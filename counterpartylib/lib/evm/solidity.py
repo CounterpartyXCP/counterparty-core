@@ -6,6 +6,9 @@ import binascii
 import yaml  # use yaml instead of json to get non unicode
 
 
+COMPILER_VERSION = None
+
+
 class CompileError(Exception):
     pass
 
@@ -75,19 +78,21 @@ class solc_wrapper(object):
         """
 
         if path is None:
-            p = subprocess.Popen(['solc', '--add-std', '--optimize', '--combined-json', 'abi,bin,devdoc,userdoc'],
-                                stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+            p = subprocess.Popen(['solc', '--stdin', '--add-std', '--optimize', '--combined-json', 'abi,bin,devdoc,userdoc', '=/work/counterparty-lib/'],
+                                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdoutdata, stderrdata = p.communicate(input=bytes(code, 'utf-8'))
         else:
             assert code is None or len(code) == 0, "`code` and `path` are exclusive!"
             workdir, fn = os.path.split(path)
-            p = subprocess.Popen(['solc', '--add-std', '--optimize', '--combined-json', 'abi,bin,devdoc,userdoc', fn],
-                                stdout=subprocess.PIPE, cwd=workdir)
+            p = subprocess.Popen(['solc', '--add-std', '--optimize', '--combined-json', 'abi,bin,devdoc,userdoc', '=/work/counterparty-lib/', fn],
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=workdir)
             stdoutdata = p.stdout.read().strip()
+            stderrdata = p.stderr.read().strip()
             p.terminate()
 
         if p.returncode:
-            raise CompileError('compilation failed')
+            raise CompileError('compilation failed: %s' % str(stderrdata).replace('\\n', '\n'))
+
         # contracts = json.loads(stdoutdata)['contracts']
         contracts = yaml.safe_load(stdoutdata)['contracts']
         for contract_name, data in contracts.items():
@@ -104,10 +109,16 @@ class solc_wrapper(object):
 
     @classmethod
     def compiler_version(cls):
+        global COMPILER_VERSION
+
+        if COMPILER_VERSION is not None:
+            return COMPILER_VERSION
+
         version_info = subprocess.check_output(['solc', '--version'])
-        match = re.search("^Version: ([0-9a-z.-]+)/", version_info.decode('utf-8'), re.MULTILINE)
-        if match:
-            return match.group(1)
+        match = re.search("^Version: ([0-9a-z.\-\*]+)/", version_info.decode('utf-8'), re.MULTILINE)
+
+        COMPILER_VERSION = match.group(1) if match else False
+        return COMPILER_VERSION
 
     @classmethod
     def compile_rich(cls, code, path=None):

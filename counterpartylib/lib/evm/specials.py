@@ -56,6 +56,7 @@ def proc_sha256(ext, msg):
         return 0, 0, []
     d = msg.data.extract_all()
 
+    print('proc_sha256', d, hashlib.sha256(d).digest())
     o = [safe_ord(x) for x in hashlib.sha256(d).digest()]
     return 1, msg.gas - gas_cost, o
 
@@ -68,6 +69,7 @@ def proc_ripemd160(ext, msg):
     if msg.gas < gas_cost:
         return 0, 0, []
     d = msg.data.extract_all()
+    print('proc_sha256', d, hashlib.new('ripemd160', d).digest())
     o = [0] * 12 + [safe_ord(x) for x in hashlib.new('ripemd160', d).digest()]
     return 1, msg.gas - gas_cost, o
 

@@ -50,8 +50,6 @@ class Address(object):
 
     def int(self):
         i = ethutils.decode_hex(self.hexbytes())
-        logger.warn(repr(self) + ".int() -> " + str(i))
-        logger.warn(repr(self) + ".int() -> " + str(ethutils.big_endian_to_int(i)))
 
         return ethutils.big_endian_to_int(i)
 
@@ -67,6 +65,10 @@ class Address(object):
 
     def __str__(self):
         return self.base58()
+
+    @classmethod
+    def nulladdress(cls):
+        return cls(b'\x00' * DATA_LENGTH, config.CONTRACT_ADDRESSVERSION)
 
     @classmethod
     def normalizedata(cls, data):

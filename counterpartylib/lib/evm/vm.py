@@ -233,7 +233,7 @@ def vm_execute(ext, msg, code):
             trace_data['steps'] = steps
             if op[:4] == 'PUSH':
                 trace_data['pushvalue'] = pushval
-            log_vm_op.trace('vm', **trace_data)
+            log_vm_op.trace('vm {op}', **trace_data)
             steps += 1
             _prevop = op
 
@@ -513,6 +513,8 @@ def vm_execute(ext, msg, code):
         elif op == 'CALL':
             gas, to, value, meminstart, meminsz, memoutstart, memoutsz = \
                 stk.pop(), stk.pop(), stk.pop(), stk.pop(), stk.pop(), stk.pop(), stk.pop()
+
+            log_vm_op.warn('CALL %s %s %s %s %s %s %s' % (gas, to, value, meminstart, meminsz, memoutstart, memoutsz))
             if not mem_extend(mem, compustate, op, meminstart, meminsz) or \
                     not mem_extend(mem, compustate, op, memoutstart, memoutsz):
                 return vm_exception('OOG EXTENDING MEMORY')

@@ -1,3 +1,5 @@
+import pprint
+
 import pytest
 import binascii
 import os
@@ -8,7 +10,7 @@ from counterpartylib.test import conftest  # this is require near the top to do 
 from counterpartylib.test.util_test import CURR_DIR
 
 from counterpartylib.lib import (config, database)
-from counterpartylib.lib.evm import (blocks, processblock, ethutils, abi, address)
+from counterpartylib.lib.evm import (blocks, processblock, ethutils, abi, address, vm, exceptions as ethexceptions)
 
 from counterpartylib.test.evm import contracts_tester as tester
 from counterpartylib.test import util_test
@@ -71,27 +73,21 @@ def open_cleanonteardown(filename, *args, **kwargs):
 
 
 # Test EVM contracts
-serpent_code = '''
+def test_evm():
+    serpent_code = '''
 def main(a,b):
     return(a ^ b)
 '''
 
-
-def test_evm():
     evm_code = serpent.compile(serpent_code)
-    translator = abi.ContractTranslator(serpent.mk_full_signature(
-        serpent_code))
+    pprint.pprint(vm.preprocess_code(evm_code))
+
+    translator = abi.ContractTranslator(serpent.mk_full_signature(serpent_code))
     data = translator.encode('main', [2, 5])
     s = state()
     c = s.evm(evm_code)
     o = translator.decode('main', s.send(tester.k0, c, 0, data))
     assert o == [32]
-
-
-def test_evm2():
-    s = state()
-    c = s.abi_contract(serpent_code)
-
     assert c.main(2, 5) == 32
 
 
@@ -554,6 +550,26 @@ def test_lifo():
     assert c.f3() == 1010
 
 
+def test_oog():
+    contract_code = '''
+def loop(rounds):
+    i = 0
+    while i < rounds:
+        i += 1
+        self.storage[i] = i
+    return(i)
+'''
+    s = state()
+    c = s.abi_contract(contract_code)
+    assert c.loop(5) == 5
+    e = None
+    try:
+        c.loop(500)
+    except tester.TransactionFailed as _e:
+        e = _e
+    assert e and isinstance(e, tester.TransactionFailed)
+
+
 # Test suicides and suicide reverts
 suicider_code = '''
 data creator
@@ -625,8 +641,6 @@ def recurse():
     self.storage[8081] = 4039
     self.storage[160161] = 2019
     self.recurse()
-    while msg.gas > 0:
-        self.storage["waste_some_gas"] = 0
 '''
 
 
@@ -1523,6 +1537,10 @@ def test_more_infinites():
 
 
 prevhashes_code = """
+
+def get_prevhash(k):
+    return block.prevhash(k)
+
 def get_prevhashes(k):
     o = array(k)
     i = 0
@@ -1538,6 +1556,8 @@ def test_prevhashes():
 
     s = state()
     c = s.abi_contract(prevhashes_code)
+
+    assert ethutils.intc.get_prevhash(1) == ""
 
     # Hashes of last 14 blocks including existing one
     o1 = [x % 2 ** 256 for x in c.get_prevhashes(14)]

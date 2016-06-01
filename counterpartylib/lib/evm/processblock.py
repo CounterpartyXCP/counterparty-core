@@ -34,7 +34,10 @@ class PBLogger(object):
     def trace(self, *args, **kwargs):
         return self.debug(*args, **kwargs)
 
-    def debug(self, name, **kargs):
+    def warn(self, *args, **kwargs):
+        return self.debug(*args, type='warn', **kwargs)
+
+    def debug(self, name, type='debug', **kargs):
         if name == 'TX NEW':
             order = dict(nonce=-10, sender=-9, startgas=-8, value=-7, to=-6, data=-5, gasprice=-4)
         elif name in ('OP', 'STK'):
@@ -50,7 +53,7 @@ class PBLogger(object):
         items = sorted(kargs.items(), key=lambda x: order.get(x[0], 0))
 
         msg = ", ".join("%s=%s" % (k,v) for k,v in items)
-        self.logger.debug("%s: %s" % (name, msg))
+        getattr(self.logger, type)("%s: %s" % (name, msg))
 
 logger = logging.getLogger(__name__)
 log_tx = PBLogger('tx')
@@ -190,7 +193,7 @@ class VMExt(VmExtBase):
         self._block = block
 
         def block_hash(x):
-            logger.warn('block_hash %s' % x)
+            logger.warn('block_hash %s %s %s %s' % (x, x > 0, x > block.number - 256, x <= block.number))
             if x > 0 and x > block.number - 256 and x <= block.number:
                 return binascii.unhexlify(block.get_block_hash(x))
             else:
@@ -233,7 +236,7 @@ def apply_msg(db, tx, ext, msg):
 def _apply_msg(db, tx, ext, msg, code):
     trace_msg = log_msg.is_active('trace')
     if trace_msg:
-        log_msg.debug("MSG APPLY", sender=msg.sender.base58(), to=msg.to.base58(),
+        log_msg.warn("MSG APPLY", sender=msg.sender.base58(), to=msg.to.base58(),
                       gas=msg.gas, value=msg.value,
                       data=encode_hex(msg.data.extract_all()))
         if log_state.is_active('trace'):
@@ -267,7 +270,7 @@ def _apply_msg(db, tx, ext, msg, code):
     # gas = int(gas)
     # assert ethutils.is_numeric(gas)
     if trace_msg:
-        log_msg.debug('MSG APPLIED', gas_remained=gas,
+        log_msg.warn('MSG APPLIED', gas_remained=gas,
                       sender=msg.sender, to=msg.to, data=dat, res=res)
         if log_state.is_active('trace'):
             log_state.trace('MSG POST STATE SENDER', account=msg.sender.base58(),

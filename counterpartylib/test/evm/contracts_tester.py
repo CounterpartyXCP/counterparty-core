@@ -37,12 +37,6 @@ languages = {}
 languages['solidity'] = solidity.get_solidity()
 languages['serpent'] = serpent
 
-# hack cuz eth/serpent tries to json.loads(bytes[])
-languages['serpent'].mk_full_signature = lambda code, **kwargs: \
-    json.loads(serpent.bytestostr(serpent.pyext.mk_full_signature(serpent.strtobytes(serpent.pre_transform(code, kwargs)))))
-# languages['solidity'].mk_full_signature = lambda code, **kwargs: \
-#     json.loads(serpent.bytestostr(serpent.pyext.mk_full_signature(serpent.strtobytes(serpent.pre_transform(code, kwargs)))))
-
 logger = logging.getLogger(__name__)
 
 def encode_datalist(vals):
@@ -112,20 +106,14 @@ class ContractCreationFailed(Exception):
 
 
 class ABIContract(object):
-    def __init__(self, _state, _abi, address):
+    def __init__(self, _state, _abi, address, _translator=None):
         self.address = address
-        self._translator = abi.ContractTranslator(_abi)
+        self._translator = _translator or abi.ContractTranslator(_abi)
         self.abi = _abi
 
         def kall_factory(f):
 
             def kall(*args, **kwargs):
-                print('kall', kwargs.get('sender', DEFAULT_SENDER),
-                                 self.address,
-                                 kwargs.get('value', 0),
-                                 self._translator.encode(f, args),
-                                 kwargs.get('startgas', DEFAULT_STARTGAS),
-                                 **dict_without(kwargs, 'startgas', 'sender', 'value', 'output'))
                 o = _state._send(kwargs.get('sender', DEFAULT_SENDER),
                                  self.address,
                                  kwargs.get('value', 0),
@@ -172,7 +160,7 @@ class state(object):
 
         return o
 
-    def abi_contract(self, code, sender=DEFAULT_SENDER, endowment=0, language='serpent', contract_name='', lll=False, **kwargs):
+    def abi_contract(self, code, sender=DEFAULT_SENDER, endowment=0, language='serpent', contract_name='', lll=False, constructor_parameters=None, **kwargs):
         if contract_name:
             assert language == 'solidity'
             cn_args = dict(contract_name=contract_name)
@@ -185,13 +173,21 @@ class state(object):
         language = languages[language]
 
         evm = language.compile(code, **cn_args) if not lll else language.compile_lll(code)
+        _abi = language.mk_full_signature(code, **cn_args)
+        _translator = abi.ContractTranslator(_abi)
+
+        constructor_call = None
+        if constructor_parameters is not None:
+            constructor_call = _translator.encode_constructor_arguments(constructor_parameters)
+
+        if constructor_call is not None:
+            evm += constructor_call
 
         address = self.evm(evm, sender, endowment)
 
         assert len(self.block.get_code(address)), "Contract code empty"
 
-        _abi = language.mk_full_signature(code, **cn_args)
-        return ABIContract(self, _abi, address)
+        return ABIContract(self, _abi, address, _translator=_translator)
 
     def evm(self, evm, sender=DEFAULT_SENDER, endowment=0):
         tx, success, output = self.do_send(sender, '', endowment, evm)
