@@ -47,6 +47,11 @@ def teardown_function(function):
     cursor.execute('''ROLLBACK''')
 
 
+def test_abi_translator2():
+    addrbytes32 = b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80\xe3\xc0\x90l\x8a\xc6\xc7"h;\x1f\xd5?Y\xd0\xed\xcdOX('
+    assert abi.decode_single(('address', '', []), addrbytes32) == "ts2T738tztDcSsYJghraUq9iqfbHdgpbW8"
+
+
 def test_abi_translator():
     addrbase58 = 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'
     addrhexbytes = b'6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037'

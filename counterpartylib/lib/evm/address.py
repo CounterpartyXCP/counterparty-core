@@ -39,7 +39,13 @@ class Address(object):
     def hexbytes(self):
         return binascii.hexlify(self.bytes())
 
+    def hexbytes32(self):
+        return binascii.hexlify(self.bytes32())
+
     def hexstr(self):
+        return self.hexbytes().decode('ascii')
+
+    def hexstr32(self):
         return self.hexbytes().decode('ascii')
 
     def int(self):

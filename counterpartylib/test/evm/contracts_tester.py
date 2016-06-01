@@ -2,6 +2,7 @@ import json
 import os
 import time
 import logging
+import serpent
 from counterpartylib.lib import (util, config, database, log)
 from counterpartylib.lib.messages import execute
 from counterpartylib.lib import blocks, script
@@ -9,10 +10,10 @@ from counterpartylib.lib.evm import (blocks as ethblocks, processblock, abi, opc
 from counterpartylib.lib.evm.address import Address
 import subprocess
 import binascii
-import serpent
 import rlp
 from rlp.utils import decode_hex, encode_hex, ascii_chr
 from counterpartylib.test.fixtures.params import ADDR, MULTISIGADDR, DEFAULT_PARAMS as DP
+from counterpartylib.lib.evm import solidity
 
 from counterpartylib.test import util_test
 
@@ -33,11 +34,14 @@ gas_price = 1
 DEFAULT_SENDER = ADDR[0]
 
 languages = {}
+languages['solidity'] = solidity.get_solidity()
 languages['serpent'] = serpent
 
 # hack cuz eth/serpent tries to json.loads(bytes[])
 languages['serpent'].mk_full_signature = lambda code, **kwargs: \
     json.loads(serpent.bytestostr(serpent.pyext.mk_full_signature(serpent.strtobytes(serpent.pre_transform(code, kwargs)))))
+# languages['solidity'].mk_full_signature = lambda code, **kwargs: \
+#     json.loads(serpent.bytestostr(serpent.pyext.mk_full_signature(serpent.strtobytes(serpent.pre_transform(code, kwargs)))))
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +120,12 @@ class ABIContract(object):
         def kall_factory(f):
 
             def kall(*args, **kwargs):
+                print('kall', kwargs.get('sender', DEFAULT_SENDER),
+                                 self.address,
+                                 kwargs.get('value', 0),
+                                 self._translator.encode(f, args),
+                                 kwargs.get('startgas', DEFAULT_STARTGAS),
+                                 **dict_without(kwargs, 'startgas', 'sender', 'value', 'output'))
                 o = _state._send(kwargs.get('sender', DEFAULT_SENDER),
                                  self.address,
                                  kwargs.get('value', 0),
