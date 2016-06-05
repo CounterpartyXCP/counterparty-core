@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# Bootstrap if the database does not exist (do this here to handle cases
+# where a volume is mounted over the share dir, like the fednode docker compose config does...)
+if [ -z "$TESTNET" ] && [ ! -f /root/.local/share/counterparty/counterparty.db ]; then
+    echo "No counterparty database exists. Downloading mainnet bootstrap DB..."
+    counterparty-server bootstrap --quiet
+fi
+if [ -n "$TESTNET" ] && [ ! -f /root/.local/share/counterparty/counterparty.testnet.db ]; then
+    echo "No counterparty database exists. Downloading testnet bootstrap DB..."
+    counterparty-server --testnet bootstrap --quiet
+fi
+
 # Specify defaults (defaults are overridden if defined in the environment)
 DEFAULT_BACKEND_CONNECT="bitcoin"
 DEFAULT_BACKEND_PORT=8332

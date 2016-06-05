@@ -23,10 +23,6 @@ WORKDIR /counterparty-cli
 RUN pip3 install -r requirements.txt
 RUN python3 setup.py install
 
-# Install bootstrap data (mainnet and testnet)
-RUN counterparty-server bootstrap --quiet
-RUN counterparty-server --testnet bootstrap --quiet
-
 EXPOSE 4000 4001
 
 # NOTE: Defaults to running on mainnet, specify -e TESTNET=1 to start up on testnet
