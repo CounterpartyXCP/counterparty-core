@@ -2,11 +2,13 @@ FROM counterparty/base
 
 MAINTAINER Counterparty Developers <dev@counterparty.io>
 
-# Install
+# Install (using the `develop` command to symlink back to the source dir for easy editing)
 COPY . /counterparty-lib
 WORKDIR /counterparty-lib
 RUN pip3 install -r requirements.txt
-RUN python3 setup.py install --with-serpent
+RUN python3 setup.py develop
+RUN python3 setup.py install_apsw
+RUN python3 setup.py install_serpent
 
 COPY docker/server.conf /root/.config/counterparty/server.conf
 COPY docker/start.sh /usr/local/bin/start.sh
@@ -21,7 +23,7 @@ ENV CLI_BRANCH ${CLI_BRANCH}
 RUN git clone -b ${CLI_BRANCH} https://github.com/CounterpartyXCP/counterparty-cli.git /counterparty-cli
 WORKDIR /counterparty-cli
 RUN pip3 install -r requirements.txt
-RUN python3 setup.py install
+RUN python3 setup.py develop
 
 EXPOSE 4000 4001
 
