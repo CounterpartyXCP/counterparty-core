@@ -30,7 +30,7 @@ before_install:
 - docker build -t counterparty/counterparty-server:$DOCKER_TAG --build-arg CLI_BRANCH="$DOCKERFILE_CLI_BRANCH" .
 # install bootstrap databases, for testing
 - COMMAND="bootstrap --quiet" docker run -i counterparty/counterparty-server:$DOCKER_TAG
-- TESTNET=1 COMMAND="bootstrap --verbose" docker run -i counterparty/counterparty-server:$DOCKER_TAG
+- TESTNET=1 COMMAND="bootstrap --quiet" docker run -i counterparty/counterparty-server:$DOCKER_TAG
 
 script:
 # run the test suite in the docker container we just made
