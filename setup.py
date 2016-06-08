@@ -28,7 +28,7 @@ class install_apsw(Command):
     def run(self):
         # In Windows APSW should be installed manually
         if os.name == 'nt':
-            print('To complete the installation you have to install APSW: https://github.com/rogerbinns/apsw/releases');
+            print('To complete the installation you have to install APSW: https://github.com/rogerbinns/apsw/releases')
             return
 
         try:
@@ -41,7 +41,7 @@ class install_apsw(Command):
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
-        with urllib.request.urlopen('https://github.com/rogerbinns/apsw/archive/3.8.7.3-r1.zip', context=ctx) as u, open('apsw-3.8.7.3-r1.zip', 'wb') as f:
+        with urllib.request.urlopen('https://github.com/rogerbinns/apsw/archive/3.8.7.3-r1.zip', timeout=10, context=ctx) as u, open('apsw-3.8.7.3-r1.zip', 'wb') as f:
             f.write(u.read())
 
         print("extracting.")

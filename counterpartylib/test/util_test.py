@@ -443,6 +443,7 @@ def reparse(testnet=True):
 
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
     prod_db_path = os.path.join(data_dir, '{}{}.db'.format(config.APP_NAME, '.testnet' if testnet else ''))
+    assert os.path.exists(prod_db_path), "database path {} does not exist".format(prod_db_path)
     prod_db = apsw.Connection(prod_db_path)
     prod_db.setrowtrace(database.rowtracer)
 
