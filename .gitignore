@@ -22,6 +22,7 @@ profile.txt
 
 # Python egg metadata, regenerated from source files by setuptools.
 /*.egg-info
+/*.egg
 
 # Virtualenv folders
 /lib/
@@ -29,3 +30,6 @@ profile.txt
 
 # Cache folders
 .cache
+
+/*.sol
+/webthree-umbrella

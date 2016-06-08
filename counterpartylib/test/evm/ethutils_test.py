@@ -55,4 +55,4 @@ def teardown_function(function):
 
 
 def test_big_endian_to_int():
-    assert ethutils.big_endian_to_int(binascii.unhexlify(b'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5')) == 0xd9147961436944f43cd99d28b2bbddbf452ef872b30c8279e255e7daafc7f946 - 2 ** 256
+    assert ethutils.big_endian_to_int(binascii.unhexlify(b'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5')) == 0x084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5

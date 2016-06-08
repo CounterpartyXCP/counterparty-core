@@ -3,7 +3,7 @@ import pytest
 import logging
 import tempfile
 from counterpartylib.lib.evm import abi
-from counterpartylib.lib.evm.ethutils import zpad
+from counterpartylib.lib.evm.ethutils import zpad, big_endian_to_int
 from counterpartylib.lib import (config, util, database)
 from counterpartylib import server
 from counterpartylib.lib.evm.address import Address
@@ -24,6 +24,11 @@ def setup_module():
     util_test.restore_database(config.DATABASE, CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql')
     db = database.get_connection(read_only=False)  # reinit the DB to deal with the restoring
     util.FIRST_MULTISIG_BLOCK_TESTNET = 1
+
+
+def test_abi_encode_str1():
+    assert abi.encode_single(('bytes', '', []), b"t1") == b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02t1\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+    assert big_endian_to_int(abi.encode_single(('bytes', '', []), b"t1")) == 284139044416465432730597154176973926959828477843846413988242344473275234516992
 
 
 @pytest.mark.skip()

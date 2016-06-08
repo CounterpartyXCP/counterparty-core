@@ -114,12 +114,14 @@ class ABIContract(object):
         def kall_factory(f):
 
             def kall(*args, **kwargs):
+                _state.log_listeners.append(lambda x: logger.warn(self._translator.listen(x)))
                 o = _state._send(kwargs.get('sender', DEFAULT_SENDER),
                                  self.address,
                                  kwargs.get('value', 0),
                                  self._translator.encode(f, args),
                                  startgas=kwargs.get('startgas', DEFAULT_STARTGAS),
                                  **dict_without(kwargs, 'startgas', 'sender', 'value', 'output'))
+                _state.log_listeners.pop()
                 # Compute output data
                 if kwargs.get('output', '') == 'raw':
                     outdata = o['output']

@@ -115,9 +115,6 @@ class ContractTranslator(object):
         self.event_data = {}
 
         for description in contract_interface:
-
-            print()
-
             encode_types = [
                 element['type']
                 for element in description['inputs']

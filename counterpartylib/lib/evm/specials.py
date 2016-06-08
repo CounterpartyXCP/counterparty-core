@@ -4,6 +4,7 @@ import bitcoin
 import hashlib
 
 from counterpartylib.lib.evm import ethutils as utils, opcodes
+from counterpartylib.lib import script
 from .ethutils import safe_ord, decode_hex
 from rlp.utils import ascii_chr
 
@@ -43,7 +44,10 @@ def proc_ecrecover(ext, msg):
         # Recovery failed
         return 1, msg.gas - gas_cost, []
 
-    o = [0] * 12 + [safe_ord(x) for x in utils.sha3(pubkey[1:])[-20:]]
+    from counterpartylib.lib.evm.address import Address
+    addr = Address.normalize(script.pubkey_to_pubkeyhash(pubkey))
+    o = [safe_ord(x) for x in addr.bytes32()]
+
     return 1, msg.gas - gas_cost, o
 
 

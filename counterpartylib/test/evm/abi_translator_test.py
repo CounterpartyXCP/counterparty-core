@@ -57,12 +57,12 @@ def test_abi_translator():
     addrhexbytes = b'6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037'
     addrhexstr = '6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037'
     addrbytes = binascii.unhexlify(addrhexbytes)
-    addrbytespadded = (addrbytes + (b'\x00' * 32))[:32]
+    addrbytespadded = ((b'\x00' * 32) + addrbytes)[-32:]
 
-    assert abi.encode_single(('address', '', []), addrbase58) == addrbytes
-    assert abi.encode_single(('address', '', []), addrhexstr) == addrbytes
-    assert abi.encode_single(('address', '', []), addrhexbytes) == addrbytes
-    assert abi.encode_single(('address', '', []), addrbytes) == addrbytes
+    assert abi.encode_single(('address', '', []), addrbase58) == addrbytespadded
+    assert abi.encode_single(('address', '', []), addrhexstr) == addrbytespadded
+    assert abi.encode_single(('address', '', []), addrhexbytes) == addrbytespadded
+    assert abi.encode_single(('address', '', []), addrbytes) == addrbytespadded
 
     assert abi.decode_single(('address', '', []), addrbytes) == addrbase58
     assert abi.decode_single(('address', '', []), addrbytespadded) == addrbase58
