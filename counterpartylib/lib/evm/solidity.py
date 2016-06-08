@@ -5,6 +5,9 @@ import os
 import binascii
 import yaml  # use yaml instead of json to get non unicode
 
+ROOTDIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+BINDIR = os.path.abspath(os.path.join(ROOTDIR, "bin"))
+SOLCBIN = os.path.abspath(os.path.join(BINDIR, "solc"))
 
 COMPILER_VERSION = None
 
@@ -78,13 +81,13 @@ class solc_wrapper(object):
         """
 
         if path is None:
-            p = subprocess.Popen(['solc', '--stdin', '--add-std', '--optimize', '--combined-json', 'abi,bin,devdoc,userdoc', '=/work/counterparty-lib/'],
+            p = subprocess.Popen([SOLCBIN, '--stdin', '--add-std', '--optimize', '--combined-json', 'abi,bin,devdoc,userdoc', '=/work/counterparty-lib/'],
                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdoutdata, stderrdata = p.communicate(input=bytes(code, 'utf-8'))
         else:
             assert code is None or len(code) == 0, "`code` and `path` are exclusive!"
             workdir, fn = os.path.split(path)
-            p = subprocess.Popen(['solc', '--add-std', '--optimize', '--combined-json', 'abi,bin,devdoc,userdoc', '=/work/counterparty-lib/', fn],
+            p = subprocess.Popen([SOLCBIN, '--add-std', '--optimize', '--combined-json', 'abi,bin,devdoc,userdoc', '=/work/counterparty-lib/', fn],
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=workdir)
             stdoutdata = p.stdout.read().strip()
             stderrdata = p.stderr.read().strip()

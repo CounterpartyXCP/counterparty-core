@@ -24,7 +24,6 @@ profile.txt
 /*.egg-info
 
 # Virtualenv folders
-/bin/
 /lib/
 /include/
 

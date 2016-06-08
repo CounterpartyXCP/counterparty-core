@@ -68,6 +68,7 @@ class install_apsw(Command):
         shutil.rmtree('apsw-%s' % APSW_VERSION)
         os.remove('apsw-%s.zip' % APSW_VERSION)
 
+
 class install_serpent(Command):
     description = "Install Ethereum Serpent"
     user_options = []
@@ -86,7 +87,6 @@ class install_serpent(Command):
             print('To complete the installation you have to install Serpent %s branch: https://github.com/%s/serpent/tree/%s' % (branch, repo, branch))
             return
 
-        branch = "develop"
         print("downloading serpent.")
         urllib.request.urlretrieve('https://github.com/%s/serpent/archive/%s.zip' % (repo, branch), 'serpent.zip')
 
@@ -105,6 +105,63 @@ class install_serpent(Command):
         print("clean files.")
         shutil.rmtree('serpent-%s' % branch)
         os.remove('serpent.zip')
+
+
+class install_solc(_install):
+    """
+    http://www.ethdocs.org/en/latest/ethereum-clients/cpp-ethereum/building-from-source/linux-ubuntu.html
+    """
+
+    description = "Install Ethereum Solidity"
+    user_options = _install.user_options + [
+        ("global-install-solc", None, "Install `solc` in /usr/bin"),
+        ("clean", None, "Leave the source files in place"),
+    ]
+
+    def initialize_options(self):
+        self.global_install_solc = False
+        self.clean = False
+        _install.initialize_options(self)
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        repo = "rubensayshi"
+        branch = "counterparty"
+
+        # In Windows Solidity should be installed manually
+        if os.name == 'nt':
+            print('Windows requires manual install, good luck ... @TODO')  # @TODO
+            return
+
+        if not os.path.isdir("./webthree-umbrella"):
+            print("downloading webthree-umbrella.")
+            print('git clone --recursive --branch v1.2.6 git://github.com/ethereum/webthree-umbrella.git')
+            os.system('git clone --recursive --branch v1.2.6 git://github.com/ethereum/webthree-umbrella.git')
+
+            os.system('cd webthree-umbrella/solidity && '
+                      'git remote add counterparty git://github.com/%s/solidity.git' % (repo))
+
+        os.system('cd webthree-umbrella/solidity && '
+                  'git fetch counterparty && '
+                  'git checkout -f %s &&'
+                  'git reset --hard counterparty/%s' % (branch, branch))
+
+        print("building.")
+        os.system('cd webthree-umbrella && ./webthree-helpers/scripts/ethbuild.sh --no-git --project solidity --cores 4 -DEVMJIT=0 -DETHASHCL=0 -DGUI=0')
+
+        print("copying to ./bin")
+        os.system('mkdir -p ./bin; cp webthree-umbrella/solidity/build/solc/solc ./bin')
+
+        if self.global_install_solc:
+            print("copying to /usr/bin")
+            os.system('sudo cp webthree-umbrella/solidity/build/solc/solc /usr/bin/solc')
+
+        if self.clean:
+            print("clean files.")
+            shutil.rmtree('webthree-umbrella')
+
 
 class move_old_db(Command):
     description = "Move database from old to new default data directory"
@@ -141,11 +198,13 @@ class move_old_db(Command):
                         print('Copy {} to {}'.format(src_file, dest_file))
                         shutil.copy(src_file, dest_file)
 
+
 def post_install(cmd, install_serpent=False):
     cmd.run_command('install_apsw')
     if install_serpent:
         cmd.run_command('install_serpent')
     cmd.run_command('move_old_db')
+
 
 class install(_install):
     user_options = _install.user_options + [
@@ -259,7 +318,8 @@ setup_options = {
         'install': install,
         'move_old_db': move_old_db,
         'install_apsw': install_apsw,
-        'install_serpent': install_serpent
+        'install_serpent': install_serpent,
+        'install_solc': install_solc
     }
 }
 
