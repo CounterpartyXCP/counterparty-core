@@ -5,6 +5,7 @@
 import struct
 import binascii
 import logging
+from bitcoin.core import VarIntSerializer
 logger = logging.getLogger(__name__)
 
 from counterpartylib.lib import (util, config, exceptions)
@@ -31,8 +32,9 @@ def compose (db, source, contract_id, gasprice, startgas, value, payload_hex):
 
     # Pack.
     data = struct.pack(config.TXTYPE_FORMAT, ID)
-    curr_format = FORMAT + '{}s'.format(len(payload))
-    data += struct.pack(curr_format, contract_id.bytes32() if contract_id else b'', gasprice, startgas, value, payload)
+    data += struct.pack(FORMAT, contract_id.bytes32() if contract_id else b'', gasprice, startgas, value)
+    data += VarIntSerializer.serialize(len(payload))
+    data += payload
 
     return (source, [], data)
 
@@ -51,6 +53,11 @@ def parse (db, tx, message):
             contract_id, gasprice, startgas, value, payload = struct.unpack(curr_format, message)
             if gasprice > config.MAX_INT or startgas > config.MAX_INT: # TODO: define max for gasprice and startgas
                 raise exceptions.UnpackError()
+
+            payloadlen = VarIntSerializer.deserialize(payload)
+            payloadlenlen = len(VarIntSerializer.serialize(payloadlen))
+            payload = payload[payloadlenlen:(payloadlenlen + payloadlen)]
+
         except (struct.error) as e:
             raise exceptions.UnpackError()
 
