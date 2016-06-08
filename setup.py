@@ -34,11 +34,11 @@ class install(_install):
         self.run_command('generate_configuration_files')
 
 required_packages = [
-    'appdirs',
-    'prettytable',
-    'colorlog',
-    'python-dateutil',
-    'requests',
+    'appdirs==1.4.0',
+    'prettytable==0.7.2',
+    'colorlog==2.7.0',
+    'python-dateutil==2.5.3',
+    'requests==2.10.0',
     'counterparty-lib'
 ]
 
