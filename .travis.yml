@@ -31,7 +31,14 @@ before_install:
 
 script:
 # run the test suite in the docker container we just made
-- docker run --entrypoint=/bin/bash counterparty/counterparty-server:$DOCKER_TAG -c "cd /counterparty-lib/counterpartylib; py.test --verbose --skiptestbook=all --cov-config=../.coveragerc --cov-report=term-missing --cov=./"
+#- docker run --entrypoint=/bin/bash counterparty/counterparty-server:$DOCKER_TAG -c "cd /counterparty-lib/counterpartylib; py.test --verbose --skiptestbook=all --cov-config=../.coveragerc --cov-report=term-missing --cov=./"
+- export TEST_CMD_BASE="docker run --entrypoint=/bin/bash counterparty/counterparty-server:$DOCKER_TAG"
+- export TEST_SUBCMD_BASE="cd /counterparty-lib/counterpartylib; py.test --verbose --capture=no --cov-config=../.coveragerc --cov-report=term-missing --cov=./ --cov-append"
+- $TEST_CMD_BASE -c "$TEST_SUBCMD_BASE test/unit_test.py"
+- $TEST_CMD_BASE -c "$TEST_SUBCMD_BASE test/parse_block_test.py"
+- $TEST_CMD_BASE -c "$TEST_SUBCMD_BASE --skiptestbook=all test/integration_test.py"
+- $TEST_CMD_BASE -c "$TEST_SUBCMD_BASE --skiptestbook=mainnet -k test_book test/reparse_test.py"
+- $TEST_CMD_BASE -c "$TEST_SUBCMD_BASE --skiptestbook=testnet -k test_book test/reparse_test.py"
 
 after_success:
 - coveralls

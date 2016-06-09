@@ -249,7 +249,6 @@ def run_scenario(scenario, rawtransactions_db):
 
     raw_transactions = []
     for tx in scenario:
-        time.sleep(1)
         if tx[0] != 'create_next_block':
             module = sys.modules['counterpartylib.lib.messages.{}'.format(tx[0])]
             compose = getattr(module, 'compose')
@@ -384,7 +383,6 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
             if tx_name == 'order' and inputs[1]=='BTC':
                 print('give btc')
                 tx_params['fee_provided'] = DP['fee_provided']
-            time.sleep(1)
             unsigned_tx_hex = transaction.construct(server_db, test_outputs, **tx_params)
             print(tx_name)
             print(unsigned_tx_hex)
