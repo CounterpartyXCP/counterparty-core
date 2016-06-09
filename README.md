@@ -101,14 +101,14 @@ By default, the **configuration files** are named `server.conf` and `client.conf
 Client and Server log files are named `counterparty.client.[testnet.]log` and `counterparty.server.[testnet.]log`, and located in the following directories:
 
 * Linux: `~/.cache/counterparty/log/`
-* Windows: `%APPDATA%\Counterparty\`
+* Windows: `%APPDATA%\Local\Counterparty\counterparty\Logs`
 
 Counterparty API activity is logged in `server.[testnet.]api.log` and `client.[testnet.]api.log`.
 
 Counterparty database files are by default named `counterparty.[testnet.]db` and located in the following directories:
 
 * Linux: `~/.local/share/counterparty`
-* Windows: `%APPDATA%\Local\Counterparty\counterparty`
+* Windows: `%APPDATA%\Roaming\Counterparty\counterparty`
 
 ## Configuration File Format
 
