@@ -40,9 +40,6 @@ def enabled(change_name, block_index=None):
         return _enabled(change_name, block_index)
 util.enabled = enabled
 
-def pytest_collection_modifyitems(session, config, items):
-    """Run contracts_test.py last."""
-    items[:] = list(reversed(items))
 
 def pytest_generate_tests(metafunc):
     """Generate all py.test cases. Checks for different types of tests and creates proper context."""
