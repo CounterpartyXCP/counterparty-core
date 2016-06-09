@@ -3,6 +3,12 @@ sudo: required
 services:
 - docker
 
+env:
+  global:
+    # define DOCKER_USERNAME and DOCKER_PASSWORD
+    - secure: "NZZCFpX/ubtrMHxU3C6+HkV+mrSUIAqRLXKySBiUJeiKaOsiVUl1AMd1cKQOrDp59dIFmjMvH+HGFbAKt3QvTcTImx0yye09bsXNKUKIQbVElnoZvkP6pZSxXAFcmjZdUGTfMSMkLukrXHgLb5ob2ziBCinJBoG57tgcUJnoZTc="
+    - secure: "d4TXRnQ4QffUFILVN6Hn7DA55unGDk0H6vZsmDRxP3ucLrUC/j8ko3Tm9jDeHZvVxGUe/e0dNXQ1WjaialCpB/h+rrnCEFExk9+oeUhhzn9GVOp488jqoiIwQxYM8cEh5I8Fh8lztBwaLnaI/MgRougFuOs3Ocf3v2IhBgvcwGs="
+
 before_install:
 - sudo apt-get -qq update
 # add coveralls
