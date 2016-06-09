@@ -3,6 +3,7 @@ from setuptools.command.install import install as _install
 from setuptools.command.bdist_egg import bdist_egg as _bdist_egg
 from setuptools import setup, find_packages, Command
 import inspect
+import ssl
 import os
 import zipfile
 import urllib.request
@@ -27,7 +28,7 @@ class install_apsw(Command):
     def run(self):
         # In Windows APSW should be installed manually
         if os.name == 'nt':
-            print('To complete the installation you have to install APSW: https://github.com/rogerbinns/apsw/releases');
+            print('To complete the installation you have to install APSW: https://github.com/rogerbinns/apsw/releases')
             return
 
         try:
@@ -37,7 +38,11 @@ class install_apsw(Command):
             pass
 
         print("downloading apsw.")
-        urllib.request.urlretrieve('https://github.com/rogerbinns/apsw/archive/3.8.7.3-r1.zip', 'apsw-3.8.7.3-r1.zip')
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        with urllib.request.urlopen('https://github.com/rogerbinns/apsw/archive/3.8.7.3-r1.zip', timeout=10, context=ctx) as u, open('apsw-3.8.7.3-r1.zip', 'wb') as f:
+            f.write(u.read())
 
         print("extracting.")
         with zipfile.ZipFile('apsw-3.8.7.3-r1.zip', 'r') as zip_file:

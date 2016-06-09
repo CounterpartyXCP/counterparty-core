@@ -5,6 +5,9 @@ services:
 
 before_install:
 - sudo apt-get -qq update
+# add coveralls
+- sudo apt-get install python3 python3-pip
+- sudo pip3 install coveralls
 # upgrade docker, for build argument support
 - sudo apt-get install -o Dpkg::Options::="--force-confold" --force-yes -y docker-engine
 - docker version

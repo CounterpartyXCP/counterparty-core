@@ -443,6 +443,7 @@ def reparse(testnet=True):
 
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
     prod_db_path = os.path.join(data_dir, '{}{}.db'.format(config.APP_NAME, '.testnet' if testnet else ''))
+    assert os.path.exists(prod_db_path), "database path {} does not exist".format(prod_db_path)
     prod_db = apsw.Connection(prod_db_path)
     prod_db.setrowtrace(database.rowtracer)
 
@@ -492,7 +493,6 @@ def reparse(testnet=True):
                 block['block_index'], previous_ledger_hash[-5:], previous_txlist_hash[-5:], previous_messages_hash[-5:],
                 (' [overwrote %s]' % previous_found_messages_hash) if previous_found_messages_hash and previous_found_messages_hash != previous_messages_hash else ''))
 
-        
         except check.ConsensusError as e:
             message = str(e)
             if message.find('ledger_hash') != -1:

@@ -351,7 +351,8 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     config.CHECK_ASSET_CONSERVATION = check_asset_conservation
     config.UTXO_LOCKS_MAX_ADDRESSES = utxo_locks_max_addresses
     config.UTXO_LOCKS_MAX_AGE = utxo_locks_max_age
-    
+    transaction.UTXO_LOCKS = None  # reset the UTXO_LOCKS (for tests really)
+
     logger.info('Running v{} of counterparty-lib.'.format(config.VERSION_STRING))
 
 
