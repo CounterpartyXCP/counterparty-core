@@ -384,6 +384,7 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
             if tx_name == 'order' and inputs[1]=='BTC':
                 print('give btc')
                 tx_params['fee_provided'] = DP['fee_provided']
+            time.sleep(1)
             unsigned_tx_hex = transaction.construct(server_db, test_outputs, **tx_params)
             print(tx_name)
             print(unsigned_tx_hex)
