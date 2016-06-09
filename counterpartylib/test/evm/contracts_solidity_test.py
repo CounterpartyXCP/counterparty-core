@@ -1,3 +1,7 @@
+"""
+@TODO: libraries
+@TODO: compile_rich
+"""
 import hashlib
 import pprint
 

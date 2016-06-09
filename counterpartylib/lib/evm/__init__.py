@@ -1,4 +1,6 @@
-def initialise (db):
+
+
+def initialise(db):
     cursor = db.cursor()
 
     # Contracts

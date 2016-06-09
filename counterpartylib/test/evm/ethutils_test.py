@@ -56,3 +56,12 @@ def teardown_function(function):
 
 def test_big_endian_to_int():
     assert ethutils.big_endian_to_int(binascii.unhexlify(b'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5')) == 0x084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5
+    assert ethutils.int_to_big_endian(60772363713814795336605161565488663769306106990467902980560042300358765319404) == b"\x86[\xf0\\\xca{\xa2o\xb8\x05\x1e\x83f\xc6\xd1\x9e!\xca\xde\xeb\xe3\xeek\xfaF+\\r'T\x14\xec"
+
+
+def test_zpad():
+    assert ethutils.zpad(b"\x01", 6) == b"\x00\x00\x00\x00\x00\x01"
+    assert ethutils.zpad(b"\x00\x00\x00\x00\x00\x01", 6) == b"\x00\x00\x00\x00\x00\x01"
+    assert ethutils.zpad(b"\x00\x00\x00\x00\x00\x01\x01\x01", 6) == b"\x00\x00\x00\x00\x00\x01\x01\x01"
+
+

@@ -64,9 +64,9 @@ class solc_wrapper(object):
         return binascii.unhexlify(sorted_contracts[idx][1]['bin'])
 
     @classmethod
-    def mk_full_signature(cls, code, path=None, libraries=None, contract_name=''):
+    def mk_full_signature(cls, code, path=None, libraries=None, contract_name='', optimize=True):
         "returns signature of last contract in code"
-        sorted_contracts = cls.combined(code, path=path)
+        sorted_contracts = cls.combined(code, path=path, optimize=optimize)
         if contract_name:
             idx = [x[0] for x in sorted_contracts].index(contract_name)
         else:
@@ -74,20 +74,20 @@ class solc_wrapper(object):
         return sorted_contracts[idx][1]['abi']
 
     @classmethod
-    def combined(cls, code, path=None):
+    def combined(cls, code, path=None, optimize=True):
         """compile combined-json with abi,bin,devdoc,userdoc
         @param code: literal solidity code as a string.
         @param path: absolute path to solidity-file. Note: code & path are exclusive!
         """
 
         if path is None:
-            p = subprocess.Popen([SOLCBIN, '--stdin', '--add-std', '--optimize', '--combined-json', 'abi,bin,devdoc,userdoc', '=/work/counterparty-lib/'],
+            p = subprocess.Popen([SOLCBIN, '--stdin', '--add-std', '--optimize' if optimize else '', '--combined-json', 'abi,bin,devdoc,userdoc', '=/work/counterparty-lib/'],
                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdoutdata, stderrdata = p.communicate(input=bytes(code, 'utf-8'))
         else:
             assert code is None or len(code) == 0, "`code` and `path` are exclusive!"
             workdir, fn = os.path.split(path)
-            p = subprocess.Popen([SOLCBIN, '--add-std', '--optimize', '--combined-json', 'abi,bin,devdoc,userdoc', '=/work/counterparty-lib/', fn],
+            p = subprocess.Popen([SOLCBIN, '--add-std', '--optimize' if optimize else '', '--combined-json', 'abi,bin,devdoc,userdoc', '=/work/counterparty-lib/', fn],
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=workdir)
             stdoutdata = p.stdout.read().strip()
             stderrdata = p.stderr.read().strip()

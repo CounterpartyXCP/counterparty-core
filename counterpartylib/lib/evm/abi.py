@@ -3,6 +3,7 @@ import ast
 import re
 import warnings
 
+import binascii
 import yaml  # use yaml instead of json to get non unicode (works with ascii only data)
 from rlp.utils import decode_hex, encode_hex
 
@@ -12,7 +13,7 @@ from counterpartylib.lib.evm.ethutils import isnumeric, TT256, TT255
 from counterpartylib.lib.evm import address
 
 
-def json_decode(data):
+def json_decode(data):  # @TODO: WTF
     return yaml.safe_load(data)
 
 
@@ -350,8 +351,11 @@ def encode_single(typ, arg):
 def process_type(typ):
     # Crazy reg expression to separate out base type component (eg. uint),
     # size (eg. 256, 128x128, none), array component (eg. [], [45], none)
-    regexp = '([a-z]*)([0-9]*x?[0-9]*)((\[[0-9]*\])*)'
-    base, sub, arr, _ = re.match(regexp, utils.to_string_for_regexp(typ)).groups()
+    regexp = '^([a-z]*)([0-9]*x?[0-9]*)((\[[0-9]*\])*)$'
+    m = re.match(regexp, utils.to_string_for_regexp(typ))
+    assert m, "Failed to match type"
+    base, sub, arr, _ = m.groups()
+
     arrlist = re.findall('\[[0-9]*\]', arr)
     assert len(''.join(arrlist)) == len(arr), \
         "Unknown characters found in array declaration"
@@ -391,6 +395,7 @@ def process_type(typ):
 # Returns the static size of a type, or None if dynamic
 def get_size(typ):
     base, sub, arrlist = typ
+
     if not len(arrlist):
         if base in ('string', 'bytes') and not sub:
             return None
@@ -411,9 +416,6 @@ def enc(typ, arg):
     base, sub, arrlist = typ
     sz = get_size(typ)
 
-    if base in ('address', ) and not sub:
-        arg = address.Address.normalize(arg).bytes32()
-
     # Encode dynamic-sized strings as <len(str)> + <str>
     if base in ('string', 'bytes') and not sub:
         assert isinstance(arg, (str, bytes, utils.unicode)), \
@@ -426,15 +428,18 @@ def enc(typ, arg):
     elif sz is None:
         assert isinstance(arg, list), \
             "Expecting a list argument"
+
         subtyp = base, sub, arrlist[:-1]
         subsize = get_size(subtyp)
         myhead, mytail = b'', b''
+
         if arrlist[-1] == []:
             myhead += enc(lentyp, len(arg))
         else:
             assert len(arg) == arrlist[-1][0], \
-                "Wrong array size: found %d, expecting %d" % \
-                (len(arg), arrlist[-1][0])
+                "Wrong array size: found %d, expecting %d" \
+                % (len(arg), arrlist[-1][0])
+
         for i in range(len(arg)):
             if subsize is None:
                 myhead += enc(lentyp, 32 * len(arg) + len(mytail))
@@ -471,6 +476,7 @@ def encode_abi(types, args):
             mytail += enc(proctypes[i], args[i])
         else:
             myhead += enc(proctypes[i], args[i])
+
     return myhead + mytail
 
 
