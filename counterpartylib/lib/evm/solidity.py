@@ -59,7 +59,7 @@ class solc_wrapper(object):
                 raise CompileError('Compiler does not support libraries. Please update compiler.')
             for lib_name, lib_address in libraries.items():
                 sorted_contracts[idx][1]['bin'] = sorted_contracts[idx][1]['bin']\
-                    .replace("__{}{}".format(lib_name, "_" * (38 - len(lib_name))), lib_address.hexstr32())
+                    .replace("__{}{}".format(lib_name, "_" * (38 - len(lib_name))), lib_address.hexstr())
 
         return binascii.unhexlify(sorted_contracts[idx][1]['bin'])
 

@@ -15,6 +15,10 @@ DATA_LENGTH = 20
 CHECKSUM_LENGTH = 4
 
 
+class AddressNormalizeError(Exception):
+    pass
+
+
 class Address(object):
     CLSNAME = 'Address'
 
@@ -33,19 +37,10 @@ class Address(object):
     def base58(self):
         return script.base58_check_encode(self.data, self.version)
 
-    def datahexbytes(self):
-        return binascii.hexlify(self.data)
-
     def hexbytes(self):
         return binascii.hexlify(self.bytes())
 
-    def hexbytes32(self):
-        return binascii.hexlify(self.bytes32())
-
     def hexstr(self):
-        return self.hexbytes().decode('ascii')
-
-    def hexstr32(self):
         return self.hexbytes().decode('ascii')
 
     def int(self):
@@ -58,8 +53,8 @@ class Address(object):
             self.CLSNAME,
             self.base58(),
             pprint.pformat({
-                'version': self.version,
-                'data': self.data
+                'version': binascii.hexlify(self.version),
+                'data': binascii.hexlify(self.data)
             })
         )
 
@@ -73,13 +68,13 @@ class Address(object):
     @classmethod
     def normalizedata(cls, data):
         if isinstance(data, str):
-            raise NotImplemented
+            raise NotImplementedError
 
         elif isinstance(data, int):
             data = ethutils.int_to_big_endian(data)
 
         elif not isinstance(data, bytes):
-            raise NotImplemented
+            raise NotImplementedError
 
         # add padding
         data = ((b'\x00' * DATA_LENGTH) + data)[-DATA_LENGTH:]
@@ -92,10 +87,7 @@ class Address(object):
             return None
 
         if isinstance(addr, Address):
-            if not isinstance(addr, cls):
-                return cls(addr.data, addr.version)
-            else:
-                return addr
+            return cls(addr.data, addr.version)
 
         elif isinstance(addr, (str, bytes)):
             try:
@@ -108,7 +100,8 @@ class Address(object):
 
             try:
                 return cls.frombase58(addr)
-            except: pass
+            except:
+                pass
 
         elif isinstance(addr, int):
             addr = ethutils.int_to_big_endian(addr)
@@ -126,7 +119,7 @@ class Address(object):
 
             return cls(data, version)
 
-        raise Exception("Cound not normalize Address: %s(%d)" % (addr, len(addr)))
+        raise AddressNormalizeError("Cound not normalize Address: %s(%d)" % (addr, len(addr)))
 
     @classmethod
     def fromhex(cls, addr):
