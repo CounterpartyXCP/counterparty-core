@@ -110,6 +110,12 @@ class install_serpent(Command):
 class install_solc(_install):
     """
     http://www.ethdocs.org/en/latest/ethereum-clients/cpp-ethereum/building-from-source/linux-ubuntu.html
+     - the LLVM part is not neccesary
+     - the `sudo add-apt-repository -y ppa:ethereum/ethereum-qt` is not neccesary
+        - but then you need to remove the following from the apt-get install:
+          `qtbase5-dev qt5-default qtdeclarative5-dev libqt5webkit5-dev libqt5webengine5-dev`
+     - if fails `sudo apt-get -y install libjson-rpc-cpp-dev` try `apt-get -y install libjsonrpccpp-dev`
+
     """
 
     description = "Install Ethereum Solidity"
