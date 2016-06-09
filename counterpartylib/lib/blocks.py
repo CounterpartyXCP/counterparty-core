@@ -1067,6 +1067,8 @@ def follow(db):
     not_supported_sorted = collections.deque()
     # ^ Entries in form of (block_index, tx_hash), oldest first. Allows for easy removal of past, unncessary entries
     cursor = db.cursor()
+    
+    disabled_unconfirmed_transactions = False
 
     # a reorg can happen without the block count increasing, or even for that
     # matter, with the block count decreasing. This should only delay
@@ -1186,7 +1188,7 @@ def follow(db):
             block_count = backend.getblockcount()
             block_index += 1
 
-        else:
+        elif not config.DISABLE_UNCONFIRMED_TRANSACTIONS:
             # Get old mempool.
             old_mempool = list(cursor.execute('''SELECT * FROM mempool'''))
             old_mempool_hashes = [message['tx_hash'] for message in old_mempool]
@@ -1310,9 +1312,18 @@ def follow(db):
                 "{:.2f}".format(refresh_time, 3),
                 "{:.2f}".format(sleep_time, 3)))
 
-            # Wait
+            # Wait for remaining time between intervals
             db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
             time.sleep(sleep_time)
+
+        else:
+            # Wait for interval
+            db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
+            time.sleep(config.BACKEND_POLL_INTERVAL)
+
+            if config.DISABLE_UNCONFIRMED_TRANSACTIONS and not disabled_unconfirmed_transactions:
+                backend.disable_unconfirmed_transactions()
+                disabled_unconfirmed_transactions = True
 
     cursor.close()
 

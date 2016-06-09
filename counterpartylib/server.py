@@ -94,7 +94,8 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
                 check_asset_conservation=config.DEFAULT_CHECK_ASSET_CONSERVATION,
                 backend_ssl_verify=None, rpc_allow_cors=None, p2sh_dust_return_pubkey=None,
                 utxo_locks_max_addresses=config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES,
-                utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE):
+                utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE,
+                disable_unconfirmed_transactions=None):
 
      # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -295,6 +296,9 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
 
     ##############
     # OTHER SETTINGS
+
+    if disable_unconfirmed_transactions is not None:
+        config.DISABLE_UNCONFIRMED_TRANSACTIONS = disable_unconfirmed_transactions
 
     # skip checks
     if force:

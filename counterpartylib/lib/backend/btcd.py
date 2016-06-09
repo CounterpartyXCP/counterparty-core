@@ -94,6 +94,9 @@ def searchrawtransactions(address, unconfirmed=False):
     
     return rawtransactions
 
+def disable_unconfirmed_transactions():
+    raise NotImplementedError
+
 def unconfirmed_transactions():
     raise NotImplementedError
 

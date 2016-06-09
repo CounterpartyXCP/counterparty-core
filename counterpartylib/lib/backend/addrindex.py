@@ -134,6 +134,10 @@ def unconfirmed_transactions(address):
 
     return list(getrawtransaction_batch(list(tx_hashes), verbose=True).values()) if len(tx_hashes) else []
 
+def disable_unconfirmed_transactions():
+    global unconfirmed_transactions_cache
+    unconfirmed_transactions_cache = {}
+
 def refresh_unconfirmed_transactions_cache(mempool_txhash_list):
     global unconfirmed_transactions_cache, reverse_unconfirmed_transactions_cache
 
