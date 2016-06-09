@@ -58,7 +58,37 @@ $ counterparty-server bootstrap
 $ counterparty-server --backend-password=rpc start
 ```
 
-## Configuration and Maintenance
+# Basic Usage
+
+## Via command-line 
+
+(Requires `counterparty-cli` to be installed.)
+
+* The first time you run the server, you may bootstrap the local database with:
+	`$ counterparty-server bootstrap`
+
+* Start the server with:
+	`$ counterparty-server start`
+
+* Check the status of the server with:
+	`$ counterparty-client getinfo`
+
+* For additional command-line arguments and options:
+	`$ counterparty-server --help`
+	`$ counterparty-client --help`
+
+## Via Python
+
+Bare usage from Python is also possible, without installing `counterparty-cli`:
+
+```
+$ python3
+>>> from counterpartylib import server
+>>> db = server.initialise(<options>)
+>>> server.start_all(db)
+```
+
+# Configuration and Operation
 
 The paths to the **configuration** files, **log** files and **database** files are printed to the screen when starting the server in ‘verbose’ mode:
 	`$ counterparty-server --verbose start`
@@ -105,38 +135,16 @@ A `counterparty-client` configuration file looks like this:
 	counterparty-rpc-user = <rpcuser>
 	counterparty-rpc-password = <password>
 
-# Basic Usage
 
-## Command-line 
+# Developer notes
 
-(Requires `counterparty-cli` to be installed.)
+## Versioning
 
-* The first time you run the server, you may bootstrap the local database with:
-	`$ counterparty-server bootstrap`
+* Major version changes require a full (automatic) rebuild of the database.
+* Minor version changes require a(n automatic) database reparse.
+* All protocol changes are retroactive on testnet.
 
-* Start the server with:
-	`$ counterparty-server start`
-
-* Check the status of the server with:
-	`$ counterparty-client getinfo`
-
-* For additional command-line arguments and options:
-	`$ counterparty-server --help`
-	`$ counterparty-client --help`
-
-## Python interface
-
-Bare usage from Python is also possible, without installing `counterparty-cli`:
-
-```
-$ python3
->>> from counterpartylib import server
->>> db = server.initialise(<options>)
->>> server.start_all(db)
-```
-
-
-# Continuous integration notes
+## Continuous integration
  - TravisCI is setup to run all tests with 1 command and generate a coverage report and let `python-coveralls` parse and upload it.
    It does runs with `--skiptestbook=all` so it will not do the reparsing of the bootstrap files.
  - CircleCI is setup to split the tests as much as possible to make it easier to read the error reports.
