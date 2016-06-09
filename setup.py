@@ -126,7 +126,7 @@ class install_solc(_install):
 
     def initialize_options(self):
         self.global_install_solc = False
-        self.clean = False
+        self.clean = True
         _install.initialize_options(self)
 
     def finalize_options(self):
