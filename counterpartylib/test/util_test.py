@@ -249,6 +249,7 @@ def run_scenario(scenario, rawtransactions_db):
 
     raw_transactions = []
     for tx in scenario:
+        time.sleep(1)
         if tx[0] != 'create_next_block':
             module = sys.modules['counterpartylib.lib.messages.{}'.format(tx[0])]
             compose = getattr(module, 'compose')
@@ -493,7 +494,6 @@ def reparse(testnet=True):
                 block['block_index'], previous_ledger_hash[-5:], previous_txlist_hash[-5:], previous_messages_hash[-5:],
                 (' [overwrote %s]' % previous_found_messages_hash) if previous_found_messages_hash and previous_found_messages_hash != previous_messages_hash else ''))
 
-        
         except check.ConsensusError as e:
             message = str(e)
             if message.find('ledger_hash') != -1:
