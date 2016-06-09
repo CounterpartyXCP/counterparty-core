@@ -1,7 +1,3 @@
-#! /usr/bin/python3
-
-"""Execute arbitrary data as a smart contract."""
-
 import struct
 import binascii
 import logging
@@ -17,7 +13,29 @@ LENGTH = 56
 ID = 104
 
 
-def compose (db, source, contract_id, gasprice, startgas, value, payload_hex):
+def unpack(db, message):
+    curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
+    try:
+        contract_id, gasprice, startgas, value, payload = struct.unpack(curr_format, message)
+        if gasprice > config.MAX_INT or startgas > config.MAX_INT: # TODO: define max for gasprice and startgas
+            raise exceptions.UnpackError()
+
+        payloadlen = VarIntSerializer.deserialize(payload)
+        payloadlenlen = len(VarIntSerializer.serialize(payloadlen))
+        payload = payload[payloadlenlen:(payloadlenlen + payloadlen)]
+
+    except (struct.error) as e:
+        raise exceptions.UnpackError()
+
+    if contract_id == b'\x00' * 32:
+        contract_id = None
+    else:
+        contract_id = Address.normalize(contract_id)
+
+    return contract_id, gasprice, startgas, value, payload
+
+
+def compose(db, source, contract_id, gasprice, startgas, value, payload_hex):
     if not util.enabled('evmparty'):
         return
 
@@ -39,34 +57,23 @@ def compose (db, source, contract_id, gasprice, startgas, value, payload_hex):
     return (source, [], data)
 
 
-def parse (db, tx, message):
+def parse(db, tx, message):
     if not util.enabled('evmparty'):
         return
 
+    return parse_helper(db, tx, message, unpack)
+
+
+def parse_helper(db, tx, message, unpacker):
+    """
+    Because publish and execute messages are so similar this helper us used by both and only the unpacker differs
+    """
     status = 'valid'
-    output, gas_cost, gas_remained = None, None, None
+    contract_id, gasprice, startgas, value, payload, output, gas_cost, gas_remained = None, None, None, None, None, None, None, None
 
     try:
         # Unpack message.
-        curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
-        try:
-            contract_id, gasprice, startgas, value, payload = struct.unpack(curr_format, message)
-            if gasprice > config.MAX_INT or startgas > config.MAX_INT: # TODO: define max for gasprice and startgas
-                raise exceptions.UnpackError()
-
-            payloadlen = VarIntSerializer.deserialize(payload)
-            payloadlenlen = len(VarIntSerializer.serialize(payloadlen))
-            payload = payload[payloadlenlen:(payloadlenlen + payloadlen)]
-
-        except (struct.error) as e:
-            raise exceptions.UnpackError()
-
-        gas_remained = startgas
-
-        if contract_id == b'\x00' * 32:
-            contract_id = None
-        else:
-            contract_id = Address.normalize(contract_id)
+        contract_id, gasprice, startgas, value, payload = unpacker(db, message)
 
         # Apply transaction!
         block_obj = blocks.Block(db, tx['block_hash'])
@@ -80,21 +87,14 @@ def parse (db, tx, message):
     except exceptions.UnpackError as e:
         contract_id, gasprice, startgas, value, payload = None, None, None, None, None
         status = 'invalid: could not unpack'
-        output = None
-    except evmexceptions.ContractError as e:
-        status = 'invalid: no such contract'
-        contract_id = None
-        output = None
     except evmexceptions.InsufficientStartGas as e:
         have, need = e.args
         logger.debug('Insufficient start gas: have {} and need {}'.format(have, need))
         status = 'invalid: insufficient start gas'
-        output = None
     except evmexceptions.InsufficientBalance as e:
         have, need = e.args
         logger.debug('Insufficient balance: have {} and need {}'.format(have, need))
         status = 'invalid: insufficient balance'
-        output = None
 
     if status == 'valid':
         logger.debug('TX FINISHED (gas_remained: {})'.format(gas_remained))
