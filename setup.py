@@ -71,10 +71,16 @@ class install_apsw(Command):
 
 class install_serpent(Command):
     description = "Install Ethereum Serpent"
-    user_options = []
+    user_options = _install.user_options + [
+        ("global-install-serpent", None, "Install `serpent` in /usr/bin"),
+    ]
+    boolean_options = _install.boolean_options + ['global-install-serpent']
 
     def initialize_options(self):
+        self.global_install_serpent = False
+        self.clean = True
         pass
+
     def finalize_options(self):
         pass
 
@@ -87,23 +93,31 @@ class install_serpent(Command):
             print('To complete the installation you have to install Serpent %s branch: https://github.com/%s/serpent/tree/%s' % (branch, repo, branch))
             return
 
-        print("downloading serpent.")
-        urllib.request.urlretrieve('https://github.com/%s/serpent/archive/%s.zip' % (repo, branch), 'serpent.zip')
+        if not os.path.isdir("./serpent-%s" % branch):
+            print("downloading serpent.")
+            urllib.request.urlretrieve('https://github.com/%s/serpent/archive/%s.zip' % (repo, branch), 'serpent.zip')
 
-        print("extracting.")
-        with zipfile.ZipFile('serpent.zip', 'r') as zip_file:
-            zip_file.extractall()
+            print("extracting.")
+            with zipfile.ZipFile('serpent.zip', 'r') as zip_file:
+                zip_file.extractall()
 
         print("making serpent.")
         os.system('cd serpent-%s && make' % branch)
-        print("install serpent using sudo.")
-        print("hence it might request a password.")
-        os.system('cd serpent-%s && sudo make install' % branch)
+
         print("install serpent as python lib.")
         os.system('cd serpent-%s && python setup.py install' % branch)
 
-        print("clean files.")
-        shutil.rmtree('serpent-%s' % branch)
+        print("install serpent in `./bin`.")
+        os.system('cp serpent-%s/serpent ./bin/serpent' % branch)
+
+        if self.global_install_serpent:
+            print("global install serpent using sudo.")
+            print("hence it might request a password.")
+            os.system('cd serpent-%s && sudo make install' % branch)
+
+        if self.clean:
+            print("clean files.")
+            shutil.rmtree('serpent-%s' % branch)
         os.remove('serpent.zip')
 
 
@@ -121,8 +135,8 @@ class install_solc(_install):
     description = "Install Ethereum Solidity"
     user_options = _install.user_options + [
         ("global-install-solc", None, "Install `solc` in /usr/bin"),
-        ("clean", None, "Leave the source files in place"),
     ]
+    boolean_options = _install.boolean_options + ['global-install-solc']
 
     def initialize_options(self):
         self.global_install_solc = False
@@ -158,7 +172,7 @@ class install_solc(_install):
         os.system('cd webthree-umbrella && ./webthree-helpers/scripts/ethbuild.sh --no-git --project solidity --cores 4 -DEVMJIT=0 -DETHASHCL=0 -DGUI=0')
 
         print("copying to ./bin")
-        os.system('mkdir -p ./bin; cp webthree-umbrella/solidity/build/solc/solc ./bin')
+        os.system('cp webthree-umbrella/solidity/build/solc/solc ./bin')
 
         if self.global_install_solc:
             print("copying to /usr/bin")
@@ -175,6 +189,7 @@ class move_old_db(Command):
 
     def initialize_options(self):
         pass
+
     def finalize_options(self):
         pass
 
@@ -205,21 +220,25 @@ class move_old_db(Command):
                         shutil.copy(src_file, dest_file)
 
 
-def post_install(cmd, install_serpent=False):
+def post_install(cmd, install_serpent=False, install_solc=False):
     cmd.run_command('install_apsw')
     if install_serpent:
         cmd.run_command('install_serpent')
+    if install_solc:
+        cmd.run_command('install_solc')
     cmd.run_command('move_old_db')
 
 
 class install(_install):
     user_options = _install.user_options + [
         ("with-serpent", None, "Install Ethereum Serpent"),
+        ("with-solc", None, "Install Ethereum Solc"),
     ]
-    boolean_options = _install.boolean_options + ['with-serpent']
+    boolean_options = _install.boolean_options + ['with-serpent', 'with-solc']
 
     def initialize_options(self):
         self.with_serpent = False
+        self.with_solc = False
         _install.initialize_options(self)
 
     #Some of this code taken from https://bitbucket.org/pypa/setuptools/src/4ce518784af886e6977fa2dbe58359d0fe161d0d/setuptools/command/install.py?at=default&fileviewer=file-view-default
@@ -262,7 +281,7 @@ class install(_install):
             _install.run(self)
         else:
             self.do_egg_install()
-        self.execute(post_install, (self, self.with_serpent), msg="Running post install tasks")
+        self.execute(post_install, (self, self.with_serpent, self.with_solc), msg="Running post install tasks")
 
 class bdist_egg(_bdist_egg):
     def run(self):
