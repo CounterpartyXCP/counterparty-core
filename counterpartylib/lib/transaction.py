@@ -478,9 +478,8 @@ def construct (db, tx_info, encoding='auto',
             final_fee = exact_fee
         else:
             size = 181 * len(inputs) + outputs_size + 10
-            necessary_fee = (int(size / 1000) + 1) * fee_per_kb
+            necessary_fee = int(size / 1000 * fee_per_kb)
             final_fee = max(fee_provided, necessary_fee)
-            assert final_fee >= 1 * fee_per_kb
 
         # Check if good.
         btc_out = destination_btc_out + data_btc_out
