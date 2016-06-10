@@ -100,6 +100,9 @@ def unconfirmed_transactions():
 def refresh_unconfirmed_transactions_cache():
     raise NotImplementedError
 
+def fee_per_kb(nblocks=1):
+    raise NotImplementedError
+
 def getblockcount():
     return rpc('getblockcount', [])
 

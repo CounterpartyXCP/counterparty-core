@@ -261,6 +261,7 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
 def compose_transaction(db, name, params,
                         encoding='auto',
                         fee_per_kb=config.DEFAULT_FEE_PER_KB,
+                        estimate_fee_per_kb=None, estimate_fee_per_kb_nblocks=config.ESTIMATE_FEE_NBLOCKS,
                         regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                         multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                         op_return_value=config.DEFAULT_OP_RETURN_VALUE,
@@ -303,6 +304,7 @@ def compose_transaction(db, name, params,
     tx_info = compose_method(db, **params)
     return transaction.construct(db, tx_info, encoding=encoding,
                                         fee_per_kb=fee_per_kb,
+                                        estimate_fee_per_kb=estimate_fee_per_kb, estimate_fee_per_kb_nblocks=estimate_fee_per_kb_nblocks,
                                         regular_dust_size=regular_dust_size,
                                         multisig_dust_size=multisig_dust_size,
                                         op_return_value=op_return_value,
@@ -566,6 +568,10 @@ class APIServer(threading.Thread):
                 assert False
             cursor.close()
             return block
+
+        @dispatcher.add_method
+        def fee_per_kb(nblocks=config.ESTIMATE_FEE_NBLOCKS):
+            return backend.fee_per_kb(nblocks)
 
         @dispatcher.add_method
         def get_blocks(block_indexes, min_message_index=None):

@@ -66,6 +66,16 @@ def getrawmempool():
 def extract_addresses(txhash_list):
     return BACKEND().extract_addresses(txhash_list)
 
+
+def fee_per_kb(nblocks):
+    """
+    :param nblocks:
+    :return: fee_per_kb in satoshis, or None when unable to determine
+    """
+
+    return BACKEND().fee_per_kb(nblocks)
+
+
 def refresh_unconfirmed_transactions_cache(mempool_txhash_list):
     return BACKEND().refresh_unconfirmed_transactions_cache(mempool_txhash_list)
 
