@@ -1,6 +1,7 @@
 # Keep this as non-docker for now, to give some variety to our test configurations, as travis builds with docker
 dependencies:
     override:
+        - rm -rf /home/ubuntu/virtualenvs/venv-3.4.1/bin/serpent
         - pip install -r requirements.txt
         - python setup.py install --with-serpent
 test:
