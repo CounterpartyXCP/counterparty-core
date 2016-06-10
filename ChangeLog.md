@@ -5,6 +5,7 @@
     * lock UTXOs used to construct a transaction for 3 seconds to avoid a user double spending against himself.
     * P2SH support for source / destination of addresses (protocol change: )
     * No longer ceil the size of a transaction to KBs when calculating fees
+    * Use dynamic estimated fee (from bitcoind)
     * Many many improvements to test suite
 * v9.54.0 (2016-03-05)
     * Execute post install tasks when called via `pip`

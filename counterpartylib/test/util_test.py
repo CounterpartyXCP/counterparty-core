@@ -46,7 +46,8 @@ COUNTERPARTYD_OPTIONS = {
     'backend_password': 'pass',
     'backend_ssl_no_verify': True,
     'p2sh_dust_return_pubkey': '11' * 33,
-    'utxo_locks_max_addresses': 0  # Disable UTXO locking for base test suite runs
+    'utxo_locks_max_addresses': 0,  # Disable UTXO locking for base test suite runs
+    'estimate_fee_per_kb': False
 }
 
 
