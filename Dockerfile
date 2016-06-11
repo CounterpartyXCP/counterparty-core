@@ -6,6 +6,7 @@ MAINTAINER Counterparty Developers <dev@counterparty.io>
 COPY . /counterparty-lib
 WORKDIR /counterparty-lib
 RUN pip3 install -r requirements.txt
+RUN python3 setup.py develop
 RUN python3 setup.py install_apsw
 RUN python3 setup.py install_serpent
 
@@ -22,6 +23,7 @@ ENV CLI_BRANCH ${CLI_BRANCH}
 RUN git clone -b ${CLI_BRANCH} https://github.com/CounterpartyXCP/counterparty-cli.git /counterparty-cli
 WORKDIR /counterparty-cli
 RUN pip3 install -r requirements.txt
+RUN python3 setup.py develop
 
 # Pull the mainnet and testnet DB boostraps
 RUN counterparty-server bootstrap --quiet
