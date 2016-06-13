@@ -22,11 +22,10 @@ RUN pip3 install -r requirements.txt
 RUN python3 setup.py develop
 
 # Additional setup
-WORKDIR /
-ENV PYTHONPATH=/counterparty-cli:/counterparty-lib
 COPY docker/server.conf /root/.config/counterparty/server.conf
 COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod a+x /usr/local/bin/start.sh
+WORKDIR /
 
 # Pull the mainnet and testnet DB boostraps
 RUN counterparty-server bootstrap --quiet

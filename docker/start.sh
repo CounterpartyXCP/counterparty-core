@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Run "setup.py develop" if we need to (can be the case if the .egg-info paths get removed, or mounted over, e.g. fednode)
+if [ ! -d /counterparty-lib/counterparty_lib.egg-info ]; then
+    cd /counterparty-lib; python3 setup.py develop; cd /
+fi
+if [ ! -d /counterparty-cli/counterparty_cli.egg-info ]; then
+    cd /counterparty-cli; python3 setup.py develop; cd /
+fi
+
 # Bootstrap if the database does not exist (do this here to handle cases
 # where a volume is mounted over the share dir, like the fednode docker compose config does...)
 if [ -z "$TESTNET" ] && [ ! -f /root/.local/share/counterparty/counterparty.db ]; then
