@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 
 import binascii
+import pprint
 import struct
 import logging
 logger = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ def validate (db, source, order_match_id, block_index):
     order_matches = cursor.fetchall()
     cursor.close()
     if len(order_matches) == 0:
-        problems.append('no such order match')
+        problems.append('no such order match %s' % order_match_id)
         return None, None, None, None, order_match, problems
     elif len(order_matches) > 1:
         assert False
