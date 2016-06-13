@@ -1,6 +1,7 @@
 # Keep this as non-docker for now, to give some variety to our test configurations, as travis builds with docker
 dependencies:
     override:
+        - rm -rf /home/ubuntu/virtualenvs/venv-3.4.1/bin/serpent
         - pip install -r requirements.txt
         - python setup.py install --with-serpent
 test:
@@ -8,9 +9,10 @@ test:
         - py.test --verbose --capture=no counterpartylib/test/unit_test.py
         - py.test --verbose --capture=no counterpartylib/test/parse_block_test.py
         - py.test --verbose --capture=no --skiptestbook=all counterpartylib/test/integration_test.py
+        - py.test --verbose --capture=no counterpartylib/test/contracts_test.py
         - py.test --verbose --capture=no --skiptestbook=mainnet -k test_book counterpartylib/test/reparse_test.py
         - py.test --verbose --capture=no --skiptestbook=testnet -k test_book counterpartylib/test/reparse_test.py
-        - py.test counterpartylib/test/contracts_test.py
+        - py.test --verbose --capture=no counterpartylib/test/database_version_test.py
 machine:
     pre:
         - mkdir -p ~/.local/share/counterparty;
