@@ -640,9 +640,10 @@ def match (db, tx, block_index=None):
             # tx0
             tx0_status = 'open'
             if tx0_give_remaining <= 0 or (tx0_get_remaining <= 0 and (block_index >= 292000 or config.TESTNET)):    # Protocol change
+                # Fill order. 
+                tx0_status = 'filled'
                 if tx0['give_asset'] != config.BTC and tx0['get_asset'] != config.BTC:
-                    # Fill order, and recredit give_remaining.
-                    tx0_status = 'filled'
+                    # Recredit give_remaining.
                     util.credit(db, tx0['source'], tx0['give_asset'], tx0_give_remaining, event=tx1['tx_hash'], action='filled')
             bindings = {
                 'give_remaining': tx0_give_remaining,
@@ -657,9 +658,10 @@ def match (db, tx, block_index=None):
             log.message(db, block_index, 'update', 'orders', bindings)
             # tx1
             if tx1_give_remaining <= 0 or (tx1_get_remaining <= 0 and (block_index >= 292000 or config.TESTNET)):    # Protocol change
+                # Fill order. 
+                tx1_status = 'filled'
                 if tx1['give_asset'] != config.BTC and tx1['get_asset'] != config.BTC:
-                    # Fill order, and recredit give_remaining.
-                    tx1_status = 'filled'
+                    # Recredit give_remaining.
                     util.credit(db, tx1['source'], tx1['give_asset'], tx1_give_remaining, event=tx0['tx_hash'], action='filled')
             bindings = {
                 'give_remaining': tx1_give_remaining,
@@ -728,6 +730,12 @@ def expire (db, block_index):
     order_matches = list(cursor)
     for order_match in order_matches:
         cancel_order_match(db, order_match, 'expired', block_index)
+        # Cancel btc sell order if match expires
+        if order_match['backward_asset'] == "BTC" and order_match['status'] == "expired":
+            cursor.execute('''SELECT * FROM orders \
+                              WHERE tx_hash = ?''', (order_match['tx1_hash'],))
+            cancel_order(db, list(cursor)[0], 'expired', block_index)
+        
     if block_index >= 315000 or config.TESTNET: # Protocol change.
         # Re‐match.
         for order_match in order_matches:
