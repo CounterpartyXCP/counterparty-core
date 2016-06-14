@@ -106,6 +106,10 @@ class ContractCreationFailed(Exception):
 
 
 class ABIContract(object):
+    """
+    :type address {Address}
+    """
+
     def __init__(self, _state, _abi, address, _translator=None):
         self.address = address
         self._translator = _translator or abi.ContractTranslator(_abi)
@@ -163,6 +167,9 @@ class state(object):
         return o
 
     def abi_contract(self, code, sender=DEFAULT_SENDER, endowment=0, language='serpent', contract_name='', lll=False, constructor_parameters=None, **kwargs):
+        """
+        :return: {ABIContract}
+        """
         if contract_name:
             assert language == 'solidity'
             cn_args = dict(contract_name=contract_name)

@@ -26,6 +26,7 @@ TT255 = 2 ** 255
 
 
 is_numeric = lambda x: isinstance(x, int)
+# @TODO: is_string checks for bytes :/
 is_string = lambda x: isinstance(x, bytes)
 
 

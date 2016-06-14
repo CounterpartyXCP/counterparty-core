@@ -191,6 +191,7 @@ class VMExt(VmExtBase):
         self.db = db # debug only
 
         self._block = block
+        self._tx = tx
 
         def block_hash(x):
             logger.warn('block_hash %s %s %s %s' % (x, x > 0, x > block.number - 256, x <= block.number))

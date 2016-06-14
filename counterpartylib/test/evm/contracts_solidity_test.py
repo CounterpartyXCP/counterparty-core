@@ -80,6 +80,77 @@ def open_cleanonteardown(filename, *args, **kwargs):
     return open(filename, *args, **kwargs)
 
 
+def test_sendasset1():
+    code = '''
+contract testme {
+    function main(address a, uint v) returns (bool) {
+        return sendasset(a, v, 'XCP');
+    }
+}
+'''
+
+    s = state()
+    c = s.abi_contract(code, language='solidity')
+    b = s.block.get_balance(tester.a1)
+    v = 100
+    assert c.main(tester.a1, v, value=v) is True
+    assert s.block.get_balance(tester.a1) == b + v
+
+
+def test_sendasset2():
+    code = '''
+contract testme {
+    function send_DIVISIBLE(address a, uint v) returns (bool) {
+        return sendasset(a, v, 'DIVISIBLE');
+    }
+    function send_NODIVISIBLE(address a, uint v) returns (bool) {
+        return sendasset(a, v, 'NODIVISIBLE');
+    }
+}
+'''
+
+    s = state()
+    c = s.abi_contract(code, language='solidity')
+
+    v = 100
+
+    util.credit(s.db, c.address.base58(), 'NODIVISIBLE', v)
+    assert s.block.get_balance(c.address, 'NODIVISIBLE') == v
+
+    b = s.block.get_balance(tester.a1, 'NODIVISIBLE')
+    assert c.send_NODIVISIBLE(tester.a1, v) is True
+    assert s.block.get_balance(tester.a1, 'NODIVISIBLE') == b + v
+
+    util.credit(s.db, c.address.base58(), 'DIVISIBLE', v)
+    assert s.block.get_balance(c.address, 'DIVISIBLE') == v
+
+    b = s.block.get_balance(tester.a1, 'DIVISIBLE')
+    assert c.send_DIVISIBLE(tester.a1, v) is True
+    assert s.block.get_balance(tester.a1, 'DIVISIBLE') == b + v
+
+
+def test_sendasset3():
+    code = '''
+contract testme {
+    function main(address a, uint v, bytes32 asset) returns (bool) {
+        return sendasset(a, v, asset);
+    }
+}
+'''
+
+    s = state()
+    c = s.abi_contract(code, language='solidity')
+
+    v = 100
+
+    util.credit(s.db, c.address.base58(), 'NODIVISIBLE', v)
+    assert s.block.get_balance(c.address, 'NODIVISIBLE') == v
+
+    b = s.block.get_balance(tester.a1, 'NODIVISIBLE')
+    assert c.main(tester.a1, v, b'NODIVISIBLE') is True
+    assert s.block.get_balance(tester.a1, 'NODIVISIBLE') == b + v
+
+
 def test_bool():
     code = '''
 contract testme {

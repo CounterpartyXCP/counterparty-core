@@ -204,7 +204,6 @@ def debit (db, address, asset, quantity, action=None, event=None):
     """Debit given address by quantity of asset."""
     block_index = CURRENT_BLOCK_INDEX
 
-    print('DEBIT', address, asset, quantity)
     logger.debug('DEBIT %s %s %d' % (address, asset, quantity))
 
     if type(quantity) != int:
@@ -215,11 +214,6 @@ def debit (db, address, asset, quantity, action=None, event=None):
         raise DebitError('Cannot debit bitcoins.')
 
     debit_cursor = db.cursor()
-
-    # Contracts can only hold XCP balances.
-    if enabled('contracts_only_xcp_balances'): # Protocol change.
-        if len(address) == 40:
-            assert asset == config.XCP
 
     if asset == config.BTC:
         raise exceptions.BalanceError('Cannot debit bitcoins from a {} address!'.format(config.XCP_NAME))
@@ -267,7 +261,6 @@ def credit (db, address, asset, quantity, action=None, event=None):
     """Credit given address by quantity of asset."""
     block_index = CURRENT_BLOCK_INDEX
 
-    print('CREDIT', address, asset, quantity)
     logger.debug('CREDIT %s %s %d' % (address, asset, quantity))
 
     if type(quantity) != int:
@@ -278,11 +271,6 @@ def credit (db, address, asset, quantity, action=None, event=None):
         raise CreditError('Cannot debit bitcoins.')
 
     credit_cursor = db.cursor()
-
-    # Contracts can only hold XCP balances.
-    if enabled('contracts_only_xcp_balances'): # Protocol change.
-        if len(address) == 40:
-            assert asset == config.XCP
 
     credit_cursor.execute('''SELECT * FROM balances \
                              WHERE (address = ? AND asset = ?)''', (address, asset))
