@@ -1,3 +1,8 @@
+"""
+@TODO: add more decode_abi tests
+@TODO: add bool to translator
+"""
+
 import os
 
 import binascii
@@ -254,6 +259,20 @@ def test_abi_encode_hash():
     assert abi.encode_abi(['hash8'], ['00'*8]) == b'\x00'*32
 
 
+def test_abi_encode_bool():
+    assert abi.encode_single(['bool', '', []], True) == zpad(b'\x01', 32)
+    assert abi.encode_single(['bool', '', []], False) == zpad(b'\x00', 32)
+
+    assert abi.encode_abi(['bool'], [True]) == zpad(b'\x01', 32)
+
+
+def test_abi_decode_bool():
+    assert abi.decode_single(['bool', '', []], zpad(b'\x01', 32)) == True
+    assert abi.decode_single(['bool', '', []], zpad(b'\x00', 32)) == False
+
+    assert abi.decode_abi(['bool'], zpad(b'\x01', 32)) == [True]
+
+
 def test_abi_decode_single_hash():
     typ = ['hash', '8', []]
     assert b'\x01'*8 == abi.decode_single(typ, abi.encode_single(typ, b'\x01'*8))
@@ -281,6 +300,7 @@ def test_abi_encode_address():
 
     with pytest.raises(abi.EncodingError):
         abi.encode_single(['address', '', []], "notanaddress")
+
 
 def test_abi_decode_address():
     address = 'tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt'

@@ -14,7 +14,7 @@ import serpent
 from counterpartylib.test import conftest  # this is require near the top to do setup of the test suite
 from counterpartylib.test.util_test import CURR_DIR
 
-from counterpartylib.lib import (config, database)
+from counterpartylib.lib import (config, database, util)
 from counterpartylib.lib.evm import (blocks, processblock, ethutils, abi, address, vm)
 
 from counterpartylib.test.evm import contracts_tester as tester
@@ -78,6 +78,21 @@ def open_cleanonteardown(filename, *args, **kwargs):
     CLEANUP_FILES.append(filename)
 
     return open(filename, *args, **kwargs)
+
+
+def test_bool():
+    code = '''
+contract testme {
+    function main(bool b) returns (bool) {
+        return b;
+    }
+}
+'''
+
+    s = state()
+    c = s.abi_contract(code, language='solidity')
+    assert c.main(True) is True
+    assert c.main(False) is False
 
 
 def test_evm1():

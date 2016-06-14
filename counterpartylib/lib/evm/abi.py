@@ -507,7 +507,7 @@ def decode_single(typ, data):
         i = (o - 2**(high+low)) if o >= 2**(high+low-1) else o
         return (i * 1.0 / 2**low)
     elif base == 'bool':
-        return bool(int(data.encode('hex'), 16))
+        return bool(big_endian_to_int(data))
 
 
 # Decodes multiple arguments using the head/tail mechanism
