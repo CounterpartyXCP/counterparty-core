@@ -115,7 +115,8 @@ def common_args(args):
         'fee_per_kb': args.fee_per_kb,
         'regular_dust_size': args.regular_dust_size,
         'multisig_dust_size': args.multisig_dust_size,
-        'op_return_value': args.op_return_value
+        'op_return_value': args.op_return_value,
+        'disable_utxo_locks': args.disable_utxo_locks
     }
 
 def prepare_args(args, action):
