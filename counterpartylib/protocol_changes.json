@@ -59,4 +59,10 @@
 			"minimum_version_revision": 0,
 			"block_index": 401278
 		}
+    "btc_order_status":      {
+			"minimum_version_major": 9,
+			"minimum_version_minor": 54,
+			"minimum_version_revision": 0,
+			"block_index": 420000 
+		}
 }
