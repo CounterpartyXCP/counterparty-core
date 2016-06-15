@@ -131,6 +131,16 @@ def parse (db, tx, message):
             util.credit(db, tx['source'], escrowed_asset, escrowed_quantity, action='btcpay', event=tx['tx_hash'])
             status = 'valid'
 
+            # Update order status
+            if util.enabled('btc_order_status'):
+                bindings = {
+                    'status': 'filled',
+                    'tx0_hash': tx0_hash,
+                    'tx1_hash': tx1_hash
+                }
+                sql='update orders set status = :status where tx_hash in (:tx0_hash, :tx1_hash)'
+                cursor.execute(sql, bindings)  
+            
             # Update order match.
             bindings = {
                 'status': 'completed',
