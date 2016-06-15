@@ -34,6 +34,7 @@ def unpack(db, message):
 
 def compose(db, source, gasprice, startgas, endowment, code_hex):
     if not util.enabled('evmparty'):
+        logger.warn("EVM hasn't been activated yet!")
         return
 
     code = binascii.unhexlify(code_hex)
@@ -54,6 +55,7 @@ def compose(db, source, gasprice, startgas, endowment, code_hex):
 
 def parse(db, tx, message):
     if not util.enabled('evmparty'):
+        logger.warn("EVM hasn't been activated yet!")
         return
 
     return execute.parse_helper(db, tx, message, unpack)

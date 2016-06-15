@@ -1036,7 +1036,7 @@ def get_next_tx_index(db):
 
 class MempoolError(Exception):
     pass
-def follow(db):
+def follow(db, stop_at_block_index=None):
     # Check software version.
     check.software_version()
 
@@ -1061,10 +1061,17 @@ def follow(db):
             else: #version update was included in reparse(), so don't do it twice
                 database.update_version(db)
 
-    logger.info('Resuming parsing.')
+    logger.info('Resuming parsing from %d.' % (block_index))
 
     # Get index of last transaction.
     tx_index = get_next_tx_index(db)
+
+    # Parse for relative stop
+    if stop_at_block_index is not None:
+        if stop_at_block_index[0] == '+':
+            stop_at_block_index = block_index + int(stop_at_block_index[1:])
+        else:
+            stop_at_block_index = int(stop_at_block_index)
 
     not_supported = {}   # No false positives. Use a dict to allow for O(1) lookups
     not_supported_sorted = collections.deque()
@@ -1088,6 +1095,11 @@ def follow(db):
                 continue
             else:
                 raise e
+
+        # Stop before specified block
+        if stop_at_block_index is not None and block_index >= stop_at_block_index:
+            logger.warn('set to stop at %d, current block: %d' % (stop_at_block_index, block_index))
+            return
 
         # Get new blocks.
         if block_index <= block_count:

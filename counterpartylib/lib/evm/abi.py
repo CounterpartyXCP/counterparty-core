@@ -254,7 +254,7 @@ class ValueOutOfBounds(EncodingError):
 # Decode an unsigned/signed integer
 def decint(n, signed=False):
     if isinstance(n, str):
-        n = utils.to_string(n)
+        n = int(n)  # utils.to_string(n) # @TODO
 
     if is_numeric(n):
         min, max = (-TT255,TT255-1) if signed else (0,TT256-1)

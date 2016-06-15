@@ -87,13 +87,14 @@ def parse_helper(db, tx, message, unpacker):
     except exceptions.UnpackError as e:
         contract_id, gasprice, startgas, value, payload = None, None, None, None, None
         status = 'invalid: could not unpack'
+    except evmexceptions.InvalidTransaction as e:
+        logger.debug('invalid transaction: %s' % e)
+        status = 'invalid: invalid transaction'
     except evmexceptions.InsufficientStartGas as e:
-        have, need = e.args
-        logger.debug('Insufficient start gas: have {} and need {}'.format(have, need))
+        logger.debug('Insufficient start gas: %s' % e)
         status = 'invalid: insufficient start gas'
     except evmexceptions.InsufficientBalance as e:
-        have, need = e.args
-        logger.debug('Insufficient balance: have {} and need {}'.format(have, need))
+        logger.debug('Insufficient balance: %s' % e)
         status = 'invalid: insufficient balance'
 
     if status == 'valid':
@@ -120,7 +121,7 @@ def parse_helper(db, tx, message, unpacker):
         'output': output,
         'status': status
     }
-    sql = 'insert into executions values(:tx_index, :tx_hash, :block_index, :source, :contract_id, :gasprice, :startgas, :gas_cost, :gas_remained, :value, :data, :output, :status)'
+    sql = 'insert into executions values(:tx_index, :tx_hash, :block_index, :source, :contract_id, :gasprice, :startgas, :gas_cost, :gas_remained, :value, :payload, :output, :status)'
 
     cursor = db.cursor()
     cursor.execute(sql, bindings)

@@ -72,7 +72,7 @@ CREATE_CONTRACT_ADDRESS = b''
 
 def validate_transaction(block, tx):
     def rp(what, actual, target):
-        return '%r: %r actual:%r target:%r' % (tx, what, actual, target)
+        return '%r: %r actual:%r target:%r' % (tx.tx_hash, what, actual, target)
 
     # (1) The transaction signature is valid;
     if not tx.sender:  # sender is set and validated on Transaction initialization
@@ -94,7 +94,7 @@ def validate_transaction(block, tx):
     # cost, v0, required in up-front payment.
     total_cost = tx.value + tx.gasprice * tx.startgas
     if block.get_balance(tx.sender) < total_cost:
-        raise InsufficientBalance(rp('balance', block.get_balance(tx.sender), total_cost))
+        raise InsufficientBalance(rp('balance %s' % tx.sender, block.get_balance(tx.sender), total_cost))
 
     # check block gas limit
     # @TODO
@@ -128,7 +128,7 @@ def apply_transaction(db, block, tx):
                 
     # buy startgas
     assert block.get_balance(tx.sender) >= tx.startgas * tx.gasprice
-    block.delta_balance(tx.sender, -tx.startgas * tx.gasprice, config.XCP, tx)
+    block.delta_balance(tx.sender, -tx.startgas * tx.gasprice, config.XCP, tx, action='startgas')
     message_gas = tx.startgas - intrinsic_gas
     message_data = vm.CallData([ethutils.safe_ord(x) for x in tx.data], 0, len(tx.data))
 
@@ -165,7 +165,7 @@ def apply_transaction(db, block, tx):
             gas_used -= min(block.refunds, gas_used // 2)
             block.refunds = 0
         # sell remaining gas
-        block.delta_balance(tx.sender, tx.gasprice * gas_remained, config.XCP, tx)
+        block.delta_balance(tx.sender, tx.gasprice * gas_remained, config.XCP, tx, action='startgas')
         block.gas_used += gas_used
         if tx.to:
             output = b''.join(map(ascii_chr, data))
@@ -215,7 +215,7 @@ class VMExt(VmExtBase):
         def set_balance(address, balance):
             raise NotImplemented
         self.set_balance = set_balance
-        self.delta_balance = lambda address, balance: block.delta_balance(address, balance, tx=tx)
+        self.delta_balance = lambda address, balance, action='delta balance': block.delta_balance(address, balance, tx=tx, action=action)
         self.set_storage_data = block.set_storage_data
         self.get_storage_data = block.get_storage_data
         self.add_suicide = lambda x: block.suicides.append(x)
@@ -259,7 +259,7 @@ def _apply_msg(db, tx, ext, msg, code):
     if msg.transfers_value:
         # Transfer value, instaquit if not enough
         log_msg.debug('TRANSFER %s -> %s: %d' % (msg.sender, msg.to, msg.value))
-        if not ext._block.transfer_value(msg.sender, msg.to, msg.value, tx=tx):
+        if not ext._block.transfer_value(msg.sender, msg.to, msg.value, tx=tx, action='transfer value'):
             log_msg.debug('MSG TRANSFER FAILED', have=ext.get_balance(msg.to), want=msg.value)
             return 1, msg.gas, []
 

@@ -253,25 +253,25 @@ class Block(object):
     def set_balance(self, address, value, asset=config.XCP):
         raise NotImplemented
 
-    def delta_balance(self, address, value, asset=config.XCP, tx=None):
+    def delta_balance(self, address, value, asset=config.XCP, tx=None, action='delta balance'):
         address = Address.normalize(address)
 
         assert tx is not None
         if value > 0:
-            util.credit(self.db, address.base58(), asset, value, action='delta balance', event=tx.tx_hash)
+            util.credit(self.db, address.base58(), asset, value, action=action, event=tx.tx_hash)
         elif value < 0:
-            util.debit(self.db, address.base58(), asset, -value, action='delta balance', event=tx.tx_hash)
+            util.debit(self.db, address.base58(), asset, -value, action=action, event=tx.tx_hash)
         pass  # @TODO
 
-    def transfer_value(self, source, destination, quantity, asset=config.XCP, tx=None):
+    def transfer_value(self, source, destination, quantity, asset=config.XCP, tx=None, action='transfer value'):
         source = Address.normalize(source)
         destination = Address.normalize(destination)
 
         assert tx is not None
         if source:
-            util.debit(self.db, source.base58(), asset, quantity, action='transfer value', event=tx.tx_hash)
+            util.debit(self.db, source.base58(), asset, quantity, action=action, event=tx.tx_hash)
         if destination:
-            util.credit(self.db, destination.base58(), asset, quantity, action='transfer value', event=tx.tx_hash)
+            util.credit(self.db, destination.base58(), asset, quantity, action=action, event=tx.tx_hash)
         return True
 
     def del_account(self, contract_id):

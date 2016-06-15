@@ -339,6 +339,94 @@ def init_api_access_log(app):
         for l in loggers:
             l.addHandler(handler)
 
+
+def get_evm_debug_info(db, tx_hash, _abi):
+    from counterpartylib.lib.evm import abi, ethutils
+    cursor = db.cursor()
+    result = {}
+
+    def recursive_hexlify(d):
+        """recursively iterate over dict/list and turn `bytes` into HEX str"""
+        if isinstance(d, bytes):
+            return binascii.hexlify(d).decode('ascii')
+        elif isinstance(d, dict):
+            r = {}
+            for k, v in d.items():
+                r[k] = recursive_hexlify(v)
+            return r
+        elif isinstance(d, list):
+            r = []
+            for v in d:
+                r.append(recursive_hexlify(v))
+            return r
+        else:
+            return d
+
+    try:
+        tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_hash = ?''', (tx_hash, )))
+
+        if len(tx) == 0:
+            return None
+        tx = tx[0]
+
+        result['tx'] = tx
+
+        execution = list(cursor.execute('''SELECT * FROM executions WHERE tx_index = ?''', (tx['tx_index'], )))
+
+        if len(execution) == 0:
+            return None
+        execution = execution[0]
+
+        result['execution'] = execution
+
+        result['credits'] = list(cursor.execute("""SELECT * FROM credits WHERE event = ?""", (tx_hash, )))
+        result['debits'] = list(cursor.execute("""SELECT * FROM debits WHERE event = ?""", (tx_hash, )))
+
+        result['is_contract_creation'] = not execution['contract_id']
+
+        # execution
+        if not result['is_contract_creation']:
+            contract = list(cursor.execute('''SELECT * FROM contracts WHERE contract_id = ?''', (execution['contract_id'], )))
+
+            if len(contract) == 0:
+                return None
+            contract = contract[0]
+            result['contract'] = contract
+
+            translator = abi.ContractTranslator(_abi)
+            data = execution['data']
+            output = execution['output']
+
+            for function_name, description in translator.function_data.items():
+                function_selector = ethutils.zpad(ethutils.encode_int(description['prefix']), 4)
+
+                if data[:4] == function_selector:
+                    data = data[4:]
+                    result['call'] = {
+                        'function_name': function_name,
+                        'description': description,
+                        'data': abi.decode_abi(description['encode_types'], data) if data is not None else None,
+                        'output': abi.decode_abi(description['decode_types'], output) if output is not None else None
+                    }
+                    break
+            else:  # when no function is matched
+                result['call'] = None
+
+        # contract creation
+        else:
+            contract = list(cursor.execute('''SELECT * FROM contracts WHERE contract_id = ?''', (execution['output'], )))
+
+            if len(contract) == 0:
+                return None
+            contract = contract[0]
+
+            result['contract'] = contract
+
+        return recursive_hexlify(result)
+    finally:
+        cursor.close()
+
+
 class APIStatusPoller(threading.Thread):
     """Perform regular checks on the state of the backend and the database."""
     def __init__(self):
@@ -506,6 +594,40 @@ class APIServer(threading.Thread):
         def get_xcp_supply():
             logger.warning("Deprecated method: `get_xcp_supply`")
             return util.xcp_supply(db)
+
+        @dispatcher.add_method
+        def get_evm_info(tx_hash_or_contract_id, abi, include_invalid=False):
+            if isinstance(abi, str):
+                abi = json.loads(abi)
+
+            if len(tx_hash_or_contract_id) == 64:
+                tx_hash = tx_hash_or_contract_id
+                return [get_evm_debug_info(db, tx_hash, abi)]
+            else:
+                contract_id = tx_hash_or_contract_id
+                cursor = db.cursor()
+                try:
+                    # don't filter by status='valid' if we want to include_invalid
+                    if include_invalid:
+                        executions = list(cursor.execute("""
+SELECT * FROM executions
+WHERE (contract_id = ? OR output = ?)
+ORDER BY tx_index ASC""", (contract_id, contract_id, )))
+                    else:
+                        executions = list(cursor.execute("""
+SELECT * FROM executions
+WHERE (contract_id = ? OR output = ?)
+AND status = 'valid'
+ORDER BY tx_index ASC""", (contract_id, contract_id, )))
+
+                    results = []
+                    for execution in executions:
+                        results.append(get_evm_debug_info(db, execution['tx_hash'], abi))
+
+                    return results
+
+                finally:
+                    cursor.close()
 
         @dispatcher.add_method
         def get_asset_info(assets):

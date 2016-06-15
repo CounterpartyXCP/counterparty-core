@@ -37,7 +37,7 @@ class Transaction(object):
         if self.gasprice >= TT256 or self.startgas >= TT256 or self.value >= TT256 or self.nonce >= TT256:
             raise ethexceptions.InvalidTransaction("Values way too high!")
         if self.startgas < self.intrinsic_gas_used:
-            raise ethexceptions.InvalidTransaction("Startgas too low")
+            raise ethexceptions.InsufficientStartGas("Startgas too low")
 
 
     def to_dict(self):

@@ -96,7 +96,7 @@ def proc_sendasset(ext, msg):
     
     logger.warn('proc_sendasset %s -> %s %s [%s]' % (msg.sender, address, value, repr(asset)))
 
-    r = ext._block.transfer_value(msg.sender, address, value, asset=asset, tx=ext._tx)
+    r = ext._block.transfer_value(msg.sender, address, value, asset=asset, tx=ext._tx, action='proc_sendasset')
     # try:
     #     r = ext._block.transfer_value(msg.sender, address, value, asset=asset, tx=ext._tx)
     # except util.DebitError as e:

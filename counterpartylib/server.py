@@ -9,6 +9,7 @@ import time
 import dateutil.parser
 import calendar
 import traceback
+import json
 import binascii
 import socket
 import signal
@@ -397,22 +398,23 @@ def connect_to_backend():
         backend.getblockcount()
 
 
-def start_all(db):
+def start_all(db, stop_at_block_index=None, with_api=True):
     # Backend.
     connect_to_backend()
 
-    # API Status Poller.
-    api_status_poller = api.APIStatusPoller()
-    api_status_poller.daemon = True
-    api_status_poller.start()
+    if with_api:
+        # API Status Poller.
+        api_status_poller = api.APIStatusPoller()
+        api_status_poller.daemon = True
+        api_status_poller.start()
 
-    # API Server.
-    api_server = api.APIServer()
-    api_server.daemon = True
-    api_server.start()
+        # API Server.
+        api_server = api.APIServer()
+        api_server.daemon = True
+        api_server.start()
 
     # Server.
-    blocks.follow(db)
+    blocks.follow(db, stop_at_block_index=stop_at_block_index)
 
 
 def reparse(db, block_index=None):

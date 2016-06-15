@@ -20,6 +20,12 @@ contract crowdfund {
     mapping(uint => Campaign) campaigns;
     uint campaign_id = 0;
 
+    event LogProgress(
+        uint campaign_id,
+        uint contrib_total,
+        uint control_total
+    );
+
     /**
      * create a new crowfund campaign
      *
@@ -30,12 +36,7 @@ contract crowdfund {
      * @return the id the ID of the campaign created
      */
     function create_campaign(address recipient, string title, uint goal, uint timelimit) returns (uint) {
-        uint id = campaign_id++;
-
-        // check campaign doesn't already exist
-        if (campaigns[id].recipient != 0x0) {
-            return 0;
-        }
+        uint id = ++campaign_id;
 
         campaigns[id] = Campaign(recipient, title, goal, block.timestamp + timelimit, 0, 0);
         return id;
@@ -45,11 +46,13 @@ contract crowdfund {
      * contribute to a campaign with the value send
      *
      * @param id the ID of the campaign to contribute to
-     * @return 0 = doesn't exist, 1 = funded, 2 = expired, 0 = contributed
+     * @return 0 = doesn't exist, 1 = contributed, 2 = funded, 3 = expired
      */
     function contribute(uint id) returns (uint) {
-        // make sure campaign exists
+        // make sure campaign exists // @TODO: return -1 or something?
         if (campaigns[id].recipient == 0x0) {
+            // return the send value
+            msg.sender.send(msg.value);
             return 0;
         }
 
@@ -62,11 +65,13 @@ contract crowdfund {
         campaigns[id].contribs[sub_index] = Contrib(msg.sender, msg.value);
         campaigns[id].contrib_count = sub_index + 1;
 
+        LogProgress(id, total_contributed, campaigns[id].goal);
+
         // Enough funding?
         if (total_contributed >= campaigns[id].goal) {
             campaigns[id].recipient.send(total_contributed);
             clear(id);
-            return 1;
+            return 2;
         }
 
         // Expired?
@@ -78,10 +83,10 @@ contract crowdfund {
                 i += 1;
             }
             clear(id);
-            return 2;
+            return 3;
         }
 
-        return 0;
+        return 1;
     }
 
     /**
@@ -91,6 +96,13 @@ contract crowdfund {
      * @return the current total of contributions
      */
     function progress_report(uint id) returns (uint) {
+        // make sure campaign exists // @TODO: return -1 or something to single failure?
+        if (campaigns[id].recipient == 0x0) {
+            return 0;
+        }
+
+        LogProgress(id, campaigns[id].contrib_total, campaigns[id].goal);
+
         return campaigns[id].contrib_total;
     }
 

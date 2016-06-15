@@ -306,6 +306,7 @@ required_packages = [
     'xmltodict==0.10.1',
     'cachetools==1.1.6',
     'rlp==0.4.4',
+    'pyyaml'
 ]
 
 setup_options = {
