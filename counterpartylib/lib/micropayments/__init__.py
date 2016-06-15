@@ -3,14 +3,14 @@
 # License: MIT (see LICENSE file)
 
 
-from . import util  # NOQA
-from . import scripts  # NOQA
-from . import sign  # NOQA
-from . import api  # NOQA
-from . import validate  # NOQA
-from . import exceptions  # NOQA
-
-
+from .api import make_deposit  # NOQA
 from .api import set_deposit  # NOQA
-from .api import request_commit # NOQA
-from .api import add_commit # NOQA
+from .api import request_commit  # NOQA
+from .api import create_commit  # NOQA
+from .api import add_commit  # NOQA
+from .api import revoke_secret_hashes_above  # NOQA
+from .api import revoke_all  # NOQA
+from .api import highest_commit  # NOQA
+from .api import transferred_amount  # NOQA
+from .api import payouts  # NOQA
+from .api import recoverables  # NOQA

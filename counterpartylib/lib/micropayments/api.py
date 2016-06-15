@@ -34,9 +34,9 @@ INITIAL_STATE = {
 }
 
 
-def payer_make_deposit(dispatcher, asset, payer_pubkey, payee_pubkey,
-                       spend_secret_hash, expire_time, quantity,
-                       netcode, fee, regular_dust_size):
+def make_deposit(dispatcher, asset, payer_pubkey, payee_pubkey,
+                 spend_secret_hash, expire_time, quantity,
+                 netcode, fee, regular_dust_size):
     """Create deposit and setup initial payer state.
 
     Args:
@@ -71,8 +71,8 @@ def payer_make_deposit(dispatcher, asset, payer_pubkey, payee_pubkey,
 
     # create deposit
     rawtx, script = _create_deposit(
-        dispatcher, asset, payer_pubkey, payee_pubkey,
-        spend_secret_hash, expire_time, quantity
+        dispatcher, asset, payer_pubkey, payee_pubkey, spend_secret_hash,
+        expire_time, quantity, netcode, fee, regular_dust_size
     )
 
     # setup initial state
@@ -142,7 +142,6 @@ def request_commit(dispatcher, state, quantity, revoke_secret_hash, netcode):
         counterpartylib.lib.micropayments.exceptions.InvalidQuantity
         ValueError
     """
-    state = copy.deepcopy(state)
 
     # validate input
     validate.state(state)
@@ -160,8 +159,8 @@ def request_commit(dispatcher, state, quantity, revoke_secret_hash, netcode):
     }
 
 
-def payer_create_commit(dispatcher, state, quantity, revoke_secret_hash,
-                        delay_time, netcode):
+def create_commit(dispatcher, state, quantity, revoke_secret_hash,
+                  delay_time, netcode, fee, regular_dust_size):
     """Create commit for given quantit, revoke secret hash and delay time.
 
     Args:
@@ -187,7 +186,6 @@ def payer_create_commit(dispatcher, state, quantity, revoke_secret_hash,
         counterpartylib.lib.micropayments.exceptions.InvalidSequence
         ValueError
     """
-    state = copy.deepcopy(state)
 
     # validate input
     validate.state(state)
@@ -199,8 +197,8 @@ def payer_create_commit(dispatcher, state, quantity, revoke_secret_hash,
     # create deposit script and rawtx
     deposit_script = util.h2b(state["deposit_script"])
     rawtx, commit_script = _create_commit(
-        state["asset"], deposit_script, quantity,
-        revoke_secret_hash, delay_time
+        dispatcher, state["asset"], deposit_script, quantity,
+        revoke_secret_hash, delay_time, netcode, fee, regular_dust_size
     )
 
     # update state
@@ -235,7 +233,6 @@ def add_commit(dispatcher, state, commit_rawtx, commit_script):
         counterpartylib.lib.micropayments.exceptions.IncorrectPubKey
         counterpartylib.lib.micropayments.exceptions.IncorrectSpendSecretHash
     """
-    state = copy.deepcopy(state)
 
     # validate input
     validate.state(state)
@@ -267,7 +264,7 @@ def add_commit(dispatcher, state, commit_rawtx, commit_script):
     raise ValueError("No revoke secret for given commit script.")
 
 
-def payee_revoke_secret_hashes_above(dispatcher, state, quantity):
+def revoke_secret_hashes_above(dispatcher, state, quantity):
     """Get revoke secret hashes for commits above the given quantity.
 
     Args:
@@ -280,7 +277,6 @@ def payee_revoke_secret_hashes_above(dispatcher, state, quantity):
         counterpartylib.lib.micropayments.exceptions.InvalidState
         counterpartylib.lib.micropayments.exceptions.InvalidQuantity
     """
-    state = copy.deepcopy(state)
 
     # validate input
     validate.state(state)
@@ -314,7 +310,6 @@ def revoke_all(state, secrets):
     Raises:
         counterpartylib.lib.micropayments.exceptions.InvalidState
     """
-    state = copy.deepcopy(state)
 
     # validate input
     validate.state(state)
@@ -328,7 +323,7 @@ def revoke_all(state, secrets):
     return {"state": state}
 
 
-def payee_highest_commit(dispatcher, state):
+def highest_commit(dispatcher, state):
     """Get highest commit be signed/published for closing the channel.
 
     Args:
@@ -347,7 +342,6 @@ def payee_highest_commit(dispatcher, state):
     Raises:
         counterpartylib.lib.micropayments.exceptions.InvalidState
     """
-    state = copy.deepcopy(state)
 
     # validate input
     validate.state(state)
@@ -363,7 +357,7 @@ def payee_highest_commit(dispatcher, state):
     }
 
 
-def get_transferred_amount(dispatcher, state):
+def transferred_amount(dispatcher, state):
     """Get asset quantity transferred from payer to payee.
 
     Args:
@@ -375,7 +369,6 @@ def get_transferred_amount(dispatcher, state):
     Raises:
         counterpartylib.lib.micropayments.exceptions.InvalidState
     """
-    state = copy.deepcopy(state)
 
     if len(state["commits_active"]) == 0:
         return 0
@@ -384,7 +377,7 @@ def get_transferred_amount(dispatcher, state):
     return _get_quantity(dispatcher, state["asset"], commit["rawtx"])
 
 
-def payee_payouts(dispatcher, state, netcode):
+def payouts(dispatcher, state, netcode, fee, regular_dust_size):
     """Find published commits and make payout transactions.
 
     Args:
@@ -399,7 +392,6 @@ def payee_payouts(dispatcher, state, netcode):
     Raises:
         counterpartylib.lib.micropayments.exceptions.InvalidState
     """
-    state = copy.deepcopy(state)
 
     # validate input
     validate.state(state)
@@ -412,7 +404,8 @@ def payee_payouts(dispatcher, state, netcode):
         payee_pubkey = scripts.get_deposit_payee_pubkey(deposit_script)
         for script in recoverable_scripts:
             rawtx = _create_recover_commit(
-                state["asset"], payee_pubkey, script, "payout"
+                dispatcher, state["asset"], payee_pubkey, script, "payout",
+                netcode, fee, regular_dust_size
             )
             payouts.append({
                 "payout_rawtx": rawtx, "commit_script": util.b2h(script)
@@ -420,7 +413,7 @@ def payee_payouts(dispatcher, state, netcode):
     return payouts
 
 
-def payer_recoverables(dispatcher, state, netcode):
+def recoverables(dispatcher, state, netcode, fee, regular_dust_size):
     """Find and make recoverable change, timeout and revoke transactions.
 
     Args:
@@ -447,7 +440,6 @@ def payer_recoverables(dispatcher, state, netcode):
     Raises:
         counterpartylib.lib.micropayments.exceptions.InvalidState
     """
-    state = copy.deepcopy(state)
 
     # validate input
     validate.state(state)
@@ -461,7 +453,8 @@ def payer_recoverables(dispatcher, state, netcode):
     if len(revokable) > 0:
         for script, secret in revokable:
             rawtx = _create_recover_commit(
-                state["asset"], payer_pubkey, script, "revoke"
+                dispatcher, state["asset"], payer_pubkey, script, "revoke",
+                netcode, fee, regular_dust_size
             )
             recoverables["revoke"].append({
                 "revoke_rawtx": rawtx,
@@ -472,7 +465,8 @@ def payer_recoverables(dispatcher, state, netcode):
     # If deposit expired recover the coins!
     if _can_expire_recover(dispatcher, state, netcode):
         rawtx = _recover_deposit(
-            state["asset"], payer_pubkey, deposit_script, "expire"
+            dispatcher, state["asset"], payer_pubkey, deposit_script,
+            "expire", netcode, fee, regular_dust_size
         )
         recoverables["expire"].append({
             "expire_rawtx": rawtx,
@@ -484,11 +478,12 @@ def payer_recoverables(dispatcher, state, netcode):
         # If not expired and spend secret exposed by payout
         # recover change!
         address = util.script2address(deposit_script, netcode)
-        if _can_spend_from_address(state["asset"], address):
+        if _can_spend_from_address(dispatcher, state["asset"], address):
             _spend_secret = _find_spend_secret(dispatcher, state, netcode)
             if _spend_secret is not None:
                 rawtx = _recover_deposit(
-                    state["asset"], payer_pubkey, deposit_script, "change"
+                    dispatcher, state["asset"], payer_pubkey, deposit_script,
+                    "change", netcode, fee, regular_dust_size
                 )
                 recoverables["change"].append({
                     "change_rawtx": rawtx,
@@ -497,17 +492,6 @@ def payer_recoverables(dispatcher, state, netcode):
                 })
 
     return recoverables
-
-
-def is_deposit_confirmed(dispatcher, state, minconfirms, netcode):
-    # FIXME replace with deposit_status
-    state = copy.deepcopy(state)
-    validate.is_unsigned(minconfirms)
-    script = util.h2b(state["deposit_script"])
-    confirms, asset_balance, btc_balance = _deposit_status(
-        dispatcher, state["asset"], script, netcode
-    )
-    return confirms >= minconfirms
 
 
 def _deposit_status(dispatcher, asset, script, netcode):
@@ -532,7 +516,7 @@ def _validate_channel_unused(dispatcher, channel_address):
 
 
 def _recover_tx(dispatcher, asset, dest_address,
-                script, netcode, fee, sequence):
+                script, netcode, fee, regular_dust_size, sequence):
 
     # get channel info
     src_address = util.script2address(script, netcode)
@@ -541,8 +525,8 @@ def _recover_tx(dispatcher, asset, dest_address,
     )
 
     # create expire tx
-    rawtx = _create_tx(asset, src_address, dest_address, asset_balance,
-                       extra_btc=btc_balance - fee)
+    rawtx = _create_tx(dispatcher, asset, src_address, dest_address,
+                       asset_balance, btc_balance - fee, fee, regular_dust_size)
 
     # prep for script compliance and signing
     tx = pycoin.tx.Tx.from_hex(rawtx)
@@ -552,7 +536,7 @@ def _recover_tx(dispatcher, asset, dest_address,
         if sequence:
             txin.sequence = sequence  # relative lock-time
         utxo_rawtx = dispatcher.get("getrawtransaction")(
-            tx_hash=txin.previous_hash
+            tx_hash=util.b2h_rev(txin.previous_hash)
         )
         utxo_tx = pycoin.tx.Tx.from_hex(utxo_rawtx)
         tx.unspents.append(utxo_tx.txs_out[txin.previous_index])
@@ -560,17 +544,21 @@ def _recover_tx(dispatcher, asset, dest_address,
     return rawtx
 
 
-def _create_recover_commit(asset, pubkey, script, spend_type, netcode):
+def _create_recover_commit(dispatcher, asset, pubkey, script, spend_type,
+                           netcode, fee, regular_dust_size):
     dest_address = util.pubkey2address(pubkey, netcode=netcode)
     delay_time = scripts.get_commit_delay_time(script)
-    return _recover_tx(asset, dest_address, script, delay_time)
+    return _recover_tx(dispatcher, asset, dest_address, script, netcode, fee,
+                       regular_dust_size, delay_time)
 
 
-def _recover_deposit(asset, pubkey, script, spend_type, netcode):
+def _recover_deposit(dispatcher, asset, pubkey, script, spend_type,
+                     netcode, fee, regular_dust_size):
     dest_address = util.pubkey2address(pubkey, netcode=netcode)
     expire_time = scripts.get_deposit_expire_time(script)
     rawtx = _recover_tx(
-        asset, dest_address, script,
+        dispatcher, asset, dest_address, script,
+        netcode, fee, regular_dust_size,
         expire_time if spend_type == "expire" else None
     )
     return rawtx
@@ -599,8 +587,8 @@ def _create_commit(dispatcher, asset, deposit_script, quantity,
         extra_btc = btc_balance - fee
     else:  # provide extra btc for future payout/revoke tx fees
         extra_btc = (fee + regular_dust_size)
-    rawtx = _create_tx(asset, src_address, dest_address,
-                       quantity, extra_btc=extra_btc)
+    rawtx = _create_tx(dispatcher, asset, src_address, dest_address, quantity,
+                       extra_btc, fee, regular_dust_size)
 
     return rawtx, commit_script
 
@@ -619,9 +607,8 @@ def _create_deposit(dispatcher, asset, payer_pubkey, payee_pubkey,
     # change tx or recover + commit tx + payout tx or revoke tx
     extra_btc = (fee + regular_dust_size) * 3
 
-    rawtx = _create_tx(asset, payer_address, dest_address, quantity,
-                       extra_btc=extra_btc, fee=fee,
-                       regular_dust_size=regular_dust_size)
+    rawtx = _create_tx(dispatcher, asset, payer_address, dest_address,
+                       quantity, extra_btc, fee, regular_dust_size)
     return rawtx, script
 
 
@@ -715,7 +702,7 @@ def _get_payout_recoverable(dispatcher, state, netcode):
         script = util.h2b(commit["script"])
         delay_time = scripts.get_commit_delay_time(script)
         address = util.script2address(script, netcode=netcode)
-        if _can_spend_from_address(state["asset"], address):
+        if _can_spend_from_address(dispatcher, state["asset"], address):
             for utxo in dispatcher.get("get_unspent_txouts")(address):
                 if utxo["confirmations"] >= delay_time:
                     _scripts.append(script)
@@ -731,14 +718,14 @@ def _can_expire_recover(dispatcher, state, netcode):
         _is_deposit_expired(dispatcher, state, netcode) and
 
         # funds to recover
-        _can_deposit_spend(state, netcode)
+        _can_deposit_spend(dispatcher, state, netcode)
     )
 
 
-def _can_deposit_spend(state, netcode):
+def _can_deposit_spend(dispatcher, state, netcode):
     script = util.h2b(state["deposit_script"])
     address = util.script2address(script, netcode)
-    return _can_spend_from_address(state["asset"], address)
+    return _can_spend_from_address(dispatcher, state["asset"], address)
 
 
 def _is_deposit_expired(dispatcher, state, netcode):

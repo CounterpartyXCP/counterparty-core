@@ -769,6 +769,18 @@ class APIServer(threading.Thread):
         #########################
 
         @dispatcher.add_method
+        def mpc_make_deposit(asset, payer_pubkey, payee_pubkey,
+                             spend_secret_hash, expire_time, quantity):
+            netcode = "XTN" if config.TESTNET else "BTC"
+            fee = 10000  # FIXME use fee_per_kb instead?
+            regular_dust_size = config.DEFAULT_REGULAR_DUST_SIZE
+            return micropayments.make_deposit(
+                dispatcher, asset, payer_pubkey, payee_pubkey,
+                spend_secret_hash, expire_time, quantity, netcode, fee,
+                regular_dust_size
+            )
+
+        @dispatcher.add_method
         def mpc_set_deposit(asset, deposit_script, expected_payee_pubkey,
                             expected_spend_secret_hash):
             return micropayments.set_deposit(asset, deposit_script,
@@ -782,9 +794,53 @@ class APIServer(threading.Thread):
                                                 revoke_secret_hash, netcode)
 
         @dispatcher.add_method
+        def mpc_create_commit(state, quantity, revoke_secret_hash, delay_time):
+            netcode = "XTN" if config.TESTNET else "BTC"
+            fee = 10000  # FIXME fee not needed, determind by depost btc - dust
+            regular_dust_size = config.DEFAULT_REGULAR_DUST_SIZE
+            return micropayments.create_commit(
+                dispatcher, state, quantity, revoke_secret_hash, delay_time,
+                netcode, fee, regular_dust_size
+            )
+
+        @dispatcher.add_method
         def mpc_add_commit(state, commit_rawtx, commit_script):
             return micropayments.add_commit(dispatcher, state,
                                             commit_rawtx, commit_script)
+
+        @dispatcher.add_method
+        def mpc_revoke_secret_hashes_above(state, quantity):
+            return micropayments.revoke_secret_hashes_above(
+                dispatcher, state, quantity
+            )
+
+        @dispatcher.add_method
+        def mpc_revoke_all(state, secrets):
+            return micropayments.revoke_all(state, secrets)
+
+        @dispatcher.add_method
+        def mpc_highest_commit(state):
+            return micropayments.highest_commit(dispatcher, state)
+
+        @dispatcher.add_method
+        def mpc_transferred_amount(state):
+            return micropayments.transferred_amount(dispatcher, state)
+
+        @dispatcher.add_method
+        def mpc_payouts(state):
+            netcode = "XTN" if config.TESTNET else "BTC"
+            fee = 10000  # FIXME fee not needed (fee = btc - dust)
+            regular_dust_size = config.DEFAULT_REGULAR_DUST_SIZE
+            return micropayments.payouts(dispatcher, state, netcode,
+                                         fee, regular_dust_size)
+
+        @dispatcher.add_method
+        def mpc_recoverables(state):
+            netcode = "XTN" if config.TESTNET else "BTC"
+            fee = 10000  # FIXME fee not needed (fee = btc - dust)
+            regular_dust_size = config.DEFAULT_REGULAR_DUST_SIZE
+            return micropayments.recoverables(dispatcher, state, netcode,
+                                              fee, regular_dust_size)
 
         ######################
         # JSON-RPC API
