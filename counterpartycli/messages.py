@@ -116,6 +116,7 @@ def common_args(args):
         'regular_dust_size': args.regular_dust_size,
         'multisig_dust_size': args.multisig_dust_size,
         'op_return_value': args.op_return_value,
+        'dust_return_pubkey': args.dust_return_pubkey,
         'disable_utxo_locks': args.disable_utxo_locks
     }
 
@@ -260,7 +261,7 @@ def compose_transaction(args, message_name, param_names):
     for address_name in ['source', 'destination']:
         if address_name in params:
             address = params[address_name]
-            if script.is_multisig(address) or address_name != 'destination':    # We don’t need the pubkey for a mono‐sig destination.
+            if not script.is_p2sh(address) and (script.is_multisig(address) or address_name != 'destination'):    # We don’t need the pubkey for a mono‐sig destination.
                 pubkeys += get_pubkeys(address)
     params['pubkey'] = pubkeys
 
