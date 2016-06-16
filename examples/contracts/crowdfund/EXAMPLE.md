@@ -13,7 +13,7 @@ ls $COUNTERPARTYROOT/setup.py
 
 ##### JQ
 Please install `jq >= v1.5`, it's a command line JSON parser and makes it easier to give you example commands you can copy paste:
- - Download it here: https://stedolan.github.io/jq/
+ - Download it here: https://stedolan.github.io/jq/ (`wget https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64`)
  - Install somewhere;
     - Either `/usr/bin` (`sudo cp ~/Downloads/jq-linux64 /usr/bin/jq; sudo chmod +x /usr/bin/jq`)
       And set `JQ="jq"` so we can use
@@ -24,7 +24,10 @@ Please install `jq >= v1.5`, it's a command line JSON parser and makes it easier
 
 ##### Your Wallet
 Please export the address of the wallet you're using,
-for easiest usage this can just be an address from your bitcoind wallet, that way we can also let bitcoind sign the transactions.
+for easiest usage this can just be an address from your bitcoind wallet,
+that way we can also let bitcoind sign the transactions.
+
+You should preload the address with some testnet ~0.01 BTC and ~200 XCP!
 
 eg;
 ```bash

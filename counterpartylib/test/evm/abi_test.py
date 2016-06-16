@@ -35,6 +35,15 @@ def setup_module():
     util.FIRST_MULTISIG_BLOCK_TESTNET = 1
 
 
+def test_encode_str_as_int():
+    assert abi.decint('\x80', signed=True) == 49792
+    assert abi.decint('80', signed=True) == 14384
+    assert abi.decint(80, signed=True) == 80
+    assert abi.decint('george', signed=True) == 113685359126373
+    assert abi.encode_single(['int', '256', []], 'george') == b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00george'
+    assert abi.encode_abi(['int256'], ['george']) == b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00george'
+
+
 def test_decint():
     assert abi.decint(True) == 1
     assert abi.decint(False) == 0
@@ -46,6 +55,7 @@ def test_decint():
 
     # these 2 are here for coverage, but it passing a string to this function seems ... not fun
     #  can't even figure out what to pass in to get 128 ...
+    # it's used when for serpent contracts that take a string as argument which is converted to int ...
     assert abi.decint('\x80', signed=True) == 49792
     assert abi.decint('80', signed=True) == 14384
 

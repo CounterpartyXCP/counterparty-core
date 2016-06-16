@@ -33,13 +33,19 @@ def main():
 
     translator = abi.ContractTranslator(json.loads(args.abi))
     function_name = args.fn
+    function_args = args.args
 
     assert translator.function_data[function_name]
     description = translator.function_data[function_name]
 
-    assert len(description['encode_types']) == len(args.args), str(args.args) + " != " + str(description['encode_types'])
+    assert len(description['encode_types']) == len(function_args), str(function_args) + " != " + str(description['encode_types'])
 
-    data = translator.encode_function_call(function_name, args.args)
+    # cast ints to int() to avoid funky shit
+    for i, arg in enumerate(function_args):
+        if description['encode_types'][i].startswith('int') or description['encode_types'][i].startswith('uint'):
+            function_args[i] = int(arg)
+
+    data = translator.encode_function_call(function_name, function_args)
 
     print(binascii.hexlify(data).decode('ascii'))
 

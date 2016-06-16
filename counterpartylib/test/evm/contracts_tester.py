@@ -122,7 +122,7 @@ class ABIContract(object):
                 o = _state._send(kwargs.get('sender', DEFAULT_SENDER),
                                  self.address,
                                  kwargs.get('value', 0),
-                                 self._translator.encode(f, args),
+                                 self._translator.encode_function_call(f, args),
                                  startgas=kwargs.get('startgas', DEFAULT_STARTGAS),
                                  **dict_without(kwargs, 'startgas', 'sender', 'value', 'output'))
                 _state.log_listeners.pop()
