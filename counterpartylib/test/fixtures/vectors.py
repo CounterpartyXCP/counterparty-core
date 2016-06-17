@@ -28,22 +28,22 @@ UNITTEST_VECTOR = {
         'is_scriptpubkey_spendable': [
             {
                 'comment': 'correct p2pkh',
-                'in': ('a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e87', '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy', False, ),
+                'in': ('a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e87', '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy', ),
                 'out': True
             },
             {
                 'comment': 'correct p2sh',
-                'in': ('76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', False, ),
+                'in': ('76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', ),
                 'out': True
             },
             {
                 'comment': 'incorrect p2pkh',
-                'in': ('a9144264cfd7eb65f8cbbdba98bd0015d5461fad8d7e87', '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy', False, ),
+                'in': ('a9144264cfd7eb65f8cbbdba98bd0015d5461fad8d7e87', '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy', ),
                 'out': False
             },
             {
                 'comment': 'incorrect p2sh',
-                'in': ('76a9144838d8b3588c4c7ba7c1d00f866e9b3739c6303788ac', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', False, ),
+                'in': ('76a9144838d8b3588c4c7ba7c1d00f866e9b3739c6303788ac', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', ),
                 'out': False
             }
         ]

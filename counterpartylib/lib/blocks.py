@@ -14,7 +14,6 @@ import logging
 logger = logging.getLogger(__name__)
 import collections
 import platform
-from Crypto.Cipher import ARC4
 import apsw
 import csv
 import copy
@@ -31,6 +30,7 @@ from counterpartylib.lib import script
 from counterpartylib.lib import backend
 from counterpartylib.lib import log
 from counterpartylib.lib import database
+from counterpartylib.lib import arc4
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, publish, execute, destroy)
 
 from .kickstart.blocks_parser import BlockchainParser, ChainstateParser
@@ -492,7 +492,7 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
 
             if ctx.is_coinbase():
                 raise DecodeError('coinbase transaction')
-            obj1 = ARC4.new(ctx.vin[0].prevout.hash[::-1])
+            obj1 = arc4.init_arc4(ctx.vin[0].prevout.hash[::-1])
             data_pubkey = obj1.decrypt(pubkeyhash)
             if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
                 pubkeyhash_encoding = True
@@ -565,7 +565,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
 
     def arc4_decrypt(cyphertext):
         '''Un‐obfuscate. Initialise key once per attempt.'''
-        key = ARC4.new(ctx.vin[0].prevout.hash[::-1])
+        key = arc4.init_arc4(ctx.vin[0].prevout.hash[::-1])
         return key.decrypt(cyphertext)
 
     def get_opreturn(asm):

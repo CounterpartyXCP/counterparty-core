@@ -118,18 +118,18 @@ def generate_standard_scenario(address1, address2, order_matches):
     ]
 
 standard_scenarios_params = {
-    'simplesig' : {
+    'simplesig': {
         'address1': ADDR[0],
         'address2': ADDR[1],
         'order_matches': [
-            'ad6082998925f47865b58b6d344c1b1cf0ab059d091f33334ccb92436f37eb8a_833ac1c9139acc7a9aaabbf04bdf3e4af95a3425762d39d8cc2cc23113861d2a'
+            '507fdaba6d6173642277fa3744428fa9aed27c8dc16612aae6b2ad3a9fbb5379_178e4ac45cf71f96a3a09f58739b504348173da619e567ed0b3c6bc790181424'
         ]
     },
     'multisig_1_of_2': {
         'address1': MULTISIGADDR[0],
         'address2': MULTISIGADDR[1],
         'order_matches': [
-            '2593e61dff78d2397647bfa9c14c7b17b23b2bb1b446bde8dd23f537b56870df_dda95fb9e4ccadc9e511622585ff74889c8f76dd572f9b40bb5af1242b1e6f30'
+            '604a3ca772de07ae2447c8dce9390aa1581ad4f68ff516543a4ca0da3509b4fe_624974b8f7781d86784b0798c32f3edca7cd05b664715686d40f39eda23bb3bf'
         ]
     },
     'multisig_2_of_2': {
@@ -157,7 +157,7 @@ standard_scenarios_params = {
         'address1': MULTISIGADDR[9],
         'address2': MULTISIGADDR[10],
         'order_matches': [
-            '17500c776ecb9d1aad1cfa0407e2248c890537934132bb6ec52970c3530a157b_89e7f3ea3c4c7bb01ac12d4b4eb8583e8d5351f7d03cf2221c194d324c3ce345'
+            '04f9497e4caab67eaced7f9feb24234d677b3a97f68aadb97abf667965af125d_8ffb66ce68e631e7be386afbfd500c98130c2c5cc789c3105b215cede43674c4'
         ]
     }
 }

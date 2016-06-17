@@ -684,7 +684,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None):
-            return backend.get_unspent_txouts(address, unconfirmed=unconfirmed, multisig_inputs=False, unspent_tx_hash=unspent_tx_hash)
+            return backend.get_unspent_txouts(address, unconfirmed=unconfirmed, unspent_tx_hash=unspent_tx_hash)
 
         @dispatcher.add_method
         def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
