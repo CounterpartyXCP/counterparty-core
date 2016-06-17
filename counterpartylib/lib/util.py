@@ -55,6 +55,7 @@ def api(method, params):
         "jsonrpc": "2.0",
         "id": 0,
     }
+
     response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
     if response == None:
         raise RPCError('Cannot communicate with {} server.'.format(config.XCP_NAME))

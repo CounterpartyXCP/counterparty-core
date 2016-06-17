@@ -111,46 +111,46 @@ def generate_standard_scenario(address1, address2, order_matches):
     ]
 
 standard_scenarios_params = {
-    'simplesig' : {
+    'simplesig': {
         'address1': ADDR[0],
         'address2': ADDR[1],
         'order_matches': [
-            'ad6082998925f47865b58b6d344c1b1cf0ab059d091f33334ccb92436f37eb8a_833ac1c9139acc7a9aaabbf04bdf3e4af95a3425762d39d8cc2cc23113861d2a'
+            '507fdaba6d6173642277fa3744428fa9aed27c8dc16612aae6b2ad3a9fbb5379_178e4ac45cf71f96a3a09f58739b504348173da619e567ed0b3c6bc790181424'
         ]
     },
     'multisig_1_of_2': {
         'address1': MULTISIGADDR[0],
         'address2': MULTISIGADDR[1],
         'order_matches': [
-            '2593e61dff78d2397647bfa9c14c7b17b23b2bb1b446bde8dd23f537b56870df_dda95fb9e4ccadc9e511622585ff74889c8f76dd572f9b40bb5af1242b1e6f30'
+            '7a78df734fd910fcf9170d4af753c2ceda92974684b929ff595e6063ca5a2cf1_e75417825d1fe276bfb329960a3367c711dcb256aa2ed21da0f79a58120e2433'
         ]
     },
     'multisig_2_of_2': {
         'address1': MULTISIGADDR[3],
         'address2': MULTISIGADDR[4],
         'order_matches': [
-            '21553a43dab2c64ea38eebb4bb68406adabe478ab682a4c57f3f9c38325d4fc7_dabd54da622c526e5e0114734a216530219588c48fde8a2f2b3bf2eb52f4e643'
+            '82e2a0085961f5672c7bcf81a04abf78021d9b91c5f9e0d98421ce3cb083cd4e_371a06e55fbb3661941dc2300754556a09b6badc04aa182ee7d80842dd6cb9f1'
         ]
     },
     'multisig_1_of_3': {
         'address1': MULTISIGADDR[5],
         'address2': MULTISIGADDR[6],
         'order_matches': [
-            'e1c19fef00aa067d54fcd72239999d499470c41f878807bb67e681a03ee61517_9bc459c9d72bcc916e391d7d393cabb21fb3edb9369837452babc6f0e0c9d83d'
+            'cb66a40be14321e489c3fa3455e62315e23f92244127f3f2c2f7eccb6d75b052_beaa1fddda140d119b4e5c94aa81f2e25e5550c18f3180c0f791ef6e7ad35754'
         ]
     },
     'multisig_2_of_3': {
         'address1': MULTISIGADDR[7],
         'address2': MULTISIGADDR[8],
         'order_matches': [
-            'b898ed7f73ba34981adde222bf27498f66f352254817b0f4d07156a62b387e86_bc36229a30165dd3d5f927646292fa4b1b024c50ed3490ce578946020f4f29ed'
+            '12b8ef5d36ad332a8700be63c5b6e41f4ac8cad15899e4ba651664e951d384d8_792289d0cc057f06fee7c5cdfa65c770bf30f7bcc9ea85dd83e0dcc9d6cf655c'
         ]
     },
     'multisig_3_of_3': {
         'address1': MULTISIGADDR[9],
         'address2': MULTISIGADDR[10],
         'order_matches': [
-            '17500c776ecb9d1aad1cfa0407e2248c890537934132bb6ec52970c3530a157b_89e7f3ea3c4c7bb01ac12d4b4eb8583e8d5351f7d03cf2221c194d324c3ce345'
+            '53ebb2ed5c051acc4f7fbdf6988847795b05c96f2c90066d1967135502b80d71_cf2bf59916adad3c4c08f9dba3c8b7252222281e03150892ee23bf6bc050cf16'
         ]
     }
 }
