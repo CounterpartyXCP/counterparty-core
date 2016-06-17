@@ -26,7 +26,7 @@ from counterpartylib.test.fixtures.vectors import UNITTEST_VECTOR
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS
 from counterpartylib.test.fixtures.scenarios import INTEGRATION_SCENARIOS
 
-from counterpartylib.lib import config, util, database, api, script
+from counterpartylib.lib import config, util, database, api, script, arc4
 
 
 # we swap out util.enabled with a custom one which has the option to mock the protocol changes
@@ -48,6 +48,7 @@ def enabled(change_name, block_index=None):
         return _enabled(change_name, block_index)
 util.enabled = enabled
 
+DISABLE_ARC4_MOCKING = False
 
 def pytest_generate_tests(metafunc):
     """Generate all py.test cases. Checks for different types of tests and creates proper context."""
@@ -242,8 +243,24 @@ def mock_utxos(rawtransactions_db):
     return util_test.MOCK_UTXO_SET
 
 
+def add_fn_property(**kwargs):
+    """
+    decorator to assign attributes to a FN
+    :param kwargs: attributes assigned
+    :return: fn
+    """
+
+    def decorator(fn):
+        for k, v in kwargs.items():
+            setattr(fn, k, v)
+
+        return fn
+
+    return decorator
+
+
 @pytest.fixture(scope='function', autouse=True)
-def init_mock_functions(monkeypatch, mock_utxos, rawtransactions_db):
+def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     """Test suit mock functions.
 
     Mock functions override default behaviour to allow test suit to work - for instance, date_passed is overwritten 
@@ -282,8 +299,12 @@ def init_mock_functions(monkeypatch, mock_utxos, rawtransactions_db):
         return util_test.getrawtransaction(rawtransactions_db, bitcoinlib.core.lx(tx_hash))
 
     # mock the arc4 with a fixed seed to keep data from changing based on inputs
+    _init_arc4 = arc4.init_arc4
     def init_arc4(seed):
-        return ARC4.new(binascii.unhexlify("00" * 32))
+        if getattr(request.function, 'DISABLE_ARC4_MOCKING', False):
+            return _init_arc4(seed)
+        else:
+            return ARC4.new(binascii.unhexlify("00" * 32))
 
     monkeypatch.setattr('counterpartylib.lib.transaction.arc4.init_arc4', init_arc4)
     monkeypatch.setattr('counterpartylib.lib.backend.get_unspent_txouts', get_unspent_txouts)
