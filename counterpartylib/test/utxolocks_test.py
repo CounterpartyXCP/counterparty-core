@@ -19,12 +19,17 @@ FIXTURE_OPTIONS = {
 }
 
 
-def construct_tx(db, source, destination):
+def setup_function(function):
+    transaction.UTXO_LOCKS = None  # reset UTXO_LOCKS
+
+
+def construct_tx(db, source, destination, disable_utxo_locks=False):
     tx_info = send.compose(db, source, destination, 'XCP', 1)
-    return transaction.construct(db, tx_info)
+    return transaction.construct(db, tx_info, disable_utxo_locks=disable_utxo_locks)
 
 
-def test_utxo_test(server_db):
+def test_utxolocks(server_db):
+    """it shouldn't use the same UTXO"""
     tx1hex = construct_tx(server_db, "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns")
     tx2hex = construct_tx(server_db, "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns")
 
@@ -35,3 +40,17 @@ def test_utxo_test(server_db):
     tx2 = bitcoin.core.CTransaction.stream_deserialize(tx2f)
 
     assert (tx1.vin[0].prevout.hash, tx1.vin[0].prevout.n) != (tx2.vin[0].prevout.hash, tx2.vin[0].prevout.n)
+
+
+def test_disable_utxolocks(server_db):
+    """with `disable_utxo_locks=True` it should use the same UTXO"""
+    tx1hex = construct_tx(server_db, "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", disable_utxo_locks=True)
+    tx2hex = construct_tx(server_db, "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", disable_utxo_locks=True)
+
+    tx1f = BytesIO(binascii.unhexlify(tx1hex))
+    tx1 = bitcoin.core.CTransaction.stream_deserialize(tx1f)
+
+    tx2f = BytesIO(binascii.unhexlify(tx2hex))
+    tx2 = bitcoin.core.CTransaction.stream_deserialize(tx2f)
+
+    assert (tx1.vin[0].prevout.hash, tx1.vin[0].prevout.n) == (tx2.vin[0].prevout.hash, tx2.vin[0].prevout.n)
