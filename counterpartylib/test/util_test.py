@@ -19,7 +19,10 @@ import apsw
 import pytest
 import binascii
 import appdirs
+import pycoin
+from pycoin.tx import Tx
 import bitcoin as bitcoinlib
+logger = logging.getLogger(__name__)
 
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
@@ -49,6 +52,9 @@ COUNTERPARTYD_OPTIONS = {
     'utxo_locks_max_addresses': 0,  # Disable UTXO locking for base test suite runs
     'estimate_fee_per_kb': False
 }
+
+# used for mocking the UTXO in various places, is automatically reset every test case
+MOCK_UTXO_SET = None
 
 
 def init_database(sqlfile, dbfile, options=None):
@@ -120,6 +126,7 @@ def remove_database_files(database_filename):
         if os.path.isfile(path):
             os.remove(path)
 
+
 def insert_block(db, block_index, parse_block=True):
     """Add blocks to the blockchain."""
     cursor = db.cursor()
@@ -133,10 +140,15 @@ def insert_block(db, block_index, parse_block=True):
 
     if parse_block:
         blocks.parse_block(db, block_index, block_time)
+
+    MOCK_UTXO_SET.increment_confirmations()
+
     return block_index, block_hash, block_time
+
 
 def create_next_block(db, block_index=None, parse_block=True):
     """Create faux data for the next block."""
+
     cursor = db.cursor()
     last_block_index = list(cursor.execute("SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1"))[0]['block_index']
     if not block_index:
@@ -147,22 +159,20 @@ def create_next_block(db, block_index=None, parse_block=True):
 
     for index in range(last_block_index + 1, block_index + 1):
         inserted_block_index, block_hash, block_time = insert_block(db, index, parse_block=parse_block)
+
     cursor.close()
     return inserted_block_index, block_hash, block_time
 
-def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
+
+def insert_raw_transaction(raw_transaction, db):
     """Add a raw transaction to the database."""
+    cursor = db.cursor()
+
     # one transaction per block
     block_index, block_hash, block_time = create_next_block(db, parse_block=False)
 
-    cursor = db.cursor()
+    tx_hash = dummy_tx_hash(raw_transaction)
     tx_index = block_index - config.BURN_START + 1
-
-    tx_hash = hashlib.sha256('{}{}'.format(tx_index,raw_transaction).encode('utf-8')).hexdigest()
-    # print(tx_hash)
-    # Remember to add it to the log dump
-    if pytest.config.option.savescenarios:
-        save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction)
 
     source, destination, btc_amount, fee, data = blocks._get_tx_info(raw_transaction)
     transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
@@ -170,12 +180,79 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
     cursor.close()
 
-    util.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
+    MOCK_UTXO_SET.add_raw_transaction(raw_transaction, tx_id=tx_hash, confirmations=1)
+
+    util.CURRENT_BLOCK_INDEX = block_index
     blocks.parse_block(db, block_index, block_time)
     return tx
 
+
+def insert_unconfirmed_raw_transaction(raw_transaction, db):
+    """Add a raw transaction to the database."""
+    # one transaction per block
+    cursor = db.cursor()
+
+    tx_hash = dummy_tx_hash(raw_transaction)
+
+    # this isn't really correct, but it will do
+    tx_index = list(cursor.execute('''SELECT tx_index FROM transactions ORDER BY tx_index DESC LIMIT 1'''))
+    tx_index = tx_index[0]['tx_index'] if len(tx_index) else 0
+    tx_index = tx_index + 1
+
+    source, destination, btc_amount, fee, data = blocks._get_tx_info(raw_transaction)
+    tx = {
+        'tx_index': tx_index,
+        'tx_hash': tx_hash,
+        'block_index': config.MEMPOOL_BLOCK_INDEX,
+        'block_hash': config.MEMPOOL_BLOCK_HASH,
+        'block_time': int(time.time()),
+        'source': source,
+        'destination': destination,
+        'btc_amount': btc_amount,
+        'fee': fee,
+        'data': data,
+        'supported': True
+    }
+
+    cursor.close()
+
+    MOCK_UTXO_SET.add_raw_transaction(raw_transaction, tx_id=tx_hash, confirmations=0)
+
+    return tx
+
+
+UNIQUE_DUMMY_TX_HASH = {}
+def dummy_tx_hash(raw_transaction):
+    global UNIQUE_DUMMY_TX_HASH
+
+    tx = pycoin.tx.Tx.from_hex(raw_transaction)
+
+    # normalize inputs
+    for txin in tx.txs_in:
+        txin.previous_hash = b'\x00' * 32
+        txin.previous_index = 0
+        txin.script = b'\x00'
+
+    # check if we have a change output
+    if tx.txs_out[-1].coin_value not in [0, config.DEFAULT_REGULAR_DUST_SIZE, config.DEFAULT_MULTISIG_DUST_SIZE, config.DEFAULT_OP_RETURN_VALUE]:
+        tx.txs_out[-1].coin_value = 0  # set change to 0
+
+    tx_id = tx.id()
+
+    # check we haven't created this before (if we do 2 exactly the sends for example)
+    if tx_id in UNIQUE_DUMMY_TX_HASH:
+        logger.warn('BUMP TXID %s' % tx_id)
+        UNIQUE_DUMMY_TX_HASH[tx_id] += 1
+        tx_id = hashlib.sha256('{}{}'.format(tx_id, UNIQUE_DUMMY_TX_HASH[tx_id]).encode('utf-8')).hexdigest()
+    else:
+        UNIQUE_DUMMY_TX_HASH[tx_id] = 0
+
+    return tx_id
+
+
 def insert_transaction(transaction, db):
     """Add a transaction to the database."""
+
     cursor = db.cursor()
     block = (transaction['block_index'], transaction['block_hash'], transaction['block_time'], None, None, None, None)
     cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty) 
@@ -187,19 +264,26 @@ def insert_transaction(transaction, db):
 
 
 def initialise_rawtransactions_db(db):
+    cursor = db.cursor()
+    cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT)')
+    cursor.close()
+
+    prefill_rawtransactions_db(db)
+
+
+def prefill_rawtransactions_db(db):
     """Drop old raw transaction table, create new one and populate it from unspent_outputs.json."""
-    if pytest.config.option.savescenarios:
-        server.initialise(database_file=':memory:', testnet=True, **COUNTERPARTYD_OPTIONS)
-        cursor = db.cursor()
-        cursor.execute('DROP TABLE  IF EXISTS raw_transactions')
-        cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT)')
-        with open(CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
-                wallet_unspent = json.load(listunspent_test_file)
-                for output in wallet_unspent:
-                    txid = binascii.hexlify(bitcoinlib.core.lx(output['txid'])).decode()
-                    tx = backend.deserialize(output['txhex'])
-                    cursor.execute('INSERT INTO raw_transactions VALUES (?, ?)', (txid, output['txhex']))
-        cursor.close()
+    cursor = db.cursor()
+    cursor.execute('DROP TABLE  IF EXISTS raw_transactions')
+    cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT)')
+    with open(CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
+            wallet_unspent = json.load(listunspent_test_file)
+            for output in wallet_unspent:
+                txid = binascii.hexlify(bitcoinlib.core.lx(output['txid'])).decode()
+                tx = backend.deserialize(output['txhex'])
+                cursor.execute('INSERT INTO raw_transactions VALUES (?, ?)', (txid, output['txhex']))
+    cursor.close()
+
 
 def save_rawtransaction(db, tx_hash, tx_hex):
     """Insert the raw transaction into the db."""
@@ -224,7 +308,7 @@ def initialise_db(db):
     blocks.initialise(db)
     insert_block(db, config.BLOCK_FIRST - 1, parse_block=True)
 
-def run_scenario(scenario, rawtransactions_db):
+def run_scenario(scenario):
     """Execute a scenario for integration test, returns a dump of the db, a json with raw transactions and the full log."""
     server.initialise(database_file=':memory:', testnet=True, **COUNTERPARTYD_OPTIONS)
     config.PREFIX = b'TESTXXXX'
@@ -255,7 +339,7 @@ def run_scenario(scenario, rawtransactions_db):
             compose = getattr(module, 'compose')
             unsigned_tx_hex = transaction.construct(db, compose(db, *tx[1]), **tx[2])
             raw_transactions.append({tx[0]: unsigned_tx_hex})
-            insert_raw_transaction(unsigned_tx_hex, db, rawtransactions_db)
+            insert_raw_transaction(unsigned_tx_hex, db)
         else:
             create_next_block(db, block_index=config.BURN_START + tx[1], parse_block=tx[2] if len(tx) == 3 else True)
 
@@ -266,9 +350,13 @@ def run_scenario(scenario, rawtransactions_db):
     check.CHECKPOINTS_TESTNET = checkpoints
     return dump, log, json.dumps(raw_transactions, indent=4)
 
-def save_scenario(scenario_name, rawtransactions_db):
+def save_scenario(scenario_name):
     """Save currently run scenario's output for comparison with the expected outputs."""
-    dump, log, raw_transactions = run_scenario(INTEGRATION_SCENARIOS[scenario_name][0], rawtransactions_db)
+    dump, log, raw_transactions = run_scenario(INTEGRATION_SCENARIOS[scenario_name][0])
+
+    save_scenario_output(scenario_name, dump, log, raw_transactions)
+
+def save_scenario_output(scenario_name, dump, log, raw_transactions):
     with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.new.sql', 'w') as f:
         f.writelines(dump)
     with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.new.log', 'w') as f:
