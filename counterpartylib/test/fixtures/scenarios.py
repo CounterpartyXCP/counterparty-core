@@ -150,7 +150,7 @@ standard_scenarios_params = {
         'address1': MULTISIGADDR[0],
         'address2': MULTISIGADDR[1],
         'order_matches': [
-            '2593e61dff78d2397647bfa9c14c7b17b23b2bb1b446bde8dd23f537b56870df_301a1c1b0c88420b983205bdac1d0e44cb2d971afeaf7f8ce9b48df3b256d5dd'
+            '604a3ca772de07ae2447c8dce9390aa1581ad4f68ff516543a4ca0da3509b4fe_624974b8f7781d86784b0798c32f3edca7cd05b664715686d40f39eda23bb3bf'
         ]
     },
     'multisig_2_of_2': {
@@ -178,7 +178,7 @@ standard_scenarios_params = {
         'address1': MULTISIGADDR[9],
         'address2': MULTISIGADDR[10],
         'order_matches': [
-            '17500c776ecb9d1aad1cfa0407e2248c890537934132bb6ec52970c3530a157b_1f96219c284999758bb60ee7169a3c13ec95ff5766228444d697ded138c26ccf'
+            '04f9497e4caab67eaced7f9feb24234d677b3a97f68aadb97abf667965af125d_8ffb66ce68e631e7be386afbfd500c98130c2c5cc789c3105b215cede43674c4'
         ]
     }
 }
