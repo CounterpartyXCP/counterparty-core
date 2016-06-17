@@ -795,6 +795,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def mpc_create_commit(state, quantity, revoke_secret_hash, delay_time):
+            # FIXME disable_utxo_locks
             netcode = "XTN" if config.TESTNET else "BTC"
             fee = 10000  # FIXME fee not needed, determind by depost btc - dust
             regular_dust_size = config.DEFAULT_REGULAR_DUST_SIZE
