@@ -15,7 +15,6 @@ import decimal
 import logging
 logger = logging.getLogger(__name__)
 import requests
-from Crypto.Cipher import ARC4
 from bitcoin.core.script import CScript
 from bitcoin.core import x
 from bitcoin.core import b2lx
@@ -26,6 +25,7 @@ from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 from counterpartylib.lib import script
 from counterpartylib.lib import backend
+from counterpartylib.lib import arc4
 
 # Constants
 OP_RETURN = b'\x6a'
@@ -241,7 +241,7 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
         data_chunk = config.PREFIX + data_chunk
 
         # Initialise encryption key (once per output).
-        key = ARC4.new(binascii.unhexlify(inputs[0]['txid']))  # Arbitrary, easy‐to‐find, unique key.
+        key = arc4.init_arc4(inputs[0]['txid'])  # Arbitrary, easy‐to‐find, unique key.
 
         if encoding == 'multisig':
             assert dust_return_pubkey
@@ -442,15 +442,12 @@ def construct (db, tx_info, encoding='auto',
         data_output_size = 25 + 9   # Pay‐to‐PubKeyHash (25 for the data?)
     outputs_size = ((25 + 9) * len(destination_outputs)) + (len(data_array) * data_output_size)
 
-    # Get inputs.
-    multisig_inputs = not data
-
     use_inputs = custom_inputs # Array of UTXOs, as retrieved by listunspent function from bitcoind
     if custom_inputs is None:
         if unspent_tx_hash is not None:
-            unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash, multisig_inputs=multisig_inputs)
+            unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash)
         else:
-            unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, multisig_inputs=multisig_inputs)
+            unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs)
 
         # filter out any locked UTXOs to prevent creating transactions that spend the same UTXO when they're created at the same time
         if UTXO_LOCKS is not None and source in UTXO_LOCKS:
