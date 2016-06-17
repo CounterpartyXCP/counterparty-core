@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import sys
 import os
@@ -9,7 +9,7 @@ DIR = "counterpartylib/test/fixtures/scenarios"
 REGEX = r"^(?P<name>.*)\.new(?P<ext>\..*)$"
 
 dryrun = '--dry-run' in sys.argv or '--dryrun' in sys.argv
-args = filter(lambda a: a not in [__file__, '--dry-run', '--dryrun'], sys.argv)
+args = list(filter(lambda a: a not in [__file__, '--dry-run', '--dryrun'], sys.argv))
 
 filematch = None
 if len(args) == 1:
