@@ -1,9 +1,11 @@
 # Keep this as non-docker for now, to give some variety to our test configurations, as travis builds with docker
 dependencies:
     override:
-        - rm -rf /home/ubuntu/virtualenvs/venv-3.4.1/bin/serpent
+        - rm -rf /home/ubuntu/virtualenvs/venv-*/bin/serpent
+        - rm -rf /home/ubuntu/virtualenvs/venv-*/lib/python3.4/site-packages/apsw*
         - pip install -r requirements.txt
         - python setup.py install --with-serpent
+        - python -c "import apsw; print(apsw.apswversion())"
 test:
     override:
         - py.test --verbose --capture=no counterpartylib/test/unit_test.py
