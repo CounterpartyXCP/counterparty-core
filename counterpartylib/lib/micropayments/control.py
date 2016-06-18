@@ -515,8 +515,8 @@ def _validate_channel_unused(dispatcher, channel_address):
         raise exceptions.ChannelAlreadyUsed(channel_address, transactions)
 
 
-def _recover_tx(dispatcher, asset, dest_address,
-                script, netcode, fee, regular_dust_size, sequence):
+def _recover_tx(dispatcher, asset, dest_address, script, netcode, fee,
+                regular_dust_size, sequence):
 
     # get channel info
     src_address = util.script2address(script, netcode)
@@ -526,7 +526,8 @@ def _recover_tx(dispatcher, asset, dest_address,
 
     # create expire tx
     rawtx = _create_tx(dispatcher, asset, src_address, dest_address,
-                       asset_balance, btc_balance - fee, fee, regular_dust_size)
+                       asset_balance, btc_balance - fee, fee,
+                       regular_dust_size, True)
 
     # prep for script compliance and signing
     tx = pycoin.tx.Tx.from_hex(rawtx)
@@ -588,7 +589,7 @@ def _create_commit(dispatcher, asset, deposit_script, quantity,
     else:  # provide extra btc for future payout/revoke tx fees
         extra_btc = (fee + regular_dust_size)
     rawtx = _create_tx(dispatcher, asset, src_address, dest_address, quantity,
-                       extra_btc, fee, regular_dust_size)
+                       extra_btc, fee, regular_dust_size, True)
 
     return rawtx, commit_script
 
@@ -608,12 +609,12 @@ def _create_deposit(dispatcher, asset, payer_pubkey, payee_pubkey,
     extra_btc = (fee + regular_dust_size) * 3
 
     rawtx = _create_tx(dispatcher, asset, payer_address, dest_address,
-                       quantity, extra_btc, fee, regular_dust_size)
+                       quantity, extra_btc, fee, regular_dust_size, False)
     return rawtx, script
 
 
 def _create_tx(dispatcher, asset, source_address, dest_address, quantity,
-               extra_btc, fee, regular_dust_size):
+               extra_btc, fee, regular_dust_size, disable_utxo_locks):
     assert(extra_btc >= 0)
     rawtx = dispatcher.get("create_send")(
         source=source_address,
@@ -621,7 +622,8 @@ def _create_tx(dispatcher, asset, source_address, dest_address, quantity,
         quantity=quantity,
         asset=asset,
         regular_dust_size=(extra_btc or regular_dust_size),
-        fee=fee
+        fee=fee,
+        disable_utxo_locks=disable_utxo_locks
     )
     assert(_get_quantity(dispatcher, asset, rawtx) == quantity)
     return rawtx
