@@ -164,11 +164,15 @@ def parse (db, tx, message):
         'locked': lock,
         'status': status,
     }
-    sql='insert into broadcasts values(:tx_index, :tx_hash, :block_index, :source, :timestamp, :value, :fee_fraction_int, :text, :locked, :status)'
+    sql = 'insert into broadcasts values(:tx_index, :tx_hash, :block_index, :source, :timestamp, :value, :fee_fraction_int, :text, :locked, :status)'
     cursor.execute(sql, bindings)
 
+    # stop processing if broadcast is invalid for any reason
+    if util.enabled('broadcast_invalid_check') and status != 'valid':
+        return
+
     # Negative values (default to ignore).
-    if value == None or value < 0:
+    if value is None or value < 0:
         # Cancel Open Bets?
         if value == -2:
             cursor.execute('''SELECT * FROM bets \
@@ -186,16 +190,17 @@ def parse (db, tx, message):
         cursor.close()
         return
 
+    # stop processing if broadcast is invalid for any reason
+    # @TODO: remove this check once broadcast_invalid_check has been activated
+    if util.enabled('max_fee_fraction') and status != 'valid':
+        return
+
     # Handle bet matches that use this feed.
     cursor.execute('''SELECT * FROM bet_matches \
                       WHERE (status=? AND feed_address=?)
                       ORDER BY tx1_index ASC, tx0_index ASC''',
                    ('pending', tx['source']))
     for bet_match in cursor.fetchall():
-        if util.enabled('max_fee_fraction'):
-            if status != 'valid':
-                break
-
         broadcast_bet_match_cursor = db.cursor()
         bet_match_id = util.make_id(bet_match['tx0_hash'], bet_match['tx1_hash'])
         bet_match_status = None

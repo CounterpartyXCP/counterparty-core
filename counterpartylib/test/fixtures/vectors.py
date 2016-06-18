@@ -599,6 +599,45 @@ UNITTEST_VECTOR = {
                 }}
             ]
         }, {
+            'comment': 'attempt to cancel bet on LOCKED feed, should keep bet open',
+            'in': ({'fee': 10000, 'btc_amount': 0, 'supported': 1,
+                    'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58',
+                    'tx_index': 502, 'block_time': 310501000, 'destination': '', 'block_index': DP['default_block_index'],
+                    'source': ADDR[4], 'tx_hash': 'c9e8db96d520b0611218504801e74796ae4f476578512d21d3f99367ab8e356f',
+                    'data': b'\x00\x00\x00\x1eR\xbb4,\xc0\x00\x00\x00\x00\x00\x00\x00\x00LK@\tUnit Test'},),
+            'records': [
+                {'table': 'broadcasts', 'values':  {
+                    'block_index': DP['default_block_index'],
+                    'fee_fraction_int': 5000000,
+                    'locked': 0,
+                    'source': ADDR[4],
+                    'status': 'invalid: locked feed',
+                    'text': 'Unit Test',
+                    'timestamp': 1388000300,
+                    'tx_hash': 'c9e8db96d520b0611218504801e74796ae4f476578512d21d3f99367ab8e356f',
+                    'tx_index': 502,
+                    'value': -2.0,
+                }},
+                {'table': 'bets', 'values': {
+                    'bet_type': 1,
+                    'block_index': 310487,
+                    'counterwager_quantity': 9,
+                    'counterwager_remaining': 9,
+                    'deadline': 1388000001,
+                    'expiration': 100,
+                    'expire_index': 310587,
+                    'fee_fraction_int': 5000000,
+                    'feed_address': ADDR[4],
+                    'leverage': 5040,
+                    'source': ADDR[4],
+                    'status': 'open',
+                    'target_value': 0.0,
+                    'tx_hash': '69b9a535084fa5faf91acd7d056e2c32a85cc15d6a4d83b1adf091a344d22407',
+                    'tx_index': 488,
+                    'wager_quantity': 9,
+                    'wager_remaining': 9}}
+            ]
+        }, {
             'comment': 'LOCK',
             'in': ({'btc_amount': 0, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': '', 'block_index': DP['default_block_index'], 'fee': 10000, 'supported': 1, 'block_time': 310501000, 'tx_hash': '6b4a62b80f35b0e66df4591c8a445d453d995609e2df12afe93e742bea10dd86', 'tx_index': 502, 'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\x04LOCK'},),
             'records': [
@@ -2862,12 +2901,17 @@ UNITTEST_VECTOR = {
         }],
         'last_message': [{
             'in': (),
-            'out': {'block_index': 310496,
-                    'bindings': '{"asset": "XCP", "block_index": 310496, "destination": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "quantity": 92945878046, "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "status": "valid", "tx_hash": "54f4c7b383ea19147e62d2be9f3e7f70b6c379baac15e8b4cf43f7c21578c1ef", "tx_index": 497}',
+            'out': {'bindings': '{"asset": "XCP", "block_index": 310496, "destination": '
+                            '"mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "quantity": 92945878046, '
+                            '"source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "status": '
+                            '"valid", "tx_hash": '
+                            '"54f4c7b383ea19147e62d2be9f3e7f70b6c379baac15e8b4cf43f7c21578c1ef", '
+                            '"tx_index": 497}',
+                    'block_index': 310496,
                     'category': 'sends',
-                    'timestamp': 0,
-                    'message_index': 96,
-                    'command': 'insert'}
+                    'command': 'insert',
+                    'message_index': 100,
+                    'timestamp': 0}
         }],
         'get_asset_id': [{
             'in': ('XCP', DP['default_block_index']),
