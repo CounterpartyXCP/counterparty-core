@@ -140,7 +140,8 @@ class install_solc(_install):
 
     def initialize_options(self):
         self.global_install_solc = False
-        self.clean = True
+        self.clean_and_cp = False
+        self.clean = self.clean_and_cp and False
         _install.initialize_options(self)
 
     def finalize_options(self):
@@ -155,8 +156,9 @@ class install_solc(_install):
             print('Windows requires manual install, good luck ... @TODO')  # @TODO
             return
 
-        if not os.path.isdir("./webthree-umbrella"):
+        if not os.path.isdir("./webthree-umbrella/solidity"):
             print("downloading webthree-umbrella.")
+            os.system("rm -rf ./webthree-umbrella")
             print('git clone --recursive --branch v1.2.6 git://github.com/ethereum/webthree-umbrella.git')
             os.system('git clone --recursive --branch v1.2.6 git://github.com/ethereum/webthree-umbrella.git')
 
@@ -171,16 +173,26 @@ class install_solc(_install):
         print("building.")
         os.system('cd webthree-umbrella && ./webthree-helpers/scripts/ethbuild.sh --no-git --project solidity --cores 4 -DEVMJIT=0 -DETHASHCL=0 -DGUI=0')
 
-        print("copying to ./bin")
-        os.system('cp webthree-umbrella/solidity/build/solc/solc ./bin')
+        if self.clean_and_cp:
+            print("copying to ./bin")
+            os.system('cp webthree-umbrella/solidity/build/solc/solc ./bin/solc')
 
-        if self.global_install_solc:
-            print("copying to /usr/bin")
-            os.system('sudo cp webthree-umbrella/solidity/build/solc/solc /usr/bin/solc')
+            if self.global_install_solc:
+                print("copying to /usr/bin")
+                os.system('sudo cp webthree-umbrella/solidity/build/solc/solc /usr/bin/solc')
 
-        if self.clean:
-            print("clean files.")
-            shutil.rmtree('webthree-umbrella')
+            if self.clean:
+                print("clean files.")
+                shutil.rmtree('webthree-umbrella')
+        else:
+            print("symlinking to ./bin")
+            os.system('rm ./bin/solc')
+            os.system('ln -s `pwd`/webthree-umbrella/solidity/build/solc/solc ./bin/solc')
+
+            if self.global_install_solc:
+                print("symlinking to /usr/bin")
+                os.system('sudo rm /usr/bin/solc')
+                os.system('sudo ln -s `pwd`/webthree-umbrella/solidity/build/solc/solc /usr/bin/solc')
 
 
 class move_old_db(Command):
