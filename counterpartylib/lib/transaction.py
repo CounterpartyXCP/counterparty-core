@@ -317,7 +317,7 @@ def construct (db, tx_info, encoding='auto',
                multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                op_return_value=config.DEFAULT_OP_RETURN_VALUE,
                exact_fee=None, fee_provided=0, provided_pubkeys=None, dust_return_pubkey=None,
-               allow_unconfirmed_inputs=False, unspent_tx_hash=None, custom_inputs=None):
+               allow_unconfirmed_inputs=False, unspent_tx_hash=None, custom_inputs=None, disable_utxo_locks=False):
 
     global UTXO_LOCKS
 
@@ -499,7 +499,7 @@ def construct (db, tx_info, encoding='auto',
         raise exceptions.BalanceError('Insufficient {} at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(config.BTC, source, total_btc_out / config.UNIT, config.BTC))
 
     # Lock the source's inputs (UTXOs) chosen for this transaction
-    if UTXO_LOCKS is not None:
+    if UTXO_LOCKS is not None and not disable_utxo_locks:
         if source not in UTXO_LOCKS:
             UTXO_LOCKS[source] = cachetools.TTLCache(
                 UTXO_LOCKS_PER_ADDRESS_MAXSIZE, config.UTXO_LOCKS_MAX_AGE)
