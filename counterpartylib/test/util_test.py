@@ -2,27 +2,33 @@
 This module contains a variety of utility functions used in the test suite.
 """
 
-import os, sys, hashlib, binascii, time, decimal, logging, locale, re, io
-import difflib, json, inspect, tempfile, shutil
+import os
+import sys
+import hashlib
+import time
+import decimal
+import logging
+import locale
+import re
+import io
+import difflib
+import json
+import tempfile
 import pprint
-
-import apsw, pytest, requests
-from requests.auth import HTTPBasicAuth
+import apsw
+import pytest
+import binascii
+import appdirs
+import bitcoin as bitcoinlib
 
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
-import server
-from counterpartylib.lib import (config, api, util, exceptions, blocks, check, backend, database, transaction, script)
-from counterpartylib.lib.messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve)
+from counterpartylib import server
+from counterpartylib.lib import (config, util, blocks, check, backend, database, transaction)
 
-from fixtures.params import DEFAULT_PARAMS as DP
-from fixtures.scenarios import UNITTEST_FIXTURE, INTEGRATION_SCENARIOS, standard_scenarios_params
-
-import bitcoin as bitcoinlib
-import binascii
-
-import appdirs
+from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP
+from counterpartylib.test.fixtures.scenarios import UNITTEST_FIXTURE, INTEGRATION_SCENARIOS, standard_scenarios_params
 
 D = decimal.Decimal
 
@@ -38,8 +44,39 @@ COUNTERPARTYD_OPTIONS = {
     'rpc_password': 'pass',
     'backend_port': 18332,
     'backend_password': 'pass',
-    'backend_ssl_no_verify': True
+    'backend_ssl_no_verify': True,
+    'p2sh_dust_return_pubkey': '11' * 33,
+    'utxo_locks_max_addresses': 0  # Disable UTXO locking for base test suite runs
 }
+
+
+def init_database(sqlfile, dbfile, options=None):
+    kwargs = COUNTERPARTYD_OPTIONS.copy()
+    kwargs.update(options or {})
+
+    server.initialise(
+        database_file=dbfile,
+        testnet=True,
+        verbose=True,
+        console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None),
+        **kwargs)
+
+    restore_database(config.DATABASE, sqlfile)
+    db = database.get_connection(read_only=False)  # reinit the DB to deal with the restoring
+    database.update_version(db)
+    util.FIRST_MULTISIG_BLOCK_TESTNET = 1
+
+    return db
+
+
+def reset_current_block_index(db):
+    cursor = db.cursor()
+    latest_block = list(cursor.execute('''SELECT * FROM blocks ORDER BY block_index DESC LIMIT 1'''))[0]
+    util.CURRENT_BLOCK_INDEX = latest_block['block_index']
+    cursor.close()
+
+    return util.CURRENT_BLOCK_INDEX
+
 
 def dump_database(db):
     """Create a new database dump from db object as input."""
@@ -75,7 +112,6 @@ def restore_database(database_filename, dump_filename):
     with open(dump_filename, 'r') as sql_dump:
         cursor.execute(sql_dump.read())
     cursor.close()
-    return db
 
 def remove_database_files(database_filename):
     """Delete temporary db dumps."""
@@ -86,7 +122,7 @@ def remove_database_files(database_filename):
 def insert_block(db, block_index, parse_block=True):
     """Add blocks to the blockchain."""
     cursor = db.cursor()
-    block_hash = hashlib.sha512(chr(block_index).encode('utf-8')).hexdigest()
+    block_hash = util.dhash_string(chr(block_index))
     block_time = block_index * 1000
     block = (block_index, block_hash, block_time, None, None, None, None)
     cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty) 
@@ -127,7 +163,7 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     if pytest.config.option.savescenarios:
         save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction)
 
-    source, destination, btc_amount, fee, data = blocks.get_tx_info2(raw_transaction)
+    source, destination, btc_amount, fee, data = blocks._get_tx_info(raw_transaction)
     transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
     cursor.execute('''INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?)''', transaction)
     tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
@@ -283,22 +319,27 @@ def check_record(record, server_db):
         count = list(cursor.execute(sql, tuple(bindings)))[0]['c']
         if count != 1:
             if pytest.config.option.verbosediff:
-                pprint.pprint(record['values'])
-                pprint.pprint(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
-            assert False
+                pprint.PrettyPrinter(indent=4).pprint(record['values'])
+                pprint.PrettyPrinter(indent=4).pprint(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
+
+            raise AssertionError("check_record \n" +
+                                 "table=" + record['table'] + " \n" +
+                                 "condiitions=" + ",".join(conditions) + " \n" +
+                                 "bindings=" + ",".join(map(lambda v: str(v), bindings)))
 
 def vector_to_args(vector, functions=[]):
     """Translate from UNITTEST_VECTOR style to function arguments."""
     args = []
-    for tx_name in vector:
-        for method in vector[tx_name]:
+    for tx_name in sorted(vector.keys()):
+        for method in sorted(vector[tx_name].keys()):
             for params in vector[tx_name][method]:
                 error = params.get('error', None)
                 outputs = params.get('out', None)
                 records = params.get('records', None)
                 comment = params.get('comment', None)
+                mock_protocol_changes = params.get('mock_protocol_changes', None)
                 if functions == [] or (tx_name + '.' + method) in functions:
-                    args.append((tx_name, method, params['in'], outputs, error, records, comment))
+                    args.append((tx_name, method, params['in'], outputs, error, records, comment, mock_protocol_changes))
     return args
 
 def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
@@ -306,13 +347,14 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
     if tx_name == 'transaction' and method == 'construct':
         return tested_method(server_db, inputs[0], **inputs[1])
     elif (tx_name == 'util' and (method == 'api' or method == 'date_passed' or method == 'price' or method == 'generate_asset_id' \
-         or method == 'generate_asset_name' or method == 'dhash_string' or method == 'enabled' or method == 'get_url' or method == 'hexlify')) or tx_name == 'script' \
-        or (tx_name == 'blocks' and (method == 'get_tx_info' or method == 'get_tx_info1' or method == 'get_tx_info2')) or tx_name == 'transaction' or method == 'sortkeypicker':
+        or method == 'generate_asset_name' or method == 'dhash_string' or method == 'enabled' or method == 'get_url' or method == 'hexlify')) or tx_name == 'script' \
+        or (tx_name == 'blocks' and (method[:len('get_tx_info')] == 'get_tx_info')) or tx_name == 'transaction' or method == 'sortkeypicker'\
+        or tx_name == 'backend':
         return tested_method(*inputs)
     else:
         return tested_method(server_db, *inputs)
 
-def check_outputs(tx_name, method, inputs, outputs, error, records, comment, server_db):
+def check_outputs(tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, server_db):
     """Check actual and expected outputs of a particular function."""
 
     try:
@@ -320,6 +362,12 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, ser
     except KeyError:    # TODO: hack
         tested_module = sys.modules['counterpartylib.lib.messages.{}'.format(tx_name)]
     tested_method = getattr(tested_module, method)
+
+    # import here to avoid circular imports
+    from counterpartylib.test.conftest import MOCK_PROTOCOL_CHANGES
+    MOCK_PROTOCOL_CHANGES.clear()
+    if mock_protocol_changes:
+        MOCK_PROTOCOL_CHANGES.update(mock_protocol_changes)
 
     test_outputs = None
     if error is not None:
@@ -385,21 +433,17 @@ def reparse(testnet=True):
     options = dict(COUNTERPARTYD_OPTIONS)
     server.initialise(database_file=':memory:', testnet=testnet, **options)
 
+    logger = logging.getLogger()
+
     if testnet:
         config.PREFIX = b'TESTXXXX'
-
-    logger = logging.getLogger()
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(message)s')
-    console.setFormatter(formatter)
-    logger.addHandler(console)
 
     memory_db = database.get_connection(read_only=False)
     initialise_db(memory_db)
 
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
     prod_db_path = os.path.join(data_dir, '{}{}.db'.format(config.APP_NAME, '.testnet' if testnet else ''))
+    assert os.path.exists(prod_db_path), "database path {} does not exist".format(prod_db_path)
     prod_db = apsw.Connection(prod_db_path)
     prod_db.setrowtrace(database.rowtracer)
 
@@ -418,7 +462,7 @@ def reparse(testnet=True):
         CHECKPOINTS = check.CHECKPOINTS_MAINNET
     for block_index in CHECKPOINTS.keys():
         block_exists = bool(list(memory_cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,))))
-        assert block_exists
+        assert block_exists, "block #%d does not exist" % block_index
 
     # Clean consensus hashes if first block hash don’t match with checkpoint.
     checkpoints = check.CHECKPOINTS_TESTNET if config.TESTNET else check.CHECKPOINTS_MAINNET
@@ -449,7 +493,6 @@ def reparse(testnet=True):
                 block['block_index'], previous_ledger_hash[-5:], previous_txlist_hash[-5:], previous_messages_hash[-5:],
                 (' [overwrote %s]' % previous_found_messages_hash) if previous_found_messages_hash and previous_found_messages_hash != previous_messages_hash else ''))
 
-        
         except check.ConsensusError as e:
             message = str(e)
             if message.find('ledger_hash') != -1:

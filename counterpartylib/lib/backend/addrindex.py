@@ -14,12 +14,14 @@ import hashlib
 
 from counterpartylib.lib import config, script, util
 
-raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE) #used in getrawtransaction_batch()
+raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)  # used in getrawtransaction_batch()
 unconfirmed_transactions_cache = None
 reverse_unconfirmed_transactions_cache = None
 
+
 class BackendRPCError(Exception):
     pass
+
 
 def rpc_call(payload):
     url = config.BACKEND_URL
@@ -34,7 +36,7 @@ def rpc_call(payload):
                 logger.debug('Successfully connected.')
             break
         except (Timeout, ReadTimeout, ConnectionError):
-            logger.debug('Could not connect to backend at `{}`. (Try {}/{})'.format(url, i+1, TRIES))
+            logger.debug('Could not connect to backend at `{}`. (Try {}/{})'.format(util.clean_url_for_log(url), i+1, TRIES))
             time.sleep(5)
 
     if response == None:
@@ -42,7 +44,7 @@ def rpc_call(payload):
             network = 'testnet'
         else:
             network = 'mainnet'
-        raise BackendRPCError('Cannot communicate with backend at `{}`. (server is set to run on {}, is backend?)'.format(url, network))
+        raise BackendRPCError('Cannot communicate with backend at `{}`. (server is set to run on {}, is backend?)'.format(util.clean_url_for_log(url), network))
     elif response.status_code not in (200, 500):
         raise BackendRPCError(str(response.status_code) + ' ' + response.reason)
 

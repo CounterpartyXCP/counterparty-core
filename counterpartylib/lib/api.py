@@ -68,7 +68,7 @@ API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel',
 COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
                 'allow_unconfirmed_inputs', 'fee', 'fee_provided',
-                'unspent_tx_hash','custom_inputs']
+                'unspent_tx_hash', 'custom_inputs', 'dust_return_pubkey', 'disable_utxo_locks']
 
 API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
 API_MAX_LOG_COUNT = 10
@@ -268,7 +268,7 @@ def compose_transaction(db, name, params,
                         allow_unconfirmed_inputs=False,
                         fee=None,
                         fee_provided=0,
-                        unspent_tx_hash=None, custom_inputs=None):
+                        unspent_tx_hash=None, custom_inputs=None, dust_return_pubkey=None, disable_utxo_locks=False):
     """Create and return a transaction."""
 
     # Get provided pubkeys.
@@ -310,7 +310,9 @@ def compose_transaction(db, name, params,
                                         allow_unconfirmed_inputs=allow_unconfirmed_inputs,
                                         exact_fee=fee,
                                         fee_provided=fee_provided,
-                                        unspent_tx_hash=unspent_tx_hash, custom_inputs=custom_inputs)
+                                        unspent_tx_hash=unspent_tx_hash, custom_inputs=custom_inputs,
+                                        dust_return_pubkey=dust_return_pubkey,
+                                        disable_utxo_locks=disable_utxo_locks)
 
 def conditional_decorator(decorator, condition):
     """Checks the condition and if True applies specified decorator."""

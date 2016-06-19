@@ -3,6 +3,7 @@ from setuptools.command.install import install as _install
 from setuptools.command.bdist_egg import bdist_egg as _bdist_egg
 from setuptools import setup, find_packages, Command
 import inspect
+import ssl
 import os
 import zipfile
 import urllib.request
@@ -12,11 +13,13 @@ import shutil
 from counterpartylib.lib import config
 
 CURRENT_VERSION = config.VERSION_STRING
+APSW_VERSION = "3.8.7.3-r1"
+APSW_SHORT_VERSION = APSW_VERSION.replace('-r1', '')
 
 # NOTE: Why we don’t use the the PyPi package:
-# <https://code.google.com/p/apsw/source/detail?r=358a9623d051>
+# <https://github.com/rogerbinns/apsw/issues/66#issuecomment-31310364>
 class install_apsw(Command):
-    description = "Install APSW 3.8.7.3-r1 with the appropriate version of SQLite"
+    description = "Install APSW %s with the appropriate version of SQLite" % APSW_VERSION
     user_options = []
 
     def initialize_options(self):
@@ -27,20 +30,27 @@ class install_apsw(Command):
     def run(self):
         # In Windows APSW should be installed manually
         if os.name == 'nt':
-            print('To complete the installation you have to install APSW: https://github.com/rogerbinns/apsw/releases');
+            print('To complete the installation you have to install APSW: https://github.com/rogerbinns/apsw/releases')
             return
 
         try:
             import apsw
-            return
+            if apsw.apswversion() == APSW_VERSION:
+                print('APSW %s already installed' % apsw.apswversion())
+                return
+            else:
+                print('APSW %s already installed, need %s' % (apsw.apswversion(), APSW_VERSION))
+
         except:
             pass
 
         print("downloading apsw.")
-        urllib.request.urlretrieve('https://github.com/rogerbinns/apsw/archive/3.8.7.3-r1.zip', 'apsw-3.8.7.3-r1.zip')
+        with urllib.request.urlopen('https://github.com/rogerbinns/apsw/releases/download/%s/apsw-%s.zip' % (APSW_VERSION, APSW_VERSION)) as u, \
+                open('apsw-%s.zip' % APSW_VERSION, 'wb') as f:
+            f.write(u.read())
 
         print("extracting.")
-        with zipfile.ZipFile('apsw-3.8.7.3-r1.zip', 'r') as zip_file:
+        with zipfile.ZipFile('apsw-%s.zip' % APSW_VERSION, 'r') as zip_file:
             zip_file.extractall()
 
         executable = sys.executable
@@ -48,15 +58,15 @@ class install_apsw(Command):
             executable = "python"
 
         print("install apsw.")
-        install_command = ('cd apsw-3.8.7.3-r1 && {executable} '
-          'setup.py fetch --version=3.8.7.3 --all build '
-          '--enable-all-extensions install'.format(executable=executable)
+        install_command = ('cd apsw-{version} && {executable} '
+          'setup.py fetch --version={shortversion} --all build '
+          '--enable-all-extensions install'.format(executable=executable, version=APSW_VERSION, shortversion=APSW_SHORT_VERSION)
         )
         os.system(install_command)
 
         print("clean files.")
-        shutil.rmtree('apsw-3.8.7.3-r1')
-        os.remove('apsw-3.8.7.3-r1.zip')
+        shutil.rmtree('apsw-%s' % APSW_VERSION)
+        os.remove('apsw-%s.zip' % APSW_VERSION)
 
 class install_serpent(Command):
     description = "Install Ethereum Serpent"
@@ -189,30 +199,31 @@ class bdist_egg(_bdist_egg):
         self.execute(post_install, (self, False), msg="Running post install tasks")
 
 required_packages = [
-    'appdirs',
-    'python-dateutil',
-    'Flask-HTTPAuth',
-    'Flask',
-    'json-rpc',
-    'pytest',
-    'pytest-cov',
-    'pycoin',
-    'requests',
-    'pycrypto',
-    'tendo',
-    'pysha3',
-    'colorlog',
-    'python-bitcoinlib',
-    'xmltodict'
+    'python-dateutil==2.5.3',
+    'Flask-HTTPAuth==3.1.2',
+    'Flask==0.11',
+    'appdirs==1.4.0',
+    'colorlog==2.7.0',
+    'json-rpc==1.10.3',
+    'pycoin==0.62',
+    'pycrypto==2.6.1',
+    'pysha3==0.3',
+    'pytest==2.9.1',
+    'pytest-cov==2.2.1',
+    'python-bitcoinlib==0.5.0',
+    'requests==2.10.0',
+    'tendo==0.2.8',
+    'xmltodict==0.10.1',
+    'cachetools==1.1.6',
 ]
 
 setup_options = {
     'name': 'counterparty-lib',
     'version': CURRENT_VERSION,
-    'author': 'Counterparty Foundation',
-    'author_email': 'support@counterparty.io',
-    'maintainer': 'Adam Krellenstein',
-    'maintainer_email': 'adamk@counterparty.io',
+    'author': 'Counterparty Developers',
+    'author_email': 'dev@counterparty.io',
+    'maintainer': 'Counterparty Developers',
+    'maintainer_email': 'dev@counterparty.io',
     'url': 'http://counterparty.io',
     'license': 'MIT',
     'description': 'Counterparty Protocol Reference Implementation',

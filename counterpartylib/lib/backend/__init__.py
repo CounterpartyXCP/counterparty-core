@@ -162,9 +162,9 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False, unspent
     """
     if not MEMPOOL_CACHE_INITIALIZED:
         raise MempoolError('Mempool is not yet ready; please try again in a few minutes.')
-
+    
     # Get all outputs.
-    logger.debug('Getting outputs.')
+    logger.debug('Getting outputs for {}'.format(source))
     if unspent_tx_hash:
         raw_transactions = [getrawtransaction(unspent_tx_hash, verbose=True)]
     else:
@@ -177,7 +177,7 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False, unspent
 
     # Change format.
     # TODO: Slow.
-    logger.debug('Formatting outputs.')
+    logger.debug('Formatting outputs for {}'.format(source))
     outputs = {}
     for tx in raw_transactions:
         for vout in tx['vout']:
@@ -196,12 +196,12 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False, unspent
     outputs = sorted(outputs.values(), key=lambda x: x['confirmations'])
 
     # Prune unspendable.
-    logger.debug('Pruning unspendable outputs.')
+    logger.debug('Pruning unspendable outputs for {}'.format(source))
     # TODO: Slow.
     outputs = [output for output in outputs if is_scriptpubkey_spendable(output['scriptPubKey'], source)]
 
     # Prune spent outputs.
-    logger.debug('Pruning spent outputs.')
+    logger.debug('Pruning spent outputs for {}'.format(source))
     vins = {(vin['txid'], vin['vout']) for tx in raw_transactions for vin in tx['vin'] if 'coinbase' not in vin}
     unspent = []
     for output in outputs:
@@ -241,9 +241,13 @@ def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
                 scriptsig = vin['scriptSig']
                 asm = scriptsig['asm'].split(' ')
                 if len(asm) >= 2:
-                    pubkey = asm[1]
-                    if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
-                        return pubkey
+                    # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
+                    try:
+                        pubkey = asm[1]
+                        if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                            return pubkey
+                    except binascii.Error:
+                        pass
 
     raise UnknownPubKeyError('Public key was neither provided nor published in blockchain.')
 

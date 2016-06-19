@@ -19,6 +19,7 @@ from Crypto.Cipher import ARC4
 from bitcoin.core.script import CScript
 from bitcoin.core import x
 from bitcoin.core import b2lx
+import cachetools
 
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
@@ -37,11 +38,17 @@ OP_1 = b'\x51'
 OP_2 = b'\x52'
 OP_3 = b'\x53'
 OP_CHECKMULTISIG = b'\xae'
+OP_EQUAL = b'\x87'
 
 D = decimal.Decimal
+UTXO_LOCKS = None
+UTXO_LOCKS_PER_ADDRESS_MAXSIZE = 5000  # set higher than the max number of UTXOs we should expect to
+                                       # manage in an aging cache for any one source address, at any one period
+
 
 def print_coin(coin):
     return 'amount: {}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
+
 
 def var_int (i):
     if i < 0xfd:
@@ -53,6 +60,7 @@ def var_int (i):
     else:
         return b'\xff' + (i).to_bytes(8, byteorder='little')
 
+
 def op_push (i):
     if i < 0x4c:
         return (i).to_bytes(1, byteorder='little')              # Push i bytes.
@@ -62,6 +70,7 @@ def op_push (i):
         return b'\x4d' + (i).to_bytes(2, byteorder='little')    # OP_PUSHDATA2
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
+
 
 def get_dust_return_pubkey(source, provided_pubkeys, encoding):
     """Return the pubkey to which dust from data outputs will be sent.
@@ -84,6 +93,17 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
         raise script.InputError('Invalid private key.')
 
     return dust_return_pubkey
+
+
+def get_script(address):
+    if script.is_multisig(address):
+        return get_multisig_script(address)
+    else:
+        try:
+            return get_monosig_script(address)
+        except script.VersionByteError as e:
+            return get_p2sh_script(address)
+
 
 def get_multisig_script(address):
 
@@ -120,6 +140,7 @@ def get_multisig_script(address):
 
     return tx_script
 
+
 def get_monosig_script(address):
 
     # Construct script.
@@ -132,6 +153,19 @@ def get_monosig_script(address):
     tx_script += OP_CHECKSIG                               # OP_CHECKSIG
 
     return tx_script
+
+
+def get_p2sh_script(address):
+
+    # Construct script.
+    scripthash = script.base58_check_decode(address, config.P2SH_ADDRESSVERSION)
+    tx_script = OP_HASH160
+    tx_script += op_push(len(scripthash))
+    tx_script += scripthash
+    tx_script += OP_EQUAL
+
+    return tx_script
+
 
 def make_fully_valid(pubkey_start):
     """Take a too short data pubkey and make it look like a real pubkey.
@@ -194,10 +228,7 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
     for destination, value in destination_outputs:
         s += value.to_bytes(8, byteorder='little')          # Value
 
-        if script.is_multisig(destination):
-            tx_script = get_multisig_script(destination)
-        else:
-            tx_script = get_monosig_script(destination)
+        tx_script = get_script(destination)
 
         s += var_int(int(len(tx_script)))                      # Script length
         s += tx_script
@@ -260,10 +291,7 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
         change_address, change_value = change_output
         s += change_value.to_bytes(8, byteorder='little')   # Value
 
-        if script.is_multisig(change_address):
-            tx_script = get_multisig_script(change_address)
-        else:
-            tx_script = get_monosig_script(change_address)
+        tx_script = get_script(change_address)
 
         s += var_int(int(len(tx_script)))                      # Script length
         s += tx_script
@@ -271,21 +299,41 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
     s += (0).to_bytes(4, byteorder='little')                # LockTime
     return s
 
+
 def chunks(l, n):
     """ Yield successive n‐sized chunks from l.
     """
     for i in range(0, len(l), n):
         yield l[i:i+n]
 
+
+def make_outkey(output):
+    return '{}{}'.format(output['txid'], output['vout'])
+
+
 def construct (db, tx_info, encoding='auto',
                fee_per_kb=config.DEFAULT_FEE_PER_KB,
                regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                op_return_value=config.DEFAULT_OP_RETURN_VALUE,
-               exact_fee=None, fee_provided=0, provided_pubkeys=None,
-               allow_unconfirmed_inputs=False, unspent_tx_hash=None, custom_inputs=None):
+               exact_fee=None, fee_provided=0, provided_pubkeys=None, dust_return_pubkey=None,
+               allow_unconfirmed_inputs=False, unspent_tx_hash=None, custom_inputs=None, disable_utxo_locks=False):
+
+    global UTXO_LOCKS
 
     (source, destination_outputs, data) = tx_info
+
+    if dust_return_pubkey:
+        dust_return_pubkey = binascii.unhexlify(dust_return_pubkey)
+
+    # Source.
+        # If public key is necessary for construction of (unsigned)
+        # transaction, use the public key provided, or find it from the
+        # blockchain.
+    if source:
+        script.validate(source)
+
+    source_is_p2sh = script.is_p2sh(source)
 
     # Sanity checks.
     if exact_fee and not isinstance(exact_fee, int):
@@ -293,6 +341,8 @@ def construct (db, tx_info, encoding='auto',
     if not isinstance(fee_provided, int):
         raise exceptions.TransactionError('Fee provided must be in satoshis.')
 
+    if UTXO_LOCKS is None and config.UTXO_LOCKS_MAX_ADDRESSES > 0:  # initialize if configured
+        UTXO_LOCKS = util.DictCache(size=config.UTXO_LOCKS_MAX_ADDRESSES)
 
     '''Destinations'''
 
@@ -325,18 +375,27 @@ def construct (db, tx_info, encoding='auto',
 
     '''Data'''
 
-    # Data encoding methods (choose and validate).
     if data:
+        # Data encoding methods (choose and validate).
         if encoding == 'auto':
             if len(data) + len(config.PREFIX) <= config.OP_RETURN_MAX_SIZE:
                 encoding = 'opreturn'
             else:
                 encoding = 'multisig'
+
         elif encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
             raise exceptions.TransactionError('Unknown encoding‐scheme.')
 
-    # Divide data into chunks.
-    if data:
+
+        if encoding == 'multisig':
+            # dust_return_pubkey should be set or explicitly set to False to use the default configured for the node
+            #  the default for the node is optional so could fail
+            if (source_is_p2sh and dust_return_pubkey is None) or (dust_return_pubkey is False and config.P2SH_DUST_RETURN_PUBKEY is None):
+                raise exceptions.TransactionError("Can't use multisig encoding when source is P2SH and no dust_return_pubkey is provided.")
+            elif dust_return_pubkey is False:
+                dust_return_pubkey = binascii.unhexlify(config.P2SH_DUST_RETURN_PUBKEY)
+
+        # Divide data into chunks.
         if encoding == 'pubkeyhash':
             # Prefix is also a suffix here.
             chunk_size = 20 - 1 - 8
@@ -349,11 +408,8 @@ def construct (db, tx_info, encoding='auto',
             if len(data) + len(config.PREFIX) > chunk_size:
                 raise exceptions.TransactionError('One `OP_RETURN` output per transaction.')
         data_array = list(chunks(data, chunk_size))
-    else:
-        data_array = []
 
-    # Data outputs.
-    if data:
+        # Data outputs.
         if encoding == 'multisig':
             data_value = multisig_dust_size
         elif encoding == 'opreturn':
@@ -362,23 +418,20 @@ def construct (db, tx_info, encoding='auto',
             # Pay‐to‐PubKeyHash, e.g.
             data_value = regular_dust_size
         data_output = (data_array, data_value)
+
+        if not dust_return_pubkey:
+            if encoding == 'multisig':
+                dust_return_pubkey = get_dust_return_pubkey(source, provided_pubkeys, encoding)
+            else:
+                dust_return_pubkey = None
     else:
+        data_array = []
         data_output = None
+        dust_return_pubkey = None
+
     data_btc_out = sum([data_value for data_chunk in data_array])
 
-
     '''Inputs'''
-
-    # Source.
-        # If public key is necessary for construction of (unsigned)
-        # transaction, use the public key provided, or find it from the
-        # blockchain.
-    if source:
-        script.validate(source)
-    if encoding == 'multisig':
-        dust_return_pubkey = get_dust_return_pubkey(source, provided_pubkeys, encoding)
-    else:
-        dust_return_pubkey = None
 
     # Calculate collective size of outputs, for fee calculation.
     if encoding == 'multisig':
@@ -399,10 +452,15 @@ def construct (db, tx_info, encoding='auto',
         else:
             unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, multisig_inputs=multisig_inputs)
 
-        unspent = backend.sort_unspent_txouts(unspent)
-        logger.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
-        use_inputs = unspent
+        # filter out any locked UTXOs to prevent creating transactions that spend the same UTXO when they're created at the same time
+        if UTXO_LOCKS is not None and source in UTXO_LOCKS:
+            unspentkeys = {make_outkey(output) for output in unspent}
+            filtered_unspentkeys = unspentkeys - UTXO_LOCKS[source].keys()
+            unspent = [output for output in unspent if make_outkey(output) in filtered_unspentkeys]
 
+        unspent = backend.sort_unspent_txouts(unspent)
+        logger.debug('Sorted candidate UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
+        use_inputs = unspent
 
     inputs = []
     btc_in = 0
@@ -440,6 +498,18 @@ def construct (db, tx_info, encoding='auto',
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
         raise exceptions.BalanceError('Insufficient {} at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(config.BTC, source, total_btc_out / config.UNIT, config.BTC))
 
+    # Lock the source's inputs (UTXOs) chosen for this transaction
+    if UTXO_LOCKS is not None and not disable_utxo_locks:
+        if source not in UTXO_LOCKS:
+            UTXO_LOCKS[source] = cachetools.TTLCache(
+                UTXO_LOCKS_PER_ADDRESS_MAXSIZE, config.UTXO_LOCKS_MAX_AGE)
+
+        for input in inputs:
+            UTXO_LOCKS[source][make_outkey(input)] = input
+
+        logger.debug("UTXO locks: Potentials ({}): {}, Used: {}, locked UTXOs: {}".format(
+            len(unspent), [make_outkey(coin) for coin in unspent],
+            [make_outkey(input) for input in inputs], list(UTXO_LOCKS[source].keys())))
 
     '''Finish'''
 
@@ -481,7 +551,7 @@ def construct (db, tx_info, encoding='auto',
 
     # Parsed transaction info.
     try:
-        parsed_source, parsed_destination, x, y, parsed_data = blocks.get_tx_info2(unsigned_tx_hex)
+        parsed_source, parsed_destination, x, y, parsed_data = blocks._get_tx_info(unsigned_tx_hex)
     except exceptions.BTCOnlyError:
         # Skip BTC‐only transactions.
         return unsigned_tx_hex
@@ -491,6 +561,10 @@ def construct (db, tx_info, encoding='auto',
     desired = (desired_source, desired_destination, desired_data)
     parsed = (parsed_source, parsed_destination, parsed_data)
     if desired != parsed:
+        # Unlock (revert) UTXO locks
+        for input in inputs:
+            UTXO_LOCKS[source].pop(make_outkey(input), None)
+
         raise exceptions.TransactionError('Constructed transaction does not parse correctly: {} ≠ {}'.format(desired, parsed))
 
     return unsigned_tx_hex
