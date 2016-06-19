@@ -734,6 +734,10 @@ def expire (db, block_index):
                 cursor.execute('''SELECT * FROM orders \
                                   WHERE tx_hash = ?''', (order_match['tx1_hash'],))
                 cancel_order(db, list(cursor)[0], 'expired', block_index)
+            if order_match['forward_asset'] == "BTC" and order_match['status'] == "expired":
+                cursor.execute('''SELECT * FROM orders \
+                                  WHERE tx_hash = ?''', (order_match['tx0_hash'],))
+                cancel_order(db, list(cursor)[0], 'expired', block_index)
         
     if block_index >= 315000 or config.TESTNET: # Protocol change.
         # Re‐match.
