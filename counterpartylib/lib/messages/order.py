@@ -643,7 +643,7 @@ def match (db, tx, block_index=None):
                 if tx0['give_asset'] != config.BTC and tx0['get_asset'] != config.BTC:
                     # Fill order, and recredit give_remaining.
                     tx0_status = 'filled'
-                    util.credit(db, tx0['source'], tx0['give_asset'], tx0_give_remaining, event=tx1['tx_hash'], action='filled')      
+                    util.credit(db, tx0['source'], tx0['give_asset'], tx0_give_remaining, event=tx1['tx_hash'], action='filled')
             bindings = {
                 'give_remaining': tx0_give_remaining,
                 'get_remaining': tx0_get_remaining,
