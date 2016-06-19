@@ -130,15 +130,15 @@ def parse (db, tx, message):
             # Credit source address for the currency that he bought with the bitcoins.
             util.credit(db, tx['source'], escrowed_asset, escrowed_quantity, action='btcpay', event=tx['tx_hash'])
             status = 'valid'
-
-            # Update order status
+         
+            # Update give and get order status
             if util.enabled('btc_order_status'):
                 bindings = {
                     'status': 'filled',
                     'tx0_hash': tx0_hash,
                     'tx1_hash': tx1_hash
                 }
-                sql='update orders set status = :status where tx_hash in (:tx0_hash, :tx1_hash)'
+                sql='update orders set status = :status where ((tx_hash in (:tx0_hash, :tx1_hash)) and ((give_remaining = 0) or (get_remaining = 0)))'           
                 cursor.execute(sql, bindings)  
             
             # Update order match.
