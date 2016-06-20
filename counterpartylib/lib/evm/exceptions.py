@@ -1,12 +1,16 @@
-class UnknownParentException(Exception):
+class EVMException(Exception):
     pass
 
 
-class VerificationFailed(Exception):
+class UnknownParentException(EVMException):
     pass
 
 
-class InvalidTransaction(Exception):
+class VerificationFailed(EVMException):
+    pass
+
+
+class InvalidTransaction(EVMException):
     pass
 
 
@@ -34,5 +38,9 @@ class GasPriceTooLow(InvalidTransaction):
     pass
 
 
-class ContractError(Exception):
+class ContractError(EVMException):
+    pass
+
+
+class SnapshotRequired(EVMException):
     pass

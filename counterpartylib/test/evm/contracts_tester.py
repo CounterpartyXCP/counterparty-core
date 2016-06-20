@@ -198,8 +198,8 @@ class state(object):
 
         return ABIContract(self, _abi, address, _translator=_translator)
 
-    def evm(self, evm, sender=DEFAULT_SENDER, endowment=0):
-        tx, success, output = self.do_send(sender, '', endowment, evm)
+    def evm(self, evm, sender=DEFAULT_SENDER, endowment=0, startgas=DEFAULT_STARTGAS):
+        tx, success, output = self.do_send(sender, '', endowment, evm, startgas=startgas)
         if not success:
             raise ContractCreationFailed()
 

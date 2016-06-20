@@ -14,10 +14,13 @@ we need to append log_listeners to `contract_tester.state.log_listeners` instead
 
 TODO
 ====
+ - WINDOWS INSTALL
  - ecrecover
 
  - block gas limit
  - execution order
+
+ - contract creation rollback
 
  - UnitTests
    - blocks

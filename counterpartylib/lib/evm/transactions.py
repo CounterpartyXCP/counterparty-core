@@ -60,8 +60,12 @@ class Transaction(object):
 
     @property
     def intrinsic_gas_used(self):
-        num_zero_bytes = str_to_bytes(self.data).count(ascii_chr(0))
-        num_non_zero_bytes = len(self.data) - num_zero_bytes
+        return Transaction.intrinsic_gas_used_for_data(self.data)
+
+    @classmethod
+    def intrinsic_gas_used_for_data(cls, data):
+        num_zero_bytes = str_to_bytes(data).count(ascii_chr(0))
+        num_non_zero_bytes = len(data) - num_zero_bytes
         return (opcodes.GTXCOST
                 + opcodes.GTXDATAZERO * num_zero_bytes
                 + opcodes.GTXDATANONZERO * num_non_zero_bytes)
