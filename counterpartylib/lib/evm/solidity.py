@@ -18,6 +18,12 @@ class CompileError(Exception):
     pass
 
 
+def remove_comments(string):
+            string = re.sub(re.compile("/\*.*?\*/",re.DOTALL ) ,"" ,string) # remove all occurance streamed comments (/*COMMENT */) from string
+            string = re.sub(re.compile("//.*?\n" ) ,"" ,string) # remove all occurance singleline comments (//COMMENT\n ) from string
+            return string
+
+
 class solc_wrapper(object):
 
     "wraps solc binary"
@@ -44,7 +50,14 @@ class solc_wrapper(object):
 
     @classmethod
     def contract_names(cls, code):
-        return re.findall(r'^\s*(contract|library) (\S*) ', code, re.MULTILINE)
+        """ Return the library and contract names in order of appearence. """
+        names = []
+        cleancode = remove_comments(code)
+
+        for m in re.findall(r'^\s*?(contract|library)\s+?(\S*?)\s+?', cleancode, re.MULTILINE):
+            names.append((m[0], m[1]))
+
+        return names
 
     @classmethod
     def compile(cls, code, path=None, libraries=None, contract_name=''):
