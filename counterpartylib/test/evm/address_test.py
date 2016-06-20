@@ -46,6 +46,24 @@ def test_equals():
     assert address.Address.normalize("mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc") != None
 
 
+def test_hash():
+    a = address.Address.normalize("mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc")
+
+    assert hash(a) == a.int() % address.HASHSIZE ** 8
+
+
+def test_unique_set():
+    a1 = address.Address.normalize("mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc")
+    a2 = address.Address.normalize("tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt")
+
+    # cast list to set to make it unique
+    s = set([a1, a1, a2, a2])
+
+    assert len(s) == 2
+    assert a1 in s
+    assert a2 in s
+
+
 def test_mk_contract_address():
     assert address.mk_contract_address(
         "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",

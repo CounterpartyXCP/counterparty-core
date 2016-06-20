@@ -1,6 +1,7 @@
 import hashlib
 import pprint
 import logging
+import sys
 
 import binascii
 
@@ -14,9 +15,25 @@ VERSION_BYTE_LENGTH = 1
 DATA_LENGTH = 20
 CHECKSUM_LENGTH = 4
 
+# hashsize in bytes
+HASHSIZE = int(sys.hash_info.width / 8)
+
 
 class AddressNormalizeError(Exception):
     pass
+
+
+def unique_address_list(l):
+    keys = {}
+    result = []
+    for a in l:
+        assert isinstance(a, Address)
+        key = a.bytes32()
+
+        if key not in keys:
+            result.append(a)
+
+    return result
 
 
 class Address(object):
@@ -48,6 +65,9 @@ class Address(object):
 
         return ethutils.big_endian_to_int(i)
 
+    def __hash__(self):
+        return self.int() % HASHSIZE ** 8
+
     def __eq__(self, other):
         try:
             other = Address.normalize(other)
@@ -56,7 +76,7 @@ class Address(object):
         except Exception as e:
             return False
 
-        return self.bytes32() == other.bytes32()
+        return hash(self) == hash(other)
 
     def __repr__(self):
         return '<%s %s %s>' % (

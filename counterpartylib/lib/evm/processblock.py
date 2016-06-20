@@ -15,7 +15,7 @@ from counterpartylib.lib import util
 from counterpartylib.lib import config
 from counterpartylib.lib import script
 from counterpartylib.lib.evm import exceptions
-from counterpartylib.lib.evm.address import Address, mk_contract_address
+from counterpartylib.lib.evm.address import Address, mk_contract_address, unique_address_list
 
 
 sys.setrecursionlimit(100000)
@@ -127,9 +127,7 @@ def apply_transaction(db, block, tx):
 
     # start transacting #################
 
-    snapshot = block.snapshot()
-    revert = None
-    try:
+    with block.snapshot_context() as snapshot:
         block.increment_nonce(tx.sender)
 
         # buy startgas
@@ -163,7 +161,7 @@ def apply_transaction(db, block, tx):
         else:
             log_tx.debug('TX SUCCESS', data=data)
             gas_used = tx.startgas - gas_remained
-            block.refunds += len(set(block.suicides)) * opcodes.GSUICIDEREFUND
+            block.refunds += len(unique_address_list(block.suicides)) * opcodes.GSUICIDEREFUND
             if block.refunds > 0:
                 log_tx.debug('Refunding', gas_refunded=min(block.refunds, gas_used // 2))
                 gas_remained += min(block.refunds, gas_used // 2)
@@ -178,31 +176,14 @@ def apply_transaction(db, block, tx):
                 output = data
             success = 1
 
-        suicides = block.suicides
+        suicides = unique_address_list(block.suicides)
         block.suicides = []
         for s in suicides:
             block.del_account(s)
         block.logs = []
 
-        revert = not success
+        snapshot.finish(revert=not success)
         return success, output, gas_remained
-
-    # all exceptions will result in a revert
-    except Exception as e:
-        revert = True
-        raise e
-
-    # always either revert or release
-    finally:
-        # check to make sure any changes don't result in excidently returning before setting `revert`
-        if revert is None:
-            raise Exception("Finishing apply_transaction without explicitly reverting or releasing the snapshot")
-
-        if revert:
-            block.revert(snapshot)
-        else:
-            block.release(snapshot)
-
 
 
 # External calls that can be made from inside the VM. To use the EVM with a
@@ -281,32 +262,35 @@ def _apply_msg(db, tx, ext, msg, code):
     gas = 0
     dat = []
 
-    if msg.transfers_value:
-        # Transfer value, instaquit if not enough
-        log_msg.debug('TRANSFER %s -> %s: %d' % (msg.sender, msg.to, msg.value))
-        if not ext._block.transfer_value(msg.sender, msg.to, msg.value, tx=tx, action='transfer value'):
-            log_msg.debug('MSG TRANSFER FAILED', have=ext.get_balance(msg.to), want=msg.value)
-            return 1, msg.gas, []
+    with ext._block.snapshot_context() as snapshot:
+        if msg.transfers_value:
+            # Transfer value, instaquit if not enough
+            log_msg.debug('TRANSFER %s -> %s: %d' % (msg.sender, msg.to, msg.value))
+            if not ext._block.transfer_value(msg.sender, msg.to, msg.value, tx=tx, action='transfer value'):
+                log_msg.debug('MSG TRANSFER FAILED', have=ext.get_balance(msg.to), want=msg.value)
+                snapshot.release()
+                return 1, msg.gas, []  # @TODO: failure returns 1?
 
-    # Main loop
-    if msg.code_address and msg.code_address.data in specials.specials:
-        res, gas, dat = specials.specials[msg.code_address.data](ext, msg)
-    else:
-        res, gas, dat = vm.vm_execute(ext, msg, code)
-    # gas = int(gas)
-    # assert ethutils.is_numeric(gas)
-    if trace_msg:
-        log_msg.warn('MSG APPLIED', gas_remained=gas,
-                      sender=msg.sender, to=msg.to, data=dat, res=res)
-        if log_state.is_active('trace'):
-            log_state.trace('MSG POST STATE SENDER', account=msg.sender.base58(),
-                            bal=ext.get_balance(msg.sender),
-                            state=ext.log_storage(msg.sender))
-            log_state.trace('MSG POST STATE RECIPIENT', account=msg.to.base58(),
-                            bal=ext.get_balance(msg.to),
-                            state=ext.log_storage(msg.to))
+        # Main loop
+        if msg.code_address and msg.code_address.data in specials.specials:
+            res, gas, dat = specials.specials[msg.code_address.data](ext, msg)
+        else:
+            res, gas, dat = vm.vm_execute(ext, msg, code)
+        # gas = int(gas)
+        # assert ethutils.is_numeric(gas)
+        if trace_msg:
+            log_msg.warn('MSG APPLIED', gas_remained=gas,
+                          sender=msg.sender, to=msg.to, data=dat, res=res)
+            if log_state.is_active('trace'):
+                log_state.trace('MSG POST STATE SENDER', account=msg.sender.base58(),
+                                bal=ext.get_balance(msg.sender),
+                                state=ext.log_storage(msg.sender))
+                log_state.trace('MSG POST STATE RECIPIENT', account=msg.to.base58(),
+                                bal=ext.get_balance(msg.to),
+                                state=ext.log_storage(msg.to))
 
-    return res, gas, dat
+        snapshot.finish(revert=res == 0)
+        return res, gas, dat
 
 
 def create_contract(db, tx, ext, msg):
@@ -316,49 +300,53 @@ def create_contract(db, tx, ext, msg):
     if not len(ext._block.snapshots):
         raise exceptions.SnapshotRequired("create_contract should only be called with a snapshot surrounding it")
 
-    if ext.tx_origin != msg.sender:
-        ext._block.increment_nonce(msg.sender)
+    with ext._block.snapshot_context() as snapshot:
+        if ext.tx_origin != msg.sender:
+            ext._block.increment_nonce(msg.sender)
 
-    nonce = ethutils.encode_int(ext._block.get_nonce(msg.sender) - 1)
-    msg.to = mk_contract_address(msg.sender, nonce, version=config.CONTRACT_ADDRESSVERSION)
-    b = ext.get_balance(msg.to)
+        nonce = ethutils.encode_int(ext._block.get_nonce(msg.sender) - 1)
+        msg.to = mk_contract_address(msg.sender, nonce, version=config.CONTRACT_ADDRESSVERSION)
+        b = ext.get_balance(msg.to)
 
-    if b > 0:
-        ext.set_balance(msg.to, b)
-        ext._block.set_nonce(msg.to, 0)
-        ext._block.set_code(tx, msg.to, b'')
-        ext._block.reset_storage(msg.to)
-    else:
-        # need to create `contracts` entry to satisfy FK constraints
-        #  for when contract creation sets data
-        log_msg.debug('create_contract::init_code %s' % msg.to)
-        ext._block.set_code(tx, msg.to, b'')
-
-    msg.is_create = True
-    # assert not ext.get_code(msg.to)
-    code = msg.data.extract_all()
-    msg.data = vm.CallData([], 0, 0)
-
-    res, gas, dat = _apply_msg(db, tx, ext, msg, code)
-    log_msg.debug('create_contract::_apply_msg %s %s %d' % (res, gas, len(dat)))
-    assert ethutils.is_numeric(gas)
-
-    if res:
-        if not len(dat):
-            return 1, gas, msg.to
-        gcost = len(dat) * opcodes.GCONTRACTBYTE
-
-        log_msg.debug('create_contract::gcst %s %s %s' % (gas, gcost, gas >= gcost))
-        if gas >= gcost:
-            gas -= gcost
+        if b > 0:
+            ext.set_balance(msg.to, b)
+            ext._block.set_nonce(msg.to, 0)
+            ext._block.set_code(tx, msg.to, b'')
+            ext._block.reset_storage(msg.to)
         else:
-            dat = []
-            log_msg.debug('CONTRACT CREATION OOG', have=gas, want=gcost, block_number=ext._block.number)
-            if ext.post_homestead_hardfork(): # @TODO: when does it hit this?
-                raise Rollback
+            # need to create `contracts` entry to satisfy FK constraints
+            #  for when contract creation sets data
+            log_msg.debug('create_contract::init_code %s' % msg.to)
+            ext._block.set_code(tx, msg.to, b'')
 
-        log_msg.debug('create_contract::set_code %s' % msg.to)
-        ext._block.set_code(tx, msg.to, b''.join(map(ascii_chr, dat)))
-        return 1, gas, msg.to
-    else:
-        return 0, gas, b''
+        msg.is_create = True
+        # assert not ext.get_code(msg.to)
+        code = msg.data.extract_all()
+        msg.data = vm.CallData([], 0, 0)
+
+        res, gas, dat = _apply_msg(db, tx, ext, msg, code)
+        log_msg.debug('create_contract::_apply_msg %s %s %d' % (res, gas, len(dat)))
+        assert ethutils.is_numeric(gas)
+
+        if res:
+            if not len(dat):
+                snapshot.release()
+                return 1, gas, msg.to
+            gcost = len(dat) * opcodes.GCONTRACTBYTE
+
+            log_msg.debug('create_contract::gcst %s %s %s' % (gas, gcost, gas >= gcost))
+            if gas >= gcost:
+                gas -= gcost
+            else:
+                dat = []
+                log_msg.debug('CONTRACT CREATION OOG', have=gas, want=gcost, block_number=ext._block.number)
+                if ext.post_homestead_hardfork(): # @TODO: when does it hit this?
+                    raise Rollback
+
+            log_msg.debug('create_contract::set_code %s' % msg.to)
+            ext._block.set_code(tx, msg.to, b''.join(map(ascii_chr, dat)))
+            snapshot.release()
+            return 1, gas, msg.to
+        else:
+            snapshot.revert()
+            return 0, gas, b''

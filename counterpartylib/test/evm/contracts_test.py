@@ -615,7 +615,7 @@ def test_suicider():
     c = s.abi_contract(suicider_code, language='serpent')
     # Run the suicider in such a way that it suicides in a sub-call,
     # then runs out of gas, leading to a revert of the suicide and the storage mutation
-    o1 = c.entry(8000)
+    o1 = c.entry(8000, startgas=100000)
     assert o1 == 0
 
     # Check that the suicide got reverted and the contract still works

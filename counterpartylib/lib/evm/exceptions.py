@@ -44,3 +44,11 @@ class ContractError(EVMException):
 
 class SnapshotRequired(EVMException):
     pass
+
+
+class SnapshotAlreadyFinished(EVMException):
+    pass
+
+
+class SnapshotNotFinished(EVMException):
+    pass

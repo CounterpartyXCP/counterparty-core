@@ -5,7 +5,7 @@ import logging
 import binascii
 
 import rlp
-from counterpartylib.lib.evm import ethutils
+from counterpartylib.lib.evm import ethutils, exceptions
 
 from counterpartylib.lib import util
 from counterpartylib.lib import config
@@ -15,6 +15,45 @@ from counterpartylib.lib.evm.address import Address
 logger = logging.getLogger(__name__)
 
 GAS_LIMIT = 10 ** 9
+
+
+class Snapshot(object):
+    def __init__(self, block):
+        self.block = block
+        self.finished = False
+
+    def finish(self, revert):
+        if revert:
+            self.revert()
+        else:
+            self.release()
+
+    def release(self):
+        if self.finished:
+            raise exceptions.SnapshotAlreadyFinished(self.snapshot)
+
+        self.block.release(self.snapshot)
+        self.finished = True
+
+    def revert(self):
+        if self.finished:
+            raise exceptions.SnapshotAlreadyFinished(self.snapshot)
+
+        self.block.revert(self.snapshot)
+        self.finished = True
+
+    def __enter__(self):
+        self.snapshot = self.block.snapshot()
+
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            self.revert()
+        else:
+            if not self.finished:
+                raise exceptions.SnapshotNotFinished(self.snapshot)
+
 
 class Block(object):
     def __init__(self, db, block_hash):
@@ -53,6 +92,9 @@ class Block(object):
         cursor.close()
 
         return block['block_hash']
+
+    def snapshot_context(self):
+        return Snapshot(self)
 
     def snapshot(self):
         name = "S" + binascii.hexlify(os.urandom(16)).decode('utf8')  # name must start with alphabetic char so prefix with S
