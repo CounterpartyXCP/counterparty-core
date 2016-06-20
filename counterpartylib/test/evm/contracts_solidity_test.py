@@ -1943,3 +1943,25 @@ contract testmeparent is testme {
     assert c.childsender() == c.address.base58()
     assert c.childorigin() == tester.a0
     assert c.childsenderisorigin() == False
+
+
+def test_throw():
+    code = """
+contract testme {
+    function main() {
+        msg.sender.send(10000000000);
+        throw;
+    }
+}
+"""
+
+    s = state()
+    c = s.abi_contract(code, endowment=10000000000, language='solidity')
+
+    b = s.block.get_balance(tester.a0)
+
+    with pytest.raises(tester.TransactionFailed):
+        assert c.main()
+
+    # should have paid for gas and not received the send
+    assert s.block.get_balance(tester.a0) < b
