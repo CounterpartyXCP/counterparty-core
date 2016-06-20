@@ -2,7 +2,7 @@ import pytest
 import sys, os, time, tempfile
 import binascii
 
-from counterpartylib.lib import (config, util, database)
+from counterpartylib.lib import (config, util, database, script)
 from counterpartylib import server
 from counterpartylib.test import util_test
 from counterpartylib.test.util_test import CURR_DIR
@@ -30,6 +30,11 @@ def teardown_module(function):
 
 def test_hash160():
     assert address.hash160(b"test") == b'\xce\xba\xa9\x8c\x19\x80q4CM\x10{\r>V\x92\xa5\x16\xeaf'
+
+
+def test_checksum_mismatch():
+    with pytest.raises(script.Base58ChecksumError):
+        address.Address.frombase58('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zd')
 
 
 def test_mk_contract_address():

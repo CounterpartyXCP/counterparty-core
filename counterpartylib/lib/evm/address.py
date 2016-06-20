@@ -4,7 +4,7 @@ import logging
 
 import binascii
 
-from counterpartylib.lib import script
+from counterpartylib.lib import script, util, exceptions
 from counterpartylib.lib.evm import ethutils, specials
 from counterpartylib.lib import config
 
@@ -157,7 +157,9 @@ class Address(object):
         assert len(data) == DATA_LENGTH
         assert len(chk0) == CHECKSUM_LENGTH
 
-        # @TODO: checksum
+        chk1 = util.dhash(addrbyte + data)[:4]
+        if chk0 != chk1:
+            raise script.Base58ChecksumError('Checksum mismatch: 0x{} ≠ 0x{}'.format(util.hexlify(chk0), util.hexlify(chk1)))
 
         return cls(data, addrbyte)
 
