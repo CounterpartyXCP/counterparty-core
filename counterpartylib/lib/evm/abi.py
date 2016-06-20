@@ -13,10 +13,6 @@ from counterpartylib.lib.evm.ethutils import isnumeric, TT256, TT255
 from counterpartylib.lib.evm import address
 
 
-def json_decode(data):  # @TODO: WTF
-    return yaml.safe_load(data)
-
-
 def split32(data):
     """ Split data into pieces of 32 bytes. """
     all_pieces = []
@@ -109,7 +105,7 @@ class ContractTranslator(object):
 
     def __init__(self, contract_interface):
         if is_string(contract_interface):
-            contract_interface = json_decode(contract_interface)
+            contract_interface = utils.json_decode(contract_interface)
 
         self.constructor_data = None
         self.function_data = {}

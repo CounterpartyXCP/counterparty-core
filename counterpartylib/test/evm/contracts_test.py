@@ -1952,3 +1952,57 @@ def test_prefix_types_in_functions():
     s = state()
     c = s.abi_contract(prefix_types_in_functions_code, language='serpent')
     assert c.sqrdiv(25, 2) == 156
+
+
+origin_child_code = \
+    '''
+def sender():
+    return (msg.sender:address)
+
+def origin():
+    return (tx.origin:address)
+
+def senderisorigin():
+    return (msg.sender == tx.origin:bool)
+'''
+
+filename_origin_child = "origin_qwertyuioplkjhgfdsa.se"
+
+origin_code = \
+    '''
+extern child.serpent: [origin:[]:int256, sender:[]:int256, senderisorigin:[]:int256]
+
+x = create("%s")
+
+def sender():
+    return (msg.sender:address)
+
+def origin():
+    return (tx.origin:address)
+
+def senderisorigin():
+    return (msg.sender == tx.origin:bool)
+
+def childsender():
+    return (x.sender():address)
+
+def childorigin():
+    return (x.origin():address)
+
+def childsenderisorigin():
+    return (x.senderisorigin():bool)
+''' % filename_origin_child
+
+
+def test_origin():
+    s = state()
+    open_cleanonteardown(filename_origin_child, 'w').write(origin_child_code)
+    c = s.abi_contract(origin_code, language='serpent')
+
+    assert c.sender() == tester.a0
+    assert c.origin() == tester.a0
+    assert c.senderisorigin() == True
+
+    assert c.childsender() == c.address.base58()
+    assert c.childorigin() == tester.a0
+    assert c.childsenderisorigin() == False

@@ -14,6 +14,7 @@ from rlp.utils import decode_hex, encode_hex, ascii_chr, str_to_bytes
 import random
 import math
 import binascii
+import yaml
 
 from counterpartylib.lib import util, script
 
@@ -28,6 +29,13 @@ TT255 = 2 ** 255
 is_numeric = lambda x: isinstance(x, int)
 # @TODO: is_string checks for bytes :/
 is_string = lambda x: isinstance(x, bytes)
+
+
+def json_decode(data):
+    """
+    load JSON using `yaml.safe_load` (which supports) JSON for better unicode support
+    """
+    return yaml.safe_load(data)
 
 
 def to_string(value):

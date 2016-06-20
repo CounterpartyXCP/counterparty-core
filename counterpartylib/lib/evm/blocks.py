@@ -261,7 +261,6 @@ class Block(object):
             util.credit(self.db, address.base58(), asset, value, action=action, event=tx.tx_hash)
         elif value < 0:
             util.debit(self.db, address.base58(), asset, -value, action=action, event=tx.tx_hash)
-        pass  # @TODO
 
     def transfer_value(self, source, destination, quantity, asset=config.XCP, tx=None, action='transfer value'):
         source = Address.normalize(source)

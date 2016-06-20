@@ -217,10 +217,6 @@ def vm_execute(ext, msg, code):
                     trace_data['memory'] = \
                         b''.join([encode_hex(ascii_chr(x)) for x
                                   in compustate.memory])
-                # @TODO
-                # else:
-                #     trace_data['sha3memory'] = \
-                #         encode_hex(utils.sha3(''.join([ascii_chr(x) for x in compustate.memory])))
             if _prevop in ('SSTORE', 'SLOAD') or steps == 0:
                 trace_data['storage'] = ext.log_storage(msg.to)
             trace_data['gas'] = to_string(compustate.gas + fee)
@@ -338,7 +334,7 @@ def vm_execute(ext, msg, code):
                 addr = Address.normalize(addr)
                 stk.append(ext.get_balance(addr))
             elif op == 'ORIGIN':
-                stk.append(utils.coerce_to_int(ext.tx_origin)) # @TODO
+                stk.append(utils.coerce_to_int(ext.tx_origin.int()))
             elif op == 'CALLER':
                 stk.append(msg.sender.int())
             elif op == 'CALLVALUE':

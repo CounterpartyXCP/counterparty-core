@@ -293,7 +293,6 @@ def _apply_msg(db, tx, ext, msg, code):
 def create_contract(db, tx, ext, msg):
     log_msg.debug('CONTRACT CREATION %s' % msg.sender)
 
-    # @TODO: tx_origin?!
     if ext.tx_origin != msg.sender:
         ext._block.increment_nonce(msg.sender)
 
@@ -318,7 +317,7 @@ def create_contract(db, tx, ext, msg):
     msg.data = vm.CallData([], 0, 0)
 
     try:
-        if True: # with db:
+        with db:  # apsw SAVEPOINT
             res, gas, dat = _apply_msg(db, tx, ext, msg, code)
             log_msg.debug('create_contract::_apply_msg %s %s %d' % (res, gas, len(dat)))
             assert ethutils.is_numeric(gas)

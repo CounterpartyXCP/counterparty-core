@@ -15,7 +15,9 @@ we need to append log_listeners to `contract_tester.state.log_listeners` instead
 TODO
 ====
  - ecrecover
- - send_asset
+
+ - block gas limit
+ - execution order
 
  - UnitTests
    - blocks

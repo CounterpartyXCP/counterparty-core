@@ -5,6 +5,8 @@ import os
 import binascii
 import yaml  # use yaml instead of json to get non unicode
 
+from counterpartylib.lib.evm import ethutils
+
 ROOTDIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 BINDIR = os.path.abspath(os.path.join(ROOTDIR, "bin"))
 SOLCBIN = os.path.abspath(os.path.join(BINDIR, "solc"))
@@ -97,13 +99,13 @@ class solc_wrapper(object):
             raise CompileError('compilation failed: %s' % str(stderrdata).replace('\\n', '\n'))
 
         # contracts = json.loads(stdoutdata)['contracts']
-        contracts = yaml.safe_load(stdoutdata)['contracts']
+        contracts = ethutils.json_decode(stdoutdata)['contracts']
         for contract_name, data in contracts.items():
-            data['abi'] = yaml.safe_load(data['abi'])
-            data['devdoc'] = yaml.safe_load(data['devdoc'])
-            data['userdoc'] = yaml.safe_load(data['userdoc'])
-            data['structs'] = yaml.safe_load(data['structs'])
-            data['statevars'] = yaml.safe_load(data['statevars'])
+            data['abi'] = ethutils.json_decode(data['abi'])
+            data['devdoc'] = ethutils.json_decode(data['devdoc'])
+            data['userdoc'] = ethutils.json_decode(data['userdoc'])
+            data['structs'] = ethutils.json_decode(data['structs'])
+            data['statevars'] = ethutils.json_decode(data['statevars'])
 
         names = cls.contract_names(code or open(path).read())
         assert len(names) <= len(contracts)  # imported contracts are not returned

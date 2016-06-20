@@ -1891,3 +1891,55 @@ contract testme {
     c.moo()
 
     assert o == [{"_event_type": b"foo", "x": b"bob", "y": b"cow"}]
+
+
+def test_origin():
+    code = """
+contract testme {
+    function sender() returns (address) {
+        return msg.sender;
+    }
+
+    function origin() returns (address) {
+        return tx.origin;
+    }
+
+    function senderisorigin() returns (bool) {
+        return msg.sender == tx.origin;
+    }
+}
+
+contract testmechild is testme {
+}
+
+contract testmeparent is testme {
+    testmechild child;
+
+    function testmeparent() {
+        child = new testmechild();
+    }
+
+    function childsender() returns(address) {
+        return child.sender();
+    }
+
+    function childorigin() returns(address) {
+        return child.origin();
+    }
+
+    function childsenderisorigin() returns(bool) {
+        return child.senderisorigin();
+    }
+}
+    """
+
+    s = state()
+    c = s.abi_contract(code, language='solidity')
+
+    assert c.sender() == tester.a0
+    assert c.origin() == tester.a0
+    assert c.senderisorigin() == True
+
+    assert c.childsender() == c.address.base58()
+    assert c.childorigin() == tester.a0
+    assert c.childsenderisorigin() == False
