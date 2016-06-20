@@ -1048,6 +1048,81 @@ contract testme {
             657, 0, 0, 0, 658] == c.query_person()
 
 
+def test_read_storage():
+    """
+    work in progress for debugging stuff
+    """
+
+    code = """
+contract testme {
+    mapping(uint => uint) data1;
+    mapping(uint => uint) data2;
+
+    uint id = 0;
+
+    function set(uint k) {
+        id++;
+        data1[k] = 1;
+        data2[k] = 2;
+    }
+}
+"""
+    evm = solidity.compile(code)
+    pprint.pprint(vm.preprocess_code(evm))
+
+    combined = solidity.combined(code)
+    pprint.pprint(combined)
+    contract_name = 'testme'
+    if contract_name:
+        idx = [x[0] for x in combined].index(contract_name)
+    else:
+        idx = -1
+    statevars = combined[idx][1]['statevars']
+
+    pprint.pprint(statevars)
+
+    s = state()
+    c = s.abi_contract(code, language='solidity')
+
+    c.set(0)
+    c.set(1)
+
+    def get_statevar(n, k=None):
+        if k is None:
+            idx = None
+            for _idx, statevar in enumerate(statevars):
+                if statevar['name'] == n:
+                    idx = _idx
+                    break
+
+            if idx is None:
+                raise Exception
+
+            return s.block.get_storage_data(c.address, idx)
+        else:
+            idx = None
+            for _idx, statevar in enumerate(statevars):
+                if statevar['name'] == n:
+                    idx = _idx
+                    break
+
+            if idx is None:
+                raise Exception
+
+            key = ethutils.zpad(ethutils.int_to_big_endian(k), 32) + ethutils.zpad(ethutils.int_to_big_endian(idx), 32)
+            key = ethutils.big_endian_to_int(ethutils.sha3(key))
+
+            return s.block.get_storage_data(c.address, key)
+
+    assert get_statevar('id') == 2
+    assert get_statevar('data1', 0) == 1
+    assert get_statevar('data2', 0) == 2
+    assert get_statevar('data1', 1) == 1
+    assert get_statevar('data2', 1) == 2
+    assert get_statevar('data1', 2) == 0
+    assert get_statevar('data2', 2) == 0
+
+
 def test_crowdfund():
     """
     test crowdfund smart contract, keep in mind that we create a new block for every contract call

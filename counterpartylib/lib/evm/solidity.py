@@ -81,13 +81,13 @@ class solc_wrapper(object):
         """
 
         if path is None:
-            p = subprocess.Popen([SOLCBIN, '--stdin', '--add-std', '--optimize' if optimize else '', '--combined-json', 'abi,bin,devdoc,userdoc', '=/work/counterparty-lib/'],
+            p = subprocess.Popen([SOLCBIN, '--add-std', '--optimize' if optimize else '', '--combined-json', 'abi,bin,devdoc,userdoc,structs,statevars', './=/work/counterparty-lib/', '-'],
                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdoutdata, stderrdata = p.communicate(input=bytes(code, 'utf-8'))
         else:
             assert code is None or len(code) == 0, "`code` and `path` are exclusive!"
             workdir, fn = os.path.split(path)
-            p = subprocess.Popen([SOLCBIN, '--add-std', '--optimize' if optimize else '', '--combined-json', 'abi,bin,devdoc,userdoc', '=/work/counterparty-lib/', fn],
+            p = subprocess.Popen([SOLCBIN, '--optimize' if optimize else '', '--combined-json', 'abi,bin,devdoc,userdoc,structs,statevars', './=/work/counterparty-lib/', fn],
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=workdir)
             stdoutdata = p.stdout.read().strip()
             stderrdata = p.stderr.read().strip()
@@ -102,6 +102,8 @@ class solc_wrapper(object):
             data['abi'] = yaml.safe_load(data['abi'])
             data['devdoc'] = yaml.safe_load(data['devdoc'])
             data['userdoc'] = yaml.safe_load(data['userdoc'])
+            data['structs'] = yaml.safe_load(data['structs'])
+            data['statevars'] = yaml.safe_load(data['statevars'])
 
         names = cls.contract_names(code or open(path).read())
         assert len(names) <= len(contracts)  # imported contracts are not returned
