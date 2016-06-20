@@ -31,7 +31,21 @@ You should preload the address with some testnet ~0.01 BTC and ~200 XCP!
 
 eg;
 ```bash
-SOURCE="miDAc4uBw6X2cD41iRtfrPzQT2MezD8SNz"
+SOURCE="miJqNkHhC5xsB61gsiSWXeTLnEGSQnWbXB"
+```
+
+##### Waiting for blocks
+During the example we'll have to wait for a new block a few times, paste the copy below into your terminal;
+
+```bash
+function WAITFORBLOCK {
+    HEIGHT=$(counterparty-client --testnet getinfo 2> /dev/null | $JQ '.last_block.block_index'); NEWHEIGHT=$HEIGHT; while [ $NEWHEIGHT -le $HEIGHT ]; do NEWHEIGHT=$(counterparty-client --testnet getinfo 2> /dev/null | $JQ '.last_block.block_index'); echo $NEWHEIGHT; sleep 5; done
+}
+```
+
+And then whenever we need to wait for a block we can do
+```bash
+WAITFORBLOCK
 ```
 
 
@@ -174,9 +188,9 @@ CREATIONTXID="TXID_GOES_HERE"
 ```
 
 
-Now we gotta wait for a block to confirm the TX ... zzz, you can copy paste this oneliner which keeps checking `bitcoin-cli -testnet getinfo` every 5s until a new block is found;
+Now we gotta wait for a block to confirm the TX ... zzz ... use the function we created earlier and it will keep trying until a block is found ...
 ```bash
-HEIGHT=$(bitcoin-cli -testnet getinfo | $JQ '.blocks'); NEWHEIGHT=$HEIGHT; while [ $NEWHEIGHT -le $HEIGHT ]; do NEWHEIGHT=$(bitcoin-cli -testnet getinfo | $JQ '.blocks'); echo $NEWHEIGHT; sleep 5; done
+WAITFORBLOCK
 ```
 
 Now that the TX has been mined we can check what the address of the created contract is (note; better tooling to get the address when broadcasting would be nice):
@@ -225,7 +239,10 @@ Now we can execute that:
 counterparty-client --testnet execute --source $SOURCE --contract-id $CONTRACTID --value 0 --payload-hex $CREATE_CAMPAIGN_PAYLOAD_HEX --startgas 1000000 --gasprice 1
 ```
 
-We'll again get the `Sign and broadcast (y/N)` step, gogo and then wait for a block again (use the earlier 1liner again)...
+We'll again get the `Sign and broadcast (y/N)` step, gogo and then wait for a block again (use the earlier function again)...
+```bash
+WAITFORBLOCK
+```
 
 While we wait for the block let's take a closer look at the payload we just send along:
 ```
@@ -266,7 +283,7 @@ Your campaign creation should be the last one:
 ----------------------------- EXECUTION INFO ----------------------------
 function_called: create_campaign
 arguments types: ['address', 'string', 'uint256', 'uint256']
-arguments: ['miDAc4uBw6X2cD41iRtfrPzQT2MezD8SNz', '46454544204d45', 100, 86400]
+arguments: ['miJqNkHhC5xsB61gsiSWXeTLnEGSQnWbXB', '46454544204d45', 100, 86400]
 output types: ['uint256']
 output: [1]
 ```
@@ -304,7 +321,11 @@ CONTRIBUTE_VALUE=99
 counterparty-client --testnet execute --source $SOURCE --contract-id $CONTRACTID --value $CONTRIBUTE_VALUE --payload-hex $CONTRIBUTE_PAYLOAD_HEX --startgas 1000000 --gasprice 1
 ```
 
-Once a block has been found (use the oneliner... again... zzz...),
+Once a block has been found (use the function... again... zzz...)
+```bash
+WAITFORBLOCK
+```
+
 we can debug the output again:
 
 ```bash
@@ -318,10 +339,10 @@ arguments: [1]
 output types: ['uint256']
 output: [1]
 -------------------------- GAS DEBITS / CREDITS -------------------------
- - DEBIT [GAS]; miDAc4uBw6X2cD41iRtfrPzQT2MezD8SNz -1000000 XCP (startgas)
- - CREDIT [GAS]; miDAc4uBw6X2cD41iRtfrPzQT2MezD8SNz 978155 XCP (startgas)
+ - DEBIT [GAS]; miJqNkHhC5xsB61gsiSWXeTLnEGSQnWbXB -1000000 XCP (startgas)
+ - CREDIT [GAS]; miJqNkHhC5xsB61gsiSWXeTLnEGSQnWbXB 978155 XCP (startgas)
 ---------------------------- DEBITS / CREDITS ---------------------------
- - DEBIT; miDAc4uBw6X2cD41iRtfrPzQT2MezD8SNz -99 XCP (transfer value)
+ - DEBIT; miJqNkHhC5xsB61gsiSWXeTLnEGSQnWbXB -99 XCP (transfer value)
  - CREDIT; tgdM7Z9voZfpweZKPXok4UpRNWs2pq4f6s 99 XCP (transfer value)
 ```
 
@@ -357,7 +378,12 @@ Now we can execute that:
 counterparty-client --testnet execute --source $SOURCE --contract-id $CONTRACTID --value 0 --payload-hex $PROGRESS_REPORT_PAYLOAD_HEX --startgas 1000000 --gasprice 1
 ```
 
-Again waiting for a block (if you don't know what do do by now...) ... And then run the debug tool:
+Again waiting for a block (if you don't know what do do by now...) ...
+```
+WAITFORBLOCK
+```
+
+And then run the debug tool:
 ```bash
 counterparty-client --testnet evm_info --debug-output --abi "$CONTRACTABI" $CONTRACTID
 ```
@@ -386,7 +412,7 @@ counterparty-client --testnet getrows --table balances --filter "address" "==" $
 +------------------+------------------------------------+---------+
 |     quantity     |              address               |  asset  |
 +------------------+------------------------------------+---------+
-|   13328504735    | miDAc4uBw6X2cD41iRtfrPzQT2MezD8SNz |   XCP   |
+|   13328504735    | miJqNkHhC5xsB61gsiSWXeTLnEGSQnWbXB |   XCP   |
 |        99        | tnDsEWRcV1YXMWAqRREsgs2qwEDbKSqFdj |   XCP   |
 +------------------+------------------------------------+---------+
 
@@ -400,6 +426,9 @@ counterparty-client --testnet execute --source $SOURCE --contract-id $CONTRACTID
 ```
 
 Waiting for a block again (seriously? you forgot about that 1liner?)...
+```
+WAITFORBLOCK
+```
 
 Then running the debug tool we should see the contribute:
 ```bash
@@ -413,13 +442,13 @@ arguments: [1]
 output types: ['uint256']
 output: [2]
 -------------------------- GAS DEBITS / CREDITS -------------------------
- - DEBIT [GAS]; miDAc4uBw6X2cD41iRtfrPzQT2MezD8SNz -1000000 XCP (startgas)
- - CREDIT [GAS]; miDAc4uBw6X2cD41iRtfrPzQT2MezD8SNz 931803 XCP (startgas)
+ - DEBIT [GAS]; miJqNkHhC5xsB61gsiSWXeTLnEGSQnWbXB -1000000 XCP (startgas)
+ - CREDIT [GAS]; miJqNkHhC5xsB61gsiSWXeTLnEGSQnWbXB 931803 XCP (startgas)
 ---------------------------- DEBITS / CREDITS ---------------------------
- - DEBIT; miDAc4uBw6X2cD41iRtfrPzQT2MezD8SNz -1 XCP (transfer value)
+ - DEBIT; miJqNkHhC5xsB61gsiSWXeTLnEGSQnWbXB -1 XCP (transfer value)
  - DEBIT; tnDsEWRcV1YXMWAqRREsgs2qwEDbKSqFdj -100 XCP (transfer value)
  - CREDIT; tnDsEWRcV1YXMWAqRREsgs2qwEDbKSqFdj 1 XCP (transfer value)
- - CREDIT; miDAc4uBw6X2cD41iRtfrPzQT2MezD8SNz 100 XCP (transfer value)
+ - CREDIT; miJqNkHhC5xsB61gsiSWXeTLnEGSQnWbXB 100 XCP (transfer value)
 ```
 
 But the `output` is actually `2` now, which as you can see in the `crowdfund.sol` contract means the payout was triggred.
