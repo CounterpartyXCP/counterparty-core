@@ -206,7 +206,7 @@ contract testme {
 
     contracts_before = list(cursor.execute('''SELECT * FROM contracts'''))
     storage_before = list(cursor.execute('''SELECT * FROM storage'''))
-    nonce_before = list(cursor.execute('''SELECT * FROM nonces'''))
+    nonce_before = list(cursor.execute('''SELECT * FROM nonces WHERE address = ?''', (tester.a0, )))
 
     evmcode = solidity.compile(code)
 
@@ -232,45 +232,6 @@ contract testme {
     # check that no data was left behind
     assert list(cursor.execute('''SELECT * FROM contracts''')) == contracts_before
     assert list(cursor.execute('''SELECT * FROM storage''')) == storage_before
-    assert list(cursor.execute('''SELECT * FROM nonces''')) == nonce_before
 
-
-def test_cant_circumvent_snapshot():
-    global db, cursor
-
-    code = """
-contract testme {
-    uint d = 0;
-    uint dd = 0;
-
-    function testme() {
-        d = 111;
-
-        // make sure it goes OOG here
-        for (uint i = 0; i < 100000; i++) {
-            dd = i;
-        }
-    }
-
-}
-"""
-
-    evmcode = solidity.compile(code)
-
-    s = state()
-
-    # not enough to execute the full constructor, but enough to do a bit of it
-    startgas = 314159
-
-    sender = address.Address.normalize(tester.a0)
-    to = address.Address.normalize('')
-
-    tx, tx_obj, block_obj = s.mock_tx(sender, to, 0, evmcode, startgas=startgas)
-
-    ext = processblock.VMExt(db, block_obj, tx_obj)
-
-    message = vm.Message(address.Address.normalize(tx_obj.sender), address.Address.normalize(tx_obj.to),
-                         tx_obj.value, startgas, tx_obj.data, code_address=address.Address.normalize(tx_obj.to))
-
-    with pytest.raises(ethexceptions.SnapshotRequired):
-        processblock.create_contract(db, tx_obj, ext, message)
+    # check that nonce was still bumped @TODO: are we sure about this?
+    assert list(cursor.execute('''SELECT * FROM nonces WHERE address = ?''', (tester.a0, )))[0]['nonce'] == nonce_before[0]['nonce'] + 1

@@ -127,63 +127,61 @@ def apply_transaction(db, block, tx):
 
     # start transacting #################
 
-    with block.snapshot_context() as snapshot:
-        block.increment_nonce(tx.sender)
+    block.increment_nonce(tx.sender)
 
-        # buy startgas
-        assert block.get_balance(tx.sender) >= tx.startgas * tx.gasprice
-        block.delta_balance(tx.sender, -tx.startgas * tx.gasprice, config.XCP, tx, action='startgas')
-        message_gas = tx.startgas - intrinsic_gas
-        message_data = vm.CallData([ethutils.safe_ord(x) for x in tx.data], 0, len(tx.data))
+    # buy startgas
+    assert block.get_balance(tx.sender) >= tx.startgas * tx.gasprice
+    block.delta_balance(tx.sender, -tx.startgas * tx.gasprice, config.XCP, tx, action='startgas')
+    message_gas = tx.startgas - intrinsic_gas
+    message_data = vm.CallData([ethutils.safe_ord(x) for x in tx.data], 0, len(tx.data))
 
-        message = vm.Message(Address.normalize(tx.sender), Address.normalize(tx.to),
-                             tx.value, message_gas, message_data, code_address=Address.normalize(tx.to))
+    message = vm.Message(Address.normalize(tx.sender), Address.normalize(tx.to),
+                         tx.value, message_gas, message_data, code_address=Address.normalize(tx.to))
 
-        # MESSAGE
-        ext = VMExt(db, block, tx)
-        if tx.to and tx.to != CREATE_CONTRACT_ADDRESS:
-            result, gas_remained, data = apply_msg(db, tx, ext, message)
-            log_tx.debug('_res_', result=result, gas_remained=gas_remained, data=data)
-        else:  # CREATE
-            result, gas_remained, data = create_contract(db, tx, ext, message)
-            assert ethutils.is_numeric(gas_remained)
-            log_tx.debug('_create_', result=result, gas_remained=gas_remained, data=data)
+    # MESSAGE
+    ext = VMExt(db, block, tx)
+    if tx.to and tx.to != CREATE_CONTRACT_ADDRESS:
+        result, gas_remained, data = apply_msg(db, tx, ext, message)
+        log_tx.debug('_res_', result=result, gas_remained=gas_remained, data=data)
+    else:  # CREATE
+        result, gas_remained, data = create_contract(db, tx, ext, message)
+        assert ethutils.is_numeric(gas_remained)
+        log_tx.debug('_create_', result=result, gas_remained=gas_remained, data=data)
 
-        assert gas_remained >= 0
+    assert gas_remained >= 0
 
-        log_tx.debug("TX APPLIED", result=result, gas_remained=gas_remained, data=data)
+    log_tx.debug("TX APPLIED", result=result, gas_remained=gas_remained, data=data)
 
-        if not result:  # 0 = OOG failure in both cases
-            log_tx.debug('TX FAILED', reason='out of gas', startgas=tx.startgas, gas_remained=gas_remained)
-            block.gas_used += tx.startgas
-            output = b''
-            success = 0
+    if not result:  # 0 = OOG failure in both cases
+        log_tx.debug('TX FAILED', reason='out of gas', startgas=tx.startgas, gas_remained=gas_remained)
+        block.gas_used += tx.startgas
+        output = b''
+        success = 0
+    else:
+        log_tx.debug('TX SUCCESS', data=data)
+        gas_used = tx.startgas - gas_remained
+        block.refunds += len(unique_address_list(block.suicides)) * opcodes.GSUICIDEREFUND
+        if block.refunds > 0:
+            log_tx.debug('Refunding', gas_refunded=min(block.refunds, gas_used // 2))
+            gas_remained += min(block.refunds, gas_used // 2)
+            gas_used -= min(block.refunds, gas_used // 2)
+            block.refunds = 0
+        # sell remaining gas
+        block.delta_balance(tx.sender, tx.gasprice * gas_remained, config.XCP, tx, action='startgas')
+        block.gas_used += gas_used
+        if tx.to:
+            output = b''.join(map(ascii_chr, data))
         else:
-            log_tx.debug('TX SUCCESS', data=data)
-            gas_used = tx.startgas - gas_remained
-            block.refunds += len(unique_address_list(block.suicides)) * opcodes.GSUICIDEREFUND
-            if block.refunds > 0:
-                log_tx.debug('Refunding', gas_refunded=min(block.refunds, gas_used // 2))
-                gas_remained += min(block.refunds, gas_used // 2)
-                gas_used -= min(block.refunds, gas_used // 2)
-                block.refunds = 0
-            # sell remaining gas
-            block.delta_balance(tx.sender, tx.gasprice * gas_remained, config.XCP, tx, action='startgas')
-            block.gas_used += gas_used
-            if tx.to:
-                output = b''.join(map(ascii_chr, data))
-            else:
-                output = data
-            success = 1
+            output = data
+        success = 1
 
-        suicides = unique_address_list(block.suicides)
-        block.suicides = []
-        for s in suicides:
-            block.del_account(s)
-        block.logs = []
+    suicides = unique_address_list(block.suicides)
+    block.suicides = []
+    for s in suicides:
+        block.del_account(s)
+    block.logs = []
 
-        snapshot.finish(revert=not success)
-        return success, output, gas_remained
+    return success, output, gas_remained
 
 
 # External calls that can be made from inside the VM. To use the EVM with a
@@ -240,10 +238,6 @@ def apply_msg(db, tx, ext, msg):
 
 
 def _apply_msg(db, tx, ext, msg, code):
-    # sanity check that the calling function should be wrapping this with snapshot handling
-    if not len(ext._block.snapshots):
-        raise exceptions.SnapshotRequired("_apply_msg should only be called with a snapshot surrounding it")
-
     trace_msg = log_msg.is_active('trace')
     if trace_msg:
         log_msg.warn("MSG APPLY", sender=msg.sender.base58(), to=msg.to.base58(),
@@ -295,10 +289,6 @@ def _apply_msg(db, tx, ext, msg, code):
 
 def create_contract(db, tx, ext, msg):
     log_msg.debug('CONTRACT CREATION %s' % msg.sender)
-
-    # sanity check that the calling function should be wrapping this with snapshot handling
-    if not len(ext._block.snapshots):
-        raise exceptions.SnapshotRequired("create_contract should only be called with a snapshot surrounding it")
 
     with ext._block.snapshot_context() as snapshot:
         if ext.tx_origin != msg.sender:
