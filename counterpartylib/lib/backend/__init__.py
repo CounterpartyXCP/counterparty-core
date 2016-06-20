@@ -36,7 +36,12 @@ def sortkeypicker(keynames):
     return getit
 
 def BACKEND():
-    return sys.modules['counterpartylib.lib.backend.{}'.format(config.BACKEND_NAME)] 
+    return sys.modules['counterpartylib.lib.backend.{}'.format(config.BACKEND_NAME)]
+
+def disable_unconfirmed_transactions():
+    global MEMPOOL_CACHE_INITIALIZED
+    MEMPOOL_CACHE_INITIALIZED = True
+    return BACKEND().disable_unconfirmed_transactions()
 
 def getblockcount():
     return BACKEND().getblockcount()
@@ -160,6 +165,7 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False, unspent
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
     """
+    global MEMPOOL_CACHE_INITIALIZED
     if not MEMPOOL_CACHE_INITIALIZED:
         raise MempoolError('Mempool is not yet ready; please try again in a few minutes.')
     
