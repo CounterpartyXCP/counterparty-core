@@ -90,10 +90,19 @@ contract testme {
     evmcode = solidity.compile(code)
 
     s = state()
+    assert s.block.get_nonce(tester.a0) == 1
+
     address1 = s.evm(evmcode, tester.a0, 0)
+    assert s.block.get_nonce(tester.a0) == 2
+
     address2 = s.evm(evmcode, tester.a0, 0)
+    assert s.block.get_nonce(tester.a0) == 3
+
     address3 = s.evm(evmcode, tester.a0, 0)
+    assert s.block.get_nonce(tester.a0) == 4
+
     address4 = s.evm(evmcode, tester.a0, 0)
+    assert s.block.get_nonce(tester.a0) == 5
 
     assert address1 != address2
     assert address1 != address3

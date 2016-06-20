@@ -37,6 +37,15 @@ def test_checksum_mismatch():
         address.Address.frombase58('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zd')
 
 
+def test_equals():
+    assert address.Address.normalize("mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc") == address.Address.normalize("mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc")
+    assert address.Address.normalize("mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc") != address.Address.normalize("tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt")
+    assert address.Address.normalize("mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc") == "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc"
+    assert address.Address.normalize("mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc") != "tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt"
+    assert address.Address.normalize("mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc") != "testme"
+    assert address.Address.normalize("mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc") != None
+
+
 def test_mk_contract_address():
     assert address.mk_contract_address(
         "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",

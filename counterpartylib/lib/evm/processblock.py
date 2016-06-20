@@ -186,6 +186,13 @@ def apply_transaction(db, block, tx):
 
         revert = not success
         return success, output, gas_remained
+
+    # all exceptions will result in a revert
+    except Exception as e:
+        revert = True
+        raise e
+
+    # always either revert or release
     finally:
         # check to make sure any changes don't result in excidently returning before setting `revert`
         if revert is None:

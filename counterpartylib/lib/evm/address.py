@@ -48,6 +48,16 @@ class Address(object):
 
         return ethutils.big_endian_to_int(i)
 
+    def __eq__(self, other):
+        try:
+            other = Address.normalize(other)
+            if not other:
+                return False
+        except Exception as e:
+            return False
+
+        return self.bytes32() == other.bytes32()
+
     def __repr__(self):
         return '<%s %s %s>' % (
             self.CLSNAME,
