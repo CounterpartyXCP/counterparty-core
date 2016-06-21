@@ -54,7 +54,7 @@ class PBLogger(object):
 
         kargsalpha = list(sorted(kargs.keys()))
         msg = ", ".join("%s=%s" % (k, kargs[k]) for k in sorted(kargs.keys(), key=lambda x: order.get(x, kargsalpha.index(x))))
-        # getattr(self.logger, type)("%s: %s" % (name, msg))
+        getattr(self.logger, type)("%s: %s" % (name, msg))
 
 logger = logging.getLogger(__name__)
 log_tx = PBLogger('tx')
