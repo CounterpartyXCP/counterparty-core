@@ -23,8 +23,6 @@ TODO
  - sendasset set cost
 
  - UnitTests
-   - solidity
-     - enum
    - blocks
    - ethutils
    - transactions
