@@ -434,11 +434,11 @@ contract testme {
 
 
 # Test a simple send
-def test_send():
+def test_send1():
     send_code = '''
 contract testme {
-    function send(uint v) {
-        msg.sender.send(v);
+    function send(uint v) returns(bool) {
+        return msg.sender.send(v);
     }
 }
 '''
@@ -449,9 +449,26 @@ contract testme {
     startbalance = s.block.get_balance(tester.a2)
     value = 1000000  # amount send into the contract
     v = 30000  # v= for the contract, amount we get back
-    gcost = 53408  # gascost
-    c.send(v, value=value, sender=tester.a2)
-    assert s.block.get_balance(tester.a2) == startbalance - gcost - value + v
+    gcost = 53468  # gascost
+    assert c.send(v, value=value, sender=tester.a2) == True
+    assert startbalance - s.block.get_balance(tester.a2) - value + v == gcost
+
+
+def test_send_fail():
+    send_code = '''
+contract testme {
+    function send(uint v) returns (bool) {
+        return msg.sender.send(v);
+    }
+}
+'''
+
+    s = state()
+    c = s.abi_contract(send_code, language='solidity')
+
+    v = 30000  # v= for the contract, amount we get back
+    value = v - 1  # amount send into the contract
+    assert c.send(v, value=value, sender=tester.a2) == False  # fails
 
 
 def test_send_arg():
@@ -1965,3 +1982,212 @@ contract testme {
 
     # should have paid for gas and not received the send
     assert s.block.get_balance(tester.a0) < b
+
+
+def test_fallback_call_throws():
+    code = """
+contract testme {
+    function() { throw; }
+}
+"""
+
+    s = state()
+    c = s.abi_contract(code, language='solidity')
+
+    with pytest.raises(tester.TransactionFailed):
+        s.send(sender=tester.a0, to=c.address, value=100000)
+
+
+def test_fallback_count():
+    code = """
+contract testme {
+    uint called = 0;
+
+    function() { called++; }
+
+    function get() returns (uint) {
+        return called;
+    }
+}
+"""
+
+    s = state()
+    c = s.abi_contract(code, language='solidity')
+
+    s.send(sender=tester.a0, to=c.address, value=100000)
+    assert c.get() == 1
+
+    s.send(sender=tester.a0, to=c.address, value=100000)
+    assert c.get() == 2
+
+
+def test_fallback_call():
+    code1 = """
+contract testme1 {
+    function call(address ping) returns (bool) {
+        return ping.call.value(100)();
+    }
+}
+"""
+    code2 = """
+contract testme2 {
+    uint called = 0;
+
+    function() { called++; }
+
+    function get() returns (uint) {
+        return called;
+    }
+}
+"""
+
+    s = state()
+    c1 = s.abi_contract(code1, language='solidity')
+    c2 = s.abi_contract(code2, language='solidity')
+
+    assert c2.get() == 0
+    assert c1.call(c2.address, value=100) == True
+    assert c2.get() == 1
+
+
+def test_fallback_recursive_abuse():
+    """
+    test the posibility to abuse recursive entry
+    """
+
+    code1 = """
+contract testme1 {
+    uint called = 0;
+
+    function incr(address ping) returns (bool) {
+        called++;
+        return ping.call.value(100)();
+    }
+
+    function get() returns (uint) {
+        return called;
+    }
+}
+"""
+    code2 = """
+%s // testme1
+
+contract testme2 {
+    address other = %d;
+
+    function() {
+        testme1(other).incr(this);
+    }
+}
+"""
+
+    s = state()
+    c1 = s.abi_contract(code1, endowment=199, language='solidity')
+    c2 = s.abi_contract(code2 % (code1, c1.address.int()), language='solidity')
+
+    assert s.block.get_balance(c2.address) == 0
+
+    assert c1.incr(c2.address) == True
+    assert c1.get() == 2
+    assert s.block.get_balance(c2.address) == 100
+
+    c1 = s.abi_contract(code1, endowment=2000, language='solidity')
+    c2 = s.abi_contract(code2 % (code1, c1.address.int()), language='solidity')
+    assert c1.incr(c2.address) == True
+    assert c1.get() == 21
+    assert s.block.get_balance(c2.address) == 2000
+
+
+def test_fallback_recursive_mutex():
+    """
+    test protecting against abuse of recursive entry with a mutex
+    """
+    code1 = """
+contract testme1 {
+    uint called = 0;
+
+    mapping(uint => bool) mutex;
+
+    function incr(address ping) returns (bool) {
+        if (!mutex[called]) {
+            mutex[called] = true; // LOCK IT
+            if (ping.call.value(100)()) {
+                called++;
+                return true;
+            }
+        }
+    }
+
+    function get() returns (uint) {
+        return called;
+    }
+}
+"""
+    code2 = """
+%s // testme1
+
+contract testme2 {
+    address other = %d;
+
+    function() {
+        testme1(other).incr(this);
+    }
+}
+"""
+
+    s = state()
+    c1 = s.abi_contract(code1, endowment=199, language='solidity')
+    c2 = s.abi_contract(code2 % (code1, c1.address.int()), language='solidity')
+
+    assert s.block.get_balance(c2.address) == 0
+
+    assert c1.incr(c2.address) == True
+    assert c1.get() == 1
+    assert s.block.get_balance(c2.address) == 100
+
+    c1 = s.abi_contract(code1, endowment=2000, language='solidity')
+    c2 = s.abi_contract(code2 % (code1, c1.address.int()), language='solidity')
+    assert c1.incr(c2.address) == True
+    assert c1.get() == 1
+    assert s.block.get_balance(c2.address) == 100
+
+
+def test_call_depth(request):
+    # temporarly modify stack size
+    _STACK_SIZE_LIMIT = vm.STACK_SIZE_LIMIT
+    vm.STACK_SIZE_LIMIT = 10
+    def revert_stack_size_limit():
+        vm.STACK_SIZE_LIMIT = _STACK_SIZE_LIMIT
+    request.addfinalizer(revert_stack_size_limit)
+
+    code1 = """
+contract testme1 {
+    uint called = 0;
+
+    function incr(address ping) returns (uint, uint) {
+        uint _called = called;
+        called++;
+        ping.call();
+        return (_called, called);
+    }
+}
+"""
+    code2 = """
+%s // testme1
+
+contract testme2 {
+    address other = %d;
+
+    function() {
+        testme1(other).incr(this);
+    }
+}
+"""
+
+    s = state()
+    c1 = s.abi_contract(code1, language='solidity')
+    c2 = s.abi_contract(code2 % (code1, c1.address.int()), language='solidity')
+
+    with pytest.raises(tester.TransactionFailed):
+        c1.incr(c2.address)
+

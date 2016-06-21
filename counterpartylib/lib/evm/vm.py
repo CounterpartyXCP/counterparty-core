@@ -27,6 +27,8 @@ TT256 = 2 ** 256
 TT256M1 = 2 ** 256 - 1
 TT255 = 2 ** 255
 
+STACK_SIZE_LIMIT = 1024
+
 
 class CallData(object):
 
@@ -192,7 +194,7 @@ def vm_execute(ext, msg, code):
                                 op=op, needed=to_string(in_args),
                                 available=to_string(len(compustate.stack)))
 
-        if len(compustate.stack) - in_args + out_args > 1024:
+        if len(compustate.stack) - in_args + out_args > STACK_SIZE_LIMIT:
             return vm_exception('STACK SIZE LIMIT EXCEEDED',
                                 op=op,
                                 pre_height=to_string(len(compustate.stack)))
@@ -213,7 +215,7 @@ def vm_execute(ext, msg, code):
             if _prevop in ('MLOAD', 'MSTORE', 'MSTORE8', 'SHA3', 'CALL',
                            'CALLCODE', 'CREATE', 'CALLDATACOPY', 'CODECOPY',
                            'EXTCODECOPY'):
-                if len(compustate.memory) < 1024:
+                if len(compustate.memory) < STACK_SIZE_LIMIT:
                     trace_data['memory'] = \
                         b''.join([encode_hex(ascii_chr(x)) for x
                                   in compustate.memory])
@@ -493,7 +495,7 @@ def vm_execute(ext, msg, code):
             value, mstart, msz = stk.pop(), stk.pop(), stk.pop()
             if not mem_extend(mem, compustate, op, mstart, msz):
                 return vm_exception('OOG EXTENDING MEMORY')
-            if ext.get_balance(msg.to) >= value and msg.depth < 1024:
+            if ext.get_balance(msg.to) >= value and msg.depth < STACK_SIZE_LIMIT:
                 cd = CallData(mem, mstart, msz)
                 create_msg = Message(msg.to, b'', value, compustate.gas, cd, msg.depth + 1)
                 o, gas, addr = ext.create(create_msg)
@@ -522,7 +524,7 @@ def vm_execute(ext, msg, code):
 
             if compustate.gas < gas + extra_gas:
                 return vm_exception('OUT OF GAS', needed=gas+extra_gas)
-            if ext.get_balance(msg.to) >= value and msg.depth < 1024:
+            if ext.get_balance(msg.to) >= value and msg.depth < STACK_SIZE_LIMIT:
                 compustate.gas -= (gas + extra_gas)
                 cd = CallData(mem, meminstart, meminsz)
                 call_msg = Message(msg.to, to, value, submsg_gas, cd,
@@ -553,7 +555,7 @@ def vm_execute(ext, msg, code):
             submsg_gas = gas + opcodes.GSTIPEND * (value > 0)
             if compustate.gas < gas + extra_gas:
                 return vm_exception('OUT OF GAS', needed=gas+extra_gas)
-            if ext.get_balance(msg.to) >= value and msg.depth < 1024:
+            if ext.get_balance(msg.to) >= value and msg.depth < STACK_SIZE_LIMIT:
                 compustate.gas -= (gas + extra_gas)
                 to = Address.normalize(utils.encode_int(to))
                 cd = CallData(mem, meminstart, meminsz)
