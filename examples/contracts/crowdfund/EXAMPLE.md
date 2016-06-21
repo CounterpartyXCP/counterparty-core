@@ -4,7 +4,7 @@
 To make the commands easy to copy paste you should set the `COUNTERPARTYROOT` ENVVAR, copy one of the below 2 lines;
 ```bash
 COUNTERPARTYROOT=`pwd`  # set it to current directory, which works if you're atm in the `counterparty-lib` dir
-COUNTERPARTYROOT=`~/projects/counterparty-lib`  # example, replace with you path, without trailing /
+COUNTERPARTYROOT="~/projects/counterparty-lib"  # example, replace with you path, without trailing /
 ```
 You can check if it's set correctly if the following command lists `setup.py`:
 ```bash

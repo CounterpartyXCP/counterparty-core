@@ -105,7 +105,7 @@ class install_serpent(Command):
         os.system('cd serpent-%s && make' % branch)
 
         print("install serpent as python lib.")
-        os.system('cd serpent-%s && python setup.py install' % branch)
+        os.system('cd serpent-%s && python3 setup.py install' % branch)
 
         print("install serpent in `./bin`.")
         os.system('cp serpent-%s/serpent ./bin/serpent' % branch)

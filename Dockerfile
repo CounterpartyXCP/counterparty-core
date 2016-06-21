@@ -9,11 +9,13 @@ RUN apt-add-repository -y ppa:george-edison55/cmake-3.x
 RUN apt-get -y update && apt-get -y install language-pack-en-base gcc-4.8 software-properties-common
 RUN add-apt-repository -y ppa:ethereum/ethereum
 RUN add-apt-repository -y ppa:ethereum/ethereum-dev
+RUN sudo apt-get install python3-setuptools
 RUN apt-get -y update && apt-get -y install build-essential cmake libboost-all-dev libgmp-dev \
     libleveldb-dev libminiupnpc-dev libreadline-dev libncurses5-dev \
     libcurl4-openssl-dev libcryptopp-dev libmicrohttpd-dev libjsoncpp-dev \
     libargtable2-dev libedit-dev mesa-common-dev ocl-icd-libopencl1 opencl-headers \
     libgoogle-perftools-dev ocl-icd-dev libv8-dev libz-dev libjsonrpccpp-dev
+
 
 # Install counterparty-lib
 COPY . /counterparty-lib
