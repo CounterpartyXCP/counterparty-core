@@ -280,12 +280,19 @@ Sorted candidate UTXOs: ['amount: 1.99909140; txid: ae241be7be83ebb14902757ad948
 Fee/KB 0.00025000
 New input: amount: 1.99909140; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Size: 565 Fee: 0.00014124 Change quantity: 1.99835286 BTC
+TX NEW: tx_dict={'value': 0, 'data': '0x604a80600b6000396055567c0100000000000000000000000000000000000000000000000000000000600035046397d857aa8114156048576004356040526024356060526060516040510a60805260206080f35b505b6000f3', 'nonce': 0, 'sender': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'to': '', 'gasprice': 1, 'startgas': 1000000}
 Debit: 0.01 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #startgas# <c6a3653eac1113dc211d44314f461c4c7f5746d92f473881799b0a4e0be8c6c5>
+CONTRACT CREATION mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc: 
 SNAPSHOT S13766c2342a5081eea325923ffa04aca
+create_contract::init_code tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt: 
 [tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt] b''
 have: 0
 New Contract: tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt
+MSG APPLY: sender=mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, gas=942932, value=0, to=tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt, data=b''
+MSG PRE STATE SENDER: account=mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, bal=91949000000, state=0
+MSG PRE STATE RECIPIENT: account=tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt, bal=0, state=0
 SNAPSHOT Sf0d1cffe06a00f93443626e4b4440da5
+TRANSFER mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc -> tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt: 0: 
 Debit: 0.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #transfer value# <c6a3653eac1113dc211d44314f461c4c7f5746d92f473881799b0a4e0be8c6c5>
 Credit: 0.0 XCP to tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt #transfer value# <c6a3653eac1113dc211d44314f461c4c7f5746d92f473881799b0a4e0be8c6c5>
 vm PUSH1 address=tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt, depth=0, gas=b'942932', inst=96, op=PUSH1, pc=b'0', pushvalue=74, stack=[], steps=0, storage=0
@@ -299,8 +306,17 @@ vm JUMPDEST gas=b'942888', inst=91, op=JUMPDEST, pc=b'85', stack=[b'74'], steps=
 vm PUSH1 gas=b'942887', inst=96, op=PUSH1, pc=b'86', pushvalue=0, stack=[b'74'], steps=8
 vm RETURN gas=b'942884', inst=243, op=RETURN, pc=b'88', stack=[b'74', b'0'], steps=9
 EXIT cause=RETURN
+MSG APPLIED: data=[124, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96, 0, 53, 4, 99, 151, 216, 87, 170, 129, 20, 21, 96, 72, 87, 96, 4, 53, 96, 64, 82, 96, 36, 53, 96, 96, 82, 96, 96, 81, 96, 64, 81, 10, 96, 128, 82, 96, 32, 96, 128, 243, 91, 80], gas_remained=942884, res=1, sender=mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, to=tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt
+MSG POST STATE SENDER: account=mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, bal=91949000000, state=0
+MSG POST STATE RECIPIENT: account=tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt, bal=0, state=0
+create_contract::_apply_msg 1 942884 74: 
+create_contract::gcst 942884 14800 True: 
+create_contract::set_code tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt: 
 [tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt] b'|\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00`\x005\x04c\x97\xd8W\xaa\x81\x14\x15`HW`\x045`@R`$5``R``Q`@Q\n`\x80R` `\x80\xf3[P'
 have: 1
+_create_: data=tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt, gas_remained=928084, result=1
+TX APPLIED: data=tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt, gas_remained=928084, result=1
+TX SUCCESS: data=tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt
 Credit: 0.00928084 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #startgas# <c6a3653eac1113dc211d44314f461c4c7f5746d92f473881799b0a4e0be8c6c5>
 TX FINISHED (gas_remained: 928084)
 Execution: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created contract tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt (c6a3653eac1113dc211d44314f461c4c7f5746d92f473881799b0a4e0be8c6c5) [valid]
