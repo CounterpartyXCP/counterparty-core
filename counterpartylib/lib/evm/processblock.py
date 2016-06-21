@@ -123,7 +123,7 @@ def apply_transaction(db, block, tx):
         if tx.startgas < intrinsic_gas:
             raise InsufficientStartGas(rp('startgas', tx.startgas, intrinsic_gas))
 
-    log_tx.debug('TX NEW', tx_dict=tx.log_dict())
+    log_tx.debug('TX NEW', **tx.log_dict())
 
     # start transacting #################
 
