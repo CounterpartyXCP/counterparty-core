@@ -2191,3 +2191,179 @@ contract testme2 {
     with pytest.raises(tester.TransactionFailed):
         c1.incr(c2.address)
 
+
+def test_refund_suicide():
+    code = """
+contract testme {
+    function main() {
+
+    }
+}
+"""
+
+    s = state()
+    c = s.abi_contract(code, language='solidity')
+    b = s.block.get_balance(tester.a0)
+    c.main()
+    gascost = b - s.block.get_balance(tester.a0)
+
+    assert gascost == 21362
+
+    code = """
+contract testme {
+    function main() {
+        selfdestruct(msg.sender);
+    }
+}
+"""
+
+    s = state()
+    c = s.abi_contract(code, language='solidity')
+    b = s.block.get_balance(tester.a0)
+    c.main()
+    gascost = b - s.block.get_balance(tester.a0)
+
+    assert gascost == 10678  # suicide results in a refund
+
+
+def test_refund_clear_array():
+    code = """
+contract testme {
+    uint[] data;
+
+    function main(uint l) {
+        for (uint i = 0; i < l; i++) {
+            data.push(i);
+        }
+    }
+
+    function clearall() {
+        delete data;
+    }
+}
+"""
+
+    s = state()
+    c = s.abi_contract(code, language='solidity')
+    b = s.block.get_balance(tester.a0)
+    c.main(10)
+    gascost = b - s.block.get_balance(tester.a0)
+    assert gascost == 274746
+
+    b = s.block.get_balance(tester.a0)
+    c.clearall()
+    gascost = b - s.block.get_balance(tester.a0)
+    assert gascost == 38494
+
+
+def test_refund_clear_mapping():
+    code = """
+contract testme {
+    mapping(uint => bool) data;
+
+    function main(uint l) {
+        for (uint i = 0; i < l; i++) {
+            data[i] = true;
+        }
+    }
+
+    function clear(uint l) {
+        for (uint i = 0; i < l; i++) {
+            delete data[i];
+        }
+    }
+}
+"""
+
+    s = state()
+    c = s.abi_contract(code, language='solidity')
+    b = s.block.get_balance(tester.a0)
+    c.main(10)
+    gascost = b - s.block.get_balance(tester.a0)
+    assert gascost == 223454
+
+    b = s.block.get_balance(tester.a0)
+    c.clear(10)
+    gascost = b - s.block.get_balance(tester.a0)
+    assert gascost == 36708
+
+
+def test_refund_maximize_refund():
+    code1 = """
+contract testme1 {
+    mapping(uint => bool) data;
+
+    function main(uint l) {
+        for (uint i = 0; i < l; i++) {
+            data[i] = true;
+        }
+    }
+
+    function clear(uint l) {
+        for (uint i = 0; i < l; i++) {
+            delete data[i];
+        }
+    }
+}
+"""
+    code2 = """
+%s // code1
+
+contract testme2 {
+    address other;
+    mapping(uint => bool) data;
+
+    function testme2(address _other) {
+        other = _other;
+    }
+
+    function main(uint l, bool attemptClear) {
+        // expend gas
+        for (uint i = 0; i < l; i++) {
+            data[i] = true;
+        }
+
+        if (attemptClear) {
+            testme1(other).clear(l);
+        }
+    }
+}
+"""
+
+    s = state()
+    c1 = s.abi_contract(code1, language='solidity')
+    c2 = s.abi_contract(code2 % code1, constructor_parameters=[c1.address], language='solidity')
+    b = s.block.get_balance(tester.a0)
+    c1.main(10)
+    gascost = b - s.block.get_balance(tester.a0)
+    assert gascost == 223454
+
+    b = s.block.get_balance(tester.a0)
+    c2.main(10, False)
+    gascost = b - s.block.get_balance(tester.a0)
+    assert gascost == 223640
+
+    # now try to piggyback on the refund of the other contract
+    b = s.block.get_balance(tester.a0)
+    c2.main(10, True)
+    gascost = b - s.block.get_balance(tester.a0)
+    assert gascost == 62924
+
+    # again, but with more data
+    c1 = s.abi_contract(code1, language='solidity')
+    c2 = s.abi_contract(code2 % code1, constructor_parameters=[c1.address], language='solidity')
+    b = s.block.get_balance(tester.a0)
+    c1.main(20)
+    gascost = b - s.block.get_balance(tester.a0)
+    assert gascost == 425314
+
+    b = s.block.get_balance(tester.a0)
+    c2.main(20, False)
+    gascost = b - s.block.get_balance(tester.a0)
+    assert gascost == 425530
+
+    # now try to piggyback on the refund of the other contract
+    b = s.block.get_balance(tester.a0)
+    c2.main(20, True)
+    gascost = b - s.block.get_balance(tester.a0)
+    assert gascost == 114769

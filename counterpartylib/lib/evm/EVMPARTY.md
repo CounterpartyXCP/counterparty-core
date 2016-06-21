@@ -23,6 +23,8 @@ TODO
  - contract creation rollback
 
  - UnitTests
+   - solidity
+     - enum
    - blocks
    - ethutils
    - logging

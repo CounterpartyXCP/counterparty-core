@@ -160,12 +160,18 @@ def apply_transaction(db, block, tx):
     else:
         log_tx.debug('TX SUCCESS', data=data)
         gas_used = tx.startgas - gas_remained
+
+        # add suicide value to refunds
         block.refunds += len(unique_address_list(block.suicides)) * opcodes.GSUICIDEREFUND
+
+        # refund by adding to gas_remained and substracting from gas_used
         if block.refunds > 0:
-            log_tx.debug('Refunding', gas_refunded=min(block.refunds, gas_used // 2))
-            gas_remained += min(block.refunds, gas_used // 2)
-            gas_used -= min(block.refunds, gas_used // 2)
+            refund = min(block.refunds, gas_used // 2)  # can't refund more than half the gas used
+            log_tx.debug('Refunding', block_refunds=block.refunds, gas_refunded=refund)
+            gas_remained += refund
+            gas_used -= refund
             block.refunds = 0
+
         # sell remaining gas
         block.delta_balance(tx.sender, tx.gasprice * gas_remained, config.XCP, tx, action='startgas')
         block.gas_used += gas_used

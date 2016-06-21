@@ -80,7 +80,7 @@ class Block(object):
 
         # state, anything added to this should be added to snapshot/revert
         self.gas_used = 0
-        self.refunds = 0  # @TODO
+        self.refunds = 0
         self.suicides = []
         self.logs = []
 

@@ -425,6 +425,7 @@ def vm_execute(ext, msg, code):
                 s0, s1 = stk.pop(), stk.pop()
                 if ext.get_storage_data(msg.to, s0):
                     gascost = opcodes.GSTORAGEMOD if s1 else opcodes.GSTORAGEKILL
+                    # if we're unsetting data then a refund is in order
                     refund = 0 if s1 else opcodes.GSTORAGEREFUND
                 else:
                     gascost = opcodes.GSTORAGEADD if s1 else opcodes.GSTORAGEMOD
@@ -432,7 +433,7 @@ def vm_execute(ext, msg, code):
                 if compustate.gas < gascost:
                     return vm_exception('OUT OF GAS')
                 compustate.gas -= gascost
-                ext.add_refund(refund)  # adds neg gascost as a refund if below zero
+                ext.add_refund(refund)
                 ext.set_storage_data(msg.to, s0, s1)
             elif op == 'JUMP':
                 compustate.pc = stk.pop()
