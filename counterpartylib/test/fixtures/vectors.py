@@ -3420,12 +3420,12 @@ UNITTEST_VECTOR = {
                             '"604a80600b6000396055567c0100000000000000000000000000000000000000000000000000000000600035046397d857aa8114156048576004356040526024356060526060516040510a60805260206080f35b505b6000f3", '
                             '"source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "startgas": '
                             '1000000, "status": "valid", "tx_hash": '
-                            '"87a2f442d79648a21cbace5c13a50cd2e400d74e1469cfb063a7061e3e44e5f4", '
+                            '"5ffe7b4e75ab94d3548df7616c87a96f04afaf24d3d082a069ab3136ce290265", '
                             '"tx_index": 498, "value": 0}',
                 'block_index': 310497,
                 'category': 'executions',
                 'command': 'insert',
-                'message_index': 103,
+                'message_index': 107,
                 'timestamp': 0}
         }],
         'get_asset_id': [{
