@@ -427,8 +427,8 @@ CREATE INDEX cancels_block_index_idx ON cancels (block_index);
 DROP TABLE IF EXISTS contracts;
 CREATE TABLE contracts(
                       contract_id TEXT PRIMARY KEY,
-                      tx_index INTEGER UNIQUE,
-                      tx_hash TEXT UNIQUE,
+                      tx_index INTEGER,
+                      tx_hash TEXT,
                       block_index INTEGER,
                       source TEXT,
                       code BLOB,
@@ -903,21 +903,6 @@ CREATE INDEX give_get_status_idx ON orders (get_asset, give_asset, status);
 CREATE INDEX give_status_idx ON orders (give_asset, status);
 CREATE INDEX source_give_status_idx ON orders (source, give_asset, status);
 
--- Table  postqueue
-DROP TABLE IF EXISTS postqueue;
-CREATE TABLE postqueue(
-                      message BLOB);
--- Triggers and indices on  postqueue
-CREATE TRIGGER _postqueue_delete BEFORE DELETE ON postqueue BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO postqueue(rowid,message) VALUES('||old.rowid||','||quote(old.message)||')');
-                            END;
-CREATE TRIGGER _postqueue_insert AFTER INSERT ON postqueue BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM postqueue WHERE rowid='||new.rowid);
-                            END;
-CREATE TRIGGER _postqueue_update AFTER UPDATE ON postqueue BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'UPDATE postqueue SET message='||quote(old.message)||' WHERE rowid='||old.rowid);
-                            END;
-
 -- Table  rps
 DROP TABLE IF EXISTS rps;
 CREATE TABLE rps(
@@ -1081,6 +1066,7 @@ CREATE TABLE storage(
                       contract_id TEXT,
                       key BLOB,
                       value BLOB,
+                      PRIMARY KEY(contract_id, `key`),
                       FOREIGN KEY (contract_id) REFERENCES contracts(contract_id));
 -- Triggers and indices on  storage
 CREATE TRIGGER _storage_delete BEFORE DELETE ON storage BEGIN
