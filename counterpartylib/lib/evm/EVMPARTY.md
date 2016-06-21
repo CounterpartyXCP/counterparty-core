@@ -20,15 +20,13 @@ TODO
  - block gas limit
  - execution order
 
- - contract creation rollback
+ - sendasset set cost
 
  - UnitTests
    - solidity
      - enum
    - blocks
    - ethutils
-   - logging
-   - specials
    - transactions
 
 INSTALL

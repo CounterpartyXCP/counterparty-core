@@ -31,7 +31,7 @@ def proc_ecrecover(ext, msg):
         pubkey = bitcoin.core.key.CPubKey.recover_compact(message_hash, sig)
     except:
         # Recovery failed
-        return 1, msg.gas - gas_cost, []
+        return 1, msg.gas - gas_cost, []  # @TODO: why return 1 when we fail?
 
     from counterpartylib.lib.evm.address import Address
     addr = Address.normalize(script.pubkey_to_pubkeyhash(pubkey))

@@ -2,8 +2,8 @@ import logging
 import inspect
 
 
-def get_logger(prefix):
-    return SLoggerWithTrace(prefix)
+def get_logger(prefix, logger=None):
+    return SLoggerWithTrace(prefix, logger=logger)
 
 
 def log_dict(d, msg=None):
@@ -14,7 +14,7 @@ def log_dict(d, msg=None):
 
 
 class SLoggerWithTrace(object):
-    def __init__(self, prefix=None):
+    def __init__(self, prefix=None, logger=None):
         self.prefix = prefix
 
         name = __name__
@@ -26,7 +26,11 @@ class SLoggerWithTrace(object):
                 if name != __name__:
                     break
 
-        self.logger = logging.getLogger(name)
+        if logger:
+            self.logger = logger
+        else:
+            self.logger = logging.getLogger(name)
+
         if prefix is not None:
             self.logger = self.logger.getChild(prefix)
 
