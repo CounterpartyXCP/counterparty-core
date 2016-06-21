@@ -204,8 +204,6 @@ def debit (db, address, asset, quantity, action=None, event=None):
     """Debit given address by quantity of asset."""
     block_index = CURRENT_BLOCK_INDEX
 
-    logger.debug('DEBIT %s %s %d' % (address, asset, quantity))
-
     if type(quantity) != int:
         raise DebitError('Quantity must be an integer.')
     if quantity < 0:
@@ -260,8 +258,6 @@ class CreditError (Exception): pass
 def credit (db, address, asset, quantity, action=None, event=None):
     """Credit given address by quantity of asset."""
     block_index = CURRENT_BLOCK_INDEX
-
-    logger.debug('CREDIT %s %s %d' % (address, asset, quantity))
 
     if type(quantity) != int:
         raise CreditError('Quantity must be an integer.')

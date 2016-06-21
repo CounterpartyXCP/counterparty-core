@@ -1,6 +1,7 @@
 import os
 import pickle
 import logging
+import hashlib
 
 import binascii
 
@@ -75,6 +76,7 @@ class Block(object):
         self.log_listeners.append(lambda log: logger.getChild('log').debug(str(log)))
 
         self.snapshots = {}
+        self.snapshot_incr = 0
 
         # state, anything added to this should be added to snapshot/revert
         self.gas_used = 0
@@ -96,8 +98,13 @@ class Block(object):
     def snapshot_context(self):
         return Snapshot(self)
 
+    def snapshot_name(self):
+        self.snapshot_incr += 1
+        # name must start with alphabetic char so prefix with S
+        return "S" + binascii.hexlify(hashlib.sha256(bytes(self.block_hash + str(self.snapshot_incr), 'ascii')).digest()[:16]).decode('utf-8')
+
     def snapshot(self):
-        name = "S" + binascii.hexlify(os.urandom(16)).decode('utf8')  # name must start with alphabetic char so prefix with S
+        name = self.snapshot_name()
         logger.warn('SNAPSHOT %s' % name)
 
         cursor = self.db.cursor()

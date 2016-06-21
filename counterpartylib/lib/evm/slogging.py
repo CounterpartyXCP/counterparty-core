@@ -6,8 +6,11 @@ def get_logger(prefix):
     return SLoggerWithTrace(prefix)
 
 
-def log_dict(d):
-    return " ".join("{}={!s}".format(k, v) for k, v in d.items())
+def log_dict(d, msg=None):
+    order = dict(nonce=-10, sender=-9, startgas=-8, value=-7, to=-6, data=-5, gasprice=-4)
+
+    kargsalpha = list(sorted(d.keys()))
+    return ", ".join("%s=%s" % (k, d[k]) for k in sorted(d.keys(), key=lambda x: order.get(x, kargsalpha.index(x))))
 
 
 class SLoggerWithTrace(object):
@@ -41,6 +44,7 @@ class SLoggerWithTrace(object):
 
     def debug(self, msg, type='debug', **kwargs):
         if len(list(kwargs.keys())) > 0:
-            getattr(self.logger, type)("{} {}".format(msg.format(**kwargs), log_dict(kwargs)))
+            m = msg.format(**kwargs)
+            getattr(self.logger, type)("{} {}".format(m, log_dict(kwargs, m)))
         else:
             getattr(self.logger, type)(msg, **kwargs)

@@ -51,10 +51,10 @@ class PBLogger(object):
             order = dict(nonce=-2, balance=-1, storage=0, code=1, to=2, data=3)
         else:
             order = dict()
-        items = sorted(kargs.items(), key=lambda x: order.get(x[0], 0))
 
-        msg = ", ".join("%s=%s" % (k,v) for k,v in items)
-        getattr(self.logger, type)("%s: %s" % (name, msg))
+        kargsalpha = list(sorted(kargs.keys()))
+        msg = ", ".join("%s=%s" % (k, kargs[k]) for k in sorted(kargs.keys(), key=lambda x: order.get(x, kargsalpha.index(x))))
+        # getattr(self.logger, type)("%s: %s" % (name, msg))
 
 logger = logging.getLogger(__name__)
 log_tx = PBLogger('tx')
