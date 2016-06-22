@@ -40,7 +40,8 @@ before_install:
 
 script:
 # run the test suite in the docker container we just made
-- docker run --entrypoint=/bin/bash counterparty/counterparty-server:$DOCKER_TAG -c "cd /counterparty-lib/counterpartylib; py.test --verbose --skiptestbook=all --cov-config=../.coveragerc --cov-report=term-missing --cov=./"
+- docker run --entrypoint=/bin/bash counterparty/counterparty-server:$DOCKER_TAG -c \
+  "cd /counterparty-lib; ls -la ./bin/; ./bin/solc --version; py.test --verbose --skiptestbook=all --cov-config=./.coveragerc --cov-report=term-missing --cov=./counterpartylib ./counterpartylib"
 
 after_success:
 - coveralls
