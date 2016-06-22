@@ -37,6 +37,7 @@ before_install:
 - echo $DOCKERFILE_CLI_BRANCH
 # build docker image
 - docker build -t counterparty/counterparty-server:$DOCKER_TAG --build-arg CLI_BRANCH="$DOCKERFILE_CLI_BRANCH" .
+- docker run --entrypoint=/bin/bash counterparty/counterparty-server:$DOCKER_TAG -c "cd /counterparty-lib; git submodule update --init"
 
 script:
 # run the test suite in the docker container we just made

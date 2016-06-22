@@ -32,6 +32,64 @@ def test_hash160():
     assert address.hash160(b"test") == b'\xce\xba\xa9\x8c\x19\x80q4CM\x10{\r>V\x92\xa5\x16\xeaf'
 
 
+@pytest.fixture(scope='function')
+def enable_cast_ethereum_addresses(request):
+    """fixture to enable CAST_ETHEREUM_ADDRESSES and disable once done"""
+
+    _CAST_ETHEREUM_ADDRESSES = address.CAST_ETHEREUM_ADDRESSES
+    def reset_cast():
+        address.CAST_ETHEREUM_ADDRESSES = _CAST_ETHEREUM_ADDRESSES
+    address.CAST_ETHEREUM_ADDRESSES = True
+    request.addfinalizer(reset_cast)
+
+
+@pytest.mark.usefixtures('enable_cast_ethereum_addresses')
+def test_min_int():
+    a = Address(Address.normalizedata(b''), version=config.ADDRESSVERSION)
+    a.version = b'\x01'
+
+    assert a.int() == address.MININT
+
+    # this is a ethereum literal from a test fixture
+    assert 846782024548323446991784721256445173708587954613 < address.MININT
+    a = Address.normalize(846782024548323446991784721256445173708587954613)
+    assert a.base58() == "tjnUVZs4fSCixabHsYHa4Y3sLoCMbSvBgZ"
+
+
+@pytest.mark.usefixtures('enable_cast_ethereum_addresses')
+def test_max_int():
+    a = Address(Address.normalizedata(b'\xff' * 20), version=config.ADDRESSVERSION)
+    a.version = b'\xff'
+
+    assert a.int() == address.MAXINT
+
+    # this is a ethereum literal from a test fixture
+    assert 115368164193494502992677104281492663667545801232522388744852668218526191640046 > address.MININT
+    a = Address.normalize(115368164193494502992677104281492663667545801232522388744852668218526191640046)
+    assert a.base58() == "toPCpBAKk7FsYMDi143PYqV1Wk6shh1sZ7"
+
+
+@pytest.mark.usefixtures('enable_cast_ethereum_addresses')
+def test_ruben():
+    # invalid prefix bytes should be stripped off
+    h = "aa800f572e5295c57f15886f9b263e2f6d2d6c7b5ec6"
+    r = "800f572e5295c57f15886f9b263e2f6d2d6c7b5ec6"
+    b = ethutils.decode_hex(h)
+    i = ethutils.big_endian_to_int(b)
+
+    a = Address.normalize(i)
+    assert a.hexstr() == r
+
+    # invalid suffix bytes should be stripped off
+    h = "800f572e5295c57f15886f9b263e2f6d2d6c7b5ec6aa"
+    r = "80572e5295c57f15886f9b263e2f6d2d6c7b5ec6aa"
+    b = ethutils.decode_hex(h)
+    i = ethutils.big_endian_to_int(b)
+
+    a = Address.normalize(i)
+    assert a.hexstr() == r
+
+
 def test_checksum_mismatch():
     with pytest.raises(script.Base58ChecksumError):
         address.Address.frombase58('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zd')
@@ -214,6 +272,8 @@ def address_asserts(a):
     assert a.version == b'\x6f'
     assert a.data == b'H8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607'
 
+    assert a.datahexbytes() == b'4838d8b3588c4c7ba7c1d06f866e9b3739c63037'
+    assert a.datahexstr() == '4838d8b3588c4c7ba7c1d06f866e9b3739c63037'
     assert a.base58() == 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'
     assert a.hexbytes() == b'6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037'
     assert a.hexstr() == '6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037'

@@ -57,20 +57,25 @@ class Snapshot(object):
 
 
 class Block(object):
-    def __init__(self, db, block_hash):
+    def __init__(self, db, block_hash, **kwargs):
         self.db = db
 
         cursor = db.cursor()
         block = list(cursor.execute('''SELECT * FROM blocks WHERE block_hash = ?''', (block_hash,)))[0]
         cursor.close()
 
+        # make sure no unknown kwargs are passed
+        assert len(set(kwargs.keys()) - set(['timestamp', 'number', 'coinbase_address', 'gas_limit', 'difficulty'])) == 0
+
         self.block_index = block['block_index']
         self.block_hash = block['block_hash']
-        self.block_time = block['block_time']
-        self.timestamp = block['block_time']
-        self.number = block['block_index']
+        self.block_time = kwargs.get('timestamp', block['block_time'])
+        self.timestamp = self.block_time
+        self.number = kwargs.get('number', block['block_index'])
         self.prevhash = block['previous_block_hash']
-        self.gas_limit = GAS_LIMIT
+        self.coinbase = Address.normalize(kwargs.get('coinbase_address', Address.nulladdress()))
+        self.gas_limit = kwargs.get('gas_limit', GAS_LIMIT)
+        self.difficulty = kwargs.get('difficulty', 0)
 
         self.log_listeners = []
         self.log_listeners.append(lambda log: logger.getChild('log').debug(str(log)))
@@ -175,6 +180,7 @@ class Block(object):
 
         logger.getChild('set_storage_data').debug('[%s] %s: %s' % (contract_id.base58(), key, value))
 
+        is_empty = not value
         key = key.to_bytes(32, byteorder='big')
         value = value.to_bytes(32, byteorder='big')
 
@@ -189,15 +195,23 @@ class Block(object):
         cursor.execute('''SELECT * FROM storage WHERE contract_id = ? AND key = ?''', (bindings['contract_id'], key))
         storages = list(cursor)
         if storages:  # Update value.
-            logger.getChild('set_storage_data').debug('UPDATE %s' % bindings['contract_id'])
-            log.message(self.db, self.number, 'update', 'storage', bindings)
-            sql = '''UPDATE storage SET value = :value WHERE contract_id = :contract_id AND key = :key'''
-            cursor.execute(sql, bindings)
+            if is_empty:
+                logger.getChild('set_storage_data').debug('DELETE %s' % bindings['contract_id'])
+                sql = '''DELETE FROM storage WHERE contract_id = :contract_id AND key = :key'''
+                cursor.execute(sql, bindings)
+            else:
+                logger.getChild('set_storage_data').debug('UPDATE %s' % bindings['contract_id'])
+                sql = '''UPDATE storage SET value = :value WHERE contract_id = :contract_id AND key = :key'''
+                cursor.execute(sql, bindings)
         else:  # Insert value.
-            logger.getChild('set_storage_data').debug('INSERT %s' % bindings['contract_id'])
-            log.message(self.db, self.number, 'insert', 'storage', bindings)
-            sql = '''INSERT INTO storage VALUES (:contract_id, :key, :value)'''
-            cursor.execute(sql, bindings)
+            if is_empty:
+                logger.getChild('set_storage_data').debug('INSERT BLANK %s' % bindings['contract_id'])
+            else:
+                logger.getChild('set_storage_data').debug('INSERT %s' % bindings['contract_id'])
+                sql = '''INSERT INTO storage VALUES (:contract_id, :key, :value)'''
+                cursor.execute(sql, bindings)
+
+        log.message(self.db, self.number, 'insert', 'storage', bindings)
 
         cursor.close()
 

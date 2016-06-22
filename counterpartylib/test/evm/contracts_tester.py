@@ -210,9 +210,9 @@ class state(object):
                         "or send(sender, to, value, data) directly, "
                         "using the abi module to generate data if needed")
 
-    def mock_tx(self, sender, to, value, data, startgas=DEFAULT_STARTGAS):
+    def mock_tx(self, sender, to, value, data, startgas=DEFAULT_STARTGAS, gasprice=1, nonce=None, block_obj=None):
         # create new block
-        block_obj = self.mine()
+        block_obj = block_obj or self.mine()
 
         sender = Address.normalize(sender)
         to = Address.normalize(to)
@@ -233,10 +233,10 @@ class state(object):
         cursor.execute('''INSERT INTO transactions ({}) VALUES ({})'''.format(", ".join(tx.keys()), ", ".join("?" * len(tx.keys()))), tx.values())
         cursor.close()
 
-        tx_obj = transactions.Transaction(tx, nonce=0, to=Address.normalize(to), gasprice=1, startgas=startgas, value=value, data=data)
+        tx_obj = transactions.Transaction(tx, nonce=0, to=Address.normalize(to), gasprice=gasprice, startgas=startgas, value=value, data=data)
 
         # @TODO
-        tx_obj.nonce = block_obj.get_nonce(Address.normalize(sender))
+        tx_obj.nonce = nonce or block_obj.get_nonce(Address.normalize(sender))
 
         return tx, tx_obj, block_obj
 
@@ -281,13 +281,16 @@ class state(object):
         self.send(sender, to, value, data)
         # return recorder.pop_records()
 
-    def mine(self, n=1, coinbase=None):
+    def set_balance(self, address, value):
+        util.credit(self.db, address.base58(), 'XCP', value, action='set_balance', event=None)
+
+    def mine(self, n=1, **kwargs):
         assert n > 0
 
         for x in range(0, n):
             block_index, block_hash, block_time = util_test.create_next_block(self.db)
 
-            block_obj = ethblocks.Block(self.db, block_hash)
+            block_obj = ethblocks.Block(self.db, block_hash, **kwargs)
             block_obj.log_listeners += self.log_listeners
 
             self.block = block_obj

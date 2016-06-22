@@ -26,6 +26,7 @@ dependencies:
         - python setup.py install --with-serpent --with-solc
         - python -c "import apsw; print(apsw.apswversion())"
         - ./bin/solc --version
+        - git submodule update --init
 test:
     override:
         - py.test --verbose --capture=no counterpartylib/test/config_context_test.py

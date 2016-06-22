@@ -22,6 +22,16 @@ TODO
  - block gas limit
  - execution order
 
+ - ether units
+ - time units
+ - block.coinbase
+ - block.difficulty
+ - block.gaslimit
+ - msg.sig
+ - msg.value
+ - now
+ - tx.gasprice
+
  - sendasset set cost
 
  - UnitTests

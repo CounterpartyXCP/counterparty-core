@@ -66,6 +66,7 @@ def pytest_generate_tests(metafunc):
             args = [True, False]
         metafunc.parametrize('testnet', args)
 
+
 def pytest_addoption(parser):
     """Add useful test suite argument options."""
     parser.addoption("--function", action="append", default=[], help="list of functions to test")
@@ -73,6 +74,7 @@ def pytest_addoption(parser):
     parser.addoption("--gentxhex", action='store_true', default=False, help="generate and print unsigned hex for *.compose() tests")
     parser.addoption("--savescenarios", action='store_true', default=False, help="generate sql dump and log in .new files")
     parser.addoption("--skiptestbook", default='no', help="skip test book(s) (use with one of the following values: `all`, `testnet` or `mainnet`)")
+    parser.addoption("--vmtests", action="append", default=[], help="list of vmtest fixtures to use, relative path, ie; 'VMTests/*.json' (default: all)")
 
 
 @pytest.fixture(scope="module")

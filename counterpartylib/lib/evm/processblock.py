@@ -211,12 +211,11 @@ class VMExt(VmExtBase):
 
         self.block_hash = block_hash
 
-        self.block_prevhash = 0  # @TODO
-        self.block_coinbase = 0  # @TODO
+        self.block_coinbase = block.coinbase
         self.block_timestamp = block.timestamp
         self.block_number = block.number
-        self.block_difficulty = 0  # @TODO
-        self.block_gas_limit = 0  # @TODO
+        self.block_difficulty = block.difficulty
+        self.block_gas_limit = block.gas_limit
 
         self.get_code = block.get_code
         self.get_balance = block.get_balance

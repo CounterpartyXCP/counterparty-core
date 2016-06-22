@@ -14,6 +14,7 @@ from rlp.utils import encode_hex, ascii_chr
 from .ethutils import to_string
 from .slogging import log_dict
 
+from counterpartylib.lib.evm import address
 from counterpartylib.lib.evm.address import Address
 
 log_log = get_logger('eth.vm.log')
@@ -77,7 +78,7 @@ class Message(object):
         return '<Message(to:%s...)>' % str(self.to)[:8]
 
 
-class Compustate():
+class Compustate(object):
 
     def __init__(self, **kwargs):
         self.memory = []
@@ -334,6 +335,7 @@ def vm_execute(ext, msg, code):
             elif op == 'BALANCE':
                 addr = stk.pop()
                 addr = Address.normalize(addr)
+                log_vm_op.debug('BALANCE', addr=addr, b=ext.get_balance(addr))
                 stk.append(ext.get_balance(addr))
             elif op == 'ORIGIN':
                 stk.append(utils.coerce_to_int(ext.tx_origin.int()))
@@ -368,10 +370,13 @@ def vm_execute(ext, msg, code):
             elif op == 'GASPRICE':
                 stk.append(ext.tx_gasprice)
             elif op == 'EXTCODESIZE':
-                addr = utils.coerce_addr_to_hex(stk.pop() % 2**160)
+                addr = stk.pop()
+                log_vm_op.debug('EXTCODESIZE', addr=addr)
+                addr = Address.normalize(addr)
                 stk.append(len(ext.get_code(addr) or b''))
             elif op == 'EXTCODECOPY':
-                addr = utils.coerce_addr_to_hex(stk.pop() % 2**160)
+                addr = stk.pop()
+                addr = Address.normalize(addr)
                 start, s2, size = stk.pop(), stk.pop(), stk.pop()
                 extcode = ext.get_code(addr) or b''
                 assert utils.is_string(extcode)
@@ -388,7 +393,7 @@ def vm_execute(ext, msg, code):
             if op == 'BLOCKHASH':
                 stk.append(utils.big_endian_to_int(ext.block_hash(stk.pop())))
             elif op == 'COINBASE':
-                stk.append(utils.big_endian_to_int(ext.block_coinbase))
+                stk.append(ext.block_coinbase.int())
             elif op == 'TIMESTAMP':
                 stk.append(ext.block_timestamp)
             elif op == 'NUMBER':
@@ -525,7 +530,8 @@ def vm_execute(ext, msg, code):
 
             if compustate.gas < gas + extra_gas:
                 return vm_exception('OUT OF GAS', needed=gas+extra_gas)
-            if ext.get_balance(msg.to) >= value and msg.depth < STACK_SIZE_LIMIT:
+
+            if ext.get_balance(msg.to) >= value and msg.depth < STACK_SIZE_LIMIT:  # @TODO
                 compustate.gas -= (gas + extra_gas)
                 cd = CallData(mem, meminstart, meminsz)
                 call_msg = Message(msg.to, to, value, submsg_gas, cd,
@@ -549,6 +555,9 @@ def vm_execute(ext, msg, code):
                 gas, to, meminstart, meminsz, memoutstart, memoutsz = \
                     stk.pop(), stk.pop(), stk.pop(), stk.pop(), stk.pop(), stk.pop()
                 value = 0
+
+            log_vm_op.warn('%s %s %s %s %s %s %s %s' % (op, gas, to, value, meminstart, meminsz, memoutstart, memoutsz))
+
             if not mem_extend(mem, compustate, op, meminstart, meminsz) or \
                     not mem_extend(mem, compustate, op, memoutstart, memoutsz):
                 return vm_exception('OOG EXTENDING MEMORY')
@@ -558,7 +567,7 @@ def vm_execute(ext, msg, code):
                 return vm_exception('OUT OF GAS', needed=gas+extra_gas)
             if ext.get_balance(msg.to) >= value and msg.depth < STACK_SIZE_LIMIT:
                 compustate.gas -= (gas + extra_gas)
-                to = Address.normalize(utils.encode_int(to))
+                to = Address.normalize(to)
                 cd = CallData(mem, meminstart, meminsz)
                 if ext.post_homestead_hardfork() and op == 'DELEGATECALL':
                     call_msg = Message(msg.sender, msg.to, msg.value, submsg_gas, cd,
@@ -586,12 +595,16 @@ def vm_execute(ext, msg, code):
             return peaceful_exit('RETURN', compustate.gas, mem[s0: s0 + s1])
         elif op == 'SUICIDE':
             to = stk.pop()
-            to = utils.encode_int(to)
+            to_int = utils.encode_int(to)
+            log_vm_op.debug('SUICIDE', to=to, to_int=to_int, to_int_len=len(to_int))
             to = Address.normalize(to)
 
             assert to is not None
 
             xfer = ext.get_balance(msg.to)  # balance of the contract
+
+            log_vm_op.debug('SUICIDE', from_=msg.to, to=to, xfer=xfer)
+
             ext.delta_balance(msg.to, -xfer)  # transfer balance out of the contract
             ext.delta_balance(to, xfer)  # transfer balance to suicide address
             ext.add_suicide(msg.to)
@@ -616,7 +629,6 @@ class VmExtBase(object):
         self.log_storage = lambda addr: 0
         self.add_suicide = lambda addr: 0
         self.add_refund = lambda x: 0
-        self.block_prevhash = 0
         self.block_coinbase = 0
         self.block_timestamp = 0
         self.block_number = 0

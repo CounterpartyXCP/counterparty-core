@@ -701,7 +701,7 @@ contract testme {
     assert o5 == 5
 
     # Mine 100 blocks
-    s.mine(100, tester.a3)
+    s.mine(100)
 
     # Expect code 4, meaning a normal execution where both get their share
     o6 = c2.main(address.Address.nulladdress(), 0)
@@ -2422,3 +2422,26 @@ contract test {
     assert c.getChoice() == 0
     c.setGoStraight()
     assert c.getChoice() == 2
+
+
+def test_block_properties():
+    code = """
+contract testme {
+    function coinbase() returns (address) {
+        return block.coinbase;
+    }
+    function difficulty() returns (uint) {
+        return block.difficulty;
+    }
+    function gaslimit() returns (uint) {
+        return block.gaslimit;
+    }
+}
+"""
+
+    s = state()
+    c = s.abi_contract(code, language='solidity')
+
+    assert c.coinbase() == address.Address.nulladdress()
+    assert c.difficulty() == 0
+    assert c.gaslimit() == 0
