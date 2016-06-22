@@ -162,8 +162,11 @@ class solc_wrapper(object):
         }
 
 
-def get_solidity():
-    if not solc_wrapper.compiler_available():
-        return None
-    return solc_wrapper
+def is_exe(fpath):
+    return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
+
+def get_solidity():
+    if not is_exe(SOLCBIN):
+        raise Exception("`solc` not available")
+    return solc_wrapper
