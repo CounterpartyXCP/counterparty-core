@@ -97,7 +97,7 @@ def set_deposit(asset, deposit_script, expected_payee_pubkey,
         expected_payee_pubkey (str): To validate deposit for payee.
         expected_spend_secret_hash (str): To validate deposit secret hash.
 
-    Returns: {"state": updated_state}
+    Returns: Initial payee state object
 
     Raises:
         counterpartylib.lib.micropayments.exceptions.InvalidHexData
@@ -118,7 +118,7 @@ def set_deposit(asset, deposit_script, expected_payee_pubkey,
     state["asset"] = asset
     state["deposit_script"] = deposit_script
 
-    return {"state": state}
+    return state
 
 
 def request_commit(dispatcher, state, quantity, revoke_secret_hash, netcode):
@@ -174,7 +174,7 @@ def create_commit(dispatcher, state, quantity, revoke_secret_hash,
             "state": updated_channel_state,
             "commit_script": hex_encoded,
             "tosign": {
-                "rawtx": unsigned_commit_rawtx,
+                "commit_rawtx": unsigned_commit_rawtx,
                 "deposit_script": hex_encoded
             }
         }
@@ -211,7 +211,7 @@ def create_commit(dispatcher, state, quantity, revoke_secret_hash,
         "state": state,
         "commit_script": util.b2h(commit_script),
         "tosign": {
-            "rawtx": rawtx,
+            "commit_rawtx": rawtx,
             "deposit_script": state["deposit_script"]
         }
     }
@@ -225,7 +225,7 @@ def add_commit(dispatcher, state, commit_rawtx, commit_script):
         commit_rawtx (str): Commit transaction signed by payer.
         commit_script (str): Commit p2sh script.
 
-    Returns: {"state": updated_state}
+    Returns: Updated payee state object
 
     Raises:
         counterpartylib.lib.micropayments.exceptions.InvalidHexData
@@ -259,7 +259,7 @@ def add_commit(dispatcher, state, commit_rawtx, commit_script):
                 "rawtx": commit_rawtx,
                 "script": commit_script
             })
-            return {"state": state}
+            return state
 
     raise ValueError("No revoke secret for given commit script.")
 
@@ -320,7 +320,7 @@ def revoke_all(state, secrets):
     # update state
     list(map(lambda s: _revoke(state, s), secrets))
 
-    return {"state": state}
+    return state
 
 
 def highest_commit(dispatcher, state):
