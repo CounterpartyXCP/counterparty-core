@@ -27,6 +27,8 @@ solidity = get_solidity()
 db, cursor, logger = None, None, None
 CLEANUP_FILES = []
 
+RUN_SLOWCONTACTS = True
+pytest_run_slow_contracts = pytest.mark.skipif(not RUN_SLOWCONTACTS, reason='slow')
 
 def state():
     """"create a tester.state with latest block"""
@@ -724,6 +726,7 @@ contract testme {
     assert c.f3() == 1010
 
 
+@pytest_run_slow_contracts
 def test_oog():
     contract_code = '''
 contract testme {
@@ -752,6 +755,7 @@ contract testme {
     assert e and isinstance(e, tester.TransactionFailed)
 
 
+@pytest_run_slow_contracts
 def test_subcall_suicider():
     internal_code = '''
 contract testmeinternal {
@@ -1364,6 +1368,7 @@ contract slicer {
 
 
 @pytest.mark.timeout(100)
+@pytest_run_slow_contracts
 def test_slice():
     s = state()
     c = s.abi_contract(slice_code, language='solidity')
@@ -1425,6 +1430,7 @@ contract sorter is slicer {
 
 
 @pytest.mark.timeout(100)
+@pytest_run_slow_contracts
 def test_sort():
     s = state()
     c = s.abi_contract(sort_code, language='solidity')
@@ -1454,6 +1460,7 @@ contract indirect_sorter {
 
 @pytest.mark.timeout(100)
 @pytest.mark.skip(reason="solidity doesn't support calls to dynamic array")
+@pytest_run_slow_contracts
 def test_indirect_sort():
     s = state()
     c = s.abi_contract(sort_tester_code, language='solidity')

@@ -19,6 +19,8 @@ from counterpartylib.test import util_test
 db, cursor, logger = None, None, None
 CLEANUP_FILES = []
 
+RUN_SLOWCONTACTS = True
+pytest_run_slow_contracts = pytest.mark.skipif(not RUN_SLOWCONTACTS, reason='slow')
 
 def state():
     """"create a tester.state with latest block"""
@@ -552,6 +554,7 @@ def test_lifo():
     assert c.f3() == 1010
 
 
+@pytest_run_slow_contracts
 def test_oog():
     contract_code = '''
 def loop(rounds):
@@ -603,6 +606,7 @@ def ping_storage15():
 '''
 
 
+@pytest_run_slow_contracts
 def test_suicider():
     s = state()
 
@@ -1289,6 +1293,7 @@ def sort(args:arr):
 
 
 @pytest.mark.timeout(100)
+@pytest_run_slow_contracts
 def test_sort():
     s = state()
     c = s.abi_contract(sort_code, language='serpent')
@@ -1314,6 +1319,7 @@ def test(args:arr):
 
 
 @pytest.mark.timeout(100)
+@pytest_run_slow_contracts
 def test_indirect_sort():
     s = state()
     open_cleanonteardown(filename9, 'w').write(sort_code)
