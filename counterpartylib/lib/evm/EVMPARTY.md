@@ -17,6 +17,8 @@ TODO
  - WINDOWS INSTALL
  - ecrecover
 
+ - execute on non existant contract?
+
  - block gas limit
  - execution order
 

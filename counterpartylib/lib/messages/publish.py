@@ -1,6 +1,7 @@
 import struct
 import binascii
 import logging
+import zlib
 from bitcoin.core import VarIntSerializer
 logger = logging.getLogger(__name__)
 
@@ -26,13 +27,19 @@ def unpack(db, message):
         codelenlen = len(VarIntSerializer.serialize(codelen))
         code = code[codelenlen:(codelenlen + codelen)]
 
+        # try to ungzip
+        try:
+            code = zlib.decompress(code)
+        except zlib.error:
+            pass
+
     except (struct.error) as e:
         raise exceptions.UnpackError()
 
     return None, gasprice, startgas, endowment, code
 
 
-def compose(db, source, gasprice, startgas, endowment, code_hex):
+def compose(db, source, gasprice, startgas, endowment, code_hex, gzip=None):
     if not util.enabled('evmparty'):
         logger.warn("EVM hasn't been activated yet!")
         return
@@ -44,9 +51,17 @@ def compose(db, source, gasprice, startgas, endowment, code_hex):
     if gasprice < 0:
         raise evmexceptions.ContractError('negative gasprice')
 
+    # use gzip if smaller
+    if gzip or gzip is None:
+        gzcode = zlib.compress(code)
+        if gzip or len(gzcode) < len(code):
+            logger.debug('gzip code %d < %d' % (len(gzcode), len(code)))
+            code = gzcode
+
     # Pack.
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, gasprice, startgas, endowment)
+
     data += VarIntSerializer.serialize(len(code))
     data += code
 

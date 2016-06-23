@@ -202,8 +202,22 @@ contract testme {
     s = state()
     c = s.abi_contract(contract_code, language='solidity')
 
-    assert c.ping() == 11;
-    assert c.ping() == 12;
+    assert c.ping() == 11
+    assert c.ping() == 12
+
+def test_mul2():
+    mul2_code = '''
+contract testme {
+    function mul2(uint v) returns (uint) {
+        return v * 2;
+    }
+}
+'''
+
+    s = state()
+    c = s.abi_contract(mul2_code, language='solidity')
+
+    assert c.mul2(5) == 10
 
 
 # Test import mechanism

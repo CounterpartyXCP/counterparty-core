@@ -308,6 +308,11 @@ class install(_install):
         )
         
     def run(self):
+        try:
+            import zlib
+        except:
+            assert 0, "Python must be build with zlib"
+
         # Explicit request for old-style install?  Just do it
         if self.old_and_unmanageable or self.single_version_externally_managed:
             _install.run(self)
