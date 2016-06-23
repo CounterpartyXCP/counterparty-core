@@ -1,5 +1,7 @@
 # Keep this as non-docker for now, to give some variety to our test configurations, as travis builds with docker
 dependencies:
+    cache_directories:
+        - ./webthree-umbrella*
     override:
         # Install ethereum dependencies
         # NEW PACKAGES TO BUILD `solc`
