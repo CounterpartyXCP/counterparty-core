@@ -93,16 +93,21 @@ class solc_wrapper(object):
         """compile combined-json with abi,bin,devdoc,userdoc
         @param code: literal solidity code as a string.
         @param path: absolute path to solidity-file. Note: code & path are exclusive!
+        @param optimize: let the compiler optimize the code
         """
 
+        combined_json = 'abi,bin,devdoc,userdoc,structs,statevars'
+        args = ['--add-std', '--optimize' if optimize else '', '--combined-json', combined_json]
+        cmd = [SOLCBIN] + args
+
         if path is None:
-            p = subprocess.Popen([SOLCBIN, '--add-std', '--optimize' if optimize else '', '--combined-json', 'abi,bin,devdoc,userdoc,structs,statevars', './=/work/counterparty-lib/', '-'],
+            p = subprocess.Popen(cmd + ['-'],
                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdoutdata, stderrdata = p.communicate(input=bytes(code, 'utf-8'))
         else:
             assert code is None or len(code) == 0, "`code` and `path` are exclusive!"
             workdir, fn = os.path.split(path)
-            p = subprocess.Popen([SOLCBIN, '--optimize' if optimize else '', '--combined-json', 'abi,bin,devdoc,userdoc,structs,statevars', './=/work/counterparty-lib/', fn],
+            p = subprocess.Popen(cmd + [fn],
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=workdir)
             stdoutdata = p.stdout.read().strip()
             stderrdata = p.stderr.read().strip()

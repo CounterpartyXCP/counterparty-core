@@ -21,8 +21,9 @@ import binascii
 import appdirs
 import bitcoin as bitcoinlib
 
-CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
-sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
+ROOTDIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+TESTDIR = os.path.abspath(os.path.join(ROOTDIR, "counterpartylib/test"))
+CURR_DIR = TESTDIR
 
 from counterpartylib import server
 from counterpartylib.lib import (config, util, blocks, check, backend, database, transaction)
