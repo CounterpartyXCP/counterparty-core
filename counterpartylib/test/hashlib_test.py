@@ -1,6 +1,6 @@
 import hashlib
 import binascii
-from counterpartylib.lib.messages.scriptlib import utils, rlp
+import rlp
 
 def test_sha3():
     sender = b'\x00\xb625+E\x06\x96\xbe\x10\x0e\xdc!58?\x00\x83\xa4\x99'
@@ -17,5 +17,3 @@ def test_sha3():
 
     contract_id = binascii.hexlify(contract_id).decode('ascii')
     assert contract_id == 'e6c9eda981771a3217eda4f93f9ce3c329161399'
-
-    assert utils.contract_sha3(b) == 'e6c9eda981771a3217eda4f93f9ce3c329161399'
