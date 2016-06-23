@@ -148,51 +148,77 @@ class install_solc(_install):
         pass
 
     def run(self):
-        repo = "rubensayshi"
-        branch = "counterparty"
+        import json
 
         # In Windows Solidity should be installed manually
         if os.name == 'nt':
             print('Windows requires manual install, good luck ... @TODO')  # @TODO
             return
 
-        if not os.path.isdir("./webthree-umbrella/solidity"):
-            print("downloading webthree-umbrella.")
-            os.system("rm -rf ./webthree-umbrella")
-            print('git clone --recursive --branch v1.2.6 git://github.com/ethereum/webthree-umbrella.git')
-            os.system('git clone --recursive --branch v1.2.6 git://github.com/ethereum/webthree-umbrella.git')
+        WEBTHREE_REPO = "ethereum"
+        WEBTHREE_REPO_URL = "git://github.com/%s/webthree-umbrella.git" % WEBTHREE_REPO
+        WEBTHREE_BRANCH = "v1.2.6"
 
-            os.system('cd webthree-umbrella/solidity && '
-                      'git remote add counterparty git://github.com/%s/solidity.git' % (repo))
+        SOLIDITY_REPO = "rubensayshi"
+        SOLIDITY_REPO_URL = "git://github.com/%s/solidity.git" % SOLIDITY_REPO
+        SOLIDITY_BRANCH = "counterparty"
 
-        os.system('cd webthree-umbrella/solidity && '
-                  'git fetch counterparty && '
-                  'git checkout -f %s &&'
-                  'git reset --hard counterparty/%s' % (branch, branch))
+        PARAMS = dict(
+            WEBTHREE_REPO=WEBTHREE_REPO,
+            WEBTHREE_REPO_URL=WEBTHREE_REPO_URL,
+            WEBTHREE_BRANCH=WEBTHREE_BRANCH,
+            SOLIDITY_REPO=SOLIDITY_REPO,
+            SOLIDITY_REPO_URL=SOLIDITY_REPO_URL,
+            SOLIDITY_BRANCH=SOLIDITY_BRANCH,
+        )
 
-        print("building.")
-        os.system('cd webthree-umbrella && ./webthree-helpers/scripts/ethbuild.sh --no-git --project solidity --cores 4 -DEVMJIT=0 -DETHASHCL=0 -DGUI=0')
+        with urllib.request.urlopen('https://api.github.com/repos/{SOLIDITY_REPO}/solidity/branches/{SOLIDITY_BRANCH}'.format(**PARAMS)) as u:
+            data = json.loads(u.read().decode('utf-8'))
+            commit = data['commit']['sha']
+
+        WEBTHREE_DIR = "./webthree-umbrella-%s-%s" % (WEBTHREE_BRANCH, commit)
+
+        PARAMS.update(dict(
+            WEBTHREE_DIR=WEBTHREE_DIR
+        ))
+
+        if not os.path.isdir("{WEBTHREE_DIR}/solidity".format(**PARAMS)):
+            print("downloading webthree-umbrella into {WEBTHREE_DIR}.".format(**PARAMS))
+            os.system("rm -rf {WEBTHREE_DIR}".format(**PARAMS))
+            print('git clone --recursive --branch {WEBTHREE_BRANCH} {WEBTHREE_REPO_URL} {WEBTHREE_DIR}'.format(**PARAMS))
+            os.system('git clone --recursive --branch {WEBTHREE_BRANCH} {WEBTHREE_REPO_URL} {WEBTHREE_DIR}'.format(**PARAMS))
+
+            os.system('cd {WEBTHREE_DIR}/solidity && '
+                      'git remote add counterparty {SOLIDITY_REPO_URL}'.format(**PARAMS))
+
+            os.system('cd {WEBTHREE_DIR}/solidity && '
+                      'git fetch counterparty && '
+                      'git checkout -f {SOLIDITY_BRANCH} &&'
+                      'git reset --hard counterparty/{SOLIDITY_BRANCH}'.format(**PARAMS))
+
+            print("building.")
+            os.system('cd {WEBTHREE_DIR} && ./webthree-helpers/scripts/ethbuild.sh --no-git --project solidity --cores 4 -DEVMJIT=0 -DETHASHCL=0 -DGUI=0'.format(**PARAMS))
 
         if self.clean_and_cp:
             print("copying to ./bin")
-            os.system('cp webthree-umbrella/solidity/build/solc/solc ./bin/solc')
+            os.system('cp {WEBTHREE_DIR}/solidity/build/solc/solc ./bin/solc'.format(**PARAMS))
 
             if self.global_install_solc:
                 print("copying to /usr/bin")
-                os.system('sudo cp webthree-umbrella/solidity/build/solc/solc /usr/bin/solc')
+                os.system('sudo cp {WEBTHREE_DIR}/solidity/build/solc/solc /usr/bin/solc'.format(**PARAMS))
 
             if self.clean:
                 print("clean files.")
-                shutil.rmtree('webthree-umbrella')
+                shutil.rmtree('{WEBTRHEE_DIR}'.format(**PARAMS))
         else:
             print("symlinking to ./bin")
             os.system('rm ./bin/solc')
-            os.system('ln -s `pwd`/webthree-umbrella/solidity/build/solc/solc ./bin/solc')
+            os.system('ln -s `pwd`/{WEBTHREE_DIR}/solidity/build/solc/solc ./bin/solc'.format(**PARAMS))
 
             if self.global_install_solc:
                 print("symlinking to /usr/bin")
                 os.system('sudo rm /usr/bin/solc')
-                os.system('sudo ln -s `pwd`/webthree-umbrella/solidity/build/solc/solc /usr/bin/solc')
+                os.system('sudo ln -s `pwd`/{WEBTHREE_DIR}/solidity/build/solc/solc /usr/bin/solc'.format(**PARAMS))
 
 
 class move_old_db(Command):
