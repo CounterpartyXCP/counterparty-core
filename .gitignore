@@ -33,3 +33,7 @@ profile.txt
 
 /*.sol
 /webthree-umbrella*
+
+/*.db
+/*.db-shm
+/*.db-wal

@@ -39,7 +39,7 @@ def setup_module():
     # global the DB/cursor for other functions to access
     global db, cursor, logger
 
-    db = util_test.init_database(CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql', 'fixtures.countracts_test.db')
+    db = util_test.init_database(CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql', ':memory:')
     logger = logging.getLogger(__name__)
     db.setrollbackhook(lambda: logger.debug('ROLLBACK'))
     database.update_version(db)
