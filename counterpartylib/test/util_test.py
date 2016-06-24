@@ -59,7 +59,7 @@ def init_database(sqlfile, dbfile, options=None):
     server.initialise(
         database_file=dbfile,
         testnet=True,
-        verbose=True,
+        verbose=pytest.config.getoption('verbose') >= 2,
         console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None),
         **kwargs)
 

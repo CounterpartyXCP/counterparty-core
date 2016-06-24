@@ -149,8 +149,6 @@ def run_vm_test(state, params, mode, profiler=None):
         address_is_contract[addr] = h['code'] is not None or h['storage'] is not None
         addr = normalize_address(addr, is_contract=address_is_contract[addr])
 
-        print('pre', _addr, addr.base58(), addr.int())
-
         blk.set_nonce(addr, ethutils.parse_int_or_hex(h['nonce']))
 
         # set ceiled balance
@@ -173,8 +171,6 @@ def run_vm_test(state, params, mode, profiler=None):
         assert set(h.keys()) == set(['code', 'nonce', 'balance', 'storage'])
         address_is_contract[addr] = address_is_contract.get(addr, False) or h['code'] is not None or h['storage'] is not None
         addr = normalize_address(addr, is_contract=address_is_contract[addr])
-
-        print('post', _addr, addr.base58(), addr.int())
 
         params['post'][_addr]['balance'] = encode_int_to_hex_with_prefix(ceil_balance(h['balance']))
 
