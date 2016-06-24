@@ -109,6 +109,15 @@ def proc_sendasset(ext, msg):
     return 1, msg.gas - gas_cost, o
 
 
+def proc_receivedasset(ext, msg):
+    gas_cost = opcodes.GRIPEMD160BASE
+
+    o = ethutils.zpad(ethutils.encode_int(1), 32) + ethutils.zpadright(b'XCP', 32)
+
+    return 1, msg.gas - gas_cost, o
+
+CNTRPRTY = 0x434e545250525459000000000000000000000000
+
 specials = {
     ethutils.decode_hex(k): v for k, v in
     {
@@ -116,7 +125,8 @@ specials = {
         '0000000000000000000000000000000000000002': proc_sha256,
         '0000000000000000000000000000000000000003': proc_ripemd160,
         '0000000000000000000000000000000000000004': proc_identity,
-        '434e545250525459000000000000000000000001': proc_sendasset, # CNTRPRTY prefix
+        ethutils.encode_int_to_hexstr(CNTRPRTY + 0x01): proc_sendasset,
+        ethutils.encode_int_to_hexstr(CNTRPRTY + 0x02): proc_receivedasset,
     }.items()
 }
 

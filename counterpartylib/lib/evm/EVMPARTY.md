@@ -34,6 +34,7 @@ TODO
 
  - sendasset set cost
  - sendasset recursion and no recursion
+ - asset failuyre tests
 
  - UnitTests
    - blocks

@@ -97,7 +97,14 @@ def sha3(seed):
 
 
 def zpad(x, l):
+    return zpadleft(x, l)
+
+def zpadleft(x, l):
     return b'\x00' * max(0, l - len(x)) + x
+
+
+def zpadright(x, l):
+    return x + b'\x00' * max(0, l - len(x))
 
 
 def int_to_addr(x):

@@ -153,6 +153,37 @@ contract testme {
     assert s.block.get_balance(tester.a1, 'NODIVISIBLE') == b + v
 
 
+def test_receivedasset():
+    code = '''
+contract testme {
+    bytes32 c = "XCP";
+
+    function main1() returns (uint, bytes32) {
+        var (v, a) = receivedasset();
+
+        return (v, a);
+    }
+
+    function main2() returns (bool) {
+        var (v, a) = receivedasset();
+
+        return a == "XCP";
+    }
+}
+'''
+
+    s = state()
+    c = s.abi_contract(code, language='solidity')
+
+    r = c.main1()
+    print(r)
+    assert r == [1, ethutils.zpadright(b'XCP', 32)]
+
+    r = c.main2()
+    print(r)
+    assert r == True
+
+
 def test_bool():
     code = '''
 contract testme {
