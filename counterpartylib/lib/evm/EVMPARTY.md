@@ -33,6 +33,7 @@ TODO
  - tx.gasprice
 
  - sendasset set cost
+ - sendasset recursion and no recursion
 
  - UnitTests
    - blocks
