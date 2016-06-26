@@ -189,6 +189,9 @@ def main():
 
     parser_getrunninginfo = subparsers.add_parser('getinfo', help='get the current state of the server')
 
+    parser_get_tx_info = subparsers.add_parser('get_tx_info', help='display info of a raw TX')
+    parser_get_tx_info.add_argument('tx_hex', help='the raw TX')
+
     args = parser.parse_args()
 
     # Logging
@@ -240,7 +243,7 @@ def main():
 
 
     # VIEWING
-    elif args.action in ['balances', 'asset', 'wallet', 'pending', 'getinfo', 'getrows']:
+    elif args.action in ['balances', 'asset', 'wallet', 'pending', 'getinfo', 'getrows', 'get_tx_info']:
         view = console.get_view(args.action, args)
         print_method = getattr(console, 'print_{}'.format(args.action), None)
         if args.json_output or print_method is None:
