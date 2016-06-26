@@ -43,8 +43,8 @@ CONFIG_ARGS = [
 
     [('--force',), {'action': 'store_true', 'default': False, 'help': 'skip backend check, version check, process lock (NOT FOR USE ON PRODUCTION SYSTEMS)'}],
     [('--database-file',), {'default': None, 'help': 'the path to the SQLite3 database file'}],
-    [('--log-file',), {'default': None, 'help': 'the path to the server log file'}],
-    [('--api-log-file',), {'default': None, 'help': 'the path to the API log file'}],
+    [('--log-file',), {'nargs': '?', 'const': None, 'default': False, 'help': 'log to the specified file (specify option without filename to use the default location)'}],
+    [('--api-log-file',), {'nargs': '?', 'const': None, 'default': False, 'help': 'log API requests to the specified file (specify option without filename to use the default location)'}],
 
     [('--utxo-locks-max-addresses',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES, 'help': 'max number of addresses for which to track UTXO locks'}],
     [('--utxo-locks-max-age',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_AGE, 'help': 'how long to keep a lock on a UTXO being tracked'}]
@@ -67,7 +67,7 @@ def main():
     parser.add_argument('-V', '--version', action='version', version="{} v{}; {} v{}".format(APP_NAME, APP_VERSION, 'counterparty-lib', config.VERSION_STRING))
     parser.add_argument('--config-file', help='the path to the configuration file')
 
-    parser = add_config_arguments(parser, CONFIG_ARGS, 'server.conf')
+    add_config_arguments(parser, CONFIG_ARGS, 'server.conf')
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 

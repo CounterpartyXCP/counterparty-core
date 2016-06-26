@@ -55,7 +55,7 @@ def extract_old_config():
     old_configfile = os.path.join(old_appdir, 'counterpartyd.conf')
 
     if os.path.exists(old_configfile):
-        configfile = configparser.ConfigParser()
+        configfile = configparser.SafeConfigParser(allow_no_value=True, inline_comment_prefixes=('#', ';'))
         configfile.read(old_configfile)
         if 'Default' in configfile:
             for key in configfile['Default']:

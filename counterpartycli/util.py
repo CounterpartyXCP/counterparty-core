@@ -190,7 +190,7 @@ def add_config_arguments(arg_parser, config_args, default_config_file, config_fi
             fp.truncate()
 
     logger.debug('Loading configuration file: `{}`'.format(config_file))
-    configfile = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
+    configfile = configparser.SafeConfigParser(allow_no_value=True, inline_comment_prefixes=('#', ';'))
     with codecs.open(config_file, 'r', encoding='utf8') as fp:
         configfile.readfp(fp)
 
@@ -204,8 +204,8 @@ def add_config_arguments(arg_parser, config_args, default_config_file, config_fi
             arg[1]['default'] = configfile['Default'].getboolean(key)
         elif key in configfile['Default'] and configfile['Default'][key]:
             arg[1]['default'] = configfile['Default'][key]
+        elif key in configfile['Default'] and arg[1].get('nargs', '') == '?' and 'const' in arg[1]:
+            arg[1]['default'] = arg[1]['const']  # bit of a hack
         arg_parser.add_argument(*arg[0], **arg[1])
-
-    return arg_parser
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

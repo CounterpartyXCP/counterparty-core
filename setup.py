@@ -4,7 +4,6 @@ from setuptools import setup, find_packages, Command
 import os, sys
 import shutil
 import ctypes.util
-import configparser, platform
 from counterpartycli import APP_VERSION
 
 class generate_configuration_files(Command):
