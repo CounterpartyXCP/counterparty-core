@@ -20,6 +20,14 @@ if [ ! -f /root/.local/share/counterparty/counterparty.testnet.db ]; then
 fi
 
 # Kick off the server, defaulting to the "start" subcommand
+# Launch utilizing the SIGTERM/SIGINT propagation pattern from
+# http://veithen.github.io/2014/11/16/sigterm-propagation.html
 : ${PARAMS:=""}
 : ${COMMAND:="start"}
-/usr/local/bin/counterparty-server ${PARAMS} ${COMMAND}
+trap 'kill -TERM $PID' TERM INT
+/usr/local/bin/counterparty-server ${PARAMS} ${COMMAND} &
+PID=$!
+wait $PID
+trap - TERM INT
+wait $PID
+EXIT_STATUS=$?
