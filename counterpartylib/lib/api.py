@@ -758,6 +758,10 @@ class APIServer(threading.Thread):
                 # Not found
                 return flask.Response(None, 404, mimetype='application/json')
 
+        @dispatcher.add_method
+        def sendrawtransaction(tx_hex):
+            return backend.sendrawtransaction(tx_hex)
+
         #########################
         # Micropayment channels #
         #########################
