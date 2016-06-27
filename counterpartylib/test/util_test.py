@@ -56,15 +56,16 @@ def init_database(sqlfile, dbfile, options=None):
     kwargs = COUNTERPARTYD_OPTIONS.copy()
     kwargs.update(options or {})
 
-    server.initialise(
+    server.initialise_config(
         database_file=dbfile,
         testnet=True,
         verbose=pytest.config.getoption('verbose') >= 2,
         console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None),
         **kwargs)
 
-    restore_database(config.DATABASE, sqlfile)
-    db = database.get_connection(read_only=False)  # reinit the DB to deal with the restoring
+    db = restore_database(config.DATABASE, sqlfile)
+    db = database.initialize_connection(db, read_only=False)
+
     database.update_version(db)
     util.FIRST_MULTISIG_BLOCK_TESTNET = 1
 
@@ -107,16 +108,21 @@ def dump_database(db):
 
     return new_data
 
-def restore_database(database_filename, dump_filename):
+def restore_database(database_filename, dump_filename, db=None):
     """Delete database dump, then opens another and loads it in-place."""
     remove_database_files(database_filename)
-    db = apsw.Connection(database_filename)
+    db = db or apsw.Connection(database_filename)
     cursor = db.cursor()
     with open(dump_filename, 'r') as sql_dump:
         cursor.execute(sql_dump.read())
     cursor.close()
 
+    return db
+
 def remove_database_files(database_filename):
+    if database_filename == ':memory:':
+        return
+
     """Delete temporary db dumps."""
     for path in [database_filename, '{}-shm'.format(database_filename), '{}-wal'.format(database_filename)]:
         if os.path.isfile(path):

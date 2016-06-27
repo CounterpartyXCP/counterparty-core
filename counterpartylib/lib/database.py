@@ -73,6 +73,11 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
         db = apsw.Connection(config.DATABASE, flags=0x00000001)
     else:
         db = apsw.Connection(config.DATABASE)
+
+    return initialize_connection(db, read_only=read_only, foreign_keys=foreign_keys, integrity_check=integrity_check)
+
+
+def initialize_connection(db, read_only=True, foreign_keys=True, integrity_check=True):
     cursor = db.cursor()
 
     # For integrity, security.

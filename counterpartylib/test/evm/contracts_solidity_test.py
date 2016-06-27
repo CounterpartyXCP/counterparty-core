@@ -2475,4 +2475,4 @@ contract testme {
 
     assert c.coinbase() == address.Address.nulladdress()
     assert c.difficulty() == 0
-    assert c.gaslimit() == 0
+    assert c.gaslimit() == 1000000000
