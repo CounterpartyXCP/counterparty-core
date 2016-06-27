@@ -210,6 +210,36 @@ New input: amount: 1.00000000; txid: 20ffe4012d5fc638309b2d087a15fb100d919413263
 Size: 315 Fee: 0.00007875 Change quantity: 0.99986695 BTC
 Debit: 0.0000001 XCP from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy #bet# <0c690d46bef903922354520c8c8626ab5bfd45da1ca211d65f16aeef9b5f3300>
 Bet: 0.0000001 XCP against 0.0000001 XCP, by 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy, on 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy
+Sorted candidate UTXOs: ['amount: 1.00000000; txid: 8a932032d223e4222ce2215e09b7261461fb8f781e0a5d5359822ad5de2e386a; vout: 0; confirmations: 6']
+Fee/KB 0.00025000
+New input: amount: 1.00000000; txid: 8a932032d223e4222ce2215e09b7261461fb8f781e0a5d5359822ad5de2e386a; vout: 0; confirmations: 6
+Size: 225 Fee: 0.00005625 Change quantity: 0.68994375 BTC
+Credit: 464.99535967 XCP to 2NErxwfmefM47yQ7Mk4y7WCqmvNfW2bhzic #burn# <710cab2ca813d8f2a6e4ba9f05eee67b1130777d3c67d42cc5a6b5d94a4b709e>
+Burn: 2NErxwfmefM47yQ7Mk4y7WCqmvNfW2bhzic burned 0.31 BTC for 464.99535967 XCP (710cab2ca813d8f2a6e4ba9f05eee67b1130777d3c67d42cc5a6b5d94a4b709e) [valid]
+Sorted candidate UTXOs: ['amount: 1.00000000; txid: e5e507be0154c672520eea057d88e3e25faa88098ed049da1e03fe89b296a806; vout: 0; confirmations: 6']
+Fee/KB 0.00025000
+New input: amount: 1.00000000; txid: e5e507be0154c672520eea057d88e3e25faa88098ed049da1e03fe89b296a806; vout: 0; confirmations: 6
+Size: 225 Fee: 0.00005625 Change quantity: 0.68994375 BTC
+Credit: 464.99531786 XCP to 2MxHK9KY4zhTPoupLCyXgPJoN2GtCsFr7gK #burn# <470ab0d2b7fb45cbdbe4fbba6d76325b1b1f5525f4f6be7dc995dd93b0999caf>
+Burn: 2MxHK9KY4zhTPoupLCyXgPJoN2GtCsFr7gK burned 0.31 BTC for 464.99531786 XCP (470ab0d2b7fb45cbdbe4fbba6d76325b1b1f5525f4f6be7dc995dd93b0999caf) [valid]
+Sorted candidate UTXOs: ['amount: 1.00000000; txid: 895f58443c9aaad01ffa62b46e44fbd2225874b48bedb8e08fd5eb314f9b1d0c; vout: 0; confirmations: 6']
+Fee/KB 0.00025000
+New input: amount: 1.00000000; txid: 895f58443c9aaad01ffa62b46e44fbd2225874b48bedb8e08fd5eb314f9b1d0c; vout: 0; confirmations: 6
+Size: 225 Fee: 0.00005625 Change quantity: 0.68994375 BTC
+Credit: 464.99527606 XCP to 2MuWaw3xAczwSL6DKY77kEP7JgAWiQdqFSy #burn# <5cea665ad64adf6b81a3b67bccd8720f1ecc8641418314449961fe856b195e5b>
+Burn: 2MuWaw3xAczwSL6DKY77kEP7JgAWiQdqFSy burned 0.31 BTC for 464.99527606 XCP (5cea665ad64adf6b81a3b67bccd8720f1ecc8641418314449961fe856b195e5b) [valid]
+Sorted candidate UTXOs: ['amount: 1.00000000; txid: c901c1469c61bc960592f1ee0194f2e784672b0f2582daeb751cbc682e8bc435; vout: 0; confirmations: 6']
+Fee/KB 0.00025000
+New input: amount: 1.00000000; txid: c901c1469c61bc960592f1ee0194f2e784672b0f2582daeb751cbc682e8bc435; vout: 0; confirmations: 6
+Size: 225 Fee: 0.00005625 Change quantity: 0.68994375 BTC
+Credit: 464.99523425 XCP to 2MtBCufaZs6NDoDfLfR5MGG3KtDzUG2Pmy8 #burn# <0785e6e3dd8ec67452315d7c6bed311effc9ec9ee4eb638d88c425df72da794b>
+Burn: 2MtBCufaZs6NDoDfLfR5MGG3KtDzUG2Pmy8 burned 0.31 BTC for 464.99523425 XCP (0785e6e3dd8ec67452315d7c6bed311effc9ec9ee4eb638d88c425df72da794b) [valid]
+Sorted candidate UTXOs: ['amount: 1.00000000; txid: 1802bc18d5b354e628f6da25d1d5b95a732248aaf67a676379a9ff1446f2bbcf; vout: 0; confirmations: 6']
+Fee/KB 0.00025000
+New input: amount: 1.00000000; txid: 1802bc18d5b354e628f6da25d1d5b95a732248aaf67a676379a9ff1446f2bbcf; vout: 0; confirmations: 6
+Size: 225 Fee: 0.00005625 Change quantity: 0.68994375 BTC
+Credit: 464.99519245 XCP to 2N3ACzPYimgijjPWhowmwPWzzY7XtvqbtRq #burn# <ab0c8f04a595637650a80ee32e2f1ef4c311871278b6b66cc14ca7da9606dc45>
+Burn: 2N3ACzPYimgijjPWhowmwPWzzY7XtvqbtRq burned 0.31 BTC for 464.99519245 XCP (ab0c8f04a595637650a80ee32e2f1ef4c311871278b6b66cc14ca7da9606dc45) [valid]
 Sorted candidate UTXOs: ['amount: 1.07824570; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143']
 Fee/KB 0.00025000
 New input: amount: 1.07824570; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143

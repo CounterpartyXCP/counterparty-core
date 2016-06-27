@@ -48,7 +48,7 @@ def unique_address_list(l):
 
 
 def valid_version_bytes():
-    return [config.ADDRESSVERSION, config.CONTRACT_ADDRESSVERSION]
+    return [config.ADDRESSVERSION, config.CONTRACT_ADDRESSVERSION, config.P2SH_ADDRESSVERSION]
 
 
 class Address(object):

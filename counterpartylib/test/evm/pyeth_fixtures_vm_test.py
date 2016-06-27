@@ -216,6 +216,10 @@ def pytest_generate_tests(metafunc):
     if pytest.config.option.vmtests and 'all' not in pytest.config.option.vmtests:
         testsources = pytest.config.option.vmtests
     else:
-        testsources = ['VMTests/*.json']
+        if pytest.config.option.quick:
+            testsources = ['VMTests/vmEnvironmentalInfoTest.json']
+        else:
+            testsources = ['VMTests/*.json']
+
 
     pyethtestutils.generate_test_params(testsources, metafunc)

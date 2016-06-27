@@ -65,6 +65,12 @@ UNITTEST_FIXTURE = [
     ['broadcast', (P2SH_ADDR[0], 1388000002, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'opreturn'}],
     ['bet', (P2SH_ADDR[0], P2SH_ADDR[0], 3, 1388000200, 10, 10, 0.0, 5040, 1000), {'encoding': 'opreturn'}],
 
+    ['burn', (P2SH_ADDR[1], int(DP['burn_quantity'] / 2)), {'encoding': 'opreturn'}],
+    ['burn', (P2SH_ADDR[2], int(DP['burn_quantity'] / 2)), {'encoding': 'opreturn'}],
+    ['burn', (P2SH_ADDR[3], int(DP['burn_quantity'] / 2)), {'encoding': 'opreturn'}],
+    ['burn', (P2SH_ADDR[4], int(DP['burn_quantity'] / 2)), {'encoding': 'opreturn'}],
+    ['burn', (P2SH_ADDR[5], int(DP['burn_quantity'] / 2)), {'encoding': 'opreturn'}],
+
     ['create_next_block', 485],
 
     ['broadcast', (ADDR[4], 1388000000, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],

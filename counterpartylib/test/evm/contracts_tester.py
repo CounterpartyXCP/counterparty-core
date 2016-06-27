@@ -17,27 +17,24 @@ from counterpartylib.lib.evm import solidity
 
 from counterpartylib.test import util_test
 
-# setup aliases so we don't have to change the original tests
-a0 = ADDR[0]
-a1 = ADDR[1]
-a2 = ADDR[3]  # IMPORTANT!! we skipped ADDR[2] because it has no balance
-a3 = ADDR[4]
-a4 = ADDR[5]
-a5 = ADDR[6]
-
+# setup aliases for addresses
+# IMPORTANT!! we override these with P2SH addresses too, so don't use them as defaults for func args
+#  instead do def fn(some_func_arg=None): some_func_arg = some_func_arg if some_func_arg else DEFAULT_SENDER
+a0, a1, a2, a3, a4, a5 = ADDR[0], ADDR[1], ADDR[3], ADDR[4], ADDR[5], ADDR[6]  # IMPORTANT!! we skipped ADDR[2] because it has no balance
 # we never use the privkey, so kN == aN
 k0, k1, k2, k3, k4, k5 = a0, a1, a2, a3, a4, a5
+# default sender is a0
+DEFAULT_SENDER = a0
 
 DEFAULT_STARTGAS = 3141592
 gas_price = 1
-
-DEFAULT_SENDER = ADDR[0]
 
 languages = {}
 languages['solidity'] = solidity.get_solidity()
 languages['serpent'] = serpent
 
 logger = logging.getLogger(__name__)
+
 
 def encode_datalist(vals):
     def enc(n):
@@ -153,7 +150,8 @@ class state(object):
         self.TIMESTAMP = int(time.time())
         self.log_listeners = []
 
-    def contract(self, code, sender=DEFAULT_SENDER, endowment=0, language='serpent', lll=False):
+    def contract(self, code, sender=None, endowment=0, language='serpent', lll=False):
+        sender = sender if sender is not None else DEFAULT_SENDER
         if language not in languages:
             raise NotImplemented
             # languages[language] = __import__(language)
@@ -166,7 +164,8 @@ class state(object):
 
         return o
 
-    def abi_contract(self, code, sender=DEFAULT_SENDER, endowment=0, language='serpent', contract_name='', lll=False, constructor_parameters=None, **kwargs):
+    def abi_contract(self, code, sender=None, endowment=0, language='serpent', contract_name='', lll=False, constructor_parameters=None, **kwargs):
+        sender = sender if sender is not None else DEFAULT_SENDER
         """
         :return: {ABIContract}
         """
@@ -198,7 +197,8 @@ class state(object):
 
         return ABIContract(self, _abi, address, _translator=_translator)
 
-    def evm(self, evm, sender=DEFAULT_SENDER, endowment=0, startgas=DEFAULT_STARTGAS):
+    def evm(self, evm, sender=None, endowment=0, startgas=DEFAULT_STARTGAS):
+        sender = sender if sender is not None else DEFAULT_SENDER
         tx, success, output = self.do_send(sender, '', endowment, evm, startgas=startgas)
         if not success:
             raise ContractCreationFailed()

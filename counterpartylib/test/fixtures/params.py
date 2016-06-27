@@ -50,6 +50,27 @@ MULTISIGADDR = [
     '3_{}_{}_{}_3'.format(ADDR[0], ADDR[2], ADDR[3])
 ]
 
+import binascii
+import bitcoin as bitcoinlib
+
+# bitcoinlib.SelectParams('testnet')
+# addr0 = DEFAULT_PARAMS['addresses'][0]
+# pubkey0 = binascii.unhexlify(addr0[3])
+# for addr in DEFAULT_PARAMS['addresses'][1:]:
+#     pubkey1 = binascii.unhexlify(addr[3])
+#
+#     redeemScript = bitcoinlib.core.CScript([bitcoinlib.core.script.OP_2, pubkey0, pubkey1, bitcoinlib.core.script.OP_2, bitcoinlib.core.script.OP_CHECKMULTISIG])
+#     scriptPubKey = redeemScript.to_p2sh_scriptPubKey()
+#     p2sh_address = bitcoinlib.wallet.CBitcoinAddress.from_scriptPubKey(scriptPubKey)
+#
+#     print('''"%s",  # 2of2 %s %s''' % (p2sh_address, addr0[0], addr[0]))
+#     print(binascii.hexlify(scriptPubKey))
+
 P2SH_ADDR = [
-    '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy' # 2of2 mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
+    "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",  # 2of2 mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
+    "2NErxwfmefM47yQ7Mk4y7WCqmvNfW2bhzic",  # 2of2 mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH
+    "2MxHK9KY4zhTPoupLCyXgPJoN2GtCsFr7gK",  # 2of2 mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj
+    "2MuWaw3xAczwSL6DKY77kEP7JgAWiQdqFSy",  # 2of2 mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM
+    "2MtBCufaZs6NDoDfLfR5MGG3KtDzUG2Pmy8",  # 2of2 mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b
+    "2N3ACzPYimgijjPWhowmwPWzzY7XtvqbtRq",  # 2of2 mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42
 ]

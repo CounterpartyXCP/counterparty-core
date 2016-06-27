@@ -75,13 +75,14 @@ def pytest_addoption(parser):
     parser.addoption("--savescenarios", action='store_true', default=False, help="generate sql dump and log in .new files")
     parser.addoption("--skiptestbook", default='no', help="skip test book(s) (use with one of the following values: `all`, `testnet` or `mainnet`)")
     parser.addoption("--vmtests", action="append", default=[], help="list of vmtest fixtures to use, relative path, ie; 'VMTests/*.json' (default: all)")
+    parser.addoption("--quick", action="store_true", default=False, help="only run a subset of the test suite, skipping the slow ones")
 
 
 @pytest.fixture(scope="module")
 def rawtransactions_db(request):
     """Return a database object."""
     db = apsw.Connection(util_test.CURR_DIR + '/fixtures/rawtransactions.db')
-    if (request.module.__name__ == 'integration_test'):
+    if request.module.__name__.endswith('integration_test'):
         util_test.initialise_rawtransactions_db(db)
     return db
 
@@ -169,8 +170,8 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
         address = '_'.join([str(signatures_required)] + sorted(pubkeys) + [str(len(pubkeys))])
         return address
 
-    def get_cached_raw_transaction(tx_hash, verbose=False):
-        return util_test.getrawtransaction(rawtransactions_db, bitcoinlib.core.lx(tx_hash))
+    def get_cached_raw_transaction(txid, verbose=False):
+        return util_test.getrawtransaction(rawtransactions_db, txid)
 
     monkeypatch.setattr('counterpartylib.lib.backend.get_unspent_txouts', get_unspent_txouts)
     monkeypatch.setattr('counterpartylib.lib.log.isodt', isodt)

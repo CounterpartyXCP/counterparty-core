@@ -13,6 +13,7 @@ import logging
 import serpent
 from counterpartylib.test import conftest  # this is require near the top to do setup of the test suite
 from counterpartylib.test.util_test import CURR_DIR
+from counterpartylib.test.fixtures import params
 
 from counterpartylib.lib import (config, database, util)
 from counterpartylib.lib.evm import (blocks, processblock, ethutils, abi, address, vm)
@@ -27,8 +28,8 @@ solidity = get_solidity()
 db, cursor, logger = None, None, None
 CLEANUP_FILES = []
 
-RUN_SLOWCONTACTS = True
-pytest_run_slow_contracts = pytest.mark.skipif(not RUN_SLOWCONTACTS, reason='slow')
+pytest_skip_when_quick = pytest.mark.skipif(pytest.config.option.quick, reason="avoid slow tests when not doing quick run")
+
 
 def state():
     """"create a tester.state with latest block"""
@@ -80,6 +81,54 @@ def open_cleanonteardown(filename, *args, **kwargs):
     CLEANUP_FILES.append(filename)
 
     return open(filename, *args, **kwargs)
+
+
+@pytest.fixture(scope='function', autouse=True)
+def set_p2sh_as_address(p2sh_as_address):
+    """
+    configure the addresses used in the tests; tester.aN and tester.kN
+    either set them all to P2SH or plain addresses
+    """
+    if p2sh_as_address:
+        tester.a0 = params.P2SH_ADDR[0]
+        tester.a1 = params.P2SH_ADDR[1]
+        tester.a2 = params.P2SH_ADDR[2]
+        tester.a3 = params.P2SH_ADDR[3]
+        tester.a4 = params.P2SH_ADDR[4]
+        tester.a5 = params.P2SH_ADDR[5]
+    else:
+        tester.a0 = params.ADDR[0]
+        tester.a1 = params.ADDR[1]
+        tester.a2 = params.ADDR[3]  # IMPORTANT!! we skipped ADDR[2] because it has no balance
+        tester.a3 = params.ADDR[4]
+        tester.a4 = params.ADDR[5]
+        tester.a5 = params.ADDR[6]
+
+    tester.DEFAULT_SENDER = tester.a0
+
+    # we never use the privkey, so kN == aN
+    tester.k0, tester.k1, tester.k2, tester.k3, tester.k4, tester.k5 = tester.a0, tester.a1, tester.a2, tester.a3, tester.a4, tester.a5
+
+
+def pytest_generate_tests(metafunc):
+    """
+    parametrize to run all tests with both normal and P2SH addresses
+    when --quick we only do P2SH for a few
+    """
+    if not pytest.config.option.quick:
+        both = True
+    else:
+        both = False
+        # pattern match for quick run
+        for fnpattern in ['test_send', 'test_received', 'test_crowdfund']:
+            if fnpattern in metafunc.function.__name__:
+                both = True
+                break
+
+    if both:
+        metafunc.parametrize(('p2sh_as_address', ), [(True, ), (False, )], indirect=False)
+    else:
+        metafunc.parametrize(('p2sh_as_address', ), [(False, )], indirect=False)
 
 
 def test_sendasset1():
@@ -771,7 +820,7 @@ contract testme {
     assert c.f3() == 1010
 
 
-@pytest_run_slow_contracts
+@pytest_skip_when_quick
 def test_oog():
     contract_code = '''
 contract testme {
@@ -800,7 +849,7 @@ contract testme {
     assert e and isinstance(e, tester.TransactionFailed)
 
 
-@pytest_run_slow_contracts
+@pytest_skip_when_quick
 def test_subcall_suicider():
     internal_code = '''
 contract testmeinternal {
@@ -1413,7 +1462,7 @@ contract slicer {
 
 
 @pytest.mark.timeout(100)
-@pytest_run_slow_contracts
+@pytest_skip_when_quick
 def test_slice():
     s = state()
     c = s.abi_contract(slice_code, language='solidity')
@@ -1475,7 +1524,7 @@ contract sorter is slicer {
 
 
 @pytest.mark.timeout(100)
-@pytest_run_slow_contracts
+@pytest_skip_when_quick
 def test_sort():
     s = state()
     c = s.abi_contract(sort_code, language='solidity')
@@ -1505,7 +1554,7 @@ contract indirect_sorter {
 
 @pytest.mark.timeout(100)
 @pytest.mark.skip(reason="solidity doesn't support calls to dynamic array")
-@pytest_run_slow_contracts
+@pytest_skip_when_quick
 def test_indirect_sort():
     s = state()
     c = s.abi_contract(sort_tester_code, language='solidity')

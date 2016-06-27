@@ -204,16 +204,14 @@ def initialise_rawtransactions_db(db):
         with open(CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
                 wallet_unspent = json.load(listunspent_test_file)
                 for output in wallet_unspent:
-                    txid = binascii.hexlify(bitcoinlib.core.lx(output['txid'])).decode()
-                    tx = backend.deserialize(output['txhex'])
-                    cursor.execute('INSERT INTO raw_transactions VALUES (?, ?)', (txid, output['txhex']))
+                    cursor.execute('INSERT INTO raw_transactions VALUES (?, ?)', (output['txid'], output['txhex']))
         cursor.close()
 
 def save_rawtransaction(db, tx_hash, tx_hex):
     """Insert the raw transaction into the db."""
     cursor = db.cursor()
     try:
-        txid = binascii.hexlify(bitcoinlib.core.lx(tx_hash)).decode()
+        txid = binascii.hexlify(tx_hash).decode()
         cursor.execute('''INSERT INTO raw_transactions VALUES (?, ?)''', (txid, tx_hex))
     except Exception as e: # TODO
         pass
@@ -222,7 +220,7 @@ def save_rawtransaction(db, tx_hash, tx_hex):
 def getrawtransaction(db, txid):
     """Return raw transactions with specific hash."""
     cursor = db.cursor()
-    txid = binascii.hexlify(txid).decode()
+    txid = binascii.hexlify(txid).decode() if isinstance(txid, bytes) else txid
     tx_hex = list(cursor.execute('''SELECT tx_hex FROM raw_transactions WHERE tx_hash = ?''', (txid,)))[0][0]
     cursor.close()
     return tx_hex

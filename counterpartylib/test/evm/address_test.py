@@ -136,6 +136,25 @@ def test_contract_address():
     assert a.hexstr() == '80119efcb773cf3768d04bdf797f7c3605808dce0a'
 
 
+def test_p2sh_address():
+    a = Address.normalize('2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy')
+    assert a and isinstance(a, Address)
+    assert a.hexstr() == 'c44264cfd7eb65f8cbbdba98bd9815d5461fad8d7e'
+    assert a.base58() == '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy'
+
+    a = Address.normalize('c44264cfd7eb65f8cbbdba98bd9815d5461fad8d7e')
+    assert a and isinstance(a, Address)
+    assert a.base58() == '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy'
+
+    a = Address.normalize(286833362487967993248380377968014724401410610138494)
+    assert a and isinstance(a, Address)
+    assert a.base58() == '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy'
+
+    a = Address.normalize(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc4Bd\xcf\xd7\xebe\xf8\xcb\xbd\xba\x98\xbd\x98\x15\xd5F\x1f\xad\x8d~')
+    assert a and isinstance(a, Address)
+    assert a.base58() == '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy'
+
+
 def test_another_address():
     a = Address.normalize('000000000000000000000080119efcb773cf3768d04bdf797f7c3605808dce0a')
     assert a and isinstance(a, Address)
