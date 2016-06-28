@@ -521,3 +521,28 @@ class ConfigContext(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         for k in self._before:
             vars(self.config)[k] = self._before[k]
+
+
+class MockProtocolChangesContext(object):
+    def __init__(self, **kwargs):
+        from counterpartylib.test.conftest import MOCK_PROTOCOL_CHANGES
+        self.mock_protocol_changes = MOCK_PROTOCOL_CHANGES
+        self._extend = kwargs
+        self._before = {}
+        self._before_empty = []
+
+    def __enter__(self):
+        self._before = {}
+        for k in self._extend:
+            if k in self.mock_protocol_changes:
+                self._before[k] = self.mock_protocol_changes[k]
+            else:
+                self._before_empty.append(k)
+
+            self.mock_protocol_changes[k] = self._extend[k]
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        for k in self._before:
+            self.mock_protocol_changes[k] = self._before[k]
+        for k in self._before_empty:
+            del self.mock_protocol_changes[k]
