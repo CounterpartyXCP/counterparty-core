@@ -289,6 +289,9 @@ def prefill_rawtransactions_db(db):
 
 def save_rawtransaction(db, txid, tx_hex, confirmations=0):
     """Insert the raw transaction into the db."""
+    if isinstance(txid, bytes):
+        txid = binascii.hexlify(txid).decode('ascii')
+
     cursor = db.cursor()
     try:
         if isinstance(txid, bytes):
