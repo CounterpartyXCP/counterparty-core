@@ -85,6 +85,80 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
     return dust_return_pubkey
 
 
+def construct_coin_selection(source, allow_unconfirmed_inputs, unspent_tx_hash, custom_inputs,
+                             fee_per_kb, exact_fee, outputs_size, fee_provided, destination_btc_out, data_btc_out,
+                             regular_dust_size, disable_utxo_locks):
+
+    # Array of UTXOs, as retrieved by listunspent function from bitcoind
+    use_inputs = custom_inputs
+    if custom_inputs is None:
+        if unspent_tx_hash is not None:
+            unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash)
+        else:
+            unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs)
+
+        # filter out any locked UTXOs to prevent creating transactions that spend the same UTXO when they're created at the same time
+        if UTXO_LOCKS is not None and source in UTXO_LOCKS:
+            unspentkeys = {make_outkey(output) for output in unspent}
+            filtered_unspentkeys = unspentkeys - UTXO_LOCKS[source].keys()
+            unspent = [output for output in unspent if make_outkey(output) in filtered_unspentkeys]
+
+        unspent = backend.sort_unspent_txouts(unspent)
+        logger.debug('Sorted candidate UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
+        use_inputs = unspent
+
+    inputs = []
+    btc_in = 0
+    change_quantity = 0
+    sufficient_funds = False
+    final_fee = fee_per_kb
+    for coin in use_inputs:
+        logger.debug('New input: {}'.format(print_coin(coin)))
+        inputs.append(coin)
+        btc_in += round(coin['amount'] * config.UNIT)
+
+        # If exact fee is specified, use that. Otherwise, calculate size of tx
+        # and base fee on that (plus provide a minimum fee for selling BTC).
+        if exact_fee:
+            final_fee = exact_fee
+        else:
+            size = 181 * len(inputs) + outputs_size + 10
+            necessary_fee = (int(size / 1000) + 1) * fee_per_kb
+            final_fee = max(fee_provided, necessary_fee)
+            assert final_fee >= 1 * fee_per_kb
+
+        # Check if good.
+        btc_out = destination_btc_out + data_btc_out
+        change_quantity = btc_in - (btc_out + final_fee)
+        logger.debug('Change quantity: {} BTC'.format(change_quantity / config.UNIT))
+        # If change is necessary, must not be a dust output.
+        if change_quantity == 0 or change_quantity >= regular_dust_size:
+            sufficient_funds = True
+            break
+
+    if not sufficient_funds:
+        # Approximate needed change, fee by with most recently calculated
+        # quantities.
+        btc_out = destination_btc_out + data_btc_out
+        total_btc_out = btc_out + max(change_quantity, 0) + final_fee
+        raise exceptions.BalanceError('Insufficient {} at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(config.BTC, source, total_btc_out / config.UNIT, config.BTC))
+
+    # Lock the source's inputs (UTXOs) chosen for this transaction
+    if UTXO_LOCKS is not None and not disable_utxo_locks:
+        if source not in UTXO_LOCKS:
+            UTXO_LOCKS[source] = cachetools.TTLCache(
+                UTXO_LOCKS_PER_ADDRESS_MAXSIZE, config.UTXO_LOCKS_MAX_AGE)
+
+        for input in inputs:
+            UTXO_LOCKS[source][make_outkey(input)] = input
+
+        logger.debug("UTXO locks: Potentials ({}): {}, Used: {}, locked UTXOs: {}".format(
+            len(unspent), [make_outkey(coin) for coin in unspent],
+            [make_outkey(input) for input in inputs], list(UTXO_LOCKS[source].keys())))
+
+    return inputs, change_quantity
+
+
 def construct (db, tx_info, encoding='auto',
                fee_per_kb=config.DEFAULT_FEE_PER_KB,
                regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
@@ -216,71 +290,11 @@ def construct (db, tx_info, encoding='auto',
         data_output_size = 25 + 9   # Pay‐to‐PubKeyHash (25 for the data?)
     outputs_size = ((25 + 9) * len(destination_outputs)) + (len(data_array) * data_output_size)
 
-    use_inputs = custom_inputs # Array of UTXOs, as retrieved by listunspent function from bitcoind
-    if custom_inputs is None:
-        if unspent_tx_hash is not None:
-            unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash)
-        else:
-            unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs)
-
-        # filter out any locked UTXOs to prevent creating transactions that spend the same UTXO when they're created at the same time
-        if UTXO_LOCKS is not None and source in UTXO_LOCKS:
-            unspentkeys = {make_outkey(output) for output in unspent}
-            filtered_unspentkeys = unspentkeys - UTXO_LOCKS[source].keys()
-            unspent = [output for output in unspent if make_outkey(output) in filtered_unspentkeys]
-
-        unspent = backend.sort_unspent_txouts(unspent)
-        logger.debug('Sorted candidate UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
-        use_inputs = unspent
-
-    inputs = []
-    btc_in = 0
-    change_quantity = 0
-    sufficient_funds = False
-    final_fee = fee_per_kb
-    for coin in use_inputs:
-        logger.debug('New input: {}'.format(print_coin(coin)))
-        inputs.append(coin)
-        btc_in += round(coin['amount'] * config.UNIT)
-
-        # If exact fee is specified, use that. Otherwise, calculate size of tx
-        # and base fee on that (plus provide a minimum fee for selling BTC).
-        if exact_fee:
-            final_fee = exact_fee
-        else:
-            size = 181 * len(inputs) + outputs_size + 10
-            necessary_fee = (int(size / 1000) + 1) * fee_per_kb
-            final_fee = max(fee_provided, necessary_fee)
-            assert final_fee >= 1 * fee_per_kb
-
-        # Check if good.
-        btc_out = destination_btc_out + data_btc_out
-        change_quantity = btc_in - (btc_out + final_fee)
-        logger.debug('Change quantity: {} BTC'.format(change_quantity / config.UNIT))
-        # If change is necessary, must not be a dust output.
-        if change_quantity == 0 or change_quantity >= regular_dust_size:
-            sufficient_funds = True
-            break
-
-    if not sufficient_funds:
-        # Approximate needed change, fee by with most recently calculated
-        # quantities.
-        btc_out = destination_btc_out + data_btc_out
-        total_btc_out = btc_out + max(change_quantity, 0) + final_fee
-        raise exceptions.BalanceError('Insufficient {} at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(config.BTC, source, total_btc_out / config.UNIT, config.BTC))
-
-    # Lock the source's inputs (UTXOs) chosen for this transaction
-    if UTXO_LOCKS is not None and not disable_utxo_locks:
-        if source not in UTXO_LOCKS:
-            UTXO_LOCKS[source] = cachetools.TTLCache(
-                UTXO_LOCKS_PER_ADDRESS_MAXSIZE, config.UTXO_LOCKS_MAX_AGE)
-
-        for input in inputs:
-            UTXO_LOCKS[source][make_outkey(input)] = input
-
-        logger.debug("UTXO locks: Potentials ({}): {}, Used: {}, locked UTXOs: {}".format(
-            len(unspent), [make_outkey(coin) for coin in unspent],
-            [make_outkey(input) for input in inputs], list(UTXO_LOCKS[source].keys())))
+    inputs, change_quantity = construct_coin_selection(
+        source, allow_unconfirmed_inputs, unspent_tx_hash, custom_inputs,
+        fee_per_kb, exact_fee, outputs_size, fee_provided, destination_btc_out, data_btc_out,
+        regular_dust_size, disable_utxo_locks
+    )
 
     '''Finish'''
 
