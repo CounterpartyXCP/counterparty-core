@@ -1,3 +1,5 @@
+import sys
+
 """Variables prefixed with `DEFAULT` should be able to be overridden by
 configuration file and command‐line arguments."""
 
@@ -113,5 +115,6 @@ DEFAULT_UTXO_LOCKS_MAX_AGE = 3.0 #in seconds
 
 ADDRESS_OPTION_REQUIRE_MEMO = 1
 ADDRESS_OPTION_MAX_VALUE = ADDRESS_OPTION_REQUIRE_MEMO # Or list of all the address options
+OLD_STYLE_API = True
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
