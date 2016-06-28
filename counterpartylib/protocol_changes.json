@@ -82,5 +82,12 @@
         "minimum_version_revision": 0,
         "block_index": 500000,
         "testnet_block_index": 0
+    },
+	"first_input_is_source": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 55,
+        "minimum_version_revision": 0,
+        "block_index": 600000,
+        "testnet_block_index": 0
     }
 }

@@ -699,9 +699,12 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
         else:
             raise DecodeError('unrecognised source type')
 
-        # Collect unique sources.
-        if new_source not in sources:
-            sources.append(new_source)
+        # old; append to sources, results in invalid addresses
+        # new; first found source is source, the rest can be anything (to fund the TX for example)
+        if not (util.enabled('first_input_is_source') and len(sources)):
+            # Collect unique sources.
+            if new_source not in sources:
+                sources.append(new_source)
 
     sources = '-'.join(sources)
     destinations = '-'.join(destinations)
