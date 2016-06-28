@@ -28,7 +28,7 @@ CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.ex
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
 from counterpartylib import server
-from counterpartylib.lib import (config, util, blocks, check, backend, database, transaction)
+from counterpartylib.lib import (config, util, blocks, check, backend, database, transaction, exceptions)
 
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP
 from counterpartylib.test.fixtures.scenarios import UNITTEST_FIXTURE, INTEGRATION_SCENARIOS, standard_scenarios_params
@@ -171,19 +171,24 @@ def insert_raw_transaction(raw_transaction, db):
     block_index, block_hash, block_time = create_next_block(db, parse_block=False)
 
     tx_hash = dummy_tx_hash(raw_transaction)
+    tx = None
     tx_index = block_index - config.BURN_START + 1
 
-    source, destination, btc_amount, fee, data = blocks._get_tx_info(raw_transaction)
-    transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
-    cursor.execute('''INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?)''', transaction)
-    tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
+    try:
+        source, destination, btc_amount, fee, data = blocks._get_tx_info(raw_transaction)
+        transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
+        cursor.execute('''INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?)''', transaction)
+        tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
+    except exceptions.BTCOnlyError:
+        pass
+
     cursor.close()
 
     MOCK_UTXO_SET.add_raw_transaction(raw_transaction, tx_id=tx_hash, confirmations=1)
 
     util.CURRENT_BLOCK_INDEX = block_index
     blocks.parse_block(db, block_index, block_time)
-    return tx
+    return tx_hash, tx
 
 
 def insert_unconfirmed_raw_transaction(raw_transaction, db):
