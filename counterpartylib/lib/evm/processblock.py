@@ -115,9 +115,6 @@ def apply_transaction(db, block, tx):
 
     intrinsic_gas = tx.intrinsic_gas_used
 
-    # @TODO
-    # assert tx.s * 2 < transactions.secpk1n
-
     if not tx.to or tx.to == CREATE_CONTRACT_ADDRESS:
         intrinsic_gas += opcodes.CREATE[3]
         if tx.startgas < intrinsic_gas:
@@ -303,6 +300,9 @@ def create_contract(db, tx, ext, msg):
         msg.to = mk_contract_address(msg.sender, nonce, version=config.CONTRACT_ADDRESSVERSION)
         b = ext.get_balance(msg.to)
 
+        # not sure why pyeth allows overwriting an existing account
+        #  it shouldn't be possible!
+        assert b == 0
         if b > 0:
             ext.set_balance(msg.to, b)
             ext._block.set_nonce(msg.to, 0)

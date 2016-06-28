@@ -218,7 +218,7 @@ class Block(object):
         return value
 
     def reset_storage(self, address):
-        pass  # @TODO
+        raise NotImplementedError
 
     def account_exists(self, address):
         return len(self.get_code(address)) > 0

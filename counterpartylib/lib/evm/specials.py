@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 def proc_ecrecover(ext, msg):
     # print('ecrecover proc', msg.gas)
-    OP_GAS = opcodes.GECRECOVER  # @TODO
+    OP_GAS = opcodes.GECRECOVER
     gas_cost = OP_GAS
     if msg.gas < gas_cost:
         return 0, 0, []
@@ -68,7 +68,7 @@ def proc_ripemd160(ext, msg):
 
 
 def proc_identity(ext, msg):
-    #print('identity proc', msg.gas)
+    # @TODO: what is proc_identify?
     OP_GAS = opcodes.GIDENTITYBASE + \
         opcodes.GIDENTITYWORD * (ethutils.ceil32(msg.data.size) // 32)
     gas_cost = OP_GAS

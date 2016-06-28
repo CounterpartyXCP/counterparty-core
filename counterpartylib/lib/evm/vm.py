@@ -531,7 +531,7 @@ def vm_execute(ext, msg, code):
             if compustate.gas < gas + extra_gas:
                 return vm_exception('OUT OF GAS', needed=gas+extra_gas)
 
-            if ext.get_balance(msg.to) >= value and msg.depth < STACK_SIZE_LIMIT:  # @TODO
+            if ext.get_balance(msg.to) >= value and msg.depth < STACK_SIZE_LIMIT:
                 compustate.gas -= (gas + extra_gas)
                 cd = CallData(mem, meminstart, meminsz)
                 call_msg = Message(msg.to, to, value, submsg_gas, cd,

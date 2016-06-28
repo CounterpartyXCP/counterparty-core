@@ -15,12 +15,10 @@ we need to append log_listeners to `contract_tester.state.log_listeners` instead
 TODO
 ====
  - WINDOWS INSTALL
- - ecrecover
 
  - execute on non existant contract?
 
  - block gas limit
- - execution order
 
  - ether units
  - time units
