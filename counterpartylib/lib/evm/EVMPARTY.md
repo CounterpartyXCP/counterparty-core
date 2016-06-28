@@ -16,19 +16,11 @@ TODO
 ====
  - WINDOWS INSTALL
 
- - execute on non existant contract?
-
  - block gas limit
+ - tx.gasprice
 
- - ether units
- - time units
- - block.coinbase
  - block.difficulty
  - block.gaslimit
- - msg.sig
- - msg.value
- - now
- - tx.gasprice
 
  - sendasset set cost
  - sendasset recursion and no recursion
@@ -38,6 +30,8 @@ TODO
    - blocks
    - ethutils
    - transactions
+
+ - ERC20 compatability https://github.com/ethereum/EIPs/issues/20
 
 INSTALL
 =======

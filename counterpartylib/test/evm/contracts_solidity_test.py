@@ -4,7 +4,6 @@
 """
 import hashlib
 import pprint
-
 import pytest
 import binascii
 import os
@@ -2525,3 +2524,63 @@ contract testme {
     assert c.coinbase() == address.Address.nulladdress()
     assert c.difficulty() == 0
     assert c.gaslimit() == 1000000000
+
+
+def test_units():
+    code = """
+contract testme {
+    function testethunits() returns (uint) {
+        return 5 wei + 5 szabo + 5 finney + 5 ether;
+    }
+
+    function testtimeuints() returns (uint) {
+        return 5 seconds + 5 minutes + 5 hours + 5 days + 5 weeks + 5 years;
+    }
+
+    function testnow() returns (uint, uint) {
+        return (now, block.timestamp);
+    }
+}
+"""
+
+    s = state()
+    c = s.abi_contract(code, language='solidity')
+
+    assert c.testethunits() == 5 + 5000000000000 + 5000000000000000 + 5000000000000000000
+    assert c.testtimeuints() == (5 * 365 * 86400) + (5 * 7 * 86400) + (5 * 86400) + (5 * 3600) + (5 * 60) + 5
+    testnow = c.testnow()
+    assert testnow[0] == testnow[1] == 310504000
+
+
+def test_msgsig():
+    code = """
+contract testme {
+    function testmsgsig() returns (bytes4) {
+        return msg.sig;
+    }
+}
+"""
+
+    s = state()
+    c = s.abi_contract(code, language='solidity')
+
+    assert c.testmsgsig() == b'\xdc\xd6;\x8b'
+
+
+def test_execute_non_existant_contract():
+    code = """
+contract testme {
+    function main() returns (bool) { return true; }
+}
+"""
+
+    s = state()
+    c = s.abi_contract(code, language='solidity')
+    logger.warn('--------------------------------------------------')
+
+    assert c.main() == True
+    payload = c._translator.encode_function_call('main', [])
+    nonce = ethutils.encode_int(999)
+    dummyaddress = address.mk_contract_address(tester.DEFAULT_SENDER, nonce, config.CONTRACT_ADDRESSVERSION)
+
+    assert s.send(sender=tester.DEFAULT_SENDER, to=dummyaddress, value=0, evmdata=payload) == b''
