@@ -621,6 +621,33 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
 
         return destination, data
 
+    def decode_p2sh_input(asm):
+        assert len(asm) == 3
+
+        last_chunk = asm[2]
+        last_is_p2sh = len(last_chunk) == 23 and \
+                        last_chunk[0] == bitcoinlib.core.script.OP_HASH160 and \
+                        last_chunk[22] == bitcoinlib.core.script.OP_EQUAL
+
+        # last is outputScript, so we got [datachunk] [redeemScript] [outputScript]
+        if last_is_p2sh:
+            datachunk = asm[0]
+            redeemScript = asm[1]
+        # last is not outputScript, so we got [sig] [datachunk] [redeemScript]
+        else:
+            datachunk = asm[1]
+            redeemScript = asm[2]
+
+        data = datachunk
+        # data = arc4_decrypt(datachunk)
+
+        if data[:len(config.PREFIX)] == config.PREFIX:
+            data = data[len(config.PREFIX):]
+        else:
+            raise DecodeError('unrecognised P2SH output')
+
+        return None, data
+
     # Ignore coinbase transactions.
     if ctx.is_coinbase():
         raise DecodeError('coinbase transaction')
@@ -664,6 +691,22 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
                 break
             else:                   # Data.
                 data += new_data
+
+    # P2SH encoding signalling
+    if util.enabled('p2sh_encoding') and data == b'P2SH':
+        data = b''
+        for vin in ctx.vin[1:]:  # skip first, is source
+            # Ignore transactions with invalid script.
+            try:
+                asm = script.get_asm(vin.scriptSig)
+            except CScriptInvalidError as e:
+                raise DecodeError(e)
+
+            new_destination, new_data = decode_p2sh_input(asm)
+
+            assert not new_destination
+
+            data += new_data
 
     # Only look for source if data were found or destination is `UNSPENDABLE`,
     # for speed.

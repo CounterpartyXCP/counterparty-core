@@ -19,6 +19,7 @@ import apsw
 import pytest
 import binascii
 import appdirs
+import pprint
 import pycoin
 from pycoin.tx import Tx
 import bitcoin as bitcoinlib
@@ -173,7 +174,6 @@ def insert_raw_transaction(raw_transaction, db):
     tx_hash = dummy_tx_hash(raw_transaction)
     tx = None
     tx_index = block_index - config.BURN_START + 1
-
     try:
         source, destination, btc_amount, fee, data = blocks._get_tx_info(raw_transaction)
         transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)

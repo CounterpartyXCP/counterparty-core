@@ -20,7 +20,7 @@ FIXTURE_OPTIONS = {
 
 
 def setup_function(function):
-    transaction.UTXO_LOCKS = None  # reset UTXO_LOCKS
+    transaction.initialise()  # reset UTXO_LOCKS
 
 
 def construct_tx(db, source, destination, disable_utxo_locks=False):
