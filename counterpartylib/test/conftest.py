@@ -295,8 +295,8 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         address = '_'.join([str(signatures_required)] + sorted(pubkeys) + [str(len(pubkeys))])
         return address
 
-    def get_cached_raw_transaction(tx_hash, verbose=False):
-        return util_test.getrawtransaction(rawtransactions_db, bitcoinlib.core.lx(tx_hash))
+    def get_cached_raw_transaction(txid, verbose=False):
+        return util_test.getrawtransaction(rawtransactions_db, txid)
 
     # mock the arc4 with a fixed seed to keep data from changing based on inputs
     _init_arc4 = arc4.init_arc4

@@ -283,29 +283,34 @@ def prefill_rawtransactions_db(db):
     with open(CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
             wallet_unspent = json.load(listunspent_test_file)
             for output in wallet_unspent:
-                txid = binascii.hexlify(bitcoinlib.core.lx(output['txid'])).decode()
-                tx = backend.deserialize(output['txhex'])
+                txid = output['txid']
                 cursor.execute('INSERT INTO raw_transactions VALUES (?, ?)', (txid, output['txhex']))
     cursor.close()
 
 
-def save_rawtransaction(db, tx_hash, tx_hex):
+def save_rawtransaction(db, txid, tx_hex):
     """Insert the raw transaction into the db."""
+    if isinstance(txid, bytes):
+        txid = binascii.hexlify(txid).decode('ascii')
+
     cursor = db.cursor()
     try:
-        txid = binascii.hexlify(bitcoinlib.core.lx(tx_hash)).decode()
         cursor.execute('''INSERT INTO raw_transactions VALUES (?, ?)''', (txid, tx_hex))
     except Exception as e: # TODO
         pass
     cursor.close()
 
+
 def getrawtransaction(db, txid):
     """Return raw transactions with specific hash."""
+    if isinstance(txid, bytes):
+        txid = binascii.hexlify(txid).decode('ascii')
+
     cursor = db.cursor()
-    txid = binascii.hexlify(txid).decode()
     tx_hex = list(cursor.execute('''SELECT tx_hex FROM raw_transactions WHERE tx_hash = ?''', (txid,)))[0][0]
     cursor.close()
     return tx_hex
+
 
 def initialise_db(db):
     """Initialise blockchain in the db and insert first block."""
