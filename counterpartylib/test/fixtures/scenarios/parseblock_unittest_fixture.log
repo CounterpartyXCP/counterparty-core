@@ -2,237 +2,237 @@ Creating connection to `:memory:`.
 Checking database integrity.
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.3789914 BTC
-Credit: 930.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #burn# <610b15f0c2d3845f124cc6026b6c212033de94218b25f89d5dbde47d11085a89>
-Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 0.62 BTC for 930.0 XCP (610b15f0c2d3845f124cc6026b6c212033de94218b25f89d5dbde47d11085a89) [valid]
+Change quantity: 1.37903515 BTC
+Credit: 930.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #burn# <77f08141941118b414589e9affe2b15dea5dbe8139a52cd26083f25c1f87c6eb>
+Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 0.62 BTC for 930.0 XCP (77f08141941118b414589e9affe2b15dea5dbe8139a52cd26083f25c1f87c6eb) [valid]
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9989134 BTC
-Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <82e357fac0f41bc8c0c01e781ce96f0871bd3d6aaf57a8e99255d5e9d9fba554>
-Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 1000.0 of divisible asset DIVISIBLE (82e357fac0f41bc8c0c01e781ce96f0871bd3d6aaf57a8e99255d5e9d9fba554) [valid]
-Credit: 1000.0 DIVISIBLE to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <82e357fac0f41bc8c0c01e781ce96f0871bd3d6aaf57a8e99255d5e9d9fba554>
+Change quantity: 1.9989454 BTC
+Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <a68768e0a44a119cb48124b3f11f2a03e2f738a86a539aa9beb93596092d1edf>
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 1000.0 of divisible asset DIVISIBLE (a68768e0a44a119cb48124b3f11f2a03e2f738a86a539aa9beb93596092d1edf) [valid]
+Credit: 1000.0 DIVISIBLE to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <a68768e0a44a119cb48124b3f11f2a03e2f738a86a539aa9beb93596092d1edf>
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9989134 BTC
-Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <6ecaeb544ce2f8a4a24d8d497ecba6ef7b71082a3f1cfdabc48726d5bc90fdca>
-Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 1000 of indivisible asset NODIVISIBLE (6ecaeb544ce2f8a4a24d8d497ecba6ef7b71082a3f1cfdabc48726d5bc90fdca) [valid]
-Credit: 1000 NODIVISIBLE to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <6ecaeb544ce2f8a4a24d8d497ecba6ef7b71082a3f1cfdabc48726d5bc90fdca>
+Change quantity: 1.9989454 BTC
+Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <25e8108a67011db1a409e52fc3d73511d08a5078ad73e06b7dfefb90a8b6a70f>
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 1000 of indivisible asset NODIVISIBLE (25e8108a67011db1a409e52fc3d73511d08a5078ad73e06b7dfefb90a8b6a70f) [valid]
+Credit: 1000 NODIVISIBLE to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <25e8108a67011db1a409e52fc3d73511d08a5078ad73e06b7dfefb90a8b6a70f>
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9989134 BTC
-Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <a36a2d510757def22f0aa0f1cd1b4cf5e9bb160b051b83df25a101d5bb048928>
-Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 0.00001 of divisible asset CALLABLE (a36a2d510757def22f0aa0f1cd1b4cf5e9bb160b051b83df25a101d5bb048928) [valid]
-Credit: 0.00001 CALLABLE to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <a36a2d510757def22f0aa0f1cd1b4cf5e9bb160b051b83df25a101d5bb048928>
+Change quantity: 1.9989454 BTC
+Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <227d51e90a5921551dff2554d81439718718afbd0b9a7efd2d8ec713497bdf3d>
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 0.00001 of divisible asset CALLABLE (227d51e90a5921551dff2554d81439718718afbd0b9a7efd2d8ec713497bdf3d) [valid]
+Credit: 0.00001 CALLABLE to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <227d51e90a5921551dff2554d81439718718afbd0b9a7efd2d8ec713497bdf3d>
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9989134 BTC
-Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <044c9ac702136ee7839dc776cb7b43bbb9d5328415925a958679d801ac6c6b63>
-Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 0.00001 of divisible asset LOCKED (044c9ac702136ee7839dc776cb7b43bbb9d5328415925a958679d801ac6c6b63) [valid]
-Credit: 0.00001 LOCKED to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <044c9ac702136ee7839dc776cb7b43bbb9d5328415925a958679d801ac6c6b63>
+Change quantity: 1.9989454 BTC
+Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <b5c6258164bca06c567dfe0b26b156812c34819c6ff538f9c1ee01bd071a3203>
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 0.00001 of divisible asset LOCKED (b5c6258164bca06c567dfe0b26b156812c34819c6ff538f9c1ee01bd071a3203) [valid]
+Credit: 0.00001 LOCKED to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <b5c6258164bca06c567dfe0b26b156812c34819c6ff538f9c1ee01bd071a3203>
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9989134 BTC
-Debit: 0.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <bd919f9a31982a6dbc6253e38bfba0a367e24fbd65cf79575648f799b98849b4>
-Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc locked asset LOCKED (bd919f9a31982a6dbc6253e38bfba0a367e24fbd65cf79575648f799b98849b4) [valid]
+Change quantity: 1.9989454 BTC
+Debit: 0.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <84e607982e4aae1edbc0f1a02171e06ba335e30817779425ce570e26af2b5316>
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc locked asset LOCKED (84e607982e4aae1edbc0f1a02171e06ba335e30817779425ce570e26af2b5316) [valid]
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9989134 BTC
-Debit: 1.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #open order# <074fa38a84a81c0ed7957484ebe73836104d3068f66b189e05a7cf0b95c737f3>
-Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered 1.0 XCP for 1.0 DIVISIBLE in 2000 blocks, with a provided fee of 0.0001 BTC and a required fee of 0.0 BTC (074fa38a84a81c0ed7957484ebe73836104d3068f66b189e05a7cf0b95c737f3) [open]
+Change quantity: 1.9989454 BTC
+Debit: 1.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #open order# <969baaf1c366379930e994259ec1bbc4129a06ddd7e1393f431dcee2c279c798>
+Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered 1.0 XCP for 1.0 DIVISIBLE in 2000 blocks, with a provided fee of 0.00006800 BTC and a required fee of 0.00000000 BTC (969baaf1c366379930e994259ec1bbc4129a06ddd7e1393f431dcee2c279c798) [open]
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9988591 BTC
-Debit: 1.0 DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #send# <d21d82d8298d545b91e4467c287322d2399d8eb08af15bee68f58c4bcfa9a5f9>
-Credit: 1.0 DIVISIBLE to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #send# <d21d82d8298d545b91e4467c287322d2399d8eb08af15bee68f58c4bcfa9a5f9>
-Send: 1.0 DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (d21d82d8298d545b91e4467c287322d2399d8eb08af15bee68f58c4bcfa9a5f9) [valid]
+Change quantity: 1.9988826 BTC
+Debit: 1.0 DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #send# <bdb55efb18b339207aa6483329a803fda6248e8bcf68b819708445d2c719f43d>
+Credit: 1.0 DIVISIBLE to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #send# <bdb55efb18b339207aa6483329a803fda6248e8bcf68b819708445d2c719f43d>
+Send: 1.0 DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (bdb55efb18b339207aa6483329a803fda6248e8bcf68b819708445d2c719f43d) [valid]
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9988591 BTC
-Debit: 1.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #send# <e64aac59d8759cde5785f3e1c4af448d95a152a30c76d97c114a3025e5ec118b>
-Credit: 1.0 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #send# <e64aac59d8759cde5785f3e1c4af448d95a152a30c76d97c114a3025e5ec118b>
-Send: 1.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (e64aac59d8759cde5785f3e1c4af448d95a152a30c76d97c114a3025e5ec118b) [valid]
+Change quantity: 1.9988826 BTC
+Debit: 1.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #send# <663e6e10810403876bf8d5c1bc8715a44c82bfb4a2e5e98fa63ab65fc04cc55b>
+Credit: 1.0 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #send# <663e6e10810403876bf8d5c1bc8715a44c82bfb4a2e5e98fa63ab65fc04cc55b>
+Send: 1.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (663e6e10810403876bf8d5c1bc8715a44c82bfb4a2e5e98fa63ab65fc04cc55b) [valid]
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9989134 BTC
-Debit: 1.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #open order# <a9f78534e7f340ba0f0d2ac1851a11a011ca7aa1262349eeba71add8777b162b>
-Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered 1.0 XCP for 1.0 DIVISIBLE in 2000 blocks, with a provided fee of 0.0001 BTC and a required fee of 0.0 BTC (a9f78534e7f340ba0f0d2ac1851a11a011ca7aa1262349eeba71add8777b162b) [open]
+Change quantity: 1.9989454 BTC
+Debit: 1.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #open order# <bf97aaeecda40cc1842da334c232526a5eea7219239bf03205a7fc19eaa82992>
+Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered 1.0 XCP for 1.0 DIVISIBLE in 2000 blocks, with a provided fee of 0.00006800 BTC and a required fee of 0.00000000 BTC (bf97aaeecda40cc1842da334c232526a5eea7219239bf03205a7fc19eaa82992) [open]
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9989134 BTC
-Debit: 1.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #open order# <b6db5c8412a58d9fa75bff41f8a7519353ffd4d359c7c8fa7ee1900bc05e4d9d>
-Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered 1.0 XCP for 0.01 BTC in 2000 blocks, with a provided fee of 0.0001 BTC and a required fee of 0.009 BTC (b6db5c8412a58d9fa75bff41f8a7519353ffd4d359c7c8fa7ee1900bc05e4d9d) [open]
+Change quantity: 1.9989454 BTC
+Debit: 1.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #open order# <9a2ca3ff0e914c37ff63235b2679301f15da2621d717744befc7b8e21227ef87>
+Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered 1.0 XCP for 0.01 BTC in 2000 blocks, with a provided fee of 0.00006800 BTC and a required fee of 0.00900000 BTC (9a2ca3ff0e914c37ff63235b2679301f15da2621d717744befc7b8e21227ef87) [open]
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9890134 BTC
-Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered 0.00666667 BTC for 1.0 XCP in 2000 blocks, with a provided fee of 0.01 BTC and a required fee of 0.0 BTC (8a63e7a516d36c17ac32999222ac282ab94fb9c5ea30637cd06660b3139510f6) [open]
-Considering: b6db5c8412a58d9fa75bff41f8a7519353ffd4d359c7c8fa7ee1900bc05e4d9d
+Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered 0.00666667 BTC for 1.0 XCP in 2000 blocks, with a provided fee of 0.01000000 BTC and a required fee of 0.00000000 BTC (8a63e7a516d36c17ac32999222ac282ab94fb9c5ea30637cd06660b3139510f6) [open]
+Considering: 9a2ca3ff0e914c37ff63235b2679301f15da2621d717744befc7b8e21227ef87
 Tx0 Price: 0.01; Tx1 Inverse Price: 0.00666667
 Skipping: price mismatch.
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9988354 BTC
-Debit: 3.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #send# <d4428cf4082bc5fe8fed72673f956d351f269a308cf0d0d0b87f76dd3b6165f4>
-Credit: 3.0 XCP to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #send# <d4428cf4082bc5fe8fed72673f956d351f269a308cf0d0d0b87f76dd3b6165f4>
-Send: 3.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (d4428cf4082bc5fe8fed72673f956d351f269a308cf0d0d0b87f76dd3b6165f4) [valid]
+Change quantity: 1.9988589 BTC
+Debit: 3.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #send# <631f6b5166129fd3d69dbd4a8096707d61942acb55fd2100547a39d53bd8b5b6>
+Credit: 3.0 XCP to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #send# <631f6b5166129fd3d69dbd4a8096707d61942acb55fd2100547a39d53bd8b5b6>
+Send: 3.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (631f6b5166129fd3d69dbd4a8096707d61942acb55fd2100547a39d53bd8b5b6) [valid]
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9988354 BTC
-Debit: 10.0 DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #send# <97aaf458fdbe3a8d7e57b4c238706419c001fc5810630c0c3cd2361821052a0d>
-Credit: 10.0 DIVISIBLE to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #send# <97aaf458fdbe3a8d7e57b4c238706419c001fc5810630c0c3cd2361821052a0d>
-Send: 10.0 DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (97aaf458fdbe3a8d7e57b4c238706419c001fc5810630c0c3cd2361821052a0d) [valid]
+Change quantity: 1.9988589 BTC
+Debit: 10.0 DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #send# <c91791d284a75383678ee71817775bbdfa7e22ffbbc561dbe782614121e625a5>
+Credit: 10.0 DIVISIBLE to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #send# <c91791d284a75383678ee71817775bbdfa7e22ffbbc561dbe782614121e625a5>
+Send: 10.0 DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (c91791d284a75383678ee71817775bbdfa7e22ffbbc561dbe782614121e625a5) [valid]
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9988591 BTC
-Debit: 5 NODIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #send# <29cd663b5e5b0801717e46891bc57e1d050680da0a803944623f6021151d2592>
-Credit: 5 NODIVISIBLE to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #send# <29cd663b5e5b0801717e46891bc57e1d050680da0a803944623f6021151d2592>
-Send: 5 NODIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (29cd663b5e5b0801717e46891bc57e1d050680da0a803944623f6021151d2592) [valid]
+Change quantity: 1.9988826 BTC
+Debit: 5 NODIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #send# <c3875a3cc9c8c967f8ff0accbc37f728e0bb038672c2cb19325ddb6bdb53465d>
+Credit: 5 NODIVISIBLE to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #send# <c3875a3cc9c8c967f8ff0accbc37f728e0bb038672c2cb19325ddb6bdb53465d>
+Send: 5 NODIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (c3875a3cc9c8c967f8ff0accbc37f728e0bb038672c2cb19325ddb6bdb53465d) [valid]
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9988354 BTC
-Debit: 10 NODIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #send# <b285ff2379716e92ab7b68ad4e68ba74a999dc9ca8c312c377231a89da7e9361>
-Credit: 10 NODIVISIBLE to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #send# <b285ff2379716e92ab7b68ad4e68ba74a999dc9ca8c312c377231a89da7e9361>
-Send: 10 NODIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (b285ff2379716e92ab7b68ad4e68ba74a999dc9ca8c312c377231a89da7e9361) [valid]
+Change quantity: 1.9988589 BTC
+Debit: 10 NODIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #send# <f74ffb36b1ca86e0dc9305f31671c3866817fe575463cc8b982174a19f349746>
+Credit: 10 NODIVISIBLE to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #send# <f74ffb36b1ca86e0dc9305f31671c3866817fe575463cc8b982174a19f349746>
+Send: 10 NODIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (f74ffb36b1ca86e0dc9305f31671c3866817fe575463cc8b982174a19f349746) [valid]
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9989134 BTC
-Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <cd929bf57f5f26550a56ba40eecd258b684842777dfc434a46b65a86e924bf52>
-Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 92233720368.54775807 of divisible asset MAXI (cd929bf57f5f26550a56ba40eecd258b684842777dfc434a46b65a86e924bf52) [valid]
-Credit: 92233720368.54775807 MAXI to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <cd929bf57f5f26550a56ba40eecd258b684842777dfc434a46b65a86e924bf52>
+Change quantity: 1.9989454 BTC
+Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <f6dbe255b8028a2917fff031b6d203d0822e71583432c6ba1509713db8f6dee6>
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 92233720368.54775807 of divisible asset MAXI (f6dbe255b8028a2917fff031b6d203d0822e71583432c6ba1509713db8f6dee6) [valid]
+Credit: 92233720368.54775807 MAXI to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <f6dbe255b8028a2917fff031b6d203d0822e71583432c6ba1509713db8f6dee6>
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9989134 BTC
-Broadcast: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T19:33:20 with a fee of 500.0%% (9b70f9ad8c0d92ff27127d081169cebee68a776f4974e757de09a46e85682d66) [valid]
+Change quantity: 1.9989454 BTC
+Broadcast: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T19:33:20 with a fee of 500.0%% (c23815ab2f8fa0ff8a43bb35cb8e4249fa7986a45b0b761b8fa654876772f8bd) [valid]
 Sorted candidate UTXOs: ['amount: 1.934276; txid: dc4f91c42eb79898b266ee237eed0d501b8b1a843f69aed847ad740e1933f85e; vout: 1; confirmations: 6']
 New input: amount: 1.934276; txid: dc4f91c42eb79898b266ee237eed0d501b8b1a843f69aed847ad740e1933f85e; vout: 1; confirmations: 6
-Change quantity: 1.934098 BTC
-Broadcast: mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH locked his feed (f6548d72d0726bd869fdfdcf44766871f7ab721efda6ed7bce0d4c88b43bf1cf) [valid]
+Change quantity: 1.93413 BTC
+Broadcast: mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH locked his feed (badb232b510fc70d33b241ed591d448848a424a9669b600f7e3b47454726c977) [valid]
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9988591 BTC
-Debit: 0.00000009 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #bet# <be15d34c959fde8f2baff8577d73d28c864e7684cc76ecba33e5d6d79ca6d6bd>
+Change quantity: 1.9988826 BTC
+Debit: 0.00000009 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #bet# <bf4cbb16b58a03c1f715e7dacf49f20bd184d9f197756b7977135241fd708cb3>
 Bet: 0.00000009 XCP against 0.00000009 XCP, by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Sorted candidate UTXOs: ['amount: 1.0; txid: e43c357b78baf473fd21cbc1481ac450746b60cf1d2702ce3a73a8811811e3eb; vout: 0; confirmations: 2', 'amount: 0.11121663; txid: b9fc3aa355b77ecb63282fc96e63912a253e98bf9cf441fbfbecc3fb277c4985; vout: 0; confirmations: 74']
 New input: amount: 1.0; txid: e43c357b78baf473fd21cbc1481ac450746b60cf1d2702ce3a73a8811811e3eb; vout: 0; confirmations: 2
-Change quantity: 0.9997677 BTC
-Debit: 0.00000009 XCP from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #bet# <90c1314847b1fe9b4520a3610dc98c71d39a1cb4b96edb9b02b6fed844a4b1e5>
+Change quantity: 0.9997912 BTC
+Debit: 0.00000009 XCP from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #bet# <0590f213f0549ecf353969f9ec8140b6ecd4b67f9d2912cd58ec6b4b1b756a20>
 Bet: 0.00000009 XCP against 0.00000009 XCP, by mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns, on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Considering: be15d34c959fde8f2baff8577d73d28c864e7684cc76ecba33e5d6d79ca6d6bd
+Considering: bf4cbb16b58a03c1f715e7dacf49f20bd184d9f197756b7977135241fd708cb3
 Tx0 Inverse Odds: 1.0; Tx1 Odds: 1.0
 Potential forward quantities: 9, 9
 Forward Quantity: 9
 Backward Quantity: 9
-Credit: 0.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #filled# <90c1314847b1fe9b4520a3610dc98c71d39a1cb4b96edb9b02b6fed844a4b1e5>
-Credit: 0.0 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #filled# <90c1314847b1fe9b4520a3610dc98c71d39a1cb4b96edb9b02b6fed844a4b1e5>
-Bet Match: BearCFD for 0.00000009 XCP against BullCFD for 0.00000009 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T19:33:21 that 0.0 value, leveraged 1.0x (be15d34c959fde8f2baff8577d73d28c864e7684cc76ecba33e5d6d79ca6d6bd_90c1314847b1fe9b4520a3610dc98c71d39a1cb4b96edb9b02b6fed844a4b1e5) [pending]
+Credit: 0.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #filled# <0590f213f0549ecf353969f9ec8140b6ecd4b67f9d2912cd58ec6b4b1b756a20>
+Credit: 0.0 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #filled# <0590f213f0549ecf353969f9ec8140b6ecd4b67f9d2912cd58ec6b4b1b756a20>
+Bet Match: BearCFD for 0.00000009 XCP against BullCFD for 0.00000009 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T19:33:21 that 0.0 value, leveraged 1.0x (bf4cbb16b58a03c1f715e7dacf49f20bd184d9f197756b7977135241fd708cb3_0590f213f0549ecf353969f9ec8140b6ecd4b67f9d2912cd58ec6b4b1b756a20) [pending]
 Sorted candidate UTXOs: ['amount: 1.0; txid: e43c357b78baf473fd21cbc1481ac450746b60cf1d2702ce3a73a8811811e3eb; vout: 0; confirmations: 2', 'amount: 0.11121663; txid: b9fc3aa355b77ecb63282fc96e63912a253e98bf9cf441fbfbecc3fb277c4985; vout: 0; confirmations: 74']
 New input: amount: 1.0; txid: e43c357b78baf473fd21cbc1481ac450746b60cf1d2702ce3a73a8811811e3eb; vout: 0; confirmations: 2
-Change quantity: 0.9997677 BTC
-Debit: 0.0000001 XCP from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #bet# <ba0ef1dfbbc87df94e1d198b0e9e3c06301710d4aab3d85116cbc8199954644a>
+Change quantity: 0.9997912 BTC
+Debit: 0.0000001 XCP from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #bet# <01e52b7501ff34946978d395da5b6b03032bc6a4336b007a4fe0456a19a334b1>
 Bet: 0.0000001 XCP against 0.0000001 XCP, by mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns, on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9989134 BTC
-Broadcast: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T19:33:22 with a fee of 500.0%% (18cbfca6cd776158c13245977b4eead061e6bdcea8118faa6996fb6d01b51d4e) [valid]
-Credit: 0.00000009 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #bet settled# <18cbfca6cd776158c13245977b4eead061e6bdcea8118faa6996fb6d01b51d4e>
-Credit: 0.00000009 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #bet settled# <18cbfca6cd776158c13245977b4eead061e6bdcea8118faa6996fb6d01b51d4e>
-Credit: 0.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #feed fee# <18cbfca6cd776158c13245977b4eead061e6bdcea8118faa6996fb6d01b51d4e>
-Bet Match Settled: 0.00000009 XCP credited to the bull, 0.00000009 XCP credited to the bear, and 0.0 XCP credited to the feed address (be15d34c959fde8f2baff8577d73d28c864e7684cc76ecba33e5d6d79ca6d6bd_90c1314847b1fe9b4520a3610dc98c71d39a1cb4b96edb9b02b6fed844a4b1e5)
-Database: set status of bet_match be15d34c959fde8f2baff8577d73d28c864e7684cc76ecba33e5d6d79ca6d6bd_90c1314847b1fe9b4520a3610dc98c71d39a1cb4b96edb9b02b6fed844a4b1e5 to settled.
+Change quantity: 1.9989454 BTC
+Broadcast: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T19:33:22 with a fee of 500.0%% (da14c69e2e3363b069527d936ed82e5aaff61c3060df97b0f3a4eb8af47454f0) [valid]
+Credit: 0.00000009 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #bet settled# <da14c69e2e3363b069527d936ed82e5aaff61c3060df97b0f3a4eb8af47454f0>
+Credit: 0.00000009 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #bet settled# <da14c69e2e3363b069527d936ed82e5aaff61c3060df97b0f3a4eb8af47454f0>
+Credit: 0.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #feed fee# <da14c69e2e3363b069527d936ed82e5aaff61c3060df97b0f3a4eb8af47454f0>
+Bet Match Settled: 0.00000009 XCP credited to the bull, 0.00000009 XCP credited to the bear, and 0.0 XCP credited to the feed address (bf4cbb16b58a03c1f715e7dacf49f20bd184d9f197756b7977135241fd708cb3_0590f213f0549ecf353969f9ec8140b6ecd4b67f9d2912cd58ec6b4b1b756a20)
+Database: set status of bet_match bf4cbb16b58a03c1f715e7dacf49f20bd184d9f197756b7977135241fd708cb3_0590f213f0549ecf353969f9ec8140b6ecd4b67f9d2912cd58ec6b4b1b756a20 to settled.
 Sorted candidate UTXOs: ['amount: 1.0782457; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143']
 New input: amount: 1.0782457; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143
-Change quantity: 0.4581457 BTC
-Credit: 929.99138821 XCP to myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM #burn# <6e96414550ec512d2272497e3e2cbc908ec472cc1b871d82f51a9a66af3cf148>
-Burn: myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM burned 0.62 BTC for 929.99138821 XCP (6e96414550ec512d2272497e3e2cbc908ec472cc1b871d82f51a9a66af3cf148) [valid]
+Change quantity: 0.45818945 BTC
+Credit: 929.99138821 XCP to myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM #burn# <72a78ce826f2a0a78a811366d419a1585c93b207f29be48aa09eec00a2088a90>
+Burn: myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM burned 0.62 BTC for 929.99138821 XCP (72a78ce826f2a0a78a811366d419a1585c93b207f29be48aa09eec00a2088a90) [valid]
 Sorted candidate UTXOs: ['amount: 1.0782457; txid: 1befa135e687812ab8a60678ac17f982daf008cd7094dc95fc65a0b8e4bd955e; vout: 0; confirmations: 143']
 New input: amount: 1.0782457; txid: 1befa135e687812ab8a60678ac17f982daf008cd7094dc95fc65a0b8e4bd955e; vout: 0; confirmations: 143
-Change quantity: 0.4581457 BTC
-Credit: 929.9913046 XCP to munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b #burn# <1f4e8d91b61fff6132ee060b80008f7739e8215282a5bd7c57fe088c056d9f72>
-Burn: munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b burned 0.62 BTC for 929.9913046 XCP (1f4e8d91b61fff6132ee060b80008f7739e8215282a5bd7c57fe088c056d9f72) [valid]
+Change quantity: 0.45818945 BTC
+Credit: 929.9913046 XCP to munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b #burn# <f0fc998a26684434405080655b8af2dec39c25544e5da36e60fe8711bd2f95ec>
+Burn: munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b burned 0.62 BTC for 929.9913046 XCP (f0fc998a26684434405080655b8af2dec39c25544e5da36e60fe8711bd2f95ec) [valid]
 Sorted candidate UTXOs: ['amount: 1.0782457; txid: fea12706ef63c7ce57df3e1197b8b33e6a93ef2df07964ff654c14f1b900e17f; vout: 0; confirmations: 143']
 New input: amount: 1.0782457; txid: fea12706ef63c7ce57df3e1197b8b33e6a93ef2df07964ff654c14f1b900e17f; vout: 0; confirmations: 143
-Change quantity: 0.4581457 BTC
-Credit: 929.99122099 XCP to mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 #burn# <3152127f7b6645e8b066f6691aeed95fa38f404df85df1447c320b38a79240c6>
-Burn: mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 burned 0.62 BTC for 929.99122099 XCP (3152127f7b6645e8b066f6691aeed95fa38f404df85df1447c320b38a79240c6) [valid]
+Change quantity: 0.45818945 BTC
+Credit: 929.99122099 XCP to mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 #burn# <cbdc121b6134889a6b6809c9f4134b9d3ed26cca35401efe1f512eab49e32284>
+Burn: mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 burned 0.62 BTC for 929.99122099 XCP (cbdc121b6134889a6b6809c9f4134b9d3ed26cca35401efe1f512eab49e32284) [valid]
 Sorted candidate UTXOs: ['amount: 1.0; txid: 20ffe4012d5fc638309b2d087a15fb100d9194132633623bc4c23b4c2caf0150; vout: 0; confirmations: 6']
 New input: amount: 1.0; txid: 20ffe4012d5fc638309b2d087a15fb100d9194132633623bc4c23b4c2caf0150; vout: 0; confirmations: 6
-Change quantity: 0.6899 BTC
-Credit: 464.99556869 XCP to 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy #burn# <bcf44f53dc42ae50f3f0f2dc36ff16e432ddbc298f70ec143806cb58e53d4403>
-Burn: 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy burned 0.31 BTC for 464.99556869 XCP (bcf44f53dc42ae50f3f0f2dc36ff16e432ddbc298f70ec143806cb58e53d4403) [valid]
+Change quantity: 0.68994375 BTC
+Credit: 464.99556869 XCP to 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy #burn# <9ef49fc15392479177a27cdb04734d984e52a04b2453d8f83bcfbbcb5aaf0dfa>
+Burn: 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy burned 0.31 BTC for 464.99556869 XCP (9ef49fc15392479177a27cdb04734d984e52a04b2453d8f83bcfbbcb5aaf0dfa) [valid]
 Sorted candidate UTXOs: ['amount: 1.0; txid: 20ffe4012d5fc638309b2d087a15fb100d9194132633623bc4c23b4c2caf0150; vout: 0; confirmations: 6']
 New input: amount: 1.0; txid: 20ffe4012d5fc638309b2d087a15fb100d9194132633623bc4c23b4c2caf0150; vout: 0; confirmations: 6
-Change quantity: 0.999822 BTC
-Debit: 0.5 XCP from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy #issuance fee# <63145ad2bcc7030aabcfec42a5cce5dfe6829a5694fc0b3566406bb2fd8b6444>
-Issuance: 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy created 1000 of indivisible asset PAYTOSCRIPT (63145ad2bcc7030aabcfec42a5cce5dfe6829a5694fc0b3566406bb2fd8b6444) [valid]
-Credit: 1000 PAYTOSCRIPT to 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy #issuance# <63145ad2bcc7030aabcfec42a5cce5dfe6829a5694fc0b3566406bb2fd8b6444>
+Change quantity: 0.999854 BTC
+Debit: 0.5 XCP from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy #issuance fee# <89ed806602d4e0c260a88c76b1bfcc0c17c993b04678da155369525f854c9105>
+Issuance: 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy created 1000 of indivisible asset PAYTOSCRIPT (89ed806602d4e0c260a88c76b1bfcc0c17c993b04678da155369525f854c9105) [valid]
+Credit: 1000 PAYTOSCRIPT to 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy #issuance# <89ed806602d4e0c260a88c76b1bfcc0c17c993b04678da155369525f854c9105>
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9988591 BTC
-Debit: 1.0 DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #send# <075b91828d0c7b0017f1b5876ef4909ba37db9bc2877588483d8a64bad2bd412>
-Credit: 1.0 DIVISIBLE to 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy #send# <075b91828d0c7b0017f1b5876ef4909ba37db9bc2877588483d8a64bad2bd412>
-Send: 1.0 DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy (075b91828d0c7b0017f1b5876ef4909ba37db9bc2877588483d8a64bad2bd412) [valid]
+Change quantity: 1.9988826 BTC
+Debit: 1.0 DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #send# <5776bcda35a58d001e71552bc6fd2de3764495ce50f16b3b806a986935ca5520>
+Credit: 1.0 DIVISIBLE to 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy #send# <5776bcda35a58d001e71552bc6fd2de3764495ce50f16b3b806a986935ca5520>
+Send: 1.0 DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy (5776bcda35a58d001e71552bc6fd2de3764495ce50f16b3b806a986935ca5520) [valid]
 Sorted candidate UTXOs: ['amount: 1.0; txid: 20ffe4012d5fc638309b2d087a15fb100d9194132633623bc4c23b4c2caf0150; vout: 0; confirmations: 6']
 New input: amount: 1.0; txid: 20ffe4012d5fc638309b2d087a15fb100d9194132633623bc4c23b4c2caf0150; vout: 0; confirmations: 6
-Change quantity: 0.9999 BTC
-Broadcast: 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy at 2013-12-25T19:33:22 with a fee of 500.0%% (d858c6855038048b1d5e31a34ceae2069d7c7bc311ca49d189ccbf44cee58031) [valid]
+Change quantity: 0.99992975 BTC
+Broadcast: 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy at 2013-12-25T19:33:22 with a fee of 500.0%% (ba3fe575883978cb0b79969b2f3c5268ef7b2fc7a90f6461d3ed33fbc30c90b3) [valid]
 Sorted candidate UTXOs: ['amount: 1.0; txid: 20ffe4012d5fc638309b2d087a15fb100d9194132633623bc4c23b4c2caf0150; vout: 0; confirmations: 6']
 New input: amount: 1.0; txid: 20ffe4012d5fc638309b2d087a15fb100d9194132633623bc4c23b4c2caf0150; vout: 0; confirmations: 6
-Change quantity: 0.9998457 BTC
-Debit: 0.0000001 XCP from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy #bet# <81f8ba670b22980b15c944dcd478a274723659d768b0de73b014d06d214e5b90>
+Change quantity: 0.99986695 BTC
+Debit: 0.0000001 XCP from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy #bet# <0c690d46bef903922354520c8c8626ab5bfd45da1ca211d65f16aeef9b5f3300>
 Bet: 0.0000001 XCP against 0.0000001 XCP, by 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy, on 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy
 Sorted candidate UTXOs: ['amount: 1.0782457; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143']
 New input: amount: 1.0782457; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143
-Change quantity: 1.0780677 BTC
-Broadcast: myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM at 2013-12-25T19:33:20 with a fee of 500.0%% (d0b852bbf29ccc0015893b2d252c595be4bc821b7819b90ca0cbad75bf9f956b) [valid]
+Change quantity: 1.0780997 BTC
+Broadcast: myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM at 2013-12-25T19:33:20 with a fee of 500.0%% (81a5d20db79a4b620221ba646fec2699b4e4d1c854bb4022b0550bd7d274a5b8) [valid]
 Sorted candidate UTXOs: ['amount: 1.0782457; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143']
 New input: amount: 1.0782457; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143
-Change quantity: 1.0780134 BTC
-Debit: 0.00000009 XCP from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM #bet# <69b9a535084fa5faf91acd7d056e2c32a85cc15d6a4d83b1adf091a344d22407>
+Change quantity: 1.0780369 BTC
+Debit: 0.00000009 XCP from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM #bet# <c9cfc39f98307a845d1d27d4a9ad66b19e0c38f59be14ed0c4b9d4ec15cb0940>
 Bet: 0.00000009 XCP against 0.00000009 XCP, by myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM, on myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM
 Sorted candidate UTXOs: ['amount: 1.0782457; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143']
 New input: amount: 1.0782457; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143
-Change quantity: 1.0780677 BTC
-Broadcast: myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM locked his feed (c15d2767f6eecdc768f957ea8316b18aacf6ec3a6413361cbe898df3e6095893) [valid]
+Change quantity: 1.0780997 BTC
+Broadcast: myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM locked his feed (b61f2f7e43e6696ca5b804e9c21e61616257b561e69d3cc6cf45af1e1cac3deb) [valid]
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
-Change quantity: 1.9989134 BTC
-Debit: 1.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #open order# <9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b>
-Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered 1.0 XCP for 0.008 BTC in 2000 blocks, with a provided fee of 0.0001 BTC and a required fee of 0.009 BTC (9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b) [open]
+Change quantity: 1.9989454 BTC
+Debit: 1.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #open order# <301207b62ade0707eeab94a413cb7b6be1886de25b22854e953861789385e5e7>
+Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered 1.0 XCP for 0.008 BTC in 2000 blocks, with a provided fee of 0.00006800 BTC and a required fee of 0.00900000 BTC (301207b62ade0707eeab94a413cb7b6be1886de25b22854e953861789385e5e7) [open]
 Considering: 8a63e7a516d36c17ac32999222ac282ab94fb9c5ea30637cd06660b3139510f6
 Tx0 Price: 149.9999250000375; Tx1 Inverse Price: 125.0
 Skipping: price mismatch.
 Sorted candidate UTXOs: ['amount: 1.0; txid: e43c357b78baf473fd21cbc1481ac450746b60cf1d2702ce3a73a8811811e3eb; vout: 0; confirmations: 2', 'amount: 0.11121663; txid: b9fc3aa355b77ecb63282fc96e63912a253e98bf9cf441fbfbecc3fb277c4985; vout: 0; confirmations: 74']
 New input: amount: 1.0; txid: e43c357b78baf473fd21cbc1481ac450746b60cf1d2702ce3a73a8811811e3eb; vout: 0; confirmations: 2
 Change quantity: 0.989922 BTC
-Order: mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns ordered 0.008 BTC for 1.0 XCP in 2000 blocks, with a provided fee of 0.01 BTC and a required fee of 0.0 BTC (14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0) [open]
-Considering: 9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b
+Order: mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns ordered 0.008 BTC for 1.0 XCP in 2000 blocks, with a provided fee of 0.01000000 BTC and a required fee of 0.00000000 BTC (14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0) [open]
+Considering: 301207b62ade0707eeab94a413cb7b6be1886de25b22854e953861789385e5e7
 Tx0 Price: 0.008; Tx1 Inverse Price: 0.008
 Potential forward quantities: 100000000, 100000000
 Forward Quantity: 100000000
 Backward Quantity: 800000
 Tx1 fee provided remaining: 0.01; required fee: 7.2e-05
-Order Match: 1.0 XCP for 0.008 BTC (9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b_14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0) [pending]
-Considering: b6db5c8412a58d9fa75bff41f8a7519353ffd4d359c7c8fa7ee1900bc05e4d9d
+Order Match: 1.0 XCP for 0.008 BTC (301207b62ade0707eeab94a413cb7b6be1886de25b22854e953861789385e5e7_14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0) [pending]
+Considering: 9a2ca3ff0e914c37ff63235b2679301f15da2621d717744befc7b8e21227ef87
 Skipping: negative give quantity remaining
 Sorted candidate UTXOs: ['amount: 1.934276; txid: dc4f91c42eb79898b266ee237eed0d501b8b1a843f69aed847ad740e1933f85e; vout: 1; confirmations: 6']
 New input: amount: 1.934276; txid: dc4f91c42eb79898b266ee237eed0d501b8b1a843f69aed847ad740e1933f85e; vout: 1; confirmations: 6
-Change quantity: 1.314176 BTC
-Credit: 929.95878046 XCP to mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH #burn# <d6adfa92e20b6211ff5fabb2f7a1c8b037168797984c94734c28e82e92d3b1d6>
-Burn: mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH burned 0.62 BTC for 929.95878046 XCP (d6adfa92e20b6211ff5fabb2f7a1c8b037168797984c94734c28e82e92d3b1d6) [valid]
+Change quantity: 1.31421975 BTC
+Credit: 929.95878046 XCP to mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH #burn# <0d88550e8361676614215372d3482d7749ddfe81d12fff58ce80a598dd0d368d>
+Burn: mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH burned 0.62 BTC for 929.95878046 XCP (0d88550e8361676614215372d3482d7749ddfe81d12fff58ce80a598dd0d368d) [valid]
 Sorted candidate UTXOs: ['amount: 1.934276; txid: dc4f91c42eb79898b266ee237eed0d501b8b1a843f69aed847ad740e1933f85e; vout: 1; confirmations: 6']
 New input: amount: 1.934276; txid: dc4f91c42eb79898b266ee237eed0d501b8b1a843f69aed847ad740e1933f85e; vout: 1; confirmations: 6
-Change quantity: 1.934098 BTC
-Debit: 0.5 XCP from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH #issuance fee# <084102fa0722f5520481f34eabc9f92232e4d1647b329b3fa58bffc8f91c5e4e>
-Issuance: mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH created 0.000001 of divisible asset DIVIDEND (084102fa0722f5520481f34eabc9f92232e4d1647b329b3fa58bffc8f91c5e4e) [valid]
-Credit: 0.000001 DIVIDEND to mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH #issuance# <084102fa0722f5520481f34eabc9f92232e4d1647b329b3fa58bffc8f91c5e4e>
+Change quantity: 1.93413 BTC
+Debit: 0.5 XCP from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH #issuance fee# <89f7e46840b55a8134ca6950f804862a5a89fbc07dfa223300a07daeaad9719f>
+Issuance: mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH created 0.000001 of divisible asset DIVIDEND (89f7e46840b55a8134ca6950f804862a5a89fbc07dfa223300a07daeaad9719f) [valid]
+Credit: 0.000001 DIVIDEND to mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH #issuance# <89f7e46840b55a8134ca6950f804862a5a89fbc07dfa223300a07daeaad9719f>
 Sorted candidate UTXOs: ['amount: 1.934276; txid: dc4f91c42eb79898b266ee237eed0d501b8b1a843f69aed847ad740e1933f85e; vout: 1; confirmations: 6']
 New input: amount: 1.934276; txid: dc4f91c42eb79898b266ee237eed0d501b8b1a843f69aed847ad740e1933f85e; vout: 1; confirmations: 6
-Change quantity: 1.9340437 BTC
-Debit: 0.0000001 DIVIDEND from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH #send# <9d3391348171201de9b5eb70ca80896b0ae166fd51237c843a90c1b4ccf8c602>
-Credit: 0.0000001 DIVIDEND to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj #send# <9d3391348171201de9b5eb70ca80896b0ae166fd51237c843a90c1b4ccf8c602>
-Send: 0.0000001 DIVIDEND from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj (9d3391348171201de9b5eb70ca80896b0ae166fd51237c843a90c1b4ccf8c602) [valid]
+Change quantity: 1.9340672 BTC
+Debit: 0.0000001 DIVIDEND from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH #send# <3c3e750a0a8f27fba67480957f85907f22a52d45385132d73d7fdc1c8e38107d>
+Credit: 0.0000001 DIVIDEND to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj #send# <3c3e750a0a8f27fba67480957f85907f22a52d45385132d73d7fdc1c8e38107d>
+Send: 0.0000001 DIVIDEND from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj (3c3e750a0a8f27fba67480957f85907f22a52d45385132d73d7fdc1c8e38107d) [valid]
 Sorted candidate UTXOs: ['amount: 1.934276; txid: dc4f91c42eb79898b266ee237eed0d501b8b1a843f69aed847ad740e1933f85e; vout: 1; confirmations: 6']
 New input: amount: 1.934276; txid: dc4f91c42eb79898b266ee237eed0d501b8b1a843f69aed847ad740e1933f85e; vout: 1; confirmations: 6
-Change quantity: 1.9340437 BTC
-Debit: 929.45878046 XCP from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH #send# <54f4c7b383ea19147e62d2be9f3e7f70b6c379baac15e8b4cf43f7c21578c1ef>
-Credit: 929.45878046 XCP to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj #send# <54f4c7b383ea19147e62d2be9f3e7f70b6c379baac15e8b4cf43f7c21578c1ef>
-Send: 929.45878046 XCP from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj (54f4c7b383ea19147e62d2be9f3e7f70b6c379baac15e8b4cf43f7c21578c1ef) [valid]
+Change quantity: 1.9340672 BTC
+Debit: 929.45878046 XCP from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH #send# <478048dcdaca3e8010fc50a75511f6ed8fc1a770a4fab5c339a1c15c3633971f>
+Credit: 929.45878046 XCP to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj #send# <478048dcdaca3e8010fc50a75511f6ed8fc1a770a4fab5c339a1c15c3633971f>
+Send: 929.45878046 XCP from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj (478048dcdaca3e8010fc50a75511f6ed8fc1a770a4fab5c339a1c15c3633971f) [valid]
