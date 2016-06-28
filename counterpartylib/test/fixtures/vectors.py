@@ -3511,18 +3511,19 @@ UNITTEST_VECTOR = {
         'last_message': [{
             'in': (),
             'out': {'bindings': '{"block_index": 310497, "contract_id": null, "gas_cost": '
-                            '71916, "gas_remained": 928084, "gasprice": 1, "output": '
+                            '65398, "gas_remained": 934602, "gasprice": 1, "output": '
                             '"tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt", "payload": '
-                            '"604a80600b6000396055567c0100000000000000000000000000000000000000000000000000000000600035046397d857aa8114156048576004356040526024356060526060516040510a60805260206080f35b505b6000f3", '
+                            '"6060604052602b8060106000396000f3606060405260e060020a6000350463cc572cf98114601a575b005b6024356004350a6060908152602090f3", '
                             '"source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "startgas": '
                             '1000000, "status": "valid", "tx_hash": '
-                            '"5ffe7b4e75ab94d3548df7616c87a96f04afaf24d3d082a069ab3136ce290265", '
+                            '"cb5317913bccfb793301182d72019a6f530ad031793bbb74086bbe3097059d25", '
                             '"tx_index": 498, "value": 0}',
                 'block_index': 310497,
                 'category': 'executions',
                 'command': 'insert',
-                'message_index': 107,
+                'message_index': 117,
                 'timestamp': 0}
+
         }],
         'get_asset_id': [{
             'in': ('XCP', DP['default_block_index']),
@@ -3610,7 +3611,7 @@ UNITTEST_VECTOR = {
         }],
         'xcp_created': [{
             'in': (),
-            'out': 511492826295
+            'out': 743990464324
         }],
         'xcp_destroyed': [{
             'in': (),
@@ -3618,11 +3619,11 @@ UNITTEST_VECTOR = {
         }],
         'xcp_supply': [{
             'in': (),
-            'out': 511142826295,
+            'out': 743640464324,
         }],
         'creations': [{
             'in': (),
-            'out': {'XCP': 511492826295,
+            'out': {'XCP': 743990464324,
                     'CALLABLE': 1000,
                     'DIVIDEND': 100,
                     'DIVISIBLE': 100000000000,
@@ -3637,11 +3638,11 @@ UNITTEST_VECTOR = {
         }],
         'asset_supply': [{
             'in': ('XCP',),
-            'out': 511142826295,
+            'out': 743640464324,
         }],
         'supplies': [{
             'in': (),
-            'out':  {'XCP': 511142826295,
+            'out':  {'XCP': 743640464324,
                      'CALLABLE': 1000,
                      'DIVIDEND': 100,
                      'DIVISIBLE': 100000000000,
@@ -3652,7 +3653,7 @@ UNITTEST_VECTOR = {
         }],
         'get_balance': [{
             'in': (ADDR[0], 'XCP'),
-            'out': 91949928084
+            'out': 91949934602
         }, {
             'in': (ADDR[0], 'foobar'),
             'out': 0
