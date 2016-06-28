@@ -170,7 +170,7 @@ def make_fully_valid(pubkey_start):
     return pubkey
 
 
-def serialise (encoding, inputs, destination_outputs, data_output=None, change_output=None, dust_return_pubkey=None):
+def serialise(encoding, inputs, destination_outputs, data_output=None, change_output=None, dust_return_pubkey=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -215,7 +215,8 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
         data_chunk = config.PREFIX + data_chunk
 
         # Initialise encryption key (once per output).
-        key = arc4.init_arc4(inputs[0]['txid'])  # Arbitrary, easy‐to‐find, unique key.
+        assert isinstance(inputs[0]['txid'], str)
+        key = arc4.init_arc4(binascii.unhexlify(inputs[0]['txid']))  # Arbitrary, easy‐to‐find, unique key.
 
         if encoding == 'multisig':
             assert dust_return_pubkey
@@ -271,4 +272,170 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
         s += tx_script
 
     s += (0).to_bytes(4, byteorder='little')                # LockTime
+    return s
+
+
+def make_p2sh_encoding_redeemscript(datachunk, n, pubKey):
+    _logger = logger.getChild('p2sh_encoding')
+    assert len(datachunk) <= bitcoinlib.core.script.MAX_SCRIPT_ELEMENT_SIZE
+
+    dataRedeemScript = [bitcoinlib.core.script.OP_HASH160, bitcoinlib.core.Hash160(datachunk), bitcoinlib.core.script.OP_EQUALVERIFY]
+
+    redeemScript = CScript(dataRedeemScript +
+                           [pubKey, bitcoinlib.core.script.OP_CHECKSIGVERIFY,
+                            n, bitcoinlib.core.script.OP_DROP,  # deduplicate push dropped to meet BIP62 rules
+                            bitcoinlib.core.script.OP_DEPTH, 0, bitcoinlib.core.script.OP_EQUAL])  # prevent scriptSig malleability
+
+    _logger.debug('datachunk %s' % (binascii.hexlify(datachunk)))
+    _logger.debug('dataRedeemScript %s (%s)' % (repr(CScript(dataRedeemScript)), binascii.hexlify(CScript(dataRedeemScript))))
+
+    _logger.debug('redeemScript %s (%s)' % (repr(redeemScript), binascii.hexlify(redeemScript)))
+
+    outputScript = redeemScript.to_p2sh_scriptPubKey()
+    scriptSig = CScript([datachunk]) + redeemScript  # PUSH(datachunk) + redeemScript
+
+    _logger.debug('scriptSig %s (%s)' % (repr(scriptSig), binascii.hexlify(scriptSig)))
+    _logger.debug('outputScript %s (%s)' % (repr(outputScript), binascii.hexlify(outputScript)))
+
+    return scriptSig, redeemScript, outputScript
+
+
+def serialise_p2sh_pretx(inputs, source, source_value, data_output, change_output=None, pubkey=None):
+    assert data_output  # we don't do this unless there's data
+
+    data_array, data_value = data_output
+
+    s  = (1).to_bytes(4, byteorder='little')  # Version
+
+    # Number of inputs.
+    s += var_int(int(len(inputs)))
+
+    # List of Inputs.
+    for i in range(len(inputs)):
+        txin = inputs[i]
+        s += binascii.unhexlify(bytes(txin['txid'], 'utf-8'))[::-1]  # TxOutHash
+        s += txin['vout'].to_bytes(4, byteorder='little')            # TxOutIndex
+
+        tx_script = binascii.unhexlify(bytes(txin['scriptPubKey'], 'utf-8'))
+        s += var_int(int(len(tx_script)))  # Script length
+        s += tx_script                     # Script
+        s += b'\xff' * 4                   # Sequence
+
+    # Number of outputs.
+    n = 1  # at least one for the source
+    n += len(data_array)
+    if change_output:
+        n += 1
+
+    # encode number of outputs
+    s += var_int(n)
+
+    # output to source
+    tx_script = get_script(source)
+    s += source_value.to_bytes(8, byteorder='little')  # Value
+    s += var_int(int(len(tx_script)))                  # Script length
+    s += tx_script
+
+    # P2SH for data encodeded inputs
+    for n, data_chunk in enumerate(data_array):
+        data_chunk = config.PREFIX + data_chunk  # prefix the data_chunk
+
+        # # initialise encryption key (once per output), use the txid that it's spending as key
+        # key = arc4.init_arc4(binascii.unhexlify(inputs[0]['txid']))
+        #
+        # # encrypt data
+        # data_chunk = key.encrypt(data_chunk)
+
+        # get the scripts
+        scriptSig, redeemScript, outputScript = make_p2sh_encoding_redeemscript(data_chunk, n, pubkey)
+
+        s += data_value.to_bytes(8, byteorder='little')  # Value
+        s += var_int(int(len(outputScript)))             # Script length
+        s += outputScript                                # Script
+
+    # Change output.
+    if change_output:
+        change_address, change_value = change_output
+        tx_script = get_script(change_address)
+
+        s += change_value.to_bytes(8, byteorder='little')  # Value
+        s += var_int(int(len(tx_script)))                  # Script length
+        s += tx_script                                     # Script
+
+    s += (0).to_bytes(4, byteorder='little')  # LockTime
+
+    return s
+
+
+def serialise_p2sh_datatx(txid, source, destination_outputs, data_output, pubkey=None):
+    assert data_output  # we don't do this unless there's data
+
+    txhash = bitcoinlib.core.lx(bitcoinlib.core.b2x(txid))  # reverse txId
+    data_array, value = data_output
+
+    # version
+    s = (1).to_bytes(4, byteorder='little')
+
+    # number of inputs
+    s += var_int(int(len(data_array) + 1))
+
+    # source input
+    tx_script = get_script(source)
+    s += txhash                               # TxOutHash (reverse txId)
+    s += (0).to_bytes(4, byteorder='little')  # TxOutIndex
+    s += var_int(int(len(tx_script)))         # Script length
+    s += tx_script                            # Script
+    s += b'\xff' * 4                          # Sequence
+
+    # list of inputs
+    for n, data_chunk in enumerate(data_array):
+        data_chunk = config.PREFIX + data_chunk  # prefix the data_chunk
+
+        # # initialise encryption key (once per output), use the txid that it's spending as key
+        # key = arc4.init_arc4(txid)
+        #
+        # # encrypt data
+        # data_chunk = key.encrypt(data_chunk)
+
+        # get the scripts
+        scriptSig, redeemScript, outputScript = make_p2sh_encoding_redeemscript(data_chunk, n, pubkey)
+
+        substituteScript = scriptSig + outputScript
+
+        s += txhash                                   # TxOutHash
+        s += (n + 1).to_bytes(4, byteorder='little')  # TxOutIndex
+        s += var_int(len(substituteScript))           # Script length
+        s += substituteScript                         # Script
+        s += b'\xff' * 4                              # Sequence
+
+    # number of outputs, always 1 for the opreturn
+    n = 1
+    n += len(destination_outputs)
+
+    # encode output length
+    s += var_int(n)
+
+    # destination outputs
+    for destination, value in destination_outputs:
+        tx_script = get_script(destination)
+
+        s += value.to_bytes(8, byteorder='little')  # Value
+        s += var_int(int(len(tx_script)))           # Script length
+        s += tx_script                              # Script
+
+    # opreturn to signal P2SH encoding
+    key = arc4.init_arc4(txid)
+    data_chunk = config.PREFIX + b'P2SH'
+    data_chunk = key.encrypt(data_chunk)
+    tx_script = OP_RETURN                  # OP_RETURN
+    tx_script += op_push(len(data_chunk))  # Push bytes of data chunk
+    tx_script += data_chunk                # Data
+
+    # add opreturn
+    s += (0).to_bytes(8, byteorder='little')  # Value
+    s += var_int(int(len(tx_script)))         # Script length
+    s += tx_script                            # Script
+
+    s += (0).to_bytes(4, byteorder='little')  # LockTime
+
     return s
