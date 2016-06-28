@@ -13,7 +13,7 @@ FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/parseblock_unittest_fixture.s
 FIXTURE_DB = tempfile.gettempdir() + '/fixtures.parseblock_unittest_fixture.db'
 
 
-def test_config_context(cp_server):
+def test_config_context(server_db):
     assert config.BTC_NAME == "Bitcoin"
 
     with util_test.ConfigContext(BTC_NAME="Bitcoin Testing"):
@@ -27,7 +27,7 @@ def test_config_context(cp_server):
     assert config.BTC_NAME == "Bitcoin"
 
 
-def test_mock_protocol_changes(cp_server):
+def test_mock_protocol_changes(server_db):
     assert util.enabled('multisig_addresses') == True
 
     with util_test.MockProtocolChangesContext(multisig_addresses=False):
