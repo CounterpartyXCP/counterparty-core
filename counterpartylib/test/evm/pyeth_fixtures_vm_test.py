@@ -213,13 +213,26 @@ def test_pyeth_fixtures_vm(filename, testname, testdata):
 
 
 def pytest_generate_tests(metafunc):
-    if pytest.config.option.vmtests and 'all' not in pytest.config.option.vmtests:
-        testsources = pytest.config.option.vmtests
-    else:
-        if pytest.config.option.quick:
-            testsources = ['VMTests/vmEnvironmentalInfoTest.json']
-        else:
-            testsources = ['VMTests/*.json']
+    testsources = pytest.config.option.vmtests or (['quick'] if pytest.config.option.quick else ['all'])
 
+    if 'all' in testsources:
+        testsources = ['*.json']
+
+    if 'quick' in testsources:
+        testsources.remove('quick')
+        testsources += [
+            'vmArithmeticTest.json',
+            'vmBitwiseLogicOperationTest.json',
+            'vmBlockInfoTest.json',
+            'vmEnvironmentalInfoTest.json',
+            # 'vmInputLimits.json',  # disabled, too slow
+            # 'vmInputLimitsLight.json',  # disabled, too slow
+            'vmIOandFlowOperationsTest.json',
+            'vmLogTest.json',
+            # 'vmPerformanceTest.json',  # disabled, too slow
+            'vmPushDupSwapTest.json',
+            'vmSha3Test.json',
+            'vmtests.json',
+        ]
 
     pyethtestutils.generate_test_params(testsources, metafunc)

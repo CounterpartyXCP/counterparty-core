@@ -31,6 +31,8 @@ check_vm_test = lambda params: run_vm_test(params, VERIFY)
 time_vm_test = lambda params: run_vm_test(params, TIME)
 
 fixture_path = os.path.join(os.path.dirname(__file__), 'pyethfixtures')
+vm_fixture_path = os.path.join(fixture_path, 'VMTests')
+
 
 
 def encode_hex_with_prefix(s):
@@ -381,16 +383,20 @@ def generate_test_params(testsources, metafunc):
 
     fixtures = {}
     for testsource in testsources:
-        fixtures.update(get_tests_from_file_or_dir(os.path.join(fixture_path, testsource), exclude=fixtures.keys()))
+        fixtures.update(get_tests_from_file_or_dir(os.path.join(vm_fixture_path, testsource), exclude=fixtures.keys()))
 
-    base_dir = os.path.dirname(os.path.dirname(fixture_path))
+    base_dir = os.path.dirname(os.path.dirname(vm_fixture_path))
     params = []
+    params_unique = set()
     for filename, tests in fixtures.items():
         assert isinstance(tests, dict)
         filename = os.path.relpath(filename, base_dir)
 
         for testname, testdata in tests.items():
-            params.append((filename, testname, testdata))
+            # ensure uniqueness
+            if (filename, testname) not in params_unique:
+                params.append((filename, testname, testdata))
+                params_unique.add((filename, testname))
 
     metafunc.parametrize(('filename', 'testname', 'testdata'), params)
 

@@ -74,7 +74,7 @@ def pytest_addoption(parser):
     parser.addoption("--gentxhex", action='store_true', default=False, help="generate and print unsigned hex for *.compose() tests")
     parser.addoption("--savescenarios", action='store_true', default=False, help="generate sql dump and log in .new files")
     parser.addoption("--skiptestbook", default='no', help="skip test book(s) (use with one of the following values: `all`, `testnet` or `mainnet`)")
-    parser.addoption("--vmtests", action="append", default=[], help="list of vmtest fixtures to use, relative path, ie; 'VMTests/*.json' (default: all)")
+    parser.addoption("--vmtests", action="append", default=[], help="list of vmtest fixtures to use, relative path, ie; 'VMTests/*.json' (default: 'all', recommended: 'quick')")
     parser.addoption("--quick", action="store_true", default=False, help="only run a subset of the test suite, skipping the slow ones")
 
 
