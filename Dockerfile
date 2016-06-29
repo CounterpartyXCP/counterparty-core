@@ -13,6 +13,9 @@ RUN python3 setup.py develop
 RUN python3 setup.py install_apsw
 RUN python3 setup.py install_serpent
 
+# Checkout test fixtures
+RUN git submodule update --init
+
 # Install counterparty-cli
 # NOTE: By default, check out the counterparty-cli master branch. You can override the BRANCH build arg for a different
 # branch (as you should check out the same branch as what you have with counterparty-lib, or a compatible one)
