@@ -210,7 +210,7 @@ required_packages = [
     'pysha3==0.3',
     'pytest==2.9.1',
     'pytest-cov==2.2.1',
-    'python-bitcoinlib==0.5.0',
+    'python-bitcoinlib==0.5.1',
     'requests==2.10.0',
     'tendo==0.2.8',
     'xmltodict==0.10.1',
