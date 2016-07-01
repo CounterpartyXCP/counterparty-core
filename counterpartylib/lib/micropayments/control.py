@@ -4,6 +4,7 @@
 
 
 import copy
+import json
 import pycoin
 from . import util
 from . import validate
@@ -502,8 +503,12 @@ def _deposit_status(dispatcher, asset, script, netcode):
     asset_balance, btc_balance = _get_address_balance(
         dispatcher, asset, address
     )
-    oldest_confirms = transactions[0]["confirmations"]
-    newest_confirms = transactions[-1]["confirmations"]
+    try:
+        oldest_confirms = transactions[0]["confirmations"]
+        newest_confirms = transactions[-1]["confirmations"]
+    except KeyError as e:
+        print(json.dumps(transactions, indent=2))
+        raise e
     if newest_confirms == 0:
         return 0, asset_balance, btc_balance
     return oldest_confirms, asset_balance, btc_balance
