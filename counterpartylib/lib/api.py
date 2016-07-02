@@ -723,7 +723,8 @@ class APIServer(threading.Thread):
             if not config.RPC_NO_ALLOW_CORS:
                 response.headers['Access-Control-Allow-Origin'] = '*'
                 response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-                response.headers['Access-Control-Allow-Headers'] = 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type'
+                response.headers['Access-Control-Allow-Headers'] = 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization'
+                response.headers['Access-Control-Allow-Credentials'] = 'true'
 
         @app.route('/', defaults={'args_path': ''}, methods=['GET', 'POST', 'OPTIONS'])
         @app.route('/<path:args_path>',  methods=['GET', 'POST', 'OPTIONS'])
