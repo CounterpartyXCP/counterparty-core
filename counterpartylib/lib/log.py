@@ -79,10 +79,29 @@ def set_logger(logger):
 
 
 LOGGING_SETUP = False
+LOGGING_TOFILE_SETUP = False
 def set_up(logger, verbose=False, logfile=None, console_logfilter=None):
     global LOGGING_SETUP
+    global LOGGING_TOFILE_SETUP
+
+    def set_up_file_logging():
+        assert logfile
+        max_log_size = 20 * 1024 * 1024 # 20 MB
+        if os.name == 'nt':
+            from counterpartylib.lib import util_windows
+            fileh = util_windows.SanitizedRotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
+        else:
+            fileh = logging.handlers.RotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
+        fileh.setLevel(logging.DEBUG)
+        LOGFORMAT = '%(asctime)s [%(levelname)s] %(message)s'
+        formatter = logging.Formatter(LOGFORMAT, '%Y-%m-%d-T%H:%M:%S%z')
+        fileh.setFormatter(formatter)
+        logger.addHandler(fileh)
 
     if LOGGING_SETUP:
+        if logfile and not LOGGING_TOFILE_SETUP:
+             set_up_file_logging()
+             LOGGING_TOFILE_SETUP = True
         logger.getChild('log.set_up').debug('logging already setup')
         return
     LOGGING_SETUP = True
@@ -106,17 +125,8 @@ def set_up(logger, verbose=False, logfile=None, console_logfilter=None):
 
     # File Logging
     if logfile:
-        max_log_size = 20 * 1024 * 1024 # 20 MB
-        if os.name == 'nt':
-            from counterpartylib.lib import util_windows
-            fileh = util_windows.SanitizedRotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
-        else:
-            fileh = logging.handlers.RotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
-        fileh.setLevel(logging.DEBUG)
-        LOGFORMAT = '%(asctime)s [%(levelname)s] %(message)s'
-        formatter = logging.Formatter(LOGFORMAT, '%Y-%m-%d-T%H:%M:%S%z')
-        fileh.setFormatter(formatter)
-        logger.addHandler(fileh)
+        set_up_file_logging()
+        LOGGING_TOFILE_SETUP = True
 
     # Quieten noisy libraries.
     requests_log = logging.getLogger("requests")

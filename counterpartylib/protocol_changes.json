@@ -83,11 +83,11 @@
         "block_index": 500000,
         "testnet_block_index": 0
     },
-    "btc_order_status": {
+	"first_input_is_source": {
         "minimum_version_major": 9,
         "minimum_version_minor": 55,
         "minimum_version_revision": 0,
-        "block_index": 500000,
+        "block_index": 600000,
         "testnet_block_index": 0
     }
 }

@@ -562,8 +562,9 @@ def construct (db, tx_info, encoding='auto',
     parsed = (parsed_source, parsed_destination, parsed_data)
     if desired != parsed:
         # Unlock (revert) UTXO locks
-        for input in inputs:
-            UTXO_LOCKS[source].pop(make_outkey(input), None)
+        if UTXO_LOCKS is not None:
+            for input in inputs:
+                UTXO_LOCKS[source].pop(make_outkey(input), None)
 
         raise exceptions.TransactionError('Constructed transaction does not parse correctly: {} ≠ {}'.format(desired, parsed))
 
