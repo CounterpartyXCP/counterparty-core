@@ -150,7 +150,6 @@ def parse (db, tx, message):
                 sql='select * from order_matches where status = :status and ((tx0_hash in (:tx0_hash, :tx1_hash)) or ((tx1_hash in (:tx0_hash, :tx1_hash))))'
                 cursor.execute(sql, bindings) 
                 order_matches = cursor.fetchall()
-                cursor.close()
                 if len(order_matches) == 0:
                     bindings = {
                         'status': 'filled',
