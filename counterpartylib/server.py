@@ -14,6 +14,7 @@ import socket
 import signal
 import appdirs
 import platform
+import bitcoin as bitcoinlib
 from urllib.parse import quote_plus as urlencode
 
 from counterpartylib.lib import log
@@ -118,6 +119,9 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
         network += '.testnet'
     if config.TESTCOIN:
         network += '.testcoin'
+
+
+    bitcoinlib.SelectParams('testnet' if config.TESTNET else 'mainnet')
 
     # Database
     if database_file:
@@ -357,9 +361,10 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     config.CHECK_ASSET_CONSERVATION = check_asset_conservation
     config.UTXO_LOCKS_MAX_ADDRESSES = utxo_locks_max_addresses
     config.UTXO_LOCKS_MAX_AGE = utxo_locks_max_age
-    transaction.UTXO_LOCKS = None  # reset the UTXO_LOCKS (for tests really)
+    transaction.initialise()  # initialise UTXO_LOCKS
 
     logger.info('Running v{} of counterparty-lib.'.format(config.VERSION_STRING))
+
 
 
 def initialise_db():
