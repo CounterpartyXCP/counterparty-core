@@ -38,32 +38,6 @@ INITIAL_STATE = {
 def make_deposit(dispatcher, asset, payer_pubkey, payee_pubkey,
                  spend_secret_hash, expire_time, quantity,
                  netcode, fee, regular_dust_size):
-    """Create deposit and setup initial payer state.
-
-    Args:
-        asset (str): Counterparty asset.
-        payer_pubkey (str): Hex encoded public key in sec format.
-        payee_pubkey (str): Hex encoded public key in sec format.
-        spend_secret_hash (str): Hex encoded hash160 of spend secret.
-        expire_time (int): Channel expire time in blocks given as int.
-        quantity (int): Asset quantity for deposit.
-
-    Returns:
-        {
-            "state": channel_state,
-            "topublish": unsigned_deposit_rawtx,
-            "deposit_script": hex_encoded
-        }
-
-    Raises:
-        counterpartylib.lib.micropayments.exceptions.InvalidHexData
-        counterpartylib.lib.micropayments.exceptions.InvalidPubKey
-        counterpartylib.lib.micropayments.exceptions.InvalidHash160
-        counterpartylib.lib.micropayments.exceptions.InvalidSequence
-        counterpartylib.lib.micropayments.exceptions.InvalidQuantity
-        counterpartylib.lib.micropayments.exceptions.InsufficientFunds
-        counterpartylib.lib.micropayments.exceptions.ChannelAlreadyUsed
-    """
 
     # validate input
     _validate_deposit(dispatcher, asset, payer_pubkey, payee_pubkey,
@@ -90,23 +64,6 @@ def make_deposit(dispatcher, asset, payer_pubkey, payee_pubkey,
 
 def set_deposit(asset, deposit_script, expected_payee_pubkey,
                 expected_spend_secret_hash):
-    """Setup initial payee state for given deposit.
-
-    Args:
-        asset (str): Counterparty asset.
-        deposit_script (str): Channel deposit p2sh script.
-        expected_payee_pubkey (str): To validate deposit for payee.
-        expected_spend_secret_hash (str): To validate deposit secret hash.
-
-    Returns: Initial payee state object
-
-    Raises:
-        counterpartylib.lib.micropayments.exceptions.InvalidHexData
-        counterpartylib.lib.micropayments.exceptions.InvalidPubKey
-        counterpartylib.lib.micropayments.exceptions.InvalidDepositScript
-        counterpartylib.lib.micropayments.exceptions.IncorrectPubKey
-        counterpartylib.lib.micropayments.exceptions.IncorrectSpendSecretHash
-    """
 
     # validate input
     # FIXME validate asset
@@ -123,26 +80,6 @@ def set_deposit(asset, deposit_script, expected_payee_pubkey,
 
 
 def request_commit(dispatcher, state, quantity, revoke_secret_hash, netcode):
-    """Request commit for given quantity and revoke secret hash.
-
-    Args:
-        state (dict): Current payee channel state.
-        quantity (int): Asset quantity for commit.
-        revoke_secret_hash (str): Revoke secret hash for commit.
-
-    Returns:
-        {
-            "state": updated_channel_state,
-            "quantity": quantity,
-            "revoke_secret_hash": revoke_secret_hash
-        }
-
-    Raises:
-        counterpartylib.lib.micropayments.exceptions.InvalidState
-        counterpartylib.lib.micropayments.exceptions.InvalidHash160
-        counterpartylib.lib.micropayments.exceptions.InvalidQuantity
-        ValueError
-    """
 
     # validate input
     validate.state(state)
@@ -162,31 +99,6 @@ def request_commit(dispatcher, state, quantity, revoke_secret_hash, netcode):
 
 def create_commit(dispatcher, state, quantity, revoke_secret_hash,
                   delay_time, netcode, fee, regular_dust_size):
-    """Create commit for given quantit, revoke secret hash and delay time.
-
-    Args:
-        state (dict): Current payer channel state.
-        quantity (int): Asset quantity for commit.
-        revoke_secret_hash (str): Revoke secret hash for commit.
-        delay_time (int): Blocks payee must wait before payout.
-
-    Returns:
-        {
-            "state": updated_channel_state,
-            "commit_script": hex_encoded,
-            "tosign": {
-                "commit_rawtx": unsigned_commit_rawtx,
-                "deposit_script": hex_encoded
-            }
-        }
-
-    Raises:
-        counterpartylib.lib.micropayments.exceptions.InvalidState
-        counterpartylib.lib.micropayments.exceptions.InvalidQuantity
-        counterpartylib.lib.micropayments.exceptions.InvalidHash160
-        counterpartylib.lib.micropayments.exceptions.InvalidSequence
-        ValueError
-    """
 
     # validate input
     validate.state(state)
@@ -219,21 +131,6 @@ def create_commit(dispatcher, state, quantity, revoke_secret_hash,
 
 
 def add_commit(dispatcher, state, commit_rawtx, commit_script):
-    """Add commit to channel state.
-
-    Args:
-        state (dict): Current payee channel state.
-        commit_rawtx (str): Commit transaction signed by payer.
-        commit_script (str): Commit p2sh script.
-
-    Returns: Updated payee state object
-
-    Raises:
-        counterpartylib.lib.micropayments.exceptions.InvalidHexData
-        counterpartylib.lib.micropayments.exceptions.InvalidState
-        counterpartylib.lib.micropayments.exceptions.IncorrectPubKey
-        counterpartylib.lib.micropayments.exceptions.IncorrectSpendSecretHash
-    """
 
     # validate input
     validate.state(state)
@@ -266,18 +163,6 @@ def add_commit(dispatcher, state, commit_rawtx, commit_script):
 
 
 def revoke_secret_hashes_above(dispatcher, state, quantity):
-    """Get revoke secret hashes for commits above the given quantity.
-
-    Args:
-        state (dict): Current payee channel state.
-        quantity (int): Return revoke secret hash if commit gt quantity.
-
-    Returns: List of hex encoded revoke secret hashes.
-
-    Raises:
-        counterpartylib.lib.micropayments.exceptions.InvalidState
-        counterpartylib.lib.micropayments.exceptions.InvalidQuantity
-    """
 
     # validate input
     validate.state(state)
@@ -300,17 +185,6 @@ def revoke_secret_hashes_above(dispatcher, state, quantity):
 
 
 def revoke_all(state, secrets):
-    """Revoke all commits matching the given secrets.
-
-    Args:
-        state (dict): Current payee/payer channel state.
-        secrets (list): List of hex encoded commit revoke secrets.
-
-    Returns: {"state": updated_state}
-
-    Raises:
-        counterpartylib.lib.micropayments.exceptions.InvalidState
-    """
 
     # validate input
     validate.state(state)
@@ -325,24 +199,6 @@ def revoke_all(state, secrets):
 
 
 def highest_commit(dispatcher, state):
-    """Get highest commit be signed/published for closing the channel.
-
-    Args:
-        state (dict): Current payee channel state.
-
-    Returns:
-        If no commits have been made:
-            None
-
-        If commits have been made:
-            {
-                "commit_rawtx": half_signed_commit_rawtx,
-                "deposit_script": hex_encoded
-            }
-
-    Raises:
-        counterpartylib.lib.micropayments.exceptions.InvalidState
-    """
 
     # validate input
     validate.state(state)
@@ -359,17 +215,6 @@ def highest_commit(dispatcher, state):
 
 
 def transferred_amount(dispatcher, state):
-    """Get asset quantity transferred from payer to payee.
-
-    Args:
-        state (dict): Current payee/payer channel state.
-
-    Returns:
-        Quantity transferred in satoshis.
-
-    Raises:
-        counterpartylib.lib.micropayments.exceptions.InvalidState
-    """
 
     if len(state["commits_active"]) == 0:
         return 0
@@ -379,20 +224,6 @@ def transferred_amount(dispatcher, state):
 
 
 def payouts(dispatcher, state, netcode, fee, regular_dust_size):
-    """Find published commits and make payout transactions.
-
-    Args:
-        state (dict): Current payee channel state.
-
-    Returns:
-        [{
-            "payout_rawtx": unsigned_rawtx,
-            "commit_script": hex_encoded
-        }]
-
-    Raises:
-        counterpartylib.lib.micropayments.exceptions.InvalidState
-    """
 
     # validate input
     validate.state(state)
@@ -415,32 +246,6 @@ def payouts(dispatcher, state, netcode, fee, regular_dust_size):
 
 
 def recoverables(dispatcher, state, netcode, fee, regular_dust_size):
-    """Find and make recoverable change, timeout and revoke transactions.
-
-    Args:
-        state (dict): Current payee channel state.
-
-    Returns:
-        {
-            "change":[{
-                "change_rawtx": unsigned_rawtx,
-                "deposit_script": hex_encoded,
-                "spend_secret": hex_encoded
-            }],
-            "expire":[{
-                "expire_rawtx": unsigned_rawtx,
-                "deposit_script": hex_encoded
-            }],
-            "revoke":[{
-                "revoke_rawtx": unsigned_rawtx,
-                "commit_script": hex_encoded,
-                "revoke_secret": hex_encoded
-            }]
-        }
-
-    Raises:
-        counterpartylib.lib.micropayments.exceptions.InvalidState
-    """
 
     # validate input
     validate.state(state)

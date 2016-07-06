@@ -1,19 +1,22 @@
-import pprint
 import tempfile
 import pytest
-from counterpartylib.test import conftest  # this is require near the top to do setup of the test suite
+
+# this is require near the top to do setup of the test suite
+# from counterpartylib.test import conftest
+
 from counterpartylib.test import util_test
 from counterpartylib.test.util_test import CURR_DIR
-from counterpartylib.test.fixtures.params import DP, ADDR
+from counterpartylib.test.fixtures.params import DP
 
 from counterpartylib.lib import util
 
 from counterpartylib.lib.micropayments.util import wif2address
-from counterpartylib.lib.micropayments.util import wif2pubkey
 from counterpartylib.lib.micropayments.util import b2h
+from counterpartylib.lib.micropayments.util import wif2pubkey
 from counterpartylib.lib.micropayments.util import random_wif
 from counterpartylib.lib.micropayments.scripts import compile_deposit_script
 from counterpartylib.lib.micropayments.util import script2address
+from counterpartylib.lib.util import RPCError
 
 
 FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql'
@@ -65,4 +68,137 @@ def test_standard_usage_xcp(server_db):
 @pytest.mark.usefixtures("server_db")
 @pytest.mark.usefixtures("api_server")
 def test_standard_usage_btc(server_db):
-    pass
+
+    # send funds to deposit address
+    deposit_rawtx = util.api('create_send', {
+        'source': ALICE_ADDRESS,
+        'destination': DEPOSIT_ADDRESS,
+        'asset': ASSET,
+        'quantity': 42,
+        'regular_dust_size': 300000  # 1BTC
+    })
+    util_test.insert_raw_transaction(deposit_rawtx, server_db)
+
+    # result = util.api("mpc_request_commit", {
+    #     "state": {
+    #         "asset": "BTC",
+    #         "deposit_script": b2h(DEPOSIT_SCRIPT),
+    #         "commits_active": [],
+    #         "commits_revoked": [],
+    #         "commits_requested": []
+    #     },
+    #     "quantity": 1,
+    #     "revoke_secret_hash": "d2344f3076446a5669c46ceddcce0a0c87f3e51e",
+    # })
+
+    # TODO check result
+
+
+@pytest.mark.usefixtures("server_db")
+@pytest.mark.usefixtures("api_server")
+def test_invalid_state(server_db):
+    pass  # FIXME test invalid state
+
+    # util.api("mpc_request_commit", {
+    #     "state": {
+    #         "asset": "BTC",
+    #         "deposit_script": b2h(DEPOSIT_SCRIPT),
+    #         "commits_active": [],
+    #         "commits_revoked": [],
+    #         "commits_requested": []
+    #     },
+    #     "quantity": 1,
+    #     "revoke_secret_hash": "d2344f3076446a5669c46ceddcce0a0c87f3e51e",
+    # })
+
+
+@pytest.mark.usefixtures("server_db")
+@pytest.mark.usefixtures("api_server")
+def test_invalid_quantity(server_db):
+
+    # < min
+    try:
+        util.api("mpc_request_commit", {
+            "state": {
+                "asset": ASSET,
+                "deposit_script": b2h(DEPOSIT_SCRIPT),
+                "commits_active": [],
+                "commits_revoked": [],
+                "commits_requested": []
+            },
+            "quantity": 0,
+            "revoke_secret_hash": "d2344f3076446a5669c46ceddcce0a0c87f3e51e"
+        })
+    except RPCError:
+        pass  # FIXME check exception type
+
+    # > max
+    try:
+        util.api("mpc_request_commit", {
+            "state": {
+                "asset": ASSET,
+                "deposit_script": b2h(DEPOSIT_SCRIPT),
+                "commits_active": [],
+                "commits_revoked": [],
+                "commits_requested": []
+            },
+            "quantity": 2100000000000001,
+            "revoke_secret_hash": "d2344f3076446a5669c46ceddcce0a0c87f3e51e"
+        })
+    except RPCError:
+        pass  # FIXME check exception type
+
+    # FIXME test > deposit amount
+
+
+@pytest.mark.usefixtures("server_db")
+@pytest.mark.usefixtures("api_server")
+def test_invalid_revoke_secret_hash(server_db):
+
+    # test is hex
+    try:
+        util.api("mpc_request_commit", {
+            "state": {
+                "asset": ASSET,
+                "deposit_script": b2h(DEPOSIT_SCRIPT),
+                "commits_active": [],
+                "commits_revoked": [],
+                "commits_requested": []
+            },
+            "quantity": 13,
+            "revoke_secret_hash": "xyz"
+        })
+    except RPCError:
+        pass  # FIXME check exception type
+
+    # test < 20 bytes
+    try:
+        util.api("mpc_request_commit", {
+            "state": {
+                "asset": ASSET,
+                "deposit_script": b2h(DEPOSIT_SCRIPT),
+                "commits_active": [],
+                "commits_revoked": [],
+                "commits_requested": []
+            },
+            "quantity": 13,
+            "revoke_secret_hash": "a" * 38
+        })
+    except RPCError:
+        pass  # FIXME check exception type
+
+    # test > 20 bytes
+    try:
+        util.api("mpc_request_commit", {
+            "state": {
+                "asset": ASSET,
+                "deposit_script": b2h(DEPOSIT_SCRIPT),
+                "commits_active": [],
+                "commits_revoked": [],
+                "commits_requested": []
+            },
+            "quantity": 13,
+            "revoke_secret_hash": "a" * 42
+        })
+    except RPCError:
+        pass  # FIXME check exception type
