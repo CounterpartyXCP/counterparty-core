@@ -68,6 +68,7 @@ def set_deposit(asset, deposit_script, expected_payee_pubkey,
     # validate input
     # FIXME validate asset
     validate.pubkey(expected_payee_pubkey)
+    validate.hash160(expected_spend_secret_hash)
     validate.deposit_script(deposit_script, expected_payee_pubkey,
                             expected_spend_secret_hash)
 
