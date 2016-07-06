@@ -1,13 +1,19 @@
+import os
 import pycoin
 from pycoin.serialize import b2h  # NOQA
 from pycoin.serialize import h2b  # NOQA
 from pycoin.serialize import b2h_rev  # NOQA
 from pycoin.encoding import hash160  # NOQA
+from pycoin.key.BIP32Node import BIP32Node
 
 
 def gettxid(rawtx):
     tx = pycoin.tx.Tx.from_hex(rawtx)
     return b2h_rev(tx.hash())
+
+
+def random_wif(netcode="BTC"):
+    return BIP32Node.from_master_secret(os.urandom(256), netcode=netcode).wif()
 
 
 def wif2sec(wif):

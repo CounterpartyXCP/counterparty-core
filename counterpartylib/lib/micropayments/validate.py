@@ -18,6 +18,7 @@ def is_string(s):
 
 def is_hex(data):
     is_string(data)
+    # FIXME test even length
     if not re.match("^[0-9a-f]*$", data):
         raise exceptions.InvalidHexData(data)
 
@@ -38,7 +39,7 @@ def hash160(hash_hex):
 
 def is_integer(i):
     if not isinstance(i, six.integer_types):
-        raise exceptions.InvalidString(i)
+        raise exceptions.InvalidInteger(i)
 
 
 def is_list(l):
@@ -60,7 +61,7 @@ def is_sequence(number):
 
 def is_quantity(number):
     is_integer(number)
-    if not (0 <= number < 2100000000000000):
+    if not (0 < number < 2100000000000000):
         raise exceptions.InvalidQuantity(number)
 
 
