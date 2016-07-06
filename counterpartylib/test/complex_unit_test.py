@@ -46,6 +46,14 @@ def test_alice_bob(server_db):
     assert alice_balance2 == alice_balance - v
     assert bob_balance2 == bob_balance + v
 
+    # check API result
+    result = util.api("get_balances", {"filters": [
+        {'field': 'address', 'op': '==', 'value': alice},
+        {'field': 'asset', 'op': '==', 'value': 'XCP'},
+    ]})
+
+    assert result[0]['quantity'] == alice_balance2
+
     # -- do another TX
 
     # check alices UTXOs
