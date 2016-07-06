@@ -29,6 +29,7 @@ sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
 from counterpartylib import server
 from counterpartylib.lib import (config, util, blocks, check, backend, database, transaction)
+from counterpartylib.lib.backend.addrindex import extract_addresses, extract_addresses_from_txlist
 
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP
 from counterpartylib.test.fixtures.scenarios import UNITTEST_FIXTURE, INTEGRATION_SCENARIOS, standard_scenarios_params
@@ -264,44 +265,177 @@ def insert_transaction(transaction, db):
 
 
 def initialise_rawtransactions_db(db):
-    cursor = db.cursor()
-    cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT)')
-    cursor.close()
-
     prefill_rawtransactions_db(db)
 
 
 def prefill_rawtransactions_db(db):
     """Drop old raw transaction table, create new one and populate it from unspent_outputs.json."""
     cursor = db.cursor()
-    cursor.execute('DROP TABLE  IF EXISTS raw_transactions')
-    cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT)')
+    cursor.execute('DROP TABLE IF EXISTS raw_transactions')
+    cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT, confirmations INT)')
     with open(CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
             wallet_unspent = json.load(listunspent_test_file)
             for output in wallet_unspent:
-                txid = binascii.hexlify(bitcoinlib.core.lx(output['txid'])).decode()
+                txid = output['txid']
                 tx = backend.deserialize(output['txhex'])
-                cursor.execute('INSERT INTO raw_transactions VALUES (?, ?)', (txid, output['txhex']))
+                cursor.execute('INSERT INTO raw_transactions VALUES (?, ?, ?)', (txid, output['txhex'], output['confirmations']))
     cursor.close()
 
 
-def save_rawtransaction(db, tx_hash, tx_hex):
+def save_rawtransaction(db, txid, tx_hex, confirmations=0):
     """Insert the raw transaction into the db."""
     cursor = db.cursor()
     try:
-        txid = binascii.hexlify(bitcoinlib.core.lx(tx_hash)).decode()
-        cursor.execute('''INSERT INTO raw_transactions VALUES (?, ?)''', (txid, tx_hex))
+        if isinstance(txid, bytes):
+            txid = binascii.hexlify(txid).decode('ascii')
+        cursor.execute('''INSERT INTO raw_transactions VALUES (?, ?, ?)''', (txid, tx_hex, confirmations))
     except Exception as e: # TODO
         pass
     cursor.close()
 
-def getrawtransaction(db, txid):
-    """Return raw transactions with specific hash."""
+
+def getrawtransaction(db, txid, verbose=False):
+    """
+    Return raw transactions with specific hash.
+
+    When verbose=True we mock the bitcoind RPC response, it's incomplete atm and only mocks what we need
+     if more stuff is needed, add it ..
+    """
     cursor = db.cursor()
-    txid = binascii.hexlify(txid).decode()
-    tx_hex = list(cursor.execute('''SELECT tx_hex FROM raw_transactions WHERE tx_hash = ?''', (txid,)))[0][0]
+
+    if isinstance(txid, bytes):
+        txid = binascii.hexlify(txid).decode('ascii')
+
+    tx_hex, confirmations = list(cursor.execute('''SELECT tx_hex, confirmations FROM raw_transactions WHERE tx_hash = ?''', (txid,)))[0]
     cursor.close()
-    return tx_hex
+
+    if verbose:
+        return mock_bitcoind_verbose_tx_output(tx_hex, txid, confirmations)
+    else:
+        return tx_hex
+
+
+def mock_bitcoind_verbose_tx_output(tx, txid, confirmations):
+    if isinstance(tx, bitcoinlib.core.CTransaction):
+        ctx = tx
+    else:
+        if not isinstance(tx, bytes):
+            tx = binascii.unhexlify(tx)
+        ctx = bitcoinlib.core.CTransaction.deserialize(tx)
+
+    result = {
+        'version': ctx.nVersion,
+        'locktime': ctx.nLockTime,
+        'txid': txid,  # bitcoinlib.core.b2lx(ctx.GetHash()),
+        'hex': binascii.hexlify(ctx.serialize()).decode('ascii'),
+        'size': len(ctx.serialize()),
+        'confirmations': confirmations,
+        'vin': [],
+        'vout': [],
+
+        # not mocked yet
+        'time': None,
+        'blockhash': None,
+        'blocktime': None,
+    }
+
+    for vin in ctx.vin:
+        asm = list(map(lambda op: binascii.hexlify(op).decode('ascii') if isinstance(op, bytes) else str(op), list(vin.scriptSig)))
+        rvin = {
+            'txid': bitcoinlib.core.b2lx(vin.prevout.hash),
+            'vout': vin.prevout.n,
+            'scriptSig': {
+                'hex': binascii.hexlify(vin.scriptSig).decode('ascii'),
+                'asm': " ".join(asm),
+            },
+            'sequence': vin.nSequence
+        }
+
+        # result['vin'].append(rvin)
+
+    for idx, vout in enumerate(ctx.vout):
+        if list(vout.scriptPubKey)[-1] == bitcoinlib.core.script.OP_CHECKMULTISIG:
+           pubkeys = list(vout.scriptPubKey)[1:-2]
+           addresses = []
+           for pubkey in pubkeys:
+               addr = str(bitcoinlib.wallet.P2PKHBitcoinAddress.from_pubkey(pubkey))
+
+               addresses.append(addr)
+        else:
+            try:
+                addresses = [str(bitcoinlib.wallet.CBitcoinAddress.from_scriptPubKey(vout.scriptPubKey))]
+            except bitcoinlib.wallet.CBitcoinAddressError:
+                addresses = []
+
+        asm = list(map(lambda op: binascii.hexlify(op).decode('ascii') if isinstance(op, bytes) else str(op), list(vout.scriptPubKey)))
+
+        type = 'unknown'
+        if vout.scriptPubKey[-1] == bitcoinlib.core.script.OP_CHECKMULTISIG:
+            type = 'multisig'
+        elif len(list(vout.scriptPubKey)) == 5 and \
+                        vout.scriptPubKey[1] == bitcoinlib.core.script.OP_HASH160 and \
+                        vout.scriptPubKey[-2] == bitcoinlib.core.script.OP_EQUALVERIFY and \
+                        vout.scriptPubKey[-1] == bitcoinlib.core.script.OP_CHECKSIG:
+            type = 'pubkeyhash'
+
+        rvout = {
+            'n': idx,
+            'value': vout.nValue / config.UNIT,
+            'scriptPubKey': {
+                'type': type,
+                'addresses': addresses,
+                'hex': binascii.hexlify(vout.scriptPubKey).decode('ascii'),
+                'asm': " ".join(asm),
+            }
+        }
+
+        result['vout'].append(rvout)
+
+    return result
+
+
+def getrawtransaction_batch(db, txhash_list, verbose=False):
+    result = {}
+    for txhash in txhash_list:
+        result[txhash] = getrawtransaction(db, txhash, verbose=verbose)
+
+    return result
+
+
+def searchrawtransactions(db, address, unconfirmed=False):
+    cursor = db.cursor()
+
+    try:
+        all_tx_hashes = list(map(lambda r: r[0], cursor.execute('''SELECT tx_hash FROM raw_transactions WHERE confirmations >= ?''', (0 if unconfirmed else 1, ))))
+
+        tx_hashes_tx = getrawtransaction_batch(db, all_tx_hashes, verbose=True)
+
+        def _getrawtransaction_batch(txhash_list, verbose=False):
+            return getrawtransaction_batch(db, txhash_list, verbose)
+
+        tx_hashes_addresses, tx_hashes_tx = extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch)
+
+        reverse_tx_map = {}
+        tx_map = {}
+
+        # add txs to cache and reverse cache
+        for tx_hash, addresses in tx_hashes_addresses.items():
+            reverse_tx_map.setdefault(tx_hash, set())
+
+            for _address in addresses:
+                tx_map.setdefault(_address, set())
+                tx_map[_address].add(tx_hash)
+                reverse_tx_map[tx_hash].add(_address)
+
+        tx_hashes = tx_map.get(address, set())
+
+        if len(tx_hashes):
+            return sorted(getrawtransaction_batch(db, tx_hashes, verbose=True).values(), key=lambda tx: (tx['confirmations'], tx['txid']))
+        else:
+            return []
+    finally:
+        cursor.close()
+
 
 def initialise_db(db):
     """Initialise blockchain in the db and insert first block."""

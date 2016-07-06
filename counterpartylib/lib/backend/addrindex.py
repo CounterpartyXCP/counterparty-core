@@ -91,9 +91,20 @@ def rpc_batch(request_list):
             executor.submit(make_call, chunk)
     return list(responses)
 
+
 def extract_addresses(txhash_list):
     logger.debug('extract_addresses, txs: %d' % (len(txhash_list), ))
     tx_hashes_tx = getrawtransaction_batch(txhash_list, verbose=True)
+
+    return extract_addresses_from_txlist(tx_hashes_tx, getrawtransaction_batch)
+
+
+def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
+    """
+    helper for extract_addresses, seperated so we can pass in a mocked _getrawtransaction_batch for test purposes
+    """
+
+    logger.debug('extract_addresses_from_txlist, txs: %d' % (len(tx_hashes_tx.keys()), ))
     tx_hashes_addresses = {}
     tx_inputs_hashes = set()  # use set to avoid duplicates
 
@@ -109,7 +120,7 @@ def extract_addresses(txhash_list):
 
     # chunk txs to avoid huge memory spikes
     for tx_inputs_hashes_chunk in util.chunkify(list(tx_inputs_hashes), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE):
-        raw_transactions = getrawtransaction_batch(tx_inputs_hashes_chunk, verbose=True)
+        raw_transactions = _getrawtransaction_batch(tx_inputs_hashes_chunk, verbose=True)
         for tx_hash, tx in tx_hashes_tx.items():
             for vin in tx['vin']:
                 vin_tx = raw_transactions.get(vin['txid'], None)
@@ -122,6 +133,7 @@ def extract_addresses(txhash_list):
                     tx_hashes_addresses[tx_hash].update(tuple(vout['scriptPubKey']['addresses']))
 
     return tx_hashes_addresses, tx_hashes_tx
+
 
 def unconfirmed_transactions(address):
     logger.debug("unconfirmed_transactions called: %s" % address)

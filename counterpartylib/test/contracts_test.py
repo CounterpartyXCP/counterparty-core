@@ -79,6 +79,16 @@ class serpent(object):
             # Assume you're getting in numbers or 0x...
             # return ''.join(map(enc, list(map(numberize, vals.split(' ')))))
 
+
+class FakeBlock(blocks.Block):
+    def __init__(self, db):
+        self.db = db
+        self.timestamp = TIMESTAMP
+        self.number = 9001
+        self.prevhash = 'facefeed'
+        self.difficulty = 1337
+
+
 class tester(object):
     gas_limit = 100000
 
@@ -148,16 +158,7 @@ class tester(object):
             tx_index += 1
             tx_obj = execute.Transaction(tx, to, 1, tester.gas_limit, value, data)
 
-            # Force block init.
-            def fake_block_init(self, db):
-                self.db = db
-                self.timestamp = TIMESTAMP
-                self.number = 9001
-                self.prevhash = 'facefeed'
-                self.difficulty = 1337
-                return
-            blocks.Block.__init__ = fake_block_init
-            block_obj = blocks.Block(db)
+            block_obj = FakeBlock(db)
 
             # Run.
             processblock.MULTIPLIER_CONSTANT_FACTOR = 1
@@ -194,11 +195,11 @@ class tester(object):
                 cursor.close()
 
             def get_storage_data(contract_id, key):
-                block = blocks.Block(db)
+                block = FakeBlock(db)
                 return block.get_storage_data(contract_id, key)
 
             def get_balance(address):
-                block = blocks.Block(db)
+                block = FakeBlock(db)
                 return block.get_balance(address)
 
 tester.k0 = '82a978b3f5962a5b0957d9ee9eef472ee55b42f1'
