@@ -14,6 +14,7 @@ import socket
 import signal
 import appdirs
 import platform
+import bitcoin as bitcoinlib
 from urllib.parse import quote_plus as urlencode
 
 from counterpartylib.lib import log
@@ -113,6 +114,8 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
         config.TESTCOIN = testcoin
     else:
         config.TESTCOIN = False
+
+    bitcoinlib.SelectParams('testnet' if config.TESTNET else 'mainnet')
 
     network = ''
     if config.TESTNET:
@@ -281,12 +284,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     else:
         config.RPC_USER = 'rpc'
 
-    # Server API RPC password
-    if rpc_password:
-        config.RPC_PASSWORD = rpc_password
-        config.RPC = 'http://' + urlencode(config.RPC_USER) + ':' + urlencode(config.RPC_PASSWORD) + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
-    else:
-        config.RPC = 'http://' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
+    configure_rpc(rpc_password)
 
     # RPC CORS
     if rpc_allow_cors is not None:
@@ -435,5 +433,15 @@ def generate_move_random_hash(move):
     random_bin = os.urandom(16)
     move_random_hash_bin = util.dhash(random_bin + move)
     return binascii.hexlify(random_bin).decode('utf8'), binascii.hexlify(move_random_hash_bin).decode('utf8')
+
+
+def configure_rpc(rpc_password=None):
+    # Server API RPC password
+    if rpc_password:
+        config.RPC_PASSWORD = rpc_password
+        config.RPC = 'http://' + urlencode(config.RPC_USER) + ':' + urlencode(config.RPC_PASSWORD) + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
+    else:
+        config.RPC = 'http://' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
+
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

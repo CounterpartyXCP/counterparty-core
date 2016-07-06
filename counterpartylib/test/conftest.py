@@ -19,6 +19,7 @@ from Crypto.Cipher import ARC4
 logger = logging.getLogger()
 
 from counterpartylib.lib import log
+from counterpartylib import server
 log.set_logger(logger)
 
 from counterpartylib.test import util_test
@@ -28,6 +29,8 @@ from counterpartylib.test.fixtures.scenarios import INTEGRATION_SCENARIOS
 
 from counterpartylib.lib import config, util, database, api, script, arc4
 
+# used to increment RPC port between test modules to avoid conflicts
+TEST_RPC_PORT = 9999
 
 # we swap out util.enabled with a custom one which has the option to mock the protocol changes
 MOCK_PROTOCOL_CHANGES = {
@@ -142,9 +145,10 @@ def rawtransactions_db(request):
 
 
 @pytest.fixture(scope='function')
-def server_db(request, cp_server):
+def server_db(request, cp_server, api_server):
     """Enable database access for unit test vectors."""
     db = database.get_connection(read_only=False, integrity_check=False)
+    api_server.db = db  # inject into api_server
     cursor = db.cursor()
     cursor.execute('''BEGIN''')
     util_test.reset_current_block_index(db)
@@ -157,6 +161,16 @@ def server_db(request, cp_server):
 
 @pytest.fixture(scope='module')
 def api_server(request, cp_server):
+    """
+    api_server fixture, for each module we bind it to a different port because we're unable to kill it
+    also `server_db` will inject itself into APIServer for each function
+    """
+
+    global TEST_RPC_PORT
+
+    config.RPC_PORT = TEST_RPC_PORT = TEST_RPC_PORT + 1
+    server.configure_rpc(config.RPC_PASSWORD)
+
     # start RPC server and wait for server to be ready
     api_server = api.APIServer()
     api_server.daemon = True
@@ -169,6 +183,8 @@ def api_server(request, cp_server):
             raise Exception("Timeout: RPC server not ready after 5s")
         else:
             time.sleep(0.001)  # attempt to query the current block_index if possible (scenarios start with empty DB so it's not always possible)
+
+    return api_server
 
 
 @pytest.fixture(scope='module')
@@ -240,6 +256,10 @@ class MockUTXOSet(object):
             })
 
     def increment_confirmations(self):
+        cursor = self.rawtransactions_db.cursor()
+        cursor.execute('''UPDATE raw_transactions SET confirmations = confirmations + 1''')
+        cursor.close()
+
         for utxo in self.txouts:
             utxo['confirmations'] = (utxo['confirmations'] or 0) + 1
 
@@ -270,7 +290,7 @@ class MockUTXOSet(object):
         # logger.debug(pprint.pformat(txins))
         # logger.debug(pprint.pformat(txouts))
 
-        util_test.save_rawtransaction(self.rawtransactions_db, tx_id, raw_transaction)
+        util_test.save_rawtransaction(self.rawtransactions_db, tx_id, raw_transaction, confirmations)
 
         self.update_utxo_set(txins, txouts)
 
@@ -344,8 +364,14 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         address = '_'.join([str(signatures_required)] + sorted(pubkeys) + [str(len(pubkeys))])
         return address
 
-    def get_cached_raw_transaction(tx_hash, verbose=False):
-        return util_test.getrawtransaction(rawtransactions_db, bitcoinlib.core.lx(tx_hash))
+    def mocked_getrawtransaction(tx_hash, verbose=False):
+        return util_test.getrawtransaction(rawtransactions_db, tx_hash, verbose=verbose)
+
+    def mocked_getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
+        return util_test.getrawtransaction_batch(rawtransactions_db, txhash_list, verbose=verbose)
+
+    def mocked_searchrawtransactions(address, unconfirmed=False):
+        return util_test.searchrawtransactions(rawtransactions_db, address, unconfirmed)
 
     # mock the arc4 with a fixed seed to keep data from changing based on inputs
     _init_arc4 = arc4.init_arc4
@@ -363,6 +389,8 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     monkeypatch.setattr('counterpartylib.lib.api.init_api_access_log', init_api_access_log)
     if hasattr(config, 'PREFIX'):
         monkeypatch.setattr('counterpartylib.lib.config.PREFIX', b'TESTXXXX')
-    monkeypatch.setattr('counterpartylib.lib.backend.getrawtransaction', get_cached_raw_transaction)
+    monkeypatch.setattr('counterpartylib.lib.backend.getrawtransaction', mocked_getrawtransaction)
+    monkeypatch.setattr('counterpartylib.lib.backend.getrawtransaction_batch', mocked_getrawtransaction_batch)
+    monkeypatch.setattr('counterpartylib.lib.backend.searchrawtransactions', mocked_searchrawtransactions)
     monkeypatch.setattr('counterpartylib.lib.backend.pubkeyhash_to_pubkey', pubkeyhash_to_pubkey)
     monkeypatch.setattr('counterpartylib.lib.backend.multisig_pubkeyhashes_to_pubkeys', multisig_pubkeyhashes_to_pubkeys)
