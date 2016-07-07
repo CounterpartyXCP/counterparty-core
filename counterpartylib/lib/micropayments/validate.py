@@ -18,8 +18,9 @@ def is_string(s):
 
 def is_hex(data):
     is_string(data)
-    # FIXME test even length
     if not re.match("^[0-9a-f]*$", data):
+        raise exceptions.InvalidHexData(data)
+    if not (len(data) % 2 == 0):
         raise exceptions.InvalidHexData(data)
 
 
@@ -54,7 +55,7 @@ def is_unsigned(number):
 
 
 def is_sequence(number):
-    is_integer(number)
+    is_unsigned(number)
     if not (0 <= number <= scripts.MAX_SEQUENCE):
         raise exceptions.InvalidSequence(number)
 
@@ -87,27 +88,30 @@ def deposit_script(deposit_script_hex, expected_payee_pubkey,
 
 def commit_script(commit_script_hex, deposit_script_hex):
     is_hex(commit_script_hex)
-    deposit_script = util.h2b(deposit_script_hex)
+    is_hex(deposit_script_hex)
+
+    _deposit_script = util.h2b(deposit_script_hex)
     _commit_script = util.h2b(commit_script_hex)
 
+    # FIXME check deposit script opcodes
     # FIXME check commit script opcodes
 
     # validate payee pubkey
-    deposit_payee_pubkey = scripts.get_deposit_payee_pubkey(deposit_script)
+    deposit_payee_pubkey = scripts.get_deposit_payee_pubkey(_deposit_script)
     commit_payee_pubkey = scripts.get_commit_payee_pubkey(_commit_script)
     if deposit_payee_pubkey != commit_payee_pubkey:
         raise exceptions.IncorrectPubKey(commit_payee_pubkey,
                                          deposit_payee_pubkey)
 
     # validate payer pubkey
-    deposit_payer_pubkey = scripts.get_deposit_payer_pubkey(deposit_script)
+    deposit_payer_pubkey = scripts.get_deposit_payer_pubkey(_deposit_script)
     commit_payer_pubkey = scripts.get_commit_payer_pubkey(_commit_script)
     if deposit_payer_pubkey != commit_payer_pubkey:
         raise exceptions.IncorrectPubKey(commit_payer_pubkey,
                                          deposit_payer_pubkey)
 
     # validate spend secret hash
-    deposit_spend_hash = scripts.get_deposit_spend_secret_hash(deposit_script)
+    deposit_spend_hash = scripts.get_deposit_spend_secret_hash(_deposit_script)
     commit_spend_hash = scripts.get_commit_spend_secret_hash(_commit_script)
     if deposit_spend_hash != commit_spend_hash:
         raise exceptions.IncorrectSpendSecretHash(commit_spend_hash,
