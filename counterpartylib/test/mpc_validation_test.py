@@ -170,14 +170,28 @@ def test_deposit_script():
     # valid deposit script
     validate.deposit_script(b2h(DEPOSIT_SCRIPT), BOB_PUBKEY, SPEND_SECRET_HASH)
 
-    # spend secret missmatch
+    # validates opcodes match
+    try:
+        validate.deposit_script("ab" + b2h(DEPOSIT_SCRIPT),
+                                BOB_PUBKEY, SPEND_SECRET_HASH)
+        assert False
+    except exceptions.InvalidScript:
+        pass
+    try:
+        validate.deposit_script(b2h(DEPOSIT_SCRIPT) + "ab",
+                                BOB_PUBKEY, SPEND_SECRET_HASH)
+        assert False
+    except exceptions.InvalidScript:
+        pass
+
+    # spend secret mismatch
     try:
         validate.deposit_script(b2h(DEPOSIT_SCRIPT), BOB_PUBKEY, "a" * 40)
         assert False
     except exceptions.IncorrectSpendSecretHash:
         pass
 
-    # payee pubkey missmatch
+    # payee pubkey mismatch
     try:
         validate.deposit_script(
             b2h(DEPOSIT_SCRIPT), ALICE_PUBKEY, SPEND_SECRET_HASH
@@ -185,8 +199,6 @@ def test_deposit_script():
         assert False
     except exceptions.IncorrectPubKey:
         pass
-
-    # FIXME opcode missmatch
 
 
 def test_commit_script():
@@ -197,9 +209,25 @@ def test_commit_script():
     )
     validate.commit_script(b2h(commit_script), b2h(DEPOSIT_SCRIPT))
 
-    # FIXME validates opcodes match
+    # validates opcodes match
+    try:
+        commit_script = compile_commit_script(
+            ALICE_PUBKEY, BOB_PUBKEY, SPEND_SECRET_HASH, "a" * 40, 5
+        )
+        validate.commit_script("ab" + b2h(commit_script), b2h(DEPOSIT_SCRIPT))
+        assert False
+    except exceptions.InvalidScript:
+        pass
+    try:
+        commit_script = compile_commit_script(
+            ALICE_PUBKEY, BOB_PUBKEY, SPEND_SECRET_HASH, "a" * 40, 5
+        )
+        validate.commit_script(b2h(commit_script) + "ab", b2h(DEPOSIT_SCRIPT))
+        assert False
+    except exceptions.InvalidScript:
+        pass
 
-    # payee pubkey missmatch
+    # payee pubkey mismatch
     try:
         commit_script = compile_commit_script(
             ALICE_PUBKEY, ALICE_PUBKEY, SPEND_SECRET_HASH, "a" * 40, 5
@@ -209,7 +237,7 @@ def test_commit_script():
     except exceptions.IncorrectPubKey:
         pass
 
-    # payer pubkey missmatch
+    # payer pubkey mismatch
     try:
         commit_script = compile_commit_script(
             BOB_PUBKEY, BOB_PUBKEY, SPEND_SECRET_HASH, "a" * 40, 5
@@ -219,7 +247,7 @@ def test_commit_script():
     except exceptions.IncorrectPubKey:
         pass
 
-    # spend secret hash missmatch
+    # spend secret hash mismatch
     try:
         commit_script = compile_commit_script(
             ALICE_PUBKEY, BOB_PUBKEY, "b" * 40, "a" * 40, 5

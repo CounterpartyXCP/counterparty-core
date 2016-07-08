@@ -6,6 +6,7 @@
 from pycoin.serialize import b2h
 from pycoin.tx.script import tools
 from pycoin.tx import Tx
+from . import exceptions
 
 
 MAX_SEQUENCE = 0x0000FFFF
@@ -48,6 +49,20 @@ def get_word(script, index):
     if i != index + 1:
         raise ValueError(index)
     return opcode, data, tools.disassemble_for_opcode_data(opcode, data)
+
+
+def validate(reference_script, untrusted_script):
+    r_pc = 0
+    u_pc = 0
+    while r_pc < len(reference_script) and u_pc < len(untrusted_script):
+        r_opcode, r_data, r_pc = tools.get_opcode(reference_script, r_pc)
+        u_opcode, u_data, u_pc = tools.get_opcode(untrusted_script, u_pc)
+        if r_data is not None and b2h(r_data) == "deadbeef":
+            continue  # placeholder for expected variable
+        if r_opcode != u_opcode or r_data != u_data:
+            raise exceptions.InvalidScript(b2h(untrusted_script))
+    if r_pc != len(reference_script) or u_pc != len(untrusted_script):
+        raise exceptions.InvalidScript(b2h(untrusted_script))
 
 
 def get_spend_secret(payout_rawtx, commit_script):

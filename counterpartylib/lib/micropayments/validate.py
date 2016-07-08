@@ -71,7 +71,11 @@ def deposit_script(deposit_script_hex, expected_payee_pubkey,
     is_hex(deposit_script_hex)
     script_bin = util.h2b(deposit_script_hex)
 
-    # FIXME check deposit script opcodes
+    # is a deposit script
+    reference_script = scripts.compile_deposit_script(
+        "deadbeef", "deadbeef", "deadbeef", "deadbeef"
+    )
+    scripts.validate(reference_script, script_bin)
 
     # deposit spend secret hash matches expected spend secret hash
     found_hash = scripts.get_deposit_spend_secret_hash(script_bin)
@@ -93,8 +97,17 @@ def commit_script(commit_script_hex, deposit_script_hex):
     _deposit_script = util.h2b(deposit_script_hex)
     _commit_script = util.h2b(commit_script_hex)
 
-    # FIXME check deposit script opcodes
-    # FIXME check commit script opcodes
+    # is a deposit script
+    reference_script = scripts.compile_deposit_script(
+        "deadbeef", "deadbeef", "deadbeef", "deadbeef"
+    )
+    scripts.validate(reference_script, _deposit_script)
+
+    # is a commit script
+    reference_script = scripts.compile_commit_script(
+        "deadbeef", "deadbeef", "deadbeef", "deadbeef", "deadbeef"
+    )
+    scripts.validate(reference_script, _commit_script)
 
     # validate payee pubkey
     deposit_payee_pubkey = scripts.get_deposit_payee_pubkey(_deposit_script)
