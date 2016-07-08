@@ -6,6 +6,7 @@
 import six
 import re
 import pycoin
+from pycoin.tx import Tx
 from . import exceptions
 from . import scripts
 from . import util
@@ -129,6 +130,43 @@ def commit_script(commit_script_hex, deposit_script_hex):
     if deposit_spend_hash != commit_spend_hash:
         raise exceptions.IncorrectSpendSecretHash(commit_spend_hash,
                                                   deposit_spend_hash)
+
+
+def commit_rawtx(deposit_utxos, commit_rawtx_hex, expected_asset,
+                 expected_deposit_script_hex, expected_commit_script, netcode):
+
+    # is a bitcoin transaction
+    tx = Tx.from_hex(commit_rawtx_hex)
+
+    # validate sends to commit script
+    commit_address = util.script2address(
+        util.h2b(expected_commit_script), netcode=netcode
+    )
+    for txout in tx.txs_out:
+        assert(txout.bitcoin_address(netcode=netcode) == commit_address)
+
+    for txin in tx.txs_in:
+
+        # must spend only deposit utxos
+        found = False
+        for utxo in deposit_utxos[:]:
+            txid = util.b2h_rev(txin.previous_hash)
+            if (utxo["txid"] == txid and utxo["vout"] == txin.previous_index):
+                found = True
+                deposit_utxos.remove(utxo)  # prevent reuse of utxo
+                break
+        if not found:
+            assert(False)  # spends non deposit utxo
+
+        # scriptsig is correct
+        ref_scriptsig = scripts.compile_commit_scriptsig("deadbeef", "deadbeef")
+        deposit_script = util.h2b(expected_deposit_script_hex)
+        reference_script = ref_scriptsig + deposit_script
+        scripts.validate(reference_script, txin.script)
+
+        # FIXME validate signed by payer
+
+    # FIXME validate rawtx asset correct
 
 
 def state(state_data):

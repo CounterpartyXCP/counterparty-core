@@ -216,6 +216,7 @@ required_packages = [
     'tendo==0.2.8',
     'xmltodict==0.10.1',
     'cachetools==1.1.6',
+    'btctxstore',
 ]
 
 setup_options = {

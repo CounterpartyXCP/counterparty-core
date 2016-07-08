@@ -29,10 +29,10 @@ BOB_PUBKEY = wif2pubkey(BOB_WIF)
 @pytest.mark.usefixtures("server_db")
 @pytest.mark.usefixtures("api_server")
 def test_standard_usage_xcp(server_db):
-    pass
+    pass  # TODO test
 
 
 @pytest.mark.usefixtures("server_db")
 @pytest.mark.usefixtures("api_server")
 def test_standard_usage_btc(server_db):
-    pass
+    pass  # TODO test

@@ -131,14 +131,17 @@ def create_commit(dispatcher, state, quantity, revoke_secret_hash,
     }
 
 
-def add_commit(dispatcher, state, commit_rawtx, commit_script):
+def add_commit(dispatcher, state, commit_rawtx, commit_script, netcode):
 
     # validate input
     validate.state(state)
     validate.commit_script(commit_script, state["deposit_script"])
-    # FIXME validate rawtx for deposit script
-    # FIXME validate rawtx signed by payer
-    # FIXME validate rawtx asset correct
+    deposit_address = util.script2address(
+        util.h2b(state["deposit_script"]), netcode=netcode
+    )
+    deposit_utxos = dispatcher.get("get_unspent_txouts")(deposit_address)
+    validate.commit_rawtx(deposit_utxos, commit_rawtx, state["asset"],
+                          state["deposit_script"], commit_script, netcode)
 
     # update state
     script = util.h2b(commit_script)
@@ -336,9 +339,10 @@ def _recover_tx(dispatcher, asset, dest_address, script, netcode, fee,
     )
 
     # create expire tx
-    rawtx = _create_tx(dispatcher, asset, src_address, dest_address,
-                       asset_balance, btc_balance - fee, fee,
-                       regular_dust_size, True)
+    rawtx = _create_tx(
+        dispatcher, asset, src_address, dest_address, asset_balance,
+        btc_balance - fee, fee, regular_dust_size, True
+    )
 
     # prep for script compliance and signing
     tx = pycoin.tx.Tx.from_hex(rawtx)

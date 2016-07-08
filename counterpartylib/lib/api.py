@@ -803,8 +803,9 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def mpc_add_commit(state, commit_rawtx, commit_script):
-            return micropayments.add_commit(dispatcher, state,
-                                            commit_rawtx, commit_script)
+            netcode = "XTN" if config.TESTNET else "BTC"
+            return micropayments.add_commit(dispatcher, state, commit_rawtx,
+                                            commit_script, netcode)
 
         @dispatcher.add_method
         def mpc_revoke_secret_hashes_above(state, quantity):

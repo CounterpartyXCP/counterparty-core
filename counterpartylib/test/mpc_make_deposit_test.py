@@ -7,11 +7,10 @@ import pytest
 # from counterpartylib.test import util_test
 from counterpartylib.test.util_test import CURR_DIR
 from counterpartylib.test.fixtures.params import DP
-from counterpartylib.lib import util
+# from counterpartylib.lib import util
 from counterpartylib.lib.micropayments.util import wif2address
 from counterpartylib.lib.micropayments.util import wif2pubkey
 from counterpartylib.lib.micropayments.util import random_wif
-from counterpartylib.lib.util import RPCError
 
 
 FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql'
@@ -30,34 +29,10 @@ BOB_PUBKEY = wif2pubkey(BOB_WIF)
 @pytest.mark.usefixtures("server_db")
 @pytest.mark.usefixtures("api_server")
 def test_standard_usage_xcp(server_db):
-    pass
-
-    # result = util.api("mpc_make_deposit", {
-    #     "asset": ASSET,
-    #     "payer_pubkey": ALICE_PUBKEY,
-    #     "payee_pubkey": BOB_PUBKEY,
-    #     "spend_secret_hash": "a7ec62542b0d393d43442aadf8d55f7da1e303cb",
-    #     "expire_time": 5,
-    #     "quantity": 42
-    # })
-    # util_test.insert_raw_transaction(result["topublish"], server_db)
-
-    # TODO check after state
+    pass  # TODO test
 
 
 @pytest.mark.usefixtures("server_db")
 @pytest.mark.usefixtures("api_server")
 def test_standard_usage_btc(server_db):
-    pass
-
-    # result = util.api("mpc_make_deposit", {
-    #     "asset": "BTC",
-    #     "payer_pubkey": ALICE_PUBKEY,
-    #     "payee_pubkey": BOB_PUBKEY,
-    #     "spend_secret_hash": "a7ec62542b0d393d43442aadf8d55f7da1e303cb",
-    #     "expire_time": 5,
-    #     "quantity": 42
-    # })
-    # util_test.insert_raw_transaction(result["topublish"], server_db)
-
-    # TODO check after state
+    pass  # TODO test

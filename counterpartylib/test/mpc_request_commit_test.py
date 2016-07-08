@@ -16,7 +16,6 @@ from counterpartylib.lib.micropayments.util import wif2pubkey
 from counterpartylib.lib.micropayments.util import random_wif
 from counterpartylib.lib.micropayments.scripts import compile_deposit_script
 from counterpartylib.lib.micropayments.util import script2address
-# from counterpartylib.lib.util import RPCError
 
 
 FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql'
@@ -46,23 +45,11 @@ def test_standard_usage_xcp(server_db):
         'destination': DEPOSIT_ADDRESS,
         'asset': ASSET,
         'quantity': 42,
-        'regular_dust_size': 300000  # 1BTC
+        'regular_dust_size': 300000
     })
     util_test.insert_raw_transaction(deposit_rawtx, server_db)
 
-    # result = util.api("mpc_request_commit", {
-    #     "state": {
-    #         "asset": ASSET,
-    #         "deposit_script": b2h(DEPOSIT_SCRIPT),
-    #         "commits_active": [],
-    #         "commits_revoked": [],
-    #         "commits_requested": []
-    #     },
-    #     "quantity": 1,
-    #     "revoke_secret_hash": "d2344f3076446a5669c46ceddcce0a0c87f3e51e",
-    # })
-
-    # TODO check result
+    # TODO test
 
 
 @pytest.mark.usefixtures("server_db")
@@ -75,27 +62,14 @@ def test_standard_usage_btc(server_db):
         'destination': DEPOSIT_ADDRESS,
         'asset': ASSET,
         'quantity': 42,
-        'regular_dust_size': 300000  # 1BTC
+        'regular_dust_size': 300000
     })
     util_test.insert_raw_transaction(deposit_rawtx, server_db)
 
-    # result = util.api("mpc_request_commit", {
-    #     "state": {
-    #         "asset": "BTC",
-    #         "deposit_script": b2h(DEPOSIT_SCRIPT),
-    #         "commits_active": [],
-    #         "commits_revoked": [],
-    #         "commits_requested": []
-    #     },
-    #     "quantity": 1,
-    #     "revoke_secret_hash": "d2344f3076446a5669c46ceddcce0a0c87f3e51e",
-    # })
-
-    # TODO check result
+    # TODO test
 
 
 @pytest.mark.usefixtures("server_db")
 @pytest.mark.usefixtures("api_server")
 def test_invalid_quantity(server_db):
-    pass
-    # FIXME test > deposit amount
+    pass  # FIXME test

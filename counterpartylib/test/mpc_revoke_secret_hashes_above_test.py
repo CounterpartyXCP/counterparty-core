@@ -11,7 +11,6 @@ from counterpartylib.test.fixtures.params import DP
 from counterpartylib.lib.micropayments.util import wif2address
 from counterpartylib.lib.micropayments.util import wif2pubkey
 from counterpartylib.lib.micropayments.util import random_wif
-# from counterpartylib.lib.util import RPCError
 
 
 FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql'
@@ -30,10 +29,10 @@ BOB_PUBKEY = wif2pubkey(BOB_WIF)
 @pytest.mark.usefixtures("server_db")
 @pytest.mark.usefixtures("api_server")
 def test_standard_usage_xcp(server_db):
-    pass
+    pass  # TODO test
 
 
 @pytest.mark.usefixtures("server_db")
 @pytest.mark.usefixtures("api_server")
 def test_standard_usage_btc(server_db):
-    pass
+    pass  # TODO test

@@ -258,5 +258,9 @@ def test_commit_script():
         pass
 
 
-def test_state():
+def test_commit_rawtx():
     pass
+
+
+def test_state():
+    pass  # TODO test

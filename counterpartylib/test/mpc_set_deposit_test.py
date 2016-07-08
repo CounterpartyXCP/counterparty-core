@@ -57,4 +57,4 @@ def test_standard_usage_xcp(server_db):
 @pytest.mark.usefixtures("server_db")
 @pytest.mark.usefixtures("api_server")
 def test_standard_usage_btc(server_db):
-    pass  # FIXME test
+    pass  # TODO test
