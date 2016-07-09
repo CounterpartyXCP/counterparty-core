@@ -728,6 +728,29 @@ def expire (db, block_index):
     order_matches = list(cursor)
     for order_match in order_matches:
         cancel_order_match(db, order_match, 'expired', block_index)
+        
+        # Expire btc sell order if match expires
+        if util.enabled('btc_order_status'):
+            # Check for other pending order matches involving either tx0_hash or tx1_hash
+            bindings = {
+                'status': 'pending',
+                'tx0_hash': order_match['tx0_hash'],
+                'tx1_hash': order_match['tx1_hash']
+            }
+            sql='select * from order_matches where status = :status and ((tx0_hash in (:tx0_hash, :tx1_hash)) or ((tx1_hash in (:tx0_hash, :tx1_hash))))'
+            cursor.execute(sql, bindings) 
+            order_matches_pending = cursor.fetchall()
+            # Set BTC sell order status as expired only if there are no pending order matches
+            if len(order_matches_pending) == 0:
+                if order_match['backward_asset'] == "BTC" and order_match['status'] == "expired":
+                    cursor.execute('''SELECT * FROM orders \
+                                      WHERE tx_hash = ?''', (order_match['tx1_hash'],))
+                    cancel_order(db, list(cursor)[0], 'expired', block_index)
+                if order_match['forward_asset'] == "BTC" and order_match['status'] == "expired":
+                    cursor.execute('''SELECT * FROM orders \
+                                      WHERE tx_hash = ?''', (order_match['tx0_hash'],))
+                    cancel_order(db, list(cursor)[0], 'expired', block_index)
+        
     if block_index >= 315000 or config.TESTNET: # Protocol change.
         # Re‐match.
         for order_match in order_matches:
