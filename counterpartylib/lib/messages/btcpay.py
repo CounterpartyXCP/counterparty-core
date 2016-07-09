@@ -151,12 +151,23 @@ def parse (db, tx, message):
                 cursor.execute(sql, bindings) 
                 order_matches = cursor.fetchall()
                 if len(order_matches) == 0:
+                    # mark both btc get and give orders as filled when order_match is completed and give or get remaining = 0
                     bindings = {
                         'status': 'filled',
                         'tx0_hash': tx0_hash,
                         'tx1_hash': tx1_hash
                     }
                     sql='update orders set status = :status where ((tx_hash in (:tx0_hash, :tx1_hash)) and ((give_remaining = 0) or (get_remaining = 0)))'           
+                    cursor.execute(sql, bindings) 
+                else:
+                    # always mark btc get order as filled when order_match is completed and give or get remaining = 0
+                    bindings = {
+                        'status': 'filled',
+                        'source': tx['destination'],
+                        'tx0_hash': tx0_hash,
+                        'tx1_hash': tx1_hash
+                    }
+                    sql='update orders set status = :status where ((tx_hash in (:tx0_hash, :tx1_hash)) and ((give_remaining = 0) or (get_remaining = 0)) and (source = :source))'           
                     cursor.execute(sql, bindings) 
                     
     # Add parsed transaction to message-type–specific table.
