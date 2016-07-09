@@ -4,11 +4,12 @@
 
 
 import pycoin
+from pycoin.key import Key
 from pycoin.tx import Tx
 from pycoin.tx.script import tools
 from pycoin.encoding import hash160
 from pycoin.tx.pay_to import SUBCLASSES
-from pycoin.serialize import b2h, h2b
+from pycoin.serialize import b2h, h2b, b2h_rev
 from pycoin.tx.pay_to.ScriptType import DEFAULT_PLACEHOLDER_SIGNATURE
 from pycoin.tx.pay_to.ScriptType import ScriptType
 from pycoin import encoding
@@ -188,12 +189,17 @@ def compile_commit_script(payer_pubkey, payee_pubkey, spend_secret_hash,
     return tools.compile(script_text)
 
 
-def sign_deposit(btctxstore, payer_wif, rawtx):
-    return btctxstore.sign_tx(rawtx, [payer_wif])
+def sign_deposit(get_tx_func, payer_wif, rawtx):
+    tx = _load_tx(get_tx_func, rawtx)
+    key = Key.from_text(payer_wif)
+    secret_exponents = [key.secret_exponent()]
+    hash160_lookup = pycoin.tx.pay_to.build_hash160_lookup(secret_exponents)
+    tx.sign(hash160_lookup)
+    return tx.as_hex()
 
 
-def sign_created_commit(btctxstore, payer_wif, rawtx, deposit_script):
-    tx = _load_tx(btctxstore, rawtx)
+def sign_created_commit(get_tx_func, payer_wif, rawtx, deposit_script):
+    tx = _load_tx(get_tx_func, rawtx)
     script_bin = h2b(deposit_script)
     expire_time = get_deposit_expire_time(script_bin)
     hash160_lookup, p2sh_lookup = _make_lookups(payer_wif, script_bin)
@@ -204,8 +210,8 @@ def sign_created_commit(btctxstore, payer_wif, rawtx, deposit_script):
     return tx.as_hex()
 
 
-def sign_finalize_commit(btctxstore, payee_wif, rawtx, deposit_script):
-    tx = _load_tx(btctxstore, rawtx)
+def sign_finalize_commit(get_tx_func, payee_wif, rawtx, deposit_script):
+    tx = _load_tx(get_tx_func, rawtx)
     script_bin = h2b(deposit_script)
     expire_time = get_deposit_expire_time(script_bin)
     hash160_lookup, p2sh_lookup = _make_lookups(payee_wif, script_bin)
@@ -216,43 +222,42 @@ def sign_finalize_commit(btctxstore, payee_wif, rawtx, deposit_script):
     return tx.as_hex()
 
 
-def sign_revoke_recover(btctxstore, payer_wif, rawtx,
+def sign_revoke_recover(get_tx_func, payer_wif, rawtx,
                         commit_script, revoke_secret):
-    return _sign_commit_recover(btctxstore, payer_wif, rawtx, commit_script,
+    return _sign_commit_recover(get_tx_func, payer_wif, rawtx, commit_script,
                                 "revoke", None, revoke_secret)
 
 
-def sign_payout_recover(btctxstore, payee_wif, rawtx,
+def sign_payout_recover(get_tx_func, payee_wif, rawtx,
                         commit_script, spend_secret):
-    return _sign_commit_recover(btctxstore, payee_wif, rawtx, commit_script,
+    return _sign_commit_recover(get_tx_func, payee_wif, rawtx, commit_script,
                                 "payout", spend_secret, None)
 
 
-def sign_change_recover(btctxstore, payer_wif, rawtx,
+def sign_change_recover(get_tx_func, payer_wif, rawtx,
                         deposit_script, spend_secret):
     return _sign_deposit_recover(
-        btctxstore, payer_wif, rawtx, deposit_script, "change", spend_secret
+        get_tx_func, payer_wif, rawtx, deposit_script, "change", spend_secret
     )
 
 
-def sign_expire_recover(btctxstore, payer_wif, rawtx, deposit_script):
+def sign_expire_recover(get_tx_func, payer_wif, rawtx, deposit_script):
     return _sign_deposit_recover(
-        btctxstore, payer_wif, rawtx, deposit_script, "expire", None
+        get_tx_func, payer_wif, rawtx, deposit_script, "expire", None
     )
 
 
-def _load_tx(btctxstore, rawtx):
-    # FIXME remove this so btctxstore is not required!
+def _load_tx(get_tx_func, rawtx):
     tx = Tx.from_hex(rawtx)
     for txin in tx.txs_in:
-        utxo_tx = btctxstore.service.get_tx(txin.previous_hash)
+        utxo_tx = Tx.from_hex(get_tx_func(b2h_rev(txin.previous_hash)))
         tx.unspents.append(utxo_tx.txs_out[txin.previous_index])
     return tx
 
 
-def _sign_deposit_recover(btctxstore, wif, rawtx, script_hex,
+def _sign_deposit_recover(get_tx_func, wif, rawtx, script_hex,
                           spend_type, spend_secret):
-    tx = _load_tx(btctxstore, rawtx)
+    tx = _load_tx(get_tx_func, rawtx)
     script_bin = h2b(script_hex)
     expire_time = get_deposit_expire_time(script_bin)
     hash160_lookup, p2sh_lookup = _make_lookups(wif, script_bin)
@@ -263,9 +268,9 @@ def _sign_deposit_recover(btctxstore, wif, rawtx, script_hex,
     return tx.as_hex()
 
 
-def _sign_commit_recover(btctxstore, wif, rawtx, script_hex, spend_type,
+def _sign_commit_recover(get_tx_func, wif, rawtx, script_hex, spend_type,
                          spend_secret, revoke_secret):
-    tx = _load_tx(btctxstore, rawtx)
+    tx = _load_tx(get_tx_func, rawtx)
     script_bin = h2b(script_hex)
     delay_time = get_commit_delay_time(script_bin)
     hash160_lookup, p2sh_lookup = _make_lookups(wif, script_bin)
