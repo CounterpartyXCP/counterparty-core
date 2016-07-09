@@ -730,7 +730,7 @@ def expire (db, block_index):
         cancel_order_match(db, order_match, 'expired', block_index)
         
         # Expire btc sell order if match expires
-        if util.enabled('btc_order_status'):
+        if util.enabled('btc_sell_expire_on_match_expire'):
             # Check for other pending order matches involving either tx0_hash or tx1_hash
             bindings = {
                 'status': 'pending',
