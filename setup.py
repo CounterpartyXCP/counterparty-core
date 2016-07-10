@@ -178,7 +178,7 @@ class install(_install):
             caller_module == 'distutils.dist'
             and info.function == 'run_commands'
         )
-        
+
     def run(self):
         # Explicit request for old-style install?  Just do it
         if self.old_and_unmanageable or self.single_version_externally_managed:
@@ -205,7 +205,8 @@ required_packages = [
     'appdirs==1.4.0',
     'colorlog==2.7.0',
     'json-rpc==1.10.3',
-    'pycoin==0.62',
+    'six>=1.10.0',
+    'pycoin==0.70',
     'pycrypto==2.6.1',
     'pysha3==0.3',
     'pytest==2.9.1',

@@ -135,7 +135,7 @@ def get_btc_supply(normalize=False):
             blocks_remaining = 0
     return total_supply if normalize else int(total_supply * config.UNIT)
 
-def is_scriptpubkey_spendable(scriptpubkey_hex, source, multisig_inputs=False):
+def is_scriptpubkey_spendable(scriptpubkey_hex, source):
     c_scriptpubkey = bitcoinlib.core.CScript(bitcoinlib.core.x(scriptpubkey_hex))
 
     try:
@@ -156,7 +156,7 @@ def is_scriptpubkey_spendable(scriptpubkey_hex, source, multisig_inputs=False):
 class MempoolError(Exception):
     pass
 
-def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False, unspent_tx_hash=None):
+def get_unspent_txouts(source, unconfirmed=False, unspent_tx_hash=None):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
     """

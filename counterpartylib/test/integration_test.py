@@ -5,16 +5,18 @@ from counterpartylib.test import conftest  # this is require near the top to do 
 from counterpartylib.test import util_test
 
 
-def test_scenario(scenario_name, base_scenario_name, transactions, rawtransactions_db):
+def test_scenario(scenario_name, base_scenario_name, transactions):
     """Run the integration tests.
 
     Reads scenario.py to get all the integration scenarios to create a holistic integration test run,
     executes it and then compares the json, sql and log output with data in 'scenarios/' folder.
     """
-    if pytest.config.option.savescenarios:
-        util_test.save_scenario(scenario_name, rawtransactions_db)
 
-    new_dump, new_log, new_raw_transactions = util_test.run_scenario(transactions, rawtransactions_db)
+    new_dump, new_log, new_raw_transactions = util_test.run_scenario(transactions)
+
+    if pytest.config.option.savescenarios:
+        util_test.save_scenario_output(scenario_name, new_dump, new_log, new_raw_transactions)
+
     old_dump, old_log, old_raw_transactions = util_test.load_scenario_ouput(scenario_name)
 
     assert util_test.compare_strings(old_dump, new_dump) == 0

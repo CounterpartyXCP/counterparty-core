@@ -39,6 +39,7 @@ from counterpartylib.lib import database
 from counterpartylib.lib import transaction
 from counterpartylib.lib import blocks
 from counterpartylib.lib import script
+from counterpartylib.lib import micropayments
 from counterpartylib.lib.messages import send
 from counterpartylib.lib.messages import order
 from counterpartylib.lib.messages import btcpay
@@ -325,13 +326,13 @@ def conditional_decorator(decorator, condition):
 def init_api_access_log(app):
     """Initialize API logger."""
     loggers = (logging.getLogger('werkzeug'), app.logger)
-    
+
     # Disable console logging...
     for l in loggers:
         l.setLevel(logging.INFO)
         l.propagate = False
 
-    # Log to file, if configured...    
+    # Log to file, if configured...
     if config.API_LOG:
         handler = logging_handlers.RotatingFileHandler(config.API_LOG, 'a', API_MAX_LOG_SIZE, API_MAX_LOG_COUNT)
         for l in loggers:
@@ -453,7 +454,7 @@ class APIServer(threading.Thread):
                     error_msg = "Error composing {} transaction via API: {}".format(tx, str(error))
                     logging.warning(error_msg)
                     raise JSONRPCDispatchException(code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg)
-            
+
             return create_method
 
         for tx in API_TRANSACTIONS:
@@ -590,7 +591,7 @@ class APIServer(threading.Thread):
             cursor.execute('SELECT * FROM messages WHERE block_index IN (%s) ORDER BY message_index ASC'
                 % (block_indexes_str,))
             messages = collections.deque(cursor.fetchall())
-            
+
             # Discard any messages less than min_message_index
             if min_message_index:
                 while len(messages) and messages[0]['message_index'] < min_message_index:
@@ -684,7 +685,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None):
-            return backend.get_unspent_txouts(address, unconfirmed=unconfirmed, multisig_inputs=False, unspent_tx_hash=unspent_tx_hash)
+            return backend.get_unspent_txouts(address, unconfirmed=unconfirmed, unspent_tx_hash=unspent_tx_hash)
 
         @dispatcher.add_method
         def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
@@ -756,6 +757,89 @@ class APIServer(threading.Thread):
             else:
                 # Not found
                 return flask.Response(None, 404, mimetype='application/json')
+
+        @dispatcher.add_method
+        def sendrawtransaction(tx_hex):
+            return backend.sendrawtransaction(tx_hex)
+
+        #########################
+        # Micropayment channels #
+        #########################
+
+        @dispatcher.add_method
+        def mpc_make_deposit(asset, payer_pubkey, payee_pubkey,
+                             spend_secret_hash, expire_time, quantity):
+            netcode = "XTN" if config.TESTNET else "BTC"
+            fee = 10000  # FIXME use fee_per_kb instead?
+            regular_dust_size = config.DEFAULT_REGULAR_DUST_SIZE
+            return micropayments.make_deposit(
+                dispatcher, asset, payer_pubkey, payee_pubkey,
+                spend_secret_hash, expire_time, quantity, netcode, fee,
+                regular_dust_size
+            )
+
+        @dispatcher.add_method
+        def mpc_set_deposit(asset, deposit_script, expected_payee_pubkey,
+                            expected_spend_secret_hash):
+            return micropayments.set_deposit(asset, deposit_script,
+                                             expected_payee_pubkey,
+                                             expected_spend_secret_hash)
+
+        @dispatcher.add_method
+        def mpc_request_commit(state, quantity, revoke_secret_hash):
+            netcode = "XTN" if config.TESTNET else "BTC"
+            return micropayments.request_commit(dispatcher, state, quantity,
+                                                revoke_secret_hash, netcode)
+
+        @dispatcher.add_method
+        def mpc_create_commit(state, quantity, revoke_secret_hash, delay_time):
+            netcode = "XTN" if config.TESTNET else "BTC"
+            fee = 10000  # FIXME fee not needed, determind by depost btc - dust
+            regular_dust_size = config.DEFAULT_REGULAR_DUST_SIZE
+            return micropayments.create_commit(
+                dispatcher, state, quantity, revoke_secret_hash, delay_time,
+                netcode, fee, regular_dust_size
+            )
+
+        @dispatcher.add_method
+        def mpc_add_commit(state, commit_rawtx, commit_script):
+            netcode = "XTN" if config.TESTNET else "BTC"
+            return micropayments.add_commit(dispatcher, state, commit_rawtx,
+                                            commit_script, netcode)
+
+        @dispatcher.add_method
+        def mpc_revoke_secret_hashes_above(state, quantity):
+            return micropayments.revoke_secret_hashes_above(
+                dispatcher, state, quantity
+            )
+
+        @dispatcher.add_method
+        def mpc_revoke_all(state, secrets):
+            return micropayments.revoke_all(state, secrets)
+
+        @dispatcher.add_method
+        def mpc_highest_commit(state):
+            return micropayments.highest_commit(dispatcher, state)
+
+        @dispatcher.add_method
+        def mpc_transferred_amount(state):
+            return micropayments.transferred_amount(dispatcher, state)
+
+        @dispatcher.add_method
+        def mpc_payouts(state):
+            netcode = "XTN" if config.TESTNET else "BTC"
+            fee = 10000  # FIXME fee not needed (fee = btc - dust)
+            regular_dust_size = config.DEFAULT_REGULAR_DUST_SIZE
+            return micropayments.payouts(dispatcher, state, netcode,
+                                         fee, regular_dust_size)
+
+        @dispatcher.add_method
+        def mpc_recoverables(state):
+            netcode = "XTN" if config.TESTNET else "BTC"
+            fee = 10000  # FIXME fee not needed (fee = btc - dust)
+            regular_dust_size = config.DEFAULT_REGULAR_DUST_SIZE
+            return micropayments.recoverables(dispatcher, state, netcode,
+                                              fee, regular_dust_size)
 
         ######################
         # JSON-RPC API
@@ -855,7 +939,7 @@ class APIServer(threading.Thread):
                 except (script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
                     error_msg = logging.warning("{} -- error composing {} transaction via API: {}".format(
                         str(error.__class__.__name__), query_type, str(error)))
-                    return flask.Response(error_msg, 400, mimetype='application/json')                        
+                    return flask.Response(error_msg, 400, mimetype='application/json')
             else:
                 # Need to de-generate extra_args to pass it through.
                 query_args = dict([item for item in extra_args])
@@ -887,11 +971,11 @@ class APIServer(threading.Thread):
 
         # Init the HTTP Server.
         init_api_access_log(app)
-        
+
         # Run app server (blocking)
         self.is_ready = True
         app.run(host=config.RPC_HOST, port=config.RPC_PORT, threaded=True)
-            
+
         db.close()
         return
 
