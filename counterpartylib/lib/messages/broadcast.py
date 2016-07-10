@@ -23,10 +23,13 @@ because it is stored as a four‐byte integer, it may not be greater than about
 
 import struct
 import decimal
+
 D = decimal.Decimal
 from fractions import Fraction
 import logging
 logger = logging.getLogger(__name__)
+
+from bitcoin.core import VarIntSerializer
 
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import config
@@ -107,12 +110,19 @@ def compose (db, source, timestamp, value, fee_fraction, text):
     if problems: raise exceptions.ComposeError(problems)
 
     data = struct.pack(config.TXTYPE_FORMAT, ID)
-    if len(text) <= 52:
-        curr_format = FORMAT + '{}p'.format(len(text) + 1)
+
+    # always use custom length byte instead of problematic usage of 52p format and make sure to encode('utf-8') for length
+    if util.enabled('broadcast_pack_text'):
+        data += struct.pack(FORMAT, timestamp, value, fee_fraction_int)
+        data += VarIntSerializer.serialize(len(text.encode('utf-8')))
+        data += text.encode('utf-8')
     else:
-        curr_format = FORMAT + '{}s'.format(len(text))
-    data += struct.pack(curr_format, timestamp, value, fee_fraction_int,
-                        text.encode('utf-8'))
+        if len(text) <= 52:
+            curr_format = FORMAT + '{}p'.format(len(text) + 1)
+        else:
+            curr_format = FORMAT + '{}s'.format(len(text))
+
+        data += struct.pack(curr_format, timestamp, value, fee_fraction_int, text.encode('utf-8'))
     return (source, [], data)
 
 def parse (db, tx, message):
@@ -120,11 +130,19 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        if len(message) - LENGTH <= 52:
-            curr_format = FORMAT + '{}p'.format(len(message) - LENGTH)
+        if util.enabled('broadcast_pack_text'):
+            timestamp, value, fee_fraction_int, rawtext = struct.unpack(FORMAT + '{}s'.format(len(message) - LENGTH), message)
+            textlen = VarIntSerializer.deserialize(rawtext)
+            text = rawtext[-textlen:]
+
+            assert len(text) == textlen
         else:
-            curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
-        timestamp, value, fee_fraction_int, text = struct.unpack(curr_format, message)
+            if len(message) - LENGTH <= 52:
+                curr_format = FORMAT + '{}p'.format(len(message) - LENGTH)
+            else:
+                curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
+
+            timestamp, value, fee_fraction_int, text = struct.unpack(curr_format, message)
 
         try:
             text = text.decode('utf-8')
