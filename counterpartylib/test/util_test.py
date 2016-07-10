@@ -368,44 +368,39 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
         tested_module = sys.modules['counterpartylib.lib.messages.{}'.format(tx_name)]
     tested_method = getattr(tested_module, method)
 
-    # import here to avoid circular imports
-    from counterpartylib.test.conftest import MOCK_PROTOCOL_CHANGES
-    MOCK_PROTOCOL_CHANGES.clear()
-    if mock_protocol_changes:
-        MOCK_PROTOCOL_CHANGES.update(mock_protocol_changes)
-
-    test_outputs = None
-    if error is not None:
-        with pytest.raises(error[0]) as exception:
+    with MockProtocolChangesContext(**(mock_protocol_changes or {})):
+        test_outputs = None
+        if error is not None:
+            with pytest.raises(error[0]) as exception:
+                test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
+        else:
             test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
-    else:
-        test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
-        if pytest.config.option.gentxhex and method == 'compose':
-            print('')
-            tx_params = {
-                'encoding': 'multisig'
-            }
-            if tx_name == 'order' and inputs[1]=='BTC':
-                print('give btc')
-                tx_params['fee_provided'] = DP['fee_provided']
-            unsigned_tx_hex = transaction.construct(server_db, test_outputs, **tx_params)
-            print(tx_name)
-            print(unsigned_tx_hex)
+            if pytest.config.option.gentxhex and method == 'compose':
+                print('')
+                tx_params = {
+                    'encoding': 'multisig'
+                }
+                if tx_name == 'order' and inputs[1]=='BTC':
+                    print('give btc')
+                    tx_params['fee_provided'] = DP['fee_provided']
+                unsigned_tx_hex = transaction.construct(server_db, test_outputs, **tx_params)
+                print(tx_name)
+                print(unsigned_tx_hex)
 
-    if outputs is not None:
-        try:
-            assert outputs == test_outputs
-        except AssertionError:
-            if pytest.config.option.verbosediff:
-                msg = "expected outputs don't match test_outputs:\noutputs=\n" + pprint.pformat(outputs) + "\ntest_outputs=\n" + pprint.pformat(test_outputs)
-            else:
-                msg = "expected outputs don't match test_outputs: outputs=%s test_outputs=%s" % (outputs, test_outputs)
-            raise Exception(msg)
-    if error is not None:
-        assert str(exception.value) == error[1]
-    if records is not None:
-        for record in records:
-            check_record(record, server_db)
+        if outputs is not None:
+            try:
+                assert outputs == test_outputs
+            except AssertionError:
+                if pytest.config.option.verbosediff:
+                    msg = "expected outputs don't match test_outputs:\noutputs=\n" + pprint.pformat(outputs) + "\ntest_outputs=\n" + pprint.pformat(test_outputs)
+                else:
+                    msg = "expected outputs don't match test_outputs: outputs=%s test_outputs=%s" % (outputs, test_outputs)
+                raise Exception(msg)
+        if error is not None:
+            assert str(exception.value) == error[1]
+        if records is not None:
+            for record in records:
+                check_record(record, server_db)
 
 def compare_strings(string1, string2):
     """Compare strings diff-style."""
