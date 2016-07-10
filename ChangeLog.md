@@ -1,11 +1,33 @@
 ## Library Versions ##
-* Next Release
-    * Moved check for invalid broadcast to better place to prevent broadcasting a cancel on a locked feed. (protocol change: )
-    * Only use first usable input for source. (protocol change: )
-    * lock UTXOs used to construct a transaction for 3 seconds to avoid a user double spending against himself.
+* v9.55.0 (PENDING)
     * P2SH support for source / destination of addresses (protocol change: )
-    * Fixed issue with broadcasts of exactly 52 chars, by always adding a varint to specify the length. (protocol change: )
-    * Many many improvements to test suite
+    * Moved check for invalid broadcast to better place to prevent broadcasting a cancel on a locked feed (protocol change: )
+    * Only use first usable input for source (protocol change: )
+    * Fixed issue with broadcasts of exactly 52 chars, by always adding a varint to specify the length (protocol change: )
+    * Cleanup destroy.parse and add unit tests for it (protocol change: )
+    * Added docker image building (counterparty/counterparty-server on Dockerhub)
+    * Enhanced Travis to run test suite inside Docker image, and push image if testsuite passes
+    * lock UTXOs used to construct a transaction for 3 seconds to avoid a user double spending against himself
+    * improved APSW install routine to downgrade when newer version is installed
+    * tweaked CORS headers so that web clients may authenticate directly against counterparty-server
+    * Numerous logging fixes to make logging more robust
+    * Improved transaction input processing to be more strict
+    * Further performance enhancements when fetching raw transactions from bitcoind
+    * Peg dependencies at specific versions!
+    * Added debug_config method to print config to CLI
+    * Mask username/password in backend URL when logging
+    * Updated python-bitcoinlib to newest version
+    * Test suite:
+        * Reorganization of the test suite at numerous points for more robustness and capabilities
+        * Added ability to mock protocol changes to allow for testing of certain changes on or off
+        * Modified CI builds to make it easier to read logging reports
+        * Added numerous tests to test suite for better coverage
+        * Execute tests in forward order, not reverse order, and ensure they are sorted
+        * Add logging prefix to mempool status to be able to filter it
+        * Fix when running a single unittest
+        * Use prettyprint for debugging database records
+        * Created script to easily copy test scenarios
+        * Better test detection
 * v9.54.0 (2016-03-05)
     * Execute post install tasks when called via `pip`
     * Max fee fraction of 1
