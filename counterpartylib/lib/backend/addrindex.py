@@ -234,6 +234,23 @@ def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
 def getrawmempool():
     return rpc('getrawmempool', [])
 
+def fee_per_kb(nblocks):
+    """
+    :param nblocks:
+    :return: fee_per_kb in satoshis, or None when unable to determine
+    """
+
+    # we need to loop because sometimes bitcoind can't estimate a certain nblocks
+    feeperkb = -1
+    while feeperkb == -1:
+        feeperkb = rpc('estimatefee', [nblocks])
+        nblocks += 1
+
+        if nblocks > 10:
+            return None
+
+    return int(feeperkb * config.UNIT)
+
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 

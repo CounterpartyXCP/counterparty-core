@@ -46,7 +46,8 @@ COUNTERPARTYD_OPTIONS = {
     'backend_password': 'pass',
     'backend_ssl_no_verify': True,
     'p2sh_dust_return_pubkey': '11' * 33,
-    'utxo_locks_max_addresses': 0  # Disable UTXO locking for base test suite runs
+    'utxo_locks_max_addresses': 0,  # Disable UTXO locking for base test suite runs
+    'estimate_fee_per_kb': False
 }
 
 
@@ -290,10 +291,14 @@ def clean_scenario_dump(scenario_name, dump):
     dump = dump.replace(standard_scenarios_params[scenario_name]['address1'], 'address1')
     dump = dump.replace(standard_scenarios_params[scenario_name]['address2'], 'address2')
     dump = re.sub('[a-f0-9]{64}', 'hash', dump)
-    dump = re.sub('X\'[A-F0-9]+\',1\);', '\'data\',1)', dump)
-    # ignore dust value
-    dump = re.sub(',7800,10000,\'data\',1\)', ',0,10000,\'data\',1\)', dump)
-    dump = re.sub(',5430,10000,\'data\',1\)', ',0,10000,\'data\',1\)', dump)
+    dump = re.sub('X\'[A-F0-9]+\',1\);', '\'data\',1);', dump)
+    # ignore fee values by replacing them with 10000 satoshis
+    dump = re.sub(',\d+,\'data\',1\);', ',10000,\'data\',1);', dump)
+    dump = re.sub(',\d+,X\'\',1\);', ',10000,\'data\',1);', dump)
+    # ignore dust value by replacing them with 0 satoshis
+    dump = re.sub(',7800,(\d+),\'data\',1\);', ',0,\1,\'data\',1);', dump)
+    dump = re.sub(',5430,(\d+),\'data\',1\);', ',0,\1,\'data\',1);', dump)
+
     return dump
 
 def check_record(record, server_db):

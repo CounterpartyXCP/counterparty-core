@@ -8,6 +8,8 @@
     * Added docker image building (counterparty/counterparty-server on Dockerhub)
     * Enhanced Travis to run test suite inside Docker image, and push image if testsuite passes
     * lock UTXOs used to construct a transaction for 3 seconds to avoid a user double spending against himself
+    * No longer ceil the size of a transaction to KBs when calculating fees
+    * Use dynamic estimated fee (from bitcoind)
     * improved APSW install routine to downgrade when newer version is installed
     * tweaked CORS headers so that web clients may authenticate directly against counterparty-server
     * Numerous logging fixes to make logging more robust

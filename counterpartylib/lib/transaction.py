@@ -47,7 +47,7 @@ UTXO_LOCKS_PER_ADDRESS_MAXSIZE = 5000  # set higher than the max number of UTXOs
 
 
 def print_coin(coin):
-    return 'amount: {}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
+    return 'amount: {:.8f}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
 
 
 def var_int (i):
@@ -313,11 +313,15 @@ def make_outkey(output):
 
 def construct (db, tx_info, encoding='auto',
                fee_per_kb=config.DEFAULT_FEE_PER_KB,
+               estimate_fee_per_kb=None, estimate_fee_per_kb_nblocks=config.ESTIMATE_FEE_NBLOCKS,
                regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                op_return_value=config.DEFAULT_OP_RETURN_VALUE,
                exact_fee=None, fee_provided=0, provided_pubkeys=None, dust_return_pubkey=None,
                allow_unconfirmed_inputs=False, unspent_tx_hash=None, custom_inputs=None, disable_utxo_locks=False):
+
+    if estimate_fee_per_kb is None:
+        estimate_fee_per_kb = config.ESTIMATE_FEE_PER_KB
 
     global UTXO_LOCKS
 
@@ -434,18 +438,19 @@ def construct (db, tx_info, encoding='auto',
     '''Inputs'''
 
     # Calculate collective size of outputs, for fee calculation.
+    p2pkhsize = 25 + 9
     if encoding == 'multisig':
         data_output_size = 81       # 71 for the data
     elif encoding == 'opreturn':
         data_output_size = 90       # 80 for the data
     else:
-        data_output_size = 25 + 9   # Pay‐to‐PubKeyHash (25 for the data?)
-    outputs_size = ((25 + 9) * len(destination_outputs)) + (len(data_array) * data_output_size)
+        data_output_size = p2pkhsize   # Pay‐to‐PubKeyHash (25 for the data?)
+    outputs_size = (p2pkhsize * len(destination_outputs)) + (len(data_array) * data_output_size)
 
     # Get inputs.
     multisig_inputs = not data
 
-    use_inputs = custom_inputs # Array of UTXOs, as retrieved by listunspent function from bitcoind
+    use_inputs = custom_inputs  # Array of UTXOs, as retrieved by listunspent function from bitcoind
     if custom_inputs is None:
         if unspent_tx_hash is not None:
             unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash, multisig_inputs=multisig_inputs)
@@ -462,6 +467,14 @@ def construct (db, tx_info, encoding='auto',
         logger.debug('Sorted candidate UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
         use_inputs = unspent
 
+    # use backend estimated fee_per_kb
+    if estimate_fee_per_kb:
+        estimated_fee_per_kb = backend.fee_per_kb(estimate_fee_per_kb_nblocks)
+        if estimated_fee_per_kb is not None:
+            fee_per_kb = max(estimated_fee_per_kb, fee_per_kb)  # never drop below the default fee_per_kb
+
+    logger.debug('Fee/KB {:.8f}'.format(fee_per_kb / config.UNIT))
+
     inputs = []
     btc_in = 0
     change_quantity = 0
@@ -472,20 +485,20 @@ def construct (db, tx_info, encoding='auto',
         inputs.append(coin)
         btc_in += round(coin['amount'] * config.UNIT)
 
+        size = 181 * len(inputs) + outputs_size + 10
+        necessary_fee = int(size / 1000 * fee_per_kb)
+
         # If exact fee is specified, use that. Otherwise, calculate size of tx
         # and base fee on that (plus provide a minimum fee for selling BTC).
         if exact_fee:
             final_fee = exact_fee
         else:
-            size = 181 * len(inputs) + outputs_size + 10
-            necessary_fee = (int(size / 1000) + 1) * fee_per_kb
             final_fee = max(fee_provided, necessary_fee)
-            assert final_fee >= 1 * fee_per_kb
 
         # Check if good.
         btc_out = destination_btc_out + data_btc_out
         change_quantity = btc_in - (btc_out + final_fee)
-        logger.debug('Change quantity: {} BTC'.format(change_quantity / config.UNIT))
+        logger.debug('Size: {} Fee: {:.8f} Change quantity: {:.8f} BTC'.format(size, final_fee / config.UNIT, change_quantity / config.UNIT))
         # If change is necessary, must not be a dust output.
         if change_quantity == 0 or change_quantity >= regular_dust_size:
             sufficient_funds = True
