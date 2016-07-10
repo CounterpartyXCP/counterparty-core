@@ -469,7 +469,7 @@ def construct (db, tx_info, encoding='auto',
 
     # use backend estimated fee_per_kb
     if estimate_fee_per_kb:
-        estimated_fee_per_kb = backend.fee_per_kb(nblocks=estimate_fee_per_kb_nblocks)
+        estimated_fee_per_kb = backend.fee_per_kb(estimate_fee_per_kb_nblocks)
         if estimated_fee_per_kb is not None:
             fee_per_kb = max(estimated_fee_per_kb, fee_per_kb)  # never drop below the default fee_per_kb
 

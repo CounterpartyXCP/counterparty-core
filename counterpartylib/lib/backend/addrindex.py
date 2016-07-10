@@ -234,7 +234,7 @@ def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
 def getrawmempool():
     return rpc('getrawmempool', [])
 
-def fee_per_kb(nblocks=1):
+def fee_per_kb(nblocks):
     """
     :param nblocks:
     :return: fee_per_kb in satoshis, or None when unable to determine
