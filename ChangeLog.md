@@ -7,6 +7,7 @@
 	* Added `debug_config` argument to print config to CLI.
 	* Added `--quiet` flag to `bootstrap` command
 	* Logging improvements
+        * Removed `rps` and `rpsresolve` commands
 	* Updated `README.md`
 * v1.1.1 (2015/04/20)
 	* Fix `broadcast` command
