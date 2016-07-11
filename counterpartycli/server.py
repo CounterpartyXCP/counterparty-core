@@ -4,9 +4,10 @@ import os
 import sys
 import argparse
 import logging
+logger = logging.getLogger()
 
 from counterpartylib.lib import log
-logger = logging.getLogger(__name__)
+log.set_logger(logger)
 
 from counterpartylib import server
 from counterpartylib.lib import config
@@ -30,19 +31,23 @@ CONFIG_ARGS = [
     [('--backend-ssl-no-verify',), {'action': 'store_true', 'default': False, 'help': 'verify SSL certificate of backend; disallow use of self‐signed certificates (default: true)'}],
     [('--backend-poll-interval',), {'type': float, 'default': 0.5, 'help': 'poll interval, in seconds (default: 0.5)'}],
     [('--no-check-asset-conservation',), {'action': 'store_true', 'default': False, 'help': 'Skip asset conservation checking (default: false)'}],
+    [('--p2sh-dust-return-pubkey',), {'help': 'pubkey to receive dust when multisig encoding is used for P2SH source (default: pubkey from counterparty foundation)'}],
 
     [('--rpc-host',), {'default': 'localhost', 'help': 'the IP of the interface to bind to for providing JSON-RPC API access (0.0.0.0 for all interfaces)'}],
     [('--rpc-port',), {'type': int, 'help': 'port on which to provide the {} JSON-RPC API'.format(config.APP_NAME)}],
     [('--rpc-user',), {'default': 'rpc', 'help': 'required username to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.APP_NAME)}],
     [('--rpc-password',), {'help': 'required password (for rpc-user) to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.APP_NAME)}],
-    [('--rpc-no-allow-cors',), {'action': 'store_true', 'default': False, 'help': 'Allow ajax cross domain request'}],
-    [('--rpc-batch-size',), {'type': int, 'default': config.DEFAULT_RPC_BATCH_SIZE, 'help': 'Number of RPC queries by batch (default: {})'.format(config.DEFAULT_RPC_BATCH_SIZE)}],
-    [('--requests-timeout',), {'type': int, 'default': config.DEFAULT_REQUESTS_TIMEOUT, 'help': 'Timeout used for all http requests'}],
+    [('--rpc-no-allow-cors',), {'action': 'store_true', 'default': False, 'help': 'allow ajax cross domain request'}],
+    [('--rpc-batch-size',), {'type': int, 'default': config.DEFAULT_RPC_BATCH_SIZE, 'help': 'number of RPC queries by batch (default: {})'.format(config.DEFAULT_RPC_BATCH_SIZE)}],
+    [('--requests-timeout',), {'type': int, 'default': config.DEFAULT_REQUESTS_TIMEOUT, 'help': 'timeout value (in seconds) used for all HTTP requests (default: 5)'}],
 
     [('--force',), {'action': 'store_true', 'default': False, 'help': 'skip backend check, version check, process lock (NOT FOR USE ON PRODUCTION SYSTEMS)'}],
     [('--database-file',), {'default': None, 'help': 'the path to the SQLite3 database file'}],
-    [('--log-file',), {'default': None, 'help': 'the path to the server log file'}],
-    [('--api-log-file',), {'default': None, 'help': 'the path to the API log file'}]
+    [('--log-file',), {'nargs': '?', 'const': None, 'default': False, 'help': 'log to the specified file (specify option without filename to use the default location)'}],
+    [('--api-log-file',), {'nargs': '?', 'const': None, 'default': False, 'help': 'log API requests to the specified file (specify option without filename to use the default location)'}],
+
+    [('--utxo-locks-max-addresses',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES, 'help': 'max number of addresses for which to track UTXO locks'}],
+    [('--utxo-locks-max-age',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_AGE, 'help': 'how long to keep a lock on a UTXO being tracked'}]
 ]
 
 class VersionError(Exception):
@@ -62,26 +67,27 @@ def main():
     parser.add_argument('-V', '--version', action='version', version="{} v{}; {} v{}".format(APP_NAME, APP_VERSION, 'counterparty-lib', config.VERSION_STRING))
     parser.add_argument('--config-file', help='the path to the configuration file')
 
-    parser = add_config_arguments(parser, CONFIG_ARGS, 'server.conf')
+    add_config_arguments(parser, CONFIG_ARGS, 'server.conf')
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
     parser_server = subparsers.add_parser('start', help='run the server')
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database')
-   
+
     parser_rollback = subparsers.add_parser('rollback', help='rollback database')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
-    
+
     parser_kickstart = subparsers.add_parser('kickstart', help='rapidly build database by reading from Bitcoin Core blockchain')
     parser_kickstart.add_argument('--bitcoind-dir', help='Bitcoin Core data directory')
 
     parser_bootstrap = subparsers.add_parser('bootstrap', help='bootstrap database with hosted snapshot')
+    parser_bootstrap.add_argument('-q', '--quiet', dest='quiet', action='store_true', help='suppress progress bar')
 
     args = parser.parse_args()
 
-    log.set_up(logger, verbose=args.verbose)
-    
+    log.set_up(log.ROOT_LOGGER, verbose=args.verbose, console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None))
+
     logger.info('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
 
     # Help message
@@ -91,13 +97,23 @@ def main():
 
     # Bootstrapping
     if args.action == 'bootstrap':
-        bootstrap(testnet=args.testnet)
+        bootstrap(testnet=args.testnet, quiet=args.quiet)
         sys.exit()
 
-    # Configuration
-    if args.action in ['reparse', 'rollback', 'kickstart', 'start']:
+    def init_with_catch(fn, init_args):
         try:
-            db = server.initialise(database_file=args.database_file,
+            return fn(**init_args)
+        except TypeError as e:
+            if 'unexpected keyword argument' in str(e):
+                raise VersionError('Unsupported Server Parameter. CLI/Library Version Incompatibility.')
+            else:
+                raise e
+
+    # Configuration
+    COMMANDS_WITH_DB = ['reparse', 'rollback', 'kickstart', 'start']
+    COMMANDS_WITH_CONFIG = ['debug_config']
+    if args.action in COMMANDS_WITH_DB or args.action in COMMANDS_WITH_CONFIG:
+        init_args = dict(database_file=args.database_file,
                                 log_file=args.log_file, api_log_file=args.api_log_file,
                                 testnet=args.testnet, testcoin=args.testcoin,
                                 backend_name=args.backend_name,
@@ -113,13 +129,17 @@ def main():
                                 requests_timeout=args.requests_timeout,
                                 rpc_batch_size=args.rpc_batch_size,
                                 check_asset_conservation=not args.no_check_asset_conservation,
-                                force=args.force, verbose=args.verbose)
+                                force=args.force, verbose=args.verbose, console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None),
+                                p2sh_dust_return_pubkey=args.p2sh_dust_return_pubkey,
+                                utxo_locks_max_addresses=args.utxo_locks_max_addresses,
+                                utxo_locks_max_age=args.utxo_locks_max_age)
                                 #,broadcast_tx_mainnet=args.broadcast_tx_mainnet)
-        except TypeError as e:
-            if 'unexpected keyword argument' in str(e):
-                raise VersionError('Unsupported Server Parameter. CLI/Library Version Incompatibility.')
-            else:
-                raise e
+
+    if args.action in COMMANDS_WITH_DB:
+        db = init_with_catch(server.initialise, init_args)
+
+    elif args.action in COMMANDS_WITH_CONFIG:
+        init_with_catch(server.initialise_config, init_args)
 
     # PARSING
     if args.action == 'reparse':
@@ -133,6 +153,9 @@ def main():
 
     elif args.action == 'start':
         server.start_all(db)
+
+    elif args.action == 'debug_config':
+        server.debug_config()
 
     else:
         parser.print_help()

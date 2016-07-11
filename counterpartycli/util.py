@@ -115,7 +115,7 @@ def value_out(quantity, asset, divisible=None):
         divisible = is_divisible(asset)
     return value_output(quantity, asset, divisible)
 
-def bootstrap(testnet=False, overwrite=True, ask_confirmation=False):
+def bootstrap(testnet=False, overwrite=True, ask_confirmation=False, quiet=False):
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
 
     # Set Constants.
@@ -148,7 +148,7 @@ def bootstrap(testnet=False, overwrite=True, ask_confirmation=False):
             sys.stderr.write("read %d\n" % (readsofar,))
 
     print('Downloading database from {}...'.format(BOOTSTRAP_URL))
-    urllib.request.urlretrieve(BOOTSTRAP_URL, TARBALL_PATH, reporthook)
+    urllib.request.urlretrieve(BOOTSTRAP_URL, TARBALL_PATH, reporthook if not quiet else None)
 
     print('Extracting to "%s"...' % data_dir)
     with tarfile.open(TARBALL_PATH, 'r:gz') as tar_file:
@@ -190,7 +190,7 @@ def add_config_arguments(arg_parser, config_args, default_config_file, config_fi
             fp.truncate()
 
     logger.debug('Loading configuration file: `{}`'.format(config_file))
-    configfile = configparser.ConfigParser()
+    configfile = configparser.SafeConfigParser(allow_no_value=True, inline_comment_prefixes=('#', ';'))
     with codecs.open(config_file, 'r', encoding='utf8') as fp:
         configfile.readfp(fp)
 
@@ -204,8 +204,8 @@ def add_config_arguments(arg_parser, config_args, default_config_file, config_fi
             arg[1]['default'] = configfile['Default'].getboolean(key)
         elif key in configfile['Default'] and configfile['Default'][key]:
             arg[1]['default'] = configfile['Default'][key]
+        elif key in configfile['Default'] and arg[1].get('nargs', '') == '?' and 'const' in arg[1]:
+            arg[1]['default'] = arg[1]['const']  # bit of a hack
         arg_parser.add_argument(*arg[0], **arg[1])
-
-    return arg_parser
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

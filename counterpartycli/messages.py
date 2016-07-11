@@ -3,6 +3,8 @@ from decimal import Decimal as D
 import binascii
 from math import ceil
 import time
+import calendar
+import dateutil.parser
 
 from counterpartylib.lib import script, config, blocks, exceptions, api, transaction
 from counterpartylib.lib.util import make_id, BET_TYPE_NAME, BET_TYPE_ID, dhash, generate_asset_name
@@ -113,7 +115,9 @@ def common_args(args):
         'fee_per_kb': args.fee_per_kb,
         'regular_dust_size': args.regular_dust_size,
         'multisig_dust_size': args.multisig_dust_size,
-        'op_return_value': args.op_return_value
+        'op_return_value': args.op_return_value,
+        'dust_return_pubkey': args.dust_return_pubkey,
+        'disable_utxo_locks': args.disable_utxo_locks
     }
 
 def prepare_args(args, action):
@@ -257,7 +261,7 @@ def compose_transaction(args, message_name, param_names):
     for address_name in ['source', 'destination']:
         if address_name in params:
             address = params[address_name]
-            if script.is_multisig(address) or address_name != 'destination':    # We don’t need the pubkey for a mono‐sig destination.
+            if not script.is_p2sh(address) and (script.is_multisig(address) or address_name != 'destination'):    # We don’t need the pubkey for a mono‐sig destination.
                 pubkeys += get_pubkeys(address)
     params['pubkey'] = pubkeys
 

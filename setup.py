@@ -4,7 +4,6 @@ from setuptools import setup, find_packages, Command
 import os, sys
 import shutil
 import ctypes.util
-import configparser, platform
 from counterpartycli import APP_VERSION
 
 class generate_configuration_files(Command):
@@ -34,21 +33,21 @@ class install(_install):
         self.run_command('generate_configuration_files')
 
 required_packages = [
-    'appdirs',
-    'prettytable',
-    'colorlog',
-    'python-dateutil',
-    'requests',
+    'appdirs==1.4.0',
+    'prettytable==0.7.2',
+    'colorlog==2.7.0',
+    'python-dateutil==2.5.3',
+    'requests==2.10.0',
     'counterparty-lib'
 ]
 
 setup_options = {
     'name': 'counterparty-cli',
     'version': APP_VERSION,
-    'author': 'Counterparty Foundation',
-    'author_email': 'support@counterparty.io',
-    'maintainer': 'Adam Krellenstein',
-    'maintainer_email': 'adamk@counterparty.io',
+    'author': 'Counterparty Developers',
+    'author_email': 'dev@counterparty.io',
+    'maintainer': 'Counterparty Developers',
+    'maintainer_email': 'dev@counterparty.io',
     'url': 'http://counterparty.io',
     'license': 'MIT',
     'description': 'Counterparty Protocol Command-Line Interface',
