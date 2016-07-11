@@ -279,15 +279,15 @@ def init_mempool_cache():
 
     #with this function, don't try to load in more than BACKEND_RAW_TRANSACTIONS_CACHE_SIZE entries
     num_tx = min(len(mempool_txhash_list), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)
-    mempool_tx = BACKEND().getrawtransaction_batch(mempool_txhash_list[:num_tx], verbose=True)
-    
+    mempool_tx = BACKEND().getrawtransaction_batch(mempool_txhash_list[:num_tx], skip_missing=True, verbose=True)
+
     vin_txhash_list = []
     max_remaining_num_tx = config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE - num_tx
     if max_remaining_num_tx:
         for txid in mempool_tx:
             tx = mempool_tx[txid]
             vin_txhash_list += [vin['txid'] for vin in tx['vin']]
-        BACKEND().getrawtransaction_batch(vin_txhash_list[:max_remaining_num_tx], verbose=True)
+        BACKEND().getrawtransaction_batch(vin_txhash_list[:max_remaining_num_tx], skip_missing=True, verbose=True)
 
     MEMPOOL_CACHE_INITIALIZED = True
     logger.info('Mempool cache initialized: {:.2f}s for {:,} transactions'.format(time.time() - start, num_tx + min(max_remaining_num_tx, len(vin_txhash_list))))
