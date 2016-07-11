@@ -23,7 +23,7 @@ import binascii
 import struct
 import apsw
 import flask
-from flask.ext.httpauth import HTTPBasicAuth
+from flask_httpauth import HTTPBasicAuth
 import jsonrpc
 from jsonrpc import dispatcher
 from jsonrpc.exceptions import JSONRPCDispatchException
