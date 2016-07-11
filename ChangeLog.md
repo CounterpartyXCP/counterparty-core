@@ -1,17 +1,16 @@
 ## Library Versions ##
-* v9.55.0 (PENDING)
-    * P2SH support for source / destination of addresses (protocol change: )
-    * Moved check for invalid broadcast to better place to prevent broadcasting a cancel on a locked feed (protocol change: )
-    * Only use first usable input for source (protocol change: )
-    * Fixed issue with broadcasts of exactly 52 chars, by always adding a varint to specify the length (protocol change: )
-    * Cleanup destroy.parse and add unit tests for it (protocol change: )
-    * Added docker image building (counterparty/counterparty-server on Dockerhub)
+* v9.55.0 (2016-07-11)
+    * P2SH support for source / destination of addresses (protocol change: 423888)
+    * Moved check for invalid broadcast to better place to prevent broadcasting a cancel on a locked feed (protocol change: 423888)
+    * Only use first usable input for source (protocol change: 423888)
+    * Fixed issue with broadcasts of exactly 52 chars, by always adding a varint to specify the length (protocol change: 423888)
+    * Cleanup destroy.parse and add unit tests for it (protocol change: 423888)
+    * Added Docker image building (counterparty/counterparty-server on Dockerhub)
     * Enhanced Travis to run test suite inside Docker image, and push image if testsuite passes
-    * lock UTXOs used to construct a transaction for 3 seconds to avoid a user double spending against himself
-    * improved APSW install routine to downgrade when newer version is installed
-    * tweaked CORS headers so that web clients may authenticate directly against counterparty-server
+    * UTXO "locking" used to construct a transaction for 3 seconds to avoid a user double spending against himself
+    * Improved APSW install routine to downgrade when newer version is installed
+    * Tweaked CORS headers so that web clients may authenticate directly against counterparty-server
     * Numerous logging fixes to make logging more robust
-    * Improved transaction input processing to be more strict
     * Further performance enhancements when fetching raw transactions from bitcoind
     * Peg dependencies at specific versions!
     * Added debug_config method to print config to CLI
