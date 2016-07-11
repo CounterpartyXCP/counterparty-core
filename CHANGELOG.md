@@ -1,4 +1,13 @@
 ## Command Line Interface Versions ##
+* v1.1.2 (2016/07/11)
+    * Added P2SH support (to match counterparty-lib 9.55.0)
+	* added `get_tx_info` command
+	* added `--disable-utxo-locks` to `compose_transaction` to disable the locking of selected UTXOs for when the 'user' doesn't intend to broadcast the TX (straight away)
+	* Peg dependency versions in `setup.py`
+	* Added `debug_config` argument to print config to CLI.
+	* Added `--quiet` flag to `bootstrap` command
+	* Logging improvements
+	* Updated `README.md`
 * v1.1.1 (2015/04/20)
 	* Fix `broadcast` command
 	* Cleaner, Commented-out Default Config Files
