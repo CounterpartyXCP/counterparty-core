@@ -94,7 +94,8 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
                 check_asset_conservation=config.DEFAULT_CHECK_ASSET_CONSERVATION,
                 backend_ssl_verify=None, rpc_allow_cors=None, p2sh_dust_return_pubkey=None,
                 utxo_locks_max_addresses=config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES,
-                utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE):
+                utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE,
+                estimate_fee_per_kb=None):
 
     # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -358,6 +359,9 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     config.UTXO_LOCKS_MAX_ADDRESSES = utxo_locks_max_addresses
     config.UTXO_LOCKS_MAX_AGE = utxo_locks_max_age
     transaction.UTXO_LOCKS = None  # reset the UTXO_LOCKS (for tests really)
+
+    if estimate_fee_per_kb is not None:
+        config.ESTIMATE_FEE_PER_KB = estimate_fee_per_kb
 
     logger.info('Running v{} of counterparty-lib.'.format(config.VERSION_STRING))
 
