@@ -66,6 +66,16 @@ def getrawmempool():
 def extract_addresses(txhash_list):
     return BACKEND().extract_addresses(txhash_list)
 
+
+def fee_per_kb(nblocks):
+    """
+    :param nblocks:
+    :return: fee_per_kb in satoshis, or None when unable to determine
+    """
+
+    return BACKEND().fee_per_kb(nblocks)
+
+
 def refresh_unconfirmed_transactions_cache(mempool_txhash_list):
     return BACKEND().refresh_unconfirmed_transactions_cache(mempool_txhash_list)
 
@@ -84,6 +94,19 @@ def is_valid(address):
 
 def get_txhash_list(block):
     return [bitcoinlib.core.b2lx(ctx.GetHash()) for ctx in block.vtx]
+
+def get_tx_list(block):
+    raw_transactions = {}
+    tx_hash_list = []
+
+    for ctx in block.vtx:
+        tx_hash = bitcoinlib.core.b2lx(ctx.GetHash())
+        raw = ctx.serialize()
+
+        tx_hash_list.append(tx_hash)
+        raw_transactions[tx_hash] = bitcoinlib.core.b2x(raw)
+
+    return (tx_hash_list, raw_transactions)
 
 def input_value_weight(amount):
     # Prefer outputs less than dust size, then bigger is better.
@@ -149,9 +172,9 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False, unspent
     """
     if not MEMPOOL_CACHE_INITIALIZED:
         raise MempoolError('Mempool is not yet ready; please try again in a few minutes.')
-
+    
     # Get all outputs.
-    logger.debug('Getting outputs.')
+    logger.debug('Getting outputs for {}'.format(source))
     if unspent_tx_hash:
         raw_transactions = [getrawtransaction(unspent_tx_hash, verbose=True)]
     else:
@@ -164,7 +187,7 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False, unspent
 
     # Change format.
     # TODO: Slow.
-    logger.debug('Formatting outputs.')
+    logger.debug('Formatting outputs for {}'.format(source))
     outputs = {}
     for tx in raw_transactions:
         for vout in tx['vout']:
@@ -183,12 +206,12 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False, unspent
     outputs = sorted(outputs.values(), key=lambda x: x['confirmations'])
 
     # Prune unspendable.
-    logger.debug('Pruning unspendable outputs.')
+    logger.debug('Pruning unspendable outputs for {}'.format(source))
     # TODO: Slow.
     outputs = [output for output in outputs if is_scriptpubkey_spendable(output['scriptPubKey'], source)]
 
     # Prune spent outputs.
-    logger.debug('Pruning spent outputs.')
+    logger.debug('Pruning spent outputs for {}'.format(source))
     vins = {(vin['txid'], vin['vout']) for tx in raw_transactions for vin in tx['vin'] if 'coinbase' not in vin}
     unspent = []
     for output in outputs:
@@ -228,9 +251,13 @@ def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
                 scriptsig = vin['scriptSig']
                 asm = scriptsig['asm'].split(' ')
                 if len(asm) >= 2:
-                    pubkey = asm[1]
-                    if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
-                        return pubkey
+                    # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
+                    try:
+                        pubkey = asm[1]
+                        if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                            return pubkey
+                    except binascii.Error:
+                        pass
 
     raise UnknownPubKeyError('Public key was neither provided nor published in blockchain.')
 
@@ -252,15 +279,15 @@ def init_mempool_cache():
 
     #with this function, don't try to load in more than BACKEND_RAW_TRANSACTIONS_CACHE_SIZE entries
     num_tx = min(len(mempool_txhash_list), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)
-    mempool_tx = BACKEND().getrawtransaction_batch(mempool_txhash_list[:num_tx], verbose=True)
-    
+    mempool_tx = BACKEND().getrawtransaction_batch(mempool_txhash_list[:num_tx], skip_missing=True, verbose=True)
+
     vin_txhash_list = []
     max_remaining_num_tx = config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE - num_tx
     if max_remaining_num_tx:
         for txid in mempool_tx:
             tx = mempool_tx[txid]
             vin_txhash_list += [vin['txid'] for vin in tx['vin']]
-        BACKEND().getrawtransaction_batch(vin_txhash_list[:max_remaining_num_tx], verbose=True)
+        BACKEND().getrawtransaction_batch(vin_txhash_list[:max_remaining_num_tx], skip_missing=True, verbose=True)
 
     MEMPOOL_CACHE_INITIALIZED = True
     logger.info('Mempool cache initialized: {:.2f}s for {:,} transactions'.format(time.time() - start, num_tx + min(max_remaining_num_tx, len(vin_txhash_list))))
