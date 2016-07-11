@@ -39,4 +39,7 @@ class BTCOnlyError(MessageError):
 class BalanceError(Exception):
     pass
 
+class EncodingError(Exception):
+    pass
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

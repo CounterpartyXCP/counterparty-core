@@ -22,7 +22,9 @@ from counterpartylib.lib import config, util, database, api
 
 
 # we swap out util.enabled with a custom one which has the option to mock the protocol changes
-MOCK_PROTOCOL_CHANGES = {}
+MOCK_PROTOCOL_CHANGES = {
+    'bytespersigop': False  # default to False to avoid all old vectors breaking
+}
 ALWAYS_LATEST_PROTOCOL_CHANGES = False
 _enabled = util.enabled
 def enabled(change_name, block_index=None):
