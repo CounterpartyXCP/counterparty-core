@@ -68,7 +68,7 @@ def main():
     parser.add_argument('-V', '--version', action='version', version="{} v{}; {} v{}".format(APP_NAME, APP_VERSION, 'counterparty-lib', config.VERSION_STRING))
     parser.add_argument('--config-file', help='the location of the configuration file')
 
-    parser = add_config_arguments(parser, CONFIG_ARGS, 'client.conf')
+    add_config_arguments(parser, CONFIG_ARGS, 'client.conf')
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
