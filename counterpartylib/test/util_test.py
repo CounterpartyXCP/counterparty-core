@@ -523,16 +523,23 @@ class ConfigContext(object):
         self.config = config
         self._extend = kwargs
         self._before = {}
+        self._before_empty = []
 
     def __enter__(self):
         self._before = {}
         for k in self._extend:
-            self._before[k] = vars(self.config)[k]
+            if k in vars(self.config):
+                self._before[k] = vars(self.config)[k]
+            else:
+                self._before_empty.append(k)
+
             vars(self.config)[k] = self._extend[k]
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         for k in self._before:
             vars(self.config)[k] = self._before[k]
+        for k in self._before_empty:
+            del vars(self.config)[k]
 
 
 class MockProtocolChangesContext(object):
