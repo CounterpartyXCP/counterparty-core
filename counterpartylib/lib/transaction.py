@@ -462,8 +462,8 @@ def construct (db, tx_info, encoding='auto',
 
         # filter out any locked UTXOs to prevent creating transactions that spend the same UTXO when they're created at the same time
         if UTXO_LOCKS is not None and source in UTXO_LOCKS:
-            unspentkeys = {make_outkey(output) for output in unspent}
-            filtered_unspentkeys = unspentkeys - UTXO_LOCKS[source].keys()
+            unspentkeys = set(make_outkey(output) for output in unspent)
+            filtered_unspentkeys = unspentkeys - set(UTXO_LOCKS[source].keys())
             unspent = [output for output in unspent if make_outkey(output) in filtered_unspentkeys]
 
         unspent = backend.sort_unspent_txouts(unspent)
