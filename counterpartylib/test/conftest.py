@@ -72,7 +72,6 @@ def pytest_addoption(parser):
     parser.addoption("--gentxhex", action='store_true', default=False, help="generate and print unsigned hex for *.compose() tests")
     parser.addoption("--savescenarios", action='store_true', default=False, help="generate sql dump and log in .new files")
     parser.addoption("--skiptestbook", default='no', help="skip test book(s) (use with one of the following values: `all`, `testnet` or `mainnet`)")
-    parser.addoption("--verbosediff", action='store_true', default=False, help="print verbose diff for vectors that fail")
 
 
 @pytest.fixture(scope="module")
