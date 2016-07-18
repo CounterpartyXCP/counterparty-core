@@ -451,8 +451,10 @@ def construct (db, tx_info, encoding='auto',
     # Get inputs.
     multisig_inputs = not data
 
-    use_inputs = custom_inputs  # Array of UTXOs, as retrieved by listunspent function from bitcoind
-    if custom_inputs is None:
+    # Array of UTXOs, as retrieved by listunspent function from bitcoind
+    if custom_inputs:
+        use_inputs = unspent = custom_inputs
+    else:
         if unspent_tx_hash is not None:
             unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash, multisig_inputs=multisig_inputs)
         else:
