@@ -142,8 +142,16 @@ def commit_rawtx(deposit_utxos, commit_rawtx_hex, expected_asset,
     commit_address = util.script2address(
         util.h2b(expected_commit_script), netcode=netcode
     )
+    deposit_address = util.script2address(
+        util.h2b(expected_deposit_script_hex), netcode=netcode
+    )
+    allowed_outputs = [commit_address, deposit_address]
+
     for txout in tx.txs_out:
-        assert(txout.bitcoin_address(netcode=netcode) == commit_address)
+        asm = pycoin.tx.script.tools.disassemble(txout.script)
+        if re.match("^OP_RETURN", asm):
+            continue  # ignore expected counterparty op return output
+        assert(txout.bitcoin_address(netcode=netcode) in allowed_outputs)
 
     for txin in tx.txs_in:
 
@@ -159,14 +167,14 @@ def commit_rawtx(deposit_utxos, commit_rawtx_hex, expected_asset,
             assert(False)  # spends non deposit utxo
 
         # scriptsig is correct
-        ref_scriptsig = scripts.compile_commit_scriptsig("deadbeef", "deadbeef")
-        deposit_script = util.h2b(expected_deposit_script_hex)
-        reference_script = ref_scriptsig + deposit_script
-        scripts.validate(reference_script, txin.script)
+        ref_scriptsig = scripts.compile_commit_scriptsig(
+            "deadbeef", "deadbeef", expected_deposit_script_hex
+        )
+        scripts.validate(ref_scriptsig, txin.script)
 
         # FIXME validate signed by payer
 
-    # FIXME validate rawtx asset correct
+    # FIXME validate is counterparty send for expected asset
 
 
 def state(state_data):

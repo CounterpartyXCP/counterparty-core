@@ -148,11 +148,11 @@ def get_deposit_spend_secret_hash(script):
     return b2h(data)
 
 
-def compile_commit_scriptsig(payer_sig, payee_sig):
-    script_text = COMMIT_SCRIPT.format(
+def compile_commit_scriptsig(payer_sig, payee_sig, deposit_script_hex):
+    sig_asm = COMMIT_SCRIPTSIG.format(
         payer_sig=payer_sig, payee_sig=payee_sig
     )
-    return tools.compile(script_text)
+    return tools.compile("{0} {1}".format(sig_asm, deposit_script_hex))
 
 
 def compile_deposit_script(payer_pubkey, payee_pubkey,
@@ -352,8 +352,8 @@ class _AbsCommitScript(ScriptType):
         return solve_method(**kwargs)
 
     def __repr__(self):
-        script_text = tools.disassemble(self.script)
-        return "<CommitScript: {0}".format(script_text)
+        script_asm = tools.disassemble(self.script)
+        return "<CommitScript: {0}".format(script_asm)
 
 
 class _AbsDepositScript(ScriptType):
@@ -465,8 +465,8 @@ class _AbsDepositScript(ScriptType):
         return solve_method(**kwargs)
 
     def __repr__(self):
-        script_text = tools.disassemble(self.script)
-        return "<DepositScript: {0}".format(script_text)
+        script_asm = tools.disassemble(self.script)
+        return "<DepositScript: {0}".format(script_asm)
 
 
 class _CommitScriptHandler():
