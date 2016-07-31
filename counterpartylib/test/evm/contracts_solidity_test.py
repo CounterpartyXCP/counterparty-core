@@ -179,46 +179,6 @@ contract testme {
             c.main(10, startgas=300000, block_obj=block_obj)
 
 
-def test_gaslimit2():
-    code = '''
-contract testme {
-    uint[] data;
-
-    function main(uint l) returns (bool) {
-        for (uint i = 0; i < l; i++) {
-            data.push(i);
-        }
-
-        return true;
-    }
-}
-'''
-
-    # disable verbose logging since it's A LOT more expensive
-    #  because of all the VM OP spam
-    with util_test.LoggingLevelContext(logger, logging.CRITICAL):
-        s = state()
-        c = s.abi_contract(code, language='solidity')
-
-        r = {}
-        for (n, m) in [
-            (1, 1000), (1, 10000), (1, 35000),
-            (10, 100), (10, 1000), (10, 3500),
-        ]:
-            b = s.block.get_balance(tester.a0)
-            block_obj = s.mine()
-
-            t = time.time()
-            for i in range(n):
-                c.main(m, startgas=int(config.BLOCK_GAS_LIMIT / n), block_obj=block_obj)
-            tt = time.time() - t
-
-            r[(n, m)] = (n, m, tt, b - s.block.get_balance(tester.a0))
-
-        import pprint
-        pprint.pprint(r)
-
-
 def test_sendasset1():
     code = '''
 contract testme {
