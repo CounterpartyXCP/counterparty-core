@@ -98,9 +98,8 @@ def validate_transaction(block, tx):
         raise InsufficientBalance(rp('balance %s' % tx.sender, block.get_balance(tx.sender), total_cost))
 
     # check block gas limit
-    # @TODO
-    # if block.gas_used + tx.startgas > block.gas_limit:
-    #     raise BlockGasLimitReached(rp('gaslimit', block.gas_used + tx.startgas, block.gas_limit))
+    if block.gas_used + tx.startgas > block.gas_limit:
+        raise BlockGasLimitReached(rp('gaslimit', block.gas_used + tx.startgas, block.gas_limit))
 
     return True
 
@@ -139,18 +138,18 @@ def apply_transaction(db, block, tx):
     ext = VMExt(db, block, tx)
     if tx.to and tx.to != CREATE_CONTRACT_ADDRESS:
         result, gas_remained, data = apply_msg(db, tx, ext, message)
-        log_tx.debug('_res_', result=result, gas_remained=gas_remained, data=data)
+        log_tx.debug('_res_', result=result, gas_remained=gas_remained, gas_used=tx.startgas - gas_remained, data=data)
     else:  # CREATE
         result, gas_remained, data = create_contract(db, tx, ext, message)
         assert ethutils.is_numeric(gas_remained)
-        log_tx.debug('_create_', result=result, gas_remained=gas_remained, data=data)
+        log_tx.debug('_create_', result=result, gas_remained=gas_remained, gas_used=tx.startgas - gas_remained, data=data)
 
     assert gas_remained >= 0
 
-    log_tx.debug("TX APPLIED", result=result, gas_remained=gas_remained, data=data)
+    log_tx.debug("TX APPLIED", result=result, gas_remained=gas_remained, gas_used=tx.startgas - gas_remained, data=data)
 
     if not result:  # 0 = OOG failure in both cases
-        log_tx.debug('TX FAILED', reason='out of gas', startgas=tx.startgas, gas_remained=gas_remained)
+        log_tx.debug('TX FAILED', reason='out of gas', startgas=tx.startgas, gas_remained=gas_remained, gas_used=tx.startgas - gas_remained)
         block.gas_used += tx.startgas
         output = b''
         success = 0
@@ -183,6 +182,10 @@ def apply_transaction(db, block, tx):
     for s in suicides:
         block.del_account(s)
     block.logs = []
+
+    cursor = db.cursor()
+    cursor.execute('''UPDATE blocks SET gas_used = ? WHERE block_hash = ?''', (block.gas_used, block.block_hash))
+    cursor.close()
 
     return success, output, gas_remained
 

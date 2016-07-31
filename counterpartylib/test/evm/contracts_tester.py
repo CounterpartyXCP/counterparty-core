@@ -240,7 +240,7 @@ class state(object):
 
         return tx, tx_obj, block_obj
 
-    def do_send(self, sender, to, value, data, startgas=DEFAULT_STARTGAS):
+    def do_send(self, sender, to, value, data, startgas=DEFAULT_STARTGAS, block_obj=None):
         print('DOSEND', sender, to, value, data)
 
         if not sender:
@@ -250,7 +250,7 @@ class state(object):
         sender = Address.normalize(sender)
         to = Address.normalize(to)
 
-        tx, tx_obj, block_obj = self.mock_tx(sender, to, value, data, startgas)
+        tx, tx_obj, block_obj = self.mock_tx(sender, to, value, data, startgas, block_obj=block_obj)
 
         # Run.
         processblock.MULTIPLIER_CONSTANT_FACTOR = 1
@@ -261,11 +261,11 @@ class state(object):
         # Decode, return result.
         return tx_obj, success, output
 
-    def _send(self, sender, to, value, evmdata=b'', output=None, funid=None, abi=None, startgas=DEFAULT_STARTGAS):
+    def _send(self, sender, to, value, evmdata=b'', output=None, funid=None, abi=None, startgas=DEFAULT_STARTGAS, block_obj=None):
         if funid is not None or abi is not None:
             raise Exception("Send with funid+abi is deprecated. Please use the abi_contract mechanism")
 
-        tx, s, o = self.do_send(sender, to, value, evmdata, startgas)
+        tx, s, o = self.do_send(sender, to, value, evmdata, startgas, block_obj=block_obj)
 
         if not s:
             raise TransactionFailed()

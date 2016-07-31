@@ -102,15 +102,15 @@ def parse_helper(db, tx, message, unpacker):
     except exceptions.UnpackError as e:
         contract_id, gasprice, startgas, value, payload = None, None, None, None, None
         status = 'invalid: could not unpack'
-    except evmexceptions.InvalidTransaction as e:
-        logger.debug('invalid transaction: %s' % e)
-        status = 'invalid: invalid transaction'
     except evmexceptions.InsufficientStartGas as e:
         logger.debug('Insufficient start gas: %s' % e)
         status = 'invalid: insufficient start gas'
     except evmexceptions.InsufficientBalance as e:
         logger.debug('Insufficient balance: %s' % e)
         status = 'invalid: insufficient balance'
+    except evmexceptions.InvalidTransaction as e:
+        logger.debug('invalid transaction: %s' % e)
+        status = 'invalid: invalid transaction'
 
     if status == 'valid':
         logger.debug('TX FINISHED (gas_remained: {})'.format(gas_remained))

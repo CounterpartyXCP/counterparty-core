@@ -15,8 +15,6 @@ from counterpartylib.lib.evm.address import Address
 
 logger = logging.getLogger(__name__)
 
-GAS_LIMIT = 10 ** 9
-
 
 class Snapshot(object):
     def __init__(self, block):
@@ -74,7 +72,7 @@ class Block(object):
         self.number = kwargs.get('number', block['block_index'])
         self.prevhash = block['previous_block_hash']
         self.coinbase = Address.normalize(kwargs.get('coinbase_address', Address.nulladdress()))
-        self.gas_limit = kwargs.get('gas_limit', GAS_LIMIT)
+        self.gas_limit = kwargs.get('gas_limit', config.BLOCK_GAS_LIMIT)
         self.difficulty = kwargs.get('difficulty', 0)
 
         self.log_listeners = []
@@ -84,7 +82,7 @@ class Block(object):
         self.snapshot_incr = 0
 
         # state, anything added to this should be added to snapshot/revert
-        self.gas_used = 0
+        self.gas_used = block['gas_used'] or 0
         self.refunds = 0
         self.suicides = []
         self.logs = []

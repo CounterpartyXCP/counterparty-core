@@ -113,4 +113,6 @@ UNDOLOG_MAX_PAST_BLOCKS = 100 #the number of past blocks that we store undolog h
 DEFAULT_UTXO_LOCKS_MAX_ADDRESSES = 1000
 DEFAULT_UTXO_LOCKS_MAX_AGE = 3.0 #in seconds
 
+BLOCK_GAS_LIMIT = 1000000000
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

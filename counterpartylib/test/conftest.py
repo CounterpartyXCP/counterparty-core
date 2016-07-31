@@ -11,7 +11,8 @@ import bitcoin as bitcoinlib
 import logging
 
 from counterpartylib.lib import log
-log.set_logger(logging.getLogger())
+logger = logging.getLogger()
+log.set_logger(logger)
 
 from counterpartylib.test import util_test
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS

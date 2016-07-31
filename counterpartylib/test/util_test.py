@@ -554,3 +554,16 @@ class MockProtocolChangesContext(object):
             self.mock_protocol_changes[k] = self._before[k]
         for k in self._before_empty:
             del self.mock_protocol_changes[k]
+
+
+class LoggingLevelContext(object):
+    def __init__(self, logger, level):
+        self.logger = logger
+        self.level = level
+        self.before = logger.level
+
+    def __enter__(self):
+        self.logger.setLevel(self.level)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.logger.setLevel(self.before)

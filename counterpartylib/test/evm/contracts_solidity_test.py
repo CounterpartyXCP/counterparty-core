@@ -10,12 +10,14 @@ import os
 import sys
 import logging
 import serpent
+import time
+
 from counterpartylib.test import conftest  # this is require near the top to do setup of the test suite
 from counterpartylib.test.util_test import CURR_DIR
 from counterpartylib.test.fixtures import params
 
 from counterpartylib.lib import (config, database, util)
-from counterpartylib.lib.evm import (blocks, processblock, ethutils, abi, address, vm)
+from counterpartylib.lib.evm import (blocks, processblock, ethutils, abi, address, vm, exceptions as evmexceptions)
 
 from counterpartylib.test.evm import contracts_tester as tester
 from counterpartylib.test import util_test
@@ -24,7 +26,7 @@ from counterpartylib.lib.evm.solidity import get_solidity
 solidity = get_solidity()
 
 # globals initialized by setup_function
-db, cursor, logger = None, None, None
+db, cursor, logger = None, None, conftest.logger
 CLEANUP_FILES = []
 
 pytest_skip_when_quick = pytest.mark.skipif(pytest.config.option.quick, reason="avoid slow tests when not doing quick run")
@@ -45,10 +47,9 @@ def state():
 def setup_module():
     """Initialise the database with unittest fixtures"""
     # global the DB/cursor for other functions to access
-    global db, cursor, logger
+    global db, cursor
 
     db = util_test.init_database(CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql', ':memory:')
-    logger = logging.getLogger(__name__)
     db.setrollbackhook(lambda: logger.debug('ROLLBACK'))
     database.update_version(db)
 
@@ -128,6 +129,94 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize(('p2sh_as_address', ), [(True, ), (False, )], indirect=False)
     else:
         metafunc.parametrize(('p2sh_as_address', ), [(False, )], indirect=False)
+
+
+def test_gaslimit():
+    code = '''
+contract testme {
+    uint[] data;
+
+    function main(uint l) returns (bool) {
+        for (uint i = 0; i < l; i++) {
+            data.push(i);
+        }
+
+        return true;
+    }
+}
+'''
+
+    s = state()
+    c = s.abi_contract(code, language='solidity')
+
+    # contract costs 259719
+
+    # startgas == gaslimit should work
+    with util_test.ConfigContext(BLOCK_GAS_LIMIT=300000):
+        c.main(10, startgas=300000)
+
+    # startgas < contract cost should fail
+    with pytest.raises(tester.TransactionFailed):
+        with util_test.ConfigContext(BLOCK_GAS_LIMIT=300000):
+            c.main(10, startgas=200000)
+
+    # startgas > gaslimit should fail
+    with pytest.raises(evmexceptions.BlockGasLimitReached):
+        with util_test.ConfigContext(BLOCK_GAS_LIMIT=300000):
+            c.main(10, startgas=300001)
+
+    # 2 executions with gascost of 1 + startgas of 2 < gaslimit should work
+    with util_test.ConfigContext(BLOCK_GAS_LIMIT=600000):
+        block_obj = s.mine()
+        c.main(10, startgas=300000, block_obj=block_obj)
+        c.main(10, startgas=300000, block_obj=block_obj)
+
+    # 2 executions with gascost of 1 + startgas of 2 > gaslimit should fail
+    with pytest.raises(evmexceptions.BlockGasLimitReached):
+        with util_test.ConfigContext(BLOCK_GAS_LIMIT=500000):
+            block_obj = s.mine()
+            c.main(10, startgas=300000, block_obj=block_obj)
+            c.main(10, startgas=300000, block_obj=block_obj)
+
+
+def test_gaslimit2():
+    code = '''
+contract testme {
+    uint[] data;
+
+    function main(uint l) returns (bool) {
+        for (uint i = 0; i < l; i++) {
+            data.push(i);
+        }
+
+        return true;
+    }
+}
+'''
+
+    # disable verbose logging since it's A LOT more expensive
+    #  because of all the VM OP spam
+    with util_test.LoggingLevelContext(logger, logging.CRITICAL):
+        s = state()
+        c = s.abi_contract(code, language='solidity')
+
+        r = {}
+        for (n, m) in [
+            (1, 1000), (1, 10000), (1, 35000),
+            (10, 100), (10, 1000), (10, 3500),
+        ]:
+            b = s.block.get_balance(tester.a0)
+            block_obj = s.mine()
+
+            t = time.time()
+            for i in range(n):
+                c.main(m, startgas=int(config.BLOCK_GAS_LIMIT / n), block_obj=block_obj)
+            tt = time.time() - t
+
+            r[(n, m)] = (n, m, tt, b - s.block.get_balance(tester.a0))
+
+        import pprint
+        pprint.pprint(r)
 
 
 def test_sendasset1():

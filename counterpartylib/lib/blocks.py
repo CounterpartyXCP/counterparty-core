@@ -206,6 +206,7 @@ def initialise(db):
                       block_time INTEGER,
                       previous_block_hash TEXT UNIQUE,
                       difficulty INTEGER,
+                      gas_used INTEGER,
                       PRIMARY KEY (block_index, block_hash))
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -227,6 +228,8 @@ def initialise(db):
         cursor.execute('''ALTER TABLE blocks ADD COLUMN previous_block_hash TEXT''')
     if 'difficulty' not in columns:
         cursor.execute('''ALTER TABLE blocks ADD COLUMN difficulty TEXT''')
+    if 'gas_used' not in columns:
+        cursor.execute('''ALTER TABLE blocks ADD COLUMN gas_used INTEGER''')
 
     # Check that first block in DB is BLOCK_FIRST.
     cursor.execute('''SELECT * from blocks ORDER BY block_index''')
