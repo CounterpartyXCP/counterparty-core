@@ -166,7 +166,11 @@ def add_commit(dispatcher, state, commit_rawtx, commit_script, netcode):
     raise ValueError("No revoke secret for given commit script.")
 
 
-def revoke_secret_hashes_above(dispatcher, state, quantity):
+def revoke_hashes_until(dispatcher, state, quantity):
+    pass  # TODO implement
+
+
+def revoke_hashes_above(dispatcher, state, quantity):
 
     # validate input
     validate.state(state)
@@ -178,7 +182,8 @@ def revoke_secret_hashes_above(dispatcher, state, quantity):
     for commit in reversed(state["commits_active"][:]):
         asset = state["asset"]
         rawtx = commit["rawtx"]
-        if quantity < _get_quantity(dispatcher, asset, rawtx):
+        commit_quantity = _get_quantity(dispatcher, asset, rawtx)
+        if quantity < commit_quantity:
             script = util.h2b(commit["script"])
             secret_hash = scripts.get_commit_revoke_secret_hash(script)
             revoke_secret_hashes.append(secret_hash)

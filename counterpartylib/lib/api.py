@@ -808,8 +808,14 @@ class APIServer(threading.Thread):
                                             commit_script, netcode)
 
         @dispatcher.add_method
-        def mpc_revoke_secret_hashes_above(state, quantity):
-            return micropayments.revoke_secret_hashes_above(
+        def mpc_revoke_hashes_until(state, quantity):
+            return micropayments.revoke_hashes_until(
+                dispatcher, state, quantity
+            )
+
+        @dispatcher.add_method
+        def mpc_revoke_hashes_above(state, quantity):
+            return micropayments.revoke_hashes_above(
                 dispatcher, state, quantity
             )
 
