@@ -250,6 +250,7 @@ contract testme {
     assert s.block.get_balance(tester.a1, 'NODIVISIBLE') == b + v
 
 
+@pytest.mark.skip(reason="receivedasset not implemented yet")
 def test_receivedasset():
     code = '''
 contract testme {
