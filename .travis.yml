@@ -30,6 +30,7 @@ before_install:
   if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
     if [ "$BRANCH" == "master" ]; then export DOCKER_TAG="latest"; fi
     if [ "$BRANCH" == "develop" ]; then export DOCKER_TAG="develop"; fi
+    if [ "$BRANCH" == "evmparty" ]; then export DOCKER_TAG="evmparty"; fi
   fi
 - echo $DOCKER_TAG
 # try to check out the same branch for counterparty-lib (if it exists), and fallback to the develop branch if not
