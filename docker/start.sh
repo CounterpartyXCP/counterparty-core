@@ -17,6 +17,8 @@ fi
 if [ ! -f /root/.local/share/counterparty/counterparty.testnet.db ]; then
     echo "Downloading testnet bootstrap DB..."
     counterparty-server --testnet bootstrap --quiet
+    echo "Reparsing..."
+    counterparty-server --testnet reparse --quiet --dont-verify-storedhash
 fi
 
 # Kick off the server, defaulting to the "start" subcommand
