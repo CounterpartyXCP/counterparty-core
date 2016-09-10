@@ -9,11 +9,13 @@ import time
 import dateutil.parser
 import calendar
 import traceback
+import json
 import binascii
 import socket
 import signal
 import appdirs
 import platform
+import bitcoin
 from urllib.parse import quote_plus as urlencode
 
 from counterpartylib.lib import log
@@ -95,7 +97,8 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
                 backend_ssl_verify=None, rpc_allow_cors=None, p2sh_dust_return_pubkey=None,
                 utxo_locks_max_addresses=config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES,
                 utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE,
-                estimate_fee_per_kb=None):
+                estimate_fee_per_kb=None,
+                verify_stored_hash=None, verify_checkpoints=None):
 
     # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -241,6 +244,11 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     else:
         config.BACKEND_URL = 'http://' + config.BACKEND_URL
 
+    if verify_stored_hash is not None:
+        config.VERIFY_STORED_HASH = verify_stored_hash
+
+    if verify_checkpoints is not None:
+        config.VERIFY_CHECKPOINTS = verify_checkpoints
 
     ##############
     # THINGS WE SERVE
@@ -315,6 +323,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     else:
         config.PREFIX = b'CNTRPRTY'             # 8 bytes
 
+    bitcoin.SelectParams('testnet' if config.TESTNET else 'mainnet')
     # (more) Testnet
     if config.TESTNET:
         config.MAGIC_BYTES = config.MAGIC_BYTES_TESTNET
@@ -389,23 +398,23 @@ def connect_to_backend():
         backend.getblockcount()
 
 
-def start_all(db):
-
+def start_all(db, stop_at_block_index=None, with_api=True):
     # Backend.
     connect_to_backend()
 
-    # API Status Poller.
-    api_status_poller = api.APIStatusPoller()
-    api_status_poller.daemon = True
-    api_status_poller.start()
+    if with_api:
+        # API Status Poller.
+        api_status_poller = api.APIStatusPoller()
+        api_status_poller.daemon = True
+        api_status_poller.start()
 
-    # API Server.
-    api_server = api.APIServer()
-    api_server.daemon = True
-    api_server.start()
+        # API Server.
+        api_server = api.APIServer()
+        api_server.daemon = True
+        api_server.start()
 
     # Server.
-    blocks.follow(db)
+    blocks.follow(db, stop_at_block_index=stop_at_block_index)
 
 
 def reparse(db, block_index=None):
@@ -424,6 +433,41 @@ def debug_config():
             del output[k]
 
     pprint.pprint(output)
+
+
+def checkpoints(db):
+    if config.TESTNET:
+        net = 'TESTNET'
+        first_block_index = config.BLOCK_FIRST_TESTNET
+        current_checkpoints = check.CHECKPOINTS_TESTNET
+    else:
+        net = 'MAINNET'
+        first_block_index = config.BLOCK_FIRST_MAINNET
+        current_checkpoints = check.CHECKPOINTS_MAINNET
+
+    cursor = db.cursor()
+    result = {}
+    for block_index, checkpoint in current_checkpoints.items():
+        block = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index, )))[0]
+        result[block_index] = {
+            'ledger_hash': block['ledger_hash'],
+            'txlist_hash': block['txlist_hash'],
+        }
+
+    cursor.close()
+
+    # apply some formatting to make it look nice and diff well
+    output = pprint.pformat(result, indent=4)
+    output = output.replace("{   %d: {" % first_block_index, "{\n    config.BLOCK_FIRST_%s: {" % net)
+    output = output.replace("   'ledger_hash'", "'ledger_hash'")
+    output = output.replace("   'txlist_hash'", "'txlist_hash'")
+    output = output.replace("}}", "},\n}")
+
+    print(output)
+
+
+def regtest(db):
+    print(backend.getblockcount())
 
 
 def generate_move_random_hash(move):

@@ -11,10 +11,10 @@ import bitcoin as bitcoinlib
 import logging
 
 from counterpartylib.lib import log
-log.set_logger(logging.getLogger())
+logger = logging.getLogger()
+log.set_logger(logger)
 
 from counterpartylib.test import util_test
-from counterpartylib.test.fixtures.vectors import UNITTEST_VECTOR
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS
 from counterpartylib.test.fixtures.scenarios import INTEGRATION_SCENARIOS
 
@@ -45,6 +45,8 @@ util.enabled = enabled
 
 def pytest_generate_tests(metafunc):
     """Generate all py.test cases. Checks for different types of tests and creates proper context."""
+    from counterpartylib.test.fixtures.vectors import UNITTEST_VECTOR
+
     if metafunc.function.__name__ == 'test_vector':
         args = util_test.vector_to_args(UNITTEST_VECTOR, pytest.config.option.function)
         metafunc.parametrize('tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes', args)
@@ -65,6 +67,7 @@ def pytest_generate_tests(metafunc):
             args = [True, False]
         metafunc.parametrize('testnet', args)
 
+
 def pytest_addoption(parser):
     """Add useful test suite argument options."""
     parser.addoption("--function", action="append", default=[], help="list of functions to test")
@@ -72,13 +75,16 @@ def pytest_addoption(parser):
     parser.addoption("--gentxhex", action='store_true', default=False, help="generate and print unsigned hex for *.compose() tests")
     parser.addoption("--savescenarios", action='store_true', default=False, help="generate sql dump and log in .new files")
     parser.addoption("--skiptestbook", default='no', help="skip test book(s) (use with one of the following values: `all`, `testnet` or `mainnet`)")
+    parser.addoption("--vmtests", action="append", default=[], help="list of vmtest fixtures to use, relative path, ie; 'VMTests/*.json' (default: 'all', recommended: 'quick')")
+    parser.addoption("--runbenchmarks", action="store_true", default=False, help="enable the (very slow) benchmarks")
+    parser.addoption("--quick", action="store_true", default=False, help="only run a subset of the test suite, skipping the slow ones")
 
 
 @pytest.fixture(scope="module")
 def rawtransactions_db(request):
     """Return a database object."""
     db = apsw.Connection(util_test.CURR_DIR + '/fixtures/rawtransactions.db')
-    if (request.module.__name__ == 'integration_test'):
+    if request.module.__name__.endswith('integration_test'):
         util_test.initialise_rawtransactions_db(db)
     return db
 
@@ -166,8 +172,8 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
         address = '_'.join([str(signatures_required)] + sorted(pubkeys) + [str(len(pubkeys))])
         return address
 
-    def get_cached_raw_transaction(tx_hash, verbose=False):
-        return util_test.getrawtransaction(rawtransactions_db, bitcoinlib.core.lx(tx_hash))
+    def get_cached_raw_transaction(txid, verbose=False):
+        return util_test.getrawtransaction(rawtransactions_db, txid)
 
     monkeypatch.setattr('counterpartylib.lib.backend.get_unspent_txouts', get_unspent_txouts)
     monkeypatch.setattr('counterpartylib.lib.log.isodt', isodt)

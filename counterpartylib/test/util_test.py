@@ -21,8 +21,9 @@ import binascii
 import appdirs
 import bitcoin as bitcoinlib
 
-CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
-sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
+ROOTDIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+TESTDIR = os.path.abspath(os.path.join(ROOTDIR, "counterpartylib/test"))
+CURR_DIR = TESTDIR
 
 from counterpartylib import server
 from counterpartylib.lib import (config, util, blocks, check, backend, database, transaction)
@@ -55,15 +56,16 @@ def init_database(sqlfile, dbfile, options=None):
     kwargs = COUNTERPARTYD_OPTIONS.copy()
     kwargs.update(options or {})
 
-    server.initialise(
+    server.initialise_config(
         database_file=dbfile,
         testnet=True,
-        verbose=True,
+        verbose=pytest.config.getoption('verbose') >= 2,
         console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None),
         **kwargs)
 
-    restore_database(config.DATABASE, sqlfile)
-    db = database.get_connection(read_only=False)  # reinit the DB to deal with the restoring
+    db = restore_database(config.DATABASE, sqlfile)
+    db = database.initialize_connection(db, read_only=False)
+
     database.update_version(db)
     util.FIRST_MULTISIG_BLOCK_TESTNET = 1
 
@@ -81,6 +83,7 @@ def reset_current_block_index(db):
 
 def dump_database(db):
     """Create a new database dump from db object as input."""
+
     # TEMPORARY
     # .dump command bugs when aspw.Shell is used with 'db' args instead 'args'
     # but this way stay 20x faster than running scenario with file db
@@ -105,16 +108,21 @@ def dump_database(db):
 
     return new_data
 
-def restore_database(database_filename, dump_filename):
+def restore_database(database_filename, dump_filename, db=None):
     """Delete database dump, then opens another and loads it in-place."""
     remove_database_files(database_filename)
-    db = apsw.Connection(database_filename)
+    db = db or apsw.Connection(database_filename)
     cursor = db.cursor()
     with open(dump_filename, 'r') as sql_dump:
         cursor.execute(sql_dump.read())
     cursor.close()
 
+    return db
+
 def remove_database_files(database_filename):
+    if database_filename == ':memory:':
+        return
+
     """Delete temporary db dumps."""
     for path in [database_filename, '{}-shm'.format(database_filename), '{}-wal'.format(database_filename)]:
         if os.path.isfile(path):
@@ -196,16 +204,14 @@ def initialise_rawtransactions_db(db):
         with open(CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
                 wallet_unspent = json.load(listunspent_test_file)
                 for output in wallet_unspent:
-                    txid = binascii.hexlify(bitcoinlib.core.lx(output['txid'])).decode()
-                    tx = backend.deserialize(output['txhex'])
-                    cursor.execute('INSERT INTO raw_transactions VALUES (?, ?)', (txid, output['txhex']))
+                    cursor.execute('INSERT INTO raw_transactions VALUES (?, ?)', (output['txid'], output['txhex']))
         cursor.close()
 
 def save_rawtransaction(db, tx_hash, tx_hex):
     """Insert the raw transaction into the db."""
     cursor = db.cursor()
     try:
-        txid = binascii.hexlify(bitcoinlib.core.lx(tx_hash)).decode()
+        txid = binascii.hexlify(tx_hash).decode()
         cursor.execute('''INSERT INTO raw_transactions VALUES (?, ?)''', (txid, tx_hex))
     except Exception as e: # TODO
         pass
@@ -214,7 +220,7 @@ def save_rawtransaction(db, tx_hash, tx_hex):
 def getrawtransaction(db, txid):
     """Return raw transactions with specific hash."""
     cursor = db.cursor()
-    txid = binascii.hexlify(txid).decode()
+    txid = binascii.hexlify(txid).decode() if isinstance(txid, bytes) else txid
     tx_hex = list(cursor.execute('''SELECT tx_hex FROM raw_transactions WHERE tx_hash = ?''', (txid,)))[0][0]
     cursor.close()
     return tx_hex
@@ -342,8 +348,9 @@ def vector_to_args(vector, functions=[]):
                 outputs = params.get('out', None)
                 records = params.get('records', None)
                 comment = params.get('comment', None)
+                skip = params.get('skip', False)
                 mock_protocol_changes = params.get('mock_protocol_changes', None)
-                if functions == [] or (tx_name + '.' + method) in functions:
+                if not skip and (functions == [] or (tx_name + '.' + method) in functions):
                     args.append((tx_name, method, params['in'], outputs, error, records, comment, mock_protocol_changes))
     return args
 
@@ -547,3 +554,16 @@ class MockProtocolChangesContext(object):
             self.mock_protocol_changes[k] = self._before[k]
         for k in self._before_empty:
             del self.mock_protocol_changes[k]
+
+
+class LoggingLevelContext(object):
+    def __init__(self, logger, level):
+        self.logger = logger
+        self.level = level
+        self.before = logger.level
+
+    def __enter__(self):
+        self.logger.setLevel(self.level)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.logger.setLevel(self.before)

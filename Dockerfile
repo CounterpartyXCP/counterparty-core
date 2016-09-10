@@ -1,6 +1,9 @@
-FROM counterparty/base
+FROM counterparty/counterparty-server-ethbase
 
 MAINTAINER Counterparty Developers <dev@counterparty.io>
+
+## NOTE: Ethereum dependencies, serpent and solidity are already installed via the base image
+
 
 # Install counterparty-lib
 COPY . /counterparty-lib
@@ -9,6 +12,9 @@ RUN pip3 install -r requirements.txt
 RUN python3 setup.py develop
 RUN python3 setup.py install_apsw
 RUN python3 setup.py install_serpent
+
+# Checkout test fixtures
+RUN git submodule update --init
 
 # Install counterparty-cli
 # NOTE: By default, check out the counterparty-cli master branch. You can override the BRANCH build arg for a different

@@ -20,13 +20,6 @@
         "block_index": 333500,
         "testnet_block_index": 0
     },
-    "contracts_only_xcp_balances": {
-        "minimum_version_major": 9,
-        "minimum_version_minor": 47,
-        "minimum_version_revision": 1,
-        "block_index": 333500,
-        "testnet_block_index": 0
-    },
     "better_single_source_destination": {
         "minimum_version_major": 9,
         "minimum_version_minor": 48,
@@ -103,5 +96,12 @@
         "minimum_version_revision": 0,
         "block_index": 423888,
         "testnet_block_index": 0
+    },
+    "evmparty": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 52,
+        "minimum_version_revision": 9,
+        "block_index": 500000,
+        "testnet_block_index": 867628
     }
 }

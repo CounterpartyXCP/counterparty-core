@@ -69,7 +69,11 @@ def base58_encode(binary):
 
 def base58_check_encode(original, version):
     """Check if base58 encoding is valid."""
-    b = binascii.unhexlify(bytes(original, 'utf-8'))
+    if not isinstance(original, bytes):
+        b = binascii.unhexlify(bytes(original, 'utf-8'))
+    else:
+        b = original
+
     d = version + b
 
     binary = d + util.dhash(d)[:4]
@@ -86,7 +90,7 @@ def base58_check_encode(original, version):
 
     address = b58_digits[0] * pad + res
 
-    if original != util.hexlify(base58_check_decode(address, version)):
+    if b != base58_check_decode(address, version):
         raise AddressError('encoded address does not decode properly')
 
     return address

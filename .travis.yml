@@ -30,6 +30,7 @@ before_install:
   if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
     if [ "$BRANCH" == "master" ]; then export DOCKER_TAG="latest"; fi
     if [ "$BRANCH" == "develop" ]; then export DOCKER_TAG="develop"; fi
+    if [ "$BRANCH" == "evmparty" ]; then export DOCKER_TAG="evmparty"; fi
   fi
 - echo $DOCKER_TAG
 # try to check out the same branch for counterparty-lib (if it exists), and fallback to the develop branch if not
@@ -37,10 +38,12 @@ before_install:
 - echo $DOCKERFILE_CLI_BRANCH
 # build docker image
 - docker build -t counterparty/counterparty-server:$DOCKER_TAG --build-arg CLI_BRANCH="$DOCKERFILE_CLI_BRANCH" .
+- docker run --entrypoint=/bin/bash counterparty/counterparty-server:$DOCKER_TAG -c "cd /counterparty-lib; git submodule update --init"
 
 script:
 # run the test suite in the docker container we just made
-- docker run --entrypoint=/bin/bash counterparty/counterparty-server:$DOCKER_TAG -c "cd /counterparty-lib/counterpartylib; py.test --verbose --skiptestbook=all --cov-config=../.coveragerc --cov-report=term-missing --cov=./"
+- docker run --entrypoint=/bin/bash counterparty/counterparty-server:$DOCKER_TAG -c \
+  "cd /counterparty-lib; ls -la ./bin/; ./bin/solc --version; py.test -x --vmtests=quick --skiptestbook=all --cov-config=./.coveragerc --cov-report=term-missing --cov=./counterpartylib ./counterpartylib"
 
 after_success:
 - coveralls

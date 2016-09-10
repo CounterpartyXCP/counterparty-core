@@ -57,6 +57,8 @@ PRIVATEKEY_VERSION_MAINNET = b'\x80'
 MAGIC_BYTES_TESTNET = b'\xfa\xbf\xb5\xda'   # For bip-0010
 MAGIC_BYTES_MAINNET = b'\xf9\xbe\xb4\xd9'   # For bip-0010
 
+CONTRACT_ADDRESSVERSION = b'\x80'
+
 BLOCK_FIRST_TESTNET_TESTCOIN = 310000
 BURN_START_TESTNET_TESTCOIN = 310000
 BURN_END_TESTNET_TESTCOIN = 4017708     # Fifty years, at ten minutes per block.
@@ -98,6 +100,8 @@ DEFAULT_RPC_BATCH_SIZE = 20     # A 1 MB block can hold about 4200 transactions.
 # Custom exit codes
 EXITCODE_UPDATE_REQUIRED = 5
 
+VERIFY_CHECKPOINTS = True
+VERIFY_STORED_HASH = True
 
 DEFAULT_CHECK_ASSET_CONSERVATION = True
 
@@ -108,5 +112,7 @@ UNDOLOG_MAX_PAST_BLOCKS = 100 #the number of past blocks that we store undolog h
 
 DEFAULT_UTXO_LOCKS_MAX_ADDRESSES = 1000
 DEFAULT_UTXO_LOCKS_MAX_AGE = 3.0 #in seconds
+
+BLOCK_GAS_LIMIT = 1000000000
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

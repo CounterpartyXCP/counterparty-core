@@ -65,6 +65,12 @@ UNITTEST_FIXTURE = [
     ['broadcast', (P2SH_ADDR[0], 1388000002, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'opreturn'}],
     ['bet', (P2SH_ADDR[0], P2SH_ADDR[0], 3, 1388000200, 10, 10, 0.0, 5040, 1000), {'encoding': 'opreturn'}],
 
+    ['burn', (P2SH_ADDR[1], int(DP['burn_quantity'] / 2)), {'encoding': 'opreturn'}],
+    ['burn', (P2SH_ADDR[2], int(DP['burn_quantity'] / 2)), {'encoding': 'opreturn'}],
+    ['burn', (P2SH_ADDR[3], int(DP['burn_quantity'] / 2)), {'encoding': 'opreturn'}],
+    ['burn', (P2SH_ADDR[4], int(DP['burn_quantity'] / 2)), {'encoding': 'opreturn'}],
+    ['burn', (P2SH_ADDR[5], int(DP['burn_quantity'] / 2)), {'encoding': 'opreturn'}],
+
     ['create_next_block', 485],
 
     ['broadcast', (ADDR[4], 1388000000, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
@@ -79,6 +85,8 @@ UNITTEST_FIXTURE = [
     ['issuance', (ADDR[2], None, 'DIVIDEND', 100, True, 'Test dividend'), {'encoding': 'multisig'}],
     ['send', (ADDR[2], ADDR[3], 'DIVIDEND', 10), {'encoding': 'multisig'}],
     ['send', (ADDR[2], ADDR[3], 'XCP', 92945878046), {'encoding': 'multisig'}],
+
+    ['publish', (ADDR[0], 1, 1000000, 0, '6060604052602b8060106000396000f3606060405260e060020a6000350463cc572cf98114601a575b005b6024356004350a6060908152602090f3'), {}],
 
     ['create_next_block', 500],
 ]

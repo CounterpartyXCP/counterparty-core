@@ -68,37 +68,158 @@ class install_apsw(Command):
         shutil.rmtree('apsw-%s' % APSW_VERSION)
         os.remove('apsw-%s.zip' % APSW_VERSION)
 
+
 class install_serpent(Command):
     description = "Install Ethereum Serpent"
-    user_options = []
+    user_options = _install.user_options + [
+        ("global-install-serpent", None, "Install `serpent` in /usr/bin"),
+    ]
+    boolean_options = _install.boolean_options + ['global-install-serpent']
 
     def initialize_options(self):
+        self.global_install_serpent = False
+        self.clean = True
         pass
+
     def finalize_options(self):
         pass
 
     def run(self):
+        repo = "rubensayshi"
+        branch = "counterparty"
+
         # In Windows Serpent should be installed manually
         if os.name == 'nt':
-            print('To complete the installation you have to install Serpent: https://github.com/ethereum/serpent');
+            print('To complete the installation you have to install Serpent %s branch: https://github.com/%s/serpent/tree/%s' % (branch, repo, branch))
             return
 
-        print("downloading serpent.")
-        urllib.request.urlretrieve('https://github.com/ethereum/serpent/archive/master.zip', 'serpent.zip')
+        if not os.path.isdir("./serpent-%s" % branch):
+            print("downloading serpent.")
+            urllib.request.urlretrieve('https://github.com/%s/serpent/archive/%s.zip' % (repo, branch), 'serpent.zip')
 
-        print("extracting.")
-        with zipfile.ZipFile('serpent.zip', 'r') as zip_file:
-            zip_file.extractall()
+            print("extracting.")
+            with zipfile.ZipFile('serpent.zip', 'r') as zip_file:
+                zip_file.extractall()
 
         print("making serpent.")
-        os.system('cd serpent-master && make')
-        print("install serpent using sudo.")
-        print("hence it might request a password.")
-        os.system('cd serpent-master && sudo make install')
+        os.system('cd serpent-%s && make' % branch)
 
-        print("clean files.")
-        shutil.rmtree('serpent-master')
+        print("install serpent as python lib.")
+        os.system('cd serpent-%s && python3 setup.py install' % branch)
+
+        print("install serpent in `./bin`.")
+        os.system('cp serpent-%s/serpent ./bin/serpent' % branch)
+
+        if self.global_install_serpent:
+            print("global install serpent using sudo.")
+            print("hence it might request a password.")
+            os.system('cd serpent-%s && sudo make install' % branch)
+
+        if self.clean:
+            print("clean files.")
+            shutil.rmtree('serpent-%s' % branch)
         os.remove('serpent.zip')
+
+
+class install_solc(_install):
+    """
+    http://www.ethdocs.org/en/latest/ethereum-clients/cpp-ethereum/building-from-source/linux-ubuntu.html
+     - the LLVM part is not neccesary
+     - the `sudo add-apt-repository -y ppa:ethereum/ethereum-qt` is not neccesary
+        - but then you need to remove the following from the apt-get install:
+          `qtbase5-dev qt5-default qtdeclarative5-dev libqt5webkit5-dev libqt5webengine5-dev`
+     - if fails `sudo apt-get -y install libjson-rpc-cpp-dev` try `apt-get -y install libjsonrpccpp-dev`
+
+    """
+
+    description = "Install Ethereum Solidity"
+    user_options = _install.user_options + [
+        ("global-install-solc", None, "Install `solc` in /usr/bin"),
+    ]
+    boolean_options = _install.boolean_options + ['global-install-solc']
+
+    def initialize_options(self):
+        self.global_install_solc = False
+        self.clean_and_cp = False
+        self.clean = self.clean_and_cp and False
+        _install.initialize_options(self)
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        import json
+
+        # In Windows Solidity should be installed manually
+        if os.name == 'nt':
+            print('Windows requires manual install, good luck ... @TODO')  # @TODO
+            return
+
+        WEBTHREE_REPO = "ethereum"
+        WEBTHREE_REPO_URL = "git://github.com/%s/webthree-umbrella.git" % WEBTHREE_REPO
+        WEBTHREE_BRANCH = "v1.2.6"
+
+        SOLIDITY_REPO = "rubensayshi"
+        SOLIDITY_REPO_URL = "git://github.com/%s/solidity.git" % SOLIDITY_REPO
+        SOLIDITY_BRANCH = "counterparty"
+
+        PARAMS = dict(
+            WEBTHREE_REPO=WEBTHREE_REPO,
+            WEBTHREE_REPO_URL=WEBTHREE_REPO_URL,
+            WEBTHREE_BRANCH=WEBTHREE_BRANCH,
+            SOLIDITY_REPO=SOLIDITY_REPO,
+            SOLIDITY_REPO_URL=SOLIDITY_REPO_URL,
+            SOLIDITY_BRANCH=SOLIDITY_BRANCH,
+        )
+
+        with urllib.request.urlopen('https://api.github.com/repos/{SOLIDITY_REPO}/solidity/branches/{SOLIDITY_BRANCH}'.format(**PARAMS)) as u:
+            data = json.loads(u.read().decode('utf-8'))
+            commit = data['commit']['sha']
+
+        WEBTHREE_DIR = "./webthree-umbrella-%s-%s" % (WEBTHREE_BRANCH, commit)
+
+        PARAMS.update(dict(
+            WEBTHREE_DIR=WEBTHREE_DIR
+        ))
+
+        if not os.path.isdir("{WEBTHREE_DIR}/solidity".format(**PARAMS)):
+            print("downloading webthree-umbrella into {WEBTHREE_DIR}.".format(**PARAMS))
+            os.system("rm -rf {WEBTHREE_DIR}".format(**PARAMS))
+            print('git clone --recursive --branch {WEBTHREE_BRANCH} {WEBTHREE_REPO_URL} {WEBTHREE_DIR}'.format(**PARAMS))
+            os.system('git clone --recursive --branch {WEBTHREE_BRANCH} {WEBTHREE_REPO_URL} {WEBTHREE_DIR}'.format(**PARAMS))
+
+            os.system('cd {WEBTHREE_DIR}/solidity && '
+                      'git remote add counterparty {SOLIDITY_REPO_URL}'.format(**PARAMS))
+
+            os.system('cd {WEBTHREE_DIR}/solidity && '
+                      'git fetch counterparty && '
+                      'git checkout -f {SOLIDITY_BRANCH} &&'
+                      'git reset --hard counterparty/{SOLIDITY_BRANCH}'.format(**PARAMS))
+
+            print("building.")
+            os.system('cd {WEBTHREE_DIR} && ./webthree-helpers/scripts/ethbuild.sh --no-git --project solidity --cores 4 -DEVMJIT=0 -DETHASHCL=0 -DGUI=0'.format(**PARAMS))
+
+        if self.clean_and_cp:
+            print("copying to ./bin")
+            os.system('cp {WEBTHREE_DIR}/solidity/build/solc/solc ./bin/solc'.format(**PARAMS))
+
+            if self.global_install_solc:
+                print("copying to /usr/bin")
+                os.system('sudo cp {WEBTHREE_DIR}/solidity/build/solc/solc /usr/bin/solc'.format(**PARAMS))
+
+            if self.clean:
+                print("clean files.")
+                shutil.rmtree('{WEBTRHEE_DIR}'.format(**PARAMS))
+        else:
+            print("symlinking to ./bin")
+            os.system('rm ./bin/solc')
+            os.system('ln -s `pwd`/{WEBTHREE_DIR}/solidity/build/solc/solc ./bin/solc'.format(**PARAMS))
+
+            if self.global_install_solc:
+                print("symlinking to /usr/bin")
+                os.system('sudo rm /usr/bin/solc')
+                os.system('sudo ln -s `pwd`/{WEBTHREE_DIR}/solidity/build/solc/solc /usr/bin/solc'.format(**PARAMS))
+
 
 class move_old_db(Command):
     description = "Move database from old to new default data directory"
@@ -106,6 +227,7 @@ class move_old_db(Command):
 
     def initialize_options(self):
         pass
+
     def finalize_options(self):
         pass
 
@@ -135,20 +257,26 @@ class move_old_db(Command):
                         print('Copy {} to {}'.format(src_file, dest_file))
                         shutil.copy(src_file, dest_file)
 
-def post_install(cmd, install_serpent=False):
+
+def post_install(cmd, install_serpent=False, install_solc=False):
     cmd.run_command('install_apsw')
     if install_serpent:
         cmd.run_command('install_serpent')
+    if install_solc:
+        cmd.run_command('install_solc')
     cmd.run_command('move_old_db')
+
 
 class install(_install):
     user_options = _install.user_options + [
         ("with-serpent", None, "Install Ethereum Serpent"),
+        ("with-solc", None, "Install Ethereum Solc"),
     ]
-    boolean_options = _install.boolean_options + ['with-serpent']
+    boolean_options = _install.boolean_options + ['with-serpent', 'with-solc']
 
     def initialize_options(self):
         self.with_serpent = False
+        self.with_solc = False
         _install.initialize_options(self)
 
     #Some of this code taken from https://bitbucket.org/pypa/setuptools/src/4ce518784af886e6977fa2dbe58359d0fe161d0d/setuptools/command/install.py?at=default&fileviewer=file-view-default
@@ -180,6 +308,11 @@ class install(_install):
         )
         
     def run(self):
+        try:
+            import zlib
+        except:
+            assert 0, "Python must be build with zlib"
+
         # Explicit request for old-style install?  Just do it
         if self.old_and_unmanageable or self.single_version_externally_managed:
             _install.run(self)
@@ -191,7 +324,7 @@ class install(_install):
             _install.run(self)
         else:
             self.do_egg_install()
-        self.execute(post_install, (self, self.with_serpent), msg="Running post install tasks")
+        self.execute(post_install, (self, self.with_serpent, self.with_solc), msg="Running post install tasks")
 
 class bdist_egg(_bdist_egg):
     def run(self):
@@ -215,6 +348,8 @@ required_packages = [
     'tendo==0.2.8',
     'xmltodict==0.10.1',
     'cachetools==1.1.6',
+    'rlp==0.4.4',
+    'pyyaml'
 ]
 
 setup_options = {
@@ -252,7 +387,8 @@ setup_options = {
         'install': install,
         'move_old_db': move_old_db,
         'install_apsw': install_apsw,
-        'install_serpent': install_serpent
+        'install_serpent': install_serpent,
+        'install_solc': install_solc
     }
 }
 

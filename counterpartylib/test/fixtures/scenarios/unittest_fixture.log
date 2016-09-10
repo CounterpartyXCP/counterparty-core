@@ -210,6 +210,36 @@ New input: amount: 1.00000000; txid: 20ffe4012d5fc638309b2d087a15fb100d919413263
 Size: 315 Fee: 0.00007875 Change quantity: 0.99986695 BTC
 Debit: 0.0000001 XCP from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy #bet# <0c690d46bef903922354520c8c8626ab5bfd45da1ca211d65f16aeef9b5f3300>
 Bet: 0.0000001 XCP against 0.0000001 XCP, by 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy, on 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy
+Sorted candidate UTXOs: ['amount: 1.00000000; txid: 8a932032d223e4222ce2215e09b7261461fb8f781e0a5d5359822ad5de2e386a; vout: 0; confirmations: 6']
+Fee/KB 0.00025000
+New input: amount: 1.00000000; txid: 8a932032d223e4222ce2215e09b7261461fb8f781e0a5d5359822ad5de2e386a; vout: 0; confirmations: 6
+Size: 225 Fee: 0.00005625 Change quantity: 0.68994375 BTC
+Credit: 464.99535967 XCP to 2NErxwfmefM47yQ7Mk4y7WCqmvNfW2bhzic #burn# <710cab2ca813d8f2a6e4ba9f05eee67b1130777d3c67d42cc5a6b5d94a4b709e>
+Burn: 2NErxwfmefM47yQ7Mk4y7WCqmvNfW2bhzic burned 0.31 BTC for 464.99535967 XCP (710cab2ca813d8f2a6e4ba9f05eee67b1130777d3c67d42cc5a6b5d94a4b709e) [valid]
+Sorted candidate UTXOs: ['amount: 1.00000000; txid: e5e507be0154c672520eea057d88e3e25faa88098ed049da1e03fe89b296a806; vout: 0; confirmations: 6']
+Fee/KB 0.00025000
+New input: amount: 1.00000000; txid: e5e507be0154c672520eea057d88e3e25faa88098ed049da1e03fe89b296a806; vout: 0; confirmations: 6
+Size: 225 Fee: 0.00005625 Change quantity: 0.68994375 BTC
+Credit: 464.99531786 XCP to 2MxHK9KY4zhTPoupLCyXgPJoN2GtCsFr7gK #burn# <470ab0d2b7fb45cbdbe4fbba6d76325b1b1f5525f4f6be7dc995dd93b0999caf>
+Burn: 2MxHK9KY4zhTPoupLCyXgPJoN2GtCsFr7gK burned 0.31 BTC for 464.99531786 XCP (470ab0d2b7fb45cbdbe4fbba6d76325b1b1f5525f4f6be7dc995dd93b0999caf) [valid]
+Sorted candidate UTXOs: ['amount: 1.00000000; txid: 895f58443c9aaad01ffa62b46e44fbd2225874b48bedb8e08fd5eb314f9b1d0c; vout: 0; confirmations: 6']
+Fee/KB 0.00025000
+New input: amount: 1.00000000; txid: 895f58443c9aaad01ffa62b46e44fbd2225874b48bedb8e08fd5eb314f9b1d0c; vout: 0; confirmations: 6
+Size: 225 Fee: 0.00005625 Change quantity: 0.68994375 BTC
+Credit: 464.99527606 XCP to 2MuWaw3xAczwSL6DKY77kEP7JgAWiQdqFSy #burn# <5cea665ad64adf6b81a3b67bccd8720f1ecc8641418314449961fe856b195e5b>
+Burn: 2MuWaw3xAczwSL6DKY77kEP7JgAWiQdqFSy burned 0.31 BTC for 464.99527606 XCP (5cea665ad64adf6b81a3b67bccd8720f1ecc8641418314449961fe856b195e5b) [valid]
+Sorted candidate UTXOs: ['amount: 1.00000000; txid: c901c1469c61bc960592f1ee0194f2e784672b0f2582daeb751cbc682e8bc435; vout: 0; confirmations: 6']
+Fee/KB 0.00025000
+New input: amount: 1.00000000; txid: c901c1469c61bc960592f1ee0194f2e784672b0f2582daeb751cbc682e8bc435; vout: 0; confirmations: 6
+Size: 225 Fee: 0.00005625 Change quantity: 0.68994375 BTC
+Credit: 464.99523425 XCP to 2MtBCufaZs6NDoDfLfR5MGG3KtDzUG2Pmy8 #burn# <0785e6e3dd8ec67452315d7c6bed311effc9ec9ee4eb638d88c425df72da794b>
+Burn: 2MtBCufaZs6NDoDfLfR5MGG3KtDzUG2Pmy8 burned 0.31 BTC for 464.99523425 XCP (0785e6e3dd8ec67452315d7c6bed311effc9ec9ee4eb638d88c425df72da794b) [valid]
+Sorted candidate UTXOs: ['amount: 1.00000000; txid: 1802bc18d5b354e628f6da25d1d5b95a732248aaf67a676379a9ff1446f2bbcf; vout: 0; confirmations: 6']
+Fee/KB 0.00025000
+New input: amount: 1.00000000; txid: 1802bc18d5b354e628f6da25d1d5b95a732248aaf67a676379a9ff1446f2bbcf; vout: 0; confirmations: 6
+Size: 225 Fee: 0.00005625 Change quantity: 0.68994375 BTC
+Credit: 464.99519245 XCP to 2N3ACzPYimgijjPWhowmwPWzzY7XtvqbtRq #burn# <ab0c8f04a595637650a80ee32e2f1ef4c311871278b6b66cc14ca7da9606dc45>
+Burn: 2N3ACzPYimgijjPWhowmwPWzzY7XtvqbtRq burned 0.31 BTC for 464.99519245 XCP (ab0c8f04a595637650a80ee32e2f1ef4c311871278b6b66cc14ca7da9606dc45) [valid]
 Sorted candidate UTXOs: ['amount: 1.07824570; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143']
 Fee/KB 0.00025000
 New input: amount: 1.07824570; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143
@@ -276,3 +306,47 @@ Size: 306 Fee: 0.00007650 Change quantity: 1.93406720 BTC
 Debit: 929.45878046 XCP from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH #send# <478048dcdaca3e8010fc50a75511f6ed8fc1a770a4fab5c339a1c15c3633971f>
 Credit: 929.45878046 XCP to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj #send# <478048dcdaca3e8010fc50a75511f6ed8fc1a770a4fab5c339a1c15c3633971f>
 Send: 929.45878046 XCP from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj (478048dcdaca3e8010fc50a75511f6ed8fc1a770a4fab5c339a1c15c3633971f) [valid]
+Sorted candidate UTXOs: ['amount: 1.99909140; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
+Fee/KB 0.00025000
+New input: amount: 1.99909140; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
+Size: 353 Fee: 0.00008825 Change quantity: 1.99884715 BTC
+TX NEW: nonce=0, sender=mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, startgas=1000000, value=0, to=, data=0x6060604052602b8060106000396000f3606060405260e060020a6000350463cc572cf98114601a575b005b6024356004350a6060908152602090f3, gasprice=1
+Debit: 0.01 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #startgas# <f7708dbe7c0047b1465d79ac630652e46ab325a90713cef731ab23e63afeba8d>
+CONTRACT CREATION mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc: 
+SNAPSHOT S13766c2342a5081eea325923ffa04aca
+create_contract::init_code tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt: 
+[tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt] b''
+have: 0
+New Contract: tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt
+MSG APPLY: sender=mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, gas=943244, value=0, to=tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt, data=b''
+MSG PRE STATE SENDER: account=mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, bal=91949000000, state=0
+MSG PRE STATE RECIPIENT: account=tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt, bal=0, state=0
+SNAPSHOT Sf0d1cffe06a00f93443626e4b4440da5
+TRANSFER mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc -> tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt: 0: 
+Debit: 0.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #transfer value# <f7708dbe7c0047b1465d79ac630652e46ab325a90713cef731ab23e63afeba8d>
+Credit: 0.0 XCP to tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt #transfer value# <f7708dbe7c0047b1465d79ac630652e46ab325a90713cef731ab23e63afeba8d>
+vm PUSH1 address=tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt, depth=0, gas=b'943244', inst=96, op=PUSH1, pc=b'0', pushvalue=96, stack=[], steps=0, storage=0
+vm PUSH1 gas=b'943241', inst=96, op=PUSH1, pc=b'2', pushvalue=64, stack=[b'96'], steps=1
+vm MSTORE gas=b'943238', inst=82, op=MSTORE, pc=b'4', stack=[b'96', b'64'], steps=2
+vm PUSH1 gas=b'943226', inst=96, memory=b'000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000060', op=PUSH1, pc=b'5', pushvalue=43, stack=[], steps=3
+vm DUP1 gas=b'943223', inst=128, op=DUP1, pc=b'7', stack=[b'43'], steps=4
+vm PUSH1 gas=b'943220', inst=96, op=PUSH1, pc=b'8', pushvalue=16, stack=[b'43', b'43'], steps=5
+vm PUSH1 gas=b'943217', inst=96, op=PUSH1, pc=b'10', pushvalue=0, stack=[b'43', b'43', b'16'], steps=6
+vm CODECOPY gas=b'943214', inst=57, op=CODECOPY, pc=b'12', stack=[b'43', b'43', b'16', b'0'], steps=7
+vm PUSH1 gas=b'943205', inst=96, memory=b'606060405260e060020a6000350463cc572cf98114601a575b005b6024356004350a6060908152602090f30000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000060', op=PUSH1, pc=b'13', pushvalue=0, stack=[b'43'], steps=8
+vm RETURN gas=b'943202', inst=243, op=RETURN, pc=b'15', stack=[b'43', b'0'], steps=9
+EXIT cause=RETURN
+MSG APPLIED: data=[96, 96, 96, 64, 82, 96, 224, 96, 2, 10, 96, 0, 53, 4, 99, 204, 87, 44, 249, 129, 20, 96, 26, 87, 91, 0, 91, 96, 36, 53, 96, 4, 53, 10, 96, 96, 144, 129, 82, 96, 32, 144, 243], gas_remained=943202, res=1, sender=mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, to=tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt
+MSG POST STATE SENDER: account=mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, bal=91949000000, state=0
+MSG POST STATE RECIPIENT: account=tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt, bal=0, state=0
+create_contract::_apply_msg 1 943202 43: 
+create_contract::gcst 943202 8600 True: 
+create_contract::set_code tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt: 
+[tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt] b'```@R`\xe0`\x02\n`\x005\x04c\xccW,\xf9\x81\x14`\x1aW[\x00[`$5`\x045\n``\x90\x81R` \x90\xf3'
+have: 1
+_create_: data=tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt, gas_remained=934602, gas_used=65398, result=1
+TX APPLIED: data=tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt, gas_remained=934602, gas_used=65398, result=1
+TX SUCCESS: data=tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt
+Credit: 0.00934602 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #startgas# <f7708dbe7c0047b1465d79ac630652e46ab325a90713cef731ab23e63afeba8d>
+TX FINISHED (gas_remained: 934602)
+Execution: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created contract tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt (f7708dbe7c0047b1465d79ac630652e46ab325a90713cef731ab23e63afeba8d) [valid]

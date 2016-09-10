@@ -32,6 +32,7 @@ from counterpartylib.lib import backend
 from counterpartylib.lib import log
 from counterpartylib.lib import database
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, publish, execute, destroy)
+from counterpartylib.lib import evm
 
 from .kickstart.blocks_parser import BlockchainParser, ChainstateParser
 from .kickstart.utils import ib2h
@@ -46,7 +47,7 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'cancels', 'dividends', 'issuances', 'sends',
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
          'rps_matches', 'rps', 'executions', 'storage', 'suicides', 'nonces',
-         'postqueue', 'contracts', 'destructions', 'assets']
+         'contracts', 'destructions', 'assets']
 # Compose list of tables tracked by undolog
 UNDOLOG_TABLES = copy.copy(TABLES)
 UNDOLOG_TABLES.remove('messages')
@@ -205,6 +206,7 @@ def initialise(db):
                       block_time INTEGER,
                       previous_block_hash TEXT UNIQUE,
                       difficulty INTEGER,
+                      gas_used INTEGER,
                       PRIMARY KEY (block_index, block_hash))
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -226,6 +228,8 @@ def initialise(db):
         cursor.execute('''ALTER TABLE blocks ADD COLUMN previous_block_hash TEXT''')
     if 'difficulty' not in columns:
         cursor.execute('''ALTER TABLE blocks ADD COLUMN difficulty TEXT''')
+    if 'gas_used' not in columns:
+        cursor.execute('''ALTER TABLE blocks ADD COLUMN gas_used INTEGER''')
 
     # Check that first block in DB is BLOCK_FIRST.
     cursor.execute('''SELECT * from blocks ORDER BY block_index''')
@@ -347,8 +351,7 @@ def initialise(db):
     issuance.initialise(db)
     broadcast.initialise(db)
     bet.initialise(db)
-    publish.initialise(db)
-    execute.initialise(db)
+    evm.initialise(db)
     dividend.initialise(db)
     burn.initialise(db)
     cancel.initialise(db)
@@ -1036,7 +1039,7 @@ def get_next_tx_index(db):
 
 class MempoolError(Exception):
     pass
-def follow(db):
+def follow(db, stop_at_block_index=None):
     # Check software version.
     check.software_version()
 
@@ -1061,10 +1064,17 @@ def follow(db):
             else: #version update was included in reparse(), so don't do it twice
                 database.update_version(db)
 
-    logger.info('Resuming parsing.')
+    logger.info('Resuming parsing from %d.' % (block_index))
 
     # Get index of last transaction.
     tx_index = get_next_tx_index(db)
+
+    # Parse for relative stop
+    if stop_at_block_index is not None:
+        if stop_at_block_index[0] == '+':
+            stop_at_block_index = block_index + int(stop_at_block_index[1:])
+        else:
+            stop_at_block_index = int(stop_at_block_index)
 
     not_supported = {}   # No false positives. Use a dict to allow for O(1) lookups
     not_supported_sorted = collections.deque()
@@ -1088,6 +1098,11 @@ def follow(db):
                 continue
             else:
                 raise e
+
+        # Stop before specified block
+        if stop_at_block_index is not None and block_index >= stop_at_block_index:
+            logger.warn('set to stop at %d, current block: %d' % (stop_at_block_index, block_index))
+            return
 
         # Get new blocks.
         if block_index <= block_count:
