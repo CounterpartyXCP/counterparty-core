@@ -415,20 +415,26 @@ def initialise(db):
                       timestamp INTEGER)
                   ''')
 
+    cursor.close()
+
 def get_tx_info(tx_hex, block_parser=None, block_index=None):
+    """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
+    try:
+        return _get_tx_info(tx_hex, block_parser, block_index)
+    except (DecodeError, BTCOnlyError) as e:
+        # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
+        return b'', None, None, None, None
+
+def _get_tx_info(tx_hex, block_parser=None, block_index=None):
     """Get the transaction info. Calls one of two subfunctions depending on signature type."""
     if not block_index:
         block_index = util.CURRENT_BLOCK_INDEX
-    try:
-        if util.enabled('multisig_addresses', block_index=block_index):   # Protocol change.
-            tx_info = get_tx_info2(tx_hex, block_parser=block_parser)
-        else:
-            tx_info = get_tx_info1(tx_hex, block_index, block_parser=block_parser)
-    except (DecodeError, BTCOnlyError) as e:
-        # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
-        tx_info = b'', None, None, None, None
-
-    return tx_info
+    if util.enabled('p2sh_addresses', block_index=block_index):   # Protocol change.
+        return  get_tx_info3(tx_hex, block_parser=block_parser)
+    elif util.enabled('multisig_addresses', block_index=block_index):   # Protocol change.
+        return get_tx_info2(tx_hex, block_parser=block_parser)
+    else:
+        return get_tx_info1(tx_hex, block_index, block_parser=block_parser)
 
 def get_tx_info1(tx_hex, block_index, block_parser=None):
     """Get singlesig transaction info.
@@ -546,7 +552,10 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
 
     return source, destination, btc_amount, fee, data
 
-def get_tx_info2(tx_hex, block_parser=None):
+def get_tx_info3(tx_hex, block_parser=None):
+    return get_tx_info2(tx_hex, block_parser=block_parser, p2sh_support=True)
+
+def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
     """Get multisig transaction info.
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
@@ -590,6 +599,11 @@ def get_tx_info2(tx_hex, block_parser=None):
 
         return destination, data
 
+    def decode_scripthash(asm):
+        destination = script.base58_check_encode(binascii.hexlify(asm[1]).decode('utf-8'), config.P2SH_ADDRESSVERSION)
+
+        return destination, None
+
     def decode_checkmultisig(asm):
         pubkeys, signatures_required = script.get_checkmultisig(asm)
         chunk = b''
@@ -630,6 +644,8 @@ def get_tx_info2(tx_hex, block_parser=None):
             new_destination, new_data = decode_checksig(asm)
         elif asm[-1] == 'OP_CHECKMULTISIG':
             new_destination, new_data = decode_checkmultisig(asm)
+        elif p2sh_support and asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
+            new_destination, new_data = decode_scripthash(asm)
         else:
             raise DecodeError('unrecognised output type')
         assert not (new_destination and new_data)
@@ -676,12 +692,19 @@ def get_tx_info2(tx_hex, block_parser=None):
             new_source, new_data = decode_checkmultisig(asm)
             if new_data or not new_source:
                 raise DecodeError('data in source')
+        elif p2sh_support and asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
+            new_source, new_data = decode_scripthash(asm)
+            if new_data or not new_source:
+                raise DecodeError('data in source')
         else:
             raise DecodeError('unrecognised source type')
 
-        # Collect unique sources.
-        if new_source not in sources:
-            sources.append(new_source)
+        # old; append to sources, results in invalid addresses
+        # new; first found source is source, the rest can be anything (to fund the TX for example)
+        if not (util.enabled('first_input_is_source') and len(sources)):
+            # Collect unique sources.
+            if new_source not in sources:
+                sources.append(new_source)
 
     sources = '-'.join(sources)
     destinations = '-'.join(destinations)
@@ -1120,8 +1143,8 @@ def follow(db):
             block = backend.getblock(block_hash)
             previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
             block_time = block.nTime
-            txhash_list = backend.get_txhash_list(block)
-            raw_transactions = backend.getrawtransaction_batch(txhash_list)
+            txhash_list, raw_transactions = backend.get_tx_list(block)
+
             with db:
                 util.CURRENT_BLOCK_INDEX = block_index
 
@@ -1210,7 +1233,7 @@ def follow(db):
             #  - or was there a block found while batch feting the raw txs
             #  - or was there a double spend for w/e reason accepted into the mempool (replace-by-fee?)
             try:
-                raw_transactions = backend.getrawtransaction_batch(raw_mempool)
+                raw_transactions = backend.getrawtransaction_batch(parse_txs)
             except backend.addrindex.BackendRPCError as e:
                 logger.warning('Failed to fetch raw for mempool TXs, restarting loop; %s', (e, ))
                 continue  # restart the follow loop
@@ -1284,7 +1307,7 @@ def follow(db):
             elapsed_time = time.time() - start_time
             sleep_time = config.BACKEND_POLL_INTERVAL - elapsed_time if elapsed_time <= config.BACKEND_POLL_INTERVAL else 0
 
-            logger.debug('Refresh mempool: %s XCP txs seen, out of %s total entries (took %ss (%ss was backend refresh), next refresh in %ss)' % (
+            logger.getChild('mempool').debug('Refresh mempool: %s XCP txs seen, out of %s total entries (took %ss (%ss was backend refresh), next refresh in %ss)' % (
                 len(xcp_mempool), len(raw_mempool),
                 "{:.2f}".format(elapsed_time, 3),
                 "{:.2f}".format(refresh_time, 3),

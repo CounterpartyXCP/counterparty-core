@@ -23,7 +23,7 @@ import binascii
 import struct
 import apsw
 import flask
-from flask.ext.httpauth import HTTPBasicAuth
+from flask_httpauth import HTTPBasicAuth
 import jsonrpc
 from jsonrpc import dispatcher
 from jsonrpc.exceptions import JSONRPCDispatchException
@@ -68,7 +68,7 @@ API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel',
 COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
                 'allow_unconfirmed_inputs', 'fee', 'fee_provided',
-                'unspent_tx_hash','custom_inputs']
+                'unspent_tx_hash', 'custom_inputs', 'dust_return_pubkey', 'disable_utxo_locks']
 
 API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
 API_MAX_LOG_COUNT = 10
@@ -261,6 +261,7 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
 def compose_transaction(db, name, params,
                         encoding='auto',
                         fee_per_kb=config.DEFAULT_FEE_PER_KB,
+                        estimate_fee_per_kb=None, estimate_fee_per_kb_nblocks=config.ESTIMATE_FEE_NBLOCKS,
                         regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                         multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                         op_return_value=config.DEFAULT_OP_RETURN_VALUE,
@@ -268,7 +269,7 @@ def compose_transaction(db, name, params,
                         allow_unconfirmed_inputs=False,
                         fee=None,
                         fee_provided=0,
-                        unspent_tx_hash=None, custom_inputs=None):
+                        unspent_tx_hash=None, custom_inputs=None, dust_return_pubkey=None, disable_utxo_locks=False):
     """Create and return a transaction."""
 
     # Get provided pubkeys.
@@ -303,6 +304,7 @@ def compose_transaction(db, name, params,
     tx_info = compose_method(db, **params)
     return transaction.construct(db, tx_info, encoding=encoding,
                                         fee_per_kb=fee_per_kb,
+                                        estimate_fee_per_kb=estimate_fee_per_kb, estimate_fee_per_kb_nblocks=estimate_fee_per_kb_nblocks,
                                         regular_dust_size=regular_dust_size,
                                         multisig_dust_size=multisig_dust_size,
                                         op_return_value=op_return_value,
@@ -310,7 +312,9 @@ def compose_transaction(db, name, params,
                                         allow_unconfirmed_inputs=allow_unconfirmed_inputs,
                                         exact_fee=fee,
                                         fee_provided=fee_provided,
-                                        unspent_tx_hash=unspent_tx_hash, custom_inputs=custom_inputs)
+                                        unspent_tx_hash=unspent_tx_hash, custom_inputs=custom_inputs,
+                                        dust_return_pubkey=dust_return_pubkey,
+                                        disable_utxo_locks=disable_utxo_locks)
 
 def conditional_decorator(decorator, condition):
     """Checks the condition and if True applies specified decorator."""
@@ -566,6 +570,10 @@ class APIServer(threading.Thread):
             return block
 
         @dispatcher.add_method
+        def fee_per_kb(nblocks=config.ESTIMATE_FEE_NBLOCKS):
+            return backend.fee_per_kb(nblocks)
+
+        @dispatcher.add_method
         def get_blocks(block_indexes, min_message_index=None):
             """fetches block info and messages for the specified block indexes
             @param min_message_index: Retrieve blocks from the message feed on or after this specific message index
@@ -721,7 +729,7 @@ class APIServer(threading.Thread):
             if not config.RPC_NO_ALLOW_CORS:
                 response.headers['Access-Control-Allow-Origin'] = '*'
                 response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-                response.headers['Access-Control-Allow-Headers'] = 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type'
+                response.headers['Access-Control-Allow-Headers'] = 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization'
 
         @app.route('/', defaults={'args_path': ''}, methods=['GET', 'POST', 'OPTIONS'])
         @app.route('/<path:args_path>',  methods=['GET', 'POST', 'OPTIONS'])

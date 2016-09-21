@@ -15,7 +15,6 @@ from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 
-
 class ModuleLoggingFilter(logging.Filter):
     """
     module level logging filter (NodeJS-style), ie:
@@ -71,7 +70,42 @@ class ModuleLoggingFilter(logging.Filter):
             return False
         return record.name[nlen] == "."
 
+
+ROOT_LOGGER = None
+def set_logger(logger):
+    global ROOT_LOGGER
+    if ROOT_LOGGER is None:
+        ROOT_LOGGER = logger
+
+
+LOGGING_SETUP = False
+LOGGING_TOFILE_SETUP = False
 def set_up(logger, verbose=False, logfile=None, console_logfilter=None):
+    global LOGGING_SETUP
+    global LOGGING_TOFILE_SETUP
+
+    def set_up_file_logging():
+        assert logfile
+        max_log_size = 20 * 1024 * 1024 # 20 MB
+        if os.name == 'nt':
+            from counterpartylib.lib import util_windows
+            fileh = util_windows.SanitizedRotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
+        else:
+            fileh = logging.handlers.RotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
+        fileh.setLevel(logging.DEBUG)
+        LOGFORMAT = '%(asctime)s [%(levelname)s] %(message)s'
+        formatter = logging.Formatter(LOGFORMAT, '%Y-%m-%d-T%H:%M:%S%z')
+        fileh.setFormatter(formatter)
+        logger.addHandler(fileh)
+
+    if LOGGING_SETUP:
+        if logfile and not LOGGING_TOFILE_SETUP:
+             set_up_file_logging()
+             LOGGING_TOFILE_SETUP = True
+        logger.getChild('log.set_up').debug('logging already setup')
+        return
+    LOGGING_SETUP = True
+
     log_level = logging.DEBUG if verbose else logging.INFO
     logger.setLevel(log_level)
 
@@ -91,17 +125,8 @@ def set_up(logger, verbose=False, logfile=None, console_logfilter=None):
 
     # File Logging
     if logfile:
-        max_log_size = 20 * 1024 * 1024 # 20 MB
-        if os.name == 'nt':
-            from counterpartylib.lib import util_windows
-            fileh = util_windows.SanitizedRotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
-        else:
-            fileh = logging.handlers.RotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
-        fileh.setLevel(logging.DEBUG)
-        LOGFORMAT = '%(asctime)s [%(levelname)s] %(message)s'
-        formatter = logging.Formatter(LOGFORMAT, '%Y-%m-%d-T%H:%M:%S%z')
-        fileh.setFormatter(formatter)
-        logger.addHandler(fileh)
+        set_up_file_logging()
+        LOGGING_TOFILE_SETUP = True
 
     # Quieten noisy libraries.
     requests_log = logging.getLogger("requests")
@@ -165,6 +190,7 @@ def message(db, block_index, command, category, bindings, tx_hash=None):
 
 
 def log (db, command, category, bindings):
+
     cursor = db.cursor()
 
     for element in bindings.keys():
@@ -211,7 +237,7 @@ def log (db, command, category, bindings):
             logger.info('Send: {} from {} to {} ({}) [{}]'.format(output(bindings['quantity'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'orders':
-            logger.info('Order: {} ordered {} for {} in {} blocks, with a provided fee of {} {} and a required fee of {} {} ({}) [{}]'.format(bindings['source'], output(bindings['give_quantity'], bindings['give_asset']), output(bindings['get_quantity'], bindings['get_asset']), bindings['expiration'], bindings['fee_provided'] / config.UNIT, config.BTC, bindings['fee_required'] / config.UNIT, config.BTC, bindings['tx_hash'], bindings['status']))
+            logger.info('Order: {} ordered {} for {} in {} blocks, with a provided fee of {:.8f} {} and a required fee of {:.8f} {} ({}) [{}]'.format(bindings['source'], output(bindings['give_quantity'], bindings['give_asset']), output(bindings['get_quantity'], bindings['get_asset']), bindings['expiration'], bindings['fee_provided'] / config.UNIT, config.BTC, bindings['fee_required'] / config.UNIT, config.BTC, bindings['tx_hash'], bindings['status']))
 
         elif category == 'order_matches':
             logger.info('Order Match: {} for {} ({}) [{}]'.format(output(bindings['forward_quantity'], bindings['forward_asset']), output(bindings['backward_quantity'], bindings['backward_asset']), bindings['id'], bindings['status']))

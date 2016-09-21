@@ -6,7 +6,7 @@ UNIT = 100000000        # The same across assets.
 
 # Versions
 VERSION_MAJOR = 9
-VERSION_MINOR = 54
+VERSION_MINOR = 55
 VERSION_REVISION = 0
 VERSION_STRING = str(VERSION_MAJOR) + '.' + str(VERSION_MINOR) + '.' + str(VERSION_REVISION)
 
@@ -49,8 +49,10 @@ UNSPENDABLE_TESTNET = 'mvCounterpartyXXXXXXXXXXXXXXW24Hef'
 UNSPENDABLE_MAINNET = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
 
 ADDRESSVERSION_TESTNET = b'\x6f'
+P2SH_ADDRESSVERSION_TESTNET = b'\xc4'
 PRIVATEKEY_VERSION_TESTNET = b'\xef'
 ADDRESSVERSION_MAINNET = b'\x00'
+P2SH_ADDRESSVERSION_MAINNET = b'\x05'
 PRIVATEKEY_VERSION_MAINNET = b'\x80'
 MAGIC_BYTES_TESTNET = b'\xfa\xbf\xb5\xda'   # For bip-0010
 MAGIC_BYTES_MAINNET = b'\xf9\xbe\xb4\xd9'   # For bip-0010
@@ -81,8 +83,9 @@ BURN_END_MAINNET = 283810
 DEFAULT_REGULAR_DUST_SIZE = 5430         # TODO: This is just a guess. I got it down to 5530 satoshis.
 DEFAULT_MULTISIG_DUST_SIZE = 7800        # <https://bitcointalk.org/index.php?topic=528023.msg7469941#msg7469941>
 DEFAULT_OP_RETURN_VALUE = 0
-DEFAULT_FEE_PER_KB = 10000                # Bitcoin Core default is 10000.  # TODO: Lower 10x later, too.
-
+DEFAULT_FEE_PER_KB = 25000               # sane/low default, also used as minimum when estimated fee is used
+ESTIMATE_FEE_PER_KB = True               # when True will use `estimatefee` from bitcoind instead of DEFAULT_FEE_PER_KB
+ESTIMATE_FEE_NBLOCKS = 3
 
 # UI defaults
 DEFAULT_FEE_FRACTION_REQUIRED = .009   # 0.90%
@@ -102,5 +105,8 @@ BACKEND_RAW_TRANSACTIONS_CACHE_SIZE = 20000
 BACKEND_RPC_BATCH_NUM_WORKERS = 6
 
 UNDOLOG_MAX_PAST_BLOCKS = 100 #the number of past blocks that we store undolog history
+
+DEFAULT_UTXO_LOCKS_MAX_ADDRESSES = 1000
+DEFAULT_UTXO_LOCKS_MAX_AGE = 3.0 #in seconds
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

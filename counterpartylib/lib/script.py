@@ -29,9 +29,10 @@ class Base58Error (AddressError):
 class Base58ChecksumError (Base58Error):
     pass
 
-def validate(address):
+
+def validate(address, allow_p2sh=True):
     """Make sure the address is valid.
-    
+
     May throw `AddressError`.
     """
     # Get array of pubkeyhashes to check.
@@ -42,7 +43,14 @@ def validate(address):
 
     # Check validity by attempting to decode.
     for pubkeyhash in pubkeyhashes:
-        base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
+        try:
+            base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
+        except VersionByteError as e:
+            if not allow_p2sh:
+                raise e
+            base58_check_decode(pubkeyhash, config.P2SH_ADDRESSVERSION)
+
+
 
 def base58_encode(binary):
     """Encode the address in base58."""
@@ -57,6 +65,7 @@ def base58_encode(binary):
     res = ''.join(res[::-1])
 
     return res
+
 
 def base58_check_encode(original, version):
     """Check if base58 encoding is valid."""
@@ -82,8 +91,8 @@ def base58_check_encode(original, version):
 
     return address
 
-def base58_check_decode(s, version):
-    """Decode from base58."""
+
+def base58_decode(s):
     # Convert the string to an integer
     n = 0
     for c in s:
@@ -108,12 +117,31 @@ def base58_check_decode(s, version):
             break
     k = b'\x00' * pad + res
 
+    return k
+
+
+def base58_check_decode_parts(s):
+    """Decode from base58 and return parts."""
+
+    k = base58_decode(s)
+
     addrbyte, data, chk0 = k[0:1], k[1:-4], k[-4:]
+
+    return addrbyte, data, chk0
+
+
+def base58_check_decode(s, version):
+    """Decode from base58 and return data part."""
+
+    addrbyte, data, chk0 = base58_check_decode_parts(s)
+
     if addrbyte != version:
         raise VersionByteError('incorrect version byte')
+
     chk1 = util.dhash(addrbyte + data)[:4]
     if chk0 != chk1:
         raise Base58ChecksumError('Checksum mismatch: 0x{} ≠ 0x{}'.format(util.hexlify(chk0), util.hexlify(chk1)))
+
     return data
 
 
@@ -121,6 +149,16 @@ def is_multisig(address):
     """Check if the address is multi‐signature."""
     array = address.split('_')
     return len(array) > 1
+
+def is_p2sh(address):
+    if is_multisig(address):
+        return False
+
+    try:
+        base58_check_decode(address, config.P2SH_ADDRESSVERSION)
+        return True
+    except (VersionByteError, Base58Error):
+        return False
 
 def is_fully_valid(pubkey_bin):
     """Check if the public key is valid."""
@@ -243,9 +281,10 @@ def scriptpubkey_to_address(scriptpubkey):
         pubkeyhashes = [pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
         return construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes))
 
+    elif len(asm) == 3 and asm[0] == 'OP_HASH160' and asm[2] == 'OP_EQUAL':
+        return base58_check_encode(binascii.hexlify(asm[1]).decode('utf-8'), config.P2SH_ADDRESSVERSION)
+
     return None
-
-
 
 
 # TODO: Use `python-bitcointools` instead. (Get rid of `pycoin` dependency.)
@@ -270,7 +309,7 @@ def private_key_to_public_key(private_key_wif):
     return public_key_hex
 
 def is_pubkeyhash(monosig_address):
-    """Check if PubKeyHash is valid. """
+    """Check if PubKeyHash is valid P2PKH address. """
     assert not is_multisig(monosig_address)
     try:
         base58_check_decode(monosig_address, config.ADDRESSVERSION)
@@ -293,6 +332,8 @@ def make_pubkeyhash(address):
     else:
         if is_pubkeyhash(address):
             pubkeyhash_address = address
+        elif is_p2sh(address):
+            pubkeyhash_address = address
         else:
             pubkeyhash_address = pubkey_to_pubkeyhash(binascii.unhexlify(bytes(address, 'utf-8')))
     return pubkeyhash_address
@@ -305,6 +346,8 @@ def extract_pubkeys(pub):
         for pub in pubs:
             if not is_pubkeyhash(pub):
                 pubkeys.append(pub)
+    elif is_p2sh(pub):
+        pass
     else:
         if not is_pubkeyhash(pub):
             pubkeys.append(pub)

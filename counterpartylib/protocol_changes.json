@@ -1,62 +1,107 @@
 {
-	"numeric_asset_names":	{
-			"minimum_version_major": 9,
-			"minimum_version_minor": 47,
-			"minimum_version_revision": 1,
-			"block_index": 333500
-		},
-	"multisig_addresses":	{
-			"minimum_version_major": 9,
-			"minimum_version_minor": 47,
-			"minimum_version_revision": 1,
-			"block_index": 333500
-		},
-	"send_destination_required":	{
-			"minimum_version_major": 9,
-			"minimum_version_minor": 47,
-			"minimum_version_revision": 1,
-			"block_index": 333500
-		},
-	"contracts_only_xcp_balances":	{
-			"minimum_version_major": 9,
-			"minimum_version_minor": 47,
-			"minimum_version_revision": 1,
-			"block_index": 333500
-		},
-	"better_single_source_destination":      {
-			"minimum_version_major": 9,
-			"minimum_version_minor": 48,
-			"minimum_version_revision": 0,
-			"block_index": 335000
-		},
-	"hotfix_numeric_assets":      {
-			"minimum_version_major": 9,
-			"minimum_version_minor": 49,
-			"minimum_version_revision": 0,
-			"block_index": 334000
-		},
-	"hotfix_integer_overflow":      {
-			"minimum_version_major": 9,
-			"minimum_version_minor": 50,
-			"minimum_version_revision": 0,
-			"block_index": 0
-		},
-	"disable_rps": {
-			"minimum_version_major": 9,
-			"minimum_version_minor": 51,
-			"minimum_version_revision": 0,
-			"block_index": 352000
-		},
-	"null_data_check":      {
-			"minimum_version_major": 9,
-			"minimum_version_minor": 51,
-			"minimum_version_revision": 0,
-			"block_index": 352000
-		},
-	"max_fee_fraction":      {
-			"minimum_version_major": 9,
-			"minimum_version_minor": 54,
-			"minimum_version_revision": 0,
-			"block_index": 401278
-		}
+    "numeric_asset_names": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 47,
+        "minimum_version_revision": 1,
+        "block_index": 333500,
+        "testnet_block_index": 0
+    },
+    "multisig_addresses": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 47,
+        "minimum_version_revision": 1,
+        "block_index": 333500,
+        "testnet_block_index": 0
+    },
+    "send_destination_required": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 47,
+        "minimum_version_revision": 1,
+        "block_index": 333500,
+        "testnet_block_index": 0
+    },
+    "contracts_only_xcp_balances": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 47,
+        "minimum_version_revision": 1,
+        "block_index": 333500,
+        "testnet_block_index": 0
+    },
+    "better_single_source_destination": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 48,
+        "minimum_version_revision": 0,
+        "block_index": 335000,
+        "testnet_block_index": 0
+    },
+    "hotfix_numeric_assets": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 49,
+        "minimum_version_revision": 0,
+        "block_index": 334000,
+        "testnet_block_index": 0
+    },
+    "hotfix_integer_overflow": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 50,
+        "minimum_version_revision": 0,
+        "block_index": 0,
+        "testnet_block_index": 0
+    },
+    "disable_rps": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 51,
+        "minimum_version_revision": 0,
+        "block_index": 352000,
+        "testnet_block_index": 0
+    },
+    "null_data_check": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 51,
+        "minimum_version_revision": 0,
+        "block_index": 352000,
+        "testnet_block_index": 0
+    },
+    "max_fee_fraction": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 54,
+        "minimum_version_revision": 0,
+        "block_index": 401278,
+        "testnet_block_index": 0
+    },
+    "p2sh_addresses": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 52,
+        "minimum_version_revision": 9,
+        "block_index": 423888,
+        "testnet_block_index": 0
+    },
+	"broadcast_invalid_check": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 55,
+        "minimum_version_revision": 0,
+        "block_index": 423888,
+        "testnet_block_index": 0
+    },
+	"first_input_is_source": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 55,
+        "minimum_version_revision": 0,
+        "block_index": 423888,
+        "testnet_block_index": 0
+    },
+	"broadcast_pack_text": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 55,
+        "minimum_version_revision": 0,
+        "block_index": 423888,
+        "testnet_block_index": 861987
+    },
+    "bytespersigop": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 54,
+        "minimum_version_revision": 0,
+        "block_index": 423888,
+        "testnet_block_index": 0
+    }
 }

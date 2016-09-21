@@ -23,10 +23,13 @@ because it is stored as a four‐byte integer, it may not be greater than about
 
 import struct
 import decimal
+
 D = decimal.Decimal
 from fractions import Fraction
 import logging
 logger = logging.getLogger(__name__)
+
+from bitcoin.core import VarIntSerializer
 
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import config
@@ -107,12 +110,19 @@ def compose (db, source, timestamp, value, fee_fraction, text):
     if problems: raise exceptions.ComposeError(problems)
 
     data = struct.pack(config.TXTYPE_FORMAT, ID)
-    if len(text) <= 52:
-        curr_format = FORMAT + '{}p'.format(len(text) + 1)
+
+    # always use custom length byte instead of problematic usage of 52p format and make sure to encode('utf-8') for length
+    if util.enabled('broadcast_pack_text'):
+        data += struct.pack(FORMAT, timestamp, value, fee_fraction_int)
+        data += VarIntSerializer.serialize(len(text.encode('utf-8')))
+        data += text.encode('utf-8')
     else:
-        curr_format = FORMAT + '{}s'.format(len(text))
-    data += struct.pack(curr_format, timestamp, value, fee_fraction_int,
-                        text.encode('utf-8'))
+        if len(text) <= 52:
+            curr_format = FORMAT + '{}p'.format(len(text) + 1)
+        else:
+            curr_format = FORMAT + '{}s'.format(len(text))
+
+        data += struct.pack(curr_format, timestamp, value, fee_fraction_int, text.encode('utf-8'))
     return (source, [], data)
 
 def parse (db, tx, message):
@@ -120,11 +130,19 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        if len(message) - LENGTH <= 52:
-            curr_format = FORMAT + '{}p'.format(len(message) - LENGTH)
+        if util.enabled('broadcast_pack_text'):
+            timestamp, value, fee_fraction_int, rawtext = struct.unpack(FORMAT + '{}s'.format(len(message) - LENGTH), message)
+            textlen = VarIntSerializer.deserialize(rawtext)
+            text = rawtext[-textlen:]
+
+            assert len(text) == textlen
         else:
-            curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
-        timestamp, value, fee_fraction_int, text = struct.unpack(curr_format, message)
+            if len(message) - LENGTH <= 52:
+                curr_format = FORMAT + '{}p'.format(len(message) - LENGTH)
+            else:
+                curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
+
+            timestamp, value, fee_fraction_int, text = struct.unpack(curr_format, message)
 
         try:
             text = text.decode('utf-8')
@@ -164,11 +182,15 @@ def parse (db, tx, message):
         'locked': lock,
         'status': status,
     }
-    sql='insert into broadcasts values(:tx_index, :tx_hash, :block_index, :source, :timestamp, :value, :fee_fraction_int, :text, :locked, :status)'
+    sql = 'insert into broadcasts values(:tx_index, :tx_hash, :block_index, :source, :timestamp, :value, :fee_fraction_int, :text, :locked, :status)'
     cursor.execute(sql, bindings)
 
+    # stop processing if broadcast is invalid for any reason
+    if util.enabled('broadcast_invalid_check') and status != 'valid':
+        return
+
     # Negative values (default to ignore).
-    if value == None or value < 0:
+    if value is None or value < 0:
         # Cancel Open Bets?
         if value == -2:
             cursor.execute('''SELECT * FROM bets \
@@ -186,16 +208,17 @@ def parse (db, tx, message):
         cursor.close()
         return
 
+    # stop processing if broadcast is invalid for any reason
+    # @TODO: remove this check once broadcast_invalid_check has been activated
+    if util.enabled('max_fee_fraction') and status != 'valid':
+        return
+
     # Handle bet matches that use this feed.
     cursor.execute('''SELECT * FROM bet_matches \
                       WHERE (status=? AND feed_address=?)
                       ORDER BY tx1_index ASC, tx0_index ASC''',
                    ('pending', tx['source']))
     for bet_match in cursor.fetchall():
-        if util.enabled('max_fee_fraction'):
-            if status != 'valid':
-                break
-
         broadcast_bet_match_cursor = db.cursor()
         bet_match_id = util.make_id(bet_match['tx0_hash'], bet_match['tx1_hash'])
         bet_match_status = None

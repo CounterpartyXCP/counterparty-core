@@ -1,22 +1,22 @@
-**@adamkrellenstein:**
+**Development team:**
 
-- Update ChangeLog
-- Update `lib/config.py`: `VERSION_*`
+- Merge pending dev branches into `develop`
+- Update `ChangeLog.md`
+- Update `VERSION_` variables in `lib/config.py`
 - Update `protocol_changes.json` (as necessary)
-- Update `setup.py` (as necessary)
-- Run test suite
-- Tag and Sign Release
-- Merge branch into both `master` and `develop`
+- Create `develop` PR to merge into `master` for final dev team review
+- Make sure all PR CI test runners pass
+- Merge PR into `master`
+- Tag and Sign Release (for release notes, use the relevant text from `ChangeLog.md`)
 - Rebase `gh-pages` to `master`
 - Upload (signed) package to PyPi
 	* `sudo python3 setup.py sdist build`
 	<!-- * `sudo python3 setup.py bdist_wheel build`	# Does not work with `apsw` and `ethereum-serpent` installs. -->
 	* `twine upload -s dist/$NEW_FILES`
-- Write [Release Notes](https://github.com/CounterpartyXCP/counterparty-lib/releases)
 - Update documentation (as appropriate)
 
-**@ivanazuber:**:
+**Announce:**:
 
-- Post to [Official Forums](https://forums.counterparty.io/discussion/445/new-version-announcements-counterparty-and-counterpartyd), Skype, [Gitter](https://gitter.im/CounterpartyXCP)
-- Post to social media
-- SMS and mailing list notifications
+- Post to [Official Forums](https://counterpartytalk.org/t/new-version-announcements-counterparty-and-counterpartyd/363)) and Slack
+- Send emails on Dev announcement mailing list, main mailing list 
+- Post to social media: Facebook, Twitter, etc.
