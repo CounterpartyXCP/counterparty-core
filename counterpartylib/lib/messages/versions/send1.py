@@ -107,7 +107,52 @@ def parse (db, tx, message):
 
     if status == 'valid':
         util.debit(db, tx['source'], asset, quantity, action='send', event=tx['tx_hash'])
-        util.credit(db, tx['destination'], asset, quantity, action='send', event=tx['tx_hash'])
+        
+        if util.enabled('burn_assets'):
+            if config.TESTNET: 
+                unspendable = config.UNSPENDABLE_TESTNET
+            else:
+                unspendable = config.UNSPENDABLE_MAINNET
+                
+            if tx['destination'] != unspendable:
+                util.credit(db, tx['destination'], asset, quantity, action='send', event=tx['tx_hash'])
+            else:
+                quantity = -quantity
+                
+                #get asset issuance info
+                issuance_cursor = db.cursor()
+                issuances = list(issuance_cursor.execute('''SELECT * FROM issuances \
+                                                            WHERE (status = ? AND asset = ?)
+                                                            ORDER BY tx_index ASC''', ('valid', asset)))
+                issuance_cursor.close()
+                description = issuances[-1]['description']  # Use last 
+                locked = issuances[-1]['locked']  # Use last
+                divisible = issuances[-1]['divisible']  # Use last 
+                issuer = issuances[-1]['issuer']  # Use last 
+
+                bindings= {
+                    'tx_index': tx['tx_index'],
+                    'tx_hash': tx['tx_hash'],
+                    'block_index': tx['block_index'],
+                    'asset': asset,
+                    'quantity': quantity,
+                    'divisible': divisible,
+                    'source': tx['source'], 
+                    'issuer': issuer, 
+                    'transfer': 0,
+                    'callable': 0,
+                    'call_date': 0,
+                    'call_price': 0,
+                    'description': description, 
+                    'fee_paid': 0,
+                    'locked': lock, 
+                    'status': status,
+                }
+                sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status)'
+                issuance_cursor.execute(sql, bindings)
+        else:
+            util.credit(db, tx['destination'], asset, quantity, action='send', event=tx['tx_hash'])
+   
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
