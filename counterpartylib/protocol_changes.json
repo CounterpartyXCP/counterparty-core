@@ -104,4 +104,11 @@
         "block_index": 423888,
         "testnet_block_index": 0
     }
+    "burn_assets": {
+    	"minimum_version_major": 9,
+        "minimum_version_minor": 56,
+        "minimum_version_revision": 0,
+        "block_index": 450000,
+        "testnet_block_index": 950000
+    }
 }
