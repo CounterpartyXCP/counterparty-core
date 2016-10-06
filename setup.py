@@ -80,24 +80,27 @@ class install_serpent(Command):
     def run(self):
         # In Windows Serpent should be installed manually
         if os.name == 'nt':
-            print('To complete the installation you have to install Serpent: https://github.com/ethereum/serpent');
+            print('To complete the installation you have to install Serpent: https://github.com/ethereum/serpent')
             return
 
+        SERPENT_REPO =  "ethereum"
+        SERPENT_COMMIT = "0ec2042c71edf43ef719ea6268d4206a2424d5bb"
+
         print("downloading serpent.")
-        urllib.request.urlretrieve('https://github.com/ethereum/serpent/archive/master.zip', 'serpent.zip')
+        urllib.request.urlretrieve('https://codeload.github.com/{}/serpent/zip/{}'.format(SERPENT_REPO, SERPENT_COMMIT), 'serpent.zip')
 
         print("extracting.")
         with zipfile.ZipFile('serpent.zip', 'r') as zip_file:
             zip_file.extractall()
 
         print("making serpent.")
-        os.system('cd serpent-master && make')
+        os.system('cd serpent-{} && make'.format(SERPENT_COMMIT))
         print("install serpent using sudo.")
         print("hence it might request a password.")
-        os.system('cd serpent-master && sudo make install')
+        os.system('cd serpent-{} && sudo make install'.format(SERPENT_COMMIT))
 
         print("clean files.")
-        shutil.rmtree('serpent-master')
+        shutil.rmtree('serpent-{}'.format(SERPENT_COMMIT))
         os.remove('serpent.zip')
 
 class move_old_db(Command):
