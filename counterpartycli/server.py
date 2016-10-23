@@ -31,7 +31,7 @@ CONFIG_ARGS = [
     [('--backend-ssl-no-verify',), {'action': 'store_true', 'default': False, 'help': 'verify SSL certificate of backend; disallow use of self‐signed certificates (default: true)'}],
     [('--backend-poll-interval',), {'type': float, 'default': 0.5, 'help': 'poll interval, in seconds (default: 0.5)'}],
     [('--no-check-asset-conservation',), {'action': 'store_true', 'default': False, 'help': 'Skip asset conservation checking (default: false)'}],
-    [('--p2sh-dust-return-pubkey',), {'help': 'pubkey to receive dust when multisig encoding is used for P2SH source (default: pubkey from counterparty foundation)'}],
+    [('--p2sh-dust-return-pubkey',), {'help': 'pubkey to receive dust when multisig encoding is used for P2SH source (default: none)'}],
 
     [('--rpc-host',), {'default': 'localhost', 'help': 'the IP of the interface to bind to for providing JSON-RPC API access (0.0.0.0 for all interfaces)'}],
     [('--rpc-port',), {'type': int, 'help': 'port on which to provide the {} JSON-RPC API'.format(config.APP_NAME)}],
