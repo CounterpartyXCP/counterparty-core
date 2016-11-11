@@ -211,7 +211,7 @@ required_packages = [
     'pycoin==0.62',
     'pycrypto==2.6.1',
     'pysha3==0.3',
-    'pytest==2.9.1',
+    'pytest==2.9.2',
     'pytest-cov==2.2.1',
     'python-bitcoinlib==0.5.1',
     'requests==2.10.0',
