@@ -80,24 +80,27 @@ class install_serpent(Command):
     def run(self):
         # In Windows Serpent should be installed manually
         if os.name == 'nt':
-            print('To complete the installation you have to install Serpent: https://github.com/ethereum/serpent');
+            print('To complete the installation you have to install Serpent: https://github.com/ethereum/serpent')
             return
 
+        SERPENT_REPO =  "ethereum"
+        SERPENT_COMMIT = "0ec2042c71edf43ef719ea6268d4206a2424d5bb"
+
         print("downloading serpent.")
-        urllib.request.urlretrieve('https://github.com/ethereum/serpent/archive/master.zip', 'serpent.zip')
+        urllib.request.urlretrieve('https://codeload.github.com/{}/serpent/zip/{}'.format(SERPENT_REPO, SERPENT_COMMIT), 'serpent.zip')
 
         print("extracting.")
         with zipfile.ZipFile('serpent.zip', 'r') as zip_file:
             zip_file.extractall()
 
         print("making serpent.")
-        os.system('cd serpent-master && make')
+        os.system('cd serpent-{} && make'.format(SERPENT_COMMIT))
         print("install serpent using sudo.")
         print("hence it might request a password.")
-        os.system('cd serpent-master && sudo make install')
+        os.system('cd serpent-{} && sudo make install'.format(SERPENT_COMMIT))
 
         print("clean files.")
-        shutil.rmtree('serpent-master')
+        shutil.rmtree('serpent-{}'.format(SERPENT_COMMIT))
         os.remove('serpent.zip')
 
 class move_old_db(Command):
@@ -178,7 +181,7 @@ class install(_install):
             caller_module == 'distutils.dist'
             and info.function == 'run_commands'
         )
-        
+
     def run(self):
         # Explicit request for old-style install?  Just do it
         if self.old_and_unmanageable or self.single_version_externally_managed:
@@ -205,12 +208,15 @@ required_packages = [
     'appdirs==1.4.0',
     'colorlog==2.7.0',
     'json-rpc==1.10.3',
-    'pycoin==0.62',
+    'jsonschema>=2.5.1',
+    'six>=1.10.0',
+    'pycoin==0.70',
     'pycrypto==2.6.1',
     'pysha3==0.3',
     'pytest==2.9.1',
     'pytest-cov==2.2.1',
     'python-bitcoinlib==0.5.1',
+    'micropayment-core>=0.4.0',
     'requests==2.10.0',
     'tendo==0.2.8',
     'xmltodict==0.10.1',
@@ -248,6 +254,13 @@ setup_options = {
     'setup_requires': ['appdirs'],
     'install_requires': required_packages,
     'include_package_data': True,
+    'package_data': {
+        "counterpartylib": [
+            "test/fixtures/*.json",
+            "test/fixtures/scenarios/*.json",
+            "test/fixtures/scenarios/*.sql",
+        ],
+    },
     'cmdclass': {
         'install': install,
         'move_old_db': move_old_db,
