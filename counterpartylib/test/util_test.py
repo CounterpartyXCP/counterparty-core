@@ -429,8 +429,13 @@ def get_block_txlist(db, block_index):
     txlist = json.dumps(txlist, indent=4)
     return txlist
 
+
 def reparse(testnet=True):
-    """Reparse all transaction from the database, create a new blockchain and compare it to the old one."""
+    """
+    Reparse all transaction from the database.
+     - Create a new in-memory DB, copy the DB that is on-disk
+     - Reparse DB, automatically compares consensus hashes to the original ones from the on-disk DB
+    """
     options = dict(COUNTERPARTYD_OPTIONS)
     server.initialise(database_file=':memory:', testnet=testnet, **options)
 
@@ -440,7 +445,6 @@ def reparse(testnet=True):
         config.PREFIX = b'TESTXXXX'
 
     memory_db = database.get_connection(read_only=False)
-    initialise_db(memory_db)
 
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
     prod_db_path = os.path.join(data_dir, '{}{}.db'.format(config.APP_NAME, '.testnet' if testnet else ''))
@@ -448,10 +452,13 @@ def reparse(testnet=True):
     prod_db = apsw.Connection(prod_db_path)
     prod_db.setrowtrace(database.rowtracer)
 
+    # Copy DB from file on disk (should be a DB file with at least all the checkpoints)
+    #  in-memory DB shouldn't have been written to yet up until this point
     with memory_db.backup("main", prod_db, "main") as backup:
-        backup.step()
+        while not backup.done:
+            backup.step(100)
 
-    # Here we don’t use block.reparse() because it reparse db in transaction (`with db`).
+    # Drop most tables (except blocks, transactions, undolog)
     memory_cursor = memory_db.cursor()
     for table in blocks.TABLES + ['balances']:
         memory_cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
@@ -476,11 +483,13 @@ def reparse(testnet=True):
                 logger.info('First hash changed. Cleaning {}.'.format(field))
                 memory_cursor.execute('''UPDATE blocks SET {} = NULL'''.format(field))
 
+    # Initialise missing tables
     blocks.initialise(memory_db)
     previous_ledger_hash = None
     previous_txlist_hash = None
     previous_messages_hash = None
 
+    # Reparse each block, if ConsensusError is thrown then the difference
     memory_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
     for block in memory_cursor.fetchall():
         try:
@@ -504,7 +513,8 @@ def reparse(testnet=True):
                 new_txlist = get_block_txlist(memory_db, block['block_index'])
                 old_txlist = get_block_txlist(prod_db, block['block_index'])
                 compare_strings(old_txlist, new_txlist)
-            raise(e)
+
+            raise e
 
 
 class ConfigContext(object):

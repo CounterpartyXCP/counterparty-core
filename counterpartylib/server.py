@@ -4,7 +4,7 @@ import os
 import decimal
 import pprint
 import sys
-import logging
+import apsw
 import time
 import dateutil.parser
 import calendar
@@ -14,6 +14,7 @@ import socket
 import signal
 import appdirs
 import platform
+import logging
 from urllib.parse import quote_plus as urlencode
 
 from counterpartylib.lib import log
@@ -375,7 +376,7 @@ def initialise_db():
         get_lock()
 
     # Database
-    logger.info('Connecting to database.')
+    logger.info('Connecting to database (SQLite %s).' % apsw.apswversion())
     db = database.get_connection(read_only=False)
 
     util.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
