@@ -208,6 +208,8 @@ def debit (db, address, asset, quantity, action=None, event=None):
         raise DebitError('Quantity must be an integer.')
     if quantity < 0:
         raise DebitError('Negative quantity.')
+    if quantity > config.MAX_INT:
+        raise DebitError('Quantity can\'t be higher than MAX_INT.')
     if asset == config.BTC:
         raise DebitError('Cannot debit bitcoins.')
 
@@ -268,6 +270,8 @@ def credit (db, address, asset, quantity, action=None, event=None):
         raise CreditError('Quantity must be an integer.')
     if quantity < 0:
         raise CreditError('Negative quantity.')
+    if quantity > config.MAX_INT:
+        raise CreditError('Quantity can\'t be higher than MAX_INT.')
     if asset == config.BTC:
         raise CreditError('Cannot debit bitcoins.')
 

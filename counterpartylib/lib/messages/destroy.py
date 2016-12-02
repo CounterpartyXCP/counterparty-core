@@ -3,6 +3,9 @@
 """Destroy a quantity of an asset."""
 
 import struct
+import json
+import logging
+logger = logging.getLogger(__name__)
 
 from counterpartylib.lib import util
 from counterpartylib.lib import config
@@ -78,7 +81,7 @@ def validate (db, source, destination, asset, quantity):
         raise ValidateError('quantity not integer')
 
     if quantity > config.MAX_INT:
-        raise ValidateError('quantity too large')
+        raise ValidateError('integer overflow, quantity too large')
 
     if quantity < 0:
         raise ValidateError('quantity negative')
@@ -124,9 +127,13 @@ def parse (db, tx, message):
                 'tag': tag,
                 'status': status,
                }
-    sql = 'insert into destructions values(:tx_index, :tx_hash, :block_index, :source, :asset, :quantity, :tag, :status)'
-    cursor = db.cursor()
-    cursor.execute(sql, bindings)
+    if "integer overflow" not in status:
+        sql = 'insert into destructions values(:tx_index, :tx_hash, :block_index, :source, :asset, :quantity, :tag, :status)'
+        cursor = db.cursor()
+        cursor.execute(sql, bindings)
+    else:
+        logger.warn("Not storing [destroy] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.debug("Bindings: %s" % (json.dumps(bindings), ))
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

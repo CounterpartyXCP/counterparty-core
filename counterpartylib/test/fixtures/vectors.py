@@ -117,7 +117,7 @@ UNITTEST_VECTOR = {
             'out': (['integer overflow'], 15120)
         }, {
             'in': (ADDR[1], ADDR[0], 2**63, 1488000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block_index']),
-            'out': (['unknown bet type', 'integer overflow'], 15120)
+            'out': (['integer overflow', 'unknown bet type'], 15120)
         }, {
             'in': (ADDR[1], ADDR[0], 1, 1488000100, DP['small'], DP['small'], 0.0, 2**63, DP['expiration'], DP['default_block_index']),
             'out': (['integer overflow'], 2**63)
@@ -1077,7 +1077,7 @@ UNITTEST_VECTOR = {
             'error': (exceptions.ValidateError, 'quantity not integer')
         }, {
             'in': (ADDR[0], None, 'XCP', 2**63),
-            'error': (exceptions.ValidateError, 'quantity too large')
+            'error': (exceptions.ValidateError, 'integer overflow, quantity too large')
         }, {
             'in': (ADDR[0], None, 'XCP', -1),
             'error': (exceptions.ValidateError, 'quantity negative')
@@ -1175,8 +1175,8 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], ADDR[1], 'MAXI', 2**63 - 1, 1),
             'out': ([])
         }, {
-            'in': (ADDR[0], ADDR[1], 'MAXI', 2**63 + 1, 1),
-            'out': ([])
+            'in': (ADDR[0], ADDR[1], 'MAXI', 2**63, 1),
+            'out': (['integer overflow'])
         }],
         'compose': [{
             'in': (ADDR[0], ADDR[1], 'XCP', DP['small']),
@@ -1499,7 +1499,7 @@ UNITTEST_VECTOR = {
             'out': (0, 0.0, ['insufficient funds'], 50000000, '', True, False)
         }, {
             'in': (ADDR[0], None, 'BSSET', 2**63, True, False, None, None, '', DP['default_block_index']),
-            'out': (0, 0.0, ['total quantity overflow'], 50000000, '', True, False)
+            'out': (0, 0.0, ['total quantity overflow', 'integer overflow'], 50000000, '', True, False)
         }, {
             'in': (ADDR[0], ADDR[1], 'DIVISIBLE', 1000, True, False, None, None, 'Divisible asset', DP['default_block_index']),
             'out': (0, 0.0, ['cannot issue and transfer simultaneously'], 0, 'Divisible asset', True, True)
@@ -1507,8 +1507,9 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], None, 'MAXIMUM', 2**63-1, True, False, None, None, 'Maximum quantity', DP['default_block_index']),
             'out': (0, 0.0, [], 50000000, 'Maximum quantity', True, False)
         }, {
+            'comment': 'total + quantity has to be lower than MAX_INT',
             'in': (ADDR[0], None, 'DIVISIBLE', 2**63-1, True, False, None, None, 'Maximum quantity', DP['default_block_index']),
-            'out': (0, 0.0, ['total quantity overflow'], 0, 'Maximum quantity', True, True)
+            'out': (0, 0.0, ['total quantity overflow', 'integer overflow'], 0, 'Maximum quantity', True, True)
         }],
         'compose': [{
             'in': (ADDR[0], None, 'ASSET', 1000, True, ''),
@@ -1831,6 +1832,14 @@ UNITTEST_VECTOR = {
                     ],
                     ['insufficient funds (XCP)'],
                     20000)
+        }, {
+            'in': (ADDR[2], 2 ** 63, 'DIVIDEND', 'DIVIDEND', DP['default_block_index']),
+            'out': (922337203685,
+                    [
+                        {'address_quantity': 10, 'address': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'dividend_quantity': 922337203685},
+                    ],
+                    ['integer overflow', 'insufficient funds (DIVIDEND)'],
+                    0)
         }],
         'compose': [{
             'in': (ADDR[0], DP['quantity'], 'DIVISIBLE', 'XCP'),
@@ -1989,7 +1998,7 @@ UNITTEST_VECTOR = {
             'out': (['no such asset to give (NOASSETA)', 'no such asset to get (NOASSETB)'])
         }, {
             'in': (ADDR[0], 'DIVISIBLE', 2**63 + 10, 'XCP', DP['quantity'], 4 * 2016 + 10, 0, DP['default_block_index']),
-            'out': (['expiration overflow', 'integer overflow'])
+            'out': (['integer overflow', 'expiration overflow'])
         }],
         'compose': [{
             'in': (ADDR[0], 'BTC', DP['small'], 'XCP', DP['small'] * 2, DP['expiration'], 0),
@@ -2010,7 +2019,10 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], 'MAXI', 2**63 - 1, 'XCP', DP['quantity'], DP['expiration'], DP['fee_required']),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x03:>\x7f\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\r\xbb\xa0')
         }, {
-            'in': (ADDR[0], 'MAXI', 2**63 + 1, 'XCP', DP['quantity'], DP['expiration'], DP['fee_required']),
+            'in': (ADDR[0], 'MAXI', 2**63 - 1, 'XCP', DP['quantity'], DP['expiration'], 2 ** 63),
+            'error': (exceptions.ComposeError, "['integer overflow']")
+        }, {
+            'in': (ADDR[0], 'MAXI', 2**63, 'XCP', DP['quantity'], DP['expiration'], DP['fee_required']),
             'error': (exceptions.ComposeError, 'insufficient funds')
         }],
         'parse': [{
@@ -2558,6 +2570,18 @@ UNITTEST_VECTOR = {
                     'event': '0ec7da68a67e165693afd6c97566f8f509d302bceec8d1be0100335718a40fe5',
                     'quantity': 9223372036854775807,
                 }}
+            ]
+        }, {
+            'comment': "order shouldn't be inserted because fee_required is > MAX_INT",
+            'in': ({'btc_amount': 0, 'fee': 10000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': '',
+                    'tx_hash': '0ec7da68a67e165693afd6c97566f8f509d302bceec8d1be0100335718a40fe5', 'tx_index': 502,
+                    'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x03:>\x7f\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x80\x00\x00\x00\x00\x00\x00\x00',
+                    'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'supported': 1, 'block_time': 155409000, 'block_index': DP['default_block_index']},),
+            'records': [
+                {'not': True,  # NOT
+                 'table': 'orders', 'values': {
+                    'tx_hash': '0ec7da68a67e165693afd6c97566f8f509d302bceec8d1be0100335718a40fe5'
+                }},
             ]
         }],
         'expire': [{

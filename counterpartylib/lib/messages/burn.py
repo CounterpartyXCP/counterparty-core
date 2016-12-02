@@ -1,7 +1,10 @@
 #! /usr/bin/python3
-
+import json
 import struct
 import decimal
+import logging
+logger = logging.getLogger(__name__)
+
 D = decimal.Decimal
 from fractions import Fraction
 
@@ -71,6 +74,7 @@ def parse (db, tx, MAINNET_BURNS, message=None):
     burn_parse_cursor = db.cursor()
 
     if config.TESTNET:
+        problems = []
         status = 'valid'
 
         if status == 'valid':
@@ -138,8 +142,12 @@ def parse (db, tx, MAINNET_BURNS, message=None):
         'earned': earned,
         'status': status,
     }
-    sql='insert into burns values(:tx_index, :tx_hash, :block_index, :source, :burned, :earned, :status)'
-    burn_parse_cursor.execute(sql, bindings)
+    if "integer overflow" not in status:
+        sql = 'insert into burns values(:tx_index, :tx_hash, :block_index, :source, :burned, :earned, :status)'
+        burn_parse_cursor.execute(sql, bindings)
+    else:
+        logger.warn("Not storing [burn] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.debug("Bindings: %s" % (json.dumps(bindings), ))
 
     burn_parse_cursor.close()
 

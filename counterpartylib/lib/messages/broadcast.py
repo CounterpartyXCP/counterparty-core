@@ -20,12 +20,12 @@ fee_fraction: .05 XCP means 5%. It may be greater than 1, however; but
 because it is stored as a four‐byte integer, it may not be greater than about
 42.
 """
-
 import struct
 import decimal
 
 D = decimal.Decimal
 from fractions import Fraction
+import json
 import logging
 logger = logging.getLogger(__name__)
 
@@ -72,6 +72,10 @@ def initialise(db):
 
 def validate (db, source, timestamp, value, fee_fraction_int, text, block_index):
     problems = []
+
+    # For SQLite3
+    if timestamp > config.MAX_INT or value > config.MAX_INT or fee_fraction_int > config.MAX_INT:
+        problems.append('integer overflow')
 
     if util.enabled('max_fee_fraction'):
         if fee_fraction_int >= config.UNIT:
@@ -182,8 +186,12 @@ def parse (db, tx, message):
         'locked': lock,
         'status': status,
     }
-    sql = 'insert into broadcasts values(:tx_index, :tx_hash, :block_index, :source, :timestamp, :value, :fee_fraction_int, :text, :locked, :status)'
-    cursor.execute(sql, bindings)
+    if "integer overflow" not in status:
+        sql = 'insert into broadcasts values(:tx_index, :tx_hash, :block_index, :source, :timestamp, :value, :fee_fraction_int, :text, :locked, :status)'
+        cursor.execute(sql, bindings)
+    else:
+        logger.warn("Not storing [broadcast] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.debug("Bindings: %s" % (json.dumps(bindings), ))
 
     # stop processing if broadcast is invalid for any reason
     if util.enabled('broadcast_invalid_check') and status != 'valid':

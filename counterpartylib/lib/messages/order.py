@@ -2,7 +2,7 @@
 
 # Filled orders may not be re‐opened, so only orders not involving BTC (and so
 # which cannot have expired order matches) may be filled.
-
+import json
 import struct
 import decimal
 D = decimal.Decimal
@@ -328,6 +328,10 @@ def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, ex
     problems = []
     cursor = db.cursor()
 
+    # For SQLite3
+    if give_quantity > config.MAX_INT or get_quantity > config.MAX_INT or fee_required > config.MAX_INT or block_index + expiration > config.MAX_INT:
+        problems.append('integer overflow')
+
     if give_asset == config.BTC and get_asset == config.BTC:
         problems.append('cannot trade {} for itself'.format(config.BTC))
 
@@ -361,10 +365,6 @@ def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, ex
         problems.append('no such asset to get ({})'.format(get_asset))
     if expiration > config.MAX_EXPIRATION:
         problems.append('expiration overflow')
-
-    # For SQLite3
-    if give_quantity > config.MAX_INT or get_quantity > config.MAX_INT or fee_required > config.MAX_INT:
-        problems.append('integer overflow')
 
     cursor.close()
     return problems
@@ -452,8 +452,12 @@ def parse (db, tx, message):
         'fee_provided_remaining': tx['fee'],
         'status': status,
     }
-    sql='insert into orders values(:tx_index, :tx_hash, :block_index, :source, :give_asset, :give_quantity, :give_remaining, :get_asset, :get_quantity, :get_remaining, :expiration, :expire_index, :fee_required, :fee_required_remaining, :fee_provided, :fee_provided_remaining, :status)'
-    order_parse_cursor.execute(sql, bindings)
+    if "integer overflow" not in status:
+        sql = 'insert into orders values(:tx_index, :tx_hash, :block_index, :source, :give_asset, :give_quantity, :give_remaining, :get_asset, :get_quantity, :get_remaining, :expiration, :expire_index, :fee_required, :fee_required_remaining, :fee_provided, :fee_provided_remaining, :status)'
+        order_parse_cursor.execute(sql, bindings)
+    else:
+        logger.warn("Not storing [order] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.debug("Bindings: %s" % (json.dumps(bindings), ))
 
     # Match.
     if status == 'open' and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
