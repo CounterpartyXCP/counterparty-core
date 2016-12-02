@@ -1509,7 +1509,7 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'total + quantity has to be lower than MAX_INT',
             'in': (ADDR[0], None, 'DIVISIBLE', 2**63-1, True, False, None, None, 'Maximum quantity', DP['default_block_index']),
-            'out': (0, 0.0, ['total quantity overflow', 'integer overflow'], 0, 'Maximum quantity', True, True)
+            'out': (0, 0.0, ['total quantity overflow'], 0, 'Maximum quantity', True, True)
         }],
         'compose': [{
             'in': (ADDR[0], None, 'ASSET', 1000, True, ''),

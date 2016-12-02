@@ -161,7 +161,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
         problems.append('cannot issue and transfer simultaneously')
 
     # For SQLite3
-    if fee > config.MAX_INT or quantity > config.MAX_INT or total + quantity > config.MAX_INT:
+    if fee > config.MAX_INT or quantity > config.MAX_INT:
         problems.append('integer overflow')
 
     return call_date, call_price, problems, fee, description, divisible, reissuance
