@@ -181,7 +181,7 @@ class install(_install):
             caller_module == 'distutils.dist'
             and info.function == 'run_commands'
         )
-        
+
     def run(self):
         # Explicit request for old-style install?  Just do it
         if self.old_and_unmanageable or self.single_version_externally_managed:
@@ -208,12 +208,15 @@ required_packages = [
     'appdirs==1.4.0',
     'colorlog==2.7.0',
     'json-rpc==1.10.3',
-    'pycoin==0.62',
+    'jsonschema>=2.5.1',
+    'six>=1.10.0',
+    'pycoin==0.70',
     'pycrypto==2.6.1',
     'pysha3==0.3',
     'pytest==2.9.1',
     'pytest-cov==2.2.1',
     'python-bitcoinlib==0.5.1',
+    'micropayment-core>=0.4.0',
     'requests==2.10.0',
     'tendo==0.2.8',
     'xmltodict==0.10.1',
@@ -251,6 +254,13 @@ setup_options = {
     'setup_requires': ['appdirs'],
     'install_requires': required_packages,
     'include_package_data': True,
+    'package_data': {
+        "counterpartylib": [
+            "test/fixtures/*.json",
+            "test/fixtures/scenarios/*.json",
+            "test/fixtures/scenarios/*.sql",
+        ],
+    },
     'cmdclass': {
         'install': install,
         'move_old_db': move_old_db,

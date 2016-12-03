@@ -38,7 +38,7 @@ Then, download and install `counterparty-lib`:
 ```
 $ git clone https://github.com/CounterpartyXCP/counterparty-lib.git
 $ cd counterparty-lib
-$ sudo pip3 install -r requirements.txt
+$ sudo pip3 install --upgrade -r requirements.txt
 $ sudo python3 setup.py install
 ```
 
@@ -47,7 +47,7 @@ Followed by `counterparty-cli`:
 ```
 $ git clone https://github.com/CounterpartyXCP/counterparty-cli.git
 $ cd counterparty-cli
-$ sudo pip3 install -r requirements.txt
+$ sudo pip3 install --upgrade -r requirements.txt
 $ sudo python3 setup.py install
 ```
 

@@ -39,6 +39,7 @@ from counterpartylib.lib import database
 from counterpartylib.lib import transaction
 from counterpartylib.lib import blocks
 from counterpartylib.lib import script
+from counterpartylib.lib import micropayments
 from counterpartylib.lib.messages import send
 from counterpartylib.lib.messages import order
 from counterpartylib.lib.messages import btcpay
@@ -327,13 +328,13 @@ def conditional_decorator(decorator, condition):
 def init_api_access_log(app):
     """Initialize API logger."""
     loggers = (logging.getLogger('werkzeug'), app.logger)
-    
+
     # Disable console logging...
     for l in loggers:
         l.setLevel(logging.INFO)
         l.propagate = False
 
-    # Log to file, if configured...    
+    # Log to file, if configured...
     if config.API_LOG:
         handler = logging_handlers.RotatingFileHandler(config.API_LOG, 'a', API_MAX_LOG_SIZE, API_MAX_LOG_COUNT)
         for l in loggers:
@@ -381,20 +382,33 @@ class APIStatusPoller(threading.Thread):
 
 class APIServer(threading.Thread):
     """Handle JSON-RPC API calls."""
-    def __init__(self):
+    def __init__(self, db=None):
+        self.db = db
         self.is_ready = False
+        self.shutdown_secret = binascii.hexlify(os.urandom(32)).decode('ascii')
         threading.Thread.__init__(self)
         self.stop_event = threading.Event()
 
+        self.app = None
+
     def stop(self):
+        util.api('shutdown', {'secret': self.shutdown_secret})
         self.join()
         self.stop_event.set()
 
     def run(self):
         logger.info('Starting API Server.')
-        db = database.get_connection(read_only=True, integrity_check=False)
+        self.db = self.db or database.get_connection(read_only=True, integrity_check=False)
         app = flask.Flask(__name__)
         auth = HTTPBasicAuth()
+
+        @dispatcher.add_method
+        def shutdown(secret):
+            assert self.shutdown_secret and secret == self.shutdown_secret
+            func = flask.request.environ.get('werkzeug.server.shutdown')
+            if func is None:
+                raise RuntimeError("Can't shutdown...")
+            func()
 
         @auth.get_password
         def get_pw(username):
@@ -409,7 +423,7 @@ class APIServer(threading.Thread):
         def generate_get_method(table):
             def get_method(**kwargs):
                 try:
-                    return get_rows(db, table=table, **kwargs)
+                    return get_rows(self.db, table=table, **kwargs)
                 except TypeError as e:          #TODO: generalise for all API methods
                     raise APIError(str(e))
             return get_method
@@ -423,7 +437,7 @@ class APIServer(threading.Thread):
         def sql(query, bindings=None):
             if bindings == None:
                 bindings = []
-            return db_query(db, query, tuple(bindings))
+            return db_query(self.db, query, tuple(bindings))
 
 
         ######################
@@ -448,14 +462,14 @@ class APIServer(threading.Thread):
             def create_method(**kwargs):
                 try:
                     transaction_args, common_args, private_key_wif = split_params(**kwargs)
-                    return compose_transaction(db, name=tx, params=transaction_args, **common_args)
+                    return compose_transaction(self.db, name=tx, params=transaction_args, **common_args)
                 except TypeError as e:
                     raise APIError(str(e))
                 except (script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
                     error_msg = "Error composing {} transaction via API: {}".format(tx, str(error))
                     logging.warning(error_msg)
                     raise JSONRPCDispatchException(code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg)
-            
+
             return create_method
 
         for tx in API_TRANSACTIONS:
@@ -468,7 +482,7 @@ class APIServer(threading.Thread):
             if not isinstance(block_index, int):
                 raise APIError("block_index must be an integer.")
 
-            cursor = db.cursor()
+            cursor = self.db.cursor()
             cursor.execute('select * from messages where block_index = ? order by message_index asc', (block_index,))
             messages = cursor.fetchall()
             cursor.close()
@@ -486,7 +500,7 @@ class APIServer(threading.Thread):
                 if not isinstance(idx, int):
                     raise APIError("All items in message_indexes are not integers")
 
-            cursor = db.cursor()
+            cursor = self.db.cursor()
             cursor.execute('SELECT * FROM messages WHERE message_index IN (%s) ORDER BY message_index ASC'
                 % (','.join([str(x) for x in message_indexes]),))
             messages = cursor.fetchall()
@@ -498,14 +512,14 @@ class APIServer(threading.Thread):
             if asset == 'BTC':
                 return  backend.get_btc_supply(normalize=False)
             elif asset == 'XCP':
-                return util.xcp_supply(db)
+                return util.xcp_supply(self.db)
             else:
-                return util.asset_supply(db, asset)
+                return util.asset_supply(self.db, asset)
 
         @dispatcher.add_method
         def get_xcp_supply():
             logger.warning("Deprecated method: `get_xcp_supply`")
-            return util.xcp_supply(db)
+            return util.xcp_supply(self.db)
 
         @dispatcher.add_method
         def get_asset_info(assets):
@@ -520,7 +534,7 @@ class APIServer(threading.Thread):
                     if asset == config.BTC:
                         supply = backend.get_btc_supply(normalize=False)
                     else:
-                        supply = util.xcp_supply(db)
+                        supply = util.xcp_supply(self.db)
 
                     assetsInfo.append({
                         'asset': asset,
@@ -534,7 +548,7 @@ class APIServer(threading.Thread):
                     continue
 
                 # User‐created asset.
-                cursor = db.cursor()
+                cursor = self.db.cursor()
                 issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?) ORDER BY block_index ASC''', ('valid', asset)))
                 cursor.close()
                 if not issuances:
@@ -549,7 +563,7 @@ class APIServer(threading.Thread):
                     'owner': last_issuance['issuer'],
                     'divisible': bool(last_issuance['divisible']),
                     'locked': locked,
-                    'supply': util.asset_supply(db, asset),
+                    'supply': util.asset_supply(self.db, asset),
                     'description': last_issuance['description'],
                     'issuer': last_issuance['issuer']})
             return assetsInfo
@@ -557,7 +571,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_block_info(block_index):
             assert isinstance(block_index, int)
-            cursor = db.cursor()
+            cursor = self.db.cursor()
             cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,))
             blocks = list(cursor)
             if len(blocks) == 1:
@@ -586,7 +600,7 @@ class APIServer(threading.Thread):
                 raise APIError("can only specify up to 250 indexes at a time.")
 
             block_indexes_str = ','.join([str(x) for x in block_indexes])
-            cursor = db.cursor()
+            cursor = self.db.cursor()
 
             # The blocks table gets rolled back from undolog, so min_message_index doesn't matter for this query
             cursor.execute('SELECT * FROM blocks WHERE block_index IN (%s) ORDER BY block_index ASC'
@@ -596,7 +610,7 @@ class APIServer(threading.Thread):
             cursor.execute('SELECT * FROM messages WHERE block_index IN (%s) ORDER BY message_index ASC'
                 % (block_indexes_str,))
             messages = collections.deque(cursor.fetchall())
-            
+
             # Discard any messages less than min_message_index
             if min_message_index:
                 while len(messages) and messages[0]['message_index'] < min_message_index:
@@ -617,14 +631,14 @@ class APIServer(threading.Thread):
             latestBlockIndex = backend.getblockcount()
 
             try:
-                check_database_state(db, latestBlockIndex)
+                check_database_state(self.db, latestBlockIndex)
             except DatabaseError:
                 caught_up = False
             else:
                 caught_up = True
 
             try:
-                cursor = db.cursor()
+                cursor = self.db.cursor()
                 blocks = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (util.CURRENT_BLOCK_INDEX, )))
                 assert len(blocks) == 1
                 last_block = blocks[0]
@@ -633,7 +647,7 @@ class APIServer(threading.Thread):
                 last_block = None
 
             try:
-                last_message = util.last_message(db)
+                last_message = util.last_message(self.db)
             except:
                 last_message = None
 
@@ -652,7 +666,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_element_counts():
             counts = {}
-            cursor = db.cursor()
+            cursor = self.db.cursor()
             for element in ['transactions', 'blocks', 'debits', 'credits', 'balances', 'sends', 'orders',
                 'order_matches', 'btcpays', 'issuances', 'broadcasts', 'bets', 'bet_matches', 'dividends',
                 'burns', 'cancels', 'order_expirations', 'bet_expirations', 'order_match_expirations',
@@ -666,14 +680,14 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_asset_names():
-            cursor = db.cursor()
+            cursor = self.db.cursor()
             names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE status = 'valid' ORDER BY asset ASC")]
             cursor.close()
             return names
 
         @dispatcher.add_method
         def get_holder_count(asset):
-            holders = util.holders(db, asset)
+            holders = util.holders(self.db, asset)
             addresses = []
             for holder in holders:
                 addresses.append(holder['address'])
@@ -681,7 +695,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_holders(asset):
-            holders = util.holders(db, asset)
+            holders = util.holders(self.db, asset)
             return holders
 
         @dispatcher.add_method
@@ -690,7 +704,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None):
-            return backend.get_unspent_txouts(address, unconfirmed=unconfirmed, multisig_inputs=False, unspent_tx_hash=unspent_tx_hash)
+            return backend.get_unspent_txouts(address, unconfirmed=unconfirmed, unspent_tx_hash=unspent_tx_hash)
 
         @dispatcher.add_method
         def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
@@ -717,7 +731,7 @@ class APIServer(threading.Thread):
                 unpack_method = send.unpack
             else:
                 raise APIError('unsupported message type')
-            unpacked = unpack_method(db, message, util.CURRENT_BLOCK_INDEX)
+            unpacked = unpack_method(self.db, message, util.CURRENT_BLOCK_INDEX)
             return message_type_id, unpacked
 
         @dispatcher.add_method
@@ -762,6 +776,256 @@ class APIServer(threading.Thread):
             else:
                 # Not found
                 return flask.Response(None, 404, mimetype='application/json')
+
+        @dispatcher.add_method
+        def sendrawtransaction(tx_hex):
+            micropayments.validate.tx_signature(dispatcher, tx_hex)
+            return backend.sendrawtransaction(tx_hex)
+
+        #########################
+        # Micropayment channels #
+        #########################
+
+        @dispatcher.add_method
+        def mpc_make_deposit(asset, payer_pubkey, payee_pubkey,
+                             spend_secret_hash, expire_time, quantity):
+            """ Create deposit and setup initial payer state.
+
+            Args:
+                asset (str): Counterparty asset.
+                payer_pubkey (str): Hex encoded public key in sec format.
+                payee_pubkey (str): Hex encoded public key in sec format.
+                spend_secret_hash (str): Hex encoded hash160 of spend secret.
+                expire_time (int): Channel expire time in blocks.
+                quantity (int): Asset quantity for deposit.
+
+            Returns:
+                {
+                    "state": dict,   # Initial payer micropayment state object.
+                    "topublish": str # Unsigned deposit rawtx.
+                }
+            """
+            netcode = "XTN" if config.TESTNET else "BTC"
+            regular_dust_size = config.DEFAULT_REGULAR_DUST_SIZE
+            return micropayments.make_deposit(
+                dispatcher, asset, payer_pubkey, payee_pubkey,
+                spend_secret_hash, expire_time, quantity, netcode
+            )
+
+        @dispatcher.add_method
+        def mpc_set_deposit(asset, deposit_script, expected_payee_pubkey,
+                            expected_spend_secret_hash):
+            """ Setup initial payee state for given deposit.
+
+            Args:
+                asset (str): Counterparty asset.
+                deposit_script (str): Channel deposit p2sh script.
+                expected_payee_pubkey (str): To validate deposit script.
+                expected_spend_secret_hash (str): To validate deposit script.
+
+            Returns:
+                Initial payee micropayment state object.
+            """
+            return micropayments.set_deposit(dispatcher, asset, deposit_script,
+                                             expected_payee_pubkey,
+                                             expected_spend_secret_hash)
+
+        @dispatcher.add_method
+        def mpc_request_commit(state, quantity, revoke_secret_hash):
+            """ Request commit for given quantity and revoke secret hash.
+
+            Args:
+                state (dict): Current payee channel state.
+                quantity (int): Asset quantity for commit.
+                revoke_secret_hash (str): Revoke secret hash for commit.
+
+            Returns:
+                Updated micropayment state object.
+            """
+            netcode = "XTN" if config.TESTNET else "BTC"
+            return micropayments.request_commit(dispatcher, state, quantity,
+                                                revoke_secret_hash, netcode)
+
+        @dispatcher.add_method
+        def mpc_create_commit(state, quantity, revoke_secret_hash,
+                              delay_time=2):
+            """ Create commit for given quantity, revoke secret hash and delay time.
+
+            Args:
+                state (dict): Current payer channel state.
+                quantity (int): Asset quantity for commit.
+                revoke_secret_hash (str): Revoke secret hash for commit.
+                delay_time (int): Blocks payee must wait before payout.
+
+            Returns:
+                {
+                    "state": dict,  # update payer state obect
+                    "commit_script": str, # Hex P2SH needed to spend funds.
+                    "tosign": {
+                        "commit_rawtx": str, # Unsigned hex commit rawtx
+                        "deposit_script": str,  # Hex P2SH to sign commit.
+                    }
+                }
+            """
+            netcode = "XTN" if config.TESTNET else "BTC"
+            return micropayments.create_commit(
+                dispatcher, state, quantity, revoke_secret_hash,
+                delay_time, netcode
+            )
+
+        @dispatcher.add_method
+        def mpc_add_commit(state, commit_rawtx, commit_script):
+            """ Add commit to channel state.
+
+            Args:
+                state (dict): Current payee channel state.
+                commit_rawtx (str): Commit transaction signed by payer.
+                commit_script (str): Commit p2sh script.
+
+            Returns:
+                Updated payee state object.
+            """
+            netcode = "XTN" if config.TESTNET else "BTC"
+            return micropayments.add_commit(dispatcher, state, commit_rawtx,
+                                            commit_script, netcode)
+
+        @dispatcher.add_method
+        def mpc_revoke_hashes_until(state, quantity, surpass=False):
+            """ Get revoke secret hashes for commits above the given quantity.
+
+            Args:
+                state (dict): Current payee channel state.
+                quantity (int): Revoke secret hashes if commit gt quantity.
+                surpass (bool, default=False): Allow revoking below quantity
+                                               if between commits.
+
+            Returns:
+                List of hex encoded revoke secret hashes.
+            """
+            netcode = "XTN" if config.TESTNET else "BTC"
+            return micropayments.revoke_hashes_until(
+                dispatcher, state, quantity, surpass, netcode
+            )
+
+        @dispatcher.add_method
+        def mpc_revoke_all(state, secrets):
+            """ Revoke all commits matching the given secrets.
+
+            Args:
+                state (dict): Current payee/payer channel state.
+                secrets (list): List of hex encoded commit revoke secrets.
+
+            Returns:
+                Updated micropayment state object.
+            """
+            netcode = "XTN" if config.TESTNET else "BTC"
+            return micropayments.revoke_all(dispatcher, state,
+                                            secrets, netcode)
+
+        @dispatcher.add_method
+        def mpc_highest_commit(state):
+            """ Get highest commit be signed/published for channel closing.
+
+            Args:
+                state (dict): Current payee channel state.
+
+            Returns:
+                None if no commits made, otherwise
+                {
+                    "rawtx": str, # Commit rawtx hex
+                    "script": str,  # Commit script hex
+                }
+            """
+            netcode = "XTN" if config.TESTNET else "BTC"
+            return micropayments.highest_commit(dispatcher, state, netcode)
+
+        @dispatcher.add_method
+        def mpc_transferred_amount(state):
+            """ Get asset quantity transferred from payer to payee.
+
+            Args:
+                state (dict): Current payee/payer channel state.
+
+            Returns:
+                Quantity transferred in satoshis.
+            """
+            netcode = "XTN" if config.TESTNET else "BTC"
+            return micropayments.transferred_amount(dispatcher, state, netcode)
+
+        @dispatcher.add_method
+        def mpc_payouts(state):
+            """ Find published commits and make payout transactions.
+
+            Args:
+                state (dict): Current payee channel state.
+
+            Returns:
+                [{
+                    "payout_rawtx": (str),  # Unsigned hex payout rawtx.
+                    "commit_script": (str)  # Hex commit P2SH script.
+                }]
+            """
+            netcode = "XTN" if config.TESTNET else "BTC"
+            regular_dust_size = config.DEFAULT_REGULAR_DUST_SIZE
+            return micropayments.payouts(dispatcher, state, netcode)
+
+        @dispatcher.add_method
+        def mpc_recoverables(state):
+            """ Find and make recoverable change, timeout and revoke transactions.
+
+            Args:
+                state (dict): Current payee channel state.
+
+            Returns:
+                {
+                    "change": [{
+                        "change_rawtx": str, # Unsigned change rawtx.
+                        "deposit_script": str, # Deposit script for signing.
+                        "spend_secret": str, # Spend secret for siging.
+                    }],
+                    "expire": [{
+                        "expire_rawtx": str, # Unsigned expire rawtx.
+                        "deposit_script": str, # Deposit script for signing.
+                    }],
+                    "revoke": [{
+                        "revoke_rawtx": str, # Unsigned revoke rawtx.
+                        "commit_script": str, # Commit script for signing.
+                        "revoke_secret": str, # Revoke secret for signing.
+                    }]
+                }
+            """
+            netcode = "XTN" if config.TESTNET else "BTC"
+            regular_dust_size = config.DEFAULT_REGULAR_DUST_SIZE
+            return micropayments.recoverables(dispatcher, state, netcode)
+
+        @dispatcher.add_method
+        def mpc_deposit_ttl(state, clearance=0):
+            """ Number of blocks until channel expired and can't be used.
+
+            Args:
+                state (dict): Current payee/payer channel state.
+                clearance (integer, default=0): Min clearance confirms needed.
+
+            Returns:
+                Number of blocks remaining until deposit is expired.
+            """
+            netcode = "XTN" if config.TESTNET else "BTC"
+            return micropayments.deposit_ttl(dispatcher, state,
+                                             clearance, netcode)
+
+        @dispatcher.add_method
+        def mpc_published_commits(state):
+            """ Get commits published on the blockchain, including unconfirmed.
+
+            Args:
+                state (dict): Current payee/payer channel state.
+
+            Returns:
+                List of commit raw transactions.
+            """
+            netcode = "XTN" if config.TESTNET else "BTC"
+            return micropayments.get_published_commits(dispatcher, state,
+                                                       netcode)
 
         ######################
         # JSON-RPC API
@@ -857,11 +1121,11 @@ class APIServer(threading.Thread):
 
                 # Compose the transaction.
                 try:
-                    query_data = compose_transaction(db, name=query_type, params=transaction_args, **common_args)
+                    query_data = compose_transaction(self.db, name=query_type, params=transaction_args, **common_args)
                 except (script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
                     error_msg = logging.warning("{} -- error composing {} transaction via API: {}".format(
                         str(error.__class__.__name__), query_type, str(error)))
-                    return flask.Response(error_msg, 400, mimetype='application/json')                        
+                    return flask.Response(error_msg, 400, mimetype='application/json')
             else:
                 # Need to de-generate extra_args to pass it through.
                 query_args = dict([item for item in extra_args])
@@ -871,7 +1135,7 @@ class APIServer(threading.Thread):
 
                 # Run the query.
                 try:
-                    query_data = get_rows(db, table=query_type, filters=data_filter, filterop=operator)
+                    query_data = get_rows(self.db, table=query_type, filters=data_filter, filterop=operator)
                 except APIError as error:
                     return flask.Response(str(error), 400, mimetype='application/json')
 
@@ -893,12 +1157,12 @@ class APIServer(threading.Thread):
 
         # Init the HTTP Server.
         init_api_access_log(app)
-        
+
         # Run app server (blocking)
         self.is_ready = True
         app.run(host=config.RPC_HOST, port=config.RPC_PORT, threaded=True)
-            
-        db.close()
+
+        self.db.close()
         return
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
