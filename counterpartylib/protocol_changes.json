@@ -103,5 +103,12 @@
         "minimum_version_revision": 0,
         "block_index": 423888,
         "testnet_block_index": 0
+    },
+    "integer_overflow_fix": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 54,
+        "minimum_version_revision": 0,
+        "block_index": 441563,
+        "testnet_block_index": 0
     }
 }

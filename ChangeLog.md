@@ -1,4 +1,6 @@
 ## Library Versions ##
+* v9.55.1 (2016-12-02)
+    * Hotfix for integer overflow bug that caused a crash on mainnet block #441563
 * v9.55.0 (2016-07-11)
     * P2SH support for source / destination of addresses (protocol change: 423888)
     * Moved check for invalid broadcast to better place to prevent broadcasting a cancel on a locked feed (protocol change: 423888)

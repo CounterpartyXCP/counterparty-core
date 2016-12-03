@@ -6,6 +6,9 @@ Allow simultaneous lock and transfer.
 
 import struct
 import decimal
+import json
+import logging
+logger = logging.getLogger(__name__)
 D = decimal.Decimal
 
 from counterpartylib.lib import (config, util, exceptions, util)
@@ -157,6 +160,10 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     if destination and quantity:
         problems.append('cannot issue and transfer simultaneously')
 
+    # For SQLite3
+    if util.enabled('integer_overflow_fix', block_index=block_index) and (fee > config.MAX_INT or quantity > config.MAX_INT):
+        problems.append('integer overflow')
+
     return call_date, call_price, problems, fee, description, divisible, reissuance
 
 def compose (db, source, transfer_destination, asset, quantity, divisible, description):
@@ -232,7 +239,7 @@ def parse (db, tx, message):
     if status == 'valid':
         call_date, call_price, problems, fee, description, divisible, reissuance = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
-        if 'total quantity overflow' in problems:
+        if not util.enabled('integer_overflow_fix', block_index=tx['block_index']) and 'total quantity overflow' in problems:
             quantity = 0
 
     if tx['destination']:
@@ -289,8 +296,12 @@ def parse (db, tx, message):
         'locked': lock,
         'status': status,
     }
-    sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status)'
-    issuance_parse_cursor.execute(sql, bindings)
+    if "integer overflow" not in status:
+        sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status)'
+        issuance_parse_cursor.execute(sql, bindings)
+    else:
+        logger.warn("Not storing [issuance] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.debug("Bindings: %s" % (json.dumps(bindings), ))
 
     # Credit.
     if status == 'valid' and quantity:

@@ -322,7 +322,10 @@ def check_record(record, server_db):
         sql += " AND ".join(conditions)
 
         count = list(cursor.execute(sql, tuple(bindings)))[0]['c']
-        if count != 1:
+
+        ok = (record.get('not', False) and count == 0) or count == 1
+
+        if not ok:
             if pytest.config.option.verbosediff:
                 pprint.PrettyPrinter(indent=4).pprint(record['values'])
                 pprint.PrettyPrinter(indent=4).pprint(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))

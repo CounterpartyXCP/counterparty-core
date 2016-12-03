@@ -3,6 +3,9 @@
 """Create and parse 'send'-type messages."""
 
 import struct
+import json
+import logging
+logger = logging.getLogger(__name__)
 
 from ... import (config, exceptions, util)
 
@@ -37,11 +40,16 @@ def validate (db, source, destination, asset, quantity, block_index):
         problems.append('quantity must be in satoshis')
         return problems
 
-    if quantity < 0: problems.append('negative quantity')
+    if quantity < 0:
+        problems.append('negative quantity')
+
+    # For SQLite3
+    if quantity > config.MAX_INT:
+        problems.append('integer overflow')
 
     if util.enabled('send_destination_required'):  # Protocol change.
         if not destination:
-            status = problems.append('destination is required')
+            problems.append('destination is required')
 
     return problems
 
@@ -120,8 +128,12 @@ def parse (db, tx, message):
         'quantity': quantity,
         'status': status,
     }
-    sql='insert into sends values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :quantity, :status)'
-    cursor.execute(sql, bindings)
+    if "integer overflow" not in status and "quantity must be in satoshis" not in status:
+        sql = 'insert into sends values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :quantity, :status)'
+        cursor.execute(sql, bindings)
+    else:
+        logger.warn("Not storing [send] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.debug("Bindings: %s" % (json.dumps(bindings), ))
 
 
     cursor.close()

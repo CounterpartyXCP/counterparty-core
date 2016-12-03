@@ -127,7 +127,7 @@ def parse (db, tx, message):
         curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
         try:
             contract_id, gasprice, startgas, value, payload = struct.unpack(curr_format, message)
-            if gasprice > config.MAX_INT or startgas > config.MAX_INT: # TODO: define max for gasprice and startgas
+            if gasprice > config.MAX_INT or startgas > config.MAX_INT or value > config.MAX_INT: # TODO: define max for gasprice and startgas
                 raise exceptions.UnpackError()
         except (struct.error) as e:
             raise exceptions.UnpackError()

@@ -1,7 +1,7 @@
 #! /usr/bin/python3
 
 """Pay out dividends."""
-
+import json
 import struct
 import decimal
 D = decimal.Decimal
@@ -50,7 +50,12 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
         if (not block_index >= 317500) or block_index >= 320000 or config.TESTNET:   # Protocol change.
             problems.append('cannot pay dividends to holders of {}'.format(config.XCP))
 
-    if quantity_per_unit <= 0: problems.append('non‐positive quantity per unit')
+    if quantity_per_unit <= 0:
+        problems.append('non‐positive quantity per unit')
+
+    # For SQLite3
+    if quantity_per_unit > config.MAX_INT:
+        problems.append('integer overflow')
 
     # Examine asset.
     issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?) ORDER BY tx_index ASC''', ('valid', asset)))
@@ -120,6 +125,10 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
         total_cost = dividend_total + fee
         if not dividend_balances or dividend_balances[0]['quantity'] < total_cost:
             problems.append('insufficient funds ({})'.format(dividend_asset))
+
+    # For SQLite3
+    if fee > config.MAX_INT or dividend_total > config.MAX_INT:
+        problems.append('integer overflow')
 
     cursor.close()
     return dividend_total, outputs, problems, fee
@@ -193,8 +202,12 @@ def parse (db, tx, message):
         'status': status,
     }
 
-    sql='insert into dividends values(:tx_index, :tx_hash, :block_index, :source, :asset, :dividend_asset, :quantity_per_unit, :fee_paid, :status)'
-    dividend_parse_cursor.execute(sql, bindings)
+    if "integer overflow" not in status:
+        sql = 'insert into dividends values(:tx_index, :tx_hash, :block_index, :source, :asset, :dividend_asset, :quantity_per_unit, :fee_paid, :status)'
+        dividend_parse_cursor.execute(sql, bindings)
+    else:
+        logger.warn("Not storing [dividend] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.debug("Bindings: %s" % (json.dumps(bindings), ))
 
     dividend_parse_cursor.close()
 
