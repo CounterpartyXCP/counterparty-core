@@ -127,7 +127,7 @@ A `counterparty-server` configuration file looks like this:
 	rpc-user = <rpcuser>
 	rpc-password = <rpcpassword>
 
-The ``force`` argument can be used either in the server configuration file or passed at runtime to make the server keep running in the case it loses connectivity with the Internet and falls behind the back-end database. This may be useful for Counterparty servers that need to maintain RPC service availability even when the backend or counterparty server has no Internet connectivity.
+The ``force`` argument can be used either in the server configuration file or passed at runtime to make the server keep running in the case it loses connectivity with the Internet and falls behind the back-end database. This may be useful for *non-production* Counterparty servers that need to maintain RPC service availability even when the backend or counterparty server has no Internet connectivity.
 
 A `counterparty-client` configuration file looks like this:
 
