@@ -241,12 +241,14 @@ def fee_per_kb(nblocks):
     """
 
     # we need to loop because sometimes bitcoind can't estimate a certain nblocks
+    retry = 0
     feeperkb = -1
     while feeperkb == -1:
         feeperkb = rpc('estimatefee', [nblocks])
         nblocks += 1
+        retry += 1
 
-        if nblocks > 10:
+        if retry > 10:
             return None
 
     return int(feeperkb * config.UNIT)
