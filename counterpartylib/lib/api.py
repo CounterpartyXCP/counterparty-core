@@ -68,6 +68,7 @@ API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel',
 COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
                 'allow_unconfirmed_inputs', 'fee', 'fee_provided',
+                'estimate_fee_per_kb', 'estimate_fee_per_kb_nblocks',
                 'unspent_tx_hash', 'custom_inputs', 'dust_return_pubkey', 'disable_utxo_locks']
 
 API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
