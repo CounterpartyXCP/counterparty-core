@@ -276,3 +276,17 @@ Size: 306 Fee: 0.00007650 Change quantity: 1.93406720 BTC
 Debit: 929.45878046 XCP from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH #send# <478048dcdaca3e8010fc50a75511f6ed8fc1a770a4fab5c339a1c15c3633971f>
 Credit: 929.45878046 XCP to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj #send# <478048dcdaca3e8010fc50a75511f6ed8fc1a770a4fab5c339a1c15c3633971f>
 Send: 929.45878046 XCP from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj (478048dcdaca3e8010fc50a75511f6ed8fc1a770a4fab5c339a1c15c3633971f) [valid]
+Sorted candidate UTXOs: ['amount: 1.99909140; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
+Fee/KB 0.00025000
+New input: amount: 1.99909140; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
+Size: 281 Fee: 0.00007025 Change quantity: 1.99902115 BTC
+Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <b1a5f2dd0e4c14a093ba5353f8944fa6ccd64f21b7626b5e225deea9f6cc7470>
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 1.0 of divisible asset PARENT (b1a5f2dd0e4c14a093ba5353f8944fa6ccd64f21b7626b5e225deea9f6cc7470) [valid]
+Credit: 1.0 PARENT to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <b1a5f2dd0e4c14a093ba5353f8944fa6ccd64f21b7626b5e225deea9f6cc7470>
+Sorted candidate UTXOs: ['amount: 1.99909140; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
+Fee/KB 0.00025000
+New input: amount: 1.99909140; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
+Size: 281 Fee: 0.00007025 Change quantity: 1.99902115 BTC
+Debit: 0.25 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <8a39ddcddadb158351fc7a4ea313570fe36bfade0d7d12cdca31e640d84cf26a>
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 1.0 of divisible asset A95428956661682277 (8a39ddcddadb158351fc7a4ea313570fe36bfade0d7d12cdca31e640d84cf26a) [valid]
+Credit: 1.0 A95428956661682277 to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <8a39ddcddadb158351fc7a4ea313570fe36bfade0d7d12cdca31e640d84cf26a>
