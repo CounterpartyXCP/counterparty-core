@@ -339,6 +339,14 @@ def initialise(db):
         cursor.execute('''INSERT INTO assets VALUES (?,?,?)''', ('0', 'BTC', None))
         cursor.execute('''INSERT INTO assets VALUES (?,?,?)''', ('1', 'XCP', None))
 
+    # Add asset_longname for sub-assets
+    #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS`.
+    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(assets)''')]
+    if 'asset_longname' not in columns:
+        cursor.execute('''ALTER TABLE assets ADD COLUMN asset_longname TEXT''')
+        cursor.execute('''CREATE UNIQUE INDEX IF NOT EXISTS asset_longname_idx ON assets(asset_longname)''')
+
+
     # Consolidated
     send.initialise(db)
     destroy.initialise(db)
