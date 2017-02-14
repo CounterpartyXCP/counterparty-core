@@ -60,7 +60,10 @@ def initialise(db):
     columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(issuances)''')]
     if 'asset_longname' not in columns:
         cursor.execute('''ALTER TABLE issuances ADD COLUMN asset_longname TEXT''')
-        cursor.execute('''CREATE UNIQUE INDEX IF NOT EXISTS asset_longname_idx ON issuances (asset_longname)''')
+
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      asset_longname_idx ON issuances (asset_longname)
+                   ''')
 
 def validate (db, source, destination, asset, quantity, divisible, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index):
     problems = []
