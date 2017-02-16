@@ -10,7 +10,8 @@ DROP TABLE IF EXISTS assets;
 CREATE TABLE assets(
                       asset_id TEXT UNIQUE,
                       asset_name TEXT UNIQUE,
-                      block_index INTEGER, asset_longname TEXT);
+                      block_index INTEGER,
+                      asset_longname TEXT);
 INSERT INTO assets VALUES('0','BTC',NULL,NULL);
 INSERT INTO assets VALUES('1','XCP',NULL,NULL);
 INSERT INTO assets VALUES('18279','BBBB',310005,NULL);
