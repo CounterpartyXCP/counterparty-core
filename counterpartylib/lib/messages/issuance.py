@@ -302,6 +302,7 @@ def parse (db, tx, message):
             asset = None
             status = 'invalid: bad subasset name'
 
+    reissuance = None
     fee = 0
     if status == 'valid':
         call_date, call_price, problems, fee, description, divisible, reissuance, reissued_asset_longname = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index=tx['block_index'])
@@ -345,7 +346,7 @@ def parse (db, tx, message):
             sql='insert into assets values(:asset_id, :asset_name, :block_index, :asset_longname)'
             issuance_parse_cursor.execute(sql, bindings)
 
-    if reissuance:
+    if status == 'valid' and reissuance:
         # when reissuing, add the asset_longname to the issuances table for API lookups
         asset_longname = reissued_asset_longname
     else:
