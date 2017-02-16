@@ -326,7 +326,8 @@ def initialise(db):
     cursor.execute('''CREATE TABLE IF NOT EXISTS assets(
                       asset_id TEXT UNIQUE,
                       asset_name TEXT UNIQUE,
-                      block_index INTEGER)
+                      block_index INTEGER,
+                      asset_longname TEXT)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       name_idx ON assets (asset_name)
@@ -334,18 +335,18 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       id_idx ON assets (asset_id)
                    ''')
-    cursor.execute('''SELECT * FROM assets WHERE asset_name = ?''', ('BTC',))
-    if not list(cursor):
-        cursor.execute('''INSERT INTO assets VALUES (?,?,?)''', ('0', 'BTC', None))
-        cursor.execute('''INSERT INTO assets VALUES (?,?,?)''', ('1', 'XCP', None))
 
     # Add asset_longname for sub-assets
     #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS`.
     columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(assets)''')]
     if 'asset_longname' not in columns:
         cursor.execute('''ALTER TABLE assets ADD COLUMN asset_longname TEXT''')
-        cursor.execute('''CREATE UNIQUE INDEX IF NOT EXISTS asset_longname_idx ON assets(asset_longname)''')
+    cursor.execute('''CREATE UNIQUE INDEX IF NOT EXISTS asset_longname_idx ON assets(asset_longname)''')
 
+    cursor.execute('''SELECT * FROM assets WHERE asset_name = ?''', ('BTC',))
+    if not list(cursor):
+        cursor.execute('''INSERT INTO assets VALUES (?,?,?,?)''', ('0', 'BTC', None, None))
+        cursor.execute('''INSERT INTO assets VALUES (?,?,?,?)''', ('1', 'XCP', None, None))
 
     # Consolidated
     send.initialise(db)
