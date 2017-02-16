@@ -277,7 +277,7 @@ def validate_subasset_parent_name(asset_name):
     return True
 
 def generate_random_asset ():
-    return 'A'+str(random.randint(26**12 + 1, 2**64 - 1))
+    return 'A' + str(random.randint(26**12 + 1, 2**64 - 1))
 
 class DebitError (Exception): pass
 def debit (db, address, asset, quantity, action=None, event=None):

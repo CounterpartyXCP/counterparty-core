@@ -61,7 +61,7 @@ def generate_random_asset ():
     if RANDOM_ASSET_INT is None:
         return _generate_random_asset()
     else:
-        return "A"+str(RANDOM_ASSET_INT)
+        return 'A' + str(RANDOM_ASSET_INT)
 util.generate_random_asset = generate_random_asset
 
 
