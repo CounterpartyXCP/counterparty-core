@@ -228,16 +228,16 @@ def parse_subasset_from_asset_name(asset):
 #   throws exceptions for invalid asset names
 def parse_subasset_from_description(description):
     subasset_parent = None
-    subasset = None
+    subasset_longname = None
     chunks = description.rsplit(';;l', 1)
     if len(chunks) == 2:
         split_description, asset = chunks
-        subasset_parent, subasset = parse_subasset_from_asset_name(asset)
-        if subasset is not None:
+        subasset_parent, subasset_longname = parse_subasset_from_asset_name(asset)
+        if subasset_longname is not None:
             # if we parsed a subasset, strip ;;l{subasset} from the description
             description = split_description
 
-    return (subasset_parent, subasset, description)
+    return (subasset_parent, subasset_longname, description)
 
 # throws exceptions for invalid subasset names
 def validate_subasset_longname(subasset_longname, subasset_child):
