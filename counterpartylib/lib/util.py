@@ -27,10 +27,10 @@ from counterpartylib.lib.exceptions import DecodeError
 from counterpartylib.lib import config
 
 D = decimal.Decimal
-b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+B26_DIGITS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 # subasset contain only characters a-zA-Z0-9.-_@!
-subasset_digits = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_@!'
+SUBASSET_DIGITS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_@!'
 
 # Obsolete in Python 3.4, with enum module.
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
@@ -137,9 +137,9 @@ def generate_asset_id(asset_name, block_index):
     n = 0
     for c in asset_name:
         n *= 26
-        if c not in b26_digits:
+        if c not in B26_DIGITS:
             raise exceptions.AssetNameError('invalid character:', c)
-        digit = b26_digits.index(c)
+        digit = B26_DIGITS.index(c)
         n += digit
     asset_id = n
 
@@ -169,7 +169,7 @@ def generate_asset_name (asset_id, block_index):
     n = asset_id
     while n > 0:
         n, r = divmod (n, 26)
-        res.append(b26_digits[r])
+        res.append(B26_DIGITS[r])
     asset_name = ''.join(res[::-1])
 
     """
@@ -202,32 +202,32 @@ def get_asset_name (db, asset_id, block_index):
     elif not assets:
         return 0    # Strange, I know…
 
-# checks and validates subassets
+# checks and validates subassets (PARENT.SUBASSET)
 #   throws exceptions for assset or subasset names with invalid syntax
+#   returns (None, None) if the asset is not a subasset name
 def parse_subasset_from_asset_name(asset):
     subasset_parent = None
     subasset_child = None
-    subasset = None
+    subasset_longname = None
     chunks = asset.split('.', 1)
     if (len(chunks) == 2):
         subasset_parent = chunks[0]
         subasset_child = chunks[1]
-        subasset = asset
+        subasset_longname = asset
 
         # validate parent asset
         validate_subasset_parent_name(subasset_parent)
 
         # validate child asset
-        validate_subasset_name(subasset, subasset_child)
+        validate_subasset_longname(subasset_longname, subasset_child)
 
-    return (subasset_parent, subasset)
+    return (subasset_parent, subasset_longname)
 
 # takes an asset description in 
 #   if it has a suffix like ;;lPARENT.child, then parse the subasset information
 #   throws exceptions for invalid asset names
 def parse_subasset_from_description(description):
     subasset_parent = None
-    subasset_child = None
     subasset = None
     chunks = description.rsplit(';;l', 1)
     if len(chunks) == 2:
@@ -240,20 +240,23 @@ def parse_subasset_from_description(description):
     return (subasset_parent, subasset, description)
 
 # throws exceptions for invalid subasset names
-def validate_subasset_name(subasset, subasset_child):
+def validate_subasset_longname(subasset_longname, subasset_child):
     if len(subasset_child) < 1:
         raise exceptions.AssetNameError('subasset name too short')
-    if len(subasset) > 250:
+    if len(subasset_longname) > 250:
         raise exceptions.AssetNameError('subasset name too long')
+
+    # can't start with period, can't have consecutive periods, can't contain anything not in SUBASSET_DIGITS
     previous_digit = '.'
     for c in subasset_child:
-        if c not in subasset_digits:
+        if c not in SUBASSET_DIGITS:
             raise exceptions.AssetNameError('subasset name contains invalid character:', c)
         if c == '.' and previous_digit == '.':
             raise exceptions.AssetNameError('subasset name contains consecutive periods')
         previous_digit = c
     if previous_digit == '.':
         raise exceptions.AssetNameError('subasset name ends with a period')
+
     return True
 
 # throws exceptions for invalid subasset names
@@ -269,7 +272,7 @@ def validate_subasset_parent_name(asset_name):
     if asset_name[0] == 'A':
         raise exceptions.AssetNameError('parent asset name starts with ‘A’')
     for c in asset_name:
-        if c not in b26_digits:
+        if c not in B26_DIGITS:
             raise exceptions.AssetNameError('parent asset name contains invalid character:', c)
     return True
 
