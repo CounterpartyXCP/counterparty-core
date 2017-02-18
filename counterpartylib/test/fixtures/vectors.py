@@ -1588,6 +1588,10 @@ UNITTEST_VECTOR = {
             'comment': 'make sure compose catches validation errors',
             'in': (ADDR[1], None, 'PARENT.child1', 1000, True, ''),
             'error': (exceptions.ComposeError, "['parent asset owned by another address']")
+        }, {
+            'comment': 'referencing parent asset by name composes a reissuance',
+            'in': (ADDR[0], None, 'PARENT.already.issued', 1000, True, ''),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x14\x01S\x08!g\x1b\x10e\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
         }],
         'parse': [{
             'in': ({'supported': 1, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'data': b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\xbaOs\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'btc_amount': None, 'destination': None, 'block_time': 155409000, 'block_index': DP['default_block_index'], 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'fee': 10000, 'tx_index': 502, 'block_hash': DP['default_block_hash']},),
@@ -1857,6 +1861,46 @@ UNITTEST_VECTOR = {
                     'quantity': 10000000000,
                     'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'status': 'valid',
+                    'transfer': 0, 'divisible': 1,
+                    'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace',
+                    'tx_index': 502,
+                }},
+            ]
+        }, {
+            'comment': 'reissuance of subasset with ;;l in description is invalid',
+            'in': ({'data': b'\x00\x00\x00\x14\x01S\x08!g\x1b\x10e\x00\x00\x00\x02T\x0b\xe4\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x18;;lPARENT.already.issued', 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'},),
+            'records': [
+                {'table': 'issuances', 'values': {
+                    'asset': 'A{}'.format(26**12 + 101),
+                    'asset_longname': 'PARENT.already.issued',
+                    'block_index': DP['default_block_index'],
+                    'description': ';;lPARENT.already.issued',
+                    'fee_paid': 0,
+                    'issuer': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'locked': 0,
+                    'quantity': 10000000000,
+                    'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'status': 'invalid: reissuance description cannot contain ;;l',
+                    'transfer': 0, 'divisible': 1,
+                    'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace',
+                    'tx_index': 502,
+                }},
+            ]
+        }, {
+            'comment': 'reissuance of subasset with ;;l in description is invalid (2)',
+            'in': ({'data': b'\x00\x00\x00\x14\x01S\x08!g\x1b\x10e\x00\x00\x00\x02T\x0b\xe4\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03;;l', 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'},),
+            'records': [
+                {'table': 'issuances', 'values': {
+                    'asset': 'A{}'.format(26**12 + 101),
+                    'asset_longname': None,
+                    'block_index': DP['default_block_index'],
+                    'description': ';;l',
+                    'fee_paid': 0,
+                    'issuer': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'locked': 0,
+                    'quantity': 10000000000,
+                    'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'status': 'invalid: reissuance description cannot contain ;;l',
                     'transfer': 0, 'divisible': 1,
                     'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace',
                     'tx_index': 502,

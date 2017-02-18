@@ -239,9 +239,20 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, descr
     if util.enabled('subassets'): # Protocol change.
         subasset_parent, subasset_longname = util.parse_subasset_from_asset_name(asset)
         if subasset_longname is not None:
-            # generate a random numeric asset id which maps to this subasset
-            asset = util.generate_random_asset()
-            description = description + ';;l' + subasset_longname
+            # try to find an existing subasset
+            sa_cursor = db.cursor()
+            sa_cursor.execute('''SELECT * FROM assets \
+                              WHERE (asset_longname = ?)''', (subasset_longname,))
+            assets = sa_cursor.fetchall()
+            sa_cursor.close()
+            if len(assets) > 0:
+                # this is a reissuance composition
+                asset = assets[0]['asset_name']
+            else:
+                # this is a new issuance
+                #   generate a random numeric asset id which maps to this subasset
+                asset = util.generate_random_asset()
+                description = description + ';;l' + subasset_longname
 
     call_date, call_price, problems, fee, description, divisible, reissuance, reissued_asset_longname = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, subasset_parent, subasset_longname, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
@@ -295,6 +306,7 @@ def parse (db, tx, message):
     # parse subasset from the description
     subasset_parent = None
     subasset_longname = None
+    unmodified_description = description
     if status == 'valid' and util.enabled('subassets', block_index=tx['block_index']): # Protocol change.
         try:
             subasset_parent, subasset_longname, description = util.parse_subasset_from_description(description)
@@ -306,6 +318,13 @@ def parse (db, tx, message):
     fee = 0
     if status == 'valid':
         call_date, call_price, problems, fee, description, divisible, reissuance, reissued_asset_longname = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index=tx['block_index'])
+
+        # extra validation for parsing only.  
+        # A reissuance description that contains the string ;;l in the description is invalid
+        if not problems and reissuance and ';;l' in unmodified_description and util.enabled('subassets', block_index=tx['block_index']):
+            problems.append('reissuance description cannot contain ;;l')
+            description = unmodified_description
+
         if problems: status = 'invalid: ' + '; '.join(problems)
         if not util.enabled('integer_overflow_fix', block_index=tx['block_index']) and 'total quantity overflow' in problems:
             quantity = 0
