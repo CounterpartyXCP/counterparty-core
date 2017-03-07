@@ -17,7 +17,10 @@ FORMAT_1 = '>QQ?'
 LENGTH_1 = 8 + 8 + 1
 FORMAT_2 = '>QQ??If'
 LENGTH_2 = 8 + 8 + 1 + 1 + 4 + 4
+SUBASSET_FORMAT = '>QQ?B'
+SUBASSET_FORMAT_LENGTH = 8 + 8 + 1 + 1
 ID = 20
+SUBASSET_ID = 21
 # NOTE: Pascal strings are used for storing descriptions for backwards‐compatibility.
 
 def initialise(db):
@@ -246,37 +249,65 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, descr
             assets = sa_cursor.fetchall()
             sa_cursor.close()
             if len(assets) > 0:
-                # this is a reissuance composition
+                # this is a reissuance
                 asset = assets[0]['asset_name']
             else:
                 # this is a new issuance
-                #   generate a random numeric asset id which maps to this subasset
+                #   generate a random numeric asset id which will map to this subasset
                 asset = util.generate_random_asset()
-                description = description + ';;l' + subasset_longname
 
     call_date, call_price, problems, fee, description, divisible, reissuance, reissued_asset_longname = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, subasset_parent, subasset_longname, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
     asset_id = util.generate_asset_id(asset, util.CURRENT_BLOCK_INDEX)
-    data = struct.pack(config.TXTYPE_FORMAT, ID)
-    if len(description) <= 42:
-        curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
+    if subasset_longname is None or reissuance:
+        # Type 20 standard issuance FORMAT_2 >QQ??If
+        #   used for standard issuances and all reissuances
+        data = struct.pack(config.TXTYPE_FORMAT, ID)
+        if len(description) <= 42:
+            curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
+        else:
+            curr_format = FORMAT_2 + '{}s'.format(len(description))
+        data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0,
+            call_date or 0, call_price or 0.0, description.encode('utf-8'))
     else:
-        curr_format = FORMAT_2 + '{}s'.format(len(description))
-    data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0,
-        call_date or 0, call_price or 0.0, description.encode('utf-8'))
+        # Type 21 subasset issuance SUBASSET_FORMAT >QQ?B
+        #   Used only for initial subasset issuance
+        # compacts a subasset name to save space
+        compacted_subasset_longname = util.compact_subasset_longname(subasset_longname)
+        compacted_subasset_length = len(compacted_subasset_longname)
+        data = struct.pack(config.TXTYPE_FORMAT, SUBASSET_ID)
+        curr_format = SUBASSET_FORMAT + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(description))
+        data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, compacted_subasset_length, compacted_subasset_longname, description.encode('utf-8'))
+
     if transfer_destination:
         destination_outputs = [(transfer_destination, None)]
     else:
         destination_outputs = []
     return (source, destination_outputs, data)
 
-def parse (db, tx, message):
+def parse (db, tx, message, message_type_id):
     issuance_parse_cursor = db.cursor()
 
     # Unpack message.
     try:
-        if (tx['block_index'] > 283271 or config.TESTNET) and len(message) >= LENGTH_2: # Protocol change.
+        subasset_longname = None
+        if message_type_id == SUBASSET_ID and util.enabled('subassets', block_index=tx['block_index']):
+            # parse a subasset original issuance message
+            asset_id, quantity, divisible, compacted_subasset_length = struct.unpack(SUBASSET_FORMAT, message[0:SUBASSET_FORMAT_LENGTH])
+            description_length = len(message) - SUBASSET_FORMAT_LENGTH - compacted_subasset_length
+            if description_length < 0:
+                logger.warn("invalid subasset length: [issuance] tx [%s]: %s" % (tx['tx_hash'], compacted_subasset_length))
+                raise exceptions.UnpackError
+            messages_format = '{}s{}s'.format(compacted_subasset_length, description_length)
+            compacted_subasset_longname, description = struct.unpack(messages_format, message[SUBASSET_FORMAT_LENGTH:])
+            subasset_longname = util.expand_subasset_longname(compacted_subasset_longname)
+            callable_, call_date, call_price = False, 0, 0.0
+            try:
+                description = description.decode('utf-8')
+            except UnicodeDecodeError:
+                description = ''
+        elif (tx['block_index'] > 283271 or config.TESTNET) and len(message) >= LENGTH_2: # Protocol change.
             if len(message) - LENGTH_2 <= 42:
                 curr_format = FORMAT_2 + '{}p'.format(len(message) - LENGTH_2)
             else:
@@ -303,13 +334,11 @@ def parse (db, tx, message):
         asset, quantity, divisible, callable_, call_date, call_price, description = None, None, None, None, None, None, None
         status = 'invalid: could not unpack'
 
-    # parse subasset from the description
+    # parse and validate the subasset from the message
     subasset_parent = None
-    subasset_longname = None
-    unmodified_description = description
-    if status == 'valid' and util.enabled('subassets', block_index=tx['block_index']): # Protocol change.
+    if status == 'valid' and subasset_longname is not None: # Protocol change.
         try:
-            subasset_parent, subasset_longname, description = util.parse_subasset_from_description(description)
+            subasset_parent, subasset_longname = util.parse_subasset_from_asset_name(subasset_longname)
         except exceptions.AssetNameError as e:
             asset = None
             status = 'invalid: bad subasset name'
@@ -318,12 +347,6 @@ def parse (db, tx, message):
     fee = 0
     if status == 'valid':
         call_date, call_price, problems, fee, description, divisible, reissuance, reissued_asset_longname = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index=tx['block_index'])
-
-        # extra validation for parsing only.  
-        # A reissuance description that contains the string ;;l in the description is invalid
-        if not problems and reissuance and ';;l' in unmodified_description and util.enabled('subassets', block_index=tx['block_index']):
-            problems.append('reissuance description cannot contain ;;l')
-            description = unmodified_description
 
         if problems: status = 'invalid: ' + '; '.join(problems)
         if not util.enabled('integer_overflow_fix', block_index=tx['block_index']) and 'total quantity overflow' in problems:

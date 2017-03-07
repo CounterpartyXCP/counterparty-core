@@ -13,6 +13,7 @@ def test_scenario(scenario_name, base_scenario_name, transactions, rawtransactio
     """
     from counterpartylib.test import conftest
     conftest.ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = True
+    conftest.RANDOM_ASSET_INT = 26**12 + 101
 
     if pytest.config.option.savescenarios:
         util_test.save_scenario(scenario_name, rawtransactions_db)

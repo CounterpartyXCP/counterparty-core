@@ -19,5 +19,6 @@ def test_vector(tx_name, method, inputs, outputs, error, records, comment, mock_
 
     if method == 'parse':
         util_test.insert_transaction(inputs[0], server_db)
-        inputs += (inputs[0]['data'][4:],) # message arg
+        # insert message as 2nd arg
+        inputs =  inputs[:1] + (inputs[0]['data'][4:],) + inputs[1:]
     util_test.check_outputs(tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, server_db)

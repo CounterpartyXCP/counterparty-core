@@ -31,6 +31,11 @@ B26_DIGITS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 # subasset contain only characters a-zA-Z0-9.-_@!
 SUBASSET_DIGITS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_@!'
+SUBASSET_REVERSE = {'a':1,'b':2,'c':3,'d':4,'e':5,'f':6,'g':7,'h':8,'i':9,'j':10,'k':11,'l':12,'m':13,'n':14,
+                    'o':15,'p':16,'q':17,'r':18,'s':19,'t':20,'u':21,'v':22,'w':23,'x':24,'y':25,'z':26,
+                    'A':27,'B':28,'C':29,'D':30,'E':31,'F':32,'G':33,'H':34,'I':35,'J':36,'K':37,'L':38,'M':39,
+                    'N':40,'O':41,'P':42,'Q':43,'R':44,'S':45,'T':46,'U':47,'V':48,'W':49,'X':50,'Y':51,'Z':52,
+                    '0':53,'1':54,'2':55,'3':56,'4':57,'5':58,'6':59,'7':60,'8':61,'9':62,'.':63,'-':64,'_':65,'@':66,'!':67}
 
 # Obsolete in Python 3.4, with enum module.
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
@@ -223,22 +228,6 @@ def parse_subasset_from_asset_name(asset):
 
     return (subasset_parent, subasset_longname)
 
-# takes an asset description in 
-#   if it has a suffix like ;;lPARENT.child, then parse the subasset information
-#   throws exceptions for invalid asset names
-def parse_subasset_from_description(description):
-    subasset_parent = None
-    subasset_longname = None
-    chunks = description.rsplit(';;l', 1)
-    if len(chunks) == 2:
-        split_description, asset = chunks
-        subasset_parent, subasset_longname = parse_subasset_from_asset_name(asset)
-        if subasset_longname is not None:
-            # if we parsed a subasset, strip ;;l{subasset} from the description
-            description = split_description
-
-    return (subasset_parent, subasset_longname, description)
-
 # throws exceptions for invalid subasset names
 def validate_subasset_longname(subasset_longname, subasset_child):
     if len(subasset_child) < 1:
@@ -275,6 +264,22 @@ def validate_subasset_parent_name(asset_name):
         if c not in B26_DIGITS:
             raise exceptions.AssetNameError('parent asset name contains invalid character:', c)
     return True
+
+def compact_subasset_longname(string):
+    name_int = 0
+    for i, c in enumerate(string[::-1]):
+        name_int += (68 ** i) * SUBASSET_REVERSE[c]
+    return name_int.to_bytes((name_int.bit_length() + 7) // 8, byteorder='big')
+
+def expand_subasset_longname(raw_bytes):
+    integer = int.from_bytes(raw_bytes, byteorder='big')
+    if integer == 0:
+        return ''
+    ret = ''
+    while integer != 0:
+        ret = SUBASSET_DIGITS[integer % 68 - 1] + ret
+        integer //= 68
+    return ret
 
 def generate_random_asset ():
     return 'A' + str(random.randint(26**12 + 1, 2**64 - 1))

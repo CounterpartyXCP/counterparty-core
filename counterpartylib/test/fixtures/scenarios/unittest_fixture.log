@@ -287,6 +287,6 @@ Sorted candidate UTXOs: ['amount: 1.99909140; txid: ae241be7be83ebb14902757ad948
 Fee/KB 0.00025000
 New input: amount: 1.99909140; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Size: 281 Fee: 0.00007025 Change quantity: 1.99902115 BTC
-Debit: 0.25 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <8a39ddcddadb158351fc7a4ea313570fe36bfade0d7d12cdca31e640d84cf26a>
-Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 1.0 of divisible asset A95428956661682277 (8a39ddcddadb158351fc7a4ea313570fe36bfade0d7d12cdca31e640d84cf26a) [valid]
-Credit: 1.0 A95428956661682277 to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <8a39ddcddadb158351fc7a4ea313570fe36bfade0d7d12cdca31e640d84cf26a>
+Debit: 0.25 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <2aabeff2dd379ed8d9d1400adcf6f7a375cad02aafc9de1268054839a5110d16>
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 1.0 of divisible asset A95428956661682277 (2aabeff2dd379ed8d9d1400adcf6f7a375cad02aafc9de1268054839a5110d16) [valid]
+Credit: 1.0 A95428956661682277 to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <2aabeff2dd379ed8d9d1400adcf6f7a375cad02aafc9de1268054839a5110d16>

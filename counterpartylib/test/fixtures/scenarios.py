@@ -81,7 +81,7 @@ UNITTEST_FIXTURE = [
     ['send', (ADDR[2], ADDR[3], 'XCP', 92945878046), {'encoding': 'multisig'}],
 
     ['issuance', (ADDR[0], None, 'PARENT', DP['quantity'] * 1, True, 'Parent asset'), {'encoding': 'opreturn'}],
-    ['issuance', (ADDR[0], None, 'A{}'.format(26**12 + 101), DP['quantity'] * 1, True, ';;lPARENT.already.issued'), {'encoding': 'opreturn'}],
+    ['issuance', (ADDR[0], None, 'PARENT.already.issued', DP['quantity'] * 1, True, 'Child of parent'), {'encoding': 'opreturn'}],
 
     ['create_next_block', 500],
 ]
