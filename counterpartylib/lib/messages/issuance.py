@@ -299,7 +299,7 @@ def parse (db, tx, message, message_type_id):
             if description_length < 0:
                 logger.warn("invalid subasset length: [issuance] tx [%s]: %s" % (tx['tx_hash'], compacted_subasset_length))
                 raise exceptions.UnpackError
-            messages_format = '{}s{}s'.format(compacted_subasset_length, description_length)
+            messages_format = '>{}s{}s'.format(compacted_subasset_length, description_length)
             compacted_subasset_longname, description = struct.unpack(messages_format, message[SUBASSET_FORMAT_LENGTH:])
             subasset_longname = util.expand_subasset_longname(compacted_subasset_longname)
             callable_, call_date, call_price = False, 0, 0.0
