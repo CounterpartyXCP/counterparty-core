@@ -229,7 +229,14 @@ def parse_subasset_from_asset_name(asset):
     return (subasset_parent, subasset_longname)
 
 # throws exceptions for invalid subasset names
-def validate_subasset_longname(subasset_longname, subasset_child):
+def validate_subasset_longname(subasset_longname, subasset_child=None):
+    if subasset_child is None:
+        chunks = subasset_longname.split('.', 1)
+        if (len(chunks) == 2):
+            subasset_child = chunks[1]
+        else:
+            subasset_child = ''
+
     if len(subasset_child) < 1:
         raise exceptions.AssetNameError('subasset name too short')
     if len(subasset_longname) > 250:

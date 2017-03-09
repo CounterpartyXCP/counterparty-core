@@ -338,6 +338,8 @@ def parse (db, tx, message, message_type_id):
     subasset_parent = None
     if status == 'valid' and subasset_longname is not None: # Protocol change.
         try:
+            # ensure the subasset_longname is valid
+            util.validate_subasset_longname(subasset_longname)
             subasset_parent, subasset_longname = util.parse_subasset_from_asset_name(subasset_longname)
         except exceptions.AssetNameError as e:
             asset = None
