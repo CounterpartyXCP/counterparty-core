@@ -60,6 +60,9 @@ def compose (db, source, destination, asset, quantity):
     if asset == config.BTC:
         return (source, [(destination, quantity)], None)
 
+    # resolve subassets
+    asset = util.resolve_subasset_longname(db, asset)
+
     #quantity must be in int satoshi (not float, string, etc)
     if not isinstance(quantity, int):
         raise exceptions.ComposeError('quantity must be an int (in satoshi)')

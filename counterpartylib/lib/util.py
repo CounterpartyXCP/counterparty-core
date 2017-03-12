@@ -207,6 +207,28 @@ def get_asset_name (db, asset_id, block_index):
     elif not assets:
         return 0    # Strange, I know…
 
+# If asset_name is an existing subasset (PARENT.child) then return the corresponding numeric asset name (A12345)
+#   If asset_name is not an existing subasset, then return the unmodified asset_name
+def resolve_subasset_longname(db, asset_name):
+    if enabled('subassets'):
+        subasset_longname = None
+        try:
+            subasset_parent, subasset_longname = parse_subasset_from_asset_name(asset_name)
+        except Exception as e:
+            logger.warn("Invalid subasset {}".format(asset_name))
+            subasset_longname = None
+
+        if subasset_longname is not None:
+            cursor = db.cursor()
+            cursor.execute('''SELECT asset_name FROM assets WHERE asset_longname = ?''', (subasset_longname,))
+            assets = list(cursor)
+            cursor.close()
+            if len(assets) == 1:
+                return assets[0]['asset_name']
+
+    return asset_name
+
+
 # checks and validates subassets (PARENT.SUBASSET)
 #   throws exceptions for assset or subasset names with invalid syntax
 #   returns (None, None) if the asset is not a subasset name
