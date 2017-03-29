@@ -261,7 +261,7 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
 
 def compose_transaction(db, name, params,
                         encoding='auto',
-                        fee_per_kb=config.DEFAULT_FEE_PER_KB,
+                        fee_per_kb=None,
                         estimate_fee_per_kb=None, estimate_fee_per_kb_nblocks=config.ESTIMATE_FEE_NBLOCKS,
                         regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                         multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
@@ -301,6 +301,12 @@ def compose_transaction(db, name, params,
     missing_params = [p for p in compose_params if p not in params and p != 'db']
     for param in missing_params:
         params[param] = None
+
+    # dont override fee_per_kb if specified
+    if fee_per_kb is not None:
+        estimate_fee_per_kb = False
+    else:
+        fee_per_kb = config.DEFAULT_FEE_PER_KB
 
     tx_info = compose_method(db, **params)
     return transaction.construct(db, tx_info, encoding=encoding,
@@ -450,9 +456,8 @@ class APIServer(threading.Thread):
                 try:
                     transaction_args, common_args, private_key_wif = split_params(**kwargs)
                     return compose_transaction(db, name=tx, params=transaction_args, **common_args)
-                except TypeError as e:
-                    raise APIError(str(e))
-                except (script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
+                except (TypeError, script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
+                    # TypeError happens when unexpected keyword arguments are passed in
                     error_msg = "Error composing {} transaction via API: {}".format(tx, str(error))
                     logging.warning(error_msg)
                     raise JSONRPCDispatchException(code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg)
