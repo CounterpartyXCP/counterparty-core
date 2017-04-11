@@ -1917,6 +1917,28 @@ UNITTEST_VECTOR = {
                 }}
             ]
         }, {
+            'comment': 'subassets not enabled yet',
+            'in': ({'data': bytes.fromhex('0000001501530821671b10010000000005f5e100010a57c6f36de23a1f5f4c46'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
+            'mock_protocol_changes': {'subassets': False},
+            'records': [
+                {'table': 'issuances', 'values': {
+                    'asset': None,
+                    'asset_longname': None,
+                    'block_index': DP['default_block_index'],
+                    'description': None,
+                    'fee_paid': 0,
+                    'issuer': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'locked': 0,
+                    'quantity': None,
+                    'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'status': 'invalid: could not unpack',
+                    'transfer': 0,
+                    'divisible': None,
+                    'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace',
+                    'tx_index': 502,
+                }}
+            ]
+        }, {
             'comment': 'invalid subasset length',
             'in': ({'data': bytes.fromhex('0000001501530821671b10010000000005f5e10001f057c6f36de23a1f5f4c46'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
             'records': [

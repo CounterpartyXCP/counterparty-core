@@ -292,7 +292,11 @@ def parse (db, tx, message, message_type_id):
     # Unpack message.
     try:
         subasset_longname = None
-        if message_type_id == SUBASSET_ID and util.enabled('subassets', block_index=tx['block_index']):
+        if message_type_id == SUBASSET_ID:
+            if not util.enabled('subassets', block_index=tx['block_index']):
+                logger.warn("subassets are not enabled at block %s" % tx['block_index'])
+                raise exceptions.UnpackError
+
             # parse a subasset original issuance message
             asset_id, quantity, divisible, compacted_subasset_length = struct.unpack(SUBASSET_FORMAT, message[0:SUBASSET_FORMAT_LENGTH])
             description_length = len(message) - SUBASSET_FORMAT_LENGTH - compacted_subasset_length
