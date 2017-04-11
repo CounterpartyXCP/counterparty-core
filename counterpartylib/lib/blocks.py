@@ -93,7 +93,9 @@ def parse_tx(db, tx):
         order.parse(db, tx, message)
     elif message_type_id == btcpay.ID:
         btcpay.parse(db, tx, message)
-    elif message_type_id == issuance.ID or message_type_id == issuance.SUBASSET_ID:
+    elif message_type_id == issuance.ID:
+        issuance.parse(db, tx, message, message_type_id)
+    elif message_type_id == issuance.SUBASSET_ID and util.enabled('subassets', block_index=tx['block_index']):
         issuance.parse(db, tx, message, message_type_id)
     elif message_type_id == broadcast.ID:
         broadcast.parse(db, tx, message)
