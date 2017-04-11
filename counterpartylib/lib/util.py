@@ -295,12 +295,16 @@ def validate_subasset_parent_name(asset_name):
     return True
 
 def compact_subasset_longname(string):
+    """Compacts a subasset name string into an array of bytes to save space using a base68 encoding scheme.
+    Assumes all characters provided belong to SUBASSET_DIGITS.
+    """
     name_int = 0
     for i, c in enumerate(string[::-1]):
         name_int += (68 ** i) * SUBASSET_REVERSE[c]
     return name_int.to_bytes((name_int.bit_length() + 7) // 8, byteorder='big')
 
 def expand_subasset_longname(raw_bytes):
+    """Expands an array of bytes into a subasset name string."""
     integer = int.from_bytes(raw_bytes, byteorder='big')
     if integer == 0:
         return ''
