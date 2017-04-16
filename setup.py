@@ -235,7 +235,7 @@ setup_options = {
     'url': 'http://counterparty.io',
     'license': 'MIT',
     'description': 'Counterparty Protocol Reference Implementation',
-    'keywords': 'counterparty, bitcoin',
+    'keywords': 'counterparty, bitcoin, ethereum',
     'classifiers': [
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
