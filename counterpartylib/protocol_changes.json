@@ -115,7 +115,7 @@
         "minimum_version_major": 9,
         "minimum_version_minor": 55,
         "minimum_version_revision": 2,
-        "block_index": 455000,
-        "testnet_block_index": 1088080
+        "block_index": 999999,
+        "testnet_block_index": 0
     }
 }
