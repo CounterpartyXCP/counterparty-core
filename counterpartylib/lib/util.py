@@ -20,6 +20,7 @@ import bitcoin as bitcoinlib
 import os
 import collections
 import threading
+import random
 
 from counterpartylib.lib import exceptions
 from counterpartylib.lib.exceptions import DecodeError
@@ -27,6 +28,9 @@ from counterpartylib.lib import config
 
 D = decimal.Decimal
 b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+# subasset contain only characters a-zA-Z0-9.-_@!
+subasset_digits = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_@!'
 
 # Obsolete in Python 3.4, with enum module.
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
@@ -198,6 +202,79 @@ def get_asset_name (db, asset_id, block_index):
     elif not assets:
         return 0    # Strange, I know…
 
+# checks and validates subassets
+#   throws exceptions for assset or subasset names with invalid syntax
+def parse_subasset_from_asset_name(asset):
+    subasset_parent = None
+    subasset_child = None
+    subasset = None
+    chunks = asset.split('.', 1)
+    if (len(chunks) == 2):
+        subasset_parent = chunks[0]
+        subasset_child = chunks[1]
+        subasset = asset
+
+        # validate parent asset
+        validate_subasset_parent_name(subasset_parent)
+
+        # validate child asset
+        validate_subasset_name(subasset, subasset_child)
+
+    return (subasset_parent, subasset)
+
+# takes an asset description in 
+#   if it has a suffix like ;;lPARENT.child, then parse the subasset information
+#   throws exceptions for invalid asset names
+def parse_subasset_from_description(description):
+    subasset_parent = None
+    subasset_child = None
+    subasset = None
+    chunks = description.rsplit(';;l', 1)
+    if len(chunks) == 2:
+        split_description, asset = chunks
+        subasset_parent, subasset = parse_subasset_from_asset_name(asset)
+        if subasset is not None:
+            # if we parsed a subasset, strip ;;l{subasset} from the description
+            description = split_description
+
+    return (subasset_parent, subasset, description)
+
+# throws exceptions for invalid subasset names
+def validate_subasset_name(subasset, subasset_child):
+    if len(subasset_child) < 1:
+        raise exceptions.AssetNameError('subasset name too short')
+    if len(subasset) > 250:
+        raise exceptions.AssetNameError('subasset name too long')
+    previous_digit = '.'
+    for c in subasset_child:
+        if c not in subasset_digits:
+            raise exceptions.AssetNameError('subasset name contains invalid character:', c)
+        if c == '.' and previous_digit == '.':
+            raise exceptions.AssetNameError('subasset name contains consecutive periods')
+        previous_digit = c
+    if previous_digit == '.':
+        raise exceptions.AssetNameError('subasset name ends with a period')
+    return True
+
+# throws exceptions for invalid subasset names
+def validate_subasset_parent_name(asset_name):
+    if asset_name == config.BTC:
+        raise exceptions.AssetNameError('parent asset cannot be {}'.format(config.BTC))
+    if asset_name == config.XCP:
+        raise exceptions.AssetNameError('parent asset cannot be {}'.format(config.XCP))
+    if len(asset_name) < 4:
+        raise exceptions.AssetNameError('parent asset name too short')
+    if len(asset_name) >= 13:
+        raise exceptions.AssetNameError('parent asset name too long')
+    if asset_name[0] == 'A':
+        raise exceptions.AssetNameError('parent asset name starts with ‘A’')
+    for c in asset_name:
+        if c not in b26_digits:
+            raise exceptions.AssetNameError('parent asset name contains invalid character:', c)
+    return True
+
+def generate_random_asset ():
+    return 'A'+str(random.randint(26**12 + 1, 2**64 - 1))
 
 class DebitError (Exception): pass
 def debit (db, address, asset, quantity, action=None, event=None):

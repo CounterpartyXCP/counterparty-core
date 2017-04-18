@@ -552,6 +552,7 @@ class APIServer(threading.Thread):
                     if e['locked']: locked = True
                 assetsInfo.append({
                     'asset': asset,
+                    'asset_longname': last_issuance['asset_longname'],
                     'owner': last_issuance['issuer'],
                     'divisible': bool(last_issuance['divisible']),
                     'locked': locked,
