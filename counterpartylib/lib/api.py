@@ -506,6 +506,7 @@ class APIServer(threading.Thread):
             elif asset == 'XCP':
                 return util.xcp_supply(db)
             else:
+                asset = util.resolve_subasset_longname(db, asset)
                 return util.asset_supply(db, asset)
 
         @dispatcher.add_method
@@ -520,6 +521,7 @@ class APIServer(threading.Thread):
                 raise APIError("assets must be a list of asset names, even if it just contains one entry")
             assetsInfo = []
             for asset in assets:
+                asset = util.resolve_subasset_longname(db, asset)
 
                 # BTC and XCP.
                 if asset in [config.BTC, config.XCP]:
@@ -530,6 +532,7 @@ class APIServer(threading.Thread):
 
                     assetsInfo.append({
                         'asset': asset,
+                        'asset_longname': None,
                         'owner': None,
                         'divisible': True,
                         'locked': False,
@@ -552,6 +555,7 @@ class APIServer(threading.Thread):
                     if e['locked']: locked = True
                 assetsInfo.append({
                     'asset': asset,
+                    'asset_longname': last_issuance['asset_longname'],
                     'owner': last_issuance['issuer'],
                     'divisible': bool(last_issuance['divisible']),
                     'locked': locked,
@@ -679,6 +683,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_holder_count(asset):
+            asset = util.resolve_subasset_longname(db, asset)
             holders = util.holders(db, asset)
             addresses = []
             for holder in holders:
@@ -687,6 +692,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_holders(asset):
+            asset = util.resolve_subasset_longname(db, asset)
             holders = util.holders(db, asset)
             return holders
 

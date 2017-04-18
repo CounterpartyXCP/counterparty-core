@@ -134,6 +134,9 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     return dividend_total, outputs, problems, fee
 
 def compose (db, source, quantity_per_unit, asset, dividend_asset):
+    # resolve subassets
+    asset = util.resolve_subasset_longname(db, asset)
+    dividend_asset = util.resolve_subasset_longname(db, dividend_asset)
 
     dividend_total, outputs, problems, fee = validate(db, source, quantity_per_unit, asset, dividend_asset, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)

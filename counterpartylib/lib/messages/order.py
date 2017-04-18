@@ -372,6 +372,10 @@ def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, ex
 def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required):
     cursor = db.cursor()
 
+    # resolve subassets
+    give_asset = util.resolve_subasset_longname(db, give_asset)
+    get_asset = util.resolve_subasset_longname(db, get_asset)
+
     # Check balance.
     if give_asset != config.BTC:
         balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, give_asset)))

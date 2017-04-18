@@ -94,6 +94,8 @@ def validate (db, source, destination, asset, quantity):
 
 
 def compose (db, source, asset, quantity, tag):
+    # resolve subassets
+    asset = util.resolve_subasset_longname(db, asset)
 
     validate(db, source, None, asset, quantity)
     data = pack(db, asset, quantity, tag)
