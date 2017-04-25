@@ -1472,8 +1472,8 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], None, 'NOSATOSHI', 1000.5, True, False, None, None, '', None, None, DP['default_block_index']),
             'out': (0, 0.0, ['quantity must be in satoshis'], 0, '', True, None, None)
         }, {
-            'in': (ADDR[0], None, 'CALLPRICEFLOAT', 1000, True, False, None, 100.0, '', None, None, DP['default_block_index']),
-            'out': (0, 0.0, [], 0, '', True, False, None)
+            'in': (ADDR[0], None, 'CALLPRICEFLT', 1000, True, False, None, 100.0, '', None, None, DP['default_block_index']), # CALLPRICE AS FLOAT
+            'out': (0, 0.0, [], 50000000, '', True, False, None)
         }, {
             'in': (ADDR[0], None, 'CALLPRICEINT', 1000, True, False, None, 100, '', None, None, DP['default_block_index']),
             'out': (0, 0.0, [], 50000000, '', True, False, None)
@@ -1484,7 +1484,7 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], None, 'CALLDATEINT', 1000, True, False, 1409401723, None, '', None, None, DP['default_block_index']),
             'out': (0, 0.0, [], 50000000, '', True, False, None)
         }, {
-            'in': (ADDR[0], None, 'CALLDATEFLOAT', 1000, True, False, 0.9 * 1409401723, None, '', None, None, DP['default_block_index']),
+            'in': (ADDR[0], None, 'CALLDATEFLT', 1000, True, False, 0.9 * 1409401723, None, '', None, None, DP['default_block_index']), # CALL DATE AS FLOAT
             'out': (1268461550.7, 0.0, ['call_date must be epoch integer'], 0, '', True, None, None)
         }, {
             'in': (ADDR[0], None, 'CALLDATESTR', 1000, True, False, 'abc', None, '', None, None, DP['default_block_index']),
@@ -1803,7 +1803,7 @@ UNITTEST_VECTOR = {
                     'block_index': DP['default_block_index'],
                     'description': '',
                     'divisible': 1,
-                    'fee_paid': 0,
+                    'fee_paid': 10000000,
                     'issuer': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'locked': 0,
                     'quantity': 1000,
@@ -1827,7 +1827,7 @@ UNITTEST_VECTOR = {
                     'asset': 'XCP',
                     'block_index': DP['default_block_index'],
                     'event': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7',
-                    'quantity': 0,
+                    'quantity': 10000000,
                 }}
             ]
         }, {
