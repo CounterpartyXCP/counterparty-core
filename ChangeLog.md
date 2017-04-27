@@ -1,6 +1,7 @@
 ## Library Versions ##
 * v9.55.2 (2017-02-16)
     * Implemented CIP-4 subassets (https://github.com/CounterpartyXCP/cips/blob/master/cip-0004.md)
+    * Added a .1 XCP fee for numeric asset issuance
 * v9.55.1 (2016-12-02)
     * Hotfix for integer overflow bug that caused a crash on mainnet block #441563
 * v9.55.0 (2016-07-11)

@@ -180,11 +180,16 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
             cursor.close()
             if util.enabled('numeric_asset_names'):  # Protocol change.
                 if subasset_longname is not None and util.enabled('subassets'): # Protocol change.
-                    # subasset issuance is 0.25
+                    # subasset issuance is 0.25 XCP
                     fee = int(0.25 * config.UNIT)
                 elif len(asset) >= 13:
-                    fee = 0
+                    if util.enabled('numeric_asset_fees'):  # Protocol change.
+                        # numeric issuance is 0.1 XCP
+                        fee = int(0.10 * config.UNIT)
+                    else:
+                        fee = 0
                 else:
+                    # named issuance is 0.5 XCP
                     fee = int(0.5 * config.UNIT)
             elif block_index >= 291700 or config.TESTNET:     # Protocol change.
                 fee = int(0.5 * config.UNIT)

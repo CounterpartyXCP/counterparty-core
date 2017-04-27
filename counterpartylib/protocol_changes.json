@@ -117,5 +117,12 @@
         "minimum_version_revision": 2,
         "block_index": 999999,
         "testnet_block_index": 0
+    },
+    "numeric_asset_fees": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 55,
+        "minimum_version_revision": 2,
+        "block_index": 999999,
+        "testnet_block_index": 0
     }
 }
