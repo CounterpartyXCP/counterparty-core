@@ -417,6 +417,10 @@ def kickstart(db, bitcoind_dir):
     blocks.kickstart(db, bitcoind_dir=bitcoind_dir)
 
 
+def vacuum(db):
+    database.vacuum(db)
+
+
 def debug_config():
     output = vars(config)
     for k in list(output.keys()):
