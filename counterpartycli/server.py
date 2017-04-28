@@ -75,6 +75,8 @@ def main():
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database')
 
+    parser_vacuum = subparsers.add_parser('vacuum', help='VACUUM the database (to improve performance)')
+
     parser_rollback = subparsers.add_parser('rollback', help='rollback database')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
 
@@ -110,7 +112,7 @@ def main():
                 raise e
 
     # Configuration
-    COMMANDS_WITH_DB = ['reparse', 'rollback', 'kickstart', 'start']
+    COMMANDS_WITH_DB = ['reparse', 'rollback', 'kickstart', 'start', 'vacuum']
     COMMANDS_WITH_CONFIG = ['debug_config']
     if args.action in COMMANDS_WITH_DB or args.action in COMMANDS_WITH_CONFIG:
         init_args = dict(database_file=args.database_file,
@@ -156,6 +158,9 @@ def main():
 
     elif args.action == 'debug_config':
         server.debug_config()
+
+    elif args.action == 'vacuum':
+        server.vacuum(db)
 
     else:
         parser.print_help()
