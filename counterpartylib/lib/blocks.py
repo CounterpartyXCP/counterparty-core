@@ -817,6 +817,7 @@ def reparse(db, block_index=None, quiet=False):
         logger.info('Reparsing all transactions.')
 
     check.software_version()
+    reparse_start = time.time()
 
     # Reparse from the undolog if possible
     reparsed = reparse_from_undolog(db, block_index, quiet)
@@ -847,9 +848,13 @@ def reparse(db, block_index=None, quiet=False):
                                                                          previous_ledger_hash=previous_ledger_hash,
                                                                          previous_txlist_hash=previous_txlist_hash,
                                                                          previous_messages_hash=previous_messages_hash)
+                if quiet and block['block_index'] % 10 == 0:  # every 10 blocks print status
+                    root_logger.setLevel(logging.INFO)
                 logger.info('Block (re-parse): %s (hashes: L:%s / TX:%s / M:%s%s)' % (
                     block['block_index'], previous_ledger_hash[-5:], previous_txlist_hash[-5:], previous_messages_hash[-5:],
                     (' [overwrote %s]' % previous_found_messages_hash) if previous_found_messages_hash and previous_found_messages_hash != previous_messages_hash else ''))
+                if quiet and block['block_index'] % 10 == 0:
+                    root_logger.setLevel(logging.WARNING)
 
         if quiet:
             root_logger.setLevel(root_level)
@@ -862,6 +867,13 @@ def reparse(db, block_index=None, quiet=False):
         database.update_version(db)
 
     cursor.close()
+    reparse_end = time.time()
+    logger.info("Reparse took {:.3f} minutes.".format((reparse_end - reparse_start) / 60.0))
+
+    # on full reparse - vacuum the DB afterwards for better subsequent performance (especially on non-SSDs)
+    if not block_index:
+        database.vacuum(db)
+
 
 def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=None):
     assert type(tx_hash) == str

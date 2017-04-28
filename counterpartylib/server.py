@@ -408,9 +408,9 @@ def start_all(db):
     blocks.follow(db)
 
 
-def reparse(db, block_index=None):
+def reparse(db, block_index=None, quiet=True):
     connect_to_backend()
-    blocks.reparse(db, block_index=block_index)
+    blocks.reparse(db, block_index=block_index, quiet=quiet)
 
 
 def kickstart(db, bitcoind_dir):

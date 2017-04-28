@@ -143,4 +143,10 @@ def update_version(db):
     cursor.execute('PRAGMA user_version = {}'.format(user_version)) # Syntax?!
     logger.info('Database version number updated.')
 
+def vacuum(db):
+    logger.info('Starting database VACUUM. This may take awhile...')
+    cursor = db.cursor()
+    cursor.execute('VACUUM')
+    logger.info('Database VACUUM completed.')
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
