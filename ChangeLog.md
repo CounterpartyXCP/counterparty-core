@@ -1,4 +1,6 @@
 ## Command Line Interface Versions ##
+* v1.1.3 (2017/05/01)
+    * Added `vacuum` command to server CLI.
 * v1.1.2 (2016/07/11)
     * Added P2SH support (to match counterparty-lib 9.55.0)
 	* added `get_tx_info` command
