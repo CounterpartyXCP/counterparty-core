@@ -223,8 +223,7 @@ def main():
             if script.is_multisig(args.source):
                 logger.info('Multi‐signature transactions are signed and broadcasted manually.')
             
-            #elif input('Sign and broadcast? (y/N) ') == 'y':
-            elif True:
+            elif input('Sign and broadcast? (y/N) ') == 'y':
 
                 if wallet.is_mine(args.source):
                     if wallet.is_locked():
