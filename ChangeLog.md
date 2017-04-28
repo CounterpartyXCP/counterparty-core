@@ -1,5 +1,5 @@
 ## Library Versions ##
-* v9.55.2 (2017-02-16)
+* v9.55.2 (2017-05-01)
     * Implemented CIP-4 subassets (https://github.com/CounterpartyXCP/cips/blob/master/cip-0004.md) (protocol change: 467417)
     * Moved to bitcoind 0.13.2-addrindex (please use at least 0.13.2 with this version of counterparty-lib)
 * v9.55.1 (2016-12-02)
