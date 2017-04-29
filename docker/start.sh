@@ -24,6 +24,17 @@ fi
 # http://veithen.github.io/2014/11/16/sigterm-propagation.html
 : ${PARAMS:=""}
 : ${COMMAND:="start"}
+
+#########
+# HACK: Use python-bitcoinlib snapshot version for testnet
+# TODO: REMOVE THIS ONCE https://github.com/petertodd/python-bitcoinlib/pull/112 IS MERGED!
+if [[ $PARAMS == *"testnet"* ]]; then
+  echo "TESTNET USE DETECTED -- GETTING python-bitcoinlib 0.7.1-SNAPSHOT"
+  rm -rf /usr/local/lib/python3.5/dist-packages/bitcoin /usr/local/lib/python3.5/dist-packages/python_bitcoinlib-*.dist-info
+  pip3 install --upgrade git+https://github.com/VidaID/python-bitcoinlib.git@5cd34672d7085ca4d55693a1008101c02ceeb7e9#egg=python-bitcoinlib-0.7.1-SNAPSHOT
+fi
+#########
+
 trap 'kill -TERM $PID' TERM INT
 /usr/local/bin/counterparty-server ${PARAMS} ${COMMAND} &
 PID=$!
