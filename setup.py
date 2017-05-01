@@ -67,7 +67,7 @@ setup_options = {
         "Topic :: Office/Business :: Financial",
         "Topic :: System :: Distributed Computing"
     ],
-    'download_url': 'https://github.com/CounterpartyXCP/counterparty-cli/releases/tag/v' + APP_VERSION,
+    'download_url': 'https://github.com/CounterpartyXCP/counterparty-cli/releases/tag/' + APP_VERSION,
     'provides': ['counterpartycli'],
     'packages': find_packages(),
     'zip_safe': False,
