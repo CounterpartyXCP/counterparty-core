@@ -14,7 +14,7 @@ fi
 if [[ $PARAMS == *"testnet"* ]]; then
   echo "TESTNET USE DETECTED -- GETTING python-bitcoinlib 0.7.1-SNAPSHOT"
   rm -rf /usr/local/lib/python3.5/dist-packages/bitcoin /usr/local/lib/python3.5/dist-packages/python_bitcoinlib-*.dist-info
-  pip3 install --upgrade git+https://github.com/robby-dermody/python-bitcoinlib.git@422d6d2a3d4c5e6265ebcfcd0a9137d7f6a2f5c5#egg=python-bitcoinlib-0.7.0
+  pip3 install --upgrade git+https://github.com/CounterpartyXCP/python-bitcoinlib.git@112d66b11cde30b9c7e10895f057baab13cc35ec#egg=python-bitcoinlib-0.7.0
   #^ yes, we make it look like 0.7.0 (using version "0.7.1-SNAPSHOT" was causing all sorts of issues)
 fi
 #########
