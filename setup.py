@@ -202,10 +202,11 @@ class bdist_egg(_bdist_egg):
         self.execute(post_install, (self, False), msg="Running post install tasks")
 
 required_packages = [
+    'appdirs==1.4.0',
+    'setuptools-markdown==0.2',
     'python-dateutil==2.5.3',
     'Flask-HTTPAuth==3.1.2',
     'Flask==0.11',
-    'appdirs==1.4.0',
     'colorlog==2.7.0',
     'json-rpc==1.10.3',
     'pycoin==0.77',
@@ -248,7 +249,7 @@ setup_options = {
     'provides': ['counterpartylib'],
     'packages': find_packages(),
     'zip_safe': False,
-    'setup_requires': ['appdirs'],
+    'setup_requires': ['appdirs', 'setuptools-markdown'],
     'install_requires': required_packages,
     'include_package_data': True,
     'cmdclass': {
@@ -261,6 +262,5 @@ setup_options = {
 
 if sys.argv[1] == 'sdist':
     setup_options['long_description_markdown_filename'] = 'README.md'
-    setup_options['setup_requires'].append('setuptools-markdown')
 
 setup(**setup_options)
