@@ -749,6 +749,11 @@ def reinitialise(db, block_index=None):
     if block_index:
         cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
         cursor.execute('''DELETE FROM blocks WHERE block_index > ?''', (block_index,))
+    elif config.TESTNET:  # block_index NOT specified and we are running testnet
+        # just blow away the consensus hashes with a full testnet reparse, as we could activate
+        # new features retroactively, which could otherwise lead to ConsensusError exceptions being raised.
+        logger.info("Testnet full reparse detected: Clearing all consensus hashes before performing reparse.")
+        cursor.execute('''UPDATE blocks SET ledger_hash = NULL, txlist_hash = NULL, messages_hash = NULL''')
 
     cursor.close()
 
