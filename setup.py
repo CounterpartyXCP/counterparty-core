@@ -244,7 +244,7 @@ setup_options = {
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: System :: Distributed Computing"
     ],
-    'download_url': 'https://github.com/CounterpartyXCP/counterparty-lib/releases/tag/v' + CURRENT_VERSION,
+    'download_url': 'https://github.com/CounterpartyXCP/counterparty-lib/releases/tag/' + CURRENT_VERSION,
     'provides': ['counterpartylib'],
     'packages': find_packages(),
     'zip_safe': False,
