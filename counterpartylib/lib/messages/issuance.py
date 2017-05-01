@@ -17,7 +17,10 @@ FORMAT_1 = '>QQ?'
 LENGTH_1 = 8 + 8 + 1
 FORMAT_2 = '>QQ??If'
 LENGTH_2 = 8 + 8 + 1 + 1 + 4 + 4
+SUBASSET_FORMAT = '>QQ?B'
+SUBASSET_FORMAT_LENGTH = 8 + 8 + 1 + 1
 ID = 20
+SUBASSET_ID = 21
 # NOTE: Pascal strings are used for storing descriptions for backwards‐compatibility.
 
 def initialise(db):
@@ -39,6 +42,7 @@ def initialise(db):
                       fee_paid INTEGER,
                       locked BOOL,
                       status TEXT,
+                      asset_longname TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -54,7 +58,17 @@ def initialise(db):
                       source_idx ON issuances (source)
                    ''')
 
-def validate (db, source, destination, asset, quantity, divisible, callable_, call_date, call_price, description, block_index):
+    # Add asset_longname for sub-assets
+    #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS`.
+    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(issuances)''')]
+    if 'asset_longname' not in columns:
+        cursor.execute('''ALTER TABLE issuances ADD COLUMN asset_longname TEXT''')
+
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      asset_longname_idx ON issuances (asset_longname)
+                   ''')
+
+def validate (db, source, destination, asset, quantity, divisible, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index):
     problems = []
     fee = 0
 
@@ -71,13 +85,13 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
 
     if not isinstance(quantity, int):
         problems.append('quantity must be in satoshis')
-        return call_date, call_price, problems, fee, description, divisible, None
+        return call_date, call_price, problems, fee, description, divisible, None, None
     if call_date and not isinstance(call_date, int):
         problems.append('call_date must be epoch integer')
-        return call_date, call_price, problems, fee, description, divisible, None
+        return call_date, call_price, problems, fee, description, divisible, None, None
     if call_price and not isinstance(call_price, float):
         problems.append('call_price must be a float')
-        return call_date, call_price, problems, fee, description, divisible, None
+        return call_date, call_price, problems, fee, description, divisible, None, None
 
     if quantity < 0: problems.append('negative quantity')
     if call_price < 0: problems.append('negative call price')
@@ -101,9 +115,11 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
                       ORDER BY tx_index ASC''', ('valid', asset))
     issuances = cursor.fetchall()
     cursor.close()
+    reissued_asset_longname = None
     if issuances:
         reissuance = True
         last_issuance = issuances[-1]
+        reissued_asset_longname = last_issuance['asset_longname']
 
         if last_issuance['issuer'] != source:
             problems.append('issued by another address')
@@ -124,6 +140,36 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
         if destination:
             problems.append('cannot transfer a non‐existent asset')
 
+    # validate parent ownership for subasset
+    if subasset_longname is not None:
+        cursor = db.cursor()
+        cursor.execute('''SELECT * FROM issuances \
+                          WHERE (status = ? AND asset = ?)
+                          ORDER BY tx_index ASC''', ('valid', subasset_parent))
+        parent_issuances = cursor.fetchall()
+        cursor.close()
+        if parent_issuances:
+            last_parent_issuance = parent_issuances[-1]
+            if last_parent_issuance['issuer'] != source:
+                problems.append('parent asset owned by another address')
+        else:
+            problems.append('parent asset not found')
+
+    # validate subasset issuance is not a duplicate
+    if subasset_longname is not None and not reissuance:
+        cursor = db.cursor()
+        cursor.execute('''SELECT * FROM assets \
+                          WHERE (asset_longname = ?)''', (subasset_longname,))
+        assets = cursor.fetchall()
+        if len(assets) > 0:
+            problems.append('subasset already exists')
+
+        # validate that the actual asset is numeric
+        if asset[0] != 'A':
+            problems.append('a subasset must be a numeric asset')
+
+
+    
     # Check for existence of fee funds.
     if quantity or (block_index >= 315000 or config.TESTNET):   # Protocol change.
         if not reissuance or (block_index < 310000 and not config.TESTNET):  # Pay fee only upon first issuance. (Protocol change.)
@@ -133,7 +179,10 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
             balances = cursor.fetchall()
             cursor.close()
             if util.enabled('numeric_asset_names'):  # Protocol change.
-                if len(asset) >= 13:
+                if subasset_longname is not None and util.enabled('subassets'): # Protocol change.
+                    # subasset issuance is 0.25
+                    fee = int(0.25 * config.UNIT)
+                elif len(asset) >= 13:
                     fee = 0
                 else:
                     fee = int(0.5 * config.UNIT)
@@ -164,7 +213,8 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     if util.enabled('integer_overflow_fix', block_index=block_index) and (fee > config.MAX_INT or quantity > config.MAX_INT):
         problems.append('integer overflow')
 
-    return call_date, call_price, problems, fee, description, divisible, reissuance
+    return call_date, call_price, problems, fee, description, divisible, reissuance, reissued_asset_longname
+
 
 def compose (db, source, transfer_destination, asset, quantity, divisible, description):
 
@@ -186,29 +236,82 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, descr
         call_price = 0.0
     cursor.close()
 
-    call_date, call_price, problems, fee, description, divisible, reissuance = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.CURRENT_BLOCK_INDEX)
+    # check subasset
+    subasset_parent = None
+    subasset_longname = None
+    if util.enabled('subassets'): # Protocol change.
+        subasset_parent, subasset_longname = util.parse_subasset_from_asset_name(asset)
+        if subasset_longname is not None:
+            # try to find an existing subasset
+            sa_cursor = db.cursor()
+            sa_cursor.execute('''SELECT * FROM assets \
+                              WHERE (asset_longname = ?)''', (subasset_longname,))
+            assets = sa_cursor.fetchall()
+            sa_cursor.close()
+            if len(assets) > 0:
+                # this is a reissuance
+                asset = assets[0]['asset_name']
+            else:
+                # this is a new issuance
+                #   generate a random numeric asset id which will map to this subasset
+                asset = util.generate_random_asset()
+
+    call_date, call_price, problems, fee, description, divisible, reissuance, reissued_asset_longname = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, subasset_parent, subasset_longname, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
     asset_id = util.generate_asset_id(asset, util.CURRENT_BLOCK_INDEX)
-    data = struct.pack(config.TXTYPE_FORMAT, ID)
-    if len(description) <= 42:
-        curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
+    if subasset_longname is None or reissuance:
+        # Type 20 standard issuance FORMAT_2 >QQ??If
+        #   used for standard issuances and all reissuances
+        data = struct.pack(config.TXTYPE_FORMAT, ID)
+        if len(description) <= 42:
+            curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
+        else:
+            curr_format = FORMAT_2 + '{}s'.format(len(description))
+        data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0,
+            call_date or 0, call_price or 0.0, description.encode('utf-8'))
     else:
-        curr_format = FORMAT_2 + '{}s'.format(len(description))
-    data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0,
-        call_date or 0, call_price or 0.0, description.encode('utf-8'))
+        # Type 21 subasset issuance SUBASSET_FORMAT >QQ?B
+        #   Used only for initial subasset issuance
+        # compacts a subasset name to save space
+        compacted_subasset_longname = util.compact_subasset_longname(subasset_longname)
+        compacted_subasset_length = len(compacted_subasset_longname)
+        data = struct.pack(config.TXTYPE_FORMAT, SUBASSET_ID)
+        curr_format = SUBASSET_FORMAT + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(description))
+        data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, compacted_subasset_length, compacted_subasset_longname, description.encode('utf-8'))
+
     if transfer_destination:
         destination_outputs = [(transfer_destination, None)]
     else:
         destination_outputs = []
     return (source, destination_outputs, data)
 
-def parse (db, tx, message):
+def parse (db, tx, message, message_type_id):
     issuance_parse_cursor = db.cursor()
 
     # Unpack message.
     try:
-        if (tx['block_index'] > 283271 or config.TESTNET) and len(message) >= LENGTH_2: # Protocol change.
+        subasset_longname = None
+        if message_type_id == SUBASSET_ID:
+            if not util.enabled('subassets', block_index=tx['block_index']):
+                logger.warn("subassets are not enabled at block %s" % tx['block_index'])
+                raise exceptions.UnpackError
+
+            # parse a subasset original issuance message
+            asset_id, quantity, divisible, compacted_subasset_length = struct.unpack(SUBASSET_FORMAT, message[0:SUBASSET_FORMAT_LENGTH])
+            description_length = len(message) - SUBASSET_FORMAT_LENGTH - compacted_subasset_length
+            if description_length < 0:
+                logger.warn("invalid subasset length: [issuance] tx [%s]: %s" % (tx['tx_hash'], compacted_subasset_length))
+                raise exceptions.UnpackError
+            messages_format = '>{}s{}s'.format(compacted_subasset_length, description_length)
+            compacted_subasset_longname, description = struct.unpack(messages_format, message[SUBASSET_FORMAT_LENGTH:])
+            subasset_longname = util.expand_subasset_longname(compacted_subasset_longname)
+            callable_, call_date, call_price = False, 0, 0.0
+            try:
+                description = description.decode('utf-8')
+            except UnicodeDecodeError:
+                description = ''
+        elif (tx['block_index'] > 283271 or config.TESTNET) and len(message) >= LENGTH_2: # Protocol change.
             if len(message) - LENGTH_2 <= 42:
                 curr_format = FORMAT_2 + '{}p'.format(len(message) - LENGTH_2)
             else:
@@ -235,9 +338,22 @@ def parse (db, tx, message):
         asset, quantity, divisible, callable_, call_date, call_price, description = None, None, None, None, None, None, None
         status = 'invalid: could not unpack'
 
+    # parse and validate the subasset from the message
+    subasset_parent = None
+    if status == 'valid' and subasset_longname is not None: # Protocol change.
+        try:
+            # ensure the subasset_longname is valid
+            util.validate_subasset_longname(subasset_longname)
+            subasset_parent, subasset_longname = util.parse_subasset_from_asset_name(subasset_longname)
+        except exceptions.AssetNameError as e:
+            asset = None
+            status = 'invalid: bad subasset name'
+
+    reissuance = None
     fee = 0
     if status == 'valid':
-        call_date, call_price, problems, fee, description, divisible, reissuance = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
+        call_date, call_price, problems, fee, description, divisible, reissuance, reissued_asset_longname = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index=tx['block_index'])
+
         if problems: status = 'invalid: ' + '; '.join(problems)
         if not util.enabled('integer_overflow_fix', block_index=tx['block_index']) and 'total quantity overflow' in problems:
             quantity = 0
@@ -273,9 +389,16 @@ def parse (db, tx, message):
                 'asset_id': str(asset_id),
                 'asset_name': str(asset),
                 'block_index': tx['block_index'],
+                'asset_longname': subasset_longname,
             }
-            sql='insert into assets values(:asset_id, :asset_name, :block_index)'
+            sql='insert into assets values(:asset_id, :asset_name, :block_index, :asset_longname)'
             issuance_parse_cursor.execute(sql, bindings)
+
+    if status == 'valid' and reissuance:
+        # when reissuing, add the asset_longname to the issuances table for API lookups
+        asset_longname = reissued_asset_longname
+    else:
+        asset_longname = subasset_longname
 
     # Add parsed transaction to message-type–specific table.
     bindings= {
@@ -295,9 +418,10 @@ def parse (db, tx, message):
         'fee_paid': fee,
         'locked': lock,
         'status': status,
+        'asset_longname': asset_longname,
     }
     if "integer overflow" not in status:
-        sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status)'
+        sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname)'
         issuance_parse_cursor.execute(sql, bindings)
     else:
         logger.warn("Not storing [issuance] tx [%s]: %s" % (tx['tx_hash'], status))

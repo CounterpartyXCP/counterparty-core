@@ -94,7 +94,9 @@ def parse_tx(db, tx):
     elif message_type_id == btcpay.ID:
         btcpay.parse(db, tx, message)
     elif message_type_id == issuance.ID:
-        issuance.parse(db, tx, message)
+        issuance.parse(db, tx, message, message_type_id)
+    elif message_type_id == issuance.SUBASSET_ID and util.enabled('subassets', block_index=tx['block_index']):
+        issuance.parse(db, tx, message, message_type_id)
     elif message_type_id == broadcast.ID:
         broadcast.parse(db, tx, message)
     elif message_type_id == bet.ID:
@@ -326,7 +328,8 @@ def initialise(db):
     cursor.execute('''CREATE TABLE IF NOT EXISTS assets(
                       asset_id TEXT UNIQUE,
                       asset_name TEXT UNIQUE,
-                      block_index INTEGER)
+                      block_index INTEGER,
+                      asset_longname TEXT)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       name_idx ON assets (asset_name)
@@ -334,10 +337,18 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       id_idx ON assets (asset_id)
                    ''')
+
+    # Add asset_longname for sub-assets
+    #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS`.
+    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(assets)''')]
+    if 'asset_longname' not in columns:
+        cursor.execute('''ALTER TABLE assets ADD COLUMN asset_longname TEXT''')
+    cursor.execute('''CREATE UNIQUE INDEX IF NOT EXISTS asset_longname_idx ON assets(asset_longname)''')
+
     cursor.execute('''SELECT * FROM assets WHERE asset_name = ?''', ('BTC',))
     if not list(cursor):
-        cursor.execute('''INSERT INTO assets VALUES (?,?,?)''', ('0', 'BTC', None))
-        cursor.execute('''INSERT INTO assets VALUES (?,?,?)''', ('1', 'XCP', None))
+        cursor.execute('''INSERT INTO assets VALUES (?,?,?,?)''', ('0', 'BTC', None, None))
+        cursor.execute('''INSERT INTO assets VALUES (?,?,?,?)''', ('1', 'XCP', None, None))
 
     # Consolidated
     send.initialise(db)
@@ -806,6 +817,7 @@ def reparse(db, block_index=None, quiet=False):
         logger.info('Reparsing all transactions.')
 
     check.software_version()
+    reparse_start = time.time()
 
     # Reparse from the undolog if possible
     reparsed = reparse_from_undolog(db, block_index, quiet)
@@ -836,9 +848,13 @@ def reparse(db, block_index=None, quiet=False):
                                                                          previous_ledger_hash=previous_ledger_hash,
                                                                          previous_txlist_hash=previous_txlist_hash,
                                                                          previous_messages_hash=previous_messages_hash)
+                if quiet and block['block_index'] % 10 == 0:  # every 10 blocks print status
+                    root_logger.setLevel(logging.INFO)
                 logger.info('Block (re-parse): %s (hashes: L:%s / TX:%s / M:%s%s)' % (
                     block['block_index'], previous_ledger_hash[-5:], previous_txlist_hash[-5:], previous_messages_hash[-5:],
                     (' [overwrote %s]' % previous_found_messages_hash) if previous_found_messages_hash and previous_found_messages_hash != previous_messages_hash else ''))
+                if quiet and block['block_index'] % 10 == 0:
+                    root_logger.setLevel(logging.WARNING)
 
         if quiet:
             root_logger.setLevel(root_level)
@@ -851,6 +867,13 @@ def reparse(db, block_index=None, quiet=False):
         database.update_version(db)
 
     cursor.close()
+    reparse_end = time.time()
+    logger.info("Reparse took {:.3f} minutes.".format((reparse_end - reparse_start) / 60.0))
+
+    # on full reparse - vacuum the DB afterwards for better subsequent performance (especially on non-SSDs)
+    if not block_index:
+        database.vacuum(db)
+
 
 def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=None):
     assert type(tx_hash) == str

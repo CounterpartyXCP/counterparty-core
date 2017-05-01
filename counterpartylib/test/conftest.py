@@ -25,11 +25,24 @@ from counterpartylib.lib import config, util, database, api
 MOCK_PROTOCOL_CHANGES = {
     'bytespersigop': False  # default to False to avoid all old vectors breaking
 }
+MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
+    'subassets': {'block_index': 310495, 'enabled': True},  # override to be true only after block 310495
+}
+ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False
 ALWAYS_LATEST_PROTOCOL_CHANGES = False
 _enabled = util.enabled
 def enabled(change_name, block_index=None):
     if change_name in MOCK_PROTOCOL_CHANGES:
         return MOCK_PROTOCOL_CHANGES[change_name]
+
+    # enable protocol changes at a specific block for testing
+    if ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK and change_name in MOCK_PROTOCOL_CHANGES_AT_BLOCK:
+        _block_index = block_index
+        if _block_index is None:
+            _block_index = util.CURRENT_BLOCK_INDEX
+        logger = logging.getLogger(__name__)
+        if _block_index >= MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]['block_index']:
+            return MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]['enabled']
 
     # used to force unit tests to always run against latest protocol changes
     if ALWAYS_LATEST_PROTOCOL_CHANGES:
@@ -41,6 +54,15 @@ def enabled(change_name, block_index=None):
     else:
         return _enabled(change_name, block_index)
 util.enabled = enabled
+
+RANDOM_ASSET_INT = None
+_generate_random_asset = util.generate_random_asset
+def generate_random_asset ():
+    if RANDOM_ASSET_INT is None:
+        return _generate_random_asset()
+    else:
+        return 'A' + str(RANDOM_ASSET_INT)
+util.generate_random_asset = generate_random_asset
 
 
 def pytest_generate_tests(metafunc):
@@ -72,7 +94,6 @@ def pytest_addoption(parser):
     parser.addoption("--gentxhex", action='store_true', default=False, help="generate and print unsigned hex for *.compose() tests")
     parser.addoption("--savescenarios", action='store_true', default=False, help="generate sql dump and log in .new files")
     parser.addoption("--skiptestbook", default='no', help="skip test book(s) (use with one of the following values: `all`, `testnet` or `mainnet`)")
-    parser.addoption("--verbosediff", action='store_true', default=False, help="print verbose diff for vectors that fail")
 
 
 @pytest.fixture(scope="module")

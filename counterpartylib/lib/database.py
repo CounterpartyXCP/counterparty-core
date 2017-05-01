@@ -58,6 +58,11 @@ def exectracer(cursor, sql, bindings):
         log.message(db, bindings['block_index'], command, category, bindings)
     # Record alteration in computation of message feed hash for the block
     if category not in skip_tables_block_messages:
+        # don't include asset_longname as part of the messages hash 
+        #   until subassets are enabled
+        if category == 'issuances' and not util.enabled('subassets'):
+            if isinstance(bindings, dict) and 'asset_longname' in bindings: del bindings['asset_longname']
+
         sorted_bindings = sorted(bindings.items()) if isinstance(bindings, dict) else [bindings,] 
         BLOCK_MESSAGES.append('{}{}{}'.format(command, category, sorted_bindings))
 
@@ -137,5 +142,11 @@ def update_version(db):
     user_version = (config.VERSION_MAJOR * 1000) + config.VERSION_MINOR
     cursor.execute('PRAGMA user_version = {}'.format(user_version)) # Syntax?!
     logger.info('Database version number updated.')
+
+def vacuum(db):
+    logger.info('Starting database VACUUM. This may take awhile...')
+    cursor = db.cursor()
+    cursor.execute('VACUUM')
+    logger.info('Database VACUUM completed.')
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

@@ -451,8 +451,10 @@ def construct (db, tx_info, encoding='auto',
     # Get inputs.
     multisig_inputs = not data
 
-    use_inputs = custom_inputs  # Array of UTXOs, as retrieved by listunspent function from bitcoind
-    if custom_inputs is None:
+    # Array of UTXOs, as retrieved by listunspent function from bitcoind
+    if custom_inputs:
+        use_inputs = unspent = custom_inputs
+    else:
         if unspent_tx_hash is not None:
             unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash, multisig_inputs=multisig_inputs)
         else:
@@ -460,8 +462,8 @@ def construct (db, tx_info, encoding='auto',
 
         # filter out any locked UTXOs to prevent creating transactions that spend the same UTXO when they're created at the same time
         if UTXO_LOCKS is not None and source in UTXO_LOCKS:
-            unspentkeys = {make_outkey(output) for output in unspent}
-            filtered_unspentkeys = unspentkeys - UTXO_LOCKS[source].keys()
+            unspentkeys = set(make_outkey(output) for output in unspent)
+            filtered_unspentkeys = unspentkeys - set(UTXO_LOCKS[source].keys())
             unspent = [output for output in unspent if make_outkey(output) in filtered_unspentkeys]
 
         unspent = backend.sort_unspent_txouts(unspent)

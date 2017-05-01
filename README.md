@@ -38,7 +38,7 @@ Then, download and install `counterparty-lib`:
 ```
 $ git clone https://github.com/CounterpartyXCP/counterparty-lib.git
 $ cd counterparty-lib
-$ sudo pip3 install -r requirements.txt
+$ sudo pip3 install --upgrade -r requirements.txt
 $ sudo python3 setup.py install
 ```
 
@@ -47,9 +47,12 @@ Followed by `counterparty-cli`:
 ```
 $ git clone https://github.com/CounterpartyXCP/counterparty-cli.git
 $ cd counterparty-cli
-$ sudo pip3 install -r requirements.txt
+$ sudo pip3 install --upgrade -r requirements.txt
 $ sudo python3 setup.py install
 ```
+
+Note on **sudo**: both counterparty-lib and counterparty-server can be installed by non-sudoers. Please refer to external documentation for instructions on using pip without root access and other information related to custom install locations.
+
 
 Then, launch the daemon via:
 
@@ -112,7 +115,7 @@ Counterparty database files are by default named `counterparty.[testnet.]db` and
 
 ## Configuration File Format
 
-Manual configuration is not necessary for most use cases.
+Manual configuration is not necessary for most use cases. 
 
 A `counterparty-server` configuration file looks like this:
 
@@ -123,6 +126,8 @@ A `counterparty-server` configuration file looks like this:
 	rpc-host = 0.0.0.0
 	rpc-user = <rpcuser>
 	rpc-password = <rpcpassword>
+
+The ``force`` argument can be used either in the server configuration file or passed at runtime to make the server keep running in the case it loses connectivity with the Internet and falls behind the back-end database. This may be useful for *non-production* Counterparty servers that need to maintain RPC service availability even when the backend or counterparty server has no Internet connectivity.
 
 A `counterparty-client` configuration file looks like this:
 

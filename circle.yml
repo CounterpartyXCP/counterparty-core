@@ -8,7 +8,11 @@ dependencies:
         - python -c "import apsw; print(apsw.apswversion())"
 test:
     override:
+        - py.test --verbose --capture=no counterpartylib/test/config_context_test.py
         - py.test --verbose --capture=no counterpartylib/test/unit_test.py
+        - py.test --verbose --capture=no counterpartylib/test/utxolocks_test.py
+        - py.test --verbose --capture=no counterpartylib/test/bytespersigop_test.py
+        - py.test --verbose --capture=no counterpartylib/test/hashlib_test.py
         - py.test --verbose --capture=no counterpartylib/test/parse_block_test.py
         - py.test --verbose --capture=no --skiptestbook=all counterpartylib/test/integration_test.py
         - py.test --verbose --capture=no counterpartylib/test/contracts_test.py
