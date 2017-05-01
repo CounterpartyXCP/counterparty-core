@@ -34,6 +34,7 @@ class install(_install):
 
 required_packages = [
     'appdirs==1.4.0',
+    'setuptools-markdown==0.2',
     'prettytable==0.7.2',
     'colorlog==2.7.0',
     'python-dateutil==2.5.3',
@@ -71,8 +72,8 @@ setup_options = {
     'provides': ['counterpartycli'],
     'packages': find_packages(),
     'zip_safe': False,
+    'setup_requires': ['setuptools-markdown',],
     'install_requires': required_packages,
-    'setup_requires': required_packages,
     'entry_points': {
         'console_scripts': [
             'counterparty-client = counterpartycli:client_main',
@@ -120,6 +121,5 @@ if sys.argv[1] == 'py2exe':
 # prepare PyPi package
 elif sys.argv[1] == 'sdist':
     setup_options['long_description_markdown_filename'] = 'README.md'
-    setup_options['setup_requires'].append('setuptools-markdown')
 
 setup(**setup_options)
