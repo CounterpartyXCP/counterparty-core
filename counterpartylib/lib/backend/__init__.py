@@ -109,7 +109,9 @@ def get_tx_list(block):
     return (tx_hash_list, raw_transactions)
 
 def sort_unspent_txouts(unspent, unconfirmed=False):
-    # Sort by amount, using the largest UTXOs available, which avoids dust outputs if at all possible
+    # Filter out all dust amounts
+    unspent = list(filter(lambda x: x['amount'] * config.UNIT > config.DEFAULT_REGULAR_DUST_SIZE, unspent))
+    # Then, sort by amount, using the largest UTXOs available
     unspent = sorted(unspent, key=lambda x: x['amount'], reverse=True)
 
     return unspent
