@@ -108,24 +108,9 @@ def get_tx_list(block):
 
     return (tx_hash_list, raw_transactions)
 
-def input_value_weight(amount):
-    # Prefer outputs less than dust size, then bigger is better.
-    if amount * config.UNIT <= config.DEFAULT_REGULAR_DUST_SIZE:
-        return 0
-    else:
-        return 1 / amount
-
 def sort_unspent_txouts(unspent, unconfirmed=False):
-    # Get deterministic results (for multiAPIConsensus type requirements), sort by timestamp and vout index.
-    # (Oldest to newest so the nodes don’t have to be exactly caught up to each other for consensus to be achieved.)
-    # searchrawtransactions doesn’t support unconfirmed transactions
-    try:
-        unspent = sorted(unspent, key=sortkeypicker(['ts', 'vout']))
-    except KeyError: # If timestamp isn’t given.
-        pass
-
-    # Sort by amount.
-    unspent = sorted(unspent, key=lambda x: input_value_weight(x['amount']))
+    # Sort by amount, using the largest UTXOs available, which avoids dust outputs if at all possible
+    unspent = sorted(unspent, key=lambda x: x['amount'], reverse=True)
 
     return unspent
 
