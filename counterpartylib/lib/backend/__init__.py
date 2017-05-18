@@ -109,10 +109,13 @@ def get_tx_list(block):
     return (tx_hash_list, raw_transactions)
 
 def sort_unspent_txouts(unspent, unconfirmed=False):
-    # Filter out all dust amounts
-    unspent = list(filter(lambda x: x['amount'] * config.UNIT > config.DEFAULT_REGULAR_DUST_SIZE, unspent))
-    # Then, sort by amount, using the largest UTXOs available
-    unspent = sorted(unspent, key=lambda x: x['amount'], reverse=True)
+    # Filter out all dust amounts to avoid bloating the resultant transaction
+    unspent = list(filter(lambda x: x['amount'] * config.UNIT > config.DEFAULT_MULTISIG_DUST_SIZE, unspent))
+    # Then, sort by timestamp and secondarily by vout to utilize the oldest UTXOs first (minimizes the unconfirmed UTXO chaining if possible)
+    try:
+        unspent = list(sorted(unspent, key=sortkeypicker(['ts', 'vout'])))
+    except KeyError:  # If timestamp isn’t given.
+        pass
 
     return unspent
 
@@ -159,7 +162,7 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False, unspent
     """
     if not MEMPOOL_CACHE_INITIALIZED:
         raise MempoolError('Mempool is not yet ready; please try again in a few minutes.')
-    
+
     # Get all outputs.
     logger.debug('Getting outputs for {}'.format(source))
     if unspent_tx_hash:
