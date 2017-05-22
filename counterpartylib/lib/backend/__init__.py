@@ -110,12 +110,9 @@ def get_tx_list(block):
 
 def sort_unspent_txouts(unspent, unconfirmed=False):
     # Filter out all dust amounts to avoid bloating the resultant transaction
-    unspent = list(filter(lambda x: x['amount'] * config.UNIT > config.BACKEND_MINIMUM_UTXO_SIZE_FOR_SELECTION, unspent))
-    # Then, sort by timestamp and secondarily by vout to utilize the oldest UTXOs first (minimizes the unconfirmed UTXO chaining if possible)
-    try:
-        unspent = list(sorted(unspent, key=sortkeypicker(['ts', 'vout'])))
-    except KeyError:  # If timestamp isn’t given.
-        pass
+    unspent = list(filter(lambda x: x['amount'] * config.UNIT > config.DEFAULT_MULTISIG_DUST_SIZE, unspent))
+    # Sort by amount, using the largest UTXOs available
+    unspent = sorted(unspent, key=lambda x: x['amount'], reverse=True)
 
     return unspent
 
