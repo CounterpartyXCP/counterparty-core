@@ -80,7 +80,7 @@ def initialise(*args, **kwargs):
 
 
 def initialise_config(database_file=None, log_file=None, api_log_file=None,
-                testnet=False, testcoin=False,
+                testnet=False, testcoin=False, regtest=False,
                 backend_name=None, backend_connect=None, backend_port=None,
                 backend_user=None, backend_password=None,
                 backend_ssl=False, backend_ssl_no_verify=False,
@@ -114,11 +114,20 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     else:
         config.TESTCOIN = False
 
+    if regtest:
+        config.REGTEST = regtest
+    else:
+        config.REGTEST = False
+
     network = ''
     if config.TESTNET:
         network += '.testnet'
+    elif config.REGTEST:
+        network += '.regtest'
     if config.TESTCOIN:
         network += '.testcoin'
+
+    logger.debug('Configured for network {}'.format(network))
 
     # Database
     if database_file:
@@ -182,7 +191,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     if backend_port:
         config.BACKEND_PORT = backend_port
     else:
-        if config.TESTNET:
+        if config.TESTNET or config.REGTEST:
             if config.BACKEND_NAME == 'btcd':
                 config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET_BTCD
             else:
@@ -258,7 +267,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     if rpc_port:
         config.RPC_PORT = rpc_port
     else:
-        if config.TESTNET:
+        if config.TESTNET or config.REGTEST:
             if config.TESTCOIN:
                 config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET + 1
             else:
@@ -332,6 +341,25 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
             config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET
             config.BURN_START = config.BURN_START_TESTNET
             config.BURN_END = config.BURN_END_TESTNET
+            config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+    elif config.REGTEST:
+        # REGTEST behaves almost exactly like TESTNET
+        config.MAGIC_BYTES = config.MAGIC_BYTES_TESTNET
+        if config.TESTCOIN:
+            config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
+            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET
+            config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST_TESTCOIN
+            config.BURN_START = config.BURN_START_REGTEST_TESTCOIN
+            config.BURN_END = config.BURN_END_REGTEST_TESTCOIN
+            config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+        else:
+            config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
+            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET
+            config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST
+            config.BURN_START = config.BURN_START_REGTEST
+            config.BURN_END = config.BURN_END_REGTEST
             config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
             config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
     else:

@@ -34,7 +34,7 @@ def initialise (db):
                    ''')
 
 def compose (db, source, gasprice, startgas, endowment, code_hex):
-    if not config.TESTNET:  # TODO
+    if not config.TESTNET or config.REGTEST:  # TODO
         return
 
     data = struct.pack(config.TXTYPE_FORMAT, ID)
@@ -45,13 +45,13 @@ def compose (db, source, gasprice, startgas, endowment, code_hex):
 
 
 def parse (db, tx, message):
-    if not config.TESTNET:  # TODO
+    if not config.TESTNET or config.REGTEST:  # TODO
         return
 
     try:
         gasprice, startgas, endowment = struct.unpack(FORMAT, message[:LENGTH])
     except struct.error:
-        gasprice, startgas, endowment = 0, 0, 0 # TODO: Is this ideal 
+        gasprice, startgas, endowment = 0, 0, 0 # TODO: Is this ideal
 
     code = util.hexlify(message[LENGTH:])
     source, destination, data = execute.compose(db, tx['source'], '', gasprice, startgas, endowment, code)
