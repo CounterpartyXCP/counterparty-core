@@ -653,16 +653,16 @@ def held (db): #TODO: Rename ?
                 UNION ALL
                 SELECT backward_asset AS asset, SUM(backward_quantity) AS total FROM order_matches WHERE status = 'pending' GROUP BY asset
                 UNION ALL
-                SELECT 'XCP' AS asset, SUM(wager_remaining) AS total FROM bets WHERE status = 'open'
+                SELECT '{xcp}' AS asset, SUM(wager_remaining) AS total FROM bets WHERE status = 'open'
                 UNION ALL
-                SELECT 'XCP' AS asset, SUM(forward_quantity) AS total FROM bet_matches WHERE status = 'pending'
+                SELECT '{xcp}' AS asset, SUM(forward_quantity) AS total FROM bet_matches WHERE status = 'pending'
                 UNION ALL
-                SELECT 'XCP' AS asset, SUM(backward_quantity) AS total FROM bet_matches WHERE status = 'pending'
+                SELECT '{xcp}' AS asset, SUM(backward_quantity) AS total FROM bet_matches WHERE status = 'pending'
                 UNION ALL
-                SELECT 'XCP' AS asset, SUM(wager) AS total FROM rps WHERE status = 'open'
+                SELECT '{xcp}' AS asset, SUM(wager) AS total FROM rps WHERE status = 'open'
                 UNION ALL
-                SELECT 'XCP' AS asset, SUM(wager * 2) AS total FROM rps_matches WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
-            ) GROUP BY asset;'''
+                SELECT '{xcp}' AS asset, SUM(wager * 2) AS total FROM rps_matches WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
+            ) GROUP BY asset;'''.format(xcp = config.XCP)
 
     cursor = db.cursor()
     cursor.execute(sql)

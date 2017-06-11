@@ -36,13 +36,13 @@ UNITTEST_FIXTURE = [
     ['issuance', (ADDR[0], None, 'CALLABLE', 1000, True, 'Callable asset'), {'encoding': 'multisig'}],
     ['issuance', (ADDR[0], None, 'LOCKED', 1000, True, 'Locked asset'), {'encoding': 'multisig'}],
     ['issuance', (ADDR[0], None, 'LOCKED', 0, True, 'LOCK'), {'encoding': 'multisig'}],
-    ['order', (ADDR[0], 'XCP', DP['quantity'], 'DIVISIBLE', DP['quantity'], 2000, 0), {'encoding': 'multisig'}],
+    ['order', (ADDR[0], config.XCP, DP['quantity'], 'DIVISIBLE', DP['quantity'], 2000, 0), {'encoding': 'multisig'}],
     ['send', (ADDR[0], ADDR[1], 'DIVISIBLE', DP['quantity']), {'encoding': 'multisig'}, None],
-    ['send', (ADDR[0], ADDR[1], 'XCP', DP['quantity']), {'encoding': 'multisig'}, None],
-    ['order', (ADDR[0], 'XCP', DP['quantity'], 'DIVISIBLE', DP['quantity'], 2000, 0), {'encoding': 'multisig'}],
-    ['order', (ADDR[0], 'XCP', DP['quantity'], 'BTC', round(DP['quantity'] / 100), 2000, DP['fee_required']), {'encoding': 'multisig'}],
-    ['order', (ADDR[0], 'BTC', round(DP['quantity'] / 150), 'XCP', DP['quantity'], 2000, 0), {'encoding': 'multisig', 'fee_provided': DP['fee_provided']}],
-    ['send', (ADDR[0], MULTISIGADDR[0], 'XCP', DP['quantity'] * 3), {'encoding': 'multisig'}, None],
+    ['send', (ADDR[0], ADDR[1], config.XCP, DP['quantity']), {'encoding': 'multisig'}, None],
+    ['order', (ADDR[0], config.XCP, DP['quantity'], 'DIVISIBLE', DP['quantity'], 2000, 0), {'encoding': 'multisig'}],
+    ['order', (ADDR[0], config.XCP, DP['quantity'], config.BTC, round(DP['quantity'] / 100), 2000, DP['fee_required']), {'encoding': 'multisig'}],
+    ['order', (ADDR[0], config.BTC, round(DP['quantity'] / 150), config.XCP, DP['quantity'], 2000, 0), {'encoding': 'multisig', 'fee_provided': DP['fee_provided']}],
+    ['send', (ADDR[0], MULTISIGADDR[0], config.XCP, DP['quantity'] * 3), {'encoding': 'multisig'}, None],
     ['send', (ADDR[0], MULTISIGADDR[0], 'DIVISIBLE', DP['quantity'] * 10), {'encoding': 'multisig'}, None],
     ['send', (ADDR[0], ADDR[1], 'NODIVISIBLE', 5), {'encoding': 'multisig'}, None],
     ['send', (ADDR[0], MULTISIGADDR[0], 'NODIVISIBLE', 10), {'encoding': 'multisig'}, None],
@@ -73,8 +73,8 @@ UNITTEST_FIXTURE = [
     ['create_next_block', 480],
 
     # force 2 enhanced sends
-    ['send', (ADDR[0], ADDR[1], 'XCP', DP['quantity'], 'hello', False, True), {'encoding': 'opreturn'}, {'enhanced_sends': True}],
-    ['send', (ADDR[1], ADDR[0], 'XCP', DP['quantity'], 'fade0001', True, True), {'encoding': 'opreturn'}, {'enhanced_sends': True}],
+    ['send', (ADDR[0], ADDR[1], config.XCP, DP['quantity'], 'hello', False, True), {'encoding': 'opreturn'}, {'enhanced_sends': True}],
+    ['send', (ADDR[1], ADDR[0], config.XCP, DP['quantity'], 'fade0001', True, True), {'encoding': 'opreturn'}, {'enhanced_sends': True}],
 
     ['create_next_block', 485],
 
@@ -91,12 +91,12 @@ UNITTEST_FIXTURE = [
 
     #['create_next_block', 490],
 
-    ['order', (ADDR[0], 'XCP', DP['quantity'], 'BTC', round(DP['quantity'] / 125), 2000, DP['fee_required']), {'encoding': 'multisig'}],
-    ['order', (ADDR[1], 'BTC', round(DP['quantity'] / 125), 'XCP', DP['quantity'], 2000, 0), {'encoding': 'multisig', 'fee_provided': DP['fee_provided']}],
+    ['order', (ADDR[0], config.XCP, DP['quantity'], config.BTC, round(DP['quantity'] / 125), 2000, DP['fee_required']), {'encoding': 'multisig'}],
+    ['order', (ADDR[1], config.BTC, round(DP['quantity'] / 125), config.XCP, DP['quantity'], 2000, 0), {'encoding': 'multisig', 'fee_provided': DP['fee_provided']}],
     ['burn', (ADDR[2], DP['burn_quantity']), {'encoding': 'multisig'}],
     ['issuance', (ADDR[2], None, 'DIVIDEND', 100, True, 'Test dividend'), {'encoding': 'multisig'}],
     ['send', (ADDR[2], ADDR[3], 'DIVIDEND', 10), {'encoding': 'multisig'}, None],
-    ['send', (ADDR[2], ADDR[3], 'XCP', 92945878046), {'encoding': 'multisig'}, None],
+    ['send', (ADDR[2], ADDR[3], config.XCP, 92945878046), {'encoding': 'multisig'}, None],
 
     ['issuance', (ADDR[0], None, 'PARENT', DP['quantity'] * 1, True, 'Parent asset'), {'encoding': 'opreturn'}],
     ['issuance', (ADDR[0], None, 'PARENT.already.issued', DP['quantity'] * 1, True, 'Child of parent'), {'encoding': 'opreturn'}],
@@ -112,16 +112,16 @@ def generate_standard_scenario(address1, address2, order_matches):
     """Return a predefined set of transactions to test different types of signing."""
     return [
         ['burn', (address1, int(.62 * DP['quantity'])), {'encoding': 'multisig'}],
-        ['send', (address1, address2, 'XCP', DP['small']), {'encoding': 'multisig'}, None],
-        ['order', (address1, 'BTC', DP['small'], 'XCP', DP['small'] * 2, DP['expiration'], 0), {'encoding': 'multisig', 'fee_provided': DP['fee_provided']}],
-        ['order', (address1, 'XCP', round(DP['small'] * 2.1), 'BTC', DP['small'], DP['expiration'], DP['fee_required']), {'encoding': 'multisig'}],
+        ['send', (address1, address2, config.XCP, DP['small']), {'encoding': 'multisig'}, None],
+        ['order', (address1, config.BTC, DP['small'], config.XCP, DP['small'] * 2, DP['expiration'], 0), {'encoding': 'multisig', 'fee_provided': DP['fee_provided']}],
+        ['order', (address1, config.XCP, round(DP['small'] * 2.1), config.BTC, DP['small'], DP['expiration'], DP['fee_required']), {'encoding': 'multisig'}],
         ['btcpay', (address1, order_matches[0]), {'encoding': 'multisig'}],
         ['issuance', (address1, None, 'BBBB', DP['quantity'] * 10, True, ''), {'encoding': 'multisig'}],
         ['issuance', (address1, None, 'BBBC', round(DP['quantity'] / 1000), False, 'foobar'), {'encoding': 'multisig'}],
         ['send', (address1, address2, 'BBBB', round(DP['quantity'] / 25)), {'encoding': 'multisig'}, None],
         ['send', (address1, address2, 'BBBC', round(DP['quantity'] / 190000)), {'encoding': 'multisig'}, None],
-        ['dividend', (address1, 600, 'BBBB', 'XCP'), {'encoding': 'multisig'}],
-        ['dividend', (address1, 800, 'BBBC', 'XCP'), {'encoding': 'multisig'}],
+        ['dividend', (address1, 600, 'BBBB', config.XCP), {'encoding': 'multisig'}],
+        ['dividend', (address1, 800, 'BBBC', config.XCP), {'encoding': 'multisig'}],
         ['broadcast', (address1, 1388000000, 100, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
         ['bet', (address1, address1, 0, 1388000100, DP['small'], round(DP['small'] / 2), 0.0, 15120, DP['expiration']), {'encoding': 'multisig'}],
         ['bet', (address1, address1, 1, 1388000100, round(DP['small'] / 2), round(DP['small'] * .83), 0.0, 15120, DP['expiration']), {'encoding': 'multisig'}],
@@ -132,7 +132,7 @@ def generate_standard_scenario(address1, address2, order_matches):
         ['broadcast', (address1, 1388000050, round(100 - (.415/3) - .00001, 5), DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
         ['broadcast', (address1, 1388000101, 100.343, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
         ['broadcast', (address1, 1388000201, 2, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
-        ['order', (address1, 'BBBB', DP['small'], 'XCP', DP['small'], DP['expiration'], 0), {'encoding': 'multisig'}],
+        ['order', (address1, 'BBBB', DP['small'], config.XCP, DP['small'], DP['expiration'], 0), {'encoding': 'multisig'}],
         ['burn', (address1, (1 * DP['quantity']), True), {'encoding': 'multisig'}],  # Try to burn a whole 'nother BTC.
         ['send', (address1, address2, 'BBBC', 10000), {'encoding': 'multisig'}, None],
         ['create_next_block', 101]

@@ -149,7 +149,7 @@ def cancel_rps (db, rps, status, block_index):
     cursor.execute(sql, bindings)
     log.message(db, block_index, 'update', 'rps', bindings)
 
-    util.credit(db, rps['source'], 'XCP', rps['wager'], action='recredit wager', event=rps['tx_hash'])
+    util.credit(db, rps['source'], config.XCP, rps['wager'], action='recredit wager', event=rps['tx_hash'])
 
     cursor.close()
 
@@ -158,15 +158,15 @@ def update_rps_match_status (db, rps_match, status, block_index):
 
     if status in ['expired', 'concluded: tie']:
         # Recredit tx0 address.
-        util.credit(db, rps_match['tx0_address'], 'XCP',
+        util.credit(db, rps_match['tx0_address'], config.XCP,
                     rps_match['wager'], action='recredit wager', event=rps_match['id'])
         # Recredit tx1 address.
-        util.credit(db, rps_match['tx1_address'], 'XCP',
+        util.credit(db, rps_match['tx1_address'], config.XCP,
                     rps_match['wager'], action='recredit wager', event=rps_match['id'])
     elif status.startswith('concluded'):
         # Credit the winner
         winner = rps_match['tx0_address'] if status == 'concluded: first player wins' else rps_match['tx1_address']
-        util.credit(db, winner, 'XCP',
+        util.credit(db, winner, config.XCP,
                     2 * rps_match['wager'], action='wins', event=rps_match['id'])
 
     # Update status of rps match.
@@ -244,7 +244,7 @@ def parse(db, tx, message):
         move_random_hash = binascii.hexlify(move_random_hash).decode('utf8')
         # Overbet
         rps_parse_cursor.execute('''SELECT * FROM balances \
-                                    WHERE (address = ? AND asset = ?)''', (tx['source'], 'XCP'))
+                                    WHERE (address = ? AND asset = ?)''', (tx['source'], config.XCP))
         balances = list(rps_parse_cursor)
         if not balances:
             wager = 0
@@ -258,7 +258,7 @@ def parse(db, tx, message):
 
     # Debit quantity wagered. (Escrow.)
     if status == 'open':
-        util.debit(db, tx['source'], 'XCP', wager, action="open RPS", event=tx['tx_hash'])
+        util.debit(db, tx['source'], config.XCP, wager, action="open RPS", event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
@@ -402,7 +402,7 @@ def expire (db, block_index):
             for rps in matched_rps:
                 cursor.execute('''UPDATE rps SET status = ? WHERE tx_index = ?''', ('open', rps['tx_index']))
                 # Re-debit XCP refund by close_rps_match.
-                util.debit(db, rps['source'], 'XCP', rps['wager'], action='reopen RPS after matching expiration', event=rps_match['id'])
+                util.debit(db, rps['source'], config.XCP, rps['wager'], action='reopen RPS after matching expiration', event=rps_match['id'])
                 # Rematch
                 match(db, {'tx_index': rps['tx_index']}, block_index)
 

@@ -613,7 +613,7 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
                 tx_params = {
                     'encoding': 'multisig'
                 }
-                if tx_name == 'order' and inputs[1]=='BTC':
+                if tx_name == 'order' and inputs[1] == config.BTC:
                     print('give btc')
                     tx_params['fee_provided'] = DP['fee_provided']
                 unsigned_tx_hex = transaction.construct(server_db, test_outputs, **tx_params)

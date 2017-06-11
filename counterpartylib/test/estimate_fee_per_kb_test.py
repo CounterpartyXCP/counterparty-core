@@ -8,7 +8,7 @@ from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP, ADDR
 from counterpartylib.test.util_test import CURR_DIR
 from counterpartylib.test import util_test
 
-from counterpartylib.lib import (blocks, transaction, api, backend)
+from counterpartylib.lib import (blocks, transaction, api, backend, config)
 
 
 FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql'
@@ -32,7 +32,7 @@ def test_estimate_fee_per_kb(fee_per_kb, fee_per_kb_used, server_db, monkeypatch
             server_db, 'send',
             {'source': ADDR[0],
              'destination': ADDR[1],
-             'asset': 'XCP',
+             'asset': config.XCP,
              'quantity': 100},
         )
 

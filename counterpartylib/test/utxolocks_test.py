@@ -8,7 +8,7 @@ import tempfile
 from counterpartylib.test import conftest  # this is require near the top to do setup of the test suite
 from counterpartylib.test.util_test import CURR_DIR
 
-from counterpartylib.lib import (transaction)
+from counterpartylib.lib import (config, transaction)
 from counterpartylib.lib.messages import send
 
 
@@ -24,7 +24,7 @@ def setup_function(function):
 
 
 def construct_tx(db, source, destination, disable_utxo_locks=False, custom_inputs=None):
-    tx_info = send.compose(db, source, destination, 'XCP', 1)
+    tx_info = send.compose(db, source, destination, config.XCP, 1)
     return transaction.construct(db, tx_info, disable_utxo_locks=disable_utxo_locks, custom_inputs=custom_inputs)
 
 

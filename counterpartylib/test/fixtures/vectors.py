@@ -1074,7 +1074,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'calling_function': 'burn',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
@@ -1095,7 +1095,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'calling_function': 'burn',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
@@ -1106,35 +1106,35 @@ UNITTEST_VECTOR = {
     },
     'destroy': {
         'validate': [{
-            'in': (ADDR[0], None, 'XCP', 1),
+            'in': (ADDR[0], None, config.XCP, 1),
             'out': None
         }, {
-            'in': (P2SH_ADDR[0], None, 'XCP', 1),
+            'in': (P2SH_ADDR[0], None, config.XCP, 1),
             'out': None
         }, {
             'in': (ADDR[0], None, 'foobar', 1),
             'error': (exceptions.ValidateError, 'asset invalid')
         }, {
-            'in': (ADDR[0], ADDR[1], 'XCP', 1),
+            'in': (ADDR[0], ADDR[1], config.XCP, 1),
             'error': (exceptions.ValidateError, 'destination exists')
         }, {
-            'in': (ADDR[0], None, 'BTC', 1),
+            'in': (ADDR[0], None, config.BTC, 1),
             'error': (exceptions.ValidateError, 'cannot destroy BTC')
         }, {
-            'in': (ADDR[0], None, 'XCP', 1.1),
+            'in': (ADDR[0], None, config.XCP, 1.1),
             'error': (exceptions.ValidateError, 'quantity not integer')
         }, {
-            'in': (ADDR[0], None, 'XCP', 2**63),
+            'in': (ADDR[0], None, config.XCP, 2**63),
             'error': (exceptions.ValidateError, 'integer overflow, quantity too large')
         }, {
-            'in': (ADDR[0], None, 'XCP', -1),
+            'in': (ADDR[0], None, config.XCP, -1),
             'error': (exceptions.ValidateError, 'quantity negative')
         }, {
-            'in': (ADDR[0], None, 'XCP', 2**62),
+            'in': (ADDR[0], None, config.XCP, 2**62),
             'error': (exceptions.BalanceError, 'balance insufficient')
         }],
         'pack': [{
-            'in': ('XCP', 1, bytes(9999999)),
+            'in': (config.XCP, 1, bytes(9999999)),
             'out': b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00'
         }],
         'unpack': [{
@@ -1142,13 +1142,13 @@ UNITTEST_VECTOR = {
             'error': (exceptions.UnpackError, 'could not unpack')
         }],
         'compose': [{
-            'in': (ADDR[0], 'XCP', 1, bytes(9999999)),
+            'in': (ADDR[0], config.XCP, 1, bytes(9999999)),
             'out': (ADDR[0], [],  b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00')
         }, {
-            'in': (ADDR[0], 'XCP', 1, b'WASTE'),
+            'in': (ADDR[0], config.XCP, 1, b'WASTE'),
             'out': (ADDR[0], [],  b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01WASTE\x00\x00\x00')
         }, {
-            'in': (ADDR[0], 'XCP', 1, b'WASTEEEEE'),
+            'in': (ADDR[0], config.XCP, 1, b'WASTEEEEE'),
             'out': (ADDR[0], [],  b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01WASTEEEE')
         }, {
             'in': (ADDR[0], 'PARENT.already.issued', 1, b'WASTEEEEE'),
@@ -1161,7 +1161,7 @@ UNITTEST_VECTOR = {
                     'data': b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01WASTE\x00\x00\x00', 'tx_index': 502, },),
             'records': [
                 {'table': 'destructions', 'values': {
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'quantity': 1,
                     'source': ADDR[0],
@@ -1177,7 +1177,7 @@ UNITTEST_VECTOR = {
                     'data': b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01WASTE\x00\x00\x00', 'tx_index': 502, },),
             'records': [
                 {'table': 'destructions', 'values': {
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'quantity': 1,
                     'source': ADDR[0],
@@ -1190,25 +1190,25 @@ UNITTEST_VECTOR = {
     },
     'send': {
         'validate': [{
-            'in': (ADDR[0], ADDR[1], 'XCP', DP['quantity'], 1),
+            'in': (ADDR[0], ADDR[1], config.XCP, DP['quantity'], 1),
             'out': ([])
         }, {
-            'in': (ADDR[0], P2SH_ADDR[0], 'XCP', DP['quantity'], 1),
+            'in': (ADDR[0], P2SH_ADDR[0], config.XCP, DP['quantity'], 1),
             'out': ([])
         }, {
-            'in': (P2SH_ADDR[0], ADDR[1], 'XCP', DP['quantity'], 1),
+            'in': (P2SH_ADDR[0], ADDR[1], config.XCP, DP['quantity'], 1),
             'out': ([])
         }, {
-            'in': (ADDR[0], ADDR[1], 'BTC', DP['quantity'], 1),
+            'in': (ADDR[0], ADDR[1], config.BTC, DP['quantity'], 1),
             'out': (['cannot send bitcoins'])
         }, {
-            'in': (ADDR[0], ADDR[1], 'XCP', DP['quantity'] / 3, 1),
+            'in': (ADDR[0], ADDR[1], config.XCP, DP['quantity'] / 3, 1),
             'out': (['quantity must be in satoshis'])
         }, {
-            'in': (ADDR[0], ADDR[1], 'XCP', -1 * DP['quantity'], 1),
+            'in': (ADDR[0], ADDR[1], config.XCP, -1 * DP['quantity'], 1),
             'out': (['negative quantity'])
         }, {
-            'in': (ADDR[0], MULTISIGADDR[0], 'XCP', DP['quantity'], 1),
+            'in': (ADDR[0], MULTISIGADDR[0], config.XCP, DP['quantity'], 1),
             'out': ([])
         }, {
             'in': (ADDR[0], ADDR[1], 'MAXI', 2**63 - 1, 1),
@@ -1217,38 +1217,38 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], ADDR[1], 'MAXI', 2**63, 1),
             'out': (['integer overflow'])
         }, {
-            'in': (ADDR[0], ADDR[6], 'XCP', DP['quantity'], 1),
+            'in': (ADDR[0], ADDR[6], config.XCP, DP['quantity'], 1),
             'out': (['destination requires memo'])
         }],
         'compose': [{
-            'in': (ADDR[0], ADDR[1], 'XCP', DP['small']),
+            'in': (ADDR[0], ADDR[1], config.XCP, DP['small']),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)],
                     b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80')
         }, {
-            'in': (P2SH_ADDR[0], ADDR[1], 'XCP', DP['small']),
+            'in': (P2SH_ADDR[0], ADDR[1], config.XCP, DP['small']),
             'out': (P2SH_ADDR[0], [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80')
         }, {
-            'in': (ADDR[0], P2SH_ADDR[0], 'XCP', DP['small']),
+            'in': (ADDR[0], P2SH_ADDR[0], config.XCP, DP['small']),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [(P2SH_ADDR[0], None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80')
         }, {
-            'in': (ADDR[0], ADDR[1], 'XCP', DP['quantity'] * 10000000),
+            'in': (ADDR[0], ADDR[1], config.XCP, DP['quantity'] * 10000000),
             'error': (exceptions.ComposeError, 'insufficient funds')
         }, {
-            'in': (ADDR[0], ADDR[1], 'XCP', DP['quantity'] / 3),
+            'in': (ADDR[0], ADDR[1], config.XCP, DP['quantity'] / 3),
             'error': (exceptions.ComposeError, 'quantity must be an int (in satoshi)')
         }, {
-            'in': (ADDR[0], MULTISIGADDR[0], 'XCP', DP['quantity']),
+            'in': (ADDR[0], MULTISIGADDR[0], config.XCP, DP['quantity']),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     [('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', None)],
                     b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00')
         }, {
-            'in': (MULTISIGADDR[0], ADDR[0], 'XCP', DP['quantity']),
+            'in': (MULTISIGADDR[0], ADDR[0], config.XCP, DP['quantity']),
             'out': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
                     [('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', None)],
                     b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00')
         }, {
-            'in': (MULTISIGADDR[0], MULTISIGADDR[1], 'XCP', DP['quantity']),
+            'in': (MULTISIGADDR[0], MULTISIGADDR[1], config.XCP, DP['quantity']),
             'out': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
                     [('1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', None)],
                     b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00')
@@ -1261,12 +1261,12 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], ADDR[1], 'MAXI', 2**63 + 1),
             'error': (exceptions.ComposeError, 'insufficient funds')
         }, {
-            'in': (ADDR[0], ADDR[1], 'BTC', DP['quantity']),
+            'in': (ADDR[0], ADDR[1], config.BTC, DP['quantity']),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 100000000)],
                     None)
         }, {
-            'in': (ADDR[0], P2SH_ADDR[0], 'BTC', DP['quantity']),
+            'in': (ADDR[0], P2SH_ADDR[0], config.BTC, DP['quantity']),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     [('2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy', 100000000)],
                     None)
@@ -1278,18 +1278,18 @@ UNITTEST_VECTOR = {
                     bytes.fromhex('0000000001530821671b10650000000005f5e100'))
         }, {
             'comment': 'send to a REQUIRE_MEMO address, without memo',
-            'in': (ADDR[0], ADDR[6], 'XCP', 100000000),
+            'in': (ADDR[0], ADDR[6], config.XCP, 100000000),
             'error': (exceptions.ComposeError, '[\'destination requires memo\']')
         }, {
             'comment': 'send to a REQUIRE_MEMO address, with memo text, before enhanced_send activation',
-            'in': ({'source': ADDR[0], 'destination': ADDR[6], 'asset': 'XCP', 'quantity': 100000000, 'memo': '12345', 'use_enhanced_send': True}),
+            'in': ({'source': ADDR[0], 'destination': ADDR[6], 'asset': config.XCP, 'quantity': 100000000, 'memo': '12345', 'use_enhanced_send': True}),
             'error': (exceptions.ComposeError, 'enhanced sends are not enabled')
         }],
         'parse': [{
             'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
             'records': [
                 {'table': 'sends', 'values': {
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'quantity': 100000000,
@@ -1300,7 +1300,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'calling_function': 'send',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
@@ -1309,7 +1309,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'send',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
@@ -1319,7 +1319,7 @@ UNITTEST_VECTOR = {
             'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'block_index': DP['default_block_index'], 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x0b\xeb\xc2\x00', 'block_time': 155409000, 'fee': 10000, 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'tx_index': 502, 'supported': 1},),
             'records': [
                 {'table': 'sends', 'values': {
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'quantity': 0,
@@ -1333,7 +1333,7 @@ UNITTEST_VECTOR = {
             'in':({'tx_index': 502, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00X\xb1\x14\x00', 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'block_time': 310501000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_hash': '736ecc18f9f41b3ccf67dded1252969e4929404d6ad657b2039b937a7785cf3e', 'supported': 1, 'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'btc_amount': 5430, 'block_index': DP['default_block_index'], 'fee': 10000},),
             'records': [
                 {'table': 'sends', 'values': {
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj',
                     'quantity': 0,
@@ -1377,7 +1377,7 @@ UNITTEST_VECTOR = {
             'in': ({'btc_amount': 7800, 'block_hash': DP['default_block_hash'], 'fee': 10000, 'tx_index': 502, 'destination': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'supported': 1, 'block_time': 155409000, 'block_index': DP['default_block_index']},),
             'records': [
                 {'table': 'sends', 'values': {
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'destination': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
                     'quantity': 100000000,
@@ -1388,7 +1388,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'calling_function': 'send',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
@@ -1397,7 +1397,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'send',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
@@ -1407,7 +1407,7 @@ UNITTEST_VECTOR = {
             'in': ({'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'supported': 1, 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'btc_amount': 7800, 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'},),
             'records': [
                 {'table': 'sends', 'values': {
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'quantity': 100000000,
@@ -1418,7 +1418,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'calling_function': 'send',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
@@ -1427,7 +1427,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'send',
                     'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
@@ -1437,7 +1437,7 @@ UNITTEST_VECTOR = {
             'in': ({'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'destination': '1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'supported': 1, 'block_time': 155409000, 'fee': 10000, 'block_index': DP['default_block_index'], 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'block_hash': DP['default_block_hash']},),
             'records': [
                 {'table': 'sends', 'values': {
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'destination': '1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
                     'quantity': 100000000,
@@ -1448,7 +1448,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': '1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'calling_function': 'send',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
@@ -1457,7 +1457,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'send',
                     'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
@@ -1499,7 +1499,7 @@ UNITTEST_VECTOR = {
             'in': ({'block_index': DP['default_block_index'], 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'tx_hash': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80', 'source': ADDR[0], 'destination': ADDR[6], 'supported': 1, 'block_hash': DP['default_block_hash']},),
             'records': [
                 {'table': 'sends', 'values': {
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'destination': ADDR[6],
                     'quantity': 50000000,
@@ -1525,10 +1525,10 @@ UNITTEST_VECTOR = {
             'in': (ADDR[2], None, 'DIVIDEND', 1000, True, True, None, None, '', None, None, DP['default_block_index']),
             'out': (0, 0.0, ['cannot change callability'], 0, '', True, True, None)
         }, {
-            'in': (ADDR[0], None, 'BTC', 1000, True, False, None, None, '', None, None, DP['default_block_index']),
+            'in': (ADDR[0], None, config.BTC, 1000, True, False, None, None, '', None, None, DP['default_block_index']),
             'out': (0, 0.0, ['cannot issue BTC or XCP'], 50000000, '', True, False, None)
         }, {
-            'in': (ADDR[0], None, 'XCP', 1000, True, False, None, None, '', None, None, DP['default_block_index']),
+            'in': (ADDR[0], None, config.XCP, 1000, True, False, None, None, '', None, None, DP['default_block_index']),
             'out': (0, 0.0, ['cannot issue BTC or XCP'], 50000000, '', True, False, None)
         }, {
             'in': (ADDR[0], None, 'NOSATOSHI', 1000.5, True, False, None, None, '', None, None, DP['default_block_index']),
@@ -1729,7 +1729,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'issuance fee',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 50000000,
@@ -1805,7 +1805,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'issuance fee',
                     'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 50000000,
@@ -1833,7 +1833,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'issuance fee',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 0,
@@ -1868,7 +1868,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'issuance fee',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace',
                     'quantity': 50000000,
@@ -1904,7 +1904,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'issuance fee',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7',
                     'quantity': 0,
@@ -1968,7 +1968,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'issuance fee',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace',
                     'quantity': 25000000,
@@ -2011,7 +2011,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'issuance fee',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace',
                     'quantity': 25000000,
@@ -2174,7 +2174,7 @@ UNITTEST_VECTOR = {
     },
     'dividend': {
         'validate': [{
-            'in': (ADDR[0], DP['quantity'] * 1000, 'DIVISIBLE', 'XCP', DP['default_block_index']),
+            'in': (ADDR[0], DP['quantity'] * 1000, 'DIVISIBLE', config.XCP, DP['default_block_index']),
             'out': (1200000000000,
                     [
                         {'address_quantity': 100000000, 'dividend_quantity': 100000000000, 'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},
@@ -2184,7 +2184,7 @@ UNITTEST_VECTOR = {
                     ['insufficient funds (XCP)'],
                     0)
         }, {
-            'in': (ADDR[0], DP['quantity'] * -1000, 'DIVISIBLE', 'XCP', DP['default_block_index']),
+            'in': (ADDR[0], DP['quantity'] * -1000, 'DIVISIBLE', config.XCP, DP['default_block_index']),
             'out': (-1200000000000,
                     [
                         {'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'dividend_quantity': -100000000000, 'address_quantity': 100000000},
@@ -2195,19 +2195,19 @@ UNITTEST_VECTOR = {
                     0)
         }, {
             'comment': 'cannot pay dividends to holders of BTC',
-            'in': (ADDR[0], DP['quantity'], 'BTC', 'XCP', DP['default_block_index']),
+            'in': (ADDR[0], DP['quantity'], config.BTC, config.XCP, DP['default_block_index']),
             'out': (None, None, ['cannot pay dividends to holders of BTC', 'no such asset, BTC.'], 0)
         }, {
             'comment': 'cannot pay dividends to holders of XCP',
-            'in': (ADDR[0], DP['quantity'], 'XCP', 'XCP', DP['default_block_index']),
+            'in': (ADDR[0], DP['quantity'], config.XCP, config.XCP, DP['default_block_index']),
             'out': (None, None, ['cannot pay dividends to holders of XCP', 'no such asset, XCP.'], 0)
         }, {
             'comment': 'no such asset, NOASSET',
-            'in': (ADDR[0], DP['quantity'], 'NOASSET', 'XCP', DP['default_block_index']),
+            'in': (ADDR[0], DP['quantity'], 'NOASSET', config.XCP, DP['default_block_index']),
             'out': (None, None, ['no such asset, NOASSET.'], 0)
         }, {
             'comment': 'non‐positive quantity per unit',
-            'in': (ADDR[0], 0, 'DIVISIBLE', 'XCP', DP['default_block_index']),
+            'in': (ADDR[0], 0, 'DIVISIBLE', config.XCP, DP['default_block_index']),
             'out': (0,
                     [
                         {'dividend_quantity': 0, 'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'address_quantity': 100000000},
@@ -2217,7 +2217,7 @@ UNITTEST_VECTOR = {
                     ['non‐positive quantity per unit', 'zero dividend'],
                     0)
         }, {
-            'in': (ADDR[1], DP['quantity'], 'DIVISIBLE', 'XCP', DP['default_block_index']),
+            'in': (ADDR[1], DP['quantity'], 'DIVISIBLE', config.XCP, DP['default_block_index']),
             'out': (99900000000,
                     [
                         {'address_quantity': 98800000000, 'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'dividend_quantity': 98800000000},
@@ -2230,7 +2230,7 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], DP['quantity'], 'DIVISIBLE', 'NOASSET', DP['default_block_index']),
             'out': (None, None, ['no such dividend asset, NOASSET.'], 0)
         }, {
-            'in': (ADDR[0], 8359090909, 'DIVISIBLE', 'XCP', DP['default_block_index']),
+            'in': (ADDR[0], 8359090909, 'DIVISIBLE', config.XCP, DP['default_block_index']),
             'out': (100309090908,
                     [
                         {'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'dividend_quantity': 8359090909, 'address_quantity': 100000000},
@@ -2257,7 +2257,7 @@ UNITTEST_VECTOR = {
                     0)
         }],
         'compose': [{
-            'in': (ADDR[0], DP['quantity'], 'DIVISIBLE', 'XCP'),
+            'in': (ADDR[0], DP['quantity'], 'DIVISIBLE', config.XCP),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x002\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x01')
         }, {
             'in': (ADDR[0], 1, 'DIVISIBLE', 'PARENT.already.issued'),
@@ -2281,7 +2281,7 @@ UNITTEST_VECTOR = {
                 {'table': 'dividends', 'values': {
                     'asset': 'DIVISIBLE',
                     'block_index': DP['default_block_index'],
-                    'dividend_asset': 'XCP',
+                    'dividend_asset': config.XCP,
                     'fee_paid': 60000,
                     'quantity_per_unit': 100000000,
                     'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
@@ -2291,7 +2291,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'calling_function': 'dividend',
                     'event': '450c4ced564fa52a84746ecd79d64db6f124bddee19ff2c3cd926adea673ce4c',
@@ -2299,7 +2299,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'calling_function': 'dividend',
                     'event': '450c4ced564fa52a84746ecd79d64db6f124bddee19ff2c3cd926adea673ce4c',
@@ -2307,7 +2307,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'calling_function': 'dividend',
                     'event': '450c4ced564fa52a84746ecd79d64db6f124bddee19ff2c3cd926adea673ce4c',
@@ -2316,7 +2316,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'dividend',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': '450c4ced564fa52a84746ecd79d64db6f124bddee19ff2c3cd926adea673ce4c',
                     'quantity': 1200000000,
@@ -2324,7 +2324,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'dividend fee',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': '450c4ced564fa52a84746ecd79d64db6f124bddee19ff2c3cd926adea673ce4c',
                     'quantity': 60000,
@@ -2337,7 +2337,7 @@ UNITTEST_VECTOR = {
                 {'table': 'dividends', 'values': {
                     'asset': 'NODIVISIBLE',
                     'block_index': DP['default_block_index'],
-                    'dividend_asset': 'XCP',
+                    'dividend_asset': config.XCP,
                     'fee_paid': 40000,
                     'quantity_per_unit': 1,
                     'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
@@ -2347,7 +2347,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'calling_function': 'dividend',
                     'event': '5a36e9d939e70917695065b11b728f7ccbc7b828ae3baca1115885d8889e67c7',
@@ -2355,7 +2355,7 @@ UNITTEST_VECTOR = {
                     }},
                 {'table': 'credits', 'values': {
                     'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'calling_function': 'dividend',
                     'event': '5a36e9d939e70917695065b11b728f7ccbc7b828ae3baca1115885d8889e67c7',
@@ -2364,7 +2364,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'dividend',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': '5a36e9d939e70917695065b11b728f7ccbc7b828ae3baca1115885d8889e67c7',
                     'quantity': 15,
@@ -2372,7 +2372,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'dividend fee',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': '5a36e9d939e70917695065b11b728f7ccbc7b828ae3baca1115885d8889e67c7',
                     'quantity': 40000,
@@ -2382,71 +2382,71 @@ UNITTEST_VECTOR = {
     },
     'order': {
         'validate': [{
-            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'], 'XCP', DP['quantity'], 2000, 0, DP['default_block_index']),
+            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'], config.XCP, DP['quantity'], 2000, 0, DP['default_block_index']),
             'out': ([])
         }, {
-            'in': (P2SH_ADDR[0], 'DIVISIBLE', DP['quantity'], 'XCP', DP['quantity'], 2000, 0, DP['default_block_index']),
+            'in': (P2SH_ADDR[0], 'DIVISIBLE', DP['quantity'], config.XCP, DP['quantity'], 2000, 0, DP['default_block_index']),
             'out': ([])
         }, {
-            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'], 'XCP', DP['quantity'], 2000, 0.5, DP['default_block_index']),
+            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'], config.XCP, DP['quantity'], 2000, 0.5, DP['default_block_index']),
             'out': (['fee_required must be in satoshis'])
         }, {
-            'in': (ADDR[0], 'BTC', DP['quantity'], 'BTC', DP['quantity'], 2000, 0, DP['default_block_index']),
+            'in': (ADDR[0], config.BTC, DP['quantity'], config.BTC, DP['quantity'], 2000, 0, DP['default_block_index']),
             'out': (['cannot trade BTC for itself'])
         }, {
-            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'] / 3, 'XCP', DP['quantity'], 2000, 0, DP['default_block_index']),
+            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'] / 3, config.XCP, DP['quantity'], 2000, 0, DP['default_block_index']),
             'out': (['give_quantity must be in satoshis'])
         }, {
-            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'], 'XCP', DP['quantity'] / 3, 2000, 0, DP['default_block_index']),
+            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'], config.XCP, DP['quantity'] / 3, 2000, 0, DP['default_block_index']),
             'out': (['get_quantity must be in satoshis'])
         }, {
-            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'], 'XCP', DP['quantity'], 1.5, 0, DP['default_block_index']),
+            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'], config.XCP, DP['quantity'], 1.5, 0, DP['default_block_index']),
             'out': (['expiration must be expressed as an integer block delta'])
         }, {
-            'in': (ADDR[0], 'DIVISIBLE', -DP['quantity'], 'XCP', -DP['quantity'], -2000, -10000, DP['default_block_index']),
+            'in': (ADDR[0], 'DIVISIBLE', -DP['quantity'], config.XCP, -DP['quantity'], -2000, -10000, DP['default_block_index']),
             'out': (['non‐positive give quantity', 'non‐positive get quantity', 'negative fee_required', 'negative expiration'])
         }, {
-            'in': (ADDR[0], 'DIVISIBLE', 0, 'XCP', DP['quantity'], 2000, 0, DP['default_block_index']),
+            'in': (ADDR[0], 'DIVISIBLE', 0, config.XCP, DP['quantity'], 2000, 0, DP['default_block_index']),
             'out': (['non‐positive give quantity', 'zero give or zero get'])
         }, {
             'in': (ADDR[0], 'NOASSETA', DP['quantity'], 'NOASSETB', DP['quantity'], 2000, 0, DP['default_block_index']),
             'out': (['no such asset to give (NOASSETA)', 'no such asset to get (NOASSETB)'])
         }, {
-            'in': (ADDR[0], 'DIVISIBLE', 2**63 + 10, 'XCP', DP['quantity'], 4 * 2016 + 10, 0, DP['default_block_index']),
+            'in': (ADDR[0], 'DIVISIBLE', 2**63 + 10, config.XCP, DP['quantity'], 4 * 2016 + 10, 0, DP['default_block_index']),
             'out': (['integer overflow', 'expiration overflow'])
         }],
         'compose': [{
-            'in': (ADDR[0], 'BTC', DP['small'], 'XCP', DP['small'] * 2, DP['expiration'], 0),
+            'in': (ADDR[0], config.BTC, DP['small'], config.XCP, DP['small'] * 2, DP['expiration'], 0),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00')
         }, {
-            'in': (P2SH_ADDR[0], 'BTC', DP['small'], 'XCP', DP['small'] * 2, DP['expiration'], 0),
+            'in': (P2SH_ADDR[0], config.BTC, DP['small'], config.XCP, DP['small'] * 2, DP['expiration'], 0),
             'out': (P2SH_ADDR[0], [], b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00')
         }, {
-            'in': (ADDR[0], 'XCP', round(DP['small'] * 2.1), 'BTC', DP['small'], DP['expiration'], DP['fee_required']),
+            'in': (ADDR[0], config.XCP, round(DP['small'] * 2.1), config.BTC, DP['small'], DP['expiration'], DP['fee_required']),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x06B,@\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\n\x00\x00\x00\x00\x00\r\xbb\xa0')
         }, {
-            'in': (MULTISIGADDR[0], 'BTC', DP['small'], 'XCP', DP['small'] * 2, DP['expiration'], 0),
+            'in': (MULTISIGADDR[0], config.BTC, DP['small'], config.XCP, DP['small'] * 2, DP['expiration'], 0),
             'out': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', [], b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00')
         }, {
-            'in': (MULTISIGADDR[0], 'XCP', round(DP['small'] * 2.1), 'BTC', DP['small'], DP['expiration'], DP['fee_required']),
+            'in': (MULTISIGADDR[0], config.XCP, round(DP['small'] * 2.1), config.BTC, DP['small'], DP['expiration'], DP['fee_required']),
             'out': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', [], b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x06B,@\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\n\x00\x00\x00\x00\x00\r\xbb\xa0')
         }, {
-            'in': (ADDR[0], 'MAXI', 2**63 - 1, 'XCP', DP['quantity'], DP['expiration'], DP['fee_required']),
+            'in': (ADDR[0], 'MAXI', 2**63 - 1, config.XCP, DP['quantity'], DP['expiration'], DP['fee_required']),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x03:>\x7f\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\r\xbb\xa0')
         }, {
-            'in': (ADDR[0], 'MAXI', 2**63 - 1, 'XCP', DP['quantity'], DP['expiration'], 2 ** 63),
+            'in': (ADDR[0], 'MAXI', 2**63 - 1, config.XCP, DP['quantity'], DP['expiration'], 2 ** 63),
             'error': (exceptions.ComposeError, "['integer overflow']")
         }, {
-            'in': (ADDR[0], 'MAXI', 2**63, 'XCP', DP['quantity'], DP['expiration'], DP['fee_required']),
+            'in': (ADDR[0], 'MAXI', 2**63, config.XCP, DP['quantity'], DP['expiration'], DP['fee_required']),
             'error': (exceptions.ComposeError, 'insufficient funds')
         }, {
             'comment': 'give subasset',
-            'in': (ADDR[0], 'PARENT.already.issued', 100000000, 'XCP', DP['small'], DP['expiration'], DP['fee_required']),
+            'in': (ADDR[0], 'PARENT.already.issued', 100000000, config.XCP, DP['small'], DP['expiration'], DP['fee_required']),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [],
                 bytes.fromhex('0000000a01530821671b10650000000005f5e10000000000000000010000000002faf080000a00000000000dbba0'))
         }, {
             'comment': 'get subasset',
-            'in': (ADDR[0], 'XCP', DP['small'], 'PARENT.already.issued', 100000000, DP['expiration'], DP['fee_required']),
+            'in': (ADDR[0], config.XCP, DP['small'], 'PARENT.already.issued', 100000000, DP['expiration'], DP['fee_required']),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [],
                 bytes.fromhex('0000000a00000000000000010000000002faf08001530821671b10650000000005f5e100000a00000000000dbba0'))
         }],
@@ -2464,7 +2464,7 @@ UNITTEST_VECTOR = {
                     'fee_provided_remaining': 10000,
                     'fee_required': 0,
                     'fee_required_remaining': 0,
-                    'get_asset': 'XCP',
+                    'get_asset': config.XCP,
                     'get_quantity': 100000000,
                     'get_remaining': 0,
                     'give_asset': 'DIVISIBLE',
@@ -2480,7 +2480,7 @@ UNITTEST_VECTOR = {
                     'backward_quantity': 100000000,
                     'block_index': DP['default_block_index'],
                     'fee_paid': 0,
-                    'forward_asset': 'XCP',
+                    'forward_asset': config.XCP,
                     'forward_quantity': 100000000,
                     'id': 'b0240284e3e44dfcae7bd3e6ea9d8152f8424bd55659df84c866e07a3f6566f3_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'match_expire_index': DP['default_block_index'] + 20,
@@ -2498,7 +2498,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'calling_function': 'order match',
                     'event': 'b0240284e3e44dfcae7bd3e6ea9d8152f8424bd55659df84c866e07a3f6566f3_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
@@ -2522,7 +2522,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'calling_function': 'filled',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
@@ -2561,7 +2561,7 @@ UNITTEST_VECTOR = {
                     'fee_provided_remaining': 10000,
                     'fee_required': 0,
                     'fee_required_remaining': 0,
-                    'get_asset': 'XCP',
+                    'get_asset': config.XCP,
                     'get_quantity': 100000000,
                     'get_remaining': 0,
                     'give_asset': 'DIVISIBLE',
@@ -2577,7 +2577,7 @@ UNITTEST_VECTOR = {
                     'backward_quantity': 100000000,
                     'block_index': DP['default_block_index'],
                     'fee_paid': 0,
-                    'forward_asset': 'XCP',
+                    'forward_asset': config.XCP,
                     'forward_quantity': 100000000,
                     'id': 'b0240284e3e44dfcae7bd3e6ea9d8152f8424bd55659df84c866e07a3f6566f3_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'match_expire_index': DP['default_block_index'] + 20,
@@ -2595,7 +2595,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': P2SH_ADDR[0],
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'calling_function': 'order match',
                     'event': 'b0240284e3e44dfcae7bd3e6ea9d8152f8424bd55659df84c866e07a3f6566f3_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
@@ -2619,7 +2619,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'calling_function': 'filled',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
@@ -2646,10 +2646,10 @@ UNITTEST_VECTOR = {
                     'fee_provided_remaining': 1000,
                     'fee_required': 0,
                     'fee_required_remaining': 0,
-                    'get_asset': 'XCP',
+                    'get_asset': config.XCP,
                     'get_quantity': 100000000,
                     'get_remaining': 0,
-                    'give_asset': 'BTC',
+                    'give_asset': config.BTC,
                     'give_quantity': 1000000,
                     'give_remaining': 0,
                     'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
@@ -2658,11 +2658,11 @@ UNITTEST_VECTOR = {
                     'tx_index': 502,
                 }},
                 {'table': 'order_matches', 'values': {
-                    'backward_asset': 'BTC',
+                    'backward_asset': config.BTC,
                     'backward_quantity': 1000000,
                     'block_index': DP['default_block_index'],
                     'fee_paid': 9000,
-                    'forward_asset': 'XCP',
+                    'forward_asset': config.XCP,
                     'forward_quantity': 100000000,
                     'id': 'c073532bca106afd5faa1c6fde8d6b4d9cb148a8940fc05a5ba66c7757365145_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'match_expire_index': DP['default_block_index'] + 20,
@@ -2691,10 +2691,10 @@ UNITTEST_VECTOR = {
                     'fee_provided_remaining': 10000,
                     'fee_required': 0,
                     'fee_required_remaining': 0,
-                    'get_asset': 'BTC',
+                    'get_asset': config.BTC,
                     'get_quantity': 666666,
                     'get_remaining': 0,
-                    'give_asset': 'XCP',
+                    'give_asset': config.XCP,
                     'give_quantity': 99999990,
                     'give_remaining': 140,
                     'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
@@ -2703,11 +2703,11 @@ UNITTEST_VECTOR = {
                     'tx_index': 502,
                 }},
                 {'table': 'order_matches', 'values': {
-                    'backward_asset': 'XCP',
+                    'backward_asset': config.XCP,
                     'backward_quantity': 99999850,
                     'block_index': DP['default_block_index'],
                     'fee_paid': 0,
-                    'forward_asset': 'BTC',
+                    'forward_asset': config.BTC,
                     'forward_quantity': 666666,
                     'id': '601cf81f77b46d4921ccd22a1156d8ca75bd7106570d9514101934e5ca644f3e_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'match_expire_index': DP['default_block_index'] + 20,
@@ -2726,7 +2726,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'open order',
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 99999990,
@@ -2744,10 +2744,10 @@ UNITTEST_VECTOR = {
                     'fee_provided_remaining': 10000,
                     'fee_required': 0,
                     'fee_required_remaining': 0,
-                    'get_asset': 'BTC',
+                    'get_asset': config.BTC,
                     'get_quantity': 1999999,
                     'get_remaining': 1999999,
-                    'give_asset': 'XCP',
+                    'give_asset': config.XCP,
                     'give_quantity': 99999990,
                     'give_remaining': 99999990,
                     'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
@@ -2758,7 +2758,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'open order',
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 99999990,
@@ -2776,10 +2776,10 @@ UNITTEST_VECTOR = {
                     'fee_provided_remaining': 1000000,
                     'fee_required': 0,
                     'fee_required_remaining': 0,
-                    'get_asset': 'XCP',
+                    'get_asset': config.XCP,
                     'get_quantity': 100000000,
                     'get_remaining': 100000000,
-                    'give_asset': 'BTC',
+                    'give_asset': config.BTC,
                     'give_quantity': 500000,
                     'give_remaining': 500000,
                     'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
@@ -2824,7 +2824,7 @@ UNITTEST_VECTOR = {
                     'fee_provided_remaining': 10000,
                     'fee_required': 0,
                     'fee_required_remaining': 0,
-                    'get_asset': 'XCP',
+                    'get_asset': config.XCP,
                     'get_quantity': 100000000,
                     'get_remaining': 100000000,
                     'give_asset': 'NODIVISIBLE',
@@ -2856,10 +2856,10 @@ UNITTEST_VECTOR = {
                     'fee_provided_remaining': 1000,
                     'fee_required': 0,
                     'fee_required_remaining': 0,
-                    'get_asset': 'XCP',
+                    'get_asset': config.XCP,
                     'get_quantity': 100000000,
                     'get_remaining': 0,
-                    'give_asset': 'BTC',
+                    'give_asset': config.BTC,
                     'give_quantity': 50000000,
                     'give_remaining': 49000000,
                     'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
@@ -2868,11 +2868,11 @@ UNITTEST_VECTOR = {
                     'tx_index': 502,
                 }},
                 {'table': 'order_matches', 'values': {
-                    'backward_asset': 'BTC',
+                    'backward_asset': config.BTC,
                     'backward_quantity': 1000000,
                     'block_index': DP['default_block_index'],
                     'fee_paid': 9000,
-                    'forward_asset': 'XCP',
+                    'forward_asset': config.XCP,
                     'forward_quantity': 100000000,
                     'id': 'c073532bca106afd5faa1c6fde8d6b4d9cb148a8940fc05a5ba66c7757365145_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'match_expire_index': DP['default_block_index'] + 20,
@@ -2901,10 +2901,10 @@ UNITTEST_VECTOR = {
                     'fee_provided_remaining': 1000,
                     'fee_required': 0,
                     'fee_required_remaining': 0,
-                    'get_asset': 'XCP',
+                    'get_asset': config.XCP,
                     'get_quantity': 100000000,
                     'get_remaining': 0,
-                    'give_asset': 'BTC',
+                    'give_asset': config.BTC,
                     'give_quantity': 50000000,
                     'give_remaining': 49000000,
                     'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
@@ -2913,11 +2913,11 @@ UNITTEST_VECTOR = {
                     'tx_index': 502,
                 }},
                 {'table': 'order_matches', 'values': {
-                    'backward_asset': 'BTC',
+                    'backward_asset': config.BTC,
                     'backward_quantity': 1000000,
                     'block_index': DP['default_block_index'],
                     'fee_paid': 9000,
-                    'forward_asset': 'XCP',
+                    'forward_asset': config.XCP,
                     'forward_quantity': 100000000,
                     'id': 'c073532bca106afd5faa1c6fde8d6b4d9cb148a8940fc05a5ba66c7757365145_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'match_expire_index': DP['default_block_index'] + 20,
@@ -2945,10 +2945,10 @@ UNITTEST_VECTOR = {
                     'fee_provided_remaining': 10000,
                     'fee_required': 900000,
                     'fee_required_remaining': 900000,
-                    'get_asset': 'BTC',
+                    'get_asset': config.BTC,
                     'get_quantity': 50000000,
                     'get_remaining': 50000000,
-                    'give_asset': 'XCP',
+                    'give_asset': config.XCP,
                     'give_quantity': 105000000,
                     'give_remaining': 105000000,
                     'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
@@ -2959,7 +2959,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'open order',
                     'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
-                    'asset': 'XCP', 'quantity': 105000000,
+                    'asset': config.XCP, 'quantity': 105000000,
                     'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                 }}
@@ -2976,7 +2976,7 @@ UNITTEST_VECTOR = {
                     'fee_provided_remaining': 10000,
                     'fee_required': 900000,
                     'fee_required_remaining': 900000,
-                    'get_asset': 'XCP',
+                    'get_asset': config.XCP,
                     'get_quantity': 100000000,
                     'get_remaining': 100000000,
                     'give_asset': 'MAXI',
@@ -3288,27 +3288,27 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'standard send with no memo',
             'in': ('sends', [{'field':'block_index','op':'=','value':'310496'}], 'AND', None, None, None, None, None, 1000, 0, True),
-            'out': [{'tx_index': 497, 'tx_hash': '1410217c3b1b38ea0b90940f20b874a2375c457b0828de9f9808e4fd63fd54e6', 'block_index': 310496, 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'asset': 'XCP', 'quantity': 92945878046, 'status': 'valid', 'memo': None, 'memo_hex': None}]
+            'out': [{'tx_index': 497, 'tx_hash': '1410217c3b1b38ea0b90940f20b874a2375c457b0828de9f9808e4fd63fd54e6', 'block_index': 310496, 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'asset': config.XCP, 'quantity': 92945878046, 'status': 'valid', 'memo': None, 'memo_hex': None}]
         }, {
             'comment': 'with memo',
             'in': ('sends', [{'field':'block_index','op':'=','value':'310481'}], 'AND', None, None, None, None, None, 1000, 0, True),
-            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f'}]
+            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': config.XCP, 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f'}]
         }, {
             'comment': 'search by memo (text)',
             'in': ('sends', [{'field':'memo','op':'=','value':'hello'}], 'AND', None, None, None, None, None, 1000, 0, True),
-            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f'}]
+            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': config.XCP, 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f'}]
         }, {
             'comment': 'search by memo (LIKE text)',
             'in': ('sends', [{'field':'memo','op':'LIKE','value':'%ell%'}], 'AND', None, None, None, None, None, 1000, 0, True),
-            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f'}]
+            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': config.XCP, 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f'}]
         }, {
             'comment': 'search by memo hex',
             'in': ('sends', [{'field':'memo_hex','op':'=','value':'68656C6C6F'}], 'AND', None, None, None, None, None, 1000, 0, True),
-            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f'}]
+            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': config.XCP, 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f'}]
         }, {
             'comment': 'search by memo hex',
             'in': ('sends', [{'field':'memo_hex','op':'=','value':'68656c6c6f'}], 'AND', None, None, None, None, None, 1000, 0, True),
-            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f'}]
+            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': config.XCP, 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f'}]
         }, {
             'comment': 'search with invalid memo hex',
             'in': ('sends', [{'field':'memo_hex','op':'=','value':'badx'}], 'AND', None, None, None, None, None, 1000, 0, True),
@@ -3316,7 +3316,7 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'search by memo hex',
             'in': ('sends', [{'field':'memo_hex','op':'=','value':'fade0001'}], 'AND', None, None, None, None, None, 1000, 0, True),
-            'out': [{'tx_index': 483, 'tx_hash': 'c8716524f33646b9af94d6f5e52494ff3b34466497094b1db2ab920e4f79bc34', 'block_index': 310482, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': '', 'memo_hex': 'fade0001'}]
+            'out': [{'tx_index': 483, 'tx_hash': 'c8716524f33646b9af94d6f5e52494ff3b34466497094b1db2ab920e4f79bc34', 'block_index': 310482, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'asset': config.XCP, 'quantity': 100000000, 'status': 'valid', 'memo': '', 'memo_hex': 'fade0001'}]
         }],
     },
     'script': {
@@ -3626,10 +3626,10 @@ UNITTEST_VECTOR = {
             'in': ('create_burn', {'source': ADDR[1], 'quantity': DP['burn_quantity'], 'encoding': 'multisig'}),
             'out': '0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff02800bb203000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88ac87bf4302000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000'
         }, {
-            'in': ('create_send', {'source': ADDR[0], 'destination': ADDR[1], 'asset': 'XCP', 'quantity': DP['small'], 'encoding': 'multisig'}),
+            'in': ('create_send', {'source': ADDR[0], 'destination': ADDR[1], 'asset': config.XCP, 'quantity': DP['small'], 'encoding': 'multisig'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac781e0000000000006951210262415bf04af834423d3dd7ada4dc727a030865759f9fba5aee78c9ea71e58798210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae840dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
-            'in': ('create_send', {'source': P2SH_ADDR[0], 'destination': ADDR[1], 'asset': 'XCP', 'quantity': DP['small'], 'encoding': 'multisig', 'dust_return_pubkey': False}),
+            'in': ('create_send', {'source': P2SH_ADDR[0], 'destination': ADDR[1], 'asset': config.XCP, 'quantity': DP['small'], 'encoding': 'multisig', 'dust_return_pubkey': False}),
             'out': '01000000015001af2c4c3bc2c43b6233261394910d10fb157a082d9b3038c65f2d01e4ff200000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e87ffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac781e0000000000006951210397b51de78b0f3a171f5ed27fff56d17dcba739c8b00035c8bbb9c380fdc4ed1321036932bcbeac2a4d8846b7feb4bf93b2b88efd02f2d8dc1fc0067bcc972257e3912111111111111111111111111111111111111111111111111111111111111111111153ae708ff5050000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e8700000000'
         }, {
             'in': ('create_issuance', {'source': ADDR[0], 'transfer_destination': None, 'asset': 'BSSET', 'quantity': 1000, 'divisible': True, 'description': '', 'encoding': 'multisig'}),
@@ -3638,22 +3638,22 @@ UNITTEST_VECTOR = {
             'in': ('create_issuance', {'source': ADDR[0], 'transfer_destination': ADDR[1], 'asset': 'DIVISIBLE', 'quantity': 0, 'divisible': True, 'description': '', 'encoding': 'multisig'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac781e0000000000006951210259415bf04af834423d3dd7adb0dc727aa153863ef89fba5aee7a331af1e4873a210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae840dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
-            'in': ('create_order', {'source': ADDR[0], 'give_asset': 'BTC', 'give_quantity': DP['small'], 'get_asset': 'XCP', 'get_quantity': DP['small'] * 2, 'expiration': DP['expiration'], 'fee_required': 0, 'fee_provided': DP['fee_provided'], 'encoding': 'multisig'}),
+            'in': ('create_order', {'source': ADDR[0], 'give_asset': config.BTC, 'give_quantity': DP['small'], 'get_asset': config.XCP, 'get_quantity': DP['small'] * 2, 'expiration': DP['expiration'], 'fee_required': 0, 'fee_provided': DP['fee_provided'], 'encoding': 'multisig'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210348415bf04af834423d3dd7adaedc727a030865759e9fba5aee78c9ea71e5870f210354da540fb2673b75e6c3c994f80ad0c8431643bab28ced783cd94079bbe72445210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae5cfeda0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
-            'in': ('create_order', {'source': ADDR[0], 'give_asset': 'XCP', 'give_quantity': round(DP['small'] * 2.1), 'get_asset': 'BTC', 'get_quantity': DP['small'], 'expiration': DP['expiration'], 'fee_required': DP['fee_required'], 'encoding': 'multisig'}),
+            'in': ('create_order', {'source': ADDR[0], 'give_asset': config.XCP, 'give_quantity': round(DP['small'] * 2.1), 'get_asset': config.BTC, 'get_quantity': DP['small'], 'expiration': DP['expiration'], 'fee_required': DP['fee_required'], 'encoding': 'multisig'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210248415bf04af834423d3dd7adaedc727a030865759f9fba5aee7c7136b1e58715210354da540fb2663b75e6c3ce9be98ad0c8431643bab28156d83cd94079bbe72460210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'in': ('create_burn', {'source': MULTISIGADDR[0], 'quantity': int(DP['quantity'] / 2), 'encoding': 'multisig'}),
             'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff0280f0fa02000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88ac87dafa02000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
         }, {
-            'in': ('create_send', {'source': ADDR[0], 'destination': MULTISIGADDR[0], 'asset': 'XCP', 'quantity': DP['quantity'], 'encoding': 'multisig'}),
+            'in': ('create_send', {'source': ADDR[0], 'destination': MULTISIGADDR[0], 'asset': config.XCP, 'quantity': DP['quantity'], 'encoding': 'multisig'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03781e0000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae781e0000000000006951210362415bf04af834423d3dd7ada4dc727a030865759f9fba5aee7fc6fbf1e5875a210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae4204ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
-            'in': ('create_send', {'source': MULTISIGADDR[0], 'destination': ADDR[0], 'asset': 'XCP', 'quantity': DP['quantity'], 'encoding': 'multisig'}),
+            'in': ('create_send', {'source': MULTISIGADDR[0], 'destination': ADDR[0], 'asset': config.XCP, 'quantity': DP['quantity'], 'encoding': 'multisig'}),
             'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac781e0000000000006951210334caf7ca87f0fd78a01d9a0d68221e55beef3722da8be72d254dd351c26108892102bc14528340c27d005aa9e2913fd8c032ffa94625307a450077125d580099b57d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae708ff505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
         }, {
-            'in': ('create_send', {'source': MULTISIGADDR[0], 'destination': MULTISIGADDR[1], 'asset': 'XCP', 'quantity': DP['quantity'], 'encoding': 'multisig'}),
+            'in': ('create_send', {'source': MULTISIGADDR[0], 'destination': MULTISIGADDR[1], 'asset': config.XCP, 'quantity': DP['quantity'], 'encoding': 'multisig'}),
             'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff03781e0000000000004751210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b977210378ee11c3fb97054877a809ce083db292b16d971bcdc6aa4c8f92087133729d8b52ae781e0000000000006951210334caf7ca87f0fd78a01d9a0d68221e55beef3722da8be72d254dd351c26108892102bc14528340c27d005aa9e2913fd8c032ffa94625307a450077125d580099b57d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae2e86f505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
         }, {
             'in': ('create_issuance', {'source': MULTISIGADDR[0], 'transfer_destination': None, 'asset': 'BSSET', 'quantity': 1000, 'divisible': True, 'description': '', 'encoding': 'multisig'}),
@@ -3666,16 +3666,16 @@ UNITTEST_VECTOR = {
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210259415bf04af834423d3dd7adb0238d85fcf79a8a619fba5aee7a331919e487e8210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': '1',
-            'in': ('create_order', {'source': MULTISIGADDR[0], 'give_asset': 'BTC', 'give_quantity': DP['small'], 'get_asset': 'XCP', 'get_quantity': DP['small'] * 2, 'expiration': DP['expiration'], 'fee_required': 0, 'fee_provided': DP['fee_provided'], 'encoding': 'multisig'}),
+            'in': ('create_order', {'source': MULTISIGADDR[0], 'give_asset': config.BTC, 'give_quantity': DP['small'], 'get_asset': config.XCP, 'get_quantity': DP['small'] * 2, 'expiration': DP['expiration'], 'fee_required': 0, 'fee_provided': DP['fee_provided'], 'encoding': 'multisig'}),
             'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02781e000000000000695121021ecaf7ca87f0fd78a01d9a0d62221e55beef3722db8be72d254adc40426108d02103bc14528340c37d005aa9e764ded8c038ffa94625307a450077125d580099b53b210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae4880e605000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
         }, {
-            'in': ('create_order', {'source': MULTISIGADDR[0], 'give_asset': 'XCP', 'give_quantity': round(DP['small'] * 2.1), 'get_asset': 'BTC', 'get_quantity': DP['small'], 'expiration': DP['expiration'], 'fee_required': DP['fee_required'], 'encoding': 'multisig'}),
+            'in': ('create_order', {'source': MULTISIGADDR[0], 'give_asset': config.XCP, 'give_quantity': round(DP['small'] * 2.1), 'get_asset': config.BTC, 'get_quantity': DP['small'], 'expiration': DP['expiration'], 'fee_required': DP['fee_required'], 'encoding': 'multisig'}),
             'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02781e000000000000695121031ecaf7ca87f0fd78a01d9a0d62221e55beef3722da8be72d254e649c8261083d2102bc14528340c27d005aa9e06bcf58c038ffa946253077fea077125d580099b5bb210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aef8a7f505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
         }, {
-            'in': ('create_dividend', {'source': ADDR[0], 'quantity_per_unit': DP['quantity'], 'asset': 'DIVISIBLE', 'dividend_asset': 'XCP', 'encoding': 'multisig'}),
+            'in': ('create_dividend', {'source': ADDR[0], 'quantity_per_unit': DP['quantity'], 'asset': 'DIVISIBLE', 'dividend_asset': config.XCP, 'encoding': 'multisig'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e000000000000695121035a415bf04af834423d3dd7ad96dc727a030d90949e9fba5a4c21d05197e58735210254da540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe7246f210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
-            'in': ('create_dividend', {'source': ADDR[0], 'quantity_per_unit': 1, 'asset': 'NODIVISIBLE', 'dividend_asset': 'XCP', 'encoding': 'multisig'}),
+            'in': ('create_dividend', {'source': ADDR[0], 'quantity_per_unit': 1, 'asset': 'NODIVISIBLE', 'dividend_asset': config.XCP, 'encoding': 'multisig'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e000000000000695121025a415bf04af834423d3dd7ad96dc727a030865759f9fbc9036a64c1197e587c8210254da540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe7246f210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
 
         # CIP 9 enhanced_send tests
@@ -3683,42 +3683,42 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'standard op return send',
             'mock_protocol_changes': {'enhanced_sends': False},
-            'in': ('create_send', {'source': ADDR[0], 'destination': ADDR[1], 'asset': 'XCP', 'quantity': DP['small']}),
+            'in': ('create_send', {'source': ADDR[0], 'destination': ADDR[1], 'asset': config.XCP, 'quantity': DP['small']}),
             'out': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'03'+'3615000000000000'+'19'+'76a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac'+'0000000000000000'+'1e'+'6a1c2a504df746f83442653dd7ada4dc727a030865749e9fba5aec80c39a'+'2f30ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'
         }, {
             'comment': 'standard op return send (with API parameter)',
             'mock_protocol_changes': {'enhanced_sends': True},
-            'in': ('create_send', {'use_enhanced_send': False, 'source': ADDR[0], 'destination': ADDR[1], 'asset': 'XCP', 'quantity': DP['small']}),
+            'in': ('create_send', {'use_enhanced_send': False, 'source': ADDR[0], 'destination': ADDR[1], 'asset': config.XCP, 'quantity': DP['small']}),
             'out': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'03'+'3615000000000000'+'19'+'76a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac'+'0000000000000000'+'1e'+'6a1c2a504df746f83442653dd7ada4dc727a030865749e9fba5aec80c39a'+'2f30ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'
         }, {
             'comment': 'CIP 9 enhanced_send (op_return)',
             'mock_protocol_changes': {'enhanced_sends': True},
-            'in': ('create_send', {'source': ADDR[0], 'destination': ADDR[1], 'asset': 'XCP', 'quantity': DP['small']}),
+            'in': ('create_send', {'source': ADDR[0], 'destination': ADDR[1], 'asset': config.XCP, 'quantity': DP['small']}),
             'out': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'02'+'0000000000000000'+'33'+'6a312a504df746f83442653dd7afa4dc727a030865749e9fba5aec80c39a9e68edbc79e78ed45723c1072c38aededa458f95fa'+'aa46ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'
         }, {
             'comment': 'CIP 9 enhanced_send with memo',
             'mock_protocol_changes': {'enhanced_sends': True},
-            'in': ('create_send', {'memo': 'hello', 'source': ADDR[0], 'destination': ADDR[1], 'asset': 'XCP', 'quantity': DP['small']}),
+            'in': ('create_send', {'memo': 'hello', 'source': ADDR[0], 'destination': ADDR[1], 'asset': config.XCP, 'quantity': DP['small']}),
             'out': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'02'+'0000000000000000'+'38'+'6a36'+'2a504df746f83442653dd7afa4dc727a030865749e9fba5aec80c39a9e68edbc79e78ed45723c1072c38aededa458f95fa2bdfdee082'+'2d46ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'
         }, {
             'comment': 'CIP 9 enhanced_send with memo as hex',
             'mock_protocol_changes': {'enhanced_sends': True},
-            'in': ('create_send', {'memo': '0102030405', 'memo_is_hex': True, 'source': ADDR[0], 'destination': ADDR[1], 'asset': 'XCP', 'quantity': DP['small']}),
+            'in': ('create_send', {'memo': '0102030405', 'memo_is_hex': True, 'source': ADDR[0], 'destination': ADDR[1], 'asset': config.XCP, 'quantity': DP['small']}),
             'out': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'02'+'0000000000000000'+'38'+'6a36'+'2a504df746f83442653dd7afa4dc727a030865749e9fba5aec80c39a9e68edbc79e78ed45723c1072c38aededa458f95fa42b8b188e8'+'2d46ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'
         }, {
             'comment': 'CIP 9 enhanced_send before enabled',
             'mock_protocol_changes': {'enhanced_sends': False},
-            'in': ('create_send', {'memo': '0102030405', 'memo_is_hex': True, 'source': ADDR[0], 'destination': ADDR[1], 'asset': 'XCP', 'quantity': DP['small']}),
+            'in': ('create_send', {'memo': '0102030405', 'memo_is_hex': True, 'source': ADDR[0], 'destination': ADDR[1], 'asset': config.XCP, 'quantity': DP['small']}),
             'error': (RPCError, 'Error composing send transaction via API: enhanced sends are not enabled (-32001)')
         }, {
             'comment': 'CIP 9 enhanced send to a REQUIRE_MEMO address without memo',
             'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},
-            'in': ('create_send', {'source': ADDR[0], 'destination': ADDR[6], 'asset': 'XCP', 'quantity': DP['small']}),
+            'in': ('create_send', {'source': ADDR[0], 'destination': ADDR[6], 'asset': config.XCP, 'quantity': DP['small']}),
             'error': (RPCError, "Error composing send transaction via API: ['destination requires memo'] (-32001)")
         }, {
             'comment': 'CIP 9 enhanced send to a REQUIRE_MEMO address with memo',
             'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},
-            'in': ('create_send', {'memo': '0102030405', 'memo_is_hex': True, 'source': ADDR[0], 'destination': ADDR[6], 'asset': 'XCP', 'quantity': DP['small']}),
+            'in': ('create_send', {'memo': '0102030405', 'memo_is_hex': True, 'source': ADDR[0], 'destination': ADDR[6], 'asset': config.XCP, 'quantity': DP['small']}),
             'out': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'02'+'0000000000000000'+'38'+'6a36'+'2a504df746f83442653dd7afa4dc727a030865749e9fba5aec80c39a9e56174ca4a68af644972baced7a9ef02e467cb63542b8b188e8'+'2d46ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'
 
         # get_tx_info API method
@@ -3738,19 +3738,19 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'Unpack a data hex for a legacy send',
             'in': ('unpack', {'data_hex': '0000000000000000000000010000000002faf080'}),
-            'out': [0, {'asset': 'XCP', 'quantity': 50000000}]
+            'out': [0, {'asset': config.XCP, 'quantity': 50000000}]
         }, {
             'comment': 'Unpack a data hex for an enahcned send',
             'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},
             'in': ('unpack', {'data_hex': '0000000200000000000000010000000002faf0806f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec'}),
-            'out': [2, {'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'memo': None, 'quantity': 50000000}]
+            'out': [2, {'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': config.XCP, 'memo': None, 'quantity': 50000000}]
         }],
 
         'generate_asset_id': [{
-            'in': ('BTC', DP['default_block_index']),
+            'in': (config.BTC, DP['default_block_index']),
             'out': 0
         }, {
-            'in': ('XCP', DP['default_block_index']),
+            'in': (config.XCP, DP['default_block_index']),
             'out': 1
         }, {
             'in': ('BCD', 308000),
@@ -3785,10 +3785,10 @@ UNITTEST_VECTOR = {
         }],
         'generate_asset_name': [{
             'in': (0, DP['default_block_index']),
-            'out': 'BTC'
+            'out': config.BTC
         }, {
             'in': (1, DP['default_block_index']),
-            'out': 'XCP'
+            'out': config.XCP
         }, {
             'in': (26**12 - 1, 308000),
             'out': 'ZZZZZZZZZZZZ'
@@ -3834,18 +3834,18 @@ UNITTEST_VECTOR = {
                     'timestamp': 0}
         }],
         'get_asset_id': [{
-            'in': ('XCP', DP['default_block_index']),
+            'in': (config.XCP, DP['default_block_index']),
             'out': 1
         }, {
-            'in': ('BTC', DP['default_block_index']),
+            'in': (config.BTC, DP['default_block_index']),
             'out': 0
         }, {
             'in': ('foobar', DP['default_block_index']),
             'error': (exceptions.AssetError, 'No such asset: foobar')
         }],
         'resolve_subasset_longname': [{
-            'in': ('XCP',),
-            'out': 'XCP'
+            'in': (config.XCP,),
+            'out': config.XCP
         }, {
             'in': ('PARENT',),
             'out': 'PARENT'
@@ -3860,39 +3860,39 @@ UNITTEST_VECTOR = {
             'out': 'A{}'.format(26**12 + 101)
         }],
         'debit': [{
-            'in': (ADDR[0], 'XCP', 1),
+            'in': (ADDR[0], config.XCP, 1),
             'out': None
         }, {
-            'in': (ADDR[0], 'BTC', DP['quantity']),
+            'in': (ADDR[0], config.BTC, DP['quantity']),
             'error': (DebitError, 'Cannot debit bitcoins.')
         }, {
-            'in': (ADDR[0], 'BTC', -1 * DP['quantity']),
+            'in': (ADDR[0], config.BTC, -1 * DP['quantity']),
             'error': (DebitError, 'Negative quantity.')
         }, {
-            'in': (ADDR[0], 'BTC', 1.1 * DP['quantity']),
+            'in': (ADDR[0], config.BTC, 1.1 * DP['quantity']),
             'error': (DebitError, 'Quantity must be an integer.')
         }, {
-            'in': (ADDR[0], 'XCP', 2**40),
+            'in': (ADDR[0], config.XCP, 2**40),
             'error': (DebitError, 'Insufficient funds.')
         }],
         'credit': [{
-            'in': (ADDR[0], 'XCP', 1),
+            'in': (ADDR[0], config.XCP, 1),
             'out': None
         }, {
-            'in': (ADDR[0], 'BTC', DP['quantity']),
+            'in': (ADDR[0], config.BTC, DP['quantity']),
             'error': (CreditError, 'Cannot debit bitcoins.')
         }, {
-            'in': (ADDR[0], 'BTC', -1 * DP['quantity']),
+            'in': (ADDR[0], config.BTC, -1 * DP['quantity']),
             'error': (CreditError, 'Negative quantity.')
         }, {
-            'in': (ADDR[0], 'BTC', 1.1 * DP['quantity']),
+            'in': (ADDR[0], config.BTC, 1.1 * DP['quantity']),
             'error': (CreditError, 'Quantity must be an integer.')
         }],
         'is_divisible': [{
-            'in': ('XCP',),
+            'in': (config.XCP,),
             'out': True
         }, {
-            'in': ('BTC',),
+            'in': (config.BTC,),
             'out': True
         }, {
             'in': ('DIVISIBLE',),
@@ -3947,7 +3947,7 @@ UNITTEST_VECTOR = {
         }],
         'creations': [{
             'in': (),
-            'out': {'XCP': 511492826295,
+            'out': {config.XCP: 511492826295,
                     'CALLABLE': 1000,
                     'DIVIDEND': 100,
                     'DIVISIBLE': 100000000000,
@@ -3961,15 +3961,15 @@ UNITTEST_VECTOR = {
         }],
         'destructions': [{
             'in': (),
-            'out': {'XCP': 475000000}
+            'out': {config.XCP: 475000000}
         }],
         'asset_supply': [{
-            'in': ('XCP',),
+            'in': (config.XCP,),
             'out': 511017826295,
         }],
         'supplies': [{
             'in': (),
-            'out':  {'XCP': 511017826295,
+            'out':  {config.XCP: 511017826295,
                      'CALLABLE': 1000,
                      'DIVIDEND': 100,
                      'DIVISIBLE': 100000000000,
@@ -3982,7 +3982,7 @@ UNITTEST_VECTOR = {
                      'PARENT': 100000000}
         }],
         'get_balance': [{
-            'in': (ADDR[0], 'XCP'),
+            'in': (ADDR[0], config.XCP),
             'out': 91875000000
         }, {
             'in': (ADDR[0], 'foobar'),
@@ -3990,10 +3990,10 @@ UNITTEST_VECTOR = {
         }],
         'get_asset_name': [{
             'in': (1, DP['default_block_index']),
-            'out': 'XCP'
+            'out': config.XCP
         }, {
             'in': (0, DP['default_block_index']),
-            'out': 'BTC'
+            'out': config.BTC
         }, {
             'in': (453, DP['default_block_index']),
             'out': 0
@@ -4199,7 +4199,7 @@ UNITTEST_VECTOR = {
         }, {
             'in': (bytes.fromhex('0000000000000001' + '000000000000007b' + '00647484b055e2101927e50aba74957ba134d501d7' + '0deadbeef123'), DP['default_block_index']),
             'out': ({
-              'asset': 'XCP',
+              'asset': config.XCP,
               'quantity': 123,
               'address': '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU',
               'memo': bytes.fromhex('0deadbeef123'),
@@ -4220,25 +4220,25 @@ UNITTEST_VECTOR = {
         'validate': [
         # ----- tests copied from regular send -----
         {
-            'in': (ADDR[0], ADDR[1], 'XCP', DP['quantity'], None, 1),
+            'in': (ADDR[0], ADDR[1], config.XCP, DP['quantity'], None, 1),
             'out': ([])
         }, {
-            'in': (ADDR[0], P2SH_ADDR[0], 'XCP', DP['quantity'], None, 1),
+            'in': (ADDR[0], P2SH_ADDR[0], config.XCP, DP['quantity'], None, 1),
             'out': ([])
         }, {
-            'in': (P2SH_ADDR[0], ADDR[1], 'XCP', DP['quantity'], None, 1),
+            'in': (P2SH_ADDR[0], ADDR[1], config.XCP, DP['quantity'], None, 1),
             'out': ([])
         }, {
-            'in': (ADDR[0], ADDR[1], 'BTC', DP['quantity'], None, 1),
+            'in': (ADDR[0], ADDR[1], config.BTC, DP['quantity'], None, 1),
             'out': (['cannot send {}'.format(config.BTC)])
         }, {
-            'in': (ADDR[0], ADDR[1], 'XCP', DP['quantity'] / 3, None, 1),
+            'in': (ADDR[0], ADDR[1], config.XCP, DP['quantity'] / 3, None, 1),
             'out': (['quantity must be in satoshis'])
         }, {
-            'in': (ADDR[0], ADDR[1], 'XCP', -1 * DP['quantity'], None, 1),
+            'in': (ADDR[0], ADDR[1], config.XCP, -1 * DP['quantity'], None, 1),
             'out': (['negative quantity'])
         }, {
-            'in': (ADDR[0], MULTISIGADDR[0], 'XCP', DP['quantity'], None, 1),
+            'in': (ADDR[0], MULTISIGADDR[0], config.XCP, DP['quantity'], None, 1),
             'out': ([])
         }, {
             'in': (ADDR[0], ADDR[1], 'MAXI', 2**63 - 1, None, 1),
@@ -4247,7 +4247,7 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], ADDR[1], 'MAXI', 2**63, None, 1),
             'out': (['integer overflow'])
         }, {
-            'in': (ADDR[0], ADDR[6], 'XCP', DP['quantity'], None, 1),
+            'in': (ADDR[0], ADDR[6], config.XCP, DP['quantity'], None, 1),
             'out': (['destination requires memo'])
         }, {
             # ----- tests specific to enhanced send -----
@@ -4269,21 +4269,21 @@ UNITTEST_VECTOR = {
         'compose': [
         # ----- tests copied from regular send -----
         {
-            'in': (ADDR[0], ADDR[1], 'XCP', DP['quantity'] * 10000000, None, False),
+            'in': (ADDR[0], ADDR[1], config.XCP, DP['quantity'] * 10000000, None, False),
             'error': (exceptions.ComposeError, 'insufficient funds')
         }, {
-            'in': (ADDR[0], ADDR[1], 'XCP', DP['quantity'] / 3, None, False),
+            'in': (ADDR[0], ADDR[1], config.XCP, DP['quantity'] / 3, None, False),
             'error': (exceptions.ComposeError, 'quantity must be an int (in satoshi)')
         }, {
             'in': (ADDR[0], ADDR[1], 'MAXI', 2**63 + 1, None, False),
             'error': (exceptions.ComposeError, 'insufficient funds')
         }, {
-            'in': (ADDR[0], ADDR[1], 'BTC', DP['quantity'], None, False),
+            'in': (ADDR[0], ADDR[1], config.BTC, DP['quantity'], None, False),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 100000000)],
                     None)
         }, {
-            'in': (ADDR[0], P2SH_ADDR[0], 'BTC', DP['quantity'], None, False),
+            'in': (ADDR[0], P2SH_ADDR[0], config.BTC, DP['quantity'], None, False),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     [('2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy', 100000000)],
                     None)
@@ -4298,37 +4298,37 @@ UNITTEST_VECTOR = {
         # ----- tests specific to enhanced send -----
         {
             'mock_protocol_changes': {'short_tx_type_id': True},
-            'in': (ADDR[1], ADDR[0], 'XCP', DP['small'], None, None),
+            'in': (ADDR[1], ADDR[0], config.XCP, DP['small'], None, None),
             'out': (ADDR[1], [],
                     bytes.fromhex('02' + '0000000000000001' + '0000000002faf080' + '6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037'))
         }, {
             # memo as hex
             'mock_protocol_changes': {'short_tx_type_id': True},
-            'in': (ADDR[1], ADDR[0], 'XCP', DP['small'], '12345abcde', True),
+            'in': (ADDR[1], ADDR[0], config.XCP, DP['small'], '12345abcde', True),
             'out': (ADDR[1], [],
                     bytes.fromhex('02' + '0000000000000001' + '0000000002faf080' + '6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037' + '12345abcde'))
         }, {
             # pack a string into bytes
             'mock_protocol_changes': {'short_tx_type_id': True},
-            'in': (ADDR[1], ADDR[0], 'XCP', DP['small'], 'hello', False),
+            'in': (ADDR[1], ADDR[0], config.XCP, DP['small'], 'hello', False),
             'out': (ADDR[1], [],
                     bytes.fromhex('02' + '0000000000000001' + '0000000002faf080' + '6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037' + '68656c6c6f'))
         }, {
             # memo too long
             'mock_protocol_changes': {'short_tx_type_id': True},
-            'in': (ADDR[1], ADDR[0], 'XCP', DP['small'], '12345678901234567890123456789012345', False),
+            'in': (ADDR[1], ADDR[0], config.XCP, DP['small'], '12345678901234567890123456789012345', False),
             'error': (exceptions.ComposeError, "['memo is too long']")
         }, {
             'comment': 'enhanced_send to a REQUIRE_MEMO address, without memo',
-            'in': (ADDR[0], ADDR[6], 'XCP', DP['small'], None, False),
+            'in': (ADDR[0], ADDR[6], config.XCP, DP['small'], None, False),
             'error': (exceptions.ComposeError, "['destination requires memo']")
         }, {
             'comment': 'enhanced_send to a REQUIRE_MEMO address, with memo text',
-            'in': (ADDR[0], ADDR[6], 'XCP', DP['small'], '12345', False),
+            'in': (ADDR[0], ADDR[6], config.XCP, DP['small'], '12345', False),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80o\xb3\x90\x18~\xf2\x85D"\xac^J.\xb6\xff\xe9$\x96\xbe\xf5#12345')
         }, {
             'comment': 'enhanced_send to a REQUIRE_MEMO address, with memo hex',
-            'in': (ADDR[0], ADDR[6], 'XCP', DP['small'], 'deadbeef', True),
+            'in': (ADDR[0], ADDR[6], config.XCP, DP['small'], 'deadbeef', True),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80o\xb3\x90\x18~\xf2\x85D"\xac^J.\xb6\xff\xe9$\x96\xbe\xf5#\xde\xad\xbe\xef')
         }],
         'parse': [
@@ -4338,7 +4338,7 @@ UNITTEST_VECTOR = {
             'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': bytes.fromhex('00000002' + '0000000000000001' + '0000000005f5e100' + SHORT_ADDR_BYTES[1]), 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
             'records': [
                 {'table': 'sends', 'values': {
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'quantity': 100000000,
@@ -4350,7 +4350,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'calling_function': 'send',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
@@ -4359,7 +4359,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'send',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
@@ -4370,7 +4370,7 @@ UNITTEST_VECTOR = {
             'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'block_index': DP['default_block_index'], 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'data': bytes.fromhex('00000002' + '0000000000000001' + '0000000000000000' + SHORT_ADDR_BYTES[0]), 'block_time': 155409000, 'fee': 10000, 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'tx_index': 502, 'supported': 1},),
             'records': [
                 {'table': 'sends', 'values': {
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'quantity': 0,
@@ -4414,7 +4414,7 @@ UNITTEST_VECTOR = {
             'in': ({'data': bytes.fromhex('00000002' + '0000000000000001' + '0000000005f5e100' + SHORT_ADDR_BYTES[0]), 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'supported': 1, 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'btc_amount': 7800, 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'},),
             'records': [
                 {'table': 'sends', 'values': {
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'quantity': 100000000,
@@ -4425,7 +4425,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'calling_function': 'send',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
@@ -4434,7 +4434,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'send',
                     'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
@@ -4477,7 +4477,7 @@ UNITTEST_VECTOR = {
             'in':({'tx_index': 502, 'data': bytes.fromhex('00000002' + '0000000000000001' + '0000000058b11400' + SHORT_ADDR_BYTES[3]), 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'block_time': 310501000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_hash': '736ecc18f9f41b3ccf67dded1252969e4929404d6ad657b2039b937a7785cf3e', 'supported': 1, 'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'btc_amount': 5430, 'block_index': DP['default_block_index'], 'fee': 10000},),
             'records': [
                 {'table': 'sends', 'values': {
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj',
                     'quantity': 1488000000,
@@ -4492,7 +4492,7 @@ UNITTEST_VECTOR = {
             'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': bytes.fromhex('00000002' + '0000000000000001' + '0000000005f5e100' + SHORT_ADDR_BYTES[1] + 'beefbeef'), 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
             'records': [
                 {'table': 'sends', 'values': {
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'quantity': 100000000,
@@ -4504,7 +4504,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'calling_function': 'send',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
@@ -4513,7 +4513,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'send',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
@@ -4558,7 +4558,7 @@ UNITTEST_VECTOR = {
             'in': ({'block_index': DP['default_block_index'], 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'tx_hash': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80o\xb3\x90\x18~\xf2\x85D"\xac^J.\xb6\xff\xe9$\x96\xbe\xf5#12345', 'source': ADDR[0], 'destination': ADDR[6], 'supported': 1, 'block_hash': DP['default_block_hash']},),
             'records': [
                 {'table': 'sends', 'values': {
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'destination': ADDR[6],
                     'quantity': DP['small'],
@@ -4569,7 +4569,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': ADDR[6],
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'calling_function': 'send',
                     'event': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0',
@@ -4578,7 +4578,7 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {
                     'action': 'send',
                     'address': ADDR[0],
-                    'asset': 'XCP',
+                    'asset': config.XCP,
                     'block_index': DP['default_block_index'],
                     'event': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0',
                     'quantity': DP['small'],

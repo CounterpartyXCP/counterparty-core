@@ -346,10 +346,10 @@ def initialise(db):
         cursor.execute('''ALTER TABLE assets ADD COLUMN asset_longname TEXT''')
     cursor.execute('''CREATE UNIQUE INDEX IF NOT EXISTS asset_longname_idx ON assets(asset_longname)''')
 
-    cursor.execute('''SELECT * FROM assets WHERE asset_name = ?''', ('BTC',))
+    cursor.execute('''SELECT * FROM assets WHERE asset_name = ?''', (config.BTC,))
     if not list(cursor):
-        cursor.execute('''INSERT INTO assets VALUES (?,?,?,?)''', ('0', 'BTC', None, None))
-        cursor.execute('''INSERT INTO assets VALUES (?,?,?,?)''', ('1', 'XCP', None, None))
+        cursor.execute('''INSERT INTO assets VALUES (?,?,?,?)''', ('0', config.BTC, None, None))
+        cursor.execute('''INSERT INTO assets VALUES (?,?,?,?)''', ('1', config.XCP, None, None))
 
     # Addresses
     # Leaving this here because in the future this could work for other things besides broadcast
