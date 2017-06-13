@@ -10,7 +10,7 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 
-from counterpartylib.lib import (config, exceptions, util)
+from counterpartylib.lib import (config, exceptions, util, message_type)
 from . import (order, bet, rps)
 
 FORMAT = '>32s'
@@ -73,7 +73,7 @@ def compose (db, source, offer_hash):
     if problems: raise exceptions.ComposeError(problems)
 
     offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, 'utf-8'))
-    data = struct.pack(config.TXTYPE_FORMAT, ID)
+    data = message_type.pack(ID)
     data += struct.pack(FORMAT, offer_hash_bytes)
     return (source, [], data)
 

@@ -5,7 +5,7 @@
 import struct
 import binascii
 
-from counterpartylib.lib import (config, exceptions, util)
+from counterpartylib.lib import (config, exceptions, util, message_type)
 from . import execute
 
 FORMAT = '>QQQ'
@@ -37,7 +37,7 @@ def compose (db, source, gasprice, startgas, endowment, code_hex):
     if not config.TESTNET:  # TODO
         return
 
-    data = struct.pack(config.TXTYPE_FORMAT, ID)
+    data = message_type.pack(ID)
     data += struct.pack(FORMAT, gasprice, startgas, endowment)
     data += binascii.unhexlify(code_hex)
 

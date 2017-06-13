@@ -7,7 +7,7 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 
-from ... import (config, exceptions, util)
+from ... import (config, exceptions, util, message_type)
 
 FORMAT = '>QQ'
 LENGTH = 8 + 8
@@ -78,7 +78,7 @@ def compose (db, source, destination, asset, quantity):
     if problems: raise exceptions.ComposeError(problems)
 
     asset_id = util.get_asset_id(db, asset, block_index)
-    data = struct.pack(config.TXTYPE_FORMAT, ID)
+    data = message_type.pack(ID)
     data += struct.pack(FORMAT, asset_id, quantity)
 
     cursor.close()

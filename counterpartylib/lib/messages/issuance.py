@@ -11,7 +11,7 @@ import logging
 logger = logging.getLogger(__name__)
 D = decimal.Decimal
 
-from counterpartylib.lib import (config, util, exceptions, util)
+from counterpartylib.lib import (config, util, exceptions, util, message_type)
 
 FORMAT_1 = '>QQ?'
 LENGTH_1 = 8 + 8 + 1
@@ -263,7 +263,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, descr
     if subasset_longname is None or reissuance:
         # Type 20 standard issuance FORMAT_2 >QQ??If
         #   used for standard issuances and all reissuances
-        data = struct.pack(config.TXTYPE_FORMAT, ID)
+        data = message_type.pack(ID)
         if len(description) <= 42:
             curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
         else:
@@ -276,7 +276,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, descr
         # compacts a subasset name to save space
         compacted_subasset_longname = util.compact_subasset_longname(subasset_longname)
         compacted_subasset_length = len(compacted_subasset_longname)
-        data = struct.pack(config.TXTYPE_FORMAT, SUBASSET_ID)
+        data = message_type.pack(SUBASSET_ID)
         curr_format = SUBASSET_FORMAT + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(description))
         data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, compacted_subasset_length, compacted_subasset_longname, description.encode('utf-8'))
 
