@@ -31,6 +31,7 @@ from counterpartylib.lib import script
 from counterpartylib.lib import backend
 from counterpartylib.lib import log
 from counterpartylib.lib import database
+from counterpartylib.lib import message_type
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, publish, execute, destroy)
 
 from .kickstart.blocks_parser import BlockchainParser, ChainstateParser
@@ -77,16 +78,17 @@ def parse_tx(db, tx):
 
     if len(tx['data']) > 4:
         try:
-            message_type_id = struct.unpack(config.TXTYPE_FORMAT, tx['data'][:4])[0]
+            message_type_id, message = message_type.unpack(tx['data'], tx['block_index'])
         except struct.error:    # Deterministically raised.
             message_type_id = None
+            message = None
     else:
         message_type_id = None
+        message = None
 
     # Protocol change.
     rps_enabled = tx['block_index'] >= 308500 or config.TESTNET
 
-    message = tx['data'][4:]
     if message_type_id == send.ID:
         send.parse(db, tx, message)
     elif message_type_id == order.ID:

@@ -35,6 +35,7 @@ from counterpartylib.lib import exceptions
 from counterpartylib.lib import config
 from counterpartylib.lib import util
 from counterpartylib.lib import log
+from counterpartylib.lib import message_type
 from . import (bet)
 
 FORMAT = '>IdI'
@@ -113,7 +114,7 @@ def compose (db, source, timestamp, value, fee_fraction, text):
     problems = validate(db, source, timestamp, value, fee_fraction_int, text, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
-    data = struct.pack(config.TXTYPE_FORMAT, ID)
+    data = message_type.pack(ID)
 
     # always use custom length byte instead of problematic usage of 52p format and make sure to encode('utf-8') for length
     if util.enabled('broadcast_pack_text'):

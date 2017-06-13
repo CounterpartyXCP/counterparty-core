@@ -23,10 +23,12 @@ from counterpartylib.lib import config, util, database, api
 
 # we swap out util.enabled with a custom one which has the option to mock the protocol changes
 MOCK_PROTOCOL_CHANGES = {
-    'bytespersigop': False  # default to False to avoid all old vectors breaking
+    'bytespersigop': False,    # default to False to avoid all old vectors breaking
+    'short_tx_type_id': False, # default to False to avoid all old vectors breaking
 }
 MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
     'subassets': {'block_index': 310495, 'enabled': True},  # override to be true only after block 310495
+    'short_tx_type_id': {'block_index': 310500, 'enabled': True},  # override to be true only after block 310500
 }
 ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False
 ALWAYS_LATEST_PROTOCOL_CHANGES = False

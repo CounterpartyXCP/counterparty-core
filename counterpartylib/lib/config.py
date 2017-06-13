@@ -13,6 +13,7 @@ VERSION_STRING = str(VERSION_MAJOR) + '.' + str(VERSION_MINOR) + '.' + str(VERSI
 
 # Counterparty protocol
 TXTYPE_FORMAT = '>I'
+SHORT_TXTYPE_FORMAT = 'B'
 
 TWO_WEEKS = 2 * 7 * 24 * 3600
 MAX_EXPIRATION = 4 * 2016   # Two months

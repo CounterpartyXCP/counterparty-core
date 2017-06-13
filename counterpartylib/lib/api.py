@@ -39,6 +39,7 @@ from counterpartylib.lib import database
 from counterpartylib.lib import transaction
 from counterpartylib.lib import blocks
 from counterpartylib.lib import script
+from counterpartylib.lib import message_type
 from counterpartylib.lib.messages import send
 from counterpartylib.lib.messages import order
 from counterpartylib.lib.messages import btcpay
@@ -721,8 +722,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def unpack(data_hex):
             data = binascii.unhexlify(data_hex)
-            message_type_id = struct.unpack(config.TXTYPE_FORMAT, data[:4])[0]
-            message = data[4:]
+            message_type_id, message = message_type.unpack(data)
 
             # TODO: Enabled only for `send`.
             if message_type_id == send.ID:
