@@ -24,11 +24,11 @@ from counterpartylib.lib import config, util, database, api
 # we swap out util.enabled with a custom one which has the option to mock the protocol changes
 MOCK_PROTOCOL_CHANGES = {
     'bytespersigop': False,    # default to False to avoid all old vectors breaking
+    'short_tx_type_id': False, # default to False to avoid all old vectors breaking
 }
 MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
-    'subassets': {'block_index': 310495, 'allow_always_latest': True},  # override to be true only at block 310495
-    'short_tx_type_id': {'block_index': 310502, 'allow_always_latest': False},  # override to be true only at block 310502
-    'enhanced_sends': {'block_index': 310999, 'allow_always_latest': False},  # override to be true only at block 310999
+    'subassets': {'block_index': 310495, 'enabled': True},  # override to be true only after block 310495
+    'short_tx_type_id': {'block_index': 310500, 'enabled': True},  # override to be true only after block 310500
 }
 ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False
 ALWAYS_LATEST_PROTOCOL_CHANGES = False
@@ -174,7 +174,7 @@ def cp_server(request):
 def init_mock_functions(monkeypatch, rawtransactions_db):
     """Test suit mock functions.
 
-    Mock functions override default behaviour to allow test suit to work - for instance, date_passed is overwritten 
+    Mock functions override default behaviour to allow test suit to work - for instance, date_passed is overwritten
     so that every date will pass. Those are available to every test function in this suite."""
 
     util_test.rawtransactions_db = rawtransactions_db
