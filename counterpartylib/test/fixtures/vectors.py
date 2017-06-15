@@ -1618,6 +1618,12 @@ UNITTEST_VECTOR = {
             'comment': 'referencing parent asset by name composes a reissuance',
             'in': (ADDR[0], None, 'PARENT.already.issued', 1000, True, ''),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x14\x01S\x08!g\x1b\x10e\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+        }, {
+            'comment': 'basic child asset with compact message type id',
+            'mock_protocol_changes': {'short_tx_type_id': True},
+            'in': (ADDR[0], None, 'PARENT.child1', 100000000, True, ''),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], bytes.fromhex('1501530821671b10010000000005f5e100010a57c6f36de23a1f5f4c46'))
+            # 15|01530821671b1001|0000000005f5e100|01|0a|57c6f36de23a1f5f4c46
         }],
         'parse': [{
             'in': ({'supported': 1, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'data': b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\xbaOs\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'btc_amount': None, 'destination': None, 'block_time': 155409000, 'block_index': DP['default_block_index'], 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'fee': 10000, 'tx_index': 502, 'block_hash': DP['default_block_hash']}, issuance.ID,),
@@ -3897,6 +3903,48 @@ UNITTEST_VECTOR = {
             'records': [
                 {'table': 'pragma', 'field': 'user_version', 'value': (config.VERSION_MAJOR * 1000) + config.VERSION_MINOR}
             ]
+        }]
+    },
+    'message_type': {
+        'unpack': [{
+            'in': (bytes.fromhex('01deadbeef'), 310501),
+            'out': (1, bytes.fromhex('deadbeef'))
+        },
+        {
+            'in': (bytes.fromhex('02deadbeef'), 310501),
+            'out': (2, bytes.fromhex('deadbeef'))
+        },
+        {
+            'in': (bytes.fromhex('00000001deadbeef'), 310501),
+            'out': (1, bytes.fromhex('deadbeef'))
+        },
+        {
+            'in': (bytes.fromhex('00000000deadbeef'), 310501),
+            'out': (0, bytes.fromhex('deadbeef'))
+        },
+        {
+            'in': (bytes.fromhex('00'), 310501),
+            'out': (None, None)
+        }],
+        'pack': [{
+            'in': (0, 300000),
+            'out': bytes.fromhex('00000000')
+        },
+        {
+            'in': (1, 300000),
+            'out': bytes.fromhex('00000001')
+        },
+        {
+            'in': (0, 310501),
+            'out': bytes.fromhex('00000000')
+        },
+        {
+            'in': (1, 310501),
+            'out': bytes.fromhex('01')
+        },
+        {
+            'in': (2, 310501),
+            'out': bytes.fromhex('02')
         }]
     }
 }
