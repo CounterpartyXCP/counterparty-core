@@ -28,18 +28,14 @@ MOCK_PROTOCOL_CHANGES = {
 }
 MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
     'subassets': {'block_index': 310495, 'enabled': True},  # override to be true only after block 310495
-    'short_tx_type_id': {'block_index': 310500, 'enabled': True},  # override to be true only after block 310500
+    'short_tx_type_id': {'block_index': 310501, 'all_tests': True, 'enabled': True},  # override to be true only after block 310500
 }
 ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False
 ALWAYS_LATEST_PROTOCOL_CHANGES = False
 _enabled = util.enabled
 def enabled(change_name, block_index=None):
-    # if explicitly set
-    if change_name in MOCK_PROTOCOL_CHANGES:
-        return MOCK_PROTOCOL_CHANGES[change_name]
-
     # enable some protocol changes at a specific block for testing
-    if shouldCheckForMockProtocolChangesAtBlock(change_name):
+    if shouldCheckForMockProtocolChangesAtBlock(change_name) and change_name in MOCK_PROTOCOL_CHANGES_AT_BLOCK:
         _block_index = block_index
         if _block_index is None:
             _block_index = util.CURRENT_BLOCK_INDEX
@@ -47,6 +43,10 @@ def enabled(change_name, block_index=None):
         if _block_index >= MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]['block_index']:
             return True
         return False
+
+    # if explicitly set
+    if change_name in MOCK_PROTOCOL_CHANGES:
+        return MOCK_PROTOCOL_CHANGES[change_name]
 
     # used to force unit tests to always run against latest protocol changes
     if ALWAYS_LATEST_PROTOCOL_CHANGES:
@@ -62,18 +62,19 @@ def enabled(change_name, block_index=None):
 util.enabled = enabled
 
 # This is true if ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK is set
+#   It is also true if 'all_tests' is set in the MOCK_PROTOCOL_CHANGES_AT_BLOCK object
 def shouldCheckForMockProtocolChangesAtBlock(change_name):
-    if change_name not in MOCK_PROTOCOL_CHANGES_AT_BLOCK:
-        return False
-
+    check_for_mock_protocol_changes_at_block = False
     if ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK:
-        return True
-
-    if 'allow_always_latest' in MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name] \
-        and not MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]['allow_always_latest']:
-        return True
-
-    return False
+        # always check
+        check_for_mock_protocol_changes_at_block = True
+    else:
+        # only check if 'all_tests' is True
+        if change_name in MOCK_PROTOCOL_CHANGES_AT_BLOCK \
+            and 'all_tests' in MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name] \
+            and MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]['all_tests'] == True:
+                check_for_mock_protocol_changes_at_block = True
+    return check_for_mock_protocol_changes_at_block
 
 
 RANDOM_ASSET_INT = None
