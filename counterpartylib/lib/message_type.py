@@ -16,16 +16,19 @@ def pack(message_type_id, block_index=None):
 # retuns both the message type id and the remainder of the message data
 def unpack(packed_data, block_index=None):
     message_type_id = None
+    message_remainder = None
 
-    # try to read 1 byte first
-    if util.enabled('short_tx_type_id', block_index):
-        message_type_id = struct.unpack(config.SHORT_TXTYPE_FORMAT, packed_data[:1])[0]
-        if message_type_id > 0:
-            message_remainder = packed_data[1:]
-            return (message_type_id, message_remainder)
+    if len(packed_data) > 1:
+        # try to read 1 byte first
+        if util.enabled('short_tx_type_id', block_index):
+            message_type_id = struct.unpack(config.SHORT_TXTYPE_FORMAT, packed_data[:1])[0]
+            if message_type_id > 0:
+                message_remainder = packed_data[1:]
+                return (message_type_id, message_remainder)
 
     # First message byte was 0.  We will read 4 bytes
-    message_type_id = struct.unpack(config.TXTYPE_FORMAT, packed_data[:4])[0]
-    message_remainder = packed_data[4:]
+    if len(packed_data) > 4:
+        message_type_id = struct.unpack(config.TXTYPE_FORMAT, packed_data[:4])[0]
+        message_remainder = packed_data[4:]
 
     return (message_type_id, message_remainder)
