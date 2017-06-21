@@ -24,28 +24,29 @@ from counterpartylib.lib import config, util, database, api
 # we swap out util.enabled with a custom one which has the option to mock the protocol changes
 MOCK_PROTOCOL_CHANGES = {
     'bytespersigop': False,    # default to False to avoid all old vectors breaking
-    'short_tx_type_id': False, # default to False to avoid all old vectors breaking
 }
 MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
-    'subassets': {'block_index': 310495, 'enabled': True},  # override to be true only after block 310495
-    'short_tx_type_id': {'block_index': 310501, 'all_tests': True, 'enabled': True},  # override to be true only after block 310500
+    'subassets': {'block_index': 310495, 'allow_always_latest': True},  # override to be true only at block 310495
+    'short_tx_type_id': {'block_index': 310502, 'allow_always_latest': False},  # override to be true only at block 310502
 }
 ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False
 ALWAYS_LATEST_PROTOCOL_CHANGES = False
 _enabled = util.enabled
 def enabled(change_name, block_index=None):
+    # if explicitly set
+    if change_name in MOCK_PROTOCOL_CHANGES:
+        return MOCK_PROTOCOL_CHANGES[change_name]
+
     # enable some protocol changes at a specific block for testing
-    if shouldCheckForMockProtocolChangesAtBlock(change_name) and change_name in MOCK_PROTOCOL_CHANGES_AT_BLOCK:
+    if shouldCheckForMockProtocolChangesAtBlock(change_name):
         _block_index = block_index
         if _block_index is None:
             _block_index = util.CURRENT_BLOCK_INDEX
         logger = logging.getLogger(__name__)
+        # print("shouldCheckForMockProtocolChangesAtBlock {} {} enabled: {}".format(change_name,_block_index,_block_index >= MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]['block_index']))
         if _block_index >= MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]['block_index']:
-            return MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]['enabled']
-
-    # if explicitly set
-    if change_name in MOCK_PROTOCOL_CHANGES:
-        return MOCK_PROTOCOL_CHANGES[change_name]
+            return True
+        return False
 
     # used to force unit tests to always run against latest protocol changes
     if ALWAYS_LATEST_PROTOCOL_CHANGES:
@@ -53,25 +54,26 @@ def enabled(change_name, block_index=None):
         if change_name not in util.PROTOCOL_CHANGES:
             raise KeyError(change_name)
 
+        # print("ALWAYS_LATEST_PROTOCOL_CHANGES {} {} enabled: {}".format(change_name,block_index or util.CURRENT_BLOCK_INDEX,True))
         return True
     else:
+        # print("ALWAYS_LATEST_PROTOCOL_CHANGES {} {} enabled: {}".format(change_name,block_index or util.CURRENT_BLOCK_INDEX,_enabled(change_name, block_index)))
         return _enabled(change_name, block_index)
 util.enabled = enabled
 
 # This is true if ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK is set
-#   It is also true if 'all_tests' is set in the MOCK_PROTOCOL_CHANGES_AT_BLOCK object
 def shouldCheckForMockProtocolChangesAtBlock(change_name):
-    check_for_mock_protocol_changes_at_block = False
+    if change_name not in MOCK_PROTOCOL_CHANGES_AT_BLOCK:
+        return False
+
     if ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK:
-        # always check
-        check_for_mock_protocol_changes_at_block = True
-    else:
-        # only check if 'all_tests' is True
-        if change_name in MOCK_PROTOCOL_CHANGES_AT_BLOCK \
-            and 'all_tests' in MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name] \
-            and MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]['all_tests'] == True:
-                check_for_mock_protocol_changes_at_block = True
-    return check_for_mock_protocol_changes_at_block
+        return True
+
+    if 'allow_always_latest' in MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name] \
+        and not MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]['allow_always_latest']:
+        return True
+
+    return False
 
 
 RANDOM_ASSET_INT = None
