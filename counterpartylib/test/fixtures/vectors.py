@@ -3907,23 +3907,23 @@ UNITTEST_VECTOR = {
     },
     'message_type': {
         'unpack': [{
-            'in': (bytes.fromhex('01deadbeef'), 310501),
+            'in': (bytes.fromhex('01deadbeef'), 310502),
             'out': (1, bytes.fromhex('deadbeef'))
         },
         {
-            'in': (bytes.fromhex('02deadbeef'), 310501),
+            'in': (bytes.fromhex('02deadbeef'), 310502),
             'out': (2, bytes.fromhex('deadbeef'))
         },
         {
-            'in': (bytes.fromhex('00000001deadbeef'), 310501),
+            'in': (bytes.fromhex('00000001deadbeef'), 310502),
             'out': (1, bytes.fromhex('deadbeef'))
         },
         {
-            'in': (bytes.fromhex('00000000deadbeef'), 310501),
+            'in': (bytes.fromhex('00000000deadbeef'), 310502),
             'out': (0, bytes.fromhex('deadbeef'))
         },
         {
-            'in': (bytes.fromhex('00'), 310501),
+            'in': (bytes.fromhex('00'), 310502),
             'out': (None, None)
         }],
         'pack': [{
@@ -3935,15 +3935,15 @@ UNITTEST_VECTOR = {
             'out': bytes.fromhex('00000001')
         },
         {
-            'in': (0, 310501),
+            'in': (0, 310502),
             'out': bytes.fromhex('00000000')
         },
         {
-            'in': (1, 310501),
+            'in': (1, 310502),
             'out': bytes.fromhex('01')
         },
         {
-            'in': (2, 310501),
+            'in': (2, 310502),
             'out': bytes.fromhex('02')
         }]
     }
