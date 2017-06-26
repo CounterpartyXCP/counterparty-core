@@ -16,9 +16,9 @@ test:
         - py.test --verbose --capture=no counterpartylib/test/hashlib_test.py
         - py.test --verbose --capture=no counterpartylib/test/parse_block_test.py
         - py.test --verbose --capture=no --skiptestbook=all counterpartylib/test/integration_test.py
-        - py.test --verbose --capture=no counterpartylib/test/contracts_test.py
-        - py.test --verbose --capture=no --skiptestbook=mainnet -k test_book counterpartylib/test/reparse_test.py
-        - py.test --verbose --capture=no --skiptestbook=testnet -k test_book counterpartylib/test/reparse_test.py
+        #- py.test --verbose --capture=no counterpartylib/test/contracts_test.py
+        #- py.test --verbose --capture=no --skiptestbook=mainnet -k test_book counterpartylib/test/reparse_test.py
+        - py.test --capture=no --skiptestbook=testnet -k test_book counterpartylib/test/reparse_test.py
         - py.test --verbose --capture=no counterpartylib/test/database_version_test.py
 machine:
     pre:
