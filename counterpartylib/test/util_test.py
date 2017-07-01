@@ -20,6 +20,7 @@ import pytest
 import binascii
 import appdirs
 import bitcoin as bitcoinlib
+import resource
 
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
@@ -431,12 +432,30 @@ def get_block_txlist(db, block_index):
     txlist = json.dumps(txlist, indent=4)
     return txlist
 
-def reparse(testnet=True):
+def reparse(testnet=True, in_memory=False):
     """Reparse all transaction from the database, create a new blockchain and compare it to the old one."""
     options = dict(COUNTERPARTYD_OPTIONS)
-    server.initialise(database_file=':memory:', testnet=testnet, **options)
+
+    data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+
+    if in_memory:
+        database_file=':memory:'
+    else:
+        # create an on-disk database_file for reparsing
+        #   because the in-memory DB is too large for CircleCI testing
+        network = ''
+        if testnet:
+            network += '.testnet'
+        database_file = os.path.join(data_dir, '{}{}-tmp-reparse.db'.format(config.APP_NAME, network))
+
+        # remove any previous artifacts
+        remove_database_files(database_file)
+
+    server.initialise(database_file=database_file, testnet=testnet, **options)
 
     logger = logging.getLogger()
+    logger.info('Using database_file {}.'.format(database_file))
+    logger.info(using("Begin"))
 
     if testnet:
         config.PREFIX = b'TESTXXXX'
@@ -444,7 +463,6 @@ def reparse(testnet=True):
     memory_db = database.get_connection(read_only=False)
     initialise_db(memory_db)
 
-    data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
     prod_db_path = os.path.join(data_dir, '{}{}.db'.format(config.APP_NAME, '.testnet' if testnet else ''))
     assert os.path.exists(prod_db_path), "database path {} does not exist".format(prod_db_path)
     prod_db = apsw.Connection(prod_db_path)
@@ -495,6 +513,9 @@ def reparse(testnet=True):
             logger.info('Block (re-parse): %s (hashes: L:%s / TX:%s / M:%s%s)' % (
                 block['block_index'], previous_ledger_hash[-5:], previous_txlist_hash[-5:], previous_messages_hash[-5:],
                 (' [overwrote %s]' % previous_found_messages_hash) if previous_found_messages_hash and previous_found_messages_hash != previous_messages_hash else ''))
+            if block['block_index'] % 1000 == 1:
+                # report memory usage every 1000 blocks
+                logger.info(using("Block %s" % (block['block_index'])))
 
         except check.ConsensusError as e:
             message = str(e)
@@ -507,6 +528,18 @@ def reparse(testnet=True):
                 old_txlist = get_block_txlist(prod_db, block['block_index'])
                 compare_strings(old_txlist, new_txlist)
             raise(e)
+
+    # clean up
+    if not in_memory:
+        remove_database_files(database_file)
+
+# debug memory usage
+def using(point=""):
+    usage = resource.getrusage(resource.RUSAGE_SELF)
+    mb = 1024.0
+    if sys.platform == 'darwin':
+        mb = mb * mb
+    return '%s: usertime=%.1f systime=%.1f mem=%.1f mb' % (point, usage.ru_utime, usage.ru_stime, usage.ru_maxrss / mb)
 
 
 class ConfigContext(object):

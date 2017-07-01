@@ -11,4 +11,4 @@ from counterpartylib.lib import (config, check, database)
 
 def test_book(testnet):
     """Reparse all the transactions in the database to see check blockhain's integrity."""
-    util_test.reparse(testnet=testnet)
+    util_test.reparse(testnet=testnet, in_memory=False)
