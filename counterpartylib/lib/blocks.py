@@ -70,18 +70,32 @@ def parse_tx(db, tx):
         if len(tx['destination'].split('-')) > 1:
             return
 
-    # Burns.
-    if tx['destination'] == config.UNSPENDABLE:
-        burn.parse(db, tx, MAINNET_BURNS)
-        return
-
-    if len(tx['data']) > 4:
-        try:
-            message_type_id = struct.unpack(config.TXTYPE_FORMAT, tx['data'][:4])[0]
-        except struct.error:    # Deterministically raised.
+    if util.enabled('burn_assets'):
+        #check message type first before assuming BTC burn
+        if len(tx['data']) > 4:
+            try:
+                message_type_id = struct.unpack(config.TXTYPE_FORMAT, tx['data'][:4])[0]
+            except struct.error:    # Deterministically raised.
+                message_type_id = None
+        else:
             message_type_id = None
+            
+        if tx['destination'] == config.UNSPENDABLE and message_type_id != send.ID:
+            burn.parse(db, tx, MAINNET_BURNS)
+            return
     else:
-        message_type_id = None
+        # Burns.
+        if tx['destination'] == config.UNSPENDABLE:
+            burn.parse(db, tx, MAINNET_BURNS)
+            return
+
+        if len(tx['data']) > 4:
+            try:
+                message_type_id = struct.unpack(config.TXTYPE_FORMAT, tx['data'][:4])[0]
+            except struct.error:    # Deterministically raised.
+                message_type_id = None
+        else:
+            message_type_id = None
 
     # Protocol change.
     rps_enabled = tx['block_index'] >= 308500 or config.TESTNET
