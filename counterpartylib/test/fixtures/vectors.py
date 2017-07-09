@@ -23,6 +23,7 @@ from counterpartylib.lib.messages.scriptlib.processblock import ContractError
 from counterpartylib.lib.api import APIError
 from counterpartylib.lib.util import (DebitError, CreditError, QuantityError)
 from fractions import Fraction
+from counterpartylib.lib import address
 
 UNITTEST_VECTOR = {
     'backend': {
@@ -3945,6 +3946,44 @@ UNITTEST_VECTOR = {
         {
             'in': (2, 310502),
             'out': bytes.fromhex('02')
+        }]
+    },
+    'address': {
+        'pack': [{
+            'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j',),
+            'out': bytes.fromhex('006474849fc9ac0f5bd6b49fe144d14db7d32e2445')
+        },
+        {
+            'in': ('1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU',),
+            'out': bytes.fromhex('00647484b055e2101927e50aba74957ba134d501d7')
+        },
+        {
+            'in': ('3AAAA1111xxxxxxxxxxxxxxxxxxy3SsDsZ',),
+            'out': bytes.fromhex('055ce31be63403fa7b19f2614272547c15c8df86b9')
+        },
+        {
+            'in': ('2MtAV7xpAzU69E8GxRF2Vd2xt79kDnif6F5',),
+            'out': bytes.fromhex('C40A12AD889AECC8F6213BFD6BD47911CAB1C30E5F')
+        },
+        {
+            'in': ('BADBASE58III',),
+            'error': (bitcoinlib.base58.InvalidBase58Error, "Character 'I' is not a valid base58 character")
+        }],
+        'unpack': [{
+            'in': (bytes.fromhex('006474849fc9ac0f5bd6b49fe144d14db7d32e2445'),),
+            'out': '1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j'
+        },
+        {
+            'in': (bytes.fromhex('00647484b055e2101927e50aba74957ba134d501d7'),),
+            'out': '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU'
+        },
+        {
+            'in': (bytes.fromhex('055ce31be63403fa7b19f2614272547c15c8df86b9'),),
+            'out': '3AAAA1111xxxxxxxxxxxxxxxxxxy3SsDsZ'
+        },
+        {
+            'in': (bytes.fromhex('C40A12AD889AECC8F6213BFD6BD47911CAB1C30E5F'),),
+            'out': '2MtAV7xpAzU69E8GxRF2Vd2xt79kDnif6F5'
         }]
     }
 }
