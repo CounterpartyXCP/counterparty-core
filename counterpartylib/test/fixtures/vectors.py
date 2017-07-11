@@ -3985,5 +3985,33 @@ UNITTEST_VECTOR = {
             'in': (bytes.fromhex('C40A12AD889AECC8F6213BFD6BD47911CAB1C30E5F'),),
             'out': '2MtAV7xpAzU69E8GxRF2Vd2xt79kDnif6F5'
         }]
+    },
+    'enhanced_send': {
+        'unpack': [{
+            'in': (bytes.fromhex('000000000004fadf' + '000000174876e800' + '006474849fc9ac0f5bd6b49fe144d14db7d32e2445'), DP['default_block_index']),
+            'out': ({
+              'asset': 'SOUP',
+              'quantity': 100000000000,
+              'address': '1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j',
+              'memo': None,
+            })
+        }, {
+            'in': (bytes.fromhex('0000000000000001' + '000000000000007b' + '00647484b055e2101927e50aba74957ba134d501d7' + '0deadbeef123'), DP['default_block_index']),
+            'out': ({
+              'asset': 'XCP',
+              'quantity': 123,
+              'address': '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU',
+              'memo': bytes.fromhex('0deadbeef123'),
+            })
+        }, {
+            'in': (bytes.fromhex('0000000000000001' + '000000000000007b' + '0001'), DP['default_block_index']),
+            'error': (exceptions.UnpackError, 'could not unpack')
+        }, {
+            'in': (bytes.fromhex('0000000000000001' + '000000000000007b' + '006474849fc9ac0f5bd6b49fe144d14db7d32e2445' + '9999999999999999999999999999999999999999999999999999999999999999999999'), DP['default_block_index']),
+            'error': (exceptions.UnpackError, 'memo too long')
+        }, {
+            'in': (bytes.fromhex('0000000000000003' + '000000000000007b' + '006474849fc9ac0f5bd6b49fe144d14db7d32e2445'), DP['default_block_index']),
+            'error': (exceptions.UnpackError, 'asset id invalid')
+        }],
     }
 }

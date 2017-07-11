@@ -124,5 +124,12 @@
         "minimum_version_revision": 3,
         "block_index": 999999,
         "testnet_block_index": 0
+    },
+    "enhanced_sends": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 55,
+        "minimum_version_revision": 4,
+        "block_index": 999999,
+        "testnet_block_index": 0
     }
 }

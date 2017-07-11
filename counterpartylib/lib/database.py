@@ -63,6 +63,11 @@ def exectracer(cursor, sql, bindings):
         if category == 'issuances' and not util.enabled('subassets'):
             if isinstance(bindings, dict) and 'asset_longname' in bindings: del bindings['asset_longname']
 
+        # don't include memo as part of the messages hash 
+        #   until enhanced_sends are enabled
+        if category == 'sends' and not util.enabled('enhanced_sends'):
+            if isinstance(bindings, dict) and 'memo' in bindings: del bindings['memo']
+
         sorted_bindings = sorted(bindings.items()) if isinstance(bindings, dict) else [bindings,] 
         BLOCK_MESSAGES.append('{}{}{}'.format(command, category, sorted_bindings))
 

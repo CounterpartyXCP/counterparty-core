@@ -1059,23 +1059,24 @@ CREATE TABLE sends(
                       destination TEXT,
                       asset TEXT,
                       quantity INTEGER,
-                      status TEXT,
+                      status TEXT, memo BLOB,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
-INSERT INTO sends VALUES(2,'88fb0912c957d33f32021c55c3bb835e2c587bb8d38e745bca95ee070ce8357b',310001,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',50000000,'valid');
-INSERT INTO sends VALUES(8,'b57db455f07acb9fae894954ee8f9f32ca6d474514efdde0ccbd144e56e49bf9',310007,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBB',4000000,'valid');
-INSERT INTO sends VALUES(9,'96a04482fc202152dec10f962cf531cf7c33224e06ed92ae7d5b3916dc12029f',310008,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',526,'valid');
-INSERT INTO sends VALUES(24,'179efdc874bbb88a8a7b475f54a51dabd0119ad7bf18be27a41f155258af86a3',310023,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',10000,'valid');
+INSERT INTO sends VALUES(2,'88fb0912c957d33f32021c55c3bb835e2c587bb8d38e745bca95ee070ce8357b',310001,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',50000000,'valid',NULL);
+INSERT INTO sends VALUES(8,'b57db455f07acb9fae894954ee8f9f32ca6d474514efdde0ccbd144e56e49bf9',310007,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBB',4000000,'valid',NULL);
+INSERT INTO sends VALUES(9,'96a04482fc202152dec10f962cf531cf7c33224e06ed92ae7d5b3916dc12029f',310008,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',526,'valid',NULL);
+INSERT INTO sends VALUES(24,'179efdc874bbb88a8a7b475f54a51dabd0119ad7bf18be27a41f155258af86a3',310023,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',10000,'valid',NULL);
 -- Triggers and indices on  sends
 CREATE TRIGGER _sends_delete BEFORE DELETE ON sends BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO sends(rowid,tx_index,tx_hash,block_index,source,destination,asset,quantity,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.destination)||','||quote(old.asset)||','||quote(old.quantity)||','||quote(old.status)||')');
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO sends(rowid,tx_index,tx_hash,block_index,source,destination,asset,quantity,status,memo) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.destination)||','||quote(old.asset)||','||quote(old.quantity)||','||quote(old.status)||','||quote(old.memo)||')');
                             END;
 CREATE TRIGGER _sends_insert AFTER INSERT ON sends BEGIN
                             INSERT INTO undolog VALUES(NULL, 'DELETE FROM sends WHERE rowid='||new.rowid);
                             END;
 CREATE TRIGGER _sends_update AFTER UPDATE ON sends BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'UPDATE sends SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',destination='||quote(old.destination)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE sends SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',destination='||quote(old.destination)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||',status='||quote(old.status)||',memo='||quote(old.memo)||' WHERE rowid='||old.rowid);
                             END;
 CREATE INDEX destination_idx ON sends (destination);
+CREATE INDEX memo_idx ON sends (memo);
 CREATE INDEX source_idx ON sends (source);
 
 -- Table  storage

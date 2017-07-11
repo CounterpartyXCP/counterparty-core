@@ -109,7 +109,7 @@ def parse(db, tx, message):
                     'quantity': quantity,
                     'status': status,
                    }
-        sql = 'insert into sends values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :quantity, :status)'
+        sql = 'insert into sends values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :quantity, :status, NULL)'
         cursor = db.cursor()
         cursor.execute(sql, bindings)
 
