@@ -44,6 +44,8 @@ def unpack(db, message, block_index):
 
         # asset id to name
         asset = util.generate_asset_name(asset_id, block_index)
+        if asset == config.BTC:
+          raise exceptions.AssetNameError('{} not allowed'.format(config.BTC))
 
     except (struct.error) as e:
         logger.warning("enhanced send unpack error: {}".format(e))
@@ -61,11 +63,36 @@ def unpack(db, message, block_index):
     }
     return unpacked
 
-def validate (db, source, destination, asset, quantity, block_index):
-    # unimplemented
-    pass
+def validate (db, source, destination, asset, quantity, memo, block_index):
+    problems = []
 
-def compose (db, source, destination, asset, quantity):
+    if asset == config.BTC: problems.append('cannot send {}'.format(config.BTC))
+
+    if not isinstance(quantity, int):
+        problems.append('quantity must be in satoshis')
+        return problems
+
+    if quantity < 0:
+        problems.append('negative quantity')
+
+    if quantity == 0:
+        problems.append('zero quantity')
+
+    # For SQLite3
+    if quantity > config.MAX_INT:
+        problems.append('integer overflow')
+
+    # destination is always required
+    if not destination:
+        problems.append('destination is required')
+
+    # check memo
+    if memo is not None and len(memo) > MAX_MEMO_LENGTH:
+      problems.append('memo is too long')
+
+    return problems
+
+def compose (db, source, destination, asset, quantity, memo):
     # unimplemented
     pass
 
