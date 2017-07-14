@@ -27,20 +27,23 @@ def initialise (db):
 
 def unpack(db, message, block_index):
     try:
-        asset_id, quantity, short_address_bytes = struct.unpack(FORMAT, message[:LENGTH])
+        # account for memo bytes
+        memo_bytes_length = len(message) - LENGTH
+        if memo_bytes_length < 0:
+            raise exceptions.UnpackError('invalid message length')
+        if memo_bytes_length > MAX_MEMO_LENGTH:
+            raise exceptions.UnpackError('memo too long')
+
+        struct_format = FORMAT + ('{}s'.format(memo_bytes_length))
+        asset_id, quantity, short_address_bytes, memo_bytes = struct.unpack(struct_format, message)
+        if len(memo_bytes) == 0:
+            memo_bytes = None
         
         # unpack address
         try:
           full_address = address.unpack(short_address_bytes)
         except:
           raise exceptions.UnpackError('address invalid')
-
-        # unpack memo
-        memo = message[37:]
-        if len(memo) > MAX_MEMO_LENGTH:
-          raise exceptions.UnpackError('memo too long')
-        if len(memo) == 0:
-          memo = None
 
         # asset id to name
         asset = util.generate_asset_name(asset_id, block_index)
@@ -59,11 +62,11 @@ def unpack(db, message, block_index):
       'asset': asset,
       'quantity': quantity,
       'address': full_address,
-      'memo': memo,
+      'memo': memo_bytes,
     }
     return unpacked
 
-def validate (db, source, destination, asset, quantity, memo, block_index):
+def validate (db, source, destination, asset, quantity, memo_bytes, block_index):
     problems = []
 
     if asset == config.BTC: problems.append('cannot send {}'.format(config.BTC))
@@ -87,14 +90,54 @@ def validate (db, source, destination, asset, quantity, memo, block_index):
         problems.append('destination is required')
 
     # check memo
-    if memo is not None and len(memo) > MAX_MEMO_LENGTH:
+    if memo_bytes is not None and len(memo_bytes) > MAX_MEMO_LENGTH:
       problems.append('memo is too long')
 
     return problems
 
-def compose (db, source, destination, asset, quantity, memo):
-    # unimplemented
-    pass
+def compose (db, source, destination, asset, quantity, memo, memo_is_hex):
+    cursor = db.cursor()
+
+    # Just send BTC?
+    if asset == config.BTC:
+        return (source, [(destination, quantity)], None)
+
+    # resolve subassets
+    asset = util.resolve_subasset_longname(db, asset)
+
+    #quantity must be in int satoshi (not float, string, etc)
+    if not isinstance(quantity, int):
+        raise exceptions.ComposeError('quantity must be an int (in satoshi)')
+
+    # Only for outgoing (incoming will overburn).
+    balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, asset)))
+    if not balances or balances[0]['quantity'] < quantity:
+        raise exceptions.ComposeError('insufficient funds')
+
+    # convert memo to memo_bytes based on memo_is_hex setting
+    if memo is None:
+        memo_bytes = b''
+    elif memo_is_hex:
+        memo_bytes = bytes.fromhex(memo)
+    else:
+        memo = memo.encode('utf-8')
+        memo_bytes = struct.pack(">{}s".format(len(memo)), memo)
+
+    block_index = util.CURRENT_BLOCK_INDEX
+
+    problems = validate(db, source, destination, asset, quantity, memo_bytes, block_index)
+    if problems: raise exceptions.ComposeError(problems)
+
+    asset_id = util.get_asset_id(db, asset, block_index)
+
+    short_address_bytes = address.pack(destination)
+
+    data = message_type.pack(ID)
+    data += struct.pack(FORMAT, asset_id, quantity, short_address_bytes)
+    data += memo_bytes
+
+    cursor.close()
+    return (source, [(destination, None)], data)
 
 def parse (db, tx, message):
     # unimplemented
