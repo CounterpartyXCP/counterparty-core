@@ -4005,7 +4005,7 @@ UNITTEST_VECTOR = {
             })
         }, {
             'in': (bytes.fromhex('0000000000000001' + '000000000000007b' + '0001'), DP['default_block_index']),
-            'error': (exceptions.UnpackError, 'could not unpack')
+            'error': (exceptions.UnpackError, 'invalid message length')
         }, {
             'in': (bytes.fromhex('0000000000000001' + '000000000000007b' + '006474849fc9ac0f5bd6b49fe144d14db7d32e2445' + '9999999999999999999999999999999999999999999999999999999999999999999999'), DP['default_block_index']),
             'error': (exceptions.UnpackError, 'memo too long')
@@ -4016,7 +4016,37 @@ UNITTEST_VECTOR = {
             'in': (bytes.fromhex('0000000000000003' + '000000000000007b' + '006474849fc9ac0f5bd6b49fe144d14db7d32e2445'), DP['default_block_index']),
             'error': (exceptions.UnpackError, 'asset id invalid')
         }],
-        'validate': [{
+        'validate': [
+        # ----- tests copied from regular send -----
+        {
+            'in': (ADDR[0], ADDR[1], 'XCP', DP['quantity'], None, 1),
+            'out': ([])
+        }, {
+            'in': (ADDR[0], P2SH_ADDR[0], 'XCP', DP['quantity'], None, 1),
+            'out': ([])
+        }, {
+            'in': (P2SH_ADDR[0], ADDR[1], 'XCP', DP['quantity'], None, 1),
+            'out': ([])
+        }, {
+            'in': (ADDR[0], ADDR[1], 'BTC', DP['quantity'], None, 1),
+            'out': (['cannot send {}'.format(config.BTC)])
+        }, {
+            'in': (ADDR[0], ADDR[1], 'XCP', DP['quantity'] / 3, None, 1),
+            'out': (['quantity must be in satoshis'])
+        }, {
+            'in': (ADDR[0], ADDR[1], 'XCP', -1 * DP['quantity'], None, 1),
+            'out': (['negative quantity'])
+        }, {
+            'in': (ADDR[0], MULTISIGADDR[0], 'XCP', DP['quantity'], None, 1),
+            'out': ([])
+        }, {
+            'in': (ADDR[0], ADDR[1], 'MAXI', 2**63 - 1, None, 1),
+            'out': ([])
+        }, {
+            'in': (ADDR[0], ADDR[1], 'MAXI', 2**63, None, 1),
+            'out': (['integer overflow'])
+        }, {
+            # ----- tests specific to enhanced send -----
             'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU', 'SOUP', 100000000, None, DP['default_block_index']),
             'out': ([])
         }, {
@@ -4031,6 +4061,59 @@ UNITTEST_VECTOR = {
         }, {
             'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU', 'SOUP', 100000000, bytes.fromhex('9999999999999999999999999999999999999999999999999999999999999999999999'), DP['default_block_index']),
             'out': (['memo is too long'])
+        }],
+        'compose': [
+        # ----- tests copied from regular send -----
+        {
+            'in': (ADDR[0], ADDR[1], 'XCP', DP['quantity'] * 10000000, None, False),
+            'error': (exceptions.ComposeError, 'insufficient funds')
+        }, {
+            'in': (ADDR[0], ADDR[1], 'XCP', DP['quantity'] / 3, None, False),
+            'error': (exceptions.ComposeError, 'quantity must be an int (in satoshi)')
+        }, {
+            'in': (ADDR[0], ADDR[1], 'MAXI', 2**63 + 1, None, False),
+            'error': (exceptions.ComposeError, 'insufficient funds')
+        }, {
+            'in': (ADDR[0], ADDR[1], 'BTC', DP['quantity'], None, False),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 100000000)],
+                    None)
+        }, {
+            'in': (ADDR[0], P2SH_ADDR[0], 'BTC', DP['quantity'], None, False),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    [('2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy', 100000000)],
+                    None)
+        }, {
+            'comment': 'resolve subasset to numeric asset',
+            'mock_protocol_changes': {'short_tx_type_id': True},
+            'in': (ADDR[0], ADDR[1], 'PARENT.already.issued', 100000000, None, False),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)],
+                    bytes.fromhex('02' + '01530821671b1065' + '0000000005f5e100' + '6f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec'))
+        }, 
+        # ----- tests specific to enhanced send -----
+        {
+            'mock_protocol_changes': {'short_tx_type_id': True},
+            'in': (ADDR[1], ADDR[0], 'XCP', DP['small'], None, None),
+            'out': (ADDR[1], [(ADDR[0], None)],
+                    bytes.fromhex('02' + '0000000000000001' + '0000000002faf080' + '6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037'))
+        }, {
+            # memo as hex
+            'mock_protocol_changes': {'short_tx_type_id': True},
+            'in': (ADDR[1], ADDR[0], 'XCP', DP['small'], '12345abcde', True),
+            'out': (ADDR[1], [(ADDR[0], None)],
+                    bytes.fromhex('02' + '0000000000000001' + '0000000002faf080' + '6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037' + '12345abcde'))
+        }, {
+            # pack a string into bytes
+            'mock_protocol_changes': {'short_tx_type_id': True},
+            'in': (ADDR[1], ADDR[0], 'XCP', DP['small'], 'hello', False),
+            'out': (ADDR[1], [(ADDR[0], None)],
+                    bytes.fromhex('02' + '0000000000000001' + '0000000002faf080' + '6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037' + '68656c6c6f'))
+        }, {
+            # memo too long
+            'mock_protocol_changes': {'short_tx_type_id': True},
+            'in': (ADDR[1], ADDR[0], 'XCP', DP['small'], '12345678901234567890123456789012345', False),
+            'error': (exceptions.ComposeError, "['memo is too long']")
         }],
     }
 }
