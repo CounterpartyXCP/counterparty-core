@@ -78,8 +78,8 @@ def validate (db, source, destination, asset, quantity, memo_bytes, block_index)
     if quantity < 0:
         problems.append('negative quantity')
 
-    if quantity == 0:
-        problems.append('zero quantity')
+    # if quantity == 0:
+    #     problems.append('zero quantity')
 
     # For SQLite3
     if quantity > config.MAX_INT:
