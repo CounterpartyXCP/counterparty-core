@@ -333,7 +333,7 @@ def check_record(record, server_db):
 
             raise AssertionError("check_record \n" +
                                  "table=" + record['table'] + " \n" +
-                                 "condiitions=" + ",".join(conditions) + " \n" +
+                                 "conditions=" + ",".join(conditions) + " \n" +
                                  "bindings=" + ",".join(map(lambda v: str(v), bindings)))
 
 def vector_to_args(vector, functions=[]):
