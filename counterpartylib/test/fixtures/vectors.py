@@ -4052,9 +4052,9 @@ UNITTEST_VECTOR = {
         }, {
             'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU', 'SOUP', 100000000, bytes.fromhex('01ff'), DP['default_block_index']),
             'out': ([])
-        }, {
-            'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU', 'SOUP', 0, bytes.fromhex('01ff'), DP['default_block_index']),
-            'out': (['zero quantity'])
+        # }, {
+        #     'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU', 'SOUP', 0, bytes.fromhex('01ff'), DP['default_block_index']),
+        #     'out': (['zero quantity'])
         }, {
             'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '', 'SOUP', 100000000, bytes.fromhex('01ff'), DP['default_block_index']),
             'out': (['destination is required'])
