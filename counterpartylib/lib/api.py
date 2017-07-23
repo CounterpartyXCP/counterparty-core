@@ -70,7 +70,8 @@ COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
                 'allow_unconfirmed_inputs', 'fee', 'fee_provided',
                 'estimate_fee_per_kb', 'estimate_fee_per_kb_nblocks',
-                'unspent_tx_hash', 'custom_inputs', 'dust_return_pubkey', 'disable_utxo_locks']
+                'unspent_tx_hash', 'custom_inputs', 'dust_return_pubkey', 'disable_utxo_locks',
+                'use_enhanced_send']
 
 API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
 API_MAX_LOG_COUNT = 10
@@ -271,7 +272,8 @@ def compose_transaction(db, name, params,
                         allow_unconfirmed_inputs=False,
                         fee=None,
                         fee_provided=0,
-                        unspent_tx_hash=None, custom_inputs=None, dust_return_pubkey=None, disable_utxo_locks=False):
+                        unspent_tx_hash=None, custom_inputs=None, dust_return_pubkey=None, disable_utxo_locks=False,
+                        use_enhanced_send=None):
     """Create and return a transaction."""
 
     # Get provided pubkeys.
@@ -298,6 +300,13 @@ def compose_transaction(db, name, params,
             raise script.AddressError('invalid public key: {}'.format(pubkey))
 
     compose_method = sys.modules['counterpartylib.lib.messages.{}'.format(name)].compose
+
+    # special case - enhanced_send replaces send by default when it is enabled
+    #   (It can be explicitly disabled with an API parameter)
+    if name == 'send' and util.enabled('enhanced_sends'):
+        if use_enhanced_send is None or use_enhanced_send == True:
+            compose_method = sys.modules['counterpartylib.lib.messages.enhanced_send'].compose
+
     compose_params = inspect.getargspec(compose_method)[0]
     missing_params = [p for p in compose_params if p not in params and p != 'db']
     for param in missing_params:

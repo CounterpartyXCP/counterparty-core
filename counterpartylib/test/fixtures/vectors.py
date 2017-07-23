@@ -3555,6 +3555,24 @@ UNITTEST_VECTOR = {
         }, {
             'in': ('create_dividend', {'source': ADDR[0], 'quantity_per_unit': 1, 'asset': 'NODIVISIBLE', 'dividend_asset': 'XCP', 'encoding': 'multisig'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e000000000000695121025a415bf04af834423d3dd7ad96dc727a030865759f9fbc9036a64c1197e587c8210254da540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe7246f210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+
+        # CIP 9 enhanced_send tests
+
+        }, {
+            'comment': 'standard op return send',
+            'mock_protocol_changes': {'enhanced_sends': False},
+            'in': ('create_send', {'source': ADDR[0], 'destination': ADDR[1], 'asset': 'XCP', 'quantity': DP['small']}),
+            'out': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'03'+'3615000000000000'+'19'+'76a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac'+'0000000000000000'+'1e'+'6a1c2a504df746f83442653dd7ada4dc727a030865749e9fba5aec80c39a'+'1b2bea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'
+        }, {
+            'comment': 'standard op return send (with API parameter)',
+            'mock_protocol_changes': {'enhanced_sends': True},
+            'in': ('create_send', {'use_enhanced_send': False, 'source': ADDR[0], 'destination': ADDR[1], 'asset': 'XCP', 'quantity': DP['small']}),
+            'out': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'03'+'3615000000000000'+'19'+'76a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac'+'0000000000000000'+'1e'+'6a1c2a504df746f83442653dd7ada4dc727a030865749e9fba5aec80c39a'+'1b2bea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'
+        }, {
+            'comment': 'CIP 9 enhanced_send (op_return)',
+            'mock_protocol_changes': {'enhanced_sends': True},
+            'in': ('create_send', {'source': ADDR[0], 'destination': ADDR[1], 'asset': 'XCP', 'quantity': DP['small']}),
+            'out': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'02'+'0000000000000000'+'33'+'6a312a504df746f83442653dd7afa4dc727a030865749e9fba5aec80c39a9e68edbc79e78ed45723c1072c38aededa458f95fa'+'a343ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'
         }],
         'generate_asset_id': [{
             'in': ('BTC', DP['default_block_index']),
@@ -4088,26 +4106,26 @@ UNITTEST_VECTOR = {
             'mock_protocol_changes': {'short_tx_type_id': True},
             'in': (ADDR[0], ADDR[1], 'PARENT.already.issued', 100000000, None, False),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)],
+                    [],
                     bytes.fromhex('02' + '01530821671b1065' + '0000000005f5e100' + '6f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec'))
         }, 
         # ----- tests specific to enhanced send -----
         {
             'mock_protocol_changes': {'short_tx_type_id': True},
             'in': (ADDR[1], ADDR[0], 'XCP', DP['small'], None, None),
-            'out': (ADDR[1], [(ADDR[0], None)],
+            'out': (ADDR[1], [],
                     bytes.fromhex('02' + '0000000000000001' + '0000000002faf080' + '6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037'))
         }, {
             # memo as hex
             'mock_protocol_changes': {'short_tx_type_id': True},
             'in': (ADDR[1], ADDR[0], 'XCP', DP['small'], '12345abcde', True),
-            'out': (ADDR[1], [(ADDR[0], None)],
+            'out': (ADDR[1], [],
                     bytes.fromhex('02' + '0000000000000001' + '0000000002faf080' + '6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037' + '12345abcde'))
         }, {
             # pack a string into bytes
             'mock_protocol_changes': {'short_tx_type_id': True},
             'in': (ADDR[1], ADDR[0], 'XCP', DP['small'], 'hello', False),
-            'out': (ADDR[1], [(ADDR[0], None)],
+            'out': (ADDR[1], [],
                     bytes.fromhex('02' + '0000000000000001' + '0000000002faf080' + '6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037' + '68656c6c6f'))
         }, {
             # memo too long
