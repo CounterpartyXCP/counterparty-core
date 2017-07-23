@@ -28,6 +28,7 @@ MOCK_PROTOCOL_CHANGES = {
 MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
     'subassets': {'block_index': 310495, 'allow_always_latest': True},  # override to be true only at block 310495
     'short_tx_type_id': {'block_index': 310502, 'allow_always_latest': False},  # override to be true only at block 310502
+    'enhanced_sends': {'block_index': 310999, 'allow_always_latest': False},  # override to be true only at block 310502
 }
 ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False
 ALWAYS_LATEST_PROTOCOL_CHANGES = False

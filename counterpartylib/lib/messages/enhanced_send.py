@@ -137,7 +137,8 @@ def compose (db, source, destination, asset, quantity, memo, memo_is_hex):
     data += memo_bytes
 
     cursor.close()
-    return (source, [(destination, None)], data)
+    # return an empty array as the second argument because we don't need to send BTC dust to the recipient
+    return (source, [], data)
 
 def parse (db, tx, message):
     cursor = db.cursor()
