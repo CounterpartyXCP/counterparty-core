@@ -32,7 +32,8 @@ from counterpartylib.lib import backend
 from counterpartylib.lib import log
 from counterpartylib.lib import database
 from counterpartylib.lib import message_type
-from .messages import (send, enhanced_send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, publish, execute, destroy)
+from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, publish, execute, destroy)
+from .messages.versions import enhanced_send
 
 from .kickstart.blocks_parser import BlockchainParser, ChainstateParser
 from .kickstart.utils import ib2h
@@ -369,7 +370,6 @@ def initialise(db):
     cancel.initialise(db)
     rps.initialise(db)
     rpsresolve.initialise(db)
-    enhanced_send.initialise(db)
 
     # Messages
     cursor.execute('''CREATE TABLE IF NOT EXISTS messages(
