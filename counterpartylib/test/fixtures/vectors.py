@@ -4014,7 +4014,7 @@ UNITTEST_VECTOR = {
             'out': '2MtAV7xpAzU69E8GxRF2Vd2xt79kDnif6F5'
         }]
     },
-    'enhanced_send': {
+    'versions.enhanced_send': {
         'unpack': [{
             'in': (bytes.fromhex('000000000004fadf' + '000000174876e800' + '006474849fc9ac0f5bd6b49fe144d14db7d32e2445'), DP['default_block_index']),
             'out': ({

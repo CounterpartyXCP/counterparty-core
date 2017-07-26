@@ -12,19 +12,6 @@ LENGTH = 8 + 8 + 21
 MAX_MEMO_LENGTH = 34
 ID = 2 # 0x02
 
-def initialise (db):
-    cursor = db.cursor()
-
-    # Adds a memo to sends
-    #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS`.
-    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(sends)''')]
-    if 'memo' not in columns:
-        cursor.execute('''ALTER TABLE sends ADD COLUMN memo BLOB''')
-
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      memo_idx ON sends (memo)
-                   ''')
-
 def unpack(db, message, block_index):
     try:
         # account for memo bytes
