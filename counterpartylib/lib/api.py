@@ -190,8 +190,15 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
         if 'case_sensitive' in filter_ and not isinstance(filter_['case_sensitive'], bool):
             raise APIError("case_sensitive must be a boolean")
 
+    # special case for memo and memo_hex field searches
+    if table == 'sends':
+        adjust_get_sends_memo_filters(filters)
+
     # SELECT
-    statement = '''SELECT * FROM {}'''.format(table)
+    if table == 'sends':
+        statement = '''SELECT *, CASE WHEN memo IS NULL THEN NULL ELSE hex(memo) END AS memo_hex FROM {}'''.format(table)
+    else:
+        statement = '''SELECT * FROM {}'''.format(table)
     # WHERE
     bindings = []
     conditions = []
@@ -258,7 +265,42 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
         if offset:
             statement += ''' OFFSET {}'''.format(offset)
 
-    return db_query(db, statement, tuple(bindings))
+
+    query_result = db_query(db, statement, tuple(bindings))
+
+    if table == 'sends':
+        # for sends, handle the memo field properly
+        return adjust_get_sends_results(query_result)
+
+    return query_result
+
+def adjust_get_sends_memo_filters(filters):
+    """Convert memo to a byte string.  If memo_hex is supplied, attempt to decode it and use that instead."""
+    for filter_ in filters:
+        if filter_['field'] == 'memo':
+            filter_['value'] = bytes(filter_['value'], 'utf-8')
+        if filter_['field'] == 'memo_hex':
+            # search the indexed memo field with a byte string
+            filter_['field'] = 'memo'
+            try:
+                filter_['value'] = bytes.fromhex(filter_['value'])
+            except ValueError as e:
+                raise APIError("Invalid memo_hex value")
+
+def adjust_get_sends_results(query_result):
+    """Try and decode the memo from a utf-8 uncoded string. Otherwise return an empty memo."""
+    filtered_results = []
+    for send_row in list(query_result):
+        try:
+            if send_row['memo'] is None:
+                send_row['memo'] = None
+            else:
+                send_row['memo'] = send_row['memo'].decode('utf-8')
+        except UnicodeDecodeError:
+            send_row['memo'] = ''
+        filtered_results.append(send_row)
+    return filtered_results
+
 
 def compose_transaction(db, name, params,
                         encoding='auto',

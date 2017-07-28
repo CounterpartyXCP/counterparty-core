@@ -65,6 +65,12 @@ UNITTEST_FIXTURE = [
     ['broadcast', (P2SH_ADDR[0], 1388000002, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'opreturn'}],
     ['bet', (P2SH_ADDR[0], P2SH_ADDR[0], 3, 1388000200, 10, 10, 0.0, 5040, 1000), {'encoding': 'opreturn'}],
 
+    ['create_next_block', 480],
+
+    # force 2 enhanced sends
+    ['send', (ADDR[0], ADDR[1], 'XCP', DP['quantity'], True, 'hello', False), {'encoding': 'opreturn'}, {'enhanced_sends': True}],
+    ['send', (ADDR[1], ADDR[0], 'XCP', DP['quantity'], True, 'fade0001', True), {'encoding': 'opreturn'}, {'enhanced_sends': True}],
+
     ['create_next_block', 485],
 
     ['broadcast', (ADDR[4], 1388000000, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
