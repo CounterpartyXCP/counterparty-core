@@ -28,7 +28,7 @@ MOCK_PROTOCOL_CHANGES = {
 MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
     'subassets': {'block_index': 310495, 'allow_always_latest': True},  # override to be true only at block 310495
     'short_tx_type_id': {'block_index': 310502, 'allow_always_latest': False},  # override to be true only at block 310502
-    'enhanced_sends': {'block_index': 310999, 'allow_always_latest': False},  # override to be true only at block 310502
+    'enhanced_sends': {'block_index': 310999, 'allow_always_latest': False},  # override to be true only at block 310999
 }
 ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False
 ALWAYS_LATEST_PROTOCOL_CHANGES = False
@@ -44,7 +44,6 @@ def enabled(change_name, block_index=None):
         if _block_index is None:
             _block_index = util.CURRENT_BLOCK_INDEX
         logger = logging.getLogger(__name__)
-        # print("shouldCheckForMockProtocolChangesAtBlock {} {} enabled: {}".format(change_name,_block_index,_block_index >= MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]['block_index']))
         if _block_index >= MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]['block_index']:
             return True
         return False

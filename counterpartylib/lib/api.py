@@ -195,7 +195,10 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
         adjust_get_sends_memo_filters(filters)
 
     # SELECT
-    statement = '''SELECT * FROM {}'''.format(table)
+    if table == 'sends':
+        statement = '''SELECT *, CASE WHEN memo IS NULL THEN NULL ELSE hex(memo) END AS memo_hex FROM {}'''.format(table)
+    else:
+        statement = '''SELECT * FROM {}'''.format(table)
     # WHERE
     bindings = []
     conditions = []
@@ -285,15 +288,13 @@ def adjust_get_sends_memo_filters(filters):
                 raise APIError("Invalid memo_hex value")
 
 def adjust_get_sends_results(query_result):
-    """Format the memo_hex field.  Try and decode the memo from a utf-8 uncoded string. Invalid utf-8 strings return an empty memo."""
+    """Try and decode the memo from a utf-8 uncoded string. Otherwise return an empty memo."""
     filtered_results = []
     for send_row in list(query_result):
         try:
             if send_row['memo'] is None:
-                send_row['memo_hex'] = None
                 send_row['memo'] = None
             else:
-                send_row['memo_hex'] = binascii.hexlify(send_row['memo']).decode('utf8')
                 send_row['memo'] = send_row['memo'].decode('utf-8')
         except UnicodeDecodeError:
             send_row['memo'] = ''
@@ -377,13 +378,13 @@ def conditional_decorator(decorator, condition):
 def init_api_access_log(app):
     """Initialize API logger."""
     loggers = (logging.getLogger('werkzeug'), app.logger)
-    
+
     # Disable console logging...
     for l in loggers:
         l.setLevel(logging.INFO)
         l.propagate = False
 
-    # Log to file, if configured...    
+    # Log to file, if configured...
     if config.API_LOG:
         handler = logging_handlers.RotatingFileHandler(config.API_LOG, 'a', API_MAX_LOG_SIZE, API_MAX_LOG_COUNT)
         for l in loggers:
@@ -504,7 +505,7 @@ class APIServer(threading.Thread):
                     error_msg = "Error composing {} transaction via API: {}".format(tx, str(error))
                     logging.warning(error_msg)
                     raise JSONRPCDispatchException(code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg)
-            
+
             return create_method
 
         for tx in API_TRANSACTIONS:
@@ -649,7 +650,7 @@ class APIServer(threading.Thread):
             cursor.execute('SELECT * FROM messages WHERE block_index IN (%s) ORDER BY message_index ASC'
                 % (block_indexes_str,))
             messages = collections.deque(cursor.fetchall())
-            
+
             # Discard any messages less than min_message_index
             if min_message_index:
                 while len(messages) and messages[0]['message_index'] < min_message_index:
@@ -915,7 +916,7 @@ class APIServer(threading.Thread):
                 except (script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
                     error_msg = logging.warning("{} -- error composing {} transaction via API: {}".format(
                         str(error.__class__.__name__), query_type, str(error)))
-                    return flask.Response(error_msg, 400, mimetype='application/json')                        
+                    return flask.Response(error_msg, 400, mimetype='application/json')
             else:
                 # Need to de-generate extra_args to pass it through.
                 query_args = dict([item for item in extra_args])
@@ -947,11 +948,11 @@ class APIServer(threading.Thread):
 
         # Init the HTTP Server.
         init_api_access_log(app)
-        
+
         # Run app server (blocking)
         self.is_ready = True
         app.run(host=config.RPC_HOST, port=config.RPC_PORT, threaded=True)
-            
+
         db.close()
         return
 

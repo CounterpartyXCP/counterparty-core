@@ -6,7 +6,7 @@ tests if the outputs of all scenarios are identical. It also tests the similarit
 scenario (for instance `simplesig` scenario is the base scenario for all mutlisig scenarios).
 
 To add (or update) a transaction in a scenario, or add a scenario, just update `scenarios.py` and run `py.test --skiptestbook=all --savescenarios`
-This command will generates new outputs for each scenario (.new.json, .new.sql and .new.log), if you are satisfied with the new output just rename them (remove the .new). 
+This command will generates new outputs for each scenario (.new.json, .new.sql and .new.log), if you are satisfied with the new output just rename them (remove the .new).
 You need to do this every time you update UNITTEST_FIXTURE.
 
 ```
@@ -68,8 +68,8 @@ UNITTEST_FIXTURE = [
     ['create_next_block', 480],
 
     # force 2 enhanced sends
-    ['send', (ADDR[0], ADDR[1], 'XCP', DP['quantity'], 'hello', False, True), {'encoding': 'opreturn'}, {'enhanced_sends': True}],
-    ['send', (ADDR[1], ADDR[0], 'XCP', DP['quantity'], 'fade0001', True, True), {'encoding': 'opreturn'}, {'enhanced_sends': True}],
+    ['send', (ADDR[0], ADDR[1], 'XCP', DP['quantity'], True, 'hello', False), {'encoding': 'opreturn'}, {'enhanced_sends': True}],
+    ['send', (ADDR[1], ADDR[0], 'XCP', DP['quantity'], True, 'fade0001', True), {'encoding': 'opreturn'}, {'enhanced_sends': True}],
 
     ['create_next_block', 485],
 
