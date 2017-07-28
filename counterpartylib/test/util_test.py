@@ -251,11 +251,13 @@ def run_scenario(scenario, rawtransactions_db):
     raw_transactions = []
     for tx in scenario:
         if tx[0] != 'create_next_block':
-            module = sys.modules['counterpartylib.lib.messages.{}'.format(tx[0])]
-            compose = getattr(module, 'compose')
-            unsigned_tx_hex = transaction.construct(db, compose(db, *tx[1]), **tx[2])
-            raw_transactions.append({tx[0]: unsigned_tx_hex})
-            insert_raw_transaction(unsigned_tx_hex, db, rawtransactions_db)
+            mock_protocol_changes = tx[3] if len(tx) == 4 else {}
+            with MockProtocolChangesContext(**(mock_protocol_changes or {})):
+                module = sys.modules['counterpartylib.lib.messages.{}'.format(tx[0])]
+                compose = getattr(module, 'compose')
+                unsigned_tx_hex = transaction.construct(db, compose(db, *tx[1]), **tx[2])
+                raw_transactions.append({tx[0]: unsigned_tx_hex})
+                insert_raw_transaction(unsigned_tx_hex, db, rawtransactions_db)
         else:
             create_next_block(db, block_index=config.BURN_START + tx[1], parse_block=tx[2] if len(tx) == 3 else True)
 
