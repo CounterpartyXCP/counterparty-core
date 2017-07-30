@@ -48,7 +48,7 @@ def unpack(db, message, block_index):
 def validate (db, source, destination, asset, quantity, block_index):
     return send1.validate(db, source, destination, asset, quantity, block_index)
 
-def compose (db, source, destination, asset, quantity, use_enhanced_send=None, memo=None, memo_is_hex=False):
+def compose (db, source, destination, asset, quantity, memo=None, memo_is_hex=False, use_enhanced_send=None):
     # special case - enhanced_send replaces send by default when it is enabled
     #   but it can be explicitly disabled with an API parameter
     if util.enabled('enhanced_sends'):
