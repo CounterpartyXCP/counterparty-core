@@ -68,8 +68,8 @@ UNITTEST_FIXTURE = [
     ['create_next_block', 480],
 
     # force 2 enhanced sends
-    ['send', (ADDR[0], ADDR[1], 'XCP', DP['quantity'], True, 'hello', False), {'encoding': 'opreturn'}, {'enhanced_sends': True}],
-    ['send', (ADDR[1], ADDR[0], 'XCP', DP['quantity'], True, 'fade0001', True), {'encoding': 'opreturn'}, {'enhanced_sends': True}],
+    ['send', (ADDR[0], ADDR[1], 'XCP', DP['quantity'], 'hello', False, True), {'encoding': 'opreturn'}, {'enhanced_sends': True}],
+    ['send', (ADDR[1], ADDR[0], 'XCP', DP['quantity'], 'fade0001', True, True), {'encoding': 'opreturn'}, {'enhanced_sends': True}],
 
     ['create_next_block', 485],
 
