@@ -47,7 +47,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     if asset == config.BTC:
         problems.append('cannot pay dividends to holders of {}'.format(config.BTC))
     if asset == config.XCP:
-        if (not block_index >= 317500) or block_index >= 320000 or config.TESTNET:   # Protocol change.
+        if (not block_index >= 317500) or block_index >= 320000 or config.TESTNET or config.REGTEST:   # Protocol change.
             problems.append('cannot pay dividends to holders of {}'.format(config.XCP))
 
     if quantity_per_unit <= 0:
@@ -65,7 +65,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     divisible = issuances[0]['divisible']
 
     # Only issuer can pay dividends.
-    if block_index >= 320000 or config.TESTNET:   # Protocol change.
+    if block_index >= 320000 or config.TESTNET or config.REGTEST:   # Protocol change.
         if issuances[-1]['issuer'] != source:
             problems.append('only issuer can pay dividends')
 
@@ -86,12 +86,12 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     dividend_total = 0
     for holder in holders:
 
-        if block_index < 294500 and not config.TESTNET: # Protocol change.
+        if block_index < 294500 and not config.TESTNET or config.REGTEST: # Protocol change.
             if holder['escrow']: continue
 
         address = holder['address']
         address_quantity = holder['address_quantity']
-        if block_index >= 296000 or config.TESTNET: # Protocol change.
+        if block_index >= 296000 or config.TESTNET or config.REGTEST: # Protocol change.
             if address == source: continue
 
         dividend_quantity = address_quantity * quantity_per_unit
@@ -114,7 +114,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     fee = 0
     if not problems and dividend_asset != config.BTC:
         holder_count = len(set(addresses))
-        if block_index >= 330000 or config.TESTNET: # Protocol change.
+        if block_index >= 330000 or config.TESTNET or config.REGTEST: # Protocol change.
             fee = int(0.0002 * config.UNIT * holder_count)
         if fee:
             balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, config.XCP)))
@@ -156,7 +156,7 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        if (tx['block_index'] > 288150 or config.TESTNET) and len(message) == LENGTH_2:
+        if (tx['block_index'] > 288150 or config.TESTNET or config.REGTEST) and len(message) == LENGTH_2:
             quantity_per_unit, asset_id, dividend_asset_id = struct.unpack(FORMAT_2, message)
             asset = util.get_asset_name(db, asset_id, tx['block_index'])
             dividend_asset = util.get_asset_name(db, dividend_asset_id, tx['block_index'])
@@ -185,7 +185,7 @@ def parse (db, tx, message):
     if status == 'valid':
         # Debit.
         util.debit(db, tx['source'], dividend_asset, dividend_total, action='dividend', event=tx['tx_hash'])
-        if tx['block_index'] >= 330000 or config.TESTNET: # Protocol change.
+        if tx['block_index'] >= 330000 or config.TESTNET or config.REGTEST: # Protocol change.
             util.debit(db, tx['source'], config.XCP, fee, action='dividend fee', event=tx['tx_hash'])
 
         # Credit.

@@ -8,7 +8,8 @@ UNIT = 100000000        # The same across assets.
 VERSION_MAJOR = 9
 VERSION_MINOR = 55
 VERSION_REVISION = 2
-VERSION_STRING = str(VERSION_MAJOR) + '.' + str(VERSION_MINOR) + '.' + str(VERSION_REVISION)
+VERSION_BRANCH = '+regtest'
+VERSION_STRING = str(VERSION_MAJOR) + '.' + str(VERSION_MINOR) + '.' + str(VERSION_REVISION) + VERSION_BRANCH
 
 
 # Counterparty protocol
@@ -75,6 +76,14 @@ BLOCK_FIRST_MAINNET_HASH = '00000000000000017bac9a8e85660ad348050c789922d5f8fe54
 BURN_START_MAINNET = 278310
 BURN_END_MAINNET = 283810
 
+BLOCK_FIRST_REGTEST = 0 # This is the only block we know the hash for
+BLOCK_FIRST_REGTEST_HASH = '0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206'
+BURN_START_REGTEST = 101
+BURN_END_REGTEST = 150 # Pretty short to make burn tests easier
+
+BLOCK_FIRST_REGTEST_TESTCOIN = 0
+BURN_START_REGTEST_TESTCOIN = 101
+BURN_END_REGTEST_TESTCOIN = 150
 
 # Protocol defaults
 # NOTE: If the DUST_SIZE constants are changed, they MUST also be changed in counterblockd/lib/config.py as well
