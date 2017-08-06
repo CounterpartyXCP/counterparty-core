@@ -294,8 +294,10 @@ from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
 class AltcoinSupportError (Exception): pass
 def private_key_to_public_key(private_key_wif):
     """Convert private key to public key."""
-    if config.TESTNET or config.REGTEST:
+    if config.TESTNET:
         allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_TESTNET]
+    elif config.REGTEST:
+        allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_REGTEST]
     else:
         allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_MAINNET]
     try:

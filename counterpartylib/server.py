@@ -115,6 +115,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
         config.TESTCOIN = False
 
     if regtest:
+        logger.debug('Got REGTEST config: {}'.format(regtest))
         config.REGTEST = regtest
     else:
         config.REGTEST = False
@@ -344,23 +345,22 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
             config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
             config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
     elif config.REGTEST:
-        # REGTEST behaves almost exactly like TESTNET
-        config.MAGIC_BYTES = config.MAGIC_BYTES_TESTNET
+        config.MAGIC_BYTES = config.MAGIC_BYTES_REGTEST
         if config.TESTCOIN:
-            config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
-            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET
+            config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
+            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_REGTEST
             config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST_TESTCOIN
             config.BURN_START = config.BURN_START_REGTEST_TESTCOIN
             config.BURN_END = config.BURN_END_REGTEST_TESTCOIN
-            config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
+            config.UNSPENDABLE = config.UNSPENDABLE_REGTEST
             config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
         else:
-            config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
-            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET
+            config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
+            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_REGTEST
             config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST
             config.BURN_START = config.BURN_START_REGTEST
             config.BURN_END = config.BURN_END_REGTEST
-            config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
+            config.UNSPENDABLE = config.UNSPENDABLE_REGTEST
             config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
     else:
         config.MAGIC_BYTES = config.MAGIC_BYTES_MAINNET
