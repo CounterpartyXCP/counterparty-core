@@ -136,7 +136,7 @@ def base58_check_decode(s, version):
     addrbyte, data, chk0 = base58_check_decode_parts(s)
 
     if addrbyte != version:
-        raise VersionByteError('incorrect version byte')
+        raise VersionByteError('incorrect version byte, have {}, expected {} from addr {}'.format(util.hexlify(addrbyte), util.hexlify(version), s))
 
     chk1 = util.dhash(addrbyte + data)[:4]
     if chk0 != chk1:

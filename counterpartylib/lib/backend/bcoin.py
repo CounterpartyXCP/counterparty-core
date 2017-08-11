@@ -57,22 +57,6 @@ def json_call(method_url):
     # Batch query returns a list
     return response_json
 
-    """if isinstance(response_json, list):
-        return response_json
-    if 'error' not in response_json.keys() or response_json['error'] == None:
-        return response_json['result']
-    elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
-        raise BackendRPCError('{} Is `txindex` enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
-    elif response_json['error']['code'] in [-28, -8, -2]:
-        # “Verifying blocks...” or “Block height out of range” or “The network does not appear to fully agree!“
-        logger.debug('Backend not ready. Sleeping for ten seconds.')
-        # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
-        # seconds to start, this’ll hit the maximum recursion depth limit.
-        time.sleep(10)
-        return rpc_call(payload)
-    else:
-        raise BackendRPCError('{}'.format(response_json['error']))"""
-
 
 def rpc_call(payload):
     url = config.BACKEND_URL
@@ -269,6 +253,49 @@ def refresh_unconfirmed_transactions_cache(mempool_txhash_list):
         "{:.2f}".format(cache_time, 3),
     ))
 
+def adapt_vin(vin, idx):
+    coinbasehash = "0000000000000000000000000000000000000000000000000000000000000000"
+    res = {
+        "txid": vin["prevout"]["hash"],
+        "vout": vin["prevout"]["index"], #idx,
+        "sequence": vin["sequence"],
+        "scriptSig": {
+            "hex": vin["script"],
+            "asm": vin["script"]
+        }
+    }
+
+    if ('coin' in res) and ('coinbase' in res['coin']) and (res['coin']['coinbase']):
+        res['scriptSig']['coinbase'] = True
+        res['coinbase'] = True
+
+    return res
+
+def adapt_to_addrindex(tx):
+    # We need to adapt what bcoin gives us to what counterparty expects
+    sz = len(tx["hex"])/2
+    return {
+        "hash": tx["hash"],
+        "txid": tx["hash"],
+        "size": sz,
+        "vsize": sz,
+        "version": tx["version"],
+        "locktime": tx["locktime"],
+        "blocktime": tx["time"],
+        "time": tx["mtime"],
+        "confirmations": tx["confirmations"],
+        "hex": tx["hex"],
+        "vin": map(adapt_vin, tx["inputs"], range(0, len(tx["inputs"]))),
+        "vout": map(lambda vout, idx: {
+            "n": idx,
+            "value": vout["value"]/config.UNIT,
+            "scriptPubKey": {
+                "hex": vout["script"]
+            },
+            "addresses": list(filter(None, [vout["address"]]))
+        }, tx["outputs"], range(0, len(tx["outputs"])))
+    }
+
 def searchrawtransactions(address, unconfirmed=False):
     # Get unconfirmed transactions.
     if unconfirmed:
@@ -289,7 +316,7 @@ def searchrawtransactions(address, unconfirmed=False):
             raise BackendRPCError('Unknown RPC command: `searchrawtransactions`. Please use a version of {} Core which supports an address index.'.format(config.BTC_NAME))
         else:
             raise BackendRPCError(str(e))
-    confirmed = [tx for tx in rawtransactions if 'confirmations' in tx and tx['confirmations'] > 0]
+    confirmed = [adapt_to_addrindex(tx) for tx in rawtransactions if 'confirmations' in tx and tx['confirmations'] > 0]
 
     return unconfirmed + confirmed
 
@@ -386,9 +413,9 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                 #TODO: this seems to happen for bogus transactions? Maybe handle it more gracefully than just erroring out?
                 raise BackendRPCError('{} (txhash:: {})'.format(response['error'], tx_hash_call_id.get(response.get('id', '??'), '??')))
         if len(batch_responses) == 0:
-            _logger.warning("Got 0 responses from batch getrawtransaction")
+            _logger.debug("Got 0 responses from batch getrawtransaction")
     else:
-        _logger.warning("No requests for batched getrawtransactions")
+        _logger.debug("No requests for batched getrawtransactions")
 
     # get transactions from cache
     result = {}

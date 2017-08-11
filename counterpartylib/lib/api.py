@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 from logging import handlers as logging_handlers
 D = decimal.Decimal
 import binascii
+import traceback
 
 import struct
 import apsw
@@ -458,6 +459,8 @@ class APIServer(threading.Thread):
                     return compose_transaction(db, name=tx, params=transaction_args, **common_args)
                 except (TypeError, script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
                     # TypeError happens when unexpected keyword arguments are passed in
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                    traceback.print_exception(exc_type, exc_value, exc_traceback)
                     error_msg = "Error composing {} transaction via API: {}".format(tx, str(error))
                     logging.warning(error_msg)
                     raise JSONRPCDispatchException(code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg)
