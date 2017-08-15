@@ -28,14 +28,14 @@ def unpack(db, message, block_index):
         
         # unpack address
         try:
-          full_address = address.unpack(short_address_bytes)
+            full_address = address.unpack(short_address_bytes)
         except:
-          raise exceptions.UnpackError('address invalid')
+            raise exceptions.UnpackError('address invalid')
 
         # asset id to name
         asset = util.generate_asset_name(asset_id, block_index)
         if asset == config.BTC:
-          raise exceptions.AssetNameError('{} not allowed'.format(config.BTC))
+            raise exceptions.AssetNameError('{} not allowed'.format(config.BTC))
 
     except (struct.error) as e:
         logger.warning("enhanced send unpack error: {}".format(e))
@@ -133,10 +133,7 @@ def parse (db, tx, message):
     # Unpack message.
     try:
         unpacked = unpack(db, message, tx['block_index'])
-        asset       = unpacked['asset']
-        quantity    = unpacked['quantity']
-        destination = unpacked['address']
-        memo_bytes  = unpacked['memo']
+        asset, quantity, destination, memo_bytes = unpacked['asset'], unpacked['quantity'], unpacked['address'], unpacked['memo']
 
         status = 'valid'
 
