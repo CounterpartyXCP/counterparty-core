@@ -80,7 +80,7 @@ def api(method, params):
         except KeyError:
             raise RPCError(response_json)
     else:
-        raise RPCError('{}'.format(response_json['error']))
+        raise RPCError('{} ({})'.format(response_json['error']['message'], response_json['error']['code']))
 
 def chunkify(l, n):
     n = max(1, n)
@@ -617,7 +617,7 @@ def creations (db):
     for issuance in cursor:
         asset = issuance['asset']
         created = issuance['created']
-        creations[asset] = created            
+        creations[asset] = created
 
     cursor.close()
     return creations
@@ -653,7 +653,7 @@ def supplies (db):
 
 def held (db): #TODO: Rename ?
     sql = '''SELECT asset, SUM(total) AS total FROM (
-                SELECT asset, SUM(quantity) AS total FROM balances GROUP BY asset 
+                SELECT asset, SUM(quantity) AS total FROM balances GROUP BY asset
                 UNION ALL
                 SELECT give_asset AS asset, SUM(give_remaining) AS total FROM orders WHERE status = 'open' GROUP BY asset
                 UNION ALL
@@ -766,37 +766,37 @@ def sizeof(v):
     else:
         return sys.getsizeof(v)
 
-class DictCache: 
+class DictCache:
     """Threadsafe FIFO dict cache"""
-    def __init__(self, size=100):  
-        if int(size) < 1 :  
-            raise AttributeError('size < 1 or not a number')  
-        self.size = size  
-        self.dict = collections.OrderedDict()  
-        self.lock = threading.Lock()  
-  
-    def __getitem__(self,key):  
-        with self.lock:  
-            return self.dict[key]  
-  
-    def __setitem__(self,key,value):  
-        with self.lock:  
-            while len(self.dict) >= self.size:  
-                self.dict.popitem(last=False)  
-            self.dict[key] = value  
-  
-    def __delitem__(self,key):  
-        with self.lock:  
+    def __init__(self, size=100):
+        if int(size) < 1 :
+            raise AttributeError('size < 1 or not a number')
+        self.size = size
+        self.dict = collections.OrderedDict()
+        self.lock = threading.Lock()
+
+    def __getitem__(self,key):
+        with self.lock:
+            return self.dict[key]
+
+    def __setitem__(self,key,value):
+        with self.lock:
+            while len(self.dict) >= self.size:
+                self.dict.popitem(last=False)
+            self.dict[key] = value
+
+    def __delitem__(self,key):
+        with self.lock:
             del self.dict[key]
 
     def __len__(self):
         with self.lock:
             return len(self.dict)
-            
+
     def __contains__(self, key):
-        with self.lock: 
+        with self.lock:
             return key in self.dict
-    
+
     def refresh(self, key):
         with self.lock:
             self.dict.move_to_end(key, last=True)
