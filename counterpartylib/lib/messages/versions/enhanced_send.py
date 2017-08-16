@@ -25,7 +25,7 @@ def unpack(db, message, block_index):
         asset_id, quantity, short_address_bytes, memo_bytes = struct.unpack(struct_format, message)
         if len(memo_bytes) == 0:
             memo_bytes = None
-        
+
         # unpack address
         try:
           full_address = address.unpack(short_address_bytes)
@@ -79,6 +79,16 @@ def validate (db, source, destination, asset, quantity, memo_bytes, block_index)
     # check memo
     if memo_bytes is not None and len(memo_bytes) > MAX_MEMO_LENGTH:
       problems.append('memo is too long')
+
+    cursor = db.cursor()
+    try:
+        results = cursor.execute('SELECT options FROM addresses WHERE address=?', (destination,))
+        if results:
+            result = results.fetchone()
+            if result and result['options'] & config.ADDRESS_OPTION_REQUIRE_MEMO and memo_bytes is not None and (len(memo_bytes) == 0):
+                problems.append('destination requires memo')
+    finally:
+        cursor.close()
 
     return problems
 

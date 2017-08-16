@@ -100,9 +100,22 @@ def validate (db, source, timestamp, value, fee_fraction_int, text, block_index)
         elif timestamp <= last_broadcast['timestamp']:
             problems.append('feed timestamps not monotonically increasing')
 
-    if not (block_index >= 317500 or config.TESTNET):  # Protocol change.
+    if not (block_index >= 317500 or config.TESTNET or config.REGTEST):  # Protocol change.
         if len(text) > 52:
             problems.append('text too long')
+
+    if text and text.lower().startswith('options'):
+        ops_spl = text.split(" ")
+        if len(ops_spl) == 2:
+            try:
+                options_int = int(ops_spl.pop())
+
+                if (options_int > config.MAX_INT) or (options_int < 0):
+                    problems.append('integer overflow')
+                elif options_int > config.ADDRESS_OPTION_MAX_VALUE:
+                    problems.append('options out of range')
+            except:
+                pass
 
     return problems
 
@@ -197,6 +210,29 @@ def parse (db, tx, message):
     # stop processing if broadcast is invalid for any reason
     if util.enabled('broadcast_invalid_check') and status != 'valid':
         return
+
+    # Options?
+    if (tx['block_index'] > config.BLOCK_START_ADDRESSES_OPTIONS) and ('locked feed' not in status) and ('options out of range' not in status):
+        if text and text.lower().startswith('options'):
+            ops_spl = text.split(" ")
+            if len(ops_spl) == 2:
+                change_ops = False
+                options_int = 0
+                try:
+                    options_int = int(ops_spl.pop())
+                    change_ops = True
+                except:
+                    pass
+
+                if change_ops:
+                    op_bindings = {
+                                'block_index': tx['block_index'],
+                                'address': tx['source'],
+                                'options': options_int
+                               }
+                    sql = 'insert or replace into addresses(address, options) values(:address, :options)'
+                    cursor = db.cursor()
+                    cursor.execute(sql, op_bindings)
 
     # Negative values (default to ignore).
     if value is None or value < 0:
