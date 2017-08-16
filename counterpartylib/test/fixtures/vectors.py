@@ -3651,7 +3651,7 @@ UNITTEST_VECTOR = {
             'comment': 'CIP 9 enhanced send to a REQUIRE_MEMO address without memo',
             'mock_protocol_changes': {'enhanced_sends': True},
             'in': ('create_send', {'source': ADDR[0], 'destination': ADDR[4], 'asset': 'XCP', 'quantity': DP['small']}),
-            'error': (Exception, "{'code': -32001, 'message': \"Error composing send transaction via API: ['destination requires memo']\"}") # RPCError isn't on standard exceptions list, and this error throws raw json
+            'error': (Exception, "Error composing send transaction via API: ['destination requires memo'] (-32001)") # RPCError isn't on standard exceptions list, and this error throws raw json
         }, {
             'comment': 'CIP 9 enhanced send to a REQUIRE_MEMO address with memo',
             'mock_protocol_changes': {'enhanced_sends': True},
