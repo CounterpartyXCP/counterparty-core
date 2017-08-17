@@ -251,11 +251,13 @@ def run_scenario(scenario, rawtransactions_db):
     raw_transactions = []
     for tx in scenario:
         if tx[0] != 'create_next_block':
-            module = sys.modules['counterpartylib.lib.messages.{}'.format(tx[0])]
-            compose = getattr(module, 'compose')
-            unsigned_tx_hex = transaction.construct(db, compose(db, *tx[1]), **tx[2])
-            raw_transactions.append({tx[0]: unsigned_tx_hex})
-            insert_raw_transaction(unsigned_tx_hex, db, rawtransactions_db)
+            mock_protocol_changes = tx[3] if len(tx) == 4 else {}
+            with MockProtocolChangesContext(**(mock_protocol_changes or {})):
+                module = sys.modules['counterpartylib.lib.messages.{}'.format(tx[0])]
+                compose = getattr(module, 'compose')
+                unsigned_tx_hex = transaction.construct(db, compose(db, *tx[1]), **tx[2])
+                raw_transactions.append({tx[0]: unsigned_tx_hex})
+                insert_raw_transaction(unsigned_tx_hex, db, rawtransactions_db)
         else:
             create_next_block(db, block_index=config.BURN_START + tx[1], parse_block=tx[2] if len(tx) == 3 else True)
 
@@ -328,11 +330,12 @@ def check_record(record, server_db):
             if pytest.config.getoption('verbose') >= 2:
                 print("expected values: ")
                 pprint.PrettyPrinter(indent=4).pprint(record['values'])
+                print("SELECT * FROM {} WHERE block_index = {}: ".format(record['table'], record['values']['block_index']))
                 pprint.PrettyPrinter(indent=4).pprint(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
 
             raise AssertionError("check_record \n" +
                                  "table=" + record['table'] + " \n" +
-                                 "condiitions=" + ",".join(conditions) + " \n" +
+                                 "conditions=" + ",".join(conditions) + " \n" +
                                  "bindings=" + ",".join(map(lambda v: str(v), bindings)))
 
 def vector_to_args(vector, functions=[]):
@@ -358,7 +361,8 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         or tx_name == 'script' \
         or (tx_name == 'blocks' and (method[:len('get_tx_info')] == 'get_tx_info')) or tx_name == 'transaction' or method == 'sortkeypicker' \
         or tx_name == 'backend' \
-        or tx_name == 'message_type':
+        or tx_name == 'message_type' \
+        or tx_name == 'address':
         return tested_method(*inputs)
     else:
         return tested_method(server_db, *inputs)

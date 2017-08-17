@@ -33,6 +33,7 @@ from counterpartylib.lib import log
 from counterpartylib.lib import database
 from counterpartylib.lib import message_type
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, publish, execute, destroy)
+from .messages.versions import enhanced_send
 
 from .kickstart.blocks_parser import BlockchainParser, ChainstateParser
 from .kickstart.utils import ib2h
@@ -91,6 +92,8 @@ def parse_tx(db, tx):
 
     if message_type_id == send.ID:
         send.parse(db, tx, message)
+    elif message_type_id == enhanced_send.ID:
+        enhanced_send.parse(db, tx, message)
     elif message_type_id == order.ID:
         order.parse(db, tx, message)
     elif message_type_id == btcpay.ID:

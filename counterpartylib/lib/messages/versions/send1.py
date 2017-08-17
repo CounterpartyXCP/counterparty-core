@@ -132,7 +132,7 @@ def parse (db, tx, message):
         'status': status,
     }
     if "integer overflow" not in status and "quantity must be in satoshis" not in status:
-        sql = 'insert into sends values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :quantity, :status)'
+        sql = 'insert into sends values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :quantity, :status, NULL)'
         cursor.execute(sql, bindings)
     else:
         logger.warn("Not storing [send] tx [%s]: %s" % (tx['tx_hash'], status))

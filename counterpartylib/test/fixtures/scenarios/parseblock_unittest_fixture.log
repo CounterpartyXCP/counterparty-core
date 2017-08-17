@@ -210,6 +210,20 @@ New input: amount: 1.00000000; txid: 20ffe4012d5fc638309b2d087a15fb100d919413263
 Size: 315 Fee: 0.00007875 Change quantity: 0.99986695 BTC
 Debit: 0.0000001 XCP from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy #bet# <0c690d46bef903922354520c8c8626ab5bfd45da1ca211d65f16aeef9b5f3300>
 Bet: 0.0000001 XCP against 0.0000001 XCP, by 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy, on 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy
+Sorted candidate UTXOs: ['amount: 1.99909140; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
+Fee/KB 0.00025000
+New input: amount: 1.99909140; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
+Size: 281 Fee: 0.00007025 Change quantity: 1.99902115 BTC
+Debit: 1.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #send# <e864d7881d5c6a57b650dd507096275647eb32c05e3a27815869133a79a9db6f>
+Credit: 1.0 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #send# <e864d7881d5c6a57b650dd507096275647eb32c05e3a27815869133a79a9db6f>
+Send: 1.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (e864d7881d5c6a57b650dd507096275647eb32c05e3a27815869133a79a9db6f) [valid]
+Sorted candidate UTXOs: ['amount: 1.00000000; txid: e43c357b78baf473fd21cbc1481ac450746b60cf1d2702ce3a73a8811811e3eb; vout: 0; confirmations: 2', 'amount: 0.11121663; txid: b9fc3aa355b77ecb63282fc96e63912a253e98bf9cf441fbfbecc3fb277c4985; vout: 0; confirmations: 74']
+Fee/KB 0.00025000
+New input: amount: 1.00000000; txid: e43c357b78baf473fd21cbc1481ac450746b60cf1d2702ce3a73a8811811e3eb; vout: 0; confirmations: 2
+Size: 281 Fee: 0.00007025 Change quantity: 0.99992975 BTC
+Debit: 1.0 XCP from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #send# <b9ad301585a4f779a15adb7c357215918a22a0c32d78f1fc622122dce2ba46c2>
+Credit: 1.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #send# <b9ad301585a4f779a15adb7c357215918a22a0c32d78f1fc622122dce2ba46c2>
+Send: 1.0 XCP from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (b9ad301585a4f779a15adb7c357215918a22a0c32d78f1fc622122dce2ba46c2) [valid]
 Sorted candidate UTXOs: ['amount: 1.07824570; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143']
 Fee/KB 0.00025000
 New input: amount: 1.07824570; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143
