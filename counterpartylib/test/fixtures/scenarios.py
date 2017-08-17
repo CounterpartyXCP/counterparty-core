@@ -77,6 +77,9 @@ UNITTEST_FIXTURE = [
     ['bet', (ADDR[4], ADDR[4], 1, 1388000001, 9, 9, 0.0, 5040, 100), {'encoding': 'multisig'}],
     ['broadcast', (ADDR[4], 1388000002, 1, 0.0, 'lock'), {'encoding': 'multisig'}],
 
+    # To test REQUIRE_MEMO
+    ['broadcast', (ADDR[6], 1388000003, 1, 0.0, 'options 1'), {'encoding': 'multisig'}],
+
     ['create_next_block', 490],
 
     ['order', (ADDR[0], 'XCP', DP['quantity'], 'BTC', round(DP['quantity'] / 125), 2000, DP['fee_required']), {'encoding': 'multisig'}],
@@ -90,6 +93,7 @@ UNITTEST_FIXTURE = [
     ['issuance', (ADDR[0], None, 'PARENT.already.issued', DP['quantity'] * 1, True, 'Child of parent'), {'encoding': 'opreturn'}],
 
     ['create_next_block', 500],
+
 ]
 
 PARSEBLOCKS_FIXTURE = UNITTEST_FIXTURE + [

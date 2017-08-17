@@ -230,7 +230,7 @@ def parse (db, tx, message):
                                 'address': tx['source'],
                                 'options': options_int
                                }
-                    sql = 'insert or replace into addresses(address, options) values(:address, :options)'
+                    sql = 'insert or replace into addresses(address, options, block_index) values(:address, :options, :block_index)'
                     cursor = db.cursor()
                     cursor.execute(sql, op_bindings)
 
