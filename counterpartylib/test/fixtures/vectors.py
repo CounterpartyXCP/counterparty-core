@@ -4384,6 +4384,23 @@ UNITTEST_VECTOR = {
                     'memo': None,
                 }}
             ]
+        }, {
+            # invalid: quantity (too large)
+            'mock_protocol_changes': {'short_tx_type_id': True},
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': bytes.fromhex('00000002' + '0000000000000001' + 'ffffffffffffffff' + SHORT_ADDR_BYTES[1] + 'beefbeef'), 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
+            'records': [
+                {'table': 'sends', 'values': {
+                    'asset': None,
+                    'block_index': DP['default_block_index'],
+                    'destination': None,
+                    'quantity': None,
+                    'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'status': 'invalid: quantity is too large',
+                    'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'tx_index': 502,
+                    'memo': None,
+                }}
+            ]
         }]
     }
 }

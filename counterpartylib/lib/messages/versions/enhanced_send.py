@@ -142,6 +142,12 @@ def parse (db, tx, message):
         status = 'invalid: could not unpack'
 
     if status == 'valid':
+        # don't allow sends over MAX_INT at all
+        if quantity and quantity > config.MAX_INT:
+            status = 'invalid: quantity is too large'
+            quantity = None
+
+    if status == 'valid':
         # Oversend
         cursor.execute('''SELECT * FROM balances \
                                      WHERE (address = ? AND asset = ?)''', (tx['source'], asset))
@@ -150,10 +156,6 @@ def parse (db, tx, message):
             status = 'invalid: insufficient funds'
         elif balances[0]['quantity'] < quantity:
             quantity = min(balances[0]['quantity'], quantity)
-
-    # For SQLite3
-    if quantity:
-        quantity = min(quantity, config.MAX_INT)
 
     if status == 'valid':
         problems = validate(db, tx['source'], destination, asset, quantity, memo_bytes, tx['block_index'])
