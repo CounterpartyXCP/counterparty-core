@@ -4117,9 +4117,9 @@ UNITTEST_VECTOR = {
         }, {
             'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU', 'SOUP', 100000000, bytes.fromhex('01ff'), DP['default_block_index']),
             'out': ([])
-        # }, {
-        #     'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU', 'SOUP', 0, bytes.fromhex('01ff'), DP['default_block_index']),
-        #     'out': (['zero quantity'])
+        }, {
+            'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU', 'SOUP', 0, bytes.fromhex('01ff'), DP['default_block_index']),
+            'out': (['zero quantity'])
         }, {
             'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '', 'SOUP', 100000000, bytes.fromhex('01ff'), DP['default_block_index']),
             'out': (['destination is required'])
@@ -4224,7 +4224,7 @@ UNITTEST_VECTOR = {
                     'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'quantity': 0,
                     'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH',
-                    'status': 'valid',
+                    'status': 'invalid: zero quantity',
                     'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'tx_index': 502,
                 }}
@@ -4238,7 +4238,7 @@ UNITTEST_VECTOR = {
                     'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj',
                     'quantity': 0,
                     'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH',
-                    'status': 'valid',
+                    'status': 'invalid: zero quantity',
                     'tx_hash': '736ecc18f9f41b3ccf67dded1252969e4929404d6ad657b2039b937a7785cf3e',
                     'tx_index': 502,
                 }}
