@@ -11,7 +11,7 @@ CREATE TABLE addresses(
                       address TEXT UNIQUE,
                       options INTEGER,
                       block_index INTEGER);
-INSERT INTO addresses VALUES('mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42',1,NULL);
+INSERT INTO addresses VALUES('mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42',1,310489);
 -- Triggers and indices on  addresses
 CREATE INDEX addresses_idx ON addresses (address);
 
