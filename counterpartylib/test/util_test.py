@@ -126,7 +126,7 @@ def insert_block(db, block_index, parse_block=True):
     block_hash = util.dhash_string(chr(block_index))
     block_time = block_index * 1000
     block = (block_index, block_hash, block_time, None, None, None, None)
-    cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty) 
+    cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty)
                       VALUES (?,?,?,?,?,?,?)''', block)
     util.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
     cursor.close()
@@ -178,7 +178,7 @@ def insert_transaction(transaction, db):
     """Add a transaction to the database."""
     cursor = db.cursor()
     block = (transaction['block_index'], transaction['block_hash'], transaction['block_time'], None, None, None, None)
-    cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty) 
+    cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty)
                       VALUES (?,?,?,?,?,?,?)''', block)
     keys = ",".join(transaction.keys())
     cursor.execute('''INSERT INTO transactions ({}) VALUES (?,?,?,?,?,?,?,?,?,?,?)'''.format(keys), tuple(transaction.values()))
