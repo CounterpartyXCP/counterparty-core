@@ -3619,7 +3619,7 @@ UNITTEST_VECTOR = {
             'comment': 'CIP 9 enhanced_send before enabled',
             'mock_protocol_changes': {'enhanced_sends': False},
             'in': ('create_send', {'memo': '0102030405', 'memo_is_hex': True, 'source': ADDR[0], 'destination': ADDR[1], 'asset': 'XCP', 'quantity': DP['small']}),
-            'error': (RPCError, "{'code': -32001, 'message': 'Error composing send transaction via API: enhanced sends are not enabled'}")
+            'error': (RPCError, 'Error composing send transaction via API: enhanced sends are not enabled (-32001)')
         }],
         'generate_asset_id': [{
             'in': ('BTC', DP['default_block_index']),
