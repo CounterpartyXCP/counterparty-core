@@ -195,10 +195,7 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
         adjust_get_sends_memo_filters(filters)
 
     # SELECT
-    if table == 'sends':
-        statement = '''SELECT *, CASE WHEN memo IS NULL THEN NULL ELSE hex(memo) END AS memo_hex FROM {}'''.format(table)
-    else:
-        statement = '''SELECT * FROM {}'''.format(table)
+    statement = '''SELECT * FROM {}'''.format(table)
     # WHERE
     bindings = []
     conditions = []
@@ -288,13 +285,15 @@ def adjust_get_sends_memo_filters(filters):
                 raise APIError("Invalid memo_hex value")
 
 def adjust_get_sends_results(query_result):
-    """Try and decode the memo from a utf-8 uncoded string. Otherwise return an empty memo."""
+    """Format the memo_hex field.  Try and decode the memo from a utf-8 uncoded string. Invalid utf-8 strings return an empty memo."""
     filtered_results = []
     for send_row in list(query_result):
         try:
             if send_row['memo'] is None:
+                send_row['memo_hex'] = None
                 send_row['memo'] = None
             else:
+                send_row['memo_hex'] = send_row['memo'].hex()
                 send_row['memo'] = send_row['memo'].decode('utf-8')
         except UnicodeDecodeError:
             send_row['memo'] = ''
