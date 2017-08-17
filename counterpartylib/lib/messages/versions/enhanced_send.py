@@ -27,10 +27,7 @@ def unpack(db, message, block_index):
             memo_bytes = None
         
         # unpack address
-        try:
-            full_address = address.unpack(short_address_bytes)
-        except:
-            raise exceptions.UnpackError('address invalid')
+        full_address = address.unpack(short_address_bytes)
 
         # asset id to name
         asset = util.generate_asset_name(asset_id, block_index)
