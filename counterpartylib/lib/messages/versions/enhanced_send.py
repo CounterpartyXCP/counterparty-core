@@ -148,18 +148,16 @@ def parse (db, tx, message):
             quantity = None
 
     if status == 'valid':
-        # Oversend
+        problems = validate(db, tx['source'], destination, asset, quantity, memo_bytes, tx['block_index'])
+        if problems: status = 'invalid: ' + '; '.join(problems)
+
+    if status == 'valid':
+        # verify balance is present
         cursor.execute('''SELECT * FROM balances \
                                      WHERE (address = ? AND asset = ?)''', (tx['source'], asset))
         balances = cursor.fetchall()
-        if not balances:
+        if not balances or balances[0]['quantity'] < quantity:
             status = 'invalid: insufficient funds'
-        elif balances[0]['quantity'] < quantity:
-            quantity = min(balances[0]['quantity'], quantity)
-
-    if status == 'valid':
-        problems = validate(db, tx['source'], destination, asset, quantity, memo_bytes, tx['block_index'])
-        if problems: status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':
         util.debit(db, tx['source'], asset, quantity, action='send', event=tx['tx_hash'])
