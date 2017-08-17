@@ -326,6 +326,7 @@ def check_record(record, server_db):
 
         if not ok:
             if pytest.config.getoption('verbose') >= 2:
+                print("expected values: ")
                 pprint.PrettyPrinter(indent=4).pprint(record['values'])
                 pprint.PrettyPrinter(indent=4).pprint(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
 
@@ -356,7 +357,8 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
     elif (tx_name == 'util' and (method in ['api','date_passed','price','generate_asset_id','generate_asset_name','dhash_string','enabled','get_url','hexlify','parse_subasset_from_asset_name','compact_subasset_longname','expand_subasset_longname',])) \
         or tx_name == 'script' \
         or (tx_name == 'blocks' and (method[:len('get_tx_info')] == 'get_tx_info')) or tx_name == 'transaction' or method == 'sortkeypicker' \
-        or tx_name == 'backend':
+        or tx_name == 'backend' \
+        or tx_name == 'message_type':
         return tested_method(*inputs)
     else:
         return tested_method(server_db, *inputs)

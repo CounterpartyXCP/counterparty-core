@@ -14,6 +14,7 @@ from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 from counterpartylib.lib import backend
 from counterpartylib.lib import log
+from counterpartylib.lib import message_type
 
 FORMAT = '>QQQQHQ'
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
@@ -387,7 +388,7 @@ def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, exp
 
     give_id = util.get_asset_id(db, give_asset, util.CURRENT_BLOCK_INDEX)
     get_id = util.get_asset_id(db, get_asset, util.CURRENT_BLOCK_INDEX)
-    data = struct.pack(config.TXTYPE_FORMAT, ID)
+    data = message_type.pack(ID)
     data += struct.pack(FORMAT, give_id, give_quantity, get_id, get_quantity,
                         expiration, fee_required)
     cursor.close()
