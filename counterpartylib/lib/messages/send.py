@@ -3,10 +3,6 @@
 from counterpartylib.lib.messages.versions import send1
 from counterpartylib.lib.messages.versions import enhanced_send
 from counterpartylib.lib import util
-<<<<<<< HEAD
-from counterpartylib.lib import exceptions
-=======
->>>>>>> refactor enhanced_send into send message
 
 ID = send1.ID
 

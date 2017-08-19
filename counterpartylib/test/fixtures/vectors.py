@@ -4102,10 +4102,13 @@ UNITTEST_VECTOR = {
             })
         }, {
             'in': (bytes.fromhex('0000000000000001' + '000000000000007b' + '0001'), DP['default_block_index']),
-            'error': (exceptions.UnpackError, 'could not unpack')
+            'error': (exceptions.UnpackError, 'invalid message length')
         }, {
             'in': (bytes.fromhex('0000000000000001' + '000000000000007b' + '006474849fc9ac0f5bd6b49fe144d14db7d32e2445' + '9999999999999999999999999999999999999999999999999999999999999999999999'), DP['default_block_index']),
             'error': (exceptions.UnpackError, 'memo too long')
+        }, {
+            'in': (bytes.fromhex('0000000000000000' + '000000000000007b' + '006474849fc9ac0f5bd6b49fe144d14db7d32e2445'), DP['default_block_index']),
+            'error': (exceptions.UnpackError, 'asset id invalid')
         }, {
             'in': (bytes.fromhex('0000000000000003' + '000000000000007b' + '006474849fc9ac0f5bd6b49fe144d14db7d32e2445'), DP['default_block_index']),
             'error': (exceptions.UnpackError, 'asset id invalid')
