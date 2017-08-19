@@ -355,6 +355,17 @@ def initialise(db):
         cursor.execute('''INSERT INTO assets VALUES (?,?,?,?)''', ('0', 'BTC', None, None))
         cursor.execute('''INSERT INTO assets VALUES (?,?,?,?)''', ('1', 'XCP', None, None))
 
+    # Addresses
+    # Leaving this here because in the future this could work for other things besides broadcast
+    cursor.execute('''CREATE TABLE IF NOT EXISTS addresses(
+                      address TEXT UNIQUE,
+                      options INTEGER,
+                      block_index INTEGER)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      addresses_idx ON addresses (address)
+                   ''')
+
     # Consolidated
     send.initialise(db)
     destroy.initialise(db)
@@ -738,7 +749,12 @@ def reinitialise(db, block_index=None):
     initialise(db)
 
     # clean consensus hashes if first block hash doesn't match with checkpoint.
-    checkpoints = check.CHECKPOINTS_TESTNET if config.TESTNET else check.CHECKPOINTS_MAINNET
+    # regtest only has 1 checkpoint which is block 0
+    checkpoints = None
+    if config.TESTNET:
+        checkpoints = check.CHECKPOINTS_TESTNET
+    else:
+        checkpoints = check.CHECKPOINTS_MAINNET
     columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(blocks)''')]
     for field in ['ledger_hash', 'txlist_hash']:
         if field in columns:
@@ -985,6 +1001,7 @@ def kickstart(db, bitcoind_dir):
             transactions = []
 
             # Get `tx_info`s for transactions in this block.
+            logger.debug('Reading block {}'.format(current_hash))
             block = block_parser.read_raw_block(current_hash)
             for tx in block['transactions']:
                 source, destination, btc_amount, fee, data = get_tx_info(tx['__data__'], block_parser=block_parser, block_index=block['block_index'])
@@ -1099,6 +1116,8 @@ def follow(db):
     # Get index of last transaction.
     tx_index = get_next_tx_index(db)
 
+    logger.debug('Last TX index is {}'.format(tx_index))
+
     not_supported = {}   # No false positives. Use a dict to allow for O(1) lookups
     not_supported_sorted = collections.deque()
     # ^ Entries in form of (block_index, tx_hash), oldest first. Allows for easy removal of past, unncessary entries
@@ -1115,7 +1134,10 @@ def follow(db):
         # and try again repeatedly.
         try:
             block_count = backend.getblockcount()
+            logger.debug('Backend block count {}, current block {}'.format(block_count, block_index))
         except (ConnectionRefusedError, http.client.CannotSendRequest, backend.addrindex.BackendRPCError) as e:
+            logger.debug('Backedn refused connection')
+            logger.debug(e)
             if config.FORCE:
                 time.sleep(config.BACKEND_POLL_INTERVAL)
                 continue

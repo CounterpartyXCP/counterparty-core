@@ -25,14 +25,17 @@ def unpack(db, message, block_index):
         asset_id, quantity, short_address_bytes, memo_bytes = struct.unpack(struct_format, message)
         if len(memo_bytes) == 0:
             memo_bytes = None
-        
+
         # unpack address
-        full_address = address.unpack(short_address_bytes)
+        try:
+          full_address = address.unpack(short_address_bytes)
+        except:
+          raise exceptions.UnpackError('address invalid')
 
         # asset id to name
         asset = util.generate_asset_name(asset_id, block_index)
         if asset == config.BTC:
-            raise exceptions.AssetNameError('{} not allowed'.format(config.BTC))
+          raise exceptions.AssetNameError('{} not allowed'.format(config.BTC))
 
     except (struct.error) as e:
         logger.warning("enhanced send unpack error: {}".format(e))
@@ -62,8 +65,8 @@ def validate (db, source, destination, asset, quantity, memo_bytes, block_index)
     if quantity < 0:
         problems.append('negative quantity')
 
-    if quantity == 0:
-        problems.append('zero quantity')
+    # if quantity == 0:
+    #     problems.append('zero quantity')
 
     # For SQLite3
     if quantity > config.MAX_INT:
@@ -76,6 +79,16 @@ def validate (db, source, destination, asset, quantity, memo_bytes, block_index)
     # check memo
     if memo_bytes is not None and len(memo_bytes) > MAX_MEMO_LENGTH:
       problems.append('memo is too long')
+
+    cursor = db.cursor()
+    try:
+        results = cursor.execute('SELECT options FROM addresses WHERE address=?', (destination,))
+        if results:
+            result = results.fetchone()
+            if result and result['options'] & config.ADDRESS_OPTION_REQUIRE_MEMO and memo_bytes is not None and (len(memo_bytes) == 0):
+                problems.append('destination requires memo')
+    finally:
+        cursor.close()
 
     return problems
 
@@ -130,7 +143,10 @@ def parse (db, tx, message):
     # Unpack message.
     try:
         unpacked = unpack(db, message, tx['block_index'])
-        asset, quantity, destination, memo_bytes = unpacked['asset'], unpacked['quantity'], unpacked['address'], unpacked['memo']
+        asset       = unpacked['asset']
+        quantity    = unpacked['quantity']
+        destination = unpacked['address']
+        memo_bytes  = unpacked['memo']
 
         status = 'valid'
 
@@ -142,22 +158,22 @@ def parse (db, tx, message):
         status = 'invalid: could not unpack'
 
     if status == 'valid':
-        # don't allow sends over MAX_INT at all
-        if quantity and quantity > config.MAX_INT:
-            status = 'invalid: quantity is too large'
-            quantity = None
+        # Oversend
+        cursor.execute('''SELECT * FROM balances \
+                                     WHERE (address = ? AND asset = ?)''', (tx['source'], asset))
+        balances = cursor.fetchall()
+        if not balances:
+            status = 'invalid: insufficient funds'
+        elif balances[0]['quantity'] < quantity:
+            quantity = min(balances[0]['quantity'], quantity)
+
+    # For SQLite3
+    if quantity:
+        quantity = min(quantity, config.MAX_INT)
 
     if status == 'valid':
         problems = validate(db, tx['source'], destination, asset, quantity, memo_bytes, tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
-
-    if status == 'valid':
-        # verify balance is present
-        cursor.execute('''SELECT * FROM balances \
-                                     WHERE (address = ? AND asset = ?)''', (tx['source'], asset))
-        balances = cursor.fetchall()
-        if not balances or balances[0]['quantity'] < quantity:
-            status = 'invalid: insufficient funds'
 
     if status == 'valid':
         util.debit(db, tx['source'], asset, quantity, action='send', event=tx['tx_hash'])

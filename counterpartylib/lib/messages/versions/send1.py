@@ -51,6 +51,17 @@ def validate (db, source, destination, asset, quantity, block_index):
         if not destination:
             problems.append('destination is required')
 
+    if block_index > config.BLOCK_START_ADDRESSES_OPTIONS:
+        # Check destination address options
+
+        cursor = db.cursor()
+        results = cursor.execute('SELECT options FROM addresses WHERE address=?', (destination,))
+        if results:
+            result = results.fetchone()
+            if result and result['options'] & config.ADDRESS_OPTION_REQUIRE_MEMO:
+                problems.append('destination requires memo')
+        cursor.close()
+
     return problems
 
 def compose (db, source, destination, asset, quantity):

@@ -5,6 +5,15 @@
 
 BEGIN TRANSACTION;
 
+-- Table  addresses
+DROP TABLE IF EXISTS addresses;
+CREATE TABLE addresses(
+                      address TEXT UNIQUE,
+                      options INTEGER,
+                      block_index INTEGER);
+-- Triggers and indices on  addresses
+CREATE INDEX addresses_idx ON addresses (address);
+
 -- Table  assets
 DROP TABLE IF EXISTS assets;
 CREATE TABLE assets(
