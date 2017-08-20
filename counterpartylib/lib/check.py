@@ -39,7 +39,7 @@ CHECKPOINTS_MAINNET = {
     355000: {'ledger_hash': 'a84b17992217c7845e133a8597dac84eba1ee8c48bcc7f74bcf512837120f463', 'txlist_hash': '210d96b42644432b9e1a3433a29af9acb3bad212b67a7ae1dbc011a11b04bc24'},
     360000: {'ledger_hash': 'ddca07ea43b336b703fb8ebab6c0dc30582eb360d6f0eb0446e1fe58b53dee0a', 'txlist_hash': '31d0ff3e3782cf9464081829c5595b3de5ac477290dc069d98672f3f552767f8'},
     365000: {'ledger_hash': '2d55b126cca3eca15c07b5da683988f9e01d7346d2ca430e940fd7c07ce84fd7', 'txlist_hash': '7988a823cc1e3234953cc87d261d3c1fede8493d0a31b103357eb23cc7dc2eda'},
-    366000: {'ledger_hash': '64ce274df2784f9ca88a8d7071613ec6527e506ec31cd434eca64c6a3345a6b7', 'txlist_hash': '0d4374da6100e279b24f4ba4a2d6afbfc4fb0fc2d312330a515806e8c5f49404'}, 
+    366000: {'ledger_hash': '64ce274df2784f9ca88a8d7071613ec6527e506ec31cd434eca64c6a3345a6b7', 'txlist_hash': '0d4374da6100e279b24f4ba4a2d6afbfc4fb0fc2d312330a515806e8c5f49404'},
     370000: {'ledger_hash': 'fabb2a2e91fad3fe7734169d554cca396c1030243044cef42fcf65717cf0fa61', 'txlist_hash': '41d1732868c9ac25951ace5ca9f311a15d5eca9bf8d548e0d988c050bd2aff87'},
     375000: {'ledger_hash': 'a7ac4e2948cea0c426c8fc201cf57d9c313027ea7bff2b32a25ed28d3dbaa581', 'txlist_hash': '96118a7aa2ca753488755b7419a0f44a7fbc371bc58dcc7ab083c70fc14ef8b3'},
     380000: {'ledger_hash': '70453ba04c1c0198c4771e7964cffa25f9456c2f71456a8b05dfe935d5fcdc88', 'txlist_hash': '8bf2070103cca6f0bde507b7d20b0ba0630da6349beb560fa64c926d08dbcaef'},
@@ -81,7 +81,10 @@ CHECKPOINTS_TESTNET = {
     1150000: {'ledger_hash': 'f263033868a450338e26a72a6323230740889b76f488df60a43b92232b710779', 'txlist_hash': '63d35f206c2eb3337f0e3f698f714be898ce217c79f87da76f43ebed67de2071'},
 }
 
-
+CONSENSUS_HASH_VERSION_REGTEST = 6
+CHECKPOINTS_REGTEST = {
+    config.BLOCK_FIRST_REGTEST: {'ledger_hash': '3e2cd73017159fdc874453f227e9d0dc4dabba6d10e03458f3399f1d340c4ad1', 'txlist_hash': '3e2cd73017159fdc874453f227e9d0dc4dabba6d10e03458f3399f1d340c4ad1'},
+}
 class ConsensusError(Exception):
     pass
 
@@ -104,7 +107,13 @@ def consensus_hash(db, field, previous_consensus_hash, content):
             raise ConsensusError('Empty previous {} for block {}. Please launch a `reparse`.'.format(field, block_index))
 
     # Calculate current hash.
-    consensus_hash_version = CONSENSUS_HASH_VERSION_TESTNET if config.TESTNET else CONSENSUS_HASH_VERSION_MAINNET
+    consensus_hash_version = None
+    if config.TESTNET:
+        consensus_hash_version = CONSENSUS_HASH_VERSION_TESTNET
+    elif config.REGTEST:
+        consensus_hash_version = CONSENSUS_HASH_VERSION_REGTEST
+    else:
+        consensus_hash_version = CONSENSUS_HASH_VERSION_MAINNET
     calculated_hash = util.dhash_string(previous_consensus_hash + '{}{}'.format(consensus_hash_version, ''.join(content)))
 
     # Verify hash (if already in database) or save hash (if not).
@@ -120,9 +129,16 @@ def consensus_hash(db, field, previous_consensus_hash, content):
         cursor.execute('''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field), (calculated_hash, block_index))
 
     # Check against checkpoints.
-    checkpoints = CHECKPOINTS_TESTNET if config.TESTNET else CHECKPOINTS_MAINNET
+    checkpoints = None
+    if config.TESTNET:
+        checkpoints = CHECKPOINTS_TESTNET
+    elif config.REGTEST:
+        checkpoints = CHECKPOINTS_REGTEST
+    else:
+        checkpoints = CHECKPOINTS_MAINNET
+
     if field != 'messages_hash' and block_index in checkpoints and checkpoints[block_index][field] != calculated_hash:
-        raise ConsensusError('Incorrect {} for block {}.'.format(field, block_index))
+        raise ConsensusError('Incorrect {} for block {}. Expected {}.'.format(field, block_index, calculated_hash))
 
     return calculated_hash, found_hash
 

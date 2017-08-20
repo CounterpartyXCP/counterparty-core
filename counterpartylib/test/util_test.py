@@ -126,7 +126,7 @@ def insert_block(db, block_index, parse_block=True):
     block_hash = util.dhash_string(chr(block_index))
     block_time = block_index * 1000
     block = (block_index, block_hash, block_time, None, None, None, None)
-    cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty) 
+    cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty)
                       VALUES (?,?,?,?,?,?,?)''', block)
     util.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
     cursor.close()
@@ -178,7 +178,7 @@ def insert_transaction(transaction, db):
     """Add a transaction to the database."""
     cursor = db.cursor()
     block = (transaction['block_index'], transaction['block_hash'], transaction['block_time'], None, None, None, None)
-    cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty) 
+    cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty)
                       VALUES (?,?,?,?,?,?,?)''', block)
     keys = ",".join(transaction.keys())
     cursor.execute('''INSERT INTO transactions ({}) VALUES (?,?,?,?,?,?,?,?,?,?,?)'''.format(keys), tuple(transaction.values()))
@@ -363,6 +363,10 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         or tx_name == 'backend' \
         or tx_name == 'message_type' \
         or tx_name == 'address':
+<<<<<<< HEAD
+=======
+        #print(tx_name, method, tested_method.__name__, inputs)
+>>>>>>> c977efb509cad09463f39b41579c34893ff5441e
         return tested_method(*inputs)
     else:
         return tested_method(server_db, *inputs)
@@ -474,7 +478,13 @@ def reparse(testnet=True):
         assert block_exists, "block #%d does not exist" % block_index
 
     # Clean consensus hashes if first block hash don’t match with checkpoint.
-    checkpoints = check.CHECKPOINTS_TESTNET if config.TESTNET else check.CHECKPOINTS_MAINNET
+    checkpoints = None
+    if config.TESTNET:
+        checkpoints = check.CHECKPOINTS_TESTNET
+    elif config.REGTEST:
+        checkpoints = check.CHECKPOINTS_REGTEST
+    else:
+        checkpoints = check.CHECKPOINTS_MAINNET
     columns = [column['name'] for column in memory_cursor.execute('''PRAGMA table_info(blocks)''')]
     for field in ['ledger_hash', 'txlist_hash']:
         if field in columns:
