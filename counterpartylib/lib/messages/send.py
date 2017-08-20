@@ -3,10 +3,7 @@
 from counterpartylib.lib.messages.versions import send1
 from counterpartylib.lib.messages.versions import enhanced_send
 from counterpartylib.lib import util
-<<<<<<< HEAD
 from counterpartylib.lib import exceptions
-=======
->>>>>>> c977efb509cad09463f39b41579c34893ff5441e
 
 ID = send1.ID
 
@@ -58,12 +55,8 @@ def compose (db, source, destination, asset, quantity, memo=None, memo_is_hex=Fa
     if util.enabled('enhanced_sends'):
         if use_enhanced_send is None or use_enhanced_send == True:
             return enhanced_send.compose(db, source, destination, asset, quantity, memo, memo_is_hex)
-<<<<<<< HEAD
     elif memo is not None or use_enhanced_send == True:
         raise exceptions.ComposeError('enhanced sends are not enabled')
-
-=======
->>>>>>> c977efb509cad09463f39b41579c34893ff5441e
 
     return send1.compose(db, source, destination, asset, quantity)
 
@@ -72,4 +65,3 @@ def parse (db, tx, message):    # TODO: *args
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
-
