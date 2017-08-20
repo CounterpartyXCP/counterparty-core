@@ -20,17 +20,13 @@ For a simple Docker-based install of the Counterparty software stack, see [this 
 
 # Manual installation
 
-Download the newest [patched Bitcoin Core](https://github.com/btcdrak/bitcoin/releases) and create
-a `bitcoin.conf` file with the following options:
+Download and install [BCoin](http://bcoin.io/) and create
+a `bcoin.conf` file with the following options:
 
 ```
-rpcuser=bitcoinrpc
-rpcpassword=rpc
-server=1
-txindex=1
-addrindex=1
-rpcthreads=100
-rpctimeout=300
+index-tx: true
+index-address: true
+api-key: rpc
 ```
 
 Then, download and install `counterparty-lib`:
@@ -50,6 +46,8 @@ $ cd counterparty-cli
 $ sudo pip3 install --upgrade -r requirements.txt
 $ sudo python3 setup.py install
 ```
+
+Be sure to change the `backend-name` on `server.conf` to the `bcoin` backend.
 
 Note on **sudo**: both counterparty-lib and counterparty-server can be installed by non-sudoers. Please refer to external documentation for instructions on using pip without root access and other information related to custom install locations.
 
@@ -120,8 +118,8 @@ Manual configuration is not necessary for most use cases.
 A `counterparty-server` configuration file looks like this:
 
 	[Default]
-	backend-name = addrindex
-	backend-user = <user>
+	backend-name = bcoin
+	backend-user = <user: doesn't matters for bcoin>
 	backend-password = <password>
 	rpc-host = 0.0.0.0
 	rpc-user = <rpcuser>
