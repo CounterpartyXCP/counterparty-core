@@ -775,6 +775,16 @@ CREATE INDEX status_source_idx ON broadcasts (status, source);
 CREATE INDEX status_source_index_idx ON broadcasts (status, source, tx_index);
 CREATE INDEX timestamp_idx ON broadcasts (timestamp);
 
+-- Table addresses
+DROP TABLE IF EXISTS addresses;
+CREATE TABLE addresses(
+                      address TEXT UNIQUE,
+                      options INTEGER);
+CREATE INDEX addresses_idx ON addresses (address);
+
+INSERT INTO addresses VALUES('munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b',0);
+INSERT INTO addresses VALUES('myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM',1);
+
 -- Table  btcpays
 DROP TABLE IF EXISTS btcpays;
 CREATE TABLE btcpays(

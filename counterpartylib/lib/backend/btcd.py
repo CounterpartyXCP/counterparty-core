@@ -40,6 +40,8 @@ def rpc_call(payload):
     if response == None:
         if config.TESTNET:
             network = 'testnet'
+        elif config.REGTEST:
+            network = 'regtest'
         else:
             network = 'mainnet'
         raise BackendRPCError('Cannot communicate with backend at `{}`. (server is set to run on {}, is backend?)'.format(util.clean_url_for_log(url), network))
@@ -91,7 +93,7 @@ def searchrawtransactions(address, unconfirmed=False):
         rawtransactions = rpc('searchrawtransactions', [address, 1, 0, 9999999])
     except BackendRPCError as e:
         raise BackendRPCError(str(e))
-    
+
     return rawtransactions
 
 def unconfirmed_transactions():
@@ -162,7 +164,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
     while len(RAW_TRANSACTIONS_CACHE_KEYS) > RAW_TRANSACTIONS_CACHE_SIZE:
         first_hash = RAW_TRANSACTIONS_CACHE_KEYS[0]
         del(RAW_TRANSACTIONS_CACHE[first_hash])
-        RAW_TRANSACTIONS_CACHE_KEYS.pop(0) 
+        RAW_TRANSACTIONS_CACHE_KEYS.pop(0)
 
     return result
 

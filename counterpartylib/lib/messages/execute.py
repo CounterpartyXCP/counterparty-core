@@ -71,7 +71,7 @@ def initialise (db):
 
 
 def compose (db, source, contract_id, gasprice, startgas, value, payload_hex):
-    if not config.TESTNET:  # TODO
+    if not (config.TESTNET or config.REGTEST):  # TODO
         return
 
     payload = binascii.unhexlify(payload_hex)
@@ -95,7 +95,7 @@ class Transaction(object):
         self.tx_hash = tx['tx_hash']
         self.tx_index = tx['tx_index']
         self.sender = tx['source']
-        self.data = data 
+        self.data = data
         self.to = to
         self.gasprice = gasprice
         self.startgas = startgas
@@ -115,7 +115,7 @@ class Transaction(object):
         return dict_
 
 def parse (db, tx, message):
-    if not config.TESTNET:  # TODO
+    if not (config.TESTNET or config.REGTEST):  # TODO
         return
 
     status = 'valid'

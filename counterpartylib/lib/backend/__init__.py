@@ -16,7 +16,7 @@ from counterpartylib.lib import script
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 
-from counterpartylib.lib.backend import addrindex, btcd
+from counterpartylib.lib.backend import addrindex, btcd, bcoin
 
 MEMPOOL_CACHE_INITIALIZED = False
 
@@ -36,7 +36,7 @@ def sortkeypicker(keynames):
     return getit
 
 def BACKEND():
-    return sys.modules['counterpartylib.lib.backend.{}'.format(config.BACKEND_NAME)] 
+    return sys.modules['counterpartylib.lib.backend.{}'.format(config.BACKEND_NAME)]
 
 def getblockcount():
     return BACKEND().getblockcount()
@@ -181,7 +181,7 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False, unspent
             txid = tx['txid']
             confirmations = tx['confirmations'] if 'confirmations' in tx else 0
             outkey = '{}{}'.format(txid, vout['n']) # edge case: avoid duplicate output
-            if outkey not in outputs or outputs[outkey]['confirmations'] < confirmations: 
+            if outkey not in outputs or outputs[outkey]['confirmations'] < confirmations:
                 coin = {
                         'amount': float(vout['value']),
                         'confirmations': confirmations,

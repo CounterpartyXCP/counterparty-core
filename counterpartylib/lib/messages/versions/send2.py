@@ -72,6 +72,19 @@ def validate(db, source, destination, asset, quantity, block_index):
     if util.get_balance(db, source, asset) < quantity:
         raise BalanceError('balance insufficient')
 
+    if block_index > config.BLOCK_START_ADDRESSES_OPTIONS:
+        # Check destination address options
+
+        cursor = db.cursor()
+        try:
+            results = cursor.execute('SELECT options FROM addresses WHERE address=?', (destination,))
+            if results:
+                result = results.fetchone()
+                if result and result['options'] & config.ADDRESS_OPTION_REQUIRE_MEMO:
+                    raise ValidateError('destination requires memo')
+        finally:
+            cursor.close()
+
 def compose(db, source, destination, asset, quantity):
 
     if asset == config.BTC:
