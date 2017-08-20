@@ -106,7 +106,7 @@ def apply_transaction(db, tx, block):
               'GTXDATA': 5,
               'GTXCOST': 500
              }
-    if config.TESTNET:
+    if config.TESTNET or config.REGTEST:
         supply = 2600001 * config.UNIT
     else:
         supply = util.xcp_supply(db)

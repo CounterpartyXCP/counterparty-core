@@ -616,6 +616,14 @@ UNITTEST_VECTOR = {
         }, {
             'in': (ADDR[0], 1588000000, 1, DP['fee_multiplier'], 'Over 80 characters test test test test test test test test test test test test test test test test test test'),
             'out': (ADDR[0], [], b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00LK@lOver 80 characters test test test test test test test test test test test test test test test test test test')
+        }, {
+            'comment': 'test current text packing for \'OPTIONS 1\'',
+            'in': (ADDR[0], 1388000100, 50000000, 0, 'OPTIONS 1'),
+            'out': (ADDR[0], [], b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\tOPTIONS 1')
+        }, {
+            'comment': 'test current text packing for \'OPTIONS 0\'',
+            'in': (ADDR[0], 1388000100, 50000000, 0, 'OPTIONS 0'),
+            'out': (ADDR[0], [], b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\tOPTIONS 0')
         }],
         'parse': [{
             'comment': 'test old text unpacking for short text',
@@ -965,6 +973,26 @@ UNITTEST_VECTOR = {
                     'value': None,
                 }}
             ]
+        }, {
+            'comment': 'test changing options to 1 on a specific address',
+            'in': ({'btc_amount': 0, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': '', 'block_index': DP['default_block_index'], 'fee': 10000, 'supported': 1, 'block_time': 310501000, 'tx_hash': '6b4a62b80f35b0e66df4591c8a445d453d995609e2df12afe93e742bea10dd86', 'tx_index': 502,
+                    'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\tOPTIONS 1'},),
+            'records': [
+                {'table': 'addresses', 'values': {
+                    'options': 1,
+                    'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'
+                }}
+            ]
+        }, {
+            'comment': 'test changing options to 0 on a previously REQUIRE_MEMO address with LOCKED feed',
+            'in': ({'btc_amount': 0, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'source': 'myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM', 'destination': '', 'block_index': DP['default_block_index'], 'fee': 10000, 'supported': 1, 'block_time': 310501000, 'tx_hash': '6b4a62b80f35b0e66df4591c8a445d453d995609e2df12afe93e742bea10dd86', 'tx_index': 502,
+                    'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\tOPTIONS 0'},),
+            'records': [
+                {'table': 'addresses', 'values': {
+                    'options': 1,
+                    'address': 'myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM'
+                }}
+            ]
         }],
     },
     'burn': {
@@ -1239,6 +1267,10 @@ UNITTEST_VECTOR = {
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)],
                     bytes.fromhex('0000000001530821671b10650000000005f5e100'))
+        }, {
+            'comment': 'send to a REQUIRE_MEMO address',
+            'in': (ADDR[0], ADDR[4], 'XCP', DP['quantity']),
+            'error': (exceptions.ComposeError, '[\'destination requires memo\']')
         }],
         'parse': [{
             'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
@@ -2342,12 +2374,12 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'give subasset',
             'in': (ADDR[0], 'PARENT.already.issued', 100000000, 'XCP', DP['small'], DP['expiration'], DP['fee_required']),
-            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], 
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [],
                 bytes.fromhex('0000000a01530821671b10650000000005f5e10000000000000000010000000002faf080000a00000000000dbba0'))
         }, {
             'comment': 'get subasset',
             'in': (ADDR[0], 'XCP', DP['small'], 'PARENT.already.issued', 100000000, DP['expiration'], DP['fee_required']),
-            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], 
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [],
                 bytes.fromhex('0000000a00000000000000010000000002faf08001530821671b10650000000005f5e100000a00000000000dbba0'))
         }],
         'parse': [{
@@ -3202,6 +3234,7 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'with memo',
             'in': ('sends', [{'field':'block_index','op':'=','value':'310481'}], 'AND', None, None, None, None, None, 1000, 0, True),
+<<<<<<< HEAD
             'out': [{'tx_index': 482, 'tx_hash': 'e864d7881d5c6a57b650dd507096275647eb32c05e3a27815869133a79a9db6f', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f'}]
         }, {
             'comment': 'search by memo (text)',
@@ -3219,6 +3252,25 @@ UNITTEST_VECTOR = {
             'comment': 'search by memo hex',
             'in': ('sends', [{'field':'memo_hex','op':'=','value':'68656c6c6f'}], 'AND', None, None, None, None, None, 1000, 0, True),
             'out': [{'tx_index': 482, 'tx_hash': 'e864d7881d5c6a57b650dd507096275647eb32c05e3a27815869133a79a9db6f', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f'}]
+=======
+            'out': [{'tx_index': 482, 'tx_hash': 'e864d7881d5c6a57b650dd507096275647eb32c05e3a27815869133a79a9db6f', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656C6C6F'}]
+        }, {
+            'comment': 'search by memo (text)',
+            'in': ('sends', [{'field':'memo','op':'=','value':'hello'}], 'AND', None, None, None, None, None, 1000, 0, True),
+            'out': [{'tx_index': 482, 'tx_hash': 'e864d7881d5c6a57b650dd507096275647eb32c05e3a27815869133a79a9db6f', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656C6C6F'}]
+        }, {
+            'comment': 'search by memo (LIKE text)',
+            'in': ('sends', [{'field':'memo','op':'LIKE','value':'%ell%'}], 'AND', None, None, None, None, None, 1000, 0, True),
+            'out': [{'tx_index': 482, 'tx_hash': 'e864d7881d5c6a57b650dd507096275647eb32c05e3a27815869133a79a9db6f', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656C6C6F'}]
+        }, {
+            'comment': 'search by memo hex',
+            'in': ('sends', [{'field':'memo_hex','op':'=','value':'68656C6C6F'}], 'AND', None, None, None, None, None, 1000, 0, True),
+            'out': [{'tx_index': 482, 'tx_hash': 'e864d7881d5c6a57b650dd507096275647eb32c05e3a27815869133a79a9db6f', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656C6C6F'}]
+        }, {
+            'comment': 'search by memo hex',
+            'in': ('sends', [{'field':'memo_hex','op':'=','value':'68656c6c6f'}], 'AND', None, None, None, None, None, 1000, 0, True),
+            'out': [{'tx_index': 482, 'tx_hash': 'e864d7881d5c6a57b650dd507096275647eb32c05e3a27815869133a79a9db6f', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656C6C6F'}]
+>>>>>>> c977efb509cad09463f39b41579c34893ff5441e
         }, {
             'comment': 'search with invalid memo hex',
             'in': ('sends', [{'field':'memo_hex','op':'=','value':'badx'}], 'AND', None, None, None, None, None, 1000, 0, True),
@@ -3226,7 +3278,11 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'search by memo hex',
             'in': ('sends', [{'field':'memo_hex','op':'=','value':'fade0001'}], 'AND', None, None, None, None, None, 1000, 0, True),
+<<<<<<< HEAD
             'out': [{'tx_index': 483, 'tx_hash': 'b9ad301585a4f779a15adb7c357215918a22a0c32d78f1fc622122dce2ba46c2', 'block_index': 310482, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': '', 'memo_hex': 'fade0001'}]
+=======
+            'out': [{'tx_index': 483, 'tx_hash': 'b9ad301585a4f779a15adb7c357215918a22a0c32d78f1fc622122dce2ba46c2', 'block_index': 310482, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': '', 'memo_hex': 'FADE0001'}]
+>>>>>>> c977efb509cad09463f39b41579c34893ff5441e
         }],
     },
     'script': {
@@ -3616,10 +3672,22 @@ UNITTEST_VECTOR = {
             'in': ('create_send', {'memo': '0102030405', 'memo_is_hex': True, 'source': ADDR[0], 'destination': ADDR[1], 'asset': 'XCP', 'quantity': DP['small']}),
             'out': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'02'+'0000000000000000'+'38'+'6a36'+'2a504df746f83442653dd7afa4dc727a030865749e9fba5aec80c39a9e68edbc79e78ed45723c1072c38aededa458f95fa42b8b188e8'+'a343ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'
         }, {
+<<<<<<< HEAD
             'comment': 'CIP 9 enhanced_send before enabled',
             'mock_protocol_changes': {'enhanced_sends': False},
             'in': ('create_send', {'memo': '0102030405', 'memo_is_hex': True, 'source': ADDR[0], 'destination': ADDR[1], 'asset': 'XCP', 'quantity': DP['small']}),
             'error': (RPCError, 'Error composing send transaction via API: enhanced sends are not enabled (-32001)')
+=======
+            'comment': 'CIP 9 enhanced send to a REQUIRE_MEMO address without memo',
+            'mock_protocol_changes': {'enhanced_sends': True},
+            'in': ('create_send', {'source': ADDR[0], 'destination': ADDR[4], 'asset': 'XCP', 'quantity': DP['small']}),
+            'error': (Exception, "{'code': -32001, 'message': \"Error composing send transaction via API: ['destination requires memo']\"}") # RPCError isn't on standard exceptions list, and this error throws raw json
+        }, {
+            'comment': 'CIP 9 enhanced send to a REQUIRE_MEMO address with memo',
+            'mock_protocol_changes': {'enhanced_sends': True},
+            'in': ('create_send', {'memo': '0102030405', 'memo_is_hex': True, 'source': ADDR[0], 'destination': ADDR[4], 'asset': 'XCP', 'quantity': DP['small']}),
+            'out': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'02'+'0000000000000000'+'38'+'6a36'+'2a504df746f83442653dd7afa4dc727a030865749e9fba5aec80c39a9e24218a8a1f9472b6eded95d17e826c6ed755d2a142b8b188e8'+'a343ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'
+>>>>>>> c977efb509cad09463f39b41579c34893ff5441e
         }],
         'generate_asset_id': [{
             'in': ('BTC', DP['default_block_index']),
@@ -4117,9 +4185,15 @@ UNITTEST_VECTOR = {
         }, {
             'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU', 'SOUP', 100000000, bytes.fromhex('01ff'), DP['default_block_index']),
             'out': ([])
+<<<<<<< HEAD
         }, {
             'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU', 'SOUP', 0, bytes.fromhex('01ff'), DP['default_block_index']),
             'out': (['zero quantity'])
+=======
+        # }, {
+        #     'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU', 'SOUP', 0, bytes.fromhex('01ff'), DP['default_block_index']),
+        #     'out': (['zero quantity'])
+>>>>>>> c977efb509cad09463f39b41579c34893ff5441e
         }, {
             'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '', 'SOUP', 100000000, bytes.fromhex('01ff'), DP['default_block_index']),
             'out': (['destination is required'])
@@ -4155,7 +4229,11 @@ UNITTEST_VECTOR = {
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     [],
                     bytes.fromhex('02' + '01530821671b1065' + '0000000005f5e100' + '6f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec'))
+<<<<<<< HEAD
         }, 
+=======
+        },
+>>>>>>> c977efb509cad09463f39b41579c34893ff5441e
         # ----- tests specific to enhanced send -----
         {
             'mock_protocol_changes': {'short_tx_type_id': True},
@@ -4216,7 +4294,11 @@ UNITTEST_VECTOR = {
             ]
         }, {
             'comment': 'zero quantity send',
+<<<<<<< HEAD
             'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'block_index': DP['default_block_index'], 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'data': bytes.fromhex('00000002' + '0000000000000001' + '0000000000000000' + SHORT_ADDR_BYTES[0]), 'block_time': 155409000, 'fee': 10000, 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'tx_index': 502, 'supported': 1},),
+=======
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'block_index': DP['default_block_index'], 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'data': bytes.fromhex('00000002' + '0000000000000001' + '000000000bebc200' + SHORT_ADDR_BYTES[0]), 'block_time': 155409000, 'fee': 10000, 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'tx_index': 502, 'supported': 1},),
+>>>>>>> c977efb509cad09463f39b41579c34893ff5441e
             'records': [
                 {'table': 'sends', 'values': {
                     'asset': 'XCP',
@@ -4224,12 +4306,33 @@ UNITTEST_VECTOR = {
                     'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'quantity': 0,
                     'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH',
+<<<<<<< HEAD
                     'status': 'invalid: zero quantity',
+=======
+                    'status': 'valid',
+>>>>>>> c977efb509cad09463f39b41579c34893ff5441e
                     'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'tx_index': 502,
                 }}
             ]
         }, {
+<<<<<<< HEAD
+=======
+            'in':({'tx_index': 502, 'data': bytes.fromhex('00000002' + '0000000000000001' + '0000000058b11400' + SHORT_ADDR_BYTES[3]), 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'block_time': 310501000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_hash': '736ecc18f9f41b3ccf67dded1252969e4929404d6ad657b2039b937a7785cf3e', 'supported': 1, 'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'btc_amount': 5430, 'block_index': DP['default_block_index'], 'fee': 10000},),
+            'records': [
+                {'table': 'sends', 'values': {
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj',
+                    'quantity': 0,
+                    'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH',
+                    'status': 'valid',
+                    'tx_hash': '736ecc18f9f41b3ccf67dded1252969e4929404d6ad657b2039b937a7785cf3e',
+                    'tx_index': 502,
+                }}
+            ]
+        }, {
+>>>>>>> c977efb509cad09463f39b41579c34893ff5441e
             'in': ({'block_index': DP['default_block_index'], 'btc_amount': 7800, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'data': bytes.fromhex('00000002' + '0006cad8dc7f0b66' + '00000000000001f4' + SHORT_ADDR_BYTES[1]), 'block_hash': DP['default_block_hash'], 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1},),
             'records': [
                 {'table': 'sends', 'values': {
@@ -4322,6 +4425,7 @@ UNITTEST_VECTOR = {
         },
         # ----- tests specific to enhanced send -----
         {
+<<<<<<< HEAD
             'comment': 'instead of auto-correcting the quantity to the amount the address holds return invalid: insufficient funds',
             'in':({'tx_index': 502, 'data': bytes.fromhex('00000002' + '0000000000000001' + '0000000058b11400' + SHORT_ADDR_BYTES[3]), 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'block_time': 310501000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_hash': '736ecc18f9f41b3ccf67dded1252969e4929404d6ad657b2039b937a7785cf3e', 'supported': 1, 'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'btc_amount': 5430, 'block_index': DP['default_block_index'], 'fee': 10000},),
             'records': [
@@ -4337,6 +4441,8 @@ UNITTEST_VECTOR = {
                 }}
             ]
         }, {
+=======
+>>>>>>> c977efb509cad09463f39b41579c34893ff5441e
             'mock_protocol_changes': {'short_tx_type_id': True},
             'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': bytes.fromhex('00000002' + '0000000000000001' + '0000000005f5e100' + SHORT_ADDR_BYTES[1] + 'beefbeef'), 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
             'records': [
@@ -4385,6 +4491,7 @@ UNITTEST_VECTOR = {
                     'memo': None,
                 }}
             ]
+<<<<<<< HEAD
         }, {
             # invalid: quantity (too large)
             'mock_protocol_changes': {'short_tx_type_id': True},
@@ -4402,6 +4509,8 @@ UNITTEST_VECTOR = {
                     'memo': None,
                 }}
             ]
+=======
+>>>>>>> c977efb509cad09463f39b41579c34893ff5441e
         }]
     }
 }
