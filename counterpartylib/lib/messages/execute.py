@@ -7,7 +7,7 @@ import binascii
 import logging
 logger = logging.getLogger(__name__)
 
-from counterpartylib.lib import (util, config, exceptions)
+from counterpartylib.lib import (util, config, exceptions, message_type)
 from .scriptlib import (utils, blocks, processblock)
 
 FORMAT = '>20sQQQ'
@@ -71,7 +71,7 @@ def initialise (db):
 
 
 def compose (db, source, contract_id, gasprice, startgas, value, payload_hex):
-    if not config.TESTNET:  # TODO
+    if not (config.TESTNET or config.REGTEST):  # TODO
         return
 
     payload = binascii.unhexlify(payload_hex)
@@ -82,7 +82,7 @@ def compose (db, source, contract_id, gasprice, startgas, value, payload_hex):
         raise processblock.ContractError('negative gasprice')
 
     # Pack.
-    data = struct.pack(config.TXTYPE_FORMAT, ID)
+    data = message_type.pack(ID)
     curr_format = FORMAT + '{}s'.format(len(payload))
     data += struct.pack(curr_format, binascii.unhexlify(contract_id), gasprice, startgas, value, payload)
 
@@ -95,7 +95,7 @@ class Transaction(object):
         self.tx_hash = tx['tx_hash']
         self.tx_index = tx['tx_index']
         self.sender = tx['source']
-        self.data = data 
+        self.data = data
         self.to = to
         self.gasprice = gasprice
         self.startgas = startgas
@@ -115,7 +115,7 @@ class Transaction(object):
         return dict_
 
 def parse (db, tx, message):
-    if not config.TESTNET:  # TODO
+    if not (config.TESTNET or config.REGTEST):  # TODO
         return
 
     status = 'valid'

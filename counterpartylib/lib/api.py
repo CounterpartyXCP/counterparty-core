@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 from logging import handlers as logging_handlers
 D = decimal.Decimal
 import binascii
+import traceback
 
 import struct
 import apsw
@@ -39,6 +40,7 @@ from counterpartylib.lib import database
 from counterpartylib.lib import transaction
 from counterpartylib.lib import blocks
 from counterpartylib.lib import script
+from counterpartylib.lib import message_type
 from counterpartylib.lib.messages import send
 from counterpartylib.lib.messages import order
 from counterpartylib.lib.messages import btcpay
@@ -189,8 +191,15 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
         if 'case_sensitive' in filter_ and not isinstance(filter_['case_sensitive'], bool):
             raise APIError("case_sensitive must be a boolean")
 
+    # special case for memo and memo_hex field searches
+    if table == 'sends':
+        adjust_get_sends_memo_filters(filters)
+
     # SELECT
-    statement = '''SELECT * FROM {}'''.format(table)
+    if table == 'sends':
+        statement = '''SELECT *, CASE WHEN memo IS NULL THEN NULL ELSE hex(memo) END AS memo_hex FROM {}'''.format(table)
+    else:
+        statement = '''SELECT * FROM {}'''.format(table)
     # WHERE
     bindings = []
     conditions = []
@@ -257,7 +266,44 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
         if offset:
             statement += ''' OFFSET {}'''.format(offset)
 
-    return db_query(db, statement, tuple(bindings))
+
+    query_result = db_query(db, statement, tuple(bindings))
+
+    if table == 'sends':
+        # for sends, handle the memo field properly
+        return adjust_get_sends_results(query_result)
+
+    return query_result
+
+def adjust_get_sends_memo_filters(filters):
+    """Convert memo to a byte string.  If memo_hex is supplied, attempt to decode it and use that instead."""
+    for filter_ in filters:
+        if filter_['field'] == 'memo':
+            filter_['value'] = bytes(filter_['value'], 'utf-8')
+        if filter_['field'] == 'memo_hex':
+            # search the indexed memo field with a byte string
+            filter_['field'] = 'memo'
+            try:
+                filter_['value'] = bytes.fromhex(filter_['value'])
+            except ValueError as e:
+                raise APIError("Invalid memo_hex value")
+
+def adjust_get_sends_results(query_result):
+    """Format the memo_hex field.  Try and decode the memo from a utf-8 uncoded string. Invalid utf-8 strings return an empty memo."""
+    filtered_results = []
+    for send_row in list(query_result):
+        try:
+            if send_row['memo'] is None:
+                send_row['memo_hex'] = None
+                send_row['memo'] = None
+            else:
+                send_row['memo_hex'] = binascii.hexlify(send_row['memo']).decode('utf8')
+                send_row['memo'] = send_row['memo'].decode('utf-8')
+        except UnicodeDecodeError:
+            send_row['memo'] = ''
+        filtered_results.append(send_row)
+    return filtered_results
+
 
 def compose_transaction(db, name, params,
                         encoding='auto',
@@ -334,13 +380,13 @@ def conditional_decorator(decorator, condition):
 def init_api_access_log(app):
     """Initialize API logger."""
     loggers = (logging.getLogger('werkzeug'), app.logger)
-    
+
     # Disable console logging...
     for l in loggers:
         l.setLevel(logging.INFO)
         l.propagate = False
 
-    # Log to file, if configured...    
+    # Log to file, if configured...
     if config.API_LOG:
         handler = logging_handlers.RotatingFileHandler(config.API_LOG, 'a', API_MAX_LOG_SIZE, API_MAX_LOG_COUNT)
         for l in loggers:
@@ -458,10 +504,12 @@ class APIServer(threading.Thread):
                     return compose_transaction(db, name=tx, params=transaction_args, **common_args)
                 except (TypeError, script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
                     # TypeError happens when unexpected keyword arguments are passed in
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                    traceback.print_exception(exc_type, exc_value, exc_traceback)
                     error_msg = "Error composing {} transaction via API: {}".format(tx, str(error))
                     logging.warning(error_msg)
                     raise JSONRPCDispatchException(code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg)
-            
+
             return create_method
 
         for tx in API_TRANSACTIONS:
@@ -606,7 +654,7 @@ class APIServer(threading.Thread):
             cursor.execute('SELECT * FROM messages WHERE block_index IN (%s) ORDER BY message_index ASC'
                 % (block_indexes_str,))
             messages = collections.deque(cursor.fetchall())
-            
+
             # Discard any messages less than min_message_index
             if min_message_index:
                 while len(messages) and messages[0]['message_index'] < min_message_index:
@@ -654,6 +702,7 @@ class APIServer(threading.Thread):
                 'last_message_index': last_message['message_index'] if last_message else -1,
                 'running_testnet': config.TESTNET,
                 'running_testcoin': config.TESTCOIN,
+                'running_regtest': config.REGTEST,
                 'version_major': config.VERSION_MAJOR,
                 'version_minor': config.VERSION_MINOR,
                 'version_revision': config.VERSION_REVISION
@@ -721,8 +770,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def unpack(data_hex):
             data = binascii.unhexlify(data_hex)
-            message_type_id = struct.unpack(config.TXTYPE_FORMAT, data[:4])[0]
-            message = data[4:]
+            message_type_id, message = message_type.unpack(data)
 
             # TODO: Enabled only for `send`.
             if message_type_id == send.ID:
@@ -873,7 +921,7 @@ class APIServer(threading.Thread):
                 except (script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
                     error_msg = logging.warning("{} -- error composing {} transaction via API: {}".format(
                         str(error.__class__.__name__), query_type, str(error)))
-                    return flask.Response(error_msg, 400, mimetype='application/json')                        
+                    return flask.Response(error_msg, 400, mimetype='application/json')
             else:
                 # Need to de-generate extra_args to pass it through.
                 query_args = dict([item for item in extra_args])
@@ -905,11 +953,11 @@ class APIServer(threading.Thread):
 
         # Init the HTTP Server.
         init_api_access_log(app)
-        
+
         # Run app server (blocking)
         self.is_ready = True
         app.run(host=config.RPC_HOST, port=config.RPC_PORT, threaded=True)
-            
+
         db.close()
         return
 

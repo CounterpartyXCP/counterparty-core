@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 import string
 
-from counterpartylib.lib import (config, exceptions, util)
+from counterpartylib.lib import (config, exceptions, util, message_type)
 from . import rps
 
 # move random rps_match_id
@@ -112,7 +112,7 @@ def compose (db, source, move, random, rps_match_id):
     tx0_hash_bytes = binascii.unhexlify(bytes(tx0_hash, 'utf-8'))
     tx1_hash_bytes = binascii.unhexlify(bytes(tx1_hash, 'utf-8'))
     random_bytes = binascii.unhexlify(bytes(random, 'utf-8'))
-    data = struct.pack(config.TXTYPE_FORMAT, ID)
+    data = message_type.pack(ID)
     data += struct.pack(FORMAT, move, random_bytes, tx0_hash_bytes, tx1_hash_bytes)
     return (source, [], data)
 

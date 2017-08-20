@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 from counterpartylib.lib import util
 from counterpartylib.lib import config
 from counterpartylib.lib import script
+from counterpartylib.lib import message_type
 from counterpartylib.lib.script import AddressError
 from counterpartylib.lib.exceptions import *
 
@@ -40,7 +41,7 @@ def initialise(db):
 
 
 def pack(db, asset, quantity, tag):
-    data = struct.pack(config.TXTYPE_FORMAT, ID)
+    data = message_type.pack(ID)
     data += struct.pack(FORMAT, util.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX), quantity, tag)
     return data
 
@@ -89,7 +90,7 @@ def validate (db, source, destination, asset, quantity):
     if util.get_balance(db, source, asset) < quantity:
         raise BalanceError('balance insufficient')
 
-    if not config.TESTNET:
+    if not(config.TESTNET or config.REGTEST):
         raise ValidateError('disabled on mainnet')
 
 

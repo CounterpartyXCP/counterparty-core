@@ -5,7 +5,7 @@
 import struct
 import binascii
 
-from counterpartylib.lib import (config, exceptions, util)
+from counterpartylib.lib import (config, exceptions, util, message_type)
 from . import execute
 
 FORMAT = '>QQQ'
@@ -34,10 +34,10 @@ def initialise (db):
                    ''')
 
 def compose (db, source, gasprice, startgas, endowment, code_hex):
-    if not config.TESTNET:  # TODO
+    if not config.TESTNET or config.REGTEST:  # TODO
         return
 
-    data = struct.pack(config.TXTYPE_FORMAT, ID)
+    data = message_type.pack(ID)
     data += struct.pack(FORMAT, gasprice, startgas, endowment)
     data += binascii.unhexlify(code_hex)
 
@@ -45,17 +45,17 @@ def compose (db, source, gasprice, startgas, endowment, code_hex):
 
 
 def parse (db, tx, message):
-    if not config.TESTNET:  # TODO
+    if not config.TESTNET or config.REGTEST:  # TODO
         return
 
     try:
         gasprice, startgas, endowment = struct.unpack(FORMAT, message[:LENGTH])
     except struct.error:
-        gasprice, startgas, endowment = 0, 0, 0 # TODO: Is this ideal 
+        gasprice, startgas, endowment = 0, 0, 0 # TODO: Is this ideal
 
     code = util.hexlify(message[LENGTH:])
     source, destination, data = execute.compose(db, tx['source'], '', gasprice, startgas, endowment, code)
-    message = data[4:]
+    message_type_id, message = message_type.unpack(data, tx['block_index'])
 
     # Execute transaction upon publication, for actual creation of contract.
     execute.parse(db, tx, message)
