@@ -359,7 +359,8 @@ def initialise(db):
     # Leaving this here because in the future this could work for other things besides broadcast
     cursor.execute('''CREATE TABLE IF NOT EXISTS addresses(
                       address TEXT UNIQUE,
-                      options INTEGER)
+                      options INTEGER,
+                      block_index INTEGER)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       addresses_idx ON addresses (address)

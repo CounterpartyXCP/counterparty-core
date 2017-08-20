@@ -980,19 +980,14 @@ UNITTEST_VECTOR = {
             'records': [
                 {'table': 'addresses', 'values': {
                     'options': 1,
-                    'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'
+                    'address': ADDR[1]
                 }}
             ]
         }, {
-            'comment': 'test changing options to 0 on a previously REQUIRE_MEMO address with LOCKED feed',
-            'in': ({'btc_amount': 0, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'source': 'myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM', 'destination': '', 'block_index': DP['default_block_index'], 'fee': 10000, 'supported': 1, 'block_time': 310501000, 'tx_hash': '6b4a62b80f35b0e66df4591c8a445d453d995609e2df12afe93e742bea10dd86', 'tx_index': 502,
-                    'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\tOPTIONS 0'},),
-            'records': [
-                {'table': 'addresses', 'values': {
-                    'options': 1,
-                    'address': 'myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM'
-                }}
-            ]
+            'comment': 'test changing options to 1 on an address with LOCKED feed',
+            'in': ({'btc_amount': 1, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'source': ADDR[4], 'destination': '', 'block_index': DP['default_block_index'], 'fee': 10000, 'supported': 1, 'block_time': 310501000, 'tx_hash': '6b4a62b80f35b0e66df4591c8a445d453d995609e2df12afe93e742bea10dd86', 'tx_index': 502,
+                    'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\tOPTIONS 1'},),
+            'out': None
         }],
     },
     'burn': {
@@ -1269,7 +1264,7 @@ UNITTEST_VECTOR = {
                     bytes.fromhex('0000000001530821671b10650000000005f5e100'))
         }, {
             'comment': 'send to a REQUIRE_MEMO address',
-            'in': (ADDR[0], ADDR[4], 'XCP', DP['quantity']),
+            'in': (ADDR[0], ADDR[6], 'XCP', DP['quantity']),
             'error': (exceptions.ComposeError, '[\'destination requires memo\']')
         }],
         'parse': [{
@@ -3654,14 +3649,14 @@ UNITTEST_VECTOR = {
             'error': (RPCError, 'Error composing send transaction via API: enhanced sends are not enabled (-32001)')
         }, {
             'comment': 'CIP 9 enhanced send to a REQUIRE_MEMO address without memo',
-            'mock_protocol_changes': {'enhanced_sends': True},
-            'in': ('create_send', {'source': ADDR[0], 'destination': ADDR[4], 'asset': 'XCP', 'quantity': DP['small']}),
-            'error': (Exception, "Error composing send transaction via API: ['destination requires memo'] (-32001)")
+            'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},
+            'in': ('create_send', {'source': ADDR[0], 'destination': ADDR[6], 'asset': 'XCP', 'quantity': DP['small']}),
+            'error': (Exception, "Error composing send transaction via API: ['destination requires memo'] (-32001)") # RPCError isn't on standard exceptions list, and this error throws raw json
         }, {
             'comment': 'CIP 9 enhanced send to a REQUIRE_MEMO address with memo',
-            'mock_protocol_changes': {'enhanced_sends': True},
-            'in': ('create_send', {'memo': '0102030405', 'memo_is_hex': True, 'source': ADDR[0], 'destination': ADDR[4], 'asset': 'XCP', 'quantity': DP['small']}),
-            'out': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'02'+'0000000000000000'+'38'+'6a36'+'2a504df746f83442653dd7afa4dc727a030865749e9fba5aec80c39a9e24218a8a1f9472b6eded95d17e826c6ed755d2a142b8b188e8'+'a343ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'
+            'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},
+            'in': ('create_send', {'memo': '0102030405', 'memo_is_hex': True, 'source': ADDR[0], 'destination': ADDR[6], 'asset': 'XCP', 'quantity': DP['small']}),
+            'out': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'02'+'0000000000000000'+'38'+'6a36'+'2a504df746f83442653dd7afa4dc727a030865749e9fba5aec80c39a9e56174ca4a68af644972baced7a9ef02e467cb63542b8b188e8'+'a343ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'
         }],
         'generate_asset_id': [{
             'in': ('BTC', DP['default_block_index']),
@@ -3739,7 +3734,7 @@ UNITTEST_VECTOR = {
         }],
         'last_message': [{
             'in': (),
-            'out': {'message_index': 112, 'block_index': 310498, 'command': 'insert', 'category': 'credits', 'bindings': '{"action": "issuance", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "A95428956661682277", "block_index": 310498, "event": "2aabeff2dd379ed8d9d1400adcf6f7a375cad02aafc9de1268054839a5110d16", "quantity": 100000000}', 'timestamp': 0},
+            'out': {'message_index': 114, 'block_index': 310498, 'command': 'insert', 'category': 'credits', 'bindings': '{"action": "issuance", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "A95428956661682277", "block_index": 310498, "event": "2aabeff2dd379ed8d9d1400adcf6f7a375cad02aafc9de1268054839a5110d16", "quantity": 100000000}', 'timestamp': 0},
         }],
         'get_asset_id': [{
             'in': ('XCP', DP['default_block_index']),
