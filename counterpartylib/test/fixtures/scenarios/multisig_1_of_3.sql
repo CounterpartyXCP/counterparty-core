@@ -9,7 +9,8 @@ BEGIN TRANSACTION;
 DROP TABLE IF EXISTS addresses;
 CREATE TABLE addresses(
                       address TEXT UNIQUE,
-                      options INTEGER);
+                      options INTEGER,
+                      block_index INTEGER);
 -- Triggers and indices on  addresses
 CREATE INDEX addresses_idx ON addresses (address);
 

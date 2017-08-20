@@ -104,7 +104,7 @@ def validate (db, source, timestamp, value, fee_fraction_int, text, block_index)
         if len(text) > 52:
             problems.append('text too long')
 
-    if text and text.lower().startswith('options'):
+    if util.enabled('options_require_memo') and text and text.lower().startswith('options'):
         ops_spl = text.split(" ")
         if len(ops_spl) == 2:
             try:
@@ -212,7 +212,7 @@ def parse (db, tx, message):
         return
 
     # Options?
-    if (tx['block_index'] > config.BLOCK_START_ADDRESSES_OPTIONS) and ('locked feed' not in status) and ('options out of range' not in status):
+    if (util.enabled('options_require_memo')) and ('locked feed' not in status) and ('options out of range' not in status):
         if text and text.lower().startswith('options'):
             ops_spl = text.split(" ")
             if len(ops_spl) == 2:
@@ -230,7 +230,7 @@ def parse (db, tx, message):
                                 'address': tx['source'],
                                 'options': options_int
                                }
-                    sql = 'insert or replace into addresses(address, options) values(:address, :options)'
+                    sql = 'insert or replace into addresses(address, options, block_index) values(:address, :options, :block_index)'
                     cursor = db.cursor()
                     cursor.execute(sql, op_bindings)
 

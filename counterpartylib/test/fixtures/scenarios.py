@@ -6,7 +6,7 @@ tests if the outputs of all scenarios are identical. It also tests the similarit
 scenario (for instance `simplesig` scenario is the base scenario for all mutlisig scenarios).
 
 To add (or update) a transaction in a scenario, or add a scenario, just update `scenarios.py` and run `py.test --skiptestbook=all --savescenarios`
-This command will generates new outputs for each scenario (.new.json, .new.sql and .new.log), if you are satisfied with the new output just rename them (remove the .new). 
+This command will generates new outputs for each scenario (.new.json, .new.sql and .new.log), if you are satisfied with the new output just rename them (remove the .new).
 You need to do this every time you update UNITTEST_FIXTURE.
 
 ```
@@ -76,6 +76,9 @@ UNITTEST_FIXTURE = [
     ['broadcast', (ADDR[4], 1388000000, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
     ['bet', (ADDR[4], ADDR[4], 1, 1388000001, 9, 9, 0.0, 5040, 100), {'encoding': 'multisig'}],
     ['broadcast', (ADDR[4], 1388000002, 1, 0.0, 'lock'), {'encoding': 'multisig'}],
+
+    # To test REQUIRE_MEMO
+    ['broadcast', (ADDR[6], 1388000003, 1, 0.0, 'options 1'), {'encoding': 'multisig'}],
 
     ['create_next_block', 490],
 
