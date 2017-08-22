@@ -12,6 +12,15 @@ CREATE TABLE addresses(
                       options INTEGER,
                       block_index INTEGER);
 -- Triggers and indices on  addresses
+CREATE TRIGGER _addresses_delete BEFORE DELETE ON addresses BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO addresses(rowid,address,options,block_index) VALUES('||old.rowid||','||quote(old.address)||','||quote(old.options)||','||quote(old.block_index)||')');
+                            END;
+CREATE TRIGGER _addresses_insert AFTER INSERT ON addresses BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM addresses WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _addresses_update AFTER UPDATE ON addresses BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE addresses SET address='||quote(old.address)||',options='||quote(old.options)||',block_index='||quote(old.block_index)||' WHERE rowid='||old.rowid);
+                            END;
 CREATE INDEX addresses_idx ON addresses (address);
 
 -- Table  assets
