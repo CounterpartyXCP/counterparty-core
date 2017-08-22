@@ -14,6 +14,15 @@ CREATE TABLE addresses(
 INSERT INTO addresses VALUES('myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM',0,310488);
 INSERT INTO addresses VALUES('mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42',1,310490);
 -- Triggers and indices on  addresses
+CREATE TRIGGER _addresses_delete BEFORE DELETE ON addresses BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO addresses(rowid,address,options,block_index) VALUES('||old.rowid||','||quote(old.address)||','||quote(old.options)||','||quote(old.block_index)||')');
+                            END;
+CREATE TRIGGER _addresses_insert AFTER INSERT ON addresses BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM addresses WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _addresses_update AFTER UPDATE ON addresses BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE addresses SET address='||quote(old.address)||',options='||quote(old.options)||',block_index='||quote(old.block_index)||' WHERE rowid='||old.rowid);
+                            END;
 CREATE INDEX addresses_idx ON addresses (address);
 
 -- Table  assets
@@ -1689,46 +1698,48 @@ INSERT INTO undolog VALUES(142,'UPDATE balances SET address=''myAtcJEHAsDLbTkai6
 INSERT INTO undolog VALUES(143,'DELETE FROM debits WHERE rowid=24');
 INSERT INTO undolog VALUES(144,'DELETE FROM bets WHERE rowid=5');
 INSERT INTO undolog VALUES(145,'DELETE FROM broadcasts WHERE rowid=489');
-INSERT INTO undolog VALUES(146,'DELETE FROM broadcasts WHERE rowid=490');
-INSERT INTO undolog VALUES(147,'DELETE FROM broadcasts WHERE rowid=491');
-INSERT INTO undolog VALUES(148,'UPDATE balances SET address=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',asset=''XCP'',quantity=92050000000 WHERE rowid=1');
-INSERT INTO undolog VALUES(149,'DELETE FROM debits WHERE rowid=25');
-INSERT INTO undolog VALUES(150,'DELETE FROM orders WHERE rowid=5');
-INSERT INTO undolog VALUES(151,'DELETE FROM orders WHERE rowid=6');
-INSERT INTO undolog VALUES(152,'UPDATE orders SET tx_index=492,tx_hash=''301207b62ade0707eeab94a413cb7b6be1886de25b22854e953861789385e5e7'',block_index=310491,source=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',give_asset=''XCP'',give_quantity=100000000,give_remaining=100000000,get_asset=''BTC'',get_quantity=800000,get_remaining=800000,expiration=2000,expire_index=312491,fee_required=900000,fee_required_remaining=900000,fee_provided=6800,fee_provided_remaining=6800,status=''open'' WHERE rowid=5');
-INSERT INTO undolog VALUES(153,'UPDATE orders SET tx_index=493,tx_hash=''14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0'',block_index=310492,source=''mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'',give_asset=''BTC'',give_quantity=800000,give_remaining=800000,get_asset=''XCP'',get_quantity=100000000,get_remaining=100000000,expiration=2000,expire_index=312492,fee_required=0,fee_required_remaining=0,fee_provided=1000000,fee_provided_remaining=1000000,status=''open'' WHERE rowid=6');
-INSERT INTO undolog VALUES(154,'DELETE FROM order_matches WHERE rowid=1');
-INSERT INTO undolog VALUES(155,'DELETE FROM balances WHERE rowid=19');
-INSERT INTO undolog VALUES(156,'DELETE FROM credits WHERE rowid=26');
-INSERT INTO undolog VALUES(157,'DELETE FROM burns WHERE rowid=494');
-INSERT INTO undolog VALUES(158,'UPDATE balances SET address=''mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'',asset=''XCP'',quantity=92995878046 WHERE rowid=19');
-INSERT INTO undolog VALUES(159,'DELETE FROM debits WHERE rowid=26');
-INSERT INTO undolog VALUES(160,'DELETE FROM assets WHERE rowid=9');
-INSERT INTO undolog VALUES(161,'DELETE FROM issuances WHERE rowid=495');
-INSERT INTO undolog VALUES(162,'DELETE FROM balances WHERE rowid=20');
-INSERT INTO undolog VALUES(163,'DELETE FROM credits WHERE rowid=27');
-INSERT INTO undolog VALUES(164,'UPDATE balances SET address=''mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'',asset=''DIVIDEND'',quantity=100 WHERE rowid=20');
-INSERT INTO undolog VALUES(165,'DELETE FROM debits WHERE rowid=27');
-INSERT INTO undolog VALUES(166,'DELETE FROM balances WHERE rowid=21');
-INSERT INTO undolog VALUES(167,'DELETE FROM credits WHERE rowid=28');
-INSERT INTO undolog VALUES(168,'DELETE FROM sends WHERE rowid=496');
-INSERT INTO undolog VALUES(169,'UPDATE balances SET address=''mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'',asset=''XCP'',quantity=92945878046 WHERE rowid=19');
-INSERT INTO undolog VALUES(170,'DELETE FROM debits WHERE rowid=28');
-INSERT INTO undolog VALUES(171,'DELETE FROM balances WHERE rowid=22');
-INSERT INTO undolog VALUES(172,'DELETE FROM credits WHERE rowid=29');
-INSERT INTO undolog VALUES(173,'DELETE FROM sends WHERE rowid=497');
-INSERT INTO undolog VALUES(174,'UPDATE balances SET address=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',asset=''XCP'',quantity=91950000000 WHERE rowid=1');
-INSERT INTO undolog VALUES(175,'DELETE FROM debits WHERE rowid=29');
-INSERT INTO undolog VALUES(176,'DELETE FROM assets WHERE rowid=10');
-INSERT INTO undolog VALUES(177,'DELETE FROM issuances WHERE rowid=498');
-INSERT INTO undolog VALUES(178,'DELETE FROM balances WHERE rowid=23');
-INSERT INTO undolog VALUES(179,'DELETE FROM credits WHERE rowid=30');
-INSERT INTO undolog VALUES(180,'UPDATE balances SET address=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',asset=''XCP'',quantity=91900000000 WHERE rowid=1');
-INSERT INTO undolog VALUES(181,'DELETE FROM debits WHERE rowid=30');
-INSERT INTO undolog VALUES(182,'DELETE FROM assets WHERE rowid=11');
-INSERT INTO undolog VALUES(183,'DELETE FROM issuances WHERE rowid=499');
-INSERT INTO undolog VALUES(184,'DELETE FROM balances WHERE rowid=24');
-INSERT INTO undolog VALUES(185,'DELETE FROM credits WHERE rowid=31');
+INSERT INTO undolog VALUES(146,'DELETE FROM addresses WHERE rowid=1');
+INSERT INTO undolog VALUES(147,'DELETE FROM broadcasts WHERE rowid=490');
+INSERT INTO undolog VALUES(148,'DELETE FROM broadcasts WHERE rowid=491');
+INSERT INTO undolog VALUES(149,'DELETE FROM addresses WHERE rowid=2');
+INSERT INTO undolog VALUES(150,'UPDATE balances SET address=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',asset=''XCP'',quantity=92050000000 WHERE rowid=1');
+INSERT INTO undolog VALUES(151,'DELETE FROM debits WHERE rowid=25');
+INSERT INTO undolog VALUES(152,'DELETE FROM orders WHERE rowid=5');
+INSERT INTO undolog VALUES(153,'DELETE FROM orders WHERE rowid=6');
+INSERT INTO undolog VALUES(154,'UPDATE orders SET tx_index=492,tx_hash=''301207b62ade0707eeab94a413cb7b6be1886de25b22854e953861789385e5e7'',block_index=310491,source=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',give_asset=''XCP'',give_quantity=100000000,give_remaining=100000000,get_asset=''BTC'',get_quantity=800000,get_remaining=800000,expiration=2000,expire_index=312491,fee_required=900000,fee_required_remaining=900000,fee_provided=6800,fee_provided_remaining=6800,status=''open'' WHERE rowid=5');
+INSERT INTO undolog VALUES(155,'UPDATE orders SET tx_index=493,tx_hash=''14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0'',block_index=310492,source=''mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'',give_asset=''BTC'',give_quantity=800000,give_remaining=800000,get_asset=''XCP'',get_quantity=100000000,get_remaining=100000000,expiration=2000,expire_index=312492,fee_required=0,fee_required_remaining=0,fee_provided=1000000,fee_provided_remaining=1000000,status=''open'' WHERE rowid=6');
+INSERT INTO undolog VALUES(156,'DELETE FROM order_matches WHERE rowid=1');
+INSERT INTO undolog VALUES(157,'DELETE FROM balances WHERE rowid=19');
+INSERT INTO undolog VALUES(158,'DELETE FROM credits WHERE rowid=26');
+INSERT INTO undolog VALUES(159,'DELETE FROM burns WHERE rowid=494');
+INSERT INTO undolog VALUES(160,'UPDATE balances SET address=''mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'',asset=''XCP'',quantity=92995878046 WHERE rowid=19');
+INSERT INTO undolog VALUES(161,'DELETE FROM debits WHERE rowid=26');
+INSERT INTO undolog VALUES(162,'DELETE FROM assets WHERE rowid=9');
+INSERT INTO undolog VALUES(163,'DELETE FROM issuances WHERE rowid=495');
+INSERT INTO undolog VALUES(164,'DELETE FROM balances WHERE rowid=20');
+INSERT INTO undolog VALUES(165,'DELETE FROM credits WHERE rowid=27');
+INSERT INTO undolog VALUES(166,'UPDATE balances SET address=''mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'',asset=''DIVIDEND'',quantity=100 WHERE rowid=20');
+INSERT INTO undolog VALUES(167,'DELETE FROM debits WHERE rowid=27');
+INSERT INTO undolog VALUES(168,'DELETE FROM balances WHERE rowid=21');
+INSERT INTO undolog VALUES(169,'DELETE FROM credits WHERE rowid=28');
+INSERT INTO undolog VALUES(170,'DELETE FROM sends WHERE rowid=496');
+INSERT INTO undolog VALUES(171,'UPDATE balances SET address=''mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'',asset=''XCP'',quantity=92945878046 WHERE rowid=19');
+INSERT INTO undolog VALUES(172,'DELETE FROM debits WHERE rowid=28');
+INSERT INTO undolog VALUES(173,'DELETE FROM balances WHERE rowid=22');
+INSERT INTO undolog VALUES(174,'DELETE FROM credits WHERE rowid=29');
+INSERT INTO undolog VALUES(175,'DELETE FROM sends WHERE rowid=497');
+INSERT INTO undolog VALUES(176,'UPDATE balances SET address=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',asset=''XCP'',quantity=91950000000 WHERE rowid=1');
+INSERT INTO undolog VALUES(177,'DELETE FROM debits WHERE rowid=29');
+INSERT INTO undolog VALUES(178,'DELETE FROM assets WHERE rowid=10');
+INSERT INTO undolog VALUES(179,'DELETE FROM issuances WHERE rowid=498');
+INSERT INTO undolog VALUES(180,'DELETE FROM balances WHERE rowid=23');
+INSERT INTO undolog VALUES(181,'DELETE FROM credits WHERE rowid=30');
+INSERT INTO undolog VALUES(182,'UPDATE balances SET address=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',asset=''XCP'',quantity=91900000000 WHERE rowid=1');
+INSERT INTO undolog VALUES(183,'DELETE FROM debits WHERE rowid=30');
+INSERT INTO undolog VALUES(184,'DELETE FROM assets WHERE rowid=11');
+INSERT INTO undolog VALUES(185,'DELETE FROM issuances WHERE rowid=499');
+INSERT INTO undolog VALUES(186,'DELETE FROM balances WHERE rowid=24');
+INSERT INTO undolog VALUES(187,'DELETE FROM credits WHERE rowid=31');
 
 -- Table  undolog_block
 DROP TABLE IF EXISTS undolog_block;
@@ -1824,22 +1835,22 @@ INSERT INTO undolog_block VALUES(310485,141);
 INSERT INTO undolog_block VALUES(310486,141);
 INSERT INTO undolog_block VALUES(310487,142);
 INSERT INTO undolog_block VALUES(310488,145);
-INSERT INTO undolog_block VALUES(310489,146);
-INSERT INTO undolog_block VALUES(310490,147);
-INSERT INTO undolog_block VALUES(310491,148);
-INSERT INTO undolog_block VALUES(310492,151);
-INSERT INTO undolog_block VALUES(310493,155);
-INSERT INTO undolog_block VALUES(310494,158);
-INSERT INTO undolog_block VALUES(310495,164);
-INSERT INTO undolog_block VALUES(310496,169);
-INSERT INTO undolog_block VALUES(310497,174);
-INSERT INTO undolog_block VALUES(310498,180);
-INSERT INTO undolog_block VALUES(310499,186);
-INSERT INTO undolog_block VALUES(310500,186);
+INSERT INTO undolog_block VALUES(310489,147);
+INSERT INTO undolog_block VALUES(310490,148);
+INSERT INTO undolog_block VALUES(310491,150);
+INSERT INTO undolog_block VALUES(310492,153);
+INSERT INTO undolog_block VALUES(310493,157);
+INSERT INTO undolog_block VALUES(310494,160);
+INSERT INTO undolog_block VALUES(310495,166);
+INSERT INTO undolog_block VALUES(310496,171);
+INSERT INTO undolog_block VALUES(310497,176);
+INSERT INTO undolog_block VALUES(310498,182);
+INSERT INTO undolog_block VALUES(310499,188);
+INSERT INTO undolog_block VALUES(310500,188);
 
 -- For primary key autoincrements the next id to use is stored in
 -- sqlite_sequence
 DELETE FROM main.sqlite_sequence WHERE name='undolog';
-INSERT INTO main.sqlite_sequence VALUES ('undolog', 185);
+INSERT INTO main.sqlite_sequence VALUES ('undolog', 187);
 
 COMMIT TRANSACTION;
