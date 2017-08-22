@@ -16,7 +16,7 @@ from counterpartylib.lib import script
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 
-from counterpartylib.lib.backend import addrindex, btcd, bcoin
+from counterpartylib.lib.backend import addrindex, btcd
 
 MEMPOOL_CACHE_INITIALIZED = False
 
