@@ -975,6 +975,7 @@ UNITTEST_VECTOR = {
             ]
         }, {
             'comment': 'test changing options to 1 on a specific address',
+            'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},
             'in': ({'btc_amount': 0, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': '', 'block_index': DP['default_block_index'], 'fee': 10000, 'supported': 1, 'block_time': 310501000, 'tx_hash': '6b4a62b80f35b0e66df4591c8a445d453d995609e2df12afe93e742bea10dd86', 'tx_index': 502,
                     'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\tOPTIONS 1'},),
             'records': [
@@ -985,9 +986,16 @@ UNITTEST_VECTOR = {
             ]
         }, {
             'comment': 'test changing options to 1 on an address with LOCKED feed',
+            'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},
             'in': ({'btc_amount': 1, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'source': ADDR[4], 'destination': '', 'block_index': DP['default_block_index'], 'fee': 10000, 'supported': 1, 'block_time': 310501000, 'tx_hash': '6b4a62b80f35b0e66df4591c8a445d453d995609e2df12afe93e742bea10dd86', 'tx_index': 502,
                     'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\tOPTIONS 1'},),
-            'out': None
+            'out': None,
+            'records': [
+                {'table': 'addresses', 'values': {
+                    'options': 0,
+                    'address': ADDR[4]
+                }}
+            ]
         }],
     },
     'burn': {
@@ -3651,7 +3659,7 @@ UNITTEST_VECTOR = {
             'comment': 'CIP 9 enhanced send to a REQUIRE_MEMO address without memo',
             'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},
             'in': ('create_send', {'source': ADDR[0], 'destination': ADDR[6], 'asset': 'XCP', 'quantity': DP['small']}),
-            'error': (Exception, "Error composing send transaction via API: ['destination requires memo'] (-32001)") # RPCError isn't on standard exceptions list, and this error throws raw json
+            'error': (RPCError, "Error composing send transaction via API: ['destination requires memo'] (-32001)")
         }, {
             'comment': 'CIP 9 enhanced send to a REQUIRE_MEMO address with memo',
             'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},
@@ -3734,7 +3742,7 @@ UNITTEST_VECTOR = {
         }],
         'last_message': [{
             'in': (),
-            'out': {'message_index': 114, 'block_index': 310498, 'command': 'insert', 'category': 'credits', 'bindings': '{"action": "issuance", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "A95428956661682277", "block_index": 310498, "event": "2aabeff2dd379ed8d9d1400adcf6f7a375cad02aafc9de1268054839a5110d16", "quantity": 100000000}', 'timestamp': 0},
+            'out': {'message_index': 116, 'block_index': 310498, 'command': 'insert', 'category': 'credits', 'bindings': '{"action": "issuance", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "A95428956661682277", "block_index": 310498, "event": "2aabeff2dd379ed8d9d1400adcf6f7a375cad02aafc9de1268054839a5110d16", "quantity": 100000000}', 'timestamp': 0},
         }],
         'get_asset_id': [{
             'in': ('XCP', DP['default_block_index']),

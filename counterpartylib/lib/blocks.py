@@ -1144,7 +1144,7 @@ def follow(db):
             block_count = backend.getblockcount()
             logger.debug('Backend block count {}, current block {}'.format(block_count, block_index))
         except (ConnectionRefusedError, http.client.CannotSendRequest, backend.addrindex.BackendRPCError) as e:
-            logger.debug('Backedn refused connection')
+            logger.debug('Backend refused connection')
             logger.debug(e)
             if config.FORCE:
                 time.sleep(config.BACKEND_POLL_INTERVAL)

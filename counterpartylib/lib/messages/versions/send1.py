@@ -51,7 +51,7 @@ def validate (db, source, destination, asset, quantity, block_index):
         if not destination:
             problems.append('destination is required')
 
-    if block_index > config.BLOCK_START_ADDRESSES_OPTIONS:
+    if util.enabled('options_require_memo'):
         # Check destination address options
 
         cursor = db.cursor()
