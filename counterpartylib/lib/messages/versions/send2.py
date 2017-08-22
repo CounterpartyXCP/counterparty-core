@@ -72,7 +72,7 @@ def validate(db, source, destination, asset, quantity, block_index):
     if util.get_balance(db, source, asset) < quantity:
         raise BalanceError('balance insufficient')
 
-    if block_index > config.BLOCK_START_ADDRESSES_OPTIONS:
+    if util.enabled('options_require_memo'):
         # Check destination address options
 
         cursor = db.cursor()
