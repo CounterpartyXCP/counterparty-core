@@ -92,7 +92,7 @@ def parse_tx(db, tx):
 
     if message_type_id == send.ID:
         send.parse(db, tx, message)
-    elif message_type_id == enhanced_send.ID:
+    elif message_type_id == enhanced_send.ID and util.enabled('enhanced_sends', block_index=tx['block_index']):
         enhanced_send.parse(db, tx, message)
     elif message_type_id == order.ID:
         order.parse(db, tx, message)
