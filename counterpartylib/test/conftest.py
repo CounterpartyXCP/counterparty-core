@@ -30,8 +30,9 @@ MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
     'short_tx_type_id': {'block_index': 310502, 'allow_always_latest': False},  # override to be true only at block 310502
     'enhanced_sends': {'block_index': 310999, 'allow_always_latest': False},  # override to be true only at block 310999
 }
-ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False
-ALWAYS_LATEST_PROTOCOL_CHANGES = False
+DISABLE_ALL_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False # if true, never look at MOCK_PROTOCOL_CHANGES_AT_BLOCK
+ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False # if true, always check MOCK_PROTOCOL_CHANGES_AT_BLOCK
+ALWAYS_LATEST_PROTOCOL_CHANGES = False # Even when this is true, this can be overridden if allow_always_latest is False in MOCK_PROTOCOL_CHANGES_AT_BLOCK
 _enabled = util.enabled
 def enabled(change_name, block_index=None):
     # if explicitly set
@@ -63,6 +64,9 @@ util.enabled = enabled
 
 # This is true if ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK is set
 def shouldCheckForMockProtocolChangesAtBlock(change_name):
+    if DISABLE_ALL_MOCK_PROTOCOL_CHANGES_AT_BLOCK:
+        return False
+
     if change_name not in MOCK_PROTOCOL_CHANGES_AT_BLOCK:
         return False
 
