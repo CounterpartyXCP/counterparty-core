@@ -276,7 +276,7 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
     if counterwager_quantity <= 0: problems.append('non‐positive counterwager')
     if deadline < 0: problems.append('negative deadline')
     if expiration < 0: problems.append('negative expiration')
-    if expiration == 0 and not (block_index >= 317500 or config.TESTNET):   # Protocol change.
+    if expiration == 0 and not (block_index >= 317500 or config.TESTNET or config.REGTEST):   # Protocol change.
         problems.append('zero expiration')
 
     if target_value:
@@ -414,7 +414,7 @@ def match (db, tx):
     tx1_wager_remaining = tx1['wager_remaining']
     tx1_counterwager_remaining = tx1['counterwager_remaining']
     bet_matches = cursor.fetchall()
-    if tx['block_index'] > 284500 or config.TESTNET:  # Protocol change.
+    if tx['block_index'] > 284500 or config.TESTNET or config.REGTEST:  # Protocol change.
         sorted(bet_matches, key=lambda x: x['tx_index'])                                        # Sort by tx index second.
         sorted(bet_matches, key=lambda x: util.price(x['wager_quantity'], x['counterwager_quantity']))   # Sort by price first.
 
@@ -472,7 +472,7 @@ def match (db, tx):
             if not forward_quantity:
                 logger.debug('Skipping: zero forward quantity.')
                 continue
-            if tx1['block_index'] >= 286500 or config.TESTNET:    # Protocol change.
+            if tx1['block_index'] >= 286500 or config.TESTNET or config.REGTEST:    # Protocol change.
                 if not backward_quantity:
                     logger.debug('Skipping: zero backward quantity.')
                     continue
@@ -502,7 +502,7 @@ def match (db, tx):
             cursor.execute(sql, bindings)
             log.message(db, tx['block_index'], 'update', 'bets', bindings)
 
-            if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
+            if tx1['block_index'] >= 292000 or config.TESTNET or config.REGTEST:  # Protocol change
                 if tx1_wager_remaining <= 0 or tx1_counterwager_remaining <= 0:
                     # Fill order, and recredit give_remaining.
                     tx1_status = 'filled'

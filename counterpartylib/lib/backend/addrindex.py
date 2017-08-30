@@ -42,6 +42,8 @@ def rpc_call(payload):
     if response == None:
         if config.TESTNET:
             network = 'testnet'
+        elif config.REGTEST:
+            network = 'regtest'
         else:
             network = 'mainnet'
         raise BackendRPCError('Cannot communicate with backend at `{}`. (server is set to run on {}, is backend?)'.format(util.clean_url_for_log(url), network))
@@ -57,8 +59,8 @@ def rpc_call(payload):
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
         raise BackendRPCError('{} Is `txindex` enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
-    elif response_json['error']['code'] in [-28, -8, -2]:  
-        # “Verifying blocks...” or “Block height out of range” or “The network does not appear to fully agree!“ 
+    elif response_json['error']['code'] in [-28, -8, -2]:
+        # “Verifying blocks...” or “Block height out of range” or “The network does not appear to fully agree!“
         logger.debug('Backend not ready. Sleeping for ten seconds.')
         # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
         # seconds to start, this’ll hit the maximum recursion depth limit.
@@ -75,7 +77,7 @@ def rpc(method, params):
         "id": 0,
     }
     return rpc_call(payload)
-    
+
 def rpc_batch(request_list):
     responses = collections.deque()
 
@@ -84,7 +86,7 @@ def rpc_batch(request_list):
         #note that this is list executed serially, in the same thread in bitcoind
         #e.g. see: https://github.com/bitcoin/bitcoin/blob/master/src/rpcserver.cpp#L939
         responses.extend(rpc_call(chunk))
- 
+
     chunks = util.chunkify(request_list, config.RPC_BATCH_SIZE)
     with concurrent.futures.ThreadPoolExecutor(max_workers=config.BACKEND_RPC_BATCH_NUM_WORKERS) as executor:
         for chunk in chunks:
@@ -267,11 +269,11 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
         for txhash_list_chunk in txhash_list_chunks:
             txes.update(getrawtransaction_batch(txhash_list_chunk, verbose=verbose, skip_missing=skip_missing))
         return txes
-    
+
     tx_hash_call_id = {}
     payload = []
     noncached_txhashes = set()
-    
+
     txhash_list = set(txhash_list)
 
     # payload for transactions not in cache

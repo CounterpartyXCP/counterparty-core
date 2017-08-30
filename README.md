@@ -63,7 +63,7 @@ $ counterparty-server --backend-password=rpc start
 
 # Basic Usage
 
-## Via command-line 
+## Via command-line
 
 (Requires `counterparty-cli` to be installed.)
 
@@ -115,7 +115,7 @@ Counterparty database files are by default named `counterparty.[testnet.]db` and
 
 ## Configuration File Format
 
-Manual configuration is not necessary for most use cases. 
+Manual configuration is not necessary for most use cases.
 
 A `counterparty-server` configuration file looks like this:
 
