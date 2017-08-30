@@ -211,8 +211,8 @@ def parse (db, tx, message):
     if util.enabled('broadcast_invalid_check') and status != 'valid':
         return
 
-    # Options?
-    if (util.enabled('options_require_memo')) and ('locked feed' not in status) and ('options out of range' not in status):
+    # Options? if the status is invalid the previous if should have catched it
+    if util.enabled('options_require_memo'):
         if text and text.lower().startswith('options'):
             ops_spl = text.split(" ")
             if len(ops_spl) == 2:
