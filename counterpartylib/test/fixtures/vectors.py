@@ -616,6 +616,14 @@ UNITTEST_VECTOR = {
         }, {
             'in': (ADDR[0], 1588000000, 1, DP['fee_multiplier'], 'Over 80 characters test test test test test test test test test test test test test test test test test test'),
             'out': (ADDR[0], [], b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00LK@lOver 80 characters test test test test test test test test test test test test test test test test test test')
+        }, {
+            'comment': 'test current text packing for \'OPTIONS 1\'',
+            'in': (ADDR[0], 1388000100, 50000000, 0, 'OPTIONS 1'),
+            'out': (ADDR[0], [], b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\tOPTIONS 1')
+        }, {
+            'comment': 'test current text packing for \'OPTIONS 0\'',
+            'in': (ADDR[0], 1388000100, 50000000, 0, 'OPTIONS 0'),
+            'out': (ADDR[0], [], b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\tOPTIONS 0')
         }],
         'parse': [{
             'comment': 'test old text unpacking for short text',
@@ -965,6 +973,29 @@ UNITTEST_VECTOR = {
                     'value': None,
                 }}
             ]
+        }, {
+            'comment': 'test changing options to 1 on a specific address',
+            'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},
+            'in': ({'btc_amount': 0, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'source': ADDR[5], 'destination': '', 'block_index': DP['default_block_index'], 'fee': 10000, 'supported': 1, 'block_time': 310501000, 'tx_hash': '6b4a62b80f35b0e66df4591c8a445d453d995609e2df12afe93e742bea10dd86', 'tx_index': 502,
+                    'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\tOPTIONS 1'},),
+            'records': [
+                {'table': 'addresses', 'values': {
+                    'options': 1,
+                    'address': ADDR[5]
+                }}
+            ]
+        }, {
+            'comment': 'test changing options to 1 on an address with LOCKED feed',
+            'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},
+            'in': ({'btc_amount': 1, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'source': ADDR[4], 'destination': '', 'block_index': DP['default_block_index'], 'fee': 10000, 'supported': 1, 'block_time': 310501000, 'tx_hash': '6b4a62b80f35b0e66df4591c8a445d453d995609e2df12afe93e742bea10dd86', 'tx_index': 502,
+                    'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\tOPTIONS 1'},),
+            'out': None,
+            'records': [
+                {'table': 'addresses', 'values': {
+                    'options': 0,
+                    'address': ADDR[4]
+                }}
+            ]
         }],
     },
     'burn': {
@@ -1239,6 +1270,10 @@ UNITTEST_VECTOR = {
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)],
                     bytes.fromhex('0000000001530821671b10650000000005f5e100'))
+        }, {
+            'comment': 'send to a REQUIRE_MEMO address',
+            'in': (ADDR[0], ADDR[6], 'XCP', DP['quantity']),
+            'error': (exceptions.ComposeError, '[\'destination requires memo\']')
         }],
         'parse': [{
             'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
@@ -2342,12 +2377,12 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'give subasset',
             'in': (ADDR[0], 'PARENT.already.issued', 100000000, 'XCP', DP['small'], DP['expiration'], DP['fee_required']),
-            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], 
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [],
                 bytes.fromhex('0000000a01530821671b10650000000005f5e10000000000000000010000000002faf080000a00000000000dbba0'))
         }, {
             'comment': 'get subasset',
             'in': (ADDR[0], 'XCP', DP['small'], 'PARENT.already.issued', 100000000, DP['expiration'], DP['fee_required']),
-            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], 
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [],
                 bytes.fromhex('0000000a00000000000000010000000002faf08001530821671b10650000000005f5e100000a00000000000dbba0'))
         }],
         'parse': [{
@@ -3620,6 +3655,16 @@ UNITTEST_VECTOR = {
             'mock_protocol_changes': {'enhanced_sends': False},
             'in': ('create_send', {'memo': '0102030405', 'memo_is_hex': True, 'source': ADDR[0], 'destination': ADDR[1], 'asset': 'XCP', 'quantity': DP['small']}),
             'error': (RPCError, 'Error composing send transaction via API: enhanced sends are not enabled (-32001)')
+        }, {
+            'comment': 'CIP 9 enhanced send to a REQUIRE_MEMO address without memo',
+            'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},
+            'in': ('create_send', {'source': ADDR[0], 'destination': ADDR[6], 'asset': 'XCP', 'quantity': DP['small']}),
+            'error': (RPCError, "Error composing send transaction via API: ['destination requires memo'] (-32001)")
+        }, {
+            'comment': 'CIP 9 enhanced send to a REQUIRE_MEMO address with memo',
+            'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},
+            'in': ('create_send', {'memo': '0102030405', 'memo_is_hex': True, 'source': ADDR[0], 'destination': ADDR[6], 'asset': 'XCP', 'quantity': DP['small']}),
+            'out': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'02'+'0000000000000000'+'38'+'6a36'+'2a504df746f83442653dd7afa4dc727a030865749e9fba5aec80c39a9e56174ca4a68af644972baced7a9ef02e467cb63542b8b188e8'+'a343ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'
         }],
         'generate_asset_id': [{
             'in': ('BTC', DP['default_block_index']),
@@ -3697,7 +3742,7 @@ UNITTEST_VECTOR = {
         }],
         'last_message': [{
             'in': (),
-            'out': {'message_index': 112, 'block_index': 310498, 'command': 'insert', 'category': 'credits', 'bindings': '{"action": "issuance", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "A95428956661682277", "block_index": 310498, "event": "2aabeff2dd379ed8d9d1400adcf6f7a375cad02aafc9de1268054839a5110d16", "quantity": 100000000}', 'timestamp': 0},
+            'out': {'message_index': 116, 'block_index': 310498, 'command': 'insert', 'category': 'credits', 'bindings': '{"action": "issuance", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "A95428956661682277", "block_index": 310498, "event": "2aabeff2dd379ed8d9d1400adcf6f7a375cad02aafc9de1268054839a5110d16", "quantity": 100000000}', 'timestamp': 0},
         }],
         'get_asset_id': [{
             'in': ('XCP', DP['default_block_index']),
@@ -4155,7 +4200,7 @@ UNITTEST_VECTOR = {
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     [],
                     bytes.fromhex('02' + '01530821671b1065' + '0000000005f5e100' + '6f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec'))
-        }, 
+        },
         # ----- tests specific to enhanced send -----
         {
             'mock_protocol_changes': {'short_tx_type_id': True},

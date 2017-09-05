@@ -239,7 +239,17 @@ Sorted candidate UTXOs: ['amount: 1.07824570; txid: c018d940b7d338e57e121cbbb188
 Fee/KB 0.00025000
 New input: amount: 1.07824570; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143
 Size: 272 Fee: 0.00006800 Change quantity: 1.07809970 BTC
-Broadcast: myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM locked his feed (b61f2f7e43e6696ca5b804e9c21e61616257b561e69d3cc6cf45af1e1cac3deb) [valid]
+Broadcast: myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM at 2013-12-25T19:33:22 with a fee of 0.0%% (19ffc80e150a6c23bf8f0470a05b1a174fe4845eafd7aedd969b25384c61e9a3) [valid]
+Sorted candidate UTXOs: ['amount: 1.07824570; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143']
+Fee/KB 0.00025000
+New input: amount: 1.07824570; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143
+Size: 272 Fee: 0.00006800 Change quantity: 1.07809970 BTC
+Broadcast: myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM locked his feed (baecfb24773f385a86194dce64b380bf3460174b376bdc16e4045483721e18e3) [valid]
+Sorted candidate UTXOs: ['amount: 1.07824570; txid: fea12706ef63c7ce57df3e1197b8b33e6a93ef2df07964ff654c14f1b900e17f; vout: 0; confirmations: 143']
+Fee/KB 0.00025000
+New input: amount: 1.07824570; txid: fea12706ef63c7ce57df3e1197b8b33e6a93ef2df07964ff654c14f1b900e17f; vout: 0; confirmations: 143
+Size: 272 Fee: 0.00006800 Change quantity: 1.07809970 BTC
+Broadcast: mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 at 2013-12-25T19:33:24 with a fee of 0.0%% (51bd28ebd25e4e57b96da2e0be7e73c14b10153d616fc54646668c1b5a376d81) [valid]
 Sorted candidate UTXOs: ['amount: 1.99909140; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 Fee/KB 0.00025000
 New input: amount: 1.99909140; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
