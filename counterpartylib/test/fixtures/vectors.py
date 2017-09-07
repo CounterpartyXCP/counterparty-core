@@ -554,6 +554,21 @@ UNITTEST_VECTOR = {
         }, {
             'in': (None, 1588000000, 1, DP['fee_multiplier'], 'Unit Test', DP['default_block_index']),
             'out': (['null source address'])
+        }, {
+            'comment': 'test changing options to ADDRESS_OPTION_MAX_VALUE + 1 on a specific address',
+            'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},
+            'in': (ADDR[5], 1588000000, 1, DP['fee_multiplier'], 'OPTIONS %i' % (config.ADDRESS_OPTION_MAX_VALUE+1), DP['default_block_index']),
+            'out': (['options out of range'])
+        }, {
+            'comment': 'test changing options to -1 on a specific address',
+            'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},
+            'in': (ADDR[5], 1588000000, 1, DP['fee_multiplier'], 'OPTIONS -1', DP['default_block_index']),
+            'out': (['integer overflow'])
+        }, {
+            'comment': 'test changing options to non-int on a specific address',
+            'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},
+            'in': (ADDR[5], 1588000000, 1, DP['fee_multiplier'], 'OPTIONS XCP', DP['default_block_index']),
+            'out': (['options not an integer'])
         }],
         'compose': [{
             'comment': 'test old text packing for short text',

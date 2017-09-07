@@ -115,7 +115,7 @@ def validate (db, source, timestamp, value, fee_fraction_int, text, block_index)
                 elif options_int > config.ADDRESS_OPTION_MAX_VALUE:
                     problems.append('options out of range')
             except:
-                pass
+                problems.append('options not an integer')
 
     return problems
 
