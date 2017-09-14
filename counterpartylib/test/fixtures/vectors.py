@@ -1228,6 +1228,9 @@ UNITTEST_VECTOR = {
         }, {
             'in': (ADDR[0], ADDR[1], 'MAXI', 2**63, 1),
             'out': (['integer overflow'])
+        }, {
+            'in': (ADDR[0], ADDR[6], 'XCP', DP['quantity'], 1),
+            'out': (['destination requires memo'])
         }],
         'compose': [{
             'in': (ADDR[0], ADDR[1], 'XCP', DP['small']),
@@ -1286,9 +1289,13 @@ UNITTEST_VECTOR = {
                     [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)],
                     bytes.fromhex('0000000001530821671b10650000000005f5e100'))
         }, {
-            'comment': 'send to a REQUIRE_MEMO address',
-            'in': (ADDR[0], ADDR[6], 'XCP', DP['quantity']),
+            'comment': 'send to a REQUIRE_MEMO address, without memo',
+            'in': (ADDR[0], ADDR[6], 'XCP', 100000000),
             'error': (exceptions.ComposeError, '[\'destination requires memo\']')
+        }, {
+            'comment': 'send to a REQUIRE_MEMO address, with memo text, before enhanced_send activation',
+            'in': ({'source': ADDR[0], 'destination': ADDR[6], 'asset': 'XCP', 'quantity': 100000000, 'memo': '12345', 'use_enhanced_send': True}),
+            'error': (exceptions.ComposeError, 'enhanced sends are not enabled')
         }],
         'parse': [{
             'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
@@ -1498,6 +1505,11 @@ UNITTEST_VECTOR = {
                     'quantity': 9223372036854775807,
                 }}
             ]
+        }, {
+            'comment': 'Reject a send without memo to a REQUIRE_MEMO address',
+            'mock_protocol_changes': {'options_require_memo': True},
+            'in': ({'block_index': DP['default_block_index'], 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'tx_hash': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80', 'source': ADDR[0], 'destination': ADDR[6], 'supported': 1, 'block_hash': DP['default_block_hash']},),
+            'out': None
         }]
     },
     'issuance': {
@@ -4171,6 +4183,9 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], ADDR[1], 'MAXI', 2**63, None, 1),
             'out': (['integer overflow'])
         }, {
+            'in': (ADDR[0], ADDR[6], 'XCP', DP['quantity'], None, 1),
+            'out': (['destination requires memo'])
+        }, {
             # ----- tests specific to enhanced send -----
             'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU', 'SOUP', 100000000, None, DP['default_block_index']),
             'out': ([])
@@ -4239,6 +4254,18 @@ UNITTEST_VECTOR = {
             'mock_protocol_changes': {'short_tx_type_id': True},
             'in': (ADDR[1], ADDR[0], 'XCP', DP['small'], '12345678901234567890123456789012345', False),
             'error': (exceptions.ComposeError, "['memo is too long']")
+        }, {
+            'comment': 'enhanced_send to a REQUIRE_MEMO address, without memo',
+            'in': (ADDR[0], ADDR[6], 'XCP', DP['small'], None, False),
+            'error': (exceptions.ComposeError, "['destination requires memo']")
+        }, {
+            'comment': 'enhanced_send to a REQUIRE_MEMO address, with memo text',
+            'in': (ADDR[0], ADDR[6], 'XCP', DP['small'], '12345', False),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80o\xb3\x90\x18~\xf2\x85D"\xac^J.\xb6\xff\xe9$\x96\xbe\xf5#12345')
+        }, {
+            'comment': 'enhanced_send to a REQUIRE_MEMO address, with memo hex',
+            'in': (ADDR[0], ADDR[6], 'XCP', DP['small'], 'deadbeef', True),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80o\xb3\x90\x18~\xf2\x85D"\xac^J.\xb6\xff\xe9$\x96\xbe\xf5#\xde\xad\xbe\xef')
         }],
         'parse': [
         # ----- tests copied from regular send -----
@@ -4460,6 +4487,37 @@ UNITTEST_VECTOR = {
                     'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'tx_index': 502,
                     'memo': None,
+                }}
+            ]
+        }, {
+            'comment': 'Send a valid enhanced_send to destination address with REQUIRE_MEMO',
+            'in': ({'block_index': DP['default_block_index'], 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'tx_hash': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80o\xb3\x90\x18~\xf2\x85D"\xac^J.\xb6\xff\xe9$\x96\xbe\xf5#12345', 'source': ADDR[0], 'destination': ADDR[6], 'supported': 1, 'block_hash': DP['default_block_hash']},),
+            'records': [
+                {'table': 'sends', 'values': {
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'destination': ADDR[6],
+                    'quantity': DP['small'],
+                    'source': ADDR[0],
+                    'status': 'valid',
+                    'tx_hash': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0',
+                    'tx_index': 502,
+                }},
+                {'table': 'credits', 'values': {
+                    'address': ADDR[6],
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'calling_function': 'send',
+                    'event': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0',
+                    'quantity': DP['small'],
+                }},
+                {'table': 'debits', 'values': {
+                    'action': 'send',
+                    'address': ADDR[0],
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'event': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0',
+                    'quantity': DP['small'],
                 }}
             ]
         }]

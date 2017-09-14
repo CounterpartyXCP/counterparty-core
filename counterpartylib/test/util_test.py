@@ -365,7 +365,10 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         or tx_name == 'address':
         return tested_method(*inputs)
     else:
-        return tested_method(server_db, *inputs)
+        if isinstance(inputs, dict):
+            return tested_method(server_db, **inputs)
+        else:
+            return tested_method(server_db, *inputs)
 
 def check_outputs(tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, server_db):
     """Check actual and expected outputs of a particular function."""
