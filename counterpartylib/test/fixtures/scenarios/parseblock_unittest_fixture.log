@@ -210,6 +210,25 @@ New input: amount: 1.00000000; txid: 20ffe4012d5fc638309b2d087a15fb100d919413263
 Size: 315 Fee: 0.00007875 Change quantity: 0.99986695 BTC
 Debit: 0.0000001 XCP from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy #bet# <0c690d46bef903922354520c8c8626ab5bfd45da1ca211d65f16aeef9b5f3300>
 Bet: 0.0000001 XCP against 0.0000001 XCP, by 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy, on 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy
+Sorted candidate UTXOs: ['amount: 1.07824570; txid: fea12706ef63c7ce57df3e1197b8b33e6a93ef2df07964ff654c14f1b900e17f; vout: 0; confirmations: 143']
+Fee/KB 0.00025000
+New input: amount: 1.07824570; txid: fea12706ef63c7ce57df3e1197b8b33e6a93ef2df07964ff654c14f1b900e17f; vout: 0; confirmations: 143
+Size: 272 Fee: 0.00006800 Change quantity: 1.07809970 BTC
+Debit: 0.5 XCP from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 #issuance fee# <fd6320f6a59b69a154ca376ea67e9b0ac49b5ff178e1442d8048cd29f7989031>
+Issuance: mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 created 0.00001 of divisible asset LOCKEDPREV (fd6320f6a59b69a154ca376ea67e9b0ac49b5ff178e1442d8048cd29f7989031) [valid]
+Credit: 0.00001 LOCKEDPREV to mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 #issuance# <fd6320f6a59b69a154ca376ea67e9b0ac49b5ff178e1442d8048cd29f7989031>
+Sorted candidate UTXOs: ['amount: 1.07824570; txid: fea12706ef63c7ce57df3e1197b8b33e6a93ef2df07964ff654c14f1b900e17f; vout: 0; confirmations: 143']
+Fee/KB 0.00025000
+New input: amount: 1.07824570; txid: fea12706ef63c7ce57df3e1197b8b33e6a93ef2df07964ff654c14f1b900e17f; vout: 0; confirmations: 143
+Size: 272 Fee: 0.00006800 Change quantity: 1.07809970 BTC
+Debit: 0.0 XCP from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 #issuance fee# <b431644c7de3f9abd6390119013c26d94a974e154b9d724623239305a31ce46f>
+Issuance: mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 locked asset LOCKEDPREV (b431644c7de3f9abd6390119013c26d94a974e154b9d724623239305a31ce46f) [valid]
+Sorted candidate UTXOs: ['amount: 1.07824570; txid: fea12706ef63c7ce57df3e1197b8b33e6a93ef2df07964ff654c14f1b900e17f; vout: 0; confirmations: 143']
+Fee/KB 0.00025000
+New input: amount: 1.07824570; txid: fea12706ef63c7ce57df3e1197b8b33e6a93ef2df07964ff654c14f1b900e17f; vout: 0; confirmations: 143
+Size: 272 Fee: 0.00006800 Change quantity: 1.07809970 BTC
+Debit: 0.0 XCP from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 #issuance fee# <bec2fed840c77cd7ef57690ed52e8963e39eb6f2f9051ddcda48fddbc908c7d9>
+Issuance: mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 created 0.0 of divisible asset LOCKEDPREV (bec2fed840c77cd7ef57690ed52e8963e39eb6f2f9051ddcda48fddbc908c7d9) [valid]
 Sorted candidate UTXOs: ['amount: 1.99909140; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 Fee/KB 0.00025000
 New input: amount: 1.99909140; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
