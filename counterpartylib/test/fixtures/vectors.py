@@ -1509,7 +1509,18 @@ UNITTEST_VECTOR = {
             'comment': 'Reject a send without memo to a REQUIRE_MEMO address',
             'mock_protocol_changes': {'options_require_memo': True},
             'in': ({'block_index': DP['default_block_index'], 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'tx_hash': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80', 'source': ADDR[0], 'destination': ADDR[6], 'supported': 1, 'block_hash': DP['default_block_hash']},),
-            'out': None
+            'records': [
+                {'table': 'sends', 'values': {
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'destination': ADDR[6],
+                    'quantity': 50000000,
+                    'source': ADDR[0],
+                    'status': 'invalid: destination requires memo',
+                    'tx_hash': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0',
+                    'tx_index': 502,
+                }}
+            ]
         }]
     },
     'issuance': {
