@@ -120,6 +120,11 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
         reissuance = True
         last_issuance = issuances[-1]
         reissued_asset_longname = last_issuance['asset_longname']
+        issuance_locked = False
+        for issuance in issuances:
+            if issuance['locked']:
+                issuance_locked = True
+                break
 
         if last_issuance['issuer'] != source:
             problems.append('issued by another address')
@@ -131,7 +136,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
             problems.append('cannot advance call date')
         if last_issuance['call_price'] > call_price:
             problems.append('cannot reduce call price')
-        if last_issuance['locked'] and quantity:
+        if issuance_locked and quantity:
             problems.append('locked asset and non‐zero quantity')
     else:
         reissuance = False

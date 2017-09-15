@@ -1614,6 +1614,9 @@ UNITTEST_VECTOR = {
         }, {
             'in': (ADDR[0], None, 'UNRELATED', 1000, True, False, None, None, 'description', 'PARENT', 'PARENT.child1', DP['default_block_index']),
             'out': (0, 0.0, ['a subasset must be a numeric asset'], 25000000, 'description', True, False, None)
+        }, {
+            'in': (ADDR[6], None, 'LOCKEDPREV', 1000, True, False, None, None, 'Locked prev', None, None, DP['default_block_index']),
+            'out': (0, 0.0, ['locked asset and non‐zero quantity'], 0, 'Locked prev', True, True, None)
         }],
         'compose': [{
             'in': (ADDR[0], None, 'ASSET', 1000, True, ''),
@@ -3780,7 +3783,7 @@ UNITTEST_VECTOR = {
         }],
         'last_message': [{
             'in': (),
-            'out': {'message_index': 116, 'block_index': 310498, 'command': 'insert', 'category': 'credits', 'bindings': '{"action": "issuance", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "A95428956661682277", "block_index": 310498, "event": "2aabeff2dd379ed8d9d1400adcf6f7a375cad02aafc9de1268054839a5110d16", "quantity": 100000000}', 'timestamp': 0},
+            'out': {'message_index': 123, 'block_index': 310498, 'command': 'insert', 'category': 'credits', 'bindings': '{"action": "issuance", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "A95428956661682277", "block_index": 310498, "event": "2aabeff2dd379ed8d9d1400adcf6f7a375cad02aafc9de1268054839a5110d16", "quantity": 100000000}', 'timestamp': 0},
         }],
         'get_asset_id': [{
             'in': ('XCP', DP['default_block_index']),
@@ -3888,11 +3891,11 @@ UNITTEST_VECTOR = {
         }],
         'xcp_destroyed': [{
             'in': (),
-            'out': 425000000
+            'out': 475000000
         }],
         'xcp_supply': [{
             'in': (),
-            'out': 511067826295,
+            'out': 511017826295,
         }],
         'creations': [{
             'in': (),
@@ -3901,6 +3904,7 @@ UNITTEST_VECTOR = {
                     'DIVIDEND': 100,
                     'DIVISIBLE': 100000000000,
                     'LOCKED': 1000,
+                    'LOCKEDPREV': 1000,
                     'MAXI': 9223372036854775807,
                     'NODIVISIBLE': 1000,
                     'PAYTOSCRIPT': 1000,
@@ -3909,19 +3913,20 @@ UNITTEST_VECTOR = {
         }],
         'destructions': [{
             'in': (),
-            'out': {'XCP': 425000000}
+            'out': {'XCP': 475000000}
         }],
         'asset_supply': [{
             'in': ('XCP',),
-            'out': 511067826295,
+            'out': 511017826295,
         }],
         'supplies': [{
             'in': (),
-            'out':  {'XCP': 511067826295,
+            'out':  {'XCP': 511017826295,
                      'CALLABLE': 1000,
                      'DIVIDEND': 100,
                      'DIVISIBLE': 100000000000,
                      'LOCKED': 1000,
+                     'LOCKEDPREV': 1000,
                      'MAXI': 9223372036854775807,
                      'NODIVISIBLE': 1000,
                      'PAYTOSCRIPT': 1000,

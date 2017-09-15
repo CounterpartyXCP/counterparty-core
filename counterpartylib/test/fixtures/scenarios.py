@@ -65,6 +65,11 @@ UNITTEST_FIXTURE = [
     ['broadcast', (P2SH_ADDR[0], 1388000002, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'opreturn'}],
     ['bet', (P2SH_ADDR[0], P2SH_ADDR[0], 3, 1388000200, 10, 10, 0.0, 5040, 1000), {'encoding': 'opreturn'}],
 
+    # locked with an issuance after lock
+    ['issuance', (ADDR[6], None, 'LOCKEDPREV', 1000, True, 'Locked asset'), {'encoding': 'multisig'}],
+    ['issuance', (ADDR[6], None, 'LOCKEDPREV', 0, True, 'LOCK'), {'encoding': 'multisig'}],
+    ['issuance', (ADDR[6], None, 'LOCKEDPREV', 0, True, 'changed'), {'encoding': 'multisig'}],
+
     ['create_next_block', 480],
 
     # force 2 enhanced sends
