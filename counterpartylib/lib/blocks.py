@@ -48,7 +48,7 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'cancels', 'dividends', 'issuances', 'sends',
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
          'rps_matches', 'rps', 'executions', 'storage', 'suicides', 'nonces',
-         'postqueue', 'contracts', 'destructions', 'assets']
+         'postqueue', 'contracts', 'destructions', 'assets', 'addresses']
 # Compose list of tables tracked by undolog
 UNDOLOG_TABLES = copy.copy(TABLES)
 UNDOLOG_TABLES.remove('messages')
@@ -354,6 +354,17 @@ def initialise(db):
     if not list(cursor):
         cursor.execute('''INSERT INTO assets VALUES (?,?,?,?)''', ('0', 'BTC', None, None))
         cursor.execute('''INSERT INTO assets VALUES (?,?,?,?)''', ('1', 'XCP', None, None))
+
+    # Addresses
+    # Leaving this here because in the future this could work for other things besides broadcast
+    cursor.execute('''CREATE TABLE IF NOT EXISTS addresses(
+                      address TEXT UNIQUE,
+                      options INTEGER,
+                      block_index INTEGER)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      addresses_idx ON addresses (address)
+                   ''')
 
     # Consolidated
     send.initialise(db)
