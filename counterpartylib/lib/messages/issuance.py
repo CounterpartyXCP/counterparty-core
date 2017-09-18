@@ -121,10 +121,14 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
         last_issuance = issuances[-1]
         reissued_asset_longname = last_issuance['asset_longname']
         issuance_locked = False
-        for issuance in issuances:
-            if issuance['locked']:
-                issuance_locked = True
-                break
+        if util.enabled('issuance_lock_fix'):
+            for issuance in issuances:
+                if issuance['locked']:
+                    issuance_locked = True
+                    break
+        elif last_issuance['locked']:
+            # before the issuance_lock_fix, only the last issuance was checked
+            issuance_locked = True
 
         if last_issuance['issuer'] != source:
             problems.append('issued by another address')

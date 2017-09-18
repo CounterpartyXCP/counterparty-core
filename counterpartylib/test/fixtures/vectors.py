@@ -1615,6 +1615,14 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], None, 'UNRELATED', 1000, True, False, None, None, 'description', 'PARENT', 'PARENT.child1', DP['default_block_index']),
             'out': (0, 0.0, ['a subasset must be a numeric asset'], 25000000, 'description', True, False, None)
         }, {
+            # before protocol change, reissuing a quantity of a locked asset was allowed if the description was changed
+            'comment': 'allow reissuance of locked asset before fix',
+            'in': (ADDR[6], None, 'LOCKEDPREV', 1000, True, False, None, None, 'Locked prev', None, None, DP['default_block_index']),
+            'out': (0, 0.0, [], 0, 'Locked prev', True, True, None)
+        }, {
+            # after protocol change, reissuing quantities for a locked asset is never allowed
+            'comment': 'disallow reissuance of locked asset after fix',
+            'mock_protocol_changes': {'issuance_lock_fix': True},
             'in': (ADDR[6], None, 'LOCKEDPREV', 1000, True, False, None, None, 'Locked prev', None, None, DP['default_block_index']),
             'out': (0, 0.0, ['locked asset and non‐zero quantity'], 0, 'Locked prev', True, True, None)
         }],
