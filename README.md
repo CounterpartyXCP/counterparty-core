@@ -29,9 +29,10 @@ rpcpassword=rpc
 server=1
 txindex=1
 addrindex=1
-rpcthreads=100
 rpctimeout=300
 ```
+
+**Note:** you can and should replace the RPC credentials. Remember to use the changed RPC credentials throughout this document.
 
 Then, download and install `counterparty-lib`:
 
@@ -115,7 +116,7 @@ Counterparty database files are by default named `counterparty.[testnet.]db` and
 
 ## Configuration File Format
 
-Manual configuration is not necessary for most use cases. 
+Manual configuration is not necessary for most use cases. "back-end" and "wallet" are used to access Bitcoin server RPC.
 
 A `counterparty-server` configuration file looks like this:
 
