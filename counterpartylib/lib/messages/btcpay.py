@@ -11,6 +11,7 @@ from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 from counterpartylib.lib import log
+from counterpartylib.lib import message_type
 
 FORMAT = '>32s32s'
 LENGTH = 32 + 32
@@ -100,7 +101,7 @@ def compose (db, source, order_match_id):
         logger.warning('Order match has only {} confirmation(s).'.format(10 - time_left))
 
     tx0_hash_bytes, tx1_hash_bytes = binascii.unhexlify(bytes(tx0_hash, 'utf-8')), binascii.unhexlify(bytes(tx1_hash, 'utf-8'))
-    data = struct.pack(config.TXTYPE_FORMAT, ID)
+    data = message_type.pack(ID)
     data += struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
     return (source, [(destination, btc_quantity)], data)
 

@@ -11,4 +11,5 @@ from counterpartylib.lib import (config, check, database)
 
 def test_book(testnet):
     """Reparse all the transactions in the database to see check blockhain's integrity."""
+    conftest.DISABLE_ALL_MOCK_PROTOCOL_CHANGES_AT_BLOCK = True
     util_test.reparse(testnet=testnet)

@@ -126,7 +126,7 @@ def insert_block(db, block_index, parse_block=True):
     block_hash = util.dhash_string(chr(block_index))
     block_time = block_index * 1000
     block = (block_index, block_hash, block_time, None, None, None, None)
-    cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty) 
+    cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty)
                       VALUES (?,?,?,?,?,?,?)''', block)
     util.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
     cursor.close()
@@ -178,7 +178,7 @@ def insert_transaction(transaction, db):
     """Add a transaction to the database."""
     cursor = db.cursor()
     block = (transaction['block_index'], transaction['block_hash'], transaction['block_time'], None, None, None, None)
-    cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty) 
+    cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty)
                       VALUES (?,?,?,?,?,?,?)''', block)
     keys = ",".join(transaction.keys())
     cursor.execute('''INSERT INTO transactions ({}) VALUES (?,?,?,?,?,?,?,?,?,?,?)'''.format(keys), tuple(transaction.values()))
@@ -251,11 +251,13 @@ def run_scenario(scenario, rawtransactions_db):
     raw_transactions = []
     for tx in scenario:
         if tx[0] != 'create_next_block':
-            module = sys.modules['counterpartylib.lib.messages.{}'.format(tx[0])]
-            compose = getattr(module, 'compose')
-            unsigned_tx_hex = transaction.construct(db, compose(db, *tx[1]), **tx[2])
-            raw_transactions.append({tx[0]: unsigned_tx_hex})
-            insert_raw_transaction(unsigned_tx_hex, db, rawtransactions_db)
+            mock_protocol_changes = tx[3] if len(tx) == 4 else {}
+            with MockProtocolChangesContext(**(mock_protocol_changes or {})):
+                module = sys.modules['counterpartylib.lib.messages.{}'.format(tx[0])]
+                compose = getattr(module, 'compose')
+                unsigned_tx_hex = transaction.construct(db, compose(db, *tx[1]), **tx[2])
+                raw_transactions.append({tx[0]: unsigned_tx_hex})
+                insert_raw_transaction(unsigned_tx_hex, db, rawtransactions_db)
         else:
             create_next_block(db, block_index=config.BURN_START + tx[1], parse_block=tx[2] if len(tx) == 3 else True)
 
@@ -326,12 +328,14 @@ def check_record(record, server_db):
 
         if not ok:
             if pytest.config.getoption('verbose') >= 2:
+                print("expected values: ")
                 pprint.PrettyPrinter(indent=4).pprint(record['values'])
+                print("SELECT * FROM {} WHERE block_index = {}: ".format(record['table'], record['values']['block_index']))
                 pprint.PrettyPrinter(indent=4).pprint(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
 
             raise AssertionError("check_record \n" +
                                  "table=" + record['table'] + " \n" +
-                                 "condiitions=" + ",".join(conditions) + " \n" +
+                                 "conditions=" + ",".join(conditions) + " \n" +
                                  "bindings=" + ",".join(map(lambda v: str(v), bindings)))
 
 def vector_to_args(vector, functions=[]):
@@ -356,10 +360,15 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
     elif (tx_name == 'util' and (method in ['api','date_passed','price','generate_asset_id','generate_asset_name','dhash_string','enabled','get_url','hexlify','parse_subasset_from_asset_name','compact_subasset_longname','expand_subasset_longname',])) \
         or tx_name == 'script' \
         or (tx_name == 'blocks' and (method[:len('get_tx_info')] == 'get_tx_info')) or tx_name == 'transaction' or method == 'sortkeypicker' \
-        or tx_name == 'backend':
+        or tx_name == 'backend' \
+        or tx_name == 'message_type' \
+        or tx_name == 'address':
         return tested_method(*inputs)
     else:
-        return tested_method(server_db, *inputs)
+        if isinstance(inputs, dict):
+            return tested_method(server_db, **inputs)
+        else:
+            return tested_method(server_db, *inputs)
 
 def check_outputs(tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, server_db):
     """Check actual and expected outputs of a particular function."""

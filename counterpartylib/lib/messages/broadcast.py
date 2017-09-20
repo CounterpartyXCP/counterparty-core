@@ -35,6 +35,7 @@ from counterpartylib.lib import exceptions
 from counterpartylib.lib import config
 from counterpartylib.lib import util
 from counterpartylib.lib import log
+from counterpartylib.lib import message_type
 from . import (bet)
 
 FORMAT = '>IdI'
@@ -103,6 +104,19 @@ def validate (db, source, timestamp, value, fee_fraction_int, text, block_index)
         if len(text) > 52:
             problems.append('text too long')
 
+    if util.enabled('options_require_memo') and text and text.lower().startswith('options'):
+        ops_spl = text.split(" ")
+        if len(ops_spl) == 2:
+            try:
+                options_int = int(ops_spl.pop())
+
+                if (options_int > config.MAX_INT) or (options_int < 0):
+                    problems.append('integer overflow')
+                elif options_int > config.ADDRESS_OPTION_MAX_VALUE:
+                    problems.append('options out of range')
+            except:
+                problems.append('options not an integer')
+
     return problems
 
 def compose (db, source, timestamp, value, fee_fraction, text):
@@ -113,7 +127,7 @@ def compose (db, source, timestamp, value, fee_fraction, text):
     problems = validate(db, source, timestamp, value, fee_fraction_int, text, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
-    data = struct.pack(config.TXTYPE_FORMAT, ID)
+    data = message_type.pack(ID)
 
     # always use custom length byte instead of problematic usage of 52p format and make sure to encode('utf-8') for length
     if util.enabled('broadcast_pack_text'):
@@ -196,6 +210,29 @@ def parse (db, tx, message):
     # stop processing if broadcast is invalid for any reason
     if util.enabled('broadcast_invalid_check') and status != 'valid':
         return
+
+    # Options? if the status is invalid the previous if should have catched it
+    if util.enabled('options_require_memo'):
+        if text and text.lower().startswith('options'):
+            ops_spl = text.split(" ")
+            if len(ops_spl) == 2:
+                change_ops = False
+                options_int = 0
+                try:
+                    options_int = int(ops_spl.pop())
+                    change_ops = True
+                except:
+                    pass
+
+                if change_ops:
+                    op_bindings = {
+                                'block_index': tx['block_index'],
+                                'address': tx['source'],
+                                'options': options_int
+                               }
+                    sql = 'insert or replace into addresses(address, options, block_index) values(:address, :options, :block_index)'
+                    cursor = db.cursor()
+                    cursor.execute(sql, op_bindings)
 
     # Negative values (default to ignore).
     if value is None or value < 0:

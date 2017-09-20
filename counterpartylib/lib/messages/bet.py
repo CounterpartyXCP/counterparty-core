@@ -24,6 +24,7 @@ from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 from counterpartylib.lib import log
+from counterpartylib.lib import message_type
 
 FORMAT = '>HIQQdII'
 LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4
@@ -301,7 +302,7 @@ def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
         problems.append('deadline passed')
     if problems: raise exceptions.ComposeError(problems)
 
-    data = struct.pack(config.TXTYPE_FORMAT, ID)
+    data = message_type.pack(ID)
     data += struct.pack(FORMAT, bet_type, deadline,
                         wager_quantity, counterwager_quantity, target_value,
                         leverage, expiration)

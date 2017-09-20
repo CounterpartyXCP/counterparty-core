@@ -30,6 +30,7 @@ from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 from counterpartylib.lib import log
+from counterpartylib.lib import message_type
 
 # possible_moves wager move_random_hash expiration
 FORMAT = '>HQ32sI'
@@ -222,7 +223,7 @@ def compose(db, source, possible_moves, wager, move_random_hash, expiration):
 
     if problems: raise exceptions.ComposeError(problems)
 
-    data = struct.pack(config.TXTYPE_FORMAT, ID)
+    data = message_type.pack(ID)
     data += struct.pack(FORMAT, possible_moves, wager, binascii.unhexlify(move_random_hash), expiration)
 
     return (source, [], data)

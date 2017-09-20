@@ -31,6 +31,7 @@ DEFAULT_PARAMS = {
 DEFAULT_PARAMS['privkey'] = {addr: priv for (addr, pubkeyhash, priv, pub) in DEFAULT_PARAMS['addresses']}
 DEFAULT_PARAMS['pubkey'] = {addr: pub for (addr, pubkeyhash, priv, pub) in DEFAULT_PARAMS['addresses']}
 ADDR = [a[0] for a in DEFAULT_PARAMS['addresses']]
+SHORT_ADDR_BYTES = ['6f' + a[1] for a in DEFAULT_PARAMS['addresses']]
 DP = DEFAULT_PARAMS
 MULTISIGADDR = [
     '1_{}_{}_2'.format(ADDR[0], ADDR[1]),
