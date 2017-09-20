@@ -477,7 +477,13 @@ def reparse(testnet=True):
         assert block_exists, "block #%d does not exist" % block_index
 
     # Clean consensus hashes if first block hash don’t match with checkpoint.
-    checkpoints = check.CHECKPOINTS_TESTNET if config.TESTNET else check.CHECKPOINTS_MAINNET
+    checkpoints = None
+    if config.TESTNET:
+        checkpoints = check.CHECKPOINTS_TESTNET
+    elif config.REGTEST:
+        checkpoints = check.CHECKPOINTS_REGTEST
+    else:
+        checkpoints = check.CHECKPOINTS_MAINNET
     columns = [column['name'] for column in memory_cursor.execute('''PRAGMA table_info(blocks)''')]
     for field in ['ledger_hash', 'txlist_hash']:
         if field in columns:
