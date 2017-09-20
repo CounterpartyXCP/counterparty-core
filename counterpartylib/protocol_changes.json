@@ -138,5 +138,12 @@
         "minimum_version_revision": 4,
         "block_index": 999999,
         "testnet_block_index": 1179400
+    },
+    "issuance_lock_fix": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 55,
+        "minimum_version_revision": 4,
+        "block_index": 999999,
+        "testnet_block_index": 1179400
     }
 }
