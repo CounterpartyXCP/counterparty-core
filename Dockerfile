@@ -5,7 +5,7 @@ MAINTAINER Counterparty Developers <dev@counterparty.io>
 # Install counterparty-lib
 COPY . /counterparty-lib
 WORKDIR /counterparty-lib
-RUN pip3 install -r requirements.txt
+RUN pip3 install -r requirements.txt --process-dependency-links
 RUN python3 setup.py develop
 RUN python3 setup.py install_apsw
 RUN python3 setup.py install_serpent
