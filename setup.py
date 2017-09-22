@@ -214,7 +214,7 @@ required_packages = [
     'pysha3==0.3',
     'pytest==2.9.2',
     'pytest-cov==2.2.1',
-    'python-bitcoinlib==0.8.0',
+    'git+https://github.com/petertodd/python-bitcoinlib@98676f981bf14a6a3a8313e762161cc289043b58#egg=python-bitcoinlib-0.8.0',
     'requests==2.10.0',
     'tendo==0.2.8',
     'xmltodict==0.10.1',
