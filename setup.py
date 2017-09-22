@@ -222,7 +222,7 @@ required_packages = [
 ]
 
 dependency_links = [
-    'git+https://github.com/petertodd/python-bitcoinlib@98676f981bf14a6a3a8313e762161cc289043b58#egg=python-bitcoinlib-snapshot-0.8.0',
+    'git+https://github.com/petertodd/python-bitcoinlib.git@98676f981bf14a6a3a8313e762161cc289043b58#egg=python-bitcoinlib-snapshot-0.8.0',
 ]
 
 setup_options = {
