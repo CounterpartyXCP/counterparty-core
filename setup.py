@@ -214,15 +214,11 @@ required_packages = [
     'pysha3==0.3',
     'pytest==2.9.2',
     'pytest-cov==2.2.1',
-    'python-bitcoinlib==0.8.0',
+    # 'python-bitcoinlib==0.9.0', <-- restore this when python-bitcoinlib 0.9.0 is released
     'requests==2.10.0',
     'tendo==0.2.8',
     'xmltodict==0.10.1',
     'cachetools==1.1.6',
-]
-
-dependency_links = [
-    'git+https://github.com/petertodd/python-bitcoinlib.git@98676f981bf14a6a3a8313e762161cc289043b58#egg=python-bitcoinlib-0.8.0',
 ]
 
 setup_options = {
@@ -255,7 +251,6 @@ setup_options = {
     'zip_safe': False,
     'setup_requires': ['appdirs', 'setuptools-markdown'],
     'install_requires': required_packages,
-    'dependency_links': dependency_links,
     'include_package_data': True,
     'cmdclass': {
         'install': install,

@@ -4,7 +4,7 @@ dependencies:
         - rm -rf /home/ubuntu/virtualenvs/venv-*/bin/serpent
         - rm -rf /home/ubuntu/virtualenvs/venv-*/lib/python3.4/site-packages/apsw*
         - pip install --upgrade pip
-        - pip install -r requirements.txt --process-dependency-links
+        - pip install -r requirements.txt
         - python setup.py install --with-serpent
         - python -c "import apsw; print(apsw.apswversion())"
 test:
