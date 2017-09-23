@@ -1,6 +1,6 @@
 FROM counterparty/base
 
-MAINTAINER Counterparty Developers <dev@counterparty.io>
+MAINTAINER Monaparty Developers <dev@monaparty.me>
 
 # Install counterparty-lib
 COPY . /counterparty-lib
