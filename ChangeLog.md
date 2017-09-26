@@ -1,4 +1,12 @@
 ## Library Versions ##
+* v9.55.3 (2017-09-26)
+    * Implemented CIP-9 Enhanced Send (https://github.com/CounterpartyXCP/cips/blob/master/cip-0009.md) (protocol change: 489956)
+    * Implemented CIP-11 Shorten Transaction Type ID Namespace (https://github.com/CounterpartyXCP/cips/blob/master/cip-0011.md) (protocol change: 489956)
+    * Implemented CIP-12 Memo Requirement through Broadcasts (https://github.com/CounterpartyXCP/cips/blob/master/cip-0012.md) (protocol change: 489956)
+    * Fixes locked issuance workaround (https://github.com/CounterpartyXCP/counterparty-lib/pull/999)
+    * Updated python-bitcoinlib library for handling blocks that include transactions with segwit outputs
+    * Test suite and services updates
+    * Remove rpcthreads recommendation
 * v9.55.2 (2017-05-01)
     * Implemented CIP-4 subassets (https://github.com/CounterpartyXCP/cips/blob/master/cip-0004.md) (protocol change: 467417)
     * Moved to bitcoind 0.13.2-addrindex (please use at least 0.13.2 with this version of counterparty-lib)
