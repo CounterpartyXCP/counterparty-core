@@ -7,12 +7,13 @@ UNIT = 100000000        # The same across assets.
 # Versions
 VERSION_MAJOR = 9
 VERSION_MINOR = 55
-VERSION_REVISION = 2
+VERSION_REVISION = 3
 VERSION_STRING = str(VERSION_MAJOR) + '.' + str(VERSION_MINOR) + '.' + str(VERSION_REVISION)
 
 
 # Counterparty protocol
 TXTYPE_FORMAT = '>I'
+SHORT_TXTYPE_FORMAT = 'B'
 
 TWO_WEEKS = 2 * 7 * 24 * 3600
 MAX_EXPIRATION = 4 * 2016   # Two months
@@ -108,5 +109,8 @@ UNDOLOG_MAX_PAST_BLOCKS = 100 #the number of past blocks that we store undolog h
 
 DEFAULT_UTXO_LOCKS_MAX_ADDRESSES = 1000
 DEFAULT_UTXO_LOCKS_MAX_AGE = 3.0 #in seconds
+
+ADDRESS_OPTION_REQUIRE_MEMO = 1
+ADDRESS_OPTION_MAX_VALUE = ADDRESS_OPTION_REQUIRE_MEMO # Or list of all the address options
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

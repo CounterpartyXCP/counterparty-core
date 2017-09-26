@@ -80,7 +80,7 @@ def api(method, params):
         except KeyError:
             raise RPCError(response_json)
     else:
-        raise RPCError('{}'.format(response_json['error']))
+        raise RPCError('{} ({})'.format(response_json['error']['message'], response_json['error']['code']))
 
 def chunkify(l, n):
     n = max(1, n)

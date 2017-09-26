@@ -8,7 +8,7 @@ D = decimal.Decimal
 import logging
 logger = logging.getLogger(__name__)
 
-from counterpartylib.lib import (config, exceptions, util)
+from counterpartylib.lib import (config, exceptions, util, message_type)
 
 FORMAT_1 = '>QQ'
 LENGTH_1 = 8 + 8
@@ -147,7 +147,7 @@ def compose (db, source, quantity_per_unit, asset, dividend_asset):
 
     asset_id = util.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX)
     dividend_asset_id = util.get_asset_id(db, dividend_asset, util.CURRENT_BLOCK_INDEX)
-    data = struct.pack(config.TXTYPE_FORMAT, ID)
+    data = message_type.pack(ID)
     data += struct.pack(FORMAT_2, quantity_per_unit, asset_id, dividend_asset_id)
     return (source, [], data)
 

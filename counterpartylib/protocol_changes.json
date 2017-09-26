@@ -117,5 +117,33 @@
         "minimum_version_revision": 2,
         "block_index": 467417,
         "testnet_block_index": 0
+    },
+    "short_tx_type_id": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 55,
+        "minimum_version_revision": 3,
+        "block_index": 489956,
+        "testnet_block_index": 1179400
+    },
+    "enhanced_sends": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 55,
+        "minimum_version_revision": 3,
+        "block_index": 489956,
+        "testnet_block_index": 1179400
+    },
+    "options_require_memo": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 55,
+        "minimum_version_revision": 3,
+        "block_index": 489956,
+        "testnet_block_index": 1179400
+    },
+    "issuance_lock_fix": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 55,
+        "minimum_version_revision": 3,
+        "block_index": 489956,
+        "testnet_block_index": 1179400
     }
 }

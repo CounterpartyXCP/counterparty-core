@@ -11,7 +11,7 @@ import logging
 logger = logging.getLogger(__name__)
 D = decimal.Decimal
 
-from counterpartylib.lib import (config, util, exceptions, util)
+from counterpartylib.lib import (config, util, exceptions, util, message_type)
 
 FORMAT_1 = '>QQ?'
 LENGTH_1 = 8 + 8 + 1
@@ -120,6 +120,15 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
         reissuance = True
         last_issuance = issuances[-1]
         reissued_asset_longname = last_issuance['asset_longname']
+        issuance_locked = False
+        if util.enabled('issuance_lock_fix'):
+            for issuance in issuances:
+                if issuance['locked']:
+                    issuance_locked = True
+                    break
+        elif last_issuance['locked']:
+            # before the issuance_lock_fix, only the last issuance was checked
+            issuance_locked = True
 
         if last_issuance['issuer'] != source:
             problems.append('issued by another address')
@@ -131,7 +140,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
             problems.append('cannot advance call date')
         if last_issuance['call_price'] > call_price:
             problems.append('cannot reduce call price')
-        if last_issuance['locked'] and quantity:
+        if issuance_locked and quantity:
             problems.append('locked asset and non‐zero quantity')
     else:
         reissuance = False
@@ -263,7 +272,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, descr
     if subasset_longname is None or reissuance:
         # Type 20 standard issuance FORMAT_2 >QQ??If
         #   used for standard issuances and all reissuances
-        data = struct.pack(config.TXTYPE_FORMAT, ID)
+        data = message_type.pack(ID)
         if len(description) <= 42:
             curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
         else:
@@ -276,7 +285,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, descr
         # compacts a subasset name to save space
         compacted_subasset_longname = util.compact_subasset_longname(subasset_longname)
         compacted_subasset_length = len(compacted_subasset_longname)
-        data = struct.pack(config.TXTYPE_FORMAT, SUBASSET_ID)
+        data = message_type.pack(SUBASSET_ID)
         curr_format = SUBASSET_FORMAT + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(description))
         data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, compacted_subasset_length, compacted_subasset_longname, description.encode('utf-8'))
 
