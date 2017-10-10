@@ -318,7 +318,7 @@ def construct (db, tx_info, encoding='auto',
                multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                op_return_value=config.DEFAULT_OP_RETURN_VALUE,
                exact_fee=None, fee_provided=0, provided_pubkeys=None, dust_return_pubkey=None,
-               allow_unconfirmed_inputs=False, unspent_tx_hash=None, custom_inputs=None, disable_utxo_locks=False):
+               allow_unconfirmed_inputs=False, unspent_tx_hash=None, custom_inputs=None, disable_utxo_locks=False, extended_tx_info=False):
 
     if estimate_fee_per_kb is None:
         estimate_fee_per_kb = config.ESTIMATE_FEE_PER_KB
@@ -575,6 +575,14 @@ def construct (db, tx_info, encoding='auto',
         parsed_source, parsed_destination, x, y, parsed_data = blocks._get_tx_info(unsigned_tx_hex)
     except exceptions.BTCOnlyError:
         # Skip BTC‐only transactions.
+        if extended_tx_info:
+            return {
+                'btc_in': btc_in,
+                'btc_out': destination_btc_out + data_btc_out,
+                'btc_change': change_quantity,
+                'btc_fee': final_fee,
+                'tx_hex': unsigned_tx_hex,
+            }
         return unsigned_tx_hex
     desired_source = script.make_canonical(desired_source)
 
@@ -589,6 +597,14 @@ def construct (db, tx_info, encoding='auto',
 
         raise exceptions.TransactionError('Constructed transaction does not parse correctly: {} ≠ {}'.format(desired, parsed))
 
+    if extended_tx_info:
+        return {
+            'btc_in': btc_in,
+            'btc_out': destination_btc_out + data_btc_out,
+            'btc_change': change_quantity,
+            'btc_fee': final_fee,
+            'tx_hex': unsigned_tx_hex,
+        }
     return unsigned_tx_hex
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

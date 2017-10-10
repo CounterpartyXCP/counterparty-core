@@ -70,7 +70,7 @@ COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
                 'allow_unconfirmed_inputs', 'fee', 'fee_provided',
                 'estimate_fee_per_kb', 'estimate_fee_per_kb_nblocks',
-                'unspent_tx_hash', 'custom_inputs', 'dust_return_pubkey', 'disable_utxo_locks']
+                'unspent_tx_hash', 'custom_inputs', 'dust_return_pubkey', 'disable_utxo_locks', 'extended_tx_info']
 
 API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
 API_MAX_LOG_COUNT = 10
@@ -312,7 +312,7 @@ def compose_transaction(db, name, params,
                         allow_unconfirmed_inputs=False,
                         fee=None,
                         fee_provided=0,
-                        unspent_tx_hash=None, custom_inputs=None, dust_return_pubkey=None, disable_utxo_locks=False):
+                        unspent_tx_hash=None, custom_inputs=None, dust_return_pubkey=None, disable_utxo_locks=False, extended_tx_info=False):
     """Create and return a transaction."""
 
     # Get provided pubkeys.
@@ -363,7 +363,8 @@ def compose_transaction(db, name, params,
                                         fee_provided=fee_provided,
                                         unspent_tx_hash=unspent_tx_hash, custom_inputs=custom_inputs,
                                         dust_return_pubkey=dust_return_pubkey,
-                                        disable_utxo_locks=disable_utxo_locks)
+                                        disable_utxo_locks=disable_utxo_locks,
+                                        extended_tx_info=extended_tx_info)
 
 def conditional_decorator(decorator, condition):
     """Checks the condition and if True applies specified decorator."""
