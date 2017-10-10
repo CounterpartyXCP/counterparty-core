@@ -545,24 +545,6 @@ def construct (db, tx_info, encoding='auto',
     else:
         change_output = None
 
-    # in bitcoin core v0.12.1 a -bytespersigop was added that messes with bare multisig transactions,
-    #  as a safeguard we fall back to pubkeyhash encoding when unsure
-    # when len(inputs) > len(data_outputs) there's more bytes:sigops ratio and we can safely continue
-    if encoding == 'multisig' and inputs and data_output and len(inputs) < len(data_array) * 2 and util.enabled('bytespersigop'):
-        # if auto encoding we can do pubkeyhash encoding instead
-        if desired_encoding == 'auto':
-            return construct(db, tx_info,
-                             encoding='pubkeyhash',
-                             fee_per_kb=fee_per_kb,
-                             regular_dust_size=regular_dust_size,
-                             multisig_dust_size=multisig_dust_size,
-                             op_return_value=op_return_value,
-                             exact_fee=exact_fee, fee_provided=fee_provided, provided_pubkeys=provided_pubkeys,
-                             allow_unconfirmed_inputs=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash, custom_inputs=custom_inputs)
-        # otherwise raise exception
-        else:
-            raise exceptions.EncodingError("multisig will be rejected by Bitcoin Core >= v0.12.1, you should use `encoding=auto` or `encoding=pubkeyhash`")
-
     # Serialise inputs and outputs.
     unsigned_tx = serialise(encoding, inputs, destination_outputs,
                             data_output, change_output,
