@@ -443,7 +443,10 @@ def construct (db, tx_info, encoding='auto',
     if encoding == 'multisig':
         data_output_size = 81       # 71 for the data
     elif encoding == 'opreturn':
-        data_output_size = len(data) + len(config.PREFIX) + 10 # prefix + data + 10 bytes for script overhead
+        # prefix + data + 10 bytes script overhead
+        data_output_size = len(config.PREFIX) + 10
+        if data is not None:
+            data_output_size = data_output_size + len(data)
     else:
         data_output_size = p2pkhsize   # Pay‐to‐PubKeyHash (25 for the data?)
     outputs_size = (p2pkhsize * len(destination_outputs)) + (len(data_array) * data_output_size)
