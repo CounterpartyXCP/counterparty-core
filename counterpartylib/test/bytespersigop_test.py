@@ -74,39 +74,6 @@ def test_bytespersigop(server_db):
         assert len(tx.vout) == 2
         assert "OP_RETURN" in repr(tx.vout[0].scriptPubKey)
 
-        # ADDR[0], bytespersigop=True, desc 42 bytes, pubkeyhash encoding
-        #  pubkeyhash because ADDR[0] only has 1 UTXO to spend from
-        txhex = api.compose_transaction(
-            server_db, 'issuance',
-            {'source': ADDR[0],
-             'asset': 'TESTING',
-             'quantity': 100,
-             'transfer_destination': None,
-             'divisible': False,
-             'description': 't' * 42},
-        )
-
-        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex))
-
-        assert len(tx.vin) == 1
-        assert len(tx.vout) == 8
-        for i in range(7):
-            assert "OP_CHECKSIG" in repr(tx.vout[i].scriptPubKey)
-
-        # ADDR[0], bytespersigop=True, desc 20 bytes, FORCED multisig encoding
-        #  will error because it's not possible, ADDR[0] only has 1 UTXO
-        with pytest.raises(exceptions.EncodingError):
-            txhex = api.compose_transaction(
-                server_db, 'issuance',
-                {'source': ADDR[0],
-                 'asset': 'TESTING',
-                 'quantity': 100,
-                 'transfer_destination': None,
-                 'divisible': False,
-             'description': 't' * 20},
-                encoding='multisig'
-            )
-
         # ADDR[1], bytespersigop=True, desc 41 bytes, opreturn encoding
         txhex = api.compose_transaction(
             server_db, 'issuance',

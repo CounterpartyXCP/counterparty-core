@@ -40,7 +40,7 @@ def test_estimate_fee_per_kb(fee_per_kb, fee_per_kb_used, server_db, monkeypatch
         sumvin = sum([int(utxos[(bitcoinlib.core.b2lx(vin.prevout.hash), vin.prevout.n)]['amount'] * 1e8) for vin in pretx.vin])
         sumvout = sum([vout.nValue for vout in pretx.vout])
         unsignedsize = 183
-        signedsize = 315
+        signedsize = 263
 
         fee = int((signedsize / 1000) * (fee_per_kb_used or fee_per_kb))
 

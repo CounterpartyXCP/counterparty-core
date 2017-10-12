@@ -318,7 +318,7 @@ def construct (db, tx_info, encoding='auto',
                multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                op_return_value=config.DEFAULT_OP_RETURN_VALUE,
                exact_fee=None, fee_provided=0, provided_pubkeys=None, dust_return_pubkey=None,
-               allow_unconfirmed_inputs=False, unspent_tx_hash=None, custom_inputs=None, disable_utxo_locks=False):
+               allow_unconfirmed_inputs=False, unspent_tx_hash=None, custom_inputs=None, disable_utxo_locks=False, extended_tx_info=False):
 
     if estimate_fee_per_kb is None:
         estimate_fee_per_kb = config.ESTIMATE_FEE_PER_KB
@@ -443,7 +443,10 @@ def construct (db, tx_info, encoding='auto',
     if encoding == 'multisig':
         data_output_size = 81       # 71 for the data
     elif encoding == 'opreturn':
-        data_output_size = 90       # 80 for the data
+        # prefix + data + 10 bytes script overhead
+        data_output_size = len(config.PREFIX) + 10
+        if data is not None:
+            data_output_size = data_output_size + len(data)
     else:
         data_output_size = p2pkhsize   # Pay‐to‐PubKeyHash (25 for the data?)
     outputs_size = (p2pkhsize * len(destination_outputs)) + (len(data_array) * data_output_size)
@@ -545,24 +548,6 @@ def construct (db, tx_info, encoding='auto',
     else:
         change_output = None
 
-    # in bitcoin core v0.12.1 a -bytespersigop was added that messes with bare multisig transactions,
-    #  as a safeguard we fall back to pubkeyhash encoding when unsure
-    # when len(inputs) > len(data_outputs) there's more bytes:sigops ratio and we can safely continue
-    if encoding == 'multisig' and inputs and data_output and len(inputs) < len(data_array) * 2 and util.enabled('bytespersigop'):
-        # if auto encoding we can do pubkeyhash encoding instead
-        if desired_encoding == 'auto':
-            return construct(db, tx_info,
-                             encoding='pubkeyhash',
-                             fee_per_kb=fee_per_kb,
-                             regular_dust_size=regular_dust_size,
-                             multisig_dust_size=multisig_dust_size,
-                             op_return_value=op_return_value,
-                             exact_fee=exact_fee, fee_provided=fee_provided, provided_pubkeys=provided_pubkeys,
-                             allow_unconfirmed_inputs=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash, custom_inputs=custom_inputs)
-        # otherwise raise exception
-        else:
-            raise exceptions.EncodingError("multisig will be rejected by Bitcoin Core >= v0.12.1, you should use `encoding=auto` or `encoding=pubkeyhash`")
-
     # Serialise inputs and outputs.
     unsigned_tx = serialise(encoding, inputs, destination_outputs,
                             data_output, change_output,
@@ -593,6 +578,14 @@ def construct (db, tx_info, encoding='auto',
         parsed_source, parsed_destination, x, y, parsed_data = blocks._get_tx_info(unsigned_tx_hex)
     except exceptions.BTCOnlyError:
         # Skip BTC‐only transactions.
+        if extended_tx_info:
+            return {
+                'btc_in': btc_in,
+                'btc_out': destination_btc_out + data_btc_out,
+                'btc_change': change_quantity,
+                'btc_fee': final_fee,
+                'tx_hex': unsigned_tx_hex,
+            }
         return unsigned_tx_hex
     desired_source = script.make_canonical(desired_source)
 
@@ -607,6 +600,14 @@ def construct (db, tx_info, encoding='auto',
 
         raise exceptions.TransactionError('Constructed transaction does not parse correctly: {} ≠ {}'.format(desired, parsed))
 
+    if extended_tx_info:
+        return {
+            'btc_in': btc_in,
+            'btc_out': destination_btc_out + data_btc_out,
+            'btc_change': change_quantity,
+            'btc_fee': final_fee,
+            'tx_hex': unsigned_tx_hex,
+        }
     return unsigned_tx_hex
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
