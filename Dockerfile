@@ -13,9 +13,9 @@ RUN python3 setup.py install_apsw
 # NOTE: By default, check out the counterparty-cli master branch. You can override the BRANCH build arg for a different
 # branch (as you should check out the same branch as what you have with counterparty-lib, or a compatible one)
 # NOTE2: In the future, counterparty-lib and counterparty-cli will go back to being one repo...
-ARG CLI_BRANCH=master
+ARG CLI_BRANCH=monaparty
 ENV CLI_BRANCH ${CLI_BRANCH}
-RUN git clone -b ${CLI_BRANCH} https://github.com/CounterpartyXCP/counterparty-cli.git /counterparty-cli
+RUN git clone -b ${CLI_BRANCH} https://github.com/monaparty/counterparty-cli.git /counterparty-cli
 WORKDIR /counterparty-cli
 RUN pip3 install -r requirements.txt
 RUN python3 setup.py develop
