@@ -145,5 +145,12 @@
         "minimum_version_revision": 3,
         "block_index": 489956,
         "testnet_block_index": 1179400
+    },
+    "mpma_sends": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 56,
+      "minimum_version_revision": 0,
+      "block_index": 9999999999,
+      "testnet_block_index": 1250000
     }
 }
