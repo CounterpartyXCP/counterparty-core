@@ -4562,5 +4562,67 @@ UNITTEST_VECTOR = {
                 }}
             ]
         }]
+    },
+    'versions.mpma': {
+        'unpack': [{
+            'in': (bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec8000000000000000c000000000bebc2010000000005f5e1000'), DP['default_block_index']),
+            'out': ({'XCP': [(ADDR[2], DP['quantity']), (ADDR[1], DP['quantity'])]})
+        }, {
+            'in': (bytes.fromhex('00036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec8000000000000000c8000000002faf0800000000000bebc2010000000002faf08000'), DP['default_block_index']),
+            'out': ({'XCP': [(ADDR[3], DP['quantity']), (ADDR[2], DP['quantity']), (ADDR[1], DP['quantity'])]})
+        }],
+        'validate': [{
+            'in': (ADDR[0], [], 1),
+            'out': (['send list cannot be empty'])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[1], DP['quantity'])], 1),
+            'out': (['send list cannot have only one element'])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], 0.1)], 1),
+            'out': (['quantities must be an int (in satoshis) for XCP to {}'.format(ADDR[1])])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], -DP['quantity'])], 1),
+            'out': (['negative quantity for XCP to {}'.format(ADDR[1])])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], 0)], 1),
+            'out': (['zero quantity for XCP to {}'.format(ADDR[1])])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], config.MAX_INT + 1)], 1),
+            'out': (['integer overflow for XCP to {}'.format(ADDR[1])])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', None, DP['quantity'])], 1),
+            'out': (['destination is required for XCP'])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('BTC', ADDR[1], DP['quantity'])], 1),
+            'out': (['cannot send BTC to {}'.format(ADDR[1])])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[6], DP['quantity'])], 1),
+            'out': (['destination {} requires memo'.format(ADDR[6])])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], DP['quantity'])], 1),
+            'out': ([])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[2], DP['quantity'] + 1)], 1),
+            'out': (['cannot specify more than once a destination per asset'])
+        }],
+        'compose': [{
+            'in': (ADDR[0], [('XCP', ADDR[1], DP['quantity'] * 1000000)]),
+            'error': (exceptions.ComposeError, 'insufficient funds for XCP')
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], 0.1)]),
+            'error': (exceptions.ComposeError, 'quantities must be an int (in satoshis) for XCP')
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], DP['quantity'] * 10000)]),
+            'error': (exceptions.ComposeError, 'insufficient funds for XCP')
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], DP['quantity'])]),
+            'mock_protocol_changes': {'short_tx_type_id': True},
+            'out': (ADDR[0], [], bytes.fromhex('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec8000000000000000c000000000bebc2010000000005f5e1000'))
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[3], DP['quantity']), ('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], DP['quantity'])]),
+            'mock_protocol_changes': {'short_tx_type_id': True},
+            'out': (ADDR[0], [], bytes.fromhex('0300036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec8000000000000000c8000000002faf0800000000000bebc2010000000002faf08000'))
+        }],
+        'parse': []
     }
 }
