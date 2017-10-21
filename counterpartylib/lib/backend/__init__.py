@@ -93,14 +93,14 @@ def is_valid(address):
         return False
 
 def get_txhash_list(block):
-    return [bitcoinlib.core.b2lx(ctx.GetHash()) for ctx in block.vtx]
+    return [bitcoinlib.core.b2lx(ctx.GetTxid()) for ctx in block.vtx]
 
 def get_tx_list(block):
     raw_transactions = {}
     tx_hash_list = []
 
     for ctx in block.vtx:
-        tx_hash = bitcoinlib.core.b2lx(ctx.GetHash())
+        tx_hash = bitcoinlib.core.b2lx(ctx.GetTxid())
         raw = ctx.serialize()
 
         tx_hash_list.append(tx_hash)

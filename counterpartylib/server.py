@@ -15,6 +15,7 @@ import signal
 import appdirs
 import platform
 import bitcoin as bitcoinlib
+import altcoin
 from urllib.parse import quote_plus as urlencode
 
 from counterpartylib.lib import log
@@ -388,6 +389,9 @@ def connect_to_backend():
 
 
 def start_all(db):
+
+    # For Monacoin.
+    altcoin.SelectParams('ff9f1c0116d19de7c9963845e129f9ed1bfc0b376eb54fd7afa42e0d418c8bb6')
 
     # Backend.
     connect_to_backend()
