@@ -69,7 +69,7 @@ API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel',
 COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
                 'allow_unconfirmed_inputs', 'fee', 'fee_provided',
-                'estimate_fee_per_kb', 'estimate_fee_per_kb_nblocks',
+                'estimate_fee_per_kb', 'estimate_fee_per_kb_conf_target', 'estimate_fee_per_kb_mode',
                 'unspent_tx_hash', 'custom_inputs', 'dust_return_pubkey', 'disable_utxo_locks']
 
 API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
@@ -304,7 +304,7 @@ def adjust_get_sends_results(query_result):
 def compose_transaction(db, name, params,
                         encoding='auto',
                         fee_per_kb=None,
-                        estimate_fee_per_kb=None, estimate_fee_per_kb_nblocks=config.ESTIMATE_FEE_NBLOCKS,
+                        estimate_fee_per_kb=None, estimate_fee_per_kb_conf_target=config.ESTIMATE_FEE_CONF_TARGET, estimate_fee_per_kb_mode=config.ESTIMATE_FEE_MODE,
                         regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                         multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                         op_return_value=config.DEFAULT_OP_RETURN_VALUE,
@@ -353,7 +353,7 @@ def compose_transaction(db, name, params,
     tx_info = compose_method(db, **params)
     return transaction.construct(db, tx_info, encoding=encoding,
                                         fee_per_kb=fee_per_kb,
-                                        estimate_fee_per_kb=estimate_fee_per_kb, estimate_fee_per_kb_nblocks=estimate_fee_per_kb_nblocks,
+                                        estimate_fee_per_kb=estimate_fee_per_kb, estimate_fee_per_kb_conf_target=estimate_fee_per_kb_conf_target,
                                         regular_dust_size=regular_dust_size,
                                         multisig_dust_size=multisig_dust_size,
                                         op_return_value=op_return_value,
@@ -622,8 +622,8 @@ class APIServer(threading.Thread):
             return block
 
         @dispatcher.add_method
-        def fee_per_kb(nblocks=config.ESTIMATE_FEE_NBLOCKS):
-            return backend.fee_per_kb(nblocks)
+        def fee_per_kb(conf_target=config.ESTIMATE_FEE_CONF_TARGET, mode=config.ESTIMATE_FEE_MODE):
+            return backend.fee_per_kb(conf_target, mode)
 
         @dispatcher.add_method
         def get_blocks(block_indexes, min_message_index=None):

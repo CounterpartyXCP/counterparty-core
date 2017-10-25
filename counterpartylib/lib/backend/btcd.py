@@ -100,7 +100,7 @@ def unconfirmed_transactions():
 def refresh_unconfirmed_transactions_cache():
     raise NotImplementedError
 
-def fee_per_kb(nblocks):
+def fee_per_kb(conf_target, mode):
     raise NotImplementedError
 
 def getblockcount():

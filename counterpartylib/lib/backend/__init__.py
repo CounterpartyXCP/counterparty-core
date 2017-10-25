@@ -67,13 +67,14 @@ def extract_addresses(txhash_list):
     return BACKEND().extract_addresses(txhash_list)
 
 
-def fee_per_kb(nblocks):
+def fee_per_kb(conf_target, mode):
     """
-    :param nblocks:
+    :param conf_target:
+    :param mode:
     :return: fee_per_kb in satoshis, or None when unable to determine
     """
 
-    return BACKEND().fee_per_kb(nblocks)
+    return BACKEND().fee_per_kb(conf_target, mode)
 
 
 def refresh_unconfirmed_transactions_cache(mempool_txhash_list):
