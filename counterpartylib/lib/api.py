@@ -719,12 +719,12 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_asset_names(longnames=False):
             cursor = db.cursor()
-                if longnames:
-                    names = {}
-                    for row in cursor.execute("SELECT asset, asset_longname FROM issuances WHERE status = 'valid' GROUP BY asset ORDER BY asset ASC")
-                        names[row['asset']] = row['asset_longname']
-                else:
-                    names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE status = 'valid' ORDER BY asset ASC")]
+            if longnames:
+                names = {}
+                for row in cursor.execute("SELECT asset, asset_longname FROM issuances WHERE status = 'valid' GROUP BY asset ORDER BY asset ASC")
+                    names[row['asset']] = row['asset_longname']
+            else:
+                names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE status = 'valid' ORDER BY asset ASC")]
             cursor.close()
             return names
 
