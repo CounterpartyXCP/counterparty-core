@@ -721,7 +721,7 @@ class APIServer(threading.Thread):
             cursor = db.cursor()
             if longnames:
                 names = {}
-                for row in cursor.execute("SELECT asset, asset_longname FROM issuances WHERE status = 'valid' GROUP BY asset ORDER BY asset ASC")
+                for row in cursor.execute("SELECT asset, asset_longname FROM issuances WHERE status = 'valid' GROUP BY asset ORDER BY asset ASC"):
                     names[row['asset']] = row['asset_longname']
             else:
                 names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE status = 'valid' ORDER BY asset ASC")]
