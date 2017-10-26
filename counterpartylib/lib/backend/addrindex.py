@@ -244,7 +244,7 @@ def fee_per_kb(conf_target, mode):
     feeperkb = rpc('estimatesmartfee', [conf_target], mode)
 
     if feeperkb == 'Insufficient data or no feerate found':
-            return None
+        return None
 
     return int(feeperkb * config.UNIT)
 
