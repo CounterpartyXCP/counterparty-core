@@ -1,4 +1,6 @@
 ## Command Line Interface Versions ##
+* v1.1.4 (2017/10/26)
+    * Added enhanced send arguments support.
 * v1.1.3 (2017/05/01)
     * Added `vacuum` command to server CLI.
 * v1.1.2 (2016/07/11)
