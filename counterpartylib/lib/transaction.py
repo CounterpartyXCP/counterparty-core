@@ -47,7 +47,7 @@ UTXO_LOCKS_PER_ADDRESS_MAXSIZE = 5000  # set higher than the max number of UTXOs
 
 
 def print_coin(coin):
-    return 'amount: {:.8f}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
+    return 'amount: {} ({:.8f}); txid: {}; vout: {}; confirmations: {}'.format(coin['value'], coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
 
 
 def var_int (i):
@@ -491,7 +491,7 @@ def construct (db, tx_info, encoding='auto',
     for coin in use_inputs:
         logger.debug('New input: {}'.format(print_coin(coin)))
         inputs.append(coin)
-        btc_in += round(coin['amount'] * config.UNIT)
+        btc_in += coin['value']
 
         size = 181 * len(inputs) + outputs_size + 10
         necessary_fee = int(size / 1000 * fee_per_kb)

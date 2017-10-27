@@ -1120,7 +1120,7 @@ def follow(db):
         # and try again repeatedly.
         try:
             block_count = backend.getblockcount()
-        except (ConnectionRefusedError, http.client.CannotSendRequest, backend.addrindex.BackendRPCError) as e:
+        except (ConnectionRefusedError, http.client.CannotSendRequest, backend.indexd.BackendRPCError) as e:
             if config.FORCE:
                 time.sleep(config.BACKEND_POLL_INTERVAL)
                 continue
@@ -1234,7 +1234,6 @@ def follow(db):
 
             if backend.MEMPOOL_CACHE_INITIALIZED is False:
                 backend.init_mempool_cache()
-                backend.refresh_unconfirmed_transactions_cache(old_mempool_hashes)
                 logger.info("Ready for queries.")
 
             # Fake values for fake block.
@@ -1272,7 +1271,7 @@ def follow(db):
             #  - or was there a double spend for w/e reason accepted into the mempool (replace-by-fee?)
             try:
                 raw_transactions = backend.getrawtransaction_batch(parse_txs)
-            except backend.addrindex.BackendRPCError as e:
+            except backend.indexd.BackendRPCError as e:
                 logger.warning('Failed to fetch raw for mempool TXs, restarting loop; %s', (e, ))
                 continue  # restart the follow loop
 
@@ -1331,27 +1330,12 @@ def follow(db):
                     new_message['tx_hash'] = tx_hash
                     cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)''', new_message)
 
-            refresh_start_time = time.time()
-            # let the backend refresh it's mempool stored data
-            # Sometimes the transactions can’t be found: `{'code': -5, 'message': 'No information available about transaction'}`
-            #  - is txindex enabled in Bitcoind?
-            #  - or was there a block found while batch feting the raw txs
-            #  - or was there a double spend for w/e reason accepted into the mempool (replace-by-fee?)
-            try:
-                backend.refresh_unconfirmed_transactions_cache(raw_mempool)
-            except backend.addrindex.BackendRPCError as e:
-                logger.warning('Failed to fetch raw for mempool TXs, restarting loop; %s', (e, ))
-                continue  # restart the follow loop
-
-            refresh_time = time.time() - refresh_start_time
-
             elapsed_time = time.time() - start_time
             sleep_time = config.BACKEND_POLL_INTERVAL - elapsed_time if elapsed_time <= config.BACKEND_POLL_INTERVAL else 0
 
-            logger.getChild('mempool').debug('Refresh mempool: %s XCP txs seen, out of %s total entries (took %ss (%ss was backend refresh), next refresh in %ss)' % (
+            logger.getChild('mempool').debug('Refresh mempool: %s XCP txs seen, out of %s total entries (took %ss, next refresh in %ss)' % (
                 len(xcp_mempool), len(raw_mempool),
                 "{:.2f}".format(elapsed_time, 3),
-                "{:.2f}".format(refresh_time, 3),
                 "{:.2f}".format(sleep_time, 3)))
 
             # Wait

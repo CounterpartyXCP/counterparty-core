@@ -26,7 +26,7 @@ class ModuleLoggingFilter(logging.Filter):
 
         but will not log:
          - counterpartylib.lib
-         - counterpartylib.lib.backend.addrindex
+         - counterpartylib.lib.backend.indexd
     """
 
     def __init__(self, filters):

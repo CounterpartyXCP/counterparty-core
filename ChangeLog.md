@@ -1,7 +1,18 @@
 ## Library Versions ##
 * master (unreleased)
+    * Use Bitcoin 0.15.0 with indexd as a transaction index
     * allow multisig encoding method as the bytespersigop DoS protection was changed in Bitcoin Core v0.13.0
+    * Deprecate bare multisig addresses
     * API change (backwards compatible): adds extended_tx_info parameter to create methods
+    * Breaking API change. search_raw_transactions is no longer supported
+    * Breaking API change. The result of get_unspent_txouts has changed and now looks like this: [{
+                "amount": 0.001,
+                "confirmations": 2,
+                "height": 1211095,
+                "txid": "832d27a9b6134ecf50c5e1724bca3ebb797c21fb05b850a9abf145372acc3933",
+                "value": 100000,
+                "vout": 1
+            }]
     * Fixed unpack API method for enhanced sends
 * v9.55.4 (2017-10-31)
     * Fix for uncaught exception in short asset name issuances

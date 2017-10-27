@@ -84,6 +84,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
                 testnet=False, testcoin=False,
                 backend_name=None, backend_connect=None, backend_port=None,
                 backend_user=None, backend_password=None,
+                indexd_connect=None, indexd_port=None,
                 backend_ssl=False, backend_ssl_no_verify=False,
                 backend_poll_interval=None,
                 rpc_host=None, rpc_port=None,
@@ -168,12 +169,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     # THINGS WE CONNECT TO
 
     # Backend name
-    if backend_name:
-        config.BACKEND_NAME = backend_name
-    else:
-        config.BACKEND_NAME = 'addrindex'
-    if config.BACKEND_NAME == 'jmcorgan':
-        config.BACKEND_NAME = 'addrindex'
+    config.BACKEND_NAME = 'indexd'
 
     # Backend RPC host (Bitcoin Core)
     if backend_connect:
@@ -186,15 +182,9 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
         config.BACKEND_PORT = backend_port
     else:
         if config.TESTNET:
-            if config.BACKEND_NAME == 'btcd':
-                config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET_BTCD
-            else:
-                config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET
+            config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET
         else:
-            if config.BACKEND_NAME == 'btcd':
-                config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_BTCD
-            else:
-                config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT
+            config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT
 
     try:
         config.BACKEND_PORT = int(config.BACKEND_PORT)
@@ -243,6 +233,32 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
         config.BACKEND_URL = 'https://' + config.BACKEND_URL
     else:
         config.BACKEND_URL = 'http://' + config.BACKEND_URL
+
+
+    # Indexd RPC host
+    if indexd_connect:
+        config.INDEXD_CONNECT = indexd_connect
+    else:
+        config.INDEXD_CONNECT = 'localhost'
+
+    # Indexd RPC port
+    if indexd_port:
+        config.INDEXD_PORT = indexd_port
+    else:
+        if config.TESTNET:
+            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT_TESTNET
+        else:
+            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT
+
+    try:
+        config.INDEXD_PORT = int(config.INDEXD_PORT)
+        if not (int(config.INDEXD_PORT) > 1 and int(config.INDEXD_PORT) < 65535):
+            raise ConfigurationError('invalid Indexd API port number')
+    except:
+        raise ConfigurationError("Please specific a valid port number indexd-port configuration parameter")
+
+    # Construct Indexd URL.
+    config.INDEXD_URL = 'http://' + config.INDEXD_CONNECT + ':' + str(config.INDEXD_PORT)
 
 
     ##############
