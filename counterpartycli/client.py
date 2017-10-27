@@ -77,6 +77,9 @@ def main():
     parser_send.add_argument('--destination', required=True, help='the destination address')
     parser_send.add_argument('--quantity', required=True, help='the quantity of ASSET to send')
     parser_send.add_argument('--asset', required=True, help='the ASSET of which you would like to send QUANTITY')
+    parser_send.add_argument('--memo', help='A transaction memo attached to this send')
+    parser_send.add_argument('--memo-is-hex', action='store_true', default=False, help='Whether to interpret memo as a hexadecimal value')
+    parser_send.add_argument('--no-use-enhanced-send', action='store_false', dest="use_enhanced_send", default=True, help='If set to false, compose a non-enhanced send with a bitcoin dust output')
     parser_send.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_order = subparsers.add_parser('order', help='create and broadcast an *order* message')
