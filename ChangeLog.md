@@ -1,4 +1,7 @@
 ## Command Line Interface Versions ##
+* master (unreleased)
+	* Added indexd arguments
+	* removed backend-name argument
 * v1.1.4 (2017/10/26)
     * Added enhanced send arguments support.
 * v1.1.3 (2017/05/01)
