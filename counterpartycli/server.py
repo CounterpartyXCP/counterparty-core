@@ -33,7 +33,7 @@ CONFIG_ARGS = [
     [('--p2sh-dust-return-pubkey',), {'help': 'pubkey to receive dust when multisig encoding is used for P2SH source (default: pubkey from counterparty foundation)'}],
 
     [('--indexd-connect',), {'default': 'localhost', 'help': 'the hostname or IP of the indexd server'}],
-    [('--indexd-port',), {'type': int, 'default': 8434, 'help': 'the indexd server port to connect to'}],
+    [('--indexd-port',), {'type': int, 'help': 'the indexd server port to connect to'}],
 
     [('--rpc-host',), {'default': 'localhost', 'help': 'the IP of the interface to bind to for providing JSON-RPC API access (0.0.0.0 for all interfaces)'}],
     [('--rpc-port',), {'type': int, 'help': 'port on which to provide the {} JSON-RPC API'.format(config.APP_NAME)}],
