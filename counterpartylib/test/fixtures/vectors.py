@@ -1922,6 +1922,33 @@ UNITTEST_VECTOR = {
                 }}
             ]
         }, {
+            'comment': 'too short asset length',
+            # 00000014|00000000000002bf|0000000005f5e100|01
+            #     |           |               |           |
+            #     |           |               |           └─── divisible (1 byte)
+            #     |           |               └───── quantity (8 bytes) - 100000000
+            #     |           └────────────────── asset name (8 bytes) - BBB (invalid)
+            #     └────────────────── Type ID (4 bytes) - type 20/issuance
+            'in': ({'data': bytes.fromhex('0000001400000000000002bf0000000005f5e10001'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.ID,),
+            'records': [
+                {'table': 'issuances', 'values': {
+                    'asset': None,
+                    'asset_longname': None,
+                    'block_index': DP['default_block_index'],
+                    'description': None,
+                    'fee_paid': 0,
+                    'issuer': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'locked': 0,
+                    'quantity': None,
+                    'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'status': 'invalid: bad asset name',
+                    'transfer': 0,
+                    'divisible': None,
+                    'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace',
+                    'tx_index': 502,
+                }}
+            ]
+        }, {
             'comment': 'first time issuance of subasset',
             'in': ({'data': bytes.fromhex('0000001501530821671b10010000000005f5e100010a57c6f36de23a1f5f4c46'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
             'records': [
