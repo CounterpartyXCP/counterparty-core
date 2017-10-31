@@ -2,6 +2,8 @@
 * master (unreleased)
     * allow multisig encoding method as the bytespersigop DoS protection was changed in Bitcoin Core v0.13.0
     * API change (backwards compatible): adds extended_tx_info parameter to create methods
+* v9.55.4 (2017-10-31)
+    * Fix for uncaught exception in short asset name issuances
 * v9.55.3 (2017-09-26)
     * Implemented CIP-9 Enhanced Send (https://github.com/CounterpartyXCP/cips/blob/master/cip-0009.md) (protocol change: 489956)
     * Implemented CIP-11 Shorten Transaction Type ID Namespace (https://github.com/CounterpartyXCP/cips/blob/master/cip-0011.md) (protocol change: 489956)
