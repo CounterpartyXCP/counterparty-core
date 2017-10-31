@@ -253,6 +253,19 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
 def get_unspent_txouts(source):
     return indexd_rpc_call('/a/'+source+'/utxos')
 
+def search_raw_transactions(address, unconfirmed=True):
+    all_transactions_dict = indexd_rpc_call('/a/'+address+'/txs?verbose=1')
+    all_transactions = list(all_transactions_dict.values())
+
+    if unconfirmed:
+        return all_transactions
+
+    # filter for confirmed transactions only
+    confirmed_transactions = list(filter(lambda t: 'confirmations' in t and t['confirmations'] > 0, all_transactions))
+    return confirmed_transactions
+
+
+
 def getindexblocksbehind():
     status = indexd_rpc_call('/status')
     if status['ready']:

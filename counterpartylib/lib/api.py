@@ -747,7 +747,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def search_raw_transactions(address, unconfirmed=True):
-            raise APIError('search_raw_transactions is no longer supported')
+            return backend.search_raw_transactions(address, unconfirmed=unconfirmed)
 
         @dispatcher.add_method
         def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None):

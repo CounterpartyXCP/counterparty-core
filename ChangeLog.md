@@ -4,7 +4,6 @@
     * allow multisig encoding method as the bytespersigop DoS protection was changed in Bitcoin Core v0.13.0
     * Deprecate bare multisig addresses
     * API change (backwards compatible): adds extended_tx_info parameter to create methods
-    * Breaking API change. search_raw_transactions is no longer supported
     * Breaking API change. The result of get_unspent_txouts has changed and now looks like this: [{
                 "amount": 0.001,
                 "confirmations": 2,

@@ -545,6 +545,10 @@ def construct (db, tx_info, encoding='auto',
     else:
         change_output = None
 
+    # ensure inputs have scriptPubKey 
+    #   this is not provided by indexd
+    inputs = backend.ensureScriptPubKeyForInputs(inputs)
+
     # Serialise inputs and outputs.
     unsigned_tx = serialise(encoding, inputs, destination_outputs,
                             data_output, change_output,

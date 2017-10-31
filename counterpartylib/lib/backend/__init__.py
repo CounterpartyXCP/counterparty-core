@@ -66,6 +66,24 @@ def getindexblocksbehind():
 def extract_addresses(txhash_list):
     return BACKEND().extract_addresses(txhash_list)
 
+def ensureScriptPubKeyForInputs(coins):
+    txhash_set = set()
+    for coin in coins:
+        if 'scriptPubKey' not in coin:
+            txhash_set.add(coin['txid'])
+
+    if len(txhash_set) > 0:
+        txs = BACKEND().getrawtransaction_batch(list(txhash_set), verbose=True, skip_missing=False)
+        for coin in coins:
+            if 'scriptPubKey' not in coin:
+                # get the scriptPubKey
+                txid = coin['txid']
+                for vout in txs[txid]['vout']:
+                    if vout['n'] == coin['vout']:
+                        coin['scriptPubKey'] = vout['scriptPubKey']['hex']
+
+    return coins
+
 
 def fee_per_kb(nblocks):
     """
@@ -156,7 +174,8 @@ def get_unspent_txouts(source, unconfirmed=False, unspent_tx_hash=None):
 
     return unspent
 
-
+def search_raw_transactions(address, unconfirmed=True):
+    return BACKEND().search_raw_transactions(address, unconfirmed)
 
 class UnknownPubKeyError(Exception):
     pass
