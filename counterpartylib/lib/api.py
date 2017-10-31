@@ -730,12 +730,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_asset_longnames():
-            cursor = db.cursor()
-            names = []
-            for row in cursor.execute("SELECT asset, asset_longname FROM issuances WHERE status = 'valid' GROUP BY asset ORDER BY asset ASC"):
-                names.append({'asset': row['asset'], 'asset_longname': row['asset_longname']})
-            cursor.close()
-            return names
+            return get_asset_names(longnames=True)
 
         @dispatcher.add_method
         def get_holder_count(asset):
