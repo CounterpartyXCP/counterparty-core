@@ -12,7 +12,7 @@ import collections
 import binascii
 import hashlib
 
-from counterpartylib.lib import config, transaction, util
+from counterpartylib.lib import config, util
 
 raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)  # used in getrawtransaction_batch()
 
