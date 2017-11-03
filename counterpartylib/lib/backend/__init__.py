@@ -66,7 +66,7 @@ def getindexblocksbehind():
 def extract_addresses(txhash_list):
     return BACKEND().extract_addresses(txhash_list)
 
-def ensureScriptPubKeyForInputs(coins):
+def ensure_script_pub_key_for_inputs(coins):
     txhash_set = set()
     for coin in coins:
         if 'scriptPubKey' not in coin:

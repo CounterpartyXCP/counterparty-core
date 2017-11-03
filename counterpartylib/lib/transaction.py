@@ -47,7 +47,7 @@ UTXO_LOCKS_PER_ADDRESS_MAXSIZE = 5000  # set higher than the max number of UTXOs
 
 
 def print_coin(coin):
-    return 'amount: {} ({:.8f}); txid: {}; vout: {}; confirmations: {}'.format(coin['value'], coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
+    return 'amount: {:.8f}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
 
 
 def var_int (i):
@@ -453,7 +453,7 @@ def construct (db, tx_info, encoding='auto',
 
     # Array of UTXOs, as retrieved by listunspent function from bitcoind
     if custom_inputs:
-        use_inputs = unspent = custom_inputs
+        use_inputs = unspent = normalize_custom_inputs(custom_inputs)
     else:
         if unspent_tx_hash is not None:
             unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash)
@@ -547,7 +547,7 @@ def construct (db, tx_info, encoding='auto',
 
     # ensure inputs have scriptPubKey 
     #   this is not provided by indexd
-    inputs = backend.ensureScriptPubKeyForInputs(inputs)
+    inputs = backend.ensure_script_pub_key_for_inputs(inputs)
 
     # Serialise inputs and outputs.
     unsigned_tx = serialise(encoding, inputs, destination_outputs,
@@ -610,5 +610,13 @@ def construct (db, tx_info, encoding='auto',
             'tx_hex': unsigned_tx_hex,
         }
     return unsigned_tx_hex
+
+def normalize_custom_inputs(raw_custom_inputs):
+    custom_inputs = []
+    for custom_input in raw_custom_inputs:
+        if 'value' not in custom_input:
+            custom_input['value'] = int(custom_input['amount'] * config.UNIT)
+        custom_inputs.append(custom_input)
+    return custom_inputs
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
