@@ -1,8 +1,7 @@
 ## Library Versions ##
-* master (unreleased)
+* development (unreleased)
     * Use Bitcoin 0.15.0 with indexd as a transaction index
     * allow multisig encoding method as the bytespersigop DoS protection was changed in Bitcoin Core v0.13.0
-    * Deprecate bare multisig addresses
     * API change (backwards compatible): adds extended_tx_info parameter to create methods
     * Breaking API change. The result of get_unspent_txouts has changed and now looks like this: [{
                 "amount": 0.001,
