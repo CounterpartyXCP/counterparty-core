@@ -189,9 +189,8 @@ def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
             if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
                 return pubkey
 
-    # TODO - replace searchrawtransactions
     # Search blockchain.
-    raw_transactions = searchrawtransactions(pubkeyhash, unconfirmed=True)
+    raw_transactions = search_raw_transactions(pubkeyhash, unconfirmed=True)
     for tx in raw_transactions:
         for vin in tx['vin']:
             if 'coinbase' not in vin:
