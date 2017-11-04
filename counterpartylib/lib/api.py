@@ -696,10 +696,21 @@ class APIServer(threading.Thread):
             except:
                 last_message = None
 
+            try:
+                indexd_blocks_behind = backend.getindexblocksbehind()
+            except:
+                indexd_blocks_behind = latestBlockIndex if latestBlockIndex > 0 else 999999
+            indexd_caught_up = indexd_blocks_behind <= 1
+
+            server_ready = caught_up and indexd_caught_up
+
             return {
+                'server_ready': server_ready,
                 'db_caught_up': caught_up,
                 'bitcoin_block_count': latestBlockIndex,
                 'last_block': last_block,
+                'indexd_caught_up': indexd_caught_up,
+                'indexd_blocks_behind': indexd_blocks_behind,
                 'last_message_index': last_message['message_index'] if last_message else -1,
                 'running_testnet': config.TESTNET,
                 'running_testcoin': config.TESTCOIN,
