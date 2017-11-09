@@ -52,8 +52,12 @@ def rpc_call(payload):
     elif response.status_code not in (200, 500):
         raise BackendRPCError(str(response.status_code) + ' ' + response.reason)
 
-    # Return result, with error handling.
-    response_json = response.json()
+    # Handle json decode errors
+    try:
+        response_json = response.json()
+    except json.decoder.JSONDecodeError as e:
+        raise BackendRPCError('Received invalid JSON from backend with a response of {}'.format(str(response.status_code) + ' ' + response.reason))
+
     # Batch query returns a list
     if isinstance(response_json, list):
         return response_json
