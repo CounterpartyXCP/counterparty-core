@@ -51,8 +51,6 @@ from counterpartylib.lib.messages import burn
 from counterpartylib.lib.messages import cancel
 from counterpartylib.lib.messages import rps
 from counterpartylib.lib.messages import rpsresolve
-from counterpartylib.lib.messages import publish
-from counterpartylib.lib.messages import execute
 
 API_TABLES = ['assets', 'balances', 'credits', 'debits', 'bets', 'bet_matches',
               'broadcasts', 'btcpays', 'burns', 'cancels',
@@ -64,7 +62,7 @@ API_TABLES = ['assets', 'balances', 'credits', 'debits', 'bets', 'bet_matches',
 
 API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel',
                     'dividend', 'issuance', 'order', 'send',
-                    'rps', 'rpsresolve', 'publish', 'execute']
+                    'rps', 'rpsresolve']
 
 COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',

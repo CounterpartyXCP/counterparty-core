@@ -8,7 +8,6 @@ WORKDIR /counterparty-lib
 RUN pip3 install -r requirements.txt
 RUN python3 setup.py develop
 RUN python3 setup.py install_apsw
-RUN python3 setup.py install_serpent
 
 # Install counterparty-cli
 # NOTE: By default, check out the counterparty-cli master branch. You can override the BRANCH build arg for a different
