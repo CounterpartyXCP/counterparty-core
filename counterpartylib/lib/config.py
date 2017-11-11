@@ -76,6 +76,7 @@ BLOCK_FIRST_MAINNET_HASH = '8d347ca2677f41f863bab03d28e13ceed52c6618fba29e6ea3a9
 BURN_START_MAINNET = 1166000
 BURN_END_MAINNET = 1179440
 
+BURN_LIMIT = 3900
 
 # Protocol defaults
 # NOTE: If the DUST_SIZE constants are changed, they MUST also be changed in counterblockd/lib/config.py as well

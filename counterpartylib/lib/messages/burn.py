@@ -60,12 +60,12 @@ def compose (db, source, quantity, overburn=False):
     problems = validate(db, source, destination, quantity, util.CURRENT_BLOCK_INDEX, overburn=overburn)
     if problems: raise exceptions.ComposeError(problems)
 
-    # Check that a maximum of 1 BTC total is burned per address.
+    # Check that a maximum of BTC total is burned per address.
     burns = list(cursor.execute('''SELECT * FROM burns WHERE (status = ? AND source = ?)''', ('valid', source)))
     already_burned = sum([burn['burned'] for burn in burns])
 
-    if quantity > (1 * config.UNIT - already_burned) and not overburn:
-        raise exceptions.ComposeError('1 {} may be burned per address'.format(config.BTC))
+    if quantity > (config.BURN_LIMIT * config.UNIT - already_burned) and not overburn:
+        raise exceptions.ComposeError('{} {} may be burned per address'.format(config.BURN_LIMIT, config.BTC))
 
     cursor.close()
     return (source, [(destination, quantity)], None)
@@ -87,13 +87,13 @@ def parse (db, tx, MAINNET_BURNS, message=None):
                 sent = 0
 
         if status == 'valid':
-            # Calculate quantity of XCP earned. (Maximum 1 BTC in total, ever.)
+            # Calculate quantity of XCP earned. (Maximum BTC in total, ever.)
             cursor = db.cursor()
             cursor.execute('''SELECT * FROM burns WHERE (status = ? AND source = ?)''', ('valid', tx['source']))
             burns = cursor.fetchall()
             already_burned = sum([burn['burned'] for burn in burns])
-            ONE = 1 * config.UNIT
-            max_burn = ONE - already_burned
+            LIMIT = config.BURN_LIMIT * config.UNIT
+            max_burn = LIMIT - already_burned
             if sent > max_burn: burned = max_burn   # Exceeded maximum burn; earn what you can.
             else: burned = sent
 
