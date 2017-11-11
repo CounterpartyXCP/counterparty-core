@@ -29,10 +29,6 @@ from counterpartylib.lib import backend
 from counterpartylib.lib import arc4
 from counterpartylib.lib.transaction_helper import serializer
 
-from counterpartylib.lib.transaction_helper import serializer
-
-from counterpartylib.lib.transaction_helper import serializer
-
 # Constants
 OP_RETURN = b'\x6a'
 OP_PUSHDATA1 = b'\x4c'
