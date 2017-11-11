@@ -130,8 +130,8 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
     return dust_return_pubkey
 
 
-def construct_coin_selection(source, allow_unconfirmed_inputs, unspent_tx_hash, custom_inputs,
-                             fee_per_kb, exact_fee, size_for_fee, fee_provided, destination_btc_out, data_btc_out,
+def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inputs, unspent_tx_hash, custom_inputs,
+                             fee_per_kb, estimate_fee_per_kb, estimate_fee_per_kb_nblocks, exact_fee, size_for_fee, fee_provided, destination_btc_out, data_btc_out,
                              regular_dust_size, disable_utxo_locks):
 
     global UTXO_LOCKS, UTXO_P2SH_ENCODING_LOCKS
@@ -186,14 +186,13 @@ def construct_coin_selection(source, allow_unconfirmed_inputs, unspent_tx_hash, 
         inputs.append(coin)
         btc_in += round(coin['amount'] * config.UNIT)
 
-        size = 181 * len(inputs) + outputs_size + 10
-        necessary_fee = int(size / 1000 * fee_per_kb)
-
         # If exact fee is specified, use that. Otherwise, calculate size of tx
         # and base fee on that (plus provide a minimum fee for selling BTC).
+        size = 181 * len(inputs) + size_for_fee + 10
         if exact_fee:
             final_fee = exact_fee
         else:
+            necessary_fee = int(size / 1000 * fee_per_kb)
             final_fee = max(fee_provided, necessary_fee)
             logger.getChild('p2shdebug').debug('final_fee inputs: %d size: %d final_fee %s' % (len(inputs), size, final_fee))
 
@@ -427,8 +426,10 @@ def construct (db, tx_info, encoding='auto',
     # when encoding=P2SH and the pretx txid is passed we can skip coinselection
     if not (encoding == 'p2sh' and p2sh_pretx_txid):
         inputs, change_quantity = construct_coin_selection(
+            encoding, data_array,
             source, allow_unconfirmed_inputs, unspent_tx_hash, custom_inputs,
-            fee_per_kb, exact_fee, size_for_fee, fee_provided, destination_btc_out, data_btc_out,
+            fee_per_kb, estimate_fee_per_kb, estimate_fee_per_kb_nblocks,
+            exact_fee, size_for_fee, fee_provided, destination_btc_out, data_btc_out,
             regular_dust_size, disable_utxo_locks
         )
     else:
