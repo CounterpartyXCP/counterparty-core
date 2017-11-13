@@ -4596,6 +4596,56 @@ UNITTEST_VECTOR = {
             'mock_protocol_changes': {'short_tx_type_id': True},
             'out': (ADDR[0], [], bytes.fromhex('0300036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec8000000000000000c8000000002faf0800000000000bebc2010000000002faf08000'))
         }],
-        'parse': []
+        'parse': [{
+            'in': ({
+                'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                'source': ADDR[0],
+                'supported': 1,
+                'block_index': DP['default_block_index'],
+                'fee': 10000,
+                'block_time': 155409000,
+                'block_hash': DP['default_block_hash'],
+                'btc_amount': 7800,
+                'data': bytes.fromhex('00000000') + bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec8000000000000000c000000000bebc2010000000005f5e1000'),
+                'tx_index': 502,
+                'destination': ADDR[0]
+                },),
+            'records': [
+                {'table': 'sends', 'values': {
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'destination': '*MPMA',
+                    'quantity': DP['quantity'] * 2,
+                    'source': ADDR[0],
+                    'status': 'valid',
+                    'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'tx_index': 502,
+                }},
+                {'table': 'credits', 'values': {
+                    'address': ADDR[1],
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'calling_function': 'send',
+                    'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'quantity': DP['quantity'],
+                }},
+                {'table': 'credits', 'values':{
+                    'address': ADDR[2],
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'calling_function': 'send',
+                    'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'quantity': DP['quantity'],
+                }},
+                {'table': 'debits', 'values': {
+                    'action': 'send',
+                    'address': ADDR[0],
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'quantity': DP['quantity'] * 2,
+                }}
+            ]
+        }]
     }
 }
