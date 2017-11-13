@@ -9,6 +9,7 @@ import itertools
 import operator
 from bitcoin import base58
 from bitcoin.core import key
+from functools import reduce
 
 from bitstring import BitArray, BitStream, ConstBitStream
 
@@ -198,7 +199,6 @@ def validate (db, source, asset_dest_quant_list, block_index):
             problems.append('cannot specify more than once a destination per asset')
 
     cursor = db.cursor()
-
     for (asset, destination, quantity) in asset_dest_quant_list:
         if asset == config.BTC: problems.append('cannot send {} to {}'.format(config.BTC, destination))
 
@@ -255,7 +255,77 @@ def compose (db, source, asset_dest_quant_list):
     return (source, [], data)
 
 def parse (db, tx, message):
+    try:
+        unpacked = unpack(db, message, tx['block_index'])
+        status = 'valid'
+    except (struct.error) as e:
+        status = 'invalid: truncated message'
+    except (exceptions.AssetNameError, exceptions.AssetIDError) as e:
+        status = 'invalid: invalid asset name/id'
+    except (Exception) as e:
+        status = 'invalid: couldn\'t unpack; %s' % e
+
     cursor = db.cursor()
+
+    plain_sends = []
+    all_debits = []
+    all_credits = []
+    if status == 'valid':
+        for asset_id in unpacked:
+            try:
+                asset = util.get_asset_name(db, asset_id, tx['block_index'])
+            except (exceptions.AssetNameError) as e:
+                status = 'invalid: asset %s invalid at block index %i' % (asset_id, tx['block_index'])
+                break
+
+            cursor.execute('''SELECT * FROM balances \
+                              WHERE (address = ? AND asset = ?)''', (tx['source'], asset_id))
+
+            balances = cursor.fetchall()
+            if not balances:
+                status = 'invalid: insufficient funds for asset %s, address %s has no balance' % (asset_id, tx['source'])
+                break
+
+            credits = unpacked[asset_id]
+
+            total_sent = reduce(lambda p, t: p + t[1], credits, 0)
+
+            if balances[0]['quantity'] < total_sent:
+                status = 'invalid: insufficient funds for asset %s, needs %i' % (asset_id, total_sent)
+                break
+
+            if status == 'valid':
+                plain_sends += map(lambda t: (asset, t[0], t[1]), credits)
+                all_credits += map(lambda t: {"asset": asset_id, "destination": t[0], "quantity": t[1]}, credits)
+                all_debits.append({"asset": asset_id, "quantity": total_sent})
+
+    if status == 'valid':
+        problems = validate(db, tx['source'], plain_sends, tx['block_index'])
+
+        if problems: status = 'invalid:' + '; '.join(problems)
+
+    if status == 'valid':
+        for op in all_credits:
+            util.credit(db, op['destination'], op['asset'], op['quantity'], action='send', event=tx['tx_hash'])
+
+        for op in all_debits:
+            util.debit(db, tx['source'], op['asset'], op['quantity'], action='send', event=tx['tx_hash'])
+            bindings = {
+                'tx_index': tx['tx_index'],
+                'tx_hash': tx['tx_hash'],
+                'block_index': tx['block_index'],
+                'source': tx['source'],
+                'destination': '*MPMA',
+                'asset': op['asset'],
+                'quantity': op['quantity'],
+                'status': status,
+            }
+
+            sql = 'insert into sends values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :quantity, :status, NULL)'
+            cursor.execute(sql, bindings)
+
+    if status != 'valid':
+        logger.warn("Not storing [mpma] tx [%s]: %s" % (tx['tx_hash'], status))
 
     cursor.close()
 
