@@ -29,7 +29,7 @@ sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
 from counterpartylib import server
 from counterpartylib.lib import (config, util, blocks, check, backend, database, transaction)
-from counterpartylib.lib.backend.addrindex import extract_addresses, extract_addresses_from_txlist
+from counterpartylib.lib.backend.indexd import extract_addresses, extract_addresses_from_txlist
 
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP
 from counterpartylib.test.fixtures.scenarios import UNITTEST_FIXTURE, INTEGRATION_SCENARIOS, standard_scenarios_params
@@ -402,7 +402,7 @@ def getrawtransaction_batch(db, txhash_list, verbose=False):
     return result
 
 
-def searchrawtransactions(db, address, unconfirmed=False):
+def search_raw_transactions(db, address, unconfirmed=False):
     cursor = db.cursor()
 
     try:
