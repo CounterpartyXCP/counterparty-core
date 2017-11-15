@@ -32,7 +32,7 @@ from counterpartylib.lib import log
 from counterpartylib.lib import database
 from counterpartylib.lib import message_type
 from counterpartylib.lib import arc4
-from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, publish, execute, destroy)
+from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, destroy)
 from .messages.versions import enhanced_send
 
 from .kickstart.blocks_parser import BlockchainParser, ChainstateParser
@@ -47,8 +47,8 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'bet_expirations', 'bets', 'broadcasts', 'btcpays', 'burns',
          'cancels', 'dividends', 'issuances', 'sends',
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
-         'rps_matches', 'rps', 'executions', 'storage', 'suicides', 'nonces',
-         'postqueue', 'contracts', 'destructions', 'assets', 'addresses']
+         'rps_matches', 'rps',
+         'destructions', 'assets', 'addresses']
 # Compose list of tables tracked by undolog
 UNDOLOG_TABLES = copy.copy(TABLES)
 UNDOLOG_TABLES.remove('messages')
@@ -114,10 +114,6 @@ def parse_tx(db, tx):
         rps.parse(db, tx, message)
     elif message_type_id == rpsresolve.ID and rps_enabled:
         rpsresolve.parse(db, tx, message)
-    elif message_type_id == publish.ID and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
-        publish.parse(db, tx, message)
-    elif message_type_id == execute.ID and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
-        execute.parse(db, tx, message)
     elif message_type_id == destroy.ID:
         destroy.parse(db, tx, message)
     else:
@@ -374,8 +370,6 @@ def initialise(db):
     issuance.initialise(db)
     broadcast.initialise(db)
     bet.initialise(db)
-    publish.initialise(db)
-    execute.initialise(db)
     dividend.initialise(db)
     burn.initialise(db)
     cancel.initialise(db)

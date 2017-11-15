@@ -873,29 +873,6 @@ CREATE TRIGGER _cancels_update AFTER UPDATE ON cancels BEGIN
                             END;
 CREATE INDEX cancels_block_index_idx ON cancels (block_index);
 
--- Table  contracts
-DROP TABLE IF EXISTS contracts;
-CREATE TABLE contracts(
-                      contract_id TEXT PRIMARY KEY,
-                      tx_index INTEGER UNIQUE,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      code BLOB,
-                      nonce INTEGER,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
--- Triggers and indices on  contracts
-CREATE TRIGGER _contracts_delete BEFORE DELETE ON contracts BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO contracts(rowid,contract_id,tx_index,tx_hash,block_index,source,code,nonce) VALUES('||old.rowid||','||quote(old.contract_id)||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.code)||','||quote(old.nonce)||')');
-                            END;
-CREATE TRIGGER _contracts_insert AFTER INSERT ON contracts BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM contracts WHERE rowid='||new.rowid);
-                            END;
-CREATE TRIGGER _contracts_update AFTER UPDATE ON contracts BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'UPDATE contracts SET contract_id='||quote(old.contract_id)||',tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',code='||quote(old.code)||',nonce='||quote(old.nonce)||' WHERE rowid='||old.rowid);
-                            END;
-CREATE INDEX contract_id_idx ON contracts(contract_id);
-
 -- Table  credits
 DROP TABLE IF EXISTS credits;
 CREATE TABLE credits(
@@ -1051,34 +1028,6 @@ CREATE TRIGGER _dividends_insert AFTER INSERT ON dividends BEGIN
                             END;
 CREATE TRIGGER _dividends_update AFTER UPDATE ON dividends BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE dividends SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',asset='||quote(old.asset)||',dividend_asset='||quote(old.dividend_asset)||',quantity_per_unit='||quote(old.quantity_per_unit)||',fee_paid='||quote(old.fee_paid)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
-                            END;
-
--- Table  executions
-DROP TABLE IF EXISTS executions;
-CREATE TABLE executions(
-                      tx_index INTEGER UNIQUE,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      contract_id TEXT,
-                      gas_price INTEGER,
-                      gas_start INTEGER,
-                      gas_cost INTEGER,
-                      gas_remained INTEGER,
-                      value INTEGER,
-                      data BLOB,
-                      output BLOB,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
--- Triggers and indices on  executions
-CREATE TRIGGER _executions_delete BEFORE DELETE ON executions BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO executions(rowid,tx_index,tx_hash,block_index,source,contract_id,gas_price,gas_start,gas_cost,gas_remained,value,data,output,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.contract_id)||','||quote(old.gas_price)||','||quote(old.gas_start)||','||quote(old.gas_cost)||','||quote(old.gas_remained)||','||quote(old.value)||','||quote(old.data)||','||quote(old.output)||','||quote(old.status)||')');
-                            END;
-CREATE TRIGGER _executions_insert AFTER INSERT ON executions BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM executions WHERE rowid='||new.rowid);
-                            END;
-CREATE TRIGGER _executions_update AFTER UPDATE ON executions BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'UPDATE executions SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',contract_id='||quote(old.contract_id)||',gas_price='||quote(old.gas_price)||',gas_start='||quote(old.gas_start)||',gas_cost='||quote(old.gas_cost)||',gas_remained='||quote(old.gas_remained)||',value='||quote(old.value)||',data='||quote(old.data)||',output='||quote(old.output)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
                             END;
 
 -- Table  issuances
@@ -1272,22 +1221,6 @@ INSERT INTO messages VALUES(123,310498,'insert','credits','{"action": "issuance"
 -- Triggers and indices on  messages
 CREATE INDEX block_index_message_index_idx ON messages (block_index, message_index);
 
--- Table  nonces
-DROP TABLE IF EXISTS nonces;
-CREATE TABLE nonces(
-                      address TEXT PRIMARY KEY,
-                      nonce INTEGER);
--- Triggers and indices on  nonces
-CREATE TRIGGER _nonces_delete BEFORE DELETE ON nonces BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO nonces(rowid,address,nonce) VALUES('||old.rowid||','||quote(old.address)||','||quote(old.nonce)||')');
-                            END;
-CREATE TRIGGER _nonces_insert AFTER INSERT ON nonces BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM nonces WHERE rowid='||new.rowid);
-                            END;
-CREATE TRIGGER _nonces_update AFTER UPDATE ON nonces BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'UPDATE nonces SET address='||quote(old.address)||',nonce='||quote(old.nonce)||' WHERE rowid='||old.rowid);
-                            END;
-
 -- Table  order_expirations
 DROP TABLE IF EXISTS order_expirations;
 CREATE TABLE order_expirations(
@@ -1412,21 +1345,6 @@ CREATE INDEX give_asset_idx ON orders (give_asset);
 CREATE INDEX give_get_status_idx ON orders (get_asset, give_asset, status);
 CREATE INDEX give_status_idx ON orders (give_asset, status);
 CREATE INDEX source_give_status_idx ON orders (source, give_asset, status);
-
--- Table  postqueue
-DROP TABLE IF EXISTS postqueue;
-CREATE TABLE postqueue(
-                      message BLOB);
--- Triggers and indices on  postqueue
-CREATE TRIGGER _postqueue_delete BEFORE DELETE ON postqueue BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO postqueue(rowid,message) VALUES('||old.rowid||','||quote(old.message)||')');
-                            END;
-CREATE TRIGGER _postqueue_insert AFTER INSERT ON postqueue BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM postqueue WHERE rowid='||new.rowid);
-                            END;
-CREATE TRIGGER _postqueue_update AFTER UPDATE ON postqueue BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'UPDATE postqueue SET message='||quote(old.message)||' WHERE rowid='||old.rowid);
-                            END;
 
 -- Table  rps
 DROP TABLE IF EXISTS rps;
@@ -1592,40 +1510,6 @@ CREATE TRIGGER _sends_update AFTER UPDATE ON sends BEGIN
 CREATE INDEX destination_idx ON sends (destination);
 CREATE INDEX memo_idx ON sends (memo);
 CREATE INDEX source_idx ON sends (source);
-
--- Table  storage
-DROP TABLE IF EXISTS storage;
-CREATE TABLE storage(
-                      contract_id TEXT,
-                      key BLOB,
-                      value BLOB,
-                      FOREIGN KEY (contract_id) REFERENCES contracts(contract_id));
--- Triggers and indices on  storage
-CREATE TRIGGER _storage_delete BEFORE DELETE ON storage BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO storage(rowid,contract_id,key,value) VALUES('||old.rowid||','||quote(old.contract_id)||','||quote(old.key)||','||quote(old.value)||')');
-                            END;
-CREATE TRIGGER _storage_insert AFTER INSERT ON storage BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM storage WHERE rowid='||new.rowid);
-                            END;
-CREATE TRIGGER _storage_update AFTER UPDATE ON storage BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'UPDATE storage SET contract_id='||quote(old.contract_id)||',key='||quote(old.key)||',value='||quote(old.value)||' WHERE rowid='||old.rowid);
-                            END;
-
--- Table  suicides
-DROP TABLE IF EXISTS suicides;
-CREATE TABLE suicides(
-                      contract_id TEXT PRIMARY KEY,
-                      FOREIGN KEY (contract_id) REFERENCES contracts(contract_id));
--- Triggers and indices on  suicides
-CREATE TRIGGER _suicides_delete BEFORE DELETE ON suicides BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO suicides(rowid,contract_id) VALUES('||old.rowid||','||quote(old.contract_id)||')');
-                            END;
-CREATE TRIGGER _suicides_insert AFTER INSERT ON suicides BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM suicides WHERE rowid='||new.rowid);
-                            END;
-CREATE TRIGGER _suicides_update AFTER UPDATE ON suicides BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'UPDATE suicides SET contract_id='||quote(old.contract_id)||' WHERE rowid='||old.rowid);
-                            END;
 
 -- Table  transactions
 DROP TABLE IF EXISTS transactions;
