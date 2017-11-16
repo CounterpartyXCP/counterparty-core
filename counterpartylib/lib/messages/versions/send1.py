@@ -20,10 +20,10 @@ def unpack(db, message, block_index):
         asset = util.get_asset_name(db, asset_id, block_index)
 
     except struct.error:
-        raise UnpackError('could not unpack')
+        raise exceptions.UnpackError('could not unpack')
 
     except AssetNameError:
-        raise UnpackError('asset id invalid')
+        raise exceptions.UnpackError('asset id invalid')
 
     unpacked = {
                 'asset': asset,

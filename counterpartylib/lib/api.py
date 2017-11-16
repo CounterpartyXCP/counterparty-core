@@ -41,6 +41,7 @@ from counterpartylib.lib import blocks
 from counterpartylib.lib import script
 from counterpartylib.lib import message_type
 from counterpartylib.lib.messages import send
+from counterpartylib.lib.messages.versions import enhanced_send
 from counterpartylib.lib.messages import order
 from counterpartylib.lib.messages import btcpay
 from counterpartylib.lib.messages import issuance
@@ -768,6 +769,8 @@ class APIServer(threading.Thread):
             # TODO: Enabled only for `send`.
             if message_type_id == send.ID:
                 unpack_method = send.unpack
+            elif message_type_id == enhanced_send.ID:
+                unpack_method = enhanced_send.unpack
             else:
                 raise APIError('unsupported message type')
             unpacked = unpack_method(self.db, message, util.CURRENT_BLOCK_INDEX)

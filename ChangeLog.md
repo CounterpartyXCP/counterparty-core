@@ -2,6 +2,7 @@
 * master (unreleased)
     * allow multisig encoding method as the bytespersigop DoS protection was changed in Bitcoin Core v0.13.0
     * API change (backwards compatible): adds extended_tx_info parameter to create methods
+    * Fixed unpack API method for enhanced sends
 * v9.55.4 (2017-10-31)
     * Fix for uncaught exception in short asset name issuances
 * v9.55.3 (2017-09-26)

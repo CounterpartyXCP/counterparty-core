@@ -3720,7 +3720,32 @@ UNITTEST_VECTOR = {
             'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},
             'in': ('create_send', {'memo': '0102030405', 'memo_is_hex': True, 'source': ADDR[0], 'destination': ADDR[6], 'asset': 'XCP', 'quantity': DP['small']}),
             'out': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'02'+'0000000000000000'+'38'+'6a36'+'2a504df746f83442653dd7afa4dc727a030865749e9fba5aec80c39a9e56174ca4a68af644972baced7a9ef02e467cb63542b8b188e8'+'2d46ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'
+
+        # get_tx_info API method
+
+        }, {
+            'comment': 'get_tx_info for a legacy send',
+            'in': ('get_tx_info', {'tx_hex': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'03'+'3615000000000000'+'19'+'76a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac'+'0000000000000000'+'1e'+'6a1c2a504df746f83442653dd7ada4dc727a030865749e9fba5aec80c39a'+'2f30ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'}),
+            'out': ['mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 5430, 6575, '0000000000000000000000010000000002faf080']
+        }, {
+            'comment': 'get_tx_info for an enhanced send',
+            'mock_protocol_changes': {'enhanced_sends': True,},
+            'in': ('get_tx_info', {'tx_hex': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'02'+'0000000000000000'+'33'+'6a312a504df746f83442653dd7afa4dc727a030865749e9fba5aec80c39a9e68edbc79e78ed45723c1072c38aededa458f95fa'+'aa46ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'}),
+            'out': ['mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', '', 0, 6250, '0000000200000000000000010000000002faf0806f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec']
+
+        # unpack API method
+
+        }, {
+            'comment': 'Unpack a data hex for a legacy send',
+            'in': ('unpack', {'data_hex': '0000000000000000000000010000000002faf080'}),
+            'out': [0, {'asset': 'XCP', 'quantity': 50000000}]
+        }, {
+            'comment': 'Unpack a data hex for an enahcned send',
+            'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},
+            'in': ('unpack', {'data_hex': '0000000200000000000000010000000002faf0806f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec'}),
+            'out': [2, {'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'memo': None, 'quantity': 50000000}]
         }],
+
         'generate_asset_id': [{
             'in': ('BTC', DP['default_block_index']),
             'out': 0
