@@ -181,7 +181,7 @@ class install(_install):
             caller_module == 'distutils.dist'
             and info.function == 'run_commands'
         )
-        
+
     def run(self):
         # Explicit request for old-style install?  Just do it
         if self.old_and_unmanageable or self.single_version_externally_managed:
@@ -219,6 +219,7 @@ required_packages = [
     'tendo==0.2.8',
     'xmltodict==0.10.1',
     'cachetools==1.1.6',
+    'bitstring==3.1.5'
 ]
 
 setup_options = {

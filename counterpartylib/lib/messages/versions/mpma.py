@@ -11,7 +11,7 @@ from bitcoin import base58
 from bitcoin.core import key
 from functools import reduce
 
-from bitstring import BitArray, BitStream, ConstBitStream
+from bitstring import BitArray, BitStream, ConstBitStream, ReadError
 
 logger = logging.getLogger(__name__)
 
@@ -97,12 +97,12 @@ def _encode_constructSends(sends):
 
 def _encode_compressSends(db, mpmaSend, block_index):
     compressedLUT = _encode_compressLUT(mpmaSend['lut'])
-    isends = ''.join([
-        ''.join(['0b1', _encode_compressSendList(db, mpmaSend['lut']['nbits'], sendList, block_index).bin])
+    isends = '0b' + ''.join([
+        ''.join(['1', _encode_compressSendList(db, mpmaSend['lut']['nbits'], sendList, block_index).bin])
         for sendList in mpmaSend['sendLists']
     ])
     bstr = ''.join([isends, '0'])
-    pad = '0' * (8 - (len(bstr) - 2) % 8) # That -2 is because the prefix 0b is there
+    pad = '0' * ((8 - (len(bstr) - 2)) % 8) # That -2 is because the prefix 0b is there
     barr = BitArray(bstr + pad)
     return b''.join([
         compressedLUT,
@@ -119,6 +119,8 @@ def _encode_mpmaSend(db, sends, block_index):
 
 def _decode_decodeLUT(data):
     (numAddresses,) = struct.unpack('>H', data[0:2])
+    if numAddresses == 0:
+        raise exceptions.DecodeError('address list can\'t be empty')
     p = 2
     addressList = []
     bytesPerAddress = 21
@@ -137,14 +139,15 @@ def _decode_decodeSendList(stream, nbits, lut, block_index):
     asset_id = stream.read('uintbe:64')
     numRecipients = stream.read('uint:%i' % nbits)
     sendList = []
-
-    #
+    asset = util.generate_asset_name(asset_id, block_index)
+    print('%s LUT %s' % (asset, json.dumps(lut)))
     for i in range(0, numRecipients + 1):
-        addr = lut[stream.read('uint:%i' % nbits)]
+        idx = stream.read('uint:%i' % nbits)
+        addr = lut[idx]
         amount = stream.read('uintbe:64')
+        print('%s %i -> %i' % (asset, idx, amount))
         sendList.append((addr, amount))
 
-    asset = util.generate_asset_name(asset_id, block_index)
 
     return asset, sendList
 
@@ -175,10 +178,13 @@ def _accumulate(l):
 def unpack(db, message, block_index):
     try:
         unpacked = _decode_mpmaSendDecode(message, block_index)
+        print('****UNPACK****** %s' % json.dumps(unpacked))
     except (struct.error) as e:
         raise exceptions.UnpackError('could not unpack')
     except (exceptions.AssetNameError, exceptions.AssetIDError) as e:
         raise exceptions.UnpackError('invalid asset in mpma send')
+    except (ReadError) as e:
+        raise exceptions.UnpackError('truncated data')
 
     return unpacked
 

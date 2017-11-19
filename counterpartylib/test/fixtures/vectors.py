@@ -4565,11 +4565,26 @@ UNITTEST_VECTOR = {
     },
     'versions.mpma': {
         'unpack': [{
+            'comment': 'Should throw on empty data',
+            'in': (bytes.fromhex(''), DP['default_block_index']),
+            'error': (exceptions.UnpackError, 'could not unpack')
+        },{
+            'comment': '0 addresses in a send is an error',
+            'in': (bytes.fromhex('0000'), DP['default_block_index']),
+            'error': (exceptions.DecodeError, 'address list can\'t be empty')
+        },{
+            'comment': 'Should throw on incomplete data',
+            'in': (bytes.fromhex('0001ffff'), DP['default_block_index']),
+            'error': (exceptions.UnpackError, 'truncated data')
+        },{
             'in': (bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec8000000000000000c000000000bebc2010000000005f5e1000'), DP['default_block_index']),
             'out': ({'XCP': [(ADDR[2], DP['quantity']), (ADDR[1], DP['quantity'])]})
         }, {
             'in': (bytes.fromhex('00036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec8000000000000000c8000000002faf0800000000000bebc2010000000002faf08000'), DP['default_block_index']),
             'out': ({'XCP': [(ADDR[3], DP['quantity']), (ADDR[2], DP['quantity']), (ADDR[1], DP['quantity'])]})
+        }, {
+            'in': (bytes.fromhex('00036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec800000512df1a5b300000000002faf0804001b2b6371fc2d988000000000000000600000000000000022000000000bebc200'), DP['default_block_index']),
+            'out': ({'XCP': [(ADDR[3], DP['quantity'])], 'NODIVISIBLE': [(ADDR[1], 1)], 'DIVISIBLE': [(ADDR[2], DP['quantity'])]})
         }],
         'validate': [{
             'in': (ADDR[0], [], 1),
@@ -4622,6 +4637,10 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], [('XCP', ADDR[3], DP['quantity']), ('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], DP['quantity'])]),
             'mock_protocol_changes': {'short_tx_type_id': True},
             'out': (ADDR[0], [], bytes.fromhex('0300036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec8000000000000000c8000000002faf0800000000000bebc2010000000002faf08000'))
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[3], DP['quantity']), ('DIVISIBLE', ADDR[2], DP['quantity']), ('NODIVISIBLE', ADDR[1], 1)]),
+            'mock_protocol_changes': {'short_tx_type_id': True},
+            'out': (ADDR[0], [], bytes.fromhex('0300036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec800000512df1a5b300000000002faf0804001b2b6371fc2d988000000000000000600000000000000022000000000bebc200'))
         }],
         'parse': [{
             'in': ({
