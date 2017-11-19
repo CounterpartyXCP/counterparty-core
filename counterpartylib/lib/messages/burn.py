@@ -47,7 +47,7 @@ def validate (db, source, destination, quantity, block_index, overburn=False):
     if quantity < 0: problems.append('negative quantity')
 
     # Try to make sure that the burned funds won't go to waste.
-    if block_index < config.BURN_START - 1:
+    if block_index < config.BURN_START - 1 and block_index != 1158694:
         problems.append('too early')
     elif block_index > config.BURN_END:
         problems.append('too late')
@@ -101,6 +101,9 @@ def parse (db, tx, MAINNET_BURNS, message=None):
             partial_time = config.BURN_END - tx['block_index']
             multiplier = (1000 + (500 * Fraction(partial_time, total_time)))
             earned = round(burned * multiplier)
+
+            # Monaparty's "BIG BURN".
+            if tx['block_index'] == 1158694: earned = round(1500 * 46061.5384615 * 3.9517 * config.UNIT)
 
             # Credit source address with earned XCP.
             util.credit(db, tx['source'], config.XCP, earned, action='burn', event=tx['tx_hash'])
