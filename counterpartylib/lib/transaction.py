@@ -225,6 +225,10 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
             len(unspent), [make_outkey(coin) for coin in unspent],
             [make_outkey(input) for input in inputs], list(UTXO_LOCKS[source].keys())))
 
+    # ensure inputs have scriptPubKey 
+    #   this is not provided by indexd
+    inputs = backend.ensure_script_pub_key_for_inputs(inputs)
+
     return inputs, change_quantity
 
 def select_any_coin_from_source(source, allow_unconfirmed_inputs=True, disable_utxo_locks=False):
@@ -493,10 +497,6 @@ def construct (db, tx_info, encoding='auto',
         change_output = (source_address, change_quantity)
     else:
         change_output = None
-
-    # ensure inputs have scriptPubKey 
-    #   this is not provided by indexd
-    inputs = backend.ensure_script_pub_key_for_inputs(inputs)
 
     unsigned_pretx_hex = None
     unsigned_tx_hex = None
