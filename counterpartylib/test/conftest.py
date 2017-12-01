@@ -74,12 +74,6 @@ def enabled(change_name, block_index=None):
         return _enabled(change_name, block_index)
 util.enabled = enabled
 
-def forceEnableProtocolChange(change_name):
-    if change_name in MOCK_PROTOCOL_CHANGES_AT_BLOCK:
-        MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name] = {'block_index': 0, 'allow_always_latest': False}
-        ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = True
-
-
 # This is true if ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK is set
 def shouldCheckForMockProtocolChangesAtBlock(change_name):
     if DISABLE_ALL_MOCK_PROTOCOL_CHANGES_AT_BLOCK:

@@ -27,11 +27,10 @@ FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
 
 @pytest.mark.usefixtures("cp_server")
 def test_p2sh_encoding(server_db):
-    conftest.forceEnableProtocolChange('enhanced_sends')
     source = ADDR[0]
     destination = ADDR[1]
 
-    with util_test.ConfigContext(OLD_STYLE_API=True):
+    with util_test.ConfigContext(OLD_STYLE_API=True), util_test.MockProtocolChangesContext(enhanced_sends=True):
         utxos = dict(((utxo['txid'], utxo['vout']), utxo) for utxo in backend.get_unspent_txouts(source))
 
         # pprint.pprint(utxos)
@@ -166,11 +165,10 @@ def test_p2sh_encoding(server_db):
 ''' Test that p2sh sources are not supported by the API at this time '''
 @pytest.mark.usefixtures("cp_server")
 def test_p2sh_encoding_p2sh_source_not_supported(server_db):
-    conftest.forceEnableProtocolChange('enhanced_sends')
     source = P2SH_ADDR[0]
     destination = ADDR[1]
 
-    with util_test.ConfigContext(OLD_STYLE_API=True):
+    with util_test.ConfigContext(OLD_STYLE_API=True), util_test.MockProtocolChangesContext(enhanced_sends=True):
         fee = 20000
         fee_per_kb = 50000
         
@@ -190,11 +188,10 @@ def test_p2sh_encoding_p2sh_source_not_supported(server_db):
 ''' Manually form a transaction from a p2sh source '''
 @pytest.mark.usefixtures("cp_server")
 def test_p2sh_encoding_manual_multisig_transaction(server_db):
-    conftest.forceEnableProtocolChange('enhanced_sends')
     source = P2SH_ADDR[0]
     destination = ADDR[1]
 
-    with util_test.ConfigContext(OLD_STYLE_API=True):
+    with util_test.ConfigContext(OLD_STYLE_API=True), util_test.MockProtocolChangesContext(enhanced_sends=True):
         p2sh_source_multisig_pubkeys_binary = [binascii.unhexlify(p) for p in [DP['pubkey'][ADDR[0]], DP['pubkey'][ADDR[1]], DP['pubkey'][ADDR[2]]]]
         scriptSig, redeemScript, outputScript = p2sh_encoding.make_p2sh_encoding_redeemscript(
             b'deadbeef01',
