@@ -19,13 +19,15 @@ from counterpartylib.lib import api
 from counterpartylib.lib import backend
 from counterpartylib.lib import blocks
 from counterpartylib.lib import exceptions
+from counterpartylib.lib.transaction_helper import serializer
+from counterpartylib.lib.transaction_helper import p2sh_encoding
 
 FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql'
 FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
 
-
 @pytest.mark.usefixtures("cp_server")
 def test_p2sh_encoding(server_db):
+    conftest.forceEnableProtocolChange('enhanced_sends')
     source = ADDR[0]
     destination = ADDR[1]
 
@@ -34,6 +36,8 @@ def test_p2sh_encoding(server_db):
 
         # pprint.pprint(utxos)
 
+        fee = 20000
+        fee_per_kb = 50000
         result = api.compose_transaction(
             server_db, 'send',
             {'source': source,
@@ -41,29 +45,48 @@ def test_p2sh_encoding(server_db):
              'asset': 'XCP',
              'quantity': 100},
             encoding='p2sh',
+            fee_per_kb=fee_per_kb,
+            fee=fee
         )
         assert not isinstance(result, list)
         pretxhex = result
 
         pretx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(pretxhex))
+
         sumvin = sum([int(utxos[(bitcoinlib.core.b2lx(vin.prevout.hash), vin.prevout.n)]['amount'] * 1e8) for vin in pretx.vin])
         sumvout = sum([vout.nValue for vout in pretx.vout])
-        fee = 10000
 
-        assert len(pretxhex) / 2 == 176
+        assert len(pretx.vout) == 2
+        assert len(pretxhex) / 2 == 142
         assert sumvin == 199909140
         assert sumvout < sumvin
-        assert sumvout == sumvin - fee
-        assert len(pretx.vout) == 3
-        # source
-        assert str(bitcoinlib.wallet.CBitcoinAddress.from_scriptPubKey(pretx.vout[0].scriptPubKey)) == source
-        assert pretx.vout[0].nValue == 7630
+        assert sumvout == (sumvin - fee)
+
+
         # data P2SH output
-        assert repr(pretx.vout[1].scriptPubKey) == "CScript([OP_HASH160, x('98b597ee2cd6cf41c8a946f86b467cfba5bd37e3'), OP_EQUAL])"
-        assert pretx.vout[1].nValue == 7800
+        expected_datatx_length = 435
+        expected_datatx_fee = int(expected_datatx_length / 1000 * fee_per_kb)
+        assert repr(pretx.vout[0].scriptPubKey) == "CScript([OP_HASH160, x('80070406f277bae04c990e986a4cbfa7c5120308'), OP_EQUAL])"
+        assert pretx.vout[0].nValue == expected_datatx_fee
         # change output
-        assert pretx.vout[2].nValue == sumvin - 7630 - 7800 - fee
-        assert pretxhex == "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03ce1d0000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac781e00000000000017a91498b597ee2cd6cf41c8a946f86b467cfba5bd37e387befbe90b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        assert pretx.vout[1].nValue == sumvin - expected_datatx_fee - fee
+
+        assert pretxhex == "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02f65400000000000017a91480070406f277bae04c990e986a4cbfa7c512030887febbe90b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        # 01000000                                                          | version
+        # 01                                                                | inputs
+        # c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae  | txout hash
+        # 00000000                                                          | txout index
+        # 19                                                                | script length
+        # 76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac                | tx_script
+        # ffffffff                                                          | Sequence
+        # 02                                                                | number of outputs
+        # f654000000000000                                                  | output 1 value (21750)
+        # 17                                                                | output 1 length (23 bytes)
+        # a91480070406f277bae04c990e986a4cbfa7c512030887                    | output 1 script
+        # febbe90b00000000                                                  | output 2 value (199867390)
+        # 19                                                                | output 2 length (25 bytes)
+        # 76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac                | output 2 script
+        # 00000000                                                          | locktime
 
         # first transaction should be considered BTC only
         with pytest.raises(exceptions.BTCOnlyError):
@@ -73,6 +96,7 @@ def test_p2sh_encoding(server_db):
         pretxid, _ = util_test.insert_raw_transaction(pretxhex, server_db)
 
         logger.debug('pretxid %s' % (pretxid))
+
 
         # check that when we do another, unrelated, send that it won't use our UTXO
         result = api.compose_transaction(
@@ -87,6 +111,7 @@ def test_p2sh_encoding(server_db):
         assert not(binascii.hexlify(othertxid).decode('ascii') == pretxid and othertx.vin[0].prevout.n == 0)
 
 
+        # now compose the data transaction
         result = api.compose_transaction(
             server_db, 'send',
             {'source': source,
@@ -94,7 +119,8 @@ def test_p2sh_encoding(server_db):
              'asset': 'XCP',
              'quantity': 100},
             p2sh_pretx_txid=pretxid,  # pass the pretxid
-            encoding='p2sh'
+            encoding='p2sh',
+            fee_per_kb=fee_per_kb
         )
         assert not isinstance(result, list)
         datatxhex = result
@@ -104,117 +130,126 @@ def test_p2sh_encoding(server_db):
         sumvout = sum([vout.nValue for vout in datatx.vout])
         fee = 10000
 
-        assert len(datatxhex) / 2 == 291
-        assert sumvin == 15430
+        assert len(datatxhex) / 2 == 212
+        assert sumvin == expected_datatx_fee
         assert sumvout < sumvin
-        assert sumvout == sumvin - fee
-        assert len(datatx.vout) == 2
-        # destination
-        assert str(bitcoinlib.wallet.CBitcoinAddress.from_scriptPubKey(datatx.vout[0].scriptPubKey)) == destination
-        assert datatx.vout[0].nValue == 5430
+        assert sumvout == sumvin - expected_datatx_fee
+        assert len(datatx.vout) == 1
         # opreturn signalling P2SH
-        assert repr(datatx.vout[1].scriptPubKey) == "CScript([OP_RETURN, x('8a5dda15fb6f0562da344d2f')])"  # arc4(PREFIX + 'P2SH')
-        assert datatx.vout[1].nValue == 0
-        assert datatxhex == "0100000002526b4dba7aa2e7d0bebe3ee0f9f3425b405187f50adb883c322e86f4fd318630000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff526b4dba7aa2e7d0bebe3ee0f9f3425b405187f50adb883c322e86f4fd31863001000000751c544553545858585800000000000000000000000100000000000000643fa914d7ec7ac660b5771fc9beeaf1d8363923676fd3fe88210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad007574008717a91498b597ee2cd6cf41c8a946f86b467cfba5bd37e387ffffffff0236150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000000000000e6a0c8a5dda15fb6f0562da344d2f00000000"
+        assert repr(datatx.vout[0].scriptPubKey) == "CScript([OP_RETURN, x('8a5dda15fb6f0562da344d2f')])"  # arc4(PREFIX + 'P2SH')
+        assert datatx.vout[0].nValue == 0
+        assert datatxhex == "0100000001d7ae0e13a5a42505dd6ab53d93ca1444050f68910f72a805b728d4fba6e0d384000000008a31544553545858585800000002000000000000000100000000000000646f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec3fa91469239b1c91f30886e520641e25d08529b30bb3c388210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad007574008717a91480070406f277bae04c990e986a4cbfa7c512030887ffffffff0100000000000000000e6a0c8a5dda15fb6f0562da344d2f00000000"
+        # 01000000                                                                                         | version
+        # 01                                                                                               | inputs
+        # d7ae0e13a5a42505dd6ab53d93ca1444050f68910f72a805b728d4fba6e0d384                                 | txout hash
+        # 00000000                                                                                         | txout index (0)
+        # 8a                                                                                               | script length (138)
+        # 31544553545858585800000002000000000000000100000000000000                                         | tx_script
+        #         646f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec3fa91469239b1c91f30886e520641e25d08529b30bb  |   ...
+        #         3c388210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad0075740087    |   ... 
+        #         17a91480070406f277bae04c990e986a4cbfa7c512030887                                         |   ...
+        # ffffffff                                                                                         | Sequence
+        # 01                                                                                               | number of outputs
+        # 0000000000000000                                                                                 | output 1 value (0)
+        # 0e                                                                                               | output 1 length (23 bytes)
+        # 6a0c8a5dda15fb6f0562da344d2f                                                                     | output 1 script
+        # 00000000                                                                                         | locktime
 
         # verify parsed result
         parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data = blocks._get_tx_info(datatxhex)
         assert parsed_source == source
-        assert parsed_destination == destination
-        assert parsed_data == binascii.unhexlify("00000000" "0000000000000001" "0000000000000064")  # ID=SEND(0x00) ASSET=XCP(0x01) VALUE=100(0x64)
-        assert parsed_btc_amount == 5430
-        assert parsed_fee == fee
+        assert parsed_data == binascii.unhexlify("00000002" "0000000000000001" "0000000000000064" "6f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec")  # ID=enhanced_send(0x02) ASSET=XCP(0x01) VALUE=100(0x64) destination_pubkey(0x6f8d...d6ec)
+        assert parsed_btc_amount == 0
+        assert parsed_fee == expected_datatx_fee
 
 
+''' Test that p2sh sources are not supported by the API at this time '''
 @pytest.mark.usefixtures("cp_server")
-def test_p2sh_encoding_p2sh_source(server_db):
+def test_p2sh_encoding_p2sh_source_not_supported(server_db):
+    conftest.forceEnableProtocolChange('enhanced_sends')
     source = P2SH_ADDR[0]
     destination = ADDR[1]
 
     with util_test.ConfigContext(OLD_STYLE_API=True):
-        utxos = dict(((utxo['txid'], utxo['vout']), utxo) for utxo in backend.get_unspent_txouts(source))
+        fee = 20000
+        fee_per_kb = 50000
+        
+        with pytest.raises(exceptions.TransactionError):
+            result = api.compose_transaction(
+                server_db, 'send',
+                {'source': source,
+                 'destination': destination,
+                 'asset': 'XCP',
+                 'quantity': 100},
+                encoding='p2sh',
+                fee_per_kb=fee_per_kb,
+                fee=fee
+            )
 
-        # pprint.pprint(utxos)
 
-        result = api.compose_transaction(
+''' Manually form a transaction from a p2sh source '''
+@pytest.mark.usefixtures("cp_server")
+def test_p2sh_encoding_manual_multisig_transaction(server_db):
+    conftest.forceEnableProtocolChange('enhanced_sends')
+    source = P2SH_ADDR[0]
+    destination = ADDR[1]
+
+    with util_test.ConfigContext(OLD_STYLE_API=True):
+        p2sh_source_multisig_pubkeys_binary = [binascii.unhexlify(p) for p in [DP['pubkey'][ADDR[0]], DP['pubkey'][ADDR[1]], DP['pubkey'][ADDR[2]]]]
+        scriptSig, redeemScript, outputScript = p2sh_encoding.make_p2sh_encoding_redeemscript(
+            b'deadbeef01',
+            n=0, pubKey=None, 
+            multisig_pubkeys=p2sh_source_multisig_pubkeys_binary, 
+            multisig_pubkeys_required=2
+        )
+        redeemScript = bitcoinlib.core.script.CScript(redeemScript)
+        assert repr(redeemScript) == "CScript([OP_HASH160, x('28fc9fc8c6318c76eb74a841f76423777a120073'), OP_EQUALVERIFY, 2, x('{}'), x('{}'), x('{}'), 3, OP_CHECKMULTISIGVERIFY, 0, OP_DROP, OP_DEPTH, 0, OP_EQUAL])".format(DP['pubkey'][ADDR[0]], DP['pubkey'][ADDR[1]], DP['pubkey'][ADDR[2]])
+
+        # setup transaction
+        fee = 20000
+        fee_per_kb = 50000
+        pretxhex = api.compose_transaction(
             server_db, 'send',
             {'source': source,
              'destination': destination,
              'asset': 'XCP',
-             'quantity': 100},
+             'quantity': 100,
+            },
+            p2sh_source_multisig_pubkeys=[DP['pubkey'][ADDR[0]], DP['pubkey'][ADDR[1]], DP['pubkey'][ADDR[2]]],
+            p2sh_source_multisig_pubkeys_required=2,
             encoding='p2sh',
-            dust_return_pubkey=DP['pubkey'][ADDR[0]]
+            fee_per_kb=fee_per_kb,
+            fee=fee
         )
-        assert not isinstance(result, list)
-        pretxhex = result
-
-        pretx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(pretxhex))
-        sumvin = sum([int(utxos[(bitcoinlib.core.b2lx(vin.prevout.hash), vin.prevout.n)]['amount'] * 1e8) for vin in pretx.vin])
-        sumvout = sum([vout.nValue for vout in pretx.vout])
-        fee = 10000
-
-        assert len(pretxhex) / 2 == 170
-        assert sumvin == 100000000
-        assert sumvout < sumvin
-        assert sumvout == sumvin - fee
-        assert len(pretx.vout) == 3
-        # source
-        assert str(bitcoinlib.wallet.CBitcoinAddress.from_scriptPubKey(pretx.vout[0].scriptPubKey)) == source
-        assert pretx.vout[0].nValue == 7630
-        # data P2SH output
-        assert repr(pretx.vout[1].scriptPubKey) == "CScript([OP_HASH160, x('98b597ee2cd6cf41c8a946f86b467cfba5bd37e3'), OP_EQUAL])"
-        assert pretx.vout[1].nValue == 7800
-        # change output
-        assert pretx.vout[2].nValue == sumvin - 7630 - 7800 - fee
-        assert pretxhex == "01000000015001af2c4c3bc2c43b6233261394910d10fb157a082d9b3038c65f2d01e4ff200000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e87ffffffff03ce1d00000000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e87781e00000000000017a91498b597ee2cd6cf41c8a946f86b467cfba5bd37e387aa7df5050000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e8700000000"
-
-        # first transaction should be considered BTC only
-        with pytest.raises(exceptions.BTCOnlyError):
-            blocks._get_tx_info(pretxhex)
+        # debugTransaction = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(pretxhex))
 
         # store transaction
         pretxid, _ = util_test.insert_raw_transaction(pretxhex, server_db)
-
         logger.debug('pretxid %s' % (pretxid))
 
+        # now compose the data transaction
         result = api.compose_transaction(
             server_db, 'send',
             {'source': source,
              'destination': destination,
              'asset': 'XCP',
              'quantity': 100},
+            p2sh_source_multisig_pubkeys=[DP['pubkey'][ADDR[0]], DP['pubkey'][ADDR[1]], DP['pubkey'][ADDR[2]]],
+            p2sh_source_multisig_pubkeys_required=2,
             p2sh_pretx_txid=pretxid,  # pass the pretxid
             encoding='p2sh',
-            dust_return_pubkey=DP['pubkey'][ADDR[0]]
+            fee_per_kb=fee_per_kb
         )
         assert not isinstance(result, list)
         datatxhex = result
 
         datatx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(datatxhex))
-        sumvin = sum([pretx.vout[n].nValue for n, vin in enumerate(datatx.vin)])
-        sumvout = sum([vout.nValue for vout in datatx.vout])
-        fee = 10000
 
-        assert len(datatxhex) / 2 == 289
-        assert sumvin == 15430
-        assert sumvout < sumvin
-        assert sumvout == sumvin - fee
-        assert len(datatx.vout) == 2
-        # destination
-        assert str(bitcoinlib.wallet.CBitcoinAddress.from_scriptPubKey(datatx.vout[0].scriptPubKey)) == destination
-        assert datatx.vout[0].nValue == 5430
-        # opreturn signalling P2SH
-        assert repr(datatx.vout[1].scriptPubKey) == "CScript([OP_RETURN, x('8a5dda15fb6f0562da344d2f')])"  # arc4(PREFIX + 'P2SH')
-        assert datatx.vout[1].nValue == 0
-        assert datatxhex == "01000000025eb13dc32d12bbaa0431b7352caf52f2a173ebcc53cf8eaade9e5706cb72a3110000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e87ffffffff5eb13dc32d12bbaa0431b7352caf52f2a173ebcc53cf8eaade9e5706cb72a31101000000751c544553545858585800000000000000000000000100000000000000643fa914d7ec7ac660b5771fc9beeaf1d8363923676fd3fe88210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad007574008717a91498b597ee2cd6cf41c8a946f86b467cfba5bd37e387ffffffff0236150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000000000000e6a0c8a5dda15fb6f0562da344d2f00000000"
-
-        # verify parsed result
+        # parse the transaction
         parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data = blocks._get_tx_info(datatxhex)
         assert parsed_source == source
-        assert parsed_destination == destination
-        assert parsed_data == binascii.unhexlify("00000000" "0000000000000001" "0000000000000064")  # ID=SEND(0x00) ASSET=XCP(0x01) VALUE=100(0x64)
-        assert parsed_btc_amount == 5430
-        assert parsed_fee == fee
+        assert parsed_data == binascii.unhexlify("00000002" "0000000000000001" "0000000000000064" "6f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec")  # ID=enhanced_send(0x02) ASSET=XCP(0x01) VALUE=100(0x64) destination_pubkey(0x6f8d...d6ec)
+        assert parsed_btc_amount == 0
 
 
 @pytest.mark.usefixtures("cp_server")
