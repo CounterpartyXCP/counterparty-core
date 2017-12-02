@@ -4,6 +4,7 @@ import binascii
 import time
 import hashlib
 import pytest
+import math
 import bitcoin as bitcoinlib
 from counterpartylib.test import conftest  # this is require near the top to do setup of the test suite
 from counterpartylib.test import util_test
@@ -160,6 +161,144 @@ def test_p2sh_encoding(server_db):
         assert parsed_data == binascii.unhexlify("00000002" "0000000000000001" "0000000000000064" "6f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec")  # ID=enhanced_send(0x02) ASSET=XCP(0x01) VALUE=100(0x64) destination_pubkey(0x6f8d...d6ec)
         assert parsed_btc_amount == 0
         assert parsed_fee == expected_datatx_fee
+
+@pytest.mark.usefixtures("cp_server")
+def test_p2sh_encoding_long_data(server_db):
+    source = ADDR[0]
+    destination = ADDR[1]
+
+    with util_test.ConfigContext(OLD_STYLE_API=True), util_test.MockProtocolChangesContext(enhanced_sends=True):
+        utxos = dict(((utxo['txid'], utxo['vout']), utxo) for utxo in backend.get_unspent_txouts(source))
+
+        # pprint.pprint(utxos)
+
+        fee_per_kb = 50000
+        result = api.compose_transaction(
+            server_db, 'broadcast',
+            {'source': source,
+             'text': 'The quick brown fox jumped over the lazy dog. ' * 12,
+             'fee_fraction': 0,
+             'timestamp': 1512155862,
+             'value': 0,},
+            encoding='p2sh',
+            fee_per_kb=fee_per_kb
+        )
+        assert not isinstance(result, list)
+        pretxhex = result
+
+        pretx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(pretxhex))
+        actual_fee = int(len(pretxhex) / 2 * fee_per_kb / 1000)
+
+        sumvin = sum([int(utxos[(bitcoinlib.core.b2lx(vin.prevout.hash), vin.prevout.n)]['amount'] * 1e8) for vin in pretx.vin])
+        sumvout = sum([vout.nValue for vout in pretx.vout])
+
+        pretx_fee = 12950
+
+        assert len(pretx.vout) == 3
+        assert len(pretxhex) / 2 == 174
+        assert sumvin == 199909140
+        assert sumvout < sumvin
+        assert sumvout == (sumvin - pretx_fee)
+
+
+        # data P2SH output
+        expected_datatx_length = 1156
+        expected_datatx_fee = int(expected_datatx_length / 1000 * fee_per_kb)
+        expected_datatx_fee_rounded = int(math.ceil(expected_datatx_fee / 2)) * 2
+        assert repr(pretx.vout[0].scriptPubKey) == "CScript([OP_HASH160, x('4b398076a5d51586d8e7f87498ce0c46f8d56942'), OP_EQUAL])"
+        assert pretx.vout[0].nValue == int(math.ceil(expected_datatx_fee / 2))
+        assert pretx.vout[1].nValue == int(math.ceil(expected_datatx_fee / 2))
+        # change output
+        assert pretx.vout[2].nValue == sumvin - expected_datatx_fee_rounded - pretx_fee
+
+        assert pretxhex == "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03e47000000000000017a9144b398076a5d51586d8e7f87498ce0c46f8d5694287e47000000000000017a914e3e4e26f1e7ab2a1d4d04395628bb9d758de566887b64ae90b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        # 01000000                                                          | version
+        # 01                                                                | inputs
+        # c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae  | txout hash
+        # 00000000                                                          | txout index
+        # 19                                                                | script length
+        # 76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac                | tx_script
+        # ffffffff                                                          | Sequence
+        # 03                                                                | number of outputs (3)
+        # e470000000000000                                                  | output 1 value (28900)
+        # 17                                                                | output 1 length (23 bytes)
+        # a9144b398076a5d51586d8e7f87498ce0c46f8d5694287                    | output 1 script
+        # e470000000000000                                                  | output 2 value (28900)
+        # 17                                                                | output 2 length (23 bytes)
+        # a914e3e4e26f1e7ab2a1d4d04395628bb9d758de566887                    | output 2 script
+        # febbe90b00000000                                                  | output 3 value (199867390)
+        # 19                                                                | output 3 length (25 bytes)
+        # 76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac                | output 3 script
+        # 00000000                                                          | locktime
+
+        # store transaction
+        pretxid, _ = util_test.insert_raw_transaction(pretxhex, server_db)
+        logger.debug('pretxid %s' % (pretxid))
+
+        # now compose the data transaction
+        result = api.compose_transaction(
+            server_db, 'broadcast',
+            {'source': source,
+             'text': 'The quick brown fox jumped over the lazy dog. ' * 12,
+             'fee_fraction': 0,
+             'timestamp': 1512155862,
+             'value': 0,},
+            p2sh_pretx_txid=pretxid,  # pass the pretxid
+            encoding='p2sh',
+            fee_per_kb=fee_per_kb
+        )
+        assert not isinstance(result, list)
+        datatxhex = result
+
+        datatx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(datatxhex))
+        sumvin = sum([pretx.vout[n].nValue for n, vin in enumerate(datatx.vin)])
+        sumvout = sum([vout.nValue for vout in datatx.vout])
+        assert len(datatx.vin) == 2
+
+        assert len(datatxhex) / 2 == 885
+        assert sumvin == expected_datatx_fee_rounded
+        assert sumvout < sumvin
+        assert sumvout == sumvin - expected_datatx_fee_rounded
+        assert len(datatx.vout) == 1
+        # opreturn signalling P2SH
+        assert repr(datatx.vout[0].scriptPubKey) == "CScript([OP_RETURN, x('8a5dda15fb6f0562da344d2f')])"  # arc4(PREFIX + 'P2SH')
+        assert datatx.vout[0].nValue == 0
+        assert datatxhex == "010000000237045ddc94525b14092261f44ae79d5277e2794023dcee99891233b63fcc1d9e00000000fd63024d080254455354585858580000001e5a21aad600000000000000000000000054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f766572203fa9143689a1aa1c1d59310f726ecad800e28df2172a1088210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad007574008717a9144b398076a5d51586d8e7f87498ce0c46f8d5694287ffffffff37045ddc94525b14092261f44ae79d5277e2794023dcee99891233b63fcc1d9e010000009d445445535458585858746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e203fa914ed9124f6cfc01a8486c8be19c514a2b959c686b988210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad517574008717a914e3e4e26f1e7ab2a1d4d04395628bb9d758de566887ffffffff0100000000000000000e6a0c8a5dda15fb6f0562da344d2f00000000"
+        # 01000000                                                                                         | version
+        # 02                                                                                               | inputs
+        # 37045ddc94525b14092261f44ae79d5277e2794023dcee99891233b63fcc1d9e                                 | txout hash
+        # 00000000                                                                                         | txout index (0)
+        # fd                                                                                               | script length (253)
+        # 31544553545858585800000002000000000000000100000000000000                                         | tx_script
+        #    63024d080254455354585858580000001e5a21aad6000000000000000000000000                            |   ... 
+        #    54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20  |   ... 
+        #    54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20  |   ... 
+        #    54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20  |   ... 
+        #    54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20  |   ... 
+        #    54686520717569636b2062726f776e20666f78206a756d706564206f7665722074686520                      |   ... 
+        # ffffffff                                                                                         | Sequence
+        # 37045ddc94525b14092261f44ae79d5277e2794023dcee99891233b63fcc1d9e                                 | txout hash
+        # 01000000                                                                                         | txout index (1)
+        # 9d                                                                                               | script length (157)
+        # 445445535458585858746865206c617a7920646f672e20                                                   | tx_script
+        # 54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20     |   ... 
+        #     3fa914ed9124f6cfc01a8486c8be19c514a2b959c686b988210282b886c087eb37dc8182f14ba6cc3e9485ed618  |   ... 
+        #     b95804d44aecc17c300b585b0ad517574008717a914e3e4e26f1e7ab2a1d4d04395628bb9d758de566887        |   ... 
+        # ffffffff                                                                                         | Sequence
+        # 01                                                                                               | number of outputs
+        # 0000000000000000                                                                                 | output 1 value (0)
+        # 0e                                                                                               | output 1 length (23 bytes)
+        # 6a0c8a5dda15fb6f0562da344d2f                                                                     | output 1 script
+        # 00000000                                                                                         | locktime
+
+
+        # verify parsed result
+        parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data = blocks._get_tx_info(datatxhex)
+        assert parsed_source == source
+
+        assert parsed_data == binascii.unhexlify("0000001e5a21aad6000000000000000000000000") + b'The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. '  # ID=enhanced_send(0x1e) ASSET=XCP(0x01) VALUE=100(0x64) destination_pubkey(0x6f8d...d6ec)
+        assert parsed_btc_amount == 0
+        assert parsed_fee == expected_datatx_fee_rounded
 
 
 ''' Test that p2sh sources are not supported by the API at this time '''

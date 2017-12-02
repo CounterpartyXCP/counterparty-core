@@ -3,6 +3,7 @@ This module contains p2sh data encoding functions
 """
 
 import binascii
+import math
 
 import logging
 logger = logging.getLogger(__name__)
@@ -13,6 +14,36 @@ from bitcoin.core.script import CScript
 from counterpartylib.lib import config
 from counterpartylib.lib import script
 from counterpartylib.lib import exceptions
+
+def maximum_data_chunk_size():
+    return bitcoinlib.core.script.MAX_SCRIPT_ELEMENT_SIZE - len(config.PREFIX)
+
+def calculate_outputs(destination_outputs, data_array, fee_per_kb):
+    datatx_size = 10  # 10 base
+    datatx_size += 181  # 181 for source input
+    datatx_size += (25 + 9) * len(destination_outputs)  # destination outputs
+    datatx_size += 13  # opreturn that signals P2SH encoding
+    datatx_size += len(data_array) * (9 + 181)  # size of p2sh inputs, excl data
+    datatx_size += sum([len(data_chunk) for data_chunk in data_array])  # data in scriptSig
+    datatx_necessary_fee = int(datatx_size / 1000 * fee_per_kb)
+
+    pretx_output_size = 10  # 10 base
+    pretx_output_size += len(data_array) * 29  # size of P2SH output
+
+    size_for_fee = pretx_output_size
+
+    # split the tx fee evenly between all datatx outputs
+    data_value = math.ceil(datatx_necessary_fee / len(data_array))
+
+    # adjust the data output with the new value and recalculate data_btc_out
+    data_output = (data_array, data_value)
+    data_btc_out = data_value * len(data_array)
+
+    logger.getChild('p2shdebug').debug('datatx size: %d fee: %d' % (datatx_size, datatx_necessary_fee))
+    logger.getChild('p2shdebug').debug('pretx output size: %d' % (pretx_output_size, ))
+    logger.getChild('p2shdebug').debug('size_for_fee: %d' % (size_for_fee, ))
+
+    return size_for_fee, datatx_necessary_fee, data_value, data_btc_out
 
 def decode_p2sh_input(asm):
     ''' Looks at the scriptSig for the input of the p2sh-encoded data transaction 
