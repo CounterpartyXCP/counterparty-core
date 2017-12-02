@@ -29,7 +29,7 @@ from counterpartylib.lib import util
 from counterpartylib.lib import script
 from counterpartylib.lib import backend
 from counterpartylib.lib import arc4
-from counterpartylib.lib.transaction_helper import serializer
+from counterpartylib.lib.transaction_helper import serializer, p2sh_encoding
 
 
 # Constants
@@ -345,7 +345,6 @@ def construct (db, tx_info, encoding='auto',
 
         elif encoding not in ('pubkeyhash', 'multisig', 'opreturn', 'p2sh'):
             raise exceptions.TransactionError('Unknown encoding‐scheme.')
-
     else:
         # no data
         encoding = None
@@ -401,7 +400,7 @@ def construct (db, tx_info, encoding='auto',
             # minus two sign bytes.
             chunk_size = (33 * 2) - 1 - 8 - 2 - 2
         elif encoding == 'p2sh':
-            chunk_size = config.P2SH_DATA_CHUNK_SIZE
+            chunk_size = p2sh_encoding.maximum_data_chunk_size()
         elif encoding == 'opreturn':
             chunk_size = config.OP_RETURN_MAX_SIZE
             if len(data) + len(config.PREFIX) > chunk_size:
@@ -449,37 +448,15 @@ def construct (db, tx_info, encoding='auto',
         data_output_size = p2pkhsize   # Pay‐to‐PubKeyHash (25 for the data?)
     outputs_size = (p2pkhsize * len(destination_outputs)) + (len(data_array) * data_output_size)
 
-    # we don't pad the p2sh encoding to exact size, we add the data size to it even though it's gonna be in the input
     if encoding == 'p2sh':
-        datatx_size = 10  # 10 base
-        datatx_size += 181  # 181 for source input
-        datatx_size += (25 + 9) * len(destination_outputs)  # destination outputs
-        datatx_size += 13  # opreturn that signals P2SH encoding
-        datatx_size += len(data_array) * (9 + 181)  # size of p2sh inputs, excl data
-        datatx_size += sum([len(data_chunk) for data_chunk in data_array])  # data in scriptSig
-        datatx_necessary_fee = int(datatx_size / 1000 * fee_per_kb)
-
-        pretx_output_size = 10  # 10 base
-        pretx_output_size += len(data_array) * 29  # size of P2SH output
-
-        size_for_fee = pretx_output_size
-
-        # split the tx fee evenly between all datatx outputs
-        data_value = math.ceil(datatx_necessary_fee / len(data_array))
-
-        # adjust the data output with the new value and recault data_btc_out
+        # calculate all the p2sh outputs
+        size_for_fee, datatx_necessary_fee, data_value, data_btc_out = p2sh_encoding.calculate_outputs(destination_outputs, data_array, fee_per_kb)
+        # replace the data value
         data_output = (data_array, data_value)
-        data_btc_out = data_value * len(data_array)
-
-        logger.getChild('p2shdebug').debug('datatx size: %d fee: %d' % (datatx_size, datatx_necessary_fee))
-        logger.getChild('p2shdebug').debug('pretx output size: %d' % (pretx_output_size, ))
-        logger.getChild('p2shdebug').debug('size_for_fee: %d' % (size_for_fee, ))
-
     else:
         sum_data_output_size = len(data_array) * data_output_size
         size_for_fee = ((25 + 9) * len(destination_outputs)) + sum_data_output_size
 
-    # when encoding=P2SH and the pretx txid is passed we can skip coinselection
     if not (encoding == 'p2sh' and p2sh_pretx_txid):
         inputs, change_quantity = construct_coin_selection(
             encoding, data_array,
@@ -489,6 +466,7 @@ def construct (db, tx_info, encoding='auto',
             regular_dust_size, disable_utxo_locks
         )
     else:
+        # when encoding is P2SH and the pretx txid is passed we can skip coinselection
         inputs, change_quantity = None, None
 
     '''Finish'''
@@ -504,24 +482,19 @@ def construct (db, tx_info, encoding='auto',
     if encoding == 'p2sh':
         assert not (segwit and p2sh_pretx_txid)  # shouldn't do old style with segwit enabled
 
-
         pretx_txid = None
         if p2sh_pretx_txid:
             pretx_txid = p2sh_pretx_txid if isinstance(p2sh_pretx_txid, bytes) else binascii.unhexlify(p2sh_pretx_txid)
             unsigned_pretx = None
         else:
             destination_value_sum = sum([value for (destination, value) in destination_outputs])
-            source_value = destination_value_sum + datatx_necessary_fee
-            source_value -= (len(data_array) * data_value)  # substract the value we can use from the data inputs
+            source_value = destination_value_sum
 
             logger.getChild('p2shdebug').debug('source_value %d' % (source_value, ))
             logger.getChild('p2shdebug').debug('change_value %d' % (change_output[1], ))
             if change_output:
-                change_value = change_output[1]
-                # substract source_value from change
-                change_value -= source_value
-                # add destination_value_sum to change, it's already in source_value
-                change_value += destination_value_sum
+                # add the difference between source and destination to the change
+                change_value = change_output[1] + (destination_value_sum - source_value)
                 change_output = (change_output[0], change_value)
 
             unsigned_pretx = serializer.serialise_p2sh_pretx(inputs,
