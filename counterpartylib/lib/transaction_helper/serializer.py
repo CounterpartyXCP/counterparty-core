@@ -359,7 +359,13 @@ def serialise_p2sh_datatx(txid, source, source_input, destination_outputs, data_
         # get the scripts
         scriptSig, redeemScript, outputScript = p2sh_encoding.make_p2sh_encoding_redeemscript(data_chunk, n, pubkey, multisig_pubkeys, multisig_pubkeys_required)
 
-        substituteScript = scriptSig + outputScript
+        if script.is_p2sh(source):
+            # substituteScript should be signed by the P2SH source address
+            source_pubkey = bitcoinlib.core.script.CScript(script.base58_check_decode(source, config.P2SH_ADDRESSVERSION))
+        else:
+            # substituteScript should be signed by the P2PKH source address
+            source_pubkey = bitcoinlib.core.script.CScript(binascii.unhexlify(backend.pubkeyhash_to_pubkey(source)))
+        substituteScript = scriptSig + source_pubkey
 
         s += txhash                                              # TxOutHash
         s += (n).to_bytes(4, byteorder='little')                 # TxOutIndex (assumes 0-based)

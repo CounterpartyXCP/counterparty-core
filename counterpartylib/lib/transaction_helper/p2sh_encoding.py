@@ -51,24 +51,28 @@ def decode_p2sh_input(asm):
     '''
     assert len(asm) == 3
 
-    source = None
-    last_chunk = asm[2]
-    last_is_p2sh = len(last_chunk) == 23 and \
-                    last_chunk[0] == bitcoinlib.core.script.OP_HASH160 and \
-                    last_chunk[22] == bitcoinlib.core.script.OP_EQUAL
-    unsigned = last_is_p2sh
-
-    # this is an unsigned transaction (last is outputScript), so we got [datachunk] [redeemScript] [outputScript]
-    if unsigned:
-        datachunk = asm[0]
-        redeemScript = asm[1]
-    # this is a signed transaction (last is not outputScript), so we got [sig] [datachunk] [redeemScript]
+    pubkey, source, redeem_script_is_valid = decode_data_redeem_script(asm[2])
+    if redeem_script_is_valid:
+        # this is a signed transaction (last is not outputScript), so we got [sig] [datachunk] [redeemScript]
+        _sig, datachunk, redeemScript = asm
     else:
-        datachunk = asm[1]
-        redeemScript = asm[2]
+        pubkey, source, redeem_script_is_valid = decode_data_redeem_script(asm[1])
+        if not redeem_script_is_valid:
+            raise exceptions.DecodeError('unrecognised redeemScript in P2SH output')
 
-    # extract the source from the redeemScript
-    redeem_script_is_valid = False
+        # this is an unsigned transaction (last is outputScript), so we got [datachunk] [redeemScript] [temporaryOutputScript]
+        datachunk, redeemScript, _substituteScript = asm
+
+    data = datachunk
+
+    if data[:len(config.PREFIX)] == config.PREFIX:
+        data = data[len(config.PREFIX):]
+    else:
+        raise exceptions.DecodeError('unrecognised P2SH output')
+
+    return source, None, data
+
+def decode_data_redeem_script(redeemScript):
     script_len = len(redeemScript)
     if script_len == 63 and \
         redeemScript[0] == bitcoinlib.core.script.OP_HASH160 and \
@@ -90,23 +94,15 @@ def decode_p2sh_input(asm):
         redeemScript[script_len-2] == bitcoinlib.core.script.OP_0 and \
         redeemScript[script_len-1] == bitcoinlib.core.script.OP_EQUAL:
             # - OP_HASH160 [push] [20bytehash] OP_EQUALVERIFY {arbitrary multisig script} [n] OP_DROP OP_DEPTH 0 OP_EQUAL
+            pubkey = None
             source = None
             redeem_script_is_valid = True
     else:
-      redeem_script_is_valid = False
+        pubkey = None
+        source = None
+        redeem_script_is_valid = False
 
-    if not redeem_script_is_valid:
-        raise exceptions.DecodeError('unrecognised redeemScript in P2SH output')
-
-    data = datachunk
-
-    if data[:len(config.PREFIX)] == config.PREFIX:
-        data = data[len(config.PREFIX):]
-    else:
-        raise exceptions.DecodeError('unrecognised P2SH output')
-
-    return source, None, data
-
+    return pubkey, source, redeem_script_is_valid
 
 def make_p2sh_encoding_redeemscript(datachunk, n, pubKey=None, multisig_pubkeys=None, multisig_pubkeys_required=None):
     _logger = logger.getChild('p2sh_encoding')
