@@ -130,7 +130,7 @@ def test_p2sh_encoding(server_db):
         sumvout = sum([vout.nValue for vout in datatx.vout])
         fee = 10000
 
-        assert len(datatxhex) / 2 == 212
+        assert len(datatxhex) / 2 == 222
         assert sumvin == expected_datatx_fee
         assert sumvout < sumvin
         assert sumvout == sumvin - expected_datatx_fee
@@ -138,22 +138,22 @@ def test_p2sh_encoding(server_db):
         # opreturn signalling P2SH
         assert repr(datatx.vout[0].scriptPubKey) == "CScript([OP_RETURN, x('8a5dda15fb6f0562da344d2f')])"  # arc4(PREFIX + 'P2SH')
         assert datatx.vout[0].nValue == 0
-        assert datatxhex == "0100000001d7ae0e13a5a42505dd6ab53d93ca1444050f68910f72a805b728d4fba6e0d384000000008a31544553545858585800000002000000000000000100000000000000646f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec3fa91469239b1c91f30886e520641e25d08529b30bb3c388210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad007574008717a91480070406f277bae04c990e986a4cbfa7c512030887ffffffff0100000000000000000e6a0c8a5dda15fb6f0562da344d2f00000000"
-        # 01000000                                                                                         | version
-        # 01                                                                                               | inputs
-        # d7ae0e13a5a42505dd6ab53d93ca1444050f68910f72a805b728d4fba6e0d384                                 | txout hash
-        # 00000000                                                                                         | txout index (0)
-        # 8a                                                                                               | script length (138)
-        # 31544553545858585800000002000000000000000100000000000000                                         | tx_script
-        #         646f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec3fa91469239b1c91f30886e520641e25d08529b30bb  |   ...
-        #         3c388210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad0075740087    |   ... 
-        #         17a91480070406f277bae04c990e986a4cbfa7c512030887                                         |   ...
-        # ffffffff                                                                                         | Sequence
-        # 01                                                                                               | number of outputs
-        # 0000000000000000                                                                                 | output 1 value (0)
-        # 0e                                                                                               | output 1 length (23 bytes)
-        # 6a0c8a5dda15fb6f0562da344d2f                                                                     | output 1 script
-        # 00000000                                                                                         | locktime
+        assert datatxhex == "0100000001d7ae0e13a5a42505dd6ab53d93ca1444050f68910f72a805b728d4fba6e0d384000000009431544553545858585800000002000000000000000100000000000000646f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec3fa91469239b1c91f30886e520641e25d08529b30bb3c388210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad0075740087210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ffffffff0100000000000000000e6a0c8a5dda15fb6f0562da344d2f00000000"
+        # 01000000                                                                                    | version
+        # 01                                                                                          | inputs
+        # d7ae0e13a5a42505dd6ab53d93ca1444050f68910f72a805b728d4fba6e0d384                            | txout hash
+        # 00000000                                                                                    | txout index (0)
+        # 94                                                                                          | script length (148)
+        # 31544553545858585800000002000000000000000100000000000000                                    | tx_script
+        #         646f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec3fa91469239b1c91f30886e520641e25d085    |   ...
+        #         29b30bb3c388210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0    |   ... 
+        #         ad0075740087210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0    |   ...
+        # ffffffff                                                                                    | Sequence
+        # 01                                                                                          | number of outputs
+        # 0000000000000000                                                                            | output 1 value (0)
+        # 0e                                                                                          | output 1 length (23 bytes)
+        # 6a0c8a5dda15fb6f0562da344d2f                                                                | output 1 script
+        # 00000000                                                                                    | locktime
 
         # verify parsed result
         parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data = blocks._get_tx_info(datatxhex)
@@ -255,7 +255,7 @@ def test_p2sh_encoding_long_data(server_db):
         sumvout = sum([vout.nValue for vout in datatx.vout])
         assert len(datatx.vin) == 2
 
-        assert len(datatxhex) / 2 == 885
+        assert len(datatxhex) / 2 == 905
         assert sumvin == expected_datatx_fee_rounded
         assert sumvout < sumvin
         assert sumvout == sumvin - expected_datatx_fee_rounded
@@ -263,33 +263,40 @@ def test_p2sh_encoding_long_data(server_db):
         # opreturn signalling P2SH
         assert repr(datatx.vout[0].scriptPubKey) == "CScript([OP_RETURN, x('8a5dda15fb6f0562da344d2f')])"  # arc4(PREFIX + 'P2SH')
         assert datatx.vout[0].nValue == 0
-        assert datatxhex == "010000000237045ddc94525b14092261f44ae79d5277e2794023dcee99891233b63fcc1d9e00000000fd63024d080254455354585858580000001e5a21aad600000000000000000000000054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f766572203fa9143689a1aa1c1d59310f726ecad800e28df2172a1088210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad007574008717a9144b398076a5d51586d8e7f87498ce0c46f8d5694287ffffffff37045ddc94525b14092261f44ae79d5277e2794023dcee99891233b63fcc1d9e010000009d445445535458585858746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e203fa914ed9124f6cfc01a8486c8be19c514a2b959c686b988210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad517574008717a914e3e4e26f1e7ab2a1d4d04395628bb9d758de566887ffffffff0100000000000000000e6a0c8a5dda15fb6f0562da344d2f00000000"
-        # 01000000                                                                                         | version
-        # 02                                                                                               | inputs
-        # 37045ddc94525b14092261f44ae79d5277e2794023dcee99891233b63fcc1d9e                                 | txout hash
-        # 00000000                                                                                         | txout index (0)
-        # fd                                                                                               | script length (253)
-        # 31544553545858585800000002000000000000000100000000000000                                         | tx_script
-        #    63024d080254455354585858580000001e5a21aad6000000000000000000000000                            |   ... 
-        #    54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20  |   ... 
-        #    54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20  |   ... 
-        #    54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20  |   ... 
-        #    54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20  |   ... 
-        #    54686520717569636b2062726f776e20666f78206a756d706564206f7665722074686520                      |   ... 
-        # ffffffff                                                                                         | Sequence
-        # 37045ddc94525b14092261f44ae79d5277e2794023dcee99891233b63fcc1d9e                                 | txout hash
-        # 01000000                                                                                         | txout index (1)
-        # 9d                                                                                               | script length (157)
-        # 445445535458585858746865206c617a7920646f672e20                                                   | tx_script
-        # 54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20     |   ... 
-        #     3fa914ed9124f6cfc01a8486c8be19c514a2b959c686b988210282b886c087eb37dc8182f14ba6cc3e9485ed618  |   ... 
-        #     b95804d44aecc17c300b585b0ad517574008717a914e3e4e26f1e7ab2a1d4d04395628bb9d758de566887        |   ... 
-        # ffffffff                                                                                         | Sequence
-        # 01                                                                                               | number of outputs
-        # 0000000000000000                                                                                 | output 1 value (0)
-        # 0e                                                                                               | output 1 length (23 bytes)
-        # 6a0c8a5dda15fb6f0562da344d2f                                                                     | output 1 script
-        # 00000000                                                                                         | locktime
+        assert datatxhex == "010000000237045ddc94525b14092261f44ae79d5277e2794023dcee99891233b63fcc1d9e00000000fd6d024d080254455354585858580000001e5a21aad600000000000000000000000054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f766572203fa9143689a1aa1c1d59310f726ecad800e28df2172a1088210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad0075740087210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ffffffff37045ddc94525b14092261f44ae79d5277e2794023dcee99891233b63fcc1d9e01000000a7445445535458585858746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e203fa914ed9124f6cfc01a8486c8be19c514a2b959c686b988210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad5175740087210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ffffffff0100000000000000000e6a0c8a5dda15fb6f0562da344d2f00000000"
+        # 01000000                                                                                             | version
+        # 02                                                                                                   | inputs
+        # 37045ddc94525b14092261f44ae79d5277e2794023dcee99891233b63fcc1d9e                                     | txout hash
+        # 00000000                                                                                             | txout index (0)
+        # fd                                                                                                   | script length (253)
+        # 6d024d080254455354585858580000001e5a21aad6000000000000000000000000                                   | tx_script
+        #     54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20     |   ... 
+        #     54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20     |   ... 
+        #     54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20     |   ... 
+        #     54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20     |   ... 
+        #     54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20     |   ... 
+        #     54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20     |   ... 
+        #     54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20     |   ... 
+        #     54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20     |   ... 
+        #     54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20     |   ... 
+        #     54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20     |   ... 
+        #     54686520717569636b2062726f776e20666f78206a756d706564206f766572203fa9143689a1aa1c1d59310f726e     |   ... 
+        #     cad800e28df2172a1088210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad007    |   ... 
+        #     5740087210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0                      |   ... 
+        # ffffffff                                                                                             | Sequence
+        # 37045ddc94525b14092261f44ae79d5277e2794023dcee99891233b63fcc1d9e                                     | txout hash
+        # 01000000                                                                                             | txout index (1)
+        # a7                                                                                                   | script length (167)
+        # 445445535458585858746865206c617a7920646f672e20                                                       | tx_script
+        #     54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e203fa9 |   ... 
+        #     14ed9124f6cfc01a8486c8be19c514a2b959c686b988210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44 |   ... 
+        #     aecc17c300b585b0ad5175740087210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0 |   ... 
+        # ffffffff                                                                                             | Sequence
+        # 01                                                                                                   | number of outputs
+        # 0000000000000000                                                                                     | output 1 value (0)
+        # 0e                                                                                                   | output 1 length (14 bytes)
+        # 6a0c8a5dda15fb6f0562da344d2f                                                                         | output 1 script
+        # 00000000                                                                                             | locktime
 
 
         # verify parsed result
