@@ -143,4 +143,12 @@ def make_p2sh_encoding_redeemscript(datachunk, n, pubKey=None, multisig_pubkeys=
 
     return scriptSig, redeemScript, outputScript
 
-
+def make_standard_p2sh_multisig_script(multisig_pubkeys, multisig_pubkeys_required):
+    # a 2-of-3 multisig looks like this:
+    #   2 {pubkey1} {pubkey2} {pubkey3} 3 OP_CHECKMULTISIG
+    multisig_pubkeys_required = int(multisig_pubkeys_required)
+    multisig_script = [multisig_pubkeys_required]
+    for multisig_pubkey in multisig_pubkeys:
+        multisig_script.append(multisig_pubkey)
+    multisig_script = multisig_script + [len(multisig_pubkeys), bitcoinlib.core.script.OP_CHECKMULTISIG]
+    return multisig_script
