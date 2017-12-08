@@ -359,16 +359,7 @@ def serialise_p2sh_datatx(txid, source, source_input, destination_outputs, data_
 
         # get the scripts
         scriptSig, redeemScript, outputScript = p2sh_encoding.make_p2sh_encoding_redeemscript(data_chunk, n, pubkey, multisig_pubkeys, multisig_pubkeys_required)
-
-        if script.is_p2sh(source):
-            # temporary_output_script should be a standard multisig script based on the pubkeys
-            temporary_output_script = CScript(p2sh_encoding.make_standard_p2sh_multisig_script(multisig_pubkeys, multisig_pubkeys_required))
-        else:
-            # temporary_output_script should be signed by the P2PKH scriptPubKey [script.OP_DUP, script.OP_HASH160, self, script.OP_EQUALVERIFY, script.OP_CHECKSIG]
-            temporary_output_script = P2PKHBitcoinAddress.from_pubkey(binascii.unhexlify(backend.pubkeyhash_to_pubkey(source))).to_scriptPubKey()
-            logger.warn('[DBG] temporary_output_script: {}'.format(binascii.hexlify(temporary_output_script).decode('utf-8')))
-
-        substituteScript = scriptSig + temporary_output_script
+        substituteScript = scriptSig + outputScript
 
         s += txhash                                              # TxOutHash
         s += (n).to_bytes(4, byteorder='little')                 # TxOutIndex (assumes 0-based)
