@@ -74,26 +74,24 @@ def decode_p2sh_input(asm):
 
 def decode_data_redeem_script(redeemScript):
     script_len = len(redeemScript)
-    if script_len == 63 and \
-        redeemScript[0] == bitcoinlib.core.script.OP_HASH160 and \
-        redeemScript[22] == bitcoinlib.core.script.OP_EQUALVERIFY and \
-        redeemScript[57] == bitcoinlib.core.script.OP_CHECKSIGVERIFY and \
-        redeemScript[59] == bitcoinlib.core.script.OP_DROP and \
-        redeemScript[60] == bitcoinlib.core.script.OP_DEPTH and \
-        redeemScript[61] == bitcoinlib.core.script.OP_0 and \
-        redeemScript[62] == bitcoinlib.core.script.OP_EQUAL:
-            # - OP_HASH160 [push] [20bytehash] OP_EQUALVERIFY [push] [33-byte pubkey] OP_CHECKSIGVERIFY [n] OP_DROP OP_DEPTH 0 OP_EQUAL
-            pubkey = redeemScript[24:57]
+    if script_len == 41 and \
+        redeemScript[0] == bitcoinlib.core.script.OP_DROP and \
+        redeemScript[35] == bitcoinlib.core.script.OP_CHECKSIGVERIFY and \
+        redeemScript[37] == bitcoinlib.core.script.OP_DROP and \
+        redeemScript[38] == bitcoinlib.core.script.OP_DEPTH and \
+        redeemScript[39] == bitcoinlib.core.script.OP_0 and \
+        redeemScript[40] == bitcoinlib.core.script.OP_EQUAL:
+            # - OP_DROP [push] [33-byte pubkey] OP_CHECKSIGVERIFY [n] OP_DROP OP_DEPTH 0 OP_EQUAL
+            pubkey = redeemScript[2:35]
             source = script.pubkey_to_pubkeyhash(pubkey)
             redeem_script_is_valid = True
-    elif script_len > 63 and \
-        redeemScript[0] == bitcoinlib.core.script.OP_HASH160 and \
-        redeemScript[22] == bitcoinlib.core.script.OP_EQUALVERIFY and \
+    elif script_len > 41 and \
+        redeemScript[0] == bitcoinlib.core.script.OP_DROP and \
         redeemScript[script_len-4] == bitcoinlib.core.script.OP_DROP and \
         redeemScript[script_len-3] == bitcoinlib.core.script.OP_DEPTH and \
         redeemScript[script_len-2] == bitcoinlib.core.script.OP_0 and \
         redeemScript[script_len-1] == bitcoinlib.core.script.OP_EQUAL:
-            # - OP_HASH160 [push] [20bytehash] OP_EQUALVERIFY {arbitrary multisig script} [n] OP_DROP OP_DEPTH 0 OP_EQUAL
+            # - OP_DROP {arbitrary multisig script} [n] OP_DROP OP_DEPTH 0 OP_EQUAL
             pubkey = None
             source = None
             redeem_script_is_valid = True
@@ -108,7 +106,8 @@ def make_p2sh_encoding_redeemscript(datachunk, n, pubKey=None, multisig_pubkeys=
     _logger = logger.getChild('p2sh_encoding')
     assert len(datachunk) <= bitcoinlib.core.script.MAX_SCRIPT_ELEMENT_SIZE
 
-    dataRedeemScript = [bitcoinlib.core.script.OP_HASH160, bitcoinlib.core.Hash160(datachunk), bitcoinlib.core.script.OP_EQUALVERIFY]
+    dataDropScript = [bitcoinlib.core.script.OP_DROP] # just drop the data chunk
+    cleanupScript = [n, bitcoinlib.core.script.OP_DROP, bitcoinlib.core.script.OP_DEPTH, 0, bitcoinlib.core.script.OP_EQUAL] # unique offset + prevent scriptSig malleability
 
     if pubKey is not None:
         # a p2pkh script looks like this: {pubkey} OP_CHECKSIGVERIFY
@@ -126,14 +125,12 @@ def make_p2sh_encoding_redeemscript(datachunk, n, pubKey=None, multisig_pubkeys=
     else:
         raise exceptions.TransactionError('Either pubKey or multisig pubKeys must be provided')
 
-    redeemScript = CScript(dataRedeemScript + verifyOwnerScript +
-                           [n, bitcoinlib.core.script.OP_DROP,  # deduplicate push dropped to meet BIP62 rules
-                            bitcoinlib.core.script.OP_DEPTH, 0, bitcoinlib.core.script.OP_EQUAL])  # prevent scriptSig malleability
+    redeemScript = CScript(dataDropScript + verifyOwnerScript + cleanupScript)
 
     _logger.debug('datachunk %s' % (binascii.hexlify(datachunk)))
-    _logger.debug('dataRedeemScript %s (%s)' % (repr(CScript(dataRedeemScript)), binascii.hexlify(CScript(dataRedeemScript))))
-
-    _logger.debug('redeemScript %s (%s)' % (repr(redeemScript), binascii.hexlify(redeemScript)))
+    _logger.debug('dataDropScript %s (%s)' % (repr(CScript(dataDropScript)), binascii.hexlify(CScript(dataDropScript))))
+    _logger.debug('verifyOwnerScript %s (%s)' % (repr(CScript(verifyOwnerScript)), binascii.hexlify(CScript(verifyOwnerScript))))
+    _logger.debug('entire redeemScript %s (%s)' % (repr(redeemScript), binascii.hexlify(redeemScript)))
 
     outputScript = redeemScript.to_p2sh_scriptPubKey()
     scriptSig = CScript([datachunk]) + redeemScript  # PUSH(datachunk) + redeemScript
@@ -141,6 +138,9 @@ def make_p2sh_encoding_redeemscript(datachunk, n, pubKey=None, multisig_pubkeys=
     _logger.debug('scriptSig %s (%s)' % (repr(scriptSig), binascii.hexlify(scriptSig)))
     _logger.debug('outputScript %s (%s)' % (repr(outputScript), binascii.hexlify(outputScript)))
 
+    # outputScript looks like OP_HASH160 {{ hash160([redeemScript]) }} OP_EQUALVERIFY
+    # redeemScript looks like OP_DROP {{ pubkey }} OP_CHECKSIGVERIFY {{ n }} OP_DROP OP_DEPTH 0 OP_EQUAL
+    # scriptSig is {{ datachunk }} OP_DROP {{ pubkey }} OP_CHECKSIGVERIFY {{ n }} OP_DROP OP_DEPTH 0 OP_EQUAL
     return scriptSig, redeemScript, outputScript
 
 def make_standard_p2sh_multisig_script(multisig_pubkeys, multisig_pubkeys_required):

@@ -67,12 +67,12 @@ def test_p2sh_encoding(server_db):
         # data P2SH output
         expected_datatx_length = 435
         expected_datatx_fee = int(expected_datatx_length / 1000 * fee_per_kb)
-        assert repr(pretx.vout[0].scriptPubKey) == "CScript([OP_HASH160, x('80070406f277bae04c990e986a4cbfa7c5120308'), OP_EQUAL])"
+        assert repr(pretx.vout[0].scriptPubKey) == "CScript([OP_HASH160, x('7698101f9b9e5cdf0a0e11c2972dbc4860f374bf'), OP_EQUAL])"
         assert pretx.vout[0].nValue == expected_datatx_fee
         # change output
         assert pretx.vout[1].nValue == sumvin - expected_datatx_fee - fee
 
-        assert pretxhex == "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02f65400000000000017a91480070406f277bae04c990e986a4cbfa7c512030887febbe90b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        assert pretxhex == "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02f65400000000000017a9147698101f9b9e5cdf0a0e11c2972dbc4860f374bf87febbe90b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
         # 01000000                                                          | version
         # 01                                                                | inputs
         # c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae  | txout hash
@@ -83,7 +83,7 @@ def test_p2sh_encoding(server_db):
         # 02                                                                | number of outputs
         # f654000000000000                                                  | output 1 value (21750)
         # 17                                                                | output 1 length (23 bytes)
-        # a91480070406f277bae04c990e986a4cbfa7c512030887                    | output 1 script
+        # a9147698101f9b9e5cdf0a0e11c2972dbc4860f374bf87                    | output 1 script
         # febbe90b00000000                                                  | output 2 value (199867390)
         # 19                                                                | output 2 length (25 bytes)
         # 76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac                | output 2 script
@@ -131,7 +131,7 @@ def test_p2sh_encoding(server_db):
         sumvout = sum([vout.nValue for vout in datatx.vout])
         fee = 10000
 
-        assert len(datatxhex) / 2 == 212
+        assert len(datatxhex) / 2 == 190
         assert sumvin == expected_datatx_fee
         assert sumvout < sumvin
         assert sumvout == sumvin - expected_datatx_fee
@@ -140,16 +140,16 @@ def test_p2sh_encoding(server_db):
         assert repr(datatx.vout[0].scriptPubKey) == "CScript([OP_RETURN, x('8a5dda15fb6f0562da344d2f')])"  # arc4(PREFIX + 'P2SH')
         assert datatx.vout[0].nValue == 0
         
-        assert datatxhex == "0100000001d7ae0e13a5a42505dd6ab53d93ca1444050f68910f72a805b728d4fba6e0d384000000008a31544553545858585800000002000000000000000100000000000000646f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec3fa91469239b1c91f30886e520641e25d08529b30bb3c388210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad007574008717a91480070406f277bae04c990e986a4cbfa7c512030887ffffffff0100000000000000000e6a0c8a5dda15fb6f0562da344d2f00000000"
+        assert datatxhex == "01000000010a0746fe9308ac6e753fb85780a8b788b40655148dcde1435f2048783b784f06000000007431544553545858585800000002000000000000000100000000000000646f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec2975210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad007574008717a9147698101f9b9e5cdf0a0e11c2972dbc4860f374bf87ffffffff0100000000000000000e6a0c8a5dda15fb6f0562da344d2f00000000"
         # 01000000                                                                                    | version
         # 01                                                                                          | inputs
-        # d7ae0e13a5a42505dd6ab53d93ca1444050f68910f72a805b728d4fba6e0d384                            | txout hash
+        # 0a0746fe9308ac6e753fb85780a8b788b40655148dcde1435f2048783b784f06                            | txout hash
         # 00000000                                                                                    | txout index (0)
-        # 8c                                                                                          | script length (140)
+        # 74                                                                                          | script length (116)
         # 31544553545858585800000002000000000000000100000000000000                                    | tx_script
-        #         646f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec3fa91469239b1c91f30886e520641e25d085    |   ...
-        #         29b30bb3c388210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0    |   ... 
-        #         ad007574008717a91480070406f277bae04c990e986a4cbfa7c512030887                        |   ...
+        #         646f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec2975210282b886c087eb37dc8182f14ba6cc    |   ...
+        #         3e9485ed618b95804d44aecc17c300b585b0ad007574008717a9147698101f9b9e5cdf0a0e11c297    |   ... 
+        #         2dbc4860f374bf87                                                                    |   ...
         # ffffffff                                                                                    | Sequence
         # 01                                                                                          | number of outputs
         # 0000000000000000                                                                            | output 1 value (0)
@@ -217,31 +217,32 @@ def test_p2sh_encoding_long_data(server_db):
         expected_datatx_length = 1156
         expected_datatx_fee = int(expected_datatx_length / 1000 * fee_per_kb)
         expected_datatx_fee_rounded = int(math.ceil(expected_datatx_fee / 2)) * 2
-        assert repr(pretx.vout[0].scriptPubKey) == "CScript([OP_HASH160, x('4b398076a5d51586d8e7f87498ce0c46f8d56942'), OP_EQUAL])"
+        assert repr(pretx.vout[0].scriptPubKey) == "CScript([OP_HASH160, x('7698101f9b9e5cdf0a0e11c2972dbc4860f374bf'), OP_EQUAL])"
         assert pretx.vout[0].nValue == int(math.ceil(expected_datatx_fee / 2))
         assert pretx.vout[1].nValue == int(math.ceil(expected_datatx_fee / 2))
         # change output
         assert pretx.vout[2].nValue == sumvin - expected_datatx_fee_rounded - pretx_fee
 
-        assert pretxhex == "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03e47000000000000017a9144b398076a5d51586d8e7f87498ce0c46f8d5694287e47000000000000017a914e3e4e26f1e7ab2a1d4d04395628bb9d758de566887b64ae90b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
-        # 01000000                                                          | version
-        # 01                                                                | inputs
-        # c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae  | txout hash
-        # 00000000                                                          | txout index
-        # 19                                                                | script length
-        # 76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac                | tx_script
-        # ffffffff                                                          | Sequence
-        # 03                                                                | number of outputs (3)
-        # e470000000000000                                                  | output 1 value (28900)
-        # 17                                                                | output 1 length (23 bytes)
-        # a9144b398076a5d51586d8e7f87498ce0c46f8d5694287                    | output 1 script
-        # e470000000000000                                                  | output 2 value (28900)
-        # 17                                                                | output 2 length (23 bytes)
-        # a914e3e4e26f1e7ab2a1d4d04395628bb9d758de566887                    | output 2 script
-        # febbe90b00000000                                                  | output 3 value (199867390)
-        # 19                                                                | output 3 length (25 bytes)
-        # 76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac                | output 3 script
-        # 00000000                                                          | locktime
+        assert pretxhex == "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03e47000000000000017a9147698101f9b9e5cdf0a0e11c2972dbc4860f374bf87e47000000000000017a914676d587edf25cf01d3b153ff0b71f5e9b622386387b64ae90b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        # 00000001                                                         | version
+        # 01                                                               | inputs
+        # c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae | txout hash
+        # 00000000                                                         | txout index
+        # 19                                                               | script length
+        # 76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac               | tx_script
+        # ffffffff                                                         | Sequence
+        # 03                                                               | number of outputs (3)
+        # e470000000000000                                                 | output 1 value (28900)
+        # 17                                                               | output 1 length (23 bytes)
+        # a9147698101f9b9e5cdf0a0e11c2972dbc4860f374bf87                   | output 1 script
+        # e470000000000000                                                 | output 2 value (28900)
+        # 17                                                               | output 2 length (23 bytes)
+        # a914676d587edf25cf01d3b153ff0b71f5e9b622386387                   | output 2 script
+        # b64ae90b00000000                                                 | output 3 value (199838390)
+        # 19                                                               | output 3 length (25 bytes)
+        # 76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac               | output 3 script
+        # 00000000                                                         | locktime
+
 
         # store transaction
         pretxid, _ = util_test.insert_raw_transaction(pretxhex, server_db)
@@ -267,7 +268,7 @@ def test_p2sh_encoding_long_data(server_db):
         sumvout = sum([vout.nValue for vout in datatx.vout])
         assert len(datatx.vin) == 2
 
-        assert len(datatxhex) / 2 == 885
+        assert len(datatxhex) / 2 == 1682 / 2
         assert sumvin == expected_datatx_fee_rounded
         assert sumvout < sumvin
         assert sumvout == sumvin - expected_datatx_fee_rounded
@@ -275,13 +276,13 @@ def test_p2sh_encoding_long_data(server_db):
         # opreturn signalling P2SH
         assert repr(datatx.vout[0].scriptPubKey) == "CScript([OP_RETURN, x('8a5dda15fb6f0562da344d2f')])"  # arc4(PREFIX + 'P2SH')
         assert datatx.vout[0].nValue == 0
-        assert datatxhex == "010000000237045ddc94525b14092261f44ae79d5277e2794023dcee99891233b63fcc1d9e00000000fd63024d080254455354585858580000001e5a21aad600000000000000000000000054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f766572203fa9143689a1aa1c1d59310f726ecad800e28df2172a1088210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad007574008717a9144b398076a5d51586d8e7f87498ce0c46f8d5694287ffffffff37045ddc94525b14092261f44ae79d5277e2794023dcee99891233b63fcc1d9e010000009d445445535458585858746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e203fa914ed9124f6cfc01a8486c8be19c514a2b959c686b988210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad517574008717a914e3e4e26f1e7ab2a1d4d04395628bb9d758de566887ffffffff0100000000000000000e6a0c8a5dda15fb6f0562da344d2f00000000"
+        assert datatxhex == "0100000002f33f677de4180f1b0c261a991974c57de97f082a7e62332b77ec5d193d13d1a300000000fd4d024d080254455354585858580000001e5a21aad600000000000000000000000054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f766572202975210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad007574008717a9147698101f9b9e5cdf0a0e11c2972dbc4860f374bf87fffffffff33f677de4180f1b0c261a991974c57de97f082a7e62332b77ec5d193d13d1a30100000087445445535458585858746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e202975210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad517574008717a914676d587edf25cf01d3b153ff0b71f5e9b622386387ffffffff0100000000000000000e6a0c8a5dda15fb6f0562da344d2f00000000"
         # 01000000                                                                                              | version
         # 02                                                                                                    | inputs
-        # 37045ddc94525b14092261f44ae79d5277e2794023dcee99891233b63fcc1d9e                                      | txout hash
+        # f33f677de4180f1b0c261a991974c57de97f082a7e62332b77ec5d193d13d1a3                                      | txout hash
         # 00000000                                                                                              | txout index (0)
         # fd                                                                                                    | script length (253)
-        # 65024d080254455354585858580000001e5a21aad6000000000000000000000000                                    | tx_script
+        # 4d024d080254455354585858580000001e5a21aad6000000000000000000000000                                    | tx_script
         #     54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20      |   ... 
         #     54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20      |   ... 
         #     54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20      |   ... 
@@ -292,17 +293,17 @@ def test_p2sh_encoding_long_data(server_db):
         #     54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20      |   ... 
         #     54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20      |   ... 
         #     54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e20      |   ... 
-        #     54686520717569636b2062726f776e20666f78206a756d706564206f766572203fa9143689a1aa1c1d59              |   ... 
-        #     310f726ecad800e28df2172a1088210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc              |   ... 
-        #     17c300b585b0ad007574008717a9144b398076a5d51586d8e7f87498ce0c46f8d5694287                          |   ... 
+        #     54686520717569636b2062726f776e20666f78206a756d706564206f766572202975210282b886c087eb37dc8182      |   ... 
+        #     f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad007574008717a9147698101f9b9e5cdf0a0e11c2972dbc      |   ... 
+        #     4860f374bf87                                                                                      |   ... 
         # ffffffff                                                                                              | Sequence
-        # 37045ddc94525b14092261f44ae79d5277e2794023dcee99891233b63fcc1d9e                                      | txout hash
+        # f33f677de4180f1b0c261a991974c57de97f082a7e62332b77ec5d193d13d1a3                                      | txout hash
         # 01000000                                                                                              | txout index (1)
-        # 9f                                                                                                    | script length (159)
+        # 87                                                                                                    | script length (135)
         # 445445535458585858746865206c617a7920646f672e20                                                        | tx_script
-        #     54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e203fa9  |   ... 
-        #     14ed9124f6cfc01a8486c8be19c514a2b959c686b988210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44  |   ... 
-        #     aecc17c300b585b0ad51757400871976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac                  |   ... 
+        #     54686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e202975  |   ... 
+        #     210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad517574008717a914676d587edf  |   ... 
+        #     25cf01d3b153ff0b71f5e9b622386387                                                                  |   ... 
         # ffffffff                                                                                              | Sequence
         # 01                                                                                                    | number of outputs
         # 0000000000000000                                                                                      | output 1 value (0)
@@ -358,7 +359,7 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
             multisig_pubkeys_required=2
         )
         redeemScript = bitcoinlib.core.script.CScript(redeemScript)
-        assert repr(redeemScript) == "CScript([OP_HASH160, x('28fc9fc8c6318c76eb74a841f76423777a120073'), OP_EQUALVERIFY, 2, x('{}'), x('{}'), x('{}'), 3, OP_CHECKMULTISIGVERIFY, 0, OP_DROP, OP_DEPTH, 0, OP_EQUAL])".format(DP['pubkey'][ADDR[0]], DP['pubkey'][ADDR[1]], DP['pubkey'][ADDR[2]])
+        assert repr(redeemScript) == "CScript([OP_DROP, 2, x('{}'), x('{}'), x('{}'), 3, OP_CHECKMULTISIGVERIFY, 0, OP_DROP, OP_DEPTH, 0, OP_EQUAL])".format(DP['pubkey'][ADDR[0]], DP['pubkey'][ADDR[1]], DP['pubkey'][ADDR[2]])
 
         # setup transaction
         fee = 20000
