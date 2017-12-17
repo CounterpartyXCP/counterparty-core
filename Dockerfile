@@ -10,7 +10,6 @@ RUN pip3 install git+https://github.com/monaparty/python-altcoinlib@abb1e38#egg=
 RUN pip3 install -r requirements.txt
 RUN python3 setup.py develop
 RUN python3 setup.py install_apsw
-RUN python3 setup.py install_serpent
 RUN pip3 freeze
 
 # Install counterparty-cli

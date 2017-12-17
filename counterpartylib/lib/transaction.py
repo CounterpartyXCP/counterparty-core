@@ -9,6 +9,7 @@ import sys
 import binascii
 import json
 import hashlib
+import math
 import re
 import time
 import decimal
@@ -494,7 +495,7 @@ def construct (db, tx_info, encoding='auto',
         btc_in += round(coin['amount'] * config.UNIT)
 
         size = 181 * len(inputs) + outputs_size + 10
-        necessary_fee = int(size / 1000 * fee_per_kb)
+        necessary_fee = math.ceil(size / 1000.0 * fee_per_kb)
 
         # If exact fee is specified, use that. Otherwise, calculate size of tx
         # and base fee on that (plus provide a minimum fee for selling BTC).
