@@ -49,16 +49,15 @@ def decode_p2sh_input(asm):
     ''' Looks at the scriptSig for the input of the p2sh-encoded data transaction 
         [signature] [data] [OP_HASH160 ... OP_EQUAL]
     '''
-    assert len(asm) == 3
 
-    pubkey, source, redeem_script_is_valid = decode_data_redeem_script(asm[2])
-    if redeem_script_is_valid:
-        # this is a signed transaction (last is not outputScript), so we got [sig] [datachunk] [redeemScript]
-        _sig, datachunk, redeemScript = asm
+    pubkey, source, redeem_script_is_valid = decode_data_redeem_script(asm[-1])
+    if redeem_script_is_valid and len(asm) >= 3:
+        # this is a signed transaction, so we got {sig[,sig]} {datachunk} {redeemScript}
+        datachunk, redeemScript = asm[-2:]
     else:
-        pubkey, source, redeem_script_is_valid = decode_data_redeem_script(asm[1])
-        if not redeem_script_is_valid:
-            raise exceptions.DecodeError('unrecognised redeemScript in P2SH output')
+        pubkey, source, redeem_script_is_valid = decode_data_redeem_script(asm[-2])
+        if not redeem_script_is_valid or len(asm) != 3:
+            return None, None, None
 
         # this is an unsigned transaction (last is outputScript), so we got [datachunk] [redeemScript] [temporaryOutputScript]
         datachunk, redeemScript, _substituteScript = asm
