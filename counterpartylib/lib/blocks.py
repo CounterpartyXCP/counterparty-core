@@ -704,12 +704,12 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
             except CScriptInvalidError as e:
                 raise DecodeError(e)
 
-            if (len(asm) == 3 and asm[0] == 'OP_HASH160' and asm[2] == 'OP_EQUAL') \
-              or (len(asm) == 4 and asm[1] == 'OP_HASH160' and asm[3] == 'OP_EQUAL'):
-                # this is a P2SH source address - ignore it
-                continue
-
             new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm)
+
+            # this could be a p2sh source address with no encoded data
+            if new_data is None:
+              continue;
+
             if new_source is not None:
                 if p2sh_encoding_source is not None and new_source != p2sh_encoding_source:
                     # this p2sh data input has a bad source address
