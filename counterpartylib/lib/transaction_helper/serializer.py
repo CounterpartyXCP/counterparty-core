@@ -348,6 +348,10 @@ def serialise_p2sh_datatx(txid, source, source_input, destination_outputs, data_
     if source_input is not None:
         s += binascii.unhexlify(bytes(source_input['txid'], 'utf-8'))[::-1]  # TxOutHash
         s += source_input['vout'].to_bytes(4, byteorder='little')            # TxOutIndex
+
+        # since pubkey is not returned from indexd, add it from bitcoind
+        source_inputs = backend.ensure_script_pub_key_for_inputs([source_input])
+        source_input = source_inputs[0]
         tx_script = binascii.unhexlify(bytes(source_input['scriptPubKey'], 'utf-8'))
         s += var_int(int(len(tx_script)))                                    # Script length
         s += tx_script                                                       # Script
