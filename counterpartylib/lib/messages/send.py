@@ -21,6 +21,52 @@ def initialise (db):
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
+    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(sends)''')]
+
+    # If CIP10 activated, Create Sends copy, copy old data, drop old table, rename new table, recreate indexes
+    #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS` nor can drop UNIQUE constraints
+    if 'msg_index' not in columns:
+        if 'memo' not in columns:
+            cursor.execute('''CREATE TABLE new_sends(
+                              tx_index INTEGER PRIMARY KEY,
+                              tx_hash TEXT,
+                              block_index INTEGER,
+                              source TEXT,
+                              destination TEXT,
+                              asset TEXT,
+                              quantity INTEGER,
+                              status TEXT,
+                              msg_index INTEGER DEFAULT 0,
+                              FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
+                              UNIQUE (tx_hash, msg_index) ON CONFLICT FAIL)
+                           ''')
+            cursor.execute('''INSERT INTO new_sends(tx_index, tx_hash, block_index, source, destination, asset, quantity, status)
+                SELECT tx_index, tx_hash, block_index, source, destination, asset, quantity, status
+                FROM sends''', {})
+        else:
+            cursor.execute('''CREATE TABLE new_sends(
+                  tx_index INTEGER PRIMARY KEY,
+                  tx_hash TEXT,
+                  block_index INTEGER,
+                  source TEXT,
+                  destination TEXT,
+                  asset TEXT,
+                  quantity INTEGER,
+                  status TEXT,
+                  memo BLOB,
+                  msg_index INTEGER DEFAULT 0,
+                  FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
+                  UNIQUE (tx_hash, msg_index) ON CONFLICT FAIL)
+               ''')
+            cursor.execute('''INSERT INTO new_sends (tx_index, tx_hash, block_index, source, destination, asset, quantity, status, memo)
+                SELECT tx_index, tx_hash, block_index, source, destination, asset, quantity, status, memo
+                FROM sends''', {})
+
+        cursor.execute('DROP INDEX block_index_idx')
+        cursor.execute('DROP INDEX asset_idx')
+        cursor.execute('DROP TABLE sends')
+        cursor.execute('ALTER TABLE new_sends RENAME TO sends')
+
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       block_index_idx ON sends (block_index)
                    ''')
@@ -36,7 +82,7 @@ def initialise (db):
 
     # Adds a memo to sends
     #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS`.
-    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(sends)''')]
+
     if 'memo' not in columns:
         cursor.execute('''ALTER TABLE sends ADD COLUMN memo BLOB''')
 
