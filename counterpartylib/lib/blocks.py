@@ -14,7 +14,6 @@ import logging
 logger = logging.getLogger(__name__)
 import collections
 import platform
-from Crypto.Cipher import ARC4
 import apsw
 import csv
 import copy
@@ -32,7 +31,8 @@ from counterpartylib.lib import backend
 from counterpartylib.lib import log
 from counterpartylib.lib import database
 from counterpartylib.lib import message_type
-from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, publish, execute, destroy)
+from counterpartylib.lib import arc4
+from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, destroy)
 from .messages.versions import enhanced_send
 
 from .kickstart.blocks_parser import BlockchainParser, ChainstateParser
@@ -47,8 +47,8 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'bet_expirations', 'bets', 'broadcasts', 'btcpays', 'burns',
          'cancels', 'dividends', 'issuances', 'sends',
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
-         'rps_matches', 'rps', 'executions', 'storage', 'suicides', 'nonces',
-         'postqueue', 'contracts', 'destructions', 'assets', 'addresses']
+         'rps_matches', 'rps',
+         'destructions', 'assets', 'addresses']
 # Compose list of tables tracked by undolog
 UNDOLOG_TABLES = copy.copy(TABLES)
 UNDOLOG_TABLES.remove('messages')
@@ -114,10 +114,6 @@ def parse_tx(db, tx):
         rps.parse(db, tx, message)
     elif message_type_id == rpsresolve.ID and rps_enabled:
         rpsresolve.parse(db, tx, message)
-    elif message_type_id == publish.ID and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
-        publish.parse(db, tx, message)
-    elif message_type_id == execute.ID and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
-        execute.parse(db, tx, message)
     elif message_type_id == destroy.ID:
         destroy.parse(db, tx, message)
     else:
@@ -374,8 +370,6 @@ def initialise(db):
     issuance.initialise(db)
     broadcast.initialise(db)
     bet.initialise(db)
-    publish.initialise(db)
-    execute.initialise(db)
     dividend.initialise(db)
     burn.initialise(db)
     cancel.initialise(db)
@@ -519,7 +513,7 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
 
             if ctx.is_coinbase():
                 raise DecodeError('coinbase transaction')
-            obj1 = ARC4.new(ctx.vin[0].prevout.hash[::-1])
+            obj1 = arc4.init_arc4(ctx.vin[0].prevout.hash[::-1])
             data_pubkey = obj1.decrypt(pubkeyhash)
             if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
                 pubkeyhash_encoding = True
@@ -592,7 +586,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
 
     def arc4_decrypt(cyphertext):
         '''Un‐obfuscate. Initialise key once per attempt.'''
-        key = ARC4.new(ctx.vin[0].prevout.hash[::-1])
+        key = arc4.init_arc4(ctx.vin[0].prevout.hash[::-1])
         return key.decrypt(cyphertext)
 
     def get_opreturn(asm):

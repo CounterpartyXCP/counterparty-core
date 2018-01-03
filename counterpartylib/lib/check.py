@@ -53,34 +53,33 @@ CHECKPOINTS_MAINNET = {
     420000: {'ledger_hash': '42167117e16943f44bb8117aa0a39bed2d863a454cd694d0bc5006a7aab23b06', 'txlist_hash': 'a1139870bef8eb9bbe60856029a4f01fce5432eb7aeacd088ba2e033757b86e3'},
 }
 
-CONSENSUS_HASH_VERSION_TESTNET = 6
+CONSENSUS_HASH_VERSION_TESTNET = 7
 CHECKPOINTS_TESTNET = {
-    config.BLOCK_FIRST_TESTNET: {'ledger_hash': '3e2cd73017159fdc874453f227e9d0dc4dabba6d10e03458f3399f1d340c4ad1', 'txlist_hash': '3e2cd73017159fdc874453f227e9d0dc4dabba6d10e03458f3399f1d340c4ad1'},
-    313000: {'ledger_hash': 'f9aa095bef80a768c68912e387268c14a2d16ced915a71d9f0c58fbf8d9554ef', 'txlist_hash': '4e0a83016b0e51df3fb905755f3ff82ae160fa1d0dce63375cf71d594d14d054'},
-    316000: {'ledger_hash': 'eede57604aab218b5d94c087cc5d1b3b1c3ad92b8d583cc73a249cd31865ab73', 'txlist_hash': '988e569c0452a21efc8f3d2a2553cb7122aa574e3658c67f195262699df76c39'},
-    319000: {'ledger_hash': '08145b9709f74c3faf7186884b76ace877349571870d8d40a4a185c7bdff31a6', 'txlist_hash': 'a635c17858960679b8a5787648f59f08de5fa6b362c45a66125e6bc55705a6f4'},
-    322000: {'ledger_hash': 'a029da7e7f25721dd111f3fb3a3791074aaf276a26c4ef5858a0ddfc82360938', 'txlist_hash': '7da60d3080a3a74027be619106e1b9c3f963880344c26a5f93f13bc48b8a76e9'},
-    325000: {'ledger_hash': '94a5d06bf7c815fac477b075893d8bb5aaabdf2a6e28ca77274bbcafaefa874e', 'txlist_hash': '2db52b2b1dae5132f14e65a97c8c95a5375630916f5129eaa9057efabd18e808'},
-    329000: {'ledger_hash': 'e4f5f8c330e8d2f515d2cfef92759aef7f92dd397df5869d9ffcfe2749b45c5c', 'txlist_hash': 'c002aada68aae93cd2670d04317caf7de6a7935d8f8b71d4044e359804108d00'},
-    350000: {'ledger_hash': '03000561ca9871223836a214ec1200fb035b70388fbd108bb9351d891844cd9e', 'txlist_hash': '0716337ad4b354823aab46e46f316161adab4fc083f315d4b2c2e7c7b17e0a67'},
-    400000: {'ledger_hash': '7a1bbf50517d098afbb3ecdc77d41f8bd35555e0937a71c2a2b1a4d072416f4e', 'txlist_hash': 'e28fbecaac4d82ed1d9a8eb2a4a43ab9b2b32c1ca8ce20ca300cc8848a690966'},
-    450000: {'ledger_hash': 'ce34985ad5400195edc90a5cd50aaa07c3fb746b663aafefb4ff3bb5990fa837', 'txlist_hash': '1667c7a08471cffcccb55056a8e080d0141486b430b673bee5b7cda54ee2387c'},
-    500000: {'ledger_hash': '703632461af220490f6f9cb006a4741ed07d54dd8d5f0da81297308934745819', 'txlist_hash': '5f32a0d9c49c7788ce0f154c72e9e227c42f7d1ab8a2ff5031701fd46c15eec5'},
-    550000: {'ledger_hash': '042f52c7944512e4386dd4a3a5c4666ae1ba6234ef9d7d7c14bcba1b39bd75c7', 'txlist_hash': '362613cc234336cb30f645894f3587db636c8b9cba45a01e74934e349063714c'},
-    600000: {'ledger_hash': '5dfb8ca53d6820f268378cc4313890c14e86ed12623616bfce3800b288749847', 'txlist_hash': 'f7c4f03135d68d139ad4152d46f0a9ffa44c4f2a562d2b7abe15055a43b91dc2'},
-    650000: {'ledger_hash': '3716fd39dc5e30867b1e78233b9b920e0a106932b03675e8c6a86fce99c87c59', 'txlist_hash': 'be8173266f3720bdc38b609d5418a728d62c416e31d6295218bc9cf10c69d412'},
-    700000: {'ledger_hash': 'a9948e54915a1bcfb034e59ce88d613ee5f7d3b798b9800c9e81d7e430729924', 'txlist_hash': '2d6c8995bb256c0a68507f322f84d02c335cbdd6ba4e329809905abefede8a4d'},
-    750000: {'ledger_hash': 'a0ad188ad5f037b3bd26114ebd5ace57d05d767ce5641e318998c9c193ce396a', 'txlist_hash': '6fa10581c0717ce6a6c9938905d2ae78a1265a66ee1b5dd0532025c6f562d95f'},
-    800000: {'ledger_hash': '2186547319dc5ca9eee16eb5ea298e3d4c8eced0309651e4c5d625c135db44e2', 'txlist_hash': '0e72e166609229e067601eadb7d77b179e363bd75453dc7bad0a8c52e6a15a1b'},
-    850000: {'ledger_hash': '203430101150a7ed630fc3ce895eec9925571ef8a3e66d9e5b7f0b0e8249dbb9', 'txlist_hash': '485615f9a45e147c5b30452f7ca6cecb704cc88f6e35845e4a5c6499daa29b9a'},
-    900000: {'ledger_hash': 'c82f249b9a793b507be4b76d02e23219378b4ed2dd2db76362143f881cd3c161', 'txlist_hash': '4088837b4f94ffe0bc542895eee32ff1496f94b7d6e1ed1091303042c320f8b2'},
-    950000: {'ledger_hash': '1b9b69f19f313c99a26c835cf3d9701ea477c3edd5b31812300658d9cc1ac351', 'txlist_hash': 'ec7435440523babb05eee73e68b72ef0aa66f9b4a04e92b62ed775780227ec8a'},
-    1000000: {'ledger_hash': '5c899627965bf3f334f3eaa22a17c7b127705b255f6e933c7bdf8aa21218d1bc', 'txlist_hash': 'e54ccfdb1966d4c0cd7b4a87a4a6ac91e41a0b5973356091d0e17bd165fc51c8'},
-    1050000: {'ledger_hash': '53580232f2ad500829906c6af21f4834574e432702e8cb8d3b5cf5398c073563', 'txlist_hash': '95ae6ae5b618faeda6176da5a18db9277d6e62309ff0837b4c21686e4c889918'},
-    1100000: {'ledger_hash': 'ba6f165f6453e0d58e2bed6fe19f6b1d36e1878a9b248e266c035ce51e0f6270', 'txlist_hash': '2d3c3e184f58e991f9a8f5e3d11ea5a96240649ff57a3042e7688917486b0a06'},
-    1150000: {'ledger_hash': 'f263033868a450338e26a72a6323230740889b76f488df60a43b92232b710779', 'txlist_hash': '63d35f206c2eb3337f0e3f698f714be898ce217c79f87da76f43ebed67de2071'},
+    config.BLOCK_FIRST_TESTNET: {'ledger_hash': '63f0fef31d02da85fa779e9a0e1b585b1a6a4e59e14564249e288e074e91c223', 'txlist_hash': '63f0fef31d02da85fa779e9a0e1b585b1a6a4e59e14564249e288e074e91c223'},
+    316000: {'ledger_hash': 'f645e6877da416b8b91670ac927df686c5ea6fc1158c150ae49d594222ed504c', 'txlist_hash': '3e29bcbf3873326097024cc26e9296f0164f552dd79c2ee7cfc344e6d64fa87d'},
+    319000: {'ledger_hash': '384ca28ac56976bc24a6ab7572b41bc61474e6b87fdee814135701d6a8f5c8a2', 'txlist_hash': '6c05c98418a6daa6de82dd59e000d3f3f5407c5432d4ab7d76047873a38e4d4b'},
+    322000: {'ledger_hash': 'f4015c37eb4f31ac42083fd0389cde4868acb5353d3f3abfe2f3a88aba8cae72', 'txlist_hash': '18f278154e9bc3bbcc39da905ab4ad3023742ab7723b55b0fd1c58c36cd3e9bf'},
+    325000: {'ledger_hash': 'd7f70a927f5aeed38e559ddc0bc4697601477ea43cde928ad228fefc195b02da', 'txlist_hash': '1a60e38664b39e0f501b3e5a60c6fc0bd4ed311b74872922c2dde4cb2267fd3e'},
+    329000: {'ledger_hash': '96637b4400cbe084c2c4f139f59b5bc16770815e96306423aaeb2b2677a9a657', 'txlist_hash': '79d577d8fbba0ad6ae67829dfa5824f758286ccd429d65b7d1d42989134d5b57'},
+    350000: {'ledger_hash': 'cae8fec787bba3d5c968a8f4b6fb22a54c96d5acbeadd0425f6b20c3a8813ea3', 'txlist_hash': '097df9c3079df4d96f59518df72492dfd7a79716462e3a4a30d62a37aec6fc16'},
+    400000: {'ledger_hash': '94abfd9c00c8462c155f64011e71af141b7d524e17de5aeda26b7469fe79b5f0', 'txlist_hash': 'a9fc42b69f80ec69f3f98e8a3cd81f4f946544fd0561a62a0891254c16970a87'},
+    450000: {'ledger_hash': '09eb9f2aa605ce77225362b4b556284acdd9f6d3bc273372dfae4a5be9e9b035', 'txlist_hash': '05af651c1de49d0728834991e50000fbf2286d7928961b71917f682a0f2b7171'},
+    500000: {'ledger_hash': '85f3bca8c88246ddfa1a5ec327e71f0696c182ed2a5fedf3712cd2e87e2661ac', 'txlist_hash': '663b34955116a96501e0c1c27f27d24bad7d45995913367553c5cfe4b8b9d0a9'},
+    550000: {'ledger_hash': 'c143026133af2d83bc49ef205b4623194466ca3e7c79f95da2ad565359ccb5ad', 'txlist_hash': '097b8bca7a243e0b9bdf089f34de15bd2dcd4727fb4e88aae7bfd96302250326'},
+    600000: {'ledger_hash': '82caf720967d0e43a1c49a6c75f255d9056ed1bffe3f96d962478faccdaba8ff', 'txlist_hash': '0d99f42184233426d70102d5ac3c80aaecf804d441a8a0d0ef26038d333ab7a7'},
+    650000: {'ledger_hash': 'bef100ae7d5027a8b3f32416c4f26e1f16b21cee2a986c57be1466a3ba338051', 'txlist_hash': '409ed86e4274b511193d187df92e433c734dcc890bf93496e7a7dee770e7035e'},
+    700000: {'ledger_hash': 'afe5e9c3f3a8c6f19c4f9feaf09df051c28202c6bae64f3563a09ffea9e79a6e', 'txlist_hash': '4f9765158855d24950c7e076615b0ad5b72738d4d579decfd3b93c998edf4fcb'},
+    750000: {'ledger_hash': 'e7c7969a6156facb193b77ef71b5e3fac49c6998e5a94ec3b90292be10ece9cc', 'txlist_hash': '6e511790656d3ffec0c912d697e5d1c2a4e401a1606203c77ab5a5855891bc2c'},
+    800000: {'ledger_hash': '42a7c679e51e5e8d38df26b67673b4850e8e6f72723aa19673b3219fcc02b77b', 'txlist_hash': '885ae1e6c21f5fb3645231aaa6bb6910fc21a0ae0ca5dbe9a4011f3b5295b3e7'},
+    850000: {'ledger_hash': '35b2a2ab4a8bfbc321d4545292887b4ccaea73415c7674f795aefa6e240890eb', 'txlist_hash': '72d5cfe1e729a22da9eacd4d7752c881c43a191904556b65a0fae82b770dcdf3'},
+    900000: {'ledger_hash': 'a5552b4998d2e5a516b9310d6592e7368771c1ad3b6e6330f6bc0baa3db31643', 'txlist_hash': '5a2e9fbd9b52ee32b8e8bfff993ed92dc22510aa7448277a704176cf01e55b04'},
+    950000: {'ledger_hash': '5a5e78b55ac294690229abff7ff8f74f390f3a47dc4d08a0bac40e2e89a5bed2', 'txlist_hash': 'f4fa9838fb38d3e5beffb760fae022dcc59c61c506dd28ac83ee48ba814d04b2'},
+    1000000: {'ledger_hash': 'eafca6700b9fd8f3992f8a18316e9ad59480ef74a4e7737793c101878aba8e1a', 'txlist_hash': '03deb626e031f30acd394bf49c35e11a487cb11e55dff5ba9a3f6d04b460c7de'},
+    1050000: {'ledger_hash': '8012ebaf4c6638173e88ecd3e7bb2242ab88a9bdf877fc32c42dbcd7d2d3bab1', 'txlist_hash': '896274fdba957961083b07b80634126bc9f0434b67d723ed1fa83157ce5cd9a7'},
+    1100000: {'ledger_hash': '76357f917235daa180c904cdf5c44366eef3e33539b7b0ba6a38f89582e82d22', 'txlist_hash': '36ecfd4b07f23176cd6960bc0adef97472c13793e53ac3df0eea0dd2e718a570'},
+    1150000: {'ledger_hash': '5924f004bfdc3be449401c764808ebced542d2e06ba30c5984830292d1a926aa', 'txlist_hash': '9ff139dacf4b04293074e962153b972d25fa16d862dae05f7f3acc15e83c4fe8'},
+    1200000: {'ledger_hash': 'a3d009bd2e0b838c185b8866233d7b4edaff87e5ec4cc4719578d1a8f9f8fe34', 'txlist_hash': '11dcf3a0ab714f05004a4e6c77fe425eb2a6427e4c98b7032412ab29363ffbb2'},
 }
-
 
 class ConsensusError(Exception):
     pass
@@ -122,7 +121,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
     # Check against checkpoints.
     checkpoints = CHECKPOINTS_TESTNET if config.TESTNET else CHECKPOINTS_MAINNET
     if field != 'messages_hash' and block_index in checkpoints and checkpoints[block_index][field] != calculated_hash:
-        raise ConsensusError('Incorrect {} for block {}.'.format(field, block_index))
+        raise ConsensusError('Incorrect {} hash for block {}.  Calculated {} but expected {}'.format(field, block_index, calculated_hash, checkpoints[block_index][field],))
 
     return calculated_hash, found_hash
 

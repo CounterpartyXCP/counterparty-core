@@ -343,26 +343,6 @@ def log (db, command, category, bindings):
         elif category == 'rps_match_expirations':
             logger.info('Expired RPS Match: {}'.format(bindings['rps_match_id']))
 
-        elif category == 'contracts':
-            logger.info('New Contract: {}'.format(bindings['contract_id']))
-
-        elif category == 'executions':
-            """
-            try:
-                payload_hex = binascii.hexlify(bindings['payload']).decode('ascii')
-            except TypeError:
-                payload_hex = '<None>'
-            try:
-                output_hex = binascii.hexlify(bindings['output']).decode('ascii')
-            except TypeError:
-                output_hex = '<None>'
-            logger.info('Execution: {} executed contract {}, funded with {}, at a price of {} (?), at a final cost of {}, reclaiming {}, and also sending {}, with a data payload of {}, yielding {} ({}) [{}]'.format(bindings['source'], bindings['contract_id'], output(bindings['gas_start'], config.XCP), bindings['gas_price'], output(bindings['gas_cost'], config.XCP), output(bindings['gas_remaining'], config.XCP), output(bindings['value'], config.XCP), payload_hex, output_hex, bindings['tx_hash'], bindings['status']))
-            """
-            if bindings['contract_id']:
-                logger.info('Execution: {} executed contract {} ({}) [{}]'.format(bindings['source'], bindings['contract_id'], bindings['tx_hash'], bindings['status']))
-            else:
-                logger.info('Execution: {} created contract {} ({}) [{}]'.format(bindings['source'], bindings['output'], bindings['tx_hash'], bindings['status']))
-
         elif category == 'destructions':
             logger.info('Destruction: {} destroyed {} {} with tag ‘{}’({}) [{}]'.format(bindings['source'], bindings['quantity'], bindings['asset'], bindings['tag'], bindings['tx_hash'], bindings['status']))
 

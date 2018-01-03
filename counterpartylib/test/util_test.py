@@ -19,13 +19,17 @@ import apsw
 import pytest
 import binascii
 import appdirs
+import pycoin
+from pycoin.tx import Tx
 import bitcoin as bitcoinlib
+logger = logging.getLogger(__name__)
 
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
 from counterpartylib import server
 from counterpartylib.lib import (config, util, blocks, check, backend, database, transaction)
+from counterpartylib.lib.backend.addrindex import extract_addresses, extract_addresses_from_txlist
 
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP
 from counterpartylib.test.fixtures.scenarios import UNITTEST_FIXTURE, INTEGRATION_SCENARIOS, standard_scenarios_params
@@ -49,6 +53,9 @@ COUNTERPARTYD_OPTIONS = {
     'utxo_locks_max_addresses': 0,  # Disable UTXO locking for base test suite runs
     'estimate_fee_per_kb': False
 }
+
+# used for mocking the UTXO in various places, is automatically reset every test case
+MOCK_UTXO_SET = None
 
 
 def init_database(sqlfile, dbfile, options=None):
@@ -120,6 +127,7 @@ def remove_database_files(database_filename):
         if os.path.isfile(path):
             os.remove(path)
 
+
 def insert_block(db, block_index, parse_block=True):
     """Add blocks to the blockchain."""
     cursor = db.cursor()
@@ -133,10 +141,15 @@ def insert_block(db, block_index, parse_block=True):
 
     if parse_block:
         blocks.parse_block(db, block_index, block_time)
+
+    MOCK_UTXO_SET.increment_confirmations()
+
     return block_index, block_hash, block_time
+
 
 def create_next_block(db, block_index=None, parse_block=True):
     """Create faux data for the next block."""
+
     cursor = db.cursor()
     last_block_index = list(cursor.execute("SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1"))[0]['block_index']
     if not block_index:
@@ -147,22 +160,20 @@ def create_next_block(db, block_index=None, parse_block=True):
 
     for index in range(last_block_index + 1, block_index + 1):
         inserted_block_index, block_hash, block_time = insert_block(db, index, parse_block=parse_block)
+
     cursor.close()
     return inserted_block_index, block_hash, block_time
 
-def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
+
+def insert_raw_transaction(raw_transaction, db):
     """Add a raw transaction to the database."""
+    cursor = db.cursor()
+
     # one transaction per block
     block_index, block_hash, block_time = create_next_block(db, parse_block=False)
 
-    cursor = db.cursor()
+    tx_hash = dummy_tx_hash(raw_transaction)
     tx_index = block_index - config.BURN_START + 1
-
-    tx_hash = hashlib.sha256('{}{}'.format(tx_index,raw_transaction).encode('utf-8')).hexdigest()
-    # print(tx_hash)
-    # Remember to add it to the log dump
-    if pytest.config.option.savescenarios:
-        save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction)
 
     source, destination, btc_amount, fee, data = blocks._get_tx_info(raw_transaction)
     transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
@@ -170,12 +181,79 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
     cursor.close()
 
-    util.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
+    MOCK_UTXO_SET.add_raw_transaction(raw_transaction, tx_id=tx_hash, confirmations=1)
+
+    util.CURRENT_BLOCK_INDEX = block_index
     blocks.parse_block(db, block_index, block_time)
     return tx
 
+
+def insert_unconfirmed_raw_transaction(raw_transaction, db):
+    """Add a raw transaction to the database."""
+    # one transaction per block
+    cursor = db.cursor()
+
+    tx_hash = dummy_tx_hash(raw_transaction)
+
+    # this isn't really correct, but it will do
+    tx_index = list(cursor.execute('''SELECT tx_index FROM transactions ORDER BY tx_index DESC LIMIT 1'''))
+    tx_index = tx_index[0]['tx_index'] if len(tx_index) else 0
+    tx_index = tx_index + 1
+
+    source, destination, btc_amount, fee, data = blocks._get_tx_info(raw_transaction)
+    tx = {
+        'tx_index': tx_index,
+        'tx_hash': tx_hash,
+        'block_index': config.MEMPOOL_BLOCK_INDEX,
+        'block_hash': config.MEMPOOL_BLOCK_HASH,
+        'block_time': int(time.time()),
+        'source': source,
+        'destination': destination,
+        'btc_amount': btc_amount,
+        'fee': fee,
+        'data': data,
+        'supported': True
+    }
+
+    cursor.close()
+
+    MOCK_UTXO_SET.add_raw_transaction(raw_transaction, tx_id=tx_hash, confirmations=0)
+
+    return tx
+
+
+UNIQUE_DUMMY_TX_HASH = {}
+def dummy_tx_hash(raw_transaction):
+    global UNIQUE_DUMMY_TX_HASH
+
+    tx = pycoin.tx.Tx.from_hex(raw_transaction)
+
+    # normalize inputs
+    for txin in tx.txs_in:
+        txin.previous_hash = b'\x00' * 32
+        txin.previous_index = 0
+        txin.script = b'\x00'
+
+    # check if we have a change output
+    if tx.txs_out[-1].coin_value not in [0, config.DEFAULT_REGULAR_DUST_SIZE, config.DEFAULT_MULTISIG_DUST_SIZE, config.DEFAULT_OP_RETURN_VALUE]:
+        tx.txs_out[-1].coin_value = 0  # set change to 0
+
+    tx_id = tx.id()
+
+    # check we haven't created this before (if we do 2 exactly the sends for example)
+    if tx_id in UNIQUE_DUMMY_TX_HASH:
+        logger.warn('BUMP TXID %s' % tx_id)
+        UNIQUE_DUMMY_TX_HASH[tx_id] += 1
+        tx_id = hashlib.sha256('{}{}'.format(tx_id, UNIQUE_DUMMY_TX_HASH[tx_id]).encode('utf-8')).hexdigest()
+    else:
+        UNIQUE_DUMMY_TX_HASH[tx_id] = 0
+
+    return tx_id
+
+
 def insert_transaction(transaction, db):
     """Add a transaction to the database."""
+
     cursor = db.cursor()
     block = (transaction['block_index'], transaction['block_hash'], transaction['block_time'], None, None, None, None)
     cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty)
@@ -187,44 +265,184 @@ def insert_transaction(transaction, db):
 
 
 def initialise_rawtransactions_db(db):
-    """Drop old raw transaction table, create new one and populate it from unspent_outputs.json."""
-    if pytest.config.option.savescenarios:
-        server.initialise(database_file=':memory:', testnet=True, **COUNTERPARTYD_OPTIONS)
-        cursor = db.cursor()
-        cursor.execute('DROP TABLE  IF EXISTS raw_transactions')
-        cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT)')
-        with open(CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
-                wallet_unspent = json.load(listunspent_test_file)
-                for output in wallet_unspent:
-                    txid = binascii.hexlify(bitcoinlib.core.lx(output['txid'])).decode()
-                    tx = backend.deserialize(output['txhex'])
-                    cursor.execute('INSERT INTO raw_transactions VALUES (?, ?)', (txid, output['txhex']))
-        cursor.close()
+    prefill_rawtransactions_db(db)
 
-def save_rawtransaction(db, tx_hash, tx_hex):
+
+def prefill_rawtransactions_db(db):
+    """Drop old raw transaction table, create new one and populate it from unspent_outputs.json."""
+    cursor = db.cursor()
+    cursor.execute('DROP TABLE IF EXISTS raw_transactions')
+    cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT, confirmations INT)')
+    with open(CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
+            wallet_unspent = json.load(listunspent_test_file)
+            for output in wallet_unspent:
+                txid = output['txid']
+                tx = backend.deserialize(output['txhex'])
+                cursor.execute('INSERT INTO raw_transactions VALUES (?, ?, ?)', (txid, output['txhex'], output['confirmations']))
+    cursor.close()
+
+
+def save_rawtransaction(db, txid, tx_hex, confirmations=0):
     """Insert the raw transaction into the db."""
     cursor = db.cursor()
     try:
-        txid = binascii.hexlify(bitcoinlib.core.lx(tx_hash)).decode()
-        cursor.execute('''INSERT INTO raw_transactions VALUES (?, ?)''', (txid, tx_hex))
+        if isinstance(txid, bytes):
+            txid = binascii.hexlify(txid).decode('ascii')
+        cursor.execute('''INSERT INTO raw_transactions VALUES (?, ?, ?)''', (txid, tx_hex, confirmations))
     except Exception as e: # TODO
         pass
     cursor.close()
 
-def getrawtransaction(db, txid):
-    """Return raw transactions with specific hash."""
+
+def getrawtransaction(db, txid, verbose=False):
+    """
+    Return raw transactions with specific hash.
+
+    When verbose=True we mock the bitcoind RPC response, it's incomplete atm and only mocks what we need
+     if more stuff is needed, add it ..
+    """
     cursor = db.cursor()
-    txid = binascii.hexlify(txid).decode()
-    tx_hex = list(cursor.execute('''SELECT tx_hex FROM raw_transactions WHERE tx_hash = ?''', (txid,)))[0][0]
+
+    if isinstance(txid, bytes):
+        txid = binascii.hexlify(txid).decode('ascii')
+
+    tx_hex, confirmations = list(cursor.execute('''SELECT tx_hex, confirmations FROM raw_transactions WHERE tx_hash = ?''', (txid,)))[0]
     cursor.close()
-    return tx_hex
+
+    if verbose:
+        return mock_bitcoind_verbose_tx_output(tx_hex, txid, confirmations)
+    else:
+        return tx_hex
+
+
+def mock_bitcoind_verbose_tx_output(tx, txid, confirmations):
+    if isinstance(tx, bitcoinlib.core.CTransaction):
+        ctx = tx
+    else:
+        if not isinstance(tx, bytes):
+            tx = binascii.unhexlify(tx)
+        ctx = bitcoinlib.core.CTransaction.deserialize(tx)
+
+    result = {
+        'version': ctx.nVersion,
+        'locktime': ctx.nLockTime,
+        'txid': txid,  # bitcoinlib.core.b2lx(ctx.GetHash()),
+        'hex': binascii.hexlify(ctx.serialize()).decode('ascii'),
+        'size': len(ctx.serialize()),
+        'confirmations': confirmations,
+        'vin': [],
+        'vout': [],
+
+        # not mocked yet
+        'time': None,
+        'blockhash': None,
+        'blocktime': None,
+    }
+
+    for vin in ctx.vin:
+        asm = list(map(lambda op: binascii.hexlify(op).decode('ascii') if isinstance(op, bytes) else str(op), list(vin.scriptSig)))
+        rvin = {
+            'txid': bitcoinlib.core.b2lx(vin.prevout.hash),
+            'vout': vin.prevout.n,
+            'scriptSig': {
+                'hex': binascii.hexlify(vin.scriptSig).decode('ascii'),
+                'asm': " ".join(asm),
+            },
+            'sequence': vin.nSequence
+        }
+
+        # result['vin'].append(rvin)
+
+    for idx, vout in enumerate(ctx.vout):
+        if list(vout.scriptPubKey)[-1] == bitcoinlib.core.script.OP_CHECKMULTISIG:
+           pubkeys = list(vout.scriptPubKey)[1:-2]
+           addresses = []
+           for pubkey in pubkeys:
+               addr = str(bitcoinlib.wallet.P2PKHBitcoinAddress.from_pubkey(pubkey))
+
+               addresses.append(addr)
+        else:
+            try:
+                addresses = [str(bitcoinlib.wallet.CBitcoinAddress.from_scriptPubKey(vout.scriptPubKey))]
+            except bitcoinlib.wallet.CBitcoinAddressError:
+                addresses = []
+
+        asm = list(map(lambda op: binascii.hexlify(op).decode('ascii') if isinstance(op, bytes) else str(op), list(vout.scriptPubKey)))
+
+        type = 'unknown'
+        if vout.scriptPubKey[-1] == bitcoinlib.core.script.OP_CHECKMULTISIG:
+            type = 'multisig'
+        elif len(list(vout.scriptPubKey)) == 5 and \
+                        vout.scriptPubKey[1] == bitcoinlib.core.script.OP_HASH160 and \
+                        vout.scriptPubKey[-2] == bitcoinlib.core.script.OP_EQUALVERIFY and \
+                        vout.scriptPubKey[-1] == bitcoinlib.core.script.OP_CHECKSIG:
+            type = 'pubkeyhash'
+
+        rvout = {
+            'n': idx,
+            'value': vout.nValue / config.UNIT,
+            'scriptPubKey': {
+                'type': type,
+                'addresses': addresses,
+                'hex': binascii.hexlify(vout.scriptPubKey).decode('ascii'),
+                'asm': " ".join(asm),
+            }
+        }
+
+        result['vout'].append(rvout)
+
+    return result
+
+
+def getrawtransaction_batch(db, txhash_list, verbose=False):
+    result = {}
+    for txhash in txhash_list:
+        result[txhash] = getrawtransaction(db, txhash, verbose=verbose)
+
+    return result
+
+
+def searchrawtransactions(db, address, unconfirmed=False):
+    cursor = db.cursor()
+
+    try:
+        all_tx_hashes = list(map(lambda r: r[0], cursor.execute('''SELECT tx_hash FROM raw_transactions WHERE confirmations >= ?''', (0 if unconfirmed else 1, ))))
+
+        tx_hashes_tx = getrawtransaction_batch(db, all_tx_hashes, verbose=True)
+
+        def _getrawtransaction_batch(txhash_list, verbose=False):
+            return getrawtransaction_batch(db, txhash_list, verbose)
+
+        tx_hashes_addresses, tx_hashes_tx = extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch)
+
+        reverse_tx_map = {}
+        tx_map = {}
+
+        # add txs to cache and reverse cache
+        for tx_hash, addresses in tx_hashes_addresses.items():
+            reverse_tx_map.setdefault(tx_hash, set())
+
+            for _address in addresses:
+                tx_map.setdefault(_address, set())
+                tx_map[_address].add(tx_hash)
+                reverse_tx_map[tx_hash].add(_address)
+
+        tx_hashes = tx_map.get(address, set())
+
+        if len(tx_hashes):
+            return sorted(getrawtransaction_batch(db, tx_hashes, verbose=True).values(), key=lambda tx: (tx['confirmations'], tx['txid']))
+        else:
+            return []
+    finally:
+        cursor.close()
+
 
 def initialise_db(db):
     """Initialise blockchain in the db and insert first block."""
     blocks.initialise(db)
     insert_block(db, config.BLOCK_FIRST - 1, parse_block=True)
 
-def run_scenario(scenario, rawtransactions_db):
+def run_scenario(scenario):
     """Execute a scenario for integration test, returns a dump of the db, a json with raw transactions and the full log."""
     server.initialise(database_file=':memory:', testnet=True, **COUNTERPARTYD_OPTIONS)
     config.PREFIX = b'TESTXXXX'
@@ -257,7 +475,7 @@ def run_scenario(scenario, rawtransactions_db):
                 compose = getattr(module, 'compose')
                 unsigned_tx_hex = transaction.construct(db, compose(db, *tx[1]), **tx[2])
                 raw_transactions.append({tx[0]: unsigned_tx_hex})
-                insert_raw_transaction(unsigned_tx_hex, db, rawtransactions_db)
+                insert_raw_transaction(unsigned_tx_hex, db)
         else:
             create_next_block(db, block_index=config.BURN_START + tx[1], parse_block=tx[2] if len(tx) == 3 else True)
 
@@ -268,9 +486,13 @@ def run_scenario(scenario, rawtransactions_db):
     check.CHECKPOINTS_TESTNET = checkpoints
     return dump, log, json.dumps(raw_transactions, indent=4)
 
-def save_scenario(scenario_name, rawtransactions_db):
+def save_scenario(scenario_name):
     """Save currently run scenario's output for comparison with the expected outputs."""
-    dump, log, raw_transactions = run_scenario(INTEGRATION_SCENARIOS[scenario_name][0], rawtransactions_db)
+    dump, log, raw_transactions = run_scenario(INTEGRATION_SCENARIOS[scenario_name][0])
+
+    save_scenario_output(scenario_name, dump, log, raw_transactions)
+
+def save_scenario_output(scenario_name, dump, log, raw_transactions):
     with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.new.sql', 'w') as f:
         f.writelines(dump)
     with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.new.log', 'w') as f:
@@ -523,16 +745,23 @@ class ConfigContext(object):
         self.config = config
         self._extend = kwargs
         self._before = {}
+        self._before_empty = []
 
     def __enter__(self):
         self._before = {}
         for k in self._extend:
-            self._before[k] = vars(self.config)[k]
+            if k in vars(self.config):
+                self._before[k] = vars(self.config)[k]
+            else:
+                self._before_empty.append(k)
+
             vars(self.config)[k] = self._extend[k]
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         for k in self._before:
             vars(self.config)[k] = self._before[k]
+        for k in self._before_empty:
+            del vars(self.config)[k]
 
 
 class MockProtocolChangesContext(object):

@@ -45,14 +45,12 @@ def exectracer(cursor, sql, bindings):
     skip_tables = [
         'blocks', 'transactions',
         'balances', 'messages', 'mempool', 'assets',
-        'suicides', 'postqueue', # These tables are ephemeral.
-        'nonces', 'storage', # List message manually.
         'new_sends' # interim table for CIP10 activation
     ]
     skip_tables_block_messages = copy.copy(skip_tables)
     if command == 'update':
         # List message manually.
-        skip_tables += ['orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts']
+        skip_tables += ['orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches']
 
     # Record alteration in database.
     if category not in skip_tables:
