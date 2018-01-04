@@ -377,7 +377,8 @@ def parse (db, tx, message):
                 break
 
             if status == 'valid':
-                plain_sends += map(lambda t: (asset, t[0], t[1]), credits)
+                plain_sends += map(lambda t: (asset_id, *t), credits)
+                print(credits, plain_sends)
                 all_credits += map(lambda t: {"asset": asset_id, "destination": t[0], "quantity": t[1]}, credits)
                 all_debits.append({"asset": asset_id, "quantity": total_sent})
 
@@ -394,8 +395,12 @@ def parse (db, tx, message):
             util.debit(db, tx['source'], op['asset'], op['quantity'], action='send', event=tx['tx_hash'])
 
         for i, op in enumerate(plain_sends):
+            if len(op) > 3:
+                memo_bytes = op[3]
+            else:
+                memo_bytes = None
             bindings = {
-                'tx_index': tx['tx_index'] + i,
+                'tx_index': tx['tx_index'],
                 'tx_hash': tx['tx_hash'],
                 'block_index': tx['block_index'],
                 'source': tx['source'],
@@ -403,11 +408,12 @@ def parse (db, tx, message):
                 'destination': op[1],
                 'quantity': op[2],
                 'status': status,
+                'memo': memo_bytes,
                 'msg_index': i
             }
 
-            sql = 'insert into sends values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :quantity, :status, :msg_index)'
-            print(bindings)
+            sql = 'insert into sends (tx_index, tx_hash, block_index, source, destination, asset, quantity, status, memo, msg_index) values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :quantity, :status, :memo, :msg_index)'
+            print(bindings, op)
             cursor.execute(sql, bindings)
 
     if status != 'valid':

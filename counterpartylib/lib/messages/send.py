@@ -28,7 +28,7 @@ def initialise (db):
     if 'msg_index' not in columns:
         if 'memo' not in columns:
             cursor.execute('''CREATE TABLE new_sends(
-                              tx_index INTEGER PRIMARY KEY,
+                              tx_index INTEGER,
                               tx_hash TEXT,
                               block_index INTEGER,
                               source TEXT,
@@ -37,6 +37,7 @@ def initialise (db):
                               quantity INTEGER,
                               status TEXT,
                               msg_index INTEGER DEFAULT 0,
+                              PRIMARY KEY (tx_index, msg_index),
                               FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                               UNIQUE (tx_hash, msg_index) ON CONFLICT FAIL)
                            ''')
@@ -45,7 +46,7 @@ def initialise (db):
                 FROM sends''', {})
         else:
             cursor.execute('''CREATE TABLE new_sends(
-                  tx_index INTEGER PRIMARY KEY,
+                  tx_index INTEGER,
                   tx_hash TEXT,
                   block_index INTEGER,
                   source TEXT,
@@ -55,6 +56,7 @@ def initialise (db):
                   status TEXT,
                   memo BLOB,
                   msg_index INTEGER DEFAULT 0,
+                  PRIMARY KEY (tx_index, msg_index),
                   FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                   UNIQUE (tx_hash, msg_index) ON CONFLICT FAIL)
                ''')
@@ -62,8 +64,6 @@ def initialise (db):
                 SELECT tx_index, tx_hash, block_index, source, destination, asset, quantity, status, memo
                 FROM sends''', {})
 
-        cursor.execute('DROP INDEX block_index_idx')
-        cursor.execute('DROP INDEX asset_idx')
         cursor.execute('DROP TABLE sends')
         cursor.execute('ALTER TABLE new_sends RENAME TO sends')
 
