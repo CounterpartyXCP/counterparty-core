@@ -399,6 +399,7 @@ def parse (db, tx, message):
                 memo_bytes = op[3]
             else:
                 memo_bytes = None
+
             bindings = {
                 'tx_index': tx['tx_index'],
                 'tx_hash': tx['tx_hash'],
