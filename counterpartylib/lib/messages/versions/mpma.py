@@ -336,6 +336,15 @@ def compose (db, source, asset_dest_quant_list, memo, memo_is_hex):
 
     return (source, [], data)
 
+def py34TupleAppend(first_elem, t):
+    # Had to do it this way to support python 3.4, if we start
+    # using the 3.5 runtime this can be replaced by:
+    #  (first_elem, *t)
+
+    l = list(t)
+    l.insert(0, first_elem)
+    return tuple(l)
+
 def parse (db, tx, message):
     try:
         unpacked = unpack(db, message, tx['block_index'])
@@ -377,7 +386,7 @@ def parse (db, tx, message):
                 break
 
             if status == 'valid':
-                plain_sends += map(lambda t: (asset_id, *t), credits)
+                plain_sends += map(lambda t: py34TupleAppend(asset_id, t), credits)
                 all_credits += map(lambda t: {"asset": asset_id, "destination": t[0], "quantity": t[1]}, credits)
                 all_debits.append({"asset": asset_id, "quantity": total_sent})
 
