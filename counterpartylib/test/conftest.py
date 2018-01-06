@@ -332,7 +332,7 @@ def add_fn_property(**kwargs):
 def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     """Test suit mock functions.
 
-    Mock functions override default behaviour to allow test suit to work - for instance, date_passed is overwritten 
+    Mock functions override default behaviour to allow test suit to work - for instance, date_passed is overwritten
     so that every date will pass. Those are available to every test function in this suite."""
 
     util_test.rawtransactions_db = rawtransactions_db

@@ -96,13 +96,24 @@ def unpack(db, message, block_index):
 def validate (db, source, destination, asset, quantity, block_index):
     return send1.validate(db, source, destination, asset, quantity, block_index)
 
+def flat(z):
+    return [x for x in z]
+
 def compose (db, source, destination, asset, quantity, memo=None, memo_is_hex=False, use_enhanced_send=None):
     # special case - enhanced_send replaces send by default when it is enabled
     #   but it can be explicitly disabled with an API parameter
     if util.enabled('enhanced_sends'):
         # Another special case, if destination, asset and quantity are arrays, it's an MPMA send
-        if util.enabled('mpma_sends') and isinstance(destination, list) and isinstance(asset, list) and isinstance(quantity, list):
-            return mpma.compose(db, source, zip(asset, destination, quantity))
+        if isinstance(destination, list) and isinstance(asset, list) and isinstance(quantity, list):
+            if util.enabled('mpma_sends'):
+                if isinstance(memo, list) and isinstance(memo_is_hex, list):
+                    return mpma.compose(db, source, flat(zip(asset, destination, quantity, memo, memo_is_hex)), None, None)
+                elif isinstance(memo, dict) and isinstance(memo_is_hex, dict):
+                    return mpma.compose(db, source, flat(zip(asset, destination, quantity, memo['list'], memo_is_hex['list'])), memo['msg_wide'], memo_is_hex['msg_wide'])
+                else:
+                    return mpma.compose(db, source, flat(zip(asset, destination, quantity)), memo, memo_is_hex)
+            else:
+                raise exceptions.ComposeError('mpma sends are not enabled')
         elif use_enhanced_send is None or use_enhanced_send == True:
             return enhanced_send.compose(db, source, destination, asset, quantity, memo, memo_is_hex)
     elif memo is not None or use_enhanced_send == True:

@@ -1284,6 +1284,11 @@ UNITTEST_VECTOR = {
             'comment': 'send to a REQUIRE_MEMO address, with memo text, before enhanced_send activation',
             'in': ({'source': ADDR[0], 'destination': ADDR[6], 'asset': 'XCP', 'quantity': 100000000, 'memo': '12345', 'use_enhanced_send': True}),
             'error': (exceptions.ComposeError, 'enhanced sends are not enabled')
+        }, {
+            'comment': 'send to multiple addresses, before mpma_sends activation',
+            'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True, 'mpma_sends': False},
+            'in': ({'source': ADDR[0], 'destination': [ADDR[1], ADDR[2]], 'asset': ['XCP', 'XCP'], 'quantity': [100000000, 100000000], 'memo': '12345', 'use_enhanced_send': True}),
+            'error': (exceptions.ComposeError, 'mpma sends are not enabled')
         }],
         'parse': [{
             'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
@@ -4836,8 +4841,6 @@ UNITTEST_VECTOR = {
                 }}
             ]
         },{
-        #'in': (bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e100000300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e10000'), DP['default_block_index']),
-        #'out': ({'DIVISIBLE': [(ADDR[1], DP['quantity'])], 'XCP': [(ADDR[2], DP['quantity'])]})
             'in': ({
                 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                 'source': ADDR[0],
@@ -4860,7 +4863,7 @@ UNITTEST_VECTOR = {
                     'source': ADDR[0],
                     'status': 'valid',
                     'memo': None,
-                    'msg_index': 0,
+                    'msg_index': 1,
                     'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'tx_index': 502,
                 }},
@@ -4872,7 +4875,7 @@ UNITTEST_VECTOR = {
                     'source': ADDR[0],
                     'status': 'valid',
                     'memo': None,
-                    'msg_index': 1,
+                    'msg_index': 0,
                     'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'tx_index': 502,
                 }},

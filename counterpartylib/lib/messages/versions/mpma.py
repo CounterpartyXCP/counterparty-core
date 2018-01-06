@@ -378,7 +378,6 @@ def parse (db, tx, message):
 
             if status == 'valid':
                 plain_sends += map(lambda t: (asset_id, *t), credits)
-                print(credits, plain_sends)
                 all_credits += map(lambda t: {"asset": asset_id, "destination": t[0], "quantity": t[1]}, credits)
                 all_debits.append({"asset": asset_id, "quantity": total_sent})
 
@@ -394,6 +393,8 @@ def parse (db, tx, message):
         for op in all_debits:
             util.debit(db, tx['source'], op['asset'], op['quantity'], action='send', event=tx['tx_hash'])
 
+        # Enumeration of the plain sends needs to be deterministic, so we sort them by asset and then by address
+        plain_sends = sorted(plain_sends, key=lambda x: ''.join([x[0], x[1]]))
         for i, op in enumerate(plain_sends):
             if len(op) > 3:
                 memo_bytes = op[3]
@@ -414,7 +415,6 @@ def parse (db, tx, message):
             }
 
             sql = 'insert into sends (tx_index, tx_hash, block_index, source, destination, asset, quantity, status, memo, msg_index) values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :quantity, :status, :memo, :msg_index)'
-            print(bindings, op)
             cursor.execute(sql, bindings)
 
     if status != 'valid':
