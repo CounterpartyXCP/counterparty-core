@@ -436,7 +436,7 @@ def construct (db, tx_info, encoding='auto',
 
     data_btc_out = sum([data_value for data_chunk in data_array])
 
-    '''Inputs'''
+    '''Size of outputs (Total)'''
 
     # Calculate collective size of outputs, for fee calculation.
     p2pkhsize = 25 + 9
@@ -449,7 +449,13 @@ def construct (db, tx_info, encoding='auto',
             data_output_size = data_output_size + len(data)
     else:
         data_output_size = p2pkhsize   # Pay‐to‐PubKeyHash (25 for the data?)
-    outputs_size = (p2pkhsize * len(destination_outputs)) + (len(data_array) * data_output_size)
+
+    # destination + data + 'change'
+    # Strictly we can't determine if the change output is contained in this transaction.
+    # But in almost all cases, it will be contained.
+    outputs_size = (p2pkhsize * len(destination_outputs)) + (len(data_array) * data_output_size) + p2pkhsize
+
+    '''Inputs'''
 
     # Get inputs.
     multisig_inputs = not data
