@@ -27,7 +27,7 @@ COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod a+x /usr/local/bin/start.sh
 WORKDIR /
 
-# Pull the mainnet and testnet DB boostraps
+# Pull the mainnet and testnet DB bootstraps
 RUN counterparty-server bootstrap --quiet
 RUN counterparty-server --testnet bootstrap --quiet
 
