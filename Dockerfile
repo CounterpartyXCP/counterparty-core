@@ -16,7 +16,7 @@ RUN python3 setup.py install_serpent
 # NOTE2: In the future, counterparty-lib and counterparty-cli will go back to being one repo...
 ARG CLI_BRANCH=master
 ENV CLI_BRANCH ${CLI_BRANCH}
-RUN git clone -b ${CLI_BRANCH} https://github.com/CounterpartyXCP/counterparty-cli.git /counterparty-cli
+RUN git clone -b ${CLI_BRANCH} https://github.com/wakumo/counterparty-cli.git /counterparty-cli
 WORKDIR /counterparty-cli
 RUN pip3 install -r requirements.txt
 RUN python3 setup.py develop
