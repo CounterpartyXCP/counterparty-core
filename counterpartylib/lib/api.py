@@ -376,13 +376,13 @@ def conditional_decorator(decorator, condition):
 def init_api_access_log(app):
     """Initialize API logger."""
     loggers = (logging.getLogger('werkzeug'), app.logger)
-    
+
     # Disable console logging...
     for l in loggers:
         l.setLevel(logging.INFO)
         l.propagate = False
 
-    # Log to file, if configured...    
+    # Log to file, if configured...
     if config.API_LOG:
         handler = logging_handlers.RotatingFileHandler(config.API_LOG, 'a', API_MAX_LOG_SIZE, API_MAX_LOG_COUNT)
         for l in loggers:
@@ -503,7 +503,7 @@ class APIServer(threading.Thread):
                     error_msg = "Error composing {} transaction via API: {}".format(tx, str(error))
                     logging.warning(error_msg)
                     raise JSONRPCDispatchException(code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg)
-            
+
             return create_method
 
         for tx in API_TRANSACTIONS:
@@ -648,18 +648,11 @@ class APIServer(threading.Thread):
             cursor.execute('SELECT * FROM messages WHERE block_index IN (%s) ORDER BY message_index ASC'
                 % (block_indexes_str,))
             messages = collections.deque(cursor.fetchall())
-            
-            # Discard any messages less than min_message_index
-            if min_message_index:
-                while len(messages) and messages[0]['message_index'] < min_message_index:
-                    messages.popleft()
 
             # Packages messages into their appropriate block in the data structure to be returned
             for block in blocks:
                 block['_messages'] = []
-                while len(messages) and messages[0]['block_index'] == block['block_index']:
-                    block['_messages'].append(messages.popleft())
-            #NOTE: if len(messages), then we're only returning the messages for the first set of blocks before the reorg
+                block['_messages'].append(messages.popleft())
 
             cursor.close()
             return blocks
@@ -914,7 +907,7 @@ class APIServer(threading.Thread):
                 except (script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
                     error_msg = logging.warning("{} -- error composing {} transaction via API: {}".format(
                         str(error.__class__.__name__), query_type, str(error)))
-                    return flask.Response(error_msg, 400, mimetype='application/json')                        
+                    return flask.Response(error_msg, 400, mimetype='application/json')
             else:
                 # Need to de-generate extra_args to pass it through.
                 query_args = dict([item for item in extra_args])
@@ -946,11 +939,11 @@ class APIServer(threading.Thread):
 
         # Init the HTTP Server.
         init_api_access_log(app)
-        
+
         # Run app server (blocking)
         self.is_ready = True
         app.run(host=config.RPC_HOST, port=config.RPC_PORT, threaded=True)
-            
+
         db.close()
         return
 
