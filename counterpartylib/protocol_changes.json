@@ -145,5 +145,12 @@
         "minimum_version_revision": 3,
         "block_index": 489956,
         "testnet_block_index": 1179400
+    },
+    "delisted_assets": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 55,
+        "minimum_version_revision": 3,
+        "block_index": 1437000,
+        "testnet_block_index": 317777
     }
 }
