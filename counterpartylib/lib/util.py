@@ -338,7 +338,8 @@ def validate_address_options(options):
     elif config.ADDRESS_OPTION_MAX_VALUE & options == options
         raise exceptions.OptionsError('options not enabled')
 
-def confirm_option_is_active(options, option)
+def active_option(options, option):
+    """Checks if option present in options."""
     return options & option == option
 
 class DebitError (Exception): pass
