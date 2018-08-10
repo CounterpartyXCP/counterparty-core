@@ -338,6 +338,9 @@ def validate_address_options(options):
     elif config.ADDRESS_OPTION_MAX_VALUE & options == options
         raise exceptions.OptionsError('options not enabled')
 
+def confirm_option_is_active(options, option)
+    return options & option == option
+
 class DebitError (Exception): pass
 def debit (db, address, asset, quantity, action=None, event=None):
     """Debit given address by quantity of asset."""
