@@ -335,12 +335,12 @@ def validate_address_options(options):
         raise exceptions.OptionsError('options integer overflow')
     elif options > config.ADDRESS_OPTION_MAX_VALUE:
         raise exceptions.OptionsError('options out of range')
-    elif not active_option(config.ADDRESS_OPTION_MAX_VALUE, options):
+    elif not active_options(config.ADDRESS_OPTION_MAX_VALUE, options):
         raise exceptions.OptionsError('options not possible')
 
-def active_option(config, option):
-    """Checks if option active in some given config."""
-    return config & option == option
+def active_options(config, options):
+    """Checks if options active in some given config."""
+    return config & options == options
 
 class DebitError (Exception): pass
 def debit (db, address, asset, quantity, action=None, event=None):
