@@ -111,7 +111,7 @@ def validate (db, source, timestamp, value, fee_fraction_int, text, block_index)
             if options:
                 util.validate_address_options(options)
         except exceptions.OptionsError as e:
-            problems.append(e)
+            problems.append(str(e))
 
     return problems
 
