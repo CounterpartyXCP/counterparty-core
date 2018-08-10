@@ -336,7 +336,7 @@ def validate_address_options(options):
     elif options > config.ADDRESS_OPTION_MAX_VALUE:
         raise exceptions.OptionsError('options out of range')
     elif config.ADDRESS_OPTION_MAX_VALUE & options == options
-        raise exceptions.OptionsError('options not enabled')
+        raise exceptions.OptionsError('options not possible')
 
 def active_option(options, option):
     """Checks if option present in options."""
