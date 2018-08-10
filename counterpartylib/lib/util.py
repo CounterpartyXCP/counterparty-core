@@ -335,7 +335,7 @@ def validate_address_options(options):
         raise exceptions.OptionsError('options integer overflow')
     elif options > config.ADDRESS_OPTION_MAX_VALUE:
         raise exceptions.OptionsError('options out of range')
-    elif options != 0 and config.ADDRESS_OPTION_MAX_VALUE & options != options:
+    elif not active_option(config.ADDRESS_OPTION_MAX_VALUE, options):
         raise exceptions.OptionsError('options not possible')
 
 def active_option(options, option):
