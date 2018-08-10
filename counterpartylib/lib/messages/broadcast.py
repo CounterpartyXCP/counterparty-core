@@ -108,7 +108,7 @@ def validate (db, source, timestamp, value, fee_fraction_int, text, block_index)
         try:
             # Check for options and if they are valid.
             options = util.parse_options_from_string(text)
-            if options:
+            if options or options is 0:
                 util.validate_address_options(options)
         except exceptions.OptionsError as e:
             problems.append(str(e))
@@ -210,7 +210,7 @@ def parse (db, tx, message):
     # Options? Should not fail to parse due to above checks.
     if util.enabled('options_require_memo') and text and text.lower().startswith('options'):
         options = util.parse_options_from_string(text)
-        if options:
+        if options or options is 0:
             op_bindings = {
                         'block_index': tx['block_index'],
                         'address': tx['source'],
