@@ -210,7 +210,7 @@ def parse (db, tx, message):
     # Options? Should not fail to parse due to above checks.
     if util.enabled('options_require_memo') and text and text.lower().startswith('options'):
         options = util.parse_options_from_string(text)
-        if options if not False:
+        if options is not False:
             op_bindings = {
                         'block_index': tx['block_index'],
                         'address': tx['source'],
