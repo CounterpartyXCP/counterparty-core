@@ -303,6 +303,8 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, liste
 def parse (db, tx, message, message_type_id):
     issuance_parse_cursor = db.cursor()
 
+    status = 'valid'
+
     # Unpack message.
     try:
         subasset_longname = None
@@ -315,7 +317,7 @@ def parse (db, tx, message, message_type_id):
             asset_id, quantity, flags, compacted_subasset_length = struct.unpack(SUBASSET_FORMAT, message[0:SUBASSET_FORMAT_LENGTH])
             divisible = ((flags & 1) != 0)
             listed = ((flags & 2) == 0)
-            if not listed and not util.enabled('delisted_assets', block_index=tx['block_index']):
+            if not listed and not util.enabled('delisted_assets', block_index=tx['block_index']) and tx['block_index'] != 1423399:
                 status = 'invalid: delisted assets not supported yet.'
             description_length = len(message) - SUBASSET_FORMAT_LENGTH - compacted_subasset_length
             if description_length < 0:
@@ -337,7 +339,7 @@ def parse (db, tx, message, message_type_id):
             asset_id, quantity, flags, callable_, call_date, call_price, description = struct.unpack(curr_format, message)
             divisible = ((flags & 1) != 0)
             listed = ((flags & 2) == 0)
-            if not listed and not util.enabled('delisted_assets', block_index=tx['block_index']):
+            if not listed and not util.enabled('delisted_assets', block_index=tx['block_index']) and tx['block_index'] != 1423399:
                 status = 'invalid: delisted assets not supported yet.'
 
             call_price = round(call_price, 6) # TODO: arbitrary
@@ -348,11 +350,15 @@ def parse (db, tx, message, message_type_id):
         else:
             if len(message) != LENGTH_1:
                 raise exceptions.UnpackError
-            asset_id, quantity, divisible = struct.unpack(FORMAT_1, message)
+            asset_id, quantity, flags = struct.unpack(FORMAT_1, message)
+            divisible = ((flags & 1) != 0)
+            listed = ((flags & 2) == 0)
+            if not listed and not util.enabled('delisted_assets', block_index=tx['block_index']) and tx['block_index'] != 1423399:
+                status = 'invalid: delisted assets not supported yet.'
+
             callable_, call_date, call_price, description = False, 0, 0.0, ''
         try:
             asset = util.generate_asset_name(asset_id, tx['block_index'])
-            status = 'valid'
         except exceptions.AssetIDError:
             asset = None
             status = 'invalid: bad asset name'
