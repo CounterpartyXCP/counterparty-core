@@ -139,6 +139,8 @@ def validate (db, source, destination, asset, quantity, divisible, listed, calla
             problems.append('issued by another address')
         if bool(last_issuance['divisible']) != bool(divisible):
             problems.append('cannot change divisibility')
+        if bool(last_issuance['listed']) != bool(listed):
+            problems.append('cannot change listing flag')
         if bool(last_issuance['callable']) != bool(callable_):
             problems.append('cannot change callability')
         if last_issuance['call_date'] > call_date and (call_date != 0 or (block_index < 312500 and not config.TESTNET)):
