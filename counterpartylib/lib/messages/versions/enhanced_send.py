@@ -89,6 +89,20 @@ def validate (db, source, destination, asset, quantity, memo_bytes, block_index)
         finally:
             cursor.close()
 
+    if util.enabled('non_reassignable_assets') and asset != config.BTC and asset != config.XCP:
+        cursor = db.cursor()
+        try:
+            # verify not senging non-reassignable asset
+            issuances = list(cursor.execute('''SELECT * FROM issuances
+                                               WHERE asset = ? AND status = ? ORDER BY tx_index DESC LIMIT 1''',
+                                                   (asset, 'valid')))
+            if not issuances:
+               problems.append('issuance not found (system error?)')
+            elif not issuances[0]['reassignable'] and issuances[0]['issuer'] != source and issuances[0]['issuer'] != destination:
+               problems.append('non-reassignable asset')
+        finally:
+            cursor.close()
+
     return problems
 
 def compose (db, source, destination, asset, quantity, memo, memo_is_hex):
@@ -181,7 +195,6 @@ def parse (db, tx, message):
             logger.warn("Invalid send from %s with status %s. (%s)" % (tx['source'], status, tx['tx_hash']))
         else:
             logger.warn("Invalid send of %s %s from %s to %s. status is %s. (%s)" % (quantity, asset, tx['source'], destination, status, tx['tx_hash']))
-
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

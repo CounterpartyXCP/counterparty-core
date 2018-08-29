@@ -358,13 +358,19 @@ def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, ex
 
     if not give_quantity or not get_quantity:
         problems.append('zero give or zero get')
-    cursor.execute('select listed from issuances where (status = ? and asset = ?) ORDER BY tx_index DESC LIMIT 1', ('valid', give_asset))
+
+    cursor.execute('SELECT * FROM issuances WHERE (status = ? AND asset = ?) ORDER BY tx_index DESC LIMIT 1', ('valid', give_asset))
     valid_give_asset = cursor.fetchone();
     if give_asset not in (config.BTC, config.XCP):
         if not valid_give_asset:
             problems.append('no such asset to give ({})'.format(give_asset))
         elif util.enabled('delisted_assets', block_index=block_index) and valid_give_asset['listed'] == 0:
             problems.append('Delisted asset ({})'.format(give_asset))
+        elif util.enabled('non_reassignable_assets', block_index=block_index):
+            if valid_give_asset['reassignable'] == 0 and valid_give_asset['issuer'] != source:
+                problems.append('non reassignable asset to give ({})'.format(give_asset))
+
+    # Don't check if `get_asset` is reassignable here. The issuer of the non-reassignable asset can be a maker.
     cursor.execute('select * from issuances where (status = ? and asset = ?) ORDER BY tx_index DESC LIMIT 1', ('valid', get_asset))
     valid_get_asset = cursor.fetchone();
     if get_asset not in (config.BTC, config.XCP):
@@ -372,6 +378,7 @@ def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, ex
             problems.append('no such asset to get ({})'.format(get_asset))
         elif util.enabled('delisted_assets', block_index=block_index) and valid_get_asset['listed'] == 0:
             problems.append('Delisted asset ({})'.format(get_asset))
+
     if expiration > config.MAX_EXPIRATION:
         problems.append('expiration overflow')
 
