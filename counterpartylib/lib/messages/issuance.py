@@ -44,6 +44,7 @@ def initialise(db):
                       status TEXT,
                       asset_longname TEXT,
                       listed BOOL,
+                      reassignable BOOL,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -72,7 +73,10 @@ def initialise(db):
     if 'listed' not in columns:
         cursor.execute('''ALTER TABLE issuances ADD COLUMN listed BOOL''')
 
-def validate (db, source, destination, asset, quantity, divisible, listed, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index):
+    if 'reassignable' not in columns:
+        cursor.execute('''ALTER TABLE issuances ADD COLUMN reassignable BOOL''')
+
+def validate (db, source, destination, asset, quantity, divisible, listed, reassignable, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index):
     problems = []
     fee = 0
 
@@ -84,19 +88,20 @@ def validate (db, source, destination, asset, quantity, divisible, listed, calla
     if description is None: description = ""
     if divisible is None: divisible = True
     if listed is None: listed = True
+    if reassignable is None: reassignable = True
 
     if isinstance(call_price, int): call_price = float(call_price)
     #^ helps especially with calls from JS‐based clients, where parseFloat(15) returns 15 (not 15.0), which json takes as an int
 
     if not isinstance(quantity, int):
         problems.append('quantity must be in satoshis')
-        return call_date, call_price, problems, fee, description, divisible, listed, None, None
+        return call_date, call_price, problems, fee, description, divisible, listed, reassignable, None, None
     if call_date and not isinstance(call_date, int):
         problems.append('call_date must be epoch integer')
-        return call_date, call_price, problems, fee, description, divisible, listed, None, None
+        return call_date, call_price, problems, fee, description, divisible, listed, reassignable, None, None
     if call_price and not isinstance(call_price, float):
         problems.append('call_price must be a float')
-        return call_date, call_price, problems, fee, description, divisible, listed, None, None
+        return call_date, call_price, problems, fee, description, divisible, listed, reassignable, None, None
 
     if quantity < 0: problems.append('negative quantity')
     if call_price < 0: problems.append('negative call price')
@@ -141,6 +146,8 @@ def validate (db, source, destination, asset, quantity, divisible, listed, calla
             problems.append('cannot change divisibility')
         if bool(last_issuance['listed']) != bool(listed):
             problems.append('cannot change listing flag')
+        if bool(last_issuance['reassignable']) != bool(reassignable):
+            problems.append('cannot change reassignable flag')
         if bool(last_issuance['callable']) != bool(callable_):
             problems.append('cannot change callability')
         if last_issuance['call_date'] > call_date and (call_date != 0 or (block_index < 312500 and not config.TESTNET)):
@@ -218,6 +225,9 @@ def validate (db, source, destination, asset, quantity, divisible, listed, calla
     if not listed and not util.enabled('delisted_assets', block_index=block_index):
         problems.append('invalid: delisted assets not supported yet.')
 
+    if not reassignable and not util.enabled('non_reassignable_assets', block_index=block_index):
+        problems.append('invalid: non-reassignable assets not supported yet.')
+
     # For SQLite3
     call_date = min(call_date, config.MAX_INT)
     total = sum([issuance['quantity'] for issuance in issuances])
@@ -232,10 +242,10 @@ def validate (db, source, destination, asset, quantity, divisible, listed, calla
     if util.enabled('integer_overflow_fix', block_index=block_index) and (fee > config.MAX_INT or quantity > config.MAX_INT):
         problems.append('integer overflow')
 
-    return call_date, call_price, problems, fee, description, divisible, listed, reissuance, reissued_asset_longname
+    return call_date, call_price, problems, fee, description, divisible, listed, reassignable, reissuance, reissued_asset_longname
 
 
-def compose (db, source, transfer_destination, asset, quantity, divisible, listed, description):
+def compose (db, source, transfer_destination, asset, quantity, divisible, listed, reassignable, description):
 
     # Callability is deprecated, so for re‐issuances set relevant parameters
     # to old values; for first issuances, make uncallable.
@@ -275,7 +285,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, liste
                 #   generate a random numeric asset id which will map to this subasset
                 asset = util.generate_random_asset()
 
-    call_date, call_price, problems, fee, description, divisible, listed, reissuance, reissued_asset_longname = validate(db, source, transfer_destination, asset, quantity, divisible, listed, callable_, call_date, call_price, description, subasset_parent, subasset_longname, util.CURRENT_BLOCK_INDEX)
+    call_date, call_price, problems, fee, description, divisible, listed, reassignable, reissuance, reissued_asset_longname = validate(db, source, transfer_destination, asset, quantity, divisible, listed, reassignable, callable_, call_date, call_price, description, subasset_parent, subasset_longname, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
     asset_id = util.generate_asset_id(asset, util.CURRENT_BLOCK_INDEX)
@@ -287,7 +297,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, liste
             curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
         else:
             curr_format = FORMAT_2 + '{}s'.format(len(description))
-        data += struct.pack(curr_format, asset_id, quantity, (1 if divisible else 0) | (0 if listed else 2), 1 if callable_ else 0,
+        data += struct.pack(curr_format, asset_id, quantity, (1 if divisible else 0) | (0 if listed else 2) | (0 if reassignable else 4), 1 if callable_ else 0,
             call_date or 0, call_price or 0.0, description.encode('utf-8'))
     else:
         # Type 21 subasset issuance SUBASSET_FORMAT >QQ?B
@@ -297,7 +307,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, liste
         compacted_subasset_length = len(compacted_subasset_longname)
         data = message_type.pack(SUBASSET_ID)
         curr_format = SUBASSET_FORMAT + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(description))
-        data += struct.pack(curr_format, asset_id, quantity, (1 if divisible else 0) | (0 if listed else 2), compacted_subasset_length, compacted_subasset_longname, description.encode('utf-8'))
+        data += struct.pack(curr_format, asset_id, quantity, (1 if divisible else 0) | (0 if listed else 2) | (0 if reassignable else 4), compacted_subasset_length, compacted_subasset_longname, description.encode('utf-8'))
 
     if transfer_destination:
         destination_outputs = [(transfer_destination, None)]
@@ -320,6 +330,7 @@ def parse (db, tx, message, message_type_id):
             asset_id, quantity, flags, compacted_subasset_length = struct.unpack(SUBASSET_FORMAT, message[0:SUBASSET_FORMAT_LENGTH])
             divisible = ((flags & 1) != 0)
             listed = ((flags & 2) == 0)
+            reassignable = ((flags & 4) == 0)
             description_length = len(message) - SUBASSET_FORMAT_LENGTH - compacted_subasset_length
             if description_length < 0:
                 logger.warn("invalid subasset length: [issuance] tx [%s]: %s" % (tx['tx_hash'], compacted_subasset_length))
@@ -340,6 +351,7 @@ def parse (db, tx, message, message_type_id):
             asset_id, quantity, flags, callable_, call_date, call_price, description = struct.unpack(curr_format, message)
             divisible = ((flags & 1) != 0)
             listed = ((flags & 2) == 0)
+            reassignable = ((flags & 4) == 0)
             call_price = round(call_price, 6) # TODO: arbitrary
             try:
                 description = description.decode('utf-8')
@@ -351,6 +363,7 @@ def parse (db, tx, message, message_type_id):
             asset_id, quantity, flags = struct.unpack(FORMAT_1, message)
             divisible = ((flags & 1) != 0)
             listed = ((flags & 2) == 0)
+            reassignable = ((flags & 4) == 0)
             callable_, call_date, call_price, description = False, 0, 0.0, ''
         try:
             asset = util.generate_asset_name(asset_id, tx['block_index'])
@@ -359,7 +372,7 @@ def parse (db, tx, message, message_type_id):
             asset = None
             status = 'invalid: bad asset name'
     except exceptions.UnpackError as e:
-        asset, quantity, divisible, listed, callable_, call_date, call_price, description = None, None, None, None, None, None, None, None
+        asset, quantity, divisible, listed, reassignable, callable_, call_date, call_price, description = None, None, None, None, None, None, None, None, None
         status = 'invalid: could not unpack'
 
     # parse and validate the subasset from the message
@@ -376,7 +389,7 @@ def parse (db, tx, message, message_type_id):
     reissuance = None
     fee = 0
     if status == 'valid':
-        call_date, call_price, problems, fee, description, divisible, listed, reissuance, reissued_asset_longname = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, listed, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index=tx['block_index'])
+        call_date, call_price, problems, fee, description, divisible, listed, reassignable, reissuance, reissued_asset_longname = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, listed, reassignable, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index=tx['block_index'])
 
         if problems: status = 'invalid: ' + '; '.join(problems)
         if not util.enabled('integer_overflow_fix', block_index=tx['block_index']) and 'total quantity overflow' in problems:
@@ -433,6 +446,7 @@ def parse (db, tx, message, message_type_id):
         'quantity': quantity,
         'divisible': divisible,
         'listed': listed,
+        'reassignable': reassignable,
         'source': tx['source'],
         'issuer': issuer,
         'transfer': transfer,
@@ -446,7 +460,7 @@ def parse (db, tx, message, message_type_id):
         'asset_longname': asset_longname,
     }
     if "integer overflow" not in status:
-        sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :listed)'
+        sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :listed, :reassignable)'
         issuance_parse_cursor.execute(sql, bindings)
     else:
         logger.warn("Not storing [issuance] tx [%s]: %s" % (tx['tx_hash'], status))
