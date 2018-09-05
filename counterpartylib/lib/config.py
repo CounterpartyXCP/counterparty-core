@@ -113,4 +113,6 @@ DEFAULT_UTXO_LOCKS_MAX_AGE = 3.0 #in seconds
 ADDRESS_OPTION_REQUIRE_MEMO = 1
 ADDRESS_OPTION_MAX_VALUE = ADDRESS_OPTION_REQUIRE_MEMO # Or list of all the address options
 
+API_LIMIT_ROWS = 1000
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
