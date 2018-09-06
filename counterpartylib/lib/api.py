@@ -149,8 +149,8 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
         raise APIError('Invalid order direction (ASC, DESC)')
     if not isinstance(limit, int):
         raise APIError('Invalid limit')
-    elif limit > 1000:
-        raise APIError('Limit should be lower or equal to 1000')
+    elif config.API_LIMIT_ROWS != 0 and limit > config.API_LIMIT_ROWS:
+        raise APIError('Limit should be lower or equal to %i' % config.API_LIMIT_ROWS)
     if not isinstance(offset, int):
         raise APIError('Invalid offset')
     # TODO: accept an object:  {'field1':'ASC', 'field2': 'DESC'}
@@ -257,7 +257,7 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
         if order_dir != None:
             statement += ''' {}'''.format(order_dir.upper())
     # LIMIT
-    if limit:
+    if limit and limit > 0:
         statement += ''' LIMIT {}'''.format(limit)
         if offset:
             statement += ''' OFFSET {}'''.format(offset)
@@ -376,13 +376,13 @@ def conditional_decorator(decorator, condition):
 def init_api_access_log(app):
     """Initialize API logger."""
     loggers = (logging.getLogger('werkzeug'), app.logger)
-    
+
     # Disable console logging...
     for l in loggers:
         l.setLevel(logging.INFO)
         l.propagate = False
 
-    # Log to file, if configured...    
+    # Log to file, if configured...
     if config.API_LOG:
         handler = logging_handlers.RotatingFileHandler(config.API_LOG, 'a', API_MAX_LOG_SIZE, API_MAX_LOG_COUNT)
         for l in loggers:
@@ -503,7 +503,7 @@ class APIServer(threading.Thread):
                     error_msg = "Error composing {} transaction via API: {}".format(tx, str(error))
                     logging.warning(error_msg)
                     raise JSONRPCDispatchException(code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg)
-            
+
             return create_method
 
         for tx in API_TRANSACTIONS:
@@ -648,7 +648,7 @@ class APIServer(threading.Thread):
             cursor.execute('SELECT * FROM messages WHERE block_index IN (%s) ORDER BY message_index ASC'
                 % (block_indexes_str,))
             messages = collections.deque(cursor.fetchall())
-            
+
             # Discard any messages less than min_message_index
             if min_message_index:
                 while len(messages) and messages[0]['message_index'] < min_message_index:
@@ -694,6 +694,7 @@ class APIServer(threading.Thread):
                 'bitcoin_block_count': latestBlockIndex,
                 'last_block': last_block,
                 'last_message_index': last_message['message_index'] if last_message else -1,
+                'api_limit_rows': config.API_LIMIT_ROWS,
                 'running_testnet': config.TESTNET,
                 'running_testcoin': config.TESTCOIN,
                 'version_major': config.VERSION_MAJOR,
@@ -914,7 +915,7 @@ class APIServer(threading.Thread):
                 except (script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
                     error_msg = logging.warning("{} -- error composing {} transaction via API: {}".format(
                         str(error.__class__.__name__), query_type, str(error)))
-                    return flask.Response(error_msg, 400, mimetype='application/json')                        
+                    return flask.Response(error_msg, 400, mimetype='application/json')
             else:
                 # Need to de-generate extra_args to pass it through.
                 query_args = dict([item for item in extra_args])
@@ -946,11 +947,11 @@ class APIServer(threading.Thread):
 
         # Init the HTTP Server.
         init_api_access_log(app)
-        
+
         # Run app server (blocking)
         self.is_ready = True
         app.run(host=config.RPC_HOST, port=config.RPC_PORT, threaded=True)
-            
+
         db.close()
         return
 
