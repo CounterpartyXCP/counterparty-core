@@ -151,6 +151,8 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
         raise APIError('Invalid limit')
     elif config.API_LIMIT_ROWS != 0 and limit > config.API_LIMIT_ROWS:
         raise APIError('Limit should be lower or equal to %i' % config.API_LIMIT_ROWS)
+    elif config.API_LIMIT_ROWS != 0 and limit == 0:
+        raise APIError('Limit should be greater than 0')
     if not isinstance(offset, int):
         raise APIError('Invalid offset')
     # TODO: accept an object:  {'field1':'ASC', 'field2': 'DESC'}
