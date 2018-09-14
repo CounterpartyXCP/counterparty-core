@@ -85,8 +85,9 @@ DEFAULT_REGULAR_DUST_SIZE = 5430         # TODO: This is just a guess. I got it 
 DEFAULT_MULTISIG_DUST_SIZE = 7800        # <https://bitcointalk.org/index.php?topic=528023.msg7469941#msg7469941>
 DEFAULT_OP_RETURN_VALUE = 0
 DEFAULT_FEE_PER_KB = 25000               # sane/low default, also used as minimum when estimated fee is used
-ESTIMATE_FEE_PER_KB = True               # when True will use `estimatefee` from bitcoind instead of DEFAULT_FEE_PER_KB
-ESTIMATE_FEE_NBLOCKS = 3
+ESTIMATE_FEE_PER_KB = True               # when True will use `estimatesmartfee` from bitcoind instead of DEFAULT_FEE_PER_KB
+ESTIMATE_FEE_CONF_TARGET = 3
+ESTIMATE_FEE_MODE = 'CONSERVATIVE'
 
 # UI defaults
 DEFAULT_FEE_FRACTION_REQUIRED = .009   # 0.90%
