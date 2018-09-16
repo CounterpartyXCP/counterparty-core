@@ -37,8 +37,6 @@ before_install:
 - echo $DOCKERFILE_CLI_BRANCH
 # build docker image
 - docker build -t counterparty/counterparty-server:$DOCKER_TAG --build-arg CLI_BRANCH="$DOCKERFILE_CLI_BRANCH" .
-# reparse database in case there's a consensus hash change
-- docker run --entrypoint=/bin/bash counterparty/counterparty-server:$DOCKER_TAG -c "counterparty-server --force reparse"
 
 script:
 # run the test suite in the docker container we just made

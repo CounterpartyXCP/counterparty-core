@@ -29,9 +29,10 @@ WORKDIR /
 # Pull the mainnet and testnet DB boostraps
 RUN counterparty-server bootstrap --quiet
 RUN counterparty-server --testnet bootstrap --quiet
+RUN counterparty-server reparse --quiet
+RUN counterparty-server --testnet reparse --quiet
 
 EXPOSE 4000 14000
 
 # NOTE: Defaults to running on mainnet, specify -e TESTNET=1 to start up on testnet
 ENTRYPOINT ["start.sh"]
-
