@@ -30,6 +30,7 @@ txindex=1
 rpctimeout=300
 zmqpubhashblock=tcp://127.0.0.1:28832
 zmqpubhashtx=tcp://127.0.0.1:28832
+addresstype=legacy
 ```
 **Note:** you can and should replace the RPC credentials. Remember to use the changed RPC credentials throughout this document.
 
