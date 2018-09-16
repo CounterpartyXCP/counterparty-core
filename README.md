@@ -3,7 +3,6 @@
 [![Coverage Status](https://coveralls.io/repos/CounterpartyXCP/counterparty-lib/badge.png?branch=develop)](https://coveralls.io/r/CounterpartyXCP/counterparty-lib?branch=develop)
 [![Latest Version](https://pypip.in/version/counterparty-lib/badge.svg)](https://pypi.python.org/pypi/counterparty-lib/)
 [![License](https://pypip.in/license/counterparty-lib/badge.svg)](https://pypi.python.org/pypi/counterparty-lib/)
-[![Slack Status](http://slack.counterparty.io/badge.svg)](http://slack.counterparty.io)
 [![Docker Pulls](https://img.shields.io/docker/pulls/counterparty/counterparty-server.svg?maxAge=2592000)](https://hub.docker.com/r/counterparty/counterparty-server/)
 
 
@@ -20,7 +19,7 @@ For a simple Docker-based install of the Counterparty software stack, see [this 
 
 # Manual installation
 
-Download the newest [patched Bitcoin Core](https://github.com/btcdrak/bitcoin/releases) and create
+Download the latest [Bitcoin Core](https://github.com/bitcoin/bitcoin/releases) and create
 a `bitcoin.conf` file with the following options:
 
 ```
@@ -28,11 +27,23 @@ rpcuser=bitcoinrpc
 rpcpassword=rpc
 server=1
 txindex=1
-addrindex=1
 rpctimeout=300
+zmqpubhashblock=tcp://127.0.0.1:28832
+zmqpubhashtx=tcp://127.0.0.1:28832
+```
+**Note:** you can and should replace the RPC credentials. Remember to use the changed RPC credentials throughout this document.
+
+Download and install latest Indexd:
+```
+$ git clone https://github.com/CounterpartyXCP/indexd-server.git
+$ cd indexd-server
+$ cp .env-mainnet-example .env
+ -- Modify .env with your rpcuser and rpcpassword --
+$ npm install
+$ npm start
 ```
 
-**Note:** you can and should replace the RPC credentials. Remember to use the changed RPC credentials throughout this document.
+You could run the indexd daemon with a process manager like `forever` or `pm2` (recommended).
 
 Then, download and install `counterparty-lib`:
 
@@ -64,7 +75,7 @@ $ counterparty-server --backend-password=rpc start
 
 # Basic Usage
 
-## Via command-line 
+## Via command-line
 
 (Requires `counterparty-cli` to be installed.)
 
@@ -121,9 +132,11 @@ Manual configuration is not necessary for most use cases. "back-end" and "wallet
 A `counterparty-server` configuration file looks like this:
 
 	[Default]
-	backend-name = addrindex
+	backend-name = indexd
 	backend-user = <user>
 	backend-password = <password>
+	indexd-connect = localhost
+	indexd-port = 8432
 	rpc-host = 0.0.0.0
 	rpc-user = <rpcuser>
 	rpc-password = <rpcpassword>

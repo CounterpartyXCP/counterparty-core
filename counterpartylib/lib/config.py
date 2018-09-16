@@ -6,8 +6,8 @@ UNIT = 100000000        # The same across assets.
 
 # Versions
 VERSION_MAJOR = 9
-VERSION_MINOR = 55
-VERSION_REVISION = 4
+VERSION_MINOR = 56
+VERSION_REVISION = 0
 VERSION_STRING = str(VERSION_MAJOR) + '.' + str(VERSION_MINOR) + '.' + str(VERSION_REVISION)
 
 
@@ -113,5 +113,7 @@ DEFAULT_UTXO_LOCKS_MAX_AGE = 3.0 #in seconds
 
 ADDRESS_OPTION_REQUIRE_MEMO = 1
 ADDRESS_OPTION_MAX_VALUE = ADDRESS_OPTION_REQUIRE_MEMO # Or list of all the address options
+
+API_LIMIT_ROWS = 1000
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

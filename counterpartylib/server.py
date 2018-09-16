@@ -82,6 +82,7 @@ def initialise(*args, **kwargs):
 
 def initialise_config(database_file=None, log_file=None, api_log_file=None,
                 testnet=False, testcoin=False,
+                api_limit_rows=1000,
                 backend_name=None, backend_connect=None, backend_port=None,
                 backend_user=None, backend_password=None,
                 indexd_connect=None, indexd_port=None,
@@ -164,6 +165,8 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     def handle_exception(exc_type, exc_value, exc_traceback):
         logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
     sys.excepthook = handle_exception
+
+    config.API_LIMIT_ROWS = api_limit_rows
 
     ##############
     # THINGS WE CONNECT TO
