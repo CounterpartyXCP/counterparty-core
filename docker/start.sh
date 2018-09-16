@@ -19,11 +19,12 @@ if [ ! -f /root/.local/share/counterparty/counterparty.testnet.db ]; then
     counterparty-server --testnet bootstrap --quiet
 fi
 
-# Kick off the server, defaulting to the "start" subcommand
+# Kick off the server, defaulting to the "reparse" subcommand
+# Using "reparse" allows us to do consensus changes without updating bootstrap db
 # Launch utilizing the SIGTERM/SIGINT propagation pattern from
 # http://veithen.github.io/2014/11/16/sigterm-propagation.html
 : ${PARAMS:=""}
-: ${COMMAND:="start"}
+: ${COMMAND:="reparse"}
 
 trap 'kill -TERM $PID' TERM INT
 /usr/local/bin/counterparty-server ${PARAMS} ${COMMAND} &
