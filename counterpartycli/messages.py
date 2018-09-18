@@ -15,7 +15,7 @@ from counterpartycli import wallet
 import bitcoin as bitcoinlib
 
 MESSAGE_PARAMS = {
-    'send': ['source', 'destination', 'asset', 'quantity'],
+    'send': ['source', 'destination', 'asset', 'quantity', 'memo', 'memo_is_hex', 'use_enhanced_send'],
     'order': ['source', 'give_asset', 'give_quantity', 'get_asset', 'get_quantity', 'expiration', 'fee_required', 'fee_provided'],
     'btcpay': ['source', 'order_match_id'],
     'issuance': ['source', 'asset', 'quantity', 'divisible', 'description', 'transfer_destination'],
