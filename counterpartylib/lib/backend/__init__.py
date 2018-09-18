@@ -16,7 +16,7 @@ from counterpartylib.lib import script
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 
-from counterpartylib.lib.backend import addrindex, btcd
+from counterpartylib.lib.backend import indexd
 
 MEMPOOL_CACHE_INITIALIZED = False
 
@@ -48,9 +48,6 @@ def getblock(block_hash):
     block_hex = BACKEND().getblock(block_hash)
     return CBlock.deserialize(util.unhexlify(block_hex))
 
-def searchrawtransactions(address, unconfirmed=False):
-    return BACKEND().searchrawtransactions(address, unconfirmed=unconfirmed)
-
 def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
     return BACKEND().getrawtransaction(tx_hash, verbose=verbose, skip_missing=skip_missing)
 
@@ -63,8 +60,29 @@ def sendrawtransaction(tx_hex):
 def getrawmempool():
     return BACKEND().getrawmempool()
 
+def getindexblocksbehind():
+    return BACKEND().getindexblocksbehind()
+
 def extract_addresses(txhash_list):
     return BACKEND().extract_addresses(txhash_list)
+
+def ensure_script_pub_key_for_inputs(coins):
+    txhash_set = set()
+    for coin in coins:
+        if 'scriptPubKey' not in coin:
+            txhash_set.add(coin['txid'])
+
+    if len(txhash_set) > 0:
+        txs = BACKEND().getrawtransaction_batch(list(txhash_set), verbose=True, skip_missing=False)
+        for coin in coins:
+            if 'scriptPubKey' not in coin:
+                # get the scriptPubKey
+                txid = coin['txid']
+                for vout in txs[txid]['vout']:
+                    if vout['n'] == coin['vout']:
+                        coin['scriptPubKey'] = vout['scriptPubKey']['hex']
+
+    return coins
 
 
 def fee_per_kb(nblocks):
@@ -75,9 +93,6 @@ def fee_per_kb(nblocks):
 
     return BACKEND().fee_per_kb(nblocks)
 
-
-def refresh_unconfirmed_transactions_cache(mempool_txhash_list):
-    return BACKEND().refresh_unconfirmed_transactions_cache(mempool_txhash_list)
 
 def deserialize(tx_hex):
     return bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
@@ -110,9 +125,9 @@ def get_tx_list(block):
 
 def sort_unspent_txouts(unspent, unconfirmed=False):
     # Filter out all dust amounts to avoid bloating the resultant transaction
-    unspent = list(filter(lambda x: x['amount'] * config.UNIT > config.DEFAULT_MULTISIG_DUST_SIZE, unspent))
+    unspent = list(filter(lambda x: x['value'] > config.DEFAULT_MULTISIG_DUST_SIZE, unspent))
     # Sort by amount, using the largest UTXOs available
-    unspent = sorted(unspent, key=lambda x: x['amount'], reverse=True)
+    unspent = sorted(unspent, key=lambda x: x['value'], reverse=True)
 
     return unspent
 
@@ -132,24 +147,6 @@ def get_btc_supply(normalize=False):
             blocks_remaining = 0
     return total_supply if normalize else int(total_supply * config.UNIT)
 
-def is_scriptpubkey_spendable(scriptpubkey_hex, source):
-    c_scriptpubkey = bitcoinlib.core.CScript(bitcoinlib.core.x(scriptpubkey_hex))
-
-    try:
-        vout_address = script.scriptpubkey_to_address(c_scriptpubkey)
-    except exceptions.DecodeError:
-        return False
-
-    if not vout_address:
-        return False
-
-    source = script.make_canonical(source)
-
-    if vout_address == source:
-        return True
-
-    return False
-
 class MempoolError(Exception):
     pass
 
@@ -157,66 +154,28 @@ def get_unspent_txouts(source, unconfirmed=False, unspent_tx_hash=None):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
     """
-    if not MEMPOOL_CACHE_INITIALIZED:
-        raise MempoolError('Mempool is not yet ready; please try again in a few minutes.')
 
-    # Get all outputs.
-    logger.debug('Getting outputs for {}'.format(source))
-    if unspent_tx_hash:
-        raw_transactions = [getrawtransaction(unspent_tx_hash, verbose=True)]
-    else:
-        if script.is_multisig(source):
-            pubkeyhashes = script.pubkeyhash_array(source)
-            raw_transactions = searchrawtransactions(pubkeyhashes[1], unconfirmed=True) # unconfirmed=True to prune unconfirmed spent outputs
-        else:
-            pubkeyhashes = [source]
-            raw_transactions = searchrawtransactions(source, unconfirmed=True)
+    unspent = BACKEND().get_unspent_txouts(source)
 
-    # Change format.
-    # TODO: Slow.
-    logger.debug('Formatting outputs for {}'.format(source))
-    outputs = {}
-    for tx in raw_transactions:
-        for vout in tx['vout']:
-            txid = tx['txid']
-            confirmations = tx['confirmations'] if 'confirmations' in tx else 0
-            outkey = '{}{}'.format(txid, vout['n']) # edge case: avoid duplicate output
-            if outkey not in outputs or outputs[outkey]['confirmations'] < confirmations: 
-                coin = {
-                        'amount': float(vout['value']),
-                        'confirmations': confirmations,
-                        'scriptPubKey': vout['scriptPubKey']['hex'],
-                        'txid': txid,
-                        'vout': vout['n']
-                       }
-                outputs[outkey] = coin
-    outputs = sorted(outputs.values(), key=lambda x: x['confirmations'])
-
-    # Prune unspendable.
-    logger.debug('Pruning unspendable outputs for {}'.format(source))
-    # TODO: Slow.
-    outputs = [output for output in outputs if is_scriptpubkey_spendable(output['scriptPubKey'], source)]
-
-    # Prune spent outputs.
-    logger.debug('Pruning spent outputs for {}'.format(source))
-    vins = {(vin['txid'], vin['vout']) for tx in raw_transactions for vin in tx['vin'] if 'coinbase' not in vin}
-    unspent = []
-    for output in outputs:
-        if (output['txid'], output['vout']) not in vins:
-            unspent.append(output)
-    unspent = sorted(unspent, key=lambda x: x['txid'])
-
-    # Remove unconfirmed txouts, if desired.
+    # filter by unspent_tx_hash
+    if unspent_tx_hash is not None:
+        unspent = list(filter(lambda x: x['txId'] == unspent_tx_hash, unspent))
+        
+    # filter unconfirmed
     if not unconfirmed:
-        unspent = [output for output in unspent if output['confirmations'] > 0]
-    else:
-        # Hackish: Allow only inputs which are either already confirmed or were seen only recently. (Skip outputs from slow‐to‐confirm transanctions.)
-        try:
-            unspent = [output for output in unspent if output['confirmations'] > 0 or (time.time() - output['ts']) < 6 * 3600] # Cutoff: six hours
-        except (KeyError, TypeError):
-            pass
+        unspent = [utxo for utxo in unspent if utxo['confirmations'] > 0]
+
+    # format
+    for utxo in unspent:
+        utxo['amount'] = float(utxo['value'] / config.UNIT)
+        utxo['txid'] = utxo['txId']
+        del utxo['txId']
+        # do not add scriptPubKey
 
     return unspent
+
+def search_raw_transactions(address, unconfirmed=True):
+    return BACKEND().search_raw_transactions(address, unconfirmed)
 
 class UnknownPubKeyError(Exception):
     pass
@@ -231,7 +190,7 @@ def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
                 return pubkey
 
     # Search blockchain.
-    raw_transactions = searchrawtransactions(pubkeyhash, unconfirmed=True)
+    raw_transactions = search_raw_transactions(pubkeyhash, unconfirmed=True)
     for tx in raw_transactions:
         for vin in tx['vin']:
             if 'coinbase' not in vin:

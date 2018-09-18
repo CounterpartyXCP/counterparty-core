@@ -25,30 +25,6 @@ from fractions import Fraction
 from counterpartylib.lib import address
 
 UNITTEST_VECTOR = {
-    'backend': {
-        'is_scriptpubkey_spendable': [
-            {
-                'comment': 'correct p2pkh',
-                'in': ('a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e87', '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy', ),
-                'out': True
-            },
-            {
-                'comment': 'correct p2sh',
-                'in': ('76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', ),
-                'out': True
-            },
-            {
-                'comment': 'incorrect p2pkh',
-                'in': ('a9144264cfd7eb65f8cbbdba98bd0015d5461fad8d7e87', '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy', ),
-                'out': False
-            },
-            {
-                'comment': 'incorrect p2sh',
-                'in': ('76a9144838d8b3588c4c7ba7c1d00f866e9b3739c6303788ac', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', ),
-                'out': False
-            }
-        ]
-    },
     'bet': {
         'validate': [{
             'in': (ADDR[1], ADDR[0], 0, 1488000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block_index']),

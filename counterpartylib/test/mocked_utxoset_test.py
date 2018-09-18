@@ -14,8 +14,8 @@ FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
 
 
 @pytest.mark.usefixtures("server_db")
-def test_searchrawtransactions_output():
-    txs = backend.searchrawtransactions(ADDR[0], unconfirmed=True)
+def test_search_raw_transactions_output():
+    txs = backend.search_raw_transactions(ADDR[0], unconfirmed=True)
     tx = txs[0]
 
     tx = backend.getrawtransaction('02f95716d3c93a1e81b926d9d8d5f05b6f382c115d9ecf0dd0bc9514b0e08649', verbose=True)
@@ -56,9 +56,9 @@ def test_searchrawtransactions_output():
 
 
 @pytest.mark.usefixtures("api_server")
-def test_searchrawtransactions_unconfirmed(server_db):
-    assert len(backend.searchrawtransactions(ADDR[0], unconfirmed=True)) == 27
-    assert len(backend.searchrawtransactions(ADDR[0], unconfirmed=False)) == 27
+def test_search_raw_transactions_unconfirmed(server_db):
+    assert len(backend.search_raw_transactions(ADDR[0], unconfirmed=True)) == 27
+    assert len(backend.search_raw_transactions(ADDR[0], unconfirmed=False)) == 27
 
     # create send
     v = int(100 * 1e8)
@@ -67,8 +67,8 @@ def test_searchrawtransactions_unconfirmed(server_db):
     # insert send, this automatically also creates a block
     tx1 = util_test.insert_raw_transaction(send1hex, server_db)
 
-    assert len(backend.searchrawtransactions(ADDR[0], unconfirmed=True)) == 28
-    assert len(backend.searchrawtransactions(ADDR[0], unconfirmed=False)) == 28
+    assert len(backend.search_raw_transactions(ADDR[0], unconfirmed=True)) == 28
+    assert len(backend.search_raw_transactions(ADDR[0], unconfirmed=False)) == 28
 
     # create send
     v = int(100 * 1e8)
@@ -77,5 +77,5 @@ def test_searchrawtransactions_unconfirmed(server_db):
     # insert send, this automatically also creates a block
     tx2 = util_test.insert_unconfirmed_raw_transaction(send2hex, server_db)
 
-    assert len(backend.searchrawtransactions(ADDR[0], unconfirmed=True)) == 29
-    assert len(backend.searchrawtransactions(ADDR[0], unconfirmed=False)) == 28
+    assert len(backend.search_raw_transactions(ADDR[0], unconfirmed=True)) == 29
+    assert len(backend.search_raw_transactions(ADDR[0], unconfirmed=False)) == 28

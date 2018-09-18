@@ -453,7 +453,7 @@ def construct (db, tx_info, encoding='auto',
 
     # Array of UTXOs, as retrieved by listunspent function from bitcoind
     if custom_inputs:
-        use_inputs = unspent = custom_inputs
+        use_inputs = unspent = normalize_custom_inputs(custom_inputs)
     else:
         if unspent_tx_hash is not None:
             unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash)
@@ -491,7 +491,7 @@ def construct (db, tx_info, encoding='auto',
     for coin in use_inputs:
         logger.debug('New input: {}'.format(print_coin(coin)))
         inputs.append(coin)
-        btc_in += round(coin['amount'] * config.UNIT)
+        btc_in += coin['value']
 
         size = 181 * len(inputs) + outputs_size + 10
         necessary_fee = int(size / 1000 * fee_per_kb)
@@ -544,6 +544,10 @@ def construct (db, tx_info, encoding='auto',
         change_output = (change_address, change_quantity)
     else:
         change_output = None
+
+    # ensure inputs have scriptPubKey 
+    #   this is not provided by indexd
+    inputs = backend.ensure_script_pub_key_for_inputs(inputs)
 
     # Serialise inputs and outputs.
     unsigned_tx = serialise(encoding, inputs, destination_outputs,
@@ -606,5 +610,13 @@ def construct (db, tx_info, encoding='auto',
             'tx_hex': unsigned_tx_hex,
         }
     return unsigned_tx_hex
+
+def normalize_custom_inputs(raw_custom_inputs):
+    custom_inputs = []
+    for custom_input in raw_custom_inputs:
+        if 'value' not in custom_input:
+            custom_input['value'] = int(custom_input['amount'] * config.UNIT)
+        custom_inputs.append(custom_input)
+    return custom_inputs
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

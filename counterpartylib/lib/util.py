@@ -41,7 +41,8 @@ SUBASSET_REVERSE = {'a':1,'b':2,'c':3,'d':4,'e':5,'f':6,'g':7,'h':8,'i':9,'j':10
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
-json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
+json_dump = lambda x: json.dumps(x, sort_keys=True, indent=4)
+json_print = lambda x: print(json_dump(x))
 
 BLOCK_LEDGER = []
 
