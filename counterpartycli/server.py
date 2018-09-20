@@ -88,6 +88,7 @@ def main():
 
     parser_bootstrap = subparsers.add_parser('bootstrap', help='bootstrap database with hosted snapshot')
     parser_bootstrap.add_argument('-q', '--quiet', dest='quiet', action='store_true', help='suppress progress bar')
+    #parser_bootstrap.add_argument('--branch', help='use a different branch for bootstrap db pulling')
 
     args = parser.parse_args()
 
