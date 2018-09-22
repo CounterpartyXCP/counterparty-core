@@ -215,7 +215,7 @@ def validate (db, source, destination, asset, quantity, divisible, listed, calla
         if len(description) > 42:
             problems.append('description too long')
 
-    if not listed and not util.enabled('delisted_assets', block_index=block_index) and block_index != 1423399:
+    if not listed and not util.enabled('delisted_assets', block_index=block_index):
         problems.append('invalid: delisted assets not supported yet.')
 
     # For SQLite3
