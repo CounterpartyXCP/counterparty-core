@@ -148,16 +148,16 @@
     },
     "delisted_assets": {
         "minimum_version_major": 9,
-        "minimum_version_minor": 55,
-        "minimum_version_revision": 3,
-        "block_index": 1454000,
+        "minimum_version_minor": 5500,
+        "minimum_version_revision": 300,
+        "block_index": 1463600,
         "testnet_block_index": 317777
     },
     "non_reassignable_assets": {
         "minimum_version_major": 9,
-        "minimum_version_minor": 55,
-        "minimum_version_revision": 3,
-        "block_index": 1454000,
+        "minimum_version_minor": 5500,
+        "minimum_version_revision": 300,
+        "block_index": 1463600,
         "testnet_block_index": 317777
     }
 }
