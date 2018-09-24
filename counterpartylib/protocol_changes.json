@@ -123,28 +123,28 @@
         "minimum_version_minor": 55,
         "minimum_version_revision": 3,
         "block_index": 489956,
-        "testnet_block_index": 1179400
+        "testnet_block_index": 350000
     },
     "enhanced_sends": {
         "minimum_version_major": 9,
         "minimum_version_minor": 55,
         "minimum_version_revision": 3,
         "block_index": 489956,
-        "testnet_block_index": 1179400
+        "testnet_block_index": 350000
     },
     "options_require_memo": {
         "minimum_version_major": 9,
         "minimum_version_minor": 55,
         "minimum_version_revision": 3,
         "block_index": 489956,
-        "testnet_block_index": 1179400
+        "testnet_block_index": 350000
     },
     "issuance_lock_fix": {
         "minimum_version_major": 9,
         "minimum_version_minor": 55,
         "minimum_version_revision": 3,
         "block_index": 489956,
-        "testnet_block_index": 1179400
+        "testnet_block_index": 350000
     },
     "delisted_assets": {
         "minimum_version_major": 9,
