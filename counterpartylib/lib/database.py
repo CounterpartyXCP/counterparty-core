@@ -78,7 +78,7 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
     logger.debug('Creating connection to `{}`.'.format(config.DATABASE))
 
     if read_only:
-        db = apsw.Connection(config.DATABASE, flags=0x00000001)
+        db = apsw.Connection(config.DATABASE, flags=apsw.SQLITE_OPEN_READONLY)
     else:
         db = apsw.Connection(config.DATABASE)
     cursor = db.cursor()

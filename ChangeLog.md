@@ -12,6 +12,10 @@
                 "vout": 1
             }]
     * Fixed unpack API method for enhanced sends
+    * Upgrade SQLite/APSW to v3.12.2
+        * Run `python3 setup.py install_apsw` to upgrade your installed version.
+        * Run `./tools/upgradesqlitepagesize.py <PATHTOYOURDB>` while your node is OFFLINE to upgrade.
+          Most likely the path to your DB is `~/.local/share/counterparty/counterparty.db`.
 * v9.55.4 (2017-10-31)
     * Fix for uncaught exception in short asset name issuances
 * v9.55.3 (2017-09-26)
