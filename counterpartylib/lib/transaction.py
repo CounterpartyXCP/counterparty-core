@@ -313,7 +313,7 @@ def make_outkey(output):
 
 def construct (db, tx_info, encoding='auto',
                fee_per_kb=config.DEFAULT_FEE_PER_KB,
-               estimate_fee_per_kb=None, estimate_fee_per_kb_nblocks=config.ESTIMATE_FEE_NBLOCKS,
+               estimate_fee_per_kb=None, estimate_fee_per_kb_conf_target=config.ESTIMATE_FEE_CONF_TARGET, estimate_fee_per_kb_mode=config.ESTIMATE_FEE_MODE,
                regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                op_return_value=config.DEFAULT_OP_RETURN_VALUE,
@@ -473,7 +473,7 @@ def construct (db, tx_info, encoding='auto',
 
     # use backend estimated fee_per_kb
     if estimate_fee_per_kb:
-        estimated_fee_per_kb = backend.fee_per_kb(estimate_fee_per_kb_nblocks)
+        estimated_fee_per_kb = backend.fee_per_kb(estimate_fee_per_kb_conf_target, estimate_fee_per_kb_mode)
         if estimated_fee_per_kb is not None:
             fee_per_kb = max(estimated_fee_per_kb, fee_per_kb)  # never drop below the default fee_per_kb
 
