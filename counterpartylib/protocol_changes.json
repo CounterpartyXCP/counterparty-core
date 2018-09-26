@@ -148,7 +148,7 @@
     },
     "btc_order_filled": {
         "minimum_version_major": 9,
-        "minimum_version_minor": 55,
+        "minimum_version_minor": 56,
         "minimum_version_revision": 0,
         "block_index": 550000,
         "testnet_block_index": 1420000
