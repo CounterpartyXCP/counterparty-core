@@ -431,6 +431,14 @@ def parse (db, tx, message):
 
         problems = validate(db, tx['source'], give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
+            
+        if util.enabled('btc_order_minimum'):
+            min_btc_quantity = 0.001 * config.UNIT  # 0.001 BTC
+            if (give_asset == config.BTC and give_quantity < min_btc_quantity) or (get_asset == config.BTC and get_quantity < min_btc_quantity):
+                if problems:
+                    status += '; btc order below minimum'
+                else:
+                    status = 'invalid: btc order below minimum'
 
     # Debit give quantity. (Escrow.)
     if status == 'open':
