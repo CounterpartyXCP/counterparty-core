@@ -31,7 +31,7 @@ CONFIG_ARGS = [
     [('--backend-ssl-no-verify',), {'action': 'store_true', 'default': False, 'help': 'verify SSL certificate of backend; disallow use of self‐signed certificates (default: true)'}],
     [('--backend-poll-interval',), {'type': float, 'default': 0.5, 'help': 'poll interval, in seconds (default: 0.5)'}],
     [('--no-check-asset-conservation',), {'action': 'store_true', 'default': False, 'help': 'Skip asset conservation checking (default: false)'}],
-    [('--p2sh-dust-return-pubkey',), {'help': 'pubkey to receive dust when multisig encoding is used for P2SH source (default: pubkey from counterparty foundation)'}],
+    [('--p2sh-dust-return-pubkey',), {'help': 'pubkey to receive dust when multisig encoding is used for P2SH source (default: none)'}],
 
     [('--indexd-connect',), {'default': 'localhost', 'help': 'the hostname or IP of the indexd server'}],
     [('--indexd-port',), {'type': int, 'help': 'the indexd server port to connect to'}],
