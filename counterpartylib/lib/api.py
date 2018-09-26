@@ -739,11 +739,20 @@ class APIServer(threading.Thread):
             return counts
 
         @dispatcher.add_method
-        def get_asset_names():
+        def get_asset_names(longnames=False):
             cursor = self.db.cursor()
-            names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE status = 'valid' ORDER BY asset ASC")]
+            if longnames:
+                names = []
+                for row in cursor.execute("SELECT asset, asset_longname FROM issuances WHERE status = 'valid' GROUP BY asset ORDER BY asset ASC"):
+                    names.append({'asset': row['asset'], 'asset_longname': row['asset_longname']})
+            else:
+                names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE status = 'valid' ORDER BY asset ASC")]
             cursor.close()
             return names
+
+        @dispatcher.add_method
+        def get_asset_longnames():
+            return get_asset_names(longnames=True)
 
         @dispatcher.add_method
         def get_holder_count(asset):
