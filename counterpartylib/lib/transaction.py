@@ -78,7 +78,7 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
     This pubkey is used in multi-sig data outputs (as the only real pubkey) to
     make those the outputs spendable. It is derived from the source address, so
     that the dust is spendable by the creator of the transaction.
-    """ 
+    """
     # Get hex dust return pubkey.
     if script.is_multisig(source):
         a, self_pubkeys, b = script.extract_array(backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys))
@@ -454,6 +454,7 @@ def construct (db, tx_info, encoding='auto',
     # Array of UTXOs, as retrieved by listunspent function from bitcoind
     if custom_inputs:
         use_inputs = unspent = normalize_custom_inputs(custom_inputs)
+
     else:
         if unspent_tx_hash is not None:
             unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash)
@@ -520,19 +521,6 @@ def construct (db, tx_info, encoding='auto',
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
         raise exceptions.BalanceError('Insufficient {} at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(config.BTC, source, total_btc_out / config.UNIT, config.BTC))
 
-    # Lock the source's inputs (UTXOs) chosen for this transaction
-    if UTXO_LOCKS is not None and not disable_utxo_locks:
-        if source not in UTXO_LOCKS:
-            UTXO_LOCKS[source] = cachetools.TTLCache(
-                UTXO_LOCKS_PER_ADDRESS_MAXSIZE, config.UTXO_LOCKS_MAX_AGE)
-
-        for input in inputs:
-            UTXO_LOCKS[source][make_outkey(input)] = input
-
-        logger.debug("UTXO locks: Potentials ({}): {}, Used: {}, locked UTXOs: {}".format(
-            len(unspent), [make_outkey(coin) for coin in unspent],
-            [make_outkey(input) for input in inputs], list(UTXO_LOCKS[source].keys())))
-
     '''Finish'''
 
     # Change output.
@@ -545,9 +533,22 @@ def construct (db, tx_info, encoding='auto',
     else:
         change_output = None
 
-    # ensure inputs have scriptPubKey 
+    # ensure inputs have scriptPubKey
     #   this is not provided by indexd
     inputs = backend.ensure_script_pub_key_for_inputs(inputs)
+
+    # Lock the source's inputs (UTXOs) chosen for this transaction
+    if UTXO_LOCKS is not None and not disable_utxo_locks:
+        if source not in UTXO_LOCKS:
+            UTXO_LOCKS[source] = cachetools.TTLCache(
+                UTXO_LOCKS_PER_ADDRESS_MAXSIZE, config.UTXO_LOCKS_MAX_AGE)
+
+        logger.debug("UTXO locks: Potentials ({}): {}, Used: {}, locked UTXOs: {}".format(
+            len(unspent), [make_outkey(coin) for coin in unspent],
+            [make_outkey(input) for input in inputs], list(UTXO_LOCKS[source].keys())))
+
+        for input in inputs:
+            UTXO_LOCKS[source][make_outkey(input)] = input
 
     # Serialise inputs and outputs.
     unsigned_tx = serialise(encoding, inputs, destination_outputs,
