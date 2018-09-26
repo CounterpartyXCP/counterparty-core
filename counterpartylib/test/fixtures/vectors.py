@@ -539,7 +539,7 @@ UNITTEST_VECTOR = {
             'comment': 'test changing options to -1 on a specific address',
             'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},
             'in': (ADDR[5], 1588000000, 1, DP['fee_multiplier'], 'OPTIONS -1', DP['default_block_index']),
-            'out': (['integer overflow'])
+            'out': (['options integer overflow'])
         }, {
             'comment': 'test changing options to non-int on a specific address',
             'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True},

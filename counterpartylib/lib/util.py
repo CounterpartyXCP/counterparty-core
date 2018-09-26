@@ -319,6 +319,31 @@ def expand_subasset_longname(raw_bytes):
 def generate_random_asset ():
     return 'A' + str(random.randint(26**12 + 1, 2**64 - 1))
 
+def parse_options_from_string(string):
+    """Parse options integer from string, if exists."""
+    string_list = string.split(" ")
+    if len(string_list) == 2:
+        try:
+            options = int(string_list.pop())
+        except:
+            raise exceptions.OptionsError('options not an integer')
+        return options
+    else:
+        return False
+
+def validate_address_options(options):
+    """Ensure the options are all valid and in range."""
+    if (options > config.MAX_INT) or (options < 0):
+        raise exceptions.OptionsError('options integer overflow')
+    elif options > config.ADDRESS_OPTION_MAX_VALUE:
+        raise exceptions.OptionsError('options out of range')
+    elif not active_options(config.ADDRESS_OPTION_MAX_VALUE, options):
+        raise exceptions.OptionsError('options not possible')
+
+def active_options(config, options):
+    """Checks if options active in some given config."""
+    return config & options == options
+
 class DebitError (Exception): pass
 def debit (db, address, asset, quantity, action=None, event=None):
     """Debit given address by quantity of asset."""
