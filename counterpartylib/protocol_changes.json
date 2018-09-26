@@ -145,5 +145,26 @@
         "minimum_version_revision": 3,
         "block_index": 489956,
         "testnet_block_index": 1179400
+    },
+    "btc_order_filled": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 56,
+        "minimum_version_revision": 0,
+        "block_index": 550000,
+        "testnet_block_index": 1420000
+    },
+    "btc_order_minimum": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 56,
+        "minimum_version_revision": 0,
+        "block_index": 550000,
+        "testnet_block_index": 1420000
+    },
+    "btc_sell_expire_on_match_expire": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 56,
+        "minimum_version_revision": 0,
+        "block_index": 550000,
+        "testnet_block_index": 1420000
     }
 }

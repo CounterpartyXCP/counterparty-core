@@ -49,27 +49,28 @@ from counterpartylib.lib.messages import broadcast
 from counterpartylib.lib.messages import bet
 from counterpartylib.lib.messages import dividend
 from counterpartylib.lib.messages import burn
+from counterpartylib.lib.messages import destroy
 from counterpartylib.lib.messages import cancel
 from counterpartylib.lib.messages import rps
 from counterpartylib.lib.messages import rpsresolve
 
 API_TABLES = ['assets', 'balances', 'credits', 'debits', 'bets', 'bet_matches',
-              'broadcasts', 'btcpays', 'burns', 'cancels',
+              'broadcasts', 'btcpays', 'burns', 'cancels', 'destructions',
               'dividends', 'issuances', 'orders', 'order_matches', 'sends',
               'bet_expirations', 'order_expirations', 'bet_match_expirations',
               'order_match_expirations', 'bet_match_resolutions', 'rps',
               'rpsresolves', 'rps_matches', 'rps_expirations', 'rps_match_expirations',
               'mempool']
 
-API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel',
+API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel', 'destroy',
                     'dividend', 'issuance', 'order', 'send',
                     'rps', 'rpsresolve']
 
 COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
                 'allow_unconfirmed_inputs', 'fee', 'fee_provided',
-                'estimate_fee_per_kb', 'estimate_fee_per_kb_nblocks',
-                'unspent_tx_hash', 'custom_inputs', 'dust_return_pubkey', 'disable_utxo_locks', 'extended_tx_info']
+                'estimate_fee_per_kb', 'estimate_fee_per_kb_conf_target', 'estimate_fee_per_kb_mode',
+                'unspent_tx_hash', 'custom_inputs', 'dust_return_pubkey', 'disable_utxo_locks']
 
 API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
 API_MAX_LOG_COUNT = 10
@@ -311,7 +312,7 @@ def adjust_get_sends_results(query_result):
 def compose_transaction(db, name, params,
                         encoding='auto',
                         fee_per_kb=None,
-                        estimate_fee_per_kb=None, estimate_fee_per_kb_nblocks=config.ESTIMATE_FEE_NBLOCKS,
+                        estimate_fee_per_kb=None, estimate_fee_per_kb_conf_target=config.ESTIMATE_FEE_CONF_TARGET, estimate_fee_per_kb_mode=config.ESTIMATE_FEE_MODE,
                         regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                         multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                         op_return_value=config.DEFAULT_OP_RETURN_VALUE,
@@ -360,7 +361,7 @@ def compose_transaction(db, name, params,
     tx_info = compose_method(db, **params)
     return transaction.construct(db, tx_info, encoding=encoding,
                                         fee_per_kb=fee_per_kb,
-                                        estimate_fee_per_kb=estimate_fee_per_kb, estimate_fee_per_kb_nblocks=estimate_fee_per_kb_nblocks,
+                                        estimate_fee_per_kb=estimate_fee_per_kb, estimate_fee_per_kb_conf_target=estimate_fee_per_kb_conf_target,
                                         regular_dust_size=regular_dust_size,
                                         multisig_dust_size=multisig_dust_size,
                                         op_return_value=op_return_value,
@@ -631,8 +632,8 @@ class APIServer(threading.Thread):
             return block
 
         @dispatcher.add_method
-        def fee_per_kb(nblocks=config.ESTIMATE_FEE_NBLOCKS):
-            return backend.fee_per_kb(nblocks)
+        def fee_per_kb(conf_target=config.ESTIMATE_FEE_CONF_TARGET, mode=config.ESTIMATE_FEE_MODE):
+            return backend.fee_per_kb(conf_target, mode)
 
         @dispatcher.add_method
         def get_blocks(block_indexes, min_message_index=None):
@@ -729,7 +730,7 @@ class APIServer(threading.Thread):
             for element in ['transactions', 'blocks', 'debits', 'credits', 'balances', 'sends', 'orders',
                 'order_matches', 'btcpays', 'issuances', 'broadcasts', 'bets', 'bet_matches', 'dividends',
                 'burns', 'cancels', 'order_expirations', 'bet_expirations', 'order_match_expirations',
-                'bet_match_expirations', 'messages']:
+                'bet_match_expirations', 'messages', 'destructions']:
                 cursor.execute("SELECT COUNT(*) AS count FROM %s" % element)
                 count_list = cursor.fetchall()
                 assert len(count_list) == 1
@@ -738,11 +739,20 @@ class APIServer(threading.Thread):
             return counts
 
         @dispatcher.add_method
-        def get_asset_names():
+        def get_asset_names(longnames=False):
             cursor = self.db.cursor()
-            names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE status = 'valid' ORDER BY asset ASC")]
+            if longnames:
+                names = []
+                for row in cursor.execute("SELECT asset, asset_longname FROM issuances WHERE status = 'valid' GROUP BY asset ORDER BY asset ASC"):
+                    names.append({'asset': row['asset'], 'asset_longname': row['asset_longname']})
+            else:
+                names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE status = 'valid' ORDER BY asset ASC")]
             cursor.close()
             return names
+
+        @dispatcher.add_method
+        def get_asset_longnames():
+            return get_asset_names(longnames=True)
 
         @dispatcher.add_method
         def get_holder_count(asset):

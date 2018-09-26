@@ -142,7 +142,37 @@ def parse (db, tx, message):
             sql='update order_matches set status = :status where id = :order_match_id'
             cursor.execute(sql, bindings)
             log.message(db, tx['block_index'], 'update', 'order_matches', bindings)
-
+            
+            # Update give and get order status as filled if order_match is completed
+            if util.enabled('btc_order_filled'):    
+                bindings = {
+                    'status': 'pending',
+                    'tx0_hash': tx0_hash,
+                    'tx1_hash': tx1_hash
+                }
+                sql='select * from order_matches where status = :status and ((tx0_hash in (:tx0_hash, :tx1_hash)) or ((tx1_hash in (:tx0_hash, :tx1_hash))))'
+                cursor.execute(sql, bindings) 
+                order_matches = cursor.fetchall()
+                if len(order_matches) == 0:
+                    # mark both btc get and give orders as filled when order_match is completed and give or get remaining = 0
+                    bindings = {
+                        'status': 'filled',
+                        'tx0_hash': tx0_hash,
+                        'tx1_hash': tx1_hash
+                    }
+                    sql='update orders set status = :status where ((tx_hash in (:tx0_hash, :tx1_hash)) and ((give_remaining = 0) or (get_remaining = 0)))'           
+                    cursor.execute(sql, bindings) 
+                else:
+                    # always mark btc get order as filled when order_match is completed and give or get remaining = 0
+                    bindings = {
+                        'status': 'filled',
+                        'source': tx['destination'],
+                        'tx0_hash': tx0_hash,
+                        'tx1_hash': tx1_hash
+                    }
+                    sql='update orders set status = :status where ((tx_hash in (:tx0_hash, :tx1_hash)) and ((give_remaining = 0) or (get_remaining = 0)) and (source = :source))'           
+                    cursor.execute(sql, bindings) 
+                    
     # Add parsed transaction to message-type–specific table.
     bindings = {
         'tx_index': tx['tx_index'],

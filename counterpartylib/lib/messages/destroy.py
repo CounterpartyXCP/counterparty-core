@@ -90,9 +90,6 @@ def validate (db, source, destination, asset, quantity):
     if util.get_balance(db, source, asset) < quantity:
         raise BalanceError('balance insufficient')
 
-    if not config.TESTNET:
-        raise ValidateError('disabled on mainnet')
-
 
 def compose (db, source, asset, quantity, tag):
     # resolve subassets
