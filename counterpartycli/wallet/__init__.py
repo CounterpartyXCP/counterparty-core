@@ -48,7 +48,7 @@ def pycoin_sign_raw_transaction(tx_hex, private_key_wif):
     hash160 = public_pair_to_hash160_sec(public_pair, compressed)
     hash160_lookup = {hash160: (secret_exponent, public_pair, compressed)}
 
-    tx = Tx.tx_from_hex(tx_hex)
+    tx = Tx.from_hex(tx_hex)
     for idx, tx_in in enumerate(tx.txs_in):
         tx.sign_tx_in(hash160_lookup, idx, tx_in.script, hash_type=SIGHASH_ALL)
 
