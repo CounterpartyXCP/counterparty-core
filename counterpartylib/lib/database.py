@@ -136,13 +136,13 @@ def version(db):
         user_version = (config.VERSION_MAJOR * 1000) + version_minor
         cursor.execute('PRAGMA user_version = {}'.format(user_version))
     else:
-        version_minor = user_version % 1000
-        version_major = user_version // 1000
+        version_minor = user_version % 10000
+        version_major = user_version // 10000
     return version_major, version_minor
 
 def update_version(db):
     cursor = db.cursor()
-    user_version = (config.VERSION_MAJOR * 1000) + config.VERSION_MINOR
+    user_version = (config.VERSION_MAJOR * 10000) + config.VERSION_MINOR
     cursor.execute('PRAGMA user_version = {}'.format(user_version)) # Syntax?!
     logger.info('Database version number updated.')
 
