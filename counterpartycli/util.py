@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 D = decimal.Decimal
 
 from counterpartylib import server
-from counterpartylib.lib import config
+from counterpartylib.lib import config, check
 from counterpartylib.lib.util import value_input, value_output
 
 rpc_sessions = {}
@@ -120,11 +120,17 @@ def bootstrap(testnet=False, overwrite=True, ask_confirmation=False, quiet=False
 
     # Set Constants.
     if testnet:
-        BOOTSTRAP_URL = 'https://s3.amazonaws.com/counterparty-bootstrap/counterparty-db-testnet.latest.tar.gz'
+        if check.CONSENSUS_HASH_VERSION_TESTNET < 7:
+            BOOTSTRAP_URL = 'https://s3.amazonaws.com/counterparty-bootstrap/counterparty-db-testnet.latest.tar.gz'
+        else:
+            BOOTSTRAP_URL = 'https://s3.amazonaws.com/counterparty-bootstrap/counterparty-db-testnet-{}.latest.tar.gz'.format(check.CONSENSUS_HASH_VERSION_TESTNET)
         TARBALL_PATH = os.path.join(tempfile.gettempdir(), 'counterpartyd-testnet-db.latest.tar.gz')
         DATABASE_PATH = os.path.join(data_dir, '{}.testnet.db'.format(config.APP_NAME))
     else:
-        BOOTSTRAP_URL = 'https://s3.amazonaws.com/counterparty-bootstrap/counterparty-db.latest.tar.gz'
+        if check.CONSENSUS_HASH_VERSION_MAINNET < 3:
+            BOOTSTRAP_URL = 'https://s3.amazonaws.com/counterparty-bootstrap/counterparty-db.latest.tar.gz'
+        else:
+            BOOTSTRAP_URL = 'https://s3.amazonaws.com/counterparty-bootstrap/counterparty-db-{}.latest.tar.gz'.format(check.CONSENSUS_HASH_VERSION_MAINNET)
         TARBALL_PATH = os.path.join(tempfile.gettempdir(), 'counterpartyd-db.latest.tar.gz')
         DATABASE_PATH = os.path.join(data_dir, '{}.db'.format(config.APP_NAME))
 
