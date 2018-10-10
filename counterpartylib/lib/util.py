@@ -551,7 +551,7 @@ def holders(db, asset):
     cursor = db.cursor()
     # Balances
     cursor.execute('''SELECT * FROM balances \
-                      WHERE asset = ?''', (asset,))
+                      WHERE asset = ? AND quantity > ?''', (asset, 0))
     for balance in list(cursor):
         holders.append({'address': balance['address'], 'address_quantity': balance['quantity'], 'escrow': None})
     # Funds escrowed in orders. (Protocol change.)
