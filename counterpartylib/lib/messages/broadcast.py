@@ -258,7 +258,12 @@ def parse (db, tx, message):
         # the bet match is settled. Escrow less fee is amount to be paid back
         # to betters.
         total_escrow = bet_match['forward_quantity'] + bet_match['backward_quantity']
-        fee_fraction = bet_match['fee_fraction_int'] / config.UNIT
+
+        if util.enabled('inmutable_fee_fraction'):
+            fee_fraction = bet_match['fee_fraction_int'] / config.UNIT
+        else:
+            fee_fraction = fee_fraction_int / config.UNIT
+
         fee = int(fee_fraction * total_escrow)              # Truncate.
         escrow_less_fee = total_escrow - fee
 
