@@ -82,7 +82,7 @@ def initialise(*args, **kwargs):
 
 
 def initialise_config(database_file=None, log_file=None, api_log_file=None,
-                testnet=False, testcoin=False,
+                testnet=False, testcoin=False, regtest=False,
                 api_limit_rows=1000,
                 backend_name=None, backend_connect=None, backend_port=None,
                 backend_user=None, backend_password=None,
@@ -118,11 +118,24 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     else:
         config.TESTCOIN = False
 
-    bitcoinlib.SelectParams('testnet' if config.TESTNET else 'mainnet')
+    # regtest
+    if regtest:
+        config.REGTEST = regtest
+    else:
+        config.REGTEST = False
+
+    if config.TESTNET:
+        bitcoinlib.SelectParams('testnet')
+    elif config.REGTEST:
+        bitcoinlib.SelectParams('regtest')
+    else:
+        bitcoinlib.SelectParams('mainnet')
 
     network = ''
     if config.TESTNET:
         network += '.testnet'
+    if config.REGTEST:
+        network += '.regtest'
     if config.TESTCOIN:
         network += '.testcoin'
 
@@ -187,6 +200,8 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     else:
         if config.TESTNET:
             config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET
+        elif config.REGTEST:
+            config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_REGTEST
         else:
             config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT
 
@@ -251,6 +266,8 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     else:
         if config.TESTNET:
             config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT_TESTNET
+        elif config.REGTEST:
+            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT_REGTEST
         else:
             config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT
 
@@ -286,6 +303,11 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
                 config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET + 1
             else:
                 config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET
+        elif config.REGTEST:
+            if config.TESTCOIN:
+                config.RPC_PORT = config.DEFAULT_RPC_PORT_REGTEST + 1
+            else:
+                config.RPC_PORT = config.DEFAULT_RPC_PORT_REGTEST
         else:
             if config.TESTCOIN:
                 config.RPC_PORT = config.DEFAULT_RPC_PORT + 1
@@ -351,6 +373,24 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
             config.BURN_START = config.BURN_START_TESTNET
             config.BURN_END = config.BURN_END_TESTNET
             config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+    elif config.REGTEST:
+        config.MAGIC_BYTES = config.MAGIC_BYTES_REGTEST
+        if config.TESTCOIN:
+            config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
+            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_REGTEST
+            config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST_TESTCOIN
+            config.BURN_START = config.BURN_START_REGTEST_TESTCOIN
+            config.BURN_END = config.BURN_END_REGTEST_TESTCOIN
+            config.UNSPENDABLE = config.UNSPENDABLE_REGTEST
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+        else:
+            config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
+            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_REGTEST
+            config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST
+            config.BURN_START = config.BURN_START_REGTEST
+            config.BURN_END = config.BURN_END_REGTEST
+            config.UNSPENDABLE = config.UNSPENDABLE_REGTEST
             config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
     else:
         config.MAGIC_BYTES = config.MAGIC_BYTES_MAINNET

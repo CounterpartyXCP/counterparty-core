@@ -85,6 +85,11 @@ CHECKPOINTS_TESTNET = {
     1400000: {'ledger_hash': '85a23f6fee9ce9c80fa335729312183ff014920bbf297095ac77c4105fb67e17', 'txlist_hash': 'eee762f34a3f82e6332c58e0c256757d97ca308719323af78bf5924f08463e12'},
 }
 
+CONSENSUS_HASH_VERSION_REGTEST = 1
+CHECKPOINTS_REGTEST = {
+    config.BLOCK_FIRST_REGTEST: {'ledger_hash': '63f0fef31d02da85fa779e9a0e1b585b1a6a4e59e14564249e288e074e91c223', 'txlist_hash': '63f0fef31d02da85fa779e9a0e1b585b1a6a4e59e14564249e288e074e91c223'},
+}
+
 class ConsensusError(Exception):
     pass
 
@@ -107,7 +112,13 @@ def consensus_hash(db, field, previous_consensus_hash, content):
             raise ConsensusError('Empty previous {} for block {}. Please launch a `reparse`.'.format(field, block_index))
 
     # Calculate current hash.
-    consensus_hash_version = CONSENSUS_HASH_VERSION_TESTNET if config.TESTNET else CONSENSUS_HASH_VERSION_MAINNET
+    if config.TESTNET:
+        consensus_hash_version = CONSENSUS_HASH_VERSION_TESTNET
+    elif config.REGTEST:
+        consensus_hash_version = CONSENSUS_HASH_VERSION_REGTEST
+    else:
+        consensus_hash_version = CONSENSUS_HASH_VERSION_MAINNET
+
     calculated_hash = util.dhash_string(previous_consensus_hash + '{}{}'.format(consensus_hash_version, ''.join(content)))
 
     # Verify hash (if already in database) or save hash (if not).
@@ -123,7 +134,13 @@ def consensus_hash(db, field, previous_consensus_hash, content):
         cursor.execute('''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field), (calculated_hash, block_index))
 
     # Check against checkpoints.
-    checkpoints = CHECKPOINTS_TESTNET if config.TESTNET else CHECKPOINTS_MAINNET
+    if config.TESTNET:
+        checkpoints = CHECKPOINTS_TESTNET
+    elif config.REGTEST:
+        checkpoints = CHECKPOINTS_REGTEST
+    else:
+        checkpoints = CHECKPOINTS_MAINNET
+
     if field != 'messages_hash' and block_index in checkpoints and checkpoints[block_index][field] != calculated_hash:
         raise ConsensusError('Incorrect {} hash for block {}.  Calculated {} but expected {}'.format(field, block_index, calculated_hash, checkpoints[block_index][field],))
 

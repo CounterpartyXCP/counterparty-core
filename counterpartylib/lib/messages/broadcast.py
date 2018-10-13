@@ -100,7 +100,7 @@ def validate (db, source, timestamp, value, fee_fraction_int, text, block_index)
         elif timestamp <= last_broadcast['timestamp']:
             problems.append('feed timestamps not monotonically increasing')
 
-    if not (block_index >= 317500 or config.TESTNET):  # Protocol change.
+    if not (block_index >= 317500 or config.TESTNET or config.REGTEST):  # Protocol change.
         if len(text) > 52:
             problems.append('text too long')
 
