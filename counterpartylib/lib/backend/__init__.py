@@ -127,10 +127,13 @@ def get_tx_list(block):
 def sort_unspent_txouts(unspent, unconfirmed=False):
     # Filter out all dust amounts to avoid bloating the resultant transaction
     unspent = list(filter(lambda x: x['value'] > config.DEFAULT_MULTISIG_DUST_SIZE, unspent))
-    # Sort by oldest and by amount, using the largest UTXOs available
-    # This makes the UTXO set be cleaner and allows addresses with coinbase transactions
-    # to not choke on the inmature tx bug
-    unspent = sorted(unspent, key=lambda x: (x['confirmations'], x['value']), reverse=True)
+    # Sort by amount, using the largest UTXOs available
+    if config.REGTEST:
+        # REGTEST has a lot of coinbase inputs that can't be spent due to maturity
+        # this doesn't usually happens on mainnet or testnet because most fednodes aren't mining
+        unspent = sorted(unspent, key=lambda x: (x['confirmations'], x['value']), reverse=True)
+    else:
+        unspent = sorted(unspent, key=lambda x: x['value'], reverse=True)
 
     return unspent
 
