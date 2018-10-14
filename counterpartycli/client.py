@@ -22,9 +22,10 @@ APP_NAME = 'counterparty-client'
 
 CONFIG_ARGS = [
     [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'help': 'sets log level to DEBUG instead of WARNING'}],
-    [('--testnet',), {'action': 'store_true', 'default': False, 'help': 'use {} testnet addresses and block numbers'.format(config.BTC_NAME)}],    
+    [('--testnet',), {'action': 'store_true', 'default': False, 'help': 'use {} testnet addresses and block numbers'.format(config.BTC_NAME)}],
     [('--testcoin',), {'action': 'store_true', 'default': False, 'help': 'use the test {} network on every blockchain'.format(config.XCP_NAME)}],
-    
+    [('--regtest',), {'action': 'store_true', 'default': False, 'help': 'use {} regtest addresses and block numbers'.format(config.BTC_NAME)}],
+
     [('--counterparty-rpc-connect',), {'default': 'localhost', 'help': 'the hostname or IP of the Counterparty JSON-RPC server'}],
     [('--counterparty-rpc-port',), {'type': int, 'help': 'the port of the Counterparty JSON-RPC server'}],
     [('--counterparty-rpc-user',), {'default': 'rpc', 'help': 'the username for the Counterparty JSON-RPC server'}],
@@ -209,11 +210,11 @@ def main():
         sys.exit()
 
     # Configuration
-    clientapi.initialize(testnet=args.testnet, testcoin=args.testcoin,
+    clientapi.initialize(testnet=args.testnet, testcoin=args.testcoin, regtest=args.regtest,
                         counterparty_rpc_connect=args.counterparty_rpc_connect, counterparty_rpc_port=args.counterparty_rpc_port,
                         counterparty_rpc_user=args.counterparty_rpc_user, counterparty_rpc_password=args.counterparty_rpc_password,
                         counterparty_rpc_ssl=args.counterparty_rpc_ssl, counterparty_rpc_ssl_verify=args.counterparty_rpc_ssl_verify,
-                        wallet_name=args.wallet_name, wallet_connect=args.wallet_connect, wallet_port=args.wallet_port, 
+                        wallet_name=args.wallet_name, wallet_connect=args.wallet_connect, wallet_port=args.wallet_port,
                         wallet_user=args.wallet_user, wallet_password=args.wallet_password,
                         wallet_ssl=args.wallet_ssl, wallet_ssl_verify=args.wallet_ssl_verify,
                         requests_timeout=args.requests_timeout)
@@ -225,7 +226,7 @@ def main():
         if not args.unsigned:
             if script.is_multisig(args.source):
                 logger.info('Multi‐signature transactions are signed and broadcasted manually.')
-            
+
             elif input('Sign and broadcast? (y/N) ') == 'y':
 
                 if wallet.is_mine(args.source):
