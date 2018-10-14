@@ -42,7 +42,7 @@ def initialise(db):
 
 def pack(db, asset, quantity, tag):
     data = message_type.pack(ID)
-    data += struct.pack(FORMAT, util.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX), quantity, tag)
+    data += struct.pack(FORMAT, util.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX), quantity, bytes.fromhex(tag))
     return data
 
 
@@ -87,7 +87,13 @@ def validate (db, source, destination, asset, quantity):
     if quantity < 0:
         raise ValidateError('quantity negative')
 
+    # Examine asset.
+    cursor = db.cursor()
+    issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?) ORDER BY tx_index ASC''', ('valid', asset)))
+    cursor.close()
+
     if util.get_balance(db, source, asset) < quantity:
+        logger.info('Tried to destroy {} {}, have {}'.format(quantity, asset, balance))
         raise BalanceError('balance insufficient')
 
 

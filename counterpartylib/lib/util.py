@@ -746,10 +746,11 @@ def unhexlify(hex_string):
 ### Protocol Changes ###
 def enabled(change_name, block_index=None):
     """Return True if protocol change is enabled."""
+    if config.REGTEST:
+        return True # All changes are always enabled on REGTEST
+        
     if config.TESTNET:
         index_name = 'testnet_block_index'
-    elif config.REGTEST:
-        index_name = 'regtest_block_index'
     else:
         index_name = 'block_index'
 

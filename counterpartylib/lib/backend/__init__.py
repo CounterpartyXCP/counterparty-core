@@ -36,7 +36,7 @@ def sortkeypicker(keynames):
     return getit
 
 def BACKEND():
-    return sys.modules['counterpartylib.lib.backend.{}'.format(config.BACKEND_NAME)] 
+    return sys.modules['counterpartylib.lib.backend.{}'.format(config.BACKEND_NAME)]
 
 def getblockcount():
     return BACKEND().getblockcount()
@@ -127,8 +127,10 @@ def get_tx_list(block):
 def sort_unspent_txouts(unspent, unconfirmed=False):
     # Filter out all dust amounts to avoid bloating the resultant transaction
     unspent = list(filter(lambda x: x['value'] > config.DEFAULT_MULTISIG_DUST_SIZE, unspent))
-    # Sort by amount, using the largest UTXOs available
-    unspent = sorted(unspent, key=lambda x: x['value'], reverse=True)
+    # Sort by oldest and by amount, using the largest UTXOs available
+    # This makes the UTXO set be cleaner and allows addresses with coinbase transactions
+    # to not choke on the inmature tx bug
+    unspent = sorted(unspent, key=lambda x: (x['confirmations'], x['value']), reverse=True)
 
     return unspent
 
@@ -161,7 +163,7 @@ def get_unspent_txouts(source, unconfirmed=False, unspent_tx_hash=None):
     # filter by unspent_tx_hash
     if unspent_tx_hash is not None:
         unspent = list(filter(lambda x: x['txId'] == unspent_tx_hash, unspent))
-        
+
     # filter unconfirmed
     if not unconfirmed:
         unspent = [utxo for utxo in unspent if utxo['confirmations'] > 0]
