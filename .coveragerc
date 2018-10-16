@@ -1,8 +1,0 @@
-# NOTE: See <http://nedbatchelder.com/code/coverage/>.
-[run]
-branch = True
-[report]
-omit =
-	test/*
-	lib/util_windows.py
-precision = 2
