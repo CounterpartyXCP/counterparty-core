@@ -3,6 +3,7 @@ logger = logging.getLogger(__name__)
 import struct
 
 import bitcoin
+from .util import enabled
 
 def pack(address):
     """
@@ -12,14 +13,17 @@ def pack(address):
         short_address_bytes = bitcoin.base58.decode(address)[:-4]
         return short_address_bytes
     except bitcoin.base58.InvalidBase58Error as e:
-        try:
-            bech32 = bitcoin.bech32.CBech32Data(address)
-            witver = (0x80 + bech32.witver).to_bytes(1, byteorder='big') # mark the first byte for segwit
-            witprog = bech32.to_bytes()
-            if len(witprog) > 20:
-                raise Exception('p2wsh still not supported for sending')
-            return b''.join([witver, witprog])
-        except Exception as ne:
+        if enabled('segwit_support'):
+            try:
+                bech32 = bitcoin.bech32.CBech32Data(address)
+                witver = (0x80 + bech32.witver).to_bytes(1, byteorder='big') # mark the first byte for segwit
+                witprog = bech32.to_bytes()
+                if len(witprog) > 20:
+                    raise Exception('p2wsh still not supported for sending')
+                return b''.join([witver, witprog])
+            except Exception as ne:
+                raise e
+        else:
             raise e
 
 # retuns both the message type id and the remainder of the message data
@@ -27,7 +31,7 @@ def unpack(short_address_bytes):
     """
     Converts a 21 byte prefix and public key hash into a full base58 bitcoin address
     """
-    if short_address_bytes[0] >= 0x80 and short_address_bytes[0] <= 0x8F:
+    if enabled('segwit_support') and short_address_bytes[0] >= 0x80 and short_address_bytes[0] <= 0x8F:
         # we have a segwit address here
         witver = short_address_bytes[0] - 0x80
         witprog = short_address_bytes[1:]

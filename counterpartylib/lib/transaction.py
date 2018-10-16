@@ -640,7 +640,6 @@ def construct (db, tx_info, encoding='auto',
                             dust_return_pubkey=dust_return_pubkey)
     unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')
 
-    print('All good', unsigned_tx_hex)
     '''Sanity Check'''
 
     from counterpartylib.lib import blocks
