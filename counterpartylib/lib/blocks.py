@@ -651,6 +651,11 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
 
         return destination, data
 
+    def decode_p2w(asm):
+        bech32 = bitcoinlib.bech32.CBech32Data.from_bytes(0, asm[1])
+
+        return str(bech32), None
+
     # Ignore coinbase transactions.
     if ctx.is_coinbase():
         raise DecodeError('coinbase transaction')
@@ -676,6 +681,11 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
             new_destination, new_data = decode_checkmultisig(asm)
         elif p2sh_support and asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
             new_destination, new_data = decode_scripthash(asm)
+        elif asm[0] == 0:
+            # Segwit Vout, second param is redeemScript
+            #redeemScript = asm[1]
+            #new_destination, new_data = None, None
+            continue
         else:
             raise DecodeError('unrecognised output type')
         assert not (new_destination and new_data)
@@ -726,6 +736,9 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
             new_source, new_data = decode_scripthash(asm)
             if new_data or not new_source:
                 raise DecodeError('data in source')
+        elif asm[0] == 0:
+            # Segwit output
+            new_source, new_data = decode_p2w(asm)
         else:
             raise DecodeError('unrecognised source type')
 

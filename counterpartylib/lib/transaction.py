@@ -18,6 +18,7 @@ import requests
 from bitcoin.core.script import CScript
 from bitcoin.core import x
 from bitcoin.core import b2lx
+from bitcoin.bech32 import CBech32Data
 import cachetools
 
 from counterpartylib.lib import config
@@ -34,6 +35,7 @@ OP_DUP = b'\x76'
 OP_HASH160 = b'\xa9'
 OP_EQUALVERIFY = b'\x88'
 OP_CHECKSIG = b'\xac'
+OP_0 = b'\x00'
 OP_1 = b'\x51'
 OP_2 = b'\x52'
 OP_3 = b'\x53'
@@ -98,6 +100,8 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
 def get_script(address):
     if script.is_multisig(address):
         return get_multisig_script(address)
+    elif script.is_bech32(address):
+        return get_p2w_script(address)
     else:
         try:
             return get_monosig_script(address)
@@ -138,7 +142,7 @@ def get_multisig_script(address):
     tx_script += op_total                                  # Total signatures
     tx_script += OP_CHECKMULTISIG                          # OP_CHECKMULTISIG
 
-    return tx_script
+    return (tx_script, None)
 
 
 def get_monosig_script(address):
@@ -152,7 +156,7 @@ def get_monosig_script(address):
     tx_script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
     tx_script += OP_CHECKSIG                               # OP_CHECKSIG
 
-    return tx_script
+    return (tx_script, None)
 
 
 def get_p2sh_script(address):
@@ -164,8 +168,29 @@ def get_p2sh_script(address):
     tx_script += scripthash
     tx_script += OP_EQUAL
 
-    return tx_script
+    return (tx_script, None)
 
+def get_p2w_script(address):
+
+    # Construct script.
+    scripthash = bytes(CBech32Data(address))
+
+    if len(scripthash) == 20:
+        # P2WPKH encoding
+
+        tx_script = OP_0
+        tx_script += b'\x14'
+        tx_script += scripthash
+
+        witness_script = OP_HASH160
+        witness_script += op_push(len(scripthash))
+        witness_script += scripthash
+        witness_script += OP_EQUAL
+
+        return (witness_script, tx_script)
+    elif len(scripthash) == 32:
+        # P2WSH encoding
+        raise Exception('P2WSH encoding not yet supported')
 
 def make_fully_valid(pubkey_start):
     """Take a too short data pubkey and make it look like a real pubkey.
@@ -199,16 +224,55 @@ def make_fully_valid(pubkey_start):
 def serialise (encoding, inputs, destination_outputs, data_output=None, change_output=None, dust_return_pubkey=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
+    use_segwit = False
+    for i in range(len(inputs)):
+        txin = inputs[i]
+        spk = txin['scriptPubKey']
+        if spk[0:2] == '00': # Witness version 0
+            datalen = binascii.unhexlify(spk[2:4])[0]
+            if datalen == 20 or datalen == 32:
+                # 20 is for P2WPKH and 32 is for P2WSH
+                use_segwit = True
+                break
+
+    if use_segwit:
+        s += b'\x00' # marker
+        s += b'\x01' # flag
+
     # Number of inputs.
     s += var_int(int(len(inputs)))
+
+    witness_txins = []
+    witness_data = {}
 
     # List of Inputs.
     for i in range(len(inputs)):
         txin = inputs[i]
+        this_is_segwit = False
+        witness_program = None
+        if use_segwit:
+            spk = txin['scriptPubKey']
+            witver = binascii.unhexlify(spk[0:2])[0]
+            datalen = binascii.unhexlify(spk[2:4])[0]
+
+            if witver == 0 and (datalen == 20 or datalen == 32):
+                witprog = binascii.unhexlify(spk[4:])
+
+                address = str((CBech32Data.from_bytes(witver, witprog)))
+                witness_data[address] = []
+                witness_txins.append(address)
+                this_is_segwit = True
+                witness_program = witprog
+            else:
+                witness_txins.append(None)
+
         s += binascii.unhexlify(bytes(txin['txid'], 'utf-8'))[::-1]         # TxOutHash
         s += txin['vout'].to_bytes(4, byteorder='little')   # TxOutIndex
 
-        tx_script = binascii.unhexlify(bytes(txin['scriptPubKey'], 'utf-8'))
+        if this_is_segwit:
+            tx_script = b'\x00' + bytes(chr(len(witness_program)), 'utf8') + witness_program
+        else:
+            tx_script = binascii.unhexlify(bytes(txin['scriptPubKey'], 'utf-8'))
         s += var_int(int(len(tx_script)))                      # Script length
         s += tx_script                                         # Script
         s += b'\xff' * 4                                    # Sequence
@@ -228,7 +292,11 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
     for destination, value in destination_outputs:
         s += value.to_bytes(8, byteorder='little')          # Value
 
-        tx_script = get_script(destination)
+        tx_script, witness_script = get_script(destination)
+
+        if use_segwit and destination in witness_data:
+            witness_data[destination].append(witness_script)
+            tx_script = witness_script
 
         s += var_int(int(len(tx_script)))                      # Script length
         s += tx_script
@@ -291,10 +359,26 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
         change_address, change_value = change_output
         s += change_value.to_bytes(8, byteorder='little')   # Value
 
-        tx_script = get_script(change_address)
+        tx_script, witness_script = get_script(change_address)
+
+        if use_segwit and change_address in witness_data:
+            witness_data[change_address].append(witness_script)
+            tx_script = witness_script
 
         s += var_int(int(len(tx_script)))                      # Script length
         s += tx_script
+
+    if use_segwit:
+        for address in witness_txins:
+            if address is None:
+                s += var_int(int(0))
+            else:
+                empty_witness = [b'\x00\x00\x00\x00', b'\x00\x00\x00\x00']
+                s += var_int(int(len(empty_witness)))           # Script length
+
+                for item in empty_witness:
+                    s += var_int(int(len(item)))
+                    s += item
 
     s += (0).to_bytes(4, byteorder='little')                # LockTime
     return s
@@ -556,7 +640,7 @@ def construct (db, tx_info, encoding='auto',
                             dust_return_pubkey=dust_return_pubkey)
     unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')
 
-
+    print('All good', unsigned_tx_hex)
     '''Sanity Check'''
 
     from counterpartylib.lib import blocks
