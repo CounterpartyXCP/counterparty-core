@@ -167,7 +167,7 @@ required_packages = [
     'setuptools-markdown==0.2',
     'python-dateutil==2.5.3',
     'Flask-HTTPAuth==3.1.2',
-    'Flask==0.11',
+    'Flask==0.11.1',
     'colorlog==2.7.0',
     'json-rpc==1.10.3',
     'pycoin==0.77',
