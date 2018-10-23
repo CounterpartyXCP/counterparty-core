@@ -10,22 +10,20 @@ def pack(address):
     """
     from .util import enabled # Here to account for test mock changes
 
-    try:
-        short_address_bytes = bitcoin.base58.decode(address)[:-4]
-        return short_address_bytes
-    except bitcoin.base58.InvalidBase58Error as e:
-        if enabled('segwit_support'):
+    if enabled('segwit_support'):
+        try:
+            bech32 = bitcoin.bech32.CBech32Data(address)
+            witver = (0x80 + bech32.witver).to_bytes(1, byteorder='big') # mark the first byte for segwit
+            witprog = bech32.to_bytes()
+            if len(witprog) > 20:
+                raise Exception('p2wsh still not supported for sending')
+            return b''.join([witver, witprog])
+        except Exception as ne:
             try:
-                bech32 = bitcoin.bech32.CBech32Data(address)
-                witver = (0x80 + bech32.witver).to_bytes(1, byteorder='big') # mark the first byte for segwit
-                witprog = bech32.to_bytes()
-                if len(witprog) > 20:
-                    raise Exception('p2wsh still not supported for sending')
-                return b''.join([witver, witprog])
-            except Exception as ne:
+                short_address_bytes = bitcoin.base58.decode(address)[:-4]
+                return short_address_bytes
+            except bitcoin.base58.InvalidBase58Error as e:
                 raise e
-        else:
-            raise e
 
 # retuns both the message type id and the remainder of the message data
 def unpack(short_address_bytes):
