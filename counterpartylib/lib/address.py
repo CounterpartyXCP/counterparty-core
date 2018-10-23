@@ -3,12 +3,13 @@ logger = logging.getLogger(__name__)
 import struct
 
 import bitcoin
-from .util import enabled
 
 def pack(address):
     """
     Converts a base58 bitcoin address into a 21 byte bytes object
     """
+    from .util import enabled # Here to account for test mock changes
+
     try:
         short_address_bytes = bitcoin.base58.decode(address)[:-4]
         return short_address_bytes
@@ -31,6 +32,8 @@ def unpack(short_address_bytes):
     """
     Converts a 21 byte prefix and public key hash into a full base58 bitcoin address
     """
+    from .util import enabled # Here to account for test mock changes
+
     if enabled('segwit_support') and short_address_bytes[0] >= 0x80 and short_address_bytes[0] <= 0x8F:
         # we have a segwit address here
         witver = short_address_bytes[0] - 0x80

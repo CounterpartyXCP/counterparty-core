@@ -1260,6 +1260,11 @@ UNITTEST_VECTOR = {
             'comment': 'send to a REQUIRE_MEMO address, with memo text, before enhanced_send activation',
             'in': ({'source': ADDR[0], 'destination': ADDR[6], 'asset': 'XCP', 'quantity': 100000000, 'memo': '12345', 'use_enhanced_send': True}),
             'error': (exceptions.ComposeError, 'enhanced sends are not enabled')
+        }, {
+            'comment': 'send from a standard P2PKH address to a P2WPKH address',
+            'mock_protocol_changes': {'enhanced_sends': True, 'segwit_support': True},
+            'in': ({'source': ADDR[0], 'destination': P2WPKH_ADDR[0], 'asset': 'XCP', 'quantity': 100000, 'memo': 'segwit', 'use_enhanced_send': True}),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x01\x86\xa0\x80u\x1ev\xe8\x19\x91\x96\xd4T\x94\x1cE\xd1\xb3\xa3#\xf1C;\xd6segwit')
         }],
         'parse': [{
             'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
@@ -3809,7 +3814,7 @@ UNITTEST_VECTOR = {
                     'block_index': 310498,
                     'category': 'credits',
                     'command': 'insert',
-                    'message_index': 123,
+                    'message_index': 125,
                     'timestamp': 0}
         }],
         'get_asset_id': [{
@@ -3914,7 +3919,7 @@ UNITTEST_VECTOR = {
         }],
         'xcp_created': [{
             'in': (),
-            'out': 511492826295
+            'out': 604491873146
         }],
         'xcp_destroyed': [{
             'in': (),
@@ -3922,11 +3927,11 @@ UNITTEST_VECTOR = {
         }],
         'xcp_supply': [{
             'in': (),
-            'out': 511017826295,
+            'out': 604016873146,
         }],
         'creations': [{
             'in': (),
-            'out': {'XCP': 511492826295,
+            'out': {'XCP': 604491873146,
                     'CALLABLE': 1000,
                     'DIVIDEND': 100,
                     'DIVISIBLE': 100000000000,
@@ -3944,11 +3949,11 @@ UNITTEST_VECTOR = {
         }],
         'asset_supply': [{
             'in': ('XCP',),
-            'out': 511017826295,
+            'out': 604016873146,
         }],
         'supplies': [{
             'in': (),
-            'out':  {'XCP': 511017826295,
+            'out':  {'XCP': 604016873146,
                      'CALLABLE': 1000,
                      'DIVIDEND': 100,
                      'DIVISIBLE': 100000000000,
@@ -4195,6 +4200,14 @@ UNITTEST_VECTOR = {
         }, {
             'in': (bytes.fromhex('0000000000000003' + '000000000000007b' + '006474849fc9ac0f5bd6b49fe144d14db7d32e2445'), DP['default_block_index']),
             'error': (exceptions.UnpackError, 'asset id invalid')
+        }, {
+            'in': (b'\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x01\x86\xa0\x80u\x1ev\xe8\x19\x91\x96\xd4T\x94\x1cE\xd1\xb3\xa3#\xf1C;\xd6segwit', DP['default_block_index']),
+            'out': ({
+                'address': P2WPKH_ADDR[0],
+                'asset': 'XCP',
+                'quantity': 100000,
+                'memo': b'segwit'
+            })
         }],
         'validate': [
         # ----- tests copied from regular send -----
@@ -4309,6 +4322,10 @@ UNITTEST_VECTOR = {
             'comment': 'enhanced_send to a REQUIRE_MEMO address, with memo hex',
             'in': (ADDR[0], ADDR[6], 'XCP', DP['small'], 'deadbeef', True),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80o\xb3\x90\x18~\xf2\x85D"\xac^J.\xb6\xff\xe9$\x96\xbe\xf5#\xde\xad\xbe\xef')
+        }, {
+            'comment': 'send from a P2WPKH address to a P2PKH one',
+            'in': (P2WPKH_ADDR[0], ADDR[0], 'XCP', DP['small'], None, False),
+            'out': (P2WPKH_ADDR[0], [], b'\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80oH8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607')
         }],
         'parse': [
         # ----- tests copied from regular send -----
@@ -4561,6 +4578,22 @@ UNITTEST_VECTOR = {
                     'block_index': DP['default_block_index'],
                     'event': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0',
                     'quantity': DP['small'],
+                }}
+            ]
+        }, {
+            'comment': 'Parse a send from a P2PKH address to a P2WPKH one',
+            'mock_protocol_changes': {'enhanced_sends': True, 'segwit_support': True},
+            'in': ({'block_index': DP['default_block_index'], 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'tx_hash': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x01\x86\xa0\x80u\x1ev\xe8\x19\x91\x96\xd4T\x94\x1cE\xd1\xb3\xa3#\xf1C;\xd6segwit', 'source': ADDR[0], 'destination': P2WPKH_ADDR[0], 'supported': 1, 'block_hash': DP['default_block_hash']},),
+            'records': [
+                {'table': 'sends', 'values': {
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'destination': P2WPKH_ADDR[0],
+                    'quantity': 100000,
+                    'source': ADDR[0],
+                    'status': 'valid',
+                    'tx_hash': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0',
+                    'tx_index': 502,
                 }}
             ]
         }]

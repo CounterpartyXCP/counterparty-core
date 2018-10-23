@@ -27,7 +27,7 @@ Here's a list of unit tests that will fail and need to be updated:
 - util.get_balance
 """
 
-from .params import ADDR, MULTISIGADDR, P2SH_ADDR, DEFAULT_PARAMS as DP
+from .params import ADDR, MULTISIGADDR, P2SH_ADDR, P2WPKH_ADDR, DEFAULT_PARAMS as DP
 
 UNITTEST_FIXTURE = [
     ['burn', (ADDR[0], DP['burn_quantity']), {'encoding': 'multisig'}],  # 310000
@@ -70,6 +70,8 @@ UNITTEST_FIXTURE = [
     ['issuance', (ADDR[6], None, 'LOCKEDPREV', 0, True, 'LOCK'), {'encoding': 'multisig'}],
     ['issuance', (ADDR[6], None, 'LOCKEDPREV', 0, True, 'changed'), {'encoding': 'multisig'}],
 
+    ['burn', (P2WPKH_ADDR[0], DP['burn_quantity']), {'encoding': 'opreturn'}],
+
     ['create_next_block', 480],
 
     # force 2 enhanced sends
@@ -102,6 +104,7 @@ UNITTEST_FIXTURE = [
     ['issuance', (ADDR[0], None, 'PARENT.already.issued', DP['quantity'] * 1, True, 'Child of parent'), {'encoding': 'opreturn'}],
 
     ['create_next_block', 500],
+
 ]
 
 PARSEBLOCKS_FIXTURE = UNITTEST_FIXTURE + [

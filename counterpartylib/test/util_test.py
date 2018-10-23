@@ -377,6 +377,8 @@ def mock_bitcoind_verbose_tx_output(tx, txid, confirmations):
                         vout.scriptPubKey[-2] == bitcoinlib.core.script.OP_EQUALVERIFY and \
                         vout.scriptPubKey[-1] == bitcoinlib.core.script.OP_CHECKSIG:
             type = 'pubkeyhash'
+        else:
+            type = 'witnesspkh'
 
         rvout = {
             'n': idx,

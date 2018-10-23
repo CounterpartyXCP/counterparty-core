@@ -230,6 +230,12 @@ New input: amount: 0.45789745; txid: 74aa7471cdb1b13162e0116dd0cbcc4022cbdbdadef
 Size: 272 Fee: 0.00006800 Change quantity: 0.45775145 BTC
 Debit: 0.0 XCP from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 #issuance fee# <214edd39455a080e261e3c319f23d3fe5f064f48c044c0973811b6a85dd2990d>
 Issuance: mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 created 0.0 of divisible asset LOCKEDPREV (214edd39455a080e261e3c319f23d3fe5f064f48c044c0973811b6a85dd2990d) [valid]
+Sorted candidate UTXOs: ['amount: 1.00000000; txid: 20efe4012d5fc638309b2d087a15fb100d9194132633623bc4c23b4c2caf0150; vout: 0; confirmations: 121']
+Fee/KB 0.00025000
+New input: amount: 1.00000000; txid: 20efe4012d5fc638309b2d087a15fb100d9194132633623bc4c23b4c2caf0150; vout: 0; confirmations: 121
+Size: 225 Fee: 0.00005625 Change quantity: 0.37994375 BTC
+Credit: 929.99046851 XCP to tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx #burn# <89c728bbe0c53eb9de4774a1261dfd8895ed0a3364dd41c5a06172472a84cee5>
+Burn: tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx burned 0.62 BTC for 929.99046851 XCP (89c728bbe0c53eb9de4774a1261dfd8895ed0a3364dd41c5a06172472a84cee5) [valid]
 Sorted candidate UTXOs: ['amount: 1.36560965; txid: f0d9e5f8a7d8a13b0d90f126c33843139a50e9d496f6a5ca90e832466e6c6481; vout: 2; confirmations: 373']
 Fee/KB 0.00025000
 New input: amount: 1.36560965; txid: f0d9e5f8a7d8a13b0d90f126c33843139a50e9d496f6a5ca90e832466e6c6481; vout: 2; confirmations: 373

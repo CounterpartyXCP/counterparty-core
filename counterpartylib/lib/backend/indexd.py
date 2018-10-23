@@ -166,9 +166,9 @@ def fee_per_kb(conf_target, mode):
     :return: fee_per_kb in satoshis, or None when unable to determine
     """
 
-    feeperkb = rpc('estimatesmartfee', [conf_target], mode)
+    feeperkb = rpc('estimatesmartfee', [conf_target, mode])
 
-    if feeperkb == 'Insufficient data or no feerate found':
+    if 'errors' in feeperkb and feeperkb['errors'][0] == 'Insufficient data or no feerate found':
         return None
 
     return int(feeperkb * config.UNIT)
