@@ -54,7 +54,6 @@ def compose (db, source, destination, asset, quantity, memo=None, memo_is_hex=Fa
     #   but it can be explicitly disabled with an API parameter
     if util.enabled('enhanced_sends'):
         if use_enhanced_send is None or use_enhanced_send == True:
-            print('Composing an enhanced send from {} to {}'.format(source, destination))
             return enhanced_send.compose(db, source, destination, asset, quantity, memo, memo_is_hex)
     elif memo is not None or use_enhanced_send == True:
         raise exceptions.ComposeError('enhanced sends are not enabled')

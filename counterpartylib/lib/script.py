@@ -45,12 +45,15 @@ def validate(address, allow_p2sh=True):
     # Check validity by attempting to decode.
     for pubkeyhash in pubkeyhashes:
         try:
-            base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
+            if util.enabled('segwit_support'):
+                if not is_bech32(pubkeyhash):
+                    base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
+            else:
+                base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
         except VersionByteError as e:
-            if not util.enabled('segwit_support') or not is_bech32(pubkeyhash):
-                if not allow_p2sh:
-                    raise e
-                base58_check_decode(pubkeyhash, config.P2SH_ADDRESSVERSION)
+            if not allow_p2sh:
+                raise e
+            base58_check_decode(pubkeyhash, config.P2SH_ADDRESSVERSION)
         except Base58Error as e:
             if not util.enabled('segwit_support') or not is_bech32(pubkeyhash):
                 raise e
@@ -352,11 +355,11 @@ def make_pubkeyhash(address):
             pubkeyhashes.append(pubkeyhash)
         pubkeyhash_address = construct_array(signatures_required, pubkeyhashes, signatures_possible)
     else:
-        if is_pubkeyhash(address):
+        if util.enabled('segwit_support') and is_bech32(address):
+            pubkeyhash_address = address # Some bech32 addresses are valid base58 data
+        elif is_pubkeyhash(address):
             pubkeyhash_address = address
         elif is_p2sh(address):
-            pubkeyhash_address = address
-        elif util.enabled('segwit_support') and is_bech32(address):
             pubkeyhash_address = address
         else:
             pubkeyhash_address = pubkey_to_pubkeyhash(binascii.unhexlify(bytes(address, 'utf-8')))

@@ -233,6 +233,7 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
             if datalen == 20 or datalen == 32:
                 # 20 is for P2WPKH and 32 is for P2WSH
                 use_segwit = True
+                s  = (2).to_bytes(4, byteorder='little') # Rewrite version
                 break
 
     if use_segwit:
@@ -293,9 +294,11 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
         s += value.to_bytes(8, byteorder='little')          # Value
 
         tx_script, witness_script = get_script(destination)
+        #if use_segwit and destination in witness_data: # We will need this for P2WSH
+        #    witness_data[destination].append(witness_script)
+        #    tx_script = witness_script
 
-        if use_segwit and destination in witness_data:
-            witness_data[destination].append(witness_script)
+        if witness_script:
             tx_script = witness_script
 
         s += var_int(int(len(tx_script)))                      # Script length
