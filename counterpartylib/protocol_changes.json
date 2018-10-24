@@ -151,34 +151,34 @@
         "minimum_version_minor": 56,
         "minimum_version_revision": 0,
         "block_index": 555000,
-        "testnet_block_index": 1500000
+        "testnet_block_index": 1440200
     },
     "btc_order_minimum": {
         "minimum_version_major": 9,
         "minimum_version_minor": 56,
         "minimum_version_revision": 0,
         "block_index": 555000,
-        "testnet_block_index": 1500000
+        "testnet_block_index": 1440200
     },
     "btc_sell_expire_on_match_expire": {
         "minimum_version_major": 9,
         "minimum_version_minor": 56,
         "minimum_version_revision": 0,
         "block_index": 555000,
-        "testnet_block_index": 1500000
+        "testnet_block_index": 1440200
     },
     "inmutable_fee_fraction": {
         "minimum_version_major": 9,
         "minimum_version_minor": 56,
         "minimum_version_revision": 0,
         "block_index": 555000,
-        "testnet_block_index": 1500000
+        "testnet_block_index": 1440200
     },
     "segwit_support": {
       "minimum_version_major": 9,
       "minimum_version_minor": 56,
       "minimum_version_revision": 0,
       "block_index": 555000,
-      "testnet_block_index": 1500000
+      "testnet_block_index": 1440200
     }
 }
