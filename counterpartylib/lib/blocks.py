@@ -116,7 +116,7 @@ def parse_tx(db, tx):
                 rps.parse(db, tx, message)
             elif message_type_id == rpsresolve.ID and rps_enabled:
                 rpsresolve.parse(db, tx, message)
-            elif message_type_id == destroy.ID:
+            elif message_type_id == destroy.ID and util.enabled('destroy_reactivated', block_index=tx['block_index']):
                 destroy.parse(db, tx, message)
             else:
                 cursor.execute('''UPDATE transactions \

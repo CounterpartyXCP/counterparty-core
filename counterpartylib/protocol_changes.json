@@ -180,5 +180,12 @@
       "minimum_version_revision": 0,
       "block_index": 555000,
       "testnet_block_index": 1440200
+    },
+    "destroy_reactivated": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 56,
+      "minimum_version_revision": 0,
+      "block_index": 555000,
+      "testnet_block_index": 1440200
     }
 }
