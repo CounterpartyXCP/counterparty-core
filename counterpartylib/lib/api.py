@@ -762,7 +762,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_holder_count(asset):
             asset = util.resolve_subasset_longname(self.db, asset)
-            holders = util.holders(self.db, asset)
+            holders = util.holders(self.db, asset, True)
             addresses = []
             for holder in holders:
                 addresses.append(holder['address'])
@@ -771,7 +771,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_holders(asset):
             asset = util.resolve_subasset_longname(self.db, asset)
-            holders = util.holders(self.db, asset)
+            holders = util.holders(self.db, asset, True)
             return holders
 
         @dispatcher.add_method

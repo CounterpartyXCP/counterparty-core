@@ -545,13 +545,18 @@ def value_out(db, quantity, asset, divisible=None):
 
 ### SUPPLIES ###
 
-def holders(db, asset):
+def holders(db, asset, exclude_empty_holders=False):
     """Return holders of the asset."""
     holders = []
     cursor = db.cursor()
     # Balances
-    cursor.execute('''SELECT * FROM balances \
-                      WHERE asset = ? AND quantity > ?''', (asset, 0))
+    if exclude_empty_holders:
+        cursor.execute('''SELECT * FROM balances \
+                          WHERE asset = ? AND quantity > ?''', (asset, 0))
+    else:
+        cursor.execute('''SELECT * FROM balances \
+                          WHERE asset = ?''', (asset, ))
+
     for balance in list(cursor):
         holders.append({'address': balance['address'], 'address_quantity': balance['quantity'], 'escrow': None})
     # Funds escrowed in orders. (Protocol change.)
@@ -748,7 +753,7 @@ def enabled(change_name, block_index=None):
     """Return True if protocol change is enabled."""
     if config.REGTEST:
         return True # All changes are always enabled on REGTEST
-        
+
     if config.TESTNET:
         index_name = 'testnet_block_index'
     else:
