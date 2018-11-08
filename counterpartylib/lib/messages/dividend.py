@@ -86,7 +86,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     dividend_total = 0
     for holder in holders:
 
-        if block_index < 294500 and not config.TESTNET or config.REGTEST: # Protocol change.
+        if block_index < 294500 and not (config.TESTNET or config.REGTEST): # Protocol change.
             if holder['escrow']: continue
 
         address = holder['address']
@@ -131,6 +131,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
         problems.append('integer overflow')
 
     cursor.close()
+
     return dividend_total, outputs, problems, fee
 
 def compose (db, source, quantity_per_unit, asset, dividend_asset):
