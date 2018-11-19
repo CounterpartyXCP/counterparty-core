@@ -24,6 +24,12 @@ def pack(address):
                 return short_address_bytes
             except bitcoin.base58.InvalidBase58Error as e:
                 raise e
+    else:
+        try:
+            short_address_bytes = bitcoin.base58.decode(address)[:-4]
+            return short_address_bytes
+        except bitcoin.base58.InvalidBase58Error as e:
+            raise e
 
 # retuns both the message type id and the remainder of the message data
 def unpack(short_address_bytes):
