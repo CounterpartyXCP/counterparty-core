@@ -171,7 +171,7 @@ def fee_per_kb(conf_target, mode):
     if 'errors' in feeperkb and feeperkb['errors'][0] == 'Insufficient data or no feerate found':
         return None
 
-    return int(feeperkb * config.UNIT)
+    return int(feeperkb['feerate'] * config.UNIT)
 
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
