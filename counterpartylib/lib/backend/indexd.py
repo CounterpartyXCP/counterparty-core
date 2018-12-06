@@ -255,8 +255,7 @@ def get_unspent_txouts(source):
     return indexd_rpc_call('/a/'+source+'/utxos')
 
 def search_raw_transactions(address, unconfirmed=True):
-    all_transactions_dict = indexd_rpc_call('/a/'+address+'/txs?verbose=1')
-    all_transactions = list(all_transactions_dict.values())
+    all_transactions = indexd_rpc_call('/a/'+address+'/txs?verbose=1')
 
     if unconfirmed:
         return all_transactions
