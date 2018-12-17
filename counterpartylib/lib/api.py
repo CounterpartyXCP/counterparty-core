@@ -358,9 +358,9 @@ def compose_transaction(db, name, params,
     else:
         fee_per_kb = config.DEFAULT_FEE_PER_KB
 
-    #if 'extended_tx_info' in params and name == 'send':
-    extended_tx_info = params['extended_tx_info']
-    del params['extended_tx_info']
+    if 'extended_tx_info' in params and (name == 'send' or name.startswith('create_')):
+      extended_tx_info = params['extended_tx_info']
+      del params['extended_tx_info']
 
     tx_info = compose_method(db, **params)
     return transaction.construct(db, tx_info, encoding=encoding,
