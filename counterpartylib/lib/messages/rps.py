@@ -210,7 +210,7 @@ def validate (db, source, possible_moves, wager, move_random_hash, expiration, b
     if expiration < 0: problems.append('negative expiration')
     if expiration == 0 and not (block_index >= 317500 or config.TESTNET or config.REGTEST):   # Protocol change.
         problems.append('zero expiration')
-    if expiration > {False: config.MAX_EXPIRATION, True: config.MAX_EXPIRATION_2}[util.enabled('yearlong_expiry', block_index)]:
+    if expiration > config.MAX_EXPIRATION:
         problems.append('expiration overflow')
     if len(move_random_hash_bytes) != 32:
         problems.append('move_random_hash must be 32 bytes in hexadecimal format')

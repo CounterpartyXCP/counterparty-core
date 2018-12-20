@@ -365,7 +365,7 @@ def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, ex
     if get_asset not in (config.BTC, config.XCP) and not cursor.fetchall():
         problems.append('no such asset to get ({})'.format(get_asset))
     print('BLOCK', block_index, util.enabled('yearlong_expiry', block_index))
-    if expiration > {False: config.MAX_EXPIRATION, True: config.MAX_EXPIRATION_2}[util.enabled('yearlong_expiry', block_index)]:
+    if expiration > config.MAX_EXPIRATION:
         problems.append('expiration overflow')
 
     cursor.close()
