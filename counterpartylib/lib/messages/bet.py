@@ -285,7 +285,7 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
         if target_value < 0:
             problems.append('negative target value')
 
-    if expiration > config.MAX_EXPIRATION:
+    if expiration > {False: config.MAX_EXPIRATION, True: config.MAX_EXPIRATION_2}[util.enabled('yearlong_expiry', block_index)]:
         problems.append('expiration overflow')
 
     return problems, leverage

@@ -258,7 +258,7 @@ def search_raw_transactions(address, unconfirmed=True):
     all_transactions = indexd_rpc_call('/a/'+address+'/txs?verbose=1')
 
     if unconfirmed:
-        return all_transactions
+        return [all_transactions[x] for x in all_transactions]
 
     # filter for confirmed transactions only
     confirmed_transactions = list(filter(lambda t: 'confirmations' in t and t['confirmations'] > 0, all_transactions))
