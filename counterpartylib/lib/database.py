@@ -44,14 +44,12 @@ def exectracer(cursor, sql, bindings):
 
     skip_tables = [
         'blocks', 'transactions',
-        'balances', 'messages', 'mempool', 'assets', 
-        'suicides', 'postqueue', # These tables are ephemeral.
-        'nonces', 'storage' # List message manually.
+        'balances', 'messages', 'mempool', 'assets'
     ]
     skip_tables_block_messages = copy.copy(skip_tables)
     if command == 'update':
         # List message manually.
-        skip_tables += ['orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts']
+        skip_tables += ['orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches']
 
     # Record alteration in database.
     if category not in skip_tables:
@@ -80,7 +78,7 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
     logger.debug('Creating connection to `{}`.'.format(config.DATABASE))
 
     if read_only:
-        db = apsw.Connection(config.DATABASE, flags=0x00000001)
+        db = apsw.Connection(config.DATABASE, flags=apsw.SQLITE_OPEN_READONLY)
     else:
         db = apsw.Connection(config.DATABASE)
     cursor = db.cursor()

@@ -11,8 +11,7 @@
 - Rebase `gh-pages` to `master`
 - Upload (signed) package to PyPi
 	* `sudo python3 setup.py sdist build`
-	<!-- * `sudo python3 setup.py bdist_wheel build`	# Does not work with `apsw` and `ethereum-serpent` installs. -->
-	* `twine upload -s dist/$NEW_FILES`
+	* `sudo python3 setup.py sdist upload -r pypi`
 - Update documentation (as appropriate)
 
 **Announce:**:

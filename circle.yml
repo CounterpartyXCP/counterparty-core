@@ -1,11 +1,10 @@
 # Keep this as non-docker for now, to give some variety to our test configurations, as travis builds with docker
 dependencies:
     override:
-        - rm -rf /home/ubuntu/virtualenvs/venv-*/bin/serpent
         - rm -rf /home/ubuntu/virtualenvs/venv-*/lib/python3.4/site-packages/apsw*
         - pip install --upgrade pip
         - pip install -r requirements.txt
-        - python setup.py install --with-serpent
+        - python setup.py install
         - python -c "import apsw; print(apsw.apswversion())"
 test:
     override:
@@ -13,12 +12,11 @@ test:
         - py.test --verbose --capture=no counterpartylib/test/unit_test.py
         - py.test --verbose --capture=no counterpartylib/test/utxolocks_test.py
         - py.test --verbose --capture=no counterpartylib/test/bytespersigop_test.py
-        - py.test --verbose --capture=no counterpartylib/test/hashlib_test.py
         - py.test --verbose --capture=no counterpartylib/test/parse_block_test.py
         - py.test --verbose --capture=no --skiptestbook=all counterpartylib/test/integration_test.py
-        - py.test --verbose --capture=no counterpartylib/test/contracts_test.py
         - py.test --verbose --capture=no --skiptestbook=mainnet -k test_book counterpartylib/test/reparse_test.py
-        - py.test --verbose --capture=no --skiptestbook=testnet -k test_book counterpartylib/test/reparse_test.py
+        - py.test --verbose --capture=no --skiptestbook=testnet -k test_book counterpartylib/test/reparse_test.py:
+            timeout: 5400
         - py.test --verbose --capture=no counterpartylib/test/database_version_test.py
 machine:
     pre:

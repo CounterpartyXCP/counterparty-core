@@ -15,10 +15,10 @@ import decimal
 import logging
 logger = logging.getLogger(__name__)
 import requests
-from Crypto.Cipher import ARC4
 from bitcoin.core.script import CScript
 from bitcoin.core import x
 from bitcoin.core import b2lx
+from bitcoin.bech32 import CBech32Data
 import cachetools
 
 from counterpartylib.lib import config
@@ -26,6 +26,7 @@ from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 from counterpartylib.lib import script
 from counterpartylib.lib import backend
+from counterpartylib.lib import arc4
 
 # Constants
 OP_RETURN = b'\x6a'
@@ -34,6 +35,7 @@ OP_DUP = b'\x76'
 OP_HASH160 = b'\xa9'
 OP_EQUALVERIFY = b'\x88'
 OP_CHECKSIG = b'\xac'
+OP_0 = b'\x00'
 OP_1 = b'\x51'
 OP_2 = b'\x52'
 OP_3 = b'\x53'
@@ -78,7 +80,7 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
     This pubkey is used in multi-sig data outputs (as the only real pubkey) to
     make those the outputs spendable. It is derived from the source address, so
     that the dust is spendable by the creator of the transaction.
-    """ 
+    """
     # Get hex dust return pubkey.
     if script.is_multisig(source):
         a, self_pubkeys, b = script.extract_array(backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys))
@@ -98,6 +100,8 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
 def get_script(address):
     if script.is_multisig(address):
         return get_multisig_script(address)
+    elif script.is_bech32(address):
+        return get_p2w_script(address)
     else:
         try:
             return get_monosig_script(address)
@@ -138,7 +142,7 @@ def get_multisig_script(address):
     tx_script += op_total                                  # Total signatures
     tx_script += OP_CHECKMULTISIG                          # OP_CHECKMULTISIG
 
-    return tx_script
+    return (tx_script, None)
 
 
 def get_monosig_script(address):
@@ -152,7 +156,7 @@ def get_monosig_script(address):
     tx_script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
     tx_script += OP_CHECKSIG                               # OP_CHECKSIG
 
-    return tx_script
+    return (tx_script, None)
 
 
 def get_p2sh_script(address):
@@ -164,8 +168,29 @@ def get_p2sh_script(address):
     tx_script += scripthash
     tx_script += OP_EQUAL
 
-    return tx_script
+    return (tx_script, None)
 
+def get_p2w_script(address):
+
+    # Construct script.
+    scripthash = bytes(CBech32Data(address))
+
+    if len(scripthash) == 20:
+        # P2WPKH encoding
+
+        tx_script = OP_0
+        tx_script += b'\x14'
+        tx_script += scripthash
+
+        witness_script = OP_HASH160
+        witness_script += op_push(len(scripthash))
+        witness_script += scripthash
+        witness_script += OP_EQUAL
+
+        return (witness_script, tx_script)
+    elif len(scripthash) == 32:
+        # P2WSH encoding
+        raise Exception('P2WSH encoding not yet supported')
 
 def make_fully_valid(pubkey_start):
     """Take a too short data pubkey and make it look like a real pubkey.
@@ -199,16 +224,56 @@ def make_fully_valid(pubkey_start):
 def serialise (encoding, inputs, destination_outputs, data_output=None, change_output=None, dust_return_pubkey=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
+    use_segwit = False
+    for i in range(len(inputs)):
+        txin = inputs[i]
+        spk = txin['scriptPubKey']
+        if spk[0:2] == '00': # Witness version 0
+            datalen = binascii.unhexlify(spk[2:4])[0]
+            if datalen == 20 or datalen == 32:
+                # 20 is for P2WPKH and 32 is for P2WSH
+                use_segwit = True
+                s  = (2).to_bytes(4, byteorder='little') # Rewrite version
+                break
+
+    if use_segwit:
+        s += b'\x00' # marker
+        s += b'\x01' # flag
+
     # Number of inputs.
     s += var_int(int(len(inputs)))
+
+    witness_txins = []
+    witness_data = {}
 
     # List of Inputs.
     for i in range(len(inputs)):
         txin = inputs[i]
+        this_is_segwit = False
+        witness_program = None
+        if use_segwit:
+            spk = txin['scriptPubKey']
+            witver = binascii.unhexlify(spk[0:2])[0]
+            datalen = binascii.unhexlify(spk[2:4])[0]
+
+            if witver == 0 and (datalen == 20 or datalen == 32):
+                witprog = binascii.unhexlify(spk[4:])
+
+                address = str((CBech32Data.from_bytes(witver, witprog)))
+                witness_data[address] = []
+                witness_txins.append(address)
+                this_is_segwit = True
+                witness_program = witprog
+            else:
+                witness_txins.append(None)
+
         s += binascii.unhexlify(bytes(txin['txid'], 'utf-8'))[::-1]         # TxOutHash
         s += txin['vout'].to_bytes(4, byteorder='little')   # TxOutIndex
 
-        tx_script = binascii.unhexlify(bytes(txin['scriptPubKey'], 'utf-8'))
+        if this_is_segwit:
+            tx_script = b'\x00' + bytes(chr(len(witness_program)), 'utf8') + witness_program
+        else:
+            tx_script = binascii.unhexlify(bytes(txin['scriptPubKey'], 'utf-8'))
         s += var_int(int(len(tx_script)))                      # Script length
         s += tx_script                                         # Script
         s += b'\xff' * 4                                    # Sequence
@@ -228,7 +293,13 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
     for destination, value in destination_outputs:
         s += value.to_bytes(8, byteorder='little')          # Value
 
-        tx_script = get_script(destination)
+        tx_script, witness_script = get_script(destination)
+        #if use_segwit and destination in witness_data: # We will need this for P2WSH
+        #    witness_data[destination].append(witness_script)
+        #    tx_script = witness_script
+
+        if witness_script:
+            tx_script = witness_script
 
         s += var_int(int(len(tx_script)))                      # Script length
         s += tx_script
@@ -241,7 +312,7 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
         data_chunk = config.PREFIX + data_chunk
 
         # Initialise encryption key (once per output).
-        key = ARC4.new(binascii.unhexlify(inputs[0]['txid']))  # Arbitrary, easy‐to‐find, unique key.
+        key = arc4.init_arc4(inputs[0]['txid'])  # Arbitrary, easy‐to‐find, unique key.
 
         if encoding == 'multisig':
             assert dust_return_pubkey
@@ -291,10 +362,26 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
         change_address, change_value = change_output
         s += change_value.to_bytes(8, byteorder='little')   # Value
 
-        tx_script = get_script(change_address)
+        tx_script, witness_script = get_script(change_address)
+
+        if use_segwit and change_address in witness_data:
+            witness_data[change_address].append(witness_script)
+            tx_script = witness_script
 
         s += var_int(int(len(tx_script)))                      # Script length
         s += tx_script
+
+    if use_segwit:
+        for address in witness_txins:
+            if address is None:
+                s += var_int(int(0))
+            else:
+                empty_witness = [b'\x00\x00\x00\x00', b'\x00\x00\x00\x00']
+                s += var_int(int(len(empty_witness)))           # Script length
+
+                for item in empty_witness:
+                    s += var_int(int(len(item)))
+                    s += item
 
     s += (0).to_bytes(4, byteorder='little')                # LockTime
     return s
@@ -313,12 +400,12 @@ def make_outkey(output):
 
 def construct (db, tx_info, encoding='auto',
                fee_per_kb=config.DEFAULT_FEE_PER_KB,
-               estimate_fee_per_kb=None, estimate_fee_per_kb_nblocks=config.ESTIMATE_FEE_NBLOCKS,
+               estimate_fee_per_kb=None, estimate_fee_per_kb_conf_target=config.ESTIMATE_FEE_CONF_TARGET, estimate_fee_per_kb_mode=config.ESTIMATE_FEE_MODE,
                regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                op_return_value=config.DEFAULT_OP_RETURN_VALUE,
                exact_fee=None, fee_provided=0, provided_pubkeys=None, dust_return_pubkey=None,
-               allow_unconfirmed_inputs=False, unspent_tx_hash=None, custom_inputs=None, disable_utxo_locks=False):
+               allow_unconfirmed_inputs=False, unspent_tx_hash=None, custom_inputs=None, disable_utxo_locks=False, extended_tx_info=False):
 
     if estimate_fee_per_kb is None:
         estimate_fee_per_kb = config.ESTIMATE_FEE_PER_KB
@@ -443,22 +530,23 @@ def construct (db, tx_info, encoding='auto',
     if encoding == 'multisig':
         data_output_size = 81       # 71 for the data
     elif encoding == 'opreturn':
-        data_output_size = 90       # 80 for the data
+        # prefix + data + 10 bytes script overhead
+        data_output_size = len(config.PREFIX) + 10
+        if data is not None:
+            data_output_size = data_output_size + len(data)
     else:
         data_output_size = p2pkhsize   # Pay‐to‐PubKeyHash (25 for the data?)
     outputs_size = (p2pkhsize * len(destination_outputs)) + (len(data_array) * data_output_size)
 
-    # Get inputs.
-    multisig_inputs = not data
-
     # Array of UTXOs, as retrieved by listunspent function from bitcoind
     if custom_inputs:
-        use_inputs = unspent = custom_inputs
+        use_inputs = unspent = normalize_custom_inputs(custom_inputs)
+
     else:
         if unspent_tx_hash is not None:
-            unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash, multisig_inputs=multisig_inputs)
+            unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash)
         else:
-            unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, multisig_inputs=multisig_inputs)
+            unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs)
 
         # filter out any locked UTXOs to prevent creating transactions that spend the same UTXO when they're created at the same time
         if UTXO_LOCKS is not None and source in UTXO_LOCKS:
@@ -472,7 +560,7 @@ def construct (db, tx_info, encoding='auto',
 
     # use backend estimated fee_per_kb
     if estimate_fee_per_kb:
-        estimated_fee_per_kb = backend.fee_per_kb(estimate_fee_per_kb_nblocks)
+        estimated_fee_per_kb = backend.fee_per_kb(estimate_fee_per_kb_conf_target, estimate_fee_per_kb_mode)
         if estimated_fee_per_kb is not None:
             fee_per_kb = max(estimated_fee_per_kb, fee_per_kb)  # never drop below the default fee_per_kb
 
@@ -491,7 +579,7 @@ def construct (db, tx_info, encoding='auto',
     for coin in use_inputs:
         logger.debug('New input: {}'.format(print_coin(coin)))
         inputs.append(coin)
-        btc_in += round(coin['amount'] * config.UNIT)
+        btc_in += coin['value']
 
         size = 181 * len(inputs) + outputs_size + 10
         necessary_fee = int(size / 1000 * fee_per_kb)
@@ -520,19 +608,6 @@ def construct (db, tx_info, encoding='auto',
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
         raise exceptions.BalanceError('Insufficient {} at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(config.BTC, source, total_btc_out / config.UNIT, config.BTC))
 
-    # Lock the source's inputs (UTXOs) chosen for this transaction
-    if UTXO_LOCKS is not None and not disable_utxo_locks:
-        if source not in UTXO_LOCKS:
-            UTXO_LOCKS[source] = cachetools.TTLCache(
-                UTXO_LOCKS_PER_ADDRESS_MAXSIZE, config.UTXO_LOCKS_MAX_AGE)
-
-        for input in inputs:
-            UTXO_LOCKS[source][make_outkey(input)] = input
-
-        logger.debug("UTXO locks: Potentials ({}): {}, Used: {}, locked UTXOs: {}".format(
-            len(unspent), [make_outkey(coin) for coin in unspent],
-            [make_outkey(input) for input in inputs], list(UTXO_LOCKS[source].keys())))
-
     '''Finish'''
 
     # Change output.
@@ -545,30 +620,28 @@ def construct (db, tx_info, encoding='auto',
     else:
         change_output = None
 
-    # in bitcoin core v0.12.1 a -bytespersigop was added that messes with bare multisig transactions,
-    #  as a safeguard we fall back to pubkeyhash encoding when unsure
-    # when len(inputs) > len(data_outputs) there's more bytes:sigops ratio and we can safely continue
-    if encoding == 'multisig' and inputs and data_output and len(inputs) < len(data_array) * 2 and util.enabled('bytespersigop'):
-        # if auto encoding we can do pubkeyhash encoding instead
-        if desired_encoding == 'auto':
-            return construct(db, tx_info,
-                             encoding='pubkeyhash',
-                             fee_per_kb=fee_per_kb,
-                             regular_dust_size=regular_dust_size,
-                             multisig_dust_size=multisig_dust_size,
-                             op_return_value=op_return_value,
-                             exact_fee=exact_fee, fee_provided=fee_provided, provided_pubkeys=provided_pubkeys,
-                             allow_unconfirmed_inputs=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash, custom_inputs=custom_inputs)
-        # otherwise raise exception
-        else:
-            raise exceptions.EncodingError("multisig will be rejected by Bitcoin Core >= v0.12.1, you should use `encoding=auto` or `encoding=pubkeyhash`")
+    # ensure inputs have scriptPubKey
+    #   this is not provided by indexd
+    inputs = backend.ensure_script_pub_key_for_inputs(inputs)
+
+    # Lock the source's inputs (UTXOs) chosen for this transaction
+    if UTXO_LOCKS is not None and not disable_utxo_locks:
+        if source not in UTXO_LOCKS:
+            UTXO_LOCKS[source] = cachetools.TTLCache(
+                UTXO_LOCKS_PER_ADDRESS_MAXSIZE, config.UTXO_LOCKS_MAX_AGE)
+
+        logger.debug("UTXO locks: Potentials ({}): {}, Used: {}, locked UTXOs: {}".format(
+            len(unspent), [make_outkey(coin) for coin in unspent],
+            [make_outkey(input) for input in inputs], list(UTXO_LOCKS[source].keys())))
+
+        for input in inputs:
+            UTXO_LOCKS[source][make_outkey(input)] = input
 
     # Serialise inputs and outputs.
     unsigned_tx = serialise(encoding, inputs, destination_outputs,
                             data_output, change_output,
                             dust_return_pubkey=dust_return_pubkey)
     unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')
-
 
     '''Sanity Check'''
 
@@ -593,6 +666,14 @@ def construct (db, tx_info, encoding='auto',
         parsed_source, parsed_destination, x, y, parsed_data = blocks._get_tx_info(unsigned_tx_hex)
     except exceptions.BTCOnlyError:
         # Skip BTC‐only transactions.
+        if extended_tx_info:
+            return {
+                'btc_in': btc_in,
+                'btc_out': destination_btc_out + data_btc_out,
+                'btc_change': change_quantity,
+                'btc_fee': final_fee,
+                'tx_hex': unsigned_tx_hex,
+            }
         return unsigned_tx_hex
     desired_source = script.make_canonical(desired_source)
 
@@ -607,6 +688,22 @@ def construct (db, tx_info, encoding='auto',
 
         raise exceptions.TransactionError('Constructed transaction does not parse correctly: {} ≠ {}'.format(desired, parsed))
 
+    if extended_tx_info:
+        return {
+            'btc_in': btc_in,
+            'btc_out': destination_btc_out + data_btc_out,
+            'btc_change': change_quantity,
+            'btc_fee': final_fee,
+            'tx_hex': unsigned_tx_hex,
+        }
     return unsigned_tx_hex
+
+def normalize_custom_inputs(raw_custom_inputs):
+    custom_inputs = []
+    for custom_input in raw_custom_inputs:
+        if 'value' not in custom_input:
+            custom_input['value'] = int(custom_input['amount'] * config.UNIT)
+        custom_inputs.append(custom_input)
+    return custom_inputs
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

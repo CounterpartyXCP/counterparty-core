@@ -41,7 +41,8 @@ SUBASSET_REVERSE = {'a':1,'b':2,'c':3,'d':4,'e':5,'f':6,'g':7,'h':8,'i':9,'j':10
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
-json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
+json_dump = lambda x: json.dumps(x, sort_keys=True, indent=4)
+json_print = lambda x: print(json_dump(x))
 
 BLOCK_LEDGER = []
 
@@ -64,6 +65,7 @@ def api(method, params):
         "jsonrpc": "2.0",
         "id": 0,
     }
+
     response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
     if response == None:
         raise RPCError('Cannot communicate with {} server.'.format(config.XCP_NAME))
@@ -92,7 +94,7 @@ def date_passed(date):
 
 def price (numerator, denominator):
     """Return price as Fraction or Decimal."""
-    if CURRENT_BLOCK_INDEX >= 294500 or config.TESTNET: # Protocol change.
+    if CURRENT_BLOCK_INDEX >= 294500 or config.TESTNET or config.REGTEST: # Protocol change.
         return fractions.Fraction(numerator, denominator)
     else:
         numerator = D(numerator)
@@ -317,6 +319,31 @@ def expand_subasset_longname(raw_bytes):
 def generate_random_asset ():
     return 'A' + str(random.randint(26**12 + 1, 2**64 - 1))
 
+def parse_options_from_string(string):
+    """Parse options integer from string, if exists."""
+    string_list = string.split(" ")
+    if len(string_list) == 2:
+        try:
+            options = int(string_list.pop())
+        except:
+            raise exceptions.OptionsError('options not an integer')
+        return options
+    else:
+        return False
+
+def validate_address_options(options):
+    """Ensure the options are all valid and in range."""
+    if (options > config.MAX_INT) or (options < 0):
+        raise exceptions.OptionsError('options integer overflow')
+    elif options > config.ADDRESS_OPTION_MAX_VALUE:
+        raise exceptions.OptionsError('options out of range')
+    elif not active_options(config.ADDRESS_OPTION_MAX_VALUE, options):
+        raise exceptions.OptionsError('options not possible')
+
+def active_options(config, options):
+    """Checks if options active in some given config."""
+    return config & options == options
+
 class DebitError (Exception): pass
 def debit (db, address, asset, quantity, action=None, event=None):
     """Debit given address by quantity of asset."""
@@ -518,13 +545,18 @@ def value_out(db, quantity, asset, divisible=None):
 
 ### SUPPLIES ###
 
-def holders(db, asset):
+def holders(db, asset, exclude_empty_holders=False):
     """Return holders of the asset."""
     holders = []
     cursor = db.cursor()
     # Balances
-    cursor.execute('''SELECT * FROM balances \
-                      WHERE asset = ?''', (asset,))
+    if exclude_empty_holders:
+        cursor.execute('''SELECT * FROM balances \
+                          WHERE asset = ? AND quantity > ?''', (asset, 0))
+    else:
+        cursor.execute('''SELECT * FROM balances \
+                          WHERE asset = ?''', (asset, ))
+
     for balance in list(cursor):
         holders.append({'address': balance['address'], 'address_quantity': balance['quantity'], 'escrow': None})
     # Funds escrowed in orders. (Protocol change.)
@@ -563,15 +595,6 @@ def holders(db, asset):
         for rps_match in list(cursor):
             holders.append({'address': rps_match['tx0_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
             holders.append({'address': rps_match['tx1_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
-
-        cursor.execute('''SELECT * FROM executions WHERE status IN (?,?)''', ('valid','out of gas'))
-        for execution in list(cursor):
-            holders.append({'address': execution['source'], 'address_quantity': execution['gas_cost'], 'escrow': None})
-
-        # XCP escrowed for not finished executions
-        cursor.execute('''SELECT * FROM executions WHERE status = ?''', ('out of gas',))
-        for execution in list(cursor):
-            holders.append({'address': execution['source'], 'address_quantity': execution['gas_remained'], 'escrow': execution['contract_id']})
 
     cursor.close()
     return holders
@@ -617,7 +640,7 @@ def creations (db):
     for issuance in cursor:
         asset = issuance['asset']
         created = issuance['created']
-        creations[asset] = created            
+        creations[asset] = created
 
     cursor.close()
     return creations
@@ -653,7 +676,7 @@ def supplies (db):
 
 def held (db): #TODO: Rename ?
     sql = '''SELECT asset, SUM(total) AS total FROM (
-                SELECT asset, SUM(quantity) AS total FROM balances GROUP BY asset 
+                SELECT asset, SUM(quantity) AS total FROM balances GROUP BY asset
                 UNION ALL
                 SELECT give_asset AS asset, SUM(give_remaining) AS total FROM orders WHERE status = 'open' GROUP BY asset
                 UNION ALL
@@ -670,10 +693,6 @@ def held (db): #TODO: Rename ?
                 SELECT 'XCP' AS asset, SUM(wager) AS total FROM rps WHERE status = 'open'
                 UNION ALL
                 SELECT 'XCP' AS asset, SUM(wager * 2) AS total FROM rps_matches WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
-                UNION ALL
-                SELECT 'XCP' AS asset, SUM(gas_cost) AS total FROM executions WHERE status IN ('valid', 'out of gas')
-                UNION ALL
-                SELECT 'XCP' AS asset, SUM(gas_remained) AS total FROM executions WHERE status  = 'out of gas'
             ) GROUP BY asset;'''
 
     cursor = db.cursor()
@@ -732,7 +751,14 @@ def unhexlify(hex_string):
 ### Protocol Changes ###
 def enabled(change_name, block_index=None):
     """Return True if protocol change is enabled."""
-    index_name = 'testnet_block_index' if config.TESTNET else 'block_index'
+    if config.REGTEST:
+        return True # All changes are always enabled on REGTEST
+
+    if config.TESTNET:
+        index_name = 'testnet_block_index'
+    else:
+        index_name = 'block_index'
+
     enable_block_index = PROTOCOL_CHANGES[change_name][index_name]
 
     if not block_index:
@@ -766,37 +792,37 @@ def sizeof(v):
     else:
         return sys.getsizeof(v)
 
-class DictCache: 
+class DictCache:
     """Threadsafe FIFO dict cache"""
-    def __init__(self, size=100):  
-        if int(size) < 1 :  
-            raise AttributeError('size < 1 or not a number')  
-        self.size = size  
-        self.dict = collections.OrderedDict()  
-        self.lock = threading.Lock()  
-  
-    def __getitem__(self,key):  
-        with self.lock:  
-            return self.dict[key]  
-  
-    def __setitem__(self,key,value):  
-        with self.lock:  
-            while len(self.dict) >= self.size:  
-                self.dict.popitem(last=False)  
-            self.dict[key] = value  
-  
-    def __delitem__(self,key):  
-        with self.lock:  
+    def __init__(self, size=100):
+        if int(size) < 1 :
+            raise AttributeError('size < 1 or not a number')
+        self.size = size
+        self.dict = collections.OrderedDict()
+        self.lock = threading.Lock()
+
+    def __getitem__(self,key):
+        with self.lock:
+            return self.dict[key]
+
+    def __setitem__(self,key,value):
+        with self.lock:
+            while len(self.dict) >= self.size:
+                self.dict.popitem(last=False)
+            self.dict[key] = value
+
+    def __delitem__(self,key):
+        with self.lock:
             del self.dict[key]
 
     def __len__(self):
         with self.lock:
             return len(self.dict)
-            
+
     def __contains__(self, key):
-        with self.lock: 
+        with self.lock:
             return key in self.dict
-    
+
     def refresh(self, key):
         with self.lock:
             self.dict.move_to_end(key, last=True)
