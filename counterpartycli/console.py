@@ -38,7 +38,7 @@ def get_view(view_name, args):
 def print_balances(balances):
     lines = []
     lines.append('')
-    lines.append('Balances')
+    lines.append('Address Balances')
     table = PrettyTable(['Asset', 'Amount'])
     for asset in balances:
         table.add_row([asset, balances[asset]])
@@ -49,7 +49,7 @@ def print_balances(balances):
 def print_asset(asset):
     lines = []
     lines.append('')
-    lines.append('Informations')
+    lines.append('Asset Details')
     table = PrettyTable(header=False, align='l')
     table.add_row(['Asset Name:', asset['asset']])
     table.add_row(['Asset ID:', asset['asset_id']])
@@ -63,7 +63,7 @@ def print_asset(asset):
 
     if asset['addresses']:
         lines.append('')
-        lines.append('Addresses')
+        lines.append('Wallet Balances')
         table = PrettyTable(['Address', 'Balance'])
         for address in asset['addresses']:
             balance = asset['addresses'][address]
@@ -72,7 +72,7 @@ def print_asset(asset):
 
     if asset['sends']:
         lines.append('')
-        lines.append('Sends')
+        lines.append('Wallet Sends and Receives')
         table = PrettyTable(['Type', 'Quantity', 'Source', 'Destination'])
         for send in asset['sends']:
             table.add_row([send['type'], send['quantity'], send['source'], send['destination']])

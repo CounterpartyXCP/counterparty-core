@@ -21,9 +21,8 @@ CONFIG_ARGS = [
     [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'default': False, 'help': 'sets log level to DEBUG instead of WARNING'}],
     [('--testnet',), {'action': 'store_true', 'default': False, 'help': 'use {} testnet addresses and block numbers'.format(config.BTC_NAME)}],
     [('--testcoin',), {'action': 'store_true', 'default': False, 'help': 'use the test {} network on every blockchain'.format(config.XCP_NAME)}],
-
+    [('--regtest',), {'action': 'store_true', 'default': False, 'help': 'use {} regtest addresses and block numbers'.format(config.BTC_NAME)}],
     [('--api-limit-rows',), {'type': int, 'default': 1000, 'help': 'limit api calls to the set results (defaults to 1000). Setting to 0 removes the limit.'}],
-
     [('--backend-name',), {'default': 'addrindex', 'help': 'the backend name to connect to'}],
     [('--backend-connect',), {'default': 'localhost', 'help': 'the hostname or IP of the backend server'}],
     [('--backend-port',), {'type': int, 'help': 'the backend port to connect to'}],
@@ -33,7 +32,10 @@ CONFIG_ARGS = [
     [('--backend-ssl-no-verify',), {'action': 'store_true', 'default': False, 'help': 'verify SSL certificate of backend; disallow use of self‐signed certificates (default: true)'}],
     [('--backend-poll-interval',), {'type': float, 'default': 0.5, 'help': 'poll interval, in seconds (default: 0.5)'}],
     [('--no-check-asset-conservation',), {'action': 'store_true', 'default': False, 'help': 'Skip asset conservation checking (default: false)'}],
-    [('--p2sh-dust-return-pubkey',), {'help': 'pubkey to receive dust when multisig encoding is used for P2SH source (default: pubkey from counterparty foundation)'}],
+    [('--p2sh-dust-return-pubkey',), {'help': 'pubkey to receive dust when multisig encoding is used for P2SH source (default: none)'}],
+
+    [('--indexd-connect',), {'default': 'localhost', 'help': 'the hostname or IP of the indexd server'}],
+    [('--indexd-port',), {'type': int, 'help': 'the indexd server port to connect to'}],
 
     [('--rpc-host',), {'default': 'localhost', 'help': 'the IP of the interface to bind to for providing JSON-RPC API access (0.0.0.0 for all interfaces)'}],
     [('--rpc-port',), {'type': int, 'help': 'port on which to provide the {} JSON-RPC API'.format(config.APP_NAME)}],
@@ -87,6 +89,7 @@ def main():
 
     parser_bootstrap = subparsers.add_parser('bootstrap', help='bootstrap database with hosted snapshot')
     parser_bootstrap.add_argument('-q', '--quiet', dest='quiet', action='store_true', help='suppress progress bar')
+    #parser_bootstrap.add_argument('--branch', help='use a different branch for bootstrap db pulling')
 
     args = parser.parse_args()
 
@@ -119,7 +122,7 @@ def main():
     if args.action in COMMANDS_WITH_DB or args.action in COMMANDS_WITH_CONFIG:
         init_args = dict(database_file=args.database_file,
                                 log_file=args.log_file, api_log_file=args.api_log_file,
-                                testnet=args.testnet, testcoin=args.testcoin,
+                                testnet=args.testnet, testcoin=args.testcoin, regtest=args.regtest,
                                 api_limit_rows=args.api_limit_rows,
                                 backend_name=args.backend_name,
                                 backend_connect=args.backend_connect,
@@ -129,6 +132,7 @@ def main():
                                 backend_ssl=args.backend_ssl,
                                 backend_ssl_no_verify=args.backend_ssl_no_verify,
                                 backend_poll_interval=args.backend_poll_interval,
+                                indexd_connect=args.indexd_connect, indexd_port=args.indexd_port,
                                 rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user,
                                 rpc_password=args.rpc_password, rpc_no_allow_cors=args.rpc_no_allow_cors,
                                 requests_timeout=args.requests_timeout,

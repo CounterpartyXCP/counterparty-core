@@ -49,7 +49,7 @@ def get_btc_balance(address):
     return 0
 
 def is_locked():
-    getinfo = rpc('getinfo', [])
+    getinfo = rpc('getwalletinfo', [])
     if 'unlocked_until' in getinfo:
         if getinfo['unlocked_until'] >= 10:
             return False # Wallet is unlocked for at least the next 10 seconds.

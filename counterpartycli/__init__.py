@@ -1,6 +1,6 @@
 import os, sys
 
-APP_VERSION = '1.1.3'
+APP_VERSION = '1.1.4'
 
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser('__file__'))))
 WIN_EXE_LIB = os.path.normpath(os.path.join(CURR_DIR, 'library'))
