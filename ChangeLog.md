@@ -1,6 +1,10 @@
 ## Library Versions ##
 * v9.56.0 (2018-09-16)
-    * Use Bitcoin 0.16.2 with indexd as a transaction index
+    * Segwit support!
+    * Several changes related to CIP19
+    (https://github.com/CounterpartyXCP/cips/blob/master/cip-0019.md) (protocol change: 557236)
+    * Usage of estimatesmartfee due to deprecation of the estimatefee method
+    * Use Bitcoin 0.16.3 with indexd as a transaction index
     * allow multisig encoding method as the bytespersigop DoS protection was changed in Bitcoin Core v0.13.0
     * API change (backwards compatible): adds extended_tx_info parameter to create methods
     * Breaking API change. The result of get_unspent_txouts has changed and now looks like this: [{
