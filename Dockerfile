@@ -8,7 +8,6 @@ WORKDIR /counterparty-lib
 RUN pip3 install -r requirements.txt
 RUN python3 setup.py develop
 RUN python3 setup.py install_apsw
-RUN python3 setup.py install_serpent
 
 # Install counterparty-cli
 # NOTE: By default, check out the counterparty-cli master branch. You can override the BRANCH build arg for a different
@@ -27,12 +26,7 @@ COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod a+x /usr/local/bin/start.sh
 WORKDIR /
 
-# Pull the mainnet and testnet DB boostraps
-RUN counterparty-server bootstrap --quiet
-RUN counterparty-server --testnet bootstrap --quiet
-
 EXPOSE 4000 14000
 
 # NOTE: Defaults to running on mainnet, specify -e TESTNET=1 to start up on testnet
 ENTRYPOINT ["start.sh"]
-

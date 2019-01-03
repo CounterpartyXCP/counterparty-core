@@ -6,7 +6,10 @@ class DatabaseError(Exception):
 class TransactionError(Exception):
     pass
 
-class AssetError(Exception):
+class ParseTransactionError(Exception):
+    pass
+
+class AssetError (Exception):
     pass
 
 class AssetNameError(AssetError):
@@ -40,6 +43,9 @@ class BalanceError(Exception):
     pass
 
 class EncodingError(Exception):
+    pass
+
+class OptionsError(Exception):
     pass
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

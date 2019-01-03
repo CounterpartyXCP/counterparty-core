@@ -58,7 +58,6 @@ def compose (db, source, destination, asset, quantity, memo=None, memo_is_hex=Fa
     elif memo is not None or use_enhanced_send == True:
         raise exceptions.ComposeError('enhanced sends are not enabled')
 
-
     return send1.compose(db, source, destination, asset, quantity)
 
 def parse (db, tx, message):    # TODO: *args
@@ -66,4 +65,3 @@ def parse (db, tx, message):    # TODO: *args
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
-

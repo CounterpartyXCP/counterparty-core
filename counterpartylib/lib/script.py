@@ -9,6 +9,7 @@ import bitcoin as bitcoinlib
 import binascii
 
 from bitcoin.core.key import CPubKey
+from bitcoin.bech32 import CBech32Data
 
 from counterpartylib.lib import util
 from counterpartylib.lib import config
@@ -44,11 +45,18 @@ def validate(address, allow_p2sh=True):
     # Check validity by attempting to decode.
     for pubkeyhash in pubkeyhashes:
         try:
-            base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
+            if util.enabled('segwit_support'):
+                if not is_bech32(pubkeyhash):
+                    base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
+            else:
+                base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
         except VersionByteError as e:
             if not allow_p2sh:
                 raise e
             base58_check_decode(pubkeyhash, config.P2SH_ADDRESSVERSION)
+        except Base58Error as e:
+            if not util.enabled('segwit_support') or not is_bech32(pubkeyhash):
+                raise e
 
 
 
@@ -160,6 +168,17 @@ def is_p2sh(address):
     except (VersionByteError, Base58Error):
         return False
 
+def is_bech32(address):
+    if address.startswith('bc') or address.startswith('tb'):
+        # Should check if it's valid bech32 data
+        try:
+            b32data = CBech32Data(address)
+            return True
+        except:
+            return False
+    else:
+        return False
+
 def is_fully_valid(pubkey_bin):
     """Check if the public key is valid."""
     cpubkey = CPubKey(pubkey_bin)
@@ -226,6 +245,10 @@ def pubkey_to_pubkeyhash(pubkey):
     pubkeyhash = hash160(pubkey)
     pubkey = base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION)
     return pubkey
+
+def bech32_to_scripthash(address):
+    bech32 = CBech32Data(address)
+    return bytes(bech32)
 
 def get_asm(scriptpubkey):
     # TODO: When is an exception thrown here? Can this `try` block be tighter? Can it be replaced by a conditional?
@@ -296,6 +319,8 @@ def private_key_to_public_key(private_key_wif):
     """Convert private key to public key."""
     if config.TESTNET:
         allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_TESTNET]
+    elif config.REGTEST:
+        allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_REGTEST]
     else:
         allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_MAINNET]
     try:
@@ -330,7 +355,9 @@ def make_pubkeyhash(address):
             pubkeyhashes.append(pubkeyhash)
         pubkeyhash_address = construct_array(signatures_required, pubkeyhashes, signatures_possible)
     else:
-        if is_pubkeyhash(address):
+        if util.enabled('segwit_support') and is_bech32(address):
+            pubkeyhash_address = address # Some bech32 addresses are valid base58 data
+        elif is_pubkeyhash(address):
             pubkeyhash_address = address
         elif is_p2sh(address):
             pubkeyhash_address = address
@@ -347,6 +374,8 @@ def extract_pubkeys(pub):
             if not is_pubkeyhash(pub):
                 pubkeys.append(pub)
     elif is_p2sh(pub):
+        pass
+    elif util.enabled('segwit_support') and is_bech32(pub):
         pass
     else:
         if not is_pubkeyhash(pub):

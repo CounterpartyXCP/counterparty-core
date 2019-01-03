@@ -100,22 +100,18 @@ def validate (db, source, timestamp, value, fee_fraction_int, text, block_index)
         elif timestamp <= last_broadcast['timestamp']:
             problems.append('feed timestamps not monotonically increasing')
 
-    if not (block_index >= 317500 or config.TESTNET):  # Protocol change.
+    if not (block_index >= 317500 or config.TESTNET or config.REGTEST):  # Protocol change.
         if len(text) > 52:
             problems.append('text too long')
 
     if util.enabled('options_require_memo') and text and text.lower().startswith('options'):
-        ops_spl = text.split(" ")
-        if len(ops_spl) == 2:
-            try:
-                options_int = int(ops_spl.pop())
-
-                if (options_int > config.MAX_INT) or (options_int < 0):
-                    problems.append('integer overflow')
-                elif options_int > config.ADDRESS_OPTION_MAX_VALUE:
-                    problems.append('options out of range')
-            except:
-                problems.append('options not an integer')
+        try:
+            # Check for options and if they are valid.
+            options = util.parse_options_from_string(text)
+            if options is not False:
+                util.validate_address_options(options)
+        except exceptions.OptionsError as e:
+            problems.append(str(e))
 
     return problems
 
@@ -211,28 +207,18 @@ def parse (db, tx, message):
     if util.enabled('broadcast_invalid_check') and status != 'valid':
         return
 
-    # Options? if the status is invalid the previous if should have catched it
-    if util.enabled('options_require_memo'):
-        if text and text.lower().startswith('options'):
-            ops_spl = text.split(" ")
-            if len(ops_spl) == 2:
-                change_ops = False
-                options_int = 0
-                try:
-                    options_int = int(ops_spl.pop())
-                    change_ops = True
-                except:
-                    pass
-
-                if change_ops:
-                    op_bindings = {
-                                'block_index': tx['block_index'],
-                                'address': tx['source'],
-                                'options': options_int
-                               }
-                    sql = 'insert or replace into addresses(address, options, block_index) values(:address, :options, :block_index)'
-                    cursor = db.cursor()
-                    cursor.execute(sql, op_bindings)
+    # Options? Should not fail to parse due to above checks.
+    if util.enabled('options_require_memo') and text and text.lower().startswith('options'):
+        options = util.parse_options_from_string(text)
+        if options is not False:
+            op_bindings = {
+                        'block_index': tx['block_index'],
+                        'address': tx['source'],
+                        'options': options
+                       }
+            sql = 'insert or replace into addresses(address, options, block_index) values(:address, :options, :block_index)'
+            cursor = db.cursor()
+            cursor.execute(sql, op_bindings)
 
     # Negative values (default to ignore).
     if value is None or value < 0:
@@ -272,7 +258,12 @@ def parse (db, tx, message):
         # the bet match is settled. Escrow less fee is amount to be paid back
         # to betters.
         total_escrow = bet_match['forward_quantity'] + bet_match['backward_quantity']
-        fee_fraction = fee_fraction_int / config.UNIT
+
+        if util.enabled('inmutable_fee_fraction'):
+            fee_fraction = bet_match['fee_fraction_int'] / config.UNIT
+        else:
+            fee_fraction = fee_fraction_int / config.UNIT
+
         fee = int(fee_fraction * total_escrow)              # Truncate.
         escrow_less_fee = total_escrow - fee
 

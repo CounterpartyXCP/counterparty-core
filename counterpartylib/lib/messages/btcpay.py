@@ -69,14 +69,14 @@ def validate (db, source, order_match_id, block_index):
     # Figure out to which address the BTC are being paid.
     # Check that source address is correct.
     if order_match['backward_asset'] == config.BTC:
-        if source != order_match['tx1_address'] and not (block_index >= 313900 or config.TESTNET):  # Protocol change.
+        if source != order_match['tx1_address'] and not (block_index >= 313900 or config.TESTNET or config.REGTEST):  # Protocol change.
             problems.append('incorrect source address')
         destination = order_match['tx0_address']
         btc_quantity = order_match['backward_quantity']
         escrowed_asset  = order_match['forward_asset']
         escrowed_quantity = order_match['forward_quantity']
     elif order_match['forward_asset'] == config.BTC:
-        if source != order_match['tx0_address'] and not (block_index >= 313900 or config.TESTNET):  # Protocol change.
+        if source != order_match['tx0_address'] and not (block_index >= 313900 or config.TESTNET or config.REGTEST):  # Protocol change.
             problems.append('incorrect source address')
         destination = order_match['tx1_address']
         btc_quantity = order_match['forward_quantity']
@@ -142,6 +142,36 @@ def parse (db, tx, message):
             sql='update order_matches set status = :status where id = :order_match_id'
             cursor.execute(sql, bindings)
             log.message(db, tx['block_index'], 'update', 'order_matches', bindings)
+
+            # Update give and get order status as filled if order_match is completed
+            if util.enabled('btc_order_filled'):
+                bindings = {
+                    'status': 'pending',
+                    'tx0_hash': tx0_hash,
+                    'tx1_hash': tx1_hash
+                }
+                sql='select * from order_matches where status = :status and ((tx0_hash in (:tx0_hash, :tx1_hash)) or ((tx1_hash in (:tx0_hash, :tx1_hash))))'
+                cursor.execute(sql, bindings)
+                order_matches = cursor.fetchall()
+                if len(order_matches) == 0:
+                    # mark both btc get and give orders as filled when order_match is completed and give or get remaining = 0
+                    bindings = {
+                        'status': 'filled',
+                        'tx0_hash': tx0_hash,
+                        'tx1_hash': tx1_hash
+                    }
+                    sql='update orders set status = :status where ((tx_hash in (:tx0_hash, :tx1_hash)) and ((give_remaining = 0) or (get_remaining = 0)))'
+                    cursor.execute(sql, bindings)
+                else:
+                    # always mark btc get order as filled when order_match is completed and give or get remaining = 0
+                    bindings = {
+                        'status': 'filled',
+                        'source': tx['destination'],
+                        'tx0_hash': tx0_hash,
+                        'tx1_hash': tx1_hash
+                    }
+                    sql='update orders set status = :status where ((tx_hash in (:tx0_hash, :tx1_hash)) and ((give_remaining = 0) or (get_remaining = 0)) and (source = :source))'
+                    cursor.execute(sql, bindings)
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

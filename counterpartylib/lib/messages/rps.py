@@ -208,7 +208,7 @@ def validate (db, source, possible_moves, wager, move_random_hash, expiration, b
     if wager <= 0:
         problems.append('non‐positive wager')
     if expiration < 0: problems.append('negative expiration')
-    if expiration == 0 and not (block_index >= 317500 or config.TESTNET):   # Protocol change.
+    if expiration == 0 and not (block_index >= 317500 or config.TESTNET or config.REGTEST):   # Protocol change.
         problems.append('zero expiration')
     if expiration > config.MAX_EXPIRATION:
         problems.append('expiration overflow')
