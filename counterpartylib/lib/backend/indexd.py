@@ -159,7 +159,7 @@ def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
 def getrawmempool():
     return rpc('getrawmempool', [])
 
-def fee_per_kb(conf_target, mode):
+def fee_per_kb(conf_target, mode, nblocks=None):
     """
     :param conf_target:
     :param mode:
