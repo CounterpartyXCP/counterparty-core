@@ -85,14 +85,14 @@ def ensure_script_pub_key_for_inputs(coins):
     return coins
 
 
-def fee_per_kb(conf_target, mode):
+def fee_per_kb(conf_target, mode, nblocks=None):
     """
     :param conf_target:
     :param mode:
     :return: fee_per_kb in satoshis, or None when unable to determine
     """
 
-    return BACKEND().fee_per_kb(conf_target, mode)
+    return BACKEND().fee_per_kb(conf_target, mode, nblocks=nblocks)
 
 
 def deserialize(tx_hex):
