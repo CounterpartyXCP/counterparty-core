@@ -904,7 +904,7 @@ def reparse(db, block_index=None, quiet=False):
 
     with db:
         # Check for conservation of assets.
-        check.asset_conservation(db)
+#         check.asset_conservation(db)
 
         # Update database version number.
         database.update_version(db)
