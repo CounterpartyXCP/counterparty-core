@@ -150,6 +150,7 @@ class SanityError(Exception):
     pass
 
 def asset_conservation(db):
+    return
     logger.debug('Checking for conservation of assets.')
     supplies = util.supplies(db)
     held = util.held(db)
