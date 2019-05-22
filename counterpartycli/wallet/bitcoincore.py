@@ -26,17 +26,18 @@ def list_unspent():
     return rpc('listunspent', [0, 99999])
 
 def sign_raw_transaction(tx_hex):
-    return rpc('signrawtransaction', [tx_hex])['hex']
+    return rpc('signrawtransactionwithwallet', [tx_hex])['hex']
 
 def is_valid(address):
     return rpc('validateaddress', [address])['isvalid']
 
 def is_mine(address):
-    return rpc('validateaddress', [address])['ismine']
+    return rpc('getaddressinfo', [address])['ismine']
 
 def get_pubkey(address):
-    address_infos = rpc('validateaddress', [address])
-    if address_infos['isvalid'] and address_infos['ismine']:
+    address_valid = rpc('validateaddress', [address])
+    address_infos = rpc('getaddressinfo', [address])
+    if address_valid['isvalid'] and address_infos['ismine']:
         return address_infos['pubkey']
     return None
 

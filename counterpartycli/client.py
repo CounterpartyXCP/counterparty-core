@@ -25,6 +25,7 @@ CONFIG_ARGS = [
     [('--testnet',), {'action': 'store_true', 'default': False, 'help': 'use {} testnet addresses and block numbers'.format(config.BTC_NAME)}],
     [('--testcoin',), {'action': 'store_true', 'default': False, 'help': 'use the test {} network on every blockchain'.format(config.XCP_NAME)}],
     [('--regtest',), {'action': 'store_true', 'default': False, 'help': 'use {} regtest addresses and block numbers'.format(config.BTC_NAME)}],
+    [('--customnet',), {'default': '', 'help': 'use a custom network (specify as UNSPENDABLE_ADDRESS|ADDRESSVERSION|P2SH_ADDRESSVERSION with version bytes in HH hex format)'}],
 
     [('--counterparty-rpc-connect',), {'default': 'localhost', 'help': 'the hostname or IP of the Counterparty JSON-RPC server'}],
     [('--counterparty-rpc-port',), {'type': int, 'help': 'the port of the Counterparty JSON-RPC server'}],
@@ -210,7 +211,7 @@ def main():
         sys.exit()
 
     # Configuration
-    clientapi.initialize(testnet=args.testnet, testcoin=args.testcoin, regtest=args.regtest,
+    clientapi.initialize(testnet=args.testnet, testcoin=args.testcoin, regtest=args.regtest, customnet=args.customnet,
                         counterparty_rpc_connect=args.counterparty_rpc_connect, counterparty_rpc_port=args.counterparty_rpc_port,
                         counterparty_rpc_user=args.counterparty_rpc_user, counterparty_rpc_password=args.counterparty_rpc_password,
                         counterparty_rpc_ssl=args.counterparty_rpc_ssl, counterparty_rpc_ssl_verify=args.counterparty_rpc_ssl_verify,

@@ -1,5 +1,6 @@
 import sys
 import logging
+import binascii
 from urllib.parse import quote_plus as urlencode
 
 from counterpartylib.lib import config, script
@@ -15,7 +16,7 @@ DEFAULT_REQUESTS_TIMEOUT = 5 # seconds
 class ConfigurationError(Exception):
     pass
 
-def initialize(testnet=False, testcoin=False, regtest=True,
+def initialize(testnet=False, testcoin=False, regtest=True, customnet="",
                 counterparty_rpc_connect=None, counterparty_rpc_port=None,
                 counterparty_rpc_user=None, counterparty_rpc_password=None,
                 counterparty_rpc_ssl=False, counterparty_rpc_ssl_verify=False,
@@ -33,6 +34,12 @@ def initialize(testnet=False, testcoin=False, regtest=True,
 
     config.REGTEST = regtest or False
 
+    if len(customnet) > 0:
+        config.CUSTOMNET = True
+        config.REGTEST = True
+    else:
+        config.CUSTOMNET = False
+
     # testcoin
     config.TESTCOIN = testcoin or False
 
@@ -48,6 +55,8 @@ def initialize(testnet=False, testcoin=False, regtest=True,
     else:
         if config.TESTNET:
             config.COUNTERPARTY_RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET
+        elif config.CUSTOMNET:
+            config.COUNTERPARTY_RPC_PORT = config.DEFAULT_RPC_PORT_REGTEST
         elif config.REGTEST:
             config.COUNTERPARTY_RPC_PORT = config.DEFAULT_RPC_PORT_REGTEST
         else:
@@ -96,6 +105,8 @@ def initialize(testnet=False, testcoin=False, regtest=True,
     else:
         if config.TESTNET:
             config.WALLET_PORT = config.DEFAULT_BACKEND_PORT_TESTNET
+        elif config.CUSTOMNET:
+            config.WALLET_PORT = config.DEFAULT_BACKEND_PORT_REGTEST
         elif config.REGTEST:
             config.WALLET_PORT = config.DEFAULT_BACKEND_PORT_REGTEST
         else:
@@ -154,6 +165,19 @@ def initialize(testnet=False, testcoin=False, regtest=True,
             config.BURN_START = config.BURN_START_TESTNET
             config.BURN_END = config.BURN_END_TESTNET
             config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
+    elif config.CUSTOMNET:
+        custom_args = customnet.split('|')
+
+        if len(custom_args) == 3:
+            config.MAGIC_BYTES = config.MAGIC_BYTES_REGTEST
+            config.ADDRESSVERSION = binascii.unhexlify(custom_args[1])
+            config.P2SH_ADDRESSVERSION = binascii.unhexlify(custom_args[2])
+            config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST
+            config.BURN_START = config.BURN_START_REGTEST
+            config.BURN_END = config.BURN_END_REGTEST
+            config.UNSPENDABLE = custom_args[0]
+        else:
+            raise "Custom net parameter needs to be like UNSPENDABLE_ADDRESS|ADDRESSVERSION|P2SH_ADDRESSVERSION (version bytes in HH format)"
     elif config.REGTEST:
         config.MAGIC_BYTES = config.MAGIC_BYTES_REGTEST
         if config.TESTCOIN:
