@@ -52,7 +52,8 @@ MULTISIGADDR = [
 ]
 
 P2SH_ADDR = [
-    '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy' # 2of2 mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
+    '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy', # 2of2 mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
+    '2N6P6d3iypnnud4YJDfHZ6kc513N8ezWmPx', # 2of3 mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH
 ]
 
 P2WPKH_ADDR = [

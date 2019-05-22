@@ -32,6 +32,8 @@ from counterpartylib.lib import log
 from counterpartylib.lib import database
 from counterpartylib.lib import message_type
 from counterpartylib.lib import arc4
+from counterpartylib.lib.transaction_helper import p2sh_encoding
+
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, destroy)
 from .messages.versions import enhanced_send
 
@@ -705,13 +707,45 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
             else:                   # Data.
                 data += new_data
 
+    # source can be determined by parsing the p2sh_data transaction
+    #   or from the first spent output
+    sources = []
+
+    # P2SH encoding signalling
+    p2sh_encoding_source = None
+    if util.enabled('p2sh_encoding') and data == b'P2SH':
+        data = b''
+        for vin in ctx.vin:
+            # Ignore transactions with invalid script.
+            try:
+                asm = script.get_asm(vin.scriptSig)
+            except CScriptInvalidError as e:
+                raise DecodeError(e)
+
+            new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm)
+
+            # this could be a p2sh source address with no encoded data
+            if new_data is None:
+              continue;
+
+            if new_source is not None:
+                if p2sh_encoding_source is not None and new_source != p2sh_encoding_source:
+                    # this p2sh data input has a bad source address
+                    raise DecodeError('inconsistent p2sh inputs')
+
+                p2sh_encoding_source = new_source
+
+            assert not new_destination
+
+            data += new_data
+
     # Only look for source if data were found or destination is `UNSPENDABLE`,
     # for speed.
     if not data and destinations != [config.UNSPENDABLE,]:
         raise BTCOnlyError('no data and not unspendable')
 
     # Collect all (unique) source addresses.
-    sources = []
+    #   if we haven't found them yet
     for vin in ctx.vin[:]:                   # Loop through inputs.
         # Get the full transaction data for this input transaction.
         if block_parser:
@@ -749,7 +783,12 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
             if new_source not in sources:
                 sources.append(new_source)
 
-    sources = '-'.join(sources)
+    # use the source from the p2sh data source
+    if p2sh_encoding_source is not None:
+        sources = p2sh_encoding_source
+    else:
+        sources = '-'.join(sources)
+
     destinations = '-'.join(destinations)
     return sources, destinations, btc_amount, round(fee), data
 

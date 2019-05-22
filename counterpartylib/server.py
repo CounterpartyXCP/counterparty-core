@@ -144,6 +144,9 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     if config.TESTCOIN:
         network += '.testcoin'
 
+
+    bitcoinlib.SelectParams('testnet' if config.TESTNET else 'mainnet')
+
     # Database
     if database_file:
         config.DATABASE = database_file
@@ -435,12 +438,13 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     config.CHECK_ASSET_CONSERVATION = check_asset_conservation
     config.UTXO_LOCKS_MAX_ADDRESSES = utxo_locks_max_addresses
     config.UTXO_LOCKS_MAX_AGE = utxo_locks_max_age
-    transaction.UTXO_LOCKS = None  # reset the UTXO_LOCKS (for tests really)
+    transaction.initialise()  # initialise UTXO_LOCKS
 
     if estimate_fee_per_kb is not None:
         config.ESTIMATE_FEE_PER_KB = estimate_fee_per_kb
 
     logger.info('Running v{} of counterparty-lib.'.format(config.VERSION_STRING))
+
 
 
 def initialise_db():
