@@ -197,7 +197,7 @@
   },
   "p2sh_encoding": {
       "minimum_version_major": 9,
-      "minimum_version_minor": 55,
+      "minimum_version_minor": 57,
       "minimum_version_revision": 0,
       "block_index": 6000000,
       "testnet_block_index": 3000000
