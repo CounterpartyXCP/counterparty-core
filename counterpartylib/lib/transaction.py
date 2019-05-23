@@ -163,7 +163,7 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
 
     # use backend estimated fee_per_kb
     if estimate_fee_per_kb:
-        estimated_fee_per_kb = backend.fee_per_kb(estimate_fee_per_kb_nblocks)
+        estimated_fee_per_kb = backend.fee_per_kb(estimate_fee_per_kb_nblocks, config.ESTIMATE_FEE_MODE)
         if estimated_fee_per_kb is not None:
             fee_per_kb = max(estimated_fee_per_kb, fee_per_kb)  # never drop below the default fee_per_kb
 
