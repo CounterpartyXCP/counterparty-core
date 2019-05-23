@@ -20,8 +20,8 @@ from counterpartylib.lib import util
 from counterpartylib.lib import log
 from counterpartylib.lib import message_type
 
-FORMAT = '>QQQB'
-LENGTH = 25
+FORMAT = '>QQQQB'
+LENGTH = 33
 ID = 12
 
 STATUS_OPEN=0
@@ -37,6 +37,7 @@ def initialise(db):
                       source TEXT,
                       asset TEXT,
                       give_quantity INTEGER,
+                      giverate INTEGER,
                       satoshirate INTEGER,
                       status INTEGER,
                       give_remaining INTEGER,
@@ -50,9 +51,12 @@ def initialise(db):
                       asset_idx ON dispensers (asset)
                    ''')
 
-def validate (db, source, asset, give_quantity, satoshirate, status, block_index):
+def validate (db, source, asset, give_quantity, giverate, satoshirate, status, block_index):
     problems = []
     order_match = None
+
+    if giverate > give_quantity:
+        problems.append('dispenser must contain enough of an asset to at least give out one swap')
 
     cursor = db.cursor()
     cursor.execute('''SELECT quantity FROM balances \
@@ -74,12 +78,12 @@ def validate (db, source, asset, give_quantity, satoshirate, status, block_index
             problems.append('cannot dispense %s' % asset)
             return None, problems
 
-def compose (db, source, asset, give_quantity, satoshirate, status):
-    assetid, problems = validate(db, source, asset, give_quantity, satoshirate, status, util.CURRENT_BLOCK_INDEX)
+def compose (db, source, asset, give_quantity, giverate, satoshirate, status):
+    assetid, problems = validate(db, source, asset, give_quantity, giverate, satoshirate, status, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
     data = message_type.pack(ID)
-    data += struct.pack(FORMAT, assetid, give_quantity, satoshirate, status)
+    data += struct.pack(FORMAT, assetid, give_quantity, giverate, satoshirate, status)
     return (source, [], data)
 
 def parse (db, tx, message):
@@ -89,11 +93,11 @@ def parse (db, tx, message):
     try:
         if len(message) != LENGTH:
             raise exceptions.UnpackError
-        assetid, give_quantity, satoshirate, dispenser_status = struct.unpack(FORMAT, message)
+        assetid, give_quantity, giverate, satoshirate, dispenser_status = struct.unpack(FORMAT, message)
         asset = util.generate_asset_name(assetid)
         status = 'valid'
     except (exceptions.UnpackError, struct.error) as e:
-        assetid, give_quantity, satoshirate, asset = None, None, None, None
+        assetid, give_quantity, giverate, satoshirate, asset = None, None, None, None
         status = 'invalid: could not unpack'
 
     if status == 'valid':
@@ -115,14 +119,15 @@ def parse (db, tx, message):
                     'source': tx['source'],
                     'asset': asset,
                     'give_quantity': give_quantity,
+                    'giverate': giverate,
                     'satoshirate': satoshirate,
                     'status': dispenser_status,
                     'give_remaining': give_remaining
                 }
-                sql = 'insert into dispensers values(:tx_index, :tx_hash, :block_index, :source, :asset, :give_quantity, :satoshirate, :status, :give_remaining)'
+                sql = 'insert into dispensers values(:tx_index, :tx_hash, :block_index, :source, :asset, :give_quantity, :giverate, :satoshirate, :status, :give_remaining)'
                 cursor.execute(sql, bindings)
-            elif len(existing) == 1 and existing[0]['satoshirate'] == satoshirate:
-                # Refill the dispenser by the given amount
+            elif len(existing) == 1 and satoshirate == 0 and giverate == 0:
+                # Refill the dispenser by the given amount, rates will remain the same
                 bindings = {
                     'source': tx['source'],
                     'asset': asset,
@@ -132,8 +137,8 @@ def parse (db, tx, message):
                     'status': STATUS_OPEN,
                 }
                 util.debit(db, tx['source'], asset, give_quantity, action='refill dispenser', event=tx['tx_hash'])
-                sql = 'UPDATE dispensers SET give_remaining=:give_remaining, give_quantity=:give_quantity \
-                    WHERE source=:source AND asset=:asset AND status=:status'
+                sql = '''UPDATE dispensers SET give_remaining=:give_remaining, give_quantity=:give_quantity
+                    WHERE source=:source AND asset=:asset AND status=:status'''
                 cursor.execute(sql, bindings)
             else:
                 status = 'can only have one open dispenser per asset per address'
