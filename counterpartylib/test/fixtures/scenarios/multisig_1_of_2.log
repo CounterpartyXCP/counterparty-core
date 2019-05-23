@@ -113,19 +113,12 @@ Fee/KB 0.00025000
 New input: amount: 0.49895100; txid: 462fcf127cd185723fd0027955f8749e9cfe6c20ebdfc997ff626ab2cae93087; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.49880500 BTC
-<<<<<<< HEAD
 Broadcast: 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 at 2013-12-25T19:33:20 with a fee of 99.999999%% (3bd2702db834abf080054f2391e229d0ca8dc9d578256f23e744ad0e5997d4e8) [valid]
+data_btc_out=7800 (data_value=7800 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.49880500; txid: 3bd2702db834abf080054f2391e229d0ca8dc9d578256f23e744ad0e5997d4e8; vout: 1; confirmations: 1', 'amount: 0.48929075; txid: 5a00de6476865f69b816639038b56d348e105a9ee9f7cfd741c42bc0841bec61; vout: 3; confirmations: 8', 'amount: 0.37994375; txid: 9b6b1abb696d8d1b70c5beed046d7cddd23cd95b69ef18946cb18c5b56cfde30; vout: 1; confirmations: 12']
 Fee/KB 0.00025000
 New input: amount: 0.49880500; txid: 3bd2702db834abf080054f2391e229d0ca8dc9d578256f23e744ad0e5997d4e8; vout: 1; confirmations: 1
-=======
-Broadcast: 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 at 2013-12-25T19:33:20 with a fee of 500.0%% (8de030a907fefe8cab7c2c79319f12c6330a37207b47a7a2b8d16c009d7b8167) [valid]
-data_btc_out=7800 (data_value=7800 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 0.49880500; txid: 8de030a907fefe8cab7c2c79319f12c6330a37207b47a7a2b8d16c009d7b8167; vout: 1; confirmations: 1', 'amount: 0.48929075; txid: 5a00de6476865f69b816639038b56d348e105a9ee9f7cfd741c42bc0841bec61; vout: 3; confirmations: 8', 'amount: 0.37994375; txid: 9b6b1abb696d8d1b70c5beed046d7cddd23cd95b69ef18946cb18c5b56cfde30; vout: 1; confirmations: 12']
-Fee/KB 0.00025000
-New input: amount: 0.49880500; txid: 8de030a907fefe8cab7c2c79319f12c6330a37207b47a7a2b8d16c009d7b8167; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
->>>>>>> 8cc84bf201c90f5b3f6810035ba8a3bd11bea5fd
 Size: 306 Fee: 0.00007650 Change quantity: 0.49857250 BTC
 Debit: 0.5 XCP from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #bet# <19f4bb0c6c99045ec307905d8e15ff885413cdee3525269b25f03971dd8019b9>
 Bet: 0.5 XCP against 0.25 XCP, by 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2, on 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2
