@@ -214,7 +214,8 @@ def initialize(testnet=False, testcoin=False, regtest=True, customnet="",
 WALLET_METHODS = [
     'get_wallet_addresses', 'get_btc_balances', 'sign_raw_transaction',
     'get_pubkey', 'is_valid', 'is_mine', 'get_btc_balance', 'send_raw_transaction',
-    'wallet', 'asset', 'balances', 'pending', 'is_locked', 'unlock', 'wallet_last_block'
+    'wallet', 'asset', 'balances', 'pending', 'is_locked', 'unlock', 'wallet_last_block',
+    'sweep'
 ]
 
 def call(method, args, pubkey_resolver=None):

@@ -84,6 +84,13 @@ def main():
     parser_send.add_argument('--no-use-enhanced-send', action='store_false', dest="use_enhanced_send", default=True, help='If set to false, compose a non-enhanced send with a bitcoin dust output')
     parser_send.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
+    parser_sweep = subparsers.add_parser('sweep', help='create and broadcast a *sweep* message')
+    parser_sweep.add_argument('--source', required=True, help='the source address')
+    parser_sweep.add_argument('--destination', required=True, help='the destination address')
+    parser_sweep.add_argument('--flags', default=1, help='the ORed flags for this sweep. 1 for balance sweep, 2 for ownership sweep, 4 for memo as hex. E.G. flag=7 sends all assets, transfer all ownerships and encodes the memo as hex. default=1')
+    parser_sweep.add_argument('--memo', help='A transaction memo attached to this send')
+    parser_sweep.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
+
     parser_order = subparsers.add_parser('order', help='create and broadcast an *order* message')
     parser_order.add_argument('--source', required=True, help='the source address')
     parser_order.add_argument('--get-quantity', required=True, help='the quantity of GET_ASSET that you would like to receive')
