@@ -128,6 +128,8 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     if customnet != None:
         config.CUSTOMNET = True
         config.REGTEST = True # Custom nets are regtests with different parameters
+    else:
+        config.CUSTOMNET = False
 
     if config.TESTNET:
         bitcoinlib.SelectParams('testnet')
