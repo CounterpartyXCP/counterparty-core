@@ -1,4 +1,4 @@
-PRAGMA page_size=4096;
+-- PRAGMA page_size=1024;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
 -- PRAGMA max_page_count=1073741823;
@@ -1014,6 +1014,29 @@ CREATE TRIGGER _sends_update AFTER UPDATE ON sends BEGIN
 CREATE INDEX destination_idx ON sends (destination);
 CREATE INDEX memo_idx ON sends (memo);
 CREATE INDEX source_idx ON sends (source);
+
+-- Table  sweeps
+DROP TABLE IF EXISTS sweeps;
+CREATE TABLE sweeps(
+                      tx_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      destination TEXT,
+                      flags INTEGER,
+                      status TEXT,
+                      memo BLOB,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+-- Triggers and indices on  sweeps
+CREATE TRIGGER _sweeps_delete BEFORE DELETE ON sweeps BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO sweeps(rowid,tx_index,tx_hash,block_index,source,destination,flags,status,memo) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.destination)||','||quote(old.flags)||','||quote(old.status)||','||quote(old.memo)||')');
+                            END;
+CREATE TRIGGER _sweeps_insert AFTER INSERT ON sweeps BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM sweeps WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _sweeps_update AFTER UPDATE ON sweeps BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE sweeps SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',destination='||quote(old.destination)||',flags='||quote(old.flags)||',status='||quote(old.status)||',memo='||quote(old.memo)||' WHERE rowid='||old.rowid);
+                            END;
 
 -- Table  transactions
 DROP TABLE IF EXISTS transactions;

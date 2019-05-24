@@ -53,6 +53,7 @@ from counterpartylib.lib.messages import destroy
 from counterpartylib.lib.messages import cancel
 from counterpartylib.lib.messages import rps
 from counterpartylib.lib.messages import rpsresolve
+from counterpartylib.lib.messages import sweep
 
 API_TABLES = ['assets', 'balances', 'credits', 'debits', 'bets', 'bet_matches',
               'broadcasts', 'btcpays', 'burns', 'cancels', 'destructions',
