@@ -125,7 +125,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     else:
         config.REGTEST = False
 
-    if customnet != None:
+    if customnet != None and len(customnet) > 0:
         config.CUSTOMNET = True
         config.REGTEST = True # Custom nets are regtests with different parameters
     else:
