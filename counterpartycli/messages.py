@@ -136,6 +136,10 @@ def prepare_args(args, action):
     if action == 'send':
         args.quantity = util.value_in(args.quantity, args.asset)
 
+    # sweep
+    if action == 'sweep':
+        args.flags = int(args.flags)
+
     # order
     if action == 'order':
         fee_required, fee_fraction_provided = D(args.fee_fraction_required), D(args.fee_fraction_provided)
