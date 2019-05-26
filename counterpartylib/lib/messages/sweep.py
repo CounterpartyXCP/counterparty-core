@@ -34,6 +34,7 @@ def initialise(db):
                       flags INTEGER,
                       status TEXT,
                       memo BLOB,
+                      fee_paid INTEGER,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -129,12 +130,12 @@ def unpack(db, message, block_index):
 def parse (db, tx, message):
     cursor = db.cursor()
 
+    fee_paid = round(config.UNIT/2)
+
     # Unpack message.
     try:
         unpacked = unpack(db, message, tx['block_index'])
         destination, flags, memo_bytes = unpacked['destination'], unpacked['flags'], unpacked['memo']
-
-        util.debit(db, tx['source'], 'XCP', round(config.UNIT/2), action='sweep', event=tx['tx_hash'])
 
         status = 'valid'
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
@@ -150,6 +151,12 @@ def parse (db, tx, message):
     if status == 'valid':
         problems = validate(db, tx['source'], destination, flags, memo_bytes, tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
+
+        try:
+            util.debit(db, tx['source'], 'XCP', fee_paid, action='sweep fee', event=tx['tx_hash'])
+        except BalanceError:
+            destination, flags, memo_bytes = None, None, None
+            status = 'invalid: insufficient balance for antispam fee for sweep'
 
     if status == 'valid':
         cursor.execute('''SELECT * FROM balances WHERE address = ?''', (tx['source'],))
@@ -187,25 +194,9 @@ def parse (db, tx, message):
                             'status': status,
                             'asset_longname': last_issuance['asset_longname'],
                         }
-                        print(bindings)
                         sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname)'
                         cursor.execute(sql, bindings)
 
-    if status == 'valid':
-        bindings = {
-                    'tx_index': tx['tx_index'],
-                    'tx_hash': tx['tx_hash'],
-                    'block_index': tx['block_index'],
-                    'source': tx['source'],
-                    'asset': 'XCP',
-                    'quantity': round(config.UNIT/2),
-                    'tag': 'antispam fee',
-                    'status': 'valid',
-                   }
-        sql = 'insert into destructions values(:tx_index, :tx_hash, :block_index, :source, :asset, :quantity, :tag, :status)'
-        cursor.execute(sql, bindings)
-
-    if status == 'valid':
         bindings = {
             'tx_index': tx['tx_index'],
             'tx_hash': tx['tx_hash'],
@@ -215,8 +206,9 @@ def parse (db, tx, message):
             'flags': flags,
             'status': status,
             'memo': memo_bytes,
+            'fee_paid': fee_paid
         }
-        sql = 'insert into sweeps values(:tx_index, :tx_hash, :block_index, :source, :destination, :flags, :status, :memo)'
+        sql = 'insert into sweeps values(:tx_index, :tx_hash, :block_index, :source, :destination, :flags, :status, :memo, :fee_paid)'
         cursor.execute(sql, bindings)
 
     cursor.close()

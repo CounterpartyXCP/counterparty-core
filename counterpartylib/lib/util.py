@@ -623,8 +623,12 @@ def xcp_destroyed (db):
     cursor.execute('''SELECT SUM(fee_paid) AS total FROM dividends\
                       WHERE status = ?''', ('valid',))
     dividend_fee_total = list(cursor)[0]['total'] or 0
+    # Subtract sweep fees.
+    cursor.execute('''SELECT SUM(fee_paid) AS total FROM sweeps\
+                      WHERE status = ?''', ('valid',))
+    sweeps_fee_total = list(cursor)[0]['total'] or 0
     cursor.close()
-    return destroyed_total + issuance_fee_total + dividend_fee_total
+    return destroyed_total + issuance_fee_total + dividend_fee_total + sweeps_fee_total
 
 def xcp_supply (db):
     """Return the XCP supply."""
