@@ -91,6 +91,15 @@ def main():
     parser_sweep.add_argument('--memo', help='A transaction memo attached to this send')
     parser_sweep.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
+    parser_dispenser = subparsers.add_parser('dispenser', help='create and broadcast a *dispenser*')
+    parser_dispenser.add_argument('--source', required=True, help='the source address')
+    parser_dispenser.add_argument('--asset', required=True, help='the ASSET of which you would like to dispense GIVE_QUANTITY')
+    parser_dispenser.add_argument('--mainchainrate', required=True, help='the quantity of %s (decimal) this dispenser must receive to send the GIVEN_QUANTITY of the ASSET' % config.BTC)
+    parser_dispenser.add_argument('--give-quantity', required=True, help='the quantity of ASSET that you are giving for each MAINCHAINRATE of %s received' % config.BTC)
+    parser_dispenser.add_argument('--escrow-quantity', required=True, help='the quantity of ASSET that you are escrowing for this dispenser')
+    parser_dispenser.add_argument('--status', default=0, help='the status for the dispenser: 0. to open the dispenser (or replenish a drained one). 10. to close the dispenser. Default 0.')
+    parser_dispenser.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
+
     parser_order = subparsers.add_parser('order', help='create and broadcast an *order* message')
     parser_order.add_argument('--source', required=True, help='the source address')
     parser_order.add_argument('--get-quantity', required=True, help='the quantity of GET_ASSET that you would like to receive')
