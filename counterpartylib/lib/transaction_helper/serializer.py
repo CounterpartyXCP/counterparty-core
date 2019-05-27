@@ -386,7 +386,7 @@ def serialise_p2sh_pretx(inputs, source, source_value, data_output, change_outpu
     # Change output.
     if change_output:
         change_address, change_value = change_output
-        tx_script = get_script(change_address)
+        tx_script, witness_script = get_script(change_address)
 
         s += change_value.to_bytes(8, byteorder='little')  # Value
         s += var_int(int(len(tx_script)))                  # Script length
@@ -448,7 +448,7 @@ def serialise_p2sh_datatx(txid, source, source_input, destination_outputs, data_
 
     # destination outputs
     for destination, value in destination_outputs:
-        tx_script = get_script(destination)
+        tx_script, witness_script = get_script(destination)
 
         s += value.to_bytes(8, byteorder='little')  # Value
         s += var_int(int(len(tx_script)))           # Script length

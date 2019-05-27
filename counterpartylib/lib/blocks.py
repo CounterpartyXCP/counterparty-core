@@ -34,7 +34,7 @@ from counterpartylib.lib import message_type
 from counterpartylib.lib import arc4
 from counterpartylib.lib.transaction_helper import p2sh_encoding
 
-from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, destroy)
+from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, destroy, sweep, dispenser)
 from .messages.versions import enhanced_send
 
 from .kickstart.blocks_parser import BlockchainParser, ChainstateParser
@@ -50,7 +50,7 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'cancels', 'dividends', 'issuances', 'sends',
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
          'rps_matches', 'rps',
-         'destructions', 'assets', 'addresses']
+         'destructions', 'assets', 'addresses', 'sweeps', 'dispensers']
 # Compose list of tables tracked by undolog
 UNDOLOG_TABLES = copy.copy(TABLES)
 UNDOLOG_TABLES.remove('messages')
@@ -120,6 +120,10 @@ def parse_tx(db, tx):
                 rpsresolve.parse(db, tx, message)
             elif message_type_id == destroy.ID and util.enabled('destroy_reactivated', block_index=tx['block_index']):
                 destroy.parse(db, tx, message)
+            elif message_type_id == sweep.ID and util.enabled('sweep_send', block_index=tx['block_index']):
+                sweep.parse(db, tx, message)
+            elif message_type_id == dispenser.ID and util.enabled('dispensers', block_index=tx['block_index']):
+                dispenser.parse(db, tx, message)
             else:
                 cursor.execute('''UPDATE transactions \
                                            SET supported=? \
@@ -386,6 +390,8 @@ def initialise(db):
     cancel.initialise(db)
     rps.initialise(db)
     rpsresolve.initialise(db)
+    sweep.initialise(db)
+    dispenser.initialise(db)
 
     # Messages
     cursor.execute('''CREATE TABLE IF NOT EXISTS messages(

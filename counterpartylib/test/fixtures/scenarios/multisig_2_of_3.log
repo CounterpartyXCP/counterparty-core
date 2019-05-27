@@ -113,19 +113,12 @@ Fee/KB 0.00025000
 New input: amount: 1.86818550; txid: 5012de31b4fc38e61ffc4e4423e39190a5a294c2ab9d137b84cebf7ff3e76e17; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.86803950 BTC
-<<<<<<< HEAD
 Broadcast: 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 at 2013-12-25T19:33:20 with a fee of 99.999999%% (cd429407565d308134170dde76f3ccd8be6c18ef5db2850e636429b4ee377187) [valid]
+data_btc_out=7800 (data_value=7800 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 1.86803950; txid: cd429407565d308134170dde76f3ccd8be6c18ef5db2850e636429b4ee377187; vout: 1; confirmations: 1', 'amount: 0.50000000; txid: 957a0550bc7ce9cc16d5ff5426bdb111ddb1261739a39bcb93334f15f859a495; vout: 0; confirmations: 8']
 Fee/KB 0.00025000
 New input: amount: 1.86803950; txid: cd429407565d308134170dde76f3ccd8be6c18ef5db2850e636429b4ee377187; vout: 1; confirmations: 1
-=======
-Broadcast: 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 at 2013-12-25T19:33:20 with a fee of 500.0%% (c045731917392e0eb1d390eb1ffadea08d2dfa1653a8b967aff9df79c1bfc4f1) [valid]
-data_btc_out=7800 (data_value=7800 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.86803950; txid: c045731917392e0eb1d390eb1ffadea08d2dfa1653a8b967aff9df79c1bfc4f1; vout: 1; confirmations: 1', 'amount: 0.50000000; txid: 957a0550bc7ce9cc16d5ff5426bdb111ddb1261739a39bcb93334f15f859a495; vout: 0; confirmations: 8']
-Fee/KB 0.00025000
-New input: amount: 1.86803950; txid: c045731917392e0eb1d390eb1ffadea08d2dfa1653a8b967aff9df79c1bfc4f1; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
->>>>>>> 8cc84bf201c90f5b3f6810035ba8a3bd11bea5fd
 Size: 306 Fee: 0.00007650 Change quantity: 1.86780700 BTC
 Debit: 0.5 XCP from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #bet# <86609abcd81835cc472bd8c193d27e1048b5f7cba981414117fbf8cc67f84243>
 Bet: 0.5 XCP against 0.25 XCP, by 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3, on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3
