@@ -208,5 +208,12 @@
       "minimum_version_revision": 0,
       "block_index": 6000000,
       "testnet_block_index": 1518300
+  },
+  "dispensers": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 57,
+      "minimum_version_revision": 0,
+      "block_index": 6000000,
+      "testnet_block_index": 1518300
   }
 }

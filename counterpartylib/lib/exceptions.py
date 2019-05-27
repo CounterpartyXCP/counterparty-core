@@ -37,7 +37,9 @@ class PushDataDecodeError(DecodeError):
     pass
 
 class BTCOnlyError(MessageError):
-    pass
+    def __init__(self, msg, decodedTx=None):
+        super(BTCOnlyError, self).__init__(msg)
+        self.decodedTx = decodedTx
 
 class BalanceError(Exception):
     pass
