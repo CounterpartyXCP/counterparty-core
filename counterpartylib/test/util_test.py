@@ -638,9 +638,9 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
                 assert outputs == test_outputs
             except AssertionError:
                 if pytest.config.getoption('verbose') >= 2:
-                    msg = "expected outputs don't match test_outputs:\noutputs=\n" + pprint.pformat(outputs) + "\ntest_outputs=\n" + pprint.pformat(test_outputs)
+                    msg = "expected outputs don't match test_outputs:\nexpected_outputs=\n" + pprint.pformat(outputs) + "\ntest_outputs=\n" + pprint.pformat(test_outputs)
                 else:
-                    msg = "expected outputs don't match test_outputs: outputs=%s test_outputs=%s" % (outputs, test_outputs)
+                    msg = "expected outputs don't match test_outputs: expected_outputs=%s test_outputs=%s" % (outputs, test_outputs)
                 raise Exception(msg)
         if error is not None:
             assert str(exception.value) == error[1]

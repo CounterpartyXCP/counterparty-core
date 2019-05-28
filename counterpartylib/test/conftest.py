@@ -41,7 +41,8 @@ MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
     'short_tx_type_id': {'block_index': 310502, 'allow_always_latest': False},  # override to be true only at block 310502
     'enhanced_sends': {'block_index': 310999, 'allow_always_latest': False},  # override to be true only at block 310999
     'issuance_lock_fix': {'block_index': 310502, 'allow_always_latest': False},  # override to be true only at block 310502
-    'segwit_support': {'block_index': 0, 'allow_always_latest': False},  # override to be true only at block 310999
+    'segwit_support': {'block_index': 0, 'allow_always_latest': False},  # override to be true only at block 310999,
+    'dispensers': {'block_index': 0, 'allow_always_latest': True}
 }
 DISABLE_ALL_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False # if true, never look at MOCK_PROTOCOL_CHANGES_AT_BLOCK
 ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False # if true, always check MOCK_PROTOCOL_CHANGES_AT_BLOCK

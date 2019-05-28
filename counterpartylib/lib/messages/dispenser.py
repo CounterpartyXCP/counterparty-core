@@ -59,7 +59,7 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
 
     if asset == config.BTC:
         problems.append('cannot dispense %s' % config.BTC)
-        return
+        return None, problems
 
     if escrow_quantity < give_quantity:
         problems.append('escrow_quantity must be greater or equal than give_quantity')
@@ -88,7 +88,7 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
         if len(problems) == 0:
             asset_id = util.generate_asset_id(asset, block_index)
             if asset_id == 0:
-                problems.append('cannot dispense %s' % asset)
+                problems.append('cannot dispense %s' % asset) # How can we test this on a test vector?
 
     cursor.close()
     if len(problems) > 0:

@@ -327,7 +327,7 @@ UNITTEST_VECTOR = {
         }],
         'get_next_tx_index': [{
             'in': (),
-            'out': 501
+            'out': 500
         }],
         'last_db_index': [{
             'in': (),
@@ -3210,6 +3210,38 @@ UNITTEST_VECTOR = {
             }
         ]
     },
+    'dispenser': {
+        'validate': [
+            {
+                'in': (ADDR[0], config.XCP, 100, 100, 100, 0, DP['burn_start']),
+                'out': (1, None)
+            },
+            {
+                'in': (ADDR[0], config.XCP, 200, 100, 100, 0, DP['burn_start']),
+                'out': (None, ['escrow_quantity must be greater or equal than give_quantity'])
+            },
+            {
+                'in': (ADDR[0], config.BTC, 100, 100, 100, 0, DP['burn_start']),
+                'out': (None, ['cannot dispense %s' % config.BTC])
+            },
+            {
+                'in': (ADDR[0], config.XCP, 100, 100, 100, 5, DP['burn_start']),
+                'out': (None, ['invalid status 5'])
+            },
+            {
+                'in': (ADDR[0], 'PARENT', 100, 1000000000, 100, 0, DP['burn_start']),
+                'out': (None, ["address doesn't has enough balance of PARENT (100000000 < 1000000000)"])
+            },
+            {
+                'in': (ADDR[5], config.XCP, 100, 100, 120, 0, DP['burn_start']),
+                'out': (None, ['address has a dispenser already opened for asset %s with a different mainchainrate' % config.XCP])
+            },
+            {
+                'in': (ADDR[5], config.XCP, 120, 120, 100, 0, DP['burn_start']),
+                'out': (None, ['address has a dispenser already opened for asset %s with a different give_quantity' % config.XCP])
+            },
+        ]
+    },
     'transaction_helper.serializer': {
         'var_int': [{
             'in': (252,),
@@ -4025,13 +4057,13 @@ UNITTEST_VECTOR = {
             'in': (),
             'out': {'bindings': '{"action": "issuance", "address": '
                                 '"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": '
-                                '"A95428956661682277", "block_index": 310499, "event": '
+                                '"A95428956661682277", "block_index": 310498, "event": '
                                 '"0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf", '
                                 '"quantity": 100000000}',
-                    'block_index': 310499,
+                    'block_index': 310498,
                     'category': 'credits',
                     'command': 'insert',
-                    'message_index': 127,
+                    'message_index': 129,
                     'timestamp': 0}
         }],
         'get_asset_id': [{
@@ -4136,7 +4168,7 @@ UNITTEST_VECTOR = {
         }],
         'xcp_created': [{
             'in': (),
-            'out': 604506872476
+            'out': 604506847920
         }],
         'xcp_destroyed': [{
             'in': (),
@@ -4144,11 +4176,11 @@ UNITTEST_VECTOR = {
         }],
         'xcp_supply': [{
             'in': (),
-            'out': 604031872476,
+            'out': 604031847920,
         }],
         'creations': [{
             'in': (),
-            'out': {'XCP': 604506872476,
+            'out': {'XCP': 604506847920,
                     'CALLABLE': 1000,
                     'DIVIDEND': 100,
                     'DIVISIBLE': 100000000000,
@@ -4166,11 +4198,11 @@ UNITTEST_VECTOR = {
         }],
         'asset_supply': [{
             'in': ('XCP',),
-            'out': 604031872476,
+            'out': 604031847920,
         }],
         'supplies': [{
             'in': (),
-            'out':  {'XCP': 604031872476,
+            'out':  {'XCP': 604031847920,
                      'CALLABLE': 1000,
                      'DIVIDEND': 100,
                      'DIVISIBLE': 100000000000,
