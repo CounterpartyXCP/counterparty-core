@@ -837,11 +837,11 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
 
         asm = script.get_asm(vout.scriptPubKey)
         if asm[-1] == 'OP_CHECKSIG':
-            new_source, new_data = decode_checksig(asm)
+            new_source, new_data = decode_checksig(asm, ctx)
             if new_data or not new_source:
                 raise DecodeError('data in source')
         elif asm[-1] == 'OP_CHECKMULTISIG':
-            new_source, new_data = decode_checkmultisig(asm)
+            new_source, new_data = decode_checkmultisig(asm, ctx)
             if new_data or not new_source:
                 raise DecodeError('data in source')
         elif p2sh_support and asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:

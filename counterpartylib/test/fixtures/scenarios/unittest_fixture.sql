@@ -1011,6 +1011,31 @@ CREATE TRIGGER _destructions_update AFTER UPDATE ON destructions BEGIN
                             END;
 CREATE INDEX status_idx ON destructions (status);
 
+-- Table  dispensers
+DROP TABLE IF EXISTS dispensers;
+CREATE TABLE dispensers(
+                      tx_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      asset TEXT,
+                      give_quantity INTEGER,
+                      escrow_quantity INTEGER,
+                      satoshirate INTEGER,
+                      status INTEGER,
+                      give_remaining INTEGER,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+-- Triggers and indices on  dispensers
+CREATE TRIGGER _dispensers_delete BEFORE DELETE ON dispensers BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO dispensers(rowid,tx_index,tx_hash,block_index,source,asset,give_quantity,escrow_quantity,satoshirate,status,give_remaining) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.asset)||','||quote(old.give_quantity)||','||quote(old.escrow_quantity)||','||quote(old.satoshirate)||','||quote(old.status)||','||quote(old.give_remaining)||')');
+                            END;
+CREATE TRIGGER _dispensers_insert AFTER INSERT ON dispensers BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM dispensers WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _dispensers_update AFTER UPDATE ON dispensers BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE dispensers SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',asset='||quote(old.asset)||',give_quantity='||quote(old.give_quantity)||',escrow_quantity='||quote(old.escrow_quantity)||',satoshirate='||quote(old.satoshirate)||',status='||quote(old.status)||',give_remaining='||quote(old.give_remaining)||' WHERE rowid='||old.rowid);
+                            END;
+
 -- Table  dividends
 DROP TABLE IF EXISTS dividends;
 CREATE TABLE dividends(

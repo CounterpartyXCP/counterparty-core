@@ -158,7 +158,7 @@ def test_p2sh_encoding(server_db):
         # 00000000                                                                                    | locktime
 
         # verify parsed result
-        parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data = blocks._get_tx_info(datatxhex)
+        parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = blocks._get_tx_info(datatxhex)
         assert parsed_source == source
         assert parsed_data == binascii.unhexlify("00000002" "0000000000000001" "0000000000000064" "6f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec")  # ID=enhanced_send(0x02) ASSET=XCP(0x01) VALUE=100(0x64) destination_pubkey(0x6f8d...d6ec)
         assert parsed_btc_amount == 0
@@ -310,7 +310,7 @@ def test_p2sh_encoding_long_data(server_db):
 
 
         # verify parsed result
-        parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data = blocks._get_tx_info(datatxhex)
+        parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = blocks._get_tx_info(datatxhex)
         assert parsed_source == source
 
         assert parsed_data == binascii.unhexlify("0000001e5a21aad6000000000000000000000000") + b'The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. '  # ID=enhanced_send(0x1e) ASSET=XCP(0x01) VALUE=100(0x64) destination_pubkey(0x6f8d...d6ec)
@@ -399,7 +399,7 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
         datatx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(datatxhex))
 
         # parse the transaction
-        parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data = blocks._get_tx_info(datatxhex)
+        parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = blocks._get_tx_info(datatxhex)
         assert parsed_source == source
         assert parsed_data == binascii.unhexlify("00000002" "0000000000000001" "0000000000000064" "6f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec")  # ID=enhanced_send(0x02) ASSET=XCP(0x01) VALUE=100(0x64) destination_pubkey(0x6f8d...d6ec)
         assert parsed_btc_amount == 0

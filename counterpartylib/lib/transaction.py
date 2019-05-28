@@ -569,7 +569,7 @@ def construct (db, tx_info, encoding='auto',
 
     # Parsed transaction info.
     try:
-        parsed_source, parsed_destination, x, y, parsed_data = blocks._get_tx_info(unsigned_tx_hex)
+        parsed_source, parsed_destination, x, y, parsed_data, extra = blocks._get_tx_info(unsigned_tx_hex)
     except exceptions.BTCOnlyError:
         # Skip BTC‐only transactions.
         if extended_tx_info:

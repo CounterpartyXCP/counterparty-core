@@ -800,7 +800,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_tx_info(tx_hex, block_index=None):
             # block_index mandatory for transactions before block 335000
-            source, destination, btc_amount, fee, data = blocks.get_tx_info(tx_hex, block_index=block_index)
+            source, destination, btc_amount, fee, data, extra = blocks.get_tx_info(tx_hex, block_index=block_index)
             return source, destination, btc_amount, fee, util.hexlify(data) if data else ''
 
         @dispatcher.add_method
