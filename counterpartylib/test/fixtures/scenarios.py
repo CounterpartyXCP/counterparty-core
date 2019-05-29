@@ -58,6 +58,9 @@ UNITTEST_FIXTURE = [
     ['burn', (ADDR[4], DP['burn_quantity']), {'encoding': 'multisig'}],
     ['burn', (ADDR[5], DP['burn_quantity']), {'encoding': 'multisig'}],
     ['burn', (ADDR[6], DP['burn_quantity']), {'encoding': 'multisig'}],
+    ['burn', (ADDR[8], DP['burn_verysmall_quantity']), {'encoding': 'multisig'}],
+
+    ['dispenser', (ADDR[5], 'XCP', 100, 100, 100, 0), {'encoding': 'opreturn'}],
 
     ['burn', (P2SH_ADDR[0], int(DP['burn_quantity'] / 2)), {'encoding': 'opreturn'}],
     ['issuance', (P2SH_ADDR[0], None, 'PAYTOSCRIPT', 1000, False, 'PSH issued asset'), {'encoding': 'multisig', 'dust_return_pubkey': False}],
@@ -99,8 +102,6 @@ UNITTEST_FIXTURE = [
     ['issuance', (ADDR[2], None, 'DIVIDEND', 100, True, 'Test dividend'), {'encoding': 'multisig'}],
     ['send', (ADDR[2], ADDR[3], 'DIVIDEND', 10), {'encoding': 'multisig'}, None],
     ['send', (ADDR[2], ADDR[3], 'XCP', 92945878046), {'encoding': 'multisig'}, None],
-
-    ['burn', (ADDR[8], DP['burn_verysmall_quantity']), {'encoding': 'multisig'}],
 
     ['issuance', (ADDR[0], None, 'PARENT', DP['quantity'] * 1, True, 'Parent asset'), {'encoding': 'opreturn'}],
     ['issuance', (ADDR[0], None, 'PARENT.already.issued', DP['quantity'] * 1, True, 'Child of parent'), {'encoding': 'opreturn'}],

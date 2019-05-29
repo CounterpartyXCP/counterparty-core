@@ -177,7 +177,7 @@ def insert_raw_transaction(raw_transaction, db):
     tx = None
     tx_index = block_index - config.BURN_START + 1
     try:
-        source, destination, btc_amount, fee, data = blocks._get_tx_info(raw_transaction)
+        source, destination, btc_amount, fee, data, extra = blocks._get_tx_info(raw_transaction)
         transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
         cursor.execute('''INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?)''', transaction)
         tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
@@ -205,7 +205,7 @@ def insert_unconfirmed_raw_transaction(raw_transaction, db):
     tx_index = tx_index[0]['tx_index'] if len(tx_index) else 0
     tx_index = tx_index + 1
 
-    source, destination, btc_amount, fee, data = blocks._get_tx_info(raw_transaction)
+    source, destination, btc_amount, fee, data, extra = blocks._get_tx_info(raw_transaction)
     tx = {
         'tx_index': tx_index,
         'tx_hash': tx_hash,
@@ -638,9 +638,9 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
                 assert outputs == test_outputs
             except AssertionError:
                 if pytest.config.getoption('verbose') >= 2:
-                    msg = "expected outputs don't match test_outputs:\noutputs=\n" + pprint.pformat(outputs) + "\ntest_outputs=\n" + pprint.pformat(test_outputs)
+                    msg = "expected outputs don't match test_outputs:\nexpected_outputs=\n" + pprint.pformat(outputs) + "\ntest_outputs=\n" + pprint.pformat(test_outputs)
                 else:
-                    msg = "expected outputs don't match test_outputs: outputs=%s test_outputs=%s" % (outputs, test_outputs)
+                    msg = "expected outputs don't match test_outputs: expected_outputs=%s test_outputs=%s" % (outputs, test_outputs)
                 raise Exception(msg)
         if error is not None:
             assert str(exception.value) == error[1]

@@ -346,6 +346,12 @@ def log (db, command, category, bindings):
         elif category == 'destructions':
             logger.info('Destruction: {} destroyed {} {} with tag ‘{}’({}) [{}]'.format(bindings['source'], bindings['quantity'], bindings['asset'], bindings['tag'], bindings['tx_hash'], bindings['status']))
 
+        elif category == 'dispensers':
+            if bindings['status'] == 0:
+                logger.info('Dispenser: {} opened a dispenser for asset {} with {} balance, giving {} {} for each {} {}'.format(bindings['source'], bindings['asset'], bindings['escrow_quantity'], bindings['give_quantity'], bindings['asset'], bindings['satoshirate'], config.BTC))
+            elif bindings['status'] == 10:
+                logger.info('Dispenser: {} closed a dispenser for asset {}'.format(bindings['source'], bindings['asset']))
+
     cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

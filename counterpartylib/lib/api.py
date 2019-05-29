@@ -54,6 +54,7 @@ from counterpartylib.lib.messages import cancel
 from counterpartylib.lib.messages import rps
 from counterpartylib.lib.messages import rpsresolve
 from counterpartylib.lib.messages import sweep
+from counterpartylib.lib.messages import dispenser
 
 API_TABLES = ['assets', 'balances', 'credits', 'debits', 'bets', 'bet_matches',
               'broadcasts', 'btcpays', 'burns', 'cancels', 'destructions',
@@ -61,11 +62,11 @@ API_TABLES = ['assets', 'balances', 'credits', 'debits', 'bets', 'bet_matches',
               'bet_expirations', 'order_expirations', 'bet_match_expirations',
               'order_match_expirations', 'bet_match_resolutions', 'rps',
               'rpsresolves', 'rps_matches', 'rps_expirations', 'rps_match_expirations',
-              'mempool', 'sweeps']
+              'mempool', 'sweeps', 'dispensers']
 
 API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel', 'destroy',
                     'dividend', 'issuance', 'order', 'send',
-                    'rps', 'rpsresolve', 'sweep']
+                    'rps', 'rpsresolve', 'sweep', 'dispenser']
 
 COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
@@ -799,7 +800,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_tx_info(tx_hex, block_index=None):
             # block_index mandatory for transactions before block 335000
-            source, destination, btc_amount, fee, data = blocks.get_tx_info(tx_hex, block_index=block_index)
+            source, destination, btc_amount, fee, data, extra = blocks.get_tx_info(tx_hex, block_index=block_index)
             return source, destination, btc_amount, fee, util.hexlify(data) if data else ''
 
         @dispatcher.add_method
