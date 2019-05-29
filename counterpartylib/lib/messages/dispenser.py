@@ -79,11 +79,15 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
     else:
         cursor.execute('''SELECT * FROM dispensers WHERE source = ? AND asset = ? AND status=?''', (source, asset, STATUS_OPEN))
         open_dispensers = cursor.fetchall()
-        if len(open_dispensers) > 0 and open_dispensers[0]['satoshirate'] != mainchainrate:
-            problems.append('address has a dispenser already opened for asset %s with a different mainchainrate' % asset)
+        if status == STATUS_OPEN:
+            if len(open_dispensers) > 0 and open_dispensers[0]['satoshirate'] != mainchainrate:
+                problems.append('address has a dispenser already opened for asset %s with a different mainchainrate' % asset)
 
-        if len(open_dispensers) > 0 and open_dispensers[0]['give_quantity'] != give_quantity:
-            problems.append('address has a dispenser already opened for asset %s with a different give_quantity' % asset)
+            if len(open_dispensers) > 0 and open_dispensers[0]['give_quantity'] != give_quantity:
+                problems.append('address has a dispenser already opened for asset %s with a different give_quantity' % asset)
+        elif status == STATUS_CLOSED:
+            if len(open_dispensers) == 0:
+                problems.append('address doesnt has an open dispenser for asset %s' % asset)
 
         if len(problems) == 0:
             asset_id = util.generate_asset_id(asset, block_index)
@@ -159,7 +163,7 @@ def parse (db, tx, message):
                 cursor.execute(sql, bindings)
             else:
                 status = 'can only have one open dispenser per asset per address'
-        elif dispenser_status == STATUS_CLOSE:
+        elif dispenser_status == STATUS_CLOSED:
             cursor.execute('SELECT give_remaining FROM dispensers WHERE source=:source AND asset=:asset AND status=:status', {
                 'source': tx['source'],
                 'asset': asset,
@@ -168,7 +172,7 @@ def parse (db, tx, message):
             existing = cursor.fetchall()
 
             if len(existing) == 1:
-                util.credit(db, tx['source'], asset, existing['give_remaining'], action='close dispenser', event=tx['tx_hash'])
+                util.credit(db, tx['source'], asset, existing[0]['give_remaining'], action='close dispenser', event=tx['tx_hash'])
                 bindings = {
                     'source': tx['source'],
                     'asset': asset,
@@ -211,6 +215,7 @@ def dispense(db, tx):
             assert give_remaining >= 0
 
             util.credit(db, tx['source'], dispenser['asset'], actually_given, action='dispense', event=tx['tx_hash'])
+            print(cursor.execute('select * from credits where address=? and calling_function=?', (tx['source'],'dispense')).fetchall())
             dispenser['give_remaining'] = give_remaining
             if give_remaining < dispenser['give_quantity']:
                 # close the dispenser
