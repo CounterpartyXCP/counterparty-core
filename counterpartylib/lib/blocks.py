@@ -516,7 +516,7 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None):
             new_source, new_data = decode_checkmultisig(asm, decoded_tx)
             if new_data or not new_source:
                 raise DecodeError('data in source')
-        elif p2sh_support and asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
+        elif asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
             new_source, new_data = decode_scripthash(asm)
             if new_data or not new_source:
                 raise DecodeError('data in source')
