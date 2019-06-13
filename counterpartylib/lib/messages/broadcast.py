@@ -144,11 +144,11 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        if util.enabled('broadcast_pack_text'):
+        if util.enabled('broadcast_pack_text', tx['block_index']):
             timestamp, value, fee_fraction_int, rawtext = struct.unpack(FORMAT + '{}s'.format(len(message) - LENGTH), message)
             textlen = VarIntSerializer.deserialize(rawtext)
             text = rawtext[-textlen:]
-
+            
             assert len(text) == textlen
         else:
             if len(message) - LENGTH <= 52:

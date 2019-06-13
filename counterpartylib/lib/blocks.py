@@ -202,7 +202,8 @@ def parse_block(db, block_index, block_time,
                                                 binascii.hexlify(tx['data']).decode('UTF-8')))
         except exceptions.ParseTransactionError as e:
             logger.warn('ParseTransactionError for tx %s: %s' % (tx['tx_hash'], e))
-            pass
+            raise e
+            #pass
 
     cursor.close()
 
@@ -465,7 +466,13 @@ def get_tx_info(tx_hex, block_parser=None, block_index=None):
         # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
         return b'', None, None, None, None, None
     except BTCOnlyError as e:
-        return b'', None, None, None, None, _get_swap_tx(e.decodedTx, block_parser, block_index)
+        if util.enabled('dispensers', block_index):
+            try:
+                return b'', None, None, None, None, _get_swap_tx(e.decodedTx, block_parser, block_index)
+            except DecodeError as e:
+                return b'', None, None, None, None, None
+        else:
+            return b'', None, None, None, None, None
 
 def _get_swap_tx(decoded_tx, block_parser=None, block_index=None):
     def get_pubkeyhash(scriptpubkey):
@@ -1050,7 +1057,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
         tx_hex = backend.getrawtransaction(tx_hash)
     source, destination, btc_amount, fee, data, decoded_tx = get_tx_info(tx_hex)
 
-    if not source and decoded_tx:
+    if not source and decoded_tx and util.enabled('dispensers', block_index):
         outputs = decoded_tx[1]
         for out in outputs:
             if dispenser.is_dispensable(db, out[0], out[1]):
