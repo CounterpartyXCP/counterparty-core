@@ -1060,13 +1060,14 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
     if not source and decoded_tx and util.enabled('dispensers', block_index):
         outputs = decoded_tx[1]
         for out in outputs:
-            if dispenser.is_dispensable(db, out[0], out[1]):
+            if out[0] != decoded_tx[0][0] and dispenser.is_dispensable(db, out[0], out[1]):
                 source = decoded_tx[0][0]
                 destination = out[0]
                 btc_amount = out[1]
                 fee = 0
                 data = struct.pack(config.SHORT_TXTYPE_FORMAT, dispenser.DISPENSE_ID)
                 data += b'\x00'
+                break # Prevent inspection of further dispenses (only first one is valid)
 
     # For mempool
     if block_hash == None:

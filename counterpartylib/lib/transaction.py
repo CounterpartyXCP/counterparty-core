@@ -230,7 +230,7 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
     #   this is not provided by indexd
     inputs = backend.ensure_script_pub_key_for_inputs(inputs)
 
-    return inputs, change_quantity
+    return inputs, change_quantity, btc_in, final_fee
 
 def select_any_coin_from_source(source, allow_unconfirmed_inputs=True, disable_utxo_locks=False):
     ''' Get the first (biggest) input from the source address '''
@@ -436,7 +436,8 @@ def construct (db, tx_info, encoding='auto',
     logger.getChild('p2shdebug').debug('data_btc_out=%s (data_value=%d len(data_array)=%d)' % (data_btc_out, data_value, len(data_array)))
 
     '''Inputs'''
-
+    btc_in = 0
+    final_fee = 0
     # Calculate collective size of outputs, for fee calculation.
     p2pkhsize = 25 + 9
     if encoding == 'multisig':
@@ -460,13 +461,15 @@ def construct (db, tx_info, encoding='auto',
         size_for_fee = ((25 + 9) * len(destination_outputs)) + sum_data_output_size
 
     if not (encoding == 'p2sh' and p2sh_pretx_txid):
-        inputs, change_quantity = construct_coin_selection(
+        inputs, change_quantity, n_btc_in, n_final_fee = construct_coin_selection(
             encoding, data_array,
             source, allow_unconfirmed_inputs, unspent_tx_hash, custom_inputs,
             fee_per_kb, estimate_fee_per_kb, estimate_fee_per_kb_nblocks,
             exact_fee, size_for_fee, fee_provided, destination_btc_out, data_btc_out,
             regular_dust_size, disable_utxo_locks
         )
+        btc_in = n_btc_in
+        final_fee = n_final_fee
     else:
         # when encoding is P2SH and the pretx txid is passed we can skip coinselection
         inputs, change_quantity = None, None
