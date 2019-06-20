@@ -327,16 +327,19 @@ def serialise(encoding, inputs, destination_outputs, data_output=None, change_ou
         s += tx_script
 
     if use_segwit:
-        for address in witness_txins:
-            if address is None:
-                s += var_int(int(0))
-            else:
-                empty_witness = [b'\x00\x00\x00\x00', b'\x00\x00\x00\x00']
-                s += var_int(int(len(empty_witness)))           # Script length
+        if len(witness_txins) == 0:
+            s += var_int(int(0))
+        else:
+            for address in witness_txins:
+                if address is None:
+                    s += var_int(int(0))
+                else:
+                    empty_witness = [b'\x00\x00\x00\x00', b'\x00\x00\x00\x00']
+                    s += var_int(int(len(empty_witness)))           # Script length
 
-                for item in empty_witness:
-                    s += var_int(int(len(item)))
-                    s += item
+                    for item in empty_witness:
+                        s += var_int(int(len(item)))
+                        s += item
 
     s += (0).to_bytes(4, byteorder='little')                # LockTime
     return s
