@@ -318,8 +318,11 @@ def serialise(encoding, inputs, destination_outputs, data_output=None, change_ou
         s += change_value.to_bytes(8, byteorder='little')   # Value
 
         tx_script, witness_script = get_script(change_address)
+        print("Change address!", change_address, "\n", witness_data, "\n", tx_script, "\n", witness_script)
+        if witness_script: #use_segwit and change_address in witness_data:
+            if not(change_address in witness_data):
+                witness_data[change_address] = []
 
-        if use_segwit and change_address in witness_data:
             witness_data[change_address].append(witness_script)
             tx_script = witness_script
 
