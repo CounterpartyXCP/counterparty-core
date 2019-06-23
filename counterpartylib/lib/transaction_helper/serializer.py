@@ -207,9 +207,11 @@ def serialise(encoding, inputs, destination_outputs, data_output=None, change_ou
             datalen = binascii.unhexlify(spk[2:4])[0]
             if datalen == 20 or datalen == 32:
                 # 20 is for P2WPKH and 32 is for P2WSH
-                use_segwit = True
-                s  = (2).to_bytes(4, byteorder='little') # Rewrite version
-                break
+                if not(use_segwit):
+                    s  = (2).to_bytes(4, byteorder='little') # Rewrite version
+                    use_segwit = True
+
+                txin['is_segwit'] = True
 
     if use_segwit:
         s += b'\x00' # marker
@@ -318,20 +320,30 @@ def serialise(encoding, inputs, destination_outputs, data_output=None, change_ou
         s += change_value.to_bytes(8, byteorder='little')   # Value
 
         tx_script, witness_script = get_script(change_address)
-        print("Change address!", change_address, "\n", witness_data, "\n", tx_script, "\n", witness_script)
-        if witness_script: #use_segwit and change_address in witness_data:
-            if not(change_address in witness_data):
-                witness_data[change_address] = []
-
-            witness_data[change_address].append(witness_script)
-            tx_script = witness_script
+        #print("Change address!", change_address, "\n", witness_data, "\n", tx_script, "\n", witness_script)
+        #if witness_script: #use_segwit and change_address in witness_data:
+        #    if not(change_address in witness_data):
+        #        witness_data[change_address] = []
+        #    witness_data[change_address].append(witness_script)
+        #    tx_script = witness_script
+        #    use_segwit = True
 
         s += var_int(int(len(tx_script)))                      # Script length
         s += tx_script
 
     if use_segwit:
+        for i in range(len(inputs)):
+            txin = inputs[i]
+            if txin['is_segwit']:
+                s += b'\x02'
+                #print("Witness data:", txin)
+                s += b'\x00\x00'
+            else:
+                s += b'\x00'
+    """if use_segwit: # old code
         if len(witness_txins) == 0:
-            s += var_int(int(0))
+            #s += var_int(int(0))
+            s += (0).to_bytes(4, byteorder='little')
         else:
             for address in witness_txins:
                 if address is None:
@@ -342,7 +354,7 @@ def serialise(encoding, inputs, destination_outputs, data_output=None, change_ou
 
                     for item in empty_witness:
                         s += var_int(int(len(item)))
-                        s += item
+                        s += item"""
 
     s += (0).to_bytes(4, byteorder='little')                # LockTime
     return s
