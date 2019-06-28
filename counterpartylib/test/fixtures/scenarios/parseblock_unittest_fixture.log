@@ -320,8 +320,8 @@ Fee/KB 0.00025000
 New input: amount: 1.00000000; txid: 20efe4012d5fc638309b2d087a15fb100d9194132633623bc4c23b4c2caf0150; vout: 0; confirmations: 123
 final_fee inputs: 1 size: 225 final_fee 5625
 Size: 225 Fee: 0.00005625 Change quantity: 0.37994375 BTC
-Credit: 929.99030129 XCP to tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx #burn# <89c728bbe0c53eb9de4774a1261dfd8895ed0a3364dd41c5a06172472a84cee5>
-Burn: tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx burned 0.62 BTC for 929.99030129 XCP (89c728bbe0c53eb9de4774a1261dfd8895ed0a3364dd41c5a06172472a84cee5) [valid]
+Credit: 929.99030129 XCP to tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx #burn# <27929c4fcad307a76ea7da34dd2691084f678a22ee43ce7f3842b78730ee08f9>
+Burn: tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx burned 0.62 BTC for 929.99030129 XCP (27929c4fcad307a76ea7da34dd2691084f678a22ee43ce7f3842b78730ee08f9) [valid]
 data_btc_out=0 (data_value=0 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 1.36560965; txid: f0d9e5f8a7d8a13b0d90f126c33843139a50e9d496f6a5ca90e832466e6c6481; vout: 2; confirmations: 371']
 Fee/KB 0.00025000
