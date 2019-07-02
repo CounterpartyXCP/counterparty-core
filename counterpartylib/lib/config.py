@@ -103,7 +103,7 @@ BURN_END_REGTEST_TESTCOIN = 150
 DEFAULT_REGULAR_DUST_SIZE = 5430         # TODO: This is just a guess. I got it down to 5530 satoshis.
 DEFAULT_MULTISIG_DUST_SIZE = 7800        # <https://bitcointalk.org/index.php?topic=528023.msg7469941#msg7469941>
 DEFAULT_OP_RETURN_VALUE = 0
-DEFAULT_FEE_PER_KB_ESTIMATE_SMART = 1000
+DEFAULT_FEE_PER_KB_ESTIMATE_SMART = 1024
 DEFAULT_FEE_PER_KB = 25000               # sane/low default, also used as minimum when estimated fee is used
 ESTIMATE_FEE_PER_KB = True               # when True will use `estimatesmartfee` from bitcoind instead of DEFAULT_FEE_PER_KB
 ESTIMATE_FEE_CONF_TARGET = 3
