@@ -1276,6 +1276,11 @@ UNITTEST_VECTOR = {
             'mock_protocol_changes': {'enhanced_sends': True, 'segwit_support': True},
             'in': ({'source': ADDR[0], 'destination': P2WPKH_ADDR[0], 'asset': 'XCP', 'quantity': 100000, 'memo': 'segwit', 'use_enhanced_send': True}),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x01\x86\xa0\x80u\x1ev\xe8\x19\x91\x96\xd4T\x94\x1cE\xd1\xb3\xa3#\xf1C;\xd6segwit')
+        }, {
+            'comment': 'send to multiple addresses, before mpma_sends activation',
+            'mock_protocol_changes': {'enhanced_sends': True, 'options_require_memo': True, 'mpma_sends': False},
+            'in': ({'source': ADDR[0], 'destination': [ADDR[1], ADDR[2]], 'asset': ['XCP', 'XCP'], 'quantity': [100000000, 100000000], 'memo': '12345', 'use_enhanced_send': True}),
+            'error': (exceptions.ComposeError, 'mpma sends are not enabled')
         }],
         'parse': [{
             'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
@@ -3683,27 +3688,27 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'standard send with no memo',
             'in': ('sends', [{'field':'block_index','op':'=','value':'310496'}], 'AND', None, None, None, None, None, 1000, 0, True),
-            'out': [{'tx_index': 497, 'tx_hash': '1410217c3b1b38ea0b90940f20b874a2375c457b0828de9f9808e4fd63fd54e6', 'block_index': 310496, 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'asset': 'XCP', 'quantity': 92945878046, 'status': 'valid', 'memo': None, 'memo_hex': None}]
+            'out': [{'tx_index': 497, 'tx_hash': '1410217c3b1b38ea0b90940f20b874a2375c457b0828de9f9808e4fd63fd54e6', 'block_index': 310496, 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'asset': 'XCP', 'quantity': 92945878046, 'status': 'valid', 'memo': None, 'memo_hex': None, 'msg_index': 0}]
         }, {
             'comment': 'with memo',
             'in': ('sends', [{'field':'block_index','op':'=','value':'310481'}], 'AND', None, None, None, None, None, 1000, 0, True),
-            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f'}]
+            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f', 'msg_index': 0}]
         }, {
             'comment': 'search by memo (text)',
             'in': ('sends', [{'field':'memo','op':'=','value':'hello'}], 'AND', None, None, None, None, None, 1000, 0, True),
-            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f'}]
+            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f', 'msg_index': 0}]
         }, {
             'comment': 'search by memo (LIKE text)',
             'in': ('sends', [{'field':'memo','op':'LIKE','value':'%ell%'}], 'AND', None, None, None, None, None, 1000, 0, True),
-            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f'}]
+            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f', 'msg_index': 0}]
         }, {
             'comment': 'search by memo hex',
             'in': ('sends', [{'field':'memo_hex','op':'=','value':'68656C6C6F'}], 'AND', None, None, None, None, None, 1000, 0, True),
-            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f'}]
+            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f', 'msg_index': 0}]
         }, {
             'comment': 'search by memo hex',
             'in': ('sends', [{'field':'memo_hex','op':'=','value':'68656c6c6f'}], 'AND', None, None, None, None, None, 1000, 0, True),
-            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f'}]
+            'out': [{'tx_index': 482, 'tx_hash': 'b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5', 'block_index': 310481, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': 'hello', 'memo_hex': '68656c6c6f', 'msg_index': 0}]
         }, {
             'comment': 'search with invalid memo hex',
             'in': ('sends', [{'field':'memo_hex','op':'=','value':'badx'}], 'AND', None, None, None, None, None, 1000, 0, True),
@@ -3711,7 +3716,7 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'search by memo hex',
             'in': ('sends', [{'field':'memo_hex','op':'=','value':'fade0001'}], 'AND', None, None, None, None, None, 1000, 0, True),
-            'out': [{'tx_index': 483, 'tx_hash': 'c8716524f33646b9af94d6f5e52494ff3b34466497094b1db2ab920e4f79bc34', 'block_index': 310482, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': '', 'memo_hex': 'fade0001'}]
+            'out': [{'tx_index': 483, 'tx_hash': 'c8716524f33646b9af94d6f5e52494ff3b34466497094b1db2ab920e4f79bc34', 'block_index': 310482, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'asset': 'XCP', 'quantity': 100000000, 'status': 'valid', 'memo': '', 'memo_hex': 'fade0001', 'msg_index': 0}]
         }],
     },
     'script': {
@@ -5005,6 +5010,329 @@ UNITTEST_VECTOR = {
                     'status': 'valid',
                     'tx_hash': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0',
                     'tx_index': 502,
+                }}
+            ]
+        }]
+    },
+    'versions.mpma': {
+        'unpack': [{
+            'comment': 'Should throw on empty data',
+            'in': (bytes.fromhex(''), DP['default_block_index']),
+            'error': (exceptions.UnpackError, 'could not unpack')
+        },{
+            'comment': '0 addresses in a send is an error',
+            'in': (bytes.fromhex('0000'), DP['default_block_index']),
+            'error': (exceptions.DecodeError, 'address list can\'t be empty')
+        },{
+            'comment': 'Should throw on incomplete data',
+            'in': (bytes.fromhex('0001ffff'), DP['default_block_index']),
+            'error': (exceptions.UnpackError, 'truncated data')
+        },{
+            'in': (bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e10040000000017d78400'), DP['default_block_index']),
+            'out': ({'XCP': [(ADDR[2], DP['quantity']), (ADDR[1], DP['quantity'])]})
+        },{
+            'in': (bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e100c4deadbeef8000000002faf0800'), DP['default_block_index']),
+            'out': ({'XCP': [(ADDR[2], DP['quantity'], bytes.fromhex('DEADBEEF'), True), (ADDR[1], DP['quantity'])]})
+        },{
+            'in': (bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e1008844454144424545468000000002faf0800'), DP['default_block_index']),
+            'out': ({'XCP': [(ADDR[2], DP['quantity'], 'DEADBEEF', False), (ADDR[1], DP['quantity'])]})
+        },{
+            'in': (bytes.fromhex('00036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000000000000000640000000017d784000000000002faf08020000000005f5e1000'), DP['default_block_index']),
+            'out': ({'XCP': [(ADDR[3], DP['quantity']), (ADDR[2], DP['quantity']), (ADDR[1], DP['quantity'])]})
+        },{
+            'in': (bytes.fromhex('00036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d9800000000017d784010006cad8dc7f0b66200000000000000014000000000000000440000000017d784000'), DP['default_block_index']),
+            'out': ({'XCP': [(ADDR[3], DP['quantity'])], 'NODIVISIBLE': [(ADDR[1], 1)], 'DIVISIBLE': [(ADDR[2], DP['quantity'])]})
+        },{
+            'in': (bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ecc4deadbeef8000000000000000c000000000bebc2008000000002faf0800'), DP['default_block_index']),
+            'out': ({'XCP': [(ADDR[2], DP['quantity'], bytes.fromhex('DEADBEEF'), True), (ADDR[1], DP['quantity'], bytes.fromhex('DEADBEEF'), True)]})
+        },{
+            'in': (bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ecc4deadbeef8000000000000000c000000000bebc201897ddfbd5b0000000005f5e1000'), DP['default_block_index']),
+            'out': ({'XCP': [(ADDR[2], DP['quantity'], bytes.fromhex('BEEFDEAD'), True), (ADDR[1], DP['quantity'], bytes.fromhex('DEADBEEF'), True)]})
+        },{
+            'in': (bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e100000300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e10000'), DP['default_block_index']),
+            'out': ({'DIVISIBLE': [(ADDR[1], DP['quantity'])], 'XCP': [(ADDR[2], DP['quantity'])]})
+        }],
+        'validate': [{
+            'in': (ADDR[0], [], 1),
+            'out': (['send list cannot be empty'])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[1], DP['quantity'])], 1),
+            'out': (['send list cannot have only one element'])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], 0.1)], 1),
+            'out': (['quantities must be an int (in satoshis) for XCP to {}'.format(ADDR[1])])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], -DP['quantity'])], 1),
+            'out': (['negative quantity for XCP to {}'.format(ADDR[1])])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], 0)], 1),
+            'out': (['zero quantity for XCP to {}'.format(ADDR[1])])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], config.MAX_INT + 1)], 1),
+            'out': (['integer overflow for XCP to {}'.format(ADDR[1])])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', None, DP['quantity'])], 1),
+            'out': (['destination is required for XCP'])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('BTC', ADDR[1], DP['quantity'])], 1),
+            'out': (['cannot send BTC to {}'.format(ADDR[1])])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[6], DP['quantity'])], 1),
+            'out': (['destination {} requires memo'.format(ADDR[6])])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], DP['quantity'])], 1),
+            'out': ([])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[2], DP['quantity'] + 1)], 1),
+            'out': (['cannot specify more than once a destination per asset'])
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[6], DP['quantity'], 'DEADBEEF', True)], 1),
+            'out': ([])
+        }],
+        'compose': [{
+            'in': (ADDR[0], [('XCP', ADDR[1], DP['quantity'] * 1000000)], None, None),
+            'error': (exceptions.ComposeError, 'insufficient funds for XCP')
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], 0.1)], None, None),
+            'error': (exceptions.ComposeError, 'quantities must be an int (in satoshis) for XCP')
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], DP['quantity'] * 10000)], None, None),
+            'error': (exceptions.ComposeError, 'insufficient funds for XCP')
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], DP['quantity'])], None, None),
+            'mock_protocol_changes': {'short_tx_type_id': True},
+            'out': (ADDR[0], [], bytes.fromhex('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e10040000000017d78400'))
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity'], 'DEADBEEF', True), ('XCP', ADDR[1], DP['quantity'])], None, None),
+            'mock_protocol_changes': {'short_tx_type_id': True},
+            'out': (ADDR[0], [], bytes.fromhex('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e100c4deadbeef8000000002faf0800'))
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity'], 'DEADBEEF', False), ('XCP', ADDR[1], DP['quantity'])], None, None),
+            'mock_protocol_changes': {'short_tx_type_id': True},
+            'out': (ADDR[0], [], bytes.fromhex('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e1008844454144424545468000000002faf0800'))
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[3], DP['quantity']), ('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], DP['quantity'])], None, None),
+            'mock_protocol_changes': {'short_tx_type_id': True},
+            'out': (ADDR[0], [], bytes.fromhex('0300036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000000000000000640000000017d784000000000002faf08020000000005f5e1000'))
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[3], DP['quantity']), ('DIVISIBLE', ADDR[2], DP['quantity']), ('NODIVISIBLE', ADDR[1], 1)], None, None),
+            'mock_protocol_changes': {'short_tx_type_id': True},
+            'out': (ADDR[0], [], bytes.fromhex('0300036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d9800000000017d784010006cad8dc7f0b66200000000000000014000000000000000440000000017d784000'))
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], DP['quantity'])], 'DEADBEEF', True),
+            'mock_protocol_changes': {'short_tx_type_id': True},
+            'out': (ADDR[0], [], bytes.fromhex('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ecc4deadbeef8000000000000000c000000000bebc2008000000002faf0800'))
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], DP['quantity'])], 'DEADBEEF', False),
+            'mock_protocol_changes': {'short_tx_type_id': True},
+            'out': (ADDR[0], [], bytes.fromhex('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec8844454144424545468000000000000000c000000000bebc2008000000002faf0800'))
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity'], 'BEEFDEAD', True), ('XCP', ADDR[1], DP['quantity'])], 'DEADBEEF', True),
+            'mock_protocol_changes': {'short_tx_type_id': True},
+            'out': (ADDR[0], [], bytes.fromhex('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ecc4deadbeef8000000000000000c000000000bebc201897ddfbd5b0000000005f5e1000'))
+        }, {
+            'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('DIVISIBLE', ADDR[1], DP['quantity'])], None, None),
+            'mock_protocol_changes': {'short_tx_type_id': True},
+            'out': (ADDR[0], [], bytes.fromhex('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e10000'))
+        }],
+        'parse': [{
+            'in': ({
+                'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                'source': ADDR[0],
+                'supported': 1,
+                'block_index': DP['default_block_index'],
+                'fee': 10000,
+                'block_time': 155409000,
+                'block_hash': DP['default_block_hash'],
+                'btc_amount': 7800,
+                'data': bytes.fromhex('00000000') + bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e10040000000017d78400'),
+                'tx_index': 502,
+                'destination': ADDR[0]
+                },),
+            'records': [
+                {'table': 'sends', 'values': {
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'destination': ADDR[2],
+                    'quantity': DP['quantity'],
+                    'source': ADDR[0],
+                    'status': 'valid',
+                    'memo': None,
+                    'msg_index': 0,
+                    'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'tx_index': 502,
+                }},
+                {'table': 'sends', 'values': {
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'destination': ADDR[1],
+                    'quantity': DP['quantity'],
+                    'source': ADDR[0],
+                    'status': 'valid',
+                    'memo': None,
+                    'msg_index': 1,
+                    'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'tx_index': 502,
+                }},
+                {'table': 'credits', 'values': {
+                    'address': ADDR[1],
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'calling_function': 'send',
+                    'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'quantity': DP['quantity'],
+                }},
+                {'table': 'credits', 'values':{
+                    'address': ADDR[2],
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'calling_function': 'send',
+                    'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'quantity': DP['quantity'],
+                }},
+                {'table': 'debits', 'values': {
+                    'action': 'send',
+                    'address': ADDR[0],
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'quantity': DP['quantity'] * 2,
+                }}
+            ]
+        },{
+            'in': ({
+                'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                'source': ADDR[0],
+                'supported': 1,
+                'block_index': DP['default_block_index'],
+                'fee': 10000,
+                'block_time': 155409000,
+                'block_hash': DP['default_block_hash'],
+                'btc_amount': 7800,
+                'data': bytes.fromhex('00000000') + bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ecc4deadbeef8000000000000000c000000000bebc201897ddfbd5b0000000005f5e1000'),
+                'tx_index': 502,
+                'destination': ADDR[0]
+                },),
+            'records': [
+                {'table': 'sends', 'values': {
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'destination': ADDR[2],
+                    'quantity': DP['quantity'],
+                    'source': ADDR[0],
+                    'status': 'valid',
+                    'memo': bytes.fromhex('BEEFDEAD'),
+                    'msg_index': 0,
+                    'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'tx_index': 502,
+                }},
+                {'table': 'sends', 'values': {
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'destination': ADDR[1],
+                    'quantity': DP['quantity'],
+                    'source': ADDR[0],
+                    'status': 'valid',
+                    'memo': bytes.fromhex('DEADBEEF'),
+                    'msg_index': 1,
+                    'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'tx_index': 502,
+                }},
+                {'table': 'credits', 'values': {
+                    'address': ADDR[1],
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'calling_function': 'send',
+                    'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'quantity': DP['quantity'],
+                }},
+                {'table': 'credits', 'values':{
+                    'address': ADDR[2],
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'calling_function': 'send',
+                    'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'quantity': DP['quantity'],
+                }},
+                {'table': 'debits', 'values': {
+                    'action': 'send',
+                    'address': ADDR[0],
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'quantity': DP['quantity'] * 2,
+                }}
+            ]
+        },{
+            'in': ({
+                'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                'source': ADDR[0],
+                'supported': 1,
+                'block_index': DP['default_block_index'],
+                'fee': 10000,
+                'block_time': 155409000,
+                'block_hash': DP['default_block_hash'],
+                'btc_amount': 7800,
+                'data': bytes.fromhex('00000000') + bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e100000300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e10000'),
+                'tx_index': 502,
+                'destination': ADDR[0]
+                },),
+            'records': [
+                {'table': 'sends', 'values': {
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'destination': ADDR[2],
+                    'quantity': DP['quantity'],
+                    'source': ADDR[0],
+                    'status': 'valid',
+                    'memo': None,
+                    'msg_index': 1,
+                    'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'tx_index': 502,
+                }},
+                {'table': 'sends', 'values': {
+                    'asset': 'DIVISIBLE',
+                    'block_index': DP['default_block_index'],
+                    'destination': ADDR[1],
+                    'quantity': DP['quantity'],
+                    'source': ADDR[0],
+                    'status': 'valid',
+                    'memo': None,
+                    'msg_index': 0,
+                    'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'tx_index': 502,
+                }},
+                {'table': 'credits', 'values': {
+                    'address': ADDR[1],
+                    'asset': 'DIVISIBLE',
+                    'block_index': DP['default_block_index'],
+                    'calling_function': 'send',
+                    'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'quantity': DP['quantity'],
+                }},
+                {'table': 'credits', 'values':{
+                    'address': ADDR[2],
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'calling_function': 'send',
+                    'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'quantity': DP['quantity'],
+                }},
+                {'table': 'debits', 'values': {
+                    'action': 'send',
+                    'address': ADDR[0],
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'quantity': DP['quantity'],
+                }},
+                {'table': 'debits', 'values': {
+                    'action': 'send',
+                    'address': ADDR[0],
+                    'asset': 'DIVISIBLE',
+                    'block_index': DP['default_block_index'],
+                    'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'quantity': DP['quantity'],
                 }}
             ]
         }]

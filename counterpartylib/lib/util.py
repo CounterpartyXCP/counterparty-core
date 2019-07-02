@@ -21,6 +21,7 @@ import os
 import collections
 import threading
 import random
+import itertools
 
 from counterpartylib.lib import exceptions
 from counterpartylib.lib.exceptions import DecodeError
@@ -87,6 +88,23 @@ def api(method, params):
 def chunkify(l, n):
     n = max(1, n)
     return [l[i:i + n] for i in range(0, len(l), n)]
+
+def flat(z):
+    return [x for x in z]
+
+def py34TupleAppend(first_elem, t):
+    # Had to do it this way to support python 3.4, if we start
+    # using the 3.5 runtime this can be replaced by:
+    #  (first_elem, *t)
+
+    l = list(t)
+    l.insert(0, first_elem)
+    return tuple(l)
+
+def accumulate(l):
+    it = itertools.groupby(l, itemgetter(0))
+    for key, subiter in it:
+       yield key, sum(item[1] for item in subiter)
 
 def date_passed(date):
     """Check if the date has already passed."""

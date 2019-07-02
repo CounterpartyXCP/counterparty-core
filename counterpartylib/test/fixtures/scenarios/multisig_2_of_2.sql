@@ -1,4 +1,4 @@
-PRAGMA page_size=4096;
+-- PRAGMA page_size=1024;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
 -- PRAGMA max_page_count=1073741823;
@@ -1012,29 +1012,32 @@ CREATE INDEX rps_match_id_idx ON rpsresolves (rps_match_id);
 
 -- Table  sends
 DROP TABLE IF EXISTS sends;
-CREATE TABLE sends(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      destination TEXT,
-                      asset TEXT,
-                      quantity INTEGER,
-                      status TEXT, memo BLOB,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
-INSERT INTO sends VALUES(2,'63242f35c724cd03163541785b69fbd620df9ebeb72706a0caeb5e19ce7680cc',310001,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','XCP',50000000,'valid',NULL);
-INSERT INTO sends VALUES(8,'cfdba3d6b7a8dafd12d45751395d3a2a99e2b36456d68db5e2080ce8118503ab',310007,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','BBBB',4000000,'valid',NULL);
-INSERT INTO sends VALUES(9,'0f649981bbe02942cc0e2f2e43cdb6e41d22c9275506792873b89b683e023f89',310008,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','BBBC',526,'valid',NULL);
-INSERT INTO sends VALUES(24,'ff48aca435aafe8e5fec706d3dcb2e3e54710e797ef43d006206136761371bca',310023,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','BBBC',10000,'valid',NULL);
+CREATE TABLE "sends"(
+                              tx_index INTEGER,
+                              tx_hash TEXT,
+                              block_index INTEGER,
+                              source TEXT,
+                              destination TEXT,
+                              asset TEXT,
+                              quantity INTEGER,
+                              status TEXT,
+                              msg_index INTEGER DEFAULT 0, memo BLOB,
+                              PRIMARY KEY (tx_index, msg_index),
+                              FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
+                              UNIQUE (tx_hash, msg_index) ON CONFLICT FAIL);
+INSERT INTO sends VALUES(2,'63242f35c724cd03163541785b69fbd620df9ebeb72706a0caeb5e19ce7680cc',310001,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','XCP',50000000,'valid',0,NULL);
+INSERT INTO sends VALUES(8,'cfdba3d6b7a8dafd12d45751395d3a2a99e2b36456d68db5e2080ce8118503ab',310007,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','BBBB',4000000,'valid',0,NULL);
+INSERT INTO sends VALUES(9,'0f649981bbe02942cc0e2f2e43cdb6e41d22c9275506792873b89b683e023f89',310008,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','BBBC',526,'valid',0,NULL);
+INSERT INTO sends VALUES(24,'ff48aca435aafe8e5fec706d3dcb2e3e54710e797ef43d006206136761371bca',310023,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','BBBC',10000,'valid',0,NULL);
 -- Triggers and indices on  sends
 CREATE TRIGGER _sends_delete BEFORE DELETE ON sends BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO sends(rowid,tx_index,tx_hash,block_index,source,destination,asset,quantity,status,memo) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.destination)||','||quote(old.asset)||','||quote(old.quantity)||','||quote(old.status)||','||quote(old.memo)||')');
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO sends(rowid,tx_index,tx_hash,block_index,source,destination,asset,quantity,status,msg_index,memo) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.destination)||','||quote(old.asset)||','||quote(old.quantity)||','||quote(old.status)||','||quote(old.msg_index)||','||quote(old.memo)||')');
                             END;
 CREATE TRIGGER _sends_insert AFTER INSERT ON sends BEGIN
                             INSERT INTO undolog VALUES(NULL, 'DELETE FROM sends WHERE rowid='||new.rowid);
                             END;
 CREATE TRIGGER _sends_update AFTER UPDATE ON sends BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'UPDATE sends SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',destination='||quote(old.destination)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||',status='||quote(old.status)||',memo='||quote(old.memo)||' WHERE rowid='||old.rowid);
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE sends SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',destination='||quote(old.destination)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||',status='||quote(old.status)||',msg_index='||quote(old.msg_index)||',memo='||quote(old.memo)||' WHERE rowid='||old.rowid);
                             END;
 CREATE INDEX destination_idx ON sends (destination);
 CREATE INDEX memo_idx ON sends (memo);
@@ -1119,7 +1122,7 @@ INSERT INTO undolog VALUES(4,'UPDATE balances SET address=''2_mn6q3dS2EnDUx3bmyW
 INSERT INTO undolog VALUES(5,'DELETE FROM debits WHERE rowid=1');
 INSERT INTO undolog VALUES(6,'DELETE FROM balances WHERE rowid=2');
 INSERT INTO undolog VALUES(7,'DELETE FROM credits WHERE rowid=2');
-INSERT INTO undolog VALUES(8,'DELETE FROM sends WHERE rowid=2');
+INSERT INTO undolog VALUES(8,'DELETE FROM sends WHERE rowid=1');
 INSERT INTO undolog VALUES(9,'DELETE FROM orders WHERE rowid=1');
 INSERT INTO undolog VALUES(10,'UPDATE balances SET address=''2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2'',asset=''XCP'',quantity=92950000000 WHERE rowid=1');
 INSERT INTO undolog VALUES(11,'DELETE FROM debits WHERE rowid=2');
@@ -1147,12 +1150,12 @@ INSERT INTO undolog VALUES(32,'UPDATE balances SET address=''2_mn6q3dS2EnDUx3bmy
 INSERT INTO undolog VALUES(33,'DELETE FROM debits WHERE rowid=5');
 INSERT INTO undolog VALUES(34,'DELETE FROM balances WHERE rowid=5');
 INSERT INTO undolog VALUES(35,'DELETE FROM credits WHERE rowid=6');
-INSERT INTO undolog VALUES(36,'DELETE FROM sends WHERE rowid=8');
+INSERT INTO undolog VALUES(36,'DELETE FROM sends WHERE rowid=2');
 INSERT INTO undolog VALUES(37,'UPDATE balances SET address=''2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2'',asset=''BBBC'',quantity=100000 WHERE rowid=4');
 INSERT INTO undolog VALUES(38,'DELETE FROM debits WHERE rowid=6');
 INSERT INTO undolog VALUES(39,'DELETE FROM balances WHERE rowid=6');
 INSERT INTO undolog VALUES(40,'DELETE FROM credits WHERE rowid=7');
-INSERT INTO undolog VALUES(41,'DELETE FROM sends WHERE rowid=9');
+INSERT INTO undolog VALUES(41,'DELETE FROM sends WHERE rowid=3');
 INSERT INTO undolog VALUES(42,'UPDATE balances SET address=''2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2'',asset=''XCP'',quantity=92845000000 WHERE rowid=1');
 INSERT INTO undolog VALUES(43,'DELETE FROM debits WHERE rowid=7');
 INSERT INTO undolog VALUES(44,'UPDATE balances SET address=''2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2'',asset=''XCP'',quantity=92844999976 WHERE rowid=1');
@@ -1248,7 +1251,7 @@ INSERT INTO undolog VALUES(133,'UPDATE balances SET address=''2_mn6q3dS2EnDUx3bm
 INSERT INTO undolog VALUES(134,'DELETE FROM debits WHERE rowid=18');
 INSERT INTO undolog VALUES(135,'UPDATE balances SET address=''2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2'',asset=''BBBC'',quantity=526 WHERE rowid=6');
 INSERT INTO undolog VALUES(136,'DELETE FROM credits WHERE rowid=25');
-INSERT INTO undolog VALUES(137,'DELETE FROM sends WHERE rowid=24');
+INSERT INTO undolog VALUES(137,'DELETE FROM sends WHERE rowid=4');
 INSERT INTO undolog VALUES(138,'UPDATE orders SET tx_index=22,tx_hash=''dbbfdae392b27be467139350049f225f6b87682284d1d46c58be7d03d74caf41'',block_index=310021,source=''2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2'',give_asset=''BBBB'',give_quantity=50000000,give_remaining=50000000,get_asset=''XCP'',get_quantity=50000000,get_remaining=50000000,expiration=10,expire_index=310031,fee_required=0,fee_required_remaining=0,fee_provided=6800,fee_provided_remaining=6800,status=''open'' WHERE rowid=3');
 INSERT INTO undolog VALUES(139,'UPDATE balances SET address=''2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2'',asset=''BBBB'',quantity=946000000 WHERE rowid=3');
 INSERT INTO undolog VALUES(140,'DELETE FROM credits WHERE rowid=26');
