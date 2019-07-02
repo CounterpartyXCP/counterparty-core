@@ -25,6 +25,7 @@ CONFIG_ARGS = [
     [('--testnet',), {'action': 'store_true', 'default': False, 'help': 'use {} testnet addresses and block numbers'.format(config.BTC_NAME)}],
     [('--testcoin',), {'action': 'store_true', 'default': False, 'help': 'use the test {} network on every blockchain'.format(config.XCP_NAME)}],
     [('--regtest',), {'action': 'store_true', 'default': False, 'help': 'use {} regtest addresses and block numbers'.format(config.BTC_NAME)}],
+    [('--customnet',), {'default': '', 'help': 'use a custom network (specify as UNSPENDABLE_ADDRESS|ADDRESSVERSION|P2SH_ADDRESSVERSION with version bytes in HH hex format)'}],
 
     [('--counterparty-rpc-connect',), {'default': 'localhost', 'help': 'the hostname or IP of the Counterparty JSON-RPC server'}],
     [('--counterparty-rpc-port',), {'type': int, 'help': 'the port of the Counterparty JSON-RPC server'}],
@@ -82,6 +83,22 @@ def main():
     parser_send.add_argument('--memo-is-hex', action='store_true', default=False, help='Whether to interpret memo as a hexadecimal value')
     parser_send.add_argument('--no-use-enhanced-send', action='store_false', dest="use_enhanced_send", default=True, help='If set to false, compose a non-enhanced send with a bitcoin dust output')
     parser_send.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
+
+    parser_sweep = subparsers.add_parser('sweep', help='create and broadcast a *sweep* message')
+    parser_sweep.add_argument('--source', required=True, help='the source address')
+    parser_sweep.add_argument('--destination', required=True, help='the destination address')
+    parser_sweep.add_argument('--flags', default=1, help='the ORed flags for this sweep. 1 for balance sweep, 2 for ownership sweep, 4 for memo as hex. E.G. flag=7 sends all assets, transfer all ownerships and encodes the memo as hex. default=1')
+    parser_sweep.add_argument('--memo', help='A transaction memo attached to this send')
+    parser_sweep.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
+
+    parser_dispenser = subparsers.add_parser('dispenser', help='create and broadcast a *dispenser*')
+    parser_dispenser.add_argument('--source', required=True, help='the source address')
+    parser_dispenser.add_argument('--asset', required=True, help='the ASSET of which you would like to dispense GIVE_QUANTITY')
+    parser_dispenser.add_argument('--mainchainrate', required=True, help='the quantity of %s (decimal) this dispenser must receive to send the GIVEN_QUANTITY of the ASSET' % config.BTC)
+    parser_dispenser.add_argument('--give-quantity', required=True, help='the quantity of ASSET that you are giving for each MAINCHAINRATE of %s received' % config.BTC)
+    parser_dispenser.add_argument('--escrow-quantity', required=True, help='the quantity of ASSET that you are escrowing for this dispenser')
+    parser_dispenser.add_argument('--status', default=0, help='the status for the dispenser: 0. to open the dispenser (or replenish a drained one). 10. to close the dispenser. Default 0.')
+    parser_dispenser.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_order = subparsers.add_parser('order', help='create and broadcast an *order* message')
     parser_order.add_argument('--source', required=True, help='the source address')
@@ -210,7 +227,7 @@ def main():
         sys.exit()
 
     # Configuration
-    clientapi.initialize(testnet=args.testnet, testcoin=args.testcoin, regtest=args.regtest,
+    clientapi.initialize(testnet=args.testnet, testcoin=args.testcoin, regtest=args.regtest, customnet=args.customnet,
                         counterparty_rpc_connect=args.counterparty_rpc_connect, counterparty_rpc_port=args.counterparty_rpc_port,
                         counterparty_rpc_user=args.counterparty_rpc_user, counterparty_rpc_password=args.counterparty_rpc_password,
                         counterparty_rpc_ssl=args.counterparty_rpc_ssl, counterparty_rpc_ssl_verify=args.counterparty_rpc_ssl_verify,

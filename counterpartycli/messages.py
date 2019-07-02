@@ -16,6 +16,8 @@ import bitcoin as bitcoinlib
 
 MESSAGE_PARAMS = {
     'send': ['source', 'destination', 'asset', 'quantity', 'memo', 'memo_is_hex', 'use_enhanced_send'],
+    'sweep': ['source', 'destination', 'flags', 'memo'],
+    'dispenser': ['source', 'asset', 'give_quantity', 'mainchainrate', 'escrow_quantity', 'status'],
     'order': ['source', 'give_asset', 'give_quantity', 'get_asset', 'get_quantity', 'expiration', 'fee_required', 'fee_provided'],
     'btcpay': ['source', 'order_match_id'],
     'issuance': ['source', 'asset', 'quantity', 'divisible', 'description', 'transfer_destination'],
@@ -134,6 +136,17 @@ def prepare_args(args, action):
     # send
     if action == 'send':
         args.quantity = util.value_in(args.quantity, args.asset)
+
+    # sweep
+    if action == 'sweep':
+        args.flags = int(args.flags)
+
+    # dispenser
+    if action == 'dispenser':
+        args.status = int(args.status)
+        args.give_quantity = util.value_in(args.give_quantity, args.asset)
+        args.escrow_quantity = util.value_in(args.escrow_quantity, args.asset)
+        args.mainchainrate = util.value_in(args.mainchainrate, config.BTC)
 
     # order
     if action == 'order':
