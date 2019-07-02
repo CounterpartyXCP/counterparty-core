@@ -15,18 +15,22 @@ import decimal
 import logging
 logger = logging.getLogger(__name__)
 import requests
+import bitcoin as bitcoinlib
 from bitcoin.core.script import CScript
 from bitcoin.core import x
 from bitcoin.core import b2lx
-from bitcoin.bech32 import CBech32Data
 import cachetools
+import math
 
+from counterpartylib.lib import blocks
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 from counterpartylib.lib import script
 from counterpartylib.lib import backend
 from counterpartylib.lib import arc4
+from counterpartylib.lib.transaction_helper import serializer, p2sh_encoding
+
 
 # Constants
 OP_RETURN = b'\x6a'
@@ -43,35 +47,64 @@ OP_CHECKMULTISIG = b'\xae'
 OP_EQUAL = b'\x87'
 
 D = decimal.Decimal
+
+# UTXO_LOCKS is None or DictCache per address
 UTXO_LOCKS = None
-UTXO_LOCKS_PER_ADDRESS_MAXSIZE = 5000  # set higher than the max number of UTXOs we should expect to
-                                       # manage in an aging cache for any one source address, at any one period
+# set higher than the max number of UTXOs we should expect to
+# manage in an aging cache for any one source address, at any one period
+UTXO_LOCKS_PER_ADDRESS_MAXSIZE = 5000
+
+# UTXO_P2SH_ENCODING_LOCKS is TTLCache for UTXOs that are used for chaining p2sh encoding
+#  instead of a simple (txid, vout) key we use [(vin.prevout.hash, vin.prevout.n) for vin tx1.vin]
+UTXO_P2SH_ENCODING_LOCKS = None
+# we cache the make_outkey_vin to avoid having to fetch raw txs too often
+UTXO_P2SH_ENCODING_LOCKS_CACHE = None
+
+
+def initialise():
+    global UTXO_LOCKS, UTXO_P2SH_ENCODING_LOCKS, UTXO_P2SH_ENCODING_LOCKS_CACHE
+
+    if config.UTXO_LOCKS_MAX_ADDRESSES > 0:  # initialize if configured
+        UTXO_LOCKS = util.DictCache(size=config.UTXO_LOCKS_MAX_ADDRESSES)
+
+    UTXO_P2SH_ENCODING_LOCKS = cachetools.TTLCache(10000, 180)
+    UTXO_P2SH_ENCODING_LOCKS_CACHE = cachetools.TTLCache(1000, 600)
 
 
 def print_coin(coin):
     return 'amount: {:.8f}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
 
 
-def var_int (i):
-    if i < 0xfd:
-        return (i).to_bytes(1, byteorder='little')
-    elif i <= 0xffff:
-        return b'\xfd' + (i).to_bytes(2, byteorder='little')
-    elif i <= 0xffffffff:
-        return b'\xfe' + (i).to_bytes(4, byteorder='little')
-    else:
-        return b'\xff' + (i).to_bytes(8, byteorder='little')
+def chunks(l, n):
+    """ Yield successive n‐sized chunks from l.
+    """
+    for i in range(0, len(l), n):
+        yield l[i:i+n]
 
 
-def op_push (i):
-    if i < 0x4c:
-        return (i).to_bytes(1, byteorder='little')              # Push i bytes.
-    elif i <= 0xff:
-        return b'\x4c' + (i).to_bytes(1, byteorder='little')    # OP_PUSHDATA1
-    elif i <= 0xffff:
-        return b'\x4d' + (i).to_bytes(2, byteorder='little')    # OP_PUSHDATA2
-    else:
-        return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
+def make_outkey(output):
+    return '{}{}'.format(output['txid'], output['vout'])
+
+
+def make_outkey_vin_txid(txid, vout):
+    global UTXO_P2SH_ENCODING_LOCKS_CACHE
+
+    if (txid, vout) not in UTXO_P2SH_ENCODING_LOCKS_CACHE:
+        txhex = backend.getrawtransaction(txid, verbose=False)
+        UTXO_P2SH_ENCODING_LOCKS_CACHE[(txid, vout)] = make_outkey_vin(txhex, vout)
+
+    return UTXO_P2SH_ENCODING_LOCKS_CACHE[(txid, vout)]
+
+
+def make_outkey_vin(txhex, vout):
+    txbin = binascii.unhexlify(txhex) if isinstance(txhex, str) else txhex
+    assert isinstance(vout, int)
+
+    tx = bitcoinlib.core.CTransaction.deserialize(txbin)
+    outkey = [(vin.prevout.hash, vin.prevout.n) for vin in tx.vin]
+    outkey = hashlib.sha256(("%s%s" % (outkey, vout)).encode('ascii')).digest()
+
+    return outkey
 
 
 def get_dust_return_pubkey(source, provided_pubkeys, encoding):
@@ -97,462 +130,32 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
     return dust_return_pubkey
 
 
-def get_script(address):
-    if script.is_multisig(address):
-        return get_multisig_script(address)
-    elif script.is_bech32(address):
-        return get_p2w_script(address)
-    else:
-        try:
-            return get_monosig_script(address)
-        except script.VersionByteError as e:
-            return get_p2sh_script(address)
-
-
-def get_multisig_script(address):
-
-    # Unpack multi‐sig address.
-    signatures_required, pubkeys, signatures_possible = script.extract_array(address)
-
-    # Required signatures.
-    if signatures_required == 1:
-        op_required = OP_1
-    elif signatures_required == 2:
-        op_required = OP_2
-    elif signatures_required == 3:
-        op_required = OP_3
-    else:
-        raise script.InputError('Required signatures must be 1, 2 or 3.')
-
-    # Required signatures.
-    # Note 1-of-1 addresses are not supported (they don't go through extract_array anyway).
-    if signatures_possible == 2:
-        op_total = OP_2
-    elif signatures_possible == 3:
-        op_total = OP_3
-    else:
-        raise script.InputError('Total possible signatures must be 2 or 3.')
-
-    # Construct script.
-    tx_script = op_required                                # Required signatures
-    for public_key in pubkeys:
-        public_key = binascii.unhexlify(public_key)
-        tx_script += op_push(len(public_key))              # Push bytes of public key
-        tx_script += public_key                            # Data chunk (fake) public key
-    tx_script += op_total                                  # Total signatures
-    tx_script += OP_CHECKMULTISIG                          # OP_CHECKMULTISIG
-
-    return (tx_script, None)
-
-
-def get_monosig_script(address):
-
-    # Construct script.
-    pubkeyhash = script.base58_check_decode(address, config.ADDRESSVERSION)
-    tx_script = OP_DUP                                     # OP_DUP
-    tx_script += OP_HASH160                                # OP_HASH160
-    tx_script += op_push(20)                               # Push 0x14 bytes
-    tx_script += pubkeyhash                                # pubKeyHash
-    tx_script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
-    tx_script += OP_CHECKSIG                               # OP_CHECKSIG
-
-    return (tx_script, None)
-
-
-def get_p2sh_script(address):
-
-    # Construct script.
-    scripthash = script.base58_check_decode(address, config.P2SH_ADDRESSVERSION)
-    tx_script = OP_HASH160
-    tx_script += op_push(len(scripthash))
-    tx_script += scripthash
-    tx_script += OP_EQUAL
-
-    return (tx_script, None)
-
-def get_p2w_script(address):
-
-    # Construct script.
-    scripthash = bytes(CBech32Data(address))
-
-    if len(scripthash) == 20:
-        # P2WPKH encoding
-
-        tx_script = OP_0
-        tx_script += b'\x14'
-        tx_script += scripthash
-
-        witness_script = OP_HASH160
-        witness_script += op_push(len(scripthash))
-        witness_script += scripthash
-        witness_script += OP_EQUAL
-
-        return (witness_script, tx_script)
-    elif len(scripthash) == 32:
-        # P2WSH encoding
-        raise Exception('P2WSH encoding not yet supported')
-
-def make_fully_valid(pubkey_start):
-    """Take a too short data pubkey and make it look like a real pubkey.
-
-    Take an obfuscated chunk of data that is two bytes too short to be a pubkey and
-    add a sign byte to its beginning and a nonce byte to its end. Choose these
-    bytes so that the resulting sequence of bytes is a fully valid pubkey (i.e. on
-    the ECDSA curve). Find the correct bytes by guessing randomly until the check
-    passes. (In parsing, these two bytes are ignored.)
-    """
-    assert type(pubkey_start) == bytes
-    assert len(pubkey_start) == 31    # One sign byte and one nonce byte required (for 33 bytes).
-
-    random_bytes = hashlib.sha256(pubkey_start).digest()      # Deterministically generated, for unit tests.
-    sign = (random_bytes[0] & 0b1) + 2                  # 0x02 or 0x03
-    nonce = initial_nonce = random_bytes[1]
-
-    pubkey = b''
-    while not script.is_fully_valid(pubkey):
-        # Increment nonce.
-        nonce += 1
-        assert nonce != initial_nonce
-
-        # Construct a possibly fully valid public key.
-        pubkey = bytes([sign]) + pubkey_start + bytes([nonce % 256])
-
-    assert len(pubkey) == 33
-    return pubkey
-
-
-def serialise (encoding, inputs, destination_outputs, data_output=None, change_output=None, dust_return_pubkey=None):
-    s  = (1).to_bytes(4, byteorder='little')                # Version
-
-    use_segwit = False
-    for i in range(len(inputs)):
-        txin = inputs[i]
-        spk = txin['scriptPubKey']
-        if spk[0:2] == '00': # Witness version 0
-            datalen = binascii.unhexlify(spk[2:4])[0]
-            if datalen == 20 or datalen == 32:
-                # 20 is for P2WPKH and 32 is for P2WSH
-                use_segwit = True
-                s  = (2).to_bytes(4, byteorder='little') # Rewrite version
-                break
-
-    if use_segwit:
-        s += b'\x00' # marker
-        s += b'\x01' # flag
-
-    # Number of inputs.
-    s += var_int(int(len(inputs)))
-
-    witness_txins = []
-    witness_data = {}
-
-    # List of Inputs.
-    for i in range(len(inputs)):
-        txin = inputs[i]
-        this_is_segwit = False
-        witness_program = None
-        if use_segwit:
-            spk = txin['scriptPubKey']
-            witver = binascii.unhexlify(spk[0:2])[0]
-            datalen = binascii.unhexlify(spk[2:4])[0]
-
-            if witver == 0 and (datalen == 20 or datalen == 32):
-                witprog = binascii.unhexlify(spk[4:])
-
-                address = str((CBech32Data.from_bytes(witver, witprog)))
-                witness_data[address] = []
-                witness_txins.append(address)
-                this_is_segwit = True
-                witness_program = witprog
-            else:
-                witness_txins.append(None)
-
-        s += binascii.unhexlify(bytes(txin['txid'], 'utf-8'))[::-1]         # TxOutHash
-        s += txin['vout'].to_bytes(4, byteorder='little')   # TxOutIndex
-
-        if this_is_segwit:
-            tx_script = b'\x00' + bytes(chr(len(witness_program)), 'utf8') + witness_program
-        else:
-            tx_script = binascii.unhexlify(bytes(txin['scriptPubKey'], 'utf-8'))
-        s += var_int(int(len(tx_script)))                      # Script length
-        s += tx_script                                         # Script
-        s += b'\xff' * 4                                    # Sequence
-
-    # Number of outputs.
-    n = 0
-    n += len(destination_outputs)
-    if data_output:
-        data_array, value = data_output
-        for data_chunk in data_array: n += 1
-    else:
-        data_array = []
-    if change_output: n += 1
-    s += var_int(n)
-
-    # Destination output.
-    for destination, value in destination_outputs:
-        s += value.to_bytes(8, byteorder='little')          # Value
-
-        tx_script, witness_script = get_script(destination)
-        #if use_segwit and destination in witness_data: # We will need this for P2WSH
-        #    witness_data[destination].append(witness_script)
-        #    tx_script = witness_script
-
-        if witness_script:
-            tx_script = witness_script
-
-        s += var_int(int(len(tx_script)))                      # Script length
-        s += tx_script
-
-    # Data output.
-    for data_chunk in data_array:
-        data_array, value = data_output
-        s += value.to_bytes(8, byteorder='little')        # Value
-
-        data_chunk = config.PREFIX + data_chunk
-
-        # Initialise encryption key (once per output).
-        key = arc4.init_arc4(inputs[0]['txid'])  # Arbitrary, easy‐to‐find, unique key.
-
-        if encoding == 'multisig':
-            assert dust_return_pubkey
-            # Get data (fake) public key.
-            pad_length = (33 * 2) - 1 - 2 - 2 - len(data_chunk)
-            assert pad_length >= 0
-            data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
-            data_chunk = key.encrypt(data_chunk)
-            data_pubkey_1 = make_fully_valid(data_chunk[:31])
-            data_pubkey_2 = make_fully_valid(data_chunk[31:])
-
-            # Construct script.
-            tx_script = OP_1                                   # OP_1
-            tx_script += op_push(33)                           # Push bytes of data chunk (fake) public key    (1/2)
-            tx_script += data_pubkey_1                         # (Fake) public key                  (1/2)
-            tx_script += op_push(33)                           # Push bytes of data chunk (fake) public key    (2/2)
-            tx_script += data_pubkey_2                         # (Fake) public key                  (2/2)
-            tx_script += op_push(len(dust_return_pubkey))  # Push bytes of source public key
-            tx_script += dust_return_pubkey                       # Source public key
-            tx_script += OP_3                                  # OP_3
-            tx_script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
-        elif encoding == 'opreturn':
-            data_chunk = key.encrypt(data_chunk)
-            tx_script = OP_RETURN                                  # OP_RETURN
-            tx_script += op_push(len(data_chunk))                  # Push bytes of data chunk (NOTE: OP_SMALLDATA?)
-            tx_script += data_chunk                                # Data
-        elif encoding == 'pubkeyhash':
-            pad_length = 20 - 1 - len(data_chunk)
-            assert pad_length >= 0
-            data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
-            data_chunk = key.encrypt(data_chunk)
-            # Construct script.
-            tx_script = OP_DUP                                     # OP_DUP
-            tx_script += OP_HASH160                                # OP_HASH160
-            tx_script += op_push(20)                               # Push 0x14 bytes
-            tx_script += data_chunk                                # (Fake) pubKeyHash
-            tx_script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
-            tx_script += OP_CHECKSIG                               # OP_CHECKSIG
-        else:
-            raise exceptions.TransactionError('Unknown encoding‐scheme.')
-
-        s += var_int(int(len(tx_script)))                      # Script length
-        s += tx_script
-
-    # Change output.
-    if change_output:
-        change_address, change_value = change_output
-        s += change_value.to_bytes(8, byteorder='little')   # Value
-
-        tx_script, witness_script = get_script(change_address)
-
-        if use_segwit and change_address in witness_data:
-            witness_data[change_address].append(witness_script)
-            tx_script = witness_script
-
-        s += var_int(int(len(tx_script)))                      # Script length
-        s += tx_script
-
-    if use_segwit:
-        for address in witness_txins:
-            if address is None:
-                s += var_int(int(0))
-            else:
-                empty_witness = [b'\x00\x00\x00\x00', b'\x00\x00\x00\x00']
-                s += var_int(int(len(empty_witness)))           # Script length
-
-                for item in empty_witness:
-                    s += var_int(int(len(item)))
-                    s += item
-
-    s += (0).to_bytes(4, byteorder='little')                # LockTime
-    return s
-
-
-def chunks(l, n):
-    """ Yield successive n‐sized chunks from l.
-    """
-    for i in range(0, len(l), n):
-        yield l[i:i+n]
-
-
-def make_outkey(output):
-    return '{}{}'.format(output['txid'], output['vout'])
-
-
-def construct (db, tx_info, encoding='auto',
-               fee_per_kb=config.DEFAULT_FEE_PER_KB,
-               estimate_fee_per_kb=None, estimate_fee_per_kb_conf_target=config.ESTIMATE_FEE_CONF_TARGET, estimate_fee_per_kb_mode=config.ESTIMATE_FEE_MODE,
-               regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
-               multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
-               op_return_value=config.DEFAULT_OP_RETURN_VALUE,
-               exact_fee=None, fee_provided=0, provided_pubkeys=None, dust_return_pubkey=None,
-               allow_unconfirmed_inputs=False, unspent_tx_hash=None, custom_inputs=None, disable_utxo_locks=False, extended_tx_info=False):
-
-    if estimate_fee_per_kb is None:
-        estimate_fee_per_kb = config.ESTIMATE_FEE_PER_KB
-
-    global UTXO_LOCKS
-
-    desired_encoding = encoding
-    (source, destination_outputs, data) = tx_info
-
-    if dust_return_pubkey:
-        dust_return_pubkey = binascii.unhexlify(dust_return_pubkey)
-
-    # Source.
-        # If public key is necessary for construction of (unsigned)
-        # transaction, use the public key provided, or find it from the
-        # blockchain.
-    if source:
-        script.validate(source)
-
-    source_is_p2sh = script.is_p2sh(source)
-
-    # Sanity checks.
-    if exact_fee and not isinstance(exact_fee, int):
-        raise exceptions.TransactionError('Exact fees must be in satoshis.')
-    if not isinstance(fee_provided, int):
-        raise exceptions.TransactionError('Fee provided must be in satoshis.')
-
-    if UTXO_LOCKS is None and config.UTXO_LOCKS_MAX_ADDRESSES > 0:  # initialize if configured
-        UTXO_LOCKS = util.DictCache(size=config.UTXO_LOCKS_MAX_ADDRESSES)
-
-    '''Destinations'''
-
-    # Destination outputs.
-        # Replace multi‐sig addresses with multi‐sig pubkeys. Check that the
-        # destination output isn’t a dust output. Set null values to dust size.
-    destination_outputs_new = []
-    for (address, value) in destination_outputs:
-
-        # Value.
-        if script.is_multisig(address):
-            dust_size = multisig_dust_size
-        else:
-            dust_size = regular_dust_size
-        if value == None:
-            value = dust_size
-        elif value < dust_size:
-            raise exceptions.TransactionError('Destination output is dust.')
-
-        # Address.
-        script.validate(address)
-        if script.is_multisig(address):
-            destination_outputs_new.append((backend.multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys), value))
-        else:
-            destination_outputs_new.append((address, value))
-
-    destination_outputs = destination_outputs_new
-    destination_btc_out = sum([value for address, value in destination_outputs])
-
-
-    '''Data'''
-
-    if data:
-        # Data encoding methods (choose and validate).
-        if encoding == 'auto':
-            if len(data) + len(config.PREFIX) <= config.OP_RETURN_MAX_SIZE:
-                encoding = 'opreturn'
-            else:
-                encoding = 'multisig'
-
-        elif encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
-            raise exceptions.TransactionError('Unknown encoding‐scheme.')
-
-
-        if encoding == 'multisig':
-            # dust_return_pubkey should be set or explicitly set to False to use the default configured for the node
-            #  the default for the node is optional so could fail
-            if (source_is_p2sh and dust_return_pubkey is None) or (dust_return_pubkey is False and config.P2SH_DUST_RETURN_PUBKEY is None):
-                raise exceptions.TransactionError("Can't use multisig encoding when source is P2SH and no dust_return_pubkey is provided.")
-            elif dust_return_pubkey is False:
-                dust_return_pubkey = binascii.unhexlify(config.P2SH_DUST_RETURN_PUBKEY)
-
-        # Divide data into chunks.
-        if encoding == 'pubkeyhash':
-            # Prefix is also a suffix here.
-            chunk_size = 20 - 1 - 8
-        elif encoding == 'multisig':
-            # Two pubkeys, minus length byte, minus prefix, minus two nonces,
-            # minus two sign bytes.
-            chunk_size = (33 * 2) - 1 - 8 - 2 - 2
-        elif encoding == 'opreturn':
-            chunk_size = config.OP_RETURN_MAX_SIZE
-            if len(data) + len(config.PREFIX) > chunk_size:
-                raise exceptions.TransactionError('One `OP_RETURN` output per transaction.')
-        data_array = list(chunks(data, chunk_size))
-
-        # Data outputs.
-        if encoding == 'multisig':
-            data_value = multisig_dust_size
-        elif encoding == 'opreturn':
-            data_value = op_return_value
-        else:
-            # Pay‐to‐PubKeyHash, e.g.
-            data_value = regular_dust_size
-        data_output = (data_array, data_value)
-
-        if not dust_return_pubkey:
-            if encoding == 'multisig':
-                dust_return_pubkey = get_dust_return_pubkey(source, provided_pubkeys, encoding)
-            else:
-                dust_return_pubkey = None
-    else:
-        data_array = []
-        data_output = None
-        dust_return_pubkey = None
-
-    data_btc_out = sum([data_value for data_chunk in data_array])
-
-    '''Inputs'''
-
-    # Calculate collective size of outputs, for fee calculation.
-    p2pkhsize = 25 + 9
-    if encoding == 'multisig':
-        data_output_size = 81       # 71 for the data
-    elif encoding == 'opreturn':
-        # prefix + data + 10 bytes script overhead
-        data_output_size = len(config.PREFIX) + 10
-        if data is not None:
-            data_output_size = data_output_size + len(data)
-    else:
-        data_output_size = p2pkhsize   # Pay‐to‐PubKeyHash (25 for the data?)
-    outputs_size = (p2pkhsize * len(destination_outputs)) + (len(data_array) * data_output_size)
+def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inputs, unspent_tx_hash, custom_inputs,
+                             fee_per_kb, estimate_fee_per_kb, estimate_fee_per_kb_nblocks, exact_fee, size_for_fee, fee_provided, destination_btc_out, data_btc_out,
+                             regular_dust_size, disable_utxo_locks):
+
+    global UTXO_LOCKS, UTXO_P2SH_ENCODING_LOCKS
 
     # Array of UTXOs, as retrieved by listunspent function from bitcoind
     if custom_inputs:
-        use_inputs = unspent = normalize_custom_inputs(custom_inputs)
-
+        use_inputs = unspent = custom_inputs
     else:
         if unspent_tx_hash is not None:
             unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash)
         else:
             unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs)
 
-        # filter out any locked UTXOs to prevent creating transactions that spend the same UTXO when they're created at the same time
+        filter_unspents_utxo_locks = []
         if UTXO_LOCKS is not None and source in UTXO_LOCKS:
-            unspentkeys = set(make_outkey(output) for output in unspent)
-            filtered_unspentkeys = unspentkeys - set(UTXO_LOCKS[source].keys())
-            unspent = [output for output in unspent if make_outkey(output) in filtered_unspentkeys]
+            filter_unspents_utxo_locks = UTXO_LOCKS[source].keys()
+        filter_unspents_p2sh_locks = UTXO_P2SH_ENCODING_LOCKS.keys()
+
+        # filter out any locked UTXOs to prevent creating transactions that spend the same UTXO when they're created at the same time
+        filtered_unspent = []
+        for output in unspent:
+            if make_outkey(output) not in filter_unspents_utxo_locks and make_outkey_vin_txid(output['txid'], output['vout']) not in filter_unspents_p2sh_locks:
+                filtered_unspent.append(output)
+        unspent = filtered_unspent
 
         unspent = backend.sort_unspent_txouts(unspent)
         logger.debug('Sorted candidate UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
@@ -560,7 +163,7 @@ def construct (db, tx_info, encoding='auto',
 
     # use backend estimated fee_per_kb
     if estimate_fee_per_kb:
-        estimated_fee_per_kb = backend.fee_per_kb(estimate_fee_per_kb_conf_target, estimate_fee_per_kb_mode)
+        estimated_fee_per_kb = backend.fee_per_kb(estimate_fee_per_kb_nblocks, config.ESTIMATE_FEE_MODE)
         if estimated_fee_per_kb is not None:
             fee_per_kb = max(estimated_fee_per_kb, fee_per_kb)  # never drop below the default fee_per_kb
 
@@ -576,20 +179,22 @@ def construct (db, tx_info, encoding='auto',
     if encoding == 'multisig' and data_array and util.enabled('bytespersigop'):
         desired_input_count = len(data_array) * 2
 
+
+    # pop inputs until we can pay for the fee
     for coin in use_inputs:
         logger.debug('New input: {}'.format(print_coin(coin)))
         inputs.append(coin)
-        btc_in += coin['value']
-
-        size = 181 * len(inputs) + outputs_size + 10
-        necessary_fee = int(size / 1000 * fee_per_kb)
+        btc_in += round(coin['amount'] * config.UNIT)
 
         # If exact fee is specified, use that. Otherwise, calculate size of tx
         # and base fee on that (plus provide a minimum fee for selling BTC).
+        size = 181 * len(inputs) + size_for_fee + 10
         if exact_fee:
             final_fee = exact_fee
         else:
+            necessary_fee = int(size / 1000 * fee_per_kb)
             final_fee = max(fee_provided, necessary_fee)
+            logger.getChild('p2shdebug').debug('final_fee inputs: %d size: %d final_fee %s' % (len(inputs), size, final_fee))
 
         # Check if good.
         btc_out = destination_btc_out + data_btc_out
@@ -608,21 +213,50 @@ def construct (db, tx_info, encoding='auto',
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
         raise exceptions.BalanceError('Insufficient {} at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(config.BTC, source, total_btc_out / config.UNIT, config.BTC))
 
-    '''Finish'''
+    # Lock the source's inputs (UTXOs) chosen for this transaction
+    if UTXO_LOCKS is not None and not disable_utxo_locks:
+        if source not in UTXO_LOCKS:
+            UTXO_LOCKS[source] = cachetools.TTLCache(
+                UTXO_LOCKS_PER_ADDRESS_MAXSIZE, config.UTXO_LOCKS_MAX_AGE)
 
-    # Change output.
-    if change_quantity:
-        if script.is_multisig(source):
-            change_address = backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
-        else:
-            change_address = source
-        change_output = (change_address, change_quantity)
-    else:
-        change_output = None
+        for input in inputs:
+            UTXO_LOCKS[source][make_outkey(input)] = input
+
+        logger.debug("UTXO locks: Potentials ({}): {}, Used: {}, locked UTXOs: {}".format(
+            len(unspent), [make_outkey(coin) for coin in unspent],
+            [make_outkey(input) for input in inputs], list(UTXO_LOCKS[source].keys())))
 
     # ensure inputs have scriptPubKey
     #   this is not provided by indexd
     inputs = backend.ensure_script_pub_key_for_inputs(inputs)
+
+    return inputs, change_quantity, btc_in, final_fee
+
+def select_any_coin_from_source(source, allow_unconfirmed_inputs=True, disable_utxo_locks=False):
+    ''' Get the first (biggest) input from the source address '''
+    global UTXO_LOCKS
+
+    # Array of UTXOs, as retrieved by listunspent function from bitcoind
+    unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs)
+
+    filter_unspents_utxo_locks = []
+    if UTXO_LOCKS is not None and source in UTXO_LOCKS:
+        filter_unspents_utxo_locks = UTXO_LOCKS[source].keys()
+
+    # filter out any locked UTXOs to prevent creating transactions that spend the same UTXO when they're created at the same time
+    filtered_unspent = []
+    for output in unspent:
+        if make_outkey(output) not in filter_unspents_utxo_locks:
+            filtered_unspent.append(output)
+    unspent = filtered_unspent
+
+    # sort
+    unspent = backend.sort_unspent_txouts(unspent)
+
+    # use the first input
+    input = unspent[0]
+    if input is None:
+        return None
 
     # Lock the source's inputs (UTXOs) chosen for this transaction
     if UTXO_LOCKS is not None and not disable_utxo_locks:
@@ -630,22 +264,297 @@ def construct (db, tx_info, encoding='auto',
             UTXO_LOCKS[source] = cachetools.TTLCache(
                 UTXO_LOCKS_PER_ADDRESS_MAXSIZE, config.UTXO_LOCKS_MAX_AGE)
 
-        logger.debug("UTXO locks: Potentials ({}): {}, Used: {}, locked UTXOs: {}".format(
-            len(unspent), [make_outkey(coin) for coin in unspent],
-            [make_outkey(input) for input in inputs], list(UTXO_LOCKS[source].keys())))
+        UTXO_LOCKS[source][make_outkey(input)] = input
 
-        for input in inputs:
-            UTXO_LOCKS[source][make_outkey(input)] = input
+    return input
 
-    # Serialise inputs and outputs.
-    unsigned_tx = serialise(encoding, inputs, destination_outputs,
-                            data_output, change_output,
-                            dust_return_pubkey=dust_return_pubkey)
-    unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')
+
+def return_result(tx_hexes, old_style_api):
+        tx_hexes = list(filter(None, tx_hexes))  # filter out None
+
+        if old_style_api:
+            if len(tx_hexes) != 1:
+                raise Exception("Can't do 2 TXs with old_style_api")
+
+            return tx_hexes[0]
+        else:
+            return tx_hexes
+
+
+def construct (db, tx_info, encoding='auto',
+               fee_per_kb=config.DEFAULT_FEE_PER_KB,
+               estimate_fee_per_kb=None, estimate_fee_per_kb_conf_target=config.ESTIMATE_FEE_CONF_TARGET,
+               estimate_fee_per_kb_mode=config.ESTIMATE_FEE_MODE, estimate_fee_per_kb_nblocks=config.ESTIMATE_FEE_CONF_TARGET,
+               regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
+               multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
+               op_return_value=config.DEFAULT_OP_RETURN_VALUE,
+               exact_fee=None, fee_provided=0, provided_pubkeys=None, dust_return_pubkey=None,
+               allow_unconfirmed_inputs=False, unspent_tx_hash=None, custom_inputs=None, disable_utxo_locks=False, extended_tx_info=False,
+               old_style_api=None, segwit=False,
+               p2sh_source_multisig_pubkeys=None, p2sh_source_multisig_pubkeys_required=None, p2sh_pretx_txid=None,):
+
+    if estimate_fee_per_kb is None:
+        estimate_fee_per_kb = config.ESTIMATE_FEE_PER_KB
+
+    global UTXO_LOCKS, UTXO_P2SH_ENCODING_LOCKS
+
+    # lazy assign from config, because when set as default it's evaluated before it's configured
+    if old_style_api is None:
+        old_style_api = config.OLD_STYLE_API
+
+    (source, destination_outputs, data) = tx_info
+
+    if dust_return_pubkey:
+        dust_return_pubkey = binascii.unhexlify(dust_return_pubkey)
+
+    if p2sh_source_multisig_pubkeys:
+        p2sh_source_multisig_pubkeys = [binascii.unhexlify(p) for p in p2sh_source_multisig_pubkeys]
+
+    # Source.
+        # If public key is necessary for construction of (unsigned)
+        # transaction, use the public key provided, or find it from the
+        # blockchain.
+    if source:
+        script.validate(source)
+
+    source_is_p2sh = script.is_p2sh(source)
+
+    # Normalize source
+    if script.is_multisig(source):
+        source_address = backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
+    else:
+        source_address = source
+
+    # Sanity checks.
+    if exact_fee and not isinstance(exact_fee, int):
+        raise exceptions.TransactionError('Exact fees must be in satoshis.')
+    if not isinstance(fee_provided, int):
+        raise exceptions.TransactionError('Fee provided must be in satoshis.')
+
+    '''Determine encoding method'''
+
+    if data:
+        desired_encoding = encoding
+        # Data encoding methods (choose and validate).
+        if desired_encoding == 'auto':
+            if len(data) + len(config.PREFIX) <= config.OP_RETURN_MAX_SIZE:
+                encoding = 'opreturn'
+            else:
+                encoding = 'p2sh' if not old_style_api and util.enabled('p2sh_encoding') else 'multisig'  # p2sh is not possible with old_style_api
+
+        elif desired_encoding == 'p2sh' and not util.enabled('p2sh_encoding'):
+            raise exceptions.TransactionError('P2SH encoding not enabled yet')
+
+        elif encoding not in ('pubkeyhash', 'multisig', 'opreturn', 'p2sh'):
+            raise exceptions.TransactionError('Unknown encoding‐scheme.')
+    else:
+        # no data
+        encoding = None
+
+    '''Destinations'''
+
+    # Destination outputs.
+        # Replace multi‐sig addresses with multi‐sig pubkeys. Check that the
+        # destination output isn’t a dust output. Set null values to dust size.
+    destination_outputs_new = []
+    if encoding != 'p2sh':
+        for (address, value) in destination_outputs:
+
+            # Value.
+            if script.is_multisig(address):
+                dust_size = multisig_dust_size
+            else:
+                dust_size = regular_dust_size
+            if value == None:
+                value = dust_size
+            elif value < dust_size:
+                raise exceptions.TransactionError('Destination output is dust.')
+
+            # Address.
+            script.validate(address)
+            if script.is_multisig(address):
+                destination_outputs_new.append((backend.multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys), value))
+            else:
+                destination_outputs_new.append((address, value))
+
+    destination_outputs = destination_outputs_new
+    destination_btc_out = sum([value for address, value in destination_outputs])
+
+
+    '''Data'''
+
+    if data:
+        # @TODO: p2sh encoding require signable dust key
+        if encoding == 'multisig':
+            # dust_return_pubkey should be set or explicitly set to False to use the default configured for the node
+            #  the default for the node is optional so could fail
+            if (source_is_p2sh and dust_return_pubkey is None) or (dust_return_pubkey is False and config.P2SH_DUST_RETURN_PUBKEY is None):
+                raise exceptions.TransactionError("Can't use multisig encoding when source is P2SH and no dust_return_pubkey is provided.")
+            elif dust_return_pubkey is False:
+                dust_return_pubkey = binascii.unhexlify(config.P2SH_DUST_RETURN_PUBKEY)
+
+        # Divide data into chunks.
+        if encoding == 'pubkeyhash':
+            # Prefix is also a suffix here.
+            chunk_size = 20 - 1 - 8
+        elif encoding == 'multisig':
+            # Two pubkeys, minus length byte, minus prefix, minus two nonces,
+            # minus two sign bytes.
+            chunk_size = (33 * 2) - 1 - 8 - 2 - 2
+        elif encoding == 'p2sh':
+            chunk_size = p2sh_encoding.maximum_data_chunk_size()
+        elif encoding == 'opreturn':
+            chunk_size = config.OP_RETURN_MAX_SIZE
+            if len(data) + len(config.PREFIX) > chunk_size:
+                raise exceptions.TransactionError('One `OP_RETURN` output per transaction.')
+        data_array = list(chunks(data, chunk_size))
+
+        # Data outputs.
+        if encoding == 'multisig':
+            data_value = multisig_dust_size
+        elif encoding == 'p2sh':
+            data_value = 0   # this will be calculated later
+        elif encoding == 'opreturn':
+            data_value = op_return_value
+        else:
+            # Pay‐to‐PubKeyHash, e.g.
+            data_value = regular_dust_size
+        data_output = (data_array, data_value)
+
+        if not dust_return_pubkey:
+            if encoding == 'multisig' or encoding == 'p2sh' and not source_is_p2sh:
+                dust_return_pubkey = get_dust_return_pubkey(source, provided_pubkeys, encoding)
+            else:
+                dust_return_pubkey = None
+    else:
+        data_value = 0
+        data_array = []
+        data_output = None
+        dust_return_pubkey = None
+
+    data_btc_out = data_value * len(data_array)
+    logger.getChild('p2shdebug').debug('data_btc_out=%s (data_value=%d len(data_array)=%d)' % (data_btc_out, data_value, len(data_array)))
+
+    '''Inputs'''
+    btc_in = 0
+    final_fee = 0
+    # Calculate collective size of outputs, for fee calculation.
+    p2pkhsize = 25 + 9
+    if encoding == 'multisig':
+        data_output_size = 81       # 71 for the data
+    elif encoding == 'opreturn':
+        # prefix + data + 10 bytes script overhead
+        data_output_size = len(config.PREFIX) + 10
+        if data is not None:
+            data_output_size = data_output_size + len(data)
+    else:
+        data_output_size = p2pkhsize   # Pay‐to‐PubKeyHash (25 for the data?)
+    outputs_size = (p2pkhsize * len(destination_outputs)) + (len(data_array) * data_output_size)
+
+    if encoding == 'p2sh':
+        # calculate all the p2sh outputs
+        size_for_fee, datatx_necessary_fee, data_value, data_btc_out = p2sh_encoding.calculate_outputs(destination_outputs, data_array, fee_per_kb)
+        # replace the data value
+        data_output = (data_array, data_value)
+    else:
+        sum_data_output_size = len(data_array) * data_output_size
+        size_for_fee = ((25 + 9) * len(destination_outputs)) + sum_data_output_size
+
+    if not (encoding == 'p2sh' and p2sh_pretx_txid):
+        inputs, change_quantity, n_btc_in, n_final_fee = construct_coin_selection(
+            encoding, data_array,
+            source, allow_unconfirmed_inputs, unspent_tx_hash, custom_inputs,
+            fee_per_kb, estimate_fee_per_kb, estimate_fee_per_kb_nblocks,
+            exact_fee, size_for_fee, fee_provided, destination_btc_out, data_btc_out,
+            regular_dust_size, disable_utxo_locks
+        )
+        btc_in = n_btc_in
+        final_fee = n_final_fee
+    else:
+        # when encoding is P2SH and the pretx txid is passed we can skip coinselection
+        inputs, change_quantity = None, None
+
+    '''Finish'''
+
+    if change_quantity:
+        change_output = (source_address, change_quantity)
+    else:
+        change_output = None
+
+    unsigned_pretx_hex = None
+    unsigned_tx_hex = None
+
+    if encoding == 'p2sh':
+        assert not (segwit and p2sh_pretx_txid)  # shouldn't do old style with segwit enabled
+
+        pretx_txid = None
+        if p2sh_pretx_txid:
+            pretx_txid = p2sh_pretx_txid if isinstance(p2sh_pretx_txid, bytes) else binascii.unhexlify(p2sh_pretx_txid)
+            unsigned_pretx = None
+        else:
+            destination_value_sum = sum([value for (destination, value) in destination_outputs])
+            source_value = destination_value_sum
+
+            logger.getChild('p2shdebug').debug('source_value %d' % (source_value, ))
+            logger.getChild('p2shdebug').debug('change_value %d' % (change_output[1], ))
+            if change_output:
+                # add the difference between source and destination to the change
+                change_value = change_output[1] + (destination_value_sum - source_value)
+                change_output = (change_output[0], change_value)
+
+            unsigned_pretx = serializer.serialise_p2sh_pretx(inputs,
+                                                             source=source_address,
+                                                             source_value=source_value,
+                                                             data_output=data_output,
+                                                             change_output=change_output,
+                                                             pubkey=dust_return_pubkey,
+                                                             multisig_pubkeys=p2sh_source_multisig_pubkeys,
+                                                             multisig_pubkeys_required=p2sh_source_multisig_pubkeys_required)
+            unsigned_pretx_hex = binascii.hexlify(unsigned_pretx).decode('utf-8')
+
+        # with segwit we already know the txid and can return both
+        if segwit:
+            pretx_txid = hashlib.sha256(unsigned_pretx).digest()  # this should be segwit txid
+            logger.getChild('p2shdebug').debug('pretx_txid %s' % pretx_txid)
+
+        if unsigned_pretx:
+            # we set a long lock on this, don't want other TXs to spend from it
+            UTXO_P2SH_ENCODING_LOCKS[make_outkey_vin(unsigned_pretx, 0)] = True
+
+        # only generate the data TX if we have the pretx txId
+        if pretx_txid:
+            source_input = None
+            if script.is_p2sh(source):
+                source_input = select_any_coin_from_source(source)
+                if not source_input:
+                    raise exceptions.TransactionError('Unable to select source input for p2sh source address')
+
+            unsigned_datatx = serializer.serialise_p2sh_datatx(pretx_txid,
+                                                               source=source_address,
+                                                               source_input=source_input,
+                                                               destination_outputs=destination_outputs,
+                                                               data_output=data_output,
+                                                               pubkey=dust_return_pubkey,
+                                                               multisig_pubkeys=p2sh_source_multisig_pubkeys,
+                                                               multisig_pubkeys_required=p2sh_source_multisig_pubkeys_required)
+            unsigned_datatx_hex = binascii.hexlify(unsigned_datatx).decode('utf-8')
+
+            # let the rest of the code work it's magic on the data tx
+            unsigned_tx_hex = unsigned_datatx_hex
+        else:
+            # we're just gonna return the pretx, it doesn't require any of the further checks
+            logger.warn('old_style_api = %s' % old_style_api)
+            return return_result([unsigned_pretx_hex], old_style_api=old_style_api)
+
+    else:
+        # Serialise inputs and outputs.
+        unsigned_tx = serializer.serialise(encoding, inputs, destination_outputs,
+                                data_output, change_output,
+                                dust_return_pubkey=dust_return_pubkey)
+        unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')
+
 
     '''Sanity Check'''
-
-    from counterpartylib.lib import blocks
 
     # Desired transaction info.
     (desired_source, desired_destination_outputs, desired_data) = tx_info
@@ -663,7 +572,7 @@ def construct (db, tx_info, encoding='auto',
 
     # Parsed transaction info.
     try:
-        parsed_source, parsed_destination, x, y, parsed_data = blocks._get_tx_info(unsigned_tx_hex)
+        parsed_source, parsed_destination, x, y, parsed_data, extra = blocks._get_tx_info(unsigned_tx_hex)
     except exceptions.BTCOnlyError:
         # Skip BTC‐only transactions.
         if extended_tx_info:
@@ -674,7 +583,8 @@ def construct (db, tx_info, encoding='auto',
                 'btc_fee': final_fee,
                 'tx_hex': unsigned_tx_hex,
             }
-        return unsigned_tx_hex
+        logger.getChild('p2shdebug').debug('BTC-ONLY')
+        return return_result([unsigned_pretx_hex, unsigned_tx_hex], old_style_api=old_style_api)
     desired_source = script.make_canonical(desired_source)
 
     # Check desired info against parsed info.
@@ -682,7 +592,7 @@ def construct (db, tx_info, encoding='auto',
     parsed = (parsed_source, parsed_destination, parsed_data)
     if desired != parsed:
         # Unlock (revert) UTXO locks
-        if UTXO_LOCKS is not None:
+        if UTXO_LOCKS is not None and inputs:
             for input in inputs:
                 UTXO_LOCKS[source].pop(make_outkey(input), None)
 
@@ -696,7 +606,7 @@ def construct (db, tx_info, encoding='auto',
             'btc_fee': final_fee,
             'tx_hex': unsigned_tx_hex,
         }
-    return unsigned_tx_hex
+    return return_result([unsigned_pretx_hex, unsigned_tx_hex], old_style_api=old_style_api)
 
 def normalize_custom_inputs(raw_custom_inputs):
     custom_inputs = []
