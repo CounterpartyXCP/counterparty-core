@@ -19,6 +19,7 @@ import apsw
 import pytest
 import binascii
 import appdirs
+import pprint
 import pycoin
 from pycoin.tx import Tx
 import bitcoin as bitcoinlib
@@ -28,7 +29,7 @@ CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.ex
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
 from counterpartylib import server
-from counterpartylib.lib import (config, util, blocks, check, backend, database, transaction)
+from counterpartylib.lib import (config, util, blocks, check, backend, database, transaction, exceptions)
 from counterpartylib.lib.backend.indexd import extract_addresses, extract_addresses_from_txlist
 
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP
@@ -173,19 +174,23 @@ def insert_raw_transaction(raw_transaction, db):
     block_index, block_hash, block_time = create_next_block(db, parse_block=False)
 
     tx_hash = dummy_tx_hash(raw_transaction)
+    tx = None
     tx_index = block_index - config.BURN_START + 1
+    try:
+        source, destination, btc_amount, fee, data, extra = blocks._get_tx_info(raw_transaction)
+        transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
+        cursor.execute('''INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?)''', transaction)
+        tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
+    except exceptions.BTCOnlyError:
+        pass
 
-    source, destination, btc_amount, fee, data = blocks._get_tx_info(raw_transaction)
-    transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
-    cursor.execute('''INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?)''', transaction)
-    tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
     cursor.close()
 
     MOCK_UTXO_SET.add_raw_transaction(raw_transaction, tx_id=tx_hash, confirmations=1)
 
     util.CURRENT_BLOCK_INDEX = block_index
     blocks.parse_block(db, block_index, block_time)
-    return tx
+    return tx_hash, tx
 
 
 def insert_unconfirmed_raw_transaction(raw_transaction, db):
@@ -200,7 +205,7 @@ def insert_unconfirmed_raw_transaction(raw_transaction, db):
     tx_index = tx_index[0]['tx_index'] if len(tx_index) else 0
     tx_index = tx_index + 1
 
-    source, destination, btc_amount, fee, data = blocks._get_tx_info(raw_transaction)
+    source, destination, btc_amount, fee, data, extra = blocks._get_tx_info(raw_transaction)
     tx = {
         'tx_index': tx_index,
         'tx_hash': tx_hash,
@@ -284,6 +289,9 @@ def prefill_rawtransactions_db(db):
 
 def save_rawtransaction(db, txid, tx_hex, confirmations=0):
     """Insert the raw transaction into the db."""
+    if isinstance(txid, bytes):
+        txid = binascii.hexlify(txid).decode('ascii')
+
     cursor = db.cursor()
     try:
         if isinstance(txid, bytes):
@@ -583,7 +591,10 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         return tested_method(server_db, inputs[0], **inputs[1])
     elif (tx_name == 'util' and (method in ['api','date_passed','price','generate_asset_id','generate_asset_name','dhash_string','enabled','get_url','hexlify','parse_subasset_from_asset_name','compact_subasset_longname','expand_subasset_longname',])) \
         or tx_name == 'script' \
-        or (tx_name == 'blocks' and (method[:len('get_tx_info')] == 'get_tx_info')) or tx_name == 'transaction' or method == 'sortkeypicker' \
+        or (tx_name == 'blocks' and (method[:len('get_tx_info')] == 'get_tx_info'))  \
+        or tx_name == 'transaction' \
+        or tx_name == 'transaction_helper.serializer' \
+        or method == 'sortkeypicker' \
         or tx_name == 'backend' \
         or tx_name == 'message_type' \
         or tx_name == 'address':
@@ -627,9 +638,9 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
                 assert outputs == test_outputs
             except AssertionError:
                 if pytest.config.getoption('verbose') >= 2:
-                    msg = "expected outputs don't match test_outputs:\noutputs=\n" + pprint.pformat(outputs) + "\ntest_outputs=\n" + pprint.pformat(test_outputs)
+                    msg = "expected outputs don't match test_outputs:\nexpected_outputs=\n" + pprint.pformat(outputs) + "\ntest_outputs=\n" + pprint.pformat(test_outputs)
                 else:
-                    msg = "expected outputs don't match test_outputs: outputs=%s test_outputs=%s" % (outputs, test_outputs)
+                    msg = "expected outputs don't match test_outputs: expected_outputs=%s test_outputs=%s" % (outputs, test_outputs)
                 raise Exception(msg)
         if error is not None:
             assert str(exception.value) == error[1]

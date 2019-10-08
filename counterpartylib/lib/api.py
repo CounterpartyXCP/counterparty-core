@@ -53,6 +53,8 @@ from counterpartylib.lib.messages import destroy
 from counterpartylib.lib.messages import cancel
 from counterpartylib.lib.messages import rps
 from counterpartylib.lib.messages import rpsresolve
+from counterpartylib.lib.messages import sweep
+from counterpartylib.lib.messages import dispenser
 
 API_TABLES = ['assets', 'balances', 'credits', 'debits', 'bets', 'bet_matches',
               'broadcasts', 'btcpays', 'burns', 'cancels', 'destructions',
@@ -60,17 +62,18 @@ API_TABLES = ['assets', 'balances', 'credits', 'debits', 'bets', 'bet_matches',
               'bet_expirations', 'order_expirations', 'bet_match_expirations',
               'order_match_expirations', 'bet_match_resolutions', 'rps',
               'rpsresolves', 'rps_matches', 'rps_expirations', 'rps_match_expirations',
-              'mempool']
+              'mempool', 'sweeps', 'dispensers']
 
 API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel', 'destroy',
                     'dividend', 'issuance', 'order', 'send',
-                    'rps', 'rpsresolve']
+                    'rps', 'rpsresolve', 'sweep', 'dispenser']
 
 COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
                 'allow_unconfirmed_inputs', 'fee', 'fee_provided',
-                'estimate_fee_per_kb', 'estimate_fee_per_kb_conf_target', 'estimate_fee_per_kb_mode',
-                'unspent_tx_hash', 'custom_inputs', 'dust_return_pubkey', 'disable_utxo_locks']
+                'estimate_fee_per_kb', 'estimate_fee_per_kb_nblocks', 'estimate_fee_per_kb_conf_target', 'estimate_fee_per_kb_mode',
+                'unspent_tx_hash', 'custom_inputs', 'dust_return_pubkey', 'disable_utxo_locks', 'extended_tx_info',
+                'p2sh_source_multisig_pubkeys', 'p2sh_source_multisig_pubkeys_required', 'p2sh_pretx_txid']
 
 API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
 API_MAX_LOG_COUNT = 10
@@ -320,7 +323,9 @@ def compose_transaction(db, name, params,
                         allow_unconfirmed_inputs=False,
                         fee=None,
                         fee_provided=0,
-                        unspent_tx_hash=None, custom_inputs=None, dust_return_pubkey=None, disable_utxo_locks=False, extended_tx_info=False):
+                        unspent_tx_hash=None, custom_inputs=None, dust_return_pubkey=None, disable_utxo_locks=False, extended_tx_info=False,
+                        p2sh_source_multisig_pubkeys=None, p2sh_source_multisig_pubkeys_required=None,
+                        p2sh_pretx_txid=None):
     """Create and return a transaction."""
 
     # Get provided pubkeys.
@@ -376,7 +381,9 @@ def compose_transaction(db, name, params,
                                         unspent_tx_hash=unspent_tx_hash, custom_inputs=custom_inputs,
                                         dust_return_pubkey=dust_return_pubkey,
                                         disable_utxo_locks=disable_utxo_locks,
-                                        extended_tx_info=extended_tx_info)
+                                        extended_tx_info=extended_tx_info,
+                                        p2sh_source_multisig_pubkeys=p2sh_source_multisig_pubkeys, p2sh_source_multisig_pubkeys_required=p2sh_source_multisig_pubkeys_required,
+                                        p2sh_pretx_txid=p2sh_pretx_txid)
 
 def conditional_decorator(decorator, condition):
     """Checks the condition and if True applies specified decorator."""
@@ -793,7 +800,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_tx_info(tx_hex, block_index=None):
             # block_index mandatory for transactions before block 335000
-            source, destination, btc_amount, fee, data = blocks.get_tx_info(tx_hex, block_index=block_index)
+            source, destination, btc_amount, fee, data, extra = blocks.get_tx_info(tx_hex, block_index=block_index)
             return source, destination, btc_amount, fee, util.hexlify(data) if data else ''
 
         @dispatcher.add_method

@@ -136,7 +136,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
             problems.append('cannot change divisibility')
         if bool(last_issuance['callable']) != bool(callable_):
             problems.append('cannot change callability')
-        if last_issuance['call_date'] > call_date and (call_date != 0 or (block_index < 312500 and not config.TESTNET or config.REGTEST)):
+        if last_issuance['call_date'] > call_date and (call_date != 0 or (block_index < 312500 and (not config.TESTNET or not config.REGTEST))):
             problems.append('cannot advance call date')
         if last_issuance['call_price'] > call_price:
             problems.append('cannot reduce call price')
@@ -181,7 +181,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
 
     # Check for existence of fee funds.
     if quantity or (block_index >= 315000 or config.TESTNET or config.REGTEST):   # Protocol change.
-        if not reissuance or (block_index < 310000 and not config.TESTNET or config.REGTEST):  # Pay fee only upon first issuance. (Protocol change.)
+        if not reissuance or (block_index < 310000 and not config.TESTNET and not config.REGTEST):  # Pay fee only upon first issuance. (Protocol change.)
             cursor = db.cursor()
             cursor.execute('''SELECT * FROM balances \
                               WHERE (address = ? AND asset = ?)''', (source, config.XCP))
