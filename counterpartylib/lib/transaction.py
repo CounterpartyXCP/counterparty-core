@@ -17,10 +17,11 @@ logger = logging.getLogger(__name__)
 import requests
 import bitcoin as bitcoinlib
 from bitcoin.core.script import CScript
-from bitcoin.core import x
+from bitcoin.core import x, CTransaction
 from bitcoin.core import b2lx
 import cachetools
 import math
+import io
 
 from counterpartylib.lib import blocks
 from counterpartylib.lib import config
@@ -514,8 +515,13 @@ def construct (db, tx_info, encoding='auto',
 
         # with segwit we already know the txid and can return both
         if segwit:
-            pretx_txid = hashlib.sha256(unsigned_pretx).digest()  # this should be segwit txid
+            #pretx_txid = hashlib.sha256(unsigned_pretx).digest()  # this should be segwit txid
+            ptx = CTransaction.stream_deserialize(io.BytesIO(unsigned_pretx)) # could be a non-segwit tx anyways
+            txid_ba = bytearray(ptx.GetTxid())
+            txid_ba.reverse()
+            pretx_txid = bytes(txid_ba) # gonna leave the malleability problem to upstream
             logger.getChild('p2shdebug').debug('pretx_txid %s' % pretx_txid)
+            print('pretx txid:', binascii.hexlify(pretx_txid))
 
         if unsigned_pretx:
             # we set a long lock on this, don't want other TXs to spend from it

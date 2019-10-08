@@ -15,6 +15,7 @@ import re
 import requests
 import collections
 import logging
+import traceback
 logger = logging.getLogger(__name__)
 from logging import handlers as logging_handlers
 D = decimal.Decimal
@@ -325,7 +326,7 @@ def compose_transaction(db, name, params,
                         fee_provided=0,
                         unspent_tx_hash=None, custom_inputs=None, dust_return_pubkey=None, disable_utxo_locks=False, extended_tx_info=False,
                         p2sh_source_multisig_pubkeys=None, p2sh_source_multisig_pubkeys_required=None,
-                        p2sh_pretx_txid=None):
+                        p2sh_pretx_txid=None, old_style_api=True, segwit=False):
     """Create and return a transaction."""
 
     # Get provided pubkeys.
@@ -343,8 +344,15 @@ def compose_transaction(db, name, params,
     for address_name in ['source', 'destination']:
         if address_name in params:
             address = params[address_name]
-            provided_pubkeys += script.extract_pubkeys(address)
-            params[address_name] = script.make_pubkeyhash(address)
+            if isinstance(address, list):
+                """pubkey_list = []
+                for iaddr in address:
+                    provided_pubkeys += script.extract_pubkeys(iaddr)
+                    pubkey_list.append(script.make_pubkeyhash(iaddr))
+                params[address_name] = pubkey_list"""
+            else:
+                provided_pubkeys += script.extract_pubkeys(address)
+                params[address_name] = script.make_pubkeyhash(address)
 
     # Check validity of collected pubkeys.
     for pubkey in provided_pubkeys:
@@ -367,6 +375,14 @@ def compose_transaction(db, name, params,
       extended_tx_info = params['extended_tx_info']
       del params['extended_tx_info']
 
+    if 'old_style_api' in params:
+        old_style_api = params['old_style_api']
+        del params['old_style_api']
+
+    if 'segwit' in params:
+        segwit = params['segwit']
+        del params['segwit']
+
     tx_info = compose_method(db, **params)
     return transaction.construct(db, tx_info, encoding=encoding,
                                         fee_per_kb=fee_per_kb,
@@ -383,7 +399,9 @@ def compose_transaction(db, name, params,
                                         disable_utxo_locks=disable_utxo_locks,
                                         extended_tx_info=extended_tx_info,
                                         p2sh_source_multisig_pubkeys=p2sh_source_multisig_pubkeys, p2sh_source_multisig_pubkeys_required=p2sh_source_multisig_pubkeys_required,
-                                        p2sh_pretx_txid=p2sh_pretx_txid)
+                                        p2sh_pretx_txid=p2sh_pretx_txid,
+                                        old_style_api=old_style_api,
+                                        segwit=segwit)
 
 def conditional_decorator(decorator, condition):
     """Checks the condition and if True applies specified decorator."""
@@ -523,6 +541,7 @@ class APIServer(threading.Thread):
                     # TypeError happens when unexpected keyword arguments are passed in
                     error_msg = "Error composing {} transaction via API: {}".format(tx, str(error))
                     logging.warning(error_msg)
+                    logging.warning(traceback.format_exc())
                     raise JSONRPCDispatchException(code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg)
 
             return create_method

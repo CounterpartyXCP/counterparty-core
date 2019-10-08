@@ -46,10 +46,9 @@ def calculate_outputs(destination_outputs, data_array, fee_per_kb):
     return size_for_fee, datatx_necessary_fee, data_value, data_btc_out
 
 def decode_p2sh_input(asm):
-    ''' Looks at the scriptSig for the input of the p2sh-encoded data transaction 
+    ''' Looks at the scriptSig for the input of the p2sh-encoded data transaction
         [signature] [data] [OP_HASH160 ... OP_EQUAL]
     '''
-
     pubkey, source, redeem_script_is_valid = decode_data_redeem_script(asm[-1])
     if redeem_script_is_valid and len(asm) >= 3:
         # this is a signed transaction, so we got {sig[,sig]} {datachunk} {redeemScript}
@@ -63,7 +62,6 @@ def decode_p2sh_input(asm):
         datachunk, redeemScript, _substituteScript = asm
 
     data = datachunk
-
     if data[:len(config.PREFIX)] == config.PREFIX:
         data = data[len(config.PREFIX):]
     else:
@@ -73,6 +71,7 @@ def decode_p2sh_input(asm):
 
 def decode_data_redeem_script(redeemScript):
     script_len = len(redeemScript)
+
     if script_len == 41 and \
         redeemScript[0] == bitcoinlib.core.script.OP_DROP and \
         redeemScript[35] == bitcoinlib.core.script.OP_CHECKSIGVERIFY and \
@@ -124,7 +123,7 @@ def make_p2sh_encoding_redeemscript(datachunk, n, pubKey=None, multisig_pubkeys=
     else:
         raise exceptions.TransactionError('Either pubKey or multisig pubKeys must be provided')
 
-    redeemScript = CScript(dataDropScript + verifyOwnerScript + cleanupScript)
+    redeemScript = CScript(datachunk) + CScript(dataDropScript + verifyOwnerScript + cleanupScript)
 
     _logger.debug('datachunk %s' % (binascii.hexlify(datachunk)))
     _logger.debug('dataDropScript %s (%s)' % (repr(CScript(dataDropScript)), binascii.hexlify(CScript(dataDropScript))))
@@ -132,7 +131,12 @@ def make_p2sh_encoding_redeemscript(datachunk, n, pubKey=None, multisig_pubkeys=
     _logger.debug('entire redeemScript %s (%s)' % (repr(redeemScript), binascii.hexlify(redeemScript)))
 
     outputScript = redeemScript.to_p2sh_scriptPubKey()
-    scriptSig = CScript([datachunk]) + redeemScript  # PUSH(datachunk) + redeemScript
+
+    #scriptSig = b''.join([CScript([datachunk, redeemScript]), outputScript])
+    scriptSig = b''.join([CScript([datachunk])])
+    print('redeemScript: ', binascii.hexlify(redeemScript))
+    print('outputScript: ', binascii.hexlify(outputScript))
+    #scriptSig = CScript([datachunk]) + redeemScript
 
     _logger.debug('scriptSig %s (%s)' % (repr(scriptSig), binascii.hexlify(scriptSig)))
     _logger.debug('outputScript %s (%s)' % (repr(outputScript), binascii.hexlify(outputScript)))
