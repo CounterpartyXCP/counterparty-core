@@ -147,13 +147,17 @@ def parse (db, tx, message):
     cursor = db.cursor()
 
     # Unpack message.
+    status = 'valid' # might be invalidate later.
     try:
         if util.enabled('broadcast_pack_text'):
             timestamp, value, fee_fraction_int, rawtext = struct.unpack(FORMAT + '{}s'.format(len(message) - LENGTH), message)
             textlen = VarIntSerializer.deserialize(rawtext)
-            text = rawtext[-textlen:]
-
-            assert len(text) == textlen
+            if textlen == 0:
+                text = b''
+            else:
+                text = rawtext[-textlen:]
+                if len(text) != textlen:
+                    status = 'invalid: text length mismatch'
         else:
             if len(message) - LENGTH <= 52:
                 curr_format = FORMAT + '{}p'.format(len(message) - LENGTH)
@@ -166,7 +170,6 @@ def parse (db, tx, message):
             text = text.decode('utf-8')
         except UnicodeDecodeError:
             text = ''
-        status = 'valid'
     except (struct.error) as e:
         timestamp, value, fee_fraction_int, text = 0, None, 0, None
         status = 'invalid: could not unpack'
