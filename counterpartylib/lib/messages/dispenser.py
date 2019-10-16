@@ -215,7 +215,7 @@ def dispense(db, tx):
         assert give_remaining >= 0
 
         util.credit(db, tx['source'], dispenser['asset'], actually_given, action='dispense', event=tx['tx_hash'])
-        print(cursor.execute('select * from credits where address=? and calling_function=?', (tx['source'],'dispense')).fetchall())
+        #print(cursor.execute('select * from credits where address=? and calling_function=?', (tx['source'],'dispense')).fetchall())
         dispenser['give_remaining'] = give_remaining
         if give_remaining < dispenser['give_quantity']:
             # close the dispenser
