@@ -159,19 +159,21 @@ def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
 def getrawmempool():
     return rpc('getrawmempool', [])
 
-def fee_per_kb(conf_target, mode):
+def fee_per_kb(conf_target, mode, nblocks=None):
     """
     :param conf_target:
     :param mode:
     :return: fee_per_kb in satoshis, or None when unable to determine
     """
+    if nblocks is None and conf_target is None:
+        conf_target = nblocks
 
     feeperkb = rpc('estimatesmartfee', [conf_target, mode])
 
     if 'errors' in feeperkb and feeperkb['errors'][0] == 'Insufficient data or no feerate found':
         return None
 
-    return int(feeperkb['feerate'] * config.UNIT)
+    return int(max(feeperkb['feerate'] * config.UNIT, config.DEFAULT_FEE_PER_KB_ESTIMATE_SMART))
 
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
@@ -244,6 +246,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                 e, len(txhash_list), hashlib.md5(json.dumps(list(txhash_list)).encode()).hexdigest(), len(raw_transactions_cache), len(payload),
                 tx_hash in noncached_txhashes, tx_hash in txhash_list, list(txhash_list.difference(noncached_txhashes)) ))
             if  _retry < GETRAWTRANSACTION_MAX_RETRIES: #try again
+                time.sleep(0.05 * (_retry + 1)) # Wait a bit, hitting the index non-stop may cause it to just break down... TODO: Better handling
                 r = getrawtransaction_batch([tx_hash], verbose=verbose, skip_missing=skip_missing, _retry=_retry+1)
                 result[tx_hash] = r[tx_hash]
             else:

@@ -1,3 +1,5 @@
+import sys
+
 """Variables prefixed with `DEFAULT` should be able to be overridden by
 configuration file and command‐line arguments."""
 
@@ -6,7 +8,7 @@ UNIT = 100000000        # The same across assets.
 
 # Versions
 VERSION_MAJOR = 9
-VERSION_MINOR = 56
+VERSION_MINOR = 57
 VERSION_REVISION = 0
 VERSION_STRING = str(VERSION_MAJOR) + '.' + str(VERSION_MINOR) + '.' + str(VERSION_REVISION)
 
@@ -101,6 +103,7 @@ BURN_END_REGTEST_TESTCOIN = 150
 DEFAULT_REGULAR_DUST_SIZE = 5430         # TODO: This is just a guess. I got it down to 5530 satoshis.
 DEFAULT_MULTISIG_DUST_SIZE = 7800        # <https://bitcointalk.org/index.php?topic=528023.msg7469941#msg7469941>
 DEFAULT_OP_RETURN_VALUE = 0
+DEFAULT_FEE_PER_KB_ESTIMATE_SMART = 1024
 DEFAULT_FEE_PER_KB = 25000               # sane/low default, also used as minimum when estimated fee is used
 ESTIMATE_FEE_PER_KB = True               # when True will use `estimatesmartfee` from bitcoind instead of DEFAULT_FEE_PER_KB
 ESTIMATE_FEE_CONF_TARGET = 3
@@ -130,6 +133,7 @@ DEFAULT_UTXO_LOCKS_MAX_AGE = 3.0 #in seconds
 
 ADDRESS_OPTION_REQUIRE_MEMO = 1
 ADDRESS_OPTION_MAX_VALUE = ADDRESS_OPTION_REQUIRE_MEMO # Or list of all the address options
+OLD_STYLE_API = True
 
 API_LIMIT_ROWS = 1000
 

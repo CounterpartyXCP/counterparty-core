@@ -21,6 +21,7 @@ import os
 import collections
 import threading
 import random
+import itertools
 
 from counterpartylib.lib import exceptions
 from counterpartylib.lib.exceptions import DecodeError
@@ -87,6 +88,23 @@ def api(method, params):
 def chunkify(l, n):
     n = max(1, n)
     return [l[i:i + n] for i in range(0, len(l), n)]
+
+def flat(z):
+    return [x for x in z]
+
+def py34TupleAppend(first_elem, t):
+    # Had to do it this way to support python 3.4, if we start
+    # using the 3.5 runtime this can be replaced by:
+    #  (first_elem, *t)
+
+    l = list(t)
+    l.insert(0, first_elem)
+    return tuple(l)
+
+def accumulate(l):
+    it = itertools.groupby(l, itemgetter(0))
+    for key, subiter in it:
+       yield key, sum(item[1] for item in subiter)
 
 def date_passed(date):
     """Check if the date has already passed."""
@@ -623,8 +641,12 @@ def xcp_destroyed (db):
     cursor.execute('''SELECT SUM(fee_paid) AS total FROM dividends\
                       WHERE status = ?''', ('valid',))
     dividend_fee_total = list(cursor)[0]['total'] or 0
+    # Subtract sweep fees.
+    cursor.execute('''SELECT SUM(fee_paid) AS total FROM sweeps\
+                      WHERE status = ?''', ('valid',))
+    sweeps_fee_total = list(cursor)[0]['total'] or 0
     cursor.close()
-    return destroyed_total + issuance_fee_total + dividend_fee_total
+    return destroyed_total + issuance_fee_total + dividend_fee_total + sweeps_fee_total
 
 def xcp_supply (db):
     """Return the XCP supply."""
@@ -675,25 +697,21 @@ def supplies (db):
     return {key: d1[key] - d2.get(key, 0) for key in d1.keys()}
 
 def held (db): #TODO: Rename ?
-    sql = '''SELECT asset, SUM(total) AS total FROM (
-                SELECT asset, SUM(quantity) AS total FROM balances GROUP BY asset
-                UNION ALL
-                SELECT give_asset AS asset, SUM(give_remaining) AS total FROM orders WHERE status = 'open' GROUP BY asset
-                UNION ALL
-                SELECT forward_asset AS asset, SUM(forward_quantity) AS total FROM order_matches WHERE status = 'pending' GROUP BY asset
-                UNION ALL
-                SELECT backward_asset AS asset, SUM(backward_quantity) AS total FROM order_matches WHERE status = 'pending' GROUP BY asset
-                UNION ALL
-                SELECT 'XCP' AS asset, SUM(wager_remaining) AS total FROM bets WHERE status = 'open'
-                UNION ALL
-                SELECT 'XCP' AS asset, SUM(forward_quantity) AS total FROM bet_matches WHERE status = 'pending'
-                UNION ALL
-                SELECT 'XCP' AS asset, SUM(backward_quantity) AS total FROM bet_matches WHERE status = 'pending'
-                UNION ALL
-                SELECT 'XCP' AS asset, SUM(wager) AS total FROM rps WHERE status = 'open'
-                UNION ALL
-                SELECT 'XCP' AS asset, SUM(wager * 2) AS total FROM rps_matches WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
-            ) GROUP BY asset;'''
+    queries = [
+        "SELECT asset, SUM(quantity) AS total FROM balances GROUP BY asset",
+        "SELECT give_asset AS asset, SUM(give_remaining) AS total FROM orders WHERE status = 'open' GROUP BY asset",
+        "SELECT give_asset AS asset, SUM(give_remaining) AS total FROM orders WHERE status = 'filled' and give_asset = 'XCP' and get_asset = 'BTC' GROUP BY asset",
+        "SELECT forward_asset AS asset, SUM(forward_quantity) AS total FROM order_matches WHERE status = 'pending' GROUP BY asset",
+        "SELECT backward_asset AS asset, SUM(backward_quantity) AS total FROM order_matches WHERE status = 'pending' GROUP BY asset",
+        "SELECT 'XCP' AS asset, SUM(wager_remaining) AS total FROM bets WHERE status = 'open'",
+        "SELECT 'XCP' AS asset, SUM(forward_quantity) AS total FROM bet_matches WHERE status = 'pending'",
+        "SELECT 'XCP' AS asset, SUM(backward_quantity) AS total FROM bet_matches WHERE status = 'pending'",
+        "SELECT 'XCP' AS asset, SUM(wager) AS total FROM rps WHERE status = 'open'",
+        "SELECT 'XCP' AS asset, SUM(wager * 2) AS total FROM rps_matches WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')",
+        "SELECT asset, SUM(give_remaining) FROM dispensers WHERE status=0 GROUP BY asset",
+    ]
+
+    sql = "SELECT asset, SUM(total) AS total FROM (" + " UNION ALL ".join(queries) + ") GROUP BY asset;"
 
     cursor = db.cursor()
     cursor.execute(sql)

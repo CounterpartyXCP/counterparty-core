@@ -58,6 +58,9 @@ UNITTEST_FIXTURE = [
     ['burn', (ADDR[4], DP['burn_quantity']), {'encoding': 'multisig'}],
     ['burn', (ADDR[5], DP['burn_quantity']), {'encoding': 'multisig'}],
     ['burn', (ADDR[6], DP['burn_quantity']), {'encoding': 'multisig'}],
+    ['burn', (ADDR[8], DP['burn_verysmall_quantity']), {'encoding': 'multisig'}],
+
+    ['dispenser', (ADDR[5], 'XCP', 100, 100, 100, 0), {'encoding': 'opreturn'}],
 
     ['burn', (P2SH_ADDR[0], int(DP['burn_quantity'] / 2)), {'encoding': 'opreturn'}],
     ['issuance', (P2SH_ADDR[0], None, 'PAYTOSCRIPT', 1000, False, 'PSH issued asset'), {'encoding': 'multisig', 'dust_return_pubkey': False}],

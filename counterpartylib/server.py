@@ -99,7 +99,8 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
                 backend_ssl_verify=None, rpc_allow_cors=None, p2sh_dust_return_pubkey=None,
                 utxo_locks_max_addresses=config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES,
                 utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE,
-                estimate_fee_per_kb=None):
+                estimate_fee_per_kb=None,
+                customnet=None):
 
     # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -124,6 +125,12 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     else:
         config.REGTEST = False
 
+    if customnet != None and len(customnet) > 0:
+        config.CUSTOMNET = True
+        config.REGTEST = True # Custom nets are regtests with different parameters
+    else:
+        config.CUSTOMNET = False
+
     if config.TESTNET:
         bitcoinlib.SelectParams('testnet')
     elif config.REGTEST:
@@ -138,6 +145,9 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
         network += '.regtest'
     if config.TESTCOIN:
         network += '.testcoin'
+
+
+    bitcoinlib.SelectParams('testnet' if config.TESTNET else 'mainnet')
 
     # Database
     if database_file:
@@ -374,6 +384,20 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
             config.BURN_END = config.BURN_END_TESTNET
             config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
             config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+    elif config.CUSTOMNET:
+        custom_args = customnet.split('|')
+
+        if len(custom_args) == 3:
+            config.MAGIC_BYTES = config.MAGIC_BYTES_REGTEST
+            config.ADDRESSVERSION = binascii.unhexlify(custom_args[1])
+            config.P2SH_ADDRESSVERSION = binascii.unhexlify(custom_args[2])
+            config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST
+            config.BURN_START = config.BURN_START_REGTEST
+            config.BURN_END = config.BURN_END_REGTEST
+            config.UNSPENDABLE = custom_args[0]
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+        else:
+            raise "Custom net parameter needs to be like UNSPENDABLE_ADDRESS|ADDRESSVERSION|P2SH_ADDRESSVERSION (version bytes in HH format)"
     elif config.REGTEST:
         config.MAGIC_BYTES = config.MAGIC_BYTES_REGTEST
         if config.TESTCOIN:
@@ -416,12 +440,13 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     config.CHECK_ASSET_CONSERVATION = check_asset_conservation
     config.UTXO_LOCKS_MAX_ADDRESSES = utxo_locks_max_addresses
     config.UTXO_LOCKS_MAX_AGE = utxo_locks_max_age
-    transaction.UTXO_LOCKS = None  # reset the UTXO_LOCKS (for tests really)
+    transaction.initialise()  # initialise UTXO_LOCKS
 
     if estimate_fee_per_kb is not None:
         config.ESTIMATE_FEE_PER_KB = estimate_fee_per_kb
 
     logger.info('Running v{} of counterparty-lib.'.format(config.VERSION_STRING))
+
 
 
 def initialise_db():
