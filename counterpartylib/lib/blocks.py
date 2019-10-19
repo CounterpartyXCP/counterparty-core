@@ -765,7 +765,10 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
         elif asm[-1] == 'OP_CHECKSIG':
             new_destination, new_data = decode_checksig(asm, ctx)
         elif asm[-1] == 'OP_CHECKMULTISIG':
-            new_destination, new_data = decode_checkmultisig(asm, ctx)
+            try:
+                new_destination, new_data = decode_checkmultisig(asm, ctx)
+            except:
+                raise DecodeError('unrecognised output type')
         elif p2sh_support and asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
             new_destination, new_data = decode_scripthash(asm)
         elif util.enabled('segwit_support') and asm[0] == 0:
