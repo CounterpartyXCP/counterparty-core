@@ -1,4 +1,4 @@
--- PRAGMA page_size=1024;
+PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
 -- PRAGMA max_page_count=1073741823;
