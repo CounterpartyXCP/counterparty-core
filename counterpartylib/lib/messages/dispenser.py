@@ -227,6 +227,7 @@ def dispense(db, tx):
                 util.credit(db, dispenser['source'], dispenser['asset'], give_remaining, action='dispenser close', event=tx['tx_hash'])
             dispenser['status'] = STATUS_CLOSED
 
+        dispenser['block_index'] = tx['block_index']
         cursor.execute('UPDATE DISPENSERS SET give_remaining=:give_remaining, status=:status \
                 WHERE source=:source AND asset=:asset AND satoshirate=:satoshirate AND give_quantity=:give_quantity', dispenser)
 
