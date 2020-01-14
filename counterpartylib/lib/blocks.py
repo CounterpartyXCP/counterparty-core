@@ -529,7 +529,7 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None):
                 raise DecodeError('data in source')
         elif util.enabled('segwit_support') and asm[0] == 0:
             # Segwit output
-            new_source, new_data = decode_p2w(asm)
+            new_source, new_data = decode_p2w(vout.scriptPubKey)
         else:
             raise DecodeError('unrecognised source type')
 
