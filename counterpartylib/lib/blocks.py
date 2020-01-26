@@ -542,12 +542,12 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None):
 
     return (sources, outputs)
 
-def _get_tx_info(tx_hex, block_parser=None, block_index=None):
+def _get_tx_info(tx_hex, block_parser=None, block_index=None, p2sh_is_segwit=False):
     """Get the transaction info. Calls one of two subfunctions depending on signature type."""
     if not block_index:
         block_index = util.CURRENT_BLOCK_INDEX
     if util.enabled('p2sh_addresses', block_index=block_index):   # Protocol change.
-        return  get_tx_info3(tx_hex, block_parser=block_parser)
+        return  get_tx_info3(tx_hex, block_parser=block_parser, p2sh_is_segwit=p2sh_is_segwit)
     elif util.enabled('multisig_addresses', block_index=block_index):   # Protocol change.
         return get_tx_info2(tx_hex, block_parser=block_parser)
     else:
@@ -669,8 +669,8 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
 
     return source, destination, btc_amount, fee, data, None
 
-def get_tx_info3(tx_hex, block_parser=None):
-    return get_tx_info2(tx_hex, block_parser=block_parser, p2sh_support=True)
+def get_tx_info3(tx_hex, block_parser=None, p2sh_is_segwit=False):
+    return get_tx_info2(tx_hex, block_parser=block_parser, p2sh_support=True, p2sh_is_segwit=p2sh_is_segwit)
 
 def arc4_decrypt(cyphertext, ctx):
     '''Un‐obfuscate. Initialise key once per attempt.'''
@@ -735,7 +735,7 @@ def decode_p2w(asm):
 
     return str(bech32), None
 
-def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
+def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=False):
     """Get multisig transaction info.
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
@@ -810,7 +810,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
             except CScriptInvalidError as e:
                 raise DecodeError(e)
 
-            new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm)
+            new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm, p2sh_is_segwit=p2sh_is_segwit)
 
             # this could be a p2sh source address with no encoded data
             if new_data is None:
