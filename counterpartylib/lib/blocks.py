@@ -529,7 +529,7 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None):
                 raise DecodeError('data in source')
         elif util.enabled('segwit_support') and asm[0] == 0:
             # Segwit output
-            new_source, new_data = decode_p2w(asm)
+            new_source, new_data = decode_p2w(vout.scriptPubKey)
         else:
             raise DecodeError('unrecognised source type')
 
@@ -730,8 +730,8 @@ def decode_checkmultisig(asm, ctx):
 
     return destination, data
 
-def decode_p2w(asm):
-    bech32 = bitcoinlib.bech32.CBech32Data.from_bytes(0, asm[1])
+def decode_p2w(script_pubkey):
+    bech32 = bitcoinlib.bech32.CBech32Data.from_bytes(0, script_pubkey[2:22])
 
     return str(bech32), None
 
@@ -860,7 +860,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
                 raise DecodeError('data in source')
         elif util.enabled('segwit_support') and asm[0] == 0:
             # Segwit output
-            new_source, new_data = decode_p2w(asm)
+            new_source, new_data = decode_p2w(vout.scriptPubKey)
         else:
             raise DecodeError('unrecognised source type')
 
