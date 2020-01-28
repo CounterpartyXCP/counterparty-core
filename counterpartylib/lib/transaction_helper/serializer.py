@@ -402,8 +402,6 @@ def serialise_p2sh_pretx(inputs, source, source_value, data_output, change_outpu
         s += var_int(int(len(outputScript)))             # Script length
         s += outputScript                                # Script
 
-        print('Scriptsig HASH: ', binascii.hexlify(Hash160(redeemScript)))
-
     # Change output.
     if change_output:
         change_address, change_value = change_output
@@ -465,9 +463,6 @@ def serialise_p2sh_datatx(txid, source, source_input, destination_outputs, data_
         #s += outputScript                                    # Script
 
         s += b'\xff' * 4                                         # Sequence
-
-        print('Scriptsig HASH: ', binascii.hexlify(Hash160(redeemScript)))
-        print('Scriptsig: ', binascii.hexlify(scriptSig))
 
     # number of outputs, always 1 for the opreturn
     n = 1

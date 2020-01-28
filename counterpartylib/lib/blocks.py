@@ -811,7 +811,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
                 raise DecodeError(e)
 
             new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm, p2sh_is_segwit=p2sh_is_segwit)
-
+            print("new_source, new_destination, new_data", new_source, new_destination, new_data)
             # this could be a p2sh source address with no encoded data
             if new_data is None:
               continue;
@@ -826,7 +826,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
             assert not new_destination
 
             data += new_data
-
+    print('Script data:', data)
     # Only look for source if data were found or destination is `UNSPENDABLE`,
     # for speed.
     if not data and destinations != [config.UNSPENDABLE,]:

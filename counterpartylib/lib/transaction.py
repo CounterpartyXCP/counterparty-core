@@ -574,6 +574,10 @@ def construct (db, tx_info, encoding='auto',
             backend.cache_pretx(pretx_txid, unsigned_pretx)
         parsed_source, parsed_destination, x, y, parsed_data, extra = blocks._get_tx_info(unsigned_tx_hex, p2sh_is_segwit=script.is_bech32(desired_source))
 
+        if encoding == 'p2sh':
+            # make_canonical can't determine the address, so we blindly change the desired to the parsed
+            desired_source = parsed_source
+
         if pretx_txid and unsigned_pretx:
             backend.clear_pretx(pretx_txid)
     except exceptions.BTCOnlyError:
