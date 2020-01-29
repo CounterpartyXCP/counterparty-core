@@ -826,7 +826,6 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
             assert not new_destination
 
             data += new_data
-    print('Script data:', data)
     # Only look for source if data were found or destination is `UNSPENDABLE`,
     # for speed.
     if not data and destinations != [config.UNSPENDABLE,]:
