@@ -462,12 +462,14 @@ def get_tx_info(tx_hex, block_parser=None, block_index=None):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
     try:
         return _get_tx_info(tx_hex, block_parser, block_index)
-    except (DecodeError, BTCOnlyError) as e:
+    except DecodeError as e:
+        return b'', None, None, None, None, None
+    except BTCOnlyError as e:
         # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
         if util.enabled('dispensers', block_index):
             try:
                 return b'', None, None, None, None, _get_swap_tx(e.decodedTx, block_parser, block_index)
-            except DecodeError as e:
+            except (DecodeError, backend.indexd.BackendRPCError) as e:
                 return b'', None, None, None, None, None
         else:
             return b'', None, None, None, None, None
