@@ -462,10 +462,8 @@ def get_tx_info(tx_hex, block_parser=None, block_index=None):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
     try:
         return _get_tx_info(tx_hex, block_parser, block_index)
-    except DecodeError as e:
+    except (DecodeError, BTCOnlyError) as e:
         # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
-        return b'', None, None, None, None, None
-    except BTCOnlyError as e:
         if util.enabled('dispensers', block_index):
             try:
                 return b'', None, None, None, None, _get_swap_tx(e.decodedTx, block_parser, block_index)
@@ -829,8 +827,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
     # Only look for source if data were found or destination is `UNSPENDABLE`,
     # for speed.
     if not data and destinations != [config.UNSPENDABLE,]:
-        #raise BTCOnlyError('no data and not unspendable', ctx)
-        return None, None, None, None, None, None
+        raise BTCOnlyError('no data and not unspendable', ctx)
 
     # Collect all (unique) source addresses.
     #   if we haven't found them yet
