@@ -829,7 +829,8 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
     # Only look for source if data were found or destination is `UNSPENDABLE`,
     # for speed.
     if not data and destinations != [config.UNSPENDABLE,]:
-        raise BTCOnlyError('no data and not unspendable', ctx)
+        #raise BTCOnlyError('no data and not unspendable', ctx)
+        return None, None, None, None, None, None
 
     # Collect all (unique) source addresses.
     #   if we haven't found them yet
