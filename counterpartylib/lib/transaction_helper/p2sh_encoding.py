@@ -58,7 +58,6 @@ def decode_p2sh_input(asm, p2sh_is_segwit=False):
         # this is a signed transaction, so we got {sig[,sig]} {datachunk} {redeemScript}
         datachunk = found_data
         redeemScript = asm[-1] #asm[-2:]
-        print('HERE!', found_data)
     else:
         #print('ASM:', len(asm))
         pubkey, source, redeem_script_is_valid, found_data = decode_data_redeem_script(asm[-1], p2sh_is_segwit)
@@ -155,6 +154,8 @@ def decode_data_redeem_script(redeemScript, p2sh_is_segwit=False):
                                 pos, npubkey = decode_data_push(redeemScript, pos)
                                 num_sigs += 1
                                 if redeemScript[pos] - bitcoinlib.core.script.OP_1 + 1 == num_sigs:
+                                    pubkey = npubkey
+                                    source = script.pubkey_to_pubkeyhash(pubkey)
                                     found_sigs = True
 
                             pos += 1
@@ -162,6 +163,7 @@ def decode_data_redeem_script(redeemScript, p2sh_is_segwit=False):
                         else:
                             # it's p2pkh
                             pos, pubkey = decode_data_push(redeemScript, pos)
+                            source = script.pubkey_to_pubkeyhash(pubkey)
 
                             valid_sig = redeemScript[pos] == bitcoinlib.core.script.OP_CHECKSIGVERIFY
                         pos += 1

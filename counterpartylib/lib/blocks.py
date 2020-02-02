@@ -35,7 +35,7 @@ from counterpartylib.lib import arc4
 from counterpartylib.lib.transaction_helper import p2sh_encoding
 
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, destroy, sweep, dispenser)
-from .messages.versions import enhanced_send
+from .messages.versions import enhanced_send, mpma
 
 from .kickstart.blocks_parser import BlockchainParser, ChainstateParser
 from .kickstart.utils import ib2h
@@ -98,6 +98,8 @@ def parse_tx(db, tx):
                 send.parse(db, tx, message)
             elif message_type_id == enhanced_send.ID and util.enabled('enhanced_sends', block_index=tx['block_index']):
                 enhanced_send.parse(db, tx, message)
+            elif message_type_id == mpma.ID and util.enabled('mpma_sends', block_index=tx['block_index']):
+                mpma.parse(db, tx, message)
             elif message_type_id == order.ID:
                 order.parse(db, tx, message)
             elif message_type_id == btcpay.ID:
@@ -469,7 +471,7 @@ def get_tx_info(tx_hex, block_parser=None, block_index=None):
         if util.enabled('dispensers', block_index):
             try:
                 return b'', None, None, None, None, _get_swap_tx(e.decodedTx, block_parser, block_index)
-            except (DecodeError, backend.indexd.BackendRPCError) as e:
+            except: # (DecodeError, backend.indexd.BackendRPCError) as e:
                 return b'', None, None, None, None, None
         else:
             return b'', None, None, None, None, None
@@ -811,7 +813,6 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
                 raise DecodeError(e)
 
             new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm, p2sh_is_segwit=p2sh_is_segwit)
-            print("new_source, new_destination, new_data", new_source, new_destination, new_data)
             # this could be a p2sh source address with no encoded data
             if new_data is None:
               continue;
