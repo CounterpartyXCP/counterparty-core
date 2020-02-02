@@ -154,8 +154,6 @@ def decode_data_redeem_script(redeemScript, p2sh_is_segwit=False):
                                 pos, npubkey = decode_data_push(redeemScript, pos)
                                 num_sigs += 1
                                 if redeemScript[pos] - bitcoinlib.core.script.OP_1 + 1 == num_sigs:
-                                    pubkey = npubkey
-                                    source = script.pubkey_to_pubkeyhash(pubkey)
                                     found_sigs = True
 
                             pos += 1
