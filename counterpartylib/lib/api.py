@@ -343,8 +343,16 @@ def compose_transaction(db, name, params,
     for address_name in ['source', 'destination']:
         if address_name in params:
             address = params[address_name]
-            provided_pubkeys += script.extract_pubkeys(address)
-            params[address_name] = script.make_pubkeyhash(address)
+            if isinstance(address, list):
+                #pkhshs = []
+                #for addr in address:
+                #    provided_pubkeys += script.extract_pubkeys(addr)
+                #    pkhshs.append(script.make_pubkeyhash(addr))
+                #params[address_name] = pkhshs
+                pass
+            else:
+                provided_pubkeys += script.extract_pubkeys(address)
+                params[address_name] = script.make_pubkeyhash(address)
 
     # Check validity of collected pubkeys.
     for pubkey in provided_pubkeys:
