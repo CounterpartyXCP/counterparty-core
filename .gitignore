@@ -30,3 +30,5 @@ profile.txt
 
 # Cache folders
 .cache
+
+.python-version
