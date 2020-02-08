@@ -172,11 +172,13 @@ def _decode_decodeSendList(stream, nbits, lut, block_index):
 
     if nbits > 0:
         numRecipients = stream.read('uint:%i' % nbits)
+        rangeLimit = numRecipients + 1
     else:
         numRecipients = 1
+        rangeLimit = numRecipients
     sendList = []
     asset = util.generate_asset_name(asset_id, block_index)
-    for i in range(0, numRecipients):
+    for i in range(0, rangeLimit):
         if nbits > 0:
             idx = stream.read('uint:%i' % nbits)
         else:
