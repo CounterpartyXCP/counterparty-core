@@ -13,7 +13,7 @@ from counterpartylib.lib.exceptions import *
 FORMAT = '>21sB'
 LENGTH = 22
 MAX_MEMO_LENGTH = 34 # Could be higher, but we will keep it consistent with enhanced send
-ID = 3
+ID = 4
 ANTISPAM_FEE_DECIMAL = 0.5
 ANTISPAM_FEE = ANTISPAM_FEE_DECIMAL * config.UNIT
 

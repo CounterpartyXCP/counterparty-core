@@ -169,11 +169,20 @@ def _decode_decodeLUT(data):
 
 def _decode_decodeSendList(stream, nbits, lut, block_index):
     asset_id = stream.read('uintbe:64')
-    numRecipients = stream.read('uint:%i' % nbits)
+
+    if nbits > 0:
+        numRecipients = stream.read('uint:%i' % nbits)
+        rangeLimit = numRecipients + 1
+    else:
+        numRecipients = 1
+        rangeLimit = numRecipients
     sendList = []
     asset = util.generate_asset_name(asset_id, block_index)
-    for i in range(0, numRecipients + 1):
-        idx = stream.read('uint:%i' % nbits)
+    for i in range(0, rangeLimit):
+        if nbits > 0:
+            idx = stream.read('uint:%i' % nbits)
+        else:
+            idx = 0
         addr = lut[idx]
         amount = stream.read('uintbe:64')
 
