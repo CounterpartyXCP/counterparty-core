@@ -6,7 +6,10 @@ class DatabaseError(Exception):
 class TransactionError(Exception):
     pass
 
-class AssetError(Exception):
+class ParseTransactionError(Exception):
+    pass
+
+class AssetError (Exception):
     pass
 
 class AssetNameError(AssetError):
@@ -34,12 +37,17 @@ class PushDataDecodeError(DecodeError):
     pass
 
 class BTCOnlyError(MessageError):
-    pass
+    def __init__(self, msg, decodedTx=None):
+        super(BTCOnlyError, self).__init__(msg)
+        self.decodedTx = decodedTx
 
 class BalanceError(Exception):
     pass
 
 class EncodingError(Exception):
+    pass
+
+class OptionsError(Exception):
     pass
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
