@@ -61,6 +61,9 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
         problems.append('cannot dispense %s' % config.BTC)
         return None, problems
 
+    # resolve subassets
+    asset = util.resolve_subasset_longname(db, asset)
+
     if escrow_quantity < give_quantity:
         problems.append('escrow_quantity must be greater or equal than give_quantity')
 
