@@ -81,7 +81,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
 
     # Calculate dividend quantities
     exclude_empty = False
-    if(util.enabled('zero_quantity_value_adjustment_1')):
+    if util.enabled('zero_quantity_value_adjustment_1'):
         exclude_empty = True
     holders = util.holders(db, asset, exclude_empty)
     outputs = []
