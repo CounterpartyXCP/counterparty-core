@@ -219,20 +219,22 @@ def dispense(db, tx):
 
         assert give_remaining >= 0
 
-        util.credit(db, tx['source'], dispenser['asset'], actually_given, action='dispense', event=tx['tx_hash'])
+        # Only create the credit and update the dispenser if the quantiy given is greater than 0
+        if actually_given > 0:
+            util.credit(db, tx['source'], dispenser['asset'], actually_given, action='dispense', event=tx['tx_hash'])
 
-        dispenser['give_remaining'] = give_remaining
-        if give_remaining < dispenser['give_quantity']:
-            # close the dispenser
-            dispenser['give_remaining'] = 0
-            if give_remaining > 0:
-                # return the remaining to the owner
-                util.credit(db, dispenser['source'], dispenser['asset'], give_remaining, action='dispenser close', event=tx['tx_hash'])
-            dispenser['status'] = STATUS_CLOSED
+            dispenser['give_remaining'] = give_remaining
+            if give_remaining < dispenser['give_quantity']:
+                # close the dispenser
+                dispenser['give_remaining'] = 0
+                if give_remaining > 0:
+                    # return the remaining to the owner
+                    util.credit(db, dispenser['source'], dispenser['asset'], give_remaining, action='dispenser close', event=tx['tx_hash'])
+                dispenser['status'] = STATUS_CLOSED
 
-        dispenser['block_index'] = tx['block_index']
-        dispenser['prev_status'] = STATUS_OPEN
-        cursor.execute('UPDATE DISPENSERS SET give_remaining=:give_remaining, status=:status \
-                WHERE source=:source AND asset=:asset AND satoshirate=:satoshirate AND give_quantity=:give_quantity AND status=:prev_status', dispenser)
+            dispenser['block_index'] = tx['block_index']
+            dispenser['prev_status'] = STATUS_OPEN
+            cursor.execute('UPDATE DISPENSERS SET give_remaining=:give_remaining, status=:status \
+                    WHERE source=:source AND asset=:asset AND satoshirate=:satoshirate AND give_quantity=:give_quantity AND status=:prev_status', dispenser)
 
     cursor.close()
