@@ -79,8 +79,11 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
             return None, None, problems, 0
         dividend_divisible = issuances[0]['divisible']
 
-    # Calculate dividend quantities (exclude empty 0 quantity holders)
-    holders = util.holders(db, asset, True)
+    # Calculate dividend quantities
+    exclude_empty = False
+    if(util.enabled('zero_quantity_value_adjustment_1')):
+        exclude_empty = True
+    holders = util.holders(db, asset, exclude_empty)
     outputs = []
     addresses = []
     dividend_total = 0
