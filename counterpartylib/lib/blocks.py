@@ -1446,8 +1446,18 @@ def follow(db):
             except backend.indexd.BackendRPCError as e:
                 logger.warning('Failed to fetch raw for mempool TXs, restarting loop; %s', (e, ))
                 continue  # restart the follow loop
-
+                  
+            loop_count = 0
+            cursor.execute('begin')
             for tx_hash in parse_txs:
+                if len(parse_txs) > 10000:
+                  logger.info('too many %s mempools to register',len(parse_txs))
+                  break
+                loop_count += 1
+                if loop_count % 1000 == 0:
+                    cursor.execute('commit')
+                    cursor.execute('begin')
+                    logger.info('tx_hash %s',loop_count)
                 try:
                     with db:
                         # List the fake block.
@@ -1495,6 +1505,7 @@ def follow(db):
                     logger.warn('ParseTransactionError for tx %s: %s' % (tx['tx_hash'], e))
                 except MempoolError:
                     pass
+            cursor.execute('commit')
 
             # Re‐write mempool messages to database.
             with db:
@@ -1506,7 +1517,8 @@ def follow(db):
 
             elapsed_time = time.time() - start_time
             sleep_time = config.BACKEND_POLL_INTERVAL - elapsed_time if elapsed_time <= config.BACKEND_POLL_INTERVAL else 0
-
+            sleep_time = 60
+         
             logger.getChild('mempool').debug('Refresh mempool: %s XCP txs seen, out of %s total entries (took %ss, next refresh in %ss)' % (
                 len(xcp_mempool), len(raw_mempool),
                 "{:.2f}".format(elapsed_time, 3),
