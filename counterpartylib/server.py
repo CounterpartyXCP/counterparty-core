@@ -289,7 +289,11 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
         raise ConfigurationError("Please specific a valid port number indexd-port configuration parameter")
 
     # Construct Indexd URL.
-    config.INDEXD_URL = 'http://' + config.INDEXD_CONNECT + ':' + str(config.INDEXD_PORT)
+    if config.INDEXD_PORT == 443:
+        # support ssl
+        config.INDEXD_URL = 'https://' + config.INDEXD_CONNECT
+    else:
+        config.INDEXD_URL = 'http://' + config.INDEXD_CONNECT + ':' + str(config.INDEXD_PORT)
 
 
     ##############
