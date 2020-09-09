@@ -16,7 +16,7 @@ from counterpartylib.lib import script
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 
-from counterpartylib.lib.backend import indexd
+from counterpartylib.lib.backend import addrindexrs
 
 MEMPOOL_CACHE_INITIALIZED = False
 
@@ -38,7 +38,9 @@ def sortkeypicker(keynames):
     return getit
 
 def BACKEND():
-    return sys.modules['counterpartylib.lib.backend.{}'.format(config.BACKEND_NAME)]
+    mdl = sys.modules['counterpartylib.lib.backend.{}'.format(config.BACKEND_NAME)]
+    mdl.init()
+    return mdl
 
 def getblockcount():
     return BACKEND().getblockcount()

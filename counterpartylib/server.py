@@ -196,7 +196,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     # THINGS WE CONNECT TO
 
     # Backend name
-    config.BACKEND_NAME = 'indexd'
+    config.BACKEND_NAME = 'addrindexrs'
 
     # Backend RPC host (Bitcoin Core)
     if backend_connect:
@@ -290,7 +290,6 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
 
     # Construct Indexd URL.
     config.INDEXD_URL = 'http://' + config.INDEXD_CONNECT + ':' + str(config.INDEXD_PORT)
-
 
     ##############
     # THINGS WE SERVE
