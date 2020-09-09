@@ -12,6 +12,7 @@ import concurrent.futures
 import collections
 import binascii
 import hashlib
+import signal
 
 from counterpartylib.lib import config, util, address
 
@@ -264,7 +265,10 @@ class AddrIndexRsThread (threading.Thread):
         self.lastId = 0
         self.message_to_send = None
         self.message_result = None
-        self.daemon = True
+        self.stop_event = threading.Event()
+
+    def stop(self):
+        self.stop_event.set()
 
     def connect(self):
         logging.debug('AddrIndexRs connecting')
@@ -277,7 +281,7 @@ class AddrIndexRsThread (threading.Thread):
         self.locker = threading.Condition()
         self.locker.acquire()
         self.connect()
-        while self.locker.wait():
+        while self.stop_event.is_set() != True and self.locker.wait():
             if self.message_to_send != None:
                 msg = self.message_to_send
                 self.message_to_send = None
@@ -324,12 +328,27 @@ def ensure_addrindexrs_connected():
     global _backend
     if _backend == None:
         _backend = AddrIndexRsThread(config.INDEXD_CONNECT, config.INDEXD_PORT)
+        _backend.daemon = True
         _backend.start()
 
         _backend.send({
             "method": "server.version",
             "params": []
         })
+
+def sigterm_handler(_signo, _stack_frame):
+    if _signo == 15:
+        signal_name = 'SIGTERM'
+    elif _signo == 2:
+        signal_name = 'SIGINT'
+    else:
+        assert False
+
+    if '_backend' in globals():
+        logger.info('Stopping AddrIndexRs connector.')
+        _backend.stop()
+signal.signal(signal.SIGTERM, sigterm_handler)
+signal.signal(signal.SIGINT, sigterm_handler)
 
 def _script_pubkey_to_hash(spk):
     return hashlib.sha256(spk).digest()[::-1].hex()
