@@ -45,7 +45,7 @@ def exectracer(cursor, sql, bindings):
     skip_tables = [
         'blocks', 'transactions',
         'balances', 'messages', 'mempool', 'assets',
-        'new_sends' # interim table for CIP10 activation
+        'new_sends', 'new_issuances' # interim table for CIP10 activation
     ]
     skip_tables_block_messages = copy.copy(skip_tables)
     if command == 'update':
