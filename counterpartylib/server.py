@@ -44,6 +44,8 @@ def sigterm_handler(_signo, _stack_frame):
         logger.info('Stopping API server.')
         api_server.stop()
         api_status_poller.stop()
+    logger.info('Stopping backend.')
+    backend.stop()
     logger.info('Shutting down.')
     logging.shutdown()
     sys.exit(0)

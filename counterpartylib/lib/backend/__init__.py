@@ -42,6 +42,9 @@ def BACKEND():
     mdl.init()
     return mdl
 
+def stop():
+    BACKEND().stop()
+
 def getblockcount():
     return BACKEND().getblockcount()
 

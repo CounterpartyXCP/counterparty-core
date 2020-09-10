@@ -17,7 +17,7 @@ import signal
 from counterpartylib.lib import config, util, address
 
 READ_BUF_SIZE = 4096
-SOCKET_TIMEOUT = 5.0
+SOCKET_TIMEOUT = 45.0
 BACKEND_PING_TIME = 30.0
 
 raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)  # used in getrawtransaction_batch()
@@ -265,10 +265,11 @@ class AddrIndexRsThread (threading.Thread):
         self.lastId = 0
         self.message_to_send = None
         self.message_result = None
-        self.stop_event = threading.Event()
+        self.is_killed = False
 
     def stop(self):
-        self.stop_event.set()
+        logging.debug('AddrIndexRs thread closing')
+        self.send({"kill": True})
 
     def connect(self):
         logging.debug('AddrIndexRs connecting')
@@ -281,8 +282,8 @@ class AddrIndexRsThread (threading.Thread):
         self.locker = threading.Condition()
         self.locker.acquire()
         self.connect()
-        while self.stop_event.is_set() != True and self.locker.wait():
-            if self.message_to_send != None:
+        while self.locker.wait():
+            if not(self.is_killed) and self.message_to_send != None:
                 msg = self.message_to_send
                 self.message_to_send = None
                 retry_count = 5
@@ -310,17 +311,22 @@ class AddrIndexRsThread (threading.Thread):
                         retry_count -= 1
                     finally:
                         self.locker.notify()
+            else:
+                self.locker.notify()
         self.sock.close()
+        logging.debug('AddrIndexRs socket closed normally')
 
     def send(self, msg):
         self.locker.acquire()
-        msg["id"] = self.lastId
-        self.lastId += 1
-        self.message_to_send = (json.dumps(msg) + "\n").encode('utf8')
+        if not("kill" in msg):
+            msg["id"] = self.lastId
+            self.lastId += 1
+            self.message_to_send = (json.dumps(msg) + "\n").encode('utf8')
         self.locker.notify()
         self.locker.wait()
         self.locker.release()
         return self.message_result
+
 
 _backend = None
 
@@ -336,25 +342,15 @@ def ensure_addrindexrs_connected():
             "params": []
         })
 
-def sigterm_handler(_signo, _stack_frame):
-    if _signo == 15:
-        signal_name = 'SIGTERM'
-    elif _signo == 2:
-        signal_name = 'SIGINT'
-    else:
-        assert False
-
-    if '_backend' in globals():
-        logger.info('Stopping AddrIndexRs connector.')
-        _backend.stop()
-signal.signal(signal.SIGTERM, sigterm_handler)
-signal.signal(signal.SIGINT, sigterm_handler)
-
 def _script_pubkey_to_hash(spk):
     return hashlib.sha256(spk).digest()[::-1].hex()
 
-def _address_to_hash(address):
-    return _script_pubkey_to_hash(address.address_scriptpubkey(address))
+def _address_to_hash(addr):
+    pk = address.address_scriptpubkey(addr)
+    if pk[0:3] ==  b'\x76\xa9\x14':
+        pk = b''.join([pk[0:3], pk[4:-6], pk[-2:]])
+
+    return _script_pubkey_to_hash(pk)
 
 # Returns an array of UTXOS from an address in the following format
 # {
@@ -366,16 +362,38 @@ def _address_to_hash(address):
 # }
 # [{"txId":"a0d12eb3716e2e70fd00525486ace0da2947f82d818b7be0285f16ff672cf237","vout":5,"height":647484,"value":30455293,"confirmations":2}]
 #
+def unpack_outpoint(outpoint):
+    txid, vout = outpoint.split(':')
+    return (txid, int(vout))
+
+def unpack_vout(outpoint, tx, block_count):
+    vout = tx["vout"][outpoint[1]]
+    height = -1
+    if tx["confirmations"] > 0:
+        height = block_count - tx["confirmations"] + 1
+
+    return {
+        "txId": tx["txid"],
+        "vout": outpoint[1],
+        "height": height,
+        "value": int(vout["value"] * config.UNIT),
+        "confirmations": tx["confirmations"]
+    }
+
 def get_unspent_txouts(source):
     ensure_addrindexrs_connected()
 
+    block_count = getblockcount()
     result = _backend.send({
-        "method": blockchain.scripthash.get_history,
+        "method": "blockchain.scripthash.get_utxos",
         "params": [_address_to_hash(source)]
-    })
+    })["result"]
+    result = [unpack_outpoint(x) for x in result]
     # each item on the result array is like
     # {"tx_hash": hex_encoded_hash}
-    batch = getrawtransaction_batch([x["tx_hash"] for x in result], verbose=verbose, skip_missing=skip_missing)
+    batch = getrawtransaction_batch([x[0] for x in result], verbose=True, skip_missing=True)
+    batch = [unpack_vout(outpoint, batch[outpoint[0]], block_count) for outpoint in result]
+
     return batch
 
 # Returns transactions in the following format
@@ -424,12 +442,13 @@ def get_unspent_txouts(source):
 def search_raw_transactions(address, unconfirmed=True):
     ensure_addrindexrs_connected()
 
+    hsh = _address_to_hash(address)
     txs = _backend.send({
         "method": "blockchain.scripthash.get_history",
-        "params": [_address_to_hash(address)]
-    })
+        "params": [hsh]
+    })["result"]
 
-    batch = getrawtransaction_batch([x["tx_hash"] for x in txs], verbose=verbose, skip_missing=skip_missing)
+    batch = getrawtransaction_batch([x["tx_hash"] for x in txs], verbose=True)
 
     if not(unconfirmed):
         batch = [x for x in batch if x.height >= 0]
@@ -443,3 +462,7 @@ def getindexblocksbehind():
 
 def init():
     ensure_addrindexrs_connected()
+
+def stop():
+    if '_backend' in globals():
+        _backend.stop()
