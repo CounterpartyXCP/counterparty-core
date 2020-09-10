@@ -45,6 +45,48 @@ def initialise(db):
                       asset_longname TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
+
+    # Add asset_longname for sub-assets
+    #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS`.
+    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(issuances)''')]
+    if 'asset_longname' not in columns:
+        cursor.execute('''ALTER TABLE issuances ADD COLUMN asset_longname TEXT''')
+
+    # If sweep_hotifx activated, Create issuances copy, copy old data, drop old table, rename new table, recreate indexes
+    #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS` nor can drop UNIQUE constraints
+    if 'msg_index' not in columns:
+            cursor.execute('''CREATE TABLE IF NOT EXISTS new_issuances(
+                              tx_index INTEGER,
+                              tx_hash TEXT,
+                              msg_index INTEGER DEFAULT 0,
+                              block_index INTEGER,
+                              asset TEXT,
+                              quantity INTEGER,
+                              divisible BOOL,
+                              source TEXT,
+                              issuer TEXT,
+                              transfer BOOL,
+                              callable BOOL,
+                              call_date INTEGER,
+                              call_price REAL,
+                              description TEXT,
+                              fee_paid INTEGER,
+                              locked BOOL,
+                              status TEXT,
+                              asset_longname TEXT,
+                              PRIMARY KEY (tx_index, msg_index),
+                              FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
+                              UNIQUE (tx_hash, msg_index))
+                           ''')
+            cursor.execute('''INSERT INTO new_issuances(tx_index, tx_hash, msg_index,
+                block_index, asset, quantity, divisible, source, issuer, transfer, callable,
+                call_date, call_price, description, fee_paid, locked, status, asset_longname)
+                SELECT tx_index, tx_hash, 0, block_index, asset, quantity, divisible, source,
+                issuer, transfer, callable, call_date, call_price, description, fee_paid,
+                locked, status, asset_longname FROM issuances''', {})
+            cursor.execute('DROP TABLE issuances')
+            cursor.execute('ALTER TABLE new_issuances RENAME TO issuances')
+
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       block_index_idx ON issuances (block_index)
                     ''')
@@ -57,12 +99,6 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       source_idx ON issuances (source)
                    ''')
-
-    # Add asset_longname for sub-assets
-    #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS`.
-    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(issuances)''')]
-    if 'asset_longname' not in columns:
-        cursor.execute('''ALTER TABLE issuances ADD COLUMN asset_longname TEXT''')
 
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       asset_longname_idx ON issuances (asset_longname)
@@ -430,7 +466,7 @@ def parse (db, tx, message, message_type_id):
         'asset_longname': asset_longname,
     }
     if "integer overflow" not in status:
-        sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname)'
+        sql='insert into issuances values(:tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname)'
         issuance_parse_cursor.execute(sql, bindings)
     else:
         logger.warn("Not storing [issuance] tx [%s]: %s" % (tx['tx_hash'], status))
