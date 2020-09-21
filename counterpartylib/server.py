@@ -16,6 +16,7 @@ import appdirs
 import platform
 import bitcoin as bitcoinlib
 import altcoin
+import logging
 from urllib.parse import quote_plus as urlencode
 
 from counterpartylib.lib import log
