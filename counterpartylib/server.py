@@ -4,7 +4,7 @@ import os
 import decimal
 import pprint
 import sys
-import logging
+import apsw
 import time
 import dateutil.parser
 import calendar
@@ -82,9 +82,11 @@ def initialise(*args, **kwargs):
 
 
 def initialise_config(database_file=None, log_file=None, api_log_file=None,
-                testnet=False, testcoin=False,
+                testnet=False, testcoin=False, regtest=False,
+                api_limit_rows=1000,
                 backend_name=None, backend_connect=None, backend_port=None,
                 backend_user=None, backend_password=None,
+                indexd_connect=None, indexd_port=None,
                 backend_ssl=False, backend_ssl_no_verify=False,
                 backend_poll_interval=None,
                 rpc_host=None, rpc_port=None,
@@ -97,7 +99,8 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
                 backend_ssl_verify=None, rpc_allow_cors=None, p2sh_dust_return_pubkey=None,
                 utxo_locks_max_addresses=config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES,
                 utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE,
-                estimate_fee_per_kb=None):
+                estimate_fee_per_kb=None,
+                customnet=None):
 
     # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -116,13 +119,35 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     else:
         config.TESTCOIN = False
 
-    bitcoinlib.SelectParams('testnet' if config.TESTNET else 'mainnet')
+    # regtest
+    if regtest:
+        config.REGTEST = regtest
+    else:
+        config.REGTEST = False
+
+    if customnet != None and len(customnet) > 0:
+        config.CUSTOMNET = True
+        config.REGTEST = True # Custom nets are regtests with different parameters
+    else:
+        config.CUSTOMNET = False
+
+    if config.TESTNET:
+        bitcoinlib.SelectParams('testnet')
+    elif config.REGTEST:
+        bitcoinlib.SelectParams('regtest')
+    else:
+        bitcoinlib.SelectParams('mainnet')
 
     network = ''
     if config.TESTNET:
         network += '.testnet'
+    if config.REGTEST:
+        network += '.regtest'
     if config.TESTCOIN:
         network += '.testcoin'
+
+
+    bitcoinlib.SelectParams('testnet' if config.TESTNET else 'mainnet')
 
     # Database
     if database_file:
@@ -165,16 +190,13 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
         logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
     sys.excepthook = handle_exception
 
+    config.API_LIMIT_ROWS = api_limit_rows
+
     ##############
     # THINGS WE CONNECT TO
 
     # Backend name
-    if backend_name:
-        config.BACKEND_NAME = backend_name
-    else:
-        config.BACKEND_NAME = 'addrindex'
-    if config.BACKEND_NAME == 'jmcorgan':
-        config.BACKEND_NAME = 'addrindex'
+    config.BACKEND_NAME = 'indexd'
 
     # Backend RPC host (Bitcoin Core)
     if backend_connect:
@@ -187,15 +209,11 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
         config.BACKEND_PORT = backend_port
     else:
         if config.TESTNET:
-            if config.BACKEND_NAME == 'btcd':
-                config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET_BTCD
-            else:
-                config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET
+            config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET
+        elif config.REGTEST:
+            config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_REGTEST
         else:
-            if config.BACKEND_NAME == 'btcd':
-                config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_BTCD
-            else:
-                config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT
+            config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT
 
     try:
         config.BACKEND_PORT = int(config.BACKEND_PORT)
@@ -246,6 +264,34 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
         config.BACKEND_URL = 'http://' + config.BACKEND_URL
 
 
+    # Indexd RPC host
+    if indexd_connect:
+        config.INDEXD_CONNECT = indexd_connect
+    else:
+        config.INDEXD_CONNECT = 'localhost'
+
+    # Indexd RPC port
+    if indexd_port:
+        config.INDEXD_PORT = indexd_port
+    else:
+        if config.TESTNET:
+            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT_TESTNET
+        elif config.REGTEST:
+            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT_REGTEST
+        else:
+            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT
+
+    try:
+        config.INDEXD_PORT = int(config.INDEXD_PORT)
+        if not (int(config.INDEXD_PORT) > 1 and int(config.INDEXD_PORT) < 65535):
+            raise ConfigurationError('invalid Indexd API port number')
+    except:
+        raise ConfigurationError("Please specific a valid port number indexd-port configuration parameter")
+
+    # Construct Indexd URL.
+    config.INDEXD_URL = 'http://' + config.INDEXD_CONNECT + ':' + str(config.INDEXD_PORT)
+
+
     ##############
     # THINGS WE SERVE
 
@@ -267,6 +313,11 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
                 config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET + 1
             else:
                 config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET
+        elif config.REGTEST:
+            if config.TESTCOIN:
+                config.RPC_PORT = config.DEFAULT_RPC_PORT_REGTEST + 1
+            else:
+                config.RPC_PORT = config.DEFAULT_RPC_PORT_REGTEST
         else:
             if config.TESTCOIN:
                 config.RPC_PORT = config.DEFAULT_RPC_PORT + 1
@@ -333,6 +384,38 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
             config.BURN_END = config.BURN_END_TESTNET
             config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
             config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+    elif config.CUSTOMNET:
+        custom_args = customnet.split('|')
+
+        if len(custom_args) == 3:
+            config.MAGIC_BYTES = config.MAGIC_BYTES_REGTEST
+            config.ADDRESSVERSION = binascii.unhexlify(custom_args[1])
+            config.P2SH_ADDRESSVERSION = binascii.unhexlify(custom_args[2])
+            config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST
+            config.BURN_START = config.BURN_START_REGTEST
+            config.BURN_END = config.BURN_END_REGTEST
+            config.UNSPENDABLE = custom_args[0]
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+        else:
+            raise "Custom net parameter needs to be like UNSPENDABLE_ADDRESS|ADDRESSVERSION|P2SH_ADDRESSVERSION (version bytes in HH format)"
+    elif config.REGTEST:
+        config.MAGIC_BYTES = config.MAGIC_BYTES_REGTEST
+        if config.TESTCOIN:
+            config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
+            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_REGTEST
+            config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST_TESTCOIN
+            config.BURN_START = config.BURN_START_REGTEST_TESTCOIN
+            config.BURN_END = config.BURN_END_REGTEST_TESTCOIN
+            config.UNSPENDABLE = config.UNSPENDABLE_REGTEST
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+        else:
+            config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
+            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_REGTEST
+            config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST
+            config.BURN_START = config.BURN_START_REGTEST
+            config.BURN_END = config.BURN_END_REGTEST
+            config.UNSPENDABLE = config.UNSPENDABLE_REGTEST
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
     else:
         config.MAGIC_BYTES = config.MAGIC_BYTES_MAINNET
         if config.TESTCOIN:
@@ -357,12 +440,13 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     config.CHECK_ASSET_CONSERVATION = check_asset_conservation
     config.UTXO_LOCKS_MAX_ADDRESSES = utxo_locks_max_addresses
     config.UTXO_LOCKS_MAX_AGE = utxo_locks_max_age
-    transaction.UTXO_LOCKS = None  # reset the UTXO_LOCKS (for tests really)
+    transaction.initialise()  # initialise UTXO_LOCKS
 
     if estimate_fee_per_kb is not None:
         config.ESTIMATE_FEE_PER_KB = estimate_fee_per_kb
 
     logger.info('Running v{} of counterparty-lib.'.format(config.VERSION_STRING))
+
 
 
 def initialise_db():
@@ -374,7 +458,7 @@ def initialise_db():
         get_lock()
 
     # Database
-    logger.info('Connecting to database.')
+    logger.info('Connecting to database (SQLite %s).' % apsw.apswversion())
     db = database.get_connection(read_only=False)
 
     util.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
