@@ -1,5 +1,4 @@
 --index-url https://pypi.python.org/simple/
 
 requests>=2.8.1
-git+https://github.com/chiguireitor/python-bitcoinlib.git@bech32-address#egg=python-bitcoinlib
 -e .

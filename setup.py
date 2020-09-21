@@ -176,7 +176,7 @@ required_packages = [
     'pytest==2.9.2',
     'pytest-cov==2.2.1',
     'python-altcoinlib',
-    'python-bitcoinlib',
+    'python-bitcoinlib==0.11.0',
     'requests==2.10.0',
     'tendo==0.2.8',
     'xmltodict==0.10.1',
