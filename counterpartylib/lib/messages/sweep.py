@@ -58,13 +58,13 @@ def validate (db, source, destination, flags, memo, block_index):
         problems.append('destination cannot be the same as source')
 
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, 'XCP'))
+    cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, config.XCP))
     result = cursor.fetchall()
 
     if len(result) == 0:
-        problems.append('insufficient XCP balance for sweep. Need %s XCP for antispam fee' % ANTISPAM_FEE_DECIMAL)
+        problems.append('insufficient XMP balance for sweep. Need %s XMP for antispam fee' % ANTISPAM_FEE_DECIMAL)
     elif result[0]['quantity'] < ANTISPAM_FEE:
-        problems.append('insufficient XCP balance for sweep. Need %s XCP for antispam fee' % ANTISPAM_FEE_DECIMAL)
+        problems.append('insufficient XMP balance for sweep. Need %s XMP for antispam fee' % ANTISPAM_FEE_DECIMAL)
 
     cursor.close()
 
@@ -153,7 +153,7 @@ def parse (db, tx, message):
         if problems: status = 'invalid: ' + '; '.join(problems)
 
         try:
-            util.debit(db, tx['source'], 'XCP', fee_paid, action='sweep fee', event=tx['tx_hash'])
+            util.debit(db, tx['source'], config.XCP, fee_paid, action='sweep fee', event=tx['tx_hash'])
         except BalanceError:
             destination, flags, memo_bytes = None, None, None
             status = 'invalid: insufficient balance for antispam fee for sweep'
