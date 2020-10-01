@@ -12,18 +12,20 @@ import collections
 import binascii
 import hashlib
 
-from counterpartylib.lib import config, script, util
+from counterpartylib.lib import config, util
 
 raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)  # used in getrawtransaction_batch()
-unconfirmed_transactions_cache = None
-reverse_unconfirmed_transactions_cache = None
 
 
 class BackendRPCError(Exception):
     pass
 
+class IndexdRPCError(Exception):
+    pass
+
 
 def rpc_call(payload):
+    """Calls to bitcoin core and returns the response"""
     url = config.BACKEND_URL
     response = None
     TRIES = 12
@@ -42,14 +44,22 @@ def rpc_call(payload):
     if response == None:
         if config.TESTNET:
             network = 'testnet'
+        elif config.REGTEST:
+            network = 'regtest'
         else:
             network = 'mainnet'
         raise BackendRPCError('Cannot communicate with backend at `{}`. (server is set to run on {}, is backend?)'.format(util.clean_url_for_log(url), network))
+    elif response.status_code in (401,):
+        raise BackendRPCError('Authorization error connecting to {}: {} {}'.format(util.clean_url_for_log(url), response.status_code, response.reason))
     elif response.status_code not in (200, 500):
         raise BackendRPCError(str(response.status_code) + ' ' + response.reason)
 
-    # Return result, with error handling.
-    response_json = response.json()
+    # Handle json decode errors
+    try:
+        response_json = response.json()
+    except json.decoder.JSONDecodeError as e:
+        raise BackendRPCError('Received invalid JSON from backend with a response of {}'.format(str(response.status_code) + ' ' + response.reason))
+
     # Batch query returns a list
     if isinstance(response_json, list):
         return response_json
@@ -57,15 +67,15 @@ def rpc_call(payload):
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
         raise BackendRPCError('{} Is `txindex` enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
-    elif response_json['error']['code'] in [-28, -8, -2]:  
-        # “Verifying blocks...” or “Block height out of range” or “The network does not appear to fully agree!“ 
+    elif response_json['error']['code'] in [-28, -8, -2]:
+        # “Verifying blocks...” or “Block height out of range” or “The network does not appear to fully agree!“
         logger.debug('Backend not ready. Sleeping for ten seconds.')
         # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
         # seconds to start, this’ll hit the maximum recursion depth limit.
         time.sleep(10)
         return rpc_call(payload)
     else:
-        raise BackendRPCError('{}'.format(response_json['error']))
+        raise BackendRPCError('Error connecting to {}: {}'.format(util.clean_url_for_log(url), response_json['error']))
 
 def rpc(method, params):
     payload = {
@@ -75,7 +85,7 @@ def rpc(method, params):
         "id": 0,
     }
     return rpc_call(payload)
-    
+
 def rpc_batch(request_list):
     responses = collections.deque()
 
@@ -84,7 +94,7 @@ def rpc_batch(request_list):
         #note that this is list executed serially, in the same thread in bitcoind
         #e.g. see: https://github.com/bitcoin/bitcoin/blob/master/src/rpcserver.cpp#L939
         responses.extend(rpc_call(chunk))
- 
+
     chunks = util.chunkify(request_list, config.RPC_BATCH_SIZE)
     with concurrent.futures.ThreadPoolExecutor(max_workers=config.BACKEND_RPC_BATCH_NUM_WORKERS) as executor:
         for chunk in chunks:
@@ -134,103 +144,6 @@ def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
 
     return tx_hashes_addresses, tx_hashes_tx
 
-
-def unconfirmed_transactions(address):
-    logger.debug("unconfirmed_transactions called: %s" % address)
-    if unconfirmed_transactions_cache is None:
-        raise Exception("Unconfirmed transactions cache is not initialized")
-
-    tx_hashes = unconfirmed_transactions_cache.get(address, set())
-
-    logger.debug("unconfirmed_transcations found: %s" % ",".join(list(tx_hashes)))
-
-    return list(getrawtransaction_batch(list(tx_hashes), verbose=True).values()) if len(tx_hashes) else []
-
-def refresh_unconfirmed_transactions_cache(mempool_txhash_list):
-    global unconfirmed_transactions_cache, reverse_unconfirmed_transactions_cache
-
-    # turn list into set for better performance
-    mempool_txhash_list = set(mempool_txhash_list)
-
-    if unconfirmed_transactions_cache is None:
-        unconfirmed_transactions_cache = {}
-    if reverse_unconfirmed_transactions_cache is None:
-        reverse_unconfirmed_transactions_cache = {}
-
-    intersect_start_time = time.time()
-
-    # create diffs of new txs and txs that have been dropped
-    known_tx_hash_list = set(reverse_unconfirmed_transactions_cache.keys())
-    new_tx_hash_list = mempool_txhash_list.difference(known_tx_hash_list)  # mempool_txhash_list - known_tx_hash_list
-    old_tx_hash_list = known_tx_hash_list.difference(mempool_txhash_list)  # known_tx_hash_list - mempool_txhash_list
-
-    intersect_time = time.time() - intersect_start_time
-
-    logger.debug("refresh_unconfirmed_transactions_cache: %d txs, %d new, %d dropped" % (len(mempool_txhash_list), len(new_tx_hash_list), len(old_tx_hash_list)))
-
-    cleanup_start_time = time.time()
-
-    # cleanup the dropped txs
-    for tx_hash in old_tx_hash_list:
-        for address in reverse_unconfirmed_transactions_cache[tx_hash]:
-            unconfirmed_transactions_cache[address].remove(tx_hash)
-
-        del reverse_unconfirmed_transactions_cache[tx_hash]
-
-    cleanup_time = time.time() - cleanup_start_time
-
-    extract_start_time = time.time()
-
-    # tx_hashes_addresses is dict with tx addresses keyed by tx_hash
-    # tx_hashes_tx is dict with tx info keyed by tx_hash
-    tx_hashes_addresses, tx_hashes_tx = extract_addresses(list(new_tx_hash_list))
-
-    extract_time = time.time() - extract_start_time
-
-    cache_start_time = time.time()
-
-    # add txs to cache and reverse cache
-    for tx_hash, addresses in tx_hashes_addresses.items():
-        reverse_unconfirmed_transactions_cache.setdefault(tx_hash, set())
-
-        for address in addresses:
-            unconfirmed_transactions_cache.setdefault(address, set())
-            unconfirmed_transactions_cache[address].add(tx_hash)
-            reverse_unconfirmed_transactions_cache[tx_hash].add(address)
-
-    cache_time = time.time() - cache_start_time
-
-    logger.debug('Unconfirmed transactions cache refreshed (from {} mempool txs, contained {} entries, {} new entries required parsing, {} were deleted)'.format(
-        len(mempool_txhash_list), len(reverse_unconfirmed_transactions_cache.keys()), len(new_tx_hash_list), len(old_tx_hash_list)))
-
-    logger.debug('timings; intersect: {}, cleanup: {}, extract: {}, cache: {}'.format(
-        "{:.2f}".format(intersect_time, 3),
-        "{:.2f}".format(cleanup_time, 3),
-        "{:.2f}".format(extract_time, 3),
-        "{:.2f}".format(cache_time, 3),
-    ))
-
-def searchrawtransactions(address, unconfirmed=False):
-    # Get unconfirmed transactions.
-    if unconfirmed:
-        logger.debug('searchrawtransactions: Getting unconfirmed transactions.')
-        unconfirmed = unconfirmed_transactions(address)
-    else:
-        unconfirmed = []
-
-    # Get confirmed transactions.
-    try:
-        logger.debug('Searching raw transactions.')
-        rawtransactions = rpc('searchrawtransactions', [address, 1, 0, 9999999])
-    except BackendRPCError as e:
-        if str(e) == '404 Not Found':
-            raise BackendRPCError('Unknown RPC command: `searchrawtransactions`. Please use a version of {} Core which supports an address index.'.format(config.BTC_NAME))
-        else:
-            raise BackendRPCError(str(e))
-    confirmed = [tx for tx in rawtransactions if 'confirmations' in tx and tx['confirmations'] > 0]
-
-    return unconfirmed + confirmed
-
 def getblockcount():
     return rpc('getblockcount', [])
 
@@ -246,24 +159,21 @@ def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
 def getrawmempool():
     return rpc('getrawmempool', [])
 
-def fee_per_kb(nblocks):
+def fee_per_kb(conf_target, mode, nblocks=None):
     """
-    :param nblocks:
+    :param conf_target:
+    :param mode:
     :return: fee_per_kb in satoshis, or None when unable to determine
     """
+    if nblocks is None and conf_target is None:
+        conf_target = nblocks
 
-    # we need to loop because sometimes bitcoind can't estimate a certain nblocks
-    retry = 0
-    feeperkb = -1
-    while feeperkb == -1:
-        feeperkb = rpc('estimatefee', [nblocks])
-        nblocks += 1
-        retry += 1
+    feeperkb = rpc('estimatesmartfee', [conf_target, mode])
 
-        if retry > 10:
-            return None
+    if 'errors' in feeperkb and feeperkb['errors'][0] == 'Insufficient data or no feerate found':
+        return None
 
-    return int(feeperkb * config.UNIT)
+    return int(max(feeperkb['feerate'] * config.UNIT, config.DEFAULT_FEE_PER_KB_ESTIMATE_SMART))
 
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
@@ -279,11 +189,11 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
         for txhash_list_chunk in txhash_list_chunks:
             txes.update(getrawtransaction_batch(txhash_list_chunk, verbose=verbose, skip_missing=skip_missing))
         return txes
-    
+
     tx_hash_call_id = {}
     payload = []
     noncached_txhashes = set()
-    
+
     txhash_list = set(txhash_list)
 
     # payload for transactions not in cache
@@ -336,11 +246,65 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                 e, len(txhash_list), hashlib.md5(json.dumps(list(txhash_list)).encode()).hexdigest(), len(raw_transactions_cache), len(payload),
                 tx_hash in noncached_txhashes, tx_hash in txhash_list, list(txhash_list.difference(noncached_txhashes)) ))
             if  _retry < GETRAWTRANSACTION_MAX_RETRIES: #try again
+                time.sleep(0.05 * (_retry + 1)) # Wait a bit, hitting the index non-stop may cause it to just break down... TODO: Better handling
                 r = getrawtransaction_batch([tx_hash], verbose=verbose, skip_missing=skip_missing, _retry=_retry+1)
                 result[tx_hash] = r[tx_hash]
             else:
                 raise #already tried again, give up
 
     return result
+
+def get_unspent_txouts(source):
+    return indexd_rpc_call('/a/'+source+'/utxos')
+
+def search_raw_transactions(address, unconfirmed=True):
+    all_transactions = indexd_rpc_call('/a/'+address+'/txs?verbose=1')
+
+    if unconfirmed:
+        return all_transactions
+
+    # filter for confirmed transactions only
+    confirmed_transactions = list(filter(lambda t: 'confirmations' in t and t['confirmations'] > 0, all_transactions))
+    return confirmed_transactions
+
+
+
+def getindexblocksbehind():
+    status = indexd_rpc_call('/status')
+    if status['ready']:
+        return 0
+    if status['blocksBehind']:
+        return status['blocksBehind']
+    raise IndexdRPCError('Unknown status for indexd')
+
+def indexd_rpc_call(path):
+    url = config.INDEXD_URL+path
+
+    response = None
+    try:
+        response = requests.get(url, headers={'content-type': 'application/json'},
+            timeout=config.REQUESTS_TIMEOUT)
+    except (Timeout, ReadTimeout, ConnectionError):
+        logger.debug('Could not connect to backend at `{}`.'.format(util.clean_url_for_log(url),))
+
+    if response == None:
+        if config.TESTNET:
+            network = 'testnet'
+        elif config.REGTEST:
+            network = 'regtest'
+        else:
+            network = 'mainnet'
+        raise IndexdRPCError('Cannot communicate with {} indexd server at `{}`.'.format(network, util.clean_url_for_log(url)))
+    elif response.status_code == 400:
+        raise IndexdRPCError('Indexd returned error: {} {} {}'.format(response.status_code, response.reason, response.text))
+    elif response.status_code not in (200, 500):
+        raise IndexdRPCError("Bad response from {}: {} {}".format(util.clean_url_for_log(url), response.status_code, response.reason))
+
+    # Return result, with error handling.
+    response_json = response.json()
+    if isinstance(response_json, (list, tuple)) or 'error' not in response_json.keys() or response_json['error'] == None:
+        return response_json
+    else:
+        raise IndexdRPCError('{}'.format(response_json['error']))
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

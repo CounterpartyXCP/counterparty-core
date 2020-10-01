@@ -20,7 +20,7 @@ def pytest_generate_tests(metafunc):
 
 
 def test_estimate_fee_per_kb(fee_per_kb, fee_per_kb_used, server_db, monkeypatch):
-    def _fee_per_kb(nblocks):
+    def _fee_per_kb(conf_target, mode):
         return fee_per_kb
 
     monkeypatch.setattr('counterpartylib.lib.backend.fee_per_kb', _fee_per_kb)

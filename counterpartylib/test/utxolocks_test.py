@@ -19,16 +19,14 @@ FIXTURE_OPTIONS = {
 }
 
 
-def setup_function(function):
-    transaction.UTXO_LOCKS = None  # reset UTXO_LOCKS
-
-
 def construct_tx(db, source, destination, disable_utxo_locks=False, custom_inputs=None):
     tx_info = send.compose(db, source, destination, config.XCP, 1)
     return transaction.construct(db, tx_info, disable_utxo_locks=disable_utxo_locks, custom_inputs=custom_inputs)
 
 
 def test_utxolocks(server_db):
+    transaction.initialise()  # reset UTXO_LOCKS
+
     """it shouldn't use the same UTXO"""
     tx1hex = construct_tx(server_db, "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns")
     tx2hex = construct_tx(server_db, "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns")
@@ -43,6 +41,8 @@ def test_utxolocks(server_db):
 
 
 def test_utxolocks_custom_input(server_db):
+    transaction.initialise()  # reset UTXO_LOCKS
+
     """it should use the same UTXO"""
     custom_inputs = [{
         'txid': 'b9fc3aa355b77ecb63282fc96e63912a253e98bf9cf441fbfbecc3fb277c4985',
@@ -67,6 +67,8 @@ def test_utxolocks_custom_input(server_db):
 
 
 def test_disable_utxolocks(server_db):
+    transaction.initialise()  # reset UTXO_LOCKS
+
     """with `disable_utxo_locks=True` it should use the same UTXO"""
     tx1hex = construct_tx(server_db, "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", disable_utxo_locks=True)
     tx2hex = construct_tx(server_db, "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", disable_utxo_locks=True)

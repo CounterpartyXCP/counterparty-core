@@ -1,11 +1,11 @@
-FROM counterparty/base
+FROM monaparty/base
 
 MAINTAINER Monaparty Developers <dev@monaparty.me>
 
 # Install counterparty-lib
 COPY . /counterparty-lib
 WORKDIR /counterparty-lib
-RUN pip3 install git+https://github.com/petertodd/python-bitcoinlib.git@98676f981bf14a6a3a8313e762161cc289043b58#egg=python-bitcoinlib-0.8.1
+RUN pip3 install python-bitcoinlib==0.11.0
 RUN pip3 install git+https://github.com/monaparty/python-altcoinlib@abb1e38#egg=python-altcoinlib-0.4.1
 RUN pip3 install -r requirements.txt
 RUN python3 setup.py develop
@@ -30,12 +30,7 @@ COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod a+x /usr/local/bin/start.sh
 WORKDIR /
 
-# Pull the mainnet and testnet DB boostraps
-RUN counterparty-server bootstrap --quiet
-RUN counterparty-server --testnet bootstrap --quiet
-
 EXPOSE 4000 14000
 
 # NOTE: Defaults to running on mainnet, specify -e TESTNET=1 to start up on testnet
 ENTRYPOINT ["start.sh"]
-

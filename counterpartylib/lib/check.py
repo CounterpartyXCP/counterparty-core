@@ -46,7 +46,13 @@ def consensus_hash(db, field, previous_consensus_hash, content):
             raise ConsensusError('Empty previous {} for block {}. Please launch a `reparse`.'.format(field, block_index))
 
     # Calculate current hash.
-    consensus_hash_version = CONSENSUS_HASH_VERSION_TESTNET if config.TESTNET else CONSENSUS_HASH_VERSION_MAINNET
+    if config.TESTNET:
+        consensus_hash_version = CONSENSUS_HASH_VERSION_TESTNET
+    elif config.REGTEST:
+        consensus_hash_version = CONSENSUS_HASH_VERSION_REGTEST
+    else:
+        consensus_hash_version = CONSENSUS_HASH_VERSION_MAINNET
+
     calculated_hash = util.dhash_string(previous_consensus_hash + '{}{}'.format(consensus_hash_version, ''.join(content)))
 
     # Verify hash (if already in database) or save hash (if not).
@@ -62,7 +68,13 @@ def consensus_hash(db, field, previous_consensus_hash, content):
         cursor.execute('''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field), (calculated_hash, block_index))
 
     # Check against checkpoints.
-    checkpoints = CHECKPOINTS_TESTNET if config.TESTNET else CHECKPOINTS_MAINNET
+    if config.TESTNET:
+        checkpoints = CHECKPOINTS_TESTNET
+    elif config.REGTEST:
+        checkpoints = CHECKPOINTS_REGTEST
+    else:
+        checkpoints = CHECKPOINTS_MAINNET
+
     if field != 'messages_hash' and block_index in checkpoints and checkpoints[block_index][field] != calculated_hash:
         raise ConsensusError('Incorrect {} hash for block {}.  Calculated {} but expected {}'.format(field, block_index, calculated_hash, checkpoints[block_index][field],))
 

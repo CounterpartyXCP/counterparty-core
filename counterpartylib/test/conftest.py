@@ -41,6 +41,8 @@ MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
     'short_tx_type_id': {'block_index': 310502, 'allow_always_latest': False},  # override to be true only at block 310502
     'enhanced_sends': {'block_index': 310999, 'allow_always_latest': False},  # override to be true only at block 310999
     'issuance_lock_fix': {'block_index': 310502, 'allow_always_latest': False},  # override to be true only at block 310502
+    'segwit_support': {'block_index': 0, 'allow_always_latest': False},  # override to be true only at block 310999,
+    'dispensers': {'block_index': 0, 'allow_always_latest': True}
 }
 DISABLE_ALL_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False # if true, never look at MOCK_PROTOCOL_CHANGES_AT_BLOCK
 ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False # if true, always check MOCK_PROTOCOL_CHANGES_AT_BLOCK
@@ -207,6 +209,7 @@ class MockUTXOSet(object):
     :type utxos list UTXOs list containing:
                         { 'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                           'amount': 1.9990914,
+                          'value': 199909140,
                           'confirmations': 74,
                           'scriptPubKey': '76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac',
                           'txhex': '0100000002eff195acdf2bbd215daa8aca24eb667b563a731d34a9ab75c8d8df5df08be29b000000006c493046022100ec6fa8316a4f5cfd69816e31011022acce0933bd3b01248caa8b49e60de1b98a022100987ba974b2a4f9976a8d61d94009cb7f7986a827dc5730e999de1fb748d2046c01210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ffffffffeff195acdf2bbd215daa8aca24eb667b563a731d34a9ab75c8d8df5df08be29b010000006a47304402201f8fb2d62df22592cb8d37c68ab26563dbb8e270f7f8409ac0f6d7b24ddb5c940220314e5c767fd12b20116528c028eab2bfbad30eb963bd849993410049cf14a83d01210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ffffffff02145fea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000346a32544553540000000a00000000000000010000000005f5e1000000000000000000000000000bebc2000032000000000000271000000000',
@@ -248,6 +251,7 @@ class MockUTXOSet(object):
             self.txouts.append({
                 'address': txout['address'],
                 'amount': txout['amount'],
+                'value': round(txout['amount'] * config.UNIT),
                 'confirmations': int(txout['confirmations']),
                 'scriptPubKey': txout['scriptPubKey'],
                 'txhex': txout['txhex'],
@@ -280,6 +284,7 @@ class MockUTXOSet(object):
                 'address': script.scriptpubkey_to_address(bitcoinlib.core.CScript(txout.script)),
                 'confirmations': int(confirmations),
                 'amount': txout.coin_value / 1e8,
+                'value': txout.coin_value,
                 'scriptPubKey': binascii.hexlify(txout.script).decode('ascii'),
                 'txhex': raw_transaction,
                 'txid': tx_id,
@@ -332,7 +337,7 @@ def add_fn_property(**kwargs):
 def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     """Test suit mock functions.
 
-    Mock functions override default behaviour to allow test suit to work - for instance, date_passed is overwritten 
+    Mock functions override default behaviour to allow test suit to work - for instance, date_passed is overwritten
     so that every date will pass. Those are available to every test function in this suite."""
 
     util_test.rawtransactions_db = rawtransactions_db
@@ -370,8 +375,8 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def mocked_getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
         return util_test.getrawtransaction_batch(rawtransactions_db, txhash_list, verbose=verbose)
 
-    def mocked_searchrawtransactions(address, unconfirmed=False):
-        return util_test.searchrawtransactions(rawtransactions_db, address, unconfirmed)
+    def mocked_search_raw_transactions(address, unconfirmed=False):
+        return util_test.search_raw_transactions(rawtransactions_db, address, unconfirmed)
 
     # mock the arc4 with a fixed seed to keep data from changing based on inputs
     _init_arc4 = arc4.init_arc4
@@ -391,6 +396,6 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         monkeypatch.setattr('counterpartylib.lib.config.PREFIX', b'TESTXXXX')
     monkeypatch.setattr('counterpartylib.lib.backend.getrawtransaction', mocked_getrawtransaction)
     monkeypatch.setattr('counterpartylib.lib.backend.getrawtransaction_batch', mocked_getrawtransaction_batch)
-    monkeypatch.setattr('counterpartylib.lib.backend.searchrawtransactions', mocked_searchrawtransactions)
+    monkeypatch.setattr('counterpartylib.lib.backend.search_raw_transactions', mocked_search_raw_transactions)
     monkeypatch.setattr('counterpartylib.lib.backend.pubkeyhash_to_pubkey', pubkeyhash_to_pubkey)
     monkeypatch.setattr('counterpartylib.lib.backend.multisig_pubkeyhashes_to_pubkeys', multisig_pubkeyhashes_to_pubkeys)
