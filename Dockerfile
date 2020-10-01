@@ -6,7 +6,7 @@ MAINTAINER Monaparty Developers <dev@monaparty.me>
 COPY . /counterparty-lib
 WORKDIR /counterparty-lib
 RUN pip3 install python-bitcoinlib==0.11.0
-RUN pip3 install git+https://github.com/monaparty/python-altcoinlib@abb1e38#egg=python-altcoinlib-0.4.1
+RUN pip3 install git+https://github.com/monaparty/python-altcoinlib@55bcb8c#egg=python-altcoinlib-0.11.0
 RUN pip3 install -r requirements.txt
 RUN python3 setup.py develop
 RUN python3 setup.py install_apsw
