@@ -58,7 +58,7 @@ def validate (db, source, destination, asset, quantity, block_index):
         results = cursor.execute('SELECT options FROM addresses WHERE address=?', (destination,))
         if results:
             result = results.fetchone()
-            if result and result['options'] & config.ADDRESS_OPTION_REQUIRE_MEMO:
+            if result and util.active_options(result['options'], config.ADDRESS_OPTION_REQUIRE_MEMO):
                 problems.append('destination requires memo')
         cursor.close()
 
@@ -157,7 +157,7 @@ def parse (db, tx, message):
         'status': status,
     }
     if "integer overflow" not in status and "quantity must be in satoshis" not in status:
-        sql = 'insert into sends values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :quantity, :status, NULL)'
+        sql = 'insert into sends (tx_index, tx_hash, block_index, source, destination, asset, quantity, status, memo) values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :quantity, :status, NULL)'
         cursor.execute(sql, bindings)
     else:
         logger.warn("Not storing [send] tx [%s]: %s" % (tx['tx_hash'], status))

@@ -13,7 +13,7 @@ import shutil
 from counterpartylib.lib import config
 
 CURRENT_VERSION = config.VERSION_STRING
-APSW_VERSION = "3.8.7.3-r1"
+APSW_VERSION = "3.24.0-r1"
 APSW_SHORT_VERSION = APSW_VERSION.replace('-r1', '')
 
 # NOTE: Why we don’t use the the PyPi package:
@@ -142,7 +142,7 @@ class install(_install):
             caller_module == 'distutils.dist'
             and info.function == 'run_commands'
         )
-        
+
     def run(self):
         # Explicit request for old-style install?  Just do it
         if self.old_and_unmanageable or self.single_version_externally_managed:
@@ -167,7 +167,7 @@ required_packages = [
     'setuptools-markdown==0.2',
     'python-dateutil==2.5.3',
     'Flask-HTTPAuth==3.1.2',
-    'Flask==0.11',
+    'Flask==0.11.1',
     'colorlog==2.7.0',
     'json-rpc==1.10.3',
     'pycoin==0.77',
@@ -176,11 +176,12 @@ required_packages = [
     'pytest==2.9.2',
     'pytest-cov==2.2.1',
     'python-altcoinlib',
-    'python-bitcoinlib',
+    'python-bitcoinlib==0.11.0',
     'requests==2.10.0',
     'tendo==0.2.8',
     'xmltodict==0.10.1',
     'cachetools==1.1.6',
+    'bitstring==3.1.5'
 ]
 
 setup_options = {

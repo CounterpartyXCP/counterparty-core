@@ -26,7 +26,7 @@ class ModuleLoggingFilter(logging.Filter):
 
         but will not log:
          - counterpartylib.lib
-         - counterpartylib.lib.backend.addrindex
+         - counterpartylib.lib.backend.indexd
     """
 
     def __init__(self, filters):
@@ -270,7 +270,7 @@ def log (db, command, category, bindings):
             if bindings['locked']:
                 logger.info('Broadcast: {} locked his feed ({}) [{}]'.format(bindings['source'], bindings['tx_hash'], bindings['status']))
             else:
-                logger.info('Broadcast: ' + bindings['source'] + ' at ' + isodt(bindings['timestamp']) + ' with a fee of {}%'.format(output(D(bindings['fee_fraction_int'] / 1e8) * D(100), 'fraction')) + ' (' + bindings['tx_hash'] + ')' + ' [{}]'.format(bindings['status']))
+                logger.info('Broadcast: ' + bindings['source'] + ' at ' + isodt(bindings['timestamp']) + ' with a fee of {}%'.format(output(D(bindings['fee_fraction_int'] / 1e8), 'fraction')) + ' (' + bindings['tx_hash'] + ')' + ' [{}]'.format(bindings['status']))
 
         elif category == 'bets':
             logger.info('Bet: {} against {}, by {}, on {}'.format(output(bindings['wager_quantity'], config.XCP), output(bindings['counterwager_quantity'], config.XCP), bindings['source'], bindings['feed_address']))
@@ -345,6 +345,12 @@ def log (db, command, category, bindings):
 
         elif category == 'destructions':
             logger.info('Destruction: {} destroyed {} {} with tag ‘{}’({}) [{}]'.format(bindings['source'], bindings['quantity'], bindings['asset'], bindings['tag'], bindings['tx_hash'], bindings['status']))
+
+        elif category == 'dispensers':
+            if bindings['status'] == 0:
+                logger.info('Dispenser: {} opened a dispenser for asset {} with {} balance, giving {} {} for each {} {}'.format(bindings['source'], bindings['asset'], bindings['escrow_quantity'], bindings['give_quantity'], bindings['asset'], bindings['satoshirate'], config.BTC))
+            elif bindings['status'] == 10:
+                logger.info('Dispenser: {} closed a dispenser for asset {}'.format(bindings['source'], bindings['asset']))
 
     cursor.close()
 

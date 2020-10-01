@@ -15,6 +15,7 @@ import re
 import requests
 import collections
 import logging
+import traceback
 logger = logging.getLogger(__name__)
 from logging import handlers as logging_handlers
 D = decimal.Decimal
@@ -49,27 +50,31 @@ from counterpartylib.lib.messages import broadcast
 from counterpartylib.lib.messages import bet
 from counterpartylib.lib.messages import dividend
 from counterpartylib.lib.messages import burn
+from counterpartylib.lib.messages import destroy
 from counterpartylib.lib.messages import cancel
 from counterpartylib.lib.messages import rps
 from counterpartylib.lib.messages import rpsresolve
+from counterpartylib.lib.messages import sweep
+from counterpartylib.lib.messages import dispenser
 
 API_TABLES = ['assets', 'balances', 'credits', 'debits', 'bets', 'bet_matches',
-              'broadcasts', 'btcpays', 'burns', 'cancels',
+              'broadcasts', 'btcpays', 'burns', 'cancels', 'destructions',
               'dividends', 'issuances', 'orders', 'order_matches', 'sends',
               'bet_expirations', 'order_expirations', 'bet_match_expirations',
               'order_match_expirations', 'bet_match_resolutions', 'rps',
               'rpsresolves', 'rps_matches', 'rps_expirations', 'rps_match_expirations',
-              'mempool']
+              'mempool', 'sweeps', 'dispensers']
 
-API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel',
+API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel', 'destroy',
                     'dividend', 'issuance', 'order', 'send',
-                    'rps', 'rpsresolve']
+                    'rps', 'rpsresolve', 'sweep', 'dispenser']
 
 COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
                 'allow_unconfirmed_inputs', 'fee', 'fee_provided',
-                'estimate_fee_per_kb', 'estimate_fee_per_kb_nblocks',
-                'unspent_tx_hash', 'custom_inputs', 'dust_return_pubkey', 'disable_utxo_locks', 'extended_tx_info']
+                'estimate_fee_per_kb', 'estimate_fee_per_kb_nblocks', 'estimate_fee_per_kb_conf_target', 'estimate_fee_per_kb_mode',
+                'unspent_tx_hash', 'custom_inputs', 'dust_return_pubkey', 'disable_utxo_locks', 'extended_tx_info',
+                'p2sh_source_multisig_pubkeys', 'p2sh_source_multisig_pubkeys_required', 'p2sh_pretx_txid']
 
 API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
 API_MAX_LOG_COUNT = 10
@@ -92,6 +97,12 @@ def check_backend_state():
     time_behind = time.time() - cblock.nTime   # TODO: Block times are not very reliable.
     if time_behind > 60 * 60 * 2:   # Two hours.
         raise BackendError('Bitcoind is running about {} hours behind.'.format(round(time_behind / 3600)))
+
+    # check backend index
+    blocks_behind = backend.getindexblocksbehind()
+    if blocks_behind > 5:
+        raise BackendError('Indexd is running {} blocks behind.'.format(blocks_behind))
+
     logger.debug('Backend state check passed.')
 
 class DatabaseError(Exception):
@@ -148,8 +159,10 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
         raise APIError('Invalid order direction (ASC, DESC)')
     if not isinstance(limit, int):
         raise APIError('Invalid limit')
-    elif limit > 1000:
-        raise APIError('Limit should be lower or equal to 1000')
+    elif config.API_LIMIT_ROWS != 0 and limit > config.API_LIMIT_ROWS:
+        raise APIError('Limit should be lower or equal to %i' % config.API_LIMIT_ROWS)
+    elif config.API_LIMIT_ROWS != 0 and limit == 0:
+        raise APIError('Limit should be greater than 0')
     if not isinstance(offset, int):
         raise APIError('Invalid offset')
     # TODO: accept an object:  {'field1':'ASC', 'field2': 'DESC'}
@@ -256,7 +269,7 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
         if order_dir != None:
             statement += ''' {}'''.format(order_dir.upper())
     # LIMIT
-    if limit:
+    if limit and limit > 0:
         statement += ''' LIMIT {}'''.format(limit)
         if offset:
             statement += ''' OFFSET {}'''.format(offset)
@@ -303,7 +316,7 @@ def adjust_get_sends_results(query_result):
 def compose_transaction(db, name, params,
                         encoding='auto',
                         fee_per_kb=None,
-                        estimate_fee_per_kb=None, estimate_fee_per_kb_nblocks=config.ESTIMATE_FEE_NBLOCKS,
+                        estimate_fee_per_kb=None, estimate_fee_per_kb_conf_target=config.ESTIMATE_FEE_CONF_TARGET, estimate_fee_per_kb_mode=config.ESTIMATE_FEE_MODE,
                         regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                         multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                         op_return_value=config.DEFAULT_OP_RETURN_VALUE,
@@ -311,7 +324,9 @@ def compose_transaction(db, name, params,
                         allow_unconfirmed_inputs=False,
                         fee=None,
                         fee_provided=0,
-                        unspent_tx_hash=None, custom_inputs=None, dust_return_pubkey=None, disable_utxo_locks=False, extended_tx_info=False):
+                        unspent_tx_hash=None, custom_inputs=None, dust_return_pubkey=None, disable_utxo_locks=False, extended_tx_info=False,
+                        p2sh_source_multisig_pubkeys=None, p2sh_source_multisig_pubkeys_required=None,
+                        p2sh_pretx_txid=None, old_style_api=True, segwit=False):
     """Create and return a transaction."""
 
     # Get provided pubkeys.
@@ -329,8 +344,15 @@ def compose_transaction(db, name, params,
     for address_name in ['source', 'destination']:
         if address_name in params:
             address = params[address_name]
-            provided_pubkeys += script.extract_pubkeys(address)
-            params[address_name] = script.make_pubkeyhash(address)
+            if isinstance(address, list):
+                """pubkey_list = []
+                for iaddr in address:
+                    provided_pubkeys += script.extract_pubkeys(iaddr)
+                    pubkey_list.append(script.make_pubkeyhash(iaddr))
+                params[address_name] = pubkey_list"""
+            else:
+                provided_pubkeys += script.extract_pubkeys(address)
+                params[address_name] = script.make_pubkeyhash(address)
 
     # Check validity of collected pubkeys.
     for pubkey in provided_pubkeys:
@@ -349,10 +371,22 @@ def compose_transaction(db, name, params,
     else:
         fee_per_kb = config.DEFAULT_FEE_PER_KB
 
+    if 'extended_tx_info' in params:
+      extended_tx_info = params['extended_tx_info']
+      del params['extended_tx_info']
+
+    if 'old_style_api' in params:
+        old_style_api = params['old_style_api']
+        del params['old_style_api']
+
+    if 'segwit' in params:
+        segwit = params['segwit']
+        del params['segwit']
+
     tx_info = compose_method(db, **params)
     return transaction.construct(db, tx_info, encoding=encoding,
                                         fee_per_kb=fee_per_kb,
-                                        estimate_fee_per_kb=estimate_fee_per_kb, estimate_fee_per_kb_nblocks=estimate_fee_per_kb_nblocks,
+                                        estimate_fee_per_kb=estimate_fee_per_kb, estimate_fee_per_kb_conf_target=estimate_fee_per_kb_conf_target,
                                         regular_dust_size=regular_dust_size,
                                         multisig_dust_size=multisig_dust_size,
                                         op_return_value=op_return_value,
@@ -363,7 +397,11 @@ def compose_transaction(db, name, params,
                                         unspent_tx_hash=unspent_tx_hash, custom_inputs=custom_inputs,
                                         dust_return_pubkey=dust_return_pubkey,
                                         disable_utxo_locks=disable_utxo_locks,
-                                        extended_tx_info=extended_tx_info)
+                                        extended_tx_info=extended_tx_info,
+                                        p2sh_source_multisig_pubkeys=p2sh_source_multisig_pubkeys, p2sh_source_multisig_pubkeys_required=p2sh_source_multisig_pubkeys_required,
+                                        p2sh_pretx_txid=p2sh_pretx_txid,
+                                        old_style_api=old_style_api,
+                                        segwit=segwit)
 
 def conditional_decorator(decorator, condition):
     """Checks the condition and if True applies specified decorator."""
@@ -376,13 +414,13 @@ def conditional_decorator(decorator, condition):
 def init_api_access_log(app):
     """Initialize API logger."""
     loggers = (logging.getLogger('werkzeug'), app.logger)
-    
+
     # Disable console logging...
     for l in loggers:
         l.setLevel(logging.INFO)
         l.propagate = False
 
-    # Log to file, if configured...    
+    # Log to file, if configured...
     if config.API_LOG:
         handler = logging_handlers.RotatingFileHandler(config.API_LOG, 'a', API_MAX_LOG_SIZE, API_MAX_LOG_COUNT)
         for l in loggers:
@@ -503,8 +541,9 @@ class APIServer(threading.Thread):
                     # TypeError happens when unexpected keyword arguments are passed in
                     error_msg = "Error composing {} transaction via API: {}".format(tx, str(error))
                     logging.warning(error_msg)
+                    logging.warning(traceback.format_exc())
                     raise JSONRPCDispatchException(code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg)
-            
+
             return create_method
 
         for tx in API_TRANSACTIONS:
@@ -627,8 +666,8 @@ class APIServer(threading.Thread):
             return block
 
         @dispatcher.add_method
-        def fee_per_kb(nblocks=config.ESTIMATE_FEE_NBLOCKS):
-            return backend.fee_per_kb(nblocks)
+        def fee_per_kb(conf_target=config.ESTIMATE_FEE_CONF_TARGET, mode=config.ESTIMATE_FEE_MODE):
+            return backend.fee_per_kb(conf_target, mode)
 
         @dispatcher.add_method
         def get_blocks(block_indexes, min_message_index=None):
@@ -653,7 +692,7 @@ class APIServer(threading.Thread):
             cursor.execute('SELECT * FROM messages WHERE block_index IN (%s) ORDER BY message_index ASC'
                 % (block_indexes_str,))
             messages = collections.deque(cursor.fetchall())
-            
+
             # Discard any messages less than min_message_index
             if min_message_index:
                 while len(messages) and messages[0]['message_index'] < min_message_index:
@@ -694,12 +733,25 @@ class APIServer(threading.Thread):
             except:
                 last_message = None
 
+            try:
+                indexd_blocks_behind = backend.getindexblocksbehind()
+            except:
+                indexd_blocks_behind = latestBlockIndex if latestBlockIndex > 0 else 999999
+            indexd_caught_up = indexd_blocks_behind <= 1
+
+            server_ready = caught_up and indexd_caught_up
+
             return {
+                'server_ready': server_ready,
                 'db_caught_up': caught_up,
                 'bitcoin_block_count': latestBlockIndex,
                 'last_block': last_block,
+                'indexd_caught_up': indexd_caught_up,
+                'indexd_blocks_behind': indexd_blocks_behind,
                 'last_message_index': last_message['message_index'] if last_message else -1,
+                'api_limit_rows': config.API_LIMIT_ROWS,
                 'running_testnet': config.TESTNET,
+                'running_regtest': config.REGTEST,
                 'running_testcoin': config.TESTCOIN,
                 'version_major': config.VERSION_MAJOR,
                 'version_minor': config.VERSION_MINOR,
@@ -713,7 +765,7 @@ class APIServer(threading.Thread):
             for element in ['transactions', 'blocks', 'debits', 'credits', 'balances', 'sends', 'orders',
                 'order_matches', 'btcpays', 'issuances', 'broadcasts', 'bets', 'bet_matches', 'dividends',
                 'burns', 'cancels', 'order_expirations', 'bet_expirations', 'order_match_expirations',
-                'bet_match_expirations', 'messages']:
+                'bet_match_expirations', 'messages', 'destructions']:
                 cursor.execute("SELECT COUNT(*) AS count FROM %s" % element)
                 count_list = cursor.fetchall()
                 assert len(count_list) == 1
@@ -722,16 +774,25 @@ class APIServer(threading.Thread):
             return counts
 
         @dispatcher.add_method
-        def get_asset_names():
+        def get_asset_names(longnames=False):
             cursor = self.db.cursor()
-            names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE status = 'valid' ORDER BY asset ASC")]
+            if longnames:
+                names = []
+                for row in cursor.execute("SELECT asset, asset_longname FROM issuances WHERE status = 'valid' GROUP BY asset ORDER BY asset ASC"):
+                    names.append({'asset': row['asset'], 'asset_longname': row['asset_longname']})
+            else:
+                names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE status = 'valid' ORDER BY asset ASC")]
             cursor.close()
             return names
 
         @dispatcher.add_method
+        def get_asset_longnames():
+            return get_asset_names(longnames=True)
+
+        @dispatcher.add_method
         def get_holder_count(asset):
             asset = util.resolve_subasset_longname(self.db, asset)
-            holders = util.holders(self.db, asset)
+            holders = util.holders(self.db, asset, True)
             addresses = []
             for holder in holders:
                 addresses.append(holder['address'])
@@ -740,12 +801,12 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_holders(asset):
             asset = util.resolve_subasset_longname(self.db, asset)
-            holders = util.holders(self.db, asset)
+            holders = util.holders(self.db, asset, True)
             return holders
 
         @dispatcher.add_method
         def search_raw_transactions(address, unconfirmed=True):
-            return backend.searchrawtransactions(address, unconfirmed=unconfirmed)
+            return backend.search_raw_transactions(address, unconfirmed=unconfirmed)
 
         @dispatcher.add_method
         def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None):
@@ -762,7 +823,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_tx_info(tx_hex, block_index=None):
             # block_index mandatory for transactions before block 335000
-            source, destination, btc_amount, fee, data = blocks.get_tx_info(tx_hex, block_index=block_index)
+            source, destination, btc_amount, fee, data, extra = blocks.get_tx_info(tx_hex, block_index=block_index)
             return source, destination, btc_amount, fee, util.hexlify(data) if data else ''
 
         @dispatcher.add_method
@@ -931,7 +992,7 @@ class APIServer(threading.Thread):
                 except (script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
                     error_msg = logging.warning("{} -- error composing {} transaction via API: {}".format(
                         str(error.__class__.__name__), query_type, str(error)))
-                    return flask.Response(error_msg, 400, mimetype='application/json')                        
+                    return flask.Response(error_msg, 400, mimetype='application/json')
             else:
                 # Need to de-generate extra_args to pass it through.
                 query_args = dict([item for item in extra_args])
@@ -963,11 +1024,11 @@ class APIServer(threading.Thread):
 
         # Init the HTTP Server.
         init_api_access_log(app)
-        
+
         # Run app server (blocking)
         self.is_ready = True
         app.run(host=config.RPC_HOST, port=config.RPC_PORT, threaded=True)
-            
+
         self.db.close()
         return
 

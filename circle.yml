@@ -21,7 +21,7 @@ test:
 machine:
     pre:
         - mkdir -p ~/.local/share/counterparty;
-        - wget https://s3.amazonaws.com/counterparty-bootstrap/counterparty-db-testnet.latest.tar.gz -O ~/.local/share/counterparty/counterparty-db-testnet.latest.tar.gz;
+        - wget https://s3.amazonaws.com/counterparty-bootstrap/counterparty-db-testnet-7.latest.tar.gz -O ~/.local/share/counterparty/counterparty-db-testnet.latest.tar.gz;
         - tar -C ~/.local/share/counterparty -xvzf ~/.local/share/counterparty/counterparty-db-testnet.latest.tar.gz;
         - wget https://s3.amazonaws.com/counterparty-bootstrap/counterparty-db.latest.tar.gz -O ~/.local/share/counterparty/counterparty-db.latest.tar.gz;
         - tar -C ~/.local/share/counterparty -xvzf ~/.local/share/counterparty/counterparty-db.latest.tar.gz;

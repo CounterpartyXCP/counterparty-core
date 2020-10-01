@@ -26,7 +26,7 @@ def exectracer(cursor, sql, bindings):
 
     if sql.startswith('create trigger') or sql.startswith('drop trigger'):
         #CREATE TRIGGER stmts may include an "insert" or "update" as part of them
-        return True 
+        return True
 
     # Parse SQL.
     array = sql.split('(')[0].split(' ')
@@ -44,29 +44,30 @@ def exectracer(cursor, sql, bindings):
 
     skip_tables = [
         'blocks', 'transactions',
-        'balances', 'messages', 'mempool', 'assets'
+        'balances', 'messages', 'mempool', 'assets',
+        'new_sends' # interim table for CIP10 activation
     ]
     skip_tables_block_messages = copy.copy(skip_tables)
     if command == 'update':
         # List message manually.
-        skip_tables += ['orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches']
+        skip_tables += ['orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'dispensers']
 
     # Record alteration in database.
     if category not in skip_tables:
         log.message(db, bindings['block_index'], command, category, bindings)
     # Record alteration in computation of message feed hash for the block
     if category not in skip_tables_block_messages:
-        # don't include asset_longname as part of the messages hash 
+        # don't include asset_longname as part of the messages hash
         #   until subassets are enabled
         if category == 'issuances' and not util.enabled('subassets'):
             if isinstance(bindings, dict) and 'asset_longname' in bindings: del bindings['asset_longname']
 
-        # don't include memo as part of the messages hash 
+        # don't include memo as part of the messages hash
         #   until enhanced_sends are enabled
         if category == 'sends' and not util.enabled('enhanced_sends'):
             if isinstance(bindings, dict) and 'memo' in bindings: del bindings['memo']
 
-        sorted_bindings = sorted(bindings.items()) if isinstance(bindings, dict) else [bindings,] 
+        sorted_bindings = sorted(bindings.items()) if isinstance(bindings, dict) else [bindings,]
         BLOCK_MESSAGES.append('{}{}{}'.format(command, category, sorted_bindings))
 
     return True
@@ -78,7 +79,7 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
     logger.debug('Creating connection to `{}`.'.format(config.DATABASE))
 
     if read_only:
-        db = apsw.Connection(config.DATABASE, flags=0x00000001)
+        db = apsw.Connection(config.DATABASE, flags=apsw.SQLITE_OPEN_READONLY)
     else:
         db = apsw.Connection(config.DATABASE)
     cursor = db.cursor()
