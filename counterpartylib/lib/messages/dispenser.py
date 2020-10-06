@@ -61,6 +61,9 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
         problems.append('cannot dispense %s' % config.BTC)
         return None, problems
 
+    # resolve subassets
+    asset = util.resolve_subasset_longname(db, asset)
+
     if escrow_quantity < give_quantity:
         problems.append('escrow_quantity must be greater or equal than give_quantity')
 
@@ -218,6 +221,10 @@ def dispense(db, tx):
         give_remaining = dispenser['give_remaining'] - actually_given
 
         assert give_remaining >= 0
+
+        # Skip dispense if quantity is 0
+        if util.enabled('zero_quantity_value_adjustment_1') and actually_given==0:
+            continue
 
         util.credit(db, tx['source'], dispenser['asset'], actually_given, action='dispense', event=tx['tx_hash'])
         dispenser['give_remaining'] = give_remaining

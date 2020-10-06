@@ -614,6 +614,12 @@ def holders(db, asset, exclude_empty_holders=False):
             holders.append({'address': rps_match['tx0_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
             holders.append({'address': rps_match['tx1_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
 
+    # Funds escrowed in dispensers.
+    cursor.execute('''SELECT * FROM dispensers \
+                      WHERE asset = ? AND status = ?''', (asset, 0))
+    for dispenser in list(cursor):
+        holders.append({'address': dispenser['source'], 'address_quantity': dispenser['give_remaining'], 'escrow': None})
+
     cursor.close()
     return holders
 

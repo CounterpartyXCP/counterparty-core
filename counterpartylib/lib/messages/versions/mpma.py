@@ -94,6 +94,10 @@ def compose (db, source, asset_dest_quant_list, memo, memo_is_hex):
 
     out_balances = util.accumulate([(t[0], t[2]) for t in asset_dest_quant_list])
     for (asset, quantity) in out_balances:
+
+        # resolve subassets
+        asset = util.resolve_subasset_longname(db, asset)
+
         if not isinstance(quantity, int):
             raise exceptions.ComposeError('quantities must be an int (in satoshis) for {}'.format(asset))
 
