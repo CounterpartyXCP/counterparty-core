@@ -156,11 +156,15 @@ def parse (db, tx, message):
                     'status': dispenser_status,
                     'give_remaining': existing[0]['give_remaining'] + escrow_quantity,
                     'status': STATUS_OPEN,
+                    'block_index': tx['block_index']
                 }
-                util.debit(db, tx['source'], asset, escrow_quantity, action='refill dispenser', event=tx['tx_hash'])
-                sql = 'UPDATE dispensers SET give_remaining=:give_remaining \
-                    WHERE source=:source AND asset=:asset AND status=:status'
-                cursor.execute(sql, bindings)
+                try:
+                    util.debit(db, tx['source'], asset, escrow_quantity, action='refill dispenser', event=tx['tx_hash'])
+                    sql = 'UPDATE dispensers SET give_remaining=:give_remaining \
+                        WHERE source=:source AND asset=:asset AND status=:status'
+                    cursor.execute(sql, bindings)
+                except (util.DebitError):
+                    status = 'insufficient funds'
             else:
                 status = 'can only have one open dispenser per asset per address'
         elif dispenser_status == STATUS_CLOSED:
@@ -176,7 +180,8 @@ def parse (db, tx, message):
                 bindings = {
                     'source': tx['source'],
                     'asset': asset,
-                    'status': STATUS_CLOSED
+                    'status': STATUS_CLOSED,
+                    'block_index': tx['block_index']
                 }
                 sql = 'UPDATE dispensers SET give_remaining=0, status=:status WHERE source=:source AND asset=:asset'
                 cursor.execute(sql, bindings)
@@ -215,7 +220,6 @@ def dispense(db, tx):
         assert give_remaining >= 0
 
         util.credit(db, tx['source'], dispenser['asset'], actually_given, action='dispense', event=tx['tx_hash'])
-        #print(cursor.execute('select * from credits where address=? and calling_function=?', (tx['source'],'dispense')).fetchall())
         dispenser['give_remaining'] = give_remaining
         if give_remaining < dispenser['give_quantity']:
             # close the dispenser
@@ -225,7 +229,9 @@ def dispense(db, tx):
                 util.credit(db, dispenser['source'], dispenser['asset'], give_remaining, action='dispenser close', event=tx['tx_hash'])
             dispenser['status'] = STATUS_CLOSED
 
+        dispenser['block_index'] = tx['block_index']
+        dispenser['prev_status'] = STATUS_OPEN
         cursor.execute('UPDATE DISPENSERS SET give_remaining=:give_remaining, status=:status \
-                WHERE source=:source AND asset=:asset AND satoshirate=:satoshirate AND give_quantity=:give_quantity', dispenser)
+                WHERE source=:source AND asset=:asset AND satoshirate=:satoshirate AND give_quantity=:give_quantity AND status=:prev_status', dispenser)
 
     cursor.close()

@@ -246,6 +246,12 @@ def pubkey_to_pubkeyhash(pubkey):
     pubkey = base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION)
     return pubkey
 
+def pubkey_to_p2whash(pubkey):
+    """Convert public key to PayToWitness."""
+    pubkeyhash = hash160(pubkey)
+    pubkey = CBech32Data.from_bytes(0, pubkeyhash)
+    return str(pubkey)
+
 def bech32_to_scripthash(address):
     bech32 = CBech32Data(address)
     return bytes(bech32)
