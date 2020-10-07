@@ -181,6 +181,7 @@ def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
 GETRAWTRANSACTION_MAX_RETRIES=2
+monotonic_call_id = 0
 def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _retry=0):
     _logger = logger.getChild("getrawtransaction_batch")
 
@@ -201,7 +202,10 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
     # payload for transactions not in cache
     for tx_hash in txhash_list:
         if tx_hash not in raw_transactions_cache:
-            call_id = binascii.hexlify(os.urandom(5)).decode('utf8')
+            #call_id = binascii.hexlify(os.urandom(5)).decode('utf8') # Don't drain urandom
+            global monotonic_call_id
+            monotonic_call_id = monotonic_call_id + 1
+            call_id = "{}".format(monotonic_call_id)
             payload.append({
                 "method": 'getrawtransaction',
                 "params": [tx_hash, 1],
@@ -244,6 +248,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
             else:
                 result[tx_hash] = raw_transactions_cache[tx_hash]['hex'] if raw_transactions_cache[tx_hash] is not None else None
         except KeyError as e: #shows up most likely due to finickyness with addrindex not always returning results that we need...
+            print("Key error in addrindexrs still exists!!!!!")
             _logger.warning("tx missing in rawtx cache: {} -- txhash_list size: {}, hash: {} / raw_transactions_cache size: {} / # rpc_batch calls: {} / txhash in noncached_txhashes: {} / txhash in txhash_list: {} -- list {}".format(
                 e, len(txhash_list), hashlib.md5(json.dumps(list(txhash_list)).encode()).hexdigest(), len(raw_transactions_cache), len(payload),
                 tx_hash in noncached_txhashes, tx_hash in txhash_list, list(txhash_list.difference(noncached_txhashes)) ))
@@ -367,9 +372,10 @@ def unpack_outpoint(outpoint):
     return (txid, int(vout))
 
 def unpack_vout(outpoint, tx, block_count):
+    print(tx)
     vout = tx["vout"][outpoint[1]]
     height = -1
-    if tx["confirmations"] > 0:
+    if "confirmations" in tx and tx["confirmations"] > 0:
         height = block_count - tx["confirmations"] + 1
 
     return {

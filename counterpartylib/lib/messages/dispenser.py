@@ -28,6 +28,8 @@ DISPENSE_ID = 13
 
 STATUS_OPEN = 0
 STATUS_OPEN_EMPTY_ADDRESS = 1
+#STATUS_OPEN_ORACLE_PRICE = 20
+#STATUS_OPEN_ORACLE_PRICE_EMPTY_ADDRESS = 21
 STATUS_CLOSED = 10
 
 def initialise(db):
@@ -62,10 +64,17 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
         problems.append('cannot dispense %s' % config.BTC)
         return None, problems
 
-    if escrow_quantity < give_quantity:
-        problems.append('escrow_quantity must be greater or equal than give_quantity')
+    # resolve subassets
+    asset = util.resolve_subasset_longname(db, asset)
 
-    if not(status == STATUS_OPEN or status == STATUS_CLOSED or status == STATUS_OPEN_EMPTY_ADDRESS):
+    if status == STATUS_OPEN or status == STATUS_OPEN_EMPTY_ADDRESS:
+        if give_quantity <= 0:
+            problems.append('give_quantity must be positive')
+        if mainchainrate <= 0:
+            problems.append('mainchainrate must be positive')
+        if escrow_quantity < give_quantity:
+            problems.append('escrow_quantity must be greater or equal than give_quantity')
+    elif not(status == STATUS_CLOSED):
         problems.append('invalid status %i' % status)
 
     cursor = db.cursor()
@@ -127,12 +136,10 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        if len(message) >= LENGTH:
-            raise exceptions.UnpackError
         action_address = tx['source']
         assetid, give_quantity, escrow_quantity, mainchainrate, dispenser_status = struct.unpack(FORMAT, message[0:LENGTH])
         if dispenser_status == STATUS_OPEN_EMPTY_ADDRESS:
-            action_address = address.unpack(message[LENGTH:])
+            action_address = address.unpack(message[LENGTH:LENGTH+21])
         asset = util.generate_asset_name(assetid, util.CURRENT_BLOCK_INDEX)
         status = 'valid'
     except (exceptions.UnpackError, struct.error) as e:
@@ -151,26 +158,35 @@ def parse (db, tx, message):
             if len(existing) == 0:
                 # Create the new dispenser
                 if dispenser_status == STATUS_OPEN_EMPTY_ADDRESS:
-                    util.debit(db, tx['source'], asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
-                    util.credit(db, action_address, asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
-                    util.debit(db, action_address, asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
+                    cursor.execute('SELECT count(*) cnt FROM balances WHERE address=:address AND quantity > 0', {
+                        'address': action_address
+                    })
+                    counts = cursor.fetchall()[0]
+
+                    if counts['cnt'] == 0:
+                        util.debit(db, tx['source'], asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
+                        util.credit(db, action_address, asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
+                        util.debit(db, action_address, asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
+                    else:
+                        status = 'invalid: address not empty'
                 else:
                     util.debit(db, tx['source'], asset, escrow_quantity, action='open dispenser', event=tx['tx_hash'])
 
-                bindings = {
-                    'tx_index': tx['tx_index'],
-                    'tx_hash': tx['tx_hash'],
-                    'block_index': tx['block_index'],
-                    'source': action_address,
-                    'asset': asset,
-                    'give_quantity': give_quantity,
-                    'escrow_quantity': escrow_quantity,
-                    'satoshirate': mainchainrate,
-                    'status': dispenser_status,
-                    'give_remaining': escrow_quantity
-                }
-                sql = 'insert into dispensers values(:tx_index, :tx_hash, :block_index, :source, :asset, :give_quantity, :escrow_quantity, :satoshirate, :status, :give_remaining)'
-                cursor.execute(sql, bindings)
+                if status == 'valid':
+                    bindings = {
+                        'tx_index': tx['tx_index'],
+                        'tx_hash': tx['tx_hash'],
+                        'block_index': tx['block_index'],
+                        'source': action_address,
+                        'asset': asset,
+                        'give_quantity': give_quantity,
+                        'escrow_quantity': escrow_quantity,
+                        'satoshirate': mainchainrate,
+                        'status': dispenser_status,
+                        'give_remaining': escrow_quantity
+                    }
+                    sql = 'insert into dispensers values(:tx_index, :tx_hash, :block_index, :source, :asset, :give_quantity, :escrow_quantity, :satoshirate, :status, :give_remaining)'
+                    cursor.execute(sql, bindings)
             elif len(existing) == 1 and existing[0]['satoshirate'] == mainchainrate and existing[0]['give_quantity'] == give_quantity:
                 # Refill the dispenser by the given amount
                 bindings = {
@@ -212,6 +228,9 @@ def parse (db, tx, message):
                 status = 'dispenser inexistent'
         else:
             status = 'invalid: status must be one of OPEN or CLOSE'
+
+    if status != 'valid':
+        logger.warn("Not storing [dispenser] tx [%s]: %s" % (tx['tx_hash'], status))
 
     cursor.close()
 

@@ -349,6 +349,8 @@ def log (db, command, category, bindings):
         elif category == 'dispensers':
             if bindings['status'] == 0:
                 logger.info('Dispenser: {} opened a dispenser for asset {} with {} balance, giving {} {} for each {} {}'.format(bindings['source'], bindings['asset'], bindings['escrow_quantity'], bindings['give_quantity'], bindings['asset'], bindings['satoshirate'], config.BTC))
+            elif bindings['status'] == 1:
+                logger.info('Dispenser: {} (empty address) opened a dispenser for asset {} with {} balance, giving {} {} for each {} {}'.format(bindings['source'], bindings['asset'], bindings['escrow_quantity'], bindings['give_quantity'], bindings['asset'], bindings['satoshirate'], config.BTC))
             elif bindings['status'] == 10:
                 logger.info('Dispenser: {} closed a dispenser for asset {}'.format(bindings['source'], bindings['asset']))
 
