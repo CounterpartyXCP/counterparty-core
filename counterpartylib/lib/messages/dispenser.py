@@ -64,10 +64,12 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
     # resolve subassets
     asset = util.resolve_subasset_longname(db, asset)
 
-    if escrow_quantity < give_quantity:
-        problems.append('escrow_quantity must be greater or equal than give_quantity')
-
-    if not(status == STATUS_OPEN or status == STATUS_CLOSED):
+    if status == STATUS_OPEN:
+        if give_quantity <= 0: problems.append('give_quantity must be positive')
+        if mainchainrate <= 0: problems.append('mainchainrate must be positive')
+        if escrow_quantity < give_quantity:
+            problems.append('escrow_quantity must be greater or equal than give_quantity')
+    elif not(status == STATUS_CLOSED):
         problems.append('invalid status %i' % status)
 
     cursor = db.cursor()
