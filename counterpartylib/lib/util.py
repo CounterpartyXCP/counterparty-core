@@ -717,8 +717,7 @@ def held (db): #TODO: Rename ?
         "SELECT asset, SUM(give_remaining) AS total FROM dispensers WHERE status=0 GROUP BY asset",
     ]
 
-    sql = "SELECT asset, SUM(total) AS total FROM (" + " UNION ALL ".join(queries) + ") GROUP BY asset;".format(XCP = config.XCP, BTC = config.BTC)
-
+    sql = "SELECT asset, SUM(total) AS total FROM (" + " UNION ALL ".join(queries).format(XCP = config.XCP, BTC = config.BTC) + ") GROUP BY asset;"
     cursor = db.cursor()
     cursor.execute(sql)
     held = {}
