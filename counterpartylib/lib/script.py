@@ -169,14 +169,10 @@ def is_p2sh(address):
         return False
 
 def is_bech32(address):
-    if address.startswith('bc') or address.startswith('tb'):
-        # Should check if it's valid bech32 data
-        try:
-            b32data = CBech32Data(address)
-            return True
-        except:
-            return False
-    else:
+    try:
+        b32data = CBech32Data(address)
+        return True
+    except:
         return False
 
 def is_fully_valid(pubkey_bin):
