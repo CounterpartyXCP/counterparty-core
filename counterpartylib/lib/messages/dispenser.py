@@ -133,7 +133,6 @@ def parse (db, tx, message):
 
             if len(existing) == 0:
                 # Create the new dispenser
-                util.debit(db, tx['source'], asset, escrow_quantity, action='open dispenser', event=tx['tx_hash'])
                 bindings = {
                     'tx_index': tx['tx_index'],
                     'tx_hash': tx['tx_hash'],
@@ -146,8 +145,12 @@ def parse (db, tx, message):
                     'status': dispenser_status,
                     'give_remaining': escrow_quantity
                 }
-                sql = 'insert into dispensers values(:tx_index, :tx_hash, :block_index, :source, :asset, :give_quantity, :escrow_quantity, :satoshirate, :status, :give_remaining)'
-                cursor.execute(sql, bindings)
+                try:
+                    util.debit(db, tx['source'], asset, escrow_quantity, action='open dispenser', event=tx['tx_hash'])
+                    sql = 'insert into dispensers values(:tx_index, :tx_hash, :block_index, :source, :asset, :give_quantity, :escrow_quantity, :satoshirate, :status, :give_remaining)'
+                    cursor.execute(sql, bindings)
+                except (util.DebitError):
+                    status = 'insufficient funds'
             elif len(existing) == 1 and existing[0]['satoshirate'] == mainchainrate and existing[0]['give_quantity'] == give_quantity:
                 # Refill the dispenser by the given amount
                 bindings = {
