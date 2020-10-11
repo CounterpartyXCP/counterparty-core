@@ -774,10 +774,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
         elif p2sh_support and asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
             new_destination, new_data = decode_scripthash(asm)
         elif util.enabled('segwit_support') and asm[0] == 0:
-            # Segwit Vout, second param is redeemScript
-            #redeemScript = asm[1]
-            #new_destination, new_data = None, None
-            continue
+            new_destination, new_data = decode_p2w(vout.scriptPubKey)
         else:
             raise DecodeError('unrecognised output type')
         assert not (new_destination and new_data)
