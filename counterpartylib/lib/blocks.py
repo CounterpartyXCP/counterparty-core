@@ -502,6 +502,26 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None):
             destination = address
             btc_amount = vout.nValue
             outputs.append((destination, btc_amount))
+        elif util.enabled('hotfix_dispensers_with_non_p2pkh'):
+            asm = script.get_asm(vout.scriptPubKey)
+            if asm[-1] == 'OP_CHECKSIG':
+                destination, new_data = decode_checksig(asm, decoded_tx)
+            elif asm[-1] == 'OP_CHECKMULTISIG':
+                destination, new_data = decode_checkmultisig(asm, decoded_tx)
+            elif asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
+                destination, new_data = decode_scripthash(asm)
+            elif asm[0] == 'OP_RETURN':
+                pass #Just ignore.
+            elif util.enabled('segwit_support') and asm[0] == 0:
+                # Segwit output
+                destination, new_data = decode_p2w(vout.scriptPubKey)
+            else:
+                logger.error('unrecognised scriptPubkey. Just ignore this: ' + str(asm))
+
+            if destination and not new_data:
+                outputs.append((destination, vout.nValue))
+            else:
+                logger.error('cannot parse destination address or new_data found: ' + str(asm))
 
     # Collect all (unique) source addresses.
     #   if we haven't found them yet
