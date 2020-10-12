@@ -243,5 +243,12 @@
     "minimum_version_revision": 0,
     "block_index": 2300000,
     "testnet_block_index": 960000
+  },
+  "hotfix_dispensers_with_non_p2pkh": {
+    "minimum_version_major": 9,
+    "minimum_version_minor": 5801,
+    "minimum_version_revision": 0,
+    "block_index": 2300000,
+    "testnet_block_index": 975000
   }
 }
