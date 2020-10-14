@@ -85,6 +85,16 @@ def validate (db, source, asset_dest_quant_list, block_index):
                 if result and result['options'] & config.ADDRESS_OPTION_REQUIRE_MEMO and (sendMemo is None):
                     problems.append('destination {} requires memo'.format(destination))
 
+        if util.enabled('non_reassignable_assets') and asset != config.BTC and asset != config.XCP:
+            # verify not senging non-reassignable asset
+            issuances = list(cursor.execute('''SELECT * FROM issuances
+                                                WHERE asset = ? AND status = ? ORDER BY tx_index DESC LIMIT 1''',
+                                                    (asset, 'valid')))
+            if not issuances:
+                problems.append('issuance not found (system error?)')
+            elif not issuances[0]['reassignable'] and issuances[0]['issuer'] != source and issuances[0]['issuer'] != destination:
+                problems.append('{} is a non-reassignable asset'.format(asset))
+
     cursor.close()
 
     return problems

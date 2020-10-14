@@ -79,29 +79,25 @@ def validate (db, source, destination, asset, quantity, memo_bytes, block_index)
 
     if util.enabled('options_require_memo'):
         cursor = db.cursor()
-        try:
-            results = cursor.execute('SELECT options FROM addresses WHERE address=?', (destination,))
-            if results:
-                result = results.fetchone()
-                if result and util.active_options(result['options'], config.ADDRESS_OPTION_REQUIRE_MEMO):
-                    if memo_bytes is None or (len(memo_bytes) == 0):
-                        problems.append('destination requires memo')
-        finally:
-            cursor.close()
+        results = cursor.execute('SELECT options FROM addresses WHERE address=?', (destination,))
+        if results:
+            result = results.fetchone()
+            if result and util.active_options(result['options'], config.ADDRESS_OPTION_REQUIRE_MEMO):
+                if memo_bytes is None or (len(memo_bytes) == 0):
+                    problems.append('destination requires memo')
+        cursor.close()
 
     if util.enabled('non_reassignable_assets') and asset != config.BTC and asset != config.XCP:
         cursor = db.cursor()
-        try:
-            # verify not senging non-reassignable asset
-            issuances = list(cursor.execute('''SELECT * FROM issuances
-                                               WHERE asset = ? AND status = ? ORDER BY tx_index DESC LIMIT 1''',
-                                                   (asset, 'valid')))
-            if not issuances:
-               problems.append('issuance not found (system error?)')
-            elif not issuances[0]['reassignable'] and issuances[0]['issuer'] != source and issuances[0]['issuer'] != destination:
-               problems.append('non-reassignable asset')
-        finally:
-            cursor.close()
+        # verify not senging non-reassignable asset
+        issuances = list(cursor.execute('''SELECT * FROM issuances
+                                            WHERE asset = ? AND status = ? ORDER BY tx_index DESC LIMIT 1''',
+                                                (asset, 'valid')))
+        if not issuances:
+            problems.append('issuance not found (system error?)')
+        elif not issuances[0]['reassignable'] and issuances[0]['issuer'] != source and issuances[0]['issuer'] != destination:
+            problems.append('non-reassignable asset')
+        cursor.close()
 
     return problems
 
