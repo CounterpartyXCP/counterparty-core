@@ -476,7 +476,13 @@ def connect_to_backend():
 def start_all(db):
 
     # For Monacoin.
-    altcoin.SelectParams('ff9f1c0116d19de7c9963845e129f9ed1bfc0b376eb54fd7afa42e0d418c8bb6')
+    if config.TESTNET:
+        genesis_hash = 'a2b106ceba3be0c6d097b2a6a6aacf9d638ba8258ae478158f449c321061e0b2'
+    elif config.REGTEST:
+        assert False, 'Monaparty does not support REGTEST network.'
+    else:
+        genesis_hash = 'ff9f1c0116d19de7c9963845e129f9ed1bfc0b376eb54fd7afa42e0d418c8bb6'
+    altcoin.SelectParams(genesis_hash)
 
     # Backend.
     connect_to_backend()
