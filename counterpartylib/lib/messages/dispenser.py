@@ -20,6 +20,7 @@ from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 from counterpartylib.lib import log
 from counterpartylib.lib import message_type
+from counterpartylib.lib.messages import issuance
 
 FORMAT = '>QQQQB'
 LENGTH = 33
@@ -65,6 +66,8 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
     asset = util.resolve_subasset_longname(db, asset)
 
     if status == STATUS_OPEN:
+        if not issuance.is_vendable(db, asset):
+            problems.append('asset "%s" is not vendable')
         if give_quantity <= 0: problems.append('give_quantity must be positive')
         if mainchainrate <= 0: problems.append('mainchainrate must be positive')
         if escrow_quantity < give_quantity:
@@ -126,6 +129,10 @@ def parse (db, tx, message):
     except (exceptions.UnpackError, struct.error) as e:
         assetid, give_quantity, mainchainrate, asset = None, None, None, None
         status = 'invalid: could not unpack'
+
+    if status == 'valid':
+        assetid, problems = validate (db, tx['source'], asset, give_quantity, escrow_quantity, mainchainrate, dispenser_status, tx['block_index'])
+        if problems: status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':
         if dispenser_status == STATUS_OPEN:
@@ -210,6 +217,12 @@ def is_dispensable(db, address, amount):
     dispensers = cursor.fetchall()
     cursor.close()
     return len(dispensers) > 0 and dispensers[0]['cnt'] > 0
+
+def is_opened(db, asset):
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM dispensers WHERE asset = ? AND status=?''', (asset, STATUS_OPEN))
+    open_dispensers = cursor.fetchall()
+    return len(open_dispensers) > 0
 
 def dispense(db, tx):
     cursor = db.cursor()

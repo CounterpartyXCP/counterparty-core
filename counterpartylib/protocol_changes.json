@@ -250,5 +250,12 @@
     "minimum_version_revision": 0,
     "block_index": 2300000,
     "testnet_block_index": 975000
+  },
+  "enable_vendable_fix": {
+    "minimum_version_major": 9,
+    "minimum_version_minor": 5802,
+    "minimum_version_revision": 0,
+    "block_index": 2300000,
+    "testnet_block_index": 975000
   }
 }
