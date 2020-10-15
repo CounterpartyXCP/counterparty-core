@@ -473,8 +473,7 @@ def connect_to_backend():
         backend.getblockcount()
 
 
-def start_all(db):
-
+def _SelectParams():
     # For Monacoin.
     if config.TESTNET:
         genesis_hash = 'a2b106ceba3be0c6d097b2a6a6aacf9d638ba8258ae478158f449c321061e0b2'
@@ -483,6 +482,9 @@ def start_all(db):
     else:
         genesis_hash = 'ff9f1c0116d19de7c9963845e129f9ed1bfc0b376eb54fd7afa42e0d418c8bb6'
     altcoin.SelectParams(genesis_hash)
+
+def start_all(db):
+    _SelectParams()
 
     # Backend.
     connect_to_backend()
@@ -502,11 +504,14 @@ def start_all(db):
 
 
 def reparse(db, block_index=None, quiet=True):
+    _SelectParams()
+
     connect_to_backend()
     blocks.reparse(db, block_index=block_index, quiet=quiet)
 
-
 def kickstart(db, bitcoind_dir):
+    _SelectParams()
+
     blocks.kickstart(db, bitcoind_dir=bitcoind_dir)
 
 
