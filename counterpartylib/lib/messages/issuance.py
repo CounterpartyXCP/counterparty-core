@@ -534,6 +534,8 @@ def is_vendable(db, asset):
                                                WHERE (status = ? AND asset = ?)
                                                ORDER BY tx_index DESC LIMIT 1''', ('valid', asset)))
     cursor.close()
+    if (len(issuances) <= 0):
+        return False;
 
     vendable = issuances[0]['vendable']  # Use the last issuance.
     reassignable = issuances[0]['reassignable']
