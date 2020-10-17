@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 D = decimal.Decimal
 
 from counterpartylib.lib import (config, util, exceptions, util, message_type)
+from counterpartylib.lib.messages import (dispenser)
 
 FORMAT_1 = '>QQ?'
 LENGTH_1 = 8 + 8 + 1
@@ -45,6 +46,7 @@ def initialise(db):
                       asset_longname TEXT,
                       listed BOOL,
                       reassignable BOOL,
+                      vendable BOOL,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
 
@@ -53,6 +55,15 @@ def initialise(db):
     columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(issuances)''')]
     if 'asset_longname' not in columns:
         cursor.execute('''ALTER TABLE issuances ADD COLUMN asset_longname TEXT''')
+
+    if 'listed' not in columns:
+        cursor.execute('''ALTER TABLE issuances ADD COLUMN listed BOOL''')
+
+    if 'reassignable' not in columns:
+        cursor.execute('''ALTER TABLE issuances ADD COLUMN reassignable BOOL''')
+
+    if 'vendable' not in columns:
+        cursor.execute('''ALTER TABLE issuances ADD COLUMN vendable BOOL''')
 
     # If sweep_hotifx activated, Create issuances copy, copy old data, drop old table, rename new table, recreate indexes
     #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS` nor can drop UNIQUE constraints
@@ -78,6 +89,7 @@ def initialise(db):
                               asset_longname TEXT,
                               listed BOOL,
                               reassignable BOOL,
+                              vendable BOOL,
                               PRIMARY KEY (tx_index, msg_index),
                               FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                               UNIQUE (tx_hash, msg_index))
@@ -87,7 +99,7 @@ def initialise(db):
                 call_date, call_price, description, fee_paid, locked, status, asset_longname, listed, reassignable)
                 SELECT tx_index, tx_hash, 0, block_index, asset, quantity, divisible, source,
                 issuer, transfer, callable, call_date, call_price, description, fee_paid,
-                locked, status, asset_longname, listed, reassignable FROM issuances''', {})
+                locked, status, asset_longname, listed, reassignable, vendable FROM issuances''', {})
             cursor.execute('DROP TABLE issuances')
             cursor.execute('ALTER TABLE new_issuances RENAME TO issuances')
 
@@ -108,13 +120,7 @@ def initialise(db):
                       asset_longname_idx ON issuances (asset_longname)
                    ''')
 
-    if 'listed' not in columns:
-        cursor.execute('''ALTER TABLE issuances ADD COLUMN listed BOOL''')
-
-    if 'reassignable' not in columns:
-        cursor.execute('''ALTER TABLE issuances ADD COLUMN reassignable BOOL''')
-
-def validate (db, source, destination, asset, quantity, divisible, listed, reassignable, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index):
+def validate (db, source, destination, asset, quantity, divisible, listed, reassignable, vendable, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index):
     problems = []
     fee = 0
 
@@ -127,6 +133,7 @@ def validate (db, source, destination, asset, quantity, divisible, listed, reass
     if divisible is None: divisible = True
     if listed is None: listed = True
     if reassignable is None: reassignable = True
+    if vendable is None: vendable = True
 
     if isinstance(call_price, int): call_price = float(call_price)
     #^ helps especially with calls from JS‐based clients, where parseFloat(15) returns 15 (not 15.0), which json takes as an int
@@ -186,6 +193,12 @@ def validate (db, source, destination, asset, quantity, divisible, listed, reass
             problems.append('cannot change listing flag')
         if bool(last_issuance['reassignable']) != bool(reassignable):
             problems.append('cannot change reassignable flag')
+        if bool(last_issuance['vendable']) != bool(vendable):
+            if (last_issuance['vendable'] == False # Don't cast to bool.
+                or util.enabled('enable_vendable_fix')):
+                problems.append('Cannot change vendable flag')
+            elif dispenser.is_opened(db, asset):
+                problems.append('Cannot change vendable flag because the asset is dispending')
         if bool(last_issuance['callable']) != bool(callable_):
             problems.append('cannot change callability')
         if last_issuance['call_date'] > call_date and (call_date != 0 or (block_index < 312500 and (not config.TESTNET or not config.REGTEST))):
@@ -280,10 +293,10 @@ def validate (db, source, destination, asset, quantity, divisible, listed, reass
     if util.enabled('integer_overflow_fix', block_index=block_index) and (fee > config.MAX_INT or quantity > config.MAX_INT):
         problems.append('integer overflow')
 
-    return call_date, call_price, problems, fee, description, divisible, listed, reassignable, reissuance, reissued_asset_longname
+    return call_date, call_price, problems, fee, description, divisible, listed, reassignable, vendable, reissuance, reissued_asset_longname
 
 
-def compose (db, source, transfer_destination, asset, quantity, divisible, listed, reassignable, description):
+def compose (db, source, transfer_destination, asset, quantity, divisible, listed, reassignable, vendable, description):
 
     # Callability is deprecated, so for re‐issuances set relevant parameters
     # to old values; for first issuances, make uncallable.
@@ -323,7 +336,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, liste
                 #   generate a random numeric asset id which will map to this subasset
                 asset = util.generate_random_asset()
 
-    call_date, call_price, problems, fee, description, divisible, listed, reassignable, reissuance, reissued_asset_longname = validate(db, source, transfer_destination, asset, quantity, divisible, listed, reassignable, callable_, call_date, call_price, description, subasset_parent, subasset_longname, util.CURRENT_BLOCK_INDEX)
+    call_date, call_price, problems, fee, description, divisible, listed, reassignable, vendable, reissuance, reissued_asset_longname = validate(db, source, transfer_destination, asset, quantity, divisible, listed, reassignable, vendable, callable_, call_date, call_price, description, subasset_parent, subasset_longname, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
     asset_id = util.generate_asset_id(asset, util.CURRENT_BLOCK_INDEX)
@@ -345,7 +358,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, liste
         compacted_subasset_length = len(compacted_subasset_longname)
         data = message_type.pack(SUBASSET_ID)
         curr_format = SUBASSET_FORMAT + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(description))
-        data += struct.pack(curr_format, asset_id, quantity, (1 if divisible else 0) | (0 if listed else 2) | (0 if reassignable else 4), compacted_subasset_length, compacted_subasset_longname, description.encode('utf-8'))
+        data += struct.pack(curr_format, asset_id, quantity, (1 if divisible else 0) | (0 if listed else 2) | (0 if reassignable else 4) | (0 if vendable else 8), compacted_subasset_length, compacted_subasset_longname, description.encode('utf-8'))
 
     if transfer_destination:
         destination_outputs = [(transfer_destination, None)]
@@ -369,6 +382,7 @@ def parse (db, tx, message, message_type_id):
             divisible = ((flags & 1) != 0)
             listed = ((flags & 2) == 0)
             reassignable = ((flags & 4) == 0)
+            vendable = ((flags & 8) == 0)
             description_length = len(message) - SUBASSET_FORMAT_LENGTH - compacted_subasset_length
             if description_length < 0:
                 logger.warn("invalid subasset length: [issuance] tx [%s]: %s" % (tx['tx_hash'], compacted_subasset_length))
@@ -390,6 +404,7 @@ def parse (db, tx, message, message_type_id):
             divisible = ((flags & 1) != 0)
             listed = ((flags & 2) == 0)
             reassignable = ((flags & 4) == 0)
+            vendable = ((flags & 8) == 0)
             call_price = round(call_price, 6) # TODO: arbitrary
             try:
                 description = description.decode('utf-8')
@@ -402,6 +417,7 @@ def parse (db, tx, message, message_type_id):
             divisible = ((flags & 1) != 0)
             listed = ((flags & 2) == 0)
             reassignable = ((flags & 4) == 0)
+            vendable = ((flags & 8) == 0)
             callable_, call_date, call_price, description = False, 0, 0.0, ''
         try:
             asset = util.generate_asset_name(asset_id, tx['block_index'])
@@ -410,7 +426,7 @@ def parse (db, tx, message, message_type_id):
             asset = None
             status = 'invalid: bad asset name'
     except exceptions.UnpackError as e:
-        asset, quantity, divisible, listed, reassignable, callable_, call_date, call_price, description = None, None, None, None, None, None, None, None, None
+        asset, quantity, divisible, listed, reassignable, vendable, callable_, call_date, call_price, description = None, None, None, None, None, None, None, None, None, None
         status = 'invalid: could not unpack'
 
     # parse and validate the subasset from the message
@@ -427,7 +443,7 @@ def parse (db, tx, message, message_type_id):
     reissuance = None
     fee = 0
     if status == 'valid':
-        call_date, call_price, problems, fee, description, divisible, listed, reassignable, reissuance, reissued_asset_longname = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, listed, reassignable, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index=tx['block_index'])
+        call_date, call_price, problems, fee, description, divisible, listed, reassignable, vendable, reissuance, reissued_asset_longname = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, listed, reassignable, vendable, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index=tx['block_index'])
 
         if problems: status = 'invalid: ' + '; '.join(problems)
         if not util.enabled('integer_overflow_fix', block_index=tx['block_index']) and 'total quantity overflow' in problems:
@@ -483,6 +499,7 @@ def parse (db, tx, message, message_type_id):
         'asset': asset,
         'quantity': quantity,
         'divisible': divisible,
+        'vendable': vendable,
         'listed': listed,
         'reassignable': reassignable,
         'source': tx['source'],
@@ -498,7 +515,7 @@ def parse (db, tx, message, message_type_id):
         'asset_longname': asset_longname,
     }
     if "integer overflow" not in status:
-        sql='insert into issuances values(:tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :listed, :reassignable)'
+        sql='insert into issuances values(:tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :listed, :reassignable, :vendable)'
         issuance_parse_cursor.execute(sql, bindings)
     else:
         logger.warn("Not storing [issuance] tx [%s]: %s" % (tx['tx_hash'], status))
@@ -509,5 +526,24 @@ def parse (db, tx, message, message_type_id):
         util.credit(db, tx['source'], asset, quantity, action="issuance", event=tx['tx_hash'])
 
     issuance_parse_cursor.close()
+
+def is_vendable(db, asset):
+    asset = util.resolve_subasset_longname(db, asset)
+    cursor = db.cursor()
+    issuances = list(cursor.execute('''SELECT vendable, reassignable, listed FROM issuances \
+                                               WHERE (status = ? AND asset = ?)
+                                               ORDER BY tx_index DESC LIMIT 1''', ('valid', asset)))
+    cursor.close()
+
+    vendable = issuances[0]['vendable']  # Use the last issuance.
+    reassignable = issuances[0]['reassignable']
+    listed = issuances[0]['listed']
+
+    if not util.enabled('dispensers'):
+        return False
+    elif not util.enabled('enable_vendable_fix') and (reassignable == False or listed == False):
+        return False
+    else:
+        return vendable
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
