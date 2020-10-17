@@ -53,21 +53,21 @@ def initialise(db):
                       asset_idx ON dispensers (asset)
                    ''')
 
-def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, status, block_index):
+def validate (db, source, asset_, give_quantity, escrow_quantity, mainchainrate, status, block_index):
     problems = []
     order_match = None
     asset_id = None
 
-    if asset == config.BTC:
+    if asset_ == config.BTC:
         problems.append('cannot dispense %s' % config.BTC)
         return None, problems
 
     # resolve subassets
-    asset = util.resolve_subasset_longname(db, asset)
+    asset = util.resolve_subasset_longname(db, asset_)
 
     if status == STATUS_OPEN:
         if not issuance.is_vendable(db, asset):
-            problems.append('asset "%s" is not vendable')
+            problems.append('asset "%s" is not vendable' % asset_)
         if give_quantity <= 0: problems.append('give_quantity must be positive')
         if mainchainrate <= 0: problems.append('mainchainrate must be positive')
         if escrow_quantity < give_quantity:
@@ -81,26 +81,26 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
     available = cursor.fetchall()
 
     if len(available) == 0:
-        problems.append('address doesn\'t has the asset %s' % asset)
+        problems.append('address doesn\'t has the asset %s' % asset_)
     elif len(available) >= 1 and available[0]['quantity'] < escrow_quantity:
-        problems.append('address doesn\'t has enough balance of %s (%i < %i)' % (asset, available[0]['quantity'], escrow_quantity))
+        problems.append('address doesn\'t has enough balance of %s (%i < %i)' % (asset_, available[0]['quantity'], escrow_quantity))
     else:
         cursor.execute('''SELECT * FROM dispensers WHERE source = ? AND asset = ? AND status=?''', (source, asset, STATUS_OPEN))
         open_dispensers = cursor.fetchall()
         if status == STATUS_OPEN:
             if len(open_dispensers) > 0 and open_dispensers[0]['satoshirate'] != mainchainrate:
-                problems.append('address has a dispenser already opened for asset %s with a different mainchainrate' % asset)
+                problems.append('address has a dispenser already opened for asset %s with a different mainchainrate' % asset_)
 
             if len(open_dispensers) > 0 and open_dispensers[0]['give_quantity'] != give_quantity:
-                problems.append('address has a dispenser already opened for asset %s with a different give_quantity' % asset)
+                problems.append('address has a dispenser already opened for asset %s with a different give_quantity' % asset_)
         elif status == STATUS_CLOSED:
             if len(open_dispensers) == 0:
-                problems.append('address doesnt has an open dispenser for asset %s' % asset)
+                problems.append('address doesnt has an open dispenser for asset %s' % asset_)
 
         if len(problems) == 0:
             asset_id = util.generate_asset_id(asset, block_index)
             if asset_id == 0:
-                problems.append('cannot dispense %s' % asset) # How can we test this on a test vector?
+                problems.append('cannot dispense %s' % asset_) # How can we test this on a test vector?
 
     cursor.close()
     if len(problems) > 0:
