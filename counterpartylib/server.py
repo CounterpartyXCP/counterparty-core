@@ -44,6 +44,8 @@ def sigterm_handler(_signo, _stack_frame):
         logger.info('Stopping API server.')
         api_server.stop()
         api_status_poller.stop()
+    logger.info('Stopping backend.')
+    backend.stop()
     logger.info('Shutting down.')
     logging.shutdown()
     sys.exit(0)
@@ -196,7 +198,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     # THINGS WE CONNECT TO
 
     # Backend name
-    config.BACKEND_NAME = 'indexd'
+    config.BACKEND_NAME = 'addrindexrs'
 
     # Backend RPC host (Bitcoin Core)
     if backend_connect:
@@ -290,7 +292,6 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
 
     # Construct Indexd URL.
     config.INDEXD_URL = 'http://' + config.INDEXD_CONNECT + ':' + str(config.INDEXD_PORT)
-
 
     ##############
     # THINGS WE SERVE

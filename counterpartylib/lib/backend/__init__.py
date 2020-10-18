@@ -16,9 +16,11 @@ from counterpartylib.lib import script
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 
-from counterpartylib.lib.backend import indexd
+from counterpartylib.lib.backend import addrindexrs
 
 MEMPOOL_CACHE_INITIALIZED = False
+
+PRETX_CACHE = {}
 
 def sortkeypicker(keynames):
     """http://stackoverflow.com/a/1143719"""
@@ -36,7 +38,12 @@ def sortkeypicker(keynames):
     return getit
 
 def BACKEND():
-    return sys.modules['counterpartylib.lib.backend.{}'.format(config.BACKEND_NAME)]
+    mdl = sys.modules['counterpartylib.lib.backend.{}'.format(config.BACKEND_NAME)]
+    mdl.init()
+    return mdl
+
+def stop():
+    BACKEND().stop()
 
 def getblockcount():
     return BACKEND().getblockcount()
@@ -48,8 +55,17 @@ def getblock(block_hash):
     block_hex = BACKEND().getblock(block_hash)
     return CBlock.deserialize(util.unhexlify(block_hex))
 
+def cache_pretx(txid, rawtx):
+    PRETX_CACHE[binascii.hexlify(txid).decode('utf8')] = binascii.hexlify(rawtx).decode('utf8')
+
+def clear_pretx(txid):
+    del PRETX_CACHE[binascii.hexlify(txid).decode('utf8')]
+
 def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
-    return BACKEND().getrawtransaction(tx_hash, verbose=verbose, skip_missing=skip_missing)
+    if tx_hash in PRETX_CACHE:
+        return PRETX_CACHE[tx_hash]
+    else:
+        return BACKEND().getrawtransaction(tx_hash, verbose=verbose, skip_missing=skip_missing)
 
 def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
     return BACKEND().getrawtransaction_batch(txhash_list, verbose=verbose, skip_missing=skip_missing)
@@ -199,7 +215,16 @@ def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
     raw_transactions = search_raw_transactions(pubkeyhash, unconfirmed=True)
     for tx in raw_transactions:
         for vin in tx['vin']:
-            if 'coinbase' not in vin:
+            if 'txinwitness' in vin:
+                if len(vin['txinwitness']) >= 2:
+                    # catch unhexlify errs for when txinwitness[1] isn't a witness program (eg; for P2W)
+                    try:
+                        pubkey = vin['txinwitness'][1]
+                        if pubkeyhash == script.pubkey_to_p2whash(util.unhexlify(pubkey)):
+                            return pubkey
+                    except binascii.Error:
+                        pass
+            elif 'coinbase' not in vin:
                 scriptsig = vin['scriptSig']
                 asm = scriptsig['asm'].split(' ')
                 if len(asm) >= 2:
@@ -238,7 +263,7 @@ def init_mempool_cache():
     if max_remaining_num_tx:
         for txid in mempool_tx:
             tx = mempool_tx[txid]
-            vin_txhash_list += [vin['txid'] for vin in tx['vin']]
+            vin_txhash_list += [vin['txid'] for vin in tx['vin'] if not(tx is None)]
         BACKEND().getrawtransaction_batch(vin_txhash_list[:max_remaining_num_tx], skip_missing=True, verbose=True)
 
     MEMPOOL_CACHE_INITIALIZED = True

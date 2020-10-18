@@ -35,7 +35,7 @@ from counterpartylib.lib import arc4
 from counterpartylib.lib.transaction_helper import p2sh_encoding
 
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, destroy, sweep, dispenser)
-from .messages.versions import enhanced_send
+from .messages.versions import enhanced_send, mpma
 
 from .kickstart.blocks_parser import BlockchainParser, ChainstateParser
 from .kickstart.utils import ib2h
@@ -98,6 +98,8 @@ def parse_tx(db, tx):
                 send.parse(db, tx, message)
             elif message_type_id == enhanced_send.ID and util.enabled('enhanced_sends', block_index=tx['block_index']):
                 enhanced_send.parse(db, tx, message)
+            elif message_type_id == mpma.ID and util.enabled('mpma_sends', block_index=tx['block_index']):
+                mpma.parse(db, tx, message)
             elif message_type_id == order.ID:
                 order.parse(db, tx, message)
             elif message_type_id == btcpay.ID:
@@ -463,13 +465,13 @@ def get_tx_info(tx_hex, block_parser=None, block_index=None):
     try:
         return _get_tx_info(tx_hex, block_parser, block_index)
     except DecodeError as e:
-        # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
         return b'', None, None, None, None, None
     except BTCOnlyError as e:
+        # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
         if util.enabled('dispensers', block_index):
             try:
                 return b'', None, None, None, None, _get_swap_tx(e.decodedTx, block_parser, block_index)
-            except DecodeError as e:
+            except: # (DecodeError, backend.indexd.BackendRPCError) as e:
                 return b'', None, None, None, None, None
         else:
             return b'', None, None, None, None, None
@@ -529,7 +531,7 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None):
                 raise DecodeError('data in source')
         elif util.enabled('segwit_support') and asm[0] == 0:
             # Segwit output
-            new_source, new_data = decode_p2w(asm)
+            new_source, new_data = decode_p2w(vout.scriptPubKey)
         else:
             raise DecodeError('unrecognised source type')
 
@@ -542,12 +544,12 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None):
 
     return (sources, outputs)
 
-def _get_tx_info(tx_hex, block_parser=None, block_index=None):
+def _get_tx_info(tx_hex, block_parser=None, block_index=None, p2sh_is_segwit=False):
     """Get the transaction info. Calls one of two subfunctions depending on signature type."""
     if not block_index:
         block_index = util.CURRENT_BLOCK_INDEX
     if util.enabled('p2sh_addresses', block_index=block_index):   # Protocol change.
-        return  get_tx_info3(tx_hex, block_parser=block_parser)
+        return  get_tx_info3(tx_hex, block_parser=block_parser, p2sh_is_segwit=p2sh_is_segwit)
     elif util.enabled('multisig_addresses', block_index=block_index):   # Protocol change.
         return get_tx_info2(tx_hex, block_parser=block_parser)
     else:
@@ -669,8 +671,8 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
 
     return source, destination, btc_amount, fee, data, None
 
-def get_tx_info3(tx_hex, block_parser=None):
-    return get_tx_info2(tx_hex, block_parser=block_parser, p2sh_support=True)
+def get_tx_info3(tx_hex, block_parser=None, p2sh_is_segwit=False):
+    return get_tx_info2(tx_hex, block_parser=block_parser, p2sh_support=True, p2sh_is_segwit=p2sh_is_segwit)
 
 def arc4_decrypt(cyphertext, ctx):
     '''Un‐obfuscate. Initialise key once per attempt.'''
@@ -730,12 +732,12 @@ def decode_checkmultisig(asm, ctx):
 
     return destination, data
 
-def decode_p2w(asm):
-    bech32 = bitcoinlib.bech32.CBech32Data.from_bytes(0, asm[1])
+def decode_p2w(script_pubkey):
+    bech32 = bitcoinlib.bech32.CBech32Data.from_bytes(0, script_pubkey[2:22])
 
     return str(bech32), None
 
-def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
+def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=False):
     """Get multisig transaction info.
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
@@ -765,7 +767,10 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
         elif asm[-1] == 'OP_CHECKSIG':
             new_destination, new_data = decode_checksig(asm, ctx)
         elif asm[-1] == 'OP_CHECKMULTISIG':
-            new_destination, new_data = decode_checkmultisig(asm, ctx)
+            try:
+                new_destination, new_data = decode_checkmultisig(asm, ctx)
+            except:
+                raise DecodeError('unrecognised output type')
         elif p2sh_support and asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
             new_destination, new_data = decode_scripthash(asm)
         elif util.enabled('segwit_support') and asm[0] == 0:
@@ -807,8 +812,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
             except CScriptInvalidError as e:
                 raise DecodeError(e)
 
-            new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm)
-
+            new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm, p2sh_is_segwit=p2sh_is_segwit)
             # this could be a p2sh source address with no encoded data
             if new_data is None:
               continue;
@@ -823,7 +827,6 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
             assert not new_destination
 
             data += new_data
-
     # Only look for source if data were found or destination is `UNSPENDABLE`,
     # for speed.
     if not data and destinations != [config.UNSPENDABLE,]:
@@ -857,7 +860,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
                 raise DecodeError('data in source')
         elif util.enabled('segwit_support') and asm[0] == 0:
             # Segwit output
-            new_source, new_data = decode_p2w(asm)
+            new_source, new_data = decode_p2w(vout.scriptPubKey)
         else:
             raise DecodeError('unrecognised source type')
 
@@ -1041,7 +1044,6 @@ def reparse(db, block_index=None, quiet=False):
     if not block_index:
         database.vacuum(db)
 
-
 def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=None):
     assert type(tx_hash) == str
     cursor = db.cursor()
@@ -1054,7 +1056,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
 
     # Get the important details about each transaction.
     if tx_hex is None:
-        tx_hex = backend.getrawtransaction(tx_hash)
+        tx_hex = backend.getrawtransaction(tx_hash) # TODO: This is the call that is stalling the process the most
     source, destination, btc_amount, fee, data, decoded_tx = get_tx_info(tx_hex)
 
     if not source and decoded_tx and util.enabled('dispensers', block_index):
@@ -1307,7 +1309,6 @@ def follow(db):
                     break
 
                 logger.debug('Checking that block {} is not an orphan.'.format(current_index))
-
                 # Backend parent hash.
                 current_hash = backend.getblockhash(current_index)
                 current_cblock = backend.getblock(current_hash)
@@ -1440,7 +1441,7 @@ def follow(db):
             #  - or was there a double spend for w/e reason accepted into the mempool (replace-by-fee?)
             try:
                 raw_transactions = backend.getrawtransaction_batch(parse_txs)
-            except backend.indexd.BackendRPCError as e:
+            except Exception as e:
                 logger.warning('Failed to fetch raw for mempool TXs, restarting loop; %s', (e, ))
                 continue  # restart the follow loop
 

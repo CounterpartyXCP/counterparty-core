@@ -4,8 +4,10 @@ This module contains p2sh data encoding functions
 
 import binascii
 import math
-
+import struct
 import logging
+import traceback # not needed if not printing exceptions on p2sh decoding
+
 logger = logging.getLogger(__name__)
 
 import bitcoin as bitcoinlib
@@ -16,7 +18,7 @@ from counterpartylib.lib import script
 from counterpartylib.lib import exceptions
 
 def maximum_data_chunk_size():
-    return bitcoinlib.core.script.MAX_SCRIPT_ELEMENT_SIZE - len(config.PREFIX)
+    return bitcoinlib.core.script.MAX_SCRIPT_ELEMENT_SIZE - len(config.PREFIX) - 44 # Redeemscript size for p2pkh addresses, multisig won't work here
 
 def calculate_outputs(destination_outputs, data_array, fee_per_kb):
     datatx_size = 10  # 10 base
@@ -52,9 +54,11 @@ def decode_p2sh_input(asm):
     pubkey, source, redeem_script_is_valid = decode_data_redeem_script(asm[-1])
     if redeem_script_is_valid and len(asm) >= 3:
         # this is a signed transaction, so we got {sig[,sig]} {datachunk} {redeemScript}
-        datachunk, redeemScript = asm[-2:]
+        datachunk = found_data
+        redeemScript = asm[-1] #asm[-2:]
     else:
-        pubkey, source, redeem_script_is_valid = decode_data_redeem_script(asm[-2])
+        #print('ASM:', len(asm))
+        pubkey, source, redeem_script_is_valid, found_data = decode_data_redeem_script(asm[-1], p2sh_is_segwit)
         if not redeem_script_is_valid or len(asm) != 3:
             return None, None, None
 
@@ -65,12 +69,34 @@ def decode_p2sh_input(asm):
     if data[:len(config.PREFIX)] == config.PREFIX:
         data = data[len(config.PREFIX):]
     else:
+        if data == b'':
+            return source, None, None
         raise exceptions.DecodeError('unrecognised P2SH output')
 
     return source, None, data
 
-def decode_data_redeem_script(redeemScript):
+def decode_data_push(arr, pos):
+    pushlen = 0
+    data = b''
+    opcode = bitcoinlib.core.script.CScriptOp(arr[pos])
+    if opcode > 0 and opcode < bitcoinlib.core.script.OP_PUSHDATA1:
+        pushlen = arr[pos]
+        pos += 1
+    elif opcode == bitcoinlib.core.script.OP_PUSHDATA1:
+        pushlen = arr[pos + 1]
+        pos += 2
+    elif opcode == bitcoinlib.core.script.OP_PUSHDATA2:
+        (pushlen, ) = struct.unpack('<H', arr[pos + 1:pos + 3])
+        pos += 3
+    elif opcode == bitcoinlib.core.script.OP_PUSHDATA4:
+        (pushlen, ) = struct.unpack('<L', arr[pos + 1:pos + 5])
+        pos += 5
+
+    return pos + pushlen, arr[pos:pos + pushlen]
+
+def decode_data_redeem_script(redeemScript, p2sh_is_segwit=False):
     script_len = len(redeemScript)
+    found_data = b''
 
     if script_len == 41 and \
         redeemScript[0] == bitcoinlib.core.script.OP_DROP and \
@@ -81,7 +107,10 @@ def decode_data_redeem_script(redeemScript):
         redeemScript[40] == bitcoinlib.core.script.OP_EQUAL:
             # - OP_DROP [push] [33-byte pubkey] OP_CHECKSIGVERIFY [n] OP_DROP OP_DEPTH 0 OP_EQUAL
             pubkey = redeemScript[2:35]
-            source = script.pubkey_to_pubkeyhash(pubkey)
+            if p2sh_is_segwit:
+                source = script.pubkey_to_p2whash(pubkey)
+            else:
+                source = script.pubkey_to_pubkeyhash(pubkey)
             redeem_script_is_valid = True
     elif script_len > 41 and \
         redeemScript[0] == bitcoinlib.core.script.OP_DROP and \
@@ -98,13 +127,57 @@ def decode_data_redeem_script(redeemScript):
         source = None
         redeem_script_is_valid = False
 
-    return pubkey, source, redeem_script_is_valid
+        try:
+            opcode = bitcoinlib.core.script.CScriptOp(redeemScript[0])
+            if opcode > bitcoinlib.core.script.OP_0 and opcode < bitcoinlib.core.script.OP_PUSHDATA1 or \
+                opcode in (bitcoinlib.core.script.OP_PUSHDATA1, bitcoinlib.core.script.OP_PUSHDATA2, bitcoinlib.core.script.OP_PUSHDATA4):
+
+                pos = 0
+                pos, found_data = decode_data_push(redeemScript, 0)
+
+                if redeemScript[pos] == bitcoinlib.core.script.OP_DROP:
+                    pos += 1
+                    valid_sig = False
+                    opcode = redeemScript[pos]
+                    if type(opcode) != type(''):
+                        if opcode >= bitcoinlib.core.script.OP_2 and opcode <= bitcoinlib.core.script.OP_15:
+                            # it's multisig
+                            req_sigs = opcode - bitcoinlib.core.script.OP_1 + 1
+                            pos += 1
+                            pubkey = None
+                            num_sigs = 0
+                            found_sigs = False
+                            while not found_sigs:
+                                pos, npubkey = decode_data_push(redeemScript, pos)
+                                num_sigs += 1
+                                if redeemScript[pos] - bitcoinlib.core.script.OP_1 + 1 == num_sigs:
+                                    found_sigs = True
+
+                            pos += 1
+                            valid_sig = redeemScript[pos] == bitcoinlib.core.script.OP_CHECKMULTISIGVERIFY
+                        else:
+                            # it's p2pkh
+                            pos, pubkey = decode_data_push(redeemScript, pos)
+                            source = script.pubkey_to_pubkeyhash(pubkey)
+
+                            valid_sig = redeemScript[pos] == bitcoinlib.core.script.OP_CHECKSIGVERIFY
+                        pos += 1
+
+                        if valid_sig:
+                            redeem_script_is_valid = redeemScript[pos + 1] == bitcoinlib.core.script.OP_DROP and \
+                                redeemScript[pos + 2] == bitcoinlib.core.script.OP_DEPTH and \
+                                redeemScript[pos + 3] == 0 and \
+                                redeemScript[pos + 4] == bitcoinlib.core.script.OP_EQUAL
+        except Exception as e:
+            pass #traceback.print_exc()
+
+    return pubkey, source, redeem_script_is_valid, found_data
 
 def make_p2sh_encoding_redeemscript(datachunk, n, pubKey=None, multisig_pubkeys=None, multisig_pubkeys_required=None):
     _logger = logger.getChild('p2sh_encoding')
     assert len(datachunk) <= bitcoinlib.core.script.MAX_SCRIPT_ELEMENT_SIZE
 
-    dataDropScript = [bitcoinlib.core.script.OP_DROP] # just drop the data chunk
+    dataDropScript = [datachunk, bitcoinlib.core.script.OP_DROP] # just drop the data chunk
     cleanupScript = [n, bitcoinlib.core.script.OP_DROP, bitcoinlib.core.script.OP_DEPTH, 0, bitcoinlib.core.script.OP_EQUAL] # unique offset + prevent scriptSig malleability
 
     if pubKey is not None:
@@ -130,13 +203,9 @@ def make_p2sh_encoding_redeemscript(datachunk, n, pubKey=None, multisig_pubkeys=
     _logger.debug('verifyOwnerScript %s (%s)' % (repr(CScript(verifyOwnerScript)), binascii.hexlify(CScript(verifyOwnerScript))))
     _logger.debug('entire redeemScript %s (%s)' % (repr(redeemScript), binascii.hexlify(redeemScript)))
 
+    #scriptSig = CScript([]) + redeemScript  # PUSH(datachunk) + redeemScript
+    scriptSig = CScript([redeemScript])
     outputScript = redeemScript.to_p2sh_scriptPubKey()
-
-    #scriptSig = b''.join([CScript([datachunk, redeemScript]), outputScript])
-    scriptSig = b''.join([CScript([datachunk])])
-    print('redeemScript: ', binascii.hexlify(redeemScript))
-    print('outputScript: ', binascii.hexlify(outputScript))
-    #scriptSig = CScript([datachunk]) + redeemScript
 
     _logger.debug('scriptSig %s (%s)' % (repr(scriptSig), binascii.hexlify(scriptSig)))
     _logger.debug('outputScript %s (%s)' % (repr(outputScript), binascii.hexlify(outputScript)))

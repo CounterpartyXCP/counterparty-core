@@ -345,11 +345,12 @@ def compose_transaction(db, name, params,
         if address_name in params:
             address = params[address_name]
             if isinstance(address, list):
-                """pubkey_list = []
-                for iaddr in address:
-                    provided_pubkeys += script.extract_pubkeys(iaddr)
-                    pubkey_list.append(script.make_pubkeyhash(iaddr))
-                params[address_name] = pubkey_list"""
+                #pkhshs = []
+                #for addr in address:
+                #    provided_pubkeys += script.extract_pubkeys(addr)
+                #    pkhshs.append(script.make_pubkeyhash(addr))
+                #params[address_name] = pkhshs
+                pass
             else:
                 provided_pubkeys += script.extract_pubkeys(address)
                 params[address_name] = script.make_pubkeyhash(address)

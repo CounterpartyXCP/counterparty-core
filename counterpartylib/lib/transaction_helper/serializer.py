@@ -16,6 +16,7 @@ import logging
 logger = logging.getLogger(__name__)
 import requests
 import bitcoin as bitcoinlib
+from bitcoin.core import Hash160
 from bitcoin.core.script import CScript
 from bitcoin.wallet import P2PKHBitcoinAddress, P2SHBitcoinAddress
 import cachetools
@@ -433,12 +434,18 @@ def serialise_p2sh_datatx(txid, source, source_input, destination_outputs, data_
 
         # get the scripts
         scriptSig, redeemScript, outputScript = p2sh_encoding.make_p2sh_encoding_redeemscript(data_chunk, n, pubkey, multisig_pubkeys, multisig_pubkeys_required)
-        substituteScript = scriptSig + outputScript
+        #substituteScript = scriptSig + outputScript
 
         s += txhash                                              # TxOutHash
         s += (n).to_bytes(4, byteorder='little')                 # TxOutIndex (assumes 0-based)
-        s += var_int(len(substituteScript))                      # Script length
-        s += substituteScript                                    # Script
+
+        #s += var_int(len(substituteScript))                      # Script length
+        #s += substituteScript                                    # Script
+
+        s += var_int(len(scriptSig))# + len(outputScript))                      # Script length
+        s += scriptSig                                    # Script
+        #s += outputScript                                    # Script
+
         s += b'\xff' * 4                                         # Sequence
 
     # number of outputs, always 1 for the opreturn

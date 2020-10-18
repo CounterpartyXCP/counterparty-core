@@ -485,10 +485,10 @@ def construct (db, tx_info, encoding='auto',
     unsigned_pretx_hex = None
     unsigned_tx_hex = None
 
+    pretx_txid = None
     if encoding == 'p2sh':
         assert not (segwit and p2sh_pretx_txid)  # shouldn't do old style with segwit enabled
 
-        pretx_txid = None
         if p2sh_pretx_txid:
             pretx_txid = p2sh_pretx_txid if isinstance(p2sh_pretx_txid, bytes) else binascii.unhexlify(p2sh_pretx_txid)
             unsigned_pretx = None
@@ -496,8 +496,6 @@ def construct (db, tx_info, encoding='auto',
             destination_value_sum = sum([value for (destination, value) in destination_outputs])
             source_value = destination_value_sum
 
-            logger.getChild('p2shdebug').debug('source_value %d' % (source_value, ))
-            logger.getChild('p2shdebug').debug('change_value %d' % (change_output[1], ))
             if change_output:
                 # add the difference between source and destination to the change
                 change_value = change_output[1] + (destination_value_sum - source_value)
@@ -578,7 +576,16 @@ def construct (db, tx_info, encoding='auto',
 
     # Parsed transaction info.
     try:
-        parsed_source, parsed_destination, x, y, parsed_data, extra = blocks._get_tx_info(unsigned_tx_hex)
+        if pretx_txid and unsigned_pretx:
+            backend.cache_pretx(pretx_txid, unsigned_pretx)
+        parsed_source, parsed_destination, x, y, parsed_data, extra = blocks._get_tx_info(unsigned_tx_hex, p2sh_is_segwit=script.is_bech32(desired_source))
+
+        if encoding == 'p2sh':
+            # make_canonical can't determine the address, so we blindly change the desired to the parsed
+            desired_source = parsed_source
+
+        if pretx_txid and unsigned_pretx:
+            backend.clear_pretx(pretx_txid)
     except exceptions.BTCOnlyError:
         # Skip BTC‐only transactions.
         if extended_tx_info:
