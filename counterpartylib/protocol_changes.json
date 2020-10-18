@@ -164,14 +164,14 @@
     "minimum_version_major": 9,
     "minimum_version_minor": 5600,
     "minimum_version_revision": 0,
-    "block_index": 2300000,
+    "block_index": 2145000,
     "testnet_block_index": 960000
   },
   "btc_order_minimum": {
     "minimum_version_major": 9,
     "minimum_version_minor": 5600,
     "minimum_version_revision": 0,
-    "block_index": 2300000,
+    "block_index": 2145000,
     "testnet_block_index": 960000
   },
   "btc_order_minimum_adjustment_1": {
@@ -185,28 +185,28 @@
     "minimum_version_major": 9,
     "minimum_version_minor": 5600,
     "minimum_version_revision": 0,
-    "block_index": 2300000,
+    "block_index": 2145000,
     "testnet_block_index": 960000
   },
   "inmutable_fee_fraction": {
     "minimum_version_major": 9,
     "minimum_version_minor": 5600,
     "minimum_version_revision": 0,
-    "block_index": 2300000,
+    "block_index": 2145000,
     "testnet_block_index": 960000
   },
   "segwit_support": {
     "minimum_version_major": 9,
-    "minimum_version_minor": 5600,
+    "minimum_version_minor": 5802,
     "minimum_version_revision": 0,
-    "block_index": 2300000,
+    "block_index": 2145000,
     "testnet_block_index": 960000
   },
   "destroy_reactivated": {
     "minimum_version_major": 9,
     "minimum_version_minor": 5600,
     "minimum_version_revision": 0,
-    "block_index": 2300000,
+    "block_index": 2145000,
     "testnet_block_index": 960000
   },
   "zero_quantity_value_adjustment_1": {
@@ -227,35 +227,35 @@
       "minimum_version_major": 9,
       "minimum_version_minor": 5700,
       "minimum_version_revision": 0,
-      "block_index": 2300000,
+      "block_index": 2145000,
       "testnet_block_index": 960000
   },
   "dispensers": {
       "minimum_version_major": 9,
-      "minimum_version_minor": 5700,
+      "minimum_version_minor": 5802,
       "minimum_version_revision": 0,
-      "block_index": 2300000,
+      "block_index": 2145000,
       "testnet_block_index": 960000
   },
   "mpma_sends": {
     "minimum_version_major": 9,
     "minimum_version_minor": 5800,
     "minimum_version_revision": 0,
-    "block_index": 2300000,
+    "block_index": 2145000,
     "testnet_block_index": 960000
   },
   "hotfix_dispensers_with_non_p2pkh": {
     "minimum_version_major": 9,
     "minimum_version_minor": 5801,
     "minimum_version_revision": 0,
-    "block_index": 2300000,
+    "block_index": 2145000,
     "testnet_block_index": 975000
   },
   "enable_vendable_fix": {
     "minimum_version_major": 9,
     "minimum_version_minor": 5802,
     "minimum_version_revision": 0,
-    "block_index": 2300000,
+    "block_index": 2145000,
     "testnet_block_index": 975000
   }
 }
