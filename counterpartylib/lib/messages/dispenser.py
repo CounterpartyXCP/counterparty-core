@@ -212,27 +212,31 @@ def dispense(db, tx):
     dispensers = cursor.fetchall()
 
     for dispenser in dispensers:
-        must_give = int(floor(tx['btc_amount'] / dispenser['satoshirate']))
-        remaining = int(floor(dispenser['give_remaining'] / dispenser['give_quantity']))
-        actually_given = min(must_give, remaining) * dispenser['give_quantity']
-        give_remaining = dispenser['give_remaining'] - actually_given
+        satoshirate = dispenser['satoshirate']
+        give_quantity = dispenser['give_quantity']
 
-        assert give_remaining >= 0
+        if satoshirate > 0 and give_quantity > 0:
+            must_give = int(floor(tx['btc_amount'] / satoshirate))
+            remaining = int(floor(dispenser['give_remaining'] / give_quantity))
+            actually_given = min(must_give, remaining) * give_quantity
+            give_remaining = dispenser['give_remaining'] - actually_given
 
-        util.credit(db, tx['source'], dispenser['asset'], actually_given, action='dispense', event=tx['tx_hash'])
+            assert give_remaining >= 0
 
-        dispenser['give_remaining'] = give_remaining
-        if give_remaining < dispenser['give_quantity']:
-            # close the dispenser
-            dispenser['give_remaining'] = 0
-            if give_remaining > 0:
-                # return the remaining to the owner
-                util.credit(db, dispenser['source'], dispenser['asset'], give_remaining, action='dispenser close', event=tx['tx_hash'])
-            dispenser['status'] = STATUS_CLOSED
+            util.credit(db, tx['source'], dispenser['asset'], actually_given, action='dispense', event=tx['tx_hash'])
 
-        dispenser['block_index'] = tx['block_index']
-        dispenser['prev_status'] = STATUS_OPEN
-        cursor.execute('UPDATE DISPENSERS SET give_remaining=:give_remaining, status=:status \
-                WHERE source=:source AND asset=:asset AND satoshirate=:satoshirate AND give_quantity=:give_quantity AND status=:prev_status', dispenser)
+            dispenser['give_remaining'] = give_remaining
+            if give_remaining < dispenser['give_quantity']:
+                # close the dispenser
+                dispenser['give_remaining'] = 0
+                if give_remaining > 0:
+                    # return the remaining to the owner
+                    util.credit(db, dispenser['source'], dispenser['asset'], give_remaining, action='dispenser close', event=tx['tx_hash'])
+                dispenser['status'] = STATUS_CLOSED
+
+            dispenser['block_index'] = tx['block_index']
+            dispenser['prev_status'] = STATUS_OPEN
+            cursor.execute('UPDATE DISPENSERS SET give_remaining=:give_remaining, status=:status \
+                    WHERE source=:source AND asset=:asset AND satoshirate=:satoshirate AND give_quantity=:give_quantity AND status=:prev_status', dispenser)
 
     cursor.close()
