@@ -53,6 +53,30 @@ def initialise(db):
                       asset_idx ON dispensers (asset)
                    ''')
 
+    cursor.execute('''CREATE TABLE IF NOT EXISTS dispenses(
+                      tx_index,
+                      tx_hash TEXT,
+                      block_index INTEGER,
+                      source TEXT,
+                      destination TEXT,
+                      asset TEXT,
+                      must_give INTEGER,
+                      remaining INTEGER,
+                      actually_given INTEGER,
+                      satoshirate INTEGER,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
+                   ''')
+                      # Disallows invalids: FOREIGN KEY (order_match_id) REFERENCES order_matches(id))
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      source_idx ON dispenses (source)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      asset_idx ON dispenses (asset)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      destinaiton_idx ON dispenses (destination)
+                   ''')
+
 def validate (db, source, asset_, give_quantity, escrow_quantity, mainchainrate, status, block_index):
     problems = []
     order_match = None
@@ -232,7 +256,14 @@ def dispense(db, tx):
     })
     dispensers = cursor.fetchall()
 
+    dispense_logs = []
+
     for dispenser in dispensers:
+
+        # They should be rejected in `validate()`.
+        assert dispenser['satoshirate'] > 0
+        assert dispenser['give_quantity'] > 0
+
         must_give = int(floor(tx['btc_amount'] / dispenser['satoshirate']))
         remaining = int(floor(dispenser['give_remaining'] / dispenser['give_quantity']))
         actually_given = min(must_give, remaining) * dispenser['give_quantity']
@@ -245,6 +276,18 @@ def dispense(db, tx):
             continue
 
         util.credit(db, tx['source'], dispenser['asset'], actually_given, action='dispense', event=tx['tx_hash'])
+        dispense_logs.append({
+            "tx_index": tx['tx_index'],
+            "tx_hash": tx['tx_hash'],
+            "block_index": tx['block_index'],
+            "source": tx['source'],
+            "destination": tx['destination'],
+            "asset": dispenser['asset'],
+            "must_give": must_give,
+            "remaining": remaining,
+            "actually_given": actually_given,
+            "satoshirate": dispenser['satoshirate']
+        })
         dispenser['give_remaining'] = give_remaining
         if give_remaining < dispenser['give_quantity']:
             # close the dispenser
@@ -258,5 +301,8 @@ def dispense(db, tx):
         dispenser['prev_status'] = STATUS_OPEN
         cursor.execute('UPDATE DISPENSERS SET give_remaining=:give_remaining, status=:status \
                 WHERE source=:source AND asset=:asset AND satoshirate=:satoshirate AND give_quantity=:give_quantity AND status=:prev_status', dispenser)
+
+    for log in dispense_logs:
+        cursor.execute('INSERT INTO DISPENSES VALUES (:tx_index, :tx_hash, :block_index, :source, :destination,  :asset, :must_give, :remaining, :actually_given, :satoshirate)', log)
 
     cursor.close()
