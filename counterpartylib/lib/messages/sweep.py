@@ -1,6 +1,8 @@
 #! /usr/bin/python3
 
 import struct
+import logging
+logger = logging.getLogger(__name__)
 
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import config
@@ -51,7 +53,7 @@ def initialise(db):
                    ''')
 
 
-def validate (db, source, destination, flags, memo, block_index):
+def validate (db, source, destination, flags, memo_bytes, block_index):
     problems = []
 
     if source == destination:
@@ -73,29 +75,29 @@ def validate (db, source, destination, flags, memo, block_index):
     elif not(flags & (FLAG_BALANCES | FLAG_OWNERSHIP)):
         problems.append('must specify which kind of transfer in flags')
 
-    if memo and len(memo) > MAX_MEMO_LENGTH:
+    if memo_bytes and len(memo_bytes) > MAX_MEMO_LENGTH:
         problems.append('memo too long')
 
     return problems
 
 def compose (db, source, destination, flags, memo):
     if memo is None:
-        memo = b''
+        memo_bytes = b''
     elif flags & FLAG_BINARY_MEMO:
-        memo = bytes.fromhex(memo)
+        memo_bytes = bytes.fromhex(memo)
     else:
-        memo = memo.encode('utf-8')
-        memo = struct.pack(">{}s".format(len(memo)), memo)
+        memo_bytes = memo.encode('utf-8')
+        memo_bytes = struct.pack(">{}s".format(len(memo_bytes)), memo_bytes)
 
     block_index = util.CURRENT_BLOCK_INDEX
-    problems = validate(db, source, destination, flags, memo, block_index)
+    problems = validate(db, source, destination, flags, memo_bytes, block_index)
     if problems: raise exceptions.ComposeError(problems)
 
     short_address_bytes = address.pack(destination)
 
     data = message_type.pack(ID)
     data += struct.pack(FORMAT, short_address_bytes, flags)
-    data += memo
+    data += memo_bytes
 
     return (source, [], data)
 
