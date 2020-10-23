@@ -203,7 +203,7 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
             raise APIError("case_sensitive must be a boolean")
 
     # special case for memo and memo_hex field searches
-    if table == 'sends':
+    if table == 'sends' or table == 'sweeps': # get_sweeps also have memo.
         adjust_get_sends_memo_filters(filters)
 
     # SELECT
@@ -280,8 +280,10 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
     if table == 'sends':
         # for sends, handle the memo field properly
         return adjust_get_sends_results(query_result)
-
-    return query_result
+    elif table == 'sweeps':
+        return adjust_get_sweeps_results(query_result)
+    else:
+        return query_result
 
 def adjust_get_sends_memo_filters(filters):
     """Convert memo to a byte string.  If memo_hex is supplied, attempt to decode it and use that instead."""
@@ -312,6 +314,24 @@ def adjust_get_sends_results(query_result):
         filtered_results.append(send_row)
     return filtered_results
 
+def adjust_get_sweeps_results(query_result):
+    """Format the memo_hex field.  Try and decode the memo from a utf-8 uncoded string. Invalid utf-8 strings return an empty memo."""
+    filtered_results = []
+    for send_row in list(query_result):
+        try:
+            if send_row['memo'] is None:
+                send_row['memo_hex'] = None
+                send_row['memo'] = None
+            else:
+                if send_row['flags'] & sweep.FLAG_BINARY_MEMO:
+                    send_row['memo_hex'] = binascii.hexlify(send_row['memo']).decode('utf8')
+                    send_row['memo'] = None
+                else:
+                    send_row['memo_hex'] = None
+        except UnicodeDecodeError:
+            send_row['memo'] = ''
+        filtered_results.append(send_row)
+    return filtered_results
 
 def compose_transaction(db, name, params,
                         encoding='auto',
