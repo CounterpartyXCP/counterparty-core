@@ -76,21 +76,21 @@
     "block_index": 423888,
     "testnet_block_index": 0
   },
-	"broadcast_invalid_check": {
+  "broadcast_invalid_check": {
     "minimum_version_major": 9,
     "minimum_version_minor": 55,
     "minimum_version_revision": 0,
     "block_index": 423888,
     "testnet_block_index": 0
   },
-	"first_input_is_source": {
+    "first_input_is_source": {
     "minimum_version_major": 9,
     "minimum_version_minor": 55,
     "minimum_version_revision": 0,
     "block_index": 423888,
     "testnet_block_index": 0
   },
-	"broadcast_pack_text": {
+    "broadcast_pack_text": {
     "minimum_version_major": 9,
     "minimum_version_minor": 55,
     "minimum_version_revision": 0,
@@ -225,8 +225,8 @@
   },
   "sweep_send": {
       "minimum_version_major": 9,
-      "minimum_version_minor": 5700,
-      "minimum_version_revision": 0,
+      "minimum_version_minor": 5804,
+      "minimum_version_revision": 1,
       "block_index": 2145000,
       "testnet_block_index": 960000
   },
