@@ -528,6 +528,9 @@ def parse (db, tx, message, message_type_id):
     issuance_parse_cursor.close()
 
 def is_vendable(db, asset):
+    if asset == config.XCP:
+        return True # Always vendable.
+
     asset = util.resolve_subasset_longname(db, asset)
     cursor = db.cursor()
     issuances = list(cursor.execute('''SELECT vendable, reassignable, listed FROM issuances \
