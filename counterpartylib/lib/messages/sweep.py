@@ -56,6 +56,9 @@ def initialise(db):
 def validate (db, source, destination, flags, memo_bytes, block_index):
     problems = []
 
+    if not util.enabled('sweep_send'):
+        problems.append('not activated yet.')
+
     if source == destination:
         problems.append('destination cannot be the same as source')
 

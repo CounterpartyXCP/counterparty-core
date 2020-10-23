@@ -82,6 +82,9 @@ def validate (db, source, asset_, give_quantity, escrow_quantity, mainchainrate,
     order_match = None
     asset_id = None
 
+    if not util.enabled('dispensers'):
+        problems.append('not activated yet.')
+
     if asset_ == config.BTC:
         problems.append('cannot dispense %s' % config.BTC)
         return None, problems
