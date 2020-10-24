@@ -54,7 +54,7 @@ def initialise(db):
                    ''')
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS dispenses(
-                      tx_index,
+                      tx_index INTEGER,
                       tx_hash TEXT,
                       block_index INTEGER,
                       source TEXT,
@@ -64,9 +64,13 @@ def initialise(db):
                       remaining INTEGER,
                       actually_given INTEGER,
                       satoshirate INTEGER,
+                      dispenser_tx_hash TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
-                      # Disallows invalids: FOREIGN KEY (order_match_id) REFERENCES order_matches(id))
+    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(dispenses)''')]
+    if 'dispenser_tx_hash' not in columns:
+        cursor.execute('''ALTER TABLE dispenses ADD COLUMN dispenser_tx_hash TEXT''')
+
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       source_idx ON dispenses (source)
                    ''')
@@ -289,7 +293,8 @@ def dispense(db, tx):
             "must_give": must_give,
             "remaining": remaining,
             "actually_given": actually_given,
-            "satoshirate": dispenser['satoshirate']
+            "satoshirate": dispenser['satoshirate'],
+            "dispenser_tx_hash": dispenser['tx_hash']
         })
         dispenser['give_remaining'] = give_remaining
         if give_remaining < dispenser['give_quantity']:
@@ -306,6 +311,6 @@ def dispense(db, tx):
                 WHERE source=:source AND asset=:asset AND satoshirate=:satoshirate AND give_quantity=:give_quantity AND status=:prev_status', dispenser)
 
     for log in dispense_logs:
-        cursor.execute('INSERT INTO DISPENSES VALUES (:tx_index, :tx_hash, :block_index, :source, :destination,  :asset, :must_give, :remaining, :actually_given, :satoshirate)', log)
+        cursor.execute('INSERT INTO DISPENSES VALUES (:tx_index, :tx_hash, :block_index, :source, :destination,  :asset, :must_give, :remaining, :actually_given, :satoshirate, :dispenser_tx_hash)', log)
 
     cursor.close()
