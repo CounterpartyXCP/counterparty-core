@@ -1044,7 +1044,6 @@ def reparse(db, block_index=None, quiet=False):
     if not block_index:
         database.vacuum(db)
 
-
 def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=None):
     assert type(tx_hash) == str
     cursor = db.cursor()
@@ -1057,7 +1056,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
 
     # Get the important details about each transaction.
     if tx_hex is None:
-        tx_hex = backend.getrawtransaction(tx_hash)
+        tx_hex = backend.getrawtransaction(tx_hash) # TODO: This is the call that is stalling the process the most
     source, destination, btc_amount, fee, data, decoded_tx = get_tx_info(tx_hex)
 
     if not source and decoded_tx and util.enabled('dispensers', block_index):
@@ -1310,7 +1309,6 @@ def follow(db):
                     break
 
                 logger.debug('Checking that block {} is not an orphan.'.format(current_index))
-
                 # Backend parent hash.
                 current_hash = backend.getblockhash(current_index)
                 current_cblock = backend.getblock(current_hash)
@@ -1400,6 +1398,7 @@ def follow(db):
             block_index += 1
 
         else:
+            # TODO: add zeromq support here to await TXs and Blocks instead of constantly polling
             # Get old mempool.
             old_mempool = list(cursor.execute('''SELECT * FROM mempool'''))
             old_mempool_hashes = [message['tx_hash'] for message in old_mempool]
@@ -1414,6 +1413,12 @@ def follow(db):
 
             xcp_mempool = []
             raw_mempool = backend.getrawmempool()
+
+            # this is a quick fix to make counterparty usable on high mempool situations
+            # however, this makes the mempool unreliable on counterparty, a better, larger
+            # fix must be done by changing this whole function into a zmq driven loop
+            if len(raw_mempool) > config.MEMPOOL_TXCOUNT_UPDATE_LIMIT:
+                continue
 
             # For each transaction in Bitcoin Core mempool, if it’s new, create
             # a fake block, a fake transaction, capture the generated messages,
@@ -1443,7 +1448,7 @@ def follow(db):
             #  - or was there a double spend for w/e reason accepted into the mempool (replace-by-fee?)
             try:
                 raw_transactions = backend.getrawtransaction_batch(parse_txs)
-            except backend.indexd.BackendRPCError as e:
+            except Exception as e:
                 logger.warning('Failed to fetch raw for mempool TXs, restarting loop; %s', (e, ))
                 continue  # restart the follow loop
 
@@ -1492,7 +1497,7 @@ def follow(db):
                         # Rollback.
                         raise MempoolError
                 except exceptions.ParseTransactionError as e:
-                    logger.warn('ParseTransactionError for tx %s: %s' % (tx['tx_hash'], e))
+                    logger.warn('ParseTransactionError for tx %s: %s' % (tx_hash, e))
                 except MempoolError:
                     pass
 

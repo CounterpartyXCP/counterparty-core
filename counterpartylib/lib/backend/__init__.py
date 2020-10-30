@@ -16,7 +16,7 @@ from counterpartylib.lib import script
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 
-from counterpartylib.lib.backend import indexd
+from counterpartylib.lib.backend import addrindexrs
 
 MEMPOOL_CACHE_INITIALIZED = False
 
@@ -38,7 +38,12 @@ def sortkeypicker(keynames):
     return getit
 
 def BACKEND():
-    return sys.modules['counterpartylib.lib.backend.{}'.format(config.BACKEND_NAME)]
+    mdl = sys.modules['counterpartylib.lib.backend.{}'.format(config.BACKEND_NAME)]
+    mdl.init()
+    return mdl
+
+def stop():
+    BACKEND().stop()
 
 def getblockcount():
     return BACKEND().getblockcount()
@@ -258,7 +263,7 @@ def init_mempool_cache():
     if max_remaining_num_tx:
         for txid in mempool_tx:
             tx = mempool_tx[txid]
-            vin_txhash_list += [vin['txid'] for vin in tx['vin']]
+            vin_txhash_list += [vin['txid'] for vin in tx['vin'] if not(tx is None)]
         BACKEND().getrawtransaction_batch(vin_txhash_list[:max_remaining_num_tx], skip_missing=True, verbose=True)
 
     MEMPOOL_CACHE_INITIALIZED = True

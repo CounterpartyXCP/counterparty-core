@@ -434,6 +434,9 @@ def parse (db, tx, message):
 
         if util.enabled('btc_order_minimum'):
             min_btc_quantity = 0.001 * config.UNIT  # 0.001 BTC
+            if util.enabled('btc_order_minimum_adjustment_1'):
+                min_btc_quantity = 0.00001 * config.UNIT  # 0.00001 BTC
+
             if (give_asset == config.BTC and give_quantity < min_btc_quantity) or (get_asset == config.BTC and get_quantity < min_btc_quantity):
                 if problems:
                     status += '; btc order below minimum'

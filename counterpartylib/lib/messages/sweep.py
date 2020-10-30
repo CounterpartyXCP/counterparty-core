@@ -152,6 +152,7 @@ def parse (db, tx, message):
         problems = validate(db, tx['source'], destination, flags, memo_bytes, tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
 
+    if status == 'valid':
         try:
             util.debit(db, tx['source'], 'XCP', fee_paid, action='sweep fee', event=tx['tx_hash'])
         except BalanceError:
