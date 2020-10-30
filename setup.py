@@ -38,7 +38,7 @@ required_packages = [
     'prettytable==0.7.2',
     'colorlog==2.7.0',
     'python-dateutil==2.5.3',
-    'requests==2.10.0',
+    'requests>=2.20.0',
     'counterparty-lib'
 ]
 
