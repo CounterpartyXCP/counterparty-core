@@ -1490,7 +1490,7 @@ def follow(db):
                         # Rollback.
                         raise MempoolError
                 except exceptions.ParseTransactionError as e:
-                    logger.warn('ParseTransactionError for tx %s: %s' % (tx['tx_hash'], e))
+                    logger.warn('ParseTransactionError for tx %s: %s' % (tx_hash, e))
                 except MempoolError:
                     pass
 
