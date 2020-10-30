@@ -52,7 +52,7 @@ def initialise(db):
     if 'asset_longname' not in columns:
         cursor.execute('''ALTER TABLE issuances ADD COLUMN asset_longname TEXT''')
 
-    # If sweep_hotifx activated, Create issuances copy, copy old data, drop old table, rename new table, recreate indexes
+    # If sweep_hotfix activated, Create issuances copy, copy old data, drop old table, rename new table, recreate indexes
     #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS` nor can drop UNIQUE constraints
     if 'msg_index' not in columns:
             cursor.execute('''CREATE TABLE IF NOT EXISTS new_issuances(
