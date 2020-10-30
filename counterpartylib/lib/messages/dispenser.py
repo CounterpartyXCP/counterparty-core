@@ -261,6 +261,10 @@ def dispense(db, tx):
 
         assert give_remaining >= 0
 
+        # Skip dispense if quantity is 0
+        if util.enabled('zero_quantity_value_adjustment_1') and actually_given==0:
+            continue
+
         util.credit(db, tx['source'], dispenser['asset'], actually_given, action='dispense', event=tx['tx_hash'])
 
         dispenser['give_remaining'] = give_remaining
