@@ -136,5 +136,6 @@ ADDRESS_OPTION_MAX_VALUE = ADDRESS_OPTION_REQUIRE_MEMO # Or list of all the addr
 OLD_STYLE_API = True
 
 API_LIMIT_ROWS = 1000
+MEMPOOL_TXCOUNT_UPDATE_LIMIT=60000
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

@@ -1398,6 +1398,7 @@ def follow(db):
             block_index += 1
 
         else:
+            # TODO: add zeromq support here to await TXs and Blocks instead of constantly polling
             # Get old mempool.
             old_mempool = list(cursor.execute('''SELECT * FROM mempool'''))
             old_mempool_hashes = [message['tx_hash'] for message in old_mempool]
@@ -1412,6 +1413,12 @@ def follow(db):
 
             xcp_mempool = []
             raw_mempool = backend.getrawmempool()
+
+            # this is a quick fix to make counterparty usable on high mempool situations
+            # however, this makes the mempool unreliable on counterparty, a better, larger
+            # fix must be done by changing this whole function into a zmq driven loop
+            if len(raw_mempool) > config.MEMPOOL_TXCOUNT_UPDATE_LIMIT:
+                continue
 
             # For each transaction in Bitcoin Core mempool, if it’s new, create
             # a fake block, a fake transaction, capture the generated messages,
