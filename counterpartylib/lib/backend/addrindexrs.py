@@ -309,9 +309,11 @@ class AddrIndexRsThread (threading.Thread):
                     self.message_to_send = None
                     try:
                         data = self.sock.recv(READ_BUF_SIZE)
-                        self.message_result = json.loads(data)
+                        self.message_result = json.loads(data.decode('utf-8'))
                         retry_count = 0
                     except Exception as e:
+                        logging.warning("Got an exception parsing addrindexrs data")
+                        logging.warning(e)
                         self.message_result = None
                         retry_count -= 1
                     finally:
@@ -352,8 +354,8 @@ def _script_pubkey_to_hash(spk):
 
 def _address_to_hash(addr):
     pk = address.address_scriptpubkey(addr)
-    if pk[0:3] ==  b'\x76\xa9\x14':
-        pk = b''.join([pk[0:3], pk[4:-6], pk[-2:]])
+    #if pk[0:3] ==  b'\x76\xa9\x14':
+    #    pk = b''.join([pk[0:3], pk[4:-6], pk[-2:]])
 
     return _script_pubkey_to_hash(pk)
 

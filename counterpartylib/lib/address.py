@@ -9,7 +9,7 @@ def address_scriptpubkey(address):
         bech32 = bitcoin.bech32.CBech32Data(address)
         return b''.join([b'\x00\x14', bech32.to_bytes()])
     except Exception as e:
-        bs58 = bitcoin.base58.decode(address)
+        bs58 = bitcoin.base58.decode(address)[1:-4]
         return b''.join([b'\x76\xa9\x14', bs58, b'\x88\xac'])
 
 def pack(address):
