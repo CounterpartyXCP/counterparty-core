@@ -469,7 +469,8 @@ UNITTEST_VECTOR = {
             },
             {
                 'in': ('0100000001aee668de98ef5f37d4962b620b0ec3deed8bbd4c2fb8ddedaf36c2e8ca5e51a7060000001976a914f3a6b6e4a093e5a5b9da76977a5270fd4d62553e88acffffffff04781e000000000000695121027c6a5e4412be80b5ccd5aa0ea685a21e7a577a5e390d138288841d06514b47992103b00007171817fb044e8a5464e3e274210dd64cf68cca9ea9c3e06df384aae6b22103d928d7d5bbe6f435da935ed382a0061c4a22bdc9b60a2ce6deb7d0f134d22eef53ae781e000000000000695121037c6a5e4412be80b5cc13bde2d9b04fd2cd1fc7ff664c0d3b6d8133163857b08f2103bb6fba40bee91bb02b54835b32f14b9e04016bfa34411ec64f09e3a9586efd5d2103d928d7d5bbe6f435da935ed382a0061c4a22bdc9b60a2ce6deb7d0f134d22eef53ae781e00000000000069512102696a5e4412be80b5ccd6aa0ac9a95e43ca49a21d40f762fadc1aab1c25909fb02102176c68252c6b855d7967aee372f14b772c963b2aa0411ec64f09e3a951eefd3e2103d928d7d5bbe6f435da935ed382a0061c4a22bdc9b60a2ce6deb7d0f134d22eef53aea8d37700000000001976a914f3a6b6e4a093e5a5b9da76977a5270fd4d62553e88ac00000000',),
-                'out': (0,)
+                'error': (exceptions.BTCOnlyError, "no data and not unspendable")
+                #'out': (0,)
             }
         ]
     },
@@ -3065,23 +3066,23 @@ UNITTEST_VECTOR = {
         'compose': [
             {
                 'in': (ADDR[6], ADDR[5], 1, None),
-                'out': ('mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42', [], b'\x00\x00\x00\x03o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x01')
+                'out': ('mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42', [], b'\x00\x00\x00\x04o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x01')
             },
             {
                 'in': (ADDR[6], ADDR[5], 2, None),
-                'out': ('mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42', [], b'\x00\x00\x00\x03o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x02')
+                'out': ('mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42', [], b'\x00\x00\x00\x04o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x02')
             },
             {
                 'in': (ADDR[6], ADDR[5], 3, None),
-                'out': ('mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42', [], b'\x00\x00\x00\x03o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x03')
+                'out': ('mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42', [], b'\x00\x00\x00\x04o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x03')
             },
             {
                 'in': (ADDR[6], ADDR[5], 3, 'test'),
-                'out': ('mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42', [], b'\x00\x00\x00\x03o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x03test')
+                'out': ('mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42', [], b'\x00\x00\x00\x04o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x03test')
             },
             {
                 'in': (ADDR[6], ADDR[5], 7, 'cafebabe'),
-                'out': ('mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42', [], b'\x00\x00\x00\x03o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x07\xca\xfe\xba\xbe')
+                'out': ('mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42', [], b'\x00\x00\x00\x04o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x07\xca\xfe\xba\xbe')
             },
             {
                 'in': (ADDR[8], ADDR[5], 1, None),
@@ -3222,35 +3223,35 @@ UNITTEST_VECTOR = {
     'dispenser': {
         'validate': [
             {
-                'in': (ADDR[0], config.XCP, 100, 100, 100, 0, DP['burn_start']),
+                'in': (ADDR[0], config.XCP, 100, 100, 100, 0, None, DP['burn_start']),
                 'out': (1, None)
             },
             {
-                'in': (ADDR[0], config.XCP, 200, 100, 100, 0, DP['burn_start']),
+                'in': (ADDR[0], config.XCP, 200, 100, 100, 0, None, DP['burn_start']),
                 'out': (None, ['escrow_quantity must be greater or equal than give_quantity'])
             },
             {
-                'in': (ADDR[0], config.BTC, 100, 100, 100, 0, DP['burn_start']),
+                'in': (ADDR[0], config.BTC, 100, 100, 100, 0, None, DP['burn_start']),
                 'out': (None, ['cannot dispense %s' % config.BTC])
             },
             {
-                'in': (ADDR[0], config.XCP, 100, 100, 100, 5, DP['burn_start']),
+                'in': (ADDR[0], config.XCP, 100, 100, 100, 5, None, DP['burn_start']),
                 'out': (None, ['invalid status 5'])
             },
             {
-                'in': (ADDR[0], 'PARENT', 100, 1000000000, 100, 0, DP['burn_start']),
+                'in': (ADDR[0], 'PARENT', 100, 1000000000, 100, 0, None, DP['burn_start']),
                 'out': (None, ["address doesn't has enough balance of PARENT (100000000 < 1000000000)"])
             },
             {
-                'in': (ADDR[5], config.XCP, 100, 100, 120, 0, DP['burn_start']),
+                'in': (ADDR[5], config.XCP, 100, 100, 120, 0, None, DP['burn_start']),
                 'out': (None, ['address has a dispenser already opened for asset %s with a different mainchainrate' % config.XCP])
             },
             {
-                'in': (ADDR[5], config.XCP, 120, 120, 100, 0, DP['burn_start']),
+                'in': (ADDR[5], config.XCP, 120, 120, 100, 0, None, DP['burn_start']),
                 'out': (None, ['address has a dispenser already opened for asset %s with a different give_quantity' % config.XCP])
             },
             {
-                'in': (ADDR[0], 'PARENT', 0, 0, 0, 10, DP['burn_start']),
+                'in': (ADDR[0], 'PARENT', 0, 0, 0, 10, None, DP['burn_start']),
                 'out': (None, ['address doesnt has an open dispenser for asset PARENT'])
             }
         ],
@@ -5055,6 +5056,10 @@ UNITTEST_VECTOR = {
         },{
             'in': (bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e100000300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e10000'), DP['default_block_index']),
             'out': ({'DIVISIBLE': [(ADDR[1], DP['quantity'])], 'XCP': [(ADDR[2], DP['quantity'])]})
+        },{
+            # Test derived from block 618232 on BTC mainnet
+            'in': (bytes.fromhex('0004002e9943921a473dee1e04a579c1762ff6e9ac34e4006c7beeb1af092be778a2c0b8df639f2f8e9c987600a9055398b92818794b38b15794096f752167e25f00f3a6b6e4a093e5a5b9da76977a5270fd4d62553e40000091f59f36daf0000000271d94900180000004e3b29200200000009c76524002000000138eca4800806203d0c908232420000000000000000b000000000000000140024a67f0f279952000000000000000058000000000000000a00000000000000014000000908a3200cb000000000000000058000000000000000a000000000000000120000000000000002075410426156245525daa71f2e84a40797bcf28099a2c508662a8a33324a703597b9aa2661a79a82ffb4caaa9b15f4094622fbfa85f8b9dc7381f991f5a265421391cc3ad0075740087'), DP['default_block_index']),
+            'out': ({'MAFIACASH': [('15FPgnpZuNyZLVLsyB6UdFicsVvWFJXNve', 42000000000), ('1PDJv8u8zw4Fgqr4uCb2yim9fgTs5zfM4s', 42000000000), ('1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD', 42000000000), ('1AtcSh7uxenQ6AR5xqr6agAegWRUF5N4uh', 42000000000)], 'PAWNTHELAMBO': [('15FPgnpZuNyZLVLsyB6UdFicsVvWFJXNve', 1), ('1PDJv8u8zw4Fgqr4uCb2yim9fgTs5zfM4s', 1)], 'SHADILOUNGE': [('15FPgnpZuNyZLVLsyB6UdFicsVvWFJXNve', 1), ('1PDJv8u8zw4Fgqr4uCb2yim9fgTs5zfM4s', 1), ('1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD', 1)], 'TIKIPEPE': [('15FPgnpZuNyZLVLsyB6UdFicsVvWFJXNve', 1), ('1PDJv8u8zw4Fgqr4uCb2yim9fgTs5zfM4s', 1), ('1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD', 1), ('1AtcSh7uxenQ6AR5xqr6agAegWRUF5N4uh', 1)]})
         }],
         'validate': [{
             'in': (ADDR[0], [], 1),
