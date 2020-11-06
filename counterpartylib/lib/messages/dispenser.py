@@ -157,20 +157,23 @@ def parse (db, tx, message):
 
             if len(existing) == 0:
                 # Create the new dispenser
-                if dispenser_status == STATUS_OPEN_EMPTY_ADDRESS:
-                    cursor.execute('SELECT count(*) cnt FROM balances WHERE address=:address AND quantity > 0', {
-                        'address': action_address
-                    })
-                    counts = cursor.fetchall()[0]
+                try:
+                    if dispenser_status == STATUS_OPEN_EMPTY_ADDRESS:
+                        cursor.execute('SELECT count(*) cnt FROM balances WHERE address=:address AND quantity > 0', {
+                            'address': action_address
+                        })
+                        counts = cursor.fetchall()[0]
 
-                    if counts['cnt'] == 0:
-                        util.debit(db, tx['source'], asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
-                        util.credit(db, action_address, asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
-                        util.debit(db, action_address, asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
+                        if counts['cnt'] == 0:
+                            util.debit(db, tx['source'], asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
+                            util.credit(db, action_address, asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
+                            util.debit(db, action_address, asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
+                        else:
+                            status = 'invalid: address not empty'
                     else:
-                        status = 'invalid: address not empty'
-                else:
-                    util.debit(db, tx['source'], asset, escrow_quantity, action='open dispenser', event=tx['tx_hash'])
+                        util.debit(db, tx['source'], asset, escrow_quantity, action='open dispenser', event=tx['tx_hash'])
+                except exceptions.DebitError as e:
+                    status = 'invalid: inssuficient funds'
 
                 if status == 'valid':
                     bindings = {
@@ -264,7 +267,7 @@ def dispense(db, tx):
             give_remaining = dispenser['give_remaining'] - actually_given
 
             assert give_remaining >= 0
-            
+
             # Skip dispense if quantity is 0
             if util.enabled('zero_quantity_value_adjustment_1') and actually_given==0:
                 continue
