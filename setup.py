@@ -13,7 +13,7 @@ import shutil
 from counterpartylib.lib import config
 
 CURRENT_VERSION = config.VERSION_STRING
-APSW_VERSION = "3.24.0-r1"
+APSW_VERSION = "3.33.0-r1"
 APSW_SHORT_VERSION = APSW_VERSION.replace('-r1', '')
 
 # NOTE: Why we don’t use the the PyPi package:
