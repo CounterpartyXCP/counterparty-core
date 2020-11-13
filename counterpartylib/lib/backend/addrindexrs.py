@@ -307,6 +307,7 @@ class AddrIndexRsThread (threading.Thread):
                                 logging.debug('AddrIndexRs fatal error:' + e2)
 
                     self.message_to_send = None
+                    data = ""
                     try:
                         data = self.sock.recv(READ_BUF_SIZE)
                         self.message_result = json.loads(data.decode('utf-8'))
@@ -314,6 +315,7 @@ class AddrIndexRsThread (threading.Thread):
                     except Exception as e:
                         logging.warning("Got an exception parsing addrindexrs data")
                         logging.warning(e)
+                        logging.warning(data.decode('utf-8'))
                         self.message_result = None
                         retry_count -= 1
                     finally:
@@ -374,11 +376,12 @@ def unpack_outpoint(outpoint):
     return (txid, int(vout))
 
 def unpack_vout(outpoint, tx, block_count):
-    print(tx)
     vout = tx["vout"][outpoint[1]]
     height = -1
     if "confirmations" in tx and tx["confirmations"] > 0:
         height = block_count - tx["confirmations"] + 1
+    else:
+        tx["confirmations"] = 0
 
     return {
         "txId": tx["txid"],
@@ -395,14 +398,19 @@ def get_unspent_txouts(source):
     result = _backend.send({
         "method": "blockchain.scripthash.get_utxos",
         "params": [_address_to_hash(source)]
-    })["result"]
-    result = [unpack_outpoint(x) for x in result]
-    # each item on the result array is like
-    # {"tx_hash": hex_encoded_hash}
-    batch = getrawtransaction_batch([x[0] for x in result], verbose=True, skip_missing=True)
-    batch = [unpack_vout(outpoint, batch[outpoint[0]], block_count) for outpoint in result]
+    })
 
-    return batch
+    if not(result is None) and "result" in result:
+        result = result["result"]
+        result = [unpack_outpoint(x) for x in result]
+        # each item on the result array is like
+        # {"tx_hash": hex_encoded_hash}
+        batch = getrawtransaction_batch([x[0] for x in result], verbose=True, skip_missing=True)
+        batch = [unpack_vout(outpoint, batch[outpoint[0]], block_count) for outpoint in result]
+
+        return batch
+    else:
+        return []
 
 # Returns transactions in the following format
 # {

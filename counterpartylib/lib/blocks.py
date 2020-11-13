@@ -460,7 +460,7 @@ def initialise(db):
 
     cursor.close()
 
-def get_tx_info(tx_hex, block_parser=None, block_index=None):
+def get_tx_info(tx_hex, block_parser=None, block_index=None, db=None):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
     try:
         return _get_tx_info(tx_hex, block_parser, block_index)
@@ -470,13 +470,13 @@ def get_tx_info(tx_hex, block_parser=None, block_index=None):
         # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
         if util.enabled('dispensers', block_index):
             try:
-                return b'', None, None, None, None, _get_swap_tx(e.decodedTx, block_parser, block_index)
+                return b'', None, None, None, None, _get_swap_tx(e.decodedTx, block_parser, block_index, db=db)
             except: # (DecodeError, backend.indexd.BackendRPCError) as e:
                 return b'', None, None, None, None, None
         else:
             return b'', None, None, None, None, None
 
-def _get_swap_tx(decoded_tx, block_parser=None, block_index=None):
+def _get_swap_tx(decoded_tx, block_parser=None, block_index=None, db=None):
     def get_pubkeyhash(scriptpubkey):
         asm = script.get_asm(scriptpubkey)
         if len(asm) != 5 or asm[0] != 'OP_DUP' or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':
@@ -496,12 +496,14 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None):
         return address
 
     outputs = []
+    check_sources = db == None # If we didn't get passed a database cursor, assume we have to check for dispenser
     for vout in decoded_tx.vout:
         address = get_address(vout.scriptPubKey)
+        destination = None
+        btc_amount = None
         if address:
             destination = address
             btc_amount = vout.nValue
-            outputs.append((destination, btc_amount))
         elif util.enabled('hotfix_dispensers_with_non_p2pkh'):
             asm = script.get_asm(vout.scriptPubKey)
             if asm[-1] == 'OP_CHECKSIG':
@@ -519,48 +521,53 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None):
                 logger.error('unrecognised scriptPubkey. Just ignore this: ' + str(asm))
 
             if destination and not new_data:
-                outputs.append((destination, vout.nValue))
+                amount = vout.nValue
             else:
                 logger.error('cannot parse destination address or new_data found: ' + str(asm))
+
+        if db != None and dispenser.is_dispensable(db, destination, btc_amount):
+            check_sources = True
+            outputs.append((destination, btc_amount))
 
     # Collect all (unique) source addresses.
     #   if we haven't found them yet
     sources = []
-    for vin in decoded_tx.vin[:]:                   # Loop through inputs.
-        # Get the full transaction data for this input transaction.
-        if block_parser:
-            vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
-            vin_ctx = backend.deserialize(vin_tx['__data__'])
-        else:
-            vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash))
-            vin_ctx = backend.deserialize(vin_tx)
-        vout = vin_ctx.vout[vin.prevout.n]
+    if check_sources:
+        for vin in decoded_tx.vin[:]:                   # Loop through inputs.
+            if block_parser:
+                vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
+                vin_ctx = backend.deserialize(vin_tx['__data__'])
+            else:
+                vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash)) # TODO: Biggest penalty on parsing is here
+                vin_ctx = backend.deserialize(vin_tx)
+            vout = vin_ctx.vout[vin.prevout.n]
 
-        asm = script.get_asm(vout.scriptPubKey)
-        if asm[-1] == 'OP_CHECKSIG':
-            new_source, new_data = decode_checksig(asm, decoded_tx)
-            if new_data or not new_source:
-                raise DecodeError('data in source')
-        elif asm[-1] == 'OP_CHECKMULTISIG':
-            new_source, new_data = decode_checkmultisig(asm, decoded_tx)
-            if new_data or not new_source:
-                raise DecodeError('data in source')
-        elif asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
-            new_source, new_data = decode_scripthash(asm)
-            if new_data or not new_source:
-                raise DecodeError('data in source')
-        elif util.enabled('segwit_support') and asm[0] == 0:
-            # Segwit output
-            new_source, new_data = decode_p2w(vout.scriptPubKey)
-        else:
-            raise DecodeError('unrecognised source type')
+            asm = script.get_asm(vout.scriptPubKey)
+            if asm[-1] == 'OP_CHECKSIG':
+                new_source, new_data = decode_checksig(asm, decoded_tx)
+                if new_data or not new_source:
+                    raise DecodeError('data in source')
+            elif asm[-1] == 'OP_CHECKMULTISIG':
+                new_source, new_data = decode_checkmultisig(asm, decoded_tx)
+                if new_data or not new_source:
+                    raise DecodeError('data in source')
+            elif asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
+                new_source, new_data = decode_scripthash(asm)
+                if new_data or not new_source:
+                    raise DecodeError('data in source')
+            elif util.enabled('segwit_support') and asm[0] == 0:
+                # Segwit output
+                # Get the full transaction data for this input transaction.
+                new_source, new_data = decode_p2w(vout.scriptPubKey)
+            else:
+                raise DecodeError('unrecognised source type')
 
-        # old; append to sources, results in invalid addresses
-        # new; first found source is source, the rest can be anything (to fund the TX for example)
-        if not (util.enabled('first_input_is_source') and len(sources)):
-            # Collect unique sources.
-            if new_source not in sources:
-                sources.append(new_source)
+            # old; append to sources, results in invalid addresses
+            # new; first found source is source, the rest can be anything (to fund the TX for example)
+            if not (util.enabled('first_input_is_source') and len(sources)):
+                # Collect unique sources.
+                if new_source not in sources:
+                    sources.append(new_source)
 
     return (sources, outputs)
 
@@ -771,6 +778,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
 
     # Get destinations and data outputs.
     destinations, btc_amount, fee, data = [], 0, 0, b''
+
     for vout in ctx.vout:
         # Fee is the input values minus output values.
         output_value = vout.nValue
@@ -1077,7 +1085,8 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
     # Get the important details about each transaction.
     if tx_hex is None:
         tx_hex = backend.getrawtransaction(tx_hash) # TODO: This is the call that is stalling the process the most
-    source, destination, btc_amount, fee, data, decoded_tx = get_tx_info(tx_hex)
+
+    source, destination, btc_amount, fee, data, decoded_tx = get_tx_info(tx_hex, db=db)
 
     if not source and decoded_tx and util.enabled('dispensers', block_index):
         outputs = decoded_tx[1]
@@ -1305,7 +1314,6 @@ def follow(db):
     # processing of the new blocks a bit.
     while True:
         start_time = time.time()
-
         # Get block count.
         # If the backend is unreachable and `config.FORCE` is set, just sleep
         # and try again repeatedly.
@@ -1321,50 +1329,52 @@ def follow(db):
         # Get new blocks.
         if block_index <= block_count:
 
-            # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
             current_index = block_index
-            requires_rollback = False
-            while True:
-                if current_index == config.BLOCK_FIRST:
-                    break
+            # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
+            if block_count - block_index < 100: # Undolog only saves last 100 blocks, if there's a reorg deeper than that manual reparse should be done
+                requires_rollback = False
+                while True:
+                    if current_index == config.BLOCK_FIRST:
+                        break
 
-                logger.debug('Checking that block {} is not an orphan.'.format(current_index))
-                # Backend parent hash.
-                current_hash = backend.getblockhash(current_index)
-                current_cblock = backend.getblock(current_hash)
-                backend_parent = bitcoinlib.core.b2lx(current_cblock.hashPrevBlock)
+                    logger.debug('Checking that block {} is not an orphan.'.format(current_index))
+                    # Backend parent hash.
+                    current_hash = backend.getblockhash(current_index)
+                    current_cblock = backend.getblock(current_hash)
+                    backend_parent = bitcoinlib.core.b2lx(current_cblock.hashPrevBlock)
 
-                # DB parent hash.
-                blocks = list(cursor.execute('''SELECT * FROM blocks
-                                                WHERE block_index = ?''', (current_index - 1,)))
-                if len(blocks) != 1:  # For empty DB.
-                    break
-                db_parent = blocks[0]['block_hash']
+                    # DB parent hash.
+                    blocks = list(cursor.execute('''SELECT * FROM blocks
+                                                    WHERE block_index = ?''', (current_index - 1,)))
+                    if len(blocks) != 1:  # For empty DB.
+                        break
+                    db_parent = blocks[0]['block_hash']
 
-                # Compare.
-                assert type(db_parent) == str
-                assert type(backend_parent) == str
-                if db_parent == backend_parent:
-                    break
-                else:
-                    current_index -= 1
-                    requires_rollback = True
+                    # Compare.
+                    assert type(db_parent) == str
+                    assert type(backend_parent) == str
+                    if db_parent == backend_parent:
+                        break
+                    else:
+                        current_index -= 1
+                        requires_rollback = True
 
-            # Rollback for reorganisation.
-            if requires_rollback:
-                # Record reorganisation.
-                logger.warning('Blockchain reorganisation at block {}.'.format(current_index))
-                log.message(db, block_index, 'reorg', None, {'block_index': current_index})
+                # Rollback for reorganisation.
+                if requires_rollback:
+                    # Record reorganisation.
+                    logger.warning('Blockchain reorganisation at block {}.'.format(current_index))
+                    log.message(db, block_index, 'reorg', None, {'block_index': current_index})
 
-                # Rollback the DB.
-                reparse(db, block_index=current_index-1, quiet=True)
-                block_index = current_index
-                tx_index = get_next_tx_index(db)
-                continue
+                    # Rollback the DB.
+                    reparse(db, block_index=current_index-1, quiet=True)
+                    block_index = current_index
+                    tx_index = get_next_tx_index(db)
+                    continue
 
             # Check version. (Don’t add any blocks to the database while
             # running an out‐of‐date client!)
             check.software_version()
+
 
             # Get and parse transactions in this block (atomically).
             block_hash = backend.getblockhash(current_index)
