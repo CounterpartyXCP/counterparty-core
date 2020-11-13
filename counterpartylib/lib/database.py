@@ -84,6 +84,10 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
         db = apsw.Connection(config.DATABASE)
     cursor = db.cursor()
 
+    # For backward compatibility.
+    if not read_only:
+        cursor.execute('''PRAGMA legacy_alter_table=ON''')
+
     # For integrity, security.
     if foreign_keys and not read_only:
         # logger.debug('Checking database foreign keys.')
