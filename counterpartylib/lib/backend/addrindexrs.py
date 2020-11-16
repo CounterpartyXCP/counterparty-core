@@ -16,8 +16,8 @@ import signal
 
 from counterpartylib.lib import config, util, address
 
-READ_BUF_SIZE = 4096
-SOCKET_TIMEOUT = 45.0
+READ_BUF_SIZE = 65536
+SOCKET_TIMEOUT = 5.0
 BACKEND_PING_TIME = 30.0
 
 raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)  # used in getrawtransaction_batch()
@@ -291,7 +291,7 @@ class AddrIndexRsThread (threading.Thread):
             if not(self.is_killed) and self.message_to_send != None:
                 msg = self.message_to_send
                 self.message_to_send = None
-                retry_count = 5
+                retry_count = 15
                 while retry_count > 0:
                     has_sent = False
                     while not(has_sent) and msg:
@@ -307,19 +307,22 @@ class AddrIndexRsThread (threading.Thread):
                                 logging.debug('AddrIndexRs fatal error:' + e2)
 
                     self.message_to_send = None
-                    data = ""
-                    try:
-                        data = self.sock.recv(READ_BUF_SIZE)
-                        self.message_result = json.loads(data.decode('utf-8'))
-                        retry_count = 0
-                    except Exception as e:
-                        logging.warning("Got an exception parsing addrindexrs data")
-                        logging.warning(e)
-                        logging.warning(data.decode('utf-8'))
-                        self.message_result = None
-                        retry_count -= 1
-                    finally:
-                        self.locker.notify()
+                    data = b""
+                    parsed = False
+                    while not(parsed):
+                        try:
+                            data = data + self.sock.recv(READ_BUF_SIZE)
+                            self.message_result = json.loads(data.decode('utf-8'))
+                            retry_count = 0
+                            parsed = True
+                        except Exception as e:
+                            logging.warning("Got an exception parsing addrindexrs data")
+                            logging.warning(e)
+                            logging.warning(data.decode('utf-8'))
+                            self.message_result = None
+                            retry_count -= 1
+                        finally:
+                            self.locker.notify()
             else:
                 self.locker.notify()
         self.sock.close()
