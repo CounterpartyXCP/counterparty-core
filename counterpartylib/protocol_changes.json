@@ -192,22 +192,22 @@
       "minimum_version_major": 9,
       "minimum_version_minor": 57,
       "minimum_version_revision": 0,
-      "block_index": 1000000,
-      "testnet_block_index": 2000000
+      "block_index": 585538,
+      "testnet_block_index": 1569194
   },
   "sweep_send": {
       "minimum_version_major": 9,
       "minimum_version_minor": 57,
       "minimum_version_revision": 0,
-      "block_index": 600609,
-      "testnet_block_index": 1518300
+      "block_index": 585538,
+      "testnet_block_index": 1569194
   },
   "dispensers": {
       "minimum_version_major": 9,
       "minimum_version_minor": 57,
       "minimum_version_revision": 0,
-      "block_index": 600609,
-      "testnet_block_index": 1518300
+      "block_index": 585538,
+      "testnet_block_index": 1569194
   },
   "mpma_sends": {
     "minimum_version_major": 9,

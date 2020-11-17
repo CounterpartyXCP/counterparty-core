@@ -1039,6 +1039,17 @@ CREATE TRIGGER _dispensers_update AFTER UPDATE ON dispensers BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE dispensers SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',asset='||quote(old.asset)||',give_quantity='||quote(old.give_quantity)||',escrow_quantity='||quote(old.escrow_quantity)||',satoshirate='||quote(old.satoshirate)||',status='||quote(old.status)||',give_remaining='||quote(old.give_remaining)||' WHERE rowid='||old.rowid);
                             END;
 
+-- Table  dispenses
+DROP TABLE IF EXISTS dispenses;
+CREATE TABLE dispenses(
+                      tx_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      destination TEXT,
+                      asset TEXT,
+                      dispense_quantity INTEGER);
+
 -- Table  dividends
 DROP TABLE IF EXISTS dividends;
 CREATE TABLE dividends(

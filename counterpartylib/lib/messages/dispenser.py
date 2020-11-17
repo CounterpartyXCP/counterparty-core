@@ -55,6 +55,16 @@ def initialise(db):
                       asset_idx ON dispensers (asset)
                    ''')
 
+    cursor.execute('''CREATE TABLE IF NOT EXISTS dispenses(
+                      tx_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      destination TEXT,
+                      asset TEXT,
+                      dispense_quantity INTEGER)
+                   ''')
+
 def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, status, open_address, block_index):
     problems = []
     order_match = None
@@ -287,5 +297,18 @@ def dispense(db, tx):
             dispenser['prev_status'] = STATUS_OPEN
             cursor.execute('UPDATE DISPENSERS SET give_remaining=:give_remaining, status=:status \
                     WHERE source=:source AND asset=:asset AND satoshirate=:satoshirate AND give_quantity=:give_quantity AND status=:prev_status', dispenser)
+
+            bindings = {
+                'tx_index': tx['tx_index'],
+                'tx_hash': tx['tx_hash'],
+                'block_index': tx['block_index'],
+                'source': tx['destination'],
+                'destination': tx['source'],
+                'asset': dispenser['asset'],
+                'dispense_quantity': actually_given
+            }
+            sql = 'INSERT INTO dispenses(tx_index, tx_hash, block_index, source, destination, asset, dispense_quantity) \
+                    VALUES(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :dispense_quantity);'
+            cursor.execute(sql, bindings)
 
     cursor.close()
