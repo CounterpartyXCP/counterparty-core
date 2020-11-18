@@ -8,13 +8,16 @@ if [ ! -d /counterparty-cli/counterparty_cli.egg-info ]; then
     cd /counterparty-cli; python3 setup.py develop; cd /
 fi
 
+
 # Bootstrap if the database does not exist (do this here to handle cases
 # where a volume is mounted over the share dir, like the fednode docker compose config does...)
 if [ ! -f /root/.local/share/monaparty/monaparty.db ]; then
+    touch /root/.local/share/monaparty/monaparty.db # To reduce DB corruption by racing.
     echo "Downloading mainnet bootstrap DB..."
     counterparty-server bootstrap --quiet
 fi
 if [ ! -f /root/.local/share/monaparty/monaparty.testnet.db ]; then
+    touch /root/.local/share/monaparty/monaparty.testnet.db # To redure DB corruption by racing.
     echo "Downloading testnet bootstrap DB..."
     counterparty-server --testnet bootstrap --quiet
 fi
