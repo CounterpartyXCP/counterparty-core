@@ -31,7 +31,7 @@ while [ -f /root/.local/share/monaparty/downloading.lock ]; do
     sleep 3
 done
 while [ -f /root/.local/share/monaparty/downloading.testnet.lock ]; do
-    echo "Waiting mainnet bootstrap DB downloaded..."
+    echo "Waiting testnet bootstrap DB downloaded..."
     sleep 3
 done
 echo "All DBs are downloaded."
