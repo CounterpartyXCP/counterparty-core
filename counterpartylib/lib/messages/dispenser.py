@@ -56,13 +56,15 @@ def initialise(db):
                    ''')
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS dispenses(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
+                      tx_index INTEGER,
+                      dispense_index INTEGER,
+                      tx_hash TEXT,
                       block_index INTEGER,
                       source TEXT,
                       destination TEXT,
                       asset TEXT,
-                      dispense_quantity INTEGER)
+                      dispense_quantity INTEGER,
+                      PRIMARY KEY (tx_index, dispense_index, source, destination))
                    ''')
 
 def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, status, open_address, block_index):
@@ -260,12 +262,13 @@ def is_dispensable(db, address, amount):
 
 def dispense(db, tx):
     cursor = db.cursor()
-    cursor.execute('SELECT * FROM dispensers WHERE source=:source AND status=:status', {
+    cursor.execute('SELECT * FROM dispensers WHERE source=:source AND status=:status ORDER BY asset', {
         'source': tx['destination'],
         'status': STATUS_OPEN
     })
     dispensers = cursor.fetchall()
 
+    dispense_index = 0
     for dispenser in dispensers:
         satoshirate = dispenser['satoshirate']
         give_quantity = dispenser['give_quantity']
@@ -301,14 +304,16 @@ def dispense(db, tx):
             bindings = {
                 'tx_index': tx['tx_index'],
                 'tx_hash': tx['tx_hash'],
+                'dispense_index': dispense_index,
                 'block_index': tx['block_index'],
                 'source': tx['destination'],
                 'destination': tx['source'],
                 'asset': dispenser['asset'],
                 'dispense_quantity': actually_given
             }
-            sql = 'INSERT INTO dispenses(tx_index, tx_hash, block_index, source, destination, asset, dispense_quantity) \
-                    VALUES(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :dispense_quantity);'
+            sql = 'INSERT INTO dispenses(tx_index, dispense_index, tx_hash, block_index, source, destination, asset, dispense_quantity) \
+                    VALUES(:tx_index, :dispense_index, :tx_hash, :block_index, :source, :destination, :asset, :dispense_quantity);'
             cursor.execute(sql, bindings)
+            dispense_index += 1
 
     cursor.close()
