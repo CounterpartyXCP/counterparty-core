@@ -776,11 +776,11 @@ def expire (db, block_index):
             order_matches_pending = cursor.fetchall()
             # Set BTC sell order status as expired only if there are no pending order matches
             if len(order_matches_pending) == 0:
-                if order_match['backward_asset'] == "BTC" and order_match['status'] == "expired":
+                if order_match['backward_asset'] == config.BTC and order_match['status'] == "expired":
                     cursor.execute('''SELECT * FROM orders \
                                       WHERE tx_hash = ?''', (order_match['tx1_hash'],))
                     cancel_order(db, list(cursor)[0], 'expired', block_index)
-                if order_match['forward_asset'] == "BTC" and order_match['status'] == "expired":
+                if order_match['forward_asset'] == config.BTC and order_match['status'] == "expired":
                     cursor.execute('''SELECT * FROM orders \
                                       WHERE tx_hash = ?''', (order_match['tx0_hash'],))
                     cancel_order(db, list(cursor)[0], 'expired', block_index)
