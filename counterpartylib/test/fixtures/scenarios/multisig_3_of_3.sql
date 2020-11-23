@@ -583,13 +583,15 @@ CREATE TRIGGER _dispensers_update AFTER UPDATE ON dispensers BEGIN
 -- Table  dispenses
 DROP TABLE IF EXISTS dispenses;
 CREATE TABLE dispenses(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
+                      tx_index INTEGER,
+                      dispense_index INTEGER,
+                      tx_hash TEXT,
                       block_index INTEGER,
                       source TEXT,
                       destination TEXT,
                       asset TEXT,
-                      dispense_quantity INTEGER);
+                      dispense_quantity INTEGER,
+                      PRIMARY KEY (tx_index, dispense_index, source, destination));
 
 -- Table  dividends
 DROP TABLE IF EXISTS dividends;

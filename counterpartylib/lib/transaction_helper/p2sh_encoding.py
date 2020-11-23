@@ -52,7 +52,7 @@ def decode_p2sh_input(asm, p2sh_is_segwit=False):
         [signature] [data] [OP_HASH160 ... OP_EQUAL]
     '''
     pubkey, source, redeem_script_is_valid, found_data = decode_data_redeem_script(asm[-1], p2sh_is_segwit)
-    if redeem_script_is_valid and len(asm) >= 3:
+    if redeem_script_is_valid:
         # this is a signed transaction, so we got {sig[,sig]} {datachunk} {redeemScript}
         datachunk = found_data
         redeemScript = asm[-1] #asm[-2:]
@@ -196,7 +196,8 @@ def make_p2sh_encoding_redeemscript(datachunk, n, pubKey=None, multisig_pubkeys=
     else:
         raise exceptions.TransactionError('Either pubKey or multisig pubKeys must be provided')
 
-    redeemScript = CScript(datachunk) + CScript(dataDropScript + verifyOwnerScript + cleanupScript)
+    #redeemScript = CScript(datachunk) + CScript(dataDropScript + verifyOwnerScript + cleanupScript)
+    redeemScript = CScript(dataDropScript + verifyOwnerScript + cleanupScript)
 
     _logger.debug('datachunk %s' % (binascii.hexlify(datachunk)))
     _logger.debug('dataDropScript %s (%s)' % (repr(CScript(dataDropScript)), binascii.hexlify(CScript(dataDropScript))))
