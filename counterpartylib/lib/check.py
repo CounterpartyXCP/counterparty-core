@@ -24,6 +24,11 @@ CHECKPOINTS_TESTNET = {
     config.BLOCK_FIRST_TESTNET: {'ledger_hash': '63f0fef31d02da85fa779e9a0e1b585b1a6a4e59e14564249e288e074e91c223', 'txlist_hash': '63f0fef31d02da85fa779e9a0e1b585b1a6a4e59e14564249e288e074e91c223'},
 }
 
+CONSENSUS_HASH_VERSION_REGTEST = 1
+CHECKPOINTS_REGTEST = {
+    config.BLOCK_FIRST_REGTEST: {'ledger_hash': '33cf0669a0d309d7e6b1bf79494613b69262b58c0ea03c9c221d955eb4c84fe5', 'txlist_hash': '33cf0669a0d309d7e6b1bf79494613b69262b58c0ea03c9c221d955eb4c84fe5'},
+}
+
 class ConsensusError(Exception):
     pass
 
