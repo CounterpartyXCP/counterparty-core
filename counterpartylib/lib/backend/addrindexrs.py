@@ -13,6 +13,7 @@ import collections
 import binascii
 import hashlib
 import signal
+import bitcoin.wallet
 
 from counterpartylib.lib import config, util, address
 
@@ -358,11 +359,8 @@ def _script_pubkey_to_hash(spk):
     return hashlib.sha256(spk).digest()[::-1].hex()
 
 def _address_to_hash(addr):
-    pk = address.address_scriptpubkey(addr)
-    #if pk[0:3] ==  b'\x76\xa9\x14':
-    #    pk = b''.join([pk[0:3], pk[4:-6], pk[-2:]])
-
-    return _script_pubkey_to_hash(pk)
+    script_pubkey = bitcoin.wallet.CBitcoinAddress(addr).to_scriptPubKey()
+    return _script_pubkey_to_hash(script_pubkey)
 
 # Returns an array of UTXOS from an address in the following format
 # {
