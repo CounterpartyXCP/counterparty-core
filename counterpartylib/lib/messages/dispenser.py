@@ -64,7 +64,8 @@ def initialise(db):
                       destination TEXT,
                       asset TEXT,
                       dispense_quantity INTEGER,
-                      PRIMARY KEY (tx_index, dispense_index, source, destination))
+                      PRIMARY KEY (tx_index, dispense_index, source, destination),
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
 
 def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, status, open_address, block_index):
