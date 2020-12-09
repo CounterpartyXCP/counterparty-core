@@ -152,6 +152,7 @@ def parse (db, tx, message):
         problems = validate(db, tx['source'], destination, flags, memo_bytes, tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
 
+    if status == 'valid':
         try:
             util.debit(db, tx['source'], 'XCP', fee_paid, action='sweep fee', event=tx['tx_hash'])
         except BalanceError:
@@ -167,6 +168,7 @@ def parse (db, tx, message):
                 util.credit(db, destination, balance['asset'], balance['quantity'], action='sweep', event=tx['tx_hash'])
 
         if flags & FLAG_OWNERSHIP:
+            sweep_pos = 0
             for balance in balances:
                 cursor.execute('''SELECT * FROM issuances \
                                   WHERE (status = ? AND asset = ?)
@@ -178,6 +180,7 @@ def parse (db, tx, message):
                         bindings= {
                             'tx_index': tx['tx_index'],
                             'tx_hash': tx['tx_hash'],
+                            'msg_index': sweep_pos,
                             'block_index': tx['block_index'],
                             'asset': balance['asset'],
                             'quantity': 0,
@@ -194,8 +197,9 @@ def parse (db, tx, message):
                             'status': status,
                             'asset_longname': last_issuance['asset_longname'],
                         }
-                        sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname)'
+                        sql='insert into issuances values(:tx_index, :tx_hash, :msg_index, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname)'
                         cursor.execute(sql, bindings)
+                        sweep_pos += 1
 
         bindings = {
             'tx_index': tx['tx_index'],

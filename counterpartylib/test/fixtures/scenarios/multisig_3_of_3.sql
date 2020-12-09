@@ -580,6 +580,19 @@ CREATE TRIGGER _dispensers_update AFTER UPDATE ON dispensers BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE dispensers SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',asset='||quote(old.asset)||',give_quantity='||quote(old.give_quantity)||',escrow_quantity='||quote(old.escrow_quantity)||',satoshirate='||quote(old.satoshirate)||',status='||quote(old.status)||',give_remaining='||quote(old.give_remaining)||' WHERE rowid='||old.rowid);
                             END;
 
+-- Table  dispenses
+DROP TABLE IF EXISTS dispenses;
+CREATE TABLE dispenses(
+                      tx_index INTEGER,
+                      dispense_index INTEGER,
+                      tx_hash TEXT,
+                      block_index INTEGER,
+                      source TEXT,
+                      destination TEXT,
+                      asset TEXT,
+                      dispense_quantity INTEGER,
+                      PRIMARY KEY (tx_index, dispense_index, source, destination));
+
 -- Table  dividends
 DROP TABLE IF EXISTS dividends;
 CREATE TABLE dividends(
@@ -608,36 +621,39 @@ CREATE TRIGGER _dividends_update AFTER UPDATE ON dividends BEGIN
 
 -- Table  issuances
 DROP TABLE IF EXISTS issuances;
-CREATE TABLE issuances(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      asset TEXT,
-                      quantity INTEGER,
-                      divisible BOOL,
-                      source TEXT,
-                      issuer TEXT,
-                      transfer BOOL,
-                      callable BOOL,
-                      call_date INTEGER,
-                      call_price REAL,
-                      description TEXT,
-                      fee_paid INTEGER,
-                      locked BOOL,
-                      status TEXT,
-                      asset_longname TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
-INSERT INTO issuances VALUES(6,'ff48da90dfe51b4aa156b69cbda46269886a76a44613a217f1e8dbf172495e12',310005,'BBBB',1000000000,1,'3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'',50000000,0,'valid',NULL);
-INSERT INTO issuances VALUES(7,'ce78de24c5c55bbac91a3c08e92f4e817fa0cd73c65a5136aa3ded1c7284a6ad',310006,'BBBC',100000,0,'3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'foobar',50000000,0,'valid',NULL);
+CREATE TABLE "issuances"(
+                              tx_index INTEGER,
+                              tx_hash TEXT,
+                              msg_index INTEGER DEFAULT 0,
+                              block_index INTEGER,
+                              asset TEXT,
+                              quantity INTEGER,
+                              divisible BOOL,
+                              source TEXT,
+                              issuer TEXT,
+                              transfer BOOL,
+                              callable BOOL,
+                              call_date INTEGER,
+                              call_price REAL,
+                              description TEXT,
+                              fee_paid INTEGER,
+                              locked BOOL,
+                              status TEXT,
+                              asset_longname TEXT,
+                              PRIMARY KEY (tx_index, msg_index),
+                              FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
+                              UNIQUE (tx_hash, msg_index));
+INSERT INTO issuances VALUES(6,'ff48da90dfe51b4aa156b69cbda46269886a76a44613a217f1e8dbf172495e12',0,310005,'BBBB',1000000000,1,'3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'',50000000,0,'valid',NULL);
+INSERT INTO issuances VALUES(7,'ce78de24c5c55bbac91a3c08e92f4e817fa0cd73c65a5136aa3ded1c7284a6ad',0,310006,'BBBC',100000,0,'3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'foobar',50000000,0,'valid',NULL);
 -- Triggers and indices on  issuances
 CREATE TRIGGER _issuances_delete BEFORE DELETE ON issuances BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO issuances(rowid,tx_index,tx_hash,block_index,asset,quantity,divisible,source,issuer,transfer,callable,call_date,call_price,description,fee_paid,locked,status,asset_longname) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.asset)||','||quote(old.quantity)||','||quote(old.divisible)||','||quote(old.source)||','||quote(old.issuer)||','||quote(old.transfer)||','||quote(old.callable)||','||quote(old.call_date)||','||quote(old.call_price)||','||quote(old.description)||','||quote(old.fee_paid)||','||quote(old.locked)||','||quote(old.status)||','||quote(old.asset_longname)||')');
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO issuances(rowid,tx_index,tx_hash,msg_index,block_index,asset,quantity,divisible,source,issuer,transfer,callable,call_date,call_price,description,fee_paid,locked,status,asset_longname) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.msg_index)||','||quote(old.block_index)||','||quote(old.asset)||','||quote(old.quantity)||','||quote(old.divisible)||','||quote(old.source)||','||quote(old.issuer)||','||quote(old.transfer)||','||quote(old.callable)||','||quote(old.call_date)||','||quote(old.call_price)||','||quote(old.description)||','||quote(old.fee_paid)||','||quote(old.locked)||','||quote(old.status)||','||quote(old.asset_longname)||')');
                             END;
 CREATE TRIGGER _issuances_insert AFTER INSERT ON issuances BEGIN
                             INSERT INTO undolog VALUES(NULL, 'DELETE FROM issuances WHERE rowid='||new.rowid);
                             END;
 CREATE TRIGGER _issuances_update AFTER UPDATE ON issuances BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'UPDATE issuances SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||',divisible='||quote(old.divisible)||',source='||quote(old.source)||',issuer='||quote(old.issuer)||',transfer='||quote(old.transfer)||',callable='||quote(old.callable)||',call_date='||quote(old.call_date)||',call_price='||quote(old.call_price)||',description='||quote(old.description)||',fee_paid='||quote(old.fee_paid)||',locked='||quote(old.locked)||',status='||quote(old.status)||',asset_longname='||quote(old.asset_longname)||' WHERE rowid='||old.rowid);
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE issuances SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',msg_index='||quote(old.msg_index)||',block_index='||quote(old.block_index)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||',divisible='||quote(old.divisible)||',source='||quote(old.source)||',issuer='||quote(old.issuer)||',transfer='||quote(old.transfer)||',callable='||quote(old.callable)||',call_date='||quote(old.call_date)||',call_price='||quote(old.call_price)||',description='||quote(old.description)||',fee_paid='||quote(old.fee_paid)||',locked='||quote(old.locked)||',status='||quote(old.status)||',asset_longname='||quote(old.asset_longname)||' WHERE rowid='||old.rowid);
                             END;
 CREATE INDEX valid_asset_idx ON issuances (asset, status);
 
@@ -1137,13 +1153,13 @@ INSERT INTO undolog VALUES(19,'DELETE FROM btcpays WHERE rowid=5');
 INSERT INTO undolog VALUES(20,'UPDATE balances SET address=''3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3'',asset=''XCP'',quantity=92945000000 WHERE rowid=1');
 INSERT INTO undolog VALUES(21,'DELETE FROM debits WHERE rowid=3');
 INSERT INTO undolog VALUES(22,'DELETE FROM assets WHERE rowid=3');
-INSERT INTO undolog VALUES(23,'DELETE FROM issuances WHERE rowid=6');
+INSERT INTO undolog VALUES(23,'DELETE FROM issuances WHERE rowid=1');
 INSERT INTO undolog VALUES(24,'DELETE FROM balances WHERE rowid=3');
 INSERT INTO undolog VALUES(25,'DELETE FROM credits WHERE rowid=4');
 INSERT INTO undolog VALUES(26,'UPDATE balances SET address=''3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3'',asset=''XCP'',quantity=92895000000 WHERE rowid=1');
 INSERT INTO undolog VALUES(27,'DELETE FROM debits WHERE rowid=4');
 INSERT INTO undolog VALUES(28,'DELETE FROM assets WHERE rowid=4');
-INSERT INTO undolog VALUES(29,'DELETE FROM issuances WHERE rowid=7');
+INSERT INTO undolog VALUES(29,'DELETE FROM issuances WHERE rowid=2');
 INSERT INTO undolog VALUES(30,'DELETE FROM balances WHERE rowid=4');
 INSERT INTO undolog VALUES(31,'DELETE FROM credits WHERE rowid=5');
 INSERT INTO undolog VALUES(32,'UPDATE balances SET address=''3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3'',asset=''BBBB'',quantity=1000000000 WHERE rowid=3');

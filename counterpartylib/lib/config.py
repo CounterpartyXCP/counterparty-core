@@ -8,7 +8,7 @@ UNIT = 100000000        # The same across assets.
 
 # Versions
 VERSION_MAJOR = 9
-VERSION_MINOR = 58
+VERSION_MINOR = 59
 VERSION_REVISION = 0
 VERSION_STRING = str(VERSION_MAJOR) + '.' + str(VERSION_MINOR) + '.' + str(VERSION_REVISION)
 
@@ -136,5 +136,6 @@ ADDRESS_OPTION_MAX_VALUE = ADDRESS_OPTION_REQUIRE_MEMO # Or list of all the addr
 OLD_STYLE_API = True
 
 API_LIMIT_ROWS = 1000
+MEMPOOL_TXCOUNT_UPDATE_LIMIT=60000
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

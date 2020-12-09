@@ -176,7 +176,7 @@ required_packages = [
     'pytest==2.9.2',
     'pytest-cov==2.2.1',
     # 'python-bitcoinlib==0.10.1', <-- restore this when python-bitcoinlib 0.10.x with bech32 support is released
-    'requests==2.10.0',
+    'requests>=2.20.0',
     'tendo==0.2.8',
     'xmltodict==0.10.1',
     'cachetools==1.1.6',
