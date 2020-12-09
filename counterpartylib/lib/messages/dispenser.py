@@ -64,6 +64,7 @@ def initialise(db):
                       destination TEXT,
                       asset TEXT,
                       dispense_quantity INTEGER,
+                      dispenser_tx_hash TEXT,
                       PRIMARY KEY (tx_index, dispense_index, source, destination),
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
@@ -310,10 +311,11 @@ def dispense(db, tx):
                 'source': tx['destination'],
                 'destination': tx['source'],
                 'asset': dispenser['asset'],
-                'dispense_quantity': actually_given
+                'dispense_quantity': actually_given,
+                'dispenser_tx_hash': dispenser['tx_hash']
             }
-            sql = 'INSERT INTO dispenses(tx_index, dispense_index, tx_hash, block_index, source, destination, asset, dispense_quantity) \
-                    VALUES(:tx_index, :dispense_index, :tx_hash, :block_index, :source, :destination, :asset, :dispense_quantity);'
+            sql = 'INSERT INTO dispenses(tx_index, dispense_index, tx_hash, block_index, source, destination, asset, dispense_quantity, dispsenser_tx_hash) \
+                    VALUES(:tx_index, :dispense_index, :tx_hash, :block_index, :source, :destination, :asset, :dispense_quantity, :dispenser_tx_hash);'
             cursor.execute(sql, bindings)
             dispense_index += 1
 
