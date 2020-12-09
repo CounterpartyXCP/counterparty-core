@@ -354,6 +354,9 @@ def log (db, command, category, bindings):
             elif bindings['status'] == 10:
                 logger.info('Dispenser: {} closed a dispenser for asset {}'.format(bindings['source'], bindings['asset']))
 
+        elif category == 'dispenses':
+            logger.info('Dispense: {} from {} to {} ({})'.format(output(bindings['dispense_quantity'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash']))
+
     cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
