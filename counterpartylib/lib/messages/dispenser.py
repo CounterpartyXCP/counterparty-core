@@ -187,7 +187,7 @@ def parse (db, tx, message):
                     else:
                         util.debit(db, tx['source'], asset, escrow_quantity, action='open dispenser', event=tx['tx_hash'])
                 except util.DebitError as e:
-                    status = 'invalid: inssuficient funds'
+                    status = 'invalid: insufficient funds'
 
                 if status == 'valid':
                     bindings = {
