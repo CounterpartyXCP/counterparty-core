@@ -318,7 +318,7 @@ def dispense(db, tx):
                 'dispense_quantity': actually_given,
                 'dispenser_tx_hash': dispenser['tx_hash']
             }
-            sql = 'INSERT INTO dispenses(tx_index, dispense_index, tx_hash, block_index, source, destination, asset, dispense_quantity, dispsenser_tx_hash) \
+            sql = 'INSERT INTO dispenses(tx_index, dispense_index, tx_hash, block_index, source, destination, asset, dispense_quantity, dispenser_tx_hash) \
                     VALUES(:tx_index, :dispense_index, :tx_hash, :block_index, :source, :destination, :asset, :dispense_quantity, :dispenser_tx_hash);'
             cursor.execute(sql, bindings)
             dispense_index += 1
