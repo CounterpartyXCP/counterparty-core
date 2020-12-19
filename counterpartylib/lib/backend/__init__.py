@@ -132,7 +132,11 @@ def get_tx_list(block):
     tx_hash_list = []
 
     for ctx in block.vtx:
-        tx_hash = bitcoinlib.core.b2lx(ctx.GetHash())
+        if util.enabled('correct_segwit_txids'):
+            hsh = ctx.GetTxid()
+        else:
+            hsh = ctx.GetHash()
+        tx_hash = bitcoinlib.core.b2lx(hsh)
         raw = ctx.serialize()
 
         tx_hash_list.append(tx_hash)

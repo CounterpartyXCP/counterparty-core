@@ -148,9 +148,6 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     if config.TESTCOIN:
         network += '.testcoin'
 
-
-    bitcoinlib.SelectParams('testnet' if config.TESTNET else 'mainnet')
-
     # Database
     if database_file:
         config.DATABASE = database_file

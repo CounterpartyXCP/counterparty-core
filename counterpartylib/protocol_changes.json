@@ -250,5 +250,12 @@
     "minimum_version_revision": 0,
     "block_index": 660000,
     "testnet_block_index": 1666625
+  },
+  "correct_segwit_txids": {
+    "minimum_version_major": 9,
+    "minimum_version_minor": 59,
+    "minimum_version_revision": 0,
+    "block_index": 662000,
+    "testnet_block_index": 1666625
   }
 }

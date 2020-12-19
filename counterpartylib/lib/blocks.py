@@ -484,16 +484,21 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None, db=None):
         return asm[2]
 
     def get_address(scriptpubkey):
-        pubkeyhash = get_pubkeyhash(scriptpubkey)
-        if not pubkeyhash:
-            return False
-        pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
-        address = script.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
-        # Test decoding of address.
-        if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != script.base58_check_decode(address, config.ADDRESSVERSION):
-            return False
+        if util.enabled('correct_segwit_txids') and scriptpubkey.is_witness_v0_keyhash():
+            pubkey = scriptpubkey[2:]
+            address = str(bitcoinlib.bech32.CBech32Data.from_bytes(0, pubkey))
+            return address
+        else:
+            pubkeyhash = get_pubkeyhash(scriptpubkey)
+            if not pubkeyhash:
+                return False
+            pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
+            address = script.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
+            # Test decoding of address.
+            if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != script.base58_check_decode(address, config.ADDRESSVERSION):
+                return False
 
-        return address
+            return address
 
     outputs = []
     check_sources = db == None # If we didn't get passed a database cursor, assume we have to check for dispenser
