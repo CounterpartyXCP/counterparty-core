@@ -42,8 +42,9 @@ def initialise(db):
 
 def pack(db, asset, quantity, tag):
     data = message_type.pack(ID)
-    if type(tag) == 'str':
+    if isinstance(tag, str):
         tag = bytes.fromhex(tag)
+
     data += struct.pack(FORMAT, util.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX), quantity, tag)
     return data
 
