@@ -20,6 +20,7 @@ from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 from counterpartylib.lib import log
 from counterpartylib.lib import message_type
+from counterpartylib.lib import address
 
 FORMAT = '>QQQQB'
 LENGTH = 33
@@ -68,6 +69,9 @@ def initialise(db):
                       PRIMARY KEY (tx_index, dispense_index, source, destination),
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
+    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(dispenses)''')]
+    if 'dispenser_tx_hash' not in columns:
+        cursor.execute('ALTER TABLE dispenses ADD COLUMN dispenser_tx_hash TEXT')
 
 def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, status, open_address, block_index):
     problems = []
@@ -119,7 +123,7 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
                 problems.append('address doesnt has an open dispenser for asset %s' % asset)
 
         if status == STATUS_OPEN_EMPTY_ADDRESS:
-            cursor.execute('''SELECT count(*) cnt FROM balances WHERE address = ?''', (query_address))
+            cursor.execute('''SELECT count(*) cnt FROM balances WHERE address = ?''', (query_address,))
             existing_balances = cursor.fetchall()
             if existing_balances[0]['cnt'] > 0:
                 problems.append('cannot open on another address if it has any balance history')
