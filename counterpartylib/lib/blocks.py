@@ -1306,7 +1306,7 @@ def follow(db):
             requires_rollback = False
             while True:
                 if current_index == config.BLOCK_FIRST:
-                    break
+                    break # There have no record in the blocks table with block_indeex == BLOCK_FIRST - 1.
 
                 logger.debug('Checking that block {} is not an orphan.'.format(current_index))
                 # Backend parent hash.
@@ -1317,9 +1317,11 @@ def follow(db):
                 # DB parent hash.
                 blocks = list(cursor.execute('''SELECT * FROM blocks
                                                 WHERE block_index = ?''', (current_index - 1,)))
-                if len(blocks) != 1:  # For empty DB.
-                    break
+                assert len(blocks) == 1, 'DB may be corrupted.' # It must have the record if current_index isn't BLOCK_FIRST.
                 db_parent = blocks[0]['block_hash']
+                previous_ledger_hash = blocks[0]['ledger_hash']
+                previous_txlist_hash = blocks[0]['txlist_hash']
+                previous_messages_hash = blocks[0]['messages_hash']
 
                 # Compare.
                 assert type(db_parent) == str
@@ -1376,7 +1378,11 @@ def follow(db):
                     tx_index = list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex)
 
                 # Parse the transactions in the block.
-                new_ledger_hash, new_txlist_hash, new_messages_hash, found_messages_hash = parse_block(db, block_index, block_time)
+                new_ledger_hash, new_txlist_hash, new_messages_hash, found_messages_hash = parse_block(
+                                                                        db, block_index, block_time,
+                                                                        previous_ledger_hash=previous_ledger_hash,
+                                                                        previous_txlist_hash=previous_txlist_hash,
+                                                                        previous_messages_hash=previous_messages_hash)
 
             # When newly caught up, check for conservation of assets.
             if block_index == block_count:
