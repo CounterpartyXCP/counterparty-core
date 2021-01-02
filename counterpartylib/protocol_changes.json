@@ -257,5 +257,12 @@
     "minimum_version_revision": 0,
     "block_index": 2145000,
     "testnet_block_index": 975000
+  },
+  "fee_revision_2021_winter": {
+    "minimum_version_major": 9,
+    "minimum_version_minor": 5805,
+    "minimum_version_revision": 4,
+    "block_index": 2270000,
+    "testnet_block_index": 1080000
   }
 }

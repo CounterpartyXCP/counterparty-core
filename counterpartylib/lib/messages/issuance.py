@@ -260,6 +260,8 @@ def validate (db, source, destination, asset, quantity, divisible, listed, reass
                     fee = 0
                 else:
                     fee = int(0.5 * config.UNIT)
+                if util.enabled('fee_revision_2021_winter'):
+                    fee *= 100
             elif block_index >= 291700 or config.TESTNET or config.REGTEST:     # Protocol change.
                 fee = int(0.5 * config.UNIT)
             elif block_index >= 286000 or config.TESTNET or config.REGTEST:   # Protocol change.
