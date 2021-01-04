@@ -3,6 +3,7 @@ import json
 import logging
 import binascii
 import math
+from collections import OrderedDict
 from bitcoin.core import key
 from functools import reduce
 from itertools import groupby
@@ -197,7 +198,7 @@ def _decode_decodeSendList(stream, nbits, lut, block_index):
 
 def _decode_decodeSends(stream, nbits, lut, block_index):
     #stream = ConstBitStream(data)
-    sends = {}
+    sends = OrderedDict()
 
     while stream.read('bool'):
         asset, sendList = _decode_decodeSendList(stream, nbits, lut, block_index)
