@@ -14,8 +14,9 @@ from counterpartylib.lib import message_type
 from counterpartylib.lib.script import AddressError
 from counterpartylib.lib.exceptions import *
 
-FORMAT = '>QQ8s'
-LENGTH = 8 + 8 + 8
+FORMAT = '>QQ'
+LENGTH = 8 + 8
+MAX_TAG_LENGTH = 34
 ID = 110
 
 
@@ -43,15 +44,21 @@ def initialise(db):
 def pack(db, asset, quantity, tag):
     data = message_type.pack(ID)
     if isinstance(tag, str):
-        tag = bytes.fromhex(tag)
+        tag = bytes(tag.encode('utf8'))[0:MAX_TAG_LENGTH]
+    elif isinstance(tag, bytes):
+        tag = tag[0:MAX_TAG_LENGTH]
+    else:
+        tag = b''
 
-    data += struct.pack(FORMAT, util.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX), quantity, tag)
+    data += struct.pack(FORMAT, util.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX), quantity)
+    data += tag
     return data
 
 
 def unpack(db, message):
     try:
-        asset_id, quantity, tag = struct.unpack(FORMAT, message)
+        asset_id, quantity = struct.unpack(FORMAT, message[0:16])
+        tag = message[16:]
         asset = util.get_asset_name(db, asset_id, util.CURRENT_BLOCK_INDEX)
 
     except struct.error:
