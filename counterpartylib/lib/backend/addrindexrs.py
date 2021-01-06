@@ -317,9 +317,8 @@ class AddrIndexRsThread (threading.Thread):
                             retry_count = 0
                             parsed = True
                         except Exception as e:
-                            logging.warning("Got an exception parsing addrindexrs data")
-                            logging.warning(e)
-                            logging.warning(data.decode('utf-8'))
+                            if retry_count <= 0:
+                                raise e
                             self.message_result = None
                             retry_count -= 1
                         finally:
@@ -377,6 +376,9 @@ def unpack_outpoint(outpoint):
     return (txid, int(vout))
 
 def unpack_vout(outpoint, tx, block_count):
+    if tx is None:
+        return None
+
     vout = tx["vout"][outpoint[1]]
     height = -1
     if "confirmations" in tx and tx["confirmations"] > 0:
@@ -407,7 +409,8 @@ def get_unspent_txouts(source):
         # each item on the result array is like
         # {"tx_hash": hex_encoded_hash}
         batch = getrawtransaction_batch([x[0] for x in result], verbose=True, skip_missing=True)
-        batch = [unpack_vout(outpoint, batch[outpoint[0]], block_count) for outpoint in result]
+        batch = [unpack_vout(outpoint, batch[outpoint[0]], block_count) for outpoint in result if outpoint[0] in batch]
+        batch = [x for x in batch if x is not None]
 
         return batch
     else:
