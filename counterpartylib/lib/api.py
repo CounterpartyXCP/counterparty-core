@@ -806,8 +806,18 @@ class APIServer(threading.Thread):
             return backend.search_raw_transactions(address, unconfirmed=unconfirmed)
 
         @dispatcher.add_method
-        def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None):
-            return backend.get_unspent_txouts(address, unconfirmed=unconfirmed, unspent_tx_hash=unspent_tx_hash)
+        def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None, order_by=None):
+            results = backend.get_unspent_txouts(address, unconfirmed=unconfirmed, unspent_tx_hash=unspent_tx_hash)
+            if order_by is None:
+                return results
+            else:
+                order_key = order_by
+                reverse = False
+                if order_key.startswith('-'):
+                    order_key = order_key[1:]
+                    reverse = True
+                return sorted(results, key=lambda x: x[order_key], reverse=reverse)
+
 
         @dispatcher.add_method
         def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
