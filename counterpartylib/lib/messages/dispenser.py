@@ -203,7 +203,7 @@ def parse (db, tx, message):
                         'give_quantity': give_quantity,
                         'escrow_quantity': escrow_quantity,
                         'satoshirate': mainchainrate,
-                        'status': dispenser_status,
+                        'status': STATUS_OPEN,
                         'give_remaining': escrow_quantity
                     }
                     sql = 'insert into dispensers values(:tx_index, :tx_hash, :block_index, :source, :asset, :give_quantity, :escrow_quantity, :satoshirate, :status, :give_remaining)'
