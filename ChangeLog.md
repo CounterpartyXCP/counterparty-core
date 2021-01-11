@@ -1,4 +1,9 @@
 ## Library Versions ##
+* v9.59.0 (2021-01-11)
+    * Empty address dispensers
+    * Added addrindexrs and removed indexd
+    * Added support for xcp-proxy
+    * Several bug fixes
 * v9.56.0 (2018-09-16)
     * Segwit support!
     * Several changes related to CIP19
