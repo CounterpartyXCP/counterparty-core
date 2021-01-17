@@ -217,7 +217,8 @@ def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
 
     # Search blockchain.
     raw_transactions = search_raw_transactions(pubkeyhash, unconfirmed=True)
-    for tx in raw_transactions:
+    for tx_id in raw_transactions:
+        tx = raw_transactions[tx_id]
         for vin in tx['vin']:
             if 'txinwitness' in vin:
                 if len(vin['txinwitness']) >= 2:
