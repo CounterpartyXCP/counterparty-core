@@ -1,4 +1,6 @@
 ## Library Versions ##
+* v9.59.1 (2021-01-17)
+    * Fixed api issues while building P2SH encoded transactions
 * v9.59.0 (2021-01-11)
     * Empty address dispensers
     * Added addrindexrs and removed indexd
