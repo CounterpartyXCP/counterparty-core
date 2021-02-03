@@ -170,7 +170,7 @@ def is_p2sh(address):
 
 def is_bech32(address):
     try:
-        b32data = CBech32Data(address)
+        _ = CBech32Data(address)
         return True
     except:
         return False
@@ -224,7 +224,7 @@ def extract_array(address):
 
 def pubkeyhash_array(address):
     """Return PubKeyHashes from an address."""
-    signatures_required, pubs, signatures_possible = extract_array(address)
+    _, pubs, _ = extract_array(address)
     if not all([is_pubkeyhash(pub) for pub in pubs]):
         raise MultiSigAddressError('Invalid PubKeyHashes. Multi‐signature address must use PubKeyHashes, not public keys.')
     pubkeyhashes = pubs

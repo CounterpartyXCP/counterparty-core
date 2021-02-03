@@ -196,7 +196,7 @@ def software_version():
         host = 'https://counterpartyxcp.github.io/counterparty-lib/counterpartylib/protocol_changes.json'
         response = requests.get(host, headers={'cache-control': 'no-cache'})
         versions = json.loads(response.text)
-    except (requests.exceptions.ConnectionError, ConnectionRefusedError, ValueError) as e:
+    except (requests.exceptions.ConnectionError, ConnectionRefusedError, ValueError):
         logger.warning('Unable to check version! ' + str(sys.exc_info()[1]))
         return
 
@@ -204,7 +204,7 @@ def software_version():
         protocol_change = versions[change_name]
         try:
             check_change(protocol_change, change_name)
-        except VersionUpdateRequiredError as e:
+        except VersionUpdateRequiredError:
             logger.error("Version Update Required", exc_info=sys.exc_info())
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
 

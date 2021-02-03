@@ -295,7 +295,6 @@ def match (db, tx, block_index):
     tx1 = rps[0]
     possible_moves = tx1['possible_moves']
     wager = tx1['wager']
-    tx1_status = 'open'
 
     # Get rps match
     bindings = (possible_moves, 'open', wager, tx1['source'])

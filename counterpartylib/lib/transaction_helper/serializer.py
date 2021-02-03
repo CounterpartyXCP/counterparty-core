@@ -79,7 +79,7 @@ def get_script(address):
     else:
         try:
             return get_monosig_script(address)
-        except script.VersionByteError as e:
+        except script.VersionByteError:
             return get_p2sh_script(address)
 
 
@@ -220,9 +220,6 @@ def serialise(encoding, inputs, destination_outputs, data_output=None, change_ou
 
     # Number of inputs.
     s += var_int(int(len(inputs)))
-
-    witness_txins = []
-    witness_data = {}
 
     # List of Inputs.
     for i in range(len(inputs)):
@@ -380,7 +377,7 @@ def serialise_p2sh_pretx(inputs, source, source_value, data_output, change_outpu
         data_chunk = config.PREFIX + data_chunk  # prefix the data_chunk
 
         # get the scripts
-        scriptSig, redeemScript, outputScript = p2sh_encoding.make_p2sh_encoding_redeemscript(data_chunk, n, pubkey, multisig_pubkeys, multisig_pubkeys_required)
+        _, _, outputScript = p2sh_encoding.make_p2sh_encoding_redeemscript(data_chunk, n, pubkey, multisig_pubkeys, multisig_pubkeys_required)
 
         s += data_value.to_bytes(8, byteorder='little')  # Value
         s += var_int(int(len(outputScript)))             # Script length
@@ -389,7 +386,7 @@ def serialise_p2sh_pretx(inputs, source, source_value, data_output, change_outpu
     # Change output.
     if change_output:
         change_address, change_value = change_output
-        tx_script, witness_script = get_script(change_address)
+        tx_script, _ = get_script(change_address)
 
         s += change_value.to_bytes(8, byteorder='little')  # Value
         s += var_int(int(len(tx_script)))                  # Script length
@@ -433,7 +430,7 @@ def serialise_p2sh_datatx(txid, source, source_input, destination_outputs, data_
         data_chunk = config.PREFIX + data_chunk  # prefix the data_chunk
 
         # get the scripts
-        scriptSig, redeemScript, outputScript = p2sh_encoding.make_p2sh_encoding_redeemscript(data_chunk, n, pubkey, multisig_pubkeys, multisig_pubkeys_required)
+        scriptSig, _, _ = p2sh_encoding.make_p2sh_encoding_redeemscript(data_chunk, n, pubkey, multisig_pubkeys, multisig_pubkeys_required)
         #substituteScript = scriptSig + outputScript
 
         s += txhash                                              # TxOutHash
@@ -457,7 +454,7 @@ def serialise_p2sh_datatx(txid, source, source_input, destination_outputs, data_
 
     # destination outputs
     for destination, value in destination_outputs:
-        tx_script, witness_script = get_script(destination)
+        tx_script, _ = get_script(destination)
 
         s += value.to_bytes(8, byteorder='little')  # Value
         s += var_int(int(len(tx_script)))           # Script length

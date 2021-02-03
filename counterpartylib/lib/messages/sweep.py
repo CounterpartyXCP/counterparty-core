@@ -8,7 +8,7 @@ from counterpartylib.lib import util
 from counterpartylib.lib import log
 from counterpartylib.lib import message_type
 from counterpartylib.lib import address
-from counterpartylib.lib.exceptions import *
+from counterpartylib.lib.exceptions import BalanceError
 
 FORMAT = '>21sB'
 LENGTH = 22

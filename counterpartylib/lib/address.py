@@ -26,7 +26,7 @@ def pack(address):
             if len(witprog) > 20:
                 raise Exception('p2wsh still not supported for sending')
             return b''.join([witver, witprog])
-        except Exception as ne:
+        except Exception:
             try:
                 short_address_bytes = bitcoin.base58.decode(address)[:-4]
                 return short_address_bytes

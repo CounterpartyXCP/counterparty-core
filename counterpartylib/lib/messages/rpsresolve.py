@@ -101,7 +101,7 @@ def validate (db, source, move, random, rps_match_id):
 def compose (db, source, move, random, rps_match_id):
     tx0_hash, tx1_hash = util.parse_id(rps_match_id)
 
-    txn, rps_match, problems = validate(db, source, move, random, rps_match_id)
+    _, rps_match, problems = validate(db, source, move, random, rps_match_id)
     if problems: raise exceptions.ComposeError(problems)
 
     # Warn if down to the wire.
@@ -128,7 +128,7 @@ def parse (db, tx, message):
         rps_match_id = util.make_id(tx0_hash, tx1_hash)
         random = binascii.hexlify(random).decode('utf-8')
         status = 'valid'
-    except (exceptions.UnpackError, struct.error) as e:
+    except (exceptions.UnpackError, struct.error):
         move, random, tx0_hash, tx1_hash, rps_match_id = None, None, None, None, None
         status = 'invalid: could not unpack'
 

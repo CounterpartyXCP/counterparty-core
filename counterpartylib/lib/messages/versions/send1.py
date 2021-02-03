@@ -7,7 +7,8 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 
-from ... import (config, exceptions, util, message_type)
+from ... import (config, util, message_type)
+from counterpartylib.lib.exceptions import AssetNameError, ComposeError, UnpackError
 
 FORMAT = '>QQ'
 LENGTH = 8 + 8
@@ -20,10 +21,10 @@ def unpack(db, message, block_index):
         asset = util.get_asset_name(db, asset_id, block_index)
 
     except struct.error:
-        raise exceptions.UnpackError('could not unpack')
+        raise UnpackError('could not unpack')
 
     except AssetNameError:
-        raise exceptions.UnpackError('asset id invalid')
+        raise UnpackError('asset id invalid')
 
     unpacked = {
                 'asset': asset,
@@ -76,17 +77,17 @@ def compose (db, source, destination, asset, quantity):
 
     #quantity must be in int satoshi (not float, string, etc)
     if not isinstance(quantity, int):
-        raise exceptions.ComposeError('quantity must be an int (in satoshi)')
+        raise ComposeError('quantity must be an int (in satoshi)')
 
     # Only for outgoing (incoming will overburn).
     balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, asset)))
     if not balances or balances[0]['quantity'] < quantity:
-        raise exceptions.ComposeError('insufficient funds')
+        raise ComposeError('insufficient funds')
 
     block_index = util.CURRENT_BLOCK_INDEX
 
     problems = validate(db, source, destination, asset, quantity, block_index)
-    if problems: raise exceptions.ComposeError(problems)
+    if problems: raise ComposeError(problems)
 
     asset_id = util.get_asset_id(db, asset, block_index)
     data = message_type.pack(ID)
@@ -101,11 +102,11 @@ def parse (db, tx, message):
     # Unpack message.
     try:
         if len(message) != LENGTH:
-            raise exceptions.UnpackError
+            raise UnpackError
         asset_id, quantity = struct.unpack(FORMAT, message)
         asset = util.get_asset_name(db, asset_id, tx['block_index'])
         status = 'valid'
-    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
+    except (UnpackError, AssetNameError, struct.error):
         asset, quantity = None, None
         status = 'invalid: could not unpack'
 

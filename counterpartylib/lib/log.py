@@ -259,7 +259,7 @@ def log (db, command, category, bindings):
                     unit = 1
                 try:
                     quantity = util.value_out(db, bindings['quantity'], None, divisible=bindings['divisible'])
-                except Exception as e:
+                except Exception:
                     quantity = '?'
                 if 'asset_longname' in bindings and bindings['asset_longname'] is not None:
                     logger.info('Subasset Issuance: {} created {} of {} subasset {} as numeric asset {} ({}) [{}]'.format(bindings['issuer'], quantity, divisibility, bindings['asset_longname'], bindings['asset'], bindings['tx_hash'], bindings['status']))

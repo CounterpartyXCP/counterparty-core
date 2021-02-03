@@ -57,7 +57,7 @@ def rpc_call(payload):
     # Handle json decode errors
     try:
         response_json = response.json()
-    except json.decoder.JSONDecodeError as e:
+    except json.decoder.JSONDecodeError:
         raise BackendRPCError('Received invalid JSON from backend with a response of {}'.format(str(response.status_code) + ' ' + response.reason))
 
     # Batch query returns a list

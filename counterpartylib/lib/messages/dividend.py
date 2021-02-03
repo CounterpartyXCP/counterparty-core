@@ -142,7 +142,7 @@ def compose (db, source, quantity_per_unit, asset, dividend_asset):
     asset = util.resolve_subasset_longname(db, asset)
     dividend_asset = util.resolve_subasset_longname(db, dividend_asset)
 
-    dividend_total, outputs, problems, fee = validate(db, source, quantity_per_unit, asset, dividend_asset, util.CURRENT_BLOCK_INDEX)
+    dividend_total, outputs, problems, _ = validate(db, source, quantity_per_unit, asset, dividend_asset, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
     logger.info('Total quantity to be distributed in dividends: {} {}'.format(util.value_out(db, dividend_total, dividend_asset), dividend_asset))
 
@@ -172,7 +172,7 @@ def parse (db, tx, message):
             status = 'valid'
         else:
             raise exceptions.UnpackError
-    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
+    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error):
         dividend_asset, quantity_per_unit, asset = None, None, None
         status = 'invalid: could not unpack'
 

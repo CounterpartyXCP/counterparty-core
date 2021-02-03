@@ -117,7 +117,7 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
     """
     # Get hex dust return pubkey.
     if script.is_multisig(source):
-        a, self_pubkeys, b = script.extract_array(backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys))
+        _, self_pubkeys, _ = script.extract_array(backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys))
         dust_return_pubkey_hex = self_pubkeys[0]
     else:
         dust_return_pubkey_hex = backend.pubkeyhash_to_pubkey(source, provided_pubkeys)
@@ -454,7 +454,7 @@ def construct (db, tx_info, encoding='auto',
 
     if encoding == 'p2sh':
         # calculate all the p2sh outputs
-        size_for_fee, datatx_necessary_fee, data_value, data_btc_out = p2sh_encoding.calculate_outputs(destination_outputs, data_array, fee_per_kb)
+        size_for_fee, _, data_value, data_btc_out = p2sh_encoding.calculate_outputs(destination_outputs, data_array, fee_per_kb)
         # replace the data value
         data_output = (data_array, data_value)
     else:
@@ -578,7 +578,7 @@ def construct (db, tx_info, encoding='auto',
     try:
         if pretx_txid and unsigned_pretx:
             backend.cache_pretx(pretx_txid, unsigned_pretx)
-        parsed_source, parsed_destination, x, y, parsed_data, extra = blocks._get_tx_info(unsigned_tx_hex, p2sh_is_segwit=script.is_bech32(desired_source))
+        parsed_source, parsed_destination, _, _, parsed_data, _ = blocks._get_tx_info(unsigned_tx_hex, p2sh_is_segwit=script.is_bech32(desired_source))
 
         if encoding == 'p2sh':
             # make_canonical can't determine the address, so we blindly change the desired to the parsed

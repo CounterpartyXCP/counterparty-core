@@ -166,7 +166,7 @@ def parse (db, tx, message):
         except UnicodeDecodeError:
             text = ''
         status = 'valid'
-    except (struct.error) as e:
+    except (struct.error):
         timestamp, value, fee_fraction_int, text = 0, None, 0, None
         status = 'invalid: could not unpack'
 
@@ -284,12 +284,10 @@ def parse (db, tx, message):
             if bet_match['tx0_bet_type'] < bet_match['tx1_bet_type']:
                 bull_address = bet_match['tx0_address']
                 bear_address = bet_match['tx1_address']
-                bull_escrow = bet_match['forward_quantity']
                 bear_escrow = bet_match['backward_quantity']
             else:
                 bull_address = bet_match['tx1_address']
                 bear_address = bet_match['tx0_address']
-                bull_escrow = bet_match['backward_quantity']
                 bear_escrow = bet_match['forward_quantity']
 
             leverage = Fraction(bet_match['leverage'], 5040)

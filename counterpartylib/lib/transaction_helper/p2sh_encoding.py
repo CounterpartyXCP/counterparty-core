@@ -38,7 +38,6 @@ def calculate_outputs(destination_outputs, data_array, fee_per_kb):
     data_value = math.ceil(datatx_necessary_fee / len(data_array))
 
     # adjust the data output with the new value and recalculate data_btc_out
-    data_output = (data_array, data_value)
     data_btc_out = data_value * len(data_array)
 
     logger.getChild('p2shdebug').debug('datatx size: %d fee: %d' % (datatx_size, datatx_necessary_fee))
@@ -51,14 +50,14 @@ def decode_p2sh_input(asm):
     ''' Looks at the scriptSig for the input of the p2sh-encoded data transaction
         [signature] [data] [OP_HASH160 ... OP_EQUAL]
     '''
-    pubkey, source, redeem_script_is_valid = decode_data_redeem_script(asm[-1])
+    _, source, redeem_script_is_valid = decode_data_redeem_script(asm[-1])
     if redeem_script_is_valid and len(asm) >= 3:
         # this is a signed transaction, so we got {sig[,sig]} {datachunk} {redeemScript}
         datachunk = found_data
         redeemScript = asm[-1] #asm[-2:]
     else:
         #print('ASM:', len(asm))
-        pubkey, source, redeem_script_is_valid, found_data = decode_data_redeem_script(asm[-1], p2sh_is_segwit)
+        _, source, redeem_script_is_valid, found_data = decode_data_redeem_script(asm[-1], p2sh_is_segwit)
         if not redeem_script_is_valid or len(asm) != 3:
             return None, None, None
 
@@ -77,7 +76,6 @@ def decode_p2sh_input(asm):
 
 def decode_data_push(arr, pos):
     pushlen = 0
-    data = b''
     opcode = bitcoinlib.core.script.CScriptOp(arr[pos])
     if opcode > 0 and opcode < bitcoinlib.core.script.OP_PUSHDATA1:
         pushlen = arr[pos]
@@ -148,7 +146,7 @@ def decode_data_redeem_script(redeemScript, p2sh_is_segwit=False):
                             num_sigs = 0
                             found_sigs = False
                             while not found_sigs:
-                                pos, npubkey = decode_data_push(redeemScript, pos)
+                                pos, _ = decode_data_push(redeemScript, pos)
                                 num_sigs += 1
                                 if redeemScript[pos] - bitcoinlib.core.script.OP_1 + 1 == num_sigs:
                                     found_sigs = True
@@ -168,7 +166,7 @@ def decode_data_redeem_script(redeemScript, p2sh_is_segwit=False):
                                 redeemScript[pos + 2] == bitcoinlib.core.script.OP_DEPTH and \
                                 redeemScript[pos + 3] == 0 and \
                                 redeemScript[pos + 4] == bitcoinlib.core.script.OP_EQUAL
-        except Exception as e:
+        except Exception:
             pass #traceback.print_exc()
 
     return pubkey, source, redeem_script_is_valid, found_data

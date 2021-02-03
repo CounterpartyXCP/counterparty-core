@@ -22,11 +22,11 @@ ID = 3 # 0x03 is this specific message type
 def unpack(db, message, block_index):
     try:
         unpacked = _decode_mpmaSendDecode(message, block_index)
-    except (struct.error) as e:
+    except (struct.error):
         raise exceptions.UnpackError('could not unpack')
-    except (exceptions.AssetNameError, exceptions.AssetIDError) as e:
+    except (exceptions.AssetNameError, exceptions.AssetIDError):
         raise exceptions.UnpackError('invalid asset in mpma send')
-    except (ReadError) as e:
+    except (ReadError):
         raise exceptions.UnpackError('truncated data')
 
     return unpacked
@@ -135,7 +135,7 @@ def parse (db, tx, message):
     if status == 'valid':
         for asset_id in unpacked:
             try:
-                asset = util.get_asset_name(db, asset_id, tx['block_index'])
+                _ = util.get_asset_name(db, asset_id, tx['block_index'])
             except (exceptions.AssetNameError) as e:
                 status = 'invalid: asset %s invalid at block index %i' % (asset_id, tx['block_index'])
                 break

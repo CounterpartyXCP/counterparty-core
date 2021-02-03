@@ -69,7 +69,7 @@ def validate (db, source, offer_hash):
 def compose (db, source, offer_hash):
 
     # Check that offer exists.
-    offer, offer_type, problems = validate(db, source, offer_hash)
+    _, _, problems = validate(db, source, offer_hash)
     if problems: raise exceptions.ComposeError(problems)
 
     offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, 'utf-8'))
@@ -87,7 +87,7 @@ def parse (db, tx, message):
         offer_hash_bytes = struct.unpack(FORMAT, message)[0]
         offer_hash = binascii.hexlify(offer_hash_bytes).decode('utf-8')
         status = 'valid'
-    except (exceptions.UnpackError, struct.error) as e:
+    except (exceptions.UnpackError, struct.error):
         offer_hash = None
         status = 'invalid: could not unpack'
 

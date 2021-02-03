@@ -15,7 +15,7 @@ BLOCK_MESSAGES = []
 def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style"""
     dictionary = {}
-    for index, (name, type_) in enumerate(cursor.getdescription()):
+    for index, (name, _) in enumerate(cursor.getdescription()):
         dictionary[name] = sql[index]
     return dictionary
 
@@ -40,7 +40,6 @@ def exectracer(cursor, sql, bindings):
         return True
 
     db = cursor.getconnection()
-    dictionary = {'command': command, 'category': category, 'bindings': bindings}
 
     skip_tables = [
         'blocks', 'transactions',
@@ -106,7 +105,7 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
     if integrity_check:
         logger.debug('Checking database integrity.')
         integral = False
-        for i in range(10): # DUPE
+        for _ in range(10): # DUPE
             try:
                 cursor.execute('''PRAGMA integrity_check''')
                 rows = cursor.fetchall()

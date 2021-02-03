@@ -142,7 +142,7 @@ def parse (db, tx, message):
             action_address = address.unpack(message[LENGTH:LENGTH+21])
         asset = util.generate_asset_name(assetid, util.CURRENT_BLOCK_INDEX)
         status = 'valid'
-    except (exceptions.UnpackError, struct.error) as e:
+    except (exceptions.UnpackError, struct.error):
         assetid, give_quantity, mainchainrate, asset = None, None, None, None
         status = 'invalid: could not unpack'
 

@@ -57,11 +57,11 @@ class BlockchainParser():
         transaction['version'] = vds.read_int32()
 
         transaction['vin'] = []
-        for i in range(vds.read_compact_size()):
+        for _ in range(vds.read_compact_size()):
             transaction['vin'].append(self.read_tx_in(vds))
 
         transaction['vout'] = []
-        for i in range(vds.read_compact_size()):
+        for _ in range(vds.read_compact_size()):
             transaction['vout'].append(self.read_tx_out(vds))
 
         transaction['lock_time'] = vds.read_uint32()
@@ -93,7 +93,7 @@ class BlockchainParser():
         block = self.read_block_header(vds)
         block['transaction_count'] = vds.read_compact_size()
         block['transactions'] = []
-        for i in range(block['transaction_count']):
+        for _ in range(block['transaction_count']):
             block['transactions'].append(self.read_transaction(vds))
         return block
 
@@ -115,14 +115,14 @@ class BlockchainParser():
         ds = BCDataStream()
         ds.write(block_data)
 
-        version = ds.read_var_int()
+        _ = ds.read_var_int()
         height = ds.read_var_int()
-        status = ds.read_var_int()
-        tx_count = ds.read_var_int()
+        _ = ds.read_var_int()
+        _ = ds.read_var_int()
         file_num = ds.read_var_int()
         block_pos_in_file = ds.read_var_int() - 8
-        block_undo_pos_in_file = ds.read_var_int()
-        block_header = ds.read_bytes(80)
+        _ = ds.read_var_int()
+        _ = ds.read_bytes(80)
 
         self.prepare_data_stream(file_num, block_pos_in_file)
 

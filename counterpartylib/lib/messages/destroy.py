@@ -12,7 +12,7 @@ from counterpartylib.lib import config
 from counterpartylib.lib import script
 from counterpartylib.lib import message_type
 from counterpartylib.lib.script import AddressError
-from counterpartylib.lib.exceptions import *
+from counterpartylib.lib.exceptions import AssetError, AssetIDError, BalanceError, UnpackError, ValidateError
 
 FORMAT = '>QQ8s'
 LENGTH = 8 + 8 + 8

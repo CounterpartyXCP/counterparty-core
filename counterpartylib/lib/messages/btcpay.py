@@ -8,10 +8,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 from counterpartylib.lib import config
-from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 from counterpartylib.lib import log
 from counterpartylib.lib import message_type
+from counterpartylib.lib.exceptions import ComposeError, OrderError, UnpackError
 
 FORMAT = '>32s32s'
 LENGTH = 32 + 32
@@ -64,7 +64,7 @@ def validate (db, source, order_match_id, block_index):
         elif order_match['status'].startswith('invalid'):
             problems.append('order match invalid')
         elif order_match['status'] != 'pending':
-            raise exceptions.OrderError('unrecognised order match status')
+            raise OrderError('unrecognised order match status')
 
     # Figure out to which address the BTC are being paid.
     # Check that source address is correct.
@@ -90,8 +90,8 @@ def validate (db, source, order_match_id, block_index):
 def compose (db, source, order_match_id):
     tx0_hash, tx1_hash = util.parse_id(order_match_id)
 
-    destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(db, source, order_match_id, util.CURRENT_BLOCK_INDEX)
-    if problems: raise exceptions.ComposeError(problems)
+    destination, btc_quantity, _, _, order_match, problems = validate(db, source, order_match_id, util.CURRENT_BLOCK_INDEX)
+    if problems: raise ComposeError(problems)
 
     # Warn if down to the wire.
     time_left = order_match['match_expire_index'] - util.CURRENT_BLOCK_INDEX
@@ -111,19 +111,18 @@ def parse (db, tx, message):
     # Unpack message.
     try:
         if len(message) != LENGTH:
-            raise exceptions.UnpackError
+            raise UnpackError
         tx0_hash_bytes, tx1_hash_bytes = struct.unpack(FORMAT, message)
         tx0_hash, tx1_hash = binascii.hexlify(tx0_hash_bytes).decode('utf-8'), binascii.hexlify(tx1_hash_bytes).decode('utf-8')
         order_match_id = util.make_id(tx0_hash, tx1_hash)
         status = 'valid'
-    except (exceptions.UnpackError, struct.error) as e:
+    except (UnpackError, struct.error):
         tx0_hash, tx1_hash, order_match_id = None, None, None
         status = 'invalid: could not unpack'
 
     if status == 'valid':
-        destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(db, tx['source'], order_match_id, tx['block_index'])
+        _, btc_quantity, escrowed_asset, escrowed_quantity, _, problems = validate(db, tx['source'], order_match_id, tx['block_index'])
         if problems:
-            order_match = None
             status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':

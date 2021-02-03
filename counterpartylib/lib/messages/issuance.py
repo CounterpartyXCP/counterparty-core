@@ -301,7 +301,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, descr
                 #   generate a random numeric asset id which will map to this subasset
                 asset = util.generate_random_asset()
 
-    call_date, call_price, problems, fee, description, divisible, reissuance, reissued_asset_longname = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, subasset_parent, subasset_longname, util.CURRENT_BLOCK_INDEX)
+    _, call_price, problems, _, description, divisible, reissuance, _ = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, subasset_parent, subasset_longname, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
     asset_id = util.generate_asset_id(asset, util.CURRENT_BLOCK_INDEX)
@@ -379,7 +379,7 @@ def parse (db, tx, message, message_type_id):
         except exceptions.AssetIDError:
             asset = None
             status = 'invalid: bad asset name'
-    except exceptions.UnpackError as e:
+    except exceptions.UnpackError:
         asset, quantity, divisible, callable_, call_date, call_price, description = None, None, None, None, None, None, None
         status = 'invalid: could not unpack'
 
@@ -390,7 +390,7 @@ def parse (db, tx, message, message_type_id):
             # ensure the subasset_longname is valid
             util.validate_subasset_longname(subasset_longname)
             subasset_parent, subasset_longname = util.parse_subasset_from_asset_name(subasset_longname)
-        except exceptions.AssetNameError as e:
+        except exceptions.AssetNameError:
             asset = None
             status = 'invalid: bad subasset name'
 
@@ -426,7 +426,6 @@ def parse (db, tx, message, message_type_id):
                                                ORDER BY tx_index ASC''', ('valid', asset)))
             cursor.close()
             description = issuances[-1]['description']  # Use last description. (Assume previous issuance exists because tx is valid.)
-            timestamp, value_int, fee_fraction_int = None, None, None
 
         if not reissuance:
             # Add to table of assets.

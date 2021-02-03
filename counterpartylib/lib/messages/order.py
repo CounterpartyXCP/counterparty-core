@@ -224,8 +224,6 @@ def cancel_order_match (db, order_match, status, block_index):
     cursor.execute(sql, bindings)
     log.message(db, block_index, 'update', 'order_matches', bindings)
 
-    order_match_id = util.make_id(order_match['tx0_hash'], order_match['tx1_hash'])
-
     # If tx0 is dead, credit address directly; if not, replenish give remaining, get remaining, and fee required remaining.
     orders = list(cursor.execute('''SELECT * FROM orders \
                                     WHERE tx_index = ?''',
@@ -405,7 +403,7 @@ def parse (db, tx, message):
         give_asset = util.get_asset_name(db, give_id, tx['block_index'])
         get_asset = util.get_asset_name(db, get_id, tx['block_index'])
         status = 'open'
-    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
+    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error):
         give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required = 0, 0, 0, 0, 0, 0
         status = 'invalid: could not unpack'
 

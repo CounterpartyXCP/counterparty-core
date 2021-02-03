@@ -322,7 +322,7 @@ def parse (db, tx, message):
     except (exceptions.UnpackError, struct.error):
         (bet_type, deadline, wager_quantity,
          counterwager_quantity, target_value, leverage,
-         expiration, fee_fraction_int) = 0, 0, 0, 0, 0, 0, 0, 0
+         expiration) = 0, 0, 0, 0, 0, 0, 0
         status = 'invalid: could not unpack'
 
     odds, fee_fraction = 0, 0
@@ -477,7 +477,7 @@ def match (db, tx):
                     logger.debug('Skipping: zero backward quantity.')
                     continue
 
-            bet_match_id = util.make_id(tx0['tx_hash'], tx1['tx_hash'])
+            _ = util.make_id(tx0['tx_hash'], tx1['tx_hash'])
 
             # Debit the order.
             # Counterwager remainings may be negative.

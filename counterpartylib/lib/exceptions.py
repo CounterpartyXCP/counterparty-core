@@ -50,4 +50,7 @@ class EncodingError(Exception):
 class OptionsError(Exception):
     pass
 
+class OrderError(Exception):
+    pass
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

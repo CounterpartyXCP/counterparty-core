@@ -138,4 +138,39 @@ OLD_STYLE_API = True
 API_LIMIT_ROWS = 1000
 MEMPOOL_TXCOUNT_UPDATE_LIMIT=60000
 
+
+# Actually, these variables are set on runtime.
+# You might think they are redundant.
+# But they will help static analysis tools like Pylint. 
+ADDRESSVERSION = None
+API_LOG = None
+BACKEND_NAME = None
+BACKEND_POLL_INTERVAL = None
+BACKEND_SSL_NO_VERIFY = None
+BACKEND_URL = None
+BLOCK_FIRST = None
+BURN_END = None
+BURN_START = None
+CHECK_ASSET_CONSERVATION = None
+DATABASE = None
+FORCE = None
+INDEXD_URL = None
+P2SH_ADDRESSVERSION = None
+P2SH_DUST_RETURN_PUBKEY = None
+PREFIX = None
+REGTEST = None
+REQUESTS_TIMEOUT = None
+RPC = None
+RPC_BATCH_SIZE = None
+RPC_HOST = None
+RPC_NO_ALLOW_CORS = None
+RPC_PASSWORD = None
+RPC_PORT = None
+RPC_USER = None
+TESTCOIN = None
+TESTNET = None
+UNSPENDABLE = None
+UTXO_LOCKS_MAX_ADDRESSES = None
+UTXO_LOCKS_MAX_AGE = None
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
