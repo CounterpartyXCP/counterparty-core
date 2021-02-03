@@ -815,7 +815,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
             new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm, p2sh_is_segwit=p2sh_is_segwit)
             # this could be a p2sh source address with no encoded data
             if new_data is None:
-              continue;
+              continue
 
             if new_source is not None:
                 if p2sh_encoding_source is not None and new_source != p2sh_encoding_source:
