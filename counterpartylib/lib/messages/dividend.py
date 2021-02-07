@@ -84,22 +84,24 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     if util.enabled('zero_quantity_value_adjustment_1'):
         exclude_empty = True
     holders = util.holders(db, asset, exclude_empty)
+
     outputs = []
     addresses = []
     dividend_total = 0
     for holder in holders:
-
         if block_index < 294500 and not (config.TESTNET or config.REGTEST): # Protocol change.
             if holder['escrow']: continue
 
         address = holder['address']
         address_quantity = holder['address_quantity']
+
         if block_index >= 296000 or config.TESTNET or config.REGTEST: # Protocol change.
             if address == source: continue
 
         dividend_quantity = address_quantity * quantity_per_unit
         if divisible: dividend_quantity /= config.UNIT
-        if not dividend_divisible: dividend_quantity /= config.UNIT
+        if not util.enabled('nondivisible_dividend_fix') and not dividend_divisible: dividend_quantity /= config.UNIT # Pre-fix behaviour
+        if util.enabled('nondivisible_dividend_fix') and not dividend_divisible: dividend_quantity /= config.UNIT # Fixed behaviour
         if dividend_asset == config.BTC and dividend_quantity < config.DEFAULT_MULTISIG_DUST_SIZE: continue    # A bit hackish.
         dividend_quantity = int(dividend_quantity)
 
@@ -194,7 +196,8 @@ def parse (db, tx, message):
 
         # Credit.
         for output in outputs:
-            util.credit(db, output['address'], dividend_asset, output['dividend_quantity'], action='dividend', event=tx['tx_hash'])
+            if not util.enabled('dont_credit_zero_dividend') or output['dividend_quantity'] > 0:
+                util.credit(db, output['address'], dividend_asset, output['dividend_quantity'], action='dividend', event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

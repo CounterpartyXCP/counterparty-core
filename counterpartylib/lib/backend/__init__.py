@@ -268,7 +268,8 @@ def init_mempool_cache():
     if max_remaining_num_tx:
         for txid in mempool_tx:
             tx = mempool_tx[txid]
-            vin_txhash_list += [vin['txid'] for vin in tx['vin'] if not(tx is None)]
+            if not(tx is None):
+                vin_txhash_list += [vin['txid'] for vin in tx['vin']]
         BACKEND().getrawtransaction_batch(vin_txhash_list[:max_remaining_num_tx], skip_missing=True, verbose=True)
 
     MEMPOOL_CACHE_INITIALIZED = True

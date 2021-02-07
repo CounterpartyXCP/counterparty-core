@@ -16,7 +16,7 @@ CURRENT_VERSION = config.VERSION_STRING
 APSW_VERSION = "3.24.0-r1"
 APSW_SHORT_VERSION = APSW_VERSION.replace('-r1', '')
 
-# NOTE: Why we don’t use the the PyPi package:
+# NOTE: Why we don't use the the PyPi package:
 # <https://github.com/rogerbinns/apsw/issues/66#issuecomment-31310364>
 class install_apsw(Command):
     description = "Install APSW %s with the appropriate version of SQLite" % APSW_VERSION
