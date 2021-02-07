@@ -1,4 +1,4 @@
-PRAGMA page_size=4096;
+-- PRAGMA page_size=1024;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
 -- PRAGMA max_page_count=1073741823;
@@ -1050,7 +1050,19 @@ CREATE TABLE dispenses(
                       destination TEXT,
                       asset TEXT,
                       dispense_quantity INTEGER,
-                      PRIMARY KEY (tx_index, dispense_index, source, destination));
+                      dispenser_tx_hash TEXT,
+                      PRIMARY KEY (tx_index, dispense_index, source, destination),
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+-- Triggers and indices on  dispenses
+CREATE TRIGGER _dispenses_delete BEFORE DELETE ON dispenses BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO dispenses(rowid,tx_index,dispense_index,tx_hash,block_index,source,destination,asset,dispense_quantity,dispenser_tx_hash) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.dispense_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.destination)||','||quote(old.asset)||','||quote(old.dispense_quantity)||','||quote(old.dispenser_tx_hash)||')');
+                            END;
+CREATE TRIGGER _dispenses_insert AFTER INSERT ON dispenses BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM dispenses WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _dispenses_update AFTER UPDATE ON dispenses BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE dispenses SET tx_index='||quote(old.tx_index)||',dispense_index='||quote(old.dispense_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',destination='||quote(old.destination)||',asset='||quote(old.asset)||',dispense_quantity='||quote(old.dispense_quantity)||',dispenser_tx_hash='||quote(old.dispenser_tx_hash)||' WHERE rowid='||old.rowid);
+                            END;
 
 -- Table  dividends
 DROP TABLE IF EXISTS dividends;
