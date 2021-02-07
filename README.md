@@ -14,6 +14,8 @@
 
 # Installation
 
+**WARNING** Master branch should only be used for testing. For production releases uses tagged releases.
+
 For a simple Docker-based install of the Counterparty software stack, see [this guide](http://counterparty.io/docs/federated_node/).
 
 
