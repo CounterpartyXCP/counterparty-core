@@ -344,15 +344,22 @@ _backend = None
 
 def ensure_addrindexrs_connected():
     global _backend
-    if _backend == None:
-        _backend = AddrIndexRsThread(config.INDEXD_CONNECT, config.INDEXD_PORT)
-        _backend.daemon = True
-        _backend.start()
+    backoff = 500
+    max_backoff = 5000
+    while _backend == None:
+        try:
+            _backend = AddrIndexRsThread(config.INDEXD_CONNECT, config.INDEXD_PORT)
+            _backend.daemon = True
+            _backend.start()
 
-        _backend.send({
-            "method": "server.version",
-            "params": []
-        })
+            _backend.send({
+                "method": "server.version",
+                "params": []
+            })
+        except Exception as e:
+            logger.debug(e)
+            time.sleep(backoff)
+            backoff = min(backoff * 1.5, max_backoff)
 
 def _script_pubkey_to_hash(spk):
     return hashlib.sha256(spk).digest()[::-1].hex()
