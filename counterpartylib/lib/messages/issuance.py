@@ -226,7 +226,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
             if util.enabled('numeric_asset_names'):  # Protocol change.
                 if subasset_longname is not None and util.enabled('subassets'): # Protocol change.
                     # subasset issuance is 0.25
-                    fee = int(0.25 * config.UNIT)
+                    fee = int(D('0.25') * config.UNIT)
                 elif len(asset) >= 13:
                     fee = 0
                 else:

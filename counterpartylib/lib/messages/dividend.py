@@ -118,7 +118,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     if not problems and dividend_asset != config.BTC:
         holder_count = len(set(addresses))
         if block_index >= 330000 or config.TESTNET or config.REGTEST: # Protocol change.
-            fee = int(0.0002 * config.UNIT * holder_count)
+            fee = int(D('0.0002') * config.UNIT * holder_count)
         if fee:
             balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, config.XCP)))
             if not balances or balances[0]['quantity'] < fee:
