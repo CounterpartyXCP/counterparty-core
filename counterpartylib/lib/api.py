@@ -306,7 +306,7 @@ def adjust_get_sends_results(query_result):
                 send_row['memo'] = None
             else:
                 send_row['memo_hex'] = binascii.hexlify(send_row['memo']).decode('utf8')
-                send_row['memo'] = send_row['memo'].decode('utf-8')
+                send_row['memo'] = send_row['memo'].decode('utf-8', 'replace')
         except UnicodeDecodeError:
             send_row['memo'] = ''
         filtered_results.append(send_row)
