@@ -213,9 +213,8 @@ def parse (db, tx, message):
                 bindings = {
                     'source': tx['source'],
                     'asset': asset,
-                    'status': dispenser_status,
-                    'give_remaining': existing[0]['give_remaining'] + escrow_quantity,
                     'status': STATUS_OPEN,
+                    'give_remaining': existing[0]['give_remaining'] + escrow_quantity,
                     'block_index': tx['block_index']
                 }
                 try:
