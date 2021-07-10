@@ -305,6 +305,9 @@ def adjust_get_sends_results(query_result):
                 send_row['memo_hex'] = None
                 send_row['memo'] = None
             else:
+                if type(send_row['memo']) == str:
+                    send_row['memo'] = bytes(send_row['memo'], 'utf-8')
+                    
                 send_row['memo_hex'] = binascii.hexlify(send_row['memo']).decode('utf8')
                 send_row['memo'] = send_row['memo'].decode('utf-8')
         except UnicodeDecodeError:
