@@ -397,7 +397,7 @@ def unpack_vout(outpoint, tx, block_count):
         "txId": tx["txid"],
         "vout": outpoint[1],
         "height": height,
-        "value": int(vout["value"] * config.UNIT),
+        "value": int(round(vout["value"] * config.UNIT)),
         "confirmations": tx["confirmations"]
     }
 
