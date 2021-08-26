@@ -202,7 +202,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
 
     # payload for transactions not in cache
     for tx_hash in txhash_list:
-        if tx_hash not in raw_transactions_cache:
+        if (tx_hash not in raw_transactions_cache) or (("confirmations" in raw_transactions_cache[tx_hash]) and (raw_transactions_cache[tx_hash]["confirmations"] < 1)):
             #call_id = binascii.hexlify(os.urandom(5)).decode('utf8') # Don't drain urandom
             global monotonic_call_id
             monotonic_call_id = monotonic_call_id + 1
