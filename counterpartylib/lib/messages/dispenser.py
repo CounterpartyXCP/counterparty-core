@@ -209,22 +209,25 @@ def parse (db, tx, message):
                     sql = 'insert into dispensers values(:tx_index, :tx_hash, :block_index, :source, :asset, :give_quantity, :escrow_quantity, :satoshirate, :status, :give_remaining)'
                     cursor.execute(sql, bindings)
             elif len(existing) == 1 and existing[0]['satoshirate'] == mainchainrate and existing[0]['give_quantity'] == give_quantity:
-                # Refill the dispenser by the given amount
-                bindings = {
-                    'source': tx['source'],
-                    'asset': asset,
-                    'status': dispenser_status,
-                    'give_remaining': existing[0]['give_remaining'] + escrow_quantity,
-                    'status': STATUS_OPEN,
-                    'block_index': tx['block_index']
-                }
-                try:
-                    util.debit(db, tx['source'], asset, escrow_quantity, action='refill dispenser', event=tx['tx_hash'])
-                    sql = 'UPDATE dispensers SET give_remaining=:give_remaining \
-                        WHERE source=:source AND asset=:asset AND status=:status'
-                    cursor.execute(sql, bindings)
-                except (util.DebitError):
-                    status = 'insufficient funds'
+                if tx["source"]==action_address:
+                    # Refill the dispenser by the given amount
+                    bindings = {
+                        'source': tx['source'],
+                        'asset': asset,
+                        'status': dispenser_status,
+                        'give_remaining': existing[0]['give_remaining'] + escrow_quantity,
+                        'status': STATUS_OPEN,
+                        'block_index': tx['block_index']
+                    }
+                    try:
+                        util.debit(db, tx['source'], asset, escrow_quantity, action='refill dispenser', event=tx['tx_hash'])
+                        sql = 'UPDATE dispensers SET give_remaining=:give_remaining \
+                            WHERE source=:source AND asset=:asset AND status=:status'
+                        cursor.execute(sql, bindings)
+                    except (util.DebitError):
+                        status = 'insufficient funds'
+                else:
+                    status = 'invalid: can only refill dispenser from source'                             
             else:
                 status = 'can only have one open dispenser per asset per address'
         elif dispenser_status == STATUS_CLOSED:
