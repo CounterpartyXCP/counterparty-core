@@ -305,6 +305,11 @@ def construct (db, tx_info, encoding='auto',
 
     (source, destination_outputs, data) = tx_info
 
+    #Forcing old_style_api false if source is a segwit address
+    if script.is_bech32(source):
+        old_style_api = False
+    
+
     if dust_return_pubkey:
         dust_return_pubkey = binascii.unhexlify(dust_return_pubkey)
 
