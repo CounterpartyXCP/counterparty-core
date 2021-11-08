@@ -277,11 +277,24 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
 
     query_result = db_query(db, statement, tuple(bindings))
 
+    if table == 'destructions':
+        return adjust_get_destructions_results(query_result)
+        
     if table == 'sends':
         # for sends, handle the memo field properly
         return adjust_get_sends_results(query_result)
 
     return query_result
+
+def adjust_get_destructions_results(query_result):
+    filtered_results = []
+    for destruction_row in list(query_result):
+        if type(destruction_row['tag']) == bytes:
+            destruction_row['tag'] = destruction_row['tag'].decode('utf-8')
+
+        filtered_results.append(destruction_row)
+
+    return filtered_results
 
 def adjust_get_sends_memo_filters(filters):
     """Convert memo to a byte string.  If memo_hex is supplied, attempt to decode it and use that instead."""
