@@ -138,4 +138,6 @@ OLD_STYLE_API = True
 API_LIMIT_ROWS = 1000
 MEMPOOL_TXCOUNT_UPDATE_LIMIT=60000
 
+MPMA_LIMIT = 1000
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

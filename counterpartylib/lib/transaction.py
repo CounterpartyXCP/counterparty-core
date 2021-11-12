@@ -305,6 +305,11 @@ def construct (db, tx_info, encoding='auto',
 
     (source, destination_outputs, data) = tx_info
 
+    #Forcing old_style_api false if source is a segwit address
+    if script.is_bech32(source):
+        old_style_api = False
+    
+
     if dust_return_pubkey:
         dust_return_pubkey = binascii.unhexlify(dust_return_pubkey)
 
@@ -394,6 +399,12 @@ def construct (db, tx_info, encoding='auto',
             elif dust_return_pubkey is False:
                 dust_return_pubkey = binascii.unhexlify(config.P2SH_DUST_RETURN_PUBKEY)
 
+        if not dust_return_pubkey:
+            if encoding == 'multisig' or encoding == 'p2sh' and not source_is_p2sh:
+                dust_return_pubkey = get_dust_return_pubkey(source, provided_pubkeys, encoding)
+            else:
+                dust_return_pubkey = None
+
         # Divide data into chunks.
         if encoding == 'pubkeyhash':
             # Prefix is also a suffix here.
@@ -403,7 +414,11 @@ def construct (db, tx_info, encoding='auto',
             # minus two sign bytes.
             chunk_size = (33 * 2) - 1 - 8 - 2 - 2
         elif encoding == 'p2sh':
-            chunk_size = p2sh_encoding.maximum_data_chunk_size()
+            pubkeylength = -1
+            if dust_return_pubkey is not None:
+                pubkeylength = len(dust_return_pubkey)
+
+            chunk_size = p2sh_encoding.maximum_data_chunk_size(pubkeylength)
         elif encoding == 'opreturn':
             chunk_size = config.OP_RETURN_MAX_SIZE
             if len(data) + len(config.PREFIX) > chunk_size:
@@ -422,11 +437,6 @@ def construct (db, tx_info, encoding='auto',
             data_value = regular_dust_size
         data_output = (data_array, data_value)
 
-        if not dust_return_pubkey:
-            if encoding == 'multisig' or encoding == 'p2sh' and not source_is_p2sh:
-                dust_return_pubkey = get_dust_return_pubkey(source, provided_pubkeys, encoding)
-            else:
-                dust_return_pubkey = None
     else:
         data_value = 0
         data_array = []

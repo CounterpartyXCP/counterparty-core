@@ -5,6 +5,7 @@ from counterpartylib.lib.messages.versions import enhanced_send
 from counterpartylib.lib.messages.versions import mpma
 from counterpartylib.lib import util
 from counterpartylib.lib import exceptions
+from counterpartylib.lib import config
 
 ID = send1.ID
 
@@ -112,6 +113,9 @@ def compose (db, source, destination, asset, quantity, memo=None, memo_is_hex=Fa
                     #     + list: same as case (1). An array that specifies the memo for each send
                     #     + msg_wide: the memo for the whole message. This memo will be used for sends that don't have a memo specified. Same as in (3)
                     # 3. Send one memo (either bytes or string) and True/False in memo_is_hex. This will be interpreted as a message wide memo.
+                    if (len(destination) > config.MPMA_LIMIT):
+                        raise exceptions.ComposeError('mpma sends have a maximum of '+str(config.MPMA_LIMIT)+' sends')
+                    
                     if isinstance(memo, list) and isinstance(memo_is_hex, list):
                         # (1) implemented here
                         if len(memo) != len(memo_is_hex):
