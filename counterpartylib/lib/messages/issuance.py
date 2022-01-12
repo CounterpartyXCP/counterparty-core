@@ -375,6 +375,14 @@ def parse (db, tx, message, message_type_id):
             callable_, call_date, call_price, description = False, 0, 0.0, ''
         try:
             asset = util.generate_asset_name(asset_id, tx['block_index'])
+                        
+            ##This is for backwards compatibility with assets names longer than 12 characters
+            if asset.startswith('A'):
+                namedAsset = util.get_asset_name(db, asset_id, tx['block_index'])
+            
+                if (namedAsset != 0):
+                    asset = namedAsset
+            
             status = 'valid'
         except exceptions.AssetIDError:
             asset = None
