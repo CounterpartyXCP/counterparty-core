@@ -162,7 +162,7 @@ def get_p2w_script(address):
         witness_script += scripthash
         witness_script += OP_EQUAL
 
-        return (witness_script, tx_script)
+        return (tx_script, witness_script)
     elif len(scripthash) == 32:
         # P2WSH encoding
         raise Exception('P2WSH encoding not yet supported')

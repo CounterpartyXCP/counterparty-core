@@ -839,13 +839,17 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
     if util.enabled('p2sh_encoding') and data == b'P2SH':
         data = b''
         for vin in ctx.vin:
+            vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash))
+            logger.info(vin_tx)
+            prevout_is_segwit = 'txinwitness' in vin_tx["vin"][0]
+            
             # Ignore transactions with invalid script.
             try:
                 asm = script.get_asm(vin.scriptSig)
             except CScriptInvalidError as e:
                 raise DecodeError(e)
 
-            new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm, p2sh_is_segwit=p2sh_is_segwit)
+            new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm, p2sh_is_segwit=prevout_is_segwit)
             # this could be a p2sh source address with no encoded data
             if new_data is None:
               continue;
