@@ -158,7 +158,11 @@ def decode_data_redeem_script(redeemScript, p2sh_is_segwit=False):
                         else:
                             # it's p2pkh
                             pos, pubkey = decode_data_push(redeemScript, pos)
-                            source = script.pubkey_to_pubkeyhash(pubkey)
+
+                            if p2sh_is_segwit:
+                                source = script.pubkey_to_p2whash(pubkey)
+                            else:
+                                source = script.pubkey_to_pubkeyhash(pubkey)
 
                             valid_sig = redeemScript[pos] == bitcoinlib.core.script.OP_CHECKSIGVERIFY
                         pos += 1

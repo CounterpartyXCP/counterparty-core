@@ -279,8 +279,10 @@ def return_result(tx_hexes, old_style_api):
 
             return tx_hexes[0]
         else:
-            return tx_hexes
-
+            if len(tx_hexes) == 1:
+                return tx_hexes[0]
+            else:
+                return tx_hexes
 
 def construct (db, tx_info, encoding='auto',
                fee_per_kb=config.DEFAULT_FEE_PER_KB,

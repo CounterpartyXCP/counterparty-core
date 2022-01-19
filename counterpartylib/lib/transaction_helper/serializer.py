@@ -162,7 +162,7 @@ def get_p2w_script(address):
         witness_script += scripthash
         witness_script += OP_EQUAL
 
-        return (witness_script, tx_script)
+        return (tx_script, witness_script)
     elif len(scripthash) == 32:
         # P2WSH encoding
         raise Exception('P2WSH encoding not yet supported')
@@ -255,8 +255,8 @@ def serialise(encoding, inputs, destination_outputs, data_output=None, change_ou
         #    witness_data[destination].append(witness_script)
         #    tx_script = witness_script
 
-        if witness_script:
-            tx_script = witness_script
+        #if witness_script:
+        #    tx_script = witness_script
 
         s += var_int(int(len(tx_script)))                      # Script length
         s += tx_script
@@ -322,11 +322,11 @@ def serialise(encoding, inputs, destination_outputs, data_output=None, change_ou
 
         tx_script, witness_script = get_script(change_address)
         #print("Change address!", change_address, "\n", witness_data, "\n", tx_script, "\n", witness_script)
-        if witness_script: #use_segwit and change_address in witness_data:
+        #if witness_script: #use_segwit and change_address in witness_data:
         #    if not(change_address in witness_data):
         #        witness_data[change_address] = []
         #    witness_data[change_address].append(witness_script)
-            tx_script = witness_script
+        #    tx_script = witness_script
         #    use_segwit = True
 
         s += var_int(int(len(tx_script)))                      # Script length
