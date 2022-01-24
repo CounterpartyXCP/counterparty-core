@@ -39,7 +39,7 @@ def calculate_outputs(destination_outputs, data_array, fee_per_kb):
 
     # split the tx fee evenly between all datatx outputs
     # data_value = math.ceil(datatx_necessary_fee / len(data_array))
-	data_value = config.DEFAULT_REGULAR_DUST_SIZE
+    data_value = config.DEFAULT_REGULAR_DUST_SIZE
 
     # adjust the data output with the new value and recalculate data_btc_out
     data_output = (data_array, data_value)
