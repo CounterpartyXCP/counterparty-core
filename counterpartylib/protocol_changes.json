@@ -271,5 +271,13 @@
     "minimum_version_revision": 3,
     "block_index": 670000,
     "testnet_block_index": 1666625
+  },
+  "p2sh_dispensers_support": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 57,
+      "minimum_version_revision": 0,
+      "block_index": 724000,
+      "testnet_block_index": 2163328
+
   }
 }
