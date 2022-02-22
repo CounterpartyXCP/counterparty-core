@@ -479,9 +479,20 @@ def get_tx_info(tx_hex, block_parser=None, block_index=None, db=None):
 def _get_swap_tx(decoded_tx, block_parser=None, block_index=None, db=None):
     def get_pubkeyhash(scriptpubkey):
         asm = script.get_asm(scriptpubkey)
-        if len(asm) != 5 or asm[0] != 'OP_DUP' or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':
-            return False
-        return asm[2]
+        
+        if len(asm) > 0:
+            if asm[0] == "OP_DUP":
+                if len(asm) != 5 or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':            
+                    return False
+                else:
+                    return {"pubkeyhash":asm[2],"address_version":config.ADDRESSVERSION}
+            elif (asm[0] == "OP_HASH160") and util.enabled('p2sh_dispensers_support'):
+                if len(asm) != 3 or asm[-1] != 'OP_EQUAL':          
+                    return False
+                else:
+                    return {"pubkeyhash":asm[1],"address_version":config.P2SH_ADDRESSVERSION}
+                
+        return False
 
     def get_address(scriptpubkey):
         if util.enabled('correct_segwit_txids') and scriptpubkey.is_witness_v0_keyhash():
@@ -489,13 +500,16 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None, db=None):
             address = str(bitcoinlib.bech32.CBech32Data.from_bytes(0, pubkey))
             return address
         else:
-            pubkeyhash = get_pubkeyhash(scriptpubkey)
-            if not pubkeyhash:
+            pubkeyhashdict = get_pubkeyhash(scriptpubkey)
+            if not pubkeyhashdict:
                 return False
+            pubkeyhash = pubkeyhashdict["pubkeyhash"]
+            address_version = pubkeyhashdict["address_version"]
+            
             pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
-            address = script.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
+            address = script.base58_check_encode(pubkeyhash, address_version)
             # Test decoding of address.
-            if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != script.base58_check_decode(address, config.ADDRESSVERSION):
+            if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != script.base58_check_decode(address, address_version):
                 return False
 
             return address
