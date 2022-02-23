@@ -1121,7 +1121,8 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
                 fee = 0
                 data = struct.pack(config.SHORT_TXTYPE_FORMAT, dispenser.DISPENSE_ID)
                 data += b'\x00'
-                break # Prevent inspection of further dispenses (only first one is valid)
+                if !util.enabled('multiple_output_dispenses'):
+                    break # Prevent inspection of further dispenses (only first one is valid)
 
     # For mempool
     if block_hash == None:
