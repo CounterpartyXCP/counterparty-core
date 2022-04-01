@@ -28,10 +28,13 @@ def pack(address):
             return b''.join([witver, witprog])
         except Exception as ne:
             try:
+                encoded_address = bitcoin.base58.CBase58Data(address)
                 short_address_bytes = bitcoin.base58.decode(address)[:-4]
                 return short_address_bytes
             except bitcoin.base58.InvalidBase58Error as e:
                 raise e
+            except bitcoin.base58.Base58ChecksumError as e:
+                raise Exception(('The address {} is not a valid bitcoin address').format(address))
     else:
         try:
             short_address_bytes = bitcoin.base58.decode(address)[:-4]
