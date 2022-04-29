@@ -246,6 +246,11 @@ def cancel_order_match (db, order_match, status, block_index):
         else:
             tx0_fee_required_remaining = tx0_order['fee_required_remaining']
         tx0_order_status = tx0_order['status']
+
+        # This case could happen if a BTCpay expires and before the expiration, the order was filled by a correct BTCpay (So, we have to open the order again)
+        if (tx0_order_status == 'filled'): 
+            tx0_order_status = 'open'
+
         bindings = {
             'give_remaining': tx0_give_remaining,
             'get_remaining': tx0_get_remaining,
