@@ -246,11 +246,11 @@ def cancel_order_match (db, order_match, status, block_index):
         else:
             tx0_fee_required_remaining = tx0_order['fee_required_remaining']
         tx0_order_status = tx0_order['status']
-
-        # This case could happen if a BTCpay expires and before the expiration, the order was filled by a correct BTCpay (So, we have to open the order again)
-        if (tx0_order_status == 'filled'): 
-            tx0_order_status = 'open'
-
+        
+        if (tx0_order_status == 'filled'): #This case could happen if a BTCpay expires and before the expiration, the order was filled by a correct BTCpay
+            tx0_order_status = 'open' # So, we have to open the order again
+        
+        
         bindings = {
             'give_remaining': tx0_give_remaining,
             'get_remaining': tx0_get_remaining,
@@ -258,7 +258,7 @@ def cancel_order_match (db, order_match, status, block_index):
             'fee_required_remaining': tx0_fee_required_remaining,
             'tx_hash': order_match['tx0_hash']
         }
-        sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining where tx_hash = :tx_hash'
+        sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, status = :status where tx_hash = :tx_hash'
         cursor.execute(sql, bindings)
         log.message(db, block_index, 'update', 'orders', bindings)
 
@@ -282,6 +282,9 @@ def cancel_order_match (db, order_match, status, block_index):
         else:
             tx1_fee_required_remaining = tx1_order['fee_required_remaining']
         tx1_order_status = tx1_order['status']
+        if (tx1_order_status == 'filled'): #This case could happen if a BTCpay expires and before the expiration, the order was filled by a correct BTCpay
+            tx1_order_status = 'open' # So, we have to open the order again
+        
         bindings = {
             'give_remaining': tx1_give_remaining,
             'get_remaining': tx1_get_remaining,
@@ -289,7 +292,7 @@ def cancel_order_match (db, order_match, status, block_index):
             'fee_required_remaining': tx1_fee_required_remaining,
             'tx_hash': order_match['tx1_hash']
         }
-        sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining where tx_hash = :tx_hash'
+        sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, status = :status where tx_hash = :tx_hash'
         cursor.execute(sql, bindings)
         log.message(db, block_index, 'update', 'orders', bindings)
 
