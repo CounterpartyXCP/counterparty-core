@@ -214,6 +214,8 @@ def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
         for pubkey in provided_pubkeys:
             if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
                 return pubkey
+            elif pubkeyhash == script.pubkey_to_p2whash(util.unhexlify(pubkey)):
+                return pubkey
 
     # Search blockchain.
     raw_transactions = search_raw_transactions(pubkeyhash, unconfirmed=True)
