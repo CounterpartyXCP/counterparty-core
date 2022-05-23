@@ -3,6 +3,7 @@ logger = logging.getLogger(__name__)
 import struct
 
 import bitcoin
+from counterpartylib.lib import config
 
 def address_scriptpubkey(address):
     try:
