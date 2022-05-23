@@ -4,6 +4,7 @@ import struct
 
 import bitcoin
 from counterpartylib.lib import config
+from counterpartylib.lib import script
 
 def address_scriptpubkey(address):
     try:
