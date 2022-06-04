@@ -779,9 +779,11 @@ def decode_checkmultisig(asm, ctx):
     return destination, data
 
 def decode_p2w(script_pubkey):
-    bech32 = bitcoinlib.bech32.CBech32Data.from_bytes(0, script_pubkey[2:22])
-
-    return str(bech32), None
+    try:
+        bech32 = bitcoinlib.bech32.CBech32Data.from_bytes(0, script_pubkey[2:22])
+        return str(bech32), None
+    except TypeError as e:
+        raise DecodeError('bech32 decoding error')
 
 def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=False):
     """Get multisig transaction info.
