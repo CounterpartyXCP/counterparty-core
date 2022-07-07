@@ -69,11 +69,16 @@ def initialise(db):
                       PRIMARY KEY (tx_index, dispense_index, source, destination),
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
+                   
     columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(dispenses)''')]
     if 'dispenser_tx_hash' not in columns:
         cursor.execute('ALTER TABLE dispenses ADD COLUMN dispenser_tx_hash TEXT')
+    
+    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(dispensers)''')]
+    if 'oracle_address' not in columns:
+        cursor.execute('ALTER TABLE dispensers ADD COLUMN oracle_address TEXT')
 
-def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, status, open_address, block_index):
+def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, status, open_address, block_index, oracle_address):
     problems = []
     order_match = None
     asset_id = None
@@ -134,20 +139,48 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
                 problems.append('cannot dispense %s' % asset) # How can we test this on a test vector?
 
     cursor.close()
+    
+    if oracle_address is not None:
+        last_price, last_fee = get_last_price_oracle(db, oracle_address)
+        
+        if last_price is None:
+            problems.append('The oracle address %s has not broadcasted any price yet' % oracle_address)
+    
     if len(problems) > 0:
         return None, problems
     else:
         return asset_id, None
 
-def compose (db, source, asset, give_quantity, escrow_quantity, mainchainrate, status, open_address=None):
-    assetid, problems = validate(db, source, asset, give_quantity, escrow_quantity, mainchainrate, status, open_address, util.CURRENT_BLOCK_INDEX)
+def compose (db, source, asset, give_quantity, escrow_quantity, mainchainrate, status, open_address=None, oracle_address=None):
+    assetid, problems = validate(db, source, asset, give_quantity, escrow_quantity, mainchainrate, status, open_address, util.CURRENT_BLOCK_INDEX, oracle_address)
     if problems: raise exceptions.ComposeError(problems)
 
+    destination = []
     data = message_type.pack(ID)
     data += struct.pack(FORMAT, assetid, give_quantity, escrow_quantity, mainchainrate, status)
     if status == STATUS_OPEN_EMPTY_ADDRESS and open_address:
         data += address.pack(open_address)
-    return (source, [], data)
+    if oracle_address is not None:
+        oracle_fee = calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, oracle_address)
+        destination.append((oracle_address,oracle_fee))
+        data += address.pack(oracle_address)        
+        
+    return (source, destination, data)
+
+def calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, oracle_address):
+    last_price, last_fee = get_last_price_oracle(db, oracle_address)
+    last_fee_multiplier = (last_fee / config.UNIT)
+        
+    #Format mainchainrate to ######.##
+    oracle_mainchainrate = satoshirate_to_fiat(mainchainrate)       
+    oracle_mainchainrate_btc = oracle_mainchainrate/last_price
+        
+    #Calculate the total amount earned for dispenser and the fee
+    remaining = int(floor(escrow_quantity / give_quantity))
+    total_quantity_btc = oracle_mainchainrate_btc * remaining
+    oracle_fee_btc = int(total_quantity_btc * last_fee_multiplier *config.UNIT)
+    
+    return oracle_fee_btc
 
 def parse (db, tx, message):
     cursor = db.cursor()
@@ -155,108 +188,146 @@ def parse (db, tx, message):
     # Unpack message.
     try:
         action_address = tx['source']
+        oracle_address = None
         assetid, give_quantity, escrow_quantity, mainchainrate, dispenser_status = struct.unpack(FORMAT, message[0:LENGTH])
+        read = LENGTH
         if dispenser_status == STATUS_OPEN_EMPTY_ADDRESS:
             action_address = address.unpack(message[LENGTH:LENGTH+21])
+            read = LENGTH + 21
+        if len(message) > read:
+            oracle_address = address.unpack(message[read:read+21])
         asset = util.generate_asset_name(assetid, util.CURRENT_BLOCK_INDEX)
         status = 'valid'
     except (exceptions.UnpackError, struct.error) as e:
         assetid, give_quantity, mainchainrate, asset = None, None, None, None
         status = 'invalid: could not unpack'
 
+    
     if status == 'valid':
-        if dispenser_status == STATUS_OPEN or dispenser_status == STATUS_OPEN_EMPTY_ADDRESS:
-            cursor.execute('SELECT * FROM dispensers WHERE source=:source AND asset=:asset AND status=:status', {
-                'source': action_address,
-                'asset': asset,
-                'status': STATUS_OPEN
-            })
-            existing = cursor.fetchall()
+        asset_id, problems = validate(db, tx['source'], asset, give_quantity, escrow_quantity, mainchainrate, dispenser_status, action_address if dispenser_status == STATUS_OPEN_EMPTY_ADDRESS else None, tx['block_index'], oracle_address)
+        
+        if problems:
+            status = 'invalid: ' + '; '.join(problems)
+        else:   
+            if dispenser_status == STATUS_OPEN or dispenser_status == STATUS_OPEN_EMPTY_ADDRESS:
+                cursor.execute('SELECT * FROM dispensers WHERE source=:source AND asset=:asset AND status=:status', {
+                    'source': action_address,
+                    'asset': asset,
+                    'status': STATUS_OPEN
+                })
+                existing = cursor.fetchall()
 
-            if len(existing) == 0:
-                # Create the new dispenser
-                try:
-                    if dispenser_status == STATUS_OPEN_EMPTY_ADDRESS:
-                        cursor.execute('SELECT count(*) cnt FROM balances WHERE address=:address AND quantity > 0', {
-                            'address': action_address
-                        })
-                        counts = cursor.fetchall()[0]
+                if len(existing) == 0:
+                    if oracle_address != None:
+                        oracle_fee = calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, oracle_address) 
+                                            
+                        if tx["address"] != oracle_address or tx["btc_amount"] < oracle_fee:
+                            status = 'invalid: insufficient or non-existent oracle fee'
+                        
+                    
+                    if status == 'valid':
+                        # Create the new dispenser
+                        try:
+                            if dispenser_status == STATUS_OPEN_EMPTY_ADDRESS:
+                                cursor.execute('SELECT count(*) cnt FROM balances WHERE address=:address AND quantity > 0', {
+                                    'address': action_address
+                                })
+                                counts = cursor.fetchall()[0]
 
-                        if counts['cnt'] == 0:
-                            util.debit(db, tx['source'], asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
-                            util.credit(db, action_address, asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
-                            util.debit(db, action_address, asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
-                        else:
-                            status = 'invalid: address not empty'
+                                if counts['cnt'] == 0:
+                                    util.debit(db, tx['source'], asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
+                                    util.credit(db, action_address, asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
+                                    util.debit(db, action_address, asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
+                                else:
+                                    status = 'invalid: address not empty'
+                            else:
+                                util.debit(db, tx['source'], asset, escrow_quantity, action='open dispenser', event=tx['tx_hash'])
+                        except util.DebitError as e:
+                            status = 'invalid: insufficient funds'
+
+                    if status == 'valid':
+                        bindings = {
+                            'tx_index': tx['tx_index'],
+                            'tx_hash': tx['tx_hash'],
+                            'block_index': tx['block_index'],
+                            'source': action_address,
+                            'asset': asset,
+                            'give_quantity': give_quantity,
+                            'escrow_quantity': escrow_quantity,
+                            'satoshirate': mainchainrate,
+                            'status': STATUS_OPEN,
+                            'give_remaining': escrow_quantity,
+                            'oracle_address': oracle_address
+                        }
+                        sql = 'insert into dispensers values(:tx_index, :tx_hash, :block_index, :source, :asset, :give_quantity, :escrow_quantity, :satoshirate, :status, :give_remaining, :oracle_address)'
+                        cursor.execute(sql, bindings)
+                elif len(existing) == 1 and existing[0]['satoshirate'] == mainchainrate and existing[0]['give_quantity'] == give_quantity:
+                    if tx["source"]==action_address:
+                        # Refill the dispenser by the given amount
+                        bindings = {
+                            'source': tx['source'],
+                            'asset': asset,
+                            'status': dispenser_status,
+                            'give_remaining': existing[0]['give_remaining'] + escrow_quantity,
+                            'status': STATUS_OPEN,
+                            'block_index': tx['block_index']
+                        }
+                        try:
+                            util.debit(db, tx['source'], asset, escrow_quantity, action='refill dispenser', event=tx['tx_hash'])
+                            sql = 'UPDATE dispensers SET give_remaining=:give_remaining \
+                                WHERE source=:source AND asset=:asset AND status=:status'
+                            cursor.execute(sql, bindings)
+                        except (util.DebitError):
+                            status = 'insufficient funds'
                     else:
-                        util.debit(db, tx['source'], asset, escrow_quantity, action='open dispenser', event=tx['tx_hash'])
-                except util.DebitError as e:
-                    status = 'invalid: insufficient funds'
+                        status = 'invalid: can only refill dispenser from source'                             
+                else:
+                    status = 'can only have one open dispenser per asset per address'
+            elif dispenser_status == STATUS_CLOSED:
+                cursor.execute('SELECT give_remaining FROM dispensers WHERE source=:source AND asset=:asset AND status=:status', {
+                    'source': tx['source'],
+                    'asset': asset,
+                    'status': STATUS_OPEN
+                })
+                existing = cursor.fetchall()
 
-                if status == 'valid':
-                    bindings = {
-                        'tx_index': tx['tx_index'],
-                        'tx_hash': tx['tx_hash'],
-                        'block_index': tx['block_index'],
-                        'source': action_address,
-                        'asset': asset,
-                        'give_quantity': give_quantity,
-                        'escrow_quantity': escrow_quantity,
-                        'satoshirate': mainchainrate,
-                        'status': STATUS_OPEN,
-                        'give_remaining': escrow_quantity
-                    }
-                    sql = 'insert into dispensers values(:tx_index, :tx_hash, :block_index, :source, :asset, :give_quantity, :escrow_quantity, :satoshirate, :status, :give_remaining)'
-                    cursor.execute(sql, bindings)
-            elif len(existing) == 1 and existing[0]['satoshirate'] == mainchainrate and existing[0]['give_quantity'] == give_quantity:
-                if tx["source"]==action_address:
-                    # Refill the dispenser by the given amount
+                if len(existing) == 1:
+                    util.credit(db, tx['source'], asset, existing[0]['give_remaining'], action='close dispenser', event=tx['tx_hash'])
                     bindings = {
                         'source': tx['source'],
                         'asset': asset,
-                        'status': dispenser_status,
-                        'give_remaining': existing[0]['give_remaining'] + escrow_quantity,
-                        'status': STATUS_OPEN,
+                        'status': STATUS_CLOSED,
                         'block_index': tx['block_index']
                     }
-                    try:
-                        util.debit(db, tx['source'], asset, escrow_quantity, action='refill dispenser', event=tx['tx_hash'])
-                        sql = 'UPDATE dispensers SET give_remaining=:give_remaining \
-                            WHERE source=:source AND asset=:asset AND status=:status'
-                        cursor.execute(sql, bindings)
-                    except (util.DebitError):
-                        status = 'insufficient funds'
+                    sql = 'UPDATE dispensers SET give_remaining=0, status=:status WHERE source=:source AND asset=:asset'
+                    cursor.execute(sql, bindings)
                 else:
-                    status = 'invalid: can only refill dispenser from source'                             
+                    status = 'dispenser inexistent'
             else:
-                status = 'can only have one open dispenser per asset per address'
-        elif dispenser_status == STATUS_CLOSED:
-            cursor.execute('SELECT give_remaining FROM dispensers WHERE source=:source AND asset=:asset AND status=:status', {
-                'source': tx['source'],
-                'asset': asset,
-                'status': STATUS_OPEN
-            })
-            existing = cursor.fetchall()
-
-            if len(existing) == 1:
-                util.credit(db, tx['source'], asset, existing[0]['give_remaining'], action='close dispenser', event=tx['tx_hash'])
-                bindings = {
-                    'source': tx['source'],
-                    'asset': asset,
-                    'status': STATUS_CLOSED,
-                    'block_index': tx['block_index']
-                }
-                sql = 'UPDATE dispensers SET give_remaining=0, status=:status WHERE source=:source AND asset=:asset'
-                cursor.execute(sql, bindings)
-            else:
-                status = 'dispenser inexistent'
-        else:
-            status = 'invalid: status must be one of OPEN or CLOSE'
+                status = 'invalid: status must be one of OPEN or CLOSE'
 
     if status != 'valid':
         logger.warn("Not storing [dispenser] tx [%s]: %s" % (tx['tx_hash'], status))
 
     cursor.close()
+
+def satoshirate_to_fiat(satoshirate):
+    satoshirate_str = str(satoshirate).zfill(3)
+    return float(satoshirate_str[:-2] + "." + satoshirate_str[-2:])
+
+def get_last_price_oracle(db, oracle_address):
+    cursor = db.cursor()
+    cursor.execute('SELECT * FROM broadcasts WHERE source=:source AND status=:status ORDER by tx_index DESC LIMIT 1', {
+        'source': oracle_address,
+        'status': 'valid'
+    })
+    broadcasts = cursor.fetchall()
+    cursor.close()
+    
+    if len(broadcasts) == 0:
+        return None, None
+    
+    return broadcasts[0]['value'], broadcasts[0]['fee_fraction_int']
 
 def is_dispensable(db, address, amount):
     cursor = db.cursor()
@@ -283,7 +354,13 @@ def dispense(db, tx):
         give_quantity = dispenser['give_quantity']
 
         if satoshirate > 0 and give_quantity > 0:
-            must_give = int(floor(tx['btc_amount'] / satoshirate))
+            if dispenser['oracle_address'] != None:
+                last_price, last_fee = get_last_price_oracle(db, dispenser['oracle_address'])
+                fiatrate = satoshirate_to_fiat(satoshirate)
+                must_give = int(floor(((tx['btc_amount'] / config.UNIT) * last_price)/fiatrate))
+            else:
+                must_give = int(floor(tx['btc_amount'] / satoshirate))
+                
             remaining = int(floor(dispenser['give_remaining'] / give_quantity))
             actually_given = min(must_give, remaining) * give_quantity
             give_remaining = dispenser['give_remaining'] - actually_given
