@@ -162,7 +162,9 @@ def compose (db, source, asset, give_quantity, escrow_quantity, mainchainrate, s
         data += address.pack(open_address)
     if oracle_address is not None:
         oracle_fee = calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, oracle_address)
-        destination.append((oracle_address,oracle_fee))
+        
+        if oracle_fee >= config.DEFAULT_REGULAR_DUST_SIZE:
+            destination.append((oracle_address,oracle_fee))
         data += address.pack(oracle_address)        
         
     return (source, destination, data)
@@ -220,9 +222,10 @@ def parse (db, tx, message):
                 if len(existing) == 0:
                     if oracle_address != None:
                         oracle_fee = calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, oracle_address) 
-                                            
-                        if tx["address"] != oracle_address or tx["btc_amount"] < oracle_fee:
-                            status = 'invalid: insufficient or non-existent oracle fee'
+                           
+                        if oracle_fee >= config.DEFAULT_REGULAR_DUST_SIZE:   
+                            if tx["address"] != oracle_address or tx["btc_amount"] < oracle_fee:
+                                status = 'invalid: insufficient or non-existent oracle fee'
                         
                     
                     if status == 'valid':
