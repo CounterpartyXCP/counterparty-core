@@ -186,7 +186,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
             problems.append('cannot transfer a non‐existent asset')
 
     # validate parent ownership for subasset
-    if subasset_longname is not None:
+    if subasset_longname is not None and not reissuance:
         cursor = db.cursor()
         cursor.execute('''SELECT * FROM issuances \
                           WHERE (status = ? AND asset = ?)
