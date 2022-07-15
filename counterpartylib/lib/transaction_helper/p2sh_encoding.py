@@ -23,7 +23,7 @@ def maximum_data_chunk_size(pubkeylength):
     else:
         return bitcoinlib.core.script.MAX_SCRIPT_ELEMENT_SIZE - len(config.PREFIX) - 44 # Redeemscript size for p2pkh addresses, multisig won't work here
 
-def calculate_outputs(destination_outputs, data_array, fee_per_kb):
+def calculate_outputs(destination_outputs, data_array, fee_per_kb, exact_fee=None):
     datatx_size = 10  # 10 base
     datatx_size += 181  # 181 for source input
     datatx_size += (25 + 9) * len(destination_outputs)  # destination outputs
@@ -40,6 +40,10 @@ def calculate_outputs(destination_outputs, data_array, fee_per_kb):
     # split the tx fee evenly between all datatx outputs
     # data_value = math.ceil(datatx_necessary_fee / len(data_array))
     data_value = config.DEFAULT_REGULAR_DUST_SIZE
+
+    if exact_fee:
+        if data_value * len(data_array) < exact_fee:
+            data_value = int(math.ceil(exact_fee / len(data_array)))
 
     # adjust the data output with the new value and recalculate data_btc_out
     data_output = (data_array, data_value)
