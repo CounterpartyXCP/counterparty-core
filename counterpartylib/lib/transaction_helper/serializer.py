@@ -382,7 +382,11 @@ def serialise_p2sh_pretx(inputs, source, source_value, data_output, change_outpu
         # get the scripts
         scriptSig, redeemScript, outputScript = p2sh_encoding.make_p2sh_encoding_redeemscript(data_chunk, n, pubkey, multisig_pubkeys, multisig_pubkeys_required)
 
-        s += data_value.to_bytes(8, byteorder='little')  # Value
+        #if data_value is an array, then every output fee is specified in it
+        if type(data_value) == list:
+            s += data_value[n].to_bytes(8, byteorder='little')  # Value
+        else:
+            s += data_value.to_bytes(8, byteorder='little')  # Value
         s += var_int(int(len(outputScript)))             # Script length
         s += outputScript                                # Script
 
