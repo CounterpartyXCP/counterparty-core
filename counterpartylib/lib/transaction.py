@@ -461,7 +461,7 @@ def construct (db, tx_info, encoding='auto',
 
     if encoding == 'p2sh':
         # calculate all the p2sh outputs
-        size_for_fee, datatx_necessary_fee, data_value, data_btc_out = p2sh_encoding.calculate_outputs(destination_outputs, data_array, fee_per_kb)
+        size_for_fee, datatx_necessary_fee, data_value, data_btc_out = p2sh_encoding.calculate_outputs(destination_outputs, data_array, fee_per_kb, exact_fee)
         # replace the data value
         data_output = (data_array, data_value)
     else:
