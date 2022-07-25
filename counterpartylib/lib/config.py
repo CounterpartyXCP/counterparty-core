@@ -98,8 +98,6 @@ BURN_END_REGTEST_TESTCOIN = 150
 
 # Protocol defaults
 # NOTE: If the DUST_SIZE constants are changed, they MUST also be changed in counterblockd/lib/config.py as well
-# TODO: This should be updated, given their new configurability.
-# TODO: The dust values should be lowered by 90%, once transactions with smaller outputs start confirming faster: <https://github.com/mastercoin-MSC/spec/issues/192>
 DEFAULT_REGULAR_DUST_SIZE = 546          # TODO: Revisit when dust size is adjusted in bitcoin core
 DEFAULT_MULTISIG_DUST_SIZE = 7800        # <https://bitcointalk.org/index.php?topic=528023.msg7469941#msg7469941>
 DEFAULT_OP_RETURN_VALUE = 0
