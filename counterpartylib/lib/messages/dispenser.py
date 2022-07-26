@@ -224,7 +224,7 @@ def parse (db, tx, message):
                         oracle_fee = calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, oracle_address) 
                            
                         if oracle_fee >= config.DEFAULT_REGULAR_DUST_SIZE:   
-                            if tx["address"] != oracle_address or tx["btc_amount"] < oracle_fee:
+                            if tx["destination"] != oracle_address or tx["btc_amount"] < oracle_fee:
                                 status = 'invalid: insufficient or non-existent oracle fee'
                         
                     
