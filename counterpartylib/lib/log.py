@@ -368,7 +368,7 @@ def log (db, command, category, bindings):
                 else:   
                     currency = ""
                     
-                dispenser_label = 'oracle dispenser'
+                dispenser_label = 'oracle dispenser using {}'.format(bindings['oracle_address'])
             else:
                 each_price = "{:.8f}".format(each_price/config.UNIT) 
             
