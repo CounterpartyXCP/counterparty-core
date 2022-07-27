@@ -347,16 +347,57 @@ def log (db, command, category, bindings):
             logger.info('Destruction: {} destroyed {} {} with tag ‘{}’({}) [{}]'.format(bindings['source'], bindings['quantity'], bindings['asset'], bindings['tag'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'dispensers':
+            each_price = bindings['satoshirate']
+            currency = config.BTC
+            dispenser_label = 'dispenser'
+            escrow_quantity = bindings['escrow_quantity']
+            give_quantity = bindings['give_quantity']
+            
+            if bindings['oracle_address'] != None:
+                each_price = "{:.2f}".format(each_price/100.0)
+                
+                cursor.execute('SELECT * FROM broadcasts WHERE source=:source AND status=:status AND block_index<:block_index ORDER by tx_index DESC LIMIT 1', {
+                    'source': bindings['oracle_address'],
+                    'status': 'valid',
+                    'block_index': bindings['block_index']
+                })
+                broadcasts = cursor.fetchall()
+                oracle_label = broadcasts[0]["text"].split("-")
+                if len(oracle_label) == 2:
+                    currency = oracle_label[1]
+                else:   
+                    currency = ""
+                    
+                dispenser_label = 'oracle dispenser'
+            else:
+                each_price = "{:.8f}".format(each_price/config.UNIT) 
+            
+            divisible = get_asset_info(cursor, bindings['asset'])
+            
+            if divisible:
+                escrow_quantity = "{:.8f}".format(escrow_quantity/config.UNIT) 
+                give_quantity = "{:.8f}".format(give_quantity/config.UNIT) 
+            
             if bindings['status'] == 0:
-                logger.info('Dispenser: {} opened a dispenser for asset {} with {} balance, giving {} {} for each {} {}'.format(bindings['source'], bindings['asset'], bindings['escrow_quantity'], bindings['give_quantity'], bindings['asset'], bindings['satoshirate'], config.BTC))
+                logger.info('Dispenser: {} opened a {} for asset {} with {} balance, giving {} {} for each {} {}'.format(bindings['source'], dispenser_label, bindings['asset'], escrow_quantity, give_quantity, bindings['asset'], each_price, currency))
             elif bindings['status'] == 1:
-                logger.info('Dispenser: {} (empty address) opened a dispenser for asset {} with {} balance, giving {} {} for each {} {}'.format(bindings['source'], bindings['asset'], bindings['escrow_quantity'], bindings['give_quantity'], bindings['asset'], bindings['satoshirate'], config.BTC))
+                logger.info('Dispenser: {} (empty address) opened a {} for asset {} with {} balance, giving {} {} for each {} {}'.format(bindings['source'], dispenser_label, bindings['asset'], escrow_quantity, give_quantity, bindings['asset'], each_price, currency))
             elif bindings['status'] == 10:
-                logger.info('Dispenser: {} closed a dispenser for asset {}'.format(bindings['source'], bindings['asset']))
+                logger.info('Dispenser: {} closed a {} for asset {}'.format(bindings['source'], dispenser_label, bindings['asset']))
 
         elif category == 'dispenses':
             logger.info('Dispense: {} from {} to {} ({})'.format(output(bindings['dispense_quantity'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash']))
 
     cursor.close()
+
+def get_asset_info(cursor, asset):
+    if asset == config.BTC or asset == config.XCP:
+        return true
+    
+    cursor.execute('''SELECT * FROM issuances \
+        WHERE (status = ? AND asset = ?)
+        ORDER BY tx_index DESC''', ('valid', asset))
+    issuances = cursor.fetchall()
+    return issuances[0]['divisible']
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
