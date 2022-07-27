@@ -392,7 +392,7 @@ def log (db, command, category, bindings):
 
 def get_asset_info(cursor, asset):
     if asset == config.BTC or asset == config.XCP:
-        return true
+        return True
     
     cursor.execute('''SELECT * FROM issuances \
         WHERE (status = ? AND asset = ?)
