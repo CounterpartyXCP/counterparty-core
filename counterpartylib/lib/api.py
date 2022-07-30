@@ -869,6 +869,43 @@ class APIServer(threading.Thread):
         def search_pubkey(pubkeyhash, provided_pubkeys=None):
             return backend.pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=provided_pubkeys)
 
+        @dispatcher.add_method
+        def get_dispenser_info(tx_hash):
+            cursor.execute('SELECT * FROM dispensers WHERE tx_hash=:tx_hash', {"tx_hash":tx_hash})
+            dispensers = cursor.fetchall()
+            
+            if len(dispensers) == 1:
+                dispenser = dispensers[0]
+                oracle_price = ""
+                satoshi_price = ""
+                fiat_price = ""
+                
+                if dispenser["oracle_address"] != None:
+                    fiat_price = util.satoshirate_to_fiat(dispenser["satoshirate"])
+                    oracle_price, oracle_fee, oracle_fiat_label = util.get_last_oracle_info(self.db, dispenser.oracle_address, bindings['block_index'])
+                    satoshi_price = util.ceil_decimals(fiat_price/oracle_price, 8)
+                
+                return {
+                    "tx_index": dispenser["tx_hash"],
+                    "tx_hash": dispenser["tx_hash"],
+                    "block_index": dispenser["block_index"],
+                    "source": dispenser["source"],
+                    "asset": dispenser["asset"],
+                    "give_quantity": dispenser["give_quantity"],
+                    "escrow_quantity": dispenser["escrow_quantity"],
+                    "satoshirate": dispenser["satoshirate"],
+                    "fiat_price": fiat_price,
+                    "oracle_price": oracle_price,
+                    "satoshi_price": satoshi_price,
+                    "status": dispenser["status"],
+                    "give_remaining": dispenser["give_remaining"],
+                    "oracle_address": dispenser["oracle_address"]
+                }
+            
+            return {}
+
+        
+
         def _set_cors_headers(response):
             if not config.RPC_NO_ALLOW_CORS:
                 response.headers['Access-Control-Allow-Origin'] = '*'

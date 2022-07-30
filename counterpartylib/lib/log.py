@@ -355,19 +355,7 @@ def log (db, command, category, bindings):
             
             if bindings['oracle_address'] != None:
                 each_price = "{:.2f}".format(each_price/100.0)
-                
-                cursor.execute('SELECT * FROM broadcasts WHERE source=:source AND status=:status AND block_index<:block_index ORDER by tx_index DESC LIMIT 1', {
-                    'source': bindings['oracle_address'],
-                    'status': 'valid',
-                    'block_index': bindings['block_index']
-                })
-                broadcasts = cursor.fetchall()
-                oracle_label = broadcasts[0]["text"].split("-")
-                if len(oracle_label) == 2:
-                    currency = oracle_label[1]
-                else:   
-                    currency = ""
-                    
+                oracle_last_price, oracle_fee, currency = util.get_last_oracle_info(db, bindings['oracle_address'], bindings['block_index'])
                 dispenser_label = 'oracle dispenser using {}'.format(bindings['oracle_address'])
             else:
                 each_price = "{:.8f}".format(each_price/config.UNIT) 
@@ -386,7 +374,20 @@ def log (db, command, category, bindings):
                 logger.info('Dispenser: {} closed a {} for asset {}'.format(bindings['source'], dispenser_label, bindings['asset']))
 
         elif category == 'dispenses':
-            logger.info('Dispense: {} from {} to {} ({})'.format(output(bindings['dispense_quantity'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash']))
+            cursor.execute('SELECT * FROM dispensers WHERE tx_hash=:tx_hash', {
+                'tx_hash': bindings['dispenser_tx_hash']
+            })
+            dispensers = cursor.fetchall()
+            dispenser = dispensers[0]
+        
+            if dispenser.oracle_address != None:
+                tx_btc_amount = get_tx_info(bindings['tx_hash'])/config.UNIT
+                oracle_last_price, oracle_fee, oracle_fiat_label = util.get_last_oracle_info(db, dispenser.oracle_address, bindings['block_index'])
+                fiatpaid = round(tx_btc_amount*oracle_last_price,2)
+                
+                logger.info('Dispense: {} from {} to {} for {} {} ({} {}) ({})'.format(output(bindings['dispense_quantity'], bindings['asset']), bindings['source'], bindings['destination'], tx_btc_amount, config.BTC, fiatpaid, oracle_fiat_label, bindings['tx_hash']))
+            else:
+                logger.info('Dispense: {} from {} to {} ({})'.format(output(bindings['dispense_quantity'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash']))
 
     cursor.close()
 
@@ -399,5 +400,14 @@ def get_asset_info(cursor, asset):
         ORDER BY tx_index DESC''', ('valid', asset))
     issuances = cursor.fetchall()
     return issuances[0]['divisible']
+
+def get_tx_info(cursor, tx_hash):
+    cursor.execute('SELECT * FROM transactions WHERE tx_hash=:tx_hash', {
+        'tx_hash': tx_hash
+    })
+    transactions = cursor.fetchall()
+    transaction = transactions[0]
+    
+    return transaction["btc_amount"]
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

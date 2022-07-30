@@ -170,11 +170,11 @@ def compose (db, source, asset, give_quantity, escrow_quantity, mainchainrate, s
     return (source, destination, data)
 
 def calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, oracle_address, block_index):
-    last_price, last_fee = get_last_price_oracle(db, oracle_address, block_index)
+    last_price, last_fee, last_fiat_label = util.get_last_price_oracle(db, oracle_address, block_index)
     last_fee_multiplier = (last_fee / config.UNIT)
         
     #Format mainchainrate to ######.##
-    oracle_mainchainrate = satoshirate_to_fiat(mainchainrate)       
+    oracle_mainchainrate = util.satoshirate_to_fiat(mainchainrate)       
     oracle_mainchainrate_btc = oracle_mainchainrate/last_price
         
     #Calculate the total amount earned for dispenser and the fee
@@ -314,25 +314,6 @@ def parse (db, tx, message):
 
     cursor.close()
 
-def satoshirate_to_fiat(satoshirate):
-    satoshirate_str = str(satoshirate).zfill(3)
-    return float(satoshirate_str[:-2] + "." + satoshirate_str[-2:])
-
-def get_last_price_oracle(db, oracle_address, block_index):
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM broadcasts WHERE source=:source AND status=:status AND block_index<:block_index ORDER by tx_index DESC LIMIT 1', {
-        'source': oracle_address,
-        'status': 'valid',
-        'block_index': block_index
-    })
-    broadcasts = cursor.fetchall()
-    cursor.close()
-    
-    if len(broadcasts) == 0:
-        return None, None
-    
-    return broadcasts[0]['value'], broadcasts[0]['fee_fraction_int']
-
 def is_dispensable(db, address, amount):
     cursor = db.cursor()
     cursor.execute('SELECT count(*) as cnt FROM dispensers WHERE source=:source AND status=:status AND satoshirate<=:amount', {
@@ -359,8 +340,8 @@ def dispense(db, tx):
 
         if satoshirate > 0 and give_quantity > 0:
             if dispenser['oracle_address'] != None:
-                last_price, last_fee = get_last_price_oracle(db, dispenser['oracle_address'], tx['block_index'])
-                fiatrate = satoshirate_to_fiat(satoshirate)
+                last_price, last_fee, last_fiat_label = util.get_last_price_oracle(db, dispenser['oracle_address'], tx['block_index'])
+                fiatrate = util.satoshirate_to_fiat(satoshirate)
                 must_give = int(floor(((tx['btc_amount'] / config.UNIT) * last_price)/fiatrate))
             else:
                 must_give = int(floor(tx['btc_amount'] / satoshirate))
