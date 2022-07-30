@@ -483,7 +483,7 @@ def run_scenario(scenario):
             with MockProtocolChangesContext(**(mock_protocol_changes or {})):
                 module = sys.modules['counterpartylib.lib.messages.{}'.format(tx[0])]
                 compose = getattr(module, 'compose')
-                unsigned_tx_hex = transaction.construct(db, compose(db, *tx[1]), **tx[2])
+                unsigned_tx_hex = transaction.construct(db=db, tx_info=compose(db, *tx[1]), regular_dust_size=5430, **tx[2])
                 raw_transactions.append({tx[0]: unsigned_tx_hex})
                 insert_raw_transaction(unsigned_tx_hex, db)
         else:
