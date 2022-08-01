@@ -4557,24 +4557,28 @@ UNITTEST_VECTOR = {
     },
     'address': {
         'pack': [{
+            'config_context': {'ADDRESSVERSION': config.ADDRESSVERSION_MAINNET},
             'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j',),
             'out': bytes.fromhex('006474849fc9ac0f5bd6b49fe144d14db7d32e2445')
         },
         {
+            'config_context': {'ADDRESSVERSION': config.ADDRESSVERSION_MAINNET},
             'in': ('1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU',),
             'out': bytes.fromhex('00647484b055e2101927e50aba74957ba134d501d7')
         },
         {
+            'config_context': {'P2SH_ADDRESSVERSION': config.P2SH_ADDRESSVERSION_MAINNET},
             'in': ('3AAAA1111xxxxxxxxxxxxxxxxxxy3SsDsZ',),
             'out': bytes.fromhex('055ce31be63403fa7b19f2614272547c15c8df86b9')
         },
         {
+            'config_context': {'P2SH_ADDRESSVERSION': config.P2SH_ADDRESSVERSION_TESTNET},
             'in': ('2MtAV7xpAzU69E8GxRF2Vd2xt79kDnif6F5',),
             'out': bytes.fromhex('C40A12AD889AECC8F6213BFD6BD47911CAB1C30E5F')
         },
         {
             'in': ('BADBASE58III',),
-            'error': (bitcoinlib.base58.InvalidBase58Error, "Character 'I' is not a valid base58 character")
+            'error': (script.Base58Error, "Not a valid Base58 character: ‘I’")
         }],
         'unpack': [{
             'in': (bytes.fromhex('006474849fc9ac0f5bd6b49fe144d14db7d32e2445'),),
