@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 from logging import handlers as logging_handlers
 D = decimal.Decimal
 import binascii
+import math
 
 import struct
 import apsw
@@ -871,6 +872,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_dispenser_info(tx_hash):
+            cursor = self.db.cursor()
             cursor.execute('SELECT * FROM dispensers WHERE tx_hash=:tx_hash', {"tx_hash":tx_hash})
             dispensers = cursor.fetchall()
             
@@ -882,8 +884,8 @@ class APIServer(threading.Thread):
                 
                 if dispenser["oracle_address"] != None:
                     fiat_price = util.satoshirate_to_fiat(dispenser["satoshirate"])
-                    oracle_price, oracle_fee, oracle_fiat_label = util.get_last_oracle_info(self.db, dispenser.oracle_address, bindings['block_index'])
-                    satoshi_price = util.ceil_decimals(fiat_price/oracle_price, 8)
+                    oracle_price, oracle_fee, oracle_fiat_label = util.get_oracle_last_price(self.db, dispenser["oracle_address"], util.CURRENT_BLOCK_INDEX)
+                    satoshi_price = math.ceil((fiat_price/oracle_price) * config.UNIT)
                 
                 return {
                     "tx_index": dispenser["tx_hash"],

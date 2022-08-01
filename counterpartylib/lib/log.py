@@ -380,9 +380,9 @@ def log (db, command, category, bindings):
             dispensers = cursor.fetchall()
             dispenser = dispensers[0]
         
-            if dispenser.oracle_address != None:
+            if dispenser["oracle_address"] != None:
                 tx_btc_amount = get_tx_info(bindings['tx_hash'])/config.UNIT
-                oracle_last_price, oracle_fee, oracle_fiat_label = util.get_last_oracle_info(db, dispenser.oracle_address, bindings['block_index'])
+                oracle_last_price, oracle_fee, oracle_fiat_label = util.get_last_oracle_info(db, dispenser["oracle_address"], bindings['block_index'])
                 fiatpaid = round(tx_btc_amount*oracle_last_price,2)
                 
                 logger.info('Dispense: {} from {} to {} for {} {} ({} {}) ({})'.format(output(bindings['dispense_quantity'], bindings['asset']), bindings['source'], bindings['destination'], tx_btc_amount, config.BTC, fiatpaid, oracle_fiat_label, bindings['tx_hash']))

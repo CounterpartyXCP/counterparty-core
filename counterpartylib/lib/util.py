@@ -890,9 +890,3 @@ def get_oracle_last_price(db, oracle_address, block_index):
         fiat_label = ""
     
     return oracle_broadcast['value'], oracle_broadcast['fee_fraction_int'], fiat_label
-    
-def ceil_decimals(number, decimal_places):
-    factor = 10 ** decimal_places
-    number * factor
-    math.ceil(number)
-    return number / factor
