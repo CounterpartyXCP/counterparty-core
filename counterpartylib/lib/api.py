@@ -882,7 +882,7 @@ class APIServer(threading.Thread):
                 satoshi_price = ""
                 fiat_price = ""
                 oracle_price_last_updated = ""
-				
+                
                 if dispenser["oracle_address"] != None:
                     fiat_price = util.satoshirate_to_fiat(dispenser["satoshirate"])
                     oracle_price, oracle_fee, oracle_fiat_label, oracle_price_last_updated = util.get_oracle_last_price(self.db, dispenser["oracle_address"], util.CURRENT_BLOCK_INDEX)
@@ -907,7 +907,7 @@ class APIServer(threading.Thread):
                     "status": dispenser["status"],
                     "give_remaining": dispenser["give_remaining"],
                     "oracle_address": dispenser["oracle_address"],
-					"oracle_price_last_updated": oracle_price_last_updated
+                    "oracle_price_last_updated": oracle_price_last_updated
                 }
             
             return {}
