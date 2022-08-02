@@ -871,9 +871,17 @@ class APIServer(threading.Thread):
             return backend.pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=provided_pubkeys)
 
         @dispatcher.add_method
-        def get_dispenser_info(tx_hash):
+        def get_dispenser_info(tx_hash=None, tx_index=None):
             cursor = self.db.cursor()
-            cursor.execute('SELECT * FROM dispensers WHERE tx_hash=:tx_hash', {"tx_hash":tx_hash})
+            
+            if tx_hash is None and tx_index is None:
+                raise APIError("You must provided a tx hash or a tx index")
+            
+            if tx_hash is not None:
+                cursor.execute('SELECT * FROM dispensers WHERE tx_hash=:tx_hash', {"tx_hash":tx_hash})
+            else:
+                cursor.execute('SELECT * FROM dispensers WHERE tx_index=:tx_index', {"tx_index":tx_index})
+            
             dispensers = cursor.fetchall()
             
             if len(dispensers) == 1:
@@ -893,7 +901,7 @@ class APIServer(threading.Thread):
                         raise APIError("Last oracle price is zero")
                 
                 return {
-                    "tx_index": dispenser["tx_hash"],
+                    "tx_index": dispenser["tx_index"],
                     "tx_hash": dispenser["tx_hash"],
                     "block_index": dispenser["block_index"],
                     "source": dispenser["source"],
