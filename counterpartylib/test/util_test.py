@@ -581,8 +581,9 @@ def vector_to_args(vector, functions=[]):
                 records = params.get('records', None)
                 comment = params.get('comment', None)
                 mock_protocol_changes = params.get('mock_protocol_changes', None)
+                config_context = params.get('config_context', {})
                 if functions == [] or (tx_name + '.' + method) in functions:
-                    args.append((tx_name, method, params['in'], outputs, error, records, comment, mock_protocol_changes))
+                    args.append((tx_name, method, params['in'], outputs, error, records, comment, mock_protocol_changes, config_context))
     return args
 
 def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
