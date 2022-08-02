@@ -889,4 +889,4 @@ def get_oracle_last_price(db, oracle_address, block_index):
     else:   
         fiat_label = ""
     
-    return oracle_broadcast['value'], oracle_broadcast['fee_fraction_int'], fiat_label
+    return oracle_broadcast['value'], oracle_broadcast['fee_fraction_int'], fiat_label, oracle_broadcast['block_index']

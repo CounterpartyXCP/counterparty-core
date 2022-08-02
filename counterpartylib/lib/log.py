@@ -355,7 +355,7 @@ def log (db, command, category, bindings):
             
             if bindings['oracle_address'] != None:
                 each_price = "{:.2f}".format(each_price/100.0)
-                oracle_last_price, oracle_fee, currency = util.get_last_oracle_info(db, bindings['oracle_address'], bindings['block_index'])
+                oracle_last_price, oracle_fee, currency, oracle_last_updated = util.get_oracle_last_price(db, bindings['oracle_address'], bindings['block_index'])
                 dispenser_label = 'oracle dispenser using {}'.format(bindings['oracle_address'])
             else:
                 each_price = "{:.8f}".format(each_price/config.UNIT) 
@@ -382,7 +382,7 @@ def log (db, command, category, bindings):
         
             if dispenser["oracle_address"] != None:
                 tx_btc_amount = get_tx_info(bindings['tx_hash'])/config.UNIT
-                oracle_last_price, oracle_fee, oracle_fiat_label = util.get_last_oracle_info(db, dispenser["oracle_address"], bindings['block_index'])
+                oracle_last_price, oracle_fee, oracle_fiat_label, oracle_last_price_updated = util.get_oracle_last_price(db, dispenser["oracle_address"], bindings['block_index'])
                 fiatpaid = round(tx_btc_amount*oracle_last_price,2)
                 
                 logger.info('Dispense: {} from {} to {} for {} {} ({} {}) ({})'.format(output(bindings['dispense_quantity'], bindings['asset']), bindings['source'], bindings['destination'], tx_btc_amount, config.BTC, fiatpaid, oracle_fiat_label, bindings['tx_hash']))

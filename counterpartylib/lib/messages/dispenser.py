@@ -141,7 +141,7 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
     cursor.close()
     
     if oracle_address is not None:
-        last_price, last_fee = get_last_price_oracle(db, oracle_address, block_index)
+        last_price, last_fee, last_label, last_updated = util.get_oracle_last_price(db, oracle_address, block_index)
         
         if last_price is None:
             problems.append('The oracle address %s has not broadcasted any price yet' % oracle_address)
@@ -170,7 +170,7 @@ def compose (db, source, asset, give_quantity, escrow_quantity, mainchainrate, s
     return (source, destination, data)
 
 def calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, oracle_address, block_index):
-    last_price, last_fee, last_fiat_label = util.get_last_price_oracle(db, oracle_address, block_index)
+    last_price, last_fee, last_fiat_label, last_updated = util.get_oracle_last_price(db, oracle_address, block_index)
     last_fee_multiplier = (last_fee / config.UNIT)
         
     #Format mainchainrate to ######.##
@@ -340,7 +340,7 @@ def dispense(db, tx):
 
         if satoshirate > 0 and give_quantity > 0:
             if dispenser['oracle_address'] != None:
-                last_price, last_fee, last_fiat_label = util.get_last_price_oracle(db, dispenser['oracle_address'], tx['block_index'])
+                last_price, last_fee, last_fiat_label, last_updated = util.get_oracle_last_price(db, dispenser['oracle_address'], tx['block_index'])
                 fiatrate = util.satoshirate_to_fiat(satoshirate)
                 must_give = int(floor(((tx['btc_amount'] / config.UNIT) * last_price)/fiatrate))
             else:
