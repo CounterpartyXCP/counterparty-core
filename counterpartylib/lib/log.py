@@ -381,7 +381,7 @@ def log (db, command, category, bindings):
             dispenser = dispensers[0]
         
             if dispenser["oracle_address"] != None:
-                tx_btc_amount = get_tx_info(bindings['tx_hash'])/config.UNIT
+                tx_btc_amount = get_tx_info(cursor, bindings['tx_hash'])/config.UNIT
                 oracle_last_price, oracle_fee, oracle_fiat_label, oracle_last_price_updated = util.get_oracle_last_price(db, dispenser["oracle_address"], bindings['block_index'])
                 fiatpaid = round(tx_btc_amount*oracle_last_price,2)
                 
