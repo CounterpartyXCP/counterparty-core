@@ -878,9 +878,9 @@ class APIServer(threading.Thread):
                 raise APIError("You must provided a tx hash or a tx index")
             
             if tx_hash is not None:
-                cursor.execute('SELECT * FROM dispensers WHERE tx_hash=:tx_hash', {"tx_hash":tx_hash})
+                cursor.execute('SELECT d.*, a.asset_longname FROM dispensers d LEFT JOIN assets a ON a.asset_name = d.asset WHERE tx_hash=:tx_hash', {"tx_hash":tx_hash})
             else:
-                cursor.execute('SELECT * FROM dispensers WHERE tx_index=:tx_index', {"tx_index":tx_index})
+                cursor.execute('SELECT d.*, a.asset_longname FROM dispensers d LEFT JOIN assets a ON a.asset_name = d.asset WHERE tx_index=:tx_index', {"tx_index":tx_index})
             
             dispensers = cursor.fetchall()
             
@@ -890,6 +890,7 @@ class APIServer(threading.Thread):
                 satoshi_price = ""
                 fiat_price = ""
                 oracle_price_last_updated = ""
+                oracle_fiat_label = ""
                 
                 if dispenser["oracle_address"] != None:
                     fiat_price = util.satoshirate_to_fiat(dispenser["satoshirate"])
@@ -910,12 +911,14 @@ class APIServer(threading.Thread):
                     "escrow_quantity": dispenser["escrow_quantity"],
                     "satoshirate": dispenser["satoshirate"],
                     "fiat_price": fiat_price,
+                    "fiat_unit": oracle_fiat_label,
                     "oracle_price": oracle_price,
                     "satoshi_price": satoshi_price,
                     "status": dispenser["status"],
                     "give_remaining": dispenser["give_remaining"],
                     "oracle_address": dispenser["oracle_address"],
-                    "oracle_price_last_updated": oracle_price_last_updated
+                    "oracle_price_last_updated": oracle_price_last_updated,
+                    "asset_longname": dispenser["asset_longname"]
                 }
             
             return {}
