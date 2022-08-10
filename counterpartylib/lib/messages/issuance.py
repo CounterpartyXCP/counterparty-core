@@ -104,7 +104,7 @@ def initialise(db):
                       asset_longname_idx ON issuances (asset_longname)
                    ''')
 
-def validate (db, source, destination, asset, quantity, divisible, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index):
+def validate (db, source, destination, asset, quantity, divisible, reset, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index):
     problems = []
     fee = 0
 
@@ -168,7 +168,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
 
         if last_issuance['issuer'] != source:
             problems.append('issued by another address')
-        if bool(last_issuance['divisible']) != bool(divisible):
+        if (bool(last_issuance['divisible']) != bool(divisible)) and (not reset):
             problems.append('cannot change divisibility')
         if bool(last_issuance['callable']) != bool(callable_):
             problems.append('cannot change callability')
@@ -178,12 +178,16 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
             problems.append('cannot reduce call price')
         if issuance_locked and quantity:
             problems.append('locked asset and non‐zero quantity')
+        if issuance_locked and reset:
+            problems.append('cannot reset a locked asset')
     else:
         reissuance = False
         if description.lower() == 'lock':
             problems.append('cannot lock a non‐existent asset')
         if destination:
             problems.append('cannot transfer a non‐existent asset')
+        if reset:
+            problems.append('cannot reset a non existent asset')
 
     # validate parent ownership for subasset
     if subasset_longname is not None and not reissuance:
@@ -246,10 +250,31 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
 
     # For SQLite3
     call_date = min(call_date, config.MAX_INT)
-    total = sum([issuance['quantity'] for issuance in issuances])
     assert isinstance(quantity, int)
-    if total + quantity > config.MAX_INT:
-        problems.append('total quantity overflow')
+    if reset:#reset will overwrite the quantity
+        if quantity > config.MAX_INT:
+            problems.append('total quantity overflow')  
+    else:
+        total = sum([issuance['quantity'] for issuance in issuances])
+        if total + quantity > config.MAX_INT:
+            problems.append('total quantity overflow')
+
+    if reset and issuances:
+        cursor = db.cursor()
+        #Checking that all supply are held by the owner of the asset
+        cursor.execute('''SELECT * FROM balances \
+                            WHERE asset = ? AND quantity > 0''', (asset,))
+        balances = cursor.fetchall()
+        cursor.close()
+        
+        if (len(balances) == 0):
+            if util.asset_supply(db, asset) > 0:
+                problems.append('Cannot reset an asset with no holder')
+        elif (len(balances) > 1):
+            problems.append('Cannot reset an asset with many holders')
+        elif (len(balances) == 1):
+            if (balances[0]['address'] != last_issuance["issuer"]):
+                problems.append('Cannot reset an asset held by a different address than the owner')
 
     if destination and quantity:
         problems.append('cannot issue and transfer simultaneously')
@@ -258,10 +283,10 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     if util.enabled('integer_overflow_fix', block_index=block_index) and (fee > config.MAX_INT or quantity > config.MAX_INT):
         problems.append('integer overflow')
 
-    return call_date, call_price, problems, fee, description, divisible, reissuance, reissued_asset_longname
+    return call_date, call_price, problems, fee, description, divisible, reset, reissuance, reissued_asset_longname
 
 
-def compose (db, source, transfer_destination, asset, quantity, divisible, description):
+def compose (db, source, transfer_destination, asset, quantity, divisible, reset, description):
 
     # Callability is deprecated, so for re‐issuances set relevant parameters
     # to old values; for first issuances, make uncallable.
@@ -301,7 +326,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, descr
                 #   generate a random numeric asset id which will map to this subasset
                 asset = util.generate_random_asset()
 
-    call_date, call_price, problems, fee, description, divisible, reissuance, reissued_asset_longname = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, subasset_parent, subasset_longname, util.CURRENT_BLOCK_INDEX)
+    call_date, call_price, problems, fee, description, divisible, reset, reissuance, reissued_asset_longname = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, subasset_parent, subasset_longname, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
     asset_id = util.generate_asset_id(asset, util.CURRENT_BLOCK_INDEX)
@@ -313,7 +338,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, descr
             curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
         else:
             curr_format = FORMAT_2 + '{}s'.format(len(description))
-        data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0,
+        data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if reset else 0, 1 if callable_ else 0,
             call_date or 0, call_price or 0.0, description.encode('utf-8'))
     else:
         # Type 21 subasset issuance SUBASSET_FORMAT >QQ?B
@@ -323,7 +348,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, descr
         compacted_subasset_length = len(compacted_subasset_longname)
         data = message_type.pack(SUBASSET_ID)
         curr_format = SUBASSET_FORMAT + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(description))
-        data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, compacted_subasset_length, compacted_subasset_longname, description.encode('utf-8'))
+        data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if reset else 0, compacted_subasset_length, compacted_subasset_longname, description.encode('utf-8'))
 
     if transfer_destination:
         destination_outputs = [(transfer_destination, None)]
@@ -333,6 +358,10 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, descr
 
 def parse (db, tx, message, message_type_id):
     issuance_parse_cursor = db.cursor()
+    asset_format = util.get_value_by_block_index("issuance_asset_serialization_format",tx['block_index'])
+    asset_format_length = util.get_value_by_block_index("issuance_asset_serialization_length",tx['block_index'])
+    subasset_format = util.get_value_by_block_index("issuance_subasset_serialization_format",tx['block_index'])
+    subasset_format_length = util.get_value_by_block_index("issuance_subasset_serialization_length",tx['block_index'])
 
     # Unpack message.
     try:
@@ -343,7 +372,15 @@ def parse (db, tx, message, message_type_id):
                 raise exceptions.UnpackError
 
             # parse a subasset original issuance message
+            reset = None
+            
             asset_id, quantity, divisible, compacted_subasset_length = struct.unpack(SUBASSET_FORMAT, message[0:SUBASSET_FORMAT_LENGTH])
+            
+            if subasset_format_length <= 18:
+                asset_id, quantity, divisible, compacted_subasset_length = struct.unpack(subasset_format, message[0:subasset_format_length])
+            elif subasset_format_length <= 19:
+                asset_id, quantity, divisible, reset, compacted_subasset_length = struct.unpack(subasset_format, message[0:subasset_format_length])            
+
             description_length = len(message) - SUBASSET_FORMAT_LENGTH - compacted_subasset_length
             if description_length < 0:
                 logger.warn("invalid subasset length: [issuance] tx [%s]: %s" % (tx['tx_hash'], compacted_subasset_length))
@@ -361,8 +398,13 @@ def parse (db, tx, message, message_type_id):
                 curr_format = FORMAT_2 + '{}p'.format(len(message) - LENGTH_2)
             else:
                 curr_format = FORMAT_2 + '{}s'.format(len(message) - LENGTH_2)
-            asset_id, quantity, divisible, callable_, call_date, call_price, description = struct.unpack(curr_format, message)
-
+            
+            reset = None
+            if (asset_format_length <= 26):#the reset param didn't even exist
+                asset_id, quantity, divisible, callable_, call_date, call_price, description = struct.unpack(curr_format, message)
+            elif (asset_format_length <= 27):
+                asset_id, quantity, divisible, reset, callable_, call_date, call_price, description = struct.unpack(curr_format, message)
+            
             call_price = round(call_price, 6) # TODO: arbitrary
             try:
                 description = description.decode('utf-8')
@@ -372,7 +414,7 @@ def parse (db, tx, message, message_type_id):
             if len(message) != LENGTH_1:
                 raise exceptions.UnpackError
             asset_id, quantity, divisible = struct.unpack(FORMAT_1, message)
-            callable_, call_date, call_price, description = False, 0, 0.0, ''
+            reset, callable_, call_date, call_price, description = False, False, 0, 0.0, ''
         try:
             asset = util.generate_asset_name(asset_id, tx['block_index'])
                         
@@ -388,7 +430,7 @@ def parse (db, tx, message, message_type_id):
             asset = None
             status = 'invalid: bad asset name'
     except exceptions.UnpackError as e:
-        asset, quantity, divisible, callable_, call_date, call_price, description = None, None, None, None, None, None, None
+        asset, quantity, divisible, reset, callable_, call_date, call_price, description = None, None, None, None, None, None, None, None
         status = 'invalid: could not unpack'
 
     # parse and validate the subasset from the message
@@ -405,85 +447,141 @@ def parse (db, tx, message, message_type_id):
     reissuance = None
     fee = 0
     if status == 'valid':
-        call_date, call_price, problems, fee, description, divisible, reissuance, reissued_asset_longname = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index=tx['block_index'])
+        call_date, call_price, problems, fee, description, divisible, reset, reissuance, reissued_asset_longname = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, reset, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index=tx['block_index'])
 
         if problems: status = 'invalid: ' + '; '.join(problems)
         if not util.enabled('integer_overflow_fix', block_index=tx['block_index']) and 'total quantity overflow' in problems:
             quantity = 0
 
-    if tx['destination']:
-        issuer = tx['destination']
-        transfer = True
-        quantity = 0
+    # Reset?
+    if reset:
+        balances_cursor = issuance_parse_cursor.execute('''SELECT * FROM balances WHERE asset = ?''', (asset,))
+        balances_result = balances_cursor.fetchall()
+        
+        if len(balances_result) == 1:
+            owner_balance = balances_result[0]["quantity"]
+            owner_address = balances_result[0]["address"]
+            
+            if owner_address == tx['source']:
+                if status == 'valid':
+                    util.debit(db, tx['source'], asset, owner_balance, 'reset destroy', tx['tx_hash'])
+                    
+                    bindings = {
+                        'tx_index': tx['tx_index'],
+                        'tx_hash': tx['tx_hash'],
+                        'block_index': tx['block_index'],
+                        'source': tx['source'],
+                        'asset': asset,
+                        'quantity': owner_balance,
+                        'tag': "reset",
+                        'status': "valid",
+                        'reset': True,
+                       }
+                    sql = 'insert into destructions values(:tx_index, :tx_hash, :block_index, :source, :asset, :quantity, :tag, :status)'
+                    issuance_parse_cursor.execute(sql, bindings)
+            
+                bindings= {
+                    'tx_index': tx['tx_index'],
+                    'tx_hash': tx['tx_hash'],
+                    'block_index': tx['block_index'],
+                    'asset': asset,
+                    'quantity': quantity,
+                    'divisible': divisible,
+                    'source': tx['source'],
+                    'issuer': tx['source'],
+                    'transfer': False,
+                    'callable': callable_,
+                    'call_date': call_date,
+                    'call_price': call_price,
+                    'description': description,
+                    'fee_paid': 0,
+                    'locked': lock,
+                    'status': status,
+                    'reset': True,
+                    'asset_longname': reissued_asset_longname,
+                }
+            
+                sql='insert into issuances values(:tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname)'
+                issuance_parse_cursor.execute(sql, bindings)
+                
+                # Credit.
+                if status == 'valid' and quantity:
+                    util.credit(db, tx['source'], asset, quantity, action="reset issuance", event=tx['tx_hash'])
+
     else:
-        issuer = tx['source']
-        transfer = False
+        if tx['destination']:
+            issuer = tx['destination']
+            transfer = True
+            quantity = 0
+        else:
+            issuer = tx['source']
+            transfer = False
 
-    # Debit fee.
-    if status == 'valid':
-        util.debit(db, tx['source'], config.XCP, fee, action="issuance fee", event=tx['tx_hash'])
+        # Debit fee.
+        if status == 'valid':
+            util.debit(db, tx['source'], config.XCP, fee, action="issuance fee", event=tx['tx_hash'])
 
-    # Lock?
-    lock = False
-    if status == 'valid':
-        if description and description.lower() == 'lock':
-            lock = True
-            cursor = db.cursor()
-            issuances = list(cursor.execute('''SELECT * FROM issuances \
-                                               WHERE (status = ? AND asset = ?)
-                                               ORDER BY tx_index ASC''', ('valid', asset)))
-            cursor.close()
-            description = issuances[-1]['description']  # Use last description. (Assume previous issuance exists because tx is valid.)
-            timestamp, value_int, fee_fraction_int = None, None, None
+        # Lock?
+        lock = False
+        if status == 'valid':
+            if description and description.lower() == 'lock':
+                lock = True
+                cursor = db.cursor()
+                issuances = list(cursor.execute('''SELECT * FROM issuances \
+                                                   WHERE (status = ? AND asset = ?)
+                                                   ORDER BY tx_index ASC''', ('valid', asset)))
+                cursor.close()
+                description = issuances[-1]['description']  # Use last description. (Assume previous issuance exists because tx is valid.)
+                timestamp, value_int, fee_fraction_int = None, None, None
 
-        if not reissuance:
-            # Add to table of assets.
-            bindings= {
-                'asset_id': str(asset_id),
-                'asset_name': str(asset),
-                'block_index': tx['block_index'],
-                'asset_longname': subasset_longname,
-            }
-            sql='insert into assets values(:asset_id, :asset_name, :block_index, :asset_longname)'
+            if not reissuance:
+                # Add to table of assets.
+                bindings= {
+                    'asset_id': str(asset_id),
+                    'asset_name': str(asset),
+                    'block_index': tx['block_index'],
+                    'asset_longname': subasset_longname,
+                }
+                sql='insert into assets values(:asset_id, :asset_name, :block_index, :asset_longname)'
+                issuance_parse_cursor.execute(sql, bindings)
+
+        if status == 'valid' and reissuance:
+            # when reissuing, add the asset_longname to the issuances table for API lookups
+            asset_longname = reissued_asset_longname
+        else:
+            asset_longname = subasset_longname
+
+        # Add parsed transaction to message-type–specific table.
+        bindings= {
+            'tx_index': tx['tx_index'],
+            'tx_hash': tx['tx_hash'],
+            'block_index': tx['block_index'],
+            'asset': asset,
+            'quantity': quantity,
+            'divisible': divisible,
+            'source': tx['source'],
+            'issuer': issuer,
+            'transfer': transfer,
+            'callable': callable_,
+            'call_date': call_date,
+            'call_price': call_price,
+            'description': description,
+            'fee_paid': fee,
+            'locked': lock,
+            'status': status,
+            'asset_longname': asset_longname,
+        }
+        if "integer overflow" not in status:
+            sql='insert into issuances values(:tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname)'
             issuance_parse_cursor.execute(sql, bindings)
+        else:
+            logger.warn("Not storing [issuance] tx [%s]: %s" % (tx['tx_hash'], status))
+            logger.debug("Bindings: %s" % (json.dumps(bindings), ))
 
-    if status == 'valid' and reissuance:
-        # when reissuing, add the asset_longname to the issuances table for API lookups
-        asset_longname = reissued_asset_longname
-    else:
-        asset_longname = subasset_longname
+        # Credit.
+        if status == 'valid' and quantity:
+            util.credit(db, tx['source'], asset, quantity, action="issuance", event=tx['tx_hash'])
 
-    # Add parsed transaction to message-type–specific table.
-    bindings= {
-        'tx_index': tx['tx_index'],
-        'tx_hash': tx['tx_hash'],
-        'block_index': tx['block_index'],
-        'asset': asset,
-        'quantity': quantity,
-        'divisible': divisible,
-        'source': tx['source'],
-        'issuer': issuer,
-        'transfer': transfer,
-        'callable': callable_,
-        'call_date': call_date,
-        'call_price': call_price,
-        'description': description,
-        'fee_paid': fee,
-        'locked': lock,
-        'status': status,
-        'asset_longname': asset_longname,
-    }
-    if "integer overflow" not in status:
-        sql='insert into issuances values(:tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname)'
-        issuance_parse_cursor.execute(sql, bindings)
-    else:
-        logger.warn("Not storing [issuance] tx [%s]: %s" % (tx['tx_hash'], status))
-        logger.debug("Bindings: %s" % (json.dumps(bindings), ))
-
-    # Credit.
-    if status == 'valid' and quantity:
-        util.credit(db, tx['source'], asset, quantity, action="issuance", event=tx['tx_hash'])
-
-    issuance_parse_cursor.close()
+        issuance_parse_cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
