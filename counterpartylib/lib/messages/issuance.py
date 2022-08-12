@@ -115,6 +115,7 @@ def validate (db, source, destination, asset, quantity, divisible, reset, callab
     if call_price is None: call_price = 0.0
     if description is None: description = ""
     if divisible is None: divisible = True
+    if reset is None: reset = False
 
     if isinstance(call_price, int): call_price = float(call_price)
     #^ helps especially with calls from JS‐based clients, where parseFloat(15) returns 15 (not 15.0), which json takes as an int
@@ -168,7 +169,7 @@ def validate (db, source, destination, asset, quantity, divisible, reset, callab
 
         if last_issuance['issuer'] != source:
             problems.append('issued by another address')
-        if (bool(last_issuance['divisible']) != bool(divisible)) and (not reset):
+        if (bool(last_issuance['divisible']) != bool(divisible)) and ((not util.enabled("cip03", block_index)) or (not reset)):
             problems.append('cannot change divisibility')
         if bool(last_issuance['callable']) != bool(callable_):
             problems.append('cannot change callability')
@@ -251,7 +252,7 @@ def validate (db, source, destination, asset, quantity, divisible, reset, callab
     # For SQLite3
     call_date = min(call_date, config.MAX_INT)
     assert isinstance(quantity, int)
-    if reset:#reset will overwrite the quantity
+    if reset and util.enabled("cip03", block_index):#reset will overwrite the quantity
         if quantity > config.MAX_INT:
             problems.append('total quantity overflow')  
     else:
@@ -259,7 +260,7 @@ def validate (db, source, destination, asset, quantity, divisible, reset, callab
         if total + quantity > config.MAX_INT:
             problems.append('total quantity overflow')
 
-    if reset and issuances:
+    if util.enabled("cip03", block_index) and reset and issuances:
         cursor = db.cursor()
         #Checking that all supply are held by the owner of the asset
         cursor.execute('''SELECT * FROM balances \
@@ -326,29 +327,44 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, reset
                 #   generate a random numeric asset id which will map to this subasset
                 asset = util.generate_random_asset()
 
-    call_date, call_price, problems, fee, description, divisible, reset, reissuance, reissued_asset_longname = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, subasset_parent, subasset_longname, util.CURRENT_BLOCK_INDEX)
+    call_date, call_price, problems, fee, description, divisible, reset, reissuance, reissued_asset_longname = validate(db, source, transfer_destination, asset, quantity, divisible, reset, callable_, call_date, call_price, description, subasset_parent, subasset_longname, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
     asset_id = util.generate_asset_id(asset, util.CURRENT_BLOCK_INDEX)
     if subasset_longname is None or reissuance:
+        asset_format = util.get_value_by_block_index("issuance_asset_serialization_format")
+        asset_format_length = util.get_value_by_block_index("issuance_asset_serialization_length")
+        
         # Type 20 standard issuance FORMAT_2 >QQ??If
         #   used for standard issuances and all reissuances
         data = message_type.pack(ID)
         if (len(description) <= 42) and not util.enabled('pascal_string_removed'):
             curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
         else:
-            curr_format = FORMAT_2 + '{}s'.format(len(description))
-        data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if reset else 0, 1 if callable_ else 0,
-            call_date or 0, call_price or 0.0, description.encode('utf-8'))
+            curr_format = asset_format + '{}s'.format(len(description))
+        
+        if (asset_format_length <= 26):#the reset param didn't even exist
+            data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0,
+                call_date or 0, call_price or 0.0, description.encode('utf-8'))
+        elif (asset_format_length <= 27):
+            data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if reset else 0, 1 if callable_ else 0,
+                call_date or 0, call_price or 0.0, description.encode('utf-8'))
     else:
+        subasset_format = util.get_value_by_block_index("issuance_subasset_serialization_format",tx['block_index'])
+        subasset_format_length = util.get_value_by_block_index("issuance_subasset_serialization_length",tx['block_index'])
+
         # Type 21 subasset issuance SUBASSET_FORMAT >QQ?B
         #   Used only for initial subasset issuance
         # compacts a subasset name to save space
         compacted_subasset_longname = util.compact_subasset_longname(subasset_longname)
         compacted_subasset_length = len(compacted_subasset_longname)
         data = message_type.pack(SUBASSET_ID)
-        curr_format = SUBASSET_FORMAT + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(description))
-        data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if reset else 0, compacted_subasset_length, compacted_subasset_longname, description.encode('utf-8'))
+        curr_format = subasset_format + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(description))
+        
+        if subasset_format_length <= 18:
+            data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, compacted_subasset_length, compacted_subasset_longname, description.encode('utf-8'))
+        elif subasset_format_length <= 19:
+            data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if reset else 0, compacted_subasset_length, compacted_subasset_longname, description.encode('utf-8'))
 
     if transfer_destination:
         destination_outputs = [(transfer_destination, None)]
@@ -454,7 +470,7 @@ def parse (db, tx, message, message_type_id):
             quantity = 0
 
     # Reset?
-    if reset:
+    if reset and util.enabled("cip03", tx['block_index']):
         balances_cursor = issuance_parse_cursor.execute('''SELECT * FROM balances WHERE asset = ?''', (asset,))
         balances_result = balances_cursor.fetchall()
         
