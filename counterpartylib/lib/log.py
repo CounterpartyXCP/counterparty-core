@@ -353,7 +353,7 @@ def log (db, command, category, bindings):
             escrow_quantity = bindings['escrow_quantity']
             give_quantity = bindings['give_quantity']
             
-            if bindings['oracle_address'] != None:
+            if (bindings['oracle_address'] != None) and util.enabled('oracle_dispensers'):
                 each_price = "{:.2f}".format(each_price/100.0)
                 oracle_last_price, oracle_fee, currency, oracle_last_updated = util.get_oracle_last_price(db, bindings['oracle_address'], bindings['block_index'])
                 dispenser_label = 'oracle dispenser using {}'.format(bindings['oracle_address'])
@@ -380,7 +380,7 @@ def log (db, command, category, bindings):
             dispensers = cursor.fetchall()
             dispenser = dispensers[0]
         
-            if dispenser["oracle_address"] != None:
+            if (dispenser["oracle_address"] != None) and util.enabled('oracle_dispensers'):
                 tx_btc_amount = get_tx_info(cursor, bindings['tx_hash'])/config.UNIT
                 oracle_last_price, oracle_fee, oracle_fiat_label, oracle_last_price_updated = util.get_oracle_last_price(db, dispenser["oracle_address"], bindings['block_index'])
                 fiatpaid = round(tx_btc_amount*oracle_last_price,2)

@@ -140,7 +140,7 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
 
     cursor.close()
     
-    if oracle_address is not None:
+    if oracle_address is not None and util.enabled('oracle_dispensers', block_index):
         last_price, last_fee, last_label, last_updated = util.get_oracle_last_price(db, oracle_address, block_index)
         
         if last_price is None:
@@ -160,7 +160,7 @@ def compose (db, source, asset, give_quantity, escrow_quantity, mainchainrate, s
     data += struct.pack(FORMAT, assetid, give_quantity, escrow_quantity, mainchainrate, status)
     if status == STATUS_OPEN_EMPTY_ADDRESS and open_address:
         data += address.pack(open_address)
-    if oracle_address is not None:
+    if oracle_address is not None and util.enabled('oracle_dispensers'):
         oracle_fee = calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, oracle_address, util.CURRENT_BLOCK_INDEX)
         
         if oracle_fee >= config.DEFAULT_REGULAR_DUST_SIZE:
@@ -220,7 +220,7 @@ def parse (db, tx, message):
                 existing = cursor.fetchall()
 
                 if len(existing) == 0:
-                    if oracle_address != None:
+                    if (oracle_address != None) and util.enabled('oracle_dispensers', tx['block_index']):
                         oracle_fee = calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, oracle_address, tx['block_index']) 
                            
                         if oracle_fee >= config.DEFAULT_REGULAR_DUST_SIZE:   
@@ -339,7 +339,7 @@ def dispense(db, tx):
         give_quantity = dispenser['give_quantity']
 
         if satoshirate > 0 and give_quantity > 0:
-            if dispenser['oracle_address'] != None:
+            if (dispenser['oracle_address'] != None) and util.enabled('oracle_dispensers', tx['block_index']):
                 last_price, last_fee, last_fiat_label, last_updated = util.get_oracle_last_price(db, dispenser['oracle_address'], tx['block_index'])
                 fiatrate = util.satoshirate_to_fiat(satoshirate)
                 must_give = int(floor(((tx['btc_amount'] / config.UNIT) * last_price)/fiatrate))
