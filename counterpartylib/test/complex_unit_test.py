@@ -1,6 +1,7 @@
 import pprint
 import tempfile
 import pytest
+
 from counterpartylib.test import conftest  # this is require near the top to do setup of the test suite
 from counterpartylib.test import util_test
 from counterpartylib.test.util_test import CURR_DIR
@@ -34,7 +35,7 @@ def test_alice_bob(server_db):
 
     # create send
     v = int(100 * 1e8)
-    send1hex = util.api('create_send', {'source': alice, 'destination': bob, 'asset': 'XCP', 'quantity': v})
+    send1hex = util.api('create_send', {'source': alice, 'destination': bob, 'asset': 'XCP', 'quantity': v, 'regular_dust_size': 5430})
     assert send1hex == "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9141e9d9c2c34d4dda3cd71603d9ce1e447c3cc5c0588ac00000000000000001e6a1c8a5dda15fb6f05628a061e67576e926dc71a7fa2f0cceb951120a9322f30ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
 
     # insert send, this automatically also creates a block
@@ -72,7 +73,7 @@ def test_alice_bob(server_db):
 
     # create send
     v = int(100 * 1e8)
-    send2hex = util.api('create_send', {'source': alice, 'destination': bob, 'asset': 'XCP', 'quantity': v})
+    send2hex = util.api('create_send', {'source': alice, 'destination': bob, 'asset': 'XCP', 'quantity': v, 'regular_dust_size': 5430})
     assert send2hex == "0100000001cd2d431037d1d0cfe05daeb1d08b975f27488e383f7f169e09d2f405fb618f39020000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9141e9d9c2c34d4dda3cd71603d9ce1e447c3cc5c0588ac00000000000000001e6a1c8a5dda15fb6f05628a061e67576e926dc71a7fa2f0cceb951120a9324a01ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
 
     # insert send, this automatically also creates a block
@@ -102,7 +103,7 @@ def test_alice_bob(server_db):
 
     # create send
     v = int(100 * 1e8)
-    send3hex = util.api('create_send', {'source': alice, 'destination': bob, 'asset': 'XCP', 'quantity': v})
+    send3hex = util.api('create_send', {'source': alice, 'destination': bob, 'asset': 'XCP', 'quantity': v, 'regular_dust_size': 5430})
     assert send3hex == "01000000019aea7b78c8fffa50c51bbadb87824a202b3e6b53727e543e9c6846845205b5ce020000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9141e9d9c2c34d4dda3cd71603d9ce1e447c3cc5c0588ac00000000000000001e6a1c8a5dda15fb6f05628a061e67576e926dc71a7fa2f0cceb951120a93265d2e90b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
 
     # insert send, as unconfirmed! won't create a block!
