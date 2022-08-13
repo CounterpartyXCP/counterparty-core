@@ -231,7 +231,7 @@ def parse (db, tx, message):
             else:
                 status = 'can only have one open dispenser per asset per address'
         elif dispenser_status == STATUS_CLOSED:
-            cursor.execute('SELECT give_remaining FROM dispensers WHERE source=:source AND asset=:asset AND status=:status', {
+            cursor.execute('SELECT tx_index, give_remaining FROM dispensers WHERE source=:source AND asset=:asset AND status=:status', {
                 'source': tx['source'],
                 'asset': asset,
                 'status': STATUS_OPEN
@@ -245,7 +245,7 @@ def parse (db, tx, message):
                     'asset': asset,
                     'status': STATUS_CLOSED,
                     'block_index': tx['block_index'],
-                    'tx_index': tx['tx_index']
+                    'tx_index': existing[0]['tx_index']
                 }
                 sql = 'UPDATE dispensers SET give_remaining=0, status=:status WHERE source=:source AND asset=:asset'
                 cursor.execute(sql, bindings)
