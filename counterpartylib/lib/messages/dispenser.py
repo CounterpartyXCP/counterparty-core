@@ -244,7 +244,8 @@ def parse (db, tx, message):
                     'source': tx['source'],
                     'asset': asset,
                     'status': STATUS_CLOSED,
-                    'block_index': tx['block_index']
+                    'block_index': tx['block_index'],
+                    'tx_index': tx['tx_index']
                 }
                 sql = 'UPDATE dispensers SET give_remaining=0, status=:status WHERE source=:source AND asset=:asset'
                 cursor.execute(sql, bindings)
