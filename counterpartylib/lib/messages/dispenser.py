@@ -316,14 +316,24 @@ def parse (db, tx, message):
 
 def is_dispensable(db, address, amount):
     cursor = db.cursor()
-    cursor.execute('SELECT count(*) as cnt FROM dispensers WHERE source=:source AND status=:status AND satoshirate<=:amount', {
-        'source': address,
-        'amount': amount,
+    cursor.execute('SELECT * FROM dispensers WHERE source=:source AND status=:status', {
+        'source': address,    
         'status': STATUS_OPEN
     })
     dispensers = cursor.fetchall()
     cursor.close()
-    return len(dispensers) > 0 and dispensers[0]['cnt'] > 0
+    
+    for next_dispenser in dispensers:
+        if next_dispenser["oracle_address"] != None:
+            last_price, last_fee, last_fiat_label, last_updated = util.get_oracle_last_price(db, next_dispenser['oracle_address'], util.CURRENT_BLOCK_INDEX)
+            fiatrate = util.satoshirate_to_fiat(next_dispenser["satoshirate"])
+            if amount >= fiatrate/last_price:
+                return True
+        else:
+            if amount >= next_dispenser["satoshirate"]:
+                return True
+    
+    return False
 
 def dispense(db, tx):
     cursor = db.cursor()
