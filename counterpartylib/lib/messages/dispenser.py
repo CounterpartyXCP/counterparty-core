@@ -266,22 +266,30 @@ def parse (db, tx, message):
                         cursor.execute(sql, bindings)
                 elif len(existing) == 1 and existing[0]['satoshirate'] == mainchainrate and existing[0]['give_quantity'] == give_quantity:
                     if tx["source"]==action_address:
-                        # Refill the dispenser by the given amount
-                        bindings = {
-                            'source': tx['source'],
-                            'asset': asset,
-                            'status': dispenser_status,
-                            'give_remaining': existing[0]['give_remaining'] + escrow_quantity,
-                            'status': STATUS_OPEN,
-                            'block_index': tx['block_index']
-                        }
-                        try:
-                            util.debit(db, tx['source'], asset, escrow_quantity, action='refill dispenser', event=tx['tx_hash'])
-                            sql = 'UPDATE dispensers SET give_remaining=:give_remaining \
-                                WHERE source=:source AND asset=:asset AND status=:status'
-                            cursor.execute(sql, bindings)
-                        except (util.DebitError):
-                            status = 'insufficient funds'
+                        if (oracle_address != None) and util.enabled('oracle_dispensers', tx['block_index']):
+                            oracle_fee = calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, oracle_address, tx['block_index']) 
+                               
+                            if oracle_fee >= config.DEFAULT_REGULAR_DUST_SIZE:   
+                                if tx["destination"] != oracle_address or tx["btc_amount"] < oracle_fee:
+                                    status = 'invalid: insufficient or non-existent oracle fee'
+                        
+                        if status == 'valid':
+                            # Refill the dispenser by the given amount
+                            bindings = {
+                                'source': tx['source'],
+                                'asset': asset,
+                                'status': dispenser_status,
+                                'give_remaining': existing[0]['give_remaining'] + escrow_quantity,
+                                'status': STATUS_OPEN,
+                                'block_index': tx['block_index']
+                            }
+                            try:
+                                util.debit(db, tx['source'], asset, escrow_quantity, action='refill dispenser', event=tx['tx_hash'])
+                                sql = 'UPDATE dispensers SET give_remaining=:give_remaining \
+                                    WHERE source=:source AND asset=:asset AND status=:status'
+                                cursor.execute(sql, bindings)
+                            except (util.DebitError):
+                                status = 'insufficient funds'
                     else:
                         status = 'invalid: can only refill dispenser from source'                             
                 else:
