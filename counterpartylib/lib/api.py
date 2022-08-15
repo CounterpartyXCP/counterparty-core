@@ -64,7 +64,7 @@ API_TABLES = ['assets', 'balances', 'credits', 'debits', 'bets', 'bet_matches',
               'bet_expirations', 'order_expirations', 'bet_match_expirations',
               'order_match_expirations', 'bet_match_resolutions', 'rps',
               'rpsresolves', 'rps_matches', 'rps_expirations', 'rps_match_expirations',
-              'mempool', 'sweeps', 'dispensers', 'dispenses']
+              'mempool', 'sweeps', 'dispensers', 'dispenses','transactions']
 
 API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel', 'destroy',
                     'dividend', 'issuance', 'order', 'send',
@@ -124,7 +124,8 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
     # Sanitize.
     forbidden_words = ['pragma', 'attach', 'database', 'begin', 'transaction']
     for word in forbidden_words:
-        if word in statement.lower(): # or any([word in str(binding).lower() for binding in bindings]):
+        #This will find if the forbidden word is in the statement as a whole word. For example, "transactions" will be allowed because the "s" at the end
+        if re.search(r"\b"+word+"\b", statement.lower()):
             raise APIError("Forbidden word in query: '{}'.".format(word))
 
     if hasattr(callback, '__call__'):
@@ -284,6 +285,10 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
     if table == 'sends':
         # for sends, handle the memo field properly
         return adjust_get_sends_results(query_result)
+    
+    if table == 'transactions':
+        # for transactions, handle the data field properly
+        return adjust_get_transactions_results(query_result)    
 
     return query_result
 
@@ -329,6 +334,13 @@ def adjust_get_sends_results(query_result):
         filtered_results.append(send_row)
     return filtered_results
 
+def adjust_get_transactions_results(query_result):
+    """Format the data field.  Try and decode the data from a utf-8 uncoded string. Invalid utf-8 strings return an empty data."""
+    filtered_results = []
+    for transaction_row in list(query_result):
+        transaction_row['data'] = transaction_row['data'].hex()
+        filtered_results.append(transaction_row)
+    return filtered_results
 
 def compose_transaction(db, name, params,
                         encoding='auto',
@@ -615,8 +627,10 @@ class APIServer(threading.Thread):
             return util.xcp_supply(self.db)
 
         @dispatcher.add_method
-        def get_asset_info(assets):
-            logger.warning("Deprecated method: `get_asset_info`")
+        def get_asset_info(assets=None, asset=None):
+            if asset is not None:
+                assets = [asset]
+            
             if not isinstance(assets, list):
                 raise APIError("assets must be a list of asset names, even if it just contains one entry")
             assetsInfo = []
