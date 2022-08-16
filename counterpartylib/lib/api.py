@@ -296,7 +296,7 @@ def adjust_get_destructions_results(query_result):
     filtered_results = []
     for destruction_row in list(query_result):
         if type(destruction_row['tag']) == bytes:
-            destruction_row['tag'] = destruction_row['tag'].decode('utf-8')
+            destruction_row['tag'] = destruction_row['tag'].decode('utf-8', 'ignore')
 
         filtered_results.append(destruction_row)
 
