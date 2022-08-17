@@ -231,7 +231,7 @@ def log (db, command, category, bindings):
                     escrow_quantity = "{:.8f}".format(bindings["escrow_quantity"]/config.UNIT)                 
         
             if ("action" in bindings) and bindings["action"] == 'refill dispenser':
-                logger.info("Dispenser: {} refilled a dispenser using {} with {} {}".format(bindings["source"],bindings["source"],escrow_quantity,bindings["asset"]))
+                logger.info("Dispenser: {} refilled a dispenser with {} {}".format(bindings["source"],escrow_quantity,bindings["asset"]))
             if "prev_status" in bindings: #There was a dispense
                 if bindings["prev_status"] == 0:
                     if bindings["status"] == 10:
