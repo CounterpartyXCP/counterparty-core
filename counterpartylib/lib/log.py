@@ -237,7 +237,7 @@ def log (db, command, category, bindings):
                     if bindings["status"] == 10:
                         logger.info("Dispenser: Closed dispenser {} for {} (dispenser empty)".format(bindings["source"],bindings["asset"]))
             elif bindings["status"] == 10: #Address closed the dispenser
-                logger.info("Dispenser: Closed dispenser {} for {} (operator closed)".format(bindings["source"],bindings["asset"]))
+                logger.info("Dispenser: {} closed dispenser for {} (operator closed)".format(bindings["source"],bindings["asset"]))
         # TODO: elif category == 'balances':
             # logger.debug('Database: set balance of {} in {} to {}.'.format(bindings['address'], bindings['asset'], output(bindings['quantity'], bindings['asset']).split(' ')[0]))
 
