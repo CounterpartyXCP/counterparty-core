@@ -228,7 +228,7 @@ def log (db, command, category, bindings):
             
             if divisible:
                 if "escrow_quantity" in bindings:
-                    escrow_quantity = "{:.8f}".format(escrow_quantity/config.UNIT)                 
+                    escrow_quantity = "{:.8f}".format(int(escrow_quantity)/config.UNIT)                 
         
             if ("action" in bindings) and bindings["action"] == 'refill dispenser':
                 logger.info("Dispenser: {} refilled a dispenser using {} with {} {}".format(bindings["source"],bindings["source"],escrow_quantity,bindings["asset"]))
