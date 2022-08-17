@@ -222,6 +222,22 @@ def log (db, command, category, bindings):
             logger.debug('Database: set status of order_match {} to {}.'.format(bindings['order_match_id'], bindings['status']))
         elif category == 'bet_matches':
             logger.debug('Database: set status of bet_match {} to {}.'.format(bindings['bet_match_id'], bindings['status']))
+        elif category == 'dispensers':
+            escrow_quantity = ''
+            divisible = get_asset_info(cursor, bindings['asset'])
+            
+            if divisible:
+                if "escrow_quantity" in bindings:
+                    escrow_quantity = "{:.8f}".format(escrow_quantity/config.UNIT)                 
+        
+            if ("action" in bindings) and bindings["action"] == 'refill dispenser':
+                logger.info("{} refilled a dispenser using {} with {} {}".format(bindings["source"],bindings["source"],escrow_quantity,bindings["asset"]))
+            if "prev_status" in bindings: #There was a dispense
+                if bindings["prev_status"] == 0:
+                    if bindings["status"] == 10:
+                        logger.info("Closed dispenser {} for {} (dispenser empty)".format(bindings["source"],bindings["asset"]))
+            if bindings["status"] == 10: #Address closed the dispenser
+                logger.info("Closed dispenser {} for {} (operator closed)".format(bindings["source"],bindings["asset"]))
         # TODO: elif category == 'balances':
             # logger.debug('Database: set balance of {} in {} to {}.'.format(bindings['address'], bindings['asset'], output(bindings['quantity'], bindings['asset']).split(' ')[0]))
 

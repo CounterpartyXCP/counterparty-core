@@ -278,10 +278,12 @@ def parse (db, tx, message):
                             bindings = {
                                 'source': tx['source'],
                                 'asset': asset,
-                                'status': dispenser_status,
+                                'prev_status': dispenser_status,
                                 'give_remaining': existing[0]['give_remaining'] + escrow_quantity,
                                 'status': STATUS_OPEN,
-                                'block_index': tx['block_index']
+                                'block_index': tx['block_index'],
+                                'action':'refill dispenser',
+                                'escrow_quantity':escrow_quantity
                             }
                             try:
                                 util.debit(db, tx['source'], asset, escrow_quantity, action='refill dispenser', event=tx['tx_hash'])
