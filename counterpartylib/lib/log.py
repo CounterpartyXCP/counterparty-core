@@ -235,7 +235,7 @@ def log (db, command, category, bindings):
             elif "prev_status" in bindings: #There was a dispense
                 if bindings["prev_status"] == 0:
                     if bindings["status"] == 10:
-                        logger.info("Dispenser: Closed dispenser {} for {} (dispenser empty)".format(bindings["source"],bindings["asset"]))
+                        logger.info("Dispenser: {} closed dispenser for {} (dispenser empty)".format(bindings["source"],bindings["asset"]))
             elif bindings["status"] == 10: #Address closed the dispenser
                 logger.info("Dispenser: {} closed dispenser for {} (operator closed)".format(bindings["source"],bindings["asset"]))
         # TODO: elif category == 'balances':
