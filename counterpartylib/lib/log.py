@@ -231,13 +231,13 @@ def log (db, command, category, bindings):
                     escrow_quantity = "{:.8f}".format(escrow_quantity/config.UNIT)                 
         
             if ("action" in bindings) and bindings["action"] == 'refill dispenser':
-                logger.info("{} refilled a dispenser using {} with {} {}".format(bindings["source"],bindings["source"],escrow_quantity,bindings["asset"]))
+                logger.info("Dispenser: {} refilled a dispenser using {} with {} {}".format(bindings["source"],bindings["source"],escrow_quantity,bindings["asset"]))
             if "prev_status" in bindings: #There was a dispense
                 if bindings["prev_status"] == 0:
                     if bindings["status"] == 10:
-                        logger.info("Closed dispenser {} for {} (dispenser empty)".format(bindings["source"],bindings["asset"]))
+                        logger.info("Dispenser: Closed dispenser {} for {} (dispenser empty)".format(bindings["source"],bindings["asset"]))
             if bindings["status"] == 10: #Address closed the dispenser
-                logger.info("Closed dispenser {} for {} (operator closed)".format(bindings["source"],bindings["asset"]))
+                logger.info("Dispenser: Closed dispenser {} for {} (operator closed)".format(bindings["source"],bindings["asset"]))
         # TODO: elif category == 'balances':
             # logger.debug('Database: set balance of {} in {} to {}.'.format(bindings['address'], bindings['asset'], output(bindings['quantity'], bindings['asset']).split(' ')[0]))
 
