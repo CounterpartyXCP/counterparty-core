@@ -471,7 +471,7 @@ def parse (db, tx, message, message_type_id):
 
     # Reset?
     if reset and util.enabled("cip03", tx['block_index']):
-        balances_cursor = issuance_parse_cursor.execute('''SELECT * FROM balances WHERE asset = ?''', (asset,))
+        balances_cursor = issuance_parse_cursor.execute('''SELECT * FROM balances WHERE asset = ? AND quantity > 0''', (asset,))
         balances_result = balances_cursor.fetchall()
         
         if len(balances_result) == 1:
