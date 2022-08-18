@@ -691,13 +691,27 @@ def destructions (db):
     cursor.close()
     return destructions
 
+def asset_issued_total (db, asset):
+    """Return asset total issued."""
+    cursor = db.cursor()
+    cursor.execute('''SELECT SUM(quantity) AS total FROM issuances \
+                      WHERE (status = ? AND asset = ?)''', ('valid', asset))
+    issued_total = list(cursor)[0]['total'] or 0
+    cursor.close()
+    return issued_total
+
+def asset_destroyed_total (db, asset):
+    """Return asset total destroyed."""
+    cursor = db.cursor()
+    cursor.execute('''SELECT SUM(quantity) AS total FROM destructions \
+                      WHERE (status = ? AND asset = ?)''', ('valid', asset))
+    destroyed_total = list(cursor)[0]['total'] or 0
+    cursor.close()
+    return destroyed_total
+
 def asset_supply (db, asset):
     """Return asset supply."""
-    supply = creations(db)[asset]
-    destroyed = destructions(db)
-    if asset in destroyed:
-        supply -= destroyed[asset]
-    return supply
+    return asset_issued_total(db, asset) - asset_destroyed_total(db, asset)
 
 def supplies (db):
     """Return supplies."""
@@ -889,3 +903,29 @@ def clean_url_for_log(url):
     return url
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
+
+# ORACLES
+def satoshirate_to_fiat(satoshirate):
+    return round(satoshirate/100.0,2)
+
+def get_oracle_last_price(db, oracle_address, block_index):
+    cursor = db.cursor()
+    cursor.execute('SELECT * FROM broadcasts WHERE source=:source AND status=:status AND block_index<:block_index ORDER by tx_index DESC LIMIT 1', {
+        'source': oracle_address,
+        'status': 'valid',
+        'block_index': block_index
+    })
+    broadcasts = cursor.fetchall()
+    cursor.close()
+    
+    if len(broadcasts) == 0:
+        return None, None
+    
+    oracle_broadcast = broadcasts[0]
+    oracle_label = oracle_broadcast["text"].split("-")
+    if len(oracle_label) == 2:
+        fiat_label = oracle_label[1]
+    else:   
+        fiat_label = ""
+    
+    return oracle_broadcast['value'], oracle_broadcast['fee_fraction_int'], fiat_label, oracle_broadcast['block_index']

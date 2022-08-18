@@ -288,6 +288,13 @@
       "testnet_block_index": 2287021
 
   },
+  "oracle_dispensers": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 59,
+      "minimum_version_revision": 6,
+      "block_index": 753000,
+      "testnet_block_index": 2288000
+  },
   "cip03": {
       "minimum_version_major": 9,
       "minimum_version_minor": 59,

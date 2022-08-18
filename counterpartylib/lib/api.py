@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 from logging import handlers as logging_handlers
 D = decimal.Decimal
 import binascii
+import math
 
 import struct
 import apsw
@@ -295,7 +296,7 @@ def adjust_get_destructions_results(query_result):
     filtered_results = []
     for destruction_row in list(query_result):
         if type(destruction_row['tag']) == bytes:
-            destruction_row['tag'] = destruction_row['tag'].decode('utf-8')
+            destruction_row['tag'] = destruction_row['tag'].decode('utf-8', 'ignore')
 
         filtered_results.append(destruction_row)
 
@@ -882,6 +883,61 @@ class APIServer(threading.Thread):
         # TODO: Rename this method.
         def search_pubkey(pubkeyhash, provided_pubkeys=None):
             return backend.pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=provided_pubkeys)
+
+        @dispatcher.add_method
+        def get_dispenser_info(tx_hash=None, tx_index=None):
+            cursor = self.db.cursor()
+            
+            if tx_hash is None and tx_index is None:
+                raise APIError("You must provided a tx hash or a tx index")
+            
+            if tx_hash is not None:
+                cursor.execute('SELECT d.*, a.asset_longname FROM dispensers d LEFT JOIN assets a ON a.asset_name = d.asset WHERE tx_hash=:tx_hash', {"tx_hash":tx_hash})
+            else:
+                cursor.execute('SELECT d.*, a.asset_longname FROM dispensers d LEFT JOIN assets a ON a.asset_name = d.asset WHERE tx_index=:tx_index', {"tx_index":tx_index})
+            
+            dispensers = cursor.fetchall()
+            
+            if len(dispensers) == 1:
+                dispenser = dispensers[0]
+                oracle_price = ""
+                satoshi_price = ""
+                fiat_price = ""
+                oracle_price_last_updated = ""
+                oracle_fiat_label = ""
+                
+                if dispenser["oracle_address"] != None:
+                    fiat_price = util.satoshirate_to_fiat(dispenser["satoshirate"])
+                    oracle_price, oracle_fee, oracle_fiat_label, oracle_price_last_updated = util.get_oracle_last_price(self.db, dispenser["oracle_address"], util.CURRENT_BLOCK_INDEX)
+                    
+                    if (oracle_price > 0):
+                        satoshi_price = math.ceil((fiat_price/oracle_price) * config.UNIT)
+                    else:
+                        raise APIError("Last oracle price is zero")
+                
+                return {
+                    "tx_index": dispenser["tx_index"],
+                    "tx_hash": dispenser["tx_hash"],
+                    "block_index": dispenser["block_index"],
+                    "source": dispenser["source"],
+                    "asset": dispenser["asset"],
+                    "give_quantity": dispenser["give_quantity"],
+                    "escrow_quantity": dispenser["escrow_quantity"],
+                    "satoshirate": dispenser["satoshirate"],
+                    "fiat_price": fiat_price,
+                    "fiat_unit": oracle_fiat_label,
+                    "oracle_price": oracle_price,
+                    "satoshi_price": satoshi_price,
+                    "status": dispenser["status"],
+                    "give_remaining": dispenser["give_remaining"],
+                    "oracle_address": dispenser["oracle_address"],
+                    "oracle_price_last_updated": oracle_price_last_updated,
+                    "asset_longname": dispenser["asset_longname"]
+                }
+            
+            return {}
+
+        
 
         def _set_cors_headers(response):
             if not config.RPC_NO_ALLOW_CORS:
