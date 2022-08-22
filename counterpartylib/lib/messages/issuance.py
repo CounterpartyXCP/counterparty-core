@@ -51,6 +51,8 @@ def initialise(db):
     columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(issuances)''')]
     if 'asset_longname' not in columns:
         cursor.execute('''ALTER TABLE issuances ADD COLUMN asset_longname TEXT''')
+    if 'reset' not in columns:
+        cursor.execute('''ALTER TABLE issuances ADD COLUMN reset BOOL''')
 
     # If sweep_hotfix activated, Create issuances copy, copy old data, drop old table, rename new table, recreate indexes
     #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS` nor can drop UNIQUE constraints
@@ -529,7 +531,7 @@ def parse (db, tx, message, message_type_id):
                     'asset_longname': reissued_asset_longname,
                 }
             
-                sql='insert into issuances values(:tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname)'
+                sql='insert into issuances values(:tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :reset)'
                 issuance_parse_cursor.execute(sql, bindings)
                 
                 # Credit.
@@ -607,11 +609,12 @@ def parse (db, tx, message, message_type_id):
             'description': description,
             'fee_paid': fee,
             'locked': lock,
+            'reset': reset,
             'status': status,
             'asset_longname': asset_longname,
         }
         if "integer overflow" not in status:
-            sql='insert into issuances values(:tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname)'
+            sql='insert into issuances values(:tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :reset)'
             issuance_parse_cursor.execute(sql, bindings)
         else:
             logger.warn("Not storing [issuance] tx [%s]: %s" % (tx['tx_hash'], status))
