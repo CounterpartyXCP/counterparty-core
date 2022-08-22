@@ -923,7 +923,7 @@ class APIServer(threading.Thread):
                     "asset": dispenser["asset"],
                     "give_quantity": dispenser["give_quantity"],
                     "escrow_quantity": dispenser["escrow_quantity"],
-                    "satoshirate": dispenser["satoshirate"],
+                    "mainchainrate": dispenser["satoshirate"],
                     "fiat_price": fiat_price,
                     "fiat_unit": oracle_fiat_label,
                     "oracle_price": oracle_price,
