@@ -354,8 +354,8 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
             data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if lock else 0, 1 if reset else 0, 1 if callable_ else 0,
                 call_date or 0, call_price or 0.0, description.encode('utf-8'))
     else:
-        subasset_format = util.get_value_by_block_index("issuance_subasset_serialization_format",tx['block_index'])
-        subasset_format_length = util.get_value_by_block_index("issuance_subasset_serialization_length",tx['block_index'])
+        subasset_format = util.get_value_by_block_index("issuance_subasset_serialization_format",util.CURRENT_BLOCK_INDEX)
+        subasset_format_length = util.get_value_by_block_index("issuance_subasset_serialization_length",util.CURRENT_BLOCK_INDEX)
 
         # Type 21 subasset issuance SUBASSET_FORMAT >QQ?B
         #   Used only for initial subasset issuance
