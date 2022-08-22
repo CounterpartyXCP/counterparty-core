@@ -540,7 +540,7 @@ def parse (db, tx, message, message_type_id):
         if tx['destination']:
             issuer = tx['destination']
             transfer = True
-            quantity = 0
+            #quantity = 0
         else:
             issuer = tx['source']
             transfer = False
