@@ -399,8 +399,6 @@ def parse (db, tx, message, message_type_id):
             lock = None
             reset = None
             
-            asset_id, quantity, divisible, compacted_subasset_length = struct.unpack(subasset_format, message[0:subasset_format_length])
-            
             if subasset_format_length <= 18:
                 asset_id, quantity, divisible, compacted_subasset_length = struct.unpack(subasset_format, message[0:subasset_format_length])
             elif subasset_format_length <= 19:# param reset was inserted
