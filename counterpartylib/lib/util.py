@@ -691,13 +691,27 @@ def destructions (db):
     cursor.close()
     return destructions
 
+def asset_issued_total (db, asset):
+    """Return asset total issued."""
+    cursor = db.cursor()
+    cursor.execute('''SELECT SUM(quantity) AS total FROM issuances \
+                      WHERE (status = ? AND asset = ?)''', ('valid', asset))
+    issued_total = list(cursor)[0]['total'] or 0
+    cursor.close()
+    return issued_total
+
+def asset_destroyed_total (db, asset):
+    """Return asset total destroyed."""
+    cursor = db.cursor()
+    cursor.execute('''SELECT SUM(quantity) AS total FROM destructions \
+                      WHERE (status = ? AND asset = ?)''', ('valid', asset))
+    destroyed_total = list(cursor)[0]['total'] or 0
+    cursor.close()
+    return destroyed_total
+
 def asset_supply (db, asset):
     """Return asset supply."""
-    supply = creations(db)[asset]
-    destroyed = destructions(db)
-    if asset in destroyed:
-        supply -= destroyed[asset]
-    return supply
+    return asset_issued_total(db, asset) - asset_destroyed_total(db, asset)
 
 def supplies (db):
     """Return supplies."""
