@@ -553,23 +553,13 @@ def parse (db, tx, message, message_type_id):
         if not isinstance(lock,bool):
             lock = False
         if status == 'valid':
-            if asset_format_length <= 26:
-                if description and description.lower() == 'lock':
-                    lock = True
-                    cursor = db.cursor()
-                    issuances = list(cursor.execute('''SELECT * FROM issuances \
-                                                       WHERE (status = ? AND asset = ?)
-                                                       ORDER BY tx_index ASC''', ('valid', asset)))
-                    cursor.close()
-                    description = issuances[-1]['description']  # Use last description. (Assume previous issuance exists because tx is valid.)
-                    timestamp, value_int, fee_fraction_int = None, None, None
-            elif lock:
+            if (description and description.lower() == 'lock') or lock:
+                lock = True
                 cursor = db.cursor()
                 issuances = list(cursor.execute('''SELECT * FROM issuances \
                                                    WHERE (status = ? AND asset = ?)
                                                    ORDER BY tx_index ASC''', ('valid', asset)))
                 cursor.close()
-
                 if len(issuances) > 0:
                     description = issuances[-1]['description']  # Use last description
 
