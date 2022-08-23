@@ -262,7 +262,7 @@ def log (db, command, category, bindings):
             logger.info('{} Payment: {} paid {} to {} for order match {} ({}) [{}]'.format(config.BTC, bindings['source'], output(bindings['btc_amount'], config.BTC), bindings['destination'], bindings['order_match_id'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'issuances':
-            if get_asset_issuances_quantity(cursor, bindings["asset"]) == 0: #This is the first issuance, so we have to log the creation of the token
+            if (get_asset_issuances_quantity(cursor, bindings["asset"]) == 0) or (bindings['quantity'] > 0): #This is the first issuance or the creation of more supply, so we have to log the creation of the token
                 if bindings['divisible']:
                     divisibility = 'divisible'
                     unit = config.UNIT
