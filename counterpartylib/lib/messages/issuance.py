@@ -486,7 +486,7 @@ def parse (db, tx, message, message_type_id):
         balances_cursor = issuance_parse_cursor.execute('''SELECT * FROM balances WHERE asset = ? AND quantity > 0''', (asset,))
         balances_result = balances_cursor.fetchall()
         
-        if len(balances_result) == 1:
+        if len(balances_result) <= 1:
             owner_balance = balances_result[0]["quantity"]
             owner_address = balances_result[0]["address"]
             
