@@ -275,19 +275,19 @@ def log (db, command, category, bindings):
                     quantity = '?'
             
                 if 'asset_longname' in bindings and bindings['asset_longname'] is not None:
-                    logger.info('Subasset Issuance: {} created {} of {} subasset {} as numeric asset {} ({}) [{}]'.format(bindings['issuer'], quantity, divisibility, bindings['asset_longname'], bindings['asset'], bindings['tx_hash'], bindings['status']))
+                    logger.info('Subasset Issuance: {} created {} of {} subasset {} as numeric asset {} ({}) [{}]'.format(bindings['source'], quantity, divisibility, bindings['asset_longname'], bindings['asset'], bindings['tx_hash'], bindings['status']))
                 else:
-                    logger.info('Issuance: {} created {} of {} asset {} ({}) [{}]'.format(bindings['issuer'], quantity, divisibility, bindings['asset'], bindings['tx_hash'], bindings['status']))
-                    
-            if bindings['transfer']:
-                logger.info('Issuance: {} transfered asset {} to {} ({}) [{}]'.format(bindings['source'], bindings['asset'], bindings['issuer'], bindings['tx_hash'], bindings['status']))
+                    logger.info('Issuance: {} created {} of {} asset {} ({}) [{}]'.format(bindings['source'], quantity, divisibility, bindings['asset'], bindings['tx_hash'], bindings['status']))
             
             if bindings['locked']:
                 lock_issuance = get_lock_issuance(cursor, bindings["asset"])
                 
                 if (lock_issuance == None) or (lock_issuance['tx_hash'] == bindings['tx_hash']):
-                    logger.info('Issuance: {} locked asset {} ({}) [{}]'.format(bindings['issuer'], bindings['asset'], bindings['tx_hash'], bindings['status']))
-
+                    logger.info('Issuance: {} locked asset {} ({}) [{}]'.format(bindings['source'], bindings['asset'], bindings['tx_hash'], bindings['status']))
+            
+            if bindings['transfer']:
+                logger.info('Issuance: {} transfered asset {} to {} ({}) [{}]'.format(bindings['source'], bindings['asset'], bindings['issuer'], bindings['tx_hash'], bindings['status']))
+            
         elif category == 'broadcasts':
             if bindings['locked']:
                 logger.info('Broadcast: {} locked his feed ({}) [{}]'.format(bindings['source'], bindings['tx_hash'], bindings['status']))
