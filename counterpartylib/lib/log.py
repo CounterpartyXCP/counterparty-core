@@ -262,7 +262,7 @@ def log (db, command, category, bindings):
             logger.info('{} Payment: {} paid {} to {} for order match {} ({}) [{}]'.format(config.BTC, bindings['source'], output(bindings['btc_amount'], config.BTC), bindings['destination'], bindings['order_match_id'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'issuances':
-            if get_asset_issuances_quantity(db, bindings["asset"]) == 1: #This is the first issuance, so we have to log the creation of the token
+            if get_asset_issuances_quantity(cursor, bindings["asset"]) == 1: #This is the first issuance, so we have to log the creation of the token
                 if bindings['divisible']:
                     divisibility = 'divisible'
                     unit = config.UNIT
@@ -270,7 +270,7 @@ def log (db, command, category, bindings):
                     divisibility = 'indivisible'
                     unit = 1
                 try:
-                    quantity = util.value_out(db, bindings['quantity'], None, divisible=bindings['divisible'])
+                    quantity = util.value_out(cursor, bindings['quantity'], None, divisible=bindings['divisible'])
                 except Exception as e:
                     quantity = '?'
             
@@ -283,7 +283,7 @@ def log (db, command, category, bindings):
                 logger.info('Issuance: {} transfered asset {} to {} ({}) [{}]'.format(bindings['source'], bindings['asset'], bindings['issuer'], bindings['tx_hash'], bindings['status']))
             
             if bindings['locked']:
-                if get_lock_issuance(db, bindings["asset"])['tx_hash'] == bindings['tx_hash']:
+                if get_lock_issuance(cursor, bindings["asset"])['tx_hash'] == bindings['tx_hash']:
                     logger.info('Issuance: {} locked asset {} ({}) [{}]'.format(bindings['issuer'], bindings['asset'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'broadcasts':
