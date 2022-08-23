@@ -405,7 +405,7 @@ def log (db, command, category, bindings):
                 oracle_last_price, oracle_fee, oracle_fiat_label, oracle_last_price_updated = util.get_oracle_last_price(db, dispenser["oracle_address"], bindings['block_index'])
                 fiatpaid = round(tx_btc_amount*oracle_last_price,2)
                 
-                logger.info('Dispense: {} from {} to {} for {} {} ({} {}) ({})'.format(output(bindings['dispense_quantity'], bindings['asset']), bindings['source'], bindings['destination'], tx_btc_amount, config.BTC, fiatpaid, oracle_fiat_label, bindings['tx_hash']))
+                logger.info('Dispense: {} from {} to {} for {:.8f} {} ({} {}) ({})'.format(output(bindings['dispense_quantity'], bindings['asset']), bindings['source'], bindings['destination'], tx_btc_amount, config.BTC, fiatpaid, oracle_fiat_label, bindings['tx_hash']))
             else:
                 logger.info('Dispense: {} from {} to {} ({})'.format(output(bindings['dispense_quantity'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash']))
 
