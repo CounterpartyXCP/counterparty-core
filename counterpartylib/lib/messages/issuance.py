@@ -488,60 +488,60 @@ def parse (db, tx, message, message_type_id):
         
         if len(balances_result) <= 1:
             if len(balances_result) == 0:
-				issuances_cursor = issuance_parse_cursor.execute('''SELECT * FROM issuances WHERE asset = ? ORDER BY tx_index DESC''', (asset,))
-				issuances_result = issuances_cursor.fetchall()
-				
-				owner_balance = 0
-				owner_address = issuances_result[0]['issuer']
-			else:
-				owner_balance = balances_result[0]["quantity"]
-				owner_address = balances_result[0]["address"]
+                issuances_cursor = issuance_parse_cursor.execute('''SELECT * FROM issuances WHERE asset = ? ORDER BY tx_index DESC''', (asset,))
+                issuances_result = issuances_cursor.fetchall()
+                
+                owner_balance = 0
+                owner_address = issuances_result[0]['issuer']
+            else:
+                owner_balance = balances_result[0]["quantity"]
+                owner_address = balances_result[0]["address"]
             
             if owner_address == tx['source']:
                 if owner_balance > 0:
-					util.debit(db, tx['source'], asset, owner_balance, 'reset destroy', tx['tx_hash'])
-					
-					bindings = {
-						'tx_index': tx['tx_index'],
-						'tx_hash': tx['tx_hash'],
-						'block_index': tx['block_index'],
-						'source': tx['source'],
-						'asset': asset,
-						'quantity': owner_balance,
-						'tag': "reset",
-						'status': "valid",
-						'reset': True,
-					   }
-					sql = 'insert into destructions values(:tx_index, :tx_hash, :block_index, :source, :asset, :quantity, :tag, :status)'
-					issuance_parse_cursor.execute(sql, bindings)
-		
-				bindings= {
-					'tx_index': tx['tx_index'],
-					'tx_hash': tx['tx_hash'],
-					'block_index': tx['block_index'],
-					'asset': asset,
-					'quantity': quantity,
-					'divisible': divisible,
-					'source': tx['source'],
-					'issuer': tx['source'],
-					'transfer': False,
-					'callable': callable_,
-					'call_date': call_date,
-					'call_price': call_price,
-					'description': description,
-					'fee_paid': 0,
-					'locked': lock,
-					'status': status,
-					'reset': True,
-					'asset_longname': reissued_asset_longname,
-				}
-			
-				sql='insert into issuances values(:tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :reset)'
-				issuance_parse_cursor.execute(sql, bindings)
-			
-				# Credit.
-				if quantity:
-					util.credit(db, tx['source'], asset, quantity, action="reset issuance", event=tx['tx_hash'])
+                    util.debit(db, tx['source'], asset, owner_balance, 'reset destroy', tx['tx_hash'])
+                    
+                    bindings = {
+                        'tx_index': tx['tx_index'],
+                        'tx_hash': tx['tx_hash'],
+                        'block_index': tx['block_index'],
+                        'source': tx['source'],
+                        'asset': asset,
+                        'quantity': owner_balance,
+                        'tag': "reset",
+                        'status': "valid",
+                        'reset': True,
+                       }
+                    sql = 'insert into destructions values(:tx_index, :tx_hash, :block_index, :source, :asset, :quantity, :tag, :status)'
+                    issuance_parse_cursor.execute(sql, bindings)
+        
+                bindings= {
+                    'tx_index': tx['tx_index'],
+                    'tx_hash': tx['tx_hash'],
+                    'block_index': tx['block_index'],
+                    'asset': asset,
+                    'quantity': quantity,
+                    'divisible': divisible,
+                    'source': tx['source'],
+                    'issuer': tx['source'],
+                    'transfer': False,
+                    'callable': callable_,
+                    'call_date': call_date,
+                    'call_price': call_price,
+                    'description': description,
+                    'fee_paid': 0,
+                    'locked': lock,
+                    'status': status,
+                    'reset': True,
+                    'asset_longname': reissued_asset_longname,
+                }
+            
+                sql='insert into issuances values(:tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :reset)'
+                issuance_parse_cursor.execute(sql, bindings)
+            
+                # Credit.
+                if quantity:
+                    util.credit(db, tx['source'], asset, quantity, action="reset issuance", event=tx['tx_hash'])
 
     else:
         if tx['destination']:
