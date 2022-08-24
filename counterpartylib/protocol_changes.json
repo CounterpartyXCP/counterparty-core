@@ -294,6 +294,96 @@
       "minimum_version_revision": 6,
       "block_index": 753000,
       "testnet_block_index": 2288000
-
+  },
+  "cip03": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 59,
+      "minimum_version_revision": 6,
+      "block_index": 753000,
+      "testnet_block_index": 2288000
+  },
+  "issuance_asset_serialization_format": {
+    "mainnet":{
+      "1":{
+        "value":">QQ??If"  
+      },
+      "753000":{
+        "value":">QQ????If"
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":">QQ??If"  
+      },    
+      "2288000":{
+        "value":">QQ???If"
+      },    
+      "2342000":{
+        "value":">QQ????If"
+      }   
+    }
+  },
+  "issuance_asset_serialization_length": {
+    "mainnet":{
+      "1":{
+        "value":26  
+      },
+      "753000":{
+        "value":28
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":26
+      },    
+      "2288000":{
+        "value":27
+      },    
+      "2342000":{
+        "value":28
+      }   
+    }
+  },
+  "issuance_subasset_serialization_format": {
+    "mainnet":{
+      "1":{
+        "value":">QQ?B"  
+      },
+      "753000":{
+        "value":">QQ???B"
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":">QQ?B"  
+      },    
+      "2288000":{
+        "value":">QQ??B"
+      },
+      "2342000":{
+        "value":">QQ???B"
+      }   
+    }
+  },
+  "issuance_subasset_serialization_length": {
+    "mainnet":{
+      "1":{
+        "value":18  
+      },
+      "753000":{
+        "value":20
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":18
+      },    
+      "2288000":{
+        "value":19
+      },
+      "2342000":{
+        "value":20
+      }
+    }
   }
 }
