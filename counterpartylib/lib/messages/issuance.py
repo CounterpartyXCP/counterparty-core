@@ -309,7 +309,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, descr
         # Type 20 standard issuance FORMAT_2 >QQ??If
         #   used for standard issuances and all reissuances
         data = message_type.pack(ID)
-        if len(description) <= 42:
+        if (len(description) <= 42) and not util.enabled('pascal_string_removed'):
             curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
         else:
             curr_format = FORMAT_2 + '{}s'.format(len(description))
@@ -357,7 +357,7 @@ def parse (db, tx, message, message_type_id):
             except UnicodeDecodeError:
                 description = ''
         elif (tx['block_index'] > 283271 or config.TESTNET or config.REGTEST) and len(message) >= LENGTH_2: # Protocol change.
-            if len(message) - LENGTH_2 <= 42:
+            if (len(message) - LENGTH_2 <= 42) and not util.enabled('pascal_string_removed'):
                 curr_format = FORMAT_2 + '{}p'.format(len(message) - LENGTH_2)
             else:
                 curr_format = FORMAT_2 + '{}s'.format(len(message) - LENGTH_2)
