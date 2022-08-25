@@ -43,6 +43,7 @@ def initialise(db):
                       locked BOOL,
                       status TEXT,
                       asset_longname TEXT,
+                      reset BOOL,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
 
@@ -76,16 +77,17 @@ def initialise(db):
                               locked BOOL,
                               status TEXT,
                               asset_longname TEXT,
+                              reset BOOL,
                               PRIMARY KEY (tx_index, msg_index),
                               FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                               UNIQUE (tx_hash, msg_index))
                            ''')
             cursor.execute('''INSERT INTO new_issuances(tx_index, tx_hash, msg_index,
                 block_index, asset, quantity, divisible, source, issuer, transfer, callable,
-                call_date, call_price, description, fee_paid, locked, status, asset_longname)
+                call_date, call_price, description, fee_paid, locked, status, asset_longname, reset)
                 SELECT tx_index, tx_hash, 0, block_index, asset, quantity, divisible, source,
                 issuer, transfer, callable, call_date, call_price, description, fee_paid,
-                locked, status, asset_longname FROM issuances''', {})
+                locked, status, asset_longname, reset FROM issuances''', {})
             cursor.execute('DROP TABLE issuances')
             cursor.execute('ALTER TABLE new_issuances RENAME TO issuances')
 
