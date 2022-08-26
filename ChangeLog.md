@@ -1,4 +1,23 @@
 ## Library Versions ##
+* v9.60.0 (2022-09-01)
+    * Added support for CIP24 (Oracled Dispensers)
+    * Added support for CIP03 (Reset Token & Divisibility Statuses)
+    * Added `tx_index` field in bindings on dispenser close
+    * Added `divisible` field to `get_balances` API calls
+    * Added `asset` param to `get_asset_info()` API calls
+    * Added `transactions` table to `get_{table}` API calls
+    * Added network address validation to MPMA sends
+    * Added segwit format check for provided pubkeys when creating a send
+    * Update p2sh dust limit from 5640 to 546 (10x fee reduction)
+    * Update MPMA sends to adjust dust output to get to exact miners fee
+    * Update `get_supply()` with more efficient asset queries (thx @jotapea)
+    * Fixed issue with `get_destructions` and invalid UTF-8 characters
+    * Fixed issue with using 'BEGIN' keyword in API calls
+    * Fixed issue with transfering asset ownership to segwit addresses
+    * Fixed issue with locking subassets when parent owner is different
+    * Fixed "filled" order status when a BTCpay expires and another is successful
+    * Fixed issue with dispensers not working with p2sh addresses
+    * Fixed a bunch of CircleCI automated tests (thx @windsok)
 * v9.59.1 (2021-01-17)
     * Fixed api issues while building P2SH encoded transactions
 * v9.59.0 (2021-01-11)
