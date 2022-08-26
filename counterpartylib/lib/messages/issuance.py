@@ -348,7 +348,9 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         else:
             curr_format = asset_format + '{}s'.format(len(description))
         
-        if (asset_format_length <= 26):
+        if (asset_format_length <= 19):# callbacks parameters were removed
+            data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if lock else 0, 1 if reset else 0, description.encode('utf-8'))
+        elif (asset_format_length <= 26):
             data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0,
                 call_date or 0, call_price or 0.0, description.encode('utf-8'))
         elif (asset_format_length <= 27):# param reset was inserted
@@ -428,7 +430,10 @@ def parse (db, tx, message, message_type_id):
             
             lock = None
             reset = None
-            if (asset_format_length <= 26):#the reset param didn't even exist
+            if (asset_format_length <= 19):# callbacks parameters were removed
+                asset_id, quantity, divisible, lock, reset, description = struct.unpack(curr_format, message)
+                callable_, call_date, call_price = False, 0, 0.0
+            elif (asset_format_length <= 26):#the reset param didn't even exist
                 asset_id, quantity, divisible, callable_, call_date, call_price, description = struct.unpack(curr_format, message)
             elif (asset_format_length <= 27):# param reset was inserted
                 asset_id, quantity, divisible, reset, callable_, call_date, call_price, description = struct.unpack(curr_format, message)
