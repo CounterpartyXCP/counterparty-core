@@ -1,5 +1,6 @@
 ## Library Versions ##
-* v9.60.0 (2022-09-01)
+* v9.60.0 (2022-08-29)
+    * Removed `callable`,`call_date`, and `call_price` from issuances
     * Added support for CIP24 (Oracled Dispensers)
     * Added support for CIP03 (Reset Token & Divisibility Statuses)
     * Added `tx_index` field in bindings on dispenser close
