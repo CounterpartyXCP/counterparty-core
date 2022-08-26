@@ -432,6 +432,7 @@ def parse (db, tx, message, message_type_id):
             reset = None
             if (asset_format_length <= 19):# callbacks parameters were removed
                 asset_id, quantity, divisible, lock, reset, description = struct.unpack(curr_format, message)
+                callable_, call_date, call_price = False, 0, 0.0
             elif (asset_format_length <= 26):#the reset param didn't even exist
                 asset_id, quantity, divisible, callable_, call_date, call_price, description = struct.unpack(curr_format, message)
             elif (asset_format_length <= 27):# param reset was inserted
