@@ -308,7 +308,7 @@
         "value":">QQ??If"  
       },
       "753000":{
-        "value":">QQ????If"
+        "value":">QQ???"
       }   
     },
     "testnet":{
@@ -320,7 +320,10 @@
       },    
       "2342000":{
         "value":">QQ????If"
-      }   
+      },
+      "2343963":{
+        "value":">QQ???"
+      }
     }
   },
   "issuance_asset_serialization_length": {
@@ -329,7 +332,7 @@
         "value":26  
       },
       "753000":{
-        "value":28
+        "value":19
       }   
     },
     "testnet":{
@@ -341,6 +344,9 @@
       },    
       "2342000":{
         "value":28
+      },
+      "2343963":{
+        "value":19
       }   
     }
   },
