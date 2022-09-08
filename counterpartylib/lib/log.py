@@ -224,7 +224,7 @@ def log (db, command, category, bindings):
             logger.debug('Database: set status of bet_match {} to {}.'.format(bindings['bet_match_id'], bindings['status']))
         elif category == 'dispensers':
             escrow_quantity = ''
-            divisible = get_asset_info(cursor, bindings['asset'])
+            divisible = get_asset_info(cursor, bindings['asset'])['divisible']
             
             if divisible:
                 if "escrow_quantity" in bindings:
@@ -366,7 +366,12 @@ def log (db, command, category, bindings):
             logger.info('Expired RPS Match: {}'.format(bindings['rps_match_id']))
 
         elif category == 'destructions':
-            logger.info('Destruction: {} destroyed {} {} with tag ‘{}’({}) [{}]'.format(bindings['source'], bindings['quantity'], bindings['asset'], bindings['tag'], bindings['tx_hash'], bindings['status']))
+            asset_info = get_asset_info(cursor, bindings['asset'])
+            quantity = bindings['quantity']
+            if asset_info['divisible']:
+                quantity = "{:.8f}".format(quantity/config.UNIT)
+
+            logger.info('Destruction: {} destroyed {} {} with tag ‘{}’({}) [{}]'.format(bindings['source'], quantity, bindings['asset'], bindings['tag'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'dispensers':
             each_price = bindings['satoshirate']
@@ -382,7 +387,7 @@ def log (db, command, category, bindings):
             else:
                 each_price = "{:.8f}".format(each_price/config.UNIT) 
             
-            divisible = get_asset_info(cursor, bindings['asset'])
+            divisible = get_asset_info(cursor, bindings['asset'])['divisible']
             
             if divisible:
                 escrow_quantity = "{:.8f}".format(escrow_quantity/config.UNIT) 
@@ -439,7 +444,7 @@ def get_asset_info(cursor, asset):
         WHERE (status = ? AND asset = ?)
         ORDER BY tx_index DESC''', ('valid', asset))
     issuances = cursor.fetchall()
-    return issuances[0]['divisible']
+    return issuances[0]
 
 def get_tx_info(cursor, tx_hash):
     cursor.execute('SELECT * FROM transactions WHERE tx_hash=:tx_hash', {
