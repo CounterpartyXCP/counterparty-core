@@ -438,7 +438,7 @@ def get_asset_issuances_quantity(cursor, asset):
 
 def get_asset_info(cursor, asset):
     if asset == config.BTC or asset == config.XCP:
-        return True
+        return {'divisible':True}
     
     cursor.execute('''SELECT * FROM issuances \
         WHERE (status = ? AND asset = ?)
