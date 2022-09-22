@@ -80,7 +80,7 @@ def get_lock():
 
 def initialise(*args, **kwargs):
     initialise_config(*args, **kwargs)
-    return initialise_db()
+    return initialise_db(kwargs['checkdb'] if ('checkdb' in kwargs) else False)
 
 
 def initialise_config(database_file=None, log_file=None, api_log_file=None,
@@ -447,7 +447,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
 
 
 
-def initialise_db():
+def initialise_db(check_db):
     if config.FORCE:
         logger.warning('THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.')
 
@@ -457,7 +457,7 @@ def initialise_db():
 
     # Database
     logger.info('Connecting to database (SQLite %s).' % apsw.apswversion())
-    db = database.get_connection(read_only=False)
+    db = database.get_connection(read_only=False,integrity_check=check_db)
 
     util.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
 

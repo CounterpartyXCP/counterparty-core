@@ -104,7 +104,7 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
     cursor.execute('''PRAGMA case_sensitive_like = ON''')
 
     if integrity_check:
-        logger.debug('Checking database integrity.')
+        logger.info('Checking database integrity...')
         integral = False
         for i in range(10): # DUPE
             try:
