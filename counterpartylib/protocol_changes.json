@@ -405,5 +405,12 @@
       "minimum_version_revision": 6,
       "block_index": 751716,
       "testnet_block_index": 2344637
+  },
+  "prevout_segwit_fix": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 59,
+      "minimum_version_revision": 6,
+      "block_index": 718318,
+      "testnet_block_index": 2135609
   }
 }
