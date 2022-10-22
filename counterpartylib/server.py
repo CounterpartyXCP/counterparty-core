@@ -80,7 +80,7 @@ def get_lock():
 
 def initialise(*args, **kwargs):
     initialise_config(*args, **kwargs)
-    return initialise_db(kwargs['checkdb'] if ('checkdb' in kwargs) else False)
+    return initialise_db()
 
 
 def initialise_config(database_file=None, log_file=None, api_log_file=None,
@@ -102,7 +102,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
                 utxo_locks_max_addresses=config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES,
                 utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE,
                 estimate_fee_per_kb=None,
-                customnet=None):
+                customnet=None, checkdb=False):
 
     # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -154,6 +154,11 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     else:
         filename = '{}{}.db'.format(config.APP_NAME, network)
         config.DATABASE = os.path.join(data_dir, filename)
+
+    if checkdb:
+        config.CHECKDB = True
+    else:
+        config.CHECKDB = False
 
     # Log directory
     log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
@@ -447,7 +452,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
 
 
 
-def initialise_db(check_db):
+def initialise_db():
     if config.FORCE:
         logger.warning('THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.')
 
@@ -457,7 +462,7 @@ def initialise_db(check_db):
 
     # Database
     logger.info('Connecting to database (SQLite %s).' % apsw.apswversion())
-    db = database.get_connection(read_only=False,integrity_check=check_db)
+    db = database.get_connection(read_only=False,foreign_keys=config.CHECKDB,integrity_check=config.CHECKDB)
 
     util.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
 

@@ -13,12 +13,12 @@ fi
 if [ ! -f /root/.local/share/counterparty/counterparty.db ]; then
     echo "Downloading mainnet bootstrap DB..."
     counterparty-server bootstrap --quiet
-	PARAMS='checkdb=True'
+	PARAMS='--checkdb'
 fi
 if [ ! -f /root/.local/share/counterparty/counterparty.testnet.db ]; then
     echo "Downloading testnet bootstrap DB..."
     counterparty-server --testnet bootstrap --quiet
-	PARAMS='checkdb=True'
+	PARAMS='--checkdb'
 fi
 
 # Kick off the server, defaulting to the "start" subcommand
