@@ -53,7 +53,7 @@ CONFIG_ARGS = [
 
     [('--utxo-locks-max-addresses',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES, 'help': 'max number of addresses for which to track UTXO locks'}],
     [('--utxo-locks-max-age',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_AGE, 'help': 'how long to keep a lock on a UTXO being tracked'}],
-	[('--checkdb',), {'action': 'store_true', 'default': False, 'help': 'check the database for integrity (default: false)'}]
+    [('--checkdb',), {'action': 'store_true', 'default': False, 'help': 'check the database for integrity (default: false)'}]
 ]
 
 class VersionError(Exception):
