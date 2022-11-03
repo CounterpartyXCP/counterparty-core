@@ -50,10 +50,10 @@ def initialise(db):
                    ''')
                       # Disallows invalids: FOREIGN KEY (order_match_id) REFERENCES order_matches(id))
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON dispensers (source)
+                      dispensers_source_idx ON dispensers (source)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      asset_idx ON dispensers (asset)
+                      dispensers_asset_idx ON dispensers (asset)
                    ''')
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS dispenses(
