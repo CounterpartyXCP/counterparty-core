@@ -854,10 +854,13 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
     if util.enabled('p2sh_encoding') and data == b'P2SH':
         data = b''
         for vin in ctx.vin:
-            vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash))
-            vin_ctx = backend.deserialize(vin_tx)
-            prevout_is_segwit = vin_ctx.has_witness()
-            
+            if util.enabled("prevout_segwit_fix"):
+                vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash))
+                vin_ctx = backend.deserialize(vin_tx)
+                prevout_is_segwit = vin_ctx.has_witness()
+            else:
+                prevout_is_segwit = p2sh_is_segwit
+                
             # Ignore transactions with invalid script.
             try:
                 asm = script.get_asm(vin.scriptSig)

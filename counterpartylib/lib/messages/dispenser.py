@@ -50,10 +50,10 @@ def initialise(db):
                    ''')
                       # Disallows invalids: FOREIGN KEY (order_match_id) REFERENCES order_matches(id))
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON dispensers (source)
+                      dispensers_source_idx ON dispensers (source)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      asset_idx ON dispensers (asset)
+                      dispensers_asset_idx ON dispensers (asset)
                    ''')
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS dispenses(
@@ -206,7 +206,10 @@ def parse (db, tx, message):
 
     
     if status == 'valid':
-        asset_id, problems = validate(db, tx['source'], asset, give_quantity, escrow_quantity, mainchainrate, dispenser_status, action_address if dispenser_status == STATUS_OPEN_EMPTY_ADDRESS else None, tx['block_index'], oracle_address)
+        if util.enabled("dispenser_parsing_validation", util.CURRENT_BLOCK_INDEX):
+            asset_id, problems = validate(db, tx['source'], asset, give_quantity, escrow_quantity, mainchainrate, dispenser_status, action_address if dispenser_status == STATUS_OPEN_EMPTY_ADDRESS else None, tx['block_index'], oracle_address)
+        else:
+            problems = None
         
         if problems:
             status = 'invalid: ' + '; '.join(problems)
