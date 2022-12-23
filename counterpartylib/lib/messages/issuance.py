@@ -176,7 +176,7 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
             problems.append('issued by another address')
         if (bool(last_issuance['divisible']) != bool(divisible)) and ((not util.enabled("cip03", block_index)) or (not reset)):
             problems.append('cannot change divisibility')
-        if (not util.enabled("issuance_callability_parameters_removal", block_index)) or bool(last_issuance['callable']) != bool(callable_):
+        if (not util.enabled("issuance_callability_parameters_removal", block_index)) and bool(last_issuance['callable']) != bool(callable_):
             problems.append('cannot change callability')
         if last_issuance['call_date'] > call_date and (call_date != 0 or (block_index < 312500 and (not config.TESTNET or not config.REGTEST))):
             problems.append('cannot advance call date')
