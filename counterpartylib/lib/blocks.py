@@ -424,6 +424,19 @@ def initialise(db):
                         block_index INTEGER PRIMARY KEY,
                         first_undo_index INTEGER)
                    ''')
+                   
+    cursor.execute('''CREATE TABLE IF NOT EXISTS transaction_outputs(
+                        tx_index,
+                        tx_hash TEXT, 
+                        block_index INTEGER,
+                        out_index INTEGER,
+                        destination TEXT,
+                        btc_amount INTEGER,
+                        PRIMARY KEY (tx_hash, out_index),
+                        FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
+                   ''')
+                   
+                   
     # Create undolog triggers for all tables in TABLES list, plus the 'balances' table
     for table in UNDOLOG_TABLES:
         columns = [column['name'] for column in cursor.execute('''PRAGMA table_info({})'''.format(table))]
@@ -1115,17 +1128,27 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
 
     source, destination, btc_amount, fee, data, decoded_tx = get_tx_info(tx_hex, db=db)
 
+    outs = []
+    first_one = True #This is for backward compatibility with unique dispensers
     if not source and decoded_tx and util.enabled('dispensers', block_index):
         outputs = decoded_tx[1]
+        out_index = 0
         for out in outputs:
             if out[0] != decoded_tx[0][0] and dispenser.is_dispensable(db, out[0], out[1]):
+                
                 source = decoded_tx[0][0]
                 destination = out[0]
                 btc_amount = out[1]
                 fee = 0
                 data = struct.pack(config.SHORT_TXTYPE_FORMAT, dispenser.DISPENSE_ID)
                 data += b'\x00'
-                break # Prevent inspection of further dispenses (only first one is valid)
+                
+                if util.enabled("multiple_dispenses"):
+                    outs.append({"destination":out[0], "btc_amount":out[1], "out_index":out_index})
+                else:
+                    break # Prevent inspection of further dispenses (only first one is valid)
+                    
+            out_index = out_index + 1
 
     # For mempool
     if block_hash == None:
@@ -1158,7 +1181,25 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
                              fee,
                              data)
                       )
+        
+        for next_out in outs:
+            cursor.execute('''INSERT INTO transaction_outputs(
+                                tx_index,
+                                tx_hash,
+                                block_index,
+                                out_index,
+                                destination,
+                                btc_amount) VALUES (?,?,?,?,?,?)''',
+                                (tx_index,
+                                 tx_hash,
+                                 block_index,
+                                 next_out["out_index"],
+                                 next_out["destination"],
+                                 next_out["btc_amount"])    
+                          )
+        
         cursor.close()
+        
         return tx_index + 1
     else:
         logger.getChild('list_tx.skip').debug('Skipping transaction: {}'.format(tx_hash))
