@@ -23,6 +23,11 @@ ID = 20
 SUBASSET_ID = 21
 # NOTE: Pascal strings are used for storing descriptions for backwards‐compatibility.
 
+#Lock Reset issuances. Default composed message
+LR_ISSUANCE_ID = 22
+LR_SUBASSET_ID = 23
+
+
 def initialise(db):
     cursor = db.cursor()
     cursor.execute('''CREATE TABLE IF NOT EXISTS issuances(
@@ -342,7 +347,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         
         # Type 20 standard issuance FORMAT_2 >QQ??If
         #   used for standard issuances and all reissuances
-        data = message_type.pack(ID)
+        data = message_type.pack(LR_ISSUANCE_ID)
         if (len(description) <= 42) and not util.enabled('pascal_string_removed'):
             curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
         else:
@@ -368,7 +373,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         # compacts a subasset name to save space
         compacted_subasset_longname = util.compact_subasset_longname(subasset_longname)
         compacted_subasset_length = len(compacted_subasset_longname)
-        data = message_type.pack(SUBASSET_ID)
+        data = message_type.pack(LR_SUBASSET_ID)
         curr_format = subasset_format + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(description))
         
         if subasset_format_length <= 18:
@@ -386,15 +391,23 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
 
 def parse (db, tx, message, message_type_id):
     issuance_parse_cursor = db.cursor()
-    asset_format = util.get_value_by_block_index("issuance_asset_serialization_format",tx['block_index'])
-    asset_format_length = util.get_value_by_block_index("issuance_asset_serialization_length",tx['block_index'])
-    subasset_format = util.get_value_by_block_index("issuance_subasset_serialization_format",tx['block_index'])
-    subasset_format_length = util.get_value_by_block_index("issuance_subasset_serialization_length",tx['block_index'])
+    
+    
+    if util.enabled("issuance_backwards_compatibility", tx['block_index']) and ((message_type_id == ID) or (message_type_id == SUBASSET_ID)):
+        asset_format = FORMAT_2
+        asset_format_length = LENGTH_2
+        subasset_format = SUBASSET_FORMAT
+        subasset_format_length = SUBASSET_FORMAT_LENGTH
+    else:   
+        asset_format = util.get_value_by_block_index("issuance_asset_serialization_format",tx['block_index'])
+        asset_format_length = util.get_value_by_block_index("issuance_asset_serialization_length",tx['block_index'])
+        subasset_format = util.get_value_by_block_index("issuance_subasset_serialization_format",tx['block_index'])
+        subasset_format_length = util.get_value_by_block_index("issuance_subasset_serialization_length",tx['block_index'])
 
     # Unpack message.
     try:
         subasset_longname = None
-        if message_type_id == SUBASSET_ID:
+        if message_type_id == LR_SUBASSET_ID or message_type_id == SUBASSET_ID:
             if not util.enabled('subassets', block_index=tx['block_index']):
                 logger.warn("subassets are not enabled at block %s" % tx['block_index'])
                 raise exceptions.UnpackError
