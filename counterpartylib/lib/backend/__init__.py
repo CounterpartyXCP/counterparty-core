@@ -146,7 +146,7 @@ def get_tx_list(block):
 
 def sort_unspent_txouts(unspent, unconfirmed=False):
     # Filter out all dust amounts to avoid bloating the resultant transaction
-    unspent = list(filter(lambda x: x['value'] > config.DEFAULT_MULTISIG_DUST_SIZE, unspent))
+    unspent = list(filter(lambda x: x['value'] > config.DEFAULT_REGULAR_DUST_SIZE, unspent))
     # Sort by amount, using the largest UTXOs available
     if config.REGTEST:
         # REGTEST has a lot of coinbase inputs that can't be spent due to maturity
