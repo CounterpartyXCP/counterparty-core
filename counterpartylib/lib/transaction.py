@@ -158,7 +158,12 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
                 filtered_unspent.append(output)
         unspent = filtered_unspent
 
-        unspent = backend.sort_unspent_txouts(unspent)
+        if encoding == 'multisig':
+            dust = config.DEFAULT_MULTISIG_DUST_SIZE
+        else:
+            dust = config.DEFAULT_REGULAR_DUST_SIZE     
+            
+        unspent = backend.sort_unspent_txouts(unspent, dust_size=dust)
         logger.debug('Sorted candidate UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
         use_inputs = unspent
 
@@ -252,7 +257,7 @@ def select_any_coin_from_source(source, allow_unconfirmed_inputs=True, disable_u
     unspent = filtered_unspent
 
     # sort
-    unspent = backend.sort_unspent_txouts(unspent)
+    unspent = backend.sort_unspent_txouts(unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE)
 
     # use the first input
     input = unspent[0]
