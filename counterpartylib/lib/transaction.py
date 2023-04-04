@@ -187,7 +187,8 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
 
 
     # pop inputs until we can pay for the fee
-    for use_inputs_index, coin in use_inputs:
+    use_inputs_index = 0
+    for coin in use_inputs:
         logger.debug('New input: {}'.format(print_coin(coin)))
         inputs.append(coin)
         btc_in += round(coin['amount'] * config.UNIT)
@@ -217,6 +218,8 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
             sufficient_funds = True
             if len(inputs) >= desired_input_count:
                 break
+                
+        use_inputs_index = use_inputs_index + 1     
 
     if not sufficient_funds:
         # Approximate needed change, fee by with most recently calculated
