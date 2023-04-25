@@ -204,7 +204,7 @@ def serialise(encoding, inputs, destination_outputs, data_output=None, change_ou
     for i in range(len(inputs)):
         txin = inputs[i]
         spk = txin['scriptPubKey']
-        if spk[0:2] == '00': # Witness version 0
+        if spk[0:2] == '00' or spk[0:2] == '01': # Witness version 0 (SegWit) or Witness version 1 (Taproot)
             datalen = binascii.unhexlify(spk[2:4])[0]
             if datalen == 20 or datalen == 32:
                 # 20 is for P2WPKH and 32 is for P2WSH

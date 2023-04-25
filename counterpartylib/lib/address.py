@@ -25,7 +25,7 @@ def pack(address):
             bech32 = bitcoin.bech32.CBech32Data(address)
             witver = (0x80 + bech32.witver).to_bytes(1, byteorder='big') # mark the first byte for segwit
             witprog = bech32.to_bytes()
-            if len(witprog) > 20:
+            if bech32.witver == 0 and len(witprog) > 20:
                 raise Exception('p2wsh still not supported for sending')
             return b''.join([witver, witprog])
         except Exception as ne:
@@ -59,3 +59,14 @@ def unpack(short_address_bytes):
     else:
         check = bitcoin.core.Hash(short_address_bytes)[0:4]
         return bitcoin.base58.encode(short_address_bytes + check)
+
+def is_taproot(address):
+    try:
+        bech32 = bitcoin.bech32.CBech32Data(address)
+        if bech32.witver == 1:
+            return True
+    except Exception as e:
+        #No taproot
+        pass
+
+    return False

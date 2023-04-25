@@ -412,5 +412,12 @@
       "minimum_version_revision": 6,
       "block_index": 718318,
       "testnet_block_index": 2135609
+  },
+  "taproot_support": {
+    "minimum_version_major": 9,
+    "minimum_version_minor": 56,
+    "minimum_version_revision": 6,
+    "block_index": 784295,
+    "testnet_block_index": 2428538
   }
 }

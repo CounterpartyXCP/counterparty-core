@@ -14,6 +14,10 @@ FORMAT = '>21sB'
 LENGTH = 22
 MAX_MEMO_LENGTH = 34 # Could be higher, but we will keep it consistent with enhanced send
 ID = 4
+TAPROOT_FORMAT = '>33sB'
+TAPROOT_LENGTH = 34
+TAPROOT_MAX_MEMO_LENGTH = 22
+TAPROOT_ID = 6
 ANTISPAM_FEE_DECIMAL = 0.5
 ANTISPAM_FEE = ANTISPAM_FEE_DECIMAL * config.UNIT
 
@@ -51,7 +55,7 @@ def initialise(db):
                    ''')
 
 
-def validate (db, source, destination, flags, memo, block_index):
+def validate (db, source, destination, flags, memo, block_index, is_taproot=False):
     problems = []
 
     if source == destination:
@@ -73,12 +77,15 @@ def validate (db, source, destination, flags, memo, block_index):
     elif not(flags & (FLAG_BALANCES | FLAG_OWNERSHIP)):
         problems.append('must specify which kind of transfer in flags')
 
-    if memo and len(memo) > MAX_MEMO_LENGTH:
+    if memo and len(memo) > (TAPROOT_MAX_MEMO_LENGTH if is_taproot else MAX_MEMO_LENGTH):
         problems.append('memo too long')
 
     return problems
 
 def compose (db, source, destination, flags, memo):
+    # check if destination is taproot
+    destination_is_taproot = address.is_taproot(destination)
+
     if memo is None:
         memo = b''
     elif flags & FLAG_BINARY_MEMO:
@@ -88,18 +95,24 @@ def compose (db, source, destination, flags, memo):
         memo = struct.pack(">{}s".format(len(memo)), memo)
 
     block_index = util.CURRENT_BLOCK_INDEX
-    problems = validate(db, source, destination, flags, memo, block_index)
+    problems = validate(db, source, destination, flags, memo, block_index, destination_is_taproot)
     if problems: raise exceptions.ComposeError(problems)
+
+    format = FORMAT
+    id = ID
+    if destination_is_taproot:
+        format = TAPROOT_FORMAT
+        id = TAPROOT_ID
 
     short_address_bytes = address.pack(destination)
 
-    data = message_type.pack(ID)
-    data += struct.pack(FORMAT, short_address_bytes, flags)
+    data = message_type.pack(id)
+    data += struct.pack(format, short_address_bytes, flags)
     data += memo
 
     return (source, [], data)
 
-def unpack(db, message, block_index):
+def unpack(db, message, block_index, is_taproot=False):
     try:
         memo_bytes_length = len(message) - LENGTH
         if memo_bytes_length < 0:
@@ -127,14 +140,19 @@ def unpack(db, message, block_index):
     }
     return unpacked
 
-def parse (db, tx, message):
+def parse (db, tx, message, message_type_id):
     cursor = db.cursor()
 
     fee_paid = round(config.UNIT/2)
 
+    is_taproot = False
+    if message_type_id == TAPROOT_ID:
+        is_taproot = True
+        
+
     # Unpack message.
     try:
-        unpacked = unpack(db, message, tx['block_index'])
+        unpacked = unpack(db, message, tx['block_index'],is_taproot)
         destination, flags, memo_bytes = unpacked['destination'], unpacked['flags'], unpacked['memo']
 
         status = 'valid'
@@ -149,7 +167,7 @@ def parse (db, tx, message):
         status = 'invalid: could not unpack, ' + str(err)
 
     if status == 'valid':
-        problems = validate(db, tx['source'], destination, flags, memo_bytes, tx['block_index'])
+        problems = validate(db, tx['source'], destination, flags, memo_bytes, tx['block_index'], is_taproot)
         if problems: status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':
