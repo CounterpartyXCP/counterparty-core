@@ -1471,12 +1471,6 @@ def follow(db):
             xcp_mempool = []
             raw_mempool = backend.getrawmempool()
 
-            # this is a quick fix to make counterparty usable on high mempool situations
-            # however, this makes the mempool unreliable on counterparty, a better, larger
-            # fix must be done by changing this whole function into a zmq driven loop
-            if len(raw_mempool) > config.MEMPOOL_TXCOUNT_UPDATE_LIMIT:
-                continue
-
             # For each transaction in Bitcoin Core mempool, if it’s new, create
             # a fake block, a fake transaction, capture the generated messages,
             # and then save those messages.
@@ -1504,12 +1498,30 @@ def follow(db):
             #  - or was there a block found while batch feting the raw txs
             #  - or was there a double spend for w/e reason accepted into the mempool (replace-by-fee?)
             try:
-                raw_transactions = backend.getrawtransaction_batch(parse_txs)
+                raw_transactions = backend.getrawtransaction_batch(parse_txs, skip_missing=True)
             except Exception as e:
                 logger.warning('Failed to fetch raw for mempool TXs, restarting loop; %s', (e, ))
                 continue  # restart the follow loop
 
+            parsed_txs_count = 0
             for tx_hash in parse_txs:
+                
+                # Get block count everytime we parse some mempool_txs. If there is a new block, we just interrupt this process
+                if parsed_txs_count % 100 == 0:
+                    if len(parse_txs) > 1000:
+                        logger.info("Mempool parsed txs count:{} from {}".format(parsed_txs_count, len(parse_txs)))
+                    
+                    try:
+                        block_count = backend.getblockcount()
+                        
+                        if block_index <= block_count:
+                            logger.info("Mempool parsing interrupted, there are blocks to parse")
+                            break #Interrupt the process if there is a new block to parse
+                    except (ConnectionRefusedError, http.client.CannotSendRequest, backend.addrindexrs.BackendRPCError) as e:
+                        # Keep parsing what we have, anyway if there is a temporary problem with the server,
+                        # normal parse won't work
+                        pass
+            
                 try:
                     with db:
                         # List the fake block.
@@ -1557,6 +1569,14 @@ def follow(db):
                     logger.warn('ParseTransactionError for tx %s: %s' % (tx_hash, e))
                 except MempoolError:
                     pass
+                    
+                parsed_txs_count = parsed_txs_count + 1 
+
+            if parsed_txs_count < len(parse_txs):
+                continue #if parse didn't finish is an interruption
+            else:
+                if len(parse_txs) > 1000:
+                    logger.info("Mempool parsing finished")
 
             # Re‐write mempool messages to database.
             with db:
