@@ -238,7 +238,7 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
                     # subasset issuance is 0.25
                     fee = int(0.25 * config.UNIT)
                 elif len(asset) >= 13:
-                    fee = 0
+                    fee = int(0.25 * config.UNIT)
                 else:
                     fee = int(0.5 * config.UNIT)
             elif block_index >= 291700 or config.TESTNET or config.REGTEST:     # Protocol change.
