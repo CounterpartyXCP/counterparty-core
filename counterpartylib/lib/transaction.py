@@ -158,7 +158,12 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
                 filtered_unspent.append(output)
         unspent = filtered_unspent
 
-        unspent = backend.sort_unspent_txouts(unspent)
+        if encoding == 'multisig':
+            dust = config.DEFAULT_MULTISIG_DUST_SIZE
+        else:
+            dust = config.DEFAULT_REGULAR_DUST_SIZE     
+            
+        unspent = backend.sort_unspent_txouts(unspent, dust_size=dust)
         logger.debug('Sorted candidate UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
         use_inputs = unspent
 
@@ -182,6 +187,7 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
 
 
     # pop inputs until we can pay for the fee
+    use_inputs_index = 0
     for coin in use_inputs:
         logger.debug('New input: {}'.format(print_coin(coin)))
         inputs.append(coin)
@@ -201,11 +207,19 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
         btc_out = destination_btc_out + data_btc_out
         change_quantity = btc_in - (btc_out + final_fee)
         logger.debug('Size: {} Fee: {:.8f} Change quantity: {:.8f} BTC'.format(size, final_fee / config.UNIT, change_quantity / config.UNIT))
-        # If change is necessary, must not be a dust output.
-        if change_quantity == 0 or change_quantity >= regular_dust_size:
+        
+        #If after the sum of all the utxos the change is dust, then it will be added to the miners instead of returning an error
+        if (use_inputs_index == len(use_inputs)-1) and (change_quantity > 0) and (change_quantity < regular_dust_size):
+            sufficient_funds = True
+            final_fee = final_fee + change_quantity
+            change_quantity = 0
+        # If change is necessary, must not be a dust output.            
+        elif change_quantity == 0 or change_quantity >= regular_dust_size:
             sufficient_funds = True
             if len(inputs) >= desired_input_count:
                 break
+                
+        use_inputs_index = use_inputs_index + 1     
 
     if not sufficient_funds:
         # Approximate needed change, fee by with most recently calculated
@@ -252,7 +266,7 @@ def select_any_coin_from_source(source, allow_unconfirmed_inputs=True, disable_u
     unspent = filtered_unspent
 
     # sort
-    unspent = backend.sort_unspent_txouts(unspent)
+    unspent = backend.sort_unspent_txouts(unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE)
 
     # use the first input
     input = unspent[0]
