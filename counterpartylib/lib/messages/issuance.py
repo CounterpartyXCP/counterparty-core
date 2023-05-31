@@ -239,7 +239,7 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
                     fee = int(0.25 * config.UNIT)
                 elif len(asset) >= 13:
                     if util.enabled('numeric_asset_fee'):
-                        fee = int(0.25 * config.UNIT)
+                        fee = int(0.10 * config.UNIT)
                     else:
                         fee = 0
                 else:
@@ -252,7 +252,8 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
                 fee = 5
             if fee and (not balances or balances[0]['quantity'] < fee):
                 problems.append('insufficient funds')
-
+        elif util.enabled('not_first_issuances_fee'):
+            fee = int(0.01 * config.UNIT))
     if not (block_index >= 317500 or config.TESTNET or config.REGTEST):  # Protocol change.
         if len(description) > 42:
             problems.append('description too long')

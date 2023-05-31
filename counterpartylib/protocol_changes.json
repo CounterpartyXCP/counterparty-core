@@ -419,5 +419,12 @@
       "minimum_version_revision": 6,
       "block_index": 790872,
       "testnet_block_index": 2433011
+  },
+  "not_first_issuances_fee": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 59,
+      "minimum_version_revision": 6,
+      "block_index": 790872,
+      "testnet_block_index": 2433011
   }
 }
