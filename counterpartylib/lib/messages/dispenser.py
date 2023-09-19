@@ -21,6 +21,7 @@ from counterpartylib.lib import util
 from counterpartylib.lib import log
 from counterpartylib.lib import message_type
 from counterpartylib.lib import address
+from counterpartylib.lib import backend
 
 FORMAT = '>QQQQB'
 LENGTH = 33
@@ -132,6 +133,9 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
             existing_balances = cursor.fetchall()
             if existing_balances[0]['cnt'] > 0:
                 problems.append('cannot open on another address if it has any balance history')
+            address_transactions = backend.search_raw_transactions(query_address, True, True)
+            if len(address_transactions) > 0:
+                problems.append('cannot open on another address if it has any confirmed or unconfirmed bitcoin txs')
 
         if len(problems) == 0:
             asset_id = util.generate_asset_id(asset, block_index)

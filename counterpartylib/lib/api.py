@@ -849,8 +849,8 @@ class APIServer(threading.Thread):
             return holders
 
         @dispatcher.add_method
-        def search_raw_transactions(address, unconfirmed=True):
-            return backend.search_raw_transactions(address, unconfirmed=unconfirmed)
+        def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
+            return backend.search_raw_transactions(address, unconfirmed=unconfirmed, only_tx_hashes=only_tx_hashes)
 
         @dispatcher.add_method
         def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None, order_by=None):
