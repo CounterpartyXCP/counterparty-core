@@ -415,9 +415,9 @@
   },
   "issuance_callability_parameters_removal": {
       "minimum_version_major": 9,
-      "minimum_version_minor": 59,
-      "minimum_version_revision": 6,
-      "block_index": 768559,
+      "minimum_version_minor": 60,
+      "minimum_version_revision": 2,
+      "block_index": 825000,
       "testnet_block_index": 2412394
   }
 }
