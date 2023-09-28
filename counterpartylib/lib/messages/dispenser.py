@@ -70,6 +70,19 @@ def initialise(db):
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
                    
+    cursor.execute('''CREATE TABLE IF NOT EXISTS dispenser_refills(
+                      tx_index INTEGER,
+                      tx_hash TEXT,
+                      block_index INTEGER,
+                      source TEXT,
+                      destination TEXT,
+                      asset TEXT,
+                      dispense_quantity INTEGER,
+                      dispenser_tx_hash TEXT,
+                      PRIMARY KEY (tx_index, tx_hash, source, destination),
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
+                   ''')                
+                   
     columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(dispenses)''')]
     if 'dispenser_tx_hash' not in columns:
         cursor.execute('ALTER TABLE dispenses ADD COLUMN dispenser_tx_hash TEXT')
@@ -82,6 +95,16 @@ def initialise(db):
         cursor.execute('ALTER TABLE dispensers ADD COLUMN origin TEXT')
         
         cursor.execute("UPDATE dispensers AS d SET origin = (SELECT t.source FROM transactions t WHERE d.tx_hash = t.tx_hash)")
+        
+        cursor.execute('''INSERT INTO dispenser_refills 
+                          SELECT t.tx_index, deb.event, deb.block_index, deb.address, dis.source, deb.asset, deb.quantity, dis.tx_hash FROM debits deb 
+                          LEFT JOIN transactions t ON t.tx_hash = deb.event 
+                          LEFT JOIN dispensers dis ON 
+                              dis.source = deb.address 
+                              AND dis.asset = deb.asset 
+                              AND dis.tx_index = (SELECT max(dis2.tx_index) FROM dispensers dis2 WHERE dis2.source = deb.address AND dis2.asset = deb.asset AND dis2.block_index <= deb.block_index) 
+                          WHERE deb.action = 'refill dispenser' AND dis.source IS NOT NULL''');
+        
         
 def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, status, open_address, block_index, oracle_address):
     problems = []
@@ -305,11 +328,24 @@ def parse (db, tx, message):
                                 'action':'refill dispenser',
                                 'escrow_quantity':escrow_quantity
                             }
+                            bindings_refill = {
+                                'tx_index':tx["tx_index"],
+                                'tx_hash':tx["tx_hash"],
+                                'block_index':tx["block_index"],
+                                'source': tx['source'],
+                                'destination': action_address,
+                                'asset': asset,
+                                'dispenser_quantity': escrow_quantity,
+                                'status': STATUS_OPEN
+                            }
+                            
                             try:
                                 util.debit(db, tx['source'], asset, escrow_quantity, action='refill dispenser', event=tx['tx_hash'])
                                 sql = 'UPDATE dispensers SET give_remaining=:give_remaining \
                                     WHERE source=:source AND asset=:asset AND status=:status'
                                 cursor.execute(sql, bindings)
+                                sql = "INSERT INTO dispenser_refills VALUES(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :dispenser_quantity, (SELECT tx_hash FROM dispensers WHERE source=:destination AND asset=:asset AND status=:status))"
+                                cursor.execute(sql, bindings_refill)
                             except (util.DebitError):
                                 status = 'insufficient funds'
                     else:
