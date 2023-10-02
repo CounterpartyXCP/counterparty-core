@@ -169,10 +169,16 @@ def parse (db, tx, message):
 
         if flags & FLAG_OWNERSHIP:
             sweep_pos = 0
-            for balance in balances:
+            
+            assets_issued = balances
+            if util.enabled("zero_balance_ownership_sweep_fix", tx["block_index"]):
+                cursor.execute('''SELECT DISTINCT(asset) FROM issuances WHERE issuer = ?''', (tx['source'],))
+                assets_issued = cursor.fetchall()
+				
+            for next_asset_issued in assets_issued:
                 cursor.execute('''SELECT * FROM issuances \
                                   WHERE (status = ? AND asset = ?)
-                                  ORDER BY tx_index ASC''', ('valid', balance['asset']))
+                                  ORDER BY tx_index ASC''', ('valid', next_asset_issued['asset']))
                 issuances = cursor.fetchall()
                 if len(issuances) > 0:
                     last_issuance = issuances[-1]
@@ -182,7 +188,7 @@ def parse (db, tx, message):
                             'tx_hash': tx['tx_hash'],
                             'msg_index': sweep_pos,
                             'block_index': tx['block_index'],
-                            'asset': balance['asset'],
+                            'asset': next_asset_issued['asset'],
                             'quantity': 0,
                             'divisible': last_issuance['divisible'],
                             'source': last_issuance['source'],

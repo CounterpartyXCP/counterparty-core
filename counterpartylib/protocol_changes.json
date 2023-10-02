@@ -412,5 +412,12 @@
       "minimum_version_revision": 6,
       "block_index": 718318,
       "testnet_block_index": 2135609
+  },
+  "zero_balance_ownership_sweep_fix": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 60,
+      "minimum_version_revision": 2,
+      "block_index": 815000,
+      "testnet_block_index": 2505725
   }
 }
