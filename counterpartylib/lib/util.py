@@ -919,7 +919,7 @@ def get_oracle_last_price(db, oracle_address, block_index):
     cursor.close()
     
     if len(broadcasts) == 0:
-        return None, None
+        return None, None, None, None
     
     oracle_broadcast = broadcasts[0]
     oracle_label = oracle_broadcast["text"].split("-")
