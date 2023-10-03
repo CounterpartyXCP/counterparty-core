@@ -347,7 +347,11 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         
         # Type 20 standard issuance FORMAT_2 >QQ??If
         #   used for standard issuances and all reissuances
-        data = message_type.pack(LR_ISSUANCE_ID)
+        if util.enabled("issuance_backwards_compatibility"):
+            data = message_type.pack(LR_ISSUANCE_ID)
+        else    
+            data = message_type.pack(ID)
+            
         if (len(description) <= 42) and not util.enabled('pascal_string_removed'):
             curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
         else:
@@ -373,7 +377,11 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         # compacts a subasset name to save space
         compacted_subasset_longname = util.compact_subasset_longname(subasset_longname)
         compacted_subasset_length = len(compacted_subasset_longname)
-        data = message_type.pack(LR_SUBASSET_ID)
+        if util.enabled("issuance_backwards_compatibility"):
+            data = message_type.pack(LR_SUBASSET_ID)
+        else    
+            data = message_type.pack(SUBASSET_ID)
+            
         curr_format = subasset_format + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(description))
         
         if subasset_format_length <= 18:
