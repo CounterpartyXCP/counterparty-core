@@ -505,6 +505,18 @@ def is_divisible(db, asset):
         if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
         return issuances[0]['divisible']
 
+def get_asset_issuer(db, asset):
+    """Check if the asset is divisible."""
+    if asset in (config.BTC, config.XCP):
+        return True
+    else:
+        cursor = db.cursor()
+        cursor.execute('''SELECT * FROM issuances \
+                          WHERE (status = ? AND asset = ?) ORDER BY tx_index DESC''', ('valid', asset))
+        issuances = cursor.fetchall()
+        if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
+        return issuances[0]['issuer']
+
 def value_input(quantity, asset, divisible):
     if asset == 'leverage':
         return round(quantity)
@@ -919,7 +931,7 @@ def get_oracle_last_price(db, oracle_address, block_index):
     cursor.close()
     
     if len(broadcasts) == 0:
-        return None, None
+        return None, None, None, None
     
     oracle_broadcast = broadcasts[0]
     oracle_label = oracle_broadcast["text"].split("-")

@@ -200,8 +200,8 @@ def get_unspent_txouts(source, unconfirmed=False, unspent_tx_hash=None):
 
     return unspent
 
-def search_raw_transactions(address, unconfirmed=True):
-    return BACKEND().search_raw_transactions(address, unconfirmed)
+def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
+    return BACKEND().search_raw_transactions(address, unconfirmed, only_tx_hashes)
 
 class UnknownPubKeyError(Exception):
     pass
