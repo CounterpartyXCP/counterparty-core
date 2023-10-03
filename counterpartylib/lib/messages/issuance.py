@@ -23,6 +23,11 @@ ID = 20
 SUBASSET_ID = 21
 # NOTE: Pascal strings are used for storing descriptions for backwards‐compatibility.
 
+#Lock Reset issuances. Default composed message
+LR_ISSUANCE_ID = 22
+LR_SUBASSET_ID = 23
+
+
 def initialise(db):
     cursor = db.cursor()
     cursor.execute('''CREATE TABLE IF NOT EXISTS issuances(
@@ -176,7 +181,7 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
             problems.append('issued by another address')
         if (bool(last_issuance['divisible']) != bool(divisible)) and ((not util.enabled("cip03", block_index)) or (not reset)):
             problems.append('cannot change divisibility')
-        if bool(last_issuance['callable']) != bool(callable_):
+        if (not util.enabled("issuance_callability_parameters_removal", block_index)) and bool(last_issuance['callable']) != bool(callable_):
             problems.append('cannot change callability')
         if last_issuance['call_date'] > call_date and (call_date != 0 or (block_index < 312500 and (not config.TESTNET or not config.REGTEST))):
             problems.append('cannot advance call date')
@@ -342,7 +347,11 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         
         # Type 20 standard issuance FORMAT_2 >QQ??If
         #   used for standard issuances and all reissuances
-        data = message_type.pack(ID)
+        if util.enabled("issuance_backwards_compatibility"):
+            data = message_type.pack(LR_ISSUANCE_ID)
+        else:    
+            data = message_type.pack(ID)
+            
         if (len(description) <= 42) and not util.enabled('pascal_string_removed'):
             curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
         else:
@@ -368,7 +377,11 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         # compacts a subasset name to save space
         compacted_subasset_longname = util.compact_subasset_longname(subasset_longname)
         compacted_subasset_length = len(compacted_subasset_longname)
-        data = message_type.pack(SUBASSET_ID)
+        if util.enabled("issuance_backwards_compatibility"):
+            data = message_type.pack(LR_SUBASSET_ID)
+        else:    
+            data = message_type.pack(SUBASSET_ID)
+            
         curr_format = subasset_format + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(description))
         
         if subasset_format_length <= 18:
@@ -394,7 +407,7 @@ def parse (db, tx, message, message_type_id):
     # Unpack message.
     try:
         subasset_longname = None
-        if message_type_id == SUBASSET_ID:
+        if message_type_id == LR_SUBASSET_ID or message_type_id == SUBASSET_ID:
             if not util.enabled('subassets', block_index=tx['block_index']):
                 logger.warn("subassets are not enabled at block %s" % tx['block_index'])
                 raise exceptions.UnpackError

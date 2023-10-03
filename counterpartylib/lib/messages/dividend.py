@@ -58,27 +58,26 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
         problems.append('integer overflow')
 
     # Examine asset.
-    issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?) ORDER BY tx_index ASC''', ('valid', asset)))
-    if not issuances:
+    try:
+        divisible = util.is_divisible(db, asset)
+    except AssetError:
         problems.append('no such asset, {}.'.format(asset))
         return None, None, problems, 0
-    divisible = issuances[0]['divisible']
-
+    
     # Only issuer can pay dividends.
     if block_index >= 320000 or config.TESTNET or config.REGTEST:   # Protocol change.
-        if issuances[-1]['issuer'] != source:
+        issuer = util.get_asset_issuer(db, asset)
+    
+        if issuer != source:
             problems.append('only issuer can pay dividends')
 
     # Examine dividend asset.
-    if dividend_asset in (config.BTC, config.XCP):
-        dividend_divisible = True
-    else:
-        issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?)''', ('valid', dividend_asset)))
-        if not issuances:
-            problems.append('no such dividend asset, {}.'.format(dividend_asset))
-            return None, None, problems, 0
-        dividend_divisible = issuances[0]['divisible']
-
+    try:
+        dividend_divisible = util.is_divisible(db, dividend_asset)
+    except AssetError:
+        problems.append('no such dividend asset, {}.'.format(dividend_asset))
+        return None, None, problems, 0
+        
     # Calculate dividend quantities.
     exclude_empty = False
     if util.enabled('zero_quantity_value_adjustment_1'):
