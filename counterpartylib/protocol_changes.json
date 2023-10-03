@@ -419,5 +419,12 @@
       "minimum_version_revision": 2,
       "block_index": 825000,
       "testnet_block_index": 2412394
+  },
+  "issuance_backwards_compatibility": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 60,
+      "minimum_version_revision": 2,
+      "block_index": 825000,
+      "testnet_block_index": 2422000
   }
 }
