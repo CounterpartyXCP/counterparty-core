@@ -349,7 +349,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         #   used for standard issuances and all reissuances
         if util.enabled("issuance_backwards_compatibility"):
             data = message_type.pack(LR_ISSUANCE_ID)
-        else    
+        else:    
             data = message_type.pack(ID)
             
         if (len(description) <= 42) and not util.enabled('pascal_string_removed'):
@@ -379,7 +379,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         compacted_subasset_length = len(compacted_subasset_longname)
         if util.enabled("issuance_backwards_compatibility"):
             data = message_type.pack(LR_SUBASSET_ID)
-        else    
+        else:    
             data = message_type.pack(SUBASSET_ID)
             
         curr_format = subasset_format + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(description))
