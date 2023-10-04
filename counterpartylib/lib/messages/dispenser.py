@@ -247,7 +247,7 @@ def parse (db, tx, message):
     
     if status == 'valid':
         if util.enabled("dispenser_parsing_validation", util.CURRENT_BLOCK_INDEX):
-            asset_id, problems = validate(db, tx['source'], asset, give_quantity, escrow_quantity, mainchainrate, dispenser_status, action_address if dispenser_status == STATUS_OPEN_EMPTY_ADDRESS else None, tx['block_index'], oracle_address)
+            asset_id, problems = validate(db, tx['source'], asset, give_quantity, escrow_quantity, mainchainrate, dispenser_status, action_address if dispenser_status in [STATUS_OPEN_EMPTY_ADDRESS, STATUS_CLOSED] else None, tx['block_index'], oracle_address)
         else:
             problems = None
         
