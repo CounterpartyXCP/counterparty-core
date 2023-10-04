@@ -427,6 +427,13 @@
       "block_index": 825000,
       "testnet_block_index": 2422000
   },
+  "zero_balance_ownership_sweep_fix": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 60,
+      "minimum_version_revision": 2,
+      "block_index": 825000,
+      "testnet_block_index": 2505725
+  },
   "dispenser_origin_permission_extended": {
       "minimum_version_major": 9,
       "minimum_version_minor": 59,
