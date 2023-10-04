@@ -241,7 +241,7 @@ def log (db, command, category, bindings):
             elif bindings["status"] == 10: #Address closed the dispenser
                 operator_string = "operator closed"
             
-                if util.enabled("dispenser_origin_permission_extended", bindings['block_index']) and bindings['source'] != bindings['origin']:
+                if util.enabled("dispenser_origin_permission_extended", bindings['block_index']) and ("origin" in bindings) and bindings['source'] != bindings['origin']:
                     operator_string = "closed by origin"
             
                 logger.info("Dispenser: {} closed dispenser for {} ({})".format(bindings["source"],bindings["asset"],operator_string))
