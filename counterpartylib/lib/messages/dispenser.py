@@ -166,7 +166,8 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
                 cursor.execute('''SELECT count(*) cnt FROM dispensers WHERE source = ? AND status = ? AND origin = ?''', (query_address,STATUS_CLOSED,source))
                 dispensers_from_same_origin = cursor.fetchall()
                 
-                if dispensers_from_same_origin[0]['cnt'] == 0: #It means that the same origin has not opened other dispensers in this address
+                if not (util.enabled("dispenser_origin_permission_extended", block_index) and dispensers_from_same_origin[0]['cnt'] > 0):
+                #It means that the same origin has not opened other dispensers in this address
                     cursor.execute('''SELECT count(*) cnt FROM balances WHERE address = ?''', (query_address,))
                     existing_balances = cursor.fetchall()
                 
