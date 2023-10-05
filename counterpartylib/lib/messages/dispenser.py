@@ -163,15 +163,19 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
         if status == STATUS_OPEN_EMPTY_ADDRESS:
             #If an address is trying to refill a dispenser in a different address and it's the creator
             if not (util.enabled("dispenser_origin_permission_extended", block_index) and (len(open_dispensers) > 0) and (open_dispensers[0]["origin"] == source)):
-                cursor.execute('''SELECT count(*) cnt FROM balances WHERE address = ?''', (query_address,))
-                existing_balances = cursor.fetchall()
-            
-                if existing_balances[0]['cnt'] > 0:
-                    problems.append('cannot open on another address if it has any balance history')
-                    
-                address_transactions = backend.search_raw_transactions(query_address, True, True)
-                if len(address_transactions) > 0:
-                    problems.append('cannot open on another address if it has any confirmed or unconfirmed bitcoin txs')
+                cursor.execute('''SELECT count(*) cnt FROM dispensers WHERE source = ? AND status = ? AND origin = ?''', (query_address,STATUS_CLOSED,source))
+                dispensers_from_same_origin = cursor.fetchall()
+                
+                if dispensers_from_same_origin[0]['cnt'] == 0: #It means that the same origin has not opened other dispensers in this address
+                    cursor.execute('''SELECT count(*) cnt FROM balances WHERE address = ?''', (query_address,))
+                    existing_balances = cursor.fetchall()
+                
+                    if existing_balances[0]['cnt'] > 0:
+                        problems.append('cannot open on another address if it has any balance history')
+                        
+                    address_transactions = backend.search_raw_transactions(query_address, True, True)
+                    if len(address_transactions) > 0:
+                        problems.append('cannot open on another address if it has any confirmed or unconfirmed bitcoin txs')
 
         if len(problems) == 0:
             asset_id = util.generate_asset_id(asset, block_index)
