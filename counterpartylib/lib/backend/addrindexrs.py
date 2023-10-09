@@ -485,7 +485,7 @@ def get_unspent_txouts(source):
 #  ]
 #
 # }
-def search_raw_transactions(address, unconfirmed=True):
+def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
     ensure_addrindexrs_connected()
 
     hsh = _address_to_hash(address)
@@ -494,12 +494,15 @@ def search_raw_transactions(address, unconfirmed=True):
         "params": [hsh]
     })["result"]
 
-    batch = getrawtransaction_batch([x["tx_hash"] for x in txs], verbose=True)
+    if only_tx_hashes:
+        return txs
+    else:   
+        batch = getrawtransaction_batch([x["tx_hash"] for x in txs], verbose=True)
 
-    if not(unconfirmed):
-        batch = [x for x in batch if x.height >= 0]
+        if not(unconfirmed):
+            batch = [x for x in batch if x.height >= 0]
 
-    return batch
+        return batch
 
 # Returns the number of blocks the backend is behind the node
 def getindexblocksbehind():

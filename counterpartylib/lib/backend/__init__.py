@@ -144,9 +144,9 @@ def get_tx_list(block):
 
     return (tx_hash_list, raw_transactions)
 
-def sort_unspent_txouts(unspent, unconfirmed=False):
+def sort_unspent_txouts(unspent, unconfirmed=False, dust_size=config.DEFAULT_REGULAR_DUST_SIZE):
     # Filter out all dust amounts to avoid bloating the resultant transaction
-    unspent = list(filter(lambda x: x['value'] > config.DEFAULT_MULTISIG_DUST_SIZE, unspent))
+    unspent = list(filter(lambda x: x['value'] > dust_size, unspent))
     # Sort by amount, using the largest UTXOs available
     if config.REGTEST:
         # REGTEST has a lot of coinbase inputs that can't be spent due to maturity
@@ -200,8 +200,8 @@ def get_unspent_txouts(source, unconfirmed=False, unspent_tx_hash=None):
 
     return unspent
 
-def search_raw_transactions(address, unconfirmed=True):
-    return BACKEND().search_raw_transactions(address, unconfirmed)
+def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
+    return BACKEND().search_raw_transactions(address, unconfirmed, only_tx_hashes)
 
 class UnknownPubKeyError(Exception):
     pass
