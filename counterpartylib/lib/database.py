@@ -43,7 +43,7 @@ def exectracer(cursor, sql, bindings):
     dictionary = {'command': command, 'category': category, 'bindings': bindings}
 
     skip_tables = [
-        'blocks', 'transactions',
+        'blocks', 'transactions', 'transaction_outputs',
         'balances', 'messages', 'mempool', 'assets',
         'new_sends', 'new_issuances' # interim table for CIP10 activation
     ]
