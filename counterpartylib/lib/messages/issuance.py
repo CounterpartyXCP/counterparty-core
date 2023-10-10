@@ -396,7 +396,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         else:    
             data = message_type.pack(SUBASSET_ID)
         
-        if description == null and util.enabled("issuance_description_special_null"):
+        if description == None and util.enabled("issuance_description_special_null"):
             #a special message is created to be catched by the parse function
             curr_format = subasset_format + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(DESCRIPTION_MARK_BYTE)+len(DESCRIPTION_NULL_ACTION))
             encoded_description = DESCRIPTION_MARK_BYTE+DESCRIPTION_NULL_ACTION.encode('utf-8')
@@ -454,10 +454,14 @@ def parse (db, tx, message, message_type_id):
             try:
                 description = description.decode('utf-8')
             except UnicodeDecodeError:
+                description_data = description
                 description = ''
-                if description[0] == DESCRIPTION_MARK_BYTE:
-                    if description[1:] == DESCRIPTION_NULL_ACTION:
-                        description = None
+                if description_data[0:1] == DESCRIPTION_MARK_BYTE:
+                    try:
+                        if description_data[1:].decode('utf-8') == DESCRIPTION_NULL_ACTION:
+                            description = None
+                    except UnicodeDecodeError:
+                        description = '' 
         elif (tx['block_index'] > 283271 or config.TESTNET or config.REGTEST) and len(message) >= asset_format_length: # Protocol change.
             if (len(message) - asset_format_length <= 42) and not util.enabled('pascal_string_removed'):
                 curr_format = asset_format + '{}p'.format(len(message) - asset_format_length)
@@ -480,10 +484,14 @@ def parse (db, tx, message, message_type_id):
             try:
                 description = description.decode('utf-8')
             except UnicodeDecodeError:
+                description_data = description
                 description = ''
-                if description[0] == DESCRIPTION_MARK_BYTE:
-                    if description[1:] == DESCRIPTION_NULL_ACTION:
-                        description = None
+                if description_data[0:1] == DESCRIPTION_MARK_BYTE:
+                    try:
+                        if description_data[1:].decode('utf-8') == DESCRIPTION_NULL_ACTION:
+                            description = None
+                    except UnicodeDecodeError:
+                        description = ''        
         else:
             if len(message) != LENGTH_1:
                 raise exceptions.UnpackError
