@@ -43,7 +43,7 @@ def exectracer(cursor, sql, bindings):
     dictionary = {'command': command, 'category': category, 'bindings': bindings}
 
     skip_tables = [
-        'blocks', 'transactions',
+        'blocks', 'transactions', 'transaction_outputs',
         'balances', 'messages', 'mempool', 'assets',
         'new_sends', 'new_issuances' # interim table for CIP10 activation
     ]
@@ -54,7 +54,8 @@ def exectracer(cursor, sql, bindings):
 
     # Record alteration in database.
     if category not in skip_tables:
-        log.message(db, bindings['block_index'], command, category, bindings)
+        if bindings is not None:
+            log.message(db, bindings['block_index'], command, category, bindings)
     # Record alteration in computation of message feed hash for the block
     if category not in skip_tables_block_messages:
         # don't include asset_longname as part of the messages hash

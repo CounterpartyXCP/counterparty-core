@@ -226,10 +226,12 @@ def log (db, command, category, bindings):
             escrow_quantity = ''
             divisible = get_asset_info(cursor, bindings['asset'])['divisible']
             
-            if divisible:
-                if "escrow_quantity" in bindings:
-                    escrow_quantity = "{:.8f}".format(bindings["escrow_quantity"]/config.UNIT)                 
-        
+            if "escrow_quantity" in bindings:
+                if divisible:
+                    escrow_quantity = "{:.8f}".format(bindings["escrow_quantity"]/config.UNIT)
+                else:                
+                    escrow_quantity = bindings["escrow_quantity"]
+            
             if ("action" in bindings) and bindings["action"] == 'refill dispenser':
                 logger.info("Dispenser: {} refilled a dispenser with {} {}".format(bindings["source"],escrow_quantity,bindings["asset"]))
             elif "prev_status" in bindings: #There was a dispense
@@ -237,7 +239,12 @@ def log (db, command, category, bindings):
                     if bindings["status"] == 10:
                         logger.info("Dispenser: {} closed dispenser for {} (dispenser empty)".format(bindings["source"],bindings["asset"]))
             elif bindings["status"] == 10: #Address closed the dispenser
-                logger.info("Dispenser: {} closed dispenser for {} (operator closed)".format(bindings["source"],bindings["asset"]))
+                operator_string = "operator closed"
+            
+                if util.enabled("dispenser_origin_permission_extended", bindings['block_index']) and ("origin" in bindings) and bindings['source'] != bindings['origin']:
+                    operator_string = "closed by origin"
+            
+                logger.info("Dispenser: {} closed dispenser for {} ({})".format(bindings["source"],bindings["asset"],operator_string))
         # TODO: elif category == 'balances':
             # logger.debug('Database: set balance of {} in {} to {}.'.format(bindings['address'], bindings['asset'], output(bindings['quantity'], bindings['asset']).split(' ')[0]))
 
