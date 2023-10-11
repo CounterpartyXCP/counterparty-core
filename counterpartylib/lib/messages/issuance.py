@@ -27,6 +27,8 @@ SUBASSET_ID = 21
 LR_ISSUANCE_ID = 22
 LR_SUBASSET_ID = 23
 
+DESCRIPTION_MARK_BYTE = b'\xc0'
+DESCRIPTION_NULL_ACTION = "NULL"
 
 def initialise(db):
     cursor = db.cursor()
@@ -340,7 +342,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
     asset_id = util.generate_asset_id(asset, util.CURRENT_BLOCK_INDEX)
     asset_name = util.generate_asset_name(asset_id, util.CURRENT_BLOCK_INDEX) #This will remove leading zeros in the numeric assets
     
-    call_date, call_price, problems, fee, description, divisible, lock, reset, reissuance, reissued_asset_longname = validate(db, source, transfer_destination, asset_name, quantity, divisible, lock, reset, callable_, call_date, call_price, description, subasset_parent, subasset_longname, util.CURRENT_BLOCK_INDEX)
+    call_date, call_price, problems, fee, validated_description, divisible, lock, reset, reissuance, reissued_asset_longname = validate(db, source, transfer_destination, asset_name, quantity, divisible, lock, reset, callable_, call_date, call_price, description, subasset_parent, subasset_longname, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
     if subasset_longname is None or reissuance:
@@ -353,23 +355,33 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
             data = message_type.pack(LR_ISSUANCE_ID)
         else:    
             data = message_type.pack(ID)
-            
-        if (len(description) <= 42) and not util.enabled('pascal_string_removed'):
-            curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
+        
+        if description == None and util.enabled("issuance_description_special_null"):
+            #a special message is created to be catched by the parse function
+            curr_format = asset_format + '{}s'.format(len(DESCRIPTION_MARK_BYTE)+len(DESCRIPTION_NULL_ACTION))
+            encoded_description = DESCRIPTION_MARK_BYTE+DESCRIPTION_NULL_ACTION.encode('utf-8')
         else:
-            curr_format = asset_format + '{}s'.format(len(description))
+            if (len(validated_description) <= 42) and not util.enabled('pascal_string_removed'):
+                curr_format = FORMAT_2 + '{}p'.format(len(validated_description) + 1)
+            else:
+                curr_format = asset_format + '{}s'.format(len(validated_description))
+            
+            encoded_description = validated_description.encode('utf-8')
+        
+        
+        
         
         if (asset_format_length <= 19):# callbacks parameters were removed
-            data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if lock else 0, 1 if reset else 0, description.encode('utf-8'))
+            data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if lock else 0, 1 if reset else 0, encoded_description)
         elif (asset_format_length <= 26):
             data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0,
-                call_date or 0, call_price or 0.0, description.encode('utf-8'))
+                call_date or 0, call_price or 0.0, encoded_description)
         elif (asset_format_length <= 27):# param reset was inserted
             data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if reset else 0, 1 if callable_ else 0,
-                call_date or 0, call_price or 0.0, description.encode('utf-8'))
+                call_date or 0, call_price or 0.0, encoded_description)
         elif (asset_format_length <= 28):# param lock was inserted
             data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if lock else 0, 1 if reset else 0, 1 if callable_ else 0,
-                call_date or 0, call_price or 0.0, description.encode('utf-8'))
+                call_date or 0, call_price or 0.0, encoded_description)
     else:
         subasset_format = util.get_value_by_block_index("issuance_subasset_serialization_format",util.CURRENT_BLOCK_INDEX)
         subasset_format_length = util.get_value_by_block_index("issuance_subasset_serialization_length",util.CURRENT_BLOCK_INDEX)
@@ -383,15 +395,21 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
             data = message_type.pack(LR_SUBASSET_ID)
         else:    
             data = message_type.pack(SUBASSET_ID)
-            
-        curr_format = subasset_format + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(description))
+        
+        if description == None and util.enabled("issuance_description_special_null"):
+            #a special message is created to be catched by the parse function
+            curr_format = subasset_format + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(DESCRIPTION_MARK_BYTE)+len(DESCRIPTION_NULL_ACTION))
+            encoded_description = DESCRIPTION_MARK_BYTE+DESCRIPTION_NULL_ACTION.encode('utf-8')
+        else:       
+            curr_format = subasset_format + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(validated_description))          
+            encoded_description = validated_description.encode('utf-8')
         
         if subasset_format_length <= 18:
-            data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, compacted_subasset_length, compacted_subasset_longname, description.encode('utf-8'))
+            data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, compacted_subasset_length, compacted_subasset_longname, encoded_description)
         elif subasset_format_length <= 19:# param reset was inserted
-            data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if reset else 0, compacted_subasset_length, compacted_subasset_longname, description.encode('utf-8')) 
+            data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if reset else 0, compacted_subasset_length, compacted_subasset_longname, encoded_description) 
         elif subasset_format_length <= 20:# param lock was inserted
-            data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if lock else 0, 1 if reset else 0, compacted_subasset_length, compacted_subasset_longname, description.encode('utf-8'))
+            data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if lock else 0, 1 if reset else 0, compacted_subasset_length, compacted_subasset_longname, encoded_description)
 
     if transfer_destination:
         destination_outputs = [(transfer_destination, None)]
@@ -436,7 +454,14 @@ def parse (db, tx, message, message_type_id):
             try:
                 description = description.decode('utf-8')
             except UnicodeDecodeError:
+                description_data = description
                 description = ''
+                if description_data[0:1] == DESCRIPTION_MARK_BYTE:
+                    try:
+                        if description_data[1:].decode('utf-8') == DESCRIPTION_NULL_ACTION:
+                            description = None
+                    except UnicodeDecodeError:
+                        description = '' 
         elif (tx['block_index'] > 283271 or config.TESTNET or config.REGTEST) and len(message) >= asset_format_length: # Protocol change.
             if (len(message) - asset_format_length <= 42) and not util.enabled('pascal_string_removed'):
                 curr_format = asset_format + '{}p'.format(len(message) - asset_format_length)
@@ -459,7 +484,14 @@ def parse (db, tx, message, message_type_id):
             try:
                 description = description.decode('utf-8')
             except UnicodeDecodeError:
+                description_data = description
                 description = ''
+                if description_data[0:1] == DESCRIPTION_MARK_BYTE:
+                    try:
+                        if description_data[1:].decode('utf-8') == DESCRIPTION_NULL_ACTION:
+                            description = None
+                    except UnicodeDecodeError:
+                        description = ''        
         else:
             if len(message) != LENGTH_1:
                 raise exceptions.UnpackError
@@ -474,6 +506,9 @@ def parse (db, tx, message, message_type_id):
             
                 if (namedAsset != 0):
                     asset = namedAsset
+            
+            if description == None:
+                description = util.get_asset_description(db, asset)
             
             status = 'valid'
         except exceptions.AssetIDError:
