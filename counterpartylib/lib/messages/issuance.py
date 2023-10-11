@@ -356,7 +356,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         else:    
             data = message_type.pack(ID)
         
-        if description == null and util.enabled("issuance_description_special_null"):
+        if description == None and util.enabled("issuance_description_special_null"):
             #a special message is created to be catched by the parse function
             curr_format = asset_format + '{}s'.format(len(DESCRIPTION_MARK_BYTE)+len(DESCRIPTION_NULL_ACTION))
             encoded_description = DESCRIPTION_MARK_BYTE+DESCRIPTION_NULL_ACTION.encode('utf-8')
