@@ -454,5 +454,23 @@
       "minimum_version_revision": 2,
       "block_index": 825000,
       "testnet_block_index": 2505725
+  },
+  "max_dispenses_limit": {
+    "mainnet":{
+      "1":{
+        "value":0  
+      },
+      "825000":{
+        "value":1000
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":0
+      },    
+      "2535092":{
+        "value":1000
+      }
+    }
   }
 }
