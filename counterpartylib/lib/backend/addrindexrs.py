@@ -14,7 +14,7 @@ import binascii
 import hashlib
 import signal
 import bitcoin.wallet
-from packaging import version
+from pkg_resources import parse_version
 
 from counterpartylib.lib import config, util, address
 
@@ -379,7 +379,7 @@ def ensure_addrindexrs_connected():
             
             addrindexrs_version_label = addrindexrs_version["result"][0][12:] #12 is the length of "addrindexrs "
                         
-            if version.parse(util.get_value_by_block_index("addrindexrs_required_version")) > version.parse(addrindexrs_version_label):
+            if parse_version(util.get_value_by_block_index("addrindexrs_required_version")) > parse_version(addrindexrs_version_label):
                 raise Exception("Wrong addrindexrs version!")
             
         except Exception as e:
