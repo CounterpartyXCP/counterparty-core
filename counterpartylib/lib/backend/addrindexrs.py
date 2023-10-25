@@ -380,7 +380,8 @@ def ensure_addrindexrs_connected():
             addrindexrs_version_label = addrindexrs_version["result"][0][12:] #12 is the length of "addrindexrs "
                         
             if parse_version(util.get_value_by_block_index("addrindexrs_required_version")) > parse_version(addrindexrs_version_label):
-                raise Exception("Wrong addrindexrs version!")
+                _backend.stop()
+                sys.exit(config.EXITCODE_UPDATE_REQUIRED)
             
         except Exception as e:
             logger.debug(e)
