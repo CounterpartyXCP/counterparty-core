@@ -203,6 +203,9 @@ def get_unspent_txouts(source, unconfirmed=False, unspent_tx_hash=None):
 def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
     return BACKEND().search_raw_transactions(address, unconfirmed, only_tx_hashes)
 
+def get_oldest_tx(address):
+    return BACKEND().get_oldest_tx(address)
+
 class UnknownPubKeyError(Exception):
     pass
 
