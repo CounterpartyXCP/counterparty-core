@@ -853,6 +853,10 @@ class APIServer(threading.Thread):
             return backend.search_raw_transactions(address, unconfirmed=unconfirmed, only_tx_hashes=only_tx_hashes)
 
         @dispatcher.add_method
+        def get_oldest_tx(address):
+            return backend.get_oldest_tx(address)
+
+        @dispatcher.add_method
         def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None, order_by=None):
             results = backend.get_unspent_txouts(address, unconfirmed=unconfirmed, unspent_tx_hash=unspent_tx_hash)
             if order_by is None:

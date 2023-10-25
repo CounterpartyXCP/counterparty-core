@@ -14,6 +14,7 @@ import binascii
 import hashlib
 import signal
 import bitcoin.wallet
+from pkg_resources import parse_version
 
 from counterpartylib.lib import config, util, address
 
@@ -371,10 +372,19 @@ def ensure_addrindexrs_connected():
             _backend.daemon = True
             _backend.start()
 
-            _backend.send({
+            addrindexrs_version = _backend.send({
                 "method": "server.version",
                 "params": []
             })
+            
+            addrindexrs_version_label = addrindexrs_version["result"][0][12:] #12 is the length of "addrindexrs "
+            addrindexrs_version_needed = util.get_value_by_block_index("addrindexrs_required_version")
+               
+            if parse_version(addrindexrs_version_needed) > parse_version(addrindexrs_version_label):
+                logger.info("Wrong addrindexrs version: "+addrindexrs_version_needed+" is needed but "+addrindexrs_version_label+" was found")
+                _backend.stop()
+                sys.exit(config.EXITCODE_UPDATE_REQUIRED)
+            
         except Exception as e:
             logger.debug(e)
             time.sleep(backoff)
@@ -503,6 +513,21 @@ def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
             batch = [x for x in batch if x.height >= 0]
 
         return batch
+
+def get_oldest_tx(address):
+    ensure_addrindexrs_connected()
+
+    hsh = _address_to_hash(address)
+    call_result = _backend.send({
+        "method": "blockchain.scripthash.get_oldest_tx",
+        "params": [hsh]
+    })
+    
+    if not ("error" in call_result):
+        txs = call_result["result"]
+        return txs
+        
+    return {}
 
 # Returns the number of blocks the backend is behind the node
 def getindexblocksbehind():

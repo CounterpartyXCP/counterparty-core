@@ -455,6 +455,24 @@
       "block_index": 825000,
       "testnet_block_index": 2505725
   },
+  "addrindexrs_required_version": {
+    "mainnet":{
+      "1":{
+        "value":"0.4.0"
+      },
+      "825000":{
+        "value":"0.4.1"
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":"0.4.0"
+      },    
+      "2505725":{
+        "value":"0.4.1"
+      }
+    }
+  },
   "max_dispenses_limit": {
     "mainnet":{
       "1":{
