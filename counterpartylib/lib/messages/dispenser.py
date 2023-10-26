@@ -510,6 +510,8 @@ def dispense(db, tx):
                         
                         # return the remaining to the owner
                         util.credit(db, dispenser['source'], dispenser['asset'], give_remaining, action=credit_action, event=next_out['tx_hash'])
+                    else:
+                        dispenser['closing_reason'] = "depleted"
                     dispenser['status'] = STATUS_CLOSED
 
                 dispenser['block_index'] = next_out['block_index']
