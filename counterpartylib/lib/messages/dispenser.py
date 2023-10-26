@@ -485,7 +485,8 @@ def dispense(db, tx):
                     from_block_index = 1
                     
                     if len(max_block_index_result) > 0:
-                        from_block_index = max_block_index_result[0]["max_block_index"]
+                        if max_block_index_result[0]["max_block_index"] is not None:
+                            from_block_index = max_block_index_result[0]["max_block_index"]
                     
                     sql = 'SELECT COUNT(*) AS dispenses_count FROM dispenses WHERE dispenser_tx_hash = :dispenser_tx_hash AND block_index >= :block_index'
                     cursor.execute(sql, {'dispenser_tx_hash': dispenser['tx_hash'], 'block_index': from_block_index})
@@ -500,8 +501,15 @@ def dispense(db, tx):
                     # close the dispenser
                     dispenser['give_remaining'] = 0
                     if give_remaining > 0:
+                        if max_dispenser_limit_hit:
+                            credit_action = 'Closed: Max dispenses reached'
+                            dispenser['closing_reason'] = "max_dispenses_reached"
+                        else:   
+                            credit_action = 'dispenser close'
+                            dispenser['closing_reason'] = "no_more_to_give"
+                        
                         # return the remaining to the owner
-                        util.credit(db, dispenser['source'], dispenser['asset'], give_remaining, action='dispenser close', event=next_out['tx_hash'])
+                        util.credit(db, dispenser['source'], dispenser['asset'], give_remaining, action=credit_action, event=next_out['tx_hash'])
                     dispenser['status'] = STATUS_CLOSED
 
                 dispenser['block_index'] = next_out['block_index']
