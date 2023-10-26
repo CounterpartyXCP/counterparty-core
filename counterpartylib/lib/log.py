@@ -237,7 +237,11 @@ def log (db, command, category, bindings):
             elif "prev_status" in bindings: #There was a dispense
                 if bindings["prev_status"] == 0:
                     if bindings["status"] == 10:
-                        logger.info("Dispenser: {} closed dispenser for {} (dispenser empty)".format(bindings["source"],bindings["asset"]))
+                        if bindings["closing_reason"] == "no_more_to_give" or bindings["closing_reason"] == "depleted":
+                            logger.info("Dispenser: {} closed dispenser for {} (dispenser empty)".format(bindings["source"],bindings["asset"]))
+                        elif bindings["closing_reason"] == "max_dispenses_reached":
+                            logger.info("Dispenser: {} closed dispenser for {} (dispenser reached max dispenses limit)".format(bindings["source"],bindings["asset"]))
+                        
             elif bindings["status"] == 10: #Address closed the dispenser
                 operator_string = "operator closed"
             
