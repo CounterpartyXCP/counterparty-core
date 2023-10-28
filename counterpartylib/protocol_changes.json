@@ -472,5 +472,23 @@
         "value":"0.4.1"
       }
     }
+  },
+  "dispenser_close_delay": {
+    "mainnet":{
+      "1":{
+        "value":0
+      },
+      "825000":{
+        "value":5
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":0
+      },    
+      "2505725":{
+        "value":5
+      }
+    }
   }
 }
