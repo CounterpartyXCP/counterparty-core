@@ -491,13 +491,44 @@ def dispense(db, tx):
 
                 util.credit(db, next_out['source'], dispenser['asset'], actually_given, action='dispense', event=next_out['tx_hash'])
 
+                # Checking if the dispenser reach its max dispenses limit
+                max_dispenses_limit = util.get_value_by_block_index("max_dispenses_limit", next_out["block_index"])
+                max_dispenser_limit_hit = False
+                
+                if max_dispenses_limit > 0:
+                    sql = 'SELECT MAX(block_index) AS max_block_index FROM dispenser_refills WHERE dispenser_tx_hash = :dispenser_tx_hash'
+                    cursor.execute(sql, {'dispenser_tx_hash': dispenser['tx_hash']})
+                    max_block_index_result = cursor.fetchall()
+                    from_block_index = 1
+                    
+                    if len(max_block_index_result) > 0:
+                        if max_block_index_result[0]["max_block_index"] is not None:
+                            from_block_index = max_block_index_result[0]["max_block_index"]
+                    
+                    sql = 'SELECT COUNT(*) AS dispenses_count FROM dispenses WHERE dispenser_tx_hash = :dispenser_tx_hash AND block_index >= :block_index'
+                    cursor.execute(sql, {'dispenser_tx_hash': dispenser['tx_hash'], 'block_index': from_block_index})
+                    dispenses_count_result = cursor.fetchall()[0]
+                    dispenses_count = dispenses_count_result["dispenses_count"]
+                    
+                    if dispenses_count+1 >= max_dispenses_limit:
+                        max_dispenser_limit_hit = True
+
                 dispenser['give_remaining'] = give_remaining
-                if give_remaining < dispenser['give_quantity']:
+                if give_remaining < dispenser['give_quantity'] or max_dispenser_limit_hit:
                     # close the dispenser
                     dispenser['give_remaining'] = 0
                     if give_remaining > 0:
+                        if max_dispenser_limit_hit:
+                            credit_action = 'Closed: Max dispenses reached'
+                            dispenser['closing_reason'] = "max_dispenses_reached"
+                        else:   
+                            credit_action = 'dispenser close'
+                            dispenser['closing_reason'] = "no_more_to_give"
+                        
                         # return the remaining to the owner
-                        util.credit(db, dispenser['source'], dispenser['asset'], give_remaining, action='dispenser close', event=next_out['tx_hash'])
+                        util.credit(db, dispenser['source'], dispenser['asset'], give_remaining, action=credit_action, event=next_out['tx_hash'])
+                    else:
+                        dispenser['closing_reason'] = "depleted"
                     dispenser['status'] = STATUS_CLOSED
 
                 dispenser['block_index'] = next_out['block_index']
