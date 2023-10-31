@@ -151,11 +151,25 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
             cursor.execute('''SELECT * FROM dispensers WHERE source = ? AND asset = ? AND status=?''', (query_address, asset, STATUS_OPEN))
         open_dispensers = cursor.fetchall()
         if status == STATUS_OPEN or status == STATUS_OPEN_EMPTY_ADDRESS:
-            if len(open_dispensers) > 0 and open_dispensers[0]['satoshirate'] != mainchainrate:
-                problems.append('address has a dispenser already opened for asset %s with a different mainchainrate' % asset)
+            if len(open_dispensers) > 0:
+                max_refills = util.get_value_by_block_index("max_refills", block_index)
+                refilling_count = 0
+        
+                if max_refills > 0:
+                    cursor.execute('''SELECT count(*) cnt FROM dispenser_refills WHERE dispenser_tx_hash = ?''', (open_dispensers[0]["tx_hash"],))
+                    refilling_count = cursor.fetchall()[0]['cnt']
+            
+                #It's a valid refill
+                if open_dispensers[0]['satoshirate'] == mainchainrate and open_dispensers[0]['give_quantity'] == give_quantity:
+                    if (max_refills > 0) and (refilling_count >= max_refills):
+                        problems.append('the dispenser reached its maximum refilling')
+                else:
+                    if open_dispensers[0]['satoshirate'] != mainchainrate:
+                        problems.append('address has a dispenser already opened for asset %s with a different mainchainrate' % asset)
 
-            if len(open_dispensers) > 0 and open_dispensers[0]['give_quantity'] != give_quantity:
-                problems.append('address has a dispenser already opened for asset %s with a different give_quantity' % asset)
+                    if open_dispensers[0]['give_quantity'] != give_quantity:
+                        problems.append('address has a dispenser already opened for asset %s with a different give_quantity' % asset)           
+                    
         elif status == STATUS_CLOSED:
             if len(open_dispensers) == 0:
                 problems.append('address doesnt has an open dispenser for asset %s' % asset)
