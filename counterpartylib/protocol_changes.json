@@ -490,5 +490,23 @@
         "value":1000
       }
     }
+  },
+  "sweep_antispam_fee": {
+    "mainnet":{
+      "1":{
+        "value":0  
+      },
+      "825000":{
+        "value":0.001
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":0
+      },    
+      "2535092":{
+        "value":0.001
+      }
+    }
   }
 }
