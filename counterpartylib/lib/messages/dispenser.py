@@ -463,7 +463,7 @@ def dispense(db, tx):
     for next_out in outs:
         cursor.execute('SELECT * FROM dispensers WHERE source=:source AND status IN (0,11) ORDER BY asset', {
             'source': next_out['destination'],
-			#'status': [STATUS_OPEN, STATUS_CLOSING]
+            #'status': [STATUS_OPEN, STATUS_CLOSING]
         })
         dispensers = cursor.fetchall()
 
@@ -562,7 +562,7 @@ def close_pending(db, block_index):
         cursor.execute('SELECT d.*, t.source AS tx_source, t.block_index AS tx_block_index FROM dispensers d LEFT JOIN transactions t ON t.tx_hash = d.last_status_tx_hash WHERE status=:status AND last_status_tx_hash IS NOT NULL AND :block_index>=t.block_index+:delay', {
             'status': STATUS_CLOSING,
             'delay': block_delay,
-			'block_index': block_index
+            'block_index': block_index
         })
         pending_dispensers = cursor.fetchall()
 
