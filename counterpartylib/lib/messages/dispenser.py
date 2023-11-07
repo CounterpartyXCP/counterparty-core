@@ -534,7 +534,7 @@ def dispense(db, tx):
                 dispenser['block_index'] = next_out['block_index']
                 dispenser['prev_status'] = STATUS_OPEN
                 cursor.execute('UPDATE DISPENSERS SET give_remaining=:give_remaining, status=:status \
-                        WHERE source=:source AND asset=:asset AND satoshirate=:satoshirate AND give_quantity=:give_quantity AND status=:prev_status', dispenser)
+                        WHERE source=:source AND asset=:asset AND satoshirate=:satoshirate AND give_quantity=:give_quantity AND status IN (0,11)', dispenser)
 
                 bindings = {
                     'tx_index': next_out['tx_index'],
