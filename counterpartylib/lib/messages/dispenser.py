@@ -156,7 +156,7 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
             cursor.execute('''SELECT * FROM dispensers WHERE source = ? AND asset = ? AND status IN (0,11)''', (query_address, asset))
         open_dispensers = cursor.fetchall()
         
-        if open_dispensers[0]["status"] != STATUS_CLOSING:
+        if len(open_dispensers) == 0 or open_dispensers[0]["status"] != STATUS_CLOSING:
             if status == STATUS_OPEN or status == STATUS_OPEN_EMPTY_ADDRESS:
                 if len(open_dispensers) > 0 and open_dispensers[0]['satoshirate'] != mainchainrate:
                     problems.append('address has a dispenser already opened for asset %s with a different mainchainrate' % asset)
