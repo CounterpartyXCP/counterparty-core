@@ -150,45 +150,49 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
         
         
         if util.enabled("dispenser_origin_permission_extended", block_index) and status == STATUS_CLOSED and open_address and open_address != source:
-            cursor.execute('''SELECT * FROM dispensers WHERE source = ? AND asset = ? AND status=? AND origin=?''', (open_address, asset, STATUS_OPEN, source))
+            cursor.execute('''SELECT * FROM dispensers WHERE source = ? AND asset = ? AND status IN (0,11) AND origin=?''', (open_address, asset, source))
         else:
             query_address = open_address if status == STATUS_OPEN_EMPTY_ADDRESS else source
-            cursor.execute('''SELECT * FROM dispensers WHERE source = ? AND asset = ? AND status=?''', (query_address, asset, STATUS_OPEN))
+            cursor.execute('''SELECT * FROM dispensers WHERE source = ? AND asset = ? AND status IN (0,11)''', (query_address, asset))
         open_dispensers = cursor.fetchall()
-        if status == STATUS_OPEN or status == STATUS_OPEN_EMPTY_ADDRESS:
-            if len(open_dispensers) > 0 and open_dispensers[0]['satoshirate'] != mainchainrate:
-                problems.append('address has a dispenser already opened for asset %s with a different mainchainrate' % asset)
+        
+        if open_dispensers[0]["status"] != STATUS_CLOSING:
+            if status == STATUS_OPEN or status == STATUS_OPEN_EMPTY_ADDRESS:
+                if len(open_dispensers) > 0 and open_dispensers[0]['satoshirate'] != mainchainrate:
+                    problems.append('address has a dispenser already opened for asset %s with a different mainchainrate' % asset)
 
-            if len(open_dispensers) > 0 and open_dispensers[0]['give_quantity'] != give_quantity:
-                problems.append('address has a dispenser already opened for asset %s with a different give_quantity' % asset)
-        elif status == STATUS_CLOSED:
-            if len(open_dispensers) == 0:
-                problems.append('address doesnt has an open dispenser for asset %s' % asset)
+                if len(open_dispensers) > 0 and open_dispensers[0]['give_quantity'] != give_quantity:
+                    problems.append('address has a dispenser already opened for asset %s with a different give_quantity' % asset)
+            elif status == STATUS_CLOSED:
+                if len(open_dispensers) == 0:
+                    problems.append('address doesnt has an open dispenser for asset %s' % asset)
 
-        if status == STATUS_OPEN_EMPTY_ADDRESS:
-            #If an address is trying to refill a dispenser in a different address and it's the creator
-            if not (util.enabled("dispenser_origin_permission_extended", block_index) and (len(open_dispensers) > 0) and (open_dispensers[0]["origin"] == source)):
-                cursor.execute('''SELECT count(*) cnt FROM dispensers WHERE source = ? AND status = ? AND origin = ?''', (query_address,STATUS_CLOSED,source))
-                dispensers_from_same_origin = cursor.fetchall()
-                
-                if not (util.enabled("dispenser_origin_permission_extended", block_index) and dispensers_from_same_origin[0]['cnt'] > 0):
-                #It means that the same origin has not opened other dispensers in this address
-                    cursor.execute('''SELECT count(*) cnt FROM balances WHERE address = ?''', (query_address,))
-                    existing_balances = cursor.fetchall()
-                
-                    if existing_balances[0]['cnt'] > 0:
-                        problems.append('cannot open on another address if it has any balance history')
+            if status == STATUS_OPEN_EMPTY_ADDRESS:
+                #If an address is trying to refill a dispenser in a different address and it's the creator
+                if not (util.enabled("dispenser_origin_permission_extended", block_index) and (len(open_dispensers) > 0) and (open_dispensers[0]["origin"] == source)):
+                    cursor.execute('''SELECT count(*) cnt FROM dispensers WHERE source = ? AND status = ? AND origin = ?''', (query_address,STATUS_CLOSED,source))
+                    dispensers_from_same_origin = cursor.fetchall()
                     
-                    if util.enabled("dispenser_origin_permission_extended", block_index):
-                        address_oldest_transaction = backend.get_oldest_tx(query_address)
-                        if ("block_index" in address_oldest_transaction) and (address_oldest_transaction["block_index"] > 0) and (block_index > address_oldest_transaction["block_index"]):
-                            problems.append('cannot open on another address if it has any confirmed bitcoin txs')
+                    if not (util.enabled("dispenser_origin_permission_extended", block_index) and dispensers_from_same_origin[0]['cnt'] > 0):
+                    #It means that the same origin has not opened other dispensers in this address
+                        cursor.execute('''SELECT count(*) cnt FROM balances WHERE address = ?''', (query_address,))
+                        existing_balances = cursor.fetchall()
+                    
+                        if existing_balances[0]['cnt'] > 0:
+                            problems.append('cannot open on another address if it has any balance history')
+                        
+                        if util.enabled("dispenser_origin_permission_extended", block_index):
+                            address_oldest_transaction = backend.get_oldest_tx(query_address)
+                            if ("block_index" in address_oldest_transaction) and (address_oldest_transaction["block_index"] > 0) and (block_index > address_oldest_transaction["block_index"]):
+                                problems.append('cannot open on another address if it has any confirmed bitcoin txs')
 
-        if len(problems) == 0:
-            asset_id = util.generate_asset_id(asset, block_index)
-            if asset_id == 0:
-                problems.append('cannot dispense %s' % asset) # How can we test this on a test vector?
-
+            if len(problems) == 0:
+                asset_id = util.generate_asset_id(asset, block_index)
+                if asset_id == 0:
+                    problems.append('cannot dispense %s' % asset) # How can we test this on a test vector?
+        else:
+            problems.append('address has already a dispenser about to close, no action can be taken until it closes')
+    
     cursor.close()
     
     if oracle_address is not None and util.enabled('oracle_dispensers', block_index):
