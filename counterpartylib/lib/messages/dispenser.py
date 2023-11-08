@@ -172,8 +172,8 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
                         if open_dispensers[0]['satoshirate'] != mainchainrate:
                             problems.append('address has a dispenser already opened for asset %s with a different mainchainrate' % asset)
                         if open_dispensers[0]['give_quantity'] != give_quantity:
-                            problems.append('address has a dispenser already opened for asset %s with a different give_quantity' % asset)                       elif status == STATUS_CLOSED:
-			elif status == STATUS_CLOSED:				
+                            problems.append('address has a dispenser already opened for asset %s with a different give_quantity' % asset)
+            elif status == STATUS_CLOSED:               
                 if len(open_dispensers) == 0:
                     problems.append('address doesnt has an open dispenser for asset %s' % asset)
 
