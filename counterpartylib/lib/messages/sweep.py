@@ -71,7 +71,7 @@ def validate (db, source, destination, flags, memo, block_index):
         cursor.execute('''SELECT COUNT(DISTINCT(asset)) cnt FROM issuances WHERE issuer = ?''', (source, ))
         issuances_count = cursor.fetchall()[0]['cnt']
 
-        total_fee = balances_count * antispamfee * 2 + issuances_count * antispamfee * 4
+        total_fee = int(balances_count * antispamfee * 2 + issuances_count * antispamfee * 4)
         
         if result[0]['quantity'] < total_fee:
             problems.append('insufficient XCP balance for sweep. Need %s XCP for antispam fee' % total_fee)
