@@ -44,13 +44,14 @@ from .exceptions import DecodeError, BTCOnlyError
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
-         ['bet_match_resolutions', 'order_match_expirations', 'order_matches',
-         'order_expirations', 'orders', 'bet_match_expirations', 'bet_matches',
-         'bet_expirations', 'bets', 'broadcasts', 'btcpays', 'burns',
-         'cancels', 'dividends', 'issuances', 'sends',
-         'rps_match_expirations', 'rps_expirations', 'rpsresolves',
-         'rps_matches', 'rps',
-         'destructions', 'assets', 'addresses', 'sweeps', 'dispensers', 'dispenses']
+         ['assets', 'addresses',
+          'bets', 'bet_matches', 'bet_expirations', 'bet_match_resolutions', 'bet_match_expirations', 
+          'broadcasts', 'btcpays', 'burns', 'cancels', 'dividends', 'destructions', 'issuances', 
+          'dispensers', 'dispenses','dispenser_refills',
+          'orders', 'order_matches', 'order_expirations', 'order_match_expirations',
+          'rps', 'rps_matches', 'rpsresolves', 'rps_match_expirations', 'rps_expirations', 
+          'sends', 'sweeps', 
+          'transaction_outputs']
 # Compose list of tables tracked by undolog
 UNDOLOG_TABLES = copy.copy(TABLES)
 UNDOLOG_TABLES.remove('messages')
