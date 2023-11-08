@@ -517,6 +517,17 @@ def get_asset_issuer(db, asset):
         if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
         return issuances[0]['issuer']
 
+def get_asset_description(db, asset):
+    if asset in (config.BTC, config.XCP):
+        return ''
+    else:
+        cursor = db.cursor()
+        cursor.execute('''SELECT * FROM issuances \
+                          WHERE (status = ? AND asset = ?) ORDER BY tx_index DESC''', ('valid', asset))
+        issuances = cursor.fetchall()
+        if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
+        return issuances[0]['description']
+
 def value_input(quantity, asset, divisible):
     if asset == 'leverage':
         return round(quantity)
@@ -743,7 +754,7 @@ def held (db): #TODO: Rename ?
         "SELECT 'XCP' AS asset, SUM(backward_quantity) AS total FROM bet_matches WHERE status = 'pending'",
         "SELECT 'XCP' AS asset, SUM(wager) AS total FROM rps WHERE status = 'open'",
         "SELECT 'XCP' AS asset, SUM(wager * 2) AS total FROM rps_matches WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')",
-        "SELECT asset, SUM(give_remaining) AS total FROM dispensers WHERE status=0 OR status=1 GROUP BY asset",
+        "SELECT asset, SUM(give_remaining) AS total FROM dispensers WHERE status IN (0,1,11) GROUP BY asset",
     ]
 
     sql = "SELECT asset, SUM(total) AS total FROM (" + " UNION ALL ".join(queries) + ") GROUP BY asset;"

@@ -447,5 +447,84 @@
       "minimum_version_revision": 6,
       "block_index": 825000,
       "testnet_block_index": 2420996
-  }  
+  },
+  "issuance_description_special_null": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 60,
+      "minimum_version_revision": 2,
+      "block_index": 825000,
+      "testnet_block_index": 2505725
+  },
+  "addrindexrs_required_version": {
+    "mainnet":{
+      "1":{
+        "value":"0.4.0"
+      },
+      "825000":{
+        "value":"0.4.1"
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":"0.4.0"
+      },    
+      "2505725":{
+        "value":"0.4.1"
+      }
+    }
+  },
+  "max_dispenses_limit": {
+    "mainnet":{
+      "1":{
+        "value":0  
+      },
+      "825000":{
+        "value":1000
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":0
+      },    
+      "2535092":{
+        "value":1000
+      }
+    }
+  },
+  "dispenser_close_delay": {
+    "mainnet":{
+      "1":{
+        "value":0
+      },
+      "825000":{
+        "value":5
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":0
+      },    
+      "2505725":{
+        "value":5
+      }
+    }
+  },
+  "max_refills": {
+    "mainnet":{
+      "1":{
+        "value":0  
+      },
+      "825000":{
+        "value":5
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":0
+      },    
+      "2535092":{
+        "value":5
+      }
+    }
+  }
 }
