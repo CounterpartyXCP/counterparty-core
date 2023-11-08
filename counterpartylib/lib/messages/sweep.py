@@ -237,7 +237,7 @@ def parse (db, tx, message):
             'flags': flags,
             'status': status,
             'memo': memo_bytes,
-            'fee_paid': fee_paid
+            'fee_paid': total_fee if antispamfee > 0 else fee_paid
         }
         sql = 'insert into sweeps values(:tx_index, :tx_hash, :block_index, :source, :destination, :flags, :status, :memo, :fee_paid)'
         cursor.execute(sql, bindings)
