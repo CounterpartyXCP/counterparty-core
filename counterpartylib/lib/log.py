@@ -242,11 +242,18 @@ def log (db, command, category, bindings):
                         elif bindings["closing_reason"] == "max_dispenses_reached":
                             logger.info("Dispenser: {} closed dispenser for {} (dispenser reached max dispenses limit)".format(bindings["source"],bindings["asset"]))
                         
-            elif bindings["status"] == 10: #Address closed the dispenser
-                operator_string = "operator closed"
+            elif bindings["status"] == 10 or bindings["status"] == 11: #Address closed the dispenser
+            
+                if bindings["status"] == 10:
+                    operator_string = "operator closed"
+                else:    
+                    operator_string = "operator marked the dispenser to close it"
             
                 if util.enabled("dispenser_origin_permission_extended", bindings['block_index']) and ("origin" in bindings) and bindings['source'] != bindings['origin']:
-                    operator_string = "closed by origin"
+                    if bindings["status"] == 10:
+                        operator_string = "closed by origin"
+                    else:    
+                        operator_string = "marked to close by origin"
             
                 logger.info("Dispenser: {} closed dispenser for {} ({})".format(bindings["source"],bindings["asset"],operator_string))
         # TODO: elif category == 'balances':

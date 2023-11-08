@@ -191,6 +191,9 @@ def parse_block(db, block_index, block_time,
     bet.expire(db, block_index, block_time)
     rps.expire(db, block_index)
 
+    # Close dispensers
+    dispenser.close_pending(db, block_index)
+
     # Parse transactions, sorting them by type.
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM transactions \
