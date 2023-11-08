@@ -50,7 +50,8 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'cancels', 'dividends', 'issuances', 'sends',
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
          'rps_matches', 'rps',
-         'destructions', 'assets', 'addresses', 'sweeps', 'dispensers', 'dispenses']
+         'destructions', 'assets', 'addresses', 'sweeps', 'dispensers', 'dispenses',
+		 'transaction_outputs']
 # Compose list of tables tracked by undolog
 UNDOLOG_TABLES = copy.copy(TABLES)
 UNDOLOG_TABLES.remove('messages')
