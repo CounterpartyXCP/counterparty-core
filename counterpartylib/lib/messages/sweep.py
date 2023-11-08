@@ -169,7 +169,7 @@ def parse (db, tx, message):
 
     if status == 'valid':
         try:
-            antispamfee = util.get_value_by_block_index("sweep_antispam_fee", block_index)*config.UNIT
+            antispamfee = util.get_value_by_block_index("sweep_antispam_fee", tx['block_index'])*config.UNIT
             
             if antispamfee > 0:
                 util.debit(db, tx['source'], 'XCP', total_fee, action='sweep fee', event=tx['tx_hash'])
