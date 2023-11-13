@@ -50,7 +50,8 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'cancels', 'dividends', 'issuances', 'sends',
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
          'rps_matches', 'rps',
-         'destructions', 'assets', 'addresses', 'sweeps', 'dispensers', 'dispenses']
+         'destructions', 'assets', 'addresses', 'sweeps', 'dispensers', 'dispenses',
+         'transaction_outputs','dispenser_refills']
 # Compose list of tables tracked by undolog
 UNDOLOG_TABLES = copy.copy(TABLES)
 UNDOLOG_TABLES.remove('messages')
@@ -193,6 +194,9 @@ def parse_block(db, block_index, block_time,
     order.expire(db, block_index)
     bet.expire(db, block_index, block_time)
     rps.expire(db, block_index)
+
+    # Close dispensers
+    dispenser.close_pending(db, block_index)
 
     # Parse transactions, sorting them by type.
     cursor = db.cursor()

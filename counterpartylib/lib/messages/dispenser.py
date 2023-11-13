@@ -33,6 +33,7 @@ STATUS_OPEN_EMPTY_ADDRESS = 1
 #STATUS_OPEN_ORACLE_PRICE = 20
 #STATUS_OPEN_ORACLE_PRICE_EMPTY_ADDRESS = 21
 STATUS_CLOSED = 10
+STATUS_CLOSING = 11
 
 def initialise(db):
     cursor = db.cursor()
@@ -91,6 +92,10 @@ def initialise(db):
     columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(dispensers)''')]
     if 'oracle_address' not in columns:
         cursor.execute('ALTER TABLE dispensers ADD COLUMN oracle_address TEXT')
+    
+    #this column will be used to know when a dispenser was marked to close
+    if 'last_status_tx_hash' not in columns:
+        cursor.execute('ALTER TABLE dispensers ADD COLUMN last_status_tx_hash TEXT') 
         
     if "origin" not in columns:
         cursor.execute('ALTER TABLE dispensers ADD COLUMN origin TEXT')
@@ -145,45 +150,59 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
         
         
         if util.enabled("dispenser_origin_permission_extended", block_index) and status == STATUS_CLOSED and open_address and open_address != source:
-            cursor.execute('''SELECT * FROM dispensers WHERE source = ? AND asset = ? AND status=? AND origin=?''', (open_address, asset, STATUS_OPEN, source))
+            cursor.execute('''SELECT * FROM dispensers WHERE source = ? AND asset = ? AND status IN (0,11) AND origin=?''', (open_address, asset, source))
         else:
             query_address = open_address if status == STATUS_OPEN_EMPTY_ADDRESS else source
-            cursor.execute('''SELECT * FROM dispensers WHERE source = ? AND asset = ? AND status=?''', (query_address, asset, STATUS_OPEN))
+            cursor.execute('''SELECT * FROM dispensers WHERE source = ? AND asset = ? AND status IN (0,11)''', (query_address, asset))
         open_dispensers = cursor.fetchall()
-        if status == STATUS_OPEN or status == STATUS_OPEN_EMPTY_ADDRESS:
-            if len(open_dispensers) > 0 and open_dispensers[0]['satoshirate'] != mainchainrate:
-                problems.append('address has a dispenser already opened for asset %s with a different mainchainrate' % asset)
+        if len(open_dispensers) == 0 or open_dispensers[0]["status"] != STATUS_CLOSING:
+            if status == STATUS_OPEN or status == STATUS_OPEN_EMPTY_ADDRESS:
+                if len(open_dispensers) > 0:
+                    max_refills = util.get_value_by_block_index("max_refills", block_index)
+                    refilling_count = 0                
+                    if max_refills > 0:
+                        cursor.execute('''SELECT count(*) cnt FROM dispenser_refills WHERE dispenser_tx_hash = ?''', (open_dispensers[0]["tx_hash"],))
+                        refilling_count = cursor.fetchall()[0]['cnt']
+            
+                    #It's a valid refill
+                    if open_dispensers[0]['satoshirate'] == mainchainrate and open_dispensers[0]['give_quantity'] == give_quantity:
+                        if (max_refills > 0) and (refilling_count >= max_refills):
+                            problems.append('the dispenser reached its maximum refilling')
+                    else:
+                        if open_dispensers[0]['satoshirate'] != mainchainrate:
+                            problems.append('address has a dispenser already opened for asset %s with a different mainchainrate' % asset)
+                        if open_dispensers[0]['give_quantity'] != give_quantity:
+                            problems.append('address has a dispenser already opened for asset %s with a different give_quantity' % asset)
+            elif status == STATUS_CLOSED:               
+                if len(open_dispensers) == 0:
+                    problems.append('address doesnt has an open dispenser for asset %s' % asset)
 
-            if len(open_dispensers) > 0 and open_dispensers[0]['give_quantity'] != give_quantity:
-                problems.append('address has a dispenser already opened for asset %s with a different give_quantity' % asset)
-        elif status == STATUS_CLOSED:
-            if len(open_dispensers) == 0:
-                problems.append('address doesnt has an open dispenser for asset %s' % asset)
-
-        if status == STATUS_OPEN_EMPTY_ADDRESS:
-            #If an address is trying to refill a dispenser in a different address and it's the creator
-            if not (util.enabled("dispenser_origin_permission_extended", block_index) and (len(open_dispensers) > 0) and (open_dispensers[0]["origin"] == source)):
-                cursor.execute('''SELECT count(*) cnt FROM dispensers WHERE source = ? AND status = ? AND origin = ?''', (query_address,STATUS_CLOSED,source))
-                dispensers_from_same_origin = cursor.fetchall()
-                
-                if not (util.enabled("dispenser_origin_permission_extended", block_index) and dispensers_from_same_origin[0]['cnt'] > 0):
-                #It means that the same origin has not opened other dispensers in this address
-                    cursor.execute('''SELECT count(*) cnt FROM balances WHERE address = ?''', (query_address,))
-                    existing_balances = cursor.fetchall()
-                
-                    if existing_balances[0]['cnt'] > 0:
-                        problems.append('cannot open on another address if it has any balance history')
+            if status == STATUS_OPEN_EMPTY_ADDRESS:
+                #If an address is trying to refill a dispenser in a different address and it's the creator
+                if not (util.enabled("dispenser_origin_permission_extended", block_index) and (len(open_dispensers) > 0) and (open_dispensers[0]["origin"] == source)):
+                    cursor.execute('''SELECT count(*) cnt FROM dispensers WHERE source = ? AND status = ? AND origin = ?''', (query_address,STATUS_CLOSED,source))
+                    dispensers_from_same_origin = cursor.fetchall()
                     
-                    if util.enabled("dispenser_origin_permission_extended", block_index):
-                        address_oldest_transaction = backend.get_oldest_tx(query_address)
-                        if ("block_index" in address_oldest_transaction) and (address_oldest_transaction["block_index"] > 0) and (block_index > address_oldest_transaction["block_index"]):
-                            problems.append('cannot open on another address if it has any confirmed bitcoin txs')
+                    if not (util.enabled("dispenser_origin_permission_extended", block_index) and dispensers_from_same_origin[0]['cnt'] > 0):
+                    #It means that the same origin has not opened other dispensers in this address
+                        cursor.execute('''SELECT count(*) cnt FROM balances WHERE address = ?''', (query_address,))
+                        existing_balances = cursor.fetchall()
+                    
+                        if existing_balances[0]['cnt'] > 0:
+                            problems.append('cannot open on another address if it has any balance history')
+                        
+                        if util.enabled("dispenser_origin_permission_extended", block_index):
+                            address_oldest_transaction = backend.get_oldest_tx(query_address)
+                            if ("block_index" in address_oldest_transaction) and (address_oldest_transaction["block_index"] > 0) and (block_index > address_oldest_transaction["block_index"]):
+                                problems.append('cannot open on another address if it has any confirmed bitcoin txs')
 
-        if len(problems) == 0:
-            asset_id = util.generate_asset_id(asset, block_index)
-            if asset_id == 0:
-                problems.append('cannot dispense %s' % asset) # How can we test this on a test vector?
-
+            if len(problems) == 0:
+                asset_id = util.generate_asset_id(asset, block_index)
+                if asset_id == 0:
+                    problems.append('cannot dispense %s' % asset) # How can we test this on a test vector?
+        else:
+            problems.append('address has already a dispenser about to close, no action can be taken until it closes')
+    
     cursor.close()
     
     if oracle_address is not None and util.enabled('oracle_dispensers', block_index):
@@ -316,7 +335,8 @@ def parse (db, tx, message):
                         if util.enabled("dispenser_origin_permission_extended"):
                             bindings["origin"] = tx["source"]
                         
-                        sql = 'insert into dispensers values(:tx_index, :tx_hash, :block_index, :source, :asset, :give_quantity, :escrow_quantity, :satoshirate, :status, :give_remaining, :oracle_address, :origin)'
+                        sql = '''insert into dispensers (tx_index, tx_hash, block_index, source, asset, give_quantity, escrow_quantity, satoshirate, status, give_remaining, oracle_address, origin, last_status_tx_hash)
+                            values(:tx_index, :tx_hash, :block_index, :source, :asset, :give_quantity, :escrow_quantity, :satoshirate, :status, :give_remaining, :oracle_address, :origin, NULL)'''
                         cursor.execute(sql, bindings)
                 elif len(existing) == 1 and existing[0]['satoshirate'] == mainchainrate and existing[0]['give_quantity'] == give_quantity:
                     if tx["source"]==action_address or (util.enabled("dispenser_origin_permission_extended", tx['block_index']) and tx["source"] == existing[0]["origin"]):
@@ -364,6 +384,7 @@ def parse (db, tx, message):
                 else:
                     status = 'can only have one open dispenser per asset per address'
             elif dispenser_status == STATUS_CLOSED:
+                close_delay = util.get_value_by_block_index("dispenser_close_delay", tx['block_index'])
                 close_from_another_address = util.enabled("dispenser_origin_permission_extended", tx['block_index']) and action_address and action_address != tx["source"]
                 query_dispenser = 'SELECT tx_index, give_remaining FROM dispensers WHERE source=:source AND asset=:asset AND status=:status'
                 query_bindings = {
@@ -381,16 +402,27 @@ def parse (db, tx, message):
                 existing = cursor.fetchall()
 
                 if len(existing) == 1:
-                    util.credit(db, tx['source'], asset, existing[0]['give_remaining'], action='close dispenser', event=tx['tx_hash'])
-                    bindings = {
-                        'source': tx['source'],
-                        'asset': asset,
-                        'status': STATUS_CLOSED,
-                        'block_index': tx['block_index'],
-                        'tx_index': existing[0]['tx_index']
-                    }
-                    sql = 'UPDATE dispensers SET give_remaining=0, status=:status WHERE source=:source AND asset=:asset'
-                    
+                    if close_delay == 0:
+                        util.credit(db, tx['source'], asset, existing[0]['give_remaining'], action='close dispenser', event=tx['tx_hash'])
+                        
+                        bindings = {
+                            'source': tx['source'],
+                            'asset': asset,
+                            'status': STATUS_CLOSED,
+                            'block_index': tx['block_index'],
+                            'tx_index': existing[0]['tx_index']
+                        }
+                        sql = 'UPDATE dispensers SET give_remaining=0, status=:status WHERE source=:source AND asset=:asset'
+                    else:
+                        bindings = {
+                            'source': tx['source'],
+                            'asset': asset,
+                            'status': STATUS_CLOSING,
+                            'block_index': tx['block_index'],
+                            'last_status_tx_hash': tx['tx_hash'],
+                            'tx_index': existing[0]['tx_index']
+                        }
+                        sql = 'UPDATE dispensers SET status=:status, last_status_tx_hash=:last_status_tx_hash WHERE source=:source AND asset=:asset AND status IN (0,1)'
                     
                     if close_from_another_address:
                         sql = sql + " AND origin=:origin"
@@ -410,9 +442,9 @@ def parse (db, tx, message):
 
 def is_dispensable(db, address, amount):
     cursor = db.cursor()
-    cursor.execute('SELECT * FROM dispensers WHERE source=:source AND status=:status', {
+    cursor.execute('SELECT * FROM dispensers WHERE source=:source AND status IN (0,11)', {
         'source': address,    
-        'status': STATUS_OPEN
+        #'status': [STATUS_OPEN, STATUS_CLOSING]
     })
     dispensers = cursor.fetchall()
     cursor.close()
@@ -444,9 +476,9 @@ def dispense(db, tx):
     dispense_index = 0
         
     for next_out in outs:
-        cursor.execute('SELECT * FROM dispensers WHERE source=:source AND status=:status ORDER BY asset', {
+        cursor.execute('SELECT * FROM dispensers WHERE source=:source AND status IN (0,11) ORDER BY asset', {
             'source': next_out['destination'],
-            'status': STATUS_OPEN
+            #'status': [STATUS_OPEN, STATUS_CLOSING]
         })
         dispensers = cursor.fetchall()
 
@@ -517,7 +549,7 @@ def dispense(db, tx):
                 dispenser['block_index'] = next_out['block_index']
                 dispenser['prev_status'] = STATUS_OPEN
                 cursor.execute('UPDATE DISPENSERS SET give_remaining=:give_remaining, status=:status \
-                        WHERE source=:source AND asset=:asset AND satoshirate=:satoshirate AND give_quantity=:give_quantity AND status=:prev_status', dispenser)
+                        WHERE source=:source AND asset=:asset AND satoshirate=:satoshirate AND give_quantity=:give_quantity AND status IN (0,11)', dispenser)
 
                 bindings = {
                     'tx_index': next_out['tx_index'],
@@ -536,3 +568,35 @@ def dispense(db, tx):
                 dispense_index += 1
 
     cursor.close()
+
+def close_pending(db, block_index):
+    cursor = db.cursor()
+    block_delay = util.get_value_by_block_index("dispenser_close_delay", block_index)
+
+    if block_delay > 0:
+        cursor.execute('SELECT d.*, t.source AS tx_source, t.block_index AS tx_block_index FROM dispensers d LEFT JOIN transactions t ON t.tx_hash = d.last_status_tx_hash WHERE status=:status AND last_status_tx_hash IS NOT NULL AND :block_index>=t.block_index+:delay', {
+            'status': STATUS_CLOSING,
+            'delay': block_delay,
+            'block_index': block_index
+        })
+        pending_dispensers = cursor.fetchall()
+
+        for dispenser in pending_dispensers:
+            util.credit(db, dispenser['tx_source'], dispenser['asset'], dispenser['give_remaining'], action='close dispenser', event=dispenser['last_status_tx_hash'])
+                        
+            bindings = {
+                'source': dispenser['tx_source'],
+                'asset': dispenser['asset'],
+                'status': STATUS_CLOSED,
+                'block_index': dispenser['tx_block_index'],
+                'tx_index': dispenser['tx_index']
+            }
+            sql = 'UPDATE dispensers SET give_remaining=0, status=:status WHERE source=:source AND asset=:asset'
+            
+            #closed from another address
+            if dispenser['tx_source'] != dispenser['source']:
+                sql = sql + " AND origin=:origin"
+                bindings["origin"] = dispenser['tx_source']
+                bindings["source"] = dispenser['source']
+                    
+            cursor.execute(sql, bindings)
