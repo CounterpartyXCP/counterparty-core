@@ -22,6 +22,7 @@ because it is stored as a four‐byte integer, it may not be greater than about
 """
 import struct
 import decimal
+import sys
 
 D = decimal.Decimal
 from fractions import Fraction
@@ -42,6 +43,10 @@ FORMAT = '>IdI'
 LENGTH = 4 + 8 + 4
 ID = 30
 # NOTE: Pascal strings are used for storing texts for backwards‐compatibility.
+
+DATA_TYPE_ID = 31
+
+DATA_TYPES_TO_STORE = ['text/plain']
 
 def initialise(db):
     cursor = db.cursor()
@@ -70,6 +75,10 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       timestamp_idx ON broadcasts (timestamp)
                    ''')
+
+    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(broadcasts)''')]
+    if 'data_type' not in columns:
+        cursor.execute('''ALTER TABLE broadcasts ADD COLUMN data_type TEXT''')
 
 def validate (db, source, timestamp, value, fee_fraction_int, text, block_index):
     problems = []
@@ -115,7 +124,10 @@ def validate (db, source, timestamp, value, fee_fraction_int, text, block_index)
 
     return problems
 
-def compose (db, source, timestamp, value, fee_fraction, text):
+def compose (db, source, timestamp, value, fee_fraction, text, data_type):
+
+    if data_type is None:
+        data_type = ""
 
     # Store the fee fraction as an integer.
     fee_fraction_int = int(fee_fraction * 1e8)
@@ -123,11 +135,19 @@ def compose (db, source, timestamp, value, fee_fraction, text):
     problems = validate(db, source, timestamp, value, fee_fraction_int, text, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
-    data = message_type.pack(ID)
+    if util.enabled('issuance_data_type'):
+        data = message_type.pack(DATA_TYPE_ID)
+    else:
+        data = message_type.pack(ID)
 
     # always use custom length byte instead of problematic usage of 52p format and make sure to encode('utf-8') for length
     if util.enabled('broadcast_pack_text'):
         data += struct.pack(FORMAT, timestamp, value, fee_fraction_int)
+        
+        if util.enabled('issuance_data_type'):
+            data += VarIntSerializer.serialize(len(data_type.encode('utf-8')))
+            data += data_type.encode('utf-8')
+            
         data += VarIntSerializer.serialize(len(text.encode('utf-8')))
         data += text.encode('utf-8')
     else:
@@ -139,21 +159,50 @@ def compose (db, source, timestamp, value, fee_fraction, text):
         data += struct.pack(curr_format, timestamp, value, fee_fraction_int, text.encode('utf-8'))
     return (source, [], data)
 
-def parse (db, tx, message):
+def parse (db, tx, message, message_type_id, store_only_text=True, return_info=False):
     cursor = db.cursor()
 
     # Unpack message.
     try:
         if util.enabled('broadcast_pack_text', tx['block_index']):
             timestamp, value, fee_fraction_int, rawtext = struct.unpack(FORMAT + '{}s'.format(len(message) - LENGTH), message)
+            
+            if message_type_id == DATA_TYPE_ID:
+                data_type_len = VarIntSerializer.deserialize(rawtext)
+                if data_type_len == 0:
+                    data_type = b''
+                    rawtext = rawtext[1:]
+                else:
+                    if data_type_len < 0xfd:
+                        from_index = 1
+                    elif data_type_len <= 0xffff:   
+                        from_index = 1+2
+                    elif data_type_len <= 0xffffffff:   
+                        from_index = 1+4
+                    else:   
+                        from_index = 1+8
+                        
+                    data_type = rawtext[from_index:from_index+data_type_len]
+                    rawtext = rawtext[from_index+data_type_len:]
+                
+                data_type = data_type.decode('utf-8')
+            else:
+                data_type = ''
+            
             textlen = VarIntSerializer.deserialize(rawtext)
-            if textlen == 0:
+            if (textlen == 0):
                 text = b''
             else:
                 text = rawtext[-textlen:]
 
             assert len(text) == textlen
+            
+            if store_only_text and util.enabled('issuance_data_type', tx['block_index']) and data_type != "" and data_type not in DATA_TYPES_TO_STORE:
+                text = b''
+            
         else:
+            data_type = ''
+            
             if len(message) - LENGTH <= 52:
                 curr_format = FORMAT + '{}p'.format(len(message) - LENGTH)
             else:
@@ -170,13 +219,18 @@ def parse (db, tx, message):
         timestamp, value, fee_fraction_int, text = 0, None, 0, None
         status = 'invalid: could not unpack'
 
+    #Don't make any change to the database, only return parsed info 
+    if return_info:
+        return status, timestamp, value, fee_fraction_int, text
+
     if status == 'valid':
         # For SQLite3
         timestamp = min(timestamp, config.MAX_INT)
         value = min(value, config.MAX_INT)
 
         problems = validate(db, tx['source'], timestamp, value, fee_fraction_int, text, tx['block_index'])
-        if problems: status = 'invalid: ' + '; '.join(problems)
+        if problems: 
+            status = 'invalid: ' + '; '.join(problems)
 
     # Lock?
     lock = False
@@ -200,7 +254,15 @@ def parse (db, tx, message):
         'status': status,
     }
     if "integer overflow" not in status:
-        sql = 'insert into broadcasts values(:tx_index, :tx_hash, :block_index, :source, :timestamp, :value, :fee_fraction_int, :text, :locked, :status)'
+        fields = "tx_index, tx_hash, block_index, source, timestamp, value, fee_fraction_int, text, locked, status"
+        values = ":tx_index, :tx_hash, :block_index, :source, :timestamp, :value, :fee_fraction_int, :text, :locked, :status"
+        
+        if util.enabled('issuance_data_type', tx['block_index']):
+            bindings['data_type'] = data_type
+            fields = fields + ', data_type'
+            values = values + ', :data_type'
+        
+        sql = 'insert into broadcasts ('+fields+') values('+values+')'
         cursor.execute(sql, bindings)
     else:
         logger.warn("Not storing [broadcast] tx [%s]: %s" % (tx['tx_hash'], status))

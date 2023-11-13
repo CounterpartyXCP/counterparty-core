@@ -174,7 +174,7 @@ def parse (db, tx, message):
             if util.enabled("zero_balance_ownership_sweep_fix", tx["block_index"]):
                 cursor.execute('''SELECT DISTINCT(asset) FROM issuances WHERE issuer = ?''', (tx['source'],))
                 assets_issued = cursor.fetchall()
-				
+
             for next_asset_issued in assets_issued:
                 cursor.execute('''SELECT * FROM issuances \
                                   WHERE (status = ? AND asset = ?)
@@ -204,7 +204,18 @@ def parse (db, tx, message):
                             'asset_longname': last_issuance['asset_longname'],
                             'reset': False
                         }
-                        sql='insert into issuances values(:tx_index, :tx_hash, :msg_index, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :reset)'
+                        
+                        fields = 'tx_index, tx_hash, msg_index, block_index, asset, quantity, divisible, source, issuer, transfer, callable, call_date, call_price, description, fee_paid, locked, status, asset_longname, reset'
+                        values = ':tx_index, :tx_hash, :msg_index, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :reset'
+                        
+                        if util.enabled('issuance_data_type', tx['block_index']):
+                            bindings['data_type'] = last_issuance['data_type']
+                            fields = fields + ', data_type'
+                            values = values + ', :data_type'
+                        
+                        sql='''insert into issuances ('''+fields+''')
+                            values('''+values+''')'''
+                                        
                         cursor.execute(sql, bindings)
                         sweep_pos += 1
 

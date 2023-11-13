@@ -108,8 +108,12 @@ def parse_tx(db, tx):
                 issuance.parse(db, tx, message, message_type_id)
             elif (message_type_id == issuance.SUBASSET_ID and util.enabled('subassets', block_index=tx['block_index'])) or (util.enabled("issuance_backwards_compatibility", block_index=tx['block_index']) and message_type_id == issuance.LR_SUBASSET_ID):
                 issuance.parse(db, tx, message, message_type_id)
-            elif message_type_id == broadcast.ID:
-                broadcast.parse(db, tx, message)
+            elif (message_type_id == issuance.DATA_TYPE_ISSUANCE_ID and util.enabled('issuance_data_type', block_index=tx['block_index'])):
+                issuance.parse(db, tx, message, message_type_id)
+            elif (message_type_id == issuance.DATA_TYPE_SUBASSET_ID and util.enabled('issuance_data_type', block_index=tx['block_index'])):
+                issuance.parse(db, tx, message, message_type_id)
+            elif message_type_id == broadcast.ID or message_type_id == broadcast.DATA_TYPE_ID:
+                broadcast.parse(db, tx, message, message_type_id)
             elif message_type_id == bet.ID:
                 bet.parse(db, tx, message)
             elif message_type_id == dividend.ID:

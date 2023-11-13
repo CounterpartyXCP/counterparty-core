@@ -139,7 +139,7 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
     return results
 
 def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None,
-              status=None, limit=1000, offset=0, show_expired=True):
+              status=None, limit=1000, offset=0, show_expired=True, db_data=True):
     """SELECT * FROM wrapper. Filters results based on a filter data structure (as used by the API)."""
 
     if filters == None:
@@ -293,6 +293,15 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
         # for transactions, handle the data field properly
         return adjust_get_transactions_results(query_result)    
 
+    if table == 'broadcasts':
+        # for broadcasts, handle the text field properly
+        return adjust_get_broadcasts_results(db, query_result, db_data)
+
+    if table == 'issuances':
+        # for issuances, handle the text field properly
+        return adjust_get_issuances_results(db, query_result, db_data)
+
+
     return query_result
 
 def adjust_get_balances_results(query_result, db):
@@ -357,6 +366,49 @@ def adjust_get_transactions_results(query_result):
         transaction_row['data'] = transaction_row['data'].hex()
         filtered_results.append(transaction_row)
     return filtered_results
+
+def adjust_get_broadcasts_results(db, query_result, db_data=True):
+    
+    filtered_result = []
+    for broadcast_row in list(query_result):
+        if not db_data and broadcast_row["data_type"] != "" and broadcast_row["data_type"] not in broadcast.DATA_TYPES_TO_STORE:
+            tx_hex = backend.getrawtransaction(broadcast_row["tx_hash"])
+            source, destination, btc_amount, fee, data, decoded_tx = blocks.get_tx_info(tx_hex, db=db, block_index=broadcast_row["block_index"])
+            tx = {
+                "block_index":broadcast_row["block_index"],
+                "source": source
+            }
+            message_type_id, data = message_type.unpack(data, tx['block_index'])
+            status, timestamp, value, fee_fraction_int, text = broadcast.parse(db, tx, data, message_type_id, False, True)
+            broadcast_row['text'] = text
+            filtered_result.append(broadcast_row)
+        else:
+            filtered_result.append(broadcast_row)
+
+    return filtered_result
+
+def adjust_get_issuances_results(db, query_result, db_data=True):
+    
+    filtered_result = []
+    for issuance_row in list(query_result):
+        if not db_data and issuance_row["data_type"] != "" and issuance_row["data_type"] not in issuance.DATA_TYPES_TO_STORE:
+            tx_hex = backend.getrawtransaction(issuance_row["tx_hash"])
+            source, destination, btc_amount, fee, data, decoded_tx = blocks.get_tx_info(tx_hex, db=db, block_index=issuance_row["block_index"])
+            tx = {
+                "block_index":issuance_row["block_index"],
+                "source": source,
+                "destination": destination,
+                "tx_hash": issuance_row["tx_hash"]
+            }
+            
+            message_type_id, data = message_type.unpack(data, tx['block_index'])
+            status, call_date, call_price, fee, description, divisible, lock, reset, reissuance = issuance.parse(db, tx, data, message_type_id, False, True)
+            issuance_row['description'] = description
+            filtered_result.append(issuance_row)
+        else:
+            filtered_result.append(issuance_row)
+
+    return filtered_result
 
 def compose_transaction(db, name, params,
                         encoding='auto',

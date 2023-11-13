@@ -27,8 +27,15 @@ SUBASSET_ID = 21
 LR_ISSUANCE_ID = 22
 LR_SUBASSET_ID = 23
 
+DATA_TYPE_ISSUANCE_ID = 24
+DATA_TYPE_SUBASSET_ID = 25
+DATA_TYPE_DELIMITER = b'\xc1'
+
 DESCRIPTION_MARK_BYTE = b'\xc0'
 DESCRIPTION_NULL_ACTION = "NULL"
+
+DATA_TYPES_TO_STORE = ['text/plain']
+TEXT_STORE_LIMIT = 1024
 
 def initialise(db):
     cursor = db.cursor()
@@ -61,6 +68,8 @@ def initialise(db):
         cursor.execute('''ALTER TABLE issuances ADD COLUMN asset_longname TEXT''')
     if 'reset' not in columns:
         cursor.execute('''ALTER TABLE issuances ADD COLUMN reset BOOL''')
+    if 'data_type' not in columns:
+        cursor.execute('''ALTER TABLE issuances ADD COLUMN data_type TEXT''')
 
     # If sweep_hotfix activated, Create issuances copy, copy old data, drop old table, rename new table, recreate indexes
     #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS` nor can drop UNIQUE constraints
@@ -299,7 +308,10 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
     return call_date, call_price, problems, fee, description, divisible, lock, reset, reissuance, reissued_asset_longname
 
 
-def compose (db, source, transfer_destination, asset, quantity, divisible, lock, reset, description):
+def compose (db, source, transfer_destination, asset, quantity, divisible, lock, reset, description, data_type):
+
+    if data_type is None:
+        data_type = ""
 
     # Callability is deprecated, so for re‐issuances set relevant parameters
     # to old values; for first issuances, make uncallable.
@@ -351,22 +363,29 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         
         # Type 20 standard issuance FORMAT_2 >QQ??If
         #   used for standard issuances and all reissuances
-        if util.enabled("issuance_backwards_compatibility"):
+        if util.enabled('issuance_data_type'):
+            data = message_type.pack(DATA_TYPE_ISSUANCE_ID)
+        elif util.enabled("issuance_backwards_compatibility"):
             data = message_type.pack(LR_ISSUANCE_ID)
         else:    
             data = message_type.pack(ID)
         
         if description == None and util.enabled("issuance_description_special_null"):
             #a special message is created to be catched by the parse function
-            curr_format = asset_format + '{}s'.format(len(DESCRIPTION_MARK_BYTE)+len(DESCRIPTION_NULL_ACTION))
-            encoded_description = DESCRIPTION_MARK_BYTE+DESCRIPTION_NULL_ACTION.encode('utf-8')
+            curr_format = asset_format + '{}s'.format(len(data_type)+len(DATA_TYPE_DELIMITER)+len(DESCRIPTION_MARK_BYTE)+len(DESCRIPTION_NULL_ACTION))
+            encoded_description = data_type.encode('utf-8')+DATA_TYPE_DELIMITER+DESCRIPTION_MARK_BYTE+DESCRIPTION_NULL_ACTION.encode('utf-8')
         else:
             if (len(validated_description) <= 42) and not util.enabled('pascal_string_removed'):
                 curr_format = FORMAT_2 + '{}p'.format(len(validated_description) + 1)
+            elif util.enabled('issuance_data_type'):
+                curr_format = asset_format + '{}s'.format(len(data_type)+len(DATA_TYPE_DELIMITER)+len(validated_description))            
             else:
                 curr_format = asset_format + '{}s'.format(len(validated_description))
             
-            encoded_description = validated_description.encode('utf-8')
+            if util.enabled('issuance_data_type'):
+                encoded_description = data_type.encode('utf-8')+DATA_TYPE_DELIMITER+validated_description.encode('utf-8')
+            else:
+                encoded_description = validated_description.encode('utf-8')
         
         
         
@@ -391,18 +410,24 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         # compacts a subasset name to save space
         compacted_subasset_longname = util.compact_subasset_longname(subasset_longname)
         compacted_subasset_length = len(compacted_subasset_longname)
-        if util.enabled("issuance_backwards_compatibility"):
+        if util.enabled('issuance_data_type'):
+            data = message_type.pack(DATA_TYPE_SUBASSET_ID)
+        elif util.enabled("issuance_backwards_compatibility"):
             data = message_type.pack(LR_SUBASSET_ID)
         else:    
             data = message_type.pack(SUBASSET_ID)
         
         if description == None and util.enabled("issuance_description_special_null"):
             #a special message is created to be catched by the parse function
-            curr_format = subasset_format + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(DESCRIPTION_MARK_BYTE)+len(DESCRIPTION_NULL_ACTION))
-            encoded_description = DESCRIPTION_MARK_BYTE+DESCRIPTION_NULL_ACTION.encode('utf-8')
+            curr_format = subasset_format + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(data_type)+len(DATA_TYPE_DELIMITER)+len(DESCRIPTION_MARK_BYTE)+len(DESCRIPTION_NULL_ACTION))
+            encoded_description = data_type.encode('utf-8')+DATA_TYPE_DELIMITER+DESCRIPTION_MARK_BYTE+DESCRIPTION_NULL_ACTION.encode('utf-8')
         else:       
-            curr_format = subasset_format + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(validated_description))          
-            encoded_description = validated_description.encode('utf-8')
+            if util.enabled('issuance_data_type'):
+                curr_format = subasset_format + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(data_type)+len(DATA_TYPE_DELIMITER)+len(validated_description))          
+                encoded_description = data_type.encode('ut-8')+DATA_TYPE_DELIMITER+validated_description.encode('utf-8')
+            else:   
+                curr_format = subasset_format + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(validated_description))          
+                encoded_description = validated_description.encode('utf-8')
         
         if subasset_format_length <= 18:
             data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, compacted_subasset_length, compacted_subasset_longname, encoded_description)
@@ -417,7 +442,43 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         destination_outputs = []
     return (source, destination_outputs, data)
 
-def parse (db, tx, message, message_type_id):
+def parse_data_type_description(description_text, message_type_id, store_only_text=True):
+    try:
+        data_type = None
+        
+        if util.enabled("issuance_data_type") and (message_type_id == DATA_TYPE_SUBASSET_ID or message_type_id == DATA_TYPE_ISSUANCE_ID):
+            data_type_delimiter_pos = description_text.find(DATA_TYPE_DELIMITER)
+            
+            if data_type_delimiter_pos > 0:
+                data_type = description_text[0:data_type_delimiter_pos].decode('utf-8')
+                
+                if not store_only_text or data_type == None or data_type == "" or data_type in DATA_TYPES_TO_STORE:
+                    description = description_text[data_type_delimiter_pos+1:]                  
+                    
+                    if store_only_text and len(description) > TEXT_STORE_LIMIT:
+                        description = description[:TEXT_STORE_LIMIT]
+                    
+                else:
+                    description = b''
+            else:
+                description = description_text[1:]
+        else:
+            description = description_text
+
+        description = description.decode('utf-8')
+    except UnicodeDecodeError:
+        description_data = description
+        description = ''
+        if description_data[0:1] == DESCRIPTION_MARK_BYTE:
+            try:
+                if description_data[1:].decode('utf-8') == DESCRIPTION_NULL_ACTION:
+                    description = None
+            except UnicodeDecodeError:
+                description = ''
+                
+    return data_type, description
+
+def parse (db, tx, message, message_type_id, store_only_text=True, return_info=False):
     issuance_parse_cursor = db.cursor()
     asset_format = util.get_value_by_block_index("issuance_asset_serialization_format",tx['block_index'])
     asset_format_length = util.get_value_by_block_index("issuance_asset_serialization_length",tx['block_index'])
@@ -427,7 +488,7 @@ def parse (db, tx, message, message_type_id):
     # Unpack message.
     try:
         subasset_longname = None
-        if message_type_id == LR_SUBASSET_ID or message_type_id == SUBASSET_ID:
+        if message_type_id == LR_SUBASSET_ID or message_type_id == SUBASSET_ID or message_type_id == DATA_TYPE_SUBASSET_ID:
             if not util.enabled('subassets', block_index=tx['block_index']):
                 logger.warn("subassets are not enabled at block %s" % tx['block_index'])
                 raise exceptions.UnpackError
@@ -435,6 +496,7 @@ def parse (db, tx, message, message_type_id):
             # parse a subasset original issuance message
             lock = None
             reset = None
+            data_type = None
             
             if subasset_format_length <= 18:
                 asset_id, quantity, divisible, compacted_subasset_length = struct.unpack(subasset_format, message[0:subasset_format_length])
@@ -451,17 +513,7 @@ def parse (db, tx, message, message_type_id):
             compacted_subasset_longname, description = struct.unpack(messages_format, message[subasset_format_length:])
             subasset_longname = util.expand_subasset_longname(compacted_subasset_longname)
             callable_, call_date, call_price = False, 0, 0.0
-            try:
-                description = description.decode('utf-8')
-            except UnicodeDecodeError:
-                description_data = description
-                description = ''
-                if description_data[0:1] == DESCRIPTION_MARK_BYTE:
-                    try:
-                        if description_data[1:].decode('utf-8') == DESCRIPTION_NULL_ACTION:
-                            description = None
-                    except UnicodeDecodeError:
-                        description = '' 
+            data_type, description = parse_data_type_description(description, message_type_id, store_only_text)
         elif (tx['block_index'] > 283271 or config.TESTNET or config.REGTEST) and len(message) >= asset_format_length: # Protocol change.
             if (len(message) - asset_format_length <= 42) and not util.enabled('pascal_string_removed'):
                 curr_format = asset_format + '{}p'.format(len(message) - asset_format_length)
@@ -470,6 +522,8 @@ def parse (db, tx, message, message_type_id):
             
             lock = None
             reset = None
+            data_type = None
+            
             if (asset_format_length <= 19):# callbacks parameters were removed
                 asset_id, quantity, divisible, lock, reset, description = struct.unpack(curr_format, message)
                 callable_, call_date, call_price = False, 0, 0.0
@@ -481,17 +535,7 @@ def parse (db, tx, message, message_type_id):
                 asset_id, quantity, divisible, lock, reset, callable_, call_date, call_price, description = struct.unpack(curr_format, message)
             
             call_price = round(call_price, 6) # TODO: arbitrary
-            try:
-                description = description.decode('utf-8')
-            except UnicodeDecodeError:
-                description_data = description
-                description = ''
-                if description_data[0:1] == DESCRIPTION_MARK_BYTE:
-                    try:
-                        if description_data[1:].decode('utf-8') == DESCRIPTION_NULL_ACTION:
-                            description = None
-                    except UnicodeDecodeError:
-                        description = ''        
+            data_type, description = parse_data_type_description(description, message_type_id, store_only_text)       
         else:
             if len(message) != LENGTH_1:
                 raise exceptions.UnpackError
@@ -515,7 +559,7 @@ def parse (db, tx, message, message_type_id):
             asset = None
             status = 'invalid: bad asset name'
     except exceptions.UnpackError as e:
-        asset, quantity, divisible, lock, reset, callable_, call_date, call_price, description = None, None, None, None, None, None, None, None, None
+        asset, quantity, divisible, lock, reset, callable_, call_date, call_price, description, data_type = None, None, None, None, None, None, None, None, None, None
         status = 'invalid: could not unpack'
 
     # parse and validate the subasset from the message
@@ -531,6 +575,11 @@ def parse (db, tx, message, message_type_id):
 
     reissuance = None
     fee = 0
+    
+    #Don't make any change to the database, only return parsed info 
+    if return_info: 
+        return status, call_date, call_price, fee, description, divisible, lock, reset, reissuance
+    
     if status == 'valid':
         call_date, call_price, problems, fee, description, divisible, lock, reset, reissuance, reissued_asset_longname = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, lock, reset, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index=tx['block_index'])
 
@@ -658,6 +707,7 @@ def parse (db, tx, message, message_type_id):
             'callable': callable_,
             'call_date': call_date,
             'call_price': call_price,
+            'data_type': data_type,
             'description': description,
             'fee_paid': fee,
             'locked': lock,
@@ -666,7 +716,15 @@ def parse (db, tx, message, message_type_id):
             'asset_longname': asset_longname,
         }
         if "integer overflow" not in status:
-            sql='insert into issuances values(:tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :reset)'
+            fields = "tx_index, tx_hash, msg_index, block_index, asset, quantity, divisible, source, issuer, transfer, callable, call_date, call_price, description, fee_paid, locked, status, asset_longname, reset"
+            values = ":tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :reset"
+        
+            if util.enabled('issuance_data_type', tx['block_index']):
+                bindings['data_type'] = data_type
+                fields = fields + ', data_type'
+                values = values + ', :data_type'
+        
+            sql = '''insert into issuances ('''+fields+''') values(''' +values+''')'''
             issuance_parse_cursor.execute(sql, bindings)
         else:
             logger.warn("Not storing [issuance] tx [%s]: %s" % (tx['tx_hash'], status))
