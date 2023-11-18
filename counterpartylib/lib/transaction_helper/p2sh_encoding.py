@@ -17,10 +17,13 @@ from counterpartylib.lib import config
 from counterpartylib.lib import script
 from counterpartylib.lib import exceptions
 
-def maximum_data_chunk_size():
-    return bitcoinlib.core.script.MAX_SCRIPT_ELEMENT_SIZE - len(config.PREFIX) - 44 # Redeemscript size for p2pkh addresses, multisig won't work here
+def maximum_data_chunk_size(pubkeylength):
+    if pubkeylength >= 0:
+        return bitcoinlib.core.script.MAX_SCRIPT_ELEMENT_SIZE - len(config.PREFIX) - pubkeylength - 12 #Two bytes are for unique offset. This will work for a little more than 1000 outputs
+    else:
+        return bitcoinlib.core.script.MAX_SCRIPT_ELEMENT_SIZE - len(config.PREFIX) - 44 # Redeemscript size for p2pkh addresses, multisig won't work here
 
-def calculate_outputs(destination_outputs, data_array, fee_per_kb):
+def calculate_outputs(destination_outputs, data_array, fee_per_kb, exact_fee=None):
     datatx_size = 10  # 10 base
     datatx_size += 181  # 181 for source input
     datatx_size += (25 + 9) * len(destination_outputs)  # destination outputs
@@ -35,11 +38,21 @@ def calculate_outputs(destination_outputs, data_array, fee_per_kb):
     size_for_fee = pretx_output_size
 
     # split the tx fee evenly between all datatx outputs
-    data_value = math.ceil(datatx_necessary_fee / len(data_array))
+    # data_value = math.ceil(datatx_necessary_fee / len(data_array))
+    data_value = config.DEFAULT_REGULAR_DUST_SIZE
 
     # adjust the data output with the new value and recalculate data_btc_out
-    data_output = (data_array, data_value)
     data_btc_out = data_value * len(data_array)
+
+    if exact_fee:
+        remain_fee = exact_fee - data_value * len(data_array)
+        if remain_fee > 0:
+            #if the dust isn't enough to reach the exact_fee, data value will be an array with only the last fee bumped
+            data_value = [data_value for i in range(len(data_array))]
+            data_value[len(data_array)-1] = data_value[len(data_array)-1] + remain_fee
+            data_btc_out = exact_fee
+    
+    data_output = (data_array, data_value)          
 
     logger.getChild('p2shdebug').debug('datatx size: %d fee: %d' % (datatx_size, datatx_necessary_fee))
     logger.getChild('p2shdebug').debug('pretx output size: %d' % (pretx_output_size, ))
@@ -47,12 +60,12 @@ def calculate_outputs(destination_outputs, data_array, fee_per_kb):
 
     return size_for_fee, datatx_necessary_fee, data_value, data_btc_out
 
-def decode_p2sh_input(asm):
+def decode_p2sh_input(asm, p2sh_is_segwit=False):
     ''' Looks at the scriptSig for the input of the p2sh-encoded data transaction
         [signature] [data] [OP_HASH160 ... OP_EQUAL]
     '''
-    pubkey, source, redeem_script_is_valid = decode_data_redeem_script(asm[-1])
-    if redeem_script_is_valid and len(asm) >= 3:
+    pubkey, source, redeem_script_is_valid, found_data = decode_data_redeem_script(asm[-1], p2sh_is_segwit)
+    if redeem_script_is_valid:
         # this is a signed transaction, so we got {sig[,sig]} {datachunk} {redeemScript}
         datachunk = found_data
         redeemScript = asm[-1] #asm[-2:]
@@ -158,16 +171,27 @@ def decode_data_redeem_script(redeemScript, p2sh_is_segwit=False):
                         else:
                             # it's p2pkh
                             pos, pubkey = decode_data_push(redeemScript, pos)
-                            source = script.pubkey_to_pubkeyhash(pubkey)
+
+                            if p2sh_is_segwit:
+                                source = script.pubkey_to_p2whash(pubkey)
+                            else:
+                                source = script.pubkey_to_pubkeyhash(pubkey)
 
                             valid_sig = redeemScript[pos] == bitcoinlib.core.script.OP_CHECKSIGVERIFY
                         pos += 1
 
                         if valid_sig:
-                            redeem_script_is_valid = redeemScript[pos + 1] == bitcoinlib.core.script.OP_DROP and \
-                                redeemScript[pos + 2] == bitcoinlib.core.script.OP_DEPTH and \
-                                redeemScript[pos + 3] == 0 and \
-                                redeemScript[pos + 4] == bitcoinlib.core.script.OP_EQUAL
+                            uniqueOffsetLength = 0
+
+                            for i in range(pos+1, len(redeemScript)):
+                                if redeemScript[i] == bitcoinlib.core.script.OP_DROP:
+                                    uniqueOffsetLength = i-pos-1
+                                    break
+
+                            redeem_script_is_valid = redeemScript[pos + 1 + uniqueOffsetLength] == bitcoinlib.core.script.OP_DROP and \
+                                redeemScript[pos + 2 + uniqueOffsetLength] == bitcoinlib.core.script.OP_DEPTH and \
+                                redeemScript[pos + 3 + uniqueOffsetLength] == 0 and \
+                                redeemScript[pos + 4 + uniqueOffsetLength] == bitcoinlib.core.script.OP_EQUAL
         except Exception as e:
             pass #traceback.print_exc()
 
@@ -196,7 +220,8 @@ def make_p2sh_encoding_redeemscript(datachunk, n, pubKey=None, multisig_pubkeys=
     else:
         raise exceptions.TransactionError('Either pubKey or multisig pubKeys must be provided')
 
-    redeemScript = CScript(datachunk) + CScript(dataDropScript + verifyOwnerScript + cleanupScript)
+    #redeemScript = CScript(datachunk) + CScript(dataDropScript + verifyOwnerScript + cleanupScript)
+    redeemScript = CScript(dataDropScript + verifyOwnerScript + cleanupScript)
 
     _logger.debug('datachunk %s' % (binascii.hexlify(datachunk)))
     _logger.debug('dataDropScript %s (%s)' % (repr(CScript(dataDropScript)), binascii.hexlify(CScript(dataDropScript))))

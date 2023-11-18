@@ -61,10 +61,25 @@ def validate (db, source, destination, flags, memo, block_index):
     cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, 'XCP'))
     result = cursor.fetchall()
 
-    if len(result) == 0:
-        problems.append('insufficient XCP balance for sweep. Need %s XCP for antispam fee' % ANTISPAM_FEE_DECIMAL)
-    elif result[0]['quantity'] < ANTISPAM_FEE:
-        problems.append('insufficient XCP balance for sweep. Need %s XCP for antispam fee' % ANTISPAM_FEE_DECIMAL)
+    antispamfee = util.get_value_by_block_index("sweep_antispam_fee", block_index)*config.UNIT
+    total_fee = ANTISPAM_FEE
+
+    if antispamfee > 0:
+        cursor.execute('''SELECT count(*) cnt FROM balances WHERE address = ?''', (source, ))
+        balances_count = cursor.fetchall()[0]['cnt']
+
+        cursor.execute('''SELECT COUNT(DISTINCT(asset)) cnt FROM issuances WHERE issuer = ?''', (source, ))
+        issuances_count = cursor.fetchall()[0]['cnt']
+
+        total_fee = int(balances_count * antispamfee * 2 + issuances_count * antispamfee * 4)
+        
+        if result[0]['quantity'] < total_fee:
+            problems.append('insufficient XCP balance for sweep. Need %s XCP for antispam fee' % total_fee)
+    else:
+        if len(result) == 0:
+            problems.append('insufficient XCP balance for sweep. Need %s XCP for antispam fee' % ANTISPAM_FEE_DECIMAL)
+        elif result[0]['quantity'] < ANTISPAM_FEE:
+            problems.append('insufficient XCP balance for sweep. Need %s XCP for antispam fee' % ANTISPAM_FEE_DECIMAL)
 
     cursor.close()
 
@@ -76,7 +91,7 @@ def validate (db, source, destination, flags, memo, block_index):
     if memo and len(memo) > MAX_MEMO_LENGTH:
         problems.append('memo too long')
 
-    return problems
+    return problems, total_fee
 
 def compose (db, source, destination, flags, memo):
     if memo is None:
@@ -88,7 +103,7 @@ def compose (db, source, destination, flags, memo):
         memo = struct.pack(">{}s".format(len(memo)), memo)
 
     block_index = util.CURRENT_BLOCK_INDEX
-    problems = validate(db, source, destination, flags, memo, block_index)
+    problems, total_fee = validate(db, source, destination, flags, memo, block_index)
     if problems: raise exceptions.ComposeError(problems)
 
     short_address_bytes = address.pack(destination)
@@ -149,12 +164,17 @@ def parse (db, tx, message):
         status = 'invalid: could not unpack, ' + str(err)
 
     if status == 'valid':
-        problems = validate(db, tx['source'], destination, flags, memo_bytes, tx['block_index'])
+        problems, total_fee = validate(db, tx['source'], destination, flags, memo_bytes, tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':
         try:
-            util.debit(db, tx['source'], 'XCP', fee_paid, action='sweep fee', event=tx['tx_hash'])
+            antispamfee = util.get_value_by_block_index("sweep_antispam_fee", tx['block_index'])*config.UNIT
+            
+            if antispamfee > 0:
+                util.debit(db, tx['source'], 'XCP', total_fee, action='sweep fee', event=tx['tx_hash'])
+            else:
+                util.debit(db, tx['source'], 'XCP', fee_paid, action='sweep fee', event=tx['tx_hash'])
         except BalanceError:
             destination, flags, memo_bytes = None, None, None
             status = 'invalid: insufficient balance for antispam fee for sweep'
@@ -169,10 +189,16 @@ def parse (db, tx, message):
 
         if flags & FLAG_OWNERSHIP:
             sweep_pos = 0
-            for balance in balances:
+            
+            assets_issued = balances
+            if util.enabled("zero_balance_ownership_sweep_fix", tx["block_index"]):
+                cursor.execute('''SELECT DISTINCT(asset) FROM issuances WHERE issuer = ?''', (tx['source'],))
+                assets_issued = cursor.fetchall()
+                
+            for next_asset_issued in assets_issued:
                 cursor.execute('''SELECT * FROM issuances \
                                   WHERE (status = ? AND asset = ?)
-                                  ORDER BY tx_index ASC''', ('valid', balance['asset']))
+                                  ORDER BY tx_index ASC''', ('valid', next_asset_issued['asset']))
                 issuances = cursor.fetchall()
                 if len(issuances) > 0:
                     last_issuance = issuances[-1]
@@ -182,7 +208,7 @@ def parse (db, tx, message):
                             'tx_hash': tx['tx_hash'],
                             'msg_index': sweep_pos,
                             'block_index': tx['block_index'],
-                            'asset': balance['asset'],
+                            'asset': next_asset_issued['asset'],
                             'quantity': 0,
                             'divisible': last_issuance['divisible'],
                             'source': last_issuance['source'],
@@ -196,8 +222,9 @@ def parse (db, tx, message):
                             'locked': last_issuance['locked'],
                             'status': status,
                             'asset_longname': last_issuance['asset_longname'],
+                            'reset': False
                         }
-                        sql='insert into issuances values(:tx_index, :tx_hash, :msg_index, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname)'
+                        sql='insert into issuances values(:tx_index, :tx_hash, :msg_index, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :reset)'
                         cursor.execute(sql, bindings)
                         sweep_pos += 1
 
@@ -210,7 +237,7 @@ def parse (db, tx, message):
             'flags': flags,
             'status': status,
             'memo': memo_bytes,
-            'fee_paid': fee_paid
+            'fee_paid': total_fee if antispamfee > 0 else fee_paid
         }
         sql = 'insert into sweeps values(:tx_index, :tx_hash, :block_index, :source, :destination, :flags, :status, :memo, :fee_paid)'
         cursor.execute(sql, bindings)

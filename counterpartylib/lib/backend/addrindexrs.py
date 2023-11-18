@@ -13,11 +13,13 @@ import collections
 import binascii
 import hashlib
 import signal
+import bitcoin.wallet
+from pkg_resources import parse_version
 
 from counterpartylib.lib import config, util, address
 
-READ_BUF_SIZE = 4096
-SOCKET_TIMEOUT = 45.0
+READ_BUF_SIZE = 65536
+SOCKET_TIMEOUT = 5.0
 BACKEND_PING_TIME = 30.0
 
 raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)  # used in getrawtransaction_batch()
@@ -277,11 +279,19 @@ class AddrIndexRsThread (threading.Thread):
         self.send({"kill": True})
 
     def connect(self):
-        logging.debug('AddrIndexRs connecting')
         self.lastId = 0
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((self.host, self.port))
-        self.sock.settimeout(SOCKET_TIMEOUT)
+        while True:
+            logging.info('AddrIndexRs connecting...')
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.settimeout(SOCKET_TIMEOUT)
+            try:
+                self.sock.connect((self.host, self.port))
+            except:
+                logging.info('Error connecting to AddrIndexRs! Retrying in a few seconds')
+                time.sleep(5.0)
+            else:
+                logging.info('Connected to AddrIndexRs!')
+                break
 
     def run(self):
         self.locker = threading.Condition()
@@ -291,7 +301,7 @@ class AddrIndexRsThread (threading.Thread):
             if not(self.is_killed) and self.message_to_send != None:
                 msg = self.message_to_send
                 self.message_to_send = None
-                retry_count = 5
+                retry_count = 15
                 while retry_count > 0:
                     has_sent = False
                     while not(has_sent) and msg:
@@ -300,24 +310,39 @@ class AddrIndexRsThread (threading.Thread):
                             self.sock.send(msg)
                             has_sent = True
                         except Exception as e:
-                            try:
-                                logging.debug('AddrIndexRs error:' + e)
-                                self.connect()
-                            except Exception as e2:
-                                logging.debug('AddrIndexRs fatal error:' + e2)
+                            #try:
+                            logging.debug('AddrIndexRs error:' + e)
+                            self.connect()
+                            #except Exception as e2:
+                            #logging.debug('AddrIndexRs fatal error:' + e2)
 
                     self.message_to_send = None
-                    try:
-                        data = self.sock.recv(READ_BUF_SIZE)
-                        self.message_result = json.loads(data.decode('utf-8'))
-                        retry_count = 0
-                    except Exception as e:
-                        logging.warning("Got an exception parsing addrindexrs data")
-                        logging.warning(e)
-                        self.message_result = None
-                        retry_count -= 1
-                    finally:
-                        self.locker.notify()
+                    data = b""
+                    parsed = False
+                    while not(parsed):
+                        try:
+                            data = data + self.sock.recv(READ_BUF_SIZE)
+                            self.message_result = json.loads(data.decode('utf-8'))
+                            retry_count = 0
+                            parsed = True
+                            logging.debug('AddrIndexRs Recv complete!')
+                        except socket.timeout:
+                            logging.debug('AddrIndexRs Recv timeout error sending: '+str(msg))
+                            if retry_count <= 0:
+                                self.connect()
+                            self.message_result = None
+                            retry_count -= -1
+                        except socket.error as e:
+                            logging.debug('AddrIndexRs Recv error:' + str(e)+' with msg '+str(msg))
+                            self.connect()
+                        except Exception as e:
+                            logging.debug('AddrIndexRs Recv error:' + str(e)+' with msg '+str(msg))
+                            if retry_count <= 0:
+                                raise e
+                            self.message_result = None
+                            retry_count -= 1
+                        finally:
+                            self.locker.notify()
             else:
                 self.locker.notify()
         self.sock.close()
@@ -339,25 +364,38 @@ _backend = None
 
 def ensure_addrindexrs_connected():
     global _backend
-    if _backend == None:
-        _backend = AddrIndexRsThread(config.INDEXD_CONNECT, config.INDEXD_PORT)
-        _backend.daemon = True
-        _backend.start()
+    backoff = 500
+    max_backoff = 5000
+    while _backend == None:
+        try:
+            _backend = AddrIndexRsThread(config.INDEXD_CONNECT, config.INDEXD_PORT)
+            _backend.daemon = True
+            _backend.start()
 
-        _backend.send({
-            "method": "server.version",
-            "params": []
-        })
+            addrindexrs_version = _backend.send({
+                "method": "server.version",
+                "params": []
+            })
+            
+            addrindexrs_version_label = addrindexrs_version["result"][0][12:] #12 is the length of "addrindexrs "
+            addrindexrs_version_needed = util.get_value_by_block_index("addrindexrs_required_version")
+               
+            if parse_version(addrindexrs_version_needed) > parse_version(addrindexrs_version_label):
+                logger.info("Wrong addrindexrs version: "+addrindexrs_version_needed+" is needed but "+addrindexrs_version_label+" was found")
+                _backend.stop()
+                sys.exit(config.EXITCODE_UPDATE_REQUIRED)
+            
+        except Exception as e:
+            logger.debug(e)
+            time.sleep(backoff)
+            backoff = min(backoff * 1.5, max_backoff)
 
 def _script_pubkey_to_hash(spk):
     return hashlib.sha256(spk).digest()[::-1].hex()
 
 def _address_to_hash(addr):
-    pk = address.address_scriptpubkey(addr)
-    #if pk[0:3] ==  b'\x76\xa9\x14':
-    #    pk = b''.join([pk[0:3], pk[4:-6], pk[-2:]])
-
-    return _script_pubkey_to_hash(pk)
+    script_pubkey = bitcoin.wallet.CBitcoinAddress(addr).to_scriptPubKey()
+    return _script_pubkey_to_hash(script_pubkey)
 
 # Returns an array of UTXOS from an address in the following format
 # {
@@ -374,17 +412,21 @@ def unpack_outpoint(outpoint):
     return (txid, int(vout))
 
 def unpack_vout(outpoint, tx, block_count):
-    print(tx)
+    if tx is None:
+        return None
+
     vout = tx["vout"][outpoint[1]]
     height = -1
     if "confirmations" in tx and tx["confirmations"] > 0:
         height = block_count - tx["confirmations"] + 1
+    else:
+        tx["confirmations"] = 0
 
     return {
         "txId": tx["txid"],
         "vout": outpoint[1],
         "height": height,
-        "value": int(vout["value"] * config.UNIT),
+        "value": int(round(vout["value"] * config.UNIT)),
         "confirmations": tx["confirmations"]
     }
 
@@ -395,14 +437,20 @@ def get_unspent_txouts(source):
     result = _backend.send({
         "method": "blockchain.scripthash.get_utxos",
         "params": [_address_to_hash(source)]
-    })["result"]
-    result = [unpack_outpoint(x) for x in result]
-    # each item on the result array is like
-    # {"tx_hash": hex_encoded_hash}
-    batch = getrawtransaction_batch([x[0] for x in result], verbose=True, skip_missing=True)
-    batch = [unpack_vout(outpoint, batch[outpoint[0]], block_count) for outpoint in result]
+    })
 
-    return batch
+    if not(result is None) and "result" in result:
+        result = result["result"]
+        result = [unpack_outpoint(x) for x in result]
+        # each item on the result array is like
+        # {"tx_hash": hex_encoded_hash}
+        batch = getrawtransaction_batch([x[0] for x in result], verbose=True, skip_missing=True)
+        batch = [unpack_vout(outpoint, batch[outpoint[0]], block_count) for outpoint in result if outpoint[0] in batch]
+        batch = [x for x in batch if x is not None]
+
+        return batch
+    else:
+        return []
 
 # Returns transactions in the following format
 # {
@@ -447,7 +495,7 @@ def get_unspent_txouts(source):
 #  ]
 #
 # }
-def search_raw_transactions(address, unconfirmed=True):
+def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
     ensure_addrindexrs_connected()
 
     hsh = _address_to_hash(address)
@@ -456,12 +504,30 @@ def search_raw_transactions(address, unconfirmed=True):
         "params": [hsh]
     })["result"]
 
-    batch = getrawtransaction_batch([x["tx_hash"] for x in txs], verbose=True)
+    if only_tx_hashes:
+        return txs
+    else:   
+        batch = getrawtransaction_batch([x["tx_hash"] for x in txs], verbose=True)
 
-    if not(unconfirmed):
-        batch = [x for x in batch if x.height >= 0]
+        if not(unconfirmed):
+            batch = [x for x in batch if x.height >= 0]
 
-    return batch
+        return batch
+
+def get_oldest_tx(address):
+    ensure_addrindexrs_connected()
+
+    hsh = _address_to_hash(address)
+    call_result = _backend.send({
+        "method": "blockchain.scripthash.get_oldest_tx",
+        "params": [hsh]
+    })
+    
+    if not ("error" in call_result):
+        txs = call_result["result"]
+        return txs
+        
+    return {}
 
 # Returns the number of blocks the backend is behind the node
 def getindexblocksbehind():

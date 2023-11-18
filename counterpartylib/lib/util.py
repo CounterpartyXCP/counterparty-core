@@ -500,10 +500,33 @@ def is_divisible(db, asset):
     else:
         cursor = db.cursor()
         cursor.execute('''SELECT * FROM issuances \
-                          WHERE (status = ? AND asset = ?)''', ('valid', asset))
+                          WHERE (status = ? AND asset = ?) ORDER BY tx_index DESC''', ('valid', asset))
         issuances = cursor.fetchall()
         if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
         return issuances[0]['divisible']
+
+def get_asset_issuer(db, asset):
+    """Check if the asset is divisible."""
+    if asset in (config.BTC, config.XCP):
+        return True
+    else:
+        cursor = db.cursor()
+        cursor.execute('''SELECT * FROM issuances \
+                          WHERE (status = ? AND asset = ?) ORDER BY tx_index DESC''', ('valid', asset))
+        issuances = cursor.fetchall()
+        if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
+        return issuances[0]['issuer']
+
+def get_asset_description(db, asset):
+    if asset in (config.BTC, config.XCP):
+        return ''
+    else:
+        cursor = db.cursor()
+        cursor.execute('''SELECT * FROM issuances \
+                          WHERE (status = ? AND asset = ?) ORDER BY tx_index DESC''', ('valid', asset))
+        issuances = cursor.fetchall()
+        if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
+        return issuances[0]['description']
 
 def value_input(quantity, asset, divisible):
     if asset == 'leverage':
@@ -614,11 +637,14 @@ def holders(db, asset, exclude_empty_holders=False):
             holders.append({'address': rps_match['tx0_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
             holders.append({'address': rps_match['tx1_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
 
-    # Funds escrowed in dispensers.
-    cursor.execute('''SELECT * FROM dispensers \
-                      WHERE asset = ? AND status = ?''', (asset, 0))
-    for dispenser in list(cursor):
-        holders.append({'address': dispenser['source'], 'address_quantity': dispenser['give_remaining'], 'escrow': None})
+    if enabled('dispensers_in_holders'):
+        # Funds escrowed in dispensers.
+        cursor.execute('''SELECT * FROM dispensers \
+                          WHERE asset = ? AND status = ?''', (asset, 0))
+
+
+        for dispenser in list(cursor):
+            holders.append({'address': dispenser['source'], 'address_quantity': dispenser['give_remaining'], 'escrow': None})
 
     cursor.close()
     return holders
@@ -688,13 +714,27 @@ def destructions (db):
     cursor.close()
     return destructions
 
+def asset_issued_total (db, asset):
+    """Return asset total issued."""
+    cursor = db.cursor()
+    cursor.execute('''SELECT SUM(quantity) AS total FROM issuances \
+                      WHERE (status = ? AND asset = ?)''', ('valid', asset))
+    issued_total = list(cursor)[0]['total'] or 0
+    cursor.close()
+    return issued_total
+
+def asset_destroyed_total (db, asset):
+    """Return asset total destroyed."""
+    cursor = db.cursor()
+    cursor.execute('''SELECT SUM(quantity) AS total FROM destructions \
+                      WHERE (status = ? AND asset = ?)''', ('valid', asset))
+    destroyed_total = list(cursor)[0]['total'] or 0
+    cursor.close()
+    return destroyed_total
+
 def asset_supply (db, asset):
     """Return asset supply."""
-    supply = creations(db)[asset]
-    destroyed = destructions(db)
-    if asset in destroyed:
-        supply -= destroyed[asset]
-    return supply
+    return asset_issued_total(db, asset) - asset_destroyed_total(db, asset)
 
 def supplies (db):
     """Return supplies."""
@@ -714,7 +754,7 @@ def held (db): #TODO: Rename ?
         "SELECT 'XCP' AS asset, SUM(backward_quantity) AS total FROM bet_matches WHERE status = 'pending'",
         "SELECT 'XCP' AS asset, SUM(wager) AS total FROM rps WHERE status = 'open'",
         "SELECT 'XCP' AS asset, SUM(wager * 2) AS total FROM rps_matches WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')",
-        "SELECT asset, SUM(give_remaining) AS total FROM dispensers WHERE status=0 GROUP BY asset",
+        "SELECT asset, SUM(give_remaining) AS total FROM dispensers WHERE status IN (0,1,11) GROUP BY asset",
     ]
 
     sql = "SELECT asset, SUM(total) AS total FROM (" + " UNION ALL ".join(queries) + ") GROUP BY asset;"
@@ -793,6 +833,31 @@ def enabled(change_name, block_index=None):
     else:
         return False
 
+def get_value_by_block_index(change_name, block_index=None):
+
+    if not block_index:
+        block_index = CURRENT_BLOCK_INDEX
+    
+    if config.REGTEST:
+        max_block_index_testnet = -1
+        for key, value in PROTOCOL_CHANGES[change_name]["testnet"]:
+            if int(key) > int(max_block_index):
+                max_block_index = key
+            
+        return PROTOCOL_CHANGES[change_name]["testnet"][max_block_index]["value"]
+    
+    if config.TESTNET:
+        index_name = 'testnet'        
+    else:
+        index_name = 'mainnet'
+
+    max_block_index = -1
+    for key in PROTOCOL_CHANGES[change_name][index_name]:
+        if int(key) > int(max_block_index) and block_index >= int(key):
+            max_block_index = key
+            
+    return PROTOCOL_CHANGES[change_name][index_name][max_block_index]["value"]
+
 def transfer(db, source, destination, asset, quantity, action, event):
     """Transfer quantity of asset from source to destination."""
     debit(db, source, asset, quantity, action=action, event=event)
@@ -861,3 +926,29 @@ def clean_url_for_log(url):
     return url
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
+
+# ORACLES
+def satoshirate_to_fiat(satoshirate):
+    return round(satoshirate/100.0,2)
+
+def get_oracle_last_price(db, oracle_address, block_index):
+    cursor = db.cursor()
+    cursor.execute('SELECT * FROM broadcasts WHERE source=:source AND status=:status AND block_index<:block_index ORDER by tx_index DESC LIMIT 1', {
+        'source': oracle_address,
+        'status': 'valid',
+        'block_index': block_index
+    })
+    broadcasts = cursor.fetchall()
+    cursor.close()
+    
+    if len(broadcasts) == 0:
+        return None, None, None, None
+    
+    oracle_broadcast = broadcasts[0]
+    oracle_label = oracle_broadcast["text"].split("-")
+    if len(oracle_label) == 2:
+        fiat_label = oracle_label[1]
+    else:   
+        fiat_label = ""
+    
+    return oracle_broadcast['value'], oracle_broadcast['fee_fraction_int'], fiat_label, oracle_broadcast['block_index']

@@ -132,7 +132,11 @@ def get_tx_list(block):
     tx_hash_list = []
 
     for ctx in block.vtx:
-        tx_hash = bitcoinlib.core.b2lx(ctx.GetHash())
+        if util.enabled('correct_segwit_txids'):
+            hsh = ctx.GetTxid()
+        else:
+            hsh = ctx.GetHash()
+        tx_hash = bitcoinlib.core.b2lx(hsh)
         raw = ctx.serialize()
 
         tx_hash_list.append(tx_hash)
@@ -140,9 +144,9 @@ def get_tx_list(block):
 
     return (tx_hash_list, raw_transactions)
 
-def sort_unspent_txouts(unspent, unconfirmed=False):
+def sort_unspent_txouts(unspent, unconfirmed=False, dust_size=config.DEFAULT_REGULAR_DUST_SIZE):
     # Filter out all dust amounts to avoid bloating the resultant transaction
-    unspent = list(filter(lambda x: x['value'] > config.DEFAULT_MULTISIG_DUST_SIZE, unspent))
+    unspent = list(filter(lambda x: x['value'] > dust_size, unspent))
     # Sort by amount, using the largest UTXOs available
     if config.REGTEST:
         # REGTEST has a lot of coinbase inputs that can't be spent due to maturity
@@ -196,8 +200,11 @@ def get_unspent_txouts(source, unconfirmed=False, unspent_tx_hash=None):
 
     return unspent
 
-def search_raw_transactions(address, unconfirmed=True):
-    return BACKEND().search_raw_transactions(address, unconfirmed)
+def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
+    return BACKEND().search_raw_transactions(address, unconfirmed, only_tx_hashes)
+
+def get_oldest_tx(address):
+    return BACKEND().get_oldest_tx(address)
 
 class UnknownPubKeyError(Exception):
     pass
@@ -210,10 +217,13 @@ def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
         for pubkey in provided_pubkeys:
             if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
                 return pubkey
+            elif pubkeyhash == script.pubkey_to_p2whash(util.unhexlify(pubkey)):
+                return pubkey
 
     # Search blockchain.
     raw_transactions = search_raw_transactions(pubkeyhash, unconfirmed=True)
-    for tx in raw_transactions:
+    for tx_id in raw_transactions:
+        tx = raw_transactions[tx_id]
         for vin in tx['vin']:
             if 'txinwitness' in vin:
                 if len(vin['txinwitness']) >= 2:
@@ -263,7 +273,8 @@ def init_mempool_cache():
     if max_remaining_num_tx:
         for txid in mempool_tx:
             tx = mempool_tx[txid]
-            vin_txhash_list += [vin['txid'] for vin in tx['vin'] if not(tx is None)]
+            if not(tx is None):
+                vin_txhash_list += [vin['txid'] for vin in tx['vin']]
         BACKEND().getrawtransaction_batch(vin_txhash_list[:max_remaining_num_tx], skip_missing=True, verbose=True)
 
     MEMPOOL_CACHE_INITIALIZED = True

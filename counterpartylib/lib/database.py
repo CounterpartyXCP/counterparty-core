@@ -43,7 +43,7 @@ def exectracer(cursor, sql, bindings):
     dictionary = {'command': command, 'category': category, 'bindings': bindings}
 
     skip_tables = [
-        'blocks', 'transactions',
+        'blocks', 'transactions', 'transaction_outputs',
         'balances', 'messages', 'mempool', 'assets',
         'new_sends', 'new_issuances' # interim table for CIP10 activation
     ]
@@ -54,7 +54,8 @@ def exectracer(cursor, sql, bindings):
 
     # Record alteration in database.
     if category not in skip_tables:
-        log.message(db, bindings['block_index'], command, category, bindings)
+        if bindings is not None:
+            log.message(db, bindings['block_index'], command, category, bindings)
     # Record alteration in computation of message feed hash for the block
     if category not in skip_tables_block_messages:
         # don't include asset_longname as part of the messages hash
@@ -86,7 +87,7 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
 
     # For integrity, security.
     if foreign_keys and not read_only:
-        # logger.debug('Checking database foreign keys.')
+        logger.info('Checking database foreign keys...')
         cursor.execute('''PRAGMA foreign_keys = ON''')
         cursor.execute('''PRAGMA defer_foreign_keys = ON''')
         rows = list(cursor.execute('''PRAGMA foreign_key_check'''))
@@ -97,14 +98,14 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
 
         # So that writers don’t block readers.
         cursor.execute('''PRAGMA journal_mode = WAL''')
-        # logger.debug('Foreign key check completed.')
+        logger.info('Foreign key check completed.')
 
     # Make case sensitive the `LIKE` operator.
     # For insensitive queries use 'UPPER(fieldname) LIKE value.upper()''
     cursor.execute('''PRAGMA case_sensitive_like = ON''')
 
     if integrity_check:
-        logger.debug('Checking database integrity.')
+        logger.info('Checking database integrity...')
         integral = False
         for i in range(10): # DUPE
             try:
@@ -119,7 +120,7 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
                 continue
         if not integral:
             raise exceptions.DatabaseError('Could not perform integrity check.')
-        # logger.debug('Integrity check completed.')
+        logger.info('Integrity check completed.')
 
     db.setrowtrace(rowtracer)
     db.setexectrace(exectracer)

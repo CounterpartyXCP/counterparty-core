@@ -10,13 +10,17 @@ fi
 
 # Bootstrap if the database does not exist (do this here to handle cases
 # where a volume is mounted over the share dir, like the fednode docker compose config does...)
-if [ ! -f /root/.local/share/counterparty/counterparty.db ]; then
-    echo "Downloading mainnet bootstrap DB..."
-    counterparty-server bootstrap --quiet
-fi
-if [ ! -f /root/.local/share/counterparty/counterparty.testnet.db ]; then
-    echo "Downloading testnet bootstrap DB..."
-    counterparty-server --testnet bootstrap --quiet
+if ([ -z "$2" ] || [ $2 != "true" ]); then
+    if [ ! -f /root/.local/share/counterparty/counterparty.db ] && [ $1 = "mainnet" ]; then
+        echo "Downloading mainnet bootstrap DB..."
+        counterparty-server bootstrap --quiet
+        PARAMS="${PARAMS} --checkdb"
+    fi
+    if [ ! -f /root/.local/share/counterparty/counterparty.testnet.db ] && [ $1 = "testnet" ]; then
+        echo "Downloading testnet bootstrap DB..."
+        counterparty-server --testnet bootstrap --quiet
+        PARAMS="${PARAMS} --checkdb"
+    fi
 fi
 
 # Kick off the server, defaulting to the "start" subcommand

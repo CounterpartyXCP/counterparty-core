@@ -8,7 +8,7 @@ UNIT = 100000000        # The same across assets.
 
 # Versions
 VERSION_MAJOR = 9
-VERSION_MINOR = 59
+VERSION_MINOR = 61
 VERSION_REVISION = 0
 VERSION_STRING = str(VERSION_MAJOR) + '.' + str(VERSION_MINOR) + '.' + str(VERSION_REVISION)
 
@@ -98,10 +98,8 @@ BURN_END_REGTEST_TESTCOIN = 150
 
 # Protocol defaults
 # NOTE: If the DUST_SIZE constants are changed, they MUST also be changed in counterblockd/lib/config.py as well
-    # TODO: This should be updated, given their new configurability.
-# TODO: The dust values should be lowered by 90%, once transactions with smaller outputs start confirming faster: <https://github.com/mastercoin-MSC/spec/issues/192>
-DEFAULT_REGULAR_DUST_SIZE = 5430         # TODO: This is just a guess. I got it down to 5530 satoshis.
-DEFAULT_MULTISIG_DUST_SIZE = 7800        # <https://bitcointalk.org/index.php?topic=528023.msg7469941#msg7469941>
+DEFAULT_REGULAR_DUST_SIZE = 546          # TODO: Revisit when dust size is adjusted in bitcoin core
+DEFAULT_MULTISIG_DUST_SIZE = 1000        # OMFG: We been overpaying by 10x for years (7800!=780) <https://bitcointalk.org/index.php?topic=528023.msg7469941#msg7469941>
 DEFAULT_OP_RETURN_VALUE = 0
 DEFAULT_FEE_PER_KB_ESTIMATE_SMART = 1024
 DEFAULT_FEE_PER_KB = 25000               # sane/low default, also used as minimum when estimated fee is used
@@ -136,6 +134,7 @@ ADDRESS_OPTION_MAX_VALUE = ADDRESS_OPTION_REQUIRE_MEMO # Or list of all the addr
 OLD_STYLE_API = True
 
 API_LIMIT_ROWS = 1000
-MEMPOOL_TXCOUNT_UPDATE_LIMIT=60000
+
+MPMA_LIMIT = 1000
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

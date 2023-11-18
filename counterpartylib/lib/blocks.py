@@ -50,7 +50,8 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'cancels', 'dividends', 'issuances', 'sends',
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
          'rps_matches', 'rps',
-         'destructions', 'assets', 'addresses', 'sweeps', 'dispensers']
+         'destructions', 'assets', 'addresses', 'sweeps', 'dispensers', 'dispenses',
+         'transaction_outputs','dispenser_refills']
 # Compose list of tables tracked by undolog
 UNDOLOG_TABLES = copy.copy(TABLES)
 UNDOLOG_TABLES.remove('messages')
@@ -104,9 +105,9 @@ def parse_tx(db, tx):
                 order.parse(db, tx, message)
             elif message_type_id == btcpay.ID:
                 btcpay.parse(db, tx, message)
-            elif message_type_id == issuance.ID:
+            elif message_type_id == issuance.ID or (util.enabled("issuance_backwards_compatibility", block_index=tx['block_index']) and message_type_id == issuance.LR_ISSUANCE_ID):
                 issuance.parse(db, tx, message, message_type_id)
-            elif message_type_id == issuance.SUBASSET_ID and util.enabled('subassets', block_index=tx['block_index']):
+            elif (message_type_id == issuance.SUBASSET_ID and util.enabled('subassets', block_index=tx['block_index'])) or (util.enabled("issuance_backwards_compatibility", block_index=tx['block_index']) and message_type_id == issuance.LR_SUBASSET_ID):
                 issuance.parse(db, tx, message, message_type_id)
             elif message_type_id == broadcast.ID:
                 broadcast.parse(db, tx, message)
@@ -189,6 +190,9 @@ def parse_block(db, block_index, block_time,
     order.expire(db, block_index)
     bet.expire(db, block_index, block_time)
     rps.expire(db, block_index)
+
+    # Close dispensers
+    dispenser.close_pending(db, block_index)
 
     # Parse transactions, sorting them by type.
     cursor = db.cursor()
@@ -424,6 +428,19 @@ def initialise(db):
                         block_index INTEGER PRIMARY KEY,
                         first_undo_index INTEGER)
                    ''')
+                   
+    cursor.execute('''CREATE TABLE IF NOT EXISTS transaction_outputs(
+                        tx_index,
+                        tx_hash TEXT, 
+                        block_index INTEGER,
+                        out_index INTEGER,
+                        destination TEXT,
+                        btc_amount INTEGER,
+                        PRIMARY KEY (tx_hash, out_index),
+                        FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
+                   ''')
+                   
+                   
     # Create undolog triggers for all tables in TABLES list, plus the 'balances' table
     for table in UNDOLOG_TABLES:
         columns = [column['name'] for column in cursor.execute('''PRAGMA table_info({})'''.format(table))]
@@ -460,7 +477,7 @@ def initialise(db):
 
     cursor.close()
 
-def get_tx_info(tx_hex, block_parser=None, block_index=None):
+def get_tx_info(tx_hex, block_parser=None, block_index=None, db=None):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
     try:
         return _get_tx_info(tx_hex, block_parser, block_index)
@@ -470,77 +487,123 @@ def get_tx_info(tx_hex, block_parser=None, block_index=None):
         # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
         if util.enabled('dispensers', block_index):
             try:
-                return b'', None, None, None, None, _get_swap_tx(e.decodedTx, block_parser, block_index)
+                return b'', None, None, None, None, _get_swap_tx(e.decodedTx, block_parser, block_index, db=db)
             except: # (DecodeError, backend.indexd.BackendRPCError) as e:
                 return b'', None, None, None, None, None
         else:
             return b'', None, None, None, None, None
 
-def _get_swap_tx(decoded_tx, block_parser=None, block_index=None):
+def _get_swap_tx(decoded_tx, block_parser=None, block_index=None, db=None):
     def get_pubkeyhash(scriptpubkey):
         asm = script.get_asm(scriptpubkey)
-        if len(asm) != 5 or asm[0] != 'OP_DUP' or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':
-            return False
-        return asm[2]
+        
+        if len(asm) > 0:
+            if asm[0] == "OP_DUP":
+                if len(asm) != 5 or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':            
+                    return False
+                else:
+                    return {"pubkeyhash":asm[2],"address_version":config.ADDRESSVERSION}
+            elif (asm[0] == "OP_HASH160") and util.enabled('p2sh_dispensers_support'):
+                if len(asm) != 3 or asm[-1] != 'OP_EQUAL':          
+                    return False
+                else:
+                    return {"pubkeyhash":asm[1],"address_version":config.P2SH_ADDRESSVERSION}
+                
+        return False
 
     def get_address(scriptpubkey):
-        pubkeyhash = get_pubkeyhash(scriptpubkey)
-        if not pubkeyhash:
-            return False
-        pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
-        address = script.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
-        # Test decoding of address.
-        if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != script.base58_check_decode(address, config.ADDRESSVERSION):
-            return False
+        if util.enabled('correct_segwit_txids') and scriptpubkey.is_witness_v0_keyhash():
+            pubkey = scriptpubkey[2:]
+            address = str(bitcoinlib.bech32.CBech32Data.from_bytes(0, pubkey))
+            return address
+        else:
+            pubkeyhashdict = get_pubkeyhash(scriptpubkey)
+            if not pubkeyhashdict:
+                return False
+            pubkeyhash = pubkeyhashdict["pubkeyhash"]
+            address_version = pubkeyhashdict["address_version"]
+            
+            pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
+            address = script.base58_check_encode(pubkeyhash, address_version)
+            # Test decoding of address.
+            if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != script.base58_check_decode(address, address_version):
+                return False
 
-        return address
+            return address
 
     outputs = []
+    check_sources = db == None # If we didn't get passed a database cursor, assume we have to check for dispenser
     for vout in decoded_tx.vout:
         address = get_address(vout.scriptPubKey)
+        destination = None
+        btc_amount = None
         if address:
             destination = address
             btc_amount = vout.nValue
+        elif util.enabled('hotfix_dispensers_with_non_p2pkh'):
+            asm = script.get_asm(vout.scriptPubKey)
+            if asm[-1] == 'OP_CHECKSIG':
+                destination, new_data = decode_checksig(asm, decoded_tx)
+            elif asm[-1] == 'OP_CHECKMULTISIG':
+                destination, new_data = decode_checkmultisig(asm, decoded_tx)
+            elif asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
+                destination, new_data = decode_scripthash(asm)
+            elif asm[0] == 'OP_RETURN':
+                pass #Just ignore.
+            elif util.enabled('segwit_support') and asm[0] == 0:
+                # Segwit output
+                destination, new_data = decode_p2w(vout.scriptPubKey)
+            else:
+                logger.error('unrecognised scriptPubkey. Just ignore this: ' + str(asm))
+
+            if destination and not new_data:
+                amount = vout.nValue
+            else:
+                logger.error('cannot parse destination address or new_data found: ' + str(asm))
+
+        if db != None and dispenser.is_dispensable(db, destination, btc_amount):
+            check_sources = True
             outputs.append((destination, btc_amount))
 
     # Collect all (unique) source addresses.
     #   if we haven't found them yet
     sources = []
-    for vin in decoded_tx.vin[:]:                   # Loop through inputs.
-        # Get the full transaction data for this input transaction.
-        if block_parser:
-            vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
-            vin_ctx = backend.deserialize(vin_tx['__data__'])
-        else:
-            vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash))
-            vin_ctx = backend.deserialize(vin_tx)
-        vout = vin_ctx.vout[vin.prevout.n]
+    if check_sources:
+        for vin in decoded_tx.vin[:]:                   # Loop through inputs.
+            if block_parser:
+                vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
+                vin_ctx = backend.deserialize(vin_tx['__data__'])
+            else:
+                vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash)) # TODO: Biggest penalty on parsing is here
+                vin_ctx = backend.deserialize(vin_tx)
+            vout = vin_ctx.vout[vin.prevout.n]
 
-        asm = script.get_asm(vout.scriptPubKey)
-        if asm[-1] == 'OP_CHECKSIG':
-            new_source, new_data = decode_checksig(asm, decoded_tx)
-            if new_data or not new_source:
-                raise DecodeError('data in source')
-        elif asm[-1] == 'OP_CHECKMULTISIG':
-            new_source, new_data = decode_checkmultisig(asm, decoded_tx)
-            if new_data or not new_source:
-                raise DecodeError('data in source')
-        elif asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
-            new_source, new_data = decode_scripthash(asm)
-            if new_data or not new_source:
-                raise DecodeError('data in source')
-        elif util.enabled('segwit_support') and asm[0] == 0:
-            # Segwit output
-            new_source, new_data = decode_p2w(vout.scriptPubKey)
-        else:
-            raise DecodeError('unrecognised source type')
+            asm = script.get_asm(vout.scriptPubKey)
+            if asm[-1] == 'OP_CHECKSIG':
+                new_source, new_data = decode_checksig(asm, decoded_tx)
+                if new_data or not new_source:
+                    raise DecodeError('data in source')
+            elif asm[-1] == 'OP_CHECKMULTISIG':
+                new_source, new_data = decode_checkmultisig(asm, decoded_tx)
+                if new_data or not new_source:
+                    raise DecodeError('data in source')
+            elif asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
+                new_source, new_data = decode_scripthash(asm)
+                if new_data or not new_source:
+                    raise DecodeError('data in source')
+            elif util.enabled('segwit_support') and asm[0] == 0:
+                # Segwit output
+                # Get the full transaction data for this input transaction.
+                new_source, new_data = decode_p2w(vout.scriptPubKey)
+            else:
+                raise DecodeError('unrecognised source type')
 
-        # old; append to sources, results in invalid addresses
-        # new; first found source is source, the rest can be anything (to fund the TX for example)
-        if not (util.enabled('first_input_is_source') and len(sources)):
-            # Collect unique sources.
-            if new_source not in sources:
-                sources.append(new_source)
+            # old; append to sources, results in invalid addresses
+            # new; first found source is source, the rest can be anything (to fund the TX for example)
+            if not (util.enabled('first_input_is_source') and len(sources)):
+                # Collect unique sources.
+                if new_source not in sources:
+                    sources.append(new_source)
 
     return (sources, outputs)
 
@@ -733,9 +796,11 @@ def decode_checkmultisig(asm, ctx):
     return destination, data
 
 def decode_p2w(script_pubkey):
-    bech32 = bitcoinlib.bech32.CBech32Data.from_bytes(0, script_pubkey[2:22])
-
-    return str(bech32), None
+    try:
+        bech32 = bitcoinlib.bech32.CBech32Data.from_bytes(0, script_pubkey[2:22])
+        return str(bech32), None
+    except TypeError as e:
+        raise DecodeError('bech32 decoding error')
 
 def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=False):
     """Get multisig transaction info.
@@ -751,6 +816,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
 
     # Get destinations and data outputs.
     destinations, btc_amount, fee, data = [], 0, 0, b''
+
     for vout in ctx.vout:
         # Fee is the input values minus output values.
         output_value = vout.nValue
@@ -776,8 +842,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
         elif util.enabled('segwit_support') and asm[0] == 0:
             # Segwit Vout, second param is redeemScript
             #redeemScript = asm[1]
-            #new_destination, new_data = None, None
-            continue
+            new_destination, new_data = decode_p2w(vout.scriptPubKey)
         else:
             raise DecodeError('unrecognised output type')
         assert not (new_destination and new_data)
@@ -806,13 +871,20 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
     if util.enabled('p2sh_encoding') and data == b'P2SH':
         data = b''
         for vin in ctx.vin:
+            if util.enabled("prevout_segwit_fix"):
+                vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash))
+                vin_ctx = backend.deserialize(vin_tx)
+                prevout_is_segwit = vin_ctx.has_witness()
+            else:
+                prevout_is_segwit = p2sh_is_segwit
+                
             # Ignore transactions with invalid script.
             try:
                 asm = script.get_asm(vin.scriptSig)
             except CScriptInvalidError as e:
                 raise DecodeError(e)
 
-            new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm, p2sh_is_segwit=p2sh_is_segwit)
+            new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm, p2sh_is_segwit=prevout_is_segwit)
             # this could be a p2sh source address with no encoded data
             if new_data is None:
               continue;
@@ -1057,19 +1129,30 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
     # Get the important details about each transaction.
     if tx_hex is None:
         tx_hex = backend.getrawtransaction(tx_hash) # TODO: This is the call that is stalling the process the most
-    source, destination, btc_amount, fee, data, decoded_tx = get_tx_info(tx_hex)
 
+    source, destination, btc_amount, fee, data, decoded_tx = get_tx_info(tx_hex, db=db)
+
+    outs = []
+    first_one = True #This is for backward compatibility with unique dispensers
     if not source and decoded_tx and util.enabled('dispensers', block_index):
         outputs = decoded_tx[1]
+        out_index = 0
         for out in outputs:
             if out[0] != decoded_tx[0][0] and dispenser.is_dispensable(db, out[0], out[1]):
+                
                 source = decoded_tx[0][0]
                 destination = out[0]
                 btc_amount = out[1]
                 fee = 0
                 data = struct.pack(config.SHORT_TXTYPE_FORMAT, dispenser.DISPENSE_ID)
                 data += b'\x00'
-                break # Prevent inspection of further dispenses (only first one is valid)
+                
+                if util.enabled("multiple_dispenses"):
+                    outs.append({"destination":out[0], "btc_amount":out[1], "out_index":out_index})
+                else:
+                    break # Prevent inspection of further dispenses (only first one is valid)
+                    
+            out_index = out_index + 1
 
     # For mempool
     if block_hash == None:
@@ -1102,7 +1185,25 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
                              fee,
                              data)
                       )
+        
+        for next_out in outs:
+            cursor.execute('''INSERT INTO transaction_outputs(
+                                tx_index,
+                                tx_hash,
+                                block_index,
+                                out_index,
+                                destination,
+                                btc_amount) VALUES (?,?,?,?,?,?)''',
+                                (tx_index,
+                                 tx_hash,
+                                 block_index,
+                                 next_out["out_index"],
+                                 next_out["destination"],
+                                 next_out["btc_amount"])    
+                          )
+        
         cursor.close()
+        
         return tx_index + 1
     else:
         logger.getChild('list_tx.skip').debug('Skipping transaction: {}'.format(tx_hash))
@@ -1285,13 +1386,12 @@ def follow(db):
     # processing of the new blocks a bit.
     while True:
         start_time = time.time()
-
         # Get block count.
         # If the backend is unreachable and `config.FORCE` is set, just sleep
         # and try again repeatedly.
         try:
             block_count = backend.getblockcount()
-        except (ConnectionRefusedError, http.client.CannotSendRequest, backend.indexd.BackendRPCError) as e:
+        except (ConnectionRefusedError, http.client.CannotSendRequest, backend.addrindexrs.BackendRPCError) as e:
             if config.FORCE:
                 time.sleep(config.BACKEND_POLL_INTERVAL)
                 continue
@@ -1301,50 +1401,52 @@ def follow(db):
         # Get new blocks.
         if block_index <= block_count:
 
-            # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
             current_index = block_index
-            requires_rollback = False
-            while True:
-                if current_index == config.BLOCK_FIRST:
-                    break
+            # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
+            if block_count - block_index < 100: # Undolog only saves last 100 blocks, if there's a reorg deeper than that manual reparse should be done
+                requires_rollback = False
+                while True:
+                    if current_index == config.BLOCK_FIRST:
+                        break
 
-                logger.debug('Checking that block {} is not an orphan.'.format(current_index))
-                # Backend parent hash.
-                current_hash = backend.getblockhash(current_index)
-                current_cblock = backend.getblock(current_hash)
-                backend_parent = bitcoinlib.core.b2lx(current_cblock.hashPrevBlock)
+                    logger.debug('Checking that block {} is not an orphan.'.format(current_index))
+                    # Backend parent hash.
+                    current_hash = backend.getblockhash(current_index)
+                    current_cblock = backend.getblock(current_hash)
+                    backend_parent = bitcoinlib.core.b2lx(current_cblock.hashPrevBlock)
 
-                # DB parent hash.
-                blocks = list(cursor.execute('''SELECT * FROM blocks
-                                                WHERE block_index = ?''', (current_index - 1,)))
-                if len(blocks) != 1:  # For empty DB.
-                    break
-                db_parent = blocks[0]['block_hash']
+                    # DB parent hash.
+                    blocks = list(cursor.execute('''SELECT * FROM blocks
+                                                    WHERE block_index = ?''', (current_index - 1,)))
+                    if len(blocks) != 1:  # For empty DB.
+                        break
+                    db_parent = blocks[0]['block_hash']
 
-                # Compare.
-                assert type(db_parent) == str
-                assert type(backend_parent) == str
-                if db_parent == backend_parent:
-                    break
-                else:
-                    current_index -= 1
-                    requires_rollback = True
+                    # Compare.
+                    assert type(db_parent) == str
+                    assert type(backend_parent) == str
+                    if db_parent == backend_parent:
+                        break
+                    else:
+                        current_index -= 1
+                        requires_rollback = True
 
-            # Rollback for reorganisation.
-            if requires_rollback:
-                # Record reorganisation.
-                logger.warning('Blockchain reorganisation at block {}.'.format(current_index))
-                log.message(db, block_index, 'reorg', None, {'block_index': current_index})
+                # Rollback for reorganisation.
+                if requires_rollback:
+                    # Record reorganisation.
+                    logger.warning('Blockchain reorganisation at block {}.'.format(current_index))
+                    log.message(db, block_index, 'reorg', None, {'block_index': current_index})
 
-                # Rollback the DB.
-                reparse(db, block_index=current_index-1, quiet=True)
-                block_index = current_index
-                tx_index = get_next_tx_index(db)
-                continue
+                    # Rollback the DB.
+                    reparse(db, block_index=current_index-1, quiet=True)
+                    block_index = current_index
+                    tx_index = get_next_tx_index(db)
+                    continue
 
             # Check version. (Don’t add any blocks to the database while
             # running an out‐of‐date client!)
             check.software_version()
+
 
             # Get and parse transactions in this block (atomically).
             block_hash = backend.getblockhash(current_index)
@@ -1414,12 +1516,6 @@ def follow(db):
             xcp_mempool = []
             raw_mempool = backend.getrawmempool()
 
-            # this is a quick fix to make counterparty usable on high mempool situations
-            # however, this makes the mempool unreliable on counterparty, a better, larger
-            # fix must be done by changing this whole function into a zmq driven loop
-            if len(raw_mempool) > config.MEMPOOL_TXCOUNT_UPDATE_LIMIT:
-                continue
-
             # For each transaction in Bitcoin Core mempool, if it’s new, create
             # a fake block, a fake transaction, capture the generated messages,
             # and then save those messages.
@@ -1447,12 +1543,30 @@ def follow(db):
             #  - or was there a block found while batch feting the raw txs
             #  - or was there a double spend for w/e reason accepted into the mempool (replace-by-fee?)
             try:
-                raw_transactions = backend.getrawtransaction_batch(parse_txs)
+                raw_transactions = backend.getrawtransaction_batch(parse_txs, skip_missing=True)
             except Exception as e:
                 logger.warning('Failed to fetch raw for mempool TXs, restarting loop; %s', (e, ))
                 continue  # restart the follow loop
 
+            parsed_txs_count = 0
             for tx_hash in parse_txs:
+                
+                # Get block count everytime we parse some mempool_txs. If there is a new block, we just interrupt this process
+                if parsed_txs_count % 100 == 0:
+                    if len(parse_txs) > 1000:
+                        logger.info("Mempool parsed txs count:{} from {}".format(parsed_txs_count, len(parse_txs)))
+                    
+                    try:
+                        block_count = backend.getblockcount()
+                        
+                        if block_index <= block_count:
+                            logger.info("Mempool parsing interrupted, there are blocks to parse")
+                            break #Interrupt the process if there is a new block to parse
+                    except (ConnectionRefusedError, http.client.CannotSendRequest, backend.addrindexrs.BackendRPCError) as e:
+                        # Keep parsing what we have, anyway if there is a temporary problem with the server,
+                        # normal parse won't work
+                        pass
+            
                 try:
                     with db:
                         # List the fake block.
@@ -1500,6 +1614,14 @@ def follow(db):
                     logger.warn('ParseTransactionError for tx %s: %s' % (tx_hash, e))
                 except MempoolError:
                     pass
+                    
+                parsed_txs_count = parsed_txs_count + 1 
+
+            if parsed_txs_count < len(parse_txs):
+                continue #if parse didn't finish is an interruption
+            else:
+                if len(parse_txs) > 1000:
+                    logger.info("Mempool parsing finished")
 
             # Re‐write mempool messages to database.
             with db:

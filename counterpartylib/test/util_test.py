@@ -483,7 +483,7 @@ def run_scenario(scenario):
             with MockProtocolChangesContext(**(mock_protocol_changes or {})):
                 module = sys.modules['counterpartylib.lib.messages.{}'.format(tx[0])]
                 compose = getattr(module, 'compose')
-                unsigned_tx_hex = transaction.construct(db, compose(db, *tx[1]), **tx[2])
+                unsigned_tx_hex = transaction.construct(db=db, tx_info=compose(db, *tx[1]), regular_dust_size=5430, **tx[2])
                 raw_transactions.append({tx[0]: unsigned_tx_hex})
                 insert_raw_transaction(unsigned_tx_hex, db)
         else:
@@ -581,8 +581,9 @@ def vector_to_args(vector, functions=[]):
                 records = params.get('records', None)
                 comment = params.get('comment', None)
                 mock_protocol_changes = params.get('mock_protocol_changes', None)
+                config_context = params.get('config_context', {})
                 if functions == [] or (tx_name + '.' + method) in functions:
-                    args.append((tx_name, method, params['in'], outputs, error, records, comment, mock_protocol_changes))
+                    args.append((tx_name, method, params['in'], outputs, error, records, comment, mock_protocol_changes, config_context))
     return args
 
 def exec_tested_method(tx_name, method, tested_method, inputs, server_db):

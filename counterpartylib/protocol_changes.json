@@ -192,22 +192,22 @@
       "minimum_version_major": 9,
       "minimum_version_minor": 57,
       "minimum_version_revision": 0,
-      "block_index": 1000000,
-      "testnet_block_index": 2000000
+      "block_index": 585538,
+      "testnet_block_index": 1569194
   },
   "sweep_send": {
       "minimum_version_major": 9,
       "minimum_version_minor": 57,
       "minimum_version_revision": 0,
-      "block_index": 600609,
-      "testnet_block_index": 1518300
+      "block_index": 585538,
+      "testnet_block_index": 1569194
   },
   "dispensers": {
       "minimum_version_major": 9,
       "minimum_version_minor": 57,
       "minimum_version_revision": 0,
-      "block_index": 600609,
-      "testnet_block_index": 1518300
+      "block_index": 585538,
+      "testnet_block_index": 1569194
   },
   "mpma_sends": {
     "minimum_version_major": 9,
@@ -229,5 +229,320 @@
     "minimum_version_revision": 0,
     "block_index": 660000,
     "testnet_block_index": 1666479
+  },
+  "dispensers_in_holders": {
+    "minimum_version_major": 9,
+    "minimum_version_minor": 59,
+    "minimum_version_revision": 0,
+    "block_index": 660000,
+    "testnet_block_index": 1666479
+  },
+  "mpma_subasset_support": {
+    "minimum_version_major": 9,
+    "minimum_version_minor": 59,
+    "minimum_version_revision": 0,
+    "block_index": 660000,
+    "testnet_block_index": 1666479
+  },
+  "hotfix_dispensers_with_non_p2pkh": {
+    "minimum_version_major": 9,
+    "minimum_version_minor": 59,
+    "minimum_version_revision": 0,
+    "block_index": 660000,
+    "testnet_block_index": 1666625
+  },
+  "correct_segwit_txids": {
+    "minimum_version_major": 9,
+    "minimum_version_minor": 59,
+    "minimum_version_revision": 0,
+    "block_index": 662000,
+    "testnet_block_index": 1666625
+  },
+  "nondivisible_dividend_fix": {
+    "minimum_version_major": 9,
+    "minimum_version_minor": 59,
+    "minimum_version_revision": 3,
+    "block_index": 670000,
+    "testnet_block_index": 1666625
+  },
+  "dont_credit_zero_dividend": {
+    "minimum_version_major": 9,
+    "minimum_version_minor": 59,
+    "minimum_version_revision": 3,
+    "block_index": 670000,
+    "testnet_block_index": 1666625
+  },
+  "p2sh_dispensers_support": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 59,
+      "minimum_version_revision": 6,
+      "block_index": 724000,
+      "testnet_block_index": 2163328
+
+  },
+  "pascal_string_removed": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 59,
+      "minimum_version_revision": 6,
+      "block_index": 745825,
+      "testnet_block_index": 2287021
+
+  },
+  "oracle_dispensers": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 59,
+      "minimum_version_revision": 6,
+      "block_index": 753500,
+      "testnet_block_index": 2288000
+  },
+  "cip03": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 59,
+      "minimum_version_revision": 6,
+      "block_index": 753500,
+      "testnet_block_index": 2288000
+  },
+  "issuance_asset_serialization_format": {
+    "mainnet":{
+      "1":{
+        "value":">QQ??If"  
+      },
+      "753500":{
+        "value":">QQ???"
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":">QQ??If"  
+      },    
+      "2288000":{
+        "value":">QQ???If"
+      },    
+      "2342000":{
+        "value":">QQ????If"
+      },
+      "2343963":{
+        "value":">QQ???"
+      }
+    }
+  },
+  "issuance_asset_serialization_length": {
+    "mainnet":{
+      "1":{
+        "value":26  
+      },
+      "753500":{
+        "value":19
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":26
+      },    
+      "2288000":{
+        "value":27
+      },    
+      "2342000":{
+        "value":28
+      },
+      "2343963":{
+        "value":19
+      }   
+    }
+  },
+  "issuance_subasset_serialization_format": {
+    "mainnet":{
+      "1":{
+        "value":">QQ?B"  
+      },
+      "753500":{
+        "value":">QQ???B"
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":">QQ?B"  
+      },    
+      "2288000":{
+        "value":">QQ??B"
+      },
+      "2342000":{
+        "value":">QQ???B"
+      }   
+    }
+  },
+  "issuance_subasset_serialization_length": {
+    "mainnet":{
+      "1":{
+        "value":18  
+      },
+      "753500":{
+        "value":20
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":18
+      },    
+      "2288000":{
+        "value":19
+      },
+      "2342000":{
+        "value":20
+      }
+    }
+  },
+  "reopen_order_when_btcpay_expires_fix": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 59,
+      "minimum_version_revision": 6,
+      "block_index": 734000,
+      "testnet_block_index": 2220229
+  },
+  "dispenser_parsing_validation": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 59,
+      "minimum_version_revision": 6,
+      "block_index": 751485,
+      "testnet_block_index": 2344637
+  },
+  "prevout_segwit_fix": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 59,
+      "minimum_version_revision": 6,
+      "block_index": 718318,
+      "testnet_block_index": 2135609
+  },
+  "issuance_callability_parameters_removal": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 60,
+      "minimum_version_revision": 2,
+      "block_index": 819300,
+      "testnet_block_index": 2412394
+  },
+  "issuance_backwards_compatibility": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 60,
+      "minimum_version_revision": 2,
+      "block_index": 819300,
+      "testnet_block_index": 2422000
+  },
+  "zero_balance_ownership_sweep_fix": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 60,
+      "minimum_version_revision": 2,
+      "block_index": 819300,
+      "testnet_block_index": 2505725
+  },
+  "dispenser_origin_permission_extended": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 59,
+      "minimum_version_revision": 6,
+      "block_index": 819300,
+      "testnet_block_index": 2499850
+  },
+  "multiple_dispenses": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 59,
+      "minimum_version_revision": 6,
+      "block_index": 819300,
+      "testnet_block_index": 2420996
+  },
+  "issuance_description_special_null": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 60,
+      "minimum_version_revision": 2,
+      "block_index": 819300,
+      "testnet_block_index": 2505725
+  },
+  "addrindexrs_required_version": {
+    "mainnet":{
+      "1":{
+        "value":"0.4.0"
+      },
+      "819300":{
+        "value":"0.4.1"
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":"0.4.0"
+      },    
+      "2505725":{
+        "value":"0.4.1"
+      }
+    }
+  },
+  "max_dispenses_limit": {
+    "mainnet":{
+      "1":{
+        "value":0  
+      },
+      "819300":{
+        "value":1000
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":0
+      },    
+      "2535092":{
+        "value":1000
+      }
+    }
+  },
+  "dispenser_close_delay": {
+    "mainnet":{
+      "1":{
+        "value":0
+      },
+      "819300":{
+        "value":5
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":0
+      },    
+      "2505725":{
+        "value":5
+      }
+    }
+  },
+  "max_refills": {
+    "mainnet":{
+      "1":{
+        "value":0  
+      },
+      "819300":{
+        "value":5
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":0
+      },    
+      "2535092":{
+        "value":5
+      }
+    }
+  },
+  "sweep_antispam_fee": {
+    "mainnet":{
+      "1":{
+        "value":0  
+      },
+      "819300":{
+        "value":0.001
+      }   
+    },
+    "testnet":{
+      "1":{
+        "value":0
+      },    
+      "2535092":{
+        "value":0.001
+      }
+    }
   }
 }

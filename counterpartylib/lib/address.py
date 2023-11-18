@@ -3,6 +3,8 @@ logger = logging.getLogger(__name__)
 import struct
 
 import bitcoin
+from counterpartylib.lib import config
+from counterpartylib.lib import script
 
 def address_scriptpubkey(address):
     try:
@@ -28,10 +30,13 @@ def pack(address):
             return b''.join([witver, witprog])
         except Exception as ne:
             try:
+                script.validate(address) #This will check if the address is valid
                 short_address_bytes = bitcoin.base58.decode(address)[:-4]
                 return short_address_bytes
             except bitcoin.base58.InvalidBase58Error as e:
                 raise e
+            except Exception as e:
+                raise Exception(('The address {} is not a valid bitcoin address ({})').format(address,'testnet' if config.TESTNET or config.REGTEST else 'mainnet'))
     else:
         try:
             short_address_bytes = bitcoin.base58.decode(address)[:-4]

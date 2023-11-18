@@ -14,6 +14,8 @@
 
 # Installation
 
+**WARNING** Master branch should only be used for testing. For production releases uses tagged releases.
+
 For a simple Docker-based install of the Counterparty software stack, see [this guide](http://counterparty.io/docs/federated_node/).
 
 
@@ -34,14 +36,20 @@ addresstype=legacy
 ```
 **Note:** you can and should replace the RPC credentials. Remember to use the changed RPC credentials throughout this document.
 
-Download and install latest Indexd:
+Download and install latest addrindexrs:
 ```
-$ git clone https://github.com/CounterpartyXCP/indexd-server.git
-$ cd indexd-server
-$ cp .env-mainnet-example .env
- -- Modify .env with your rpcuser and rpcpassword --
-$ npm install
-$ npm start
+$ git clone https://github.com/CounterpartyXCP/addrindexrs.git
+$ cd addrindexrs
+$ cargo check
+ -- Setup the appropiate environment variables --
+  - ADDRINDEXRS_JSONRPC_IMPORT=1
+  - ADDRINDEXRS_TXID_LIMIT=15000
+  - ADDRINDEXRS_COOKIE=user:password
+  - ADDRINDEXRS_INDEXER_RPC_ADDR=0.0.0.0:8432
+  - ADDRINDEXRS_DAEMON_RPC_ADDR=bitcoin:8332
+ --
+$ cargo build --release
+$ cargo run --release
 ```
 
 You could run the indexd daemon with a process manager like `forever` or `pm2` (recommended).

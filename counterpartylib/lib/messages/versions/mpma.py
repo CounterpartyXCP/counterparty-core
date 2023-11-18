@@ -94,8 +94,9 @@ def compose (db, source, asset_dest_quant_list, memo, memo_is_hex):
 
     out_balances = util.accumulate([(t[0], t[2]) for t in asset_dest_quant_list])
     for (asset, quantity) in out_balances:
-        # resolve subassets
-        asset = util.resolve_subasset_longname(db, asset)
+        if util.enabled('mpma_subasset_support'):
+            # resolve subassets
+            asset = util.resolve_subasset_longname(db, asset)
 
         if not isinstance(quantity, int):
             raise exceptions.ComposeError('quantities must be an int (in satoshis) for {}'.format(asset))
@@ -168,10 +169,10 @@ def parse (db, tx, message):
 
     if status == 'valid':
         for op in all_credits:
-            util.credit(db, op['destination'], op['asset'], op['quantity'], action='send', event=tx['tx_hash'])
+            util.credit(db, op['destination'], op['asset'], op['quantity'], action='mpma send', event=tx['tx_hash'])
 
         for op in all_debits:
-            util.debit(db, tx['source'], op['asset'], op['quantity'], action='send', event=tx['tx_hash'])
+            util.debit(db, tx['source'], op['asset'], op['quantity'], action='mpma send', event=tx['tx_hash'])
 
         # Enumeration of the plain sends needs to be deterministic, so we sort them by asset and then by address
         plain_sends = sorted(plain_sends, key=lambda x: ''.join([x[0], x[1]]))

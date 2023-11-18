@@ -162,7 +162,7 @@ def get_p2w_script(address):
         witness_script += scripthash
         witness_script += OP_EQUAL
 
-        return (witness_script, tx_script)
+        return (tx_script, witness_script)
     elif len(scripthash) == 32:
         # P2WSH encoding
         raise Exception('P2WSH encoding not yet supported')
@@ -255,8 +255,8 @@ def serialise(encoding, inputs, destination_outputs, data_output=None, change_ou
         #    witness_data[destination].append(witness_script)
         #    tx_script = witness_script
 
-        if witness_script:
-            tx_script = witness_script
+        #if witness_script:
+        #    tx_script = witness_script
 
         s += var_int(int(len(tx_script)))                      # Script length
         s += tx_script
@@ -322,11 +322,11 @@ def serialise(encoding, inputs, destination_outputs, data_output=None, change_ou
 
         tx_script, witness_script = get_script(change_address)
         #print("Change address!", change_address, "\n", witness_data, "\n", tx_script, "\n", witness_script)
-        if witness_script: #use_segwit and change_address in witness_data:
+        #if witness_script: #use_segwit and change_address in witness_data:
         #    if not(change_address in witness_data):
         #        witness_data[change_address] = []
         #    witness_data[change_address].append(witness_script)
-            tx_script = witness_script
+        #    tx_script = witness_script
         #    use_segwit = True
 
         s += var_int(int(len(tx_script)))                      # Script length
@@ -382,7 +382,11 @@ def serialise_p2sh_pretx(inputs, source, source_value, data_output, change_outpu
         # get the scripts
         scriptSig, redeemScript, outputScript = p2sh_encoding.make_p2sh_encoding_redeemscript(data_chunk, n, pubkey, multisig_pubkeys, multisig_pubkeys_required)
 
-        s += data_value.to_bytes(8, byteorder='little')  # Value
+        #if data_value is an array, then every output fee is specified in it
+        if type(data_value) == list:
+            s += data_value[n].to_bytes(8, byteorder='little')  # Value
+        else:
+            s += data_value.to_bytes(8, byteorder='little')  # Value
         s += var_int(int(len(outputScript)))             # Script length
         s += outputScript                                # Script
 

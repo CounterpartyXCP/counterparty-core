@@ -158,7 +158,12 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
                 filtered_unspent.append(output)
         unspent = filtered_unspent
 
-        unspent = backend.sort_unspent_txouts(unspent)
+        if encoding == 'multisig':
+            dust = config.DEFAULT_MULTISIG_DUST_SIZE
+        else:
+            dust = config.DEFAULT_REGULAR_DUST_SIZE     
+            
+        unspent = backend.sort_unspent_txouts(unspent, dust_size=dust)
         logger.debug('Sorted candidate UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
         use_inputs = unspent
 
@@ -182,6 +187,7 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
 
 
     # pop inputs until we can pay for the fee
+    use_inputs_index = 0
     for coin in use_inputs:
         logger.debug('New input: {}'.format(print_coin(coin)))
         inputs.append(coin)
@@ -201,11 +207,19 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
         btc_out = destination_btc_out + data_btc_out
         change_quantity = btc_in - (btc_out + final_fee)
         logger.debug('Size: {} Fee: {:.8f} Change quantity: {:.8f} BTC'.format(size, final_fee / config.UNIT, change_quantity / config.UNIT))
-        # If change is necessary, must not be a dust output.
-        if change_quantity == 0 or change_quantity >= regular_dust_size:
+        
+        #If after the sum of all the utxos the change is dust, then it will be added to the miners instead of returning an error
+        if (use_inputs_index == len(use_inputs)-1) and (change_quantity > 0) and (change_quantity < regular_dust_size):
+            sufficient_funds = True
+            final_fee = final_fee + change_quantity
+            change_quantity = 0
+        # If change is necessary, must not be a dust output.            
+        elif change_quantity == 0 or change_quantity >= regular_dust_size:
             sufficient_funds = True
             if len(inputs) >= desired_input_count:
                 break
+                
+        use_inputs_index = use_inputs_index + 1     
 
     if not sufficient_funds:
         # Approximate needed change, fee by with most recently calculated
@@ -252,7 +266,7 @@ def select_any_coin_from_source(source, allow_unconfirmed_inputs=True, disable_u
     unspent = filtered_unspent
 
     # sort
-    unspent = backend.sort_unspent_txouts(unspent)
+    unspent = backend.sort_unspent_txouts(unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE)
 
     # use the first input
     input = unspent[0]
@@ -279,8 +293,10 @@ def return_result(tx_hexes, old_style_api):
 
             return tx_hexes[0]
         else:
-            return tx_hexes
-
+            if len(tx_hexes) == 1:
+                return tx_hexes[0]
+            else:
+                return tx_hexes
 
 def construct (db, tx_info, encoding='auto',
                fee_per_kb=config.DEFAULT_FEE_PER_KB,
@@ -394,6 +410,12 @@ def construct (db, tx_info, encoding='auto',
             elif dust_return_pubkey is False:
                 dust_return_pubkey = binascii.unhexlify(config.P2SH_DUST_RETURN_PUBKEY)
 
+        if not dust_return_pubkey:
+            if encoding == 'multisig' or encoding == 'p2sh' and not source_is_p2sh:
+                dust_return_pubkey = get_dust_return_pubkey(source, provided_pubkeys, encoding)
+            else:
+                dust_return_pubkey = None
+
         # Divide data into chunks.
         if encoding == 'pubkeyhash':
             # Prefix is also a suffix here.
@@ -403,7 +425,11 @@ def construct (db, tx_info, encoding='auto',
             # minus two sign bytes.
             chunk_size = (33 * 2) - 1 - 8 - 2 - 2
         elif encoding == 'p2sh':
-            chunk_size = p2sh_encoding.maximum_data_chunk_size()
+            pubkeylength = -1
+            if dust_return_pubkey is not None:
+                pubkeylength = len(dust_return_pubkey)
+
+            chunk_size = p2sh_encoding.maximum_data_chunk_size(pubkeylength)
         elif encoding == 'opreturn':
             chunk_size = config.OP_RETURN_MAX_SIZE
             if len(data) + len(config.PREFIX) > chunk_size:
@@ -422,11 +448,6 @@ def construct (db, tx_info, encoding='auto',
             data_value = regular_dust_size
         data_output = (data_array, data_value)
 
-        if not dust_return_pubkey:
-            if encoding == 'multisig' or encoding == 'p2sh' and not source_is_p2sh:
-                dust_return_pubkey = get_dust_return_pubkey(source, provided_pubkeys, encoding)
-            else:
-                dust_return_pubkey = None
     else:
         data_value = 0
         data_array = []
@@ -454,7 +475,7 @@ def construct (db, tx_info, encoding='auto',
 
     if encoding == 'p2sh':
         # calculate all the p2sh outputs
-        size_for_fee, datatx_necessary_fee, data_value, data_btc_out = p2sh_encoding.calculate_outputs(destination_outputs, data_array, fee_per_kb)
+        size_for_fee, datatx_necessary_fee, data_value, data_btc_out = p2sh_encoding.calculate_outputs(destination_outputs, data_array, fee_per_kb, exact_fee)
         # replace the data value
         data_output = (data_array, data_value)
     else:
