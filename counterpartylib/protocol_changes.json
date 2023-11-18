@@ -417,42 +417,42 @@
       "minimum_version_major": 9,
       "minimum_version_minor": 60,
       "minimum_version_revision": 2,
-      "block_index": 819300,
+      "block_index": 850000,
       "testnet_block_index": 2412394
   },
   "issuance_backwards_compatibility": {
       "minimum_version_major": 9,
       "minimum_version_minor": 60,
       "minimum_version_revision": 2,
-      "block_index": 819300,
+      "block_index": 850000,
       "testnet_block_index": 2422000
   },
   "zero_balance_ownership_sweep_fix": {
       "minimum_version_major": 9,
       "minimum_version_minor": 60,
       "minimum_version_revision": 2,
-      "block_index": 819300,
+      "block_index": 850000,
       "testnet_block_index": 2505725
   },
   "dispenser_origin_permission_extended": {
       "minimum_version_major": 9,
       "minimum_version_minor": 59,
       "minimum_version_revision": 6,
-      "block_index": 819300,
+      "block_index": 850000,
       "testnet_block_index": 2499850
   },
   "multiple_dispenses": {
       "minimum_version_major": 9,
       "minimum_version_minor": 59,
       "minimum_version_revision": 6,
-      "block_index": 819300,
+      "block_index": 850000,
       "testnet_block_index": 2420996
   },
   "issuance_description_special_null": {
       "minimum_version_major": 9,
       "minimum_version_minor": 60,
       "minimum_version_revision": 2,
-      "block_index": 819300,
+      "block_index": 850000,
       "testnet_block_index": 2505725
   },
   "addrindexrs_required_version": {
@@ -460,7 +460,7 @@
       "1":{
         "value":"0.4.0"
       },
-      "819300":{
+      "850000":{
         "value":"0.4.1"
       }   
     },
@@ -478,7 +478,7 @@
       "1":{
         "value":0  
       },
-      "819300":{
+      "850000":{
         "value":1000
       }   
     },
@@ -496,7 +496,7 @@
       "1":{
         "value":0
       },
-      "819300":{
+      "850000":{
         "value":5
       }   
     },
@@ -514,7 +514,7 @@
       "1":{
         "value":0  
       },
-      "819300":{
+      "850000":{
         "value":5
       }   
     },
@@ -532,7 +532,7 @@
       "1":{
         "value":0  
       },
-      "819300":{
+      "825000":{
         "value":0.001
       }   
     },
