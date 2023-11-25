@@ -33,7 +33,7 @@ def initialise (db):
                       cancels_block_index_idx ON cancels (block_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON cancels (source)
+                      cancels_source_idx ON cancels (source)
                    ''')
 
 def validate (db, source, offer_hash):

@@ -99,20 +99,20 @@ def initialise(db):
             cursor.execute('ALTER TABLE new_issuances RENAME TO issuances')
 
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON issuances (block_index)
+                      issuances_block_index_idx ON issuances (block_index)
                     ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       valid_asset_idx ON issuances (asset, status)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_idx ON issuances (status)
+                      issuances_status_idx ON issuances (status)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON issuances (source)
+                      issuances_source_idx ON issuances (source)
                    ''')
 
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      asset_longname_idx ON issuances (asset_longname)
+                      issuances_asset_longname_idx ON issuances (asset_longname)
                    ''')
 
 def validate (db, source, destination, asset, quantity, divisible, lock, reset, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index):

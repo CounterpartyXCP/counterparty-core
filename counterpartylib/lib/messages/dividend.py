@@ -31,13 +31,13 @@ def initialise (db):
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON dividends (block_index)
+                      dividends_block_index_idx ON dividends (block_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON dividends (source)
+                      dividends_source_idx ON dividends (source)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      asset_idx ON dividends (asset)
+                      dividends_asset_idx ON dividends (asset)
                    ''')
 
 def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index):

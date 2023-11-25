@@ -278,7 +278,7 @@ def initialise(db):
                       PRIMARY KEY (tx_index, tx_hash, block_index))
                     ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON transactions (block_index)
+                      transactions_block_index_idx ON transactions (block_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       tx_index_idx ON transactions (tx_index)
@@ -326,10 +326,10 @@ def initialise(db):
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index))
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      address_idx ON credits (address)
+                      credits_address_idx ON credits (address)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      asset_idx ON credits (asset)
+                      credits_asset_idx ON credits (asset)
                    ''')
 
     # Balances
@@ -342,10 +342,10 @@ def initialise(db):
                       address_asset_idx ON balances (address, asset)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      address_idx ON balances (address)
+                      balances_address_idx ON balances (address)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      asset_idx ON balances (asset)
+                      balances_asset_idx ON balances (asset)
                    ''')
 
     # Assets
@@ -413,7 +413,7 @@ def initialise(db):
                   ''')
                       # TODO: FOREIGN KEY (block_index) REFERENCES blocks(block_index) DEFERRABLE INITIALLY DEFERRED)
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON messages (block_index)
+                      messages_block_index_idx ON messages (block_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       block_index_message_index_idx ON messages (block_index, message_index)

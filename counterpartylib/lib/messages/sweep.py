@@ -38,16 +38,16 @@ def initialise(db):
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON sweeps (block_index)
+                      sweeps_block_index_idx ON sweeps (block_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON sweeps (source)
+                      sweeps_source_idx ON sweeps (source)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      destination_idx ON sweeps (destination)
+                      sweeps_destination_idx ON sweeps (destination)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      memo_idx ON sweeps (memo)
+                      sweeps_memo_idx ON sweeps (memo)
                    ''')
 
 

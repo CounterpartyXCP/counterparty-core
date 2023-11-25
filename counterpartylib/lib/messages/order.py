@@ -46,10 +46,10 @@ def initialise(db):
                       PRIMARY KEY (tx_index, tx_hash))
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON orders (block_index)
+                      orders_block_index_idx ON orders (block_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      index_hash_idx ON orders (tx_index, tx_hash)
+                      orders_index_hash_idx ON orders (tx_index, tx_hash)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       expire_idx ON orders (expire_index, status)
@@ -64,7 +64,7 @@ def initialise(db):
                       give_get_status_idx ON orders (get_asset, give_asset, status)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON orders (source)
+                      orders_source_idx ON orders (source)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       give_asset_idx ON orders (give_asset)
@@ -104,7 +104,7 @@ def initialise(db):
                       backward_status_idx ON order_matches (backward_asset, status)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      id_idx ON order_matches (id)
+                      order_matches_id_idx ON order_matches (id)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       tx0_address_idx ON order_matches (tx0_address)
@@ -139,13 +139,13 @@ def initialise(db):
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index))
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON order_match_expirations (block_index)
+                      order_match_expirations_block_index_idx ON order_match_expirations (block_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx0_address_idx ON order_match_expirations (tx0_address)
+                      order_match_expirations_tx0_address_idx ON order_match_expirations (tx0_address)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx1_address_idx ON order_match_expirations (tx1_address)
+                      order_match_expirations_tx1_address_idx ON order_match_expirations (tx1_address)
                    ''')
 
 def exact_penalty (db, address, block_index, order_match_id):

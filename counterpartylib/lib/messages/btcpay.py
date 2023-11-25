@@ -32,13 +32,13 @@ def initialise(db):
                    ''')
                       # Disallows invalids: FOREIGN KEY (order_match_id) REFERENCES order_matches(id))
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON btcpays (block_index)
+                      btcpays_block_index_idx ON btcpays (block_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON btcpays (source)
+                      btcpays_source_idx ON btcpays (source)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      destination_idx ON btcpays (destination)
+                      btcpays_destination_idx ON btcpays (destination)
                    ''')
 def validate (db, source, order_match_id, block_index):
     problems = []
