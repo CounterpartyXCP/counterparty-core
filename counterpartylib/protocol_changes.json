@@ -417,7 +417,7 @@
       "minimum_version_major": 9,
       "minimum_version_minor": 60,
       "minimum_version_revision": 2,
-      "block_index": 999999,
+      "block_index": 819300,
       "testnet_block_index": 2412394
   },
   "issuance_backwards_compatibility": {
@@ -431,7 +431,7 @@
       "minimum_version_major": 9,
       "minimum_version_minor": 60,
       "minimum_version_revision": 2,
-      "block_index": 999999,
+      "block_index": 819300,
       "testnet_block_index": 2505725
   },
   "dispenser_origin_permission_extended": {
