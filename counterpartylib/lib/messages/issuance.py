@@ -508,7 +508,10 @@ def parse (db, tx, message, message_type_id):
                     asset = namedAsset
             
             if description == None:
-                description = util.get_asset_description(db, asset)
+                try:
+                    description = util.get_asset_description(db, asset)
+                except exceptions.AssetError:
+                    description = ""
             
             status = 'valid'
         except exceptions.AssetIDError:
