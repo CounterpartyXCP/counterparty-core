@@ -745,7 +745,7 @@ class APIServer(threading.Thread):
             # Packages messages into their appropriate block in the data structure to be returned
             for block in blocks:
                 block['_messages'] = []
-                while len(messages) and messages[0]['block_index'] == block['block_index']:
+                while len(messages) and (messages[0]['block_index'] == block['block_index'] or messages[0]['block_index'] + util.get_value_by_block_index("dispenser_close_delay", block['block_index']) == block['block_index']):
                     block['_messages'].append(messages.popleft())
             #NOTE: if len(messages), then we're only returning the messages for the first set of blocks before the reorg
 
