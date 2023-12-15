@@ -596,7 +596,7 @@ def close_pending(db, block_index):
                 'source': dispenser['tx_source'],
                 'asset': dispenser['asset'],
                 'status': STATUS_CLOSED,
-                'block_index': dispenser['tx_block_index'],
+                'block_index': block_index,
                 'tx_index': dispenser['tx_index']
             }
             sql = 'UPDATE dispensers SET give_remaining=0, status=:status WHERE source=:source AND asset=:asset'
