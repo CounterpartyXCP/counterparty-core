@@ -51,7 +51,7 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
          'rps_matches', 'rps',
          'destructions', 'assets', 'addresses', 'sweeps', 'dispensers', 'dispenses',
-         'transaction_outputs','dispenser_refills']
+         'dispenser_refills']
 # Compose list of tables tracked by undolog
 UNDOLOG_TABLES = copy.copy(TABLES)
 UNDOLOG_TABLES.remove('messages')
@@ -984,6 +984,7 @@ def reinitialise(db, block_index=None):
 
     # For rollbacks, just delete new blocks and then reparse what’s left.
     if block_index:
+        cursor.execute('''DELETE FROM transaction_outputs WHERE block_index > ?''', (block_index,))
         cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
         cursor.execute('''DELETE FROM blocks WHERE block_index > ?''', (block_index,))
     elif config.TESTNET or config.REGTEST:  # block_index NOT specified and we are running testnet
@@ -1044,6 +1045,7 @@ def reparse(db, block_index=None, quiet=False):
                 undolog_cursor.execute(entry[1])
 
             # Trim back tx and blocks
+            undolog_cursor.execute('''DELETE FROM transaction_outputs WHERE block_index > ?''', (block_index,))
             undolog_cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
             undolog_cursor.execute('''DELETE FROM blocks WHERE block_index > ?''', (block_index,))
             # As well as undolog entries...
