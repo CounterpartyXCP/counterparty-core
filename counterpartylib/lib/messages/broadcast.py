@@ -169,7 +169,10 @@ def parse (db, tx, message):
     except (struct.error) as e:
         timestamp, value, fee_fraction_int, text = 0, None, 0, None
         status = 'invalid: could not unpack'
-
+    except AssertionError:
+        timestamp, value, fee_fraction_int, text = 0, None, 0, None
+        status = "invalid: could not unpack text"
+        
     if status == 'valid':
         # For SQLite3
         timestamp = min(timestamp, config.MAX_INT)
