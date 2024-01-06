@@ -455,6 +455,13 @@
       "block_index": 819300,
       "testnet_block_index": 2505725
   },
+  "numeric_asset_fee": {
+      "minimum_version_major": 9,
+      "minimum_version_minor": 61,
+      "minimum_version_revision": 1,
+      "block_index": 829020,
+      "testnet_block_index": 2571199
+  },
   "addrindexrs_required_version": {
     "mainnet":{
       "1":{
