@@ -181,7 +181,7 @@ required_packages = [
     'xmltodict==0.10.1',
     'cachetools==1.1.6',
     'bitstring==3.1.5',
-    'Werkzeug==2.2.2',
+    'Werkzeug==2.0.3',
     'itsdangerous==2.0.1',
 ]
 
