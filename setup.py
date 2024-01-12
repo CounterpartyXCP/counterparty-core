@@ -167,11 +167,11 @@ required_packages = [
     'setuptools-markdown==0.2',
     'python-dateutil==2.5.3',
     'Flask-HTTPAuth==3.1.2',
-    'Flask==0.11.1',
+    'Flask==2.0.3',
     'colorlog==2.7.0',
     'json-rpc==1.10.3',
     'pycoin==0.77',
-    'pycrypto==2.6.1',
+    'pycryptodome==3.17',
     'pysha3==0.3',
     'pytest==2.9.2',
     'pytest-cov==2.2.1',
@@ -180,7 +180,9 @@ required_packages = [
     'tendo==0.2.8',
     'xmltodict==0.10.1',
     'cachetools==1.1.6',
-    'bitstring==3.1.5'
+    'bitstring==3.1.5',
+    'Werkzeug==2.2.2',
+    'itsdangerous==2.0.1',
 ]
 
 setup_options = {
