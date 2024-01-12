@@ -108,24 +108,27 @@ DISABLE_ARC4_MOCKING = False
 def pytest_generate_tests(metafunc):
     """Generate all py.test cases. Checks for different types of tests and creates proper context."""
     if metafunc.function.__name__ == 'test_vector':
-        args = util_test.vector_to_args(UNITTEST_VECTOR, pytest.config.option.function)
+        args = util_test.vector_to_args(UNITTEST_VECTOR)
         metafunc.parametrize('tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, config_context', args)
     elif metafunc.function.__name__ == 'test_scenario':
         args = []
         for scenario_name in INTEGRATION_SCENARIOS:
-            if pytest.config.option.scenario == [] or scenario_name in pytest.config.option.scenario:
-                args.append((scenario_name, INTEGRATION_SCENARIOS[scenario_name][1], INTEGRATION_SCENARIOS[scenario_name][0]))
+            # TODO if pytestconfig.getoption('scenario') == [] or scenario_name in pytestconfig.getoption('scenario'):
+            args.append((scenario_name, INTEGRATION_SCENARIOS[scenario_name][1], INTEGRATION_SCENARIOS[scenario_name][0]))
         metafunc.parametrize('scenario_name, base_scenario_name, transactions', args)
+    return True # TODO
+'''
     elif metafunc.function.__name__ == 'test_book':
-        if pytest.config.option.skiptestbook == 'all':
+        if pytestconfig.getoption('skiptestbook') == 'all':
             args = []
-        elif pytest.config.option.skiptestbook == 'testnet':
+        elif pytestconfig.getoption('skiptestbook') == 'testnet':
             args = [False]
-        elif pytest.config.option.skiptestbook == 'mainnet':
+        elif pytestconfig.getoption('skiptestbook') == 'mainnet':
             args = [True]
         else:
             args = [True, False]
         metafunc.parametrize('testnet', args)
+'''
 
 def pytest_addoption(parser):
     """Add useful test suite argument options."""

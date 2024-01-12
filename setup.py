@@ -171,10 +171,10 @@ required_packages = [
     'colorlog==2.7.0',
     'json-rpc==1.10.3',
     'pycoin==0.77',
-    'pycryptodome==3.17',
+    'pycrypto==2.6.1',
     'pysha3==0.3',
-    'pytest==2.9.2',
-    'pytest-cov==2.2.1',
+    'pytest==7.3.1',
+    'pytest-cov==4.1.0',
     # 'python-bitcoinlib==0.10.1', <-- restore this when python-bitcoinlib 0.10.x with bech32 support is released
     'requests>=2.20.0',
     'tendo==0.2.8',

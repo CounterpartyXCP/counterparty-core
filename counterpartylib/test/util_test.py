@@ -483,6 +483,7 @@ def run_scenario(scenario):
             with MockProtocolChangesContext(**(mock_protocol_changes or {})):
                 module = sys.modules['counterpartylib.lib.messages.{}'.format(tx[0])]
                 compose = getattr(module, 'compose')
+                print(*tx[1]) # TODO
                 unsigned_tx_hex = transaction.construct(db=db, tx_info=compose(db, *tx[1]), regular_dust_size=5430, **tx[2])
                 raw_transactions.append({tx[0]: unsigned_tx_hex})
                 insert_raw_transaction(unsigned_tx_hex, db)
@@ -535,6 +536,7 @@ def clean_scenario_dump(scenario_name, dump):
 
     return dump
 
+@pytest.fixture
 def check_record(record, server_db):
     """Allow direct record access to the db."""
     cursor = server_db.cursor()
@@ -559,7 +561,7 @@ def check_record(record, server_db):
         ok = (record.get('not', False) and count == 0) or count == 1
 
         if not ok:
-            if pytest.config.getoption('verbose') >= 2:
+            if pytestconfig.getoption('verbose') >= 2:
                 print("expected values: ")
                 pprint.PrettyPrinter(indent=4).pprint(record['values'])
                 print("SELECT * FROM {} WHERE block_index = {}: ".format(record['table'], record['values']['block_index']))
@@ -582,8 +584,8 @@ def vector_to_args(vector, functions=[]):
                 comment = params.get('comment', None)
                 mock_protocol_changes = params.get('mock_protocol_changes', None)
                 config_context = params.get('config_context', {})
-                if functions == [] or (tx_name + '.' + method) in functions:
-                    args.append((tx_name, method, params['in'], outputs, error, records, comment, mock_protocol_changes, config_context))
+                # if functions == [] or (tx_name + '.' + method) in functions:
+                args.append((tx_name, method, params['in'], outputs, error, records, comment, mock_protocol_changes, config_context))
     return args
 
 def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
@@ -606,6 +608,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         else:
             return tested_method(server_db, *inputs)
 
+@pytest.fixture
 def check_outputs(tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, server_db):
     """Check actual and expected outputs of a particular function."""
 
@@ -622,7 +625,7 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
                 test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
         else:
             test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
-            if pytest.config.option.gentxhex and method == 'compose':
+            if pytestconfig.getoption('gentxhex') and method == 'compose':
                 print('')
                 tx_params = {
                     'encoding': 'multisig'
@@ -638,7 +641,7 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
             try:
                 assert outputs == test_outputs
             except AssertionError:
-                if pytest.config.getoption('verbose') >= 2:
+                if pytestconfig.getoption('verbose') >= 2:
                     msg = "expected outputs don't match test_outputs:\nexpected_outputs=\n" + pprint.pformat(outputs) + "\ntest_outputs=\n" + pprint.pformat(test_outputs)
                 else:
                     msg = "expected outputs don't match test_outputs: expected_outputs=%s test_outputs=%s" % (outputs, test_outputs)

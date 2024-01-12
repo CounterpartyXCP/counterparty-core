@@ -5,6 +5,7 @@ from counterpartylib.test import conftest  # this is require near the top to do 
 from counterpartylib.test import util_test
 
 
+@pytest.fixture
 def test_scenario(scenario_name, base_scenario_name, transactions):
     """Run the integration tests.
 
@@ -17,7 +18,7 @@ def test_scenario(scenario_name, base_scenario_name, transactions):
 
     new_dump, new_log, new_raw_transactions = util_test.run_scenario(transactions)
 
-    if pytest.config.option.savescenarios:
+    if pytestconfig.gewoption('savescenarios'):
         util_test.save_scenario_output(scenario_name, new_dump, new_log, new_raw_transactions)
 
     old_dump, old_log, old_raw_transactions = util_test.load_scenario_ouput(scenario_name)

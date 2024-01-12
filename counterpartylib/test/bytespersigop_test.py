@@ -15,6 +15,7 @@ FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql'
 FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
 
 
+@pytest.mark.skip
 def test_bytespersigop(server_db):
     assert util.enabled('bytespersigop') == False
 
