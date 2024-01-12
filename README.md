@@ -36,44 +36,65 @@ addresstype=legacy
 ```
 **Note:** you can and should replace the RPC credentials. Remember to use the changed RPC credentials throughout this document.
 
-Download and install latest addrindexrs:
+Adding the following lines, and opening up port `8333` to incoming traffic may improve your sync speed:
+
 ```
+listen=1
+dbcache=4000
+```
+
+Download and install latest `addrindexrs`:
+```
+$ sudo apt install cargo libclang-dev build-essential
 $ git clone https://github.com/CounterpartyXCP/addrindexrs.git
 $ cd addrindexrs
 $ cargo check
- -- Setup the appropiate environment variables --
-  - ADDRINDEXRS_JSONRPC_IMPORT=1
-  - ADDRINDEXRS_TXID_LIMIT=15000
-  - ADDRINDEXRS_COOKIE=user:password
-  - ADDRINDEXRS_INDEXER_RPC_ADDR=0.0.0.0:8432
-  - ADDRINDEXRS_DAEMON_RPC_ADDR=bitcoin:8332
- --
+```
+
+Set the following environment variables (for instance in your `.bashrc`):
+```
+export ADDRINDEXRS_JSONRPC_IMPORT=1
+export ADDRINDEXRS_TXID_LIMIT=15000
+export ADDRINDEXRS_COOKIE=user:password
+export ADDRINDEXRS_INDEXER_RPC_ADDR=0.0.0.0:8432
+export ADDRINDEXRS_DAEMON_RPC_ADDR=bitcoin:8332
+```
+
+Then continue with the build:
+
+```
 $ cargo build --release
-$ cargo run --release
+$ cargo run
 ```
 
 You could run the indexd daemon with a process manager like `forever` or `pm2` (recommended).
 
-Then, download and install `counterparty-lib`:
+
+The Counterparty reference implementation requires Python 3.9 at present. The recommended installation method is with Anaconda, which may be downloaded from the [project website](https://www.anaconda.com/download). After installing Anaconda, create a virtual Python environment with:
 
 ```
+$ conda create -n xcp python=3.9
+```
+
+Now, download and install `counterparty-lib`:
+
+```
+$ conda activate xcp
 $ git clone https://github.com/CounterpartyXCP/counterparty-lib.git
 $ cd counterparty-lib
-$ sudo pip3 install --upgrade -r requirements.txt
-$ sudo python3 setup.py install
+$ pip3 install --upgrade -r requirements.txt
+$ python3 setup.py install
 ```
 
 Followed by `counterparty-cli`:
 
 ```
+$ conda activate xcp
 $ git clone https://github.com/CounterpartyXCP/counterparty-cli.git
 $ cd counterparty-cli
-$ sudo pip3 install --upgrade -r requirements.txt
-$ sudo python3 setup.py install
+$ pip3 install --upgrade -r requirements.txt
+$ python3 setup.py install
 ```
-
-Note on **sudo**: both counterparty-lib and counterparty-server can be installed by non-sudoers. Please refer to external documentation for instructions on using pip without root access and other information related to custom install locations.
-
 
 Then, launch the daemon via:
 
@@ -81,6 +102,9 @@ Then, launch the daemon via:
 $ counterparty-server bootstrap
 $ counterparty-server --backend-password=rpc start
 ```
+
+**Note:** You will not be able to run `counterparty-server` until `addrindexrs` has caught up (and its RPC server is running), which in turn requires `bitcoind` have caught up as well.
+
 
 # Basic Usage
 
