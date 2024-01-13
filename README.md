@@ -22,17 +22,18 @@ For a simple Docker-based install of the Counterparty software stack, see [this 
 # Manual installation
 
 Download the latest [Bitcoin Core](https://github.com/bitcoin/bitcoin/releases) and create
-a `bitcoin.conf` file with the following options:
+a `bitcoin.conf` file (by default located in `~.bitcoin/`) with the following options:
 
 ```
 rpcuser=bitcoinrpc
 rpcpassword=rpc
-server=1
-txindex=1
 rpctimeout=300
 zmqpubhashblock=tcp://127.0.0.1:28832
 zmqpubhashtx=tcp://127.0.0.1:28832
 addresstype=legacy
+server=1
+txindex=1
+prune=0
 ```
 **Note:** you can and should replace the RPC credentials. Remember to use the changed RPC credentials throughout this document.
 
