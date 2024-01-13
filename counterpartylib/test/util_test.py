@@ -21,7 +21,7 @@ import binascii
 import appdirs
 import pprint
 import pycoin
-from pycoin.tx import Tx
+from pycoin.coins import Tx
 import bitcoin as bitcoinlib
 logger = logging.getLogger(__name__)
 
@@ -535,7 +535,7 @@ def clean_scenario_dump(scenario_name, dump):
 
     return dump
 
-def check_record(record, server_db):
+def check_record(record, server_db, pytest_config):
     """Allow direct record access to the db."""
     cursor = server_db.cursor()
 
@@ -559,7 +559,7 @@ def check_record(record, server_db):
         ok = (record.get('not', False) and count == 0) or count == 1
 
         if not ok:
-            if pytest.config.getoption('verbose') >= 2:
+            if pytest_config.getoption('verbose') >= 2:
                 print("expected values: ")
                 pprint.PrettyPrinter(indent=4).pprint(record['values'])
                 print("SELECT * FROM {} WHERE block_index = {}: ".format(record['table'], record['values']['block_index']))
@@ -570,7 +570,7 @@ def check_record(record, server_db):
                                  "conditions=" + ",".join(conditions) + " \n" +
                                  "bindings=" + ",".join(map(lambda v: str(v), bindings)))
 
-def vector_to_args(vector, functions=[]):
+def vector_to_args(vector, functions=[], pytest_config=None):
     """Translate from UNITTEST_VECTOR style to function arguments."""
     args = []
     for tx_name in sorted(vector.keys()):
@@ -583,7 +583,7 @@ def vector_to_args(vector, functions=[]):
                 mock_protocol_changes = params.get('mock_protocol_changes', None)
                 config_context = params.get('config_context', {})
                 if functions == [] or (tx_name + '.' + method) in functions:
-                    args.append((tx_name, method, params['in'], outputs, error, records, comment, mock_protocol_changes, config_context))
+                    args.append((tx_name, method, params['in'], outputs, error, records, comment, mock_protocol_changes, config_context, pytest_config))
     return args
 
 def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
@@ -606,7 +606,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         else:
             return tested_method(server_db, *inputs)
 
-def check_outputs(tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, server_db):
+def check_outputs(tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, pytest_config, server_db):
     """Check actual and expected outputs of a particular function."""
 
     try:
@@ -622,7 +622,7 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
                 test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
         else:
             test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
-            if pytest.config.option.gentxhex and method == 'compose':
+            if pytest_config.getoption('gentxhex') and method == 'compose':
                 print('')
                 tx_params = {
                     'encoding': 'multisig'
@@ -638,7 +638,7 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
             try:
                 assert outputs == test_outputs
             except AssertionError:
-                if pytest.config.getoption('verbose') >= 2:
+                if pytest_config.getoption('verbose') >= 2:
                     msg = "expected outputs don't match test_outputs:\nexpected_outputs=\n" + pprint.pformat(outputs) + "\ntest_outputs=\n" + pprint.pformat(test_outputs)
                 else:
                     msg = "expected outputs don't match test_outputs: expected_outputs=%s test_outputs=%s" % (outputs, test_outputs)
@@ -647,7 +647,7 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
             assert str(exception.value) == error[1]
         if records is not None:
             for record in records:
-                check_record(record, server_db)
+                check_record(record, server_db, pytest_config)
 
 
 def compare_strings(string1, string2):

@@ -32,3 +32,5 @@ profile.txt
 .cache
 
 .python-version
+
+.eggs

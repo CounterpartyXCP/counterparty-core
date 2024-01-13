@@ -313,8 +313,35 @@ def scriptpubkey_to_address(scriptpubkey):
 
 
 # TODO: Use `python-bitcointools` instead. (Get rid of `pycoin` dependency.)
-from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec, EncodingError
-from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
+from pycoin.encoding.sec import public_pair_to_sec
+from pycoin.encoding.exceptions import EncodingError
+from pycoin.encoding.bytes32 import from_bytes_32
+from pycoin.encoding.b58 import a2b_hashed_base58
+from pycoin.ecdsa.secp256k1 import secp256k1_generator as generator_secp256k1
+
+def wif_to_tuple_of_prefix_secret_exponent_compressed(wif):
+    """
+    Return a tuple of (prefix, secret_exponent, is_compressed).
+    """
+    decoded = a2b_hashed_base58(wif)
+    actual_prefix, private_key = decoded[:1], decoded[1:]
+    compressed = len(private_key) > 32
+    return actual_prefix, from_bytes_32(private_key[:32]), compressed
+
+def wif_to_tuple_of_secret_exponent_compressed(wif, allowable_wif_prefixes=None):
+    """Convert a WIF string to the corresponding secret exponent. Private key manipulation.
+    Returns a tuple: the secret exponent, as a bignum integer, and a boolean indicating if the
+    WIF corresponded to a compressed key or not.
+
+    Not that it matters, since we can use the secret exponent to generate both the compressed
+    and uncompressed Bitcoin address."""
+    actual_prefix, secret_exponent, is_compressed = wif_to_tuple_of_prefix_secret_exponent_compressed(wif)
+    if allowable_wif_prefixes and actual_prefix not in allowable_wif_prefixes:
+        raise EncodingError("unexpected first byte of WIF %s" % wif)
+    return secret_exponent, is_compressed
+
+def public_pair_for_secret_exponent(generator, secret_exponent):
+    return (generator*secret_exponent).pair()
 
 class AltcoinSupportError (Exception): pass
 def private_key_to_public_key(private_key_wif):

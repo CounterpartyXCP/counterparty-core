@@ -10,7 +10,7 @@ from datetime import datetime
 import pytest
 import bitcoin as bitcoinlib
 import pycoin
-from pycoin.tx import Tx
+from pycoin.coins import Tx
 import pprint
 import binascii
 import logging
@@ -108,20 +108,20 @@ DISABLE_ARC4_MOCKING = False
 def pytest_generate_tests(metafunc):
     """Generate all py.test cases. Checks for different types of tests and creates proper context."""
     if metafunc.function.__name__ == 'test_vector':
-        args = util_test.vector_to_args(UNITTEST_VECTOR, pytest.config.option.function)
-        metafunc.parametrize('tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, config_context', args)
+        args = util_test.vector_to_args(UNITTEST_VECTOR, metafunc.config.getoption("function"), metafunc.config)
+        metafunc.parametrize('tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, config_context, pytest_config', args)
     elif metafunc.function.__name__ == 'test_scenario':
         args = []
         for scenario_name in INTEGRATION_SCENARIOS:
-            if pytest.config.option.scenario == [] or scenario_name in pytest.config.option.scenario:
-                args.append((scenario_name, INTEGRATION_SCENARIOS[scenario_name][1], INTEGRATION_SCENARIOS[scenario_name][0]))
-        metafunc.parametrize('scenario_name, base_scenario_name, transactions', args)
+            if metafunc.config.getoption("scenario") == [] or scenario_name in metafunc.config.getoption("scenario"):
+                args.append((scenario_name, INTEGRATION_SCENARIOS[scenario_name][1], INTEGRATION_SCENARIOS[scenario_name][0], metafunc.config))
+        metafunc.parametrize('scenario_name, base_scenario_name, transactions, pytest_config', args)
     elif metafunc.function.__name__ == 'test_book':
-        if pytest.config.option.skiptestbook == 'all':
+        if metafunc.config.getoption("skiptestbook") == 'all':
             args = []
-        elif pytest.config.option.skiptestbook == 'testnet':
+        elif metafunc.config.getoption("skiptestbook") == 'testnet':
             args = [False]
-        elif pytest.config.option.skiptestbook == 'mainnet':
+        elif metafunc.config.getoption("skiptestbook") == 'mainnet':
             args = [True]
         else:
             args = [True, False]
