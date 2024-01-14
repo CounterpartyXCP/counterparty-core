@@ -1452,7 +1452,10 @@ def follow(db):
 
             # Get and parse transactions in this block (atomically).
             block_hash = backend.getblockhash(current_index)
+            start_time_getblock = time.time()
             block = backend.getblock(block_hash)
+            end_time_getblock = time.time()
+            logger.info('Fetch Time: %s' % ("{:.2f}".format(time.time() - start_time, 3)))
             previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
             block_time = block.nTime
             txhash_list, raw_transactions = backend.get_tx_list(block)

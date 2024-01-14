@@ -14,7 +14,7 @@
 
 # Installation
 
-**WARNING** Master branch should only be used for testing. For production releases uses tagged releases.
+**WARNING** The `master` branch should only be used for testing. For production releases uses tagged releases.
 
 For a simple Docker-based install of the Counterparty software stack, see [this guide](http://counterparty.io/docs/federated_node/).
 
@@ -68,19 +68,12 @@ $ cargo build --release
 $ cargo run
 ```
 
-You could run the indexd daemon with a process manager like `forever` or `pm2` (recommended).
+NOTE: You may wish to run the `addrindexrs` daemon with a process manager like `forever` or `pm2`.
 
-
-The Counterparty reference implementation requires Python 3.9 at present. The recommended installation method is with Anaconda, which may be downloaded from the [project website](https://www.anaconda.com/download). After installing Anaconda, create a virtual Python environment with:
-
-```
-$ conda create -n xcp python=3.9
-```
 
 Now, download and install `counterparty-lib`:
 
 ```
-$ conda activate xcp
 $ git clone https://github.com/CounterpartyXCP/counterparty-lib.git
 $ cd counterparty-lib
 $ pip3 install --upgrade -r requirements.txt
@@ -90,7 +83,6 @@ $ python3 setup.py install
 Followed by `counterparty-cli`:
 
 ```
-$ conda activate xcp
 $ git clone https://github.com/CounterpartyXCP/counterparty-cli.git
 $ cd counterparty-cli
 $ pip3 install --upgrade -r requirements.txt
@@ -104,7 +96,8 @@ $ counterparty-server bootstrap
 $ counterparty-server --backend-password=rpc start
 ```
 
-**WARNING:** Bootstrap should not be used for commercial or public-facing nodes.
+**WARNING:** The `bootstrap` should not be used for commercial or public-facing nodes.
+
 **Note:** You will not be able to run `counterparty-server` until `addrindexrs` has caught up (and its RPC server is running), which in turn requires `bitcoind` have caught up as well.
 
 
