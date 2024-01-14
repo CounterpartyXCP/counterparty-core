@@ -10,7 +10,7 @@ from datetime import datetime
 import pytest
 import bitcoin as bitcoinlib
 import pycoin
-from pycoin.coins import Tx
+from pycoin.coins.bitcoin import Tx
 import pprint
 import binascii
 import logging
@@ -268,13 +268,13 @@ class MockUTXOSet(object):
             utxo['confirmations'] = (utxo['confirmations'] or 0) + 1
 
     def add_raw_transaction(self, raw_transaction, tx_id=None, confirmations=0):
-        tx = pycoin.tx.Tx.from_hex(raw_transaction)
+        tx = pycoin.coins.bitcoin.Tx.Tx.from_hex(raw_transaction)
         tx_id = tx_id or tx.id()
 
         txins = []
         for txin in tx.txs_in:
             txins.append({
-                'txid': pycoin.serialize.b2h_rev(txin.previous_hash),
+                'txid': pycoin.encoding.hexbytes.b2h_rev(txin.previous_hash),
                 'vout': txin.previous_index
             })
 

@@ -131,9 +131,9 @@ def parse_tx(db, tx):
                 dispenser.dispense(db, tx)
             else:
                 cursor.execute('''UPDATE transactions \
-                                           SET supported=? \
-                                           WHERE tx_hash=?''',
-                                        (False, tx['tx_hash']))
+                                           SET supported=$supported \
+                                           WHERE tx_hash=$tx_hash''',
+                                        {'supported': False, 'tx_hash': tx['tx_hash']})
                 if tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
                     logger.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
                 cursor.close()
@@ -170,20 +170,22 @@ def parse_block(db, block_index, block_time,
 
     # Remove undolog records for any block older than we should be tracking
     undolog_oldest_block_index = block_index - config.UNDOLOG_MAX_PAST_BLOCKS
-    first_undo_index = list(undolog_cursor.execute('''SELECT first_undo_index FROM undolog_block WHERE block_index == ?''',
-        (undolog_oldest_block_index,)))
+    first_undo_index = list(undolog_cursor.execute('''SELECT first_undo_index FROM undolog_block WHERE block_index == $block_index''',
+        {'block_index': undolog_oldest_block_index}))
     if len(first_undo_index) == 1 and first_undo_index[0] is not None:
-        undolog_cursor.execute('''DELETE FROM undolog WHERE undo_index < ?''', (first_undo_index[0][0],))
-    undolog_cursor.execute('''DELETE FROM undolog_block WHERE block_index < ?''',
-        (undolog_oldest_block_index,))
+        print('first_undo_index[0]', first_undo_index[0])
+        undolog_cursor.execute('''DELETE FROM undolog WHERE undo_index < $undo_index''', 
+                               {'undo_index': first_undo_index[0]['first_undo_index']})
+    undolog_cursor.execute('''DELETE FROM undolog_block WHERE block_index < $block_index''',
+        {'block_index': undolog_oldest_block_index})
 
     # Set undolog barrier for this block
     if block_index != config.BLOCK_FIRST:
         undolog_cursor.execute('''INSERT OR REPLACE INTO undolog_block(block_index, first_undo_index)
-            SELECT ?, seq+1 FROM SQLITE_SEQUENCE WHERE name='undolog' ''', (block_index,))
+            SELECT $block_index, seq+1 FROM SQLITE_SEQUENCE WHERE name='undolog' ''', {'block_index': block_index})
     else:
         undolog_cursor.execute('''INSERT OR REPLACE INTO undolog_block(block_index, first_undo_index)
-            VALUES(?,?)''', (block_index, 1,))
+            VALUES($block_index,$first_undo_index)''', {'block_index': block_index, 'first_undo_index': 1})
     undolog_cursor.close()
 
     # Expire orders, bets and rps.
@@ -197,8 +199,8 @@ def parse_block(db, block_index, block_time,
     # Parse transactions, sorting them by type.
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM transactions \
-                      WHERE block_index=? ORDER BY tx_index''',
-                   (block_index,))
+                      WHERE block_index=$block_index ORDER BY tx_index''',
+                   {'block_index': block_index})
     txlist = []
     for tx in list(cursor):
         try:

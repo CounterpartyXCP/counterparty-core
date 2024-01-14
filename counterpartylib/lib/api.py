@@ -406,7 +406,7 @@ def compose_transaction(db, name, params,
             raise script.AddressError('invalid public key: {}'.format(pubkey))
 
     compose_method = sys.modules['counterpartylib.lib.messages.{}'.format(name)].compose
-    compose_params = inspect.getargspec(compose_method)[0]
+    compose_params = inspect.getfullargspec(compose_method)[0]
     missing_params = [p for p in compose_params if p not in params and p != 'db']
     for param in missing_params:
         params[param] = None

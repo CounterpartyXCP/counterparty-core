@@ -10,9 +10,9 @@ UNIT = 100000000        # The same across assets.
 __version__ = "9.61.1" # for hatch
 VERSION_STRING = __version__
 version = VERSION_STRING.split('.')
-VERSION_MAJOR = version[0]
-VERSION_MINOR = version[1]
-VERSION_REVISION = version[2]
+VERSION_MAJOR = int(version[0])
+VERSION_MINOR = int(version[1])
+VERSION_REVISION = int(version[2])
 
 
 # Counterparty protocol

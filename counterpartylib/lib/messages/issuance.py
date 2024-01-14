@@ -115,7 +115,7 @@ def initialise(db):
                       asset_longname_idx ON issuances (asset_longname)
                    ''')
 
-def validate (db, source, destination, asset, quantity, divisible, lock, reset, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index):
+def validate (db, source, destination, asset, quantity, divisible, lock, reset, callable_, call_date, call_price, description, subasset_parent, subasset_longname=None, block_index=None):
     problems = []
     fee = 0
 
@@ -299,7 +299,7 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
     return call_date, call_price, problems, fee, description, divisible, lock, reset, reissuance, reissued_asset_longname
 
 
-def compose (db, source, transfer_destination, asset, quantity, divisible, lock, reset, description):
+def compose (db, source, transfer_destination, asset, quantity, divisible, lock, reset=None, description=None):
 
     # Callability is deprecated, so for re‐issuances set relevant parameters
     # to old values; for first issuances, make uncallable.
@@ -367,10 +367,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
                 curr_format = asset_format + '{}s'.format(len(validated_description))
             
             encoded_description = validated_description.encode('utf-8')
-        
-        
-        
-        
+
         if (asset_format_length <= 19):# callbacks parameters were removed
             data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if lock else 0, 1 if reset else 0, encoded_description)
         elif (asset_format_length <= 26):

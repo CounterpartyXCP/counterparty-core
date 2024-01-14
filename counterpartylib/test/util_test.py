@@ -21,7 +21,7 @@ import binascii
 import appdirs
 import pprint
 import pycoin
-from pycoin.coins import Tx
+from pycoin.coins.bitcoin import Tx
 import bitcoin as bitcoinlib
 logger = logging.getLogger(__name__)
 
@@ -231,7 +231,7 @@ UNIQUE_DUMMY_TX_HASH = {}
 def dummy_tx_hash(raw_transaction):
     global UNIQUE_DUMMY_TX_HASH
 
-    tx = pycoin.tx.Tx.from_hex(raw_transaction)
+    tx = pycoin.coins.bitcoin.Tx.Tx.from_hex(raw_transaction)
 
     # normalize inputs
     for txin in tx.txs_in:
@@ -620,12 +620,14 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
         if error is not None:
             with pytest.raises(error[0]) as exception:
                 test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
+                assert exception.value.args[0] == error[1]
         else:
             test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
+            print("GEN HEX:", pytest_config.getoption('gentxhex'), method)
             if pytest_config.getoption('gentxhex') and method == 'compose':
-                print('')
+                print('--------------------------')
                 tx_params = {
-                    'encoding': 'multisig'
+                    #'encoding': 'multisig'
                 }
                 if tx_name == 'order' and inputs[1]=='BTC':
                     print('give btc')
@@ -633,6 +635,7 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
                 unsigned_tx_hex = transaction.construct(server_db, test_outputs, **tx_params)
                 print(tx_name)
                 print(unsigned_tx_hex)
+                print('--------------------------')
 
         if outputs is not None:
             try:
@@ -643,8 +646,6 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
                 else:
                     msg = "expected outputs don't match test_outputs: expected_outputs=%s test_outputs=%s" % (outputs, test_outputs)
                 raise Exception(msg)
-        if error is not None:
-            assert str(exception.value) == error[1]
         if records is not None:
             for record in records:
                 check_record(record, server_db, pytest_config)

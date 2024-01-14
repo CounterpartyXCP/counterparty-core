@@ -112,7 +112,7 @@ def initialise(db):
                           WHERE deb.action = 'refill dispenser' AND dis.source IS NOT NULL''');
         
         
-def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, status, open_address, block_index, oracle_address):
+def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, status, open_address, block_index, oracle_address=None):
     problems = []
     order_match = None
     asset_id = None

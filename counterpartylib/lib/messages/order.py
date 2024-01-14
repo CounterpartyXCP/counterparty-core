@@ -710,6 +710,7 @@ def match (db, tx, block_index=None):
                 match_expire_index = min(tx0['expire_index'], tx1['expire_index'])
 
             # Record order match.
+            print("INSERT MATCHID: ", util.make_id(tx0['tx_hash'], tx['tx_hash']))
             bindings = {
                 'id': util.make_id(tx0['tx_hash'], tx['tx_hash']),
                 'tx0_index': tx0['tx_index'],

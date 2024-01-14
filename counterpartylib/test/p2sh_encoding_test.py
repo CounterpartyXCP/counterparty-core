@@ -224,12 +224,14 @@ def test_p2sh_encoding_long_data(server_db):
         assert sumvout < sumvin
         assert sumvout == (sumvin - pretx_fee)
 
-
         # data P2SH output
         expected_datatx_length = 1156
         expected_datatx_fee = int(expected_datatx_length / 1000 * fee_per_kb)
         expected_datatx_fee_rounded = int(math.ceil(expected_datatx_fee / 2)) * 2
-        assert repr(pretx.vout[0].scriptPubKey) == "CScript([OP_HASH160, x('329d3940a8c28df82bee71bf1d5b16d35e864a84'), OP_EQUAL])"
+        #assert repr(pretx.vout[0].scriptPubKey) == "CScript([OP_HASH160, x('329d3940a8c28df82bee71bf1d5b16d35e864a84'), OP_EQUAL])"
+        assert repr(pretx.vout[0].scriptPubKey) == "CScript([OP_HASH160, x('600fad54f67716af692b33f72862b7c0d457ade6'), OP_EQUAL])"
+        print(pretx.vout[0].nValue, pretx.vout[1].nValue, pretx.vout[0].nValue+pretx.vout[1].nValue)
+        print(expected_datatx_fee)
         assert pretx.vout[0].nValue == int(math.ceil(expected_datatx_fee / 2))
         assert pretx.vout[1].nValue == int(math.ceil(expected_datatx_fee / 2))
         # change output

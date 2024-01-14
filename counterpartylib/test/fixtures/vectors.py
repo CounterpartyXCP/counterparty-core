@@ -209,7 +209,7 @@ UNITTEST_VECTOR = {
                     'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'status': 'filled',
                     'target_value': 0.0,
-                    'tx_hash': 'aac845aa4eb4232be418d70586755f7b132dc33d418da3bc96ced4f79570a305',
+                    'tx_hash': 'db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e',
                     'tx_index': 102,
                     'wager_quantity': 10,
                     'wager_remaining': 0,
@@ -262,7 +262,7 @@ UNITTEST_VECTOR = {
         #     ]
         # }],
         'cancel_bet': [{
-            'in': ({'counterwager_quantity': 10, 'wager_remaining': 10, 'target_value': 0.0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'counterwager_remaining': 10, 'tx_index': 102, 'block_index': 310101, 'deadline': 1388000200, 'bet_type': 3, 'expiration': 1000, 'expire_index': 311101, 'tx_hash': 'aac845aa4eb4232be418d70586755f7b132dc33d418da3bc96ced4f79570a305', 'leverage': 5040, 'wager_quantity': 10, 'fee_fraction_int': 5000000, 'status': 'open'}, 'filled', DP['default_block_index']),
+            'in': ({'counterwager_quantity': 10, 'wager_remaining': 10, 'target_value': 0.0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'counterwager_remaining': 10, 'tx_index': 102, 'block_index': 310101, 'deadline': 1388000200, 'bet_type': 3, 'expiration': 1000, 'expire_index': 311101, 'tx_hash': 'db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e', 'leverage': 5040, 'wager_quantity': 10, 'fee_fraction_int': 5000000, 'status': 'open'}, 'filled', DP['default_block_index']),
             'records': [
                 {'table': 'bets', 'values': {
                     'bet_type': 3,
@@ -281,12 +281,12 @@ UNITTEST_VECTOR = {
                     'wager_quantity': 10,
                     'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'target_value': 0.0,
-                    'tx_hash': 'aac845aa4eb4232be418d70586755f7b132dc33d418da3bc96ced4f79570a305',
+                    'tx_hash': 'db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e',
                 }}
             ]
         }],
         'cancel_bet_match': [{
-            'in': ({'tx0_block_index': 310019, 'backward_quantity': 9, 'initial_value': 1, 'tx1_expiration': 100, 'id': 'c698148a6da277d898f71fb2efeabf9530af97dd834c698a1a62c85019430e0d_acb20e35d26e55048ed34b3e1f4046a704c8b6d130a7d33c064cb04b24356ee0', 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'status': 'settled', 'leverage': 5040, 'target_value': 0.0, 'fee_fraction_int': 5000000, 'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'deadline': 1388000001, 'tx1_bet_type': 0, 'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx0_index': 20, 'tx1_hash': 'acb20e35d26e55048ed34b3e1f4046a704c8b6d130a7d33c064cb04b24356ee0', 'tx0_hash': 'c698148a6da277d898f71fb2efeabf9530af97dd834c698a1a62c85019430e0d', 'block_index': 310020, 'forward_quantity': 9, 'match_expire_index': 310119, 'tx1_block_index': 310020, 'tx0_expiration': 100, 'tx1_index': 21, 'tx0_bet_type': 1}, 'filled', DP['default_block_index']),
+            'in': ({'tx0_block_index': 310019, 'backward_quantity': 9, 'initial_value': 1, 'tx1_expiration': 100, 'id': '2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93', 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'status': 'settled', 'leverage': 5040, 'target_value': 0.0, 'fee_fraction_int': 5000000, 'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'deadline': 1388000001, 'tx1_bet_type': 0, 'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx0_index': 20, 'tx1_hash': '5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93', 'tx0_hash': '2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1', 'block_index': 310020, 'forward_quantity': 9, 'match_expire_index': 310119, 'tx1_block_index': 310020, 'tx0_expiration': 100, 'tx1_index': 21, 'tx0_bet_type': 1}, 'filled', DP['default_block_index']),
             'records': [
                 {'table': 'bet_matches', 'values': {
                     'backward_quantity': 9,
@@ -295,7 +295,7 @@ UNITTEST_VECTOR = {
                     'fee_fraction_int': 5000000,
                     'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'forward_quantity': 9,
-                    'id': 'c698148a6da277d898f71fb2efeabf9530af97dd834c698a1a62c85019430e0d_acb20e35d26e55048ed34b3e1f4046a704c8b6d130a7d33c064cb04b24356ee0',
+                    'id': '2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93',
                     'initial_value': 1,
                     'leverage': 5040,
                     'match_expire_index': 310119,
@@ -305,13 +305,13 @@ UNITTEST_VECTOR = {
                     'tx0_bet_type': 1,
                     'tx0_block_index': 310019,
                     'tx0_expiration': 100,
-                    'tx0_hash': 'c698148a6da277d898f71fb2efeabf9530af97dd834c698a1a62c85019430e0d',
+                    'tx0_hash': '2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1',
                     'tx0_index': 20,
                     'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'tx1_bet_type': 0,
                     'tx1_block_index': 310020,
                     'tx1_expiration': 100,
-                    'tx1_hash': 'acb20e35d26e55048ed34b3e1f4046a704c8b6d130a7d33c064cb04b24356ee0',
+                    'tx1_hash': '5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93',
                     'tx1_index': 21,
                 }}
             ]
@@ -476,8 +476,8 @@ UNITTEST_VECTOR = {
     },
     'cancel': {
         'compose': [{
-            'in': (ADDR[1], 'aac845aa4eb4232be418d70586755f7b132dc33d418da3bc96ced4f79570a305'),
-            'out': ('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [], b'\x00\x00\x00F\xaa\xc8E\xaaN\xb4#+\xe4\x18\xd7\x05\x86u_{\x13-\xc3=A\x8d\xa3\xbc\x96\xce\xd4\xf7\x95p\xa3\x05')
+            'in': (ADDR[1], 'db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e'),
+            'out': ('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [], b'\x00\x00\x00F\xdbN\xa0\x92\xbe\xa6\x03n=\x1e_n\xc8c\xdb\x9b\x90\x02R\xb4\xf4\xd6\xd9\xfa\xa6\x16S#\xf43\xc5\x1e')
         }, {
             'in': (P2SH_ADDR[0], 'd79b590e4ec3e74cbc3eb4d0f956ce7abb0e3af2ccac85ff90ed8acf13f2e048'),
             'out': (P2SH_ADDR[0], [], b'\x00\x00\x00F\xd7\x9bY\x0eN\xc3\xe7L\xbc>\xb4\xd0\xf9V\xcez\xbb\x0e:\xf2\xcc\xac\x85\xff\x90\xed\x8a\xcf\x13\xf2\xe0H')
@@ -485,21 +485,21 @@ UNITTEST_VECTOR = {
             'in': (ADDR[1], 'foobar'),
             'error': (exceptions.ComposeError, "['no open offer with that hash']")
         }, {
-            'in': ('foobar', 'aac845aa4eb4232be418d70586755f7b132dc33d418da3bc96ced4f79570a305'),
+            'in': ('foobar', 'db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e'),
             'error': (exceptions.ComposeError, "['incorrect source address']")
         }, {
-            'in': (ADDR[1], 'acb20e35d26e55048ed34b3e1f4046a704c8b6d130a7d33c064cb04b24356ee0'),
+            'in': (ADDR[1], '5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93'),
             'error': (exceptions.ComposeError, "['offer not open']")
         }],
         'parse': [{
-            'in': ({'block_index': DP['default_block_index'], 'btc_amount': 0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'data': b'\x00\x00\x00F\xaa\xc8E\xaaN\xb4#+\xe4\x18\xd7\x05\x86u_{\x13-\xc3=A\x8d\xa3\xbc\x96\xce\xd4\xf7\x95p\xa3\x05', 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'fee': 10000, 'block_time': 310501000, 'tx_hash': 'fb645106e276bfa1abd587f4a251b26f491a2a9ae61ca46a669794109728b122', 'destination': '', 'supported': 1},),
+            'in': ({'block_index': DP['default_block_index'], 'btc_amount': 0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'data': b'\x00\x00\x00F\xdbN\xa0\x92\xbe\xa6\x03n=\x1e_n\xc8c\xdb\x9b\x90\x02R\xb4\xf4\xd6\xd9\xfa\xa6\x16S#\xf43\xc5\x1e', 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'fee': 10000, 'block_time': 310501000, 'tx_hash': 'fb645106e276bfa1abd587f4a251b26f491a2a9ae61ca46a669794109728b122', 'destination': '', 'supported': 1},),
             'out': None
         }, {
-            'in': ({'block_index': DP['default_block_index'], 'btc_amount': 0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'data': b'\x00\x00\x00F\xaa\xc8E\xaaN\xb4#+\xe4\x18\xd7\x05\x86u_{\x13-\xc3=A\x8d\xa3\xbc\x96\xce\xd4\xf7\x95p\xa3\x05', 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'fee': 10000, 'block_time': 310501000, 'tx_hash': 'fb645106e276bfa1abd587f4a251b26f491a2a9ae61ca46a669794109728b122', 'destination': '', 'supported': 1},),
+            'in': ({'block_index': DP['default_block_index'], 'btc_amount': 0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'data': b'\x00\x00\x00F\xdbN\xa0\x92\xbe\xa6\x03n=\x1e_n\xc8c\xdb\x9b\x90\x02R\xb4\xf4\xd6\xd9\xfa\xa6\x16S#\xf43\xc5\x1e', 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'fee': 10000, 'block_time': 310501000, 'tx_hash': 'fb645106e276bfa1abd587f4a251b26f491a2a9ae61ca46a669794109728b122', 'destination': '', 'supported': 1},),
             'records': [
                 {'table': 'cancels', 'values': {
                     'block_index': DP['default_block_index'],
-                    'offer_hash': 'aac845aa4eb4232be418d70586755f7b132dc33d418da3bc96ced4f79570a305',
+                    'offer_hash': 'db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e',
                     'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'status': 'valid',
                     'tx_hash': 'fb645106e276bfa1abd587f4a251b26f491a2a9ae61ca46a669794109728b122',
@@ -522,7 +522,7 @@ UNITTEST_VECTOR = {
                     'wager_quantity': 10,
                     'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'target_value': 0.0,
-                    'tx_hash': 'aac845aa4eb4232be418d70586755f7b132dc33d418da3bc96ced4f79570a305',
+                    'tx_hash': 'db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e',
                 }}
            ]
         }],
@@ -766,7 +766,7 @@ UNITTEST_VECTOR = {
                     'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'status': 'dropped',
                     'target_value': 0.0,
-                    'tx_hash': 'aac845aa4eb4232be418d70586755f7b132dc33d418da3bc96ced4f79570a305',
+                    'tx_hash': 'db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e',
                     'tx_index': 102,
                     'wager_quantity': 10,
                     'wager_remaining': 10,
@@ -917,7 +917,7 @@ UNITTEST_VECTOR = {
                     'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'status': 'dropped',
                     'target_value': 0.0,
-                    'tx_hash': 'aac845aa4eb4232be418d70586755f7b132dc33d418da3bc96ced4f79570a305',
+                    'tx_hash': 'db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e',
                     'tx_index': 102,
                     'wager_quantity': 10,
                     'wager_remaining': 10,
@@ -957,7 +957,7 @@ UNITTEST_VECTOR = {
                     'source': ADDR[4],
                     'status': 'open',
                     'target_value': 0.0,
-                    'tx_hash': '2447f6974033ac41c40b4598dfb73fc7479fd85bb9d01de2267b3f7842803275',
+                    'tx_hash': '41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef',
                     'tx_index': 488,
                     'wager_quantity': 9,
                     'wager_remaining': 9}}
@@ -1268,7 +1268,7 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], ADDR[1], 'PARENT.already.issued', 100000000),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)],
-                    bytes.fromhex('0000000001530821671b10650000000005f5e100'))
+                    binascii.unhexlify('0000000001530821671b10650000000005f5e100'))
         }, {
             'comment': 'send to a REQUIRE_MEMO address, without memo',
             'in': (ADDR[0], ADDR[6], 'XCP', 100000000),
@@ -1515,156 +1515,163 @@ UNITTEST_VECTOR = {
         }]
     },
     'issuance': {
+        #validate (db, source, destination, asset, quantity, divisible, lock, reset, callable_, call_date, call_price, description, subasset_parent, subasset_longname=None, block_index=None):
+        #validate (db, source, destination, asset, quantity, divisible,             ,callable_, call_date, call_price, description, block_index)
         'validate': [{
-            'in': (ADDR[0], None, 'ASSET', 1000, True, False, None, None, '', None, None, DP['default_block_index']),
-            'out': (0, 0.0, [], 50000000, '', True, False, None)
+            'in': (ADDR[0], None, 'ASSET', 1000, True, None, None, False, None, None, '', None, None, DP['default_block_index']),
+            'out': (0, 0.0, [], 50000000, '', True, False, False, False, None)
         }, {
-            'in': (P2SH_ADDR[0], None, 'ASSET', 1000, True, False, None, None, '', None, None, DP['default_block_index']),
-            'out': (0, 0.0, [], 50000000, '', True, False, None)
+            'in': (P2SH_ADDR[0], None, 'ASSET', 1000, True, None, None, False, None, None, '', None, None, DP['default_block_index']),
+            'out': (0, 0.0, [], 50000000, '', True, False, False, False, None)
         }, {
-            'in': (ADDR[2], None, 'DIVIDEND', 1000, False, False, None, None, '', None, None, DP['default_block_index']),
-            'out': (0, 0.0, ['cannot change divisibility'], 0, '', False, True, None)
+            'in': (ADDR[2], None, 'DIVIDEND', 1000, False, None, None, False, None, None, '', None, None, DP['default_block_index']),
+            'out': (0, 0.0, ['cannot change divisibility'], 0, '', False, False, False, True, None)
         }, {
-            'in': (ADDR[2], None, 'DIVIDEND', 1000, True, True, None, None, '', None, None, DP['default_block_index']),
-            'out': (0, 0.0, ['cannot change callability'], 0, '', True, True, None)
+            'in': (ADDR[2], None, 'DIVIDEND', 1000, True, None, None, True, None, None, '', None, None, DP['default_block_index']),
+            'out': (0, 0.0, ['cannot change callability'], 0, '', True, True, False, False, None)
         }, {
-            'in': (ADDR[0], None, 'BTC', 1000, True, False, None, None, '', None, None, DP['default_block_index']),
-            'out': (0, 0.0, ['cannot issue BTC or XCP'], 50000000, '', True, False, None)
+            'in': (ADDR[0], None, 'BTC', 1000, True, None, None, False, None, None, '', None, None, DP['default_block_index']),
+            'out': (0, 0.0, ['cannot issue BTC or XCP'], 50000000, '', True, False, False, False, None)
         }, {
-            'in': (ADDR[0], None, 'XCP', 1000, True, False, None, None, '', None, None, DP['default_block_index']),
-            'out': (0, 0.0, ['cannot issue BTC or XCP'], 50000000, '', True, False, None)
+            'in': (ADDR[0], None, 'XCP', 1000, True, None, None, False, None, None, '', None, None, DP['default_block_index']),
+            'out': (0, 0.0, ['cannot issue BTC or XCP'], 50000000, '', True, False, False, False, None)
         }, {
-            'in': (ADDR[0], None, 'NOSATOSHI', 1000.5, True, False, None, None, '', None, None, DP['default_block_index']),
+            'in': (ADDR[0], None, 'NOSATOSHI', 1000.5, True, None, None, False, None, None, '', None, None, DP['default_block_index']),
             'out': (0, 0.0, ['quantity must be in satoshis'], 0, '', True, None, None)
         }, {
-            'in': (ADDR[0], None, 'CALLPRICEFLOAT', 1000, True, False, None, 100.0, '', None, None, DP['default_block_index']),
-            'out': (0, 0.0, [], 0, '', True, False, None)
+            'in': (ADDR[0], None, 'CALLPRICEFLOAT', 1000, True, None, None, False, None, 100.0, '', None, None, DP['default_block_index']),
+            'out': (0, 0.0, [], 0, '', True, False, False, False, None)
         }, {
-            'in': (ADDR[0], None, 'CALLPRICEINT', 1000, True, False, None, 100, '', None, None, DP['default_block_index']),
-            'out': (0, 0.0, [], 50000000, '', True, False, None)
+            'in': (ADDR[0], None, 'CALLPRICEINT', 1000, True, None, None, False, None, 100, '', None, None, DP['default_block_index']),
+            'out': (0, 0.0, [], 50000000, '', True, False, False, False, None)
         }, {
-            'in': (ADDR[0], None, 'CALLPRICESTR', 1000, True, False, None, 'abc', '', None, None, DP['default_block_index']),
+            'in': (ADDR[0], None, 'CALLPRICESTR', 1000, True, None, None, False, None, 'abc', '', None, None, DP['default_block_index']),
             'out': (0, 'abc', ['call_price must be a float'], 0, '', True, None, None)
         }, {
-            'in': (ADDR[0], None, 'CALLDATEINT', 1000, True, False, 1409401723, None, '', None, None, DP['default_block_index']),
-            'out': (0, 0.0, [], 50000000, '', True, False, None)
+            'in': (ADDR[0], None, 'CALLDATEINT', 1000, True, None, None, False, 1409401723, None, '', None, None, DP['default_block_index']),
+            'out': (0, 0.0, [], 50000000, '', True, False, False, False, None)
         }, {
-            'in': (ADDR[0], None, 'CALLDATEFLOAT', 1000, True, False, 0.9 * 1409401723, None, '', None, None, DP['default_block_index']),
+            'in': (ADDR[0], None, 'CALLDATEFLOAT', 1000, True, None, None, False, 0.9 * 1409401723, None, '', None, None, DP['default_block_index']),
             'out': (1268461550.7, 0.0, ['call_date must be epoch integer'], 0, '', True, None, None)
         }, {
-            'in': (ADDR[0], None, 'CALLDATESTR', 1000, True, False, 'abc', None, '', None, None, DP['default_block_index']),
+            'in': (ADDR[0], None, 'CALLDATESTR', 1000, True, None, None, False, 'abc', None, '', None, None, DP['default_block_index']),
             'out': ('abc', 0.0, ['call_date must be epoch integer'], 0, '', True, None, None)
         }, {
-            'in': (ADDR[0], None, 'NEGVALUES', -1000, True, True, -1409401723, -DP['quantity'], '', None, None, DP['default_block_index']),
-            'out': (-1409401723, -100000000.0, ['negative quantity', 'negative call price', 'negative call date'], 50000000, '', True, False, None)
+            'in': (ADDR[0], None, 'NEGVALUES', -1000, True, None, None, True, -1409401723, -DP['quantity'], '', None, None, DP['default_block_index']),
+            'out': (-1409401723, -100000000.0, ['negative quantity', 'negative call price', 'negative call date'], 50000000, '', True, False, False, False, None)
         }, {
-            'in': (ADDR[2], None, 'DIVISIBLE', 1000, True, False, None, None, 'Divisible asset', None, None, DP['default_block_index']),
-            'out': (0, 0.0, ['issued by another address'], 0, 'Divisible asset', True, True, None)
+            'in': (ADDR[2], None, 'DIVISIBLE', 1000, True, None, None, False, None, None, 'Divisible asset', None, None, DP['default_block_index']),
+            'out': (0, 0.0, ['issued by another address'], 0, 'Divisible asset', True, False, False, True, None)
         }, {
-            'in': (ADDR[0], None, 'LOCKED', 1000, True, False, None, None, 'Locked asset', None, None, DP['default_block_index']),
-            'out': (0, 0.0, ['locked asset and non‐zero quantity'], 0, 'Locked asset', True, True, None)
+            'in': (ADDR[0], None, 'LOCKED', 1000, True, None, None, False, None, None, 'Locked asset', None, None, DP['default_block_index']),
+            'out': (0, 0.0, ['locked asset and non‐zero quantity'], 0, 'Locked asset', True, True, False, False, None)
         }, {
-            'in': (ADDR[0], None, 'BSSET', 1000, True, False, None, None, 'LOCK', None, None, DP['default_block_index']),
-            'out': (0, 0.0, ['cannot lock a non‐existent asset'], 50000000, 'LOCK', True, False, None)
+            'in': (ADDR[0], None, 'BSSET', 1000, True, None, None, False, None, None, 'LOCK', None, None, DP['default_block_index']),
+            'out': (0, 0.0, ['cannot lock a non‐existent asset'], 50000000, 'LOCK', True, False, False, False, None)
         }, {
-            'in': (ADDR[0], ADDR[1], 'BSSET', 1000, True, False, None, None, '', None, None, DP['default_block_index']),
-            'out': (0, 0.0, ['cannot transfer a non‐existent asset', 'cannot issue and transfer simultaneously'], 50000000, '', True, False, None)
+            # Now it's possible to issue and transfer simultaneously
+            'in': (ADDR[0], ADDR[1], 'BSSET', 1000, True, None, None, False, None, None, '', None, None, DP['default_block_index']),
+            'out': (0, 0.0, [], 50000000, '', True, False, False, False, None)
         }, {
-            'in': (ADDR[2], None, 'BSSET', 1000, True, False, None, None, '', None, None, DP['default_block_index']),
-            'out': (0, 0.0, ['insufficient funds'], 50000000, '', True, False, None)
+            'in': (ADDR[2], None, 'BSSET', 1000, True, None, None, False, None, None, '', None, None, DP['default_block_index']),
+            'out': (0, 0.0, ['insufficient funds'], 50000000, '', True, False, False, False, None)
         }, {
-            'in': (ADDR[0], None, 'BSSET', 2**63, True, False, None, None, '', None, None, DP['default_block_index']),
-            'out': (0, 0.0, ['total quantity overflow', 'integer overflow'], 50000000, '', True, False, None)
+            'in': (ADDR[0], None, 'BSSET', 2**63, True, None, None, False, None, None, '', None, None, DP['default_block_index']),
+            'out': (0, 0.0, ['total quantity overflow', 'integer overflow'], 50000000, '', True, False, False, False, None)
         }, {
-            'in': (ADDR[0], ADDR[1], 'DIVISIBLE', 1000, True, False, None, None, 'Divisible asset', None, None, DP['default_block_index']),
-            'out': (0, 0.0, ['cannot issue and transfer simultaneously'], 0, 'Divisible asset', True, True, None)
+            # Now it's possible to issue and transfer simultaneously
+            'in': (ADDR[0], ADDR[1], 'DIVISIBLE', 1000, True, None, None, False, None, None, 'Divisible asset', None, None, DP['default_block_index']),
+            'out': (0, 0.0, [], 0, 'Divisible asset', True, False, False, True, None)
         }, {
-            'in': (ADDR[0], None, 'MAXIMUM', 2**63-1, True, False, None, None, 'Maximum quantity', None, None, DP['default_block_index']),
-            'out': (0, 0.0, [], 50000000, 'Maximum quantity', True, False, None)
+            'in': (ADDR[0], None, 'MAXIMUM', 2**63-1, True, None, None, False, None, None, 'Maximum quantity', None, None, DP['default_block_index']),
+            'out': (0, 0.0, [], 50000000, 'Maximum quantity', True, False, False, False, None)
         }, {
             'comment': 'total + quantity has to be lower than MAX_INT',
-            'in': (ADDR[0], None, 'DIVISIBLE', 2**63-1, True, False, None, None, 'Maximum quantity', None, None, DP['default_block_index']),
-            'out': (0, 0.0, ['total quantity overflow'], 0, 'Maximum quantity', True, True, None)
+            'in': (ADDR[0], None, 'DIVISIBLE', 2**63-1, True, None, None, False, None, None, 'Maximum quantity', None, None, DP['default_block_index']),
+            'out': (0, 0.0, ['total quantity overflow'], 0, 'Maximum quantity', True, False, False, True, None)
         }, {
-            'in': (ADDR[0], None, 'A{}'.format(26**12 + 1), 1000, True, False, None, None, 'description', 'NOTFOUND', 'NOTFOUND.child1', DP['default_block_index']),
-            'out': (0, 0.0, ['parent asset not found'], 25000000, 'description', True, False, None)
+            'in': (ADDR[0], None, 'A{}'.format(26**12 + 1), 1000, True, None, None, False, None, None, 'description', 'NOTFOUND', 'NOTFOUND.child1', DP['default_block_index']),
+            'out': (0, 0.0, ['parent asset not found'], 25000000, 'description', True, False, False, False, None)
         }, {
-            'in': (ADDR[1], None, 'A{}'.format(26**12 + 1), 100000000, True, False, None, None, 'description', 'PARENT', 'PARENT.child1', DP['default_block_index']),
-            'out': (0, 0.0, ['parent asset owned by another address'], 25000000, 'description', True, False, None)
+            'in': (ADDR[1], None, 'A{}'.format(26**12 + 1), 100000000, True, None, None, False, None, None, 'description', 'PARENT', 'PARENT.child1', DP['default_block_index']),
+            'out': (0, 0.0, ['parent asset owned by another address'], 25000000, 'description', True, False, False, False, None)
         }, {
-            'in': (ADDR[0], None, 'A{}'.format(26**12 + 1), 100000000, True, False, None, None, 'description', 'NOTFOUND', 'NOTFOUND.child1', DP['default_block_index']),
-            'out': (0, 0.0, ['parent asset not found'], 25000000, 'description', True, False, None)
+            'in': (ADDR[0], None, 'A{}'.format(26**12 + 1), 100000000, True, None, None, False, None, None, 'description', 'NOTFOUND', 'NOTFOUND.child1', DP['default_block_index']),
+            'out': (0, 0.0, ['parent asset not found'], 25000000, 'description', True, False, False, False, None)
         }, {
             'comment': 'A subasset name must be unique',
-            'in': (ADDR[0], None, 'A{}'.format(26**12 + 1), 100000000, True, False, None, None, 'description', 'PARENT', 'PARENT.already.issued', DP['default_block_index']),
-            'out': (0, 0.0, ['subasset already exists'], 25000000, 'description', True, False, None)
+            'in': (ADDR[0], None, 'A{}'.format(26**12 + 1), 100000000, True, None, None, False, None, None, 'description', 'PARENT', 'PARENT.already.issued', DP['default_block_index']),
+            'out': (0, 0.0, ['subasset already exists'], 25000000, 'description', True, False, False, False, None)
         }, {
             'comment': 'cannot change subasset name through a reissuance description modification',
-            'in': (ADDR[0], None, 'A{}'.format(26**12 + 101), 200000000, True, False, None, None, 'description', 'PARENT', 'PARENT.changed.name', DP['default_block_index']),
-            'out': (0, 0.0, [], 0, 'description', True, True, 'PARENT.already.issued')
+            'in': (ADDR[0], None, 'A{}'.format(26**12 + 101), 200000000, True, None, None, False, None, None, 'description', 'PARENT', 'PARENT.changed.name', DP['default_block_index']),
+            'out': (0, 0.0, [], 0, 'description', True, False, False, True, 'PARENT.already.issued')
         }, {
-            'in': (ADDR[0], None, 'UNRELATED', 1000, True, False, None, None, 'description', 'PARENT', 'PARENT.child1', DP['default_block_index']),
-            'out': (0, 0.0, ['a subasset must be a numeric asset'], 25000000, 'description', True, False, None)
+            'in': (ADDR[0], None, 'UNRELATED', 1000, True, None, None, False, None, None, 'description', 'PARENT', 'PARENT.child1', DP['default_block_index']),
+            'out': (0, 0.0, ['a subasset must be a numeric asset'], 25000000, 'description', True, False, False, False, None)
         }, {
             # before protocol change, reissuing a quantity of a locked asset was allowed if the description was changed
             'comment': 'allow reissuance of locked asset before fix',
-            'in': (ADDR[6], None, 'LOCKEDPREV', 1000, True, False, None, None, 'Locked prev', None, None, DP['default_block_index']),
-            'out': (0, 0.0, [], 0, 'Locked prev', True, True, None)
+            'in': (ADDR[6], None, 'LOCKEDPREV', 1000, True, None, None, False, None, None, 'Locked prev', None, None, DP['default_block_index']),
+            'out': (0, 0.0, [], 0, 'Locked prev', True, False, False, True, None)
         }, {
             # after protocol change, reissuing quantities for a locked asset is never allowed
             'comment': 'disallow reissuance of locked asset after fix',
             'mock_protocol_changes': {'issuance_lock_fix': True},
-            'in': (ADDR[6], None, 'LOCKEDPREV', 1000, True, False, None, None, 'Locked prev', None, None, DP['default_block_index']),
-            'out': (0, 0.0, ['locked asset and non‐zero quantity'], 0, 'Locked prev', True, True, None)
+            'in': (ADDR[6], None, 'LOCKEDPREV', 1000, True, None, None, False, None, None, 'Locked prev', None, None, DP['default_block_index']),
+            'out': (0, 0.0, ['locked asset and non‐zero quantity'], 0, 'Locked prev', True, True, False, False, None)
         }],
+        #compose (db, source, transfer_destination, asset, quantity, divisible, lock, reset=None, description=None)
         'compose': [{
-            'in': (ADDR[0], None, 'ASSET', 1000, True, ''),
+            'in': (ADDR[0], None, 'ASSET', 1000, True, False, None, ''),
             'error': (exceptions.AssetNameError, 'non‐numeric asset name starts with ‘A’')
         }, {
-            'in': (ADDR[0], None, 'BSSET1', 1000, True, ''),
+            'in': (ADDR[0], None, 'BSSET1', 1000, True, False, None, ''),
             'error': (exceptions.AssetNameError, "('invalid character:', '1')")
         }, {
-            'in': (ADDR[0], None, 'SET', 1000, True, ''),
+            'in': (ADDR[0], None, 'SET', 1000, True, False, None, ''),
             'error': (exceptions.AssetNameError, 'too short')
         }, {
-            'in': (ADDR[0], None, 'BSSET', 1000, True, ''),
-            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+            'in': (ADDR[0], None, 'BSSET', 1000, True, False, None, ''),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00')
         }, {
-            'in': (P2SH_ADDR[0], None, 'BSSET', 1000, True, ''),
-            'out': (P2SH_ADDR[0], [], b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+            'in': (P2SH_ADDR[0], None, 'BSSET', 1000, True, False, None, ''),
+            'out': (P2SH_ADDR[0], [], b'\x00\x00\x00\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00')
         }, {
-            'in': (ADDR[0], None, 'BSSET', 1000, True, 'description much much much longer than 42 letters'),
-            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00description much much much longer than 42 letters')
+            'in': (ADDR[0], None, 'BSSET', 1000, True, False, None, 'description much much much longer than 42 letters'),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00description much much much longer than 42 letters')
         }, {
-            'in': (ADDR[0], ADDR[1], 'DIVISIBLE', 0, True, ''),
-            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)], b'\x00\x00\x00\x14\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+            'in': (ADDR[0], ADDR[1], 'DIVISIBLE', 0, True, False, None, ''),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)], b'\x00\x00\x00\x16\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00')
         }, {
-            'in': (MULTISIGADDR[0], None, 'BSSET', 1000, True, ''),
-            'out': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', [], b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+            'in': (MULTISIGADDR[0], None, 'BSSET', 1000, True, False, None, ''),
+            'out': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', [], b'\x00\x00\x00\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00')
         }, {
-            'in': (ADDR[0], MULTISIGADDR[0], 'DIVISIBLE', 0, True, ''),
-            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', None)], b'\x00\x00\x00\x14\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+            'in': (ADDR[0], MULTISIGADDR[0], 'DIVISIBLE', 0, True, False, None, ''),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', None)], b'\x00\x00\x00\x16\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00')
         }, {
-            'in': (ADDR[0], None, 'MAXIMUM', 2**63-1, True, 'Maximum quantity'),
-            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x14\x00\x00\x00\x00\xdd\x96\xd2t\x7f\xff\xff\xff\xff\xff\xff\xff\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10Maximum quantity')
+            'in': (ADDR[0], None, 'MAXIMUM', 2**63-1, True, False, None, 'Maximum quantity'),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x16\x00\x00\x00\x00\xdd\x96\xd2t\x7f\xff\xff\xff\xff\xff\xff\xff\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00Maximum quantity')
         }, {
-            'in': (ADDR[0], None, 'A{}'.format(2**64 - 1), 1000, None, None),
-            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x14\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+            'in': (ADDR[0], None, 'A{}'.format(2**64 - 1), 1000, None, False, None, None),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x16\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL')
         }, {
-            'in': (ADDR[0], None, 'A{}'.format(2**64), 1000, True, ''),
+            'in': (ADDR[0], None, 'A{}'.format(2**64), 1000, True, False, None, ''),
             'error': (exceptions.AssetNameError, 'numeric asset name not in range')
         }, {
-            'in': (ADDR[0], None, 'A{}'.format(26**12), 1000, True, ''),
+            'in': (ADDR[0], None, 'A{}'.format(26**12), 1000, True, False, None, ''),
             'error': (exceptions.AssetNameError, 'numeric asset name not in range')
         }, {
             'comment': 'basic child asset',
-            'in': (ADDR[0], None, 'PARENT.child1', 100000000, True, ''),
-            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], bytes.fromhex('0000001501530821671b10010000000005f5e100010a57c6f36de23a1f5f4c46'))
+            'in': (ADDR[0], None, 'PARENT.child1', 100000000, True, False, None, ''),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], binascii.unhexlify('0000001701530821671b10010000000005f5e100010a57c6f36de23a1f5f4c46'))
+            # 00000017|01530821671b1001|0000000005f5e100|01|0a|57c6f36de23a1f5f4c46
             # 00000015|01530821671b1001|0000000005f5e100|01|0a|57c6f36de23a1f5f4c46
         }, {
             'comment': 'basic child asset with description',
-            'in': (ADDR[0], None, 'PARENT.child1', 100000000, True, 'hello world'),
-            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], bytes.fromhex('0000001501530821671b10010000000005f5e100010a57c6f36de23a1f5f4c4668656c6c6f20776f726c64'))
+            'in': (ADDR[0], None, 'PARENT.child1', 100000000, True, False, None, 'hello world'),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], binascii.unhexlify('0000001701530821671b10010000000005f5e100010a57c6f36de23a1f5f4c4668656c6c6f20776f726c64'))
+            # 00000017|01530821671b1001|0000000005f5e100|01|0a|57c6f36de23a1f5f4c46|68656c6c6f20776f726c64
             # 00000015|01530821671b1001|0000000005f5e100|01|0a|57c6f36de23a1f5f4c46|68656c6c6f20776f726c64
             #     |           |               |           |  |   |                   |
             #     |           |               |           |  |   |                   └─── Description - "hello world"
@@ -1675,31 +1682,32 @@ UNITTEST_VECTOR = {
             #     |           └────────────────── asset name (8 bytes) - Numeric asset A95428956661682177 (26**12 + 1)
             #     └────────────────── Type ID (4 bytes) - type 21/subasset
         }, {
-            'in': (ADDR[0], None, 'PARENT.a.b.c', 1000, True, ''),
-            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], bytes.fromhex('0000001501530821671b100100000000000003e8010a014a74856171ca3c559f'))
+            'in': (ADDR[0], None, 'PARENT.a.b.c', 1000, True, False, None, ''),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], binascii.unhexlify('0000001701530821671b100100000000000003e8010a014a74856171ca3c559f'))
+            # 00000017|01530821671b1001|00000000000003e8|01|0a|014a74856171ca3c559f
             # 00000015|01530821671b1001|00000000000003e8|01|0a|014a74856171ca3c559f
         }, {
-            'in': (ADDR[0], None, 'PARENT.a-zA-Z0-9.-_@!', 1000, True, ''),
-            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], bytes.fromhex('0000001501530821671b100100000000000003e801108e90a57dba99d3a77b0a2470b1816edb'))
-            # 00000015|01530821671b1001|00000000000003e8|01|10|8e90a57dba99d3a77b0a2470b1816edb
+            'in': (ADDR[0], None, 'PARENT.a-zA-Z0-9.-_@!', 1000, True, False, None, ''),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], binascii.unhexlify('0000001701530821671b100100000000000003e801108e90a57dba99d3a77b0a2470b1816edb'))
+            # 00000017|01530821671b1001|00000000000003e8|01|10|8e90a57dba99d3a77b0a2470b1816edb
         }, {
             'comment': 'make sure compose catches asset name syntax errors',
-            'in': (ADDR[0], None, 'BADASSETx.child1', 1000, True, ''),
+            'in': (ADDR[0], None, 'BADASSETx.child1', 1000, True, False, None, ''),
             'error': (exceptions.AssetNameError, "('parent asset name contains invalid character:', 'x')")
         }, {
             'comment': 'make sure compose catches validation errors',
-            'in': (ADDR[1], None, 'PARENT.child1', 1000, True, ''),
+            'in': (ADDR[1], None, 'PARENT.child1', 1000, True, False, None, ''),
             'error': (exceptions.ComposeError, "['parent asset owned by another address']")
         }, {
             'comment': 'referencing parent asset by name composes a reissuance',
-            'in': (ADDR[0], None, 'PARENT.already.issued', 1000, True, ''),
-            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x14\x01S\x08!g\x1b\x10e\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+            'in': (ADDR[0], None, 'PARENT.already.issued', 1000, True, False, None, ''),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x16\x01S\x08!g\x1b\x10e\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00')
         }, {
             'comment': 'basic child asset with compact message type id',
             'mock_protocol_changes': {'short_tx_type_id': True},
-            'in': (ADDR[0], None, 'PARENT.child1', 100000000, True, ''),
-            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], bytes.fromhex('1501530821671b10010000000005f5e100010a57c6f36de23a1f5f4c46'))
-            # 15|01530821671b1001|0000000005f5e100|01|0a|57c6f36de23a1f5f4c46
+            'in': (ADDR[0], None, 'PARENT.child1', 100000000, True, False, None, ''),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], binascii.unhexlify('1701530821671b10010000000005f5e100010a57c6f36de23a1f5f4c46'))
+            # 17|01530821671b1001|0000000005f5e100|01|0a|57c6f36de23a1f5f4c46
         }],
         'parse': [{
             'comment': 'first',
@@ -1739,7 +1747,7 @@ UNITTEST_VECTOR = {
                 }}
             ]
         }, {
-            'in': ({'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_time': 155409000, 'btc_amount': 7800, 'supported': 1, 'tx_index': 502, 'block_index': DP['default_block_index'], 'data': b'\x00\x00\x00\x14\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'block_hash': DP['default_block_hash'], 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'fee': 10000, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'}, issuance.ID,),
+            'in': ({'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_time': 155409000, 'btc_amount': 7800, 'supported': 1, 'tx_index': 502, 'block_index': DP['default_block_index'], 'data': b'\x00\x00\x00\x16\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL', 'block_hash': DP['default_block_hash'], 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'fee': 10000, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'}, issuance.ID,),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': 'DIVISIBLE',
@@ -1779,7 +1787,7 @@ UNITTEST_VECTOR = {
                 }}
             ]
         }, {
-            'in': ({'data': b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'supported': 1, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_index': DP['default_block_index'], 'destination': '', 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'btc_amount': 0, 'tx_index': 502, 'block_hash': DP['default_block_hash'], 'block_time': 155409000, 'fee': 10000}, issuance.ID,),
+            'in': ({'data': b'\x00\x00\x00\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL', 'supported': 1, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_index': DP['default_block_index'], 'destination': '', 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'btc_amount': 0, 'tx_index': 502, 'block_hash': DP['default_block_hash'], 'block_time': 155409000, 'fee': 10000}, issuance.ID,),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': 'BSSET',
@@ -1815,7 +1823,7 @@ UNITTEST_VECTOR = {
                 }}
             ]
         }, {
-            'in': ({'fee': 10000, 'block_time': 155409000, 'data': b'\x00\x00\x00\x14\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'block_index': DP['default_block_index'], 'block_hash': DP['default_block_hash'], 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'btc_amount': 7800, 'tx_index': 502, 'destination': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'supported': 1, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'}, issuance.ID,),
+            'in': ({'fee': 10000, 'block_time': 155409000, 'data': b'\x00\x00\x00\x16\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL', 'block_index': DP['default_block_index'], 'block_hash': DP['default_block_hash'], 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'btc_amount': 7800, 'tx_index': 502, 'destination': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'supported': 1, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'}, issuance.ID,),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': 'DIVISIBLE',
@@ -1843,7 +1851,7 @@ UNITTEST_VECTOR = {
                 }}
             ]
         }, {
-            'in': ({'data': b'\x00\x00\x00\x14\x00\x00\x00\x00\xdd\x96\xd2t\x7f\xff\xff\xff\xff\xff\xff\xff\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10Maximum quantity', 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.ID,),
+            'in': ({'data': b'\x00\x00\x00\x16\x00\x00\x00\x00\xdd\x96\xd2t\x7f\xff\xff\xff\xff\xff\xff\xff\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL', 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.ID,),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': 'MAXIMUM',
@@ -1878,7 +1886,7 @@ UNITTEST_VECTOR = {
                 }}
             ]
         }, {
-            'in': ({'data': b'\x00\x00\x00\x14\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'tx_index': 502, 'tx_hash': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7', 'destination': '', 'fee': 10000, 'btc_amount': 0, 'block_time': 2815010000000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'block_hash': '8e80b430efbe3e1b7cc13d7ec51c1e47a16b0fa23d6dd3c939fb6c4d4cfa311e1f25072500f5f9872373b54c72424b3557fccd68915d00c0afb6523702e11b6a'}, issuance.ID,),
+            'in': ({'data': b'\x00\x00\x00\x16\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL', 'tx_index': 502, 'tx_hash': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7', 'destination': '', 'fee': 10000, 'btc_amount': 0, 'block_time': 2815010000000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'block_hash': '8e80b430efbe3e1b7cc13d7ec51c1e47a16b0fa23d6dd3c939fb6c4d4cfa311e1f25072500f5f9872373b54c72424b3557fccd68915d00c0afb6523702e11b6a'}, issuance.ID,),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': 'A18446744073709551615',
@@ -1921,7 +1929,7 @@ UNITTEST_VECTOR = {
             #     |           |               └───── quantity (8 bytes) - 100000000
             #     |           └────────────────── asset name (8 bytes) - BBB (invalid)
             #     └────────────────── Type ID (4 bytes) - type 20/issuance
-            'in': ({'data': bytes.fromhex('0000001400000000000002bf0000000005f5e10001'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.ID,),
+            'in': ({'data': binascii.unhexlify('0000001400000000000002bf0000000005f5e10001'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.ID,),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': None,
@@ -1942,7 +1950,7 @@ UNITTEST_VECTOR = {
             ]
         }, {
             'comment': 'first time issuance of subasset',
-            'in': ({'data': bytes.fromhex('0000001501530821671b10010000000005f5e100010a57c6f36de23a1f5f4c46'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
+            'in': ({'data': binascii.unhexlify('0000001501530821671b10010000000005f5e100010a57c6f36de23a1f5f4c46'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': 'A{}'.format(26**12 + 1),
@@ -1985,7 +1993,7 @@ UNITTEST_VECTOR = {
             ]
         }, {
             'comment': 'first time issuance of subasset with description',
-            'in': ({'data': bytes.fromhex('0000001501530821671b10010000000005f5e100010a57c6f36de23a1f5f4c4668656c6c6f20776f726c64'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
+            'in': ({'data': binascii.unhexlify('0000001501530821671b10010000000005f5e100010a57c6f36de23a1f5f4c4668656c6c6f20776f726c64'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': 'A{}'.format(26**12 + 1),
@@ -2028,7 +2036,7 @@ UNITTEST_VECTOR = {
             ]
         }, {
             'comment': 'subassets not enabled yet',
-            'in': ({'data': bytes.fromhex('0000001501530821671b10010000000005f5e100010a57c6f36de23a1f5f4c46'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
+            'in': ({'data': binascii.unhexlify('0000001501530821671b10010000000005f5e100010a57c6f36de23a1f5f4c46'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
             'mock_protocol_changes': {'subassets': False},
             'records': [
                 {'table': 'issuances', 'values': {
@@ -2050,7 +2058,7 @@ UNITTEST_VECTOR = {
             ]
         }, {
             'comment': 'invalid subasset length',
-            'in': ({'data': bytes.fromhex('0000001501530821671b10010000000005f5e10001f057c6f36de23a1f5f4c46'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
+            'in': ({'data': binascii.unhexlify('0000001501530821671b10010000000005f5e10001f057c6f36de23a1f5f4c46'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': None,
@@ -2071,7 +2079,7 @@ UNITTEST_VECTOR = {
             ]
         }, {
             'comment': 'first time issuance of subasset with description',
-            'in': ({'data': bytes.fromhex('0000001501530821671b10010000000005f5e100010c0631798cf0c65f1507f66fdf'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
+            'in': ({'data': binascii.unhexlify('0000001501530821671b10010000000005f5e100010c0631798cf0c65f1507f66fdf'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': None,
@@ -2092,7 +2100,7 @@ UNITTEST_VECTOR = {
             ]
         }, {
             'comment': 'missing subasset name',
-            'in': ({'data': bytes.fromhex('0000001501530821671b10010000000005f5e100010c'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
+            'in': ({'data': binascii.unhexlify('0000001501530821671b10010000000005f5e100010c'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': None,
@@ -2113,7 +2121,7 @@ UNITTEST_VECTOR = {
             ]
         }, {
             'comment': 'subasset length of zero',
-            'in': ({'data': bytes.fromhex('0000001501530821671b10010000000005f5e1000100'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
+            'in': ({'data': binascii.unhexlify('0000001501530821671b10010000000005f5e1000100'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': None,
@@ -2134,7 +2142,7 @@ UNITTEST_VECTOR = {
             ]
         }, {
             'comment': 'bad subasset B.bad',
-            'in': ({'data': bytes.fromhex('0000001501530821671b10010000000005f5e100010509cad71adf'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
+            'in': ({'data': binascii.unhexlify('0000001501530821671b10010000000005f5e100010509cad71adf'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': None,
@@ -2178,32 +2186,18 @@ UNITTEST_VECTOR = {
     'dividend': {
         'validate': [{
             'in': (ADDR[0], DP['quantity'] * 1000, 'DIVISIBLE', 'XCP', DP['default_block_index']),
-            'out': (1200000000000,
-                    [
-                        {'address_quantity': 100000000, 'dividend_quantity': 100000000000, 'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},
-                        {'address_quantity': 1000000000, 'dividend_quantity': 1000000000000, 'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2'},
-                        {'address_quantity': 100000000, 'dividend_quantity': 100000000000, 'address': '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy'}
-                    ],
-                    ['insufficient funds (XCP)'],
-                    0)
+            'out': (None, None, ['insufficient funds (XCP)'], 0)
         }, {
             'in': (ADDR[0], DP['quantity'] * -1000, 'DIVISIBLE', 'XCP', DP['default_block_index']),
-            'out': (-1200000000000,
-                    [
-                        {'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'dividend_quantity': -100000000000, 'address_quantity': 100000000},
-                        {'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'dividend_quantity': -1000000000000, 'address_quantity': 1000000000},
-                        {'address': '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy', 'dividend_quantity': -100000000000, 'address_quantity': 100000000}
-                    ],
-                    ['non‐positive quantity per unit'],
-                    0)
+            'out': (None, None, ['non‐positive quantity per unit'],0)
         }, {
             'comment': 'cannot pay dividends to holders of BTC',
             'in': (ADDR[0], DP['quantity'], 'BTC', 'XCP', DP['default_block_index']),
-            'out': (None, None, ['cannot pay dividends to holders of BTC', 'no such asset, BTC.'], 0)
+            'out': (None, None, ['cannot pay dividends to holders of BTC', 'only issuer can pay dividends'], 0)
         }, {
             'comment': 'cannot pay dividends to holders of XCP',
             'in': (ADDR[0], DP['quantity'], 'XCP', 'XCP', DP['default_block_index']),
-            'out': (None, None, ['cannot pay dividends to holders of XCP', 'no such asset, XCP.'], 0)
+            'out': (None, None, ['cannot pay dividends to holders of XCP', 'only issuer can pay dividends', 'insufficient funds (XCP)'], 0)
         }, {
             'comment': 'no such asset, NOASSET',
             'in': (ADDR[0], DP['quantity'], 'NOASSET', 'XCP', DP['default_block_index']),
@@ -2211,60 +2205,29 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'non‐positive quantity per unit',
             'in': (ADDR[0], 0, 'DIVISIBLE', 'XCP', DP['default_block_index']),
-            'out': (0,
-                    [
-                        {'dividend_quantity': 0, 'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'address_quantity': 100000000},
-                        {'dividend_quantity': 0, 'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'address_quantity': 1000000000},
-                        {'dividend_quantity': 0, 'address': '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy', 'address_quantity': 100000000}
-                    ],
-                    ['non‐positive quantity per unit', 'zero dividend'],
-                    0)
+            'out': (None, None, ['non‐positive quantity per unit', 'zero dividend'], 0)
         }, {
             'in': (ADDR[1], DP['quantity'], 'DIVISIBLE', 'XCP', DP['default_block_index']),
-            'out': (99900000000,
-                    [
-                        {'address_quantity': 98800000000, 'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'dividend_quantity': 98800000000},
-                        {'address_quantity': 1000000000, 'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'dividend_quantity': 1000000000},
-                        {'address_quantity': 100000000, 'address': '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy', 'dividend_quantity': 100000000}
-                    ],
-                    ['only issuer can pay dividends', 'insufficient funds (XCP)'],
-                    0)
+            'out': (None, None, ['only issuer can pay dividends', 'insufficient funds (XCP)'], 0)
         }, {
             'in': (ADDR[0], DP['quantity'], 'DIVISIBLE', 'NOASSET', DP['default_block_index']),
             'out': (None, None, ['no such dividend asset, NOASSET.'], 0)
         }, {
             'in': (ADDR[0], 8359090909, 'DIVISIBLE', 'XCP', DP['default_block_index']),
-            'out': (100309090908,
-                    [
-                        {'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'dividend_quantity': 8359090909, 'address_quantity': 100000000},
-                        {'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'dividend_quantity': 83590909090, 'address_quantity': 1000000000},
-                        {'address': '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy', 'dividend_quantity': 8359090909, 'address_quantity': 100000000},
-                    ],
-                    ['insufficient funds (XCP)'],
-                    0)
+            'out': (None, None, ['insufficient funds (XCP)'], 0)
         }, {
             'in': (ADDR[2], 100000000, 'DIVIDEND', 'DIVIDEND', DP['default_block_index']),
-            'out': (10,
-                    [
-                        {'address_quantity': 10, 'address': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'dividend_quantity': 10},
-                    ],
-                    ['insufficient funds (XCP)'],
-                    20000)
+            'out': (None, None, ['insufficient funds (XCP)'], 0)
         }, {
             'in': (ADDR[2], 2 ** 63, 'DIVIDEND', 'DIVIDEND', DP['default_block_index']),
-            'out': (922337203685,
-                    [
-                        {'address_quantity': 10, 'address': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'dividend_quantity': 922337203685},
-                    ],
-                    ['integer overflow', 'insufficient funds (DIVIDEND)'],
-                    0)
+            'out': (None, None, ['integer overflow', 'insufficient funds (DIVIDEND)'], 0)
         }],
         'compose': [{
             'in': (ADDR[0], DP['quantity'], 'DIVISIBLE', 'XCP'),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x002\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x01')
         }, {
             'in': (ADDR[0], 1, 'DIVISIBLE', 'PARENT.already.issued'),
-            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], bytes.fromhex('000000320000000000000001000000a25be34b6601530821671b1065'))
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], binascii.unhexlify('000000320000000000000001000000a25be34b6601530821671b1065'))
         }],
         'parse': [{
             'comment': 'dividend 1',
@@ -2446,12 +2409,12 @@ UNITTEST_VECTOR = {
             'comment': 'give subasset',
             'in': (ADDR[0], 'PARENT.already.issued', 100000000, 'XCP', DP['small'], DP['expiration'], DP['fee_required']),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [],
-                bytes.fromhex('0000000a01530821671b10650000000005f5e10000000000000000010000000002faf080000a00000000000dbba0'))
+                binascii.unhexlify('0000000a01530821671b10650000000005f5e10000000000000000010000000002faf080000a00000000000dbba0'))
         }, {
             'comment': 'get subasset',
             'in': (ADDR[0], 'XCP', DP['small'], 'PARENT.already.issued', 100000000, DP['expiration'], DP['fee_required']),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [],
-                bytes.fromhex('0000000a00000000000000010000000002faf08001530821671b10650000000005f5e100000a00000000000dbba0'))
+                binascii.unhexlify('0000000a00000000000000010000000002faf08001530821671b10650000000005f5e100000a00000000000dbba0'))
         }],
         'parse': [{
             'comment': '1',
@@ -3598,23 +3561,23 @@ UNITTEST_VECTOR = {
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac781e0000000000006951210362415bf04af834423d3dd7ada4dc727a0308664fa0e045a51185cce50ee58717210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae840dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'issuance',
-            'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'), {'encoding': 'multisig'}),
+            'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL'), {'encoding': 'multisig'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210359415bf04af834423d3dd7adb0dc727a03086e897d9fba5aee7a331919e4871d210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'issuance',
-            'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)], b'\x00\x00\x00\x14\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'), {'encoding': 'multisig', 'regular_dust_size': DP['regular_dust_size']}),
+            'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)], b'\x00\x00\x00\x16\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL'), {'encoding': 'multisig', 'regular_dust_size': DP['regular_dust_size']}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac781e0000000000006951210259415bf04af834423d3dd7adb0dc727aa153863ef89fba5aee7a331af1e4873a210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae840dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'multisig issuance',
-            'in': (('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', [], b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'), {'encoding': 'multisig'}),
+            'in': (('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', [], b'\x00\x00\x00\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL'), {'encoding': 'multisig'}),
             'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02781e000000000000695121030fcaf7ca87f0fd78a01d9a0d7c221e55beef3cde388be72d254826b32a6008cb2102bc14528340c27d005aa9e2913fd8c032ffa94625307a450077125d580099b57d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aef8a7f505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
         }, {
             'comment': 'maximum quantity issuance',
-            'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x14\x00\x00\x00\x00\xdd\x96\xd2t\x7f\xff\xff\xff\xff\xff\xff\xff\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10Maximum quantity'), {'encoding': 'multisig'}),
+            'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x16\x00\x00\x00\x00\xdd\x96\xd2t\x7f\xff\xff\xff\xff\xff\xff\xff\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL'), {'encoding': 'multisig'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210249415bf04af834423d3dd7adb0dc727a03d5f3a7eae045a51185cce50ee4877e210354da540fb2663b75f68ead197067a5af636736dbdcf8840c45d94079bbe724cb210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'transfer asset to multisig',
-            'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', None)], b'\x00\x00\x00\x14\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'), {'encoding': 'multisig'}),
+            'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', None)], b'\x00\x00\x00\x16\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL'), {'encoding': 'multisig'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03781e0000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae781e0000000000006951210259415bf04af834423d3dd7adb0dc727aa153863ef89fba5aee7a331af1e4873a210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae4204ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'order',
@@ -3642,7 +3605,7 @@ UNITTEST_VECTOR = {
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e000000000000695121025a415bf04af834423d3dd7ad96dc727a030865759f9fbc9036a64c1197e587c8210254da540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe7246f210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'free issuance',
-            'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x14\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'), {'encoding': 'multisig'}),
+            'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x16\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL'), {'encoding': 'multisig'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210259415bf04af834423d3dd7adb0238d85fcf79a8a619fba5aee7a331919e487e8210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'large broadcast',
@@ -3696,7 +3659,7 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'standard send with no memo',
             'in': ('sends', [{'field':'block_index','op':'=','value':'310496'}], 'AND', None, None, None, None, None, 1000, 0, True),
-            'out': [{'tx_index': 497, 'tx_hash': '1410217c3b1b38ea0b90940f20b874a2375c457b0828de9f9808e4fd63fd54e6', 'block_index': 310496, 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'asset': 'XCP', 'quantity': 92945878046, 'status': 'valid', 'memo': None, 'memo_hex': None, 'msg_index': 0}]
+            'out': [{'tx_index': 497, 'tx_hash': 'a35ab1736565aceddbd1d71f92fc7f39d1361006aa9099f731e54e762964d5ba', 'block_index': 310496, 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'asset': 'XCP', 'quantity': 92945878046, 'status': 'valid', 'memo': None, 'memo_hex': None, 'msg_index': 0}]
         }, {
             'comment': 'with memo',
             'in': ('sends', [{'field':'block_index','op':'=','value':'310481'}], 'AND', None, None, None, None, None, 1000, 0, True),
@@ -4468,11 +4431,11 @@ UNITTEST_VECTOR = {
         }],
         'compact_subasset_longname': [{
             'in': ('a.very.long.name',),
-            'out': bytes.fromhex('132de2e856f9a630c2e2bc09')
+            'out': binascii.unhexlify('132de2e856f9a630c2e2bc09')
         },
         {
             'in': ('aaaa',),
-            'out': bytes.fromhex('04de95')
+            'out': binascii.unhexlify('04de95')
         },
         {
             'in': ('a',),
@@ -4483,11 +4446,11 @@ UNITTEST_VECTOR = {
             'out': b'\x02'
         }],
         'expand_subasset_longname': [{
-            'in': (bytes.fromhex('132de2e856f9a630c2e2bc09'),),
+            'in': (binascii.unhexlify('132de2e856f9a630c2e2bc09'),),
             'out': 'a.very.long.name'
         },
         {
-            'in': (bytes.fromhex('04de95'),),
+            'in': (binascii.unhexlify('04de95'),),
             'out': 'aaaa'
         },
         {
@@ -4499,7 +4462,7 @@ UNITTEST_VECTOR = {
             'out': 'b'
         },
         {
-            'in': (bytes.fromhex('8e90a57dba99d3a77b0a2470b1816edb'),),
+            'in': (binascii.unhexlify('8e90a57dba99d3a77b0a2470b1816edb'),),
             'out': 'PARENT.a-zA-Z0-9.-_@!'
         }]
     },
@@ -4517,91 +4480,91 @@ UNITTEST_VECTOR = {
     },
     'message_type': {
         'unpack': [{
-            'in': (bytes.fromhex('01deadbeef'), 310502),
-            'out': (1, bytes.fromhex('deadbeef'))
+            'in': (binascii.unhexlify('01deadbeef'), 310502),
+            'out': (1, binascii.unhexlify('deadbeef'))
         },
         {
-            'in': (bytes.fromhex('02deadbeef'), 310502),
-            'out': (2, bytes.fromhex('deadbeef'))
+            'in': (binascii.unhexlify('02deadbeef'), 310502),
+            'out': (2, binascii.unhexlify('deadbeef'))
         },
         {
-            'in': (bytes.fromhex('00000001deadbeef'), 310502),
-            'out': (1, bytes.fromhex('deadbeef'))
+            'in': (binascii.unhexlify('00000001deadbeef'), 310502),
+            'out': (1, binascii.unhexlify('deadbeef'))
         },
         {
-            'in': (bytes.fromhex('00000000deadbeef'), 310502),
-            'out': (0, bytes.fromhex('deadbeef'))
+            'in': (binascii.unhexlify('00000000deadbeef'), 310502),
+            'out': (0, binascii.unhexlify('deadbeef'))
         },
         {
-            'in': (bytes.fromhex('00'), 310502),
+            'in': (binascii.unhexlify('00'), 310502),
             'out': (None, None)
         }],
         'pack': [{
             'in': (0, 300000),
-            'out': bytes.fromhex('00000000')
+            'out': binascii.unhexlify('00000000')
         },
         {
             'in': (1, 300000),
-            'out': bytes.fromhex('00000001')
+            'out': binascii.unhexlify('00000001')
         },
         {
             'in': (0, 310502),
-            'out': bytes.fromhex('00000000')
+            'out': binascii.unhexlify('00000000')
         },
         {
             'in': (1, 310502),
-            'out': bytes.fromhex('01')
+            'out': binascii.unhexlify('01')
         },
         {
             'in': (2, 310502),
-            'out': bytes.fromhex('02')
+            'out': binascii.unhexlify('02')
         }]
     },
     'address': {
         'pack': [{
             'config_context': {'ADDRESSVERSION': config.ADDRESSVERSION_MAINNET},
             'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j',),
-            'out': bytes.fromhex('006474849fc9ac0f5bd6b49fe144d14db7d32e2445')
+            'out': binascii.unhexlify('006474849fc9ac0f5bd6b49fe144d14db7d32e2445')
         },
         {
             'config_context': {'ADDRESSVERSION': config.ADDRESSVERSION_MAINNET},
             'in': ('1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU',),
-            'out': bytes.fromhex('00647484b055e2101927e50aba74957ba134d501d7')
+            'out': binascii.unhexlify('00647484b055e2101927e50aba74957ba134d501d7')
         },
         {
             'config_context': {'P2SH_ADDRESSVERSION': config.P2SH_ADDRESSVERSION_MAINNET},
             'in': ('3AAAA1111xxxxxxxxxxxxxxxxxxy3SsDsZ',),
-            'out': bytes.fromhex('055ce31be63403fa7b19f2614272547c15c8df86b9')
+            'out': binascii.unhexlify('055ce31be63403fa7b19f2614272547c15c8df86b9')
         },
         {
             'config_context': {'P2SH_ADDRESSVERSION': config.P2SH_ADDRESSVERSION_TESTNET},
             'in': ('2MtAV7xpAzU69E8GxRF2Vd2xt79kDnif6F5',),
-            'out': bytes.fromhex('C40A12AD889AECC8F6213BFD6BD47911CAB1C30E5F')
+            'out': binascii.unhexlify('C40A12AD889AECC8F6213BFD6BD47911CAB1C30E5F')
         },
         {
             'in': ('BADBASE58III',),
-            'error': (script.Base58Error, "Not a valid Base58 character: ‘I’")
+            'error': (Exception, "The address BADBASE58III is not a valid bitcoin address (testnet)")
         }],
         'unpack': [{
-            'in': (bytes.fromhex('006474849fc9ac0f5bd6b49fe144d14db7d32e2445'),),
+            'in': (binascii.unhexlify('006474849fc9ac0f5bd6b49fe144d14db7d32e2445'),),
             'out': '1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j'
         },
         {
-            'in': (bytes.fromhex('00647484b055e2101927e50aba74957ba134d501d7'),),
+            'in': (binascii.unhexlify('00647484b055e2101927e50aba74957ba134d501d7'),),
             'out': '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU'
         },
         {
-            'in': (bytes.fromhex('055ce31be63403fa7b19f2614272547c15c8df86b9'),),
+            'in': (binascii.unhexlify('055ce31be63403fa7b19f2614272547c15c8df86b9'),),
             'out': '3AAAA1111xxxxxxxxxxxxxxxxxxy3SsDsZ'
         },
         {
-            'in': (bytes.fromhex('C40A12AD889AECC8F6213BFD6BD47911CAB1C30E5F'),),
+            'in': (binascii.unhexlify('C40A12AD889AECC8F6213BFD6BD47911CAB1C30E5F'),),
             'out': '2MtAV7xpAzU69E8GxRF2Vd2xt79kDnif6F5'
         }]
     },
     'versions.enhanced_send': {
         'unpack': [{
-            'in': (bytes.fromhex('000000000004fadf' + '000000174876e800' + '006474849fc9ac0f5bd6b49fe144d14db7d32e2445'), DP['default_block_index']),
+            'in': (binascii.unhexlify('000000000004fadf' + '000000174876e800' + '006474849fc9ac0f5bd6b49fe144d14db7d32e2445'), DP['default_block_index']),
             'out': ({
               'asset': 'SOUP',
               'quantity': 100000000000,
@@ -4609,24 +4572,24 @@ UNITTEST_VECTOR = {
               'memo': None,
             })
         }, {
-            'in': (bytes.fromhex('0000000000000001' + '000000000000007b' + '00647484b055e2101927e50aba74957ba134d501d7' + '0deadbeef123'), DP['default_block_index']),
+            'in': (binascii.unhexlify('0000000000000001' + '000000000000007b' + '00647484b055e2101927e50aba74957ba134d501d7' + '0deadbeef123'), DP['default_block_index']),
             'out': ({
               'asset': 'XCP',
               'quantity': 123,
               'address': '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU',
-              'memo': bytes.fromhex('0deadbeef123'),
+              'memo': binascii.unhexlify('0deadbeef123'),
             })
         }, {
-            'in': (bytes.fromhex('0000000000000001' + '000000000000007b' + '0001'), DP['default_block_index']),
+            'in': (binascii.unhexlify('0000000000000001' + '000000000000007b' + '0001'), DP['default_block_index']),
             'error': (exceptions.UnpackError, 'invalid message length')
         }, {
-            'in': (bytes.fromhex('0000000000000001' + '000000000000007b' + '006474849fc9ac0f5bd6b49fe144d14db7d32e2445' + '9999999999999999999999999999999999999999999999999999999999999999999999'), DP['default_block_index']),
+            'in': (binascii.unhexlify('0000000000000001' + '000000000000007b' + '006474849fc9ac0f5bd6b49fe144d14db7d32e2445' + '9999999999999999999999999999999999999999999999999999999999999999999999'), DP['default_block_index']),
             'error': (exceptions.UnpackError, 'memo too long')
         }, {
-            'in': (bytes.fromhex('0000000000000000' + '000000000000007b' + '006474849fc9ac0f5bd6b49fe144d14db7d32e2445'), DP['default_block_index']),
+            'in': (binascii.unhexlify('0000000000000000' + '000000000000007b' + '006474849fc9ac0f5bd6b49fe144d14db7d32e2445'), DP['default_block_index']),
             'error': (exceptions.UnpackError, 'asset id invalid')
         }, {
-            'in': (bytes.fromhex('0000000000000003' + '000000000000007b' + '006474849fc9ac0f5bd6b49fe144d14db7d32e2445'), DP['default_block_index']),
+            'in': (binascii.unhexlify('0000000000000003' + '000000000000007b' + '006474849fc9ac0f5bd6b49fe144d14db7d32e2445'), DP['default_block_index']),
             'error': (exceptions.UnpackError, 'asset id invalid')
         }, {
             'in': (b'\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x01\x86\xa0\x80u\x1ev\xe8\x19\x91\x96\xd4T\x94\x1cE\xd1\xb3\xa3#\xf1C;\xd6segwit', DP['default_block_index']),
@@ -4674,16 +4637,16 @@ UNITTEST_VECTOR = {
             'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU', 'SOUP', 100000000, None, DP['default_block_index']),
             'out': ([])
         }, {
-            'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU', 'SOUP', 100000000, bytes.fromhex('01ff'), DP['default_block_index']),
+            'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU', 'SOUP', 100000000, binascii.unhexlify('01ff'), DP['default_block_index']),
             'out': ([])
         }, {
-            'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU', 'SOUP', 0, bytes.fromhex('01ff'), DP['default_block_index']),
+            'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU', 'SOUP', 0, binascii.unhexlify('01ff'), DP['default_block_index']),
             'out': (['zero quantity'])
         }, {
-            'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '', 'SOUP', 100000000, bytes.fromhex('01ff'), DP['default_block_index']),
+            'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '', 'SOUP', 100000000, binascii.unhexlify('01ff'), DP['default_block_index']),
             'out': (['destination is required'])
         }, {
-            'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU', 'SOUP', 100000000, bytes.fromhex('9999999999999999999999999999999999999999999999999999999999999999999999'), DP['default_block_index']),
+            'in': ('1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j', '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU', 'SOUP', 100000000, binascii.unhexlify('9999999999999999999999999999999999999999999999999999999999999999999999'), DP['default_block_index']),
             'out': (['memo is too long'])
         }],
         'compose': [
@@ -4713,26 +4676,26 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], ADDR[1], 'PARENT.already.issued', 100000000, None, False),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     [],
-                    bytes.fromhex('02' + '01530821671b1065' + '0000000005f5e100' + '6f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec'))
+                    binascii.unhexlify('02' + '01530821671b1065' + '0000000005f5e100' + '6f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec'))
         },
         # ----- tests specific to enhanced send -----
         {
             'mock_protocol_changes': {'short_tx_type_id': True},
             'in': (ADDR[1], ADDR[0], 'XCP', DP['small'], None, None),
             'out': (ADDR[1], [],
-                    bytes.fromhex('02' + '0000000000000001' + '0000000002faf080' + '6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037'))
+                    binascii.unhexlify('02' + '0000000000000001' + '0000000002faf080' + '6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037'))
         }, {
             # memo as hex
             'mock_protocol_changes': {'short_tx_type_id': True},
             'in': (ADDR[1], ADDR[0], 'XCP', DP['small'], '12345abcde', True),
             'out': (ADDR[1], [],
-                    bytes.fromhex('02' + '0000000000000001' + '0000000002faf080' + '6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037' + '12345abcde'))
+                    binascii.unhexlify('02' + '0000000000000001' + '0000000002faf080' + '6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037' + '12345abcde'))
         }, {
             # pack a string into bytes
             'mock_protocol_changes': {'short_tx_type_id': True},
             'in': (ADDR[1], ADDR[0], 'XCP', DP['small'], 'hello', False),
             'out': (ADDR[1], [],
-                    bytes.fromhex('02' + '0000000000000001' + '0000000002faf080' + '6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037' + '68656c6c6f'))
+                    binascii.unhexlify('02' + '0000000000000001' + '0000000002faf080' + '6f4838d8b3588c4c7ba7c1d06f866e9b3739c63037' + '68656c6c6f'))
         }, {
             # memo too long
             'mock_protocol_changes': {'short_tx_type_id': True},
@@ -4759,7 +4722,7 @@ UNITTEST_VECTOR = {
         # ----- tests copied from regular send -----
         {
             'mock_protocol_changes': {'short_tx_type_id': True},
-            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': bytes.fromhex('00000002' + '0000000000000001' + '0000000005f5e100' + SHORT_ADDR_BYTES[1]), 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': binascii.unhexlify('00000002' + '0000000000000001' + '0000000005f5e100' + SHORT_ADDR_BYTES[1]), 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
             'records': [
                 {'table': 'sends', 'values': {
                     'asset': 'XCP',
@@ -4791,7 +4754,7 @@ UNITTEST_VECTOR = {
             ]
         }, {
             'comment': 'zero quantity send',
-            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'block_index': DP['default_block_index'], 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'data': bytes.fromhex('00000002' + '0000000000000001' + '0000000000000000' + SHORT_ADDR_BYTES[0]), 'block_time': 155409000, 'fee': 10000, 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'tx_index': 502, 'supported': 1},),
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'block_index': DP['default_block_index'], 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'data': binascii.unhexlify('00000002' + '0000000000000001' + '0000000000000000' + SHORT_ADDR_BYTES[0]), 'block_time': 155409000, 'fee': 10000, 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'tx_index': 502, 'supported': 1},),
             'records': [
                 {'table': 'sends', 'values': {
                     'asset': 'XCP',
@@ -4805,7 +4768,7 @@ UNITTEST_VECTOR = {
                 }}
             ]
         }, {
-            'in': ({'block_index': DP['default_block_index'], 'btc_amount': 7800, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'data': bytes.fromhex('00000002' + '0006cad8dc7f0b66' + '00000000000001f4' + SHORT_ADDR_BYTES[1]), 'block_hash': DP['default_block_hash'], 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1},),
+            'in': ({'block_index': DP['default_block_index'], 'btc_amount': 7800, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'data': binascii.unhexlify('00000002' + '0006cad8dc7f0b66' + '00000000000001f4' + SHORT_ADDR_BYTES[1]), 'block_hash': DP['default_block_hash'], 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1},),
             'records': [
                 {'table': 'sends', 'values': {
                     'asset': 'NODIVISIBLE',
@@ -4835,7 +4798,7 @@ UNITTEST_VECTOR = {
                 }}
             ]
         }, {
-            'in': ({'data': bytes.fromhex('00000002' + '0000000000000001' + '0000000005f5e100' + SHORT_ADDR_BYTES[0]), 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'supported': 1, 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'btc_amount': 7800, 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'},),
+            'in': ({'data': binascii.unhexlify('00000002' + '0000000000000001' + '0000000005f5e100' + SHORT_ADDR_BYTES[0]), 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'supported': 1, 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'btc_amount': 7800, 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'},),
             'records': [
                 {'table': 'sends', 'values': {
                     'asset': 'XCP',
@@ -4865,7 +4828,7 @@ UNITTEST_VECTOR = {
                 }}
             ]
         }, {
-            'in': ({'block_index': DP['default_block_index'], 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'tx_hash': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0', 'btc_amount': 7800, 'data': bytes.fromhex('00000002' + '0000000000033a3e' + '7fffffffffffffff' + SHORT_ADDR_BYTES[1]), 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'supported': 1, 'block_hash': DP['default_block_hash']},),
+            'in': ({'block_index': DP['default_block_index'], 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'tx_hash': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0', 'btc_amount': 7800, 'data': binascii.unhexlify('00000002' + '0000000000033a3e' + '7fffffffffffffff' + SHORT_ADDR_BYTES[1]), 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'supported': 1, 'block_hash': DP['default_block_hash']},),
             'records': [
                 {'table': 'sends', 'values': {
                     'asset': 'MAXI',
@@ -4898,7 +4861,7 @@ UNITTEST_VECTOR = {
         # ----- tests specific to enhanced send -----
         {
             'comment': 'instead of auto-correcting the quantity to the amount the address holds return invalid: insufficient funds',
-            'in':({'tx_index': 502, 'data': bytes.fromhex('00000002' + '0000000000000001' + '0000000058b11400' + SHORT_ADDR_BYTES[3]), 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'block_time': 310501000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_hash': '736ecc18f9f41b3ccf67dded1252969e4929404d6ad657b2039b937a7785cf3e', 'supported': 1, 'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'btc_amount': 5430, 'block_index': DP['default_block_index'], 'fee': 10000},),
+            'in':({'tx_index': 502, 'data': binascii.unhexlify('00000002' + '0000000000000001' + '0000000058b11400' + SHORT_ADDR_BYTES[3]), 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'block_time': 310501000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_hash': '736ecc18f9f41b3ccf67dded1252969e4929404d6ad657b2039b937a7785cf3e', 'supported': 1, 'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'btc_amount': 5430, 'block_index': DP['default_block_index'], 'fee': 10000},),
             'records': [
                 {'table': 'sends', 'values': {
                     'asset': 'XCP',
@@ -4913,7 +4876,7 @@ UNITTEST_VECTOR = {
             ]
         }, {
             'mock_protocol_changes': {'short_tx_type_id': True},
-            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': bytes.fromhex('00000002' + '0000000000000001' + '0000000005f5e100' + SHORT_ADDR_BYTES[1] + 'beefbeef'), 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': binascii.unhexlify('00000002' + '0000000000000001' + '0000000005f5e100' + SHORT_ADDR_BYTES[1] + 'beefbeef'), 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
             'records': [
                 {'table': 'sends', 'values': {
                     'asset': 'XCP',
@@ -4924,7 +4887,7 @@ UNITTEST_VECTOR = {
                     'status': 'valid',
                     'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'tx_index': 502,
-                    'memo': bytes.fromhex('beefbeef'),
+                    'memo': binascii.unhexlify('beefbeef'),
                 }},
                 {'table': 'credits', 'values': {
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
@@ -4946,7 +4909,7 @@ UNITTEST_VECTOR = {
         }, {
             # invalid memo (too long)
             'mock_protocol_changes': {'short_tx_type_id': True},
-            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': bytes.fromhex('00000002' + '0000000000000001' + '0000000005f5e100' + SHORT_ADDR_BYTES[1] + '9999999999999999999999999999999999999999999999999999999999999999999999'), 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': binascii.unhexlify('00000002' + '0000000000000001' + '0000000005f5e100' + SHORT_ADDR_BYTES[1] + '9999999999999999999999999999999999999999999999999999999999999999999999'), 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
             'records': [
                 {'table': 'sends', 'values': {
                     'asset': None,
@@ -4963,7 +4926,7 @@ UNITTEST_VECTOR = {
         }, {
             # invalid: quantity (too large)
             'mock_protocol_changes': {'short_tx_type_id': True},
-            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': bytes.fromhex('00000002' + '0000000000000001' + 'ffffffffffffffff' + SHORT_ADDR_BYTES[1] + 'beefbeef'), 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': binascii.unhexlify('00000002' + '0000000000000001' + 'ffffffffffffffff' + SHORT_ADDR_BYTES[1] + 'beefbeef'), 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
             'records': [
                 {'table': 'sends', 'values': {
                     'asset': None,
@@ -5029,47 +4992,47 @@ UNITTEST_VECTOR = {
     'versions.mpma': {
         'unpack': [{
             'comment': 'Should throw on empty data',
-            'in': (bytes.fromhex(''), DP['default_block_index']),
+            'in': (binascii.unhexlify(''), DP['default_block_index']),
             'error': (exceptions.UnpackError, 'could not unpack')
         },{
             'comment': '0 addresses in a send is an error',
-            'in': (bytes.fromhex('0000'), DP['default_block_index']),
+            'in': (binascii.unhexlify('0000'), DP['default_block_index']),
             'error': (exceptions.DecodeError, 'address list can\'t be empty')
         },{
             'comment': 'Should throw on incomplete data',
-            'in': (bytes.fromhex('0001ffff'), DP['default_block_index']),
+            'in': (binascii.unhexlify('0001ffff'), DP['default_block_index']),
             'error': (exceptions.UnpackError, 'truncated data')
         },{
-            'in': (bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e10040000000017d78400'), DP['default_block_index']),
+            'in': (binascii.unhexlify('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e10040000000017d78400'), DP['default_block_index']),
             'out': ({'XCP': [(ADDR[2], DP['quantity']), (ADDR[1], DP['quantity'])]})
         },{
-            'in': (bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e100c4deadbeef8000000002faf0800'), DP['default_block_index']),
-            'out': ({'XCP': [(ADDR[2], DP['quantity'], bytes.fromhex('DEADBEEF'), True), (ADDR[1], DP['quantity'])]})
+            'in': (binascii.unhexlify('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e100c4deadbeef8000000002faf0800'), DP['default_block_index']),
+            'out': ({'XCP': [(ADDR[2], DP['quantity'], binascii.unhexlify('DEADBEEF'), True), (ADDR[1], DP['quantity'])]})
         },{
-            'in': (bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e1008844454144424545468000000002faf0800'), DP['default_block_index']),
+            'in': (binascii.unhexlify('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e1008844454144424545468000000002faf0800'), DP['default_block_index']),
             'out': ({'XCP': [(ADDR[2], DP['quantity'], 'DEADBEEF', False), (ADDR[1], DP['quantity'])]})
         },{
-            'in': (bytes.fromhex('00036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000000000000000640000000017d784000000000002faf08020000000005f5e1000'), DP['default_block_index']),
+            'in': (binascii.unhexlify('00036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000000000000000640000000017d784000000000002faf08020000000005f5e1000'), DP['default_block_index']),
             'out': ({'XCP': [(ADDR[3], DP['quantity']), (ADDR[2], DP['quantity']), (ADDR[1], DP['quantity'])]})
         },{
-            'in': (bytes.fromhex('00036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d9800000000017d784010006cad8dc7f0b66200000000000000014000000000000000440000000017d784000'), DP['default_block_index']),
+            'in': (binascii.unhexlify('00036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d9800000000017d784010006cad8dc7f0b66200000000000000014000000000000000440000000017d784000'), DP['default_block_index']),
             'out': ({'XCP': [(ADDR[3], DP['quantity'])], 'NODIVISIBLE': [(ADDR[1], 1)], 'DIVISIBLE': [(ADDR[2], DP['quantity'])]})
         },{
-            'in': (bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ecc4deadbeef8000000000000000c000000000bebc2008000000002faf0800'), DP['default_block_index']),
-            'out': ({'XCP': [(ADDR[2], DP['quantity'], bytes.fromhex('DEADBEEF'), True), (ADDR[1], DP['quantity'], bytes.fromhex('DEADBEEF'), True)]})
+            'in': (binascii.unhexlify('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ecc4deadbeef8000000000000000c000000000bebc2008000000002faf0800'), DP['default_block_index']),
+            'out': ({'XCP': [(ADDR[2], DP['quantity'], binascii.unhexlify('DEADBEEF'), True), (ADDR[1], DP['quantity'], binascii.unhexlify('DEADBEEF'), True)]})
         },{
-            'in': (bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ecc4deadbeef8000000000000000c000000000bebc201897ddfbd5b0000000005f5e1000'), DP['default_block_index']),
-            'out': ({'XCP': [(ADDR[2], DP['quantity'], bytes.fromhex('BEEFDEAD'), True), (ADDR[1], DP['quantity'], bytes.fromhex('DEADBEEF'), True)]})
+            'in': (binascii.unhexlify('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ecc4deadbeef8000000000000000c000000000bebc201897ddfbd5b0000000005f5e1000'), DP['default_block_index']),
+            'out': ({'XCP': [(ADDR[2], DP['quantity'], binascii.unhexlify('BEEFDEAD'), True), (ADDR[1], DP['quantity'], binascii.unhexlify('DEADBEEF'), True)]})
         },{
-            'in': (bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e100000300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e10000'), DP['default_block_index']),
+            'in': (binascii.unhexlify('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e100000300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e10000'), DP['default_block_index']),
             'out': ({'DIVISIBLE': [(ADDR[1], DP['quantity'])], 'XCP': [(ADDR[2], DP['quantity'])]})
         },{
             # Test derived from block 618232 on BTC mainnet
-            'in': (bytes.fromhex('0004002e9943921a473dee1e04a579c1762ff6e9ac34e4006c7beeb1af092be778a2c0b8df639f2f8e9c987600a9055398b92818794b38b15794096f752167e25f00f3a6b6e4a093e5a5b9da76977a5270fd4d62553e40000091f59f36daf0000000271d94900180000004e3b29200200000009c76524002000000138eca4800806203d0c908232420000000000000000b000000000000000140024a67f0f279952000000000000000058000000000000000a00000000000000014000000908a3200cb000000000000000058000000000000000a000000000000000120000000000000002075410426156245525daa71f2e84a40797bcf28099a2c508662a8a33324a703597b9aa2661a79a82ffb4caaa9b15f4094622fbfa85f8b9dc7381f991f5a265421391cc3ad0075740087'), DP['default_block_index']),
+            'in': (binascii.unhexlify('0004002e9943921a473dee1e04a579c1762ff6e9ac34e4006c7beeb1af092be778a2c0b8df639f2f8e9c987600a9055398b92818794b38b15794096f752167e25f00f3a6b6e4a093e5a5b9da76977a5270fd4d62553e40000091f59f36daf0000000271d94900180000004e3b29200200000009c76524002000000138eca4800806203d0c908232420000000000000000b000000000000000140024a67f0f279952000000000000000058000000000000000a00000000000000014000000908a3200cb000000000000000058000000000000000a000000000000000120000000000000002075410426156245525daa71f2e84a40797bcf28099a2c508662a8a33324a703597b9aa2661a79a82ffb4caaa9b15f4094622fbfa85f8b9dc7381f991f5a265421391cc3ad0075740087'), DP['default_block_index']),
             'out': ({'MAFIACASH': [('15FPgnpZuNyZLVLsyB6UdFicsVvWFJXNve', 42000000000), ('1PDJv8u8zw4Fgqr4uCb2yim9fgTs5zfM4s', 42000000000), ('1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD', 42000000000), ('1AtcSh7uxenQ6AR5xqr6agAegWRUF5N4uh', 42000000000)], 'PAWNTHELAMBO': [('15FPgnpZuNyZLVLsyB6UdFicsVvWFJXNve', 1), ('1PDJv8u8zw4Fgqr4uCb2yim9fgTs5zfM4s', 1)], 'SHADILOUNGE': [('15FPgnpZuNyZLVLsyB6UdFicsVvWFJXNve', 1), ('1PDJv8u8zw4Fgqr4uCb2yim9fgTs5zfM4s', 1), ('1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD', 1)], 'TIKIPEPE': [('15FPgnpZuNyZLVLsyB6UdFicsVvWFJXNve', 1), ('1PDJv8u8zw4Fgqr4uCb2yim9fgTs5zfM4s', 1), ('1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD', 1), ('1AtcSh7uxenQ6AR5xqr6agAegWRUF5N4uh', 1)]})
         },{
             # Test derived from block 647547 on BTC mainnet
-            'in': (bytes.fromhex('00010042276049e5518791be2ffe2c301f5dfe9ef85dd0400001720034b0410000000000000001500000006a79811e000000000000000054000079cec1665f4800000000000000050000000ca91f2d660000000000000005402736c8de6e34d54000000000000001500c5e4c71e081ceb00000000000000054000000045dc03ec4000000000000000500004af1271cf5fc00000000000000054001e71f8464432780000000000000015000002e1e4191f0d0000000000000005400012bc4aaac2a54000000000000001500079c7e774e411c00000000000000054000000045dc0a6f00000000000000015000002e1e486f661000000000000000540001c807abe13908000000000000000475410426156245525daa71f2e84a40797bcf28099a2c508662a8a33324a703597b9aa2661a79a82ffb4caaa9b15f4094622fbfa85f8b9dc7381f991f5a265421391cc3ad0075740087'), DP['default_block_index']),
+            'in': (binascii.unhexlify('00010042276049e5518791be2ffe2c301f5dfe9ef85dd0400001720034b0410000000000000001500000006a79811e000000000000000054000079cec1665f4800000000000000050000000ca91f2d660000000000000005402736c8de6e34d54000000000000001500c5e4c71e081ceb00000000000000054000000045dc03ec4000000000000000500004af1271cf5fc00000000000000054001e71f8464432780000000000000015000002e1e4191f0d0000000000000005400012bc4aaac2a54000000000000001500079c7e774e411c00000000000000054000000045dc0a6f00000000000000015000002e1e486f661000000000000000540001c807abe13908000000000000000475410426156245525daa71f2e84a40797bcf28099a2c508662a8a33324a703597b9aa2661a79a82ffb4caaa9b15f4094622fbfa85f8b9dc7381f991f5a265421391cc3ad0075740087'), DP['default_block_index']),
             'out': ({'BELLAMAFIA': [('172nmZbxDR6erc5PqNqV28fnMj7g6besru', 5)], 'DONPABLO': [('172nmZbxDR6erc5PqNqV28fnMj7g6besru', 5)], 'GEISHAPEPE': [('172nmZbxDR6erc5PqNqV28fnMj7g6besru', 1)], 'GUARDDOG': [('172nmZbxDR6erc5PqNqV28fnMj7g6besru', 5)], 'MATRYOSHKAPP': [('172nmZbxDR6erc5PqNqV28fnMj7g6besru', 5)], 'PEPEACIDTRIP': [('172nmZbxDR6erc5PqNqV28fnMj7g6besru', 5)], 'PEPEAIR': [('172nmZbxDR6erc5PqNqV28fnMj7g6besru', 1)], 'PEPECIGARS': [('172nmZbxDR6erc5PqNqV28fnMj7g6besru', 5)], 'PEPEDRACULA': [('172nmZbxDR6erc5PqNqV28fnMj7g6besru', 5)], 'PEPEHEMAN': [('172nmZbxDR6erc5PqNqV28fnMj7g6besru', 5)], 'PEPEHITMAN': [('172nmZbxDR6erc5PqNqV28fnMj7g6besru', 5)], 'PEPEJERICHO': [('172nmZbxDR6erc5PqNqV28fnMj7g6besru', 5)], 'PEPEKFC': [('172nmZbxDR6erc5PqNqV28fnMj7g6besru', 5)], 'PEPEWYATT': [('172nmZbxDR6erc5PqNqV28fnMj7g6besru', 5)], 'XCHAINPEPE': [('172nmZbxDR6erc5PqNqV28fnMj7g6besru', 1)]})
         }],
         'validate': [{
@@ -5121,39 +5084,39 @@ UNITTEST_VECTOR = {
         }, {
             'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], DP['quantity'])], None, None),
             'mock_protocol_changes': {'short_tx_type_id': True},
-            'out': (ADDR[0], [], bytes.fromhex('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e10040000000017d78400'))
+            'out': (ADDR[0], [], binascii.unhexlify('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e10040000000017d78400'))
         }, {
             'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity'], 'DEADBEEF', True), ('XCP', ADDR[1], DP['quantity'])], None, None),
             'mock_protocol_changes': {'short_tx_type_id': True},
-            'out': (ADDR[0], [], bytes.fromhex('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e100c4deadbeef8000000002faf0800'))
+            'out': (ADDR[0], [], binascii.unhexlify('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e100c4deadbeef8000000002faf0800'))
         }, {
             'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity'], 'DEADBEEF', False), ('XCP', ADDR[1], DP['quantity'])], None, None),
             'mock_protocol_changes': {'short_tx_type_id': True},
-            'out': (ADDR[0], [], bytes.fromhex('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e1008844454144424545468000000002faf0800'))
+            'out': (ADDR[0], [], binascii.unhexlify('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e1008844454144424545468000000002faf0800'))
         }, {
             'in': (ADDR[0], [('XCP', ADDR[3], DP['quantity']), ('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], DP['quantity'])], None, None),
             'mock_protocol_changes': {'short_tx_type_id': True},
-            'out': (ADDR[0], [], bytes.fromhex('0300036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000000000000000640000000017d784000000000002faf08020000000005f5e1000'))
+            'out': (ADDR[0], [], binascii.unhexlify('0300036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000000000000000640000000017d784000000000002faf08020000000005f5e1000'))
         }, {
             'in': (ADDR[0], [('XCP', ADDR[3], DP['quantity']), ('DIVISIBLE', ADDR[2], DP['quantity']), ('NODIVISIBLE', ADDR[1], 1)], None, None),
             'mock_protocol_changes': {'short_tx_type_id': True},
-            'out': (ADDR[0], [], bytes.fromhex('0300036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d9800000000017d784010006cad8dc7f0b66200000000000000014000000000000000440000000017d784000'))
+            'out': (ADDR[0], [], binascii.unhexlify('0300036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d9800000000017d784010006cad8dc7f0b66200000000000000014000000000000000440000000017d784000'))
         }, {
             'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], DP['quantity'])], 'DEADBEEF', True),
             'mock_protocol_changes': {'short_tx_type_id': True},
-            'out': (ADDR[0], [], bytes.fromhex('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ecc4deadbeef8000000000000000c000000000bebc2008000000002faf0800'))
+            'out': (ADDR[0], [], binascii.unhexlify('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ecc4deadbeef8000000000000000c000000000bebc2008000000002faf0800'))
         }, {
             'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], DP['quantity'])], 'DEADBEEF', False),
             'mock_protocol_changes': {'short_tx_type_id': True},
-            'out': (ADDR[0], [], bytes.fromhex('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec8844454144424545468000000000000000c000000000bebc2008000000002faf0800'))
+            'out': (ADDR[0], [], binascii.unhexlify('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec8844454144424545468000000000000000c000000000bebc2008000000002faf0800'))
         }, {
             'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity'], 'BEEFDEAD', True), ('XCP', ADDR[1], DP['quantity'])], 'DEADBEEF', True),
             'mock_protocol_changes': {'short_tx_type_id': True},
-            'out': (ADDR[0], [], bytes.fromhex('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ecc4deadbeef8000000000000000c000000000bebc201897ddfbd5b0000000005f5e1000'))
+            'out': (ADDR[0], [], binascii.unhexlify('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ecc4deadbeef8000000000000000c000000000bebc201897ddfbd5b0000000005f5e1000'))
         }, {
             'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('DIVISIBLE', ADDR[1], DP['quantity'])], None, None),
             'mock_protocol_changes': {'short_tx_type_id': True},
-            'out': (ADDR[0], [], bytes.fromhex('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e10000'))
+            'out': (ADDR[0], [], binascii.unhexlify('0300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e10000'))
         }],
         'parse': [{
             'in': ({
@@ -5165,7 +5128,7 @@ UNITTEST_VECTOR = {
                 'block_time': 155409000,
                 'block_hash': DP['default_block_hash'],
                 'btc_amount': 7800,
-                'data': bytes.fromhex('00000000') + bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e10040000000017d78400'),
+                'data': binascii.unhexlify('00000000') + binascii.unhexlify('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e10040000000017d78400'),
                 'tx_index': 502,
                 'destination': ADDR[0]
                 },),
@@ -5229,7 +5192,7 @@ UNITTEST_VECTOR = {
                 'block_time': 155409000,
                 'block_hash': DP['default_block_hash'],
                 'btc_amount': 7800,
-                'data': bytes.fromhex('00000000') + bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ecc4deadbeef8000000000000000c000000000bebc201897ddfbd5b0000000005f5e1000'),
+                'data': binascii.unhexlify('00000000') + binascii.unhexlify('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ecc4deadbeef8000000000000000c000000000bebc201897ddfbd5b0000000005f5e1000'),
                 'tx_index': 502,
                 'destination': ADDR[0]
                 },),
@@ -5241,7 +5204,7 @@ UNITTEST_VECTOR = {
                     'quantity': DP['quantity'],
                     'source': ADDR[0],
                     'status': 'valid',
-                    'memo': bytes.fromhex('BEEFDEAD'),
+                    'memo': binascii.unhexlify('BEEFDEAD'),
                     'msg_index': 0,
                     'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'tx_index': 502,
@@ -5253,7 +5216,7 @@ UNITTEST_VECTOR = {
                     'quantity': DP['quantity'],
                     'source': ADDR[0],
                     'status': 'valid',
-                    'memo': bytes.fromhex('DEADBEEF'),
+                    'memo': binascii.unhexlify('DEADBEEF'),
                     'msg_index': 1,
                     'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'tx_index': 502,
@@ -5293,7 +5256,7 @@ UNITTEST_VECTOR = {
                 'block_time': 155409000,
                 'block_hash': DP['default_block_hash'],
                 'btc_amount': 7800,
-                'data': bytes.fromhex('00000000') + bytes.fromhex('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e100000300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e10000'),
+                'data': binascii.unhexlify('00000000') + binascii.unhexlify('00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e100000300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e10000'),
                 'tx_index': 502,
                 'destination': ADDR[0]
                 },),

@@ -172,13 +172,13 @@ def message(db, block_index, command, category, bindings, tx_hash=None):
 
     # Handle binary data.
     items = []
-    for item in sorted(bindings.items()):
-        if type(item[1]) == bytes:
-            items.append((item[0], binascii.hexlify(item[1]).decode('ascii')))
+    for item in sorted(bindings):
+        if type(item) == bytes:
+            items.append(binascii.hexlify(item).decode('ascii'))
         else:
             items.append(item)
 
-    bindings_string = json.dumps(collections.OrderedDict(items))
+    bindings_string = str(items)
     cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings, :timestamp)',
                    (message_index, block_index, command, category, bindings_string, curr_time()))
 
