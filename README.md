@@ -104,6 +104,7 @@ $ counterparty-server bootstrap
 $ counterparty-server --backend-password=rpc start
 ```
 
+**WARNING:** Bootstrap should not be used for commercial or public-facing nodes.
 **Note:** You will not be able to run `counterparty-server` until `addrindexrs` has caught up (and its RPC server is running), which in turn requires `bitcoind` have caught up as well.
 
 
