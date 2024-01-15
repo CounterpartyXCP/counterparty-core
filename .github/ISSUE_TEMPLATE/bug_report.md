@@ -1,5 +1,5 @@
 ---
-name: Bug Report
+name: Report a bug
 about: Report incorrect or unexpected behavior.
 title: ''
 labels: bug
