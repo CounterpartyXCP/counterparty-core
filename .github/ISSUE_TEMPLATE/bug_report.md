@@ -1,5 +1,6 @@
 ---
 name: Bug Report
+about: Report of Incorrect or Unexpected Behavior with Counterparty
 title: ''
 labels: bug
 assignees: adamkrellenstein
