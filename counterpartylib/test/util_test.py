@@ -618,12 +618,13 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
     with MockProtocolChangesContext(**(mock_protocol_changes or {})):
         test_outputs = None
         if error is not None:
+            if pytest_config.getoption('verbose') >= 2:
+                print("Expected error:", error[0], error[1])
             with pytest.raises(error[0]) as exception:
                 test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
-                assert exception.value.args[0] == error[1]
+            assert exception.value.args[0] == error[1]
         else:
             test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
-            print("GEN HEX:", pytest_config.getoption('gentxhex'), method)
             if pytest_config.getoption('gentxhex') and method == 'compose':
                 print('--------------------------')
                 tx_params = {

@@ -483,13 +483,13 @@ UNITTEST_VECTOR = {
             'out': (P2SH_ADDR[0], [], b'\x00\x00\x00F\xd7\x9bY\x0eN\xc3\xe7L\xbc>\xb4\xd0\xf9V\xcez\xbb\x0e:\xf2\xcc\xac\x85\xff\x90\xed\x8a\xcf\x13\xf2\xe0H')
         }, {
             'in': (ADDR[1], 'foobar'),
-            'error': (exceptions.ComposeError, "['no open offer with that hash']")
+            'error': (exceptions.ComposeError, ['no open offer with that hash'])
         }, {
             'in': ('foobar', 'db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e'),
-            'error': (exceptions.ComposeError, "['incorrect source address']")
+            'error': (exceptions.ComposeError, ['incorrect source address'])
         }, {
             'in': (ADDR[1], '5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93'),
-            'error': (exceptions.ComposeError, "['offer not open']")
+            'error': (exceptions.ComposeError, ['offer not open'])
         }],
         'parse': [{
             'in': ({'block_index': DP['default_block_index'], 'btc_amount': 0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'data': b'\x00\x00\x00F\xdbN\xa0\x92\xbe\xa6\x03n=\x1e_n\xc8c\xdb\x9b\x90\x02R\xb4\xf4\xd6\xd9\xfa\xa6\x16S#\xf43\xc5\x1e', 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'fee': 10000, 'block_time': 310501000, 'tx_hash': 'fb645106e276bfa1abd587f4a251b26f491a2a9ae61ca46a669794109728b122', 'destination': '', 'supported': 1},),
@@ -1272,7 +1272,7 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'send to a REQUIRE_MEMO address, without memo',
             'in': (ADDR[0], ADDR[6], 'XCP', 100000000),
-            'error': (exceptions.ComposeError, '[\'destination requires memo\']')
+            'error': (exceptions.ComposeError, ['destination requires memo'])
         }, {
             'comment': 'send to a REQUIRE_MEMO address, with memo text, before enhanced_send activation',
             'in': ({'source': ADDR[0], 'destination': ADDR[6], 'asset': 'XCP', 'quantity': 100000000, 'memo': '12345', 'use_enhanced_send': True}),
@@ -1627,7 +1627,7 @@ UNITTEST_VECTOR = {
             'error': (exceptions.AssetNameError, 'non‐numeric asset name starts with ‘A’')
         }, {
             'in': (ADDR[0], None, 'BSSET1', 1000, True, False, None, ''),
-            'error': (exceptions.AssetNameError, "('invalid character:', '1')")
+            'error': (exceptions.AssetNameError, "invalid character:")
         }, {
             'in': (ADDR[0], None, 'SET', 1000, True, False, None, ''),
             'error': (exceptions.AssetNameError, 'too short')
@@ -1693,11 +1693,11 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'make sure compose catches asset name syntax errors',
             'in': (ADDR[0], None, 'BADASSETx.child1', 1000, True, False, None, ''),
-            'error': (exceptions.AssetNameError, "('parent asset name contains invalid character:', 'x')")
+            'error': (exceptions.AssetNameError, "parent asset name contains invalid character:")
         }, {
             'comment': 'make sure compose catches validation errors',
             'in': (ADDR[1], None, 'PARENT.child1', 1000, True, False, None, ''),
-            'error': (exceptions.ComposeError, "['parent asset owned by another address']")
+            'error': (exceptions.ComposeError, ['parent asset owned by another address'])
         }, {
             'comment': 'referencing parent asset by name composes a reissuance',
             'in': (ADDR[0], None, 'PARENT.already.issued', 1000, True, False, None, ''),
@@ -2401,7 +2401,7 @@ UNITTEST_VECTOR = {
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x03:>\x7f\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\r\xbb\xa0')
         }, {
             'in': (ADDR[0], 'MAXI', 2**63 - 1, 'XCP', DP['quantity'], DP['expiration'], 2 ** 63),
-            'error': (exceptions.ComposeError, "['integer overflow']")
+            'error': (exceptions.ComposeError, ['integer overflow'])
         }, {
             'in': (ADDR[0], 'MAXI', 2**63, 'XCP', DP['quantity'], DP['expiration'], DP['fee_required']),
             'error': (exceptions.ComposeError, 'insufficient funds')
@@ -2448,13 +2448,13 @@ UNITTEST_VECTOR = {
                     'fee_paid': 0,
                     'forward_asset': 'XCP',
                     'forward_quantity': 100000000,
-                    'id': 'b0240284e3e44dfcae7bd3e6ea9d8152f8424bd55659df84c866e07a3f6566f3_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'id': '4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'match_expire_index': DP['default_block_index'] + 20,
                     'status': 'completed',
                     'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'tx0_block_index': DP['default_block_index'] - 495,
                     'tx0_expiration': 2000,
-                    'tx0_hash': 'b0240284e3e44dfcae7bd3e6ea9d8152f8424bd55659df84c866e07a3f6566f3',
+                    'tx0_hash': '4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8',
                     'tx0_index': 7,
                     'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'tx1_block_index': DP['default_block_index'],
@@ -2467,7 +2467,7 @@ UNITTEST_VECTOR = {
                     'asset': 'XCP',
                     'block_index': DP['default_block_index'],
                     'calling_function': 'order match',
-                    'event': 'b0240284e3e44dfcae7bd3e6ea9d8152f8424bd55659df84c866e07a3f6566f3_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'event': '4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
                 }},
                 {'table': 'debits', 'values': {
@@ -2483,7 +2483,7 @@ UNITTEST_VECTOR = {
                     'asset': 'DIVISIBLE',
                     'block_index': DP['default_block_index'],
                     'calling_function': 'order match',
-                    'event': 'b0240284e3e44dfcae7bd3e6ea9d8152f8424bd55659df84c866e07a3f6566f3_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'event': '4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
                 }},
                 {'table': 'credits', 'values': {
@@ -2499,7 +2499,7 @@ UNITTEST_VECTOR = {
                     'asset': 'DIVISIBLE',
                     'block_index': DP['default_block_index'],
                     'calling_function': 'filled',
-                    'event': 'b0240284e3e44dfcae7bd3e6ea9d8152f8424bd55659df84c866e07a3f6566f3',
+                    'event': '4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8',
                     'quantity': 0,
                 }}
             ]
@@ -2545,13 +2545,13 @@ UNITTEST_VECTOR = {
                     'fee_paid': 0,
                     'forward_asset': 'XCP',
                     'forward_quantity': 100000000,
-                    'id': 'b0240284e3e44dfcae7bd3e6ea9d8152f8424bd55659df84c866e07a3f6566f3_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'id': '4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'match_expire_index': DP['default_block_index'] + 20,
                     'status': 'completed',
                     'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'tx0_block_index': DP['default_block_index'] - 495,
                     'tx0_expiration': 2000,
-                    'tx0_hash': 'b0240284e3e44dfcae7bd3e6ea9d8152f8424bd55659df84c866e07a3f6566f3',
+                    'tx0_hash': '4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8',
                     'tx0_index': 7,
                     'tx1_address': P2SH_ADDR[0],
                     'tx1_block_index': DP['default_block_index'],
@@ -2564,7 +2564,7 @@ UNITTEST_VECTOR = {
                     'asset': 'XCP',
                     'block_index': DP['default_block_index'],
                     'calling_function': 'order match',
-                    'event': 'b0240284e3e44dfcae7bd3e6ea9d8152f8424bd55659df84c866e07a3f6566f3_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'event': '4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
                 }},
                 {'table': 'debits', 'values': {
@@ -2580,7 +2580,7 @@ UNITTEST_VECTOR = {
                     'asset': 'DIVISIBLE',
                     'block_index': DP['default_block_index'],
                     'calling_function': 'order match',
-                    'event': 'b0240284e3e44dfcae7bd3e6ea9d8152f8424bd55659df84c866e07a3f6566f3_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'event': '4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
                 }},
                 {'table': 'credits', 'values': {
@@ -2596,7 +2596,7 @@ UNITTEST_VECTOR = {
                     'asset': 'DIVISIBLE',
                     'block_index': DP['default_block_index'],
                     'calling_function': 'filled',
-                    'event': 'b0240284e3e44dfcae7bd3e6ea9d8152f8424bd55659df84c866e07a3f6566f3',
+                    'event': '4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8',
                     'quantity': 0,
                 }}
             ]
@@ -2630,13 +2630,13 @@ UNITTEST_VECTOR = {
                     'fee_paid': 9000,
                     'forward_asset': 'XCP',
                     'forward_quantity': 100000000,
-                    'id': 'c073532bca106afd5faa1c6fde8d6b4d9cb148a8940fc05a5ba66c7757365145_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'id': '1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'match_expire_index': DP['default_block_index'] + 20,
                     'status': 'pending',
                     'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'tx0_block_index': DP['default_block_index'] - 491,
                     'tx0_expiration': 2000,
-                    'tx0_hash': 'c073532bca106afd5faa1c6fde8d6b4d9cb148a8940fc05a5ba66c7757365145',
+                    'tx0_hash': '1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a',
                     'tx0_index': 11,
                     'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'tx1_block_index': DP['default_block_index'],
@@ -2675,13 +2675,13 @@ UNITTEST_VECTOR = {
                     'fee_paid': 0,
                     'forward_asset': 'BTC',
                     'forward_quantity': 666666,
-                    'id': '601cf81f77b46d4921ccd22a1156d8ca75bd7106570d9514101934e5ca644f3e_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'id': 'a1768d7db2db3b9732b26df8c04db4b9a8535a1e5cf684a680e81e7c06f394b6_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'match_expire_index': DP['default_block_index'] + 20,
                     'status': 'pending',
                     'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'tx0_block_index': 310011,
                     'tx0_expiration': 2000,
-                    'tx0_hash': '601cf81f77b46d4921ccd22a1156d8ca75bd7106570d9514101934e5ca644f3e',
+                    'tx0_hash': 'a1768d7db2db3b9732b26df8c04db4b9a8535a1e5cf684a680e81e7c06f394b6',
                     'tx0_index': 12,
                     'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'tx1_block_index': DP['default_block_index'],
@@ -2840,13 +2840,13 @@ UNITTEST_VECTOR = {
                     'fee_paid': 9000,
                     'forward_asset': 'XCP',
                     'forward_quantity': 100000000,
-                    'id': 'c073532bca106afd5faa1c6fde8d6b4d9cb148a8940fc05a5ba66c7757365145_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'id': '1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'match_expire_index': DP['default_block_index'] + 20,
                     'status': 'pending',
                     'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'tx0_block_index': DP['default_block_index'] - 491,
                     'tx0_expiration': 2000,
-                    'tx0_hash': 'c073532bca106afd5faa1c6fde8d6b4d9cb148a8940fc05a5ba66c7757365145',
+                    'tx0_hash': '1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a',
                     'tx0_index': 11,
                     'tx1_address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
                     'tx1_block_index': DP['default_block_index'],
@@ -2885,13 +2885,13 @@ UNITTEST_VECTOR = {
                     'fee_paid': 9000,
                     'forward_asset': 'XCP',
                     'forward_quantity': 100000000,
-                    'id': 'c073532bca106afd5faa1c6fde8d6b4d9cb148a8940fc05a5ba66c7757365145_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'id': '1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'match_expire_index': DP['default_block_index'] + 20,
                     'status': 'pending',
                     'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'tx0_block_index': DP['default_block_index'] - 491,
                     'tx0_expiration': 2000,
-                    'tx0_hash': 'c073532bca106afd5faa1c6fde8d6b4d9cb148a8940fc05a5ba66c7757365145',
+                    'tx0_hash': '1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a',
                     'tx0_index': 11,
                     'tx1_address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
                     'tx1_block_index': DP['default_block_index'],
@@ -2984,47 +2984,47 @@ UNITTEST_VECTOR = {
         'validate': [
             {
                 'in': (ADDR[6], ADDR[5], 1, None, DP['burn_start']),
-                'out': []
+                'out': ([], 50000000.0)
             },
             {
                 'in': (ADDR[6], ADDR[5], 2, None, DP['burn_start']),
-                'out': []
+                'out': ([], 50000000.0)
             },
             {
                 'in': (ADDR[6], ADDR[5], 3, None, DP['burn_start']),
-                'out': []
+                'out': ([], 50000000.0)
             },
             {
                 'in': (ADDR[6], ADDR[5], 1, 'test', DP['burn_start']),
-                'out': []
+                'out': ([], 50000000.0)
             },
             {
                 'in': (ADDR[6], ADDR[5], 1, b'test', DP['burn_start']),
-                'out': []
+                'out': ([], 50000000.0)
             },
             {
                 'in': (ADDR[6], ADDR[5], 0, None, DP['burn_start']),
-                'out': ['must specify which kind of transfer in flags']
+                'out': (['must specify which kind of transfer in flags'], 50000000.0)
             },
             {
                 'in': (ADDR[6], ADDR[6], 1, None, DP['burn_start']),
-                'out': ['destination cannot be the same as source']
+                'out': (['destination cannot be the same as source'], 50000000.0)
             },
             {
                 'in': (ADDR[6], ADDR[5], 8, None, DP['burn_start']),
-                'out': ['invalid flags 8']
+                'out': (['invalid flags 8'], 50000000.0)
             },
             {
                 'in': (ADDR[6], ADDR[5], 1, '012345678900123456789001234567890012345', DP['burn_start']),
-                'out': ['memo too long']
+                'out': (['memo too long'], 50000000.0)
             },
             {
                 'in': (ADDR[7], ADDR[5], 1, None, DP['burn_start']),
-                'out': ['insufficient XCP balance for sweep. Need 0.5 XCP for antispam fee']
+                'out': (['insufficient XCP balance for sweep. Need 0.5 XCP for antispam fee'], 50000000.0)
             },
             {
                 'in': (ADDR[8], ADDR[5], 1, None, DP['burn_start']),
-                'out': ['insufficient XCP balance for sweep. Need 0.5 XCP for antispam fee']
+                'out': (['insufficient XCP balance for sweep. Need 0.5 XCP for antispam fee'], 50000000.0)
             }
         ],
         'compose': [
@@ -3050,7 +3050,7 @@ UNITTEST_VECTOR = {
             },
             {
                 'in': (ADDR[8], ADDR[5], 1, None),
-                'error': (exceptions.ComposeError, "['insufficient XCP balance for sweep. Need 0.5 XCP for antispam fee']")
+                'error': (exceptions.ComposeError, ['insufficient XCP balance for sweep. Need 0.5 XCP for antispam fee'])
             }
         ],
         'unpack': [
@@ -3428,7 +3428,7 @@ UNITTEST_VECTOR = {
             'out': (b'\xa9\x14Bd\xcf\xd7\xebe\xf8\xcb\xbd\xba\x98\xbd\x98\x15\xd5F\x1f\xad\x8d~\x87', None)
         }, {
             'in': (P2WPKH_ADDR[0],),
-            'out': (b'\xa9\x14u\x1ev\xe8\x19\x91\x96\xd4T\x94\x1cE\xd1\xb3\xa3#\xf1C;\xd6\x87', b'\x00\x14u\x1ev\xe8\x19\x91\x96\xd4T\x94\x1cE\xd1\xb3\xa3#\xf1C;\xd6')
+            'out': (b'\x00\x14u\x1ev\xe8\x19\x91\x96\xd4T\x94\x1cE\xd1\xb3\xa3#\xf1C;\xd6', b'\xa9\x14u\x1ev\xe8\x19\x91\x96\xd4T\x94\x1cE\xd1\xb3\xa3#\xf1C;\xd6\x87')
         }],
         'make_fully_valid': [{
             'in': (b'T\xdaT\x0f\xb2f;u\xe6\xc3\xcca\x19\n\xd0\xc2C\x16C\xba\xb2\x8c\xedx<\xd9@y\xbb\xe7$',),
@@ -3457,10 +3457,10 @@ UNITTEST_VECTOR = {
             'in': (('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [('mvCounterpartyXXXXXXXXXXXXXXW24Hef', 62000000)], None), {'encoding': 'multisig', 'fee_provided': 1.0}),
             'error': (exceptions.TransactionError, 'Fee provided must be in satoshis.')
         }, {
-            'in': (('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [('mvCounterpartyXXXXXXXXXXXXXXW24Hef', 5429)], None), {'encoding': 'singlesig', 'regular_dust_size': DP['regular_dust_size']}),
+            'in': (('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [('mvCounterpartyXXXXXXXXXXXXXXW24Hef', config.DEFAULT_REGULAR_DUST_SIZE - 1)], None), {'encoding': 'singlesig', 'regular_dust_size': DP['regular_dust_size']}),
             'error': (exceptions.TransactionError, 'Destination output is dust.')
         }, {
-            'in': (('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 7799)], None), {'encoding': 'multisig'}),
+            'in': (('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', config.DEFAULT_MULTISIG_DUST_SIZE - 1)], None), {'encoding': 'multisig'}),
             'error': (exceptions.TransactionError, 'Destination output is dust.')
         }, {
             'in': (('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [('mvCounterpartyXXXXXXXXXXXXXXW24Hef', 62000000)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80'), {'encoding': 'foobar'}),
@@ -3471,7 +3471,7 @@ UNITTEST_VECTOR = {
             'error': (exceptions.TransactionError, 'One `OP_RETURN` output per transaction.')
         }, {
             'in': (('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [('mvCounterpartyXXXXXXXXXXXXXXW24Hef', 2**30)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80'), {'encoding': 'multisig'}),
-            'error': (exceptions.BalanceError,  'Insufficient BTC at address mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns. (Need approximately 10.73761799 BTC.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)')
+            'error': (exceptions.BalanceError,  'Insufficient BTC at address mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns. (Need approximately 10.73754999 BTC.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)')
         }, {
             'comment': 'opreturn encoding with maximum possible data that fits in 80 bytes opreturn (72 bytes of data + 8 bytes for PREFIX)',
             'in': (('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [('mvCounterpartyXXXXXXXXXXXXXXW24Hef', 62000000)], b'\x00' * 72), {'encoding': 'opreturn'}),
@@ -3491,58 +3491,58 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'send',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80'), {'encoding': 'multisig', 'regular_dust_size': DP['regular_dust_size']}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac781e0000000000006951210262415bf04af834423d3dd7ada4dc727a030865759f9fba5aee78c9ea71e58798210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae840dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ace8030000000000006951210262415bf04af834423d3dd7ada4dc727a030865759f9fba5aee78c9ea71e58798210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae1428ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'send with custom input which is too low',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80'),
                    {'encoding': 'multisig',
                     'regular_dust_size': DP['regular_dust_size'],
                     'custom_inputs': [{'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'txhex': '0100000002eff195acdf2bbd215daa8aca24eb667b563a731d34a9ab75c8d8df5df08be29b000000006c493046022100ec6fa8316a4f5cfd69816e31011022acce0933bd3b01248caa8b49e60de1b98a022100987ba974b2a4f9976a8d61d94009cb7f7986a827dc5730e999de1fb748d2046c01210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ffffffffeff195acdf2bbd215daa8aca24eb667b563a731d34a9ab75c8d8df5df08be29b010000006a47304402201f8fb2d62df22592cb8d37c68ab26563dbb8e270f7f8409ac0f6d7b24ddb5c940220314e5c767fd12b20116528c028eab2bfbad30eb963bd849993410049cf14a83d01210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ffffffff02145fea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000346a32544553540000000a00000000000000010000000005f5e1000000000000000000000000000bebc2000032000000000000271000000000', 'confirmations': 74, 'vout': 0, 'scriptPubKey': '76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac', 'txid': 'ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1', 'amount': 0.00001, 'account': ''}]}),
-            'error': (exceptions.BalanceError, 'Insufficient BTC at address mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc. (Need approximately 0.0002088 BTC.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)')
+            'error': (exceptions.BalanceError, 'Insufficient BTC at address mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc. (Need approximately 0.0001408 BTC.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)')
         }, {
             'comment': 'send with custom input',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80'),
                    {'encoding': 'multisig',
                     'regular_dust_size': DP['regular_dust_size'],
                     'custom_inputs': [{'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'txhex': '0100000002eff195acdf2bbd215daa8aca24eb667b563a731d34a9ab75c8d8df5df08be29b000000006c493046022100ec6fa8316a4f5cfd69816e31011022acce0933bd3b01248caa8b49e60de1b98a022100987ba974b2a4f9976a8d61d94009cb7f7986a827dc5730e999de1fb748d2046c01210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ffffffffeff195acdf2bbd215daa8aca24eb667b563a731d34a9ab75c8d8df5df08be29b010000006a47304402201f8fb2d62df22592cb8d37c68ab26563dbb8e270f7f8409ac0f6d7b24ddb5c940220314e5c767fd12b20116528c028eab2bfbad30eb963bd849993410049cf14a83d01210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ffffffff02145fea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000346a32544553540000000a00000000000000010000000005f5e1000000000000000000000000000bebc2000032000000000000271000000000', 'confirmations': 74, 'vout': 0, 'scriptPubKey': '76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac', 'txid': 'ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1', 'amount': 1.9990914, 'account': ''}]}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac781e0000000000006951210262415bf04af834423d3dd7ada4dc727a030865759f9fba5aee78c9ea71e58798210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae840dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ace8030000000000006951210262415bf04af834423d3dd7ada4dc727a030865759f9fba5aee78c9ea71e58798210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae1428ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'send with multisig encoding and bytespersigop enabled for address with multiple UTXOs',
             'mock_protocol_changes': {'bytespersigop': True},
             'in': (('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80'), {'encoding': 'multisig', 'regular_dust_size': DP['regular_dust_size']}),
-            'out': '0100000002ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff85497c27fbc3ecfbfb41f49cbf983e252a91636ec92f2863cb7eb755a33afcb9000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac781e0000000000006951210372a51ea175f108a1c635886815c4c468ca75a06798f864a1fad446f893f5fef121023260e421a30202f2e76f46acdb292c652371ca48b97460f7928ade8ecb02ea66210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97753aec2319f06000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000'
+            'out': '0100000002ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff85497c27fbc3ecfbfb41f49cbf983e252a91636ec92f2863cb7eb755a33afcb9000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ace8030000000000006951210372a51ea175f108a1c635886815c4c468ca75a06798f864a1fad446f893f5fef121023260e421a30202f2e76f46acdb292c652371ca48b97460f7928ade8ecb02ea66210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97753ae524c9f06000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000'
         }, {
             'comment': 'send, different dust pubkey',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80'), {'encoding': 'multisig', 'regular_dust_size': DP['regular_dust_size'], 'dust_return_pubkey': '0319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b977'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac781e0000000000006951210262415bf04af834423d3dd7ada4dc727a030865759f9fba5aee78c9ea71e58798210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97753ae840dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ace8030000000000006951210262415bf04af834423d3dd7ada4dc727a030865759f9fba5aee78c9ea71e58798210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97753ae1428ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'send, burn dust pubkey',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80'), {'encoding': 'multisig', 'regular_dust_size': DP['regular_dust_size'], 'dust_return_pubkey': False}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac781e0000000000006951210262415bf04af834423d3dd7ada4dc727a030865759f9fba5aee78c9ea71e58798210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe724472111111111111111111111111111111111111111111111111111111111111111111153ae840dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ace8030000000000006951210262415bf04af834423d3dd7ada4dc727a030865759f9fba5aee78c9ea71e58798210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe724472111111111111111111111111111111111111111111111111111111111111111111153ae1428ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
              'comment': 'send from P2SH address, multsig encoding, no dust pubkey',
              'in': ((P2SH_ADDR[0], [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80'), {'encoding': 'multisig', 'dust_return_pubkey': False, 'regular_dust_size': DP['regular_dust_size']}),
-             'out': '01000000015001af2c4c3bc2c43b6233261394910d10fb157a082d9b3038c65f2d01e4ff200000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e87ffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac781e0000000000006951210397b51de78b0f3a171f5ed27fff56d17dcba739c8b00035c8bbb9c380fdc4ed1321036932bcbeac2a4d8846b7feb4bf93b2b88efd02f2d8dc1fc0067bcc972257e3912111111111111111111111111111111111111111111111111111111111111111111153ae708ff5050000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e8700000000'
+             'out': '01000000015001af2c4c3bc2c43b6233261394910d10fb157a082d9b3038c65f2d01e4ff200000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e87ffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ace8030000000000006951210397b51de78b0f3a171f5ed27fff56d17dcba739c8b00035c8bbb9c380fdc4ed1321036932bcbeac2a4d8846b7feb4bf93b2b88efd02f2d8dc1fc0067bcc972257e3912111111111111111111111111111111111111111111111111111111111111111111153ae00aaf5050000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e8700000000'
         }, {
             'comment': 'send to P2SH address',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [(P2SH_ADDR[0], None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80'), {'encoding': 'multisig', 'regular_dust_size': DP['regular_dust_size']}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03361500000000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e87781e0000000000006951210262415bf04af834423d3dd7ada4dc727a030865759f9fba5aee78c9ea71e58798210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae840dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03361500000000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e87e8030000000000006951210262415bf04af834423d3dd7ada4dc727a030865759f9fba5aee78c9ea71e58798210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae1428ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'send dest multisig',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00'), {'encoding': 'multisig'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03781e0000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae781e0000000000006951210362415bf04af834423d3dd7ada4dc727a030865759f9fba5aee7fc6fbf1e5875a210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae4204ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03e8030000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aee8030000000000006951210362415bf04af834423d3dd7ada4dc727a030865759f9fba5aee7fc6fbf1e5875a210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae6239ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'send dest multisig exact_fee',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00'), {'encoding': 'multisig', 'exact_fee': 1}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03781e0000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae781e0000000000006951210362415bf04af834423d3dd7ada4dc727a030865759f9fba5aee7fc6fbf1e5875a210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae2322ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03e8030000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aee8030000000000006951210362415bf04af834423d3dd7ada4dc727a030865759f9fba5aee7fc6fbf1e5875a210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae4357ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'send dest opreturn',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00'), {'encoding': 'opreturn'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03781e0000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000000000001e6a1c2a504df746f83442653dd7ada4dc727a030865749e9fba5aeb8fd21aed26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03e8030000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000000000001e6a1c2a504df746f83442653dd7ada4dc727a030865749e9fba5aeb8fd21a7d41ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'send dest pubkeyhash',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00'), {'encoding': 'pubkeyhash', 'regular_dust_size': DP['regular_dust_size']}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff04781e0000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae36150000000000001976a9146d415bf04af834423d3dd7ada4dc727a0308657588ac36150000000000001976a9146f415bf04af834423d3cd7ada4dc778fe208657588ac93f9e90b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff04e8030000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae36150000000000001976a9146d415bf04af834423d3dd7ada4dc727a0308657588ac36150000000000001976a9146f415bf04af834423d3cd7ada4dc778fe208657588ac2314ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'send dest 1-of-1',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_1', None)], b'\x00\x00\x00\x00\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00'), {'encoding': 'multisig'}),
@@ -3550,67 +3550,67 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'send source multisig',
             'in': (('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', [('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00'), {'encoding': 'multisig', 'regular_dust_size': DP['regular_dust_size']}),
-            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac781e0000000000006951210334caf7ca87f0fd78a01d9a0d68221e55beef3722da8be72d254dd351c26108892102bc14528340c27d005aa9e2913fd8c032ffa94625307a450077125d580099b57d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae708ff505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
+            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ace8030000000000006951210334caf7ca87f0fd78a01d9a0d68221e55beef3722da8be72d254dd351c26108892102bc14528340c27d005aa9e2913fd8c032ffa94625307a450077125d580099b57d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae00aaf505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
         }, {
             'comment': 'send source and dest multisig',
             'in': (('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', [('1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00'), {'encoding': 'multisig'}),
-            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff03781e0000000000004751210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b977210378ee11c3fb97054877a809ce083db292b16d971bcdc6aa4c8f92087133729d8b52ae781e0000000000006951210334caf7ca87f0fd78a01d9a0d68221e55beef3722da8be72d254dd351c26108892102bc14528340c27d005aa9e2913fd8c032ffa94625307a450077125d580099b57d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae2e86f505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
+            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff03e8030000000000004751210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b977210378ee11c3fb97054877a809ce083db292b16d971bcdc6aa4c8f92087133729d8b52aee8030000000000006951210334caf7ca87f0fd78a01d9a0d68221e55beef3722da8be72d254dd351c26108892102bc14528340c27d005aa9e2913fd8c032ffa94625307a450077125d580099b57d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae4ebbf505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
         }, {
             'comment': 'maximum quantity send',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03:>\x7f\xff\xff\xff\xff\xff\xff\xff'), {'encoding': 'multisig', 'regular_dust_size': DP['regular_dust_size']}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac781e0000000000006951210362415bf04af834423d3dd7ada4dc727a0308664fa0e045a51185cce50ee58717210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae840dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ace8030000000000006951210362415bf04af834423d3dd7ada4dc727a0308664fa0e045a51185cce50ee58717210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae1428ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'issuance',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL'), {'encoding': 'multisig'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210359415bf04af834423d3dd7adb0dc727a03086e897d9fba5aee7a331919e4871d210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02e8030000000000006951210355415bf04af834423d3dd7adb2dc727a03086e897d9fba5aee7a331919e48780210254da540fb2663b75268d992d550ad0c2431643bab28ced783cd94079bbe7244d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae9c40ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'issuance',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)], b'\x00\x00\x00\x16\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL'), {'encoding': 'multisig', 'regular_dust_size': DP['regular_dust_size']}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac781e0000000000006951210259415bf04af834423d3dd7adb0dc727aa153863ef89fba5aee7a331af1e4873a210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae840dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ace8030000000000006951210355415bf04af834423d3dd7adb2dc727aa153863ef89fba5aee7a331af1e48750210254da540fb2663b75268d992d550ad0c2431643bab28ced783cd94079bbe7244d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae1428ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'multisig issuance',
             'in': (('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', [], b'\x00\x00\x00\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL'), {'encoding': 'multisig'}),
-            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02781e000000000000695121030fcaf7ca87f0fd78a01d9a0d7c221e55beef3cde388be72d254826b32a6008cb2102bc14528340c27d005aa9e2913fd8c032ffa94625307a450077125d580099b57d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aef8a7f505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
+            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02e8030000000000006951210203caf7ca87f0fd78a01d9a0d7e221e55beef3cde388be72d254826b32a6008b62103bc14528340c27d009ae7b7dd73d8c032ffa94625307a450077125d580099b55a210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae88c2f505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
         }, {
             'comment': 'maximum quantity issuance',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x16\x00\x00\x00\x00\xdd\x96\xd2t\x7f\xff\xff\xff\xff\xff\xff\xff\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL'), {'encoding': 'multisig'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210249415bf04af834423d3dd7adb0dc727a03d5f3a7eae045a51185cce50ee4877e210354da540fb2663b75f68ead197067a5af636736dbdcf8840c45d94079bbe724cb210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02e8030000000000006951210355415bf04af834423d3dd7adb2dc727a03d5f3a7eae045a51185cce50ee487c2210254da540fb2663b75268d992d550ad0c2431643bab28ced783cd94079bbe7244d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae9c40ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'transfer asset to multisig',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', None)], b'\x00\x00\x00\x16\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL'), {'encoding': 'multisig'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03781e0000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae781e0000000000006951210259415bf04af834423d3dd7adb0dc727aa153863ef89fba5aee7a331af1e4873a210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae4204ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03e8030000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aee8030000000000006951210355415bf04af834423d3dd7adb2dc727aa153863ef89fba5aee7a331af1e48750210254da540fb2663b75268d992d550ad0c2431643bab28ced783cd94079bbe7244d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae6239ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'order',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00'), {'encoding': 'multisig','fee_provided': DP['fee_provided']}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210348415bf04af834423d3dd7adaedc727a030865759e9fba5aee78c9ea71e5870f210354da540fb2673b75e6c3c994f80ad0c8431643bab28ced783cd94079bbe72445210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae5cfeda0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02e8030000000000006951210348415bf04af834423d3dd7adaedc727a030865759e9fba5aee78c9ea71e5870f210354da540fb2673b75e6c3c994f80ad0c8431643bab28ced783cd94079bbe72445210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aeec18db0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'multisig order',
             'in': (('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', [], b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00'), {'encoding': 'multisig','fee_provided': DP['fee_provided']}),
-            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02781e000000000000695121021ecaf7ca87f0fd78a01d9a0d62221e55beef3722db8be72d254adc40426108d02103bc14528340c37d005aa9e764ded8c038ffa94625307a450077125d580099b53b210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae4880e605000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
+            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02e803000000000000695121021ecaf7ca87f0fd78a01d9a0d62221e55beef3722db8be72d254adc40426108d02103bc14528340c37d005aa9e764ded8c038ffa94625307a450077125d580099b53b210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aed89ae605000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
         }, {
             'comment': 'multisig order',
             'in': (('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', [], b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x06B,@\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\n\x00\x00\x00\x00\x00\r\xbb\xa0'), {'encoding': 'multisig'}),
-            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02781e000000000000695121031ecaf7ca87f0fd78a01d9a0d62221e55beef3722da8be72d254e649c8261083d2102bc14528340c27d005aa9e06bcf58c038ffa946253077fea077125d580099b5bb210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aef8a7f505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
+            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02e803000000000000695121031ecaf7ca87f0fd78a01d9a0d62221e55beef3722da8be72d254e649c8261083d2102bc14528340c27d005aa9e06bcf58c038ffa946253077fea077125d580099b5bb210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae88c2f505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
         }, {
             'comment': 'maximum quantity order',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x03:>\x7f\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\r\xbb\xa0'), {'encoding': 'multisig'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210248415bf04af834423d3dd7adaedc727a0308664fa0e045a51185cce50ee58759210354da540fb2673b75e6c3c994f80ad0c8431643bab28156d83cd94079bbe72452210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02e8030000000000006951210248415bf04af834423d3dd7adaedc727a0308664fa0e045a51185cce50ee58759210354da540fb2673b75e6c3c994f80ad0c8431643bab28156d83cd94079bbe72452210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae9c40ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'dividend',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x002\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x01'), {'encoding': 'multisig'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e000000000000695121035a415bf04af834423d3dd7ad96dc727a030d90949e9fba5a4c21d05197e58735210254da540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe7246f210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02e803000000000000695121035a415bf04af834423d3dd7ad96dc727a030d90949e9fba5a4c21d05197e58735210254da540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe7246f210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae9c40ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'dividend',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x002\x00\x00\x00\x00\x00\x00\x00\x01\x00\x06\xca\xd8\xdc\x7f\x0bf\x00\x00\x00\x00\x00\x00\x00\x01'), {'encoding': 'multisig'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e000000000000695121025a415bf04af834423d3dd7ad96dc727a030865759f9fbc9036a64c1197e587c8210254da540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe7246f210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02e803000000000000695121025a415bf04af834423d3dd7ad96dc727a030865759f9fbc9036a64c1197e587c8210254da540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe7246f210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae9c40ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'free issuance',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x16\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL'), {'encoding': 'multisig'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210259415bf04af834423d3dd7adb0238d85fcf79a8a619fba5aee7a331919e487e8210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02e8030000000000006951210255415bf04af834423d3dd7adb2238d85fcf79a8a619fba5aee7a331919e4870d210254da540fb2663b75268d992d550ad0c2431643bab28ced783cd94079bbe7244d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae9c40ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'large broadcast',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00LK@lOver 80 characters test test test test test test test test test test test test test test test test test test'), {}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff04781e0000000000006951210343415bf04af834423d3dd7adba82d48f033795759e9fba5aee7a7f51b189c8c0210322bf262f8a561b168ea2be007a7eb5b0303637dfc1f8cd0c59aa3459cf825784210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae781e0000000000006951210343415bf04af834423d49f7d9c1af065a776d1601beebdf299a5a477f8291a7c4210220bf277b92125e0692e3b8046a7ef0b62665379ac6e99e0c1cad250acfc750c9210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae781e0000000000006951210361415bf04af834423d58a4d984a8170977281110edeb9a2e8b09473a8580f45d210220da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe724dc210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae4ad9e90b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff04e8030000000000006951210343415bf04af834423d3dd7adba82d48f033795759e9fba5aee7a7f51b189c8c0210322bf262f8a561b168ea2be007a7eb5b0303637dfc1f8cd0c59aa3459cf825784210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aee8030000000000006951210343415bf04af834423d49f7d9c1af065a776d1601beebdf299a5a477f8291a7c4210220bf277b92125e0692e3b8046a7ef0b62665379ac6e99e0c1cad250acfc750c9210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aee8030000000000006951210361415bf04af834423d58a4d984a8170977281110edeb9a2e8b09473a8580f45d210220da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe724dc210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aefa28ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }],
     },
     'api': {
@@ -3998,56 +3998,56 @@ UNITTEST_VECTOR = {
             'out': '0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff02800bb203000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88ac87bf4302000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000'
         }, {
             'in': ('create_send', {'source': ADDR[0], 'destination': ADDR[1], 'asset': 'XCP', 'quantity': DP['small'], 'encoding': 'multisig'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac781e0000000000006951210262415bf04af834423d3dd7ada4dc727a030865759f9fba5aee78c9ea71e58798210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae840dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0322020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ace8030000000000006951210262415bf04af834423d3dd7ada4dc727a030865759f9fba5aee78c9ea71e58798210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae283bea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'in': ('create_send', {'source': P2SH_ADDR[0], 'destination': ADDR[1], 'asset': 'XCP', 'quantity': DP['small'], 'encoding': 'multisig', 'dust_return_pubkey': False, 'regular_dust_size': DP['regular_dust_size']}),
-            'out': '01000000015001af2c4c3bc2c43b6233261394910d10fb157a082d9b3038c65f2d01e4ff200000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e87ffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac781e0000000000006951210397b51de78b0f3a171f5ed27fff56d17dcba739c8b00035c8bbb9c380fdc4ed1321036932bcbeac2a4d8846b7feb4bf93b2b88efd02f2d8dc1fc0067bcc972257e3912111111111111111111111111111111111111111111111111111111111111111111153ae708ff5050000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e8700000000'
+            'out': '01000000015001af2c4c3bc2c43b6233261394910d10fb157a082d9b3038c65f2d01e4ff200000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e87ffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ace8030000000000006951210397b51de78b0f3a171f5ed27fff56d17dcba739c8b00035c8bbb9c380fdc4ed1321036932bcbeac2a4d8846b7feb4bf93b2b88efd02f2d8dc1fc0067bcc972257e3912111111111111111111111111111111111111111111111111111111111111111111153ae00aaf5050000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e8700000000'
         }, {
             'in': ('create_issuance', {'source': ADDR[0], 'transfer_destination': None, 'asset': 'BSSET', 'quantity': 1000, 'divisible': True, 'description': '', 'encoding': 'multisig'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210359415bf04af834423d3dd7adb0dc727a03086e897d9fba5aee7a331919e4871d210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02e8030000000000006951210358415bf04af834423d3dd7adb2dc727a03086e897d9fba5aee7a331919e487d6210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae9c40ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'in': ('create_issuance', {'source': ADDR[0], 'transfer_destination': ADDR[1], 'asset': 'DIVISIBLE', 'quantity': 0, 'divisible': True, 'description': '', 'encoding': 'multisig'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac781e0000000000006951210259415bf04af834423d3dd7adb0dc727aa153863ef89fba5aee7a331af1e4873a210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae840dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0322020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ace8030000000000006951210258415bf04af834423d3dd7adb2dc727aa153863ef89fba5aee7a331af1e4874b210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae283bea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'in': ('create_order', {'source': ADDR[0], 'give_asset': 'BTC', 'give_quantity': DP['small'], 'get_asset': 'XCP', 'get_quantity': DP['small'] * 2, 'expiration': DP['expiration'], 'fee_required': 0, 'fee_provided': DP['fee_provided'], 'encoding': 'multisig'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210348415bf04af834423d3dd7adaedc727a030865759e9fba5aee78c9ea71e5870f210354da540fb2673b75e6c3c994f80ad0c8431643bab28ced783cd94079bbe72445210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae5cfeda0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02e8030000000000006951210348415bf04af834423d3dd7adaedc727a030865759e9fba5aee78c9ea71e5870f210354da540fb2673b75e6c3c994f80ad0c8431643bab28ced783cd94079bbe72445210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aeec18db0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'in': ('create_order', {'source': ADDR[0], 'give_asset': 'XCP', 'give_quantity': round(DP['small'] * 2.1), 'get_asset': 'BTC', 'get_quantity': DP['small'], 'expiration': DP['expiration'], 'fee_required': DP['fee_required'], 'encoding': 'multisig'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210248415bf04af834423d3dd7adaedc727a030865759f9fba5aee7c7136b1e58715210354da540fb2663b75e6c3ce9be98ad0c8431643bab28156d83cd94079bbe72460210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02e8030000000000006951210248415bf04af834423d3dd7adaedc727a030865759f9fba5aee7c7136b1e58715210354da540fb2663b75e6c3ce9be98ad0c8431643bab28156d83cd94079bbe72460210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae9c40ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'in': ('create_burn', {'source': MULTISIGADDR[0], 'quantity': int(DP['quantity'] / 2), 'encoding': 'multisig'}),
             'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff0280f0fa02000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88ac87dafa02000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
         }, {
             'in': ('create_send', {'source': ADDR[0], 'destination': MULTISIGADDR[0], 'asset': 'XCP', 'quantity': DP['quantity'], 'encoding': 'multisig'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03781e0000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae781e0000000000006951210362415bf04af834423d3dd7ada4dc727a030865759f9fba5aee7fc6fbf1e5875a210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae4204ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03e8030000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aee8030000000000006951210362415bf04af834423d3dd7ada4dc727a030865759f9fba5aee7fc6fbf1e5875a210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae6239ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'in': ('create_send', {'source': MULTISIGADDR[0], 'destination': ADDR[0], 'asset': 'XCP', 'quantity': DP['quantity'], 'encoding': 'multisig'}),
-            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac781e0000000000006951210334caf7ca87f0fd78a01d9a0d68221e55beef3722da8be72d254dd351c26108892102bc14528340c27d005aa9e2913fd8c032ffa94625307a450077125d580099b57d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae708ff505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
+            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff0322020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ace8030000000000006951210334caf7ca87f0fd78a01d9a0d68221e55beef3722da8be72d254dd351c26108892102bc14528340c27d005aa9e2913fd8c032ffa94625307a450077125d580099b57d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae14bdf505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
         }, {
             'in': ('create_send', {'source': MULTISIGADDR[0], 'destination': MULTISIGADDR[1], 'asset': 'XCP', 'quantity': DP['quantity'], 'encoding': 'multisig'}),
-            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff03781e0000000000004751210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b977210378ee11c3fb97054877a809ce083db292b16d971bcdc6aa4c8f92087133729d8b52ae781e0000000000006951210334caf7ca87f0fd78a01d9a0d68221e55beef3722da8be72d254dd351c26108892102bc14528340c27d005aa9e2913fd8c032ffa94625307a450077125d580099b57d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae2e86f505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
+            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff03e8030000000000004751210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b977210378ee11c3fb97054877a809ce083db292b16d971bcdc6aa4c8f92087133729d8b52aee8030000000000006951210334caf7ca87f0fd78a01d9a0d68221e55beef3722da8be72d254dd351c26108892102bc14528340c27d005aa9e2913fd8c032ffa94625307a450077125d580099b57d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae4ebbf505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
         }, {
             'in': ('create_issuance', {'source': MULTISIGADDR[0], 'transfer_destination': None, 'asset': 'BSSET', 'quantity': 1000, 'divisible': True, 'description': '', 'encoding': 'multisig'}),
-            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02781e000000000000695121030fcaf7ca87f0fd78a01d9a0d7c221e55beef3cde388be72d254826b32a6008cb2102bc14528340c27d005aa9e2913fd8c032ffa94625307a450077125d580099b57d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aef8a7f505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
+            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02e803000000000000695121020ecaf7ca87f0fd78a01d9a0d7e221e55beef3cde388be72d254826b32a6008382102bc14528340c27d005aa9e2913fd8c032ffa94625307a450077125d580099b57d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae88c2f505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
         }, {
             'in': ('create_issuance', {'source': ADDR[0], 'transfer_destination': MULTISIGADDR[0], 'asset': 'DIVISIBLE', 'quantity': 0, 'divisible': True, 'description': '', 'encoding': 'multisig'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03781e0000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae781e0000000000006951210259415bf04af834423d3dd7adb0dc727aa153863ef89fba5aee7a331af1e4873a210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae4204ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03e8030000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aee8030000000000006951210258415bf04af834423d3dd7adb2dc727aa153863ef89fba5aee7a331af1e4874b210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae6239ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'in': ('create_issuance', {'source': ADDR[0], 'asset': 'A{}'.format(2**64 - 1), 'quantity': 1000, 'encoding': 'multisig'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210259415bf04af834423d3dd7adb0238d85fcf79a8a619fba5aee7a331919e487e8210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02e8030000000000006951210255415bf04af834423d3dd7adb2238d85fcf79a8a619fba5aee7a331919e4870d210254da540fb2663b75268d992d550ad0c2431643bab28ced783cd94079bbe7244d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae9c40ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': '1',
             'in': ('create_order', {'source': MULTISIGADDR[0], 'give_asset': 'BTC', 'give_quantity': DP['small'], 'get_asset': 'XCP', 'get_quantity': DP['small'] * 2, 'expiration': DP['expiration'], 'fee_required': 0, 'fee_provided': DP['fee_provided'], 'encoding': 'multisig'}),
-            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02781e000000000000695121021ecaf7ca87f0fd78a01d9a0d62221e55beef3722db8be72d254adc40426108d02103bc14528340c37d005aa9e764ded8c038ffa94625307a450077125d580099b53b210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae4880e605000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
+            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02e803000000000000695121021ecaf7ca87f0fd78a01d9a0d62221e55beef3722db8be72d254adc40426108d02103bc14528340c37d005aa9e764ded8c038ffa94625307a450077125d580099b53b210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aed89ae605000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
         }, {
             'in': ('create_order', {'source': MULTISIGADDR[0], 'give_asset': 'XCP', 'give_quantity': round(DP['small'] * 2.1), 'get_asset': 'BTC', 'get_quantity': DP['small'], 'expiration': DP['expiration'], 'fee_required': DP['fee_required'], 'encoding': 'multisig'}),
-            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02781e000000000000695121031ecaf7ca87f0fd78a01d9a0d62221e55beef3722da8be72d254e649c8261083d2102bc14528340c27d005aa9e06bcf58c038ffa946253077fea077125d580099b5bb210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aef8a7f505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
+            'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02e803000000000000695121031ecaf7ca87f0fd78a01d9a0d62221e55beef3722da8be72d254e649c8261083d2102bc14528340c27d005aa9e06bcf58c038ffa946253077fea077125d580099b5bb210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae88c2f505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
         }, {
             'in': ('create_dividend', {'source': ADDR[0], 'quantity_per_unit': DP['quantity'], 'asset': 'DIVISIBLE', 'dividend_asset': 'XCP', 'encoding': 'multisig'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e000000000000695121035a415bf04af834423d3dd7ad96dc727a030d90949e9fba5a4c21d05197e58735210254da540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe7246f210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02e803000000000000695121035a415bf04af834423d3dd7ad96dc727a030d90949e9fba5a4c21d05197e58735210254da540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe7246f210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae9c40ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'in': ('create_dividend', {'source': ADDR[0], 'quantity_per_unit': 1, 'asset': 'NODIVISIBLE', 'dividend_asset': 'XCP', 'encoding': 'multisig'}),
-            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e000000000000695121025a415bf04af834423d3dd7ad96dc727a030865759f9fbc9036a64c1197e587c8210254da540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe7246f210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae0c26ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02e803000000000000695121025a415bf04af834423d3dd7ad96dc727a030865759f9fbc9036a64c1197e587c8210254da540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe7246f210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae9c40ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
 
         # CIP 9 enhanced_send tests
 
@@ -4055,12 +4055,12 @@ UNITTEST_VECTOR = {
             'comment': 'standard op return send',
             'mock_protocol_changes': {'enhanced_sends': False},
             'in': ('create_send', {'source': ADDR[0], 'destination': ADDR[1], 'asset': 'XCP', 'quantity': DP['small']}),
-            'out': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'03'+'3615000000000000'+'19'+'76a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac'+'0000000000000000'+'1e'+'6a1c2a504df746f83442653dd7ada4dc727a030865749e9fba5aec80c39a'+'2f30ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'
+            'out': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'03'+'2202000000000000'+'19'+'76a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac'+'0000000000000000'+'1e'+'6a1c2a504df746f83442653dd7ada4dc727a030865749e9fba5aec80c39a'+'4343ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'
         }, {
             'comment': 'standard op return send (with API parameter)',
             'mock_protocol_changes': {'enhanced_sends': True},
             'in': ('create_send', {'use_enhanced_send': False, 'source': ADDR[0], 'destination': ADDR[1], 'asset': 'XCP', 'quantity': DP['small']}),
-            'out': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'03'+'3615000000000000'+'19'+'76a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac'+'0000000000000000'+'1e'+'6a1c2a504df746f83442653dd7ada4dc727a030865749e9fba5aec80c39a'+'2f30ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'
+            'out': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'03'+'2202000000000000'+'19'+'76a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac'+'0000000000000000'+'1e'+'6a1c2a504df746f83442653dd7ada4dc727a030865749e9fba5aec80c39a'+'4343ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'
         }, {
             'comment': 'CIP 9 enhanced_send (op_return)',
             'mock_protocol_changes': {'enhanced_sends': True},
@@ -4096,8 +4096,8 @@ UNITTEST_VECTOR = {
 
         }, {
             'comment': 'get_tx_info for a legacy send',
-            'in': ('get_tx_info', {'tx_hex': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'03'+'3615000000000000'+'19'+'76a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac'+'0000000000000000'+'1e'+'6a1c2a504df746f83442653dd7ada4dc727a030865749e9fba5aec80c39a'+'2f30ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'}),
-            'out': ['mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 5430, 6575, '0000000000000000000000010000000002faf080']
+            'in': ('get_tx_info', {'tx_hex': '01000000'+'01'+'c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae'+'00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'ffffffff'+'03'+'2202000000000000'+'19'+'76a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac'+'0000000000000000'+'1e'+'6a1c2a504df746f83442653dd7ada4dc727a030865749e9fba5aec80c39a'+'4343ea0b00000000'+'19'+'76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac'+'00000000'}),
+            'out': ['mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 546, 6575, '0000000000000000000000010000000002faf080']
         }, {
             'comment': 'get_tx_info for an enhanced send',
             'mock_protocol_changes': {'enhanced_sends': True,},
@@ -4146,7 +4146,7 @@ UNITTEST_VECTOR = {
             'error': (exceptions.AssetNameError, 'long asset names must be numeric')
         }, {
             'in': ('BCDE_F', 308000),
-            'error': (exceptions.AssetNameError, "('invalid character:', '_')")
+            'error': (exceptions.AssetNameError, "invalid character:")
         }, {
             'in': ('BAAA', 308000),
             'out': 26**3
@@ -4193,15 +4193,11 @@ UNITTEST_VECTOR = {
         }],
         'last_message': [{
             'in': (),
-            'out': {'bindings': '{"action": "issuance", "address": '
-                                '"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": '
-                                '"A95428956661682277", "block_index": 310498, "event": '
-                                '"0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf", '
-                                '"quantity": 100000000}',
-                    'block_index': 310498,
-                    'category': 'credits',
+            'out': {'bindings': "['block_index']",
+                    'block_index': 310500,
+                    'category': 'replace',
                     'command': 'insert',
-                    'message_index': 129,
+                    'message_index': 631,
                     'timestamp': 0}
         }],
         'get_asset_id': [{
@@ -4374,7 +4370,7 @@ UNITTEST_VECTOR = {
             'out': True
         }, {
             'in': ('foobar',),
-            'error': (KeyError, "'foobar'")
+            'error': (KeyError, "foobar")
         }, {
             'mock_protocol_changes': {'numeric_asset_names': False},
             'in': ('numeric_asset_names',),
@@ -4391,7 +4387,7 @@ UNITTEST_VECTOR = {
         }],
         'parse_subasset_from_asset_name': [{
             'in': ('BADASSETx.child1',),
-            'error': (exceptions.AssetNameError, "('parent asset name contains invalid character:', 'x')")
+            'error': (exceptions.AssetNameError, "parent asset name contains invalid character:")
         },
         {
             'in': ('TOOLONGASSETNAME.child1',),
@@ -4423,7 +4419,7 @@ UNITTEST_VECTOR = {
         },
         {
             'in': ('PARENT.child1&',),
-            'error': (exceptions.AssetNameError, "('subasset name contains invalid character:', '&')")
+            'error': (exceptions.AssetNameError, "subasset name contains invalid character:")
         },
         {
             'in': ('PARENT.child1..foo',),
@@ -4700,11 +4696,11 @@ UNITTEST_VECTOR = {
             # memo too long
             'mock_protocol_changes': {'short_tx_type_id': True},
             'in': (ADDR[1], ADDR[0], 'XCP', DP['small'], '12345678901234567890123456789012345', False),
-            'error': (exceptions.ComposeError, "['memo is too long']")
+            'error': (exceptions.ComposeError, ['memo is too long'])
         }, {
             'comment': 'enhanced_send to a REQUIRE_MEMO address, without memo',
             'in': (ADDR[0], ADDR[6], 'XCP', DP['small'], None, False),
-            'error': (exceptions.ComposeError, "['destination requires memo']")
+            'error': (exceptions.ComposeError, ['destination requires memo'])
         }, {
             'comment': 'enhanced_send to a REQUIRE_MEMO address, with memo text',
             'in': (ADDR[0], ADDR[6], 'XCP', DP['small'], '12345', False),
@@ -5161,7 +5157,7 @@ UNITTEST_VECTOR = {
                     'address': ADDR[1],
                     'asset': 'XCP',
                     'block_index': DP['default_block_index'],
-                    'calling_function': 'send',
+                    'calling_function': 'mpma send',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': DP['quantity'],
                 }},
@@ -5169,12 +5165,12 @@ UNITTEST_VECTOR = {
                     'address': ADDR[2],
                     'asset': 'XCP',
                     'block_index': DP['default_block_index'],
-                    'calling_function': 'send',
+                    'calling_function': 'mpma send',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': DP['quantity'],
                 }},
                 {'table': 'debits', 'values': {
-                    'action': 'send',
+                    'action': 'mpma send',
                     'address': ADDR[0],
                     'asset': 'XCP',
                     'block_index': DP['default_block_index'],
@@ -5225,7 +5221,7 @@ UNITTEST_VECTOR = {
                     'address': ADDR[1],
                     'asset': 'XCP',
                     'block_index': DP['default_block_index'],
-                    'calling_function': 'send',
+                    'calling_function': 'mpma send',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': DP['quantity'],
                 }},
@@ -5233,12 +5229,12 @@ UNITTEST_VECTOR = {
                     'address': ADDR[2],
                     'asset': 'XCP',
                     'block_index': DP['default_block_index'],
-                    'calling_function': 'send',
+                    'calling_function': 'mpma send',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': DP['quantity'],
                 }},
                 {'table': 'debits', 'values': {
-                    'action': 'send',
+                    'action': 'mpma send',
                     'address': ADDR[0],
                     'asset': 'XCP',
                     'block_index': DP['default_block_index'],
@@ -5289,7 +5285,7 @@ UNITTEST_VECTOR = {
                     'address': ADDR[1],
                     'asset': 'DIVISIBLE',
                     'block_index': DP['default_block_index'],
-                    'calling_function': 'send',
+                    'calling_function': 'mpma send',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': DP['quantity'],
                 }},
@@ -5297,12 +5293,12 @@ UNITTEST_VECTOR = {
                     'address': ADDR[2],
                     'asset': 'XCP',
                     'block_index': DP['default_block_index'],
-                    'calling_function': 'send',
+                    'calling_function': 'mpma send',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': DP['quantity'],
                 }},
                 {'table': 'debits', 'values': {
-                    'action': 'send',
+                    'action': 'mpma send',
                     'address': ADDR[0],
                     'asset': 'XCP',
                     'block_index': DP['default_block_index'],
@@ -5310,7 +5306,7 @@ UNITTEST_VECTOR = {
                     'quantity': DP['quantity'],
                 }},
                 {'table': 'debits', 'values': {
-                    'action': 'send',
+                    'action': 'mpma send',
                     'address': ADDR[0],
                     'asset': 'DIVISIBLE',
                     'block_index': DP['default_block_index'],
