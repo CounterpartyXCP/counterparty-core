@@ -218,7 +218,7 @@ def parse (db, tx, message):
         sql = 'insert into dividends values(:tx_index, :tx_hash, :block_index, :source, :asset, :dividend_asset, :quantity_per_unit, :fee_paid, :status)'
         dividend_parse_cursor.execute(sql, bindings)
     else:
-        logger.warn("Not storing [dividend] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.warning("Not storing [dividend] tx [%s]: %s" % (tx['tx_hash'], status))
         logger.debug("Bindings: %s" % (json.dumps(bindings), ))
 
     dividend_parse_cursor.close()

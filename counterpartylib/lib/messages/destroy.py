@@ -142,7 +142,7 @@ def parse (db, tx, message):
         cursor = db.cursor()
         cursor.execute(sql, bindings)
     else:
-        logger.warn("Not storing [destroy] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.warning("Not storing [destroy] tx [%s]: %s" % (tx['tx_hash'], status))
         logger.debug("Bindings: %s" % (json.dumps(bindings), ))
 
 

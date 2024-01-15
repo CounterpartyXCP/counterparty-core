@@ -209,7 +209,7 @@ def parse_block(db, block_index, block_time,
                                                 tx['btc_amount'], tx['fee'],
                                                 binascii.hexlify(tx['data']).decode('UTF-8')))
         except exceptions.ParseTransactionError as e:
-            logger.warn('ParseTransactionError for tx %s: %s' % (tx['tx_hash'], e))
+            logger.warning('ParseTransactionError for tx %s: %s' % (tx['tx_hash'], e))
             raise e
             #pass
 
@@ -1615,7 +1615,7 @@ def follow(db):
                         # Rollback.
                         raise MempoolError
                 except exceptions.ParseTransactionError as e:
-                    logger.warn('ParseTransactionError for tx %s: %s' % (tx_hash, e))
+                    logger.warning('ParseTransactionError for tx %s: %s' % (tx_hash, e))
                 except MempoolError:
                     pass
                     

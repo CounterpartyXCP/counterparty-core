@@ -235,7 +235,7 @@ def resolve_subasset_longname(db, asset_name):
         try:
             subasset_parent, subasset_longname = parse_subasset_from_asset_name(asset_name)
         except Exception as e:
-            logger.warn("Invalid subasset {}".format(asset_name))
+            logger.warning("Invalid subasset {}".format(asset_name))
             subasset_longname = None
 
         if subasset_longname is not None:

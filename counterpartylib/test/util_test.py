@@ -247,7 +247,7 @@ def dummy_tx_hash(raw_transaction):
 
     # check we haven't created this before (if we do 2 exactly the sends for example)
     if tx_id in UNIQUE_DUMMY_TX_HASH:
-        logger.warn('BUMP TXID %s' % tx_id)
+        logger.warning('BUMP TXID %s' % tx_id)
         UNIQUE_DUMMY_TX_HASH[tx_id] += 1
         tx_id = hashlib.sha256('{}{}'.format(tx_id, UNIQUE_DUMMY_TX_HASH[tx_id]).encode('utf-8')).hexdigest()
     else:

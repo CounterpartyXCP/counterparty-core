@@ -426,7 +426,7 @@ def parse (db, tx, message, message_type_id):
         subasset_longname = None
         if message_type_id == LR_SUBASSET_ID or message_type_id == SUBASSET_ID:
             if not util.enabled('subassets', block_index=tx['block_index']):
-                logger.warn("subassets are not enabled at block %s" % tx['block_index'])
+                logger.warning("subassets are not enabled at block %s" % tx['block_index'])
                 raise exceptions.UnpackError
 
             # parse a subasset original issuance message
@@ -442,7 +442,7 @@ def parse (db, tx, message, message_type_id):
                 
             description_length = len(message) - subasset_format_length - compacted_subasset_length
             if description_length < 0:
-                logger.warn("invalid subasset length: [issuance] tx [%s]: %s" % (tx['tx_hash'], compacted_subasset_length))
+                logger.warning("invalid subasset length: [issuance] tx [%s]: %s" % (tx['tx_hash'], compacted_subasset_length))
                 raise exceptions.UnpackError
             messages_format = '>{}s{}s'.format(compacted_subasset_length, description_length)
             compacted_subasset_longname, description = struct.unpack(messages_format, message[subasset_format_length:])
@@ -669,7 +669,7 @@ def parse (db, tx, message, message_type_id):
             sql='insert into issuances values(:tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :reset)'
             issuance_parse_cursor.execute(sql, bindings)
         else:
-            logger.warn("Not storing [issuance] tx [%s]: %s" % (tx['tx_hash'], status))
+            logger.warning("Not storing [issuance] tx [%s]: %s" % (tx['tx_hash'], status))
             logger.debug("Bindings: %s" % (json.dumps(bindings), ))
 
         # Credit.

@@ -222,7 +222,7 @@ class MockUTXOSet(object):
         self.txouts = utxos or []
         self.spent_utxos = []
         self.rawtransactions_db = rawtransactions_db
-        # logger.warn('MockUTXOSet %d' % len(utxos))
+        # logger.warning('MockUTXOSet %d' % len(utxos))
 
     def get_unspent_txouts(self, address, unconfirmed=False, multisig_inputs=False, unspent_tx_hash=None):
         # filter by address
@@ -291,7 +291,7 @@ class MockUTXOSet(object):
                 'vout': idx
             })
 
-        # logger.warn('add_raw_transaction %d/%d' % (len(txins), len(txouts)))
+        # logger.warning('add_raw_transaction %d/%d' % (len(txins), len(txouts)))
         # logger.debug(pprint.pformat(txins))
         # logger.debug(pprint.pformat(txouts))
 

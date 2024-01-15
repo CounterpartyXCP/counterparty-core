@@ -123,7 +123,7 @@ def parse (db, tx, message):
         sql='INSERT INTO cancels VALUES (:tx_index, :tx_hash, :block_index, :source, :offer_hash, :status)'
         cursor.execute(sql, bindings)
     else:
-        logger.warn("Not storing [cancel] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.warning("Not storing [cancel] tx [%s]: %s" % (tx['tx_hash'], status))
         logger.debug("Bindings: %s" % (json.dumps(bindings), ))
 
     cursor.close()
