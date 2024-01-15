@@ -105,7 +105,7 @@ def dump_database(db):
     lines = output.getvalue().split('\n')[8:]
     new_data = '\n'.join(lines)
     #clean ; in new line
-    new_data = re.sub('\)[\n\s]+;', ');', new_data)
+    new_data = re.sub(r'\)[\n\s]+;', ');', new_data)
     # apsw oddness: follwing sentence not always generated!
     new_data = new_data.replace('-- The values of various per-database settings\n', '')
 
@@ -538,8 +538,8 @@ def clean_scenario_dump(scenario_name, dump):
     """Replace addresses and hashes to compare a scenario with its base scenario."""
     dump = dump.replace(standard_scenarios_params[scenario_name]['address1'], 'address1')
     dump = dump.replace(standard_scenarios_params[scenario_name]['address2'], 'address2')
-    dump = re.sub('[a-f0-9]{64}', 'hash', dump)
-    dump = re.sub('X\'[A-F0-9]+\',1\);', '\'data\',1);', dump)
+    dump = re.sub(r'[a-f0-9]{64}', 'hash', dump)
+    dump = re.sub(r'X\'[A-F0-9]+\',1\);', '\'data\',1);', dump)
     return dump
 
 def check_record(record, server_db, pytest_config):
