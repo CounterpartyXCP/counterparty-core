@@ -1,26 +1,23 @@
 ---
-name: Bug report
-about: Create a report to help us improve
+name: Bug Report
 title: ''
 labels: bug
 assignees: adamkrellenstein
 
 ---
 
-**Describe the bug**
+**Describe the Bug**
 A clear and concise description of what the bug is.
 
-**To Reproduce**
+**Steps To Reproduce**
 Steps to reproduce the behavior:
 1. Go to '...'
 2. Click on '....'
 3. Scroll down to '....'
 4. See error
 
-**Expected behavior**
+**Expected Behavior**
 A clear and concise description of what you expected to happen.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
-
-**Logfiles**
+**Screenshots and Logfiles**
+If applicable, upload screenshots and logfiles to help explain your problem. Please run everything with the `--verbose` flag when possible.
