@@ -527,11 +527,11 @@ def clean_scenario_dump(scenario_name, dump):
     dump = re.sub('[a-f0-9]{64}', 'hash', dump)
     dump = re.sub('X\'[A-F0-9]+\',1\);', '\'data\',1);', dump)
     # ignore fee values by replacing them with 10000 satoshis
-    dump = re.sub(',\d+,\'data\',1\);', ',10000,\'data\',1);', dump)
-    dump = re.sub(',\d+,X\'\',1\);', ',10000,\'data\',1);', dump)
+    #dump = re.sub(',\d+,\'data\',1\);', ',10000,\'data\',1);', dump)
+    #dump = re.sub(',\d+,X\'\',1\);', ',10000,\'data\',1);', dump)
     # ignore dust value by replacing them with 0 satoshis
-    dump = re.sub(',7800,(\d+),\'data\',1\);', ',0,\1,\'data\',1);', dump)
-    dump = re.sub(',5430,(\d+),\'data\',1\);', ',0,\1,\'data\',1);', dump)
+    #dump = re.sub(',7800,(\d+),\'data\',1\);', ',0,\1,\'data\',1);', dump)
+    #dump = re.sub(',5430,(\d+),\'data\',1\);', ',0,\1,\'data\',1);', dump)
 
     return dump
 
