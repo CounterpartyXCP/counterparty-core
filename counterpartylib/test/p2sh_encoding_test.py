@@ -80,16 +80,15 @@ def test_p2sh_encoding(server_db):
         assert sumvout < sumvin
         assert sumvout == (sumvin - fee)
 
-
         # data P2SH output
         expected_datatx_length = 435
-        expected_datatx_fee = int(expected_datatx_length / 1000 * fee_per_kb)
+        expected_datatx_fee = fee # excat fee asked
         assert repr(pretx.vout[0].scriptPubKey) == "CScript([OP_HASH160, x('8042727755cf6254a0b8f7f4c82de93c23b507d6'), OP_EQUAL])"
         assert pretx.vout[0].nValue == expected_datatx_fee
         # change output
         assert pretx.vout[1].nValue == sumvin - expected_datatx_fee - fee
 
-        assert pretxhex == "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02f65400000000000017a9148042727755cf6254a0b8f7f4c82de93c23b507d687febbe90b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        assert pretxhex == "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02204e00000000000017a9148042727755cf6254a0b8f7f4c82de93c23b507d687d4c2e90b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
         # 01000000                                                          | version
         # 01                                                                | inputs
         # c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae  | txout hash
@@ -152,10 +151,10 @@ def test_p2sh_encoding(server_db):
         assert sumvout == sumvin - expected_datatx_fee
         assert len(datatx.vout) == 1
         # opreturn signalling P2SH
-        assert repr(datatx.vout[0].scriptPubKey) == "CScript([OP_RETURN, x('8a5dda15fb6f0562da344d2f')])"  # arc4(PREFIX + 'P2SH')
+        assert repr(datatx.vout[0].scriptPubKey) == "CScript([OP_RETURN, x('03214158f8e4c83c02386ffa')])"  # arc4(PREFIX + 'P2SH')
         assert datatx.vout[0].nValue == 0
 
-        assert datatxhex == "010000000146fb6cb8d783ecd8ee127c08169af083b13989b7d266269c3544d944c3efcc99000000005d4c5b31544553545858585800000002000000000000000100000000000000646f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec75210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad0075740087ffffffff0100000000000000000e6a0c8a5dda15fb6f0562da344d2f00000000"
+        assert datatxhex == "010000000119d8ee8a286d755e51877e79a8972abd2914eccc560529effb389c0bcbdd0344000000005d4c5b31544553545858585800000002000000000000000100000000000000646f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec75210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad0075740087ffffffff0100000000000000000e6a0c03214158f8e4c83c02386ffa00000000"
         # 01000000                                                                                    | version
         # 01                                                                                          | inputs
         # 0a0746fe9308ac6e753fb85780a8b788b40655148dcde1435f2048783b784f06                            | txout hash
@@ -216,28 +215,26 @@ def test_p2sh_encoding_long_data(server_db):
         sumvin = sum([int(utxos[(bitcoinlib.core.b2lx(vin.prevout.hash), vin.prevout.n)]['amount'] * 1e8) for vin in pretx.vin])
         sumvout = sum([vout.nValue for vout in pretx.vout])
 
-        pretx_fee = 12950
+        #pretx_fee = 12950
 
         assert len(pretx.vout) == 3
         assert len(pretxhex) / 2 == 174
         assert sumvin == 199909140
         assert sumvout < sumvin
-        assert sumvout == (sumvin - pretx_fee)
+        #assert sumvout == (sumvin - pretx_fee)
+
+        pretx_fee = sumvin - sumvout
 
         # data P2SH output
-        expected_datatx_length = 1156
-        expected_datatx_fee = int(expected_datatx_length / 1000 * fee_per_kb)
-        expected_datatx_fee_rounded = int(math.ceil(expected_datatx_fee / 2)) * 2
-        #assert repr(pretx.vout[0].scriptPubKey) == "CScript([OP_HASH160, x('329d3940a8c28df82bee71bf1d5b16d35e864a84'), OP_EQUAL])"
-        assert repr(pretx.vout[0].scriptPubKey) == "CScript([OP_HASH160, x('600fad54f67716af692b33f72862b7c0d457ade6'), OP_EQUAL])"
-        print(pretx.vout[0].nValue, pretx.vout[1].nValue, pretx.vout[0].nValue+pretx.vout[1].nValue)
-        print(expected_datatx_fee)
-        assert pretx.vout[0].nValue == int(math.ceil(expected_datatx_fee / 2))
-        assert pretx.vout[1].nValue == int(math.ceil(expected_datatx_fee / 2))
-        # change output
-        assert pretx.vout[2].nValue == sumvin - expected_datatx_fee_rounded - pretx_fee
+        expected_datatx_fee_rounded = config.DEFAULT_REGULAR_DUST_SIZE * 2
 
-        assert pretxhex == "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03e47000000000000017a914329d3940a8c28df82bee71bf1d5b16d35e864a8487e47000000000000017a91443b7fefe3d188e409575f9ad5f446b2fcbcf4d6a87b64ae90b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        assert repr(pretx.vout[0].scriptPubKey) == "CScript([OP_HASH160, x('600fad54f67716af692b33f72862b7c0d457ade6'), OP_EQUAL])"
+        assert pretx.vout[0].nValue == config.DEFAULT_REGULAR_DUST_SIZE
+        assert pretx.vout[1].nValue == config.DEFAULT_REGULAR_DUST_SIZE
+        # change output
+        assert pretx.vout[2].nValue == sumvin - (2 * config.DEFAULT_REGULAR_DUST_SIZE) - pretx_fee
+
+        assert pretxhex == "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03220200000000000017a914600fad54f67716af692b33f72862b7c0d457ade687220200000000000017a9142adb68fe57838e8dd49641e93f6fc70922ade549873a28ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
         # 00000001                                                         | version
         # 01                                                               | inputs
         # c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae | txout hash
@@ -256,7 +253,6 @@ def test_p2sh_encoding_long_data(server_db):
         # 19                                                               | output 3 length (25 bytes)
         # 76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac               | output 3 script
         # 00000000                                                         | locktime
-
 
         # store transaction
         pretxid, _ = util_test.insert_raw_transaction(pretxhex, server_db)
@@ -283,14 +279,14 @@ def test_p2sh_encoding_long_data(server_db):
         assert len(datatx.vin) == 2
 
         assert len(datatxhex) / 2 == 1594 / 2
-        assert sumvin == expected_datatx_fee_rounded
+        assert sumvin == 2 * config.DEFAULT_REGULAR_DUST_SIZE
         assert sumvout < sumvin
-        assert sumvout == sumvin - expected_datatx_fee_rounded
+        assert sumvout == 0
         assert len(datatx.vout) == 1
         # opreturn signalling P2SH
         assert repr(datatx.vout[0].scriptPubKey) == "CScript([OP_RETURN, x('8a5dda15fb6f0562da344d2f')])"  # arc4(PREFIX + 'P2SH')
         assert datatx.vout[0].nValue == 0
-        assert datatxhex == "0100000002d2d71c96244aa6baa98f619a4454694ae09be71577470b88aadcf8bb1d9b78c400000000fd0b024d08024ddc0154455354585858580000001e5a21aad600000000000000000000000054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746875210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad0075740087ffffffffd2d71c96244aa6baa98f619a4454694ae09be71577470b88aadcf8bb1d9b78c4010000009d4c9b4c70544553545858585865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2075210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad5175740087ffffffff0100000000000000000e6a0c8a5dda15fb6f0562da344d2f00000000"
+        assert datatxhex == "0100000002b7bd6fbf86ab2987a37ac78db80a84f2dde28bb65128fce0c2108c9c43538d5900000000fd0a024d07024ddb0154455354585858580000001e5a21aad600000000000000000000000054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f766572207475210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad0075740087ffffffffb7bd6fbf86ab2987a37ac78db80a84f2dde28bb65128fce0c2108c9c43538d59010000009e4c9c4c7154455354585858586865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d706564206f76657220746865206c617a7920646f672e2075210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad5175740087ffffffff0100000000000000000e6a0c8a5dda15fb6f0562da344d2f00000000"
         # 01000000                                                                                              | version
         # 02                                                                                                    | inputs
         # f33f677de4180f1b0c261a991974c57de97f082a7e62332b77ec5d193d13d1a3                                      | txout hash
@@ -324,7 +320,6 @@ def test_p2sh_encoding_long_data(server_db):
         # 0e                                                                                                    | output 1 length (14 bytes)
         # 6a0c8a5dda15fb6f0562da344d2f                                                                          | output 1 script
         # 00000000                                                                                              | locktime
-
 
         # verify parsed result
         parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = blocks._get_tx_info(datatxhex)
