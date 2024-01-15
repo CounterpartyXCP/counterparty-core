@@ -3220,35 +3220,35 @@ UNITTEST_VECTOR = {
     'dispenser': {
         'validate': [
             {
-                'in': (ADDR[0], config.XCP, 100, 100, 100, 0, None, DP['burn_start']),
+                'in': (ADDR[0], config.XCP, 100, 100, 100, 0, None, DP['burn_start'], None),
                 'out': (1, None)
             },
             {
-                'in': (ADDR[0], config.XCP, 200, 100, 100, 0, None, DP['burn_start']),
+                'in': (ADDR[0], config.XCP, 200, 100, 100, 0, None, DP['burn_start'], None),
                 'out': (None, ['escrow_quantity must be greater or equal than give_quantity'])
             },
             {
-                'in': (ADDR[0], config.BTC, 100, 100, 100, 0, None, DP['burn_start']),
+                'in': (ADDR[0], config.BTC, 100, 100, 100, 0, None, DP['burn_start'], None),
                 'out': (None, ['cannot dispense %s' % config.BTC])
             },
             {
-                'in': (ADDR[0], config.XCP, 100, 100, 100, 5, None, DP['burn_start']),
+                'in': (ADDR[0], config.XCP, 100, 100, 100, 5, None, DP['burn_start'], None),
                 'out': (None, ['invalid status 5'])
             },
             {
-                'in': (ADDR[0], 'PARENT', 100, 1000000000, 100, 0, None, DP['burn_start']),
+                'in': (ADDR[0], 'PARENT', 100, 1000000000, 100, 0, None, DP['burn_start'], None),
                 'out': (None, ["address doesn't has enough balance of PARENT (100000000 < 1000000000)"])
             },
             {
-                'in': (ADDR[5], config.XCP, 100, 100, 120, 0, None, DP['burn_start']),
+                'in': (ADDR[5], config.XCP, 100, 100, 120, 0, None, DP['burn_start'], None),
                 'out': (None, ['address has a dispenser already opened for asset %s with a different mainchainrate' % config.XCP])
             },
             {
-                'in': (ADDR[5], config.XCP, 120, 120, 100, 0, None, DP['burn_start']),
+                'in': (ADDR[5], config.XCP, 120, 120, 100, 0, None, DP['burn_start'], None),
                 'out': (None, ['address has a dispenser already opened for asset %s with a different give_quantity' % config.XCP])
             },
             {
-                'in': (ADDR[0], 'PARENT', 0, 0, 0, 10, None, DP['burn_start']),
+                'in': (ADDR[0], 'PARENT', 0, 0, 0, 10, None, DP['burn_start'], None),
                 'out': (None, ['address doesnt has an open dispenser for asset PARENT'])
             }
         ],
