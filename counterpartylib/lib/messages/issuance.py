@@ -299,7 +299,7 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
     return call_date, call_price, problems, fee, description, divisible, lock, reset, reissuance, reissued_asset_longname
 
 
-def compose (db, source, transfer_destination, asset, quantity, divisible, lock, reset=None, description=None):
+def compose (db, source, transfer_destination, asset, quantity, divisible, lock, reset, description):
 
     # Callability is deprecated, so for re‐issuances set relevant parameters
     # to old values; for first issuances, make uncallable.
