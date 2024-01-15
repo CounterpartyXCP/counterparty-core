@@ -32,11 +32,11 @@ from .params import ADDR, MULTISIGADDR, P2SH_ADDR, P2WPKH_ADDR, DEFAULT_PARAMS a
 
 UNITTEST_FIXTURE = [
     ['burn', (ADDR[0], DP['burn_quantity']), {'encoding': 'multisig'}],  # 310000
-    ['issuance', (ADDR[0], None, 'DIVISIBLE', DP['quantity'] * 1000, True, 'Divisible asset', None, None), {'encoding': 'multisig'}],
-    ['issuance', (ADDR[0], None, 'NODIVISIBLE', 1000, False, 'No divisible asset', None, None), {'encoding': 'multisig'}],
-    ['issuance', (ADDR[0], None, 'CALLABLE', 1000, True, 'Callable asset', None, None), {'encoding': 'multisig'}],
-    ['issuance', (ADDR[0], None, 'LOCKED', 1000, True, 'Locked asset', None, None), {'encoding': 'multisig'}],
-    ['issuance', (ADDR[0], None, 'LOCKED', 0, True, 'LOCK', None, None), {'encoding': 'multisig'}],
+    ['issuance', (ADDR[0], None, 'DIVISIBLE', DP['quantity'] * 1000, True, None, None, 'Divisible asset'), {'encoding': 'multisig'}],
+    ['issuance', (ADDR[0], None, 'NODIVISIBLE', 1000, False, None, None, 'No divisible asset'), {'encoding': 'multisig'}],
+    ['issuance', (ADDR[0], None, 'CALLABLE', 1000, True, None, None, 'Callable asset'), {'encoding': 'multisig'}],
+    ['issuance', (ADDR[0], None, 'LOCKED', 1000, True, None, None, 'Locked asset'), {'encoding': 'multisig'}],
+    ['issuance', (ADDR[0], None, 'LOCKED', 0, True, None, None, 'LOCK'), {'encoding': 'multisig'}],
     ['order', (ADDR[0], 'XCP', DP['quantity'], 'DIVISIBLE', DP['quantity'], 2000, 0), {'encoding': 'multisig'}],
     ['send', (ADDR[0], ADDR[1], 'DIVISIBLE', DP['quantity']), {'encoding': 'multisig'}, None],
     ['send', (ADDR[0], ADDR[1], 'XCP', DP['quantity']), {'encoding': 'multisig'}, None],
@@ -47,7 +47,7 @@ UNITTEST_FIXTURE = [
     ['send', (ADDR[0], MULTISIGADDR[0], 'DIVISIBLE', DP['quantity'] * 10), {'encoding': 'multisig'}, None],
     ['send', (ADDR[0], ADDR[1], 'NODIVISIBLE', 5), {'encoding': 'multisig'}, None],
     ['send', (ADDR[0], MULTISIGADDR[0], 'NODIVISIBLE', 10), {'encoding': 'multisig'}, None],
-    ['issuance', (ADDR[0], None, 'MAXI', 2**63 - 1, True, 'Maximum quantity', None, None), {'encoding': 'multisig'}],
+    ['issuance', (ADDR[0], None, 'MAXI', 2**63 - 1, True, None, None, 'Maximum quantity'), {'encoding': 'multisig'}],
     ['broadcast', (ADDR[0], 1388000000, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
     ['broadcast', (ADDR[2], 1288000000, 1, 0.0, 'lock'), {'encoding': 'multisig'}],
     ['bet', (ADDR[0], ADDR[0], 1, 1388000001, 9, 9, 0.0, 5040, 100), {'encoding': 'multisig'}],
@@ -64,15 +64,15 @@ UNITTEST_FIXTURE = [
     ['dispenser', (ADDR[5], 'XCP', 100, 100, 100, 0), {'encoding': 'opreturn'}],
 
     ['burn', (P2SH_ADDR[0], int(DP['burn_quantity'] / 2)), {'encoding': 'opreturn'}],
-    ['issuance', (P2SH_ADDR[0], None, 'PAYTOSCRIPT', 1000, False, 'PSH issued asset', None, None), {'encoding': 'multisig', 'dust_return_pubkey': False}],
+    ['issuance', (P2SH_ADDR[0], None, 'PAYTOSCRIPT', 1000, False, None, None, 'PSH issued asset'), {'encoding': 'multisig', 'dust_return_pubkey': False}],
     ['send', (ADDR[0], P2SH_ADDR[0], 'DIVISIBLE', DP['quantity']), {'encoding': 'multisig'}, None],
     ['broadcast', (P2SH_ADDR[0], 1388000002, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'opreturn'}],
     ['bet', (P2SH_ADDR[0], P2SH_ADDR[0], 3, 1388000200, 10, 10, 0.0, 5040, 1000), {'encoding': 'opreturn'}],
 
     # locked with an issuance after lock
-    ['issuance', (ADDR[6], None, 'LOCKEDPREV', 1000, True, 'Locked asset', None, None), {'encoding': 'multisig'}],
-    ['issuance', (ADDR[6], None, 'LOCKEDPREV', 0, True, 'LOCK', None, None), {'encoding': 'multisig'}],
-    ['issuance', (ADDR[6], None, 'LOCKEDPREV', 0, True, 'changed', None, None), {'encoding': 'multisig'}],
+    ['issuance', (ADDR[6], None, 'LOCKEDPREV', 1000, True, None, None, 'Locked asset'), {'encoding': 'multisig'}],
+    ['issuance', (ADDR[6], None, 'LOCKEDPREV', 0, True, None, None, 'LOCK'), {'encoding': 'multisig'}],
+    ['issuance', (ADDR[6], None, 'LOCKEDPREV', 0, True, None, None, 'changed'), {'encoding': 'multisig'}],
 
     ['burn', (P2WPKH_ADDR[0], DP['burn_quantity']), {'encoding': 'opreturn'}],
 
@@ -104,8 +104,8 @@ UNITTEST_FIXTURE = [
     ['send', (ADDR[2], ADDR[3], 'DIVIDEND', 10), {'encoding': 'multisig'}, None],
     ['send', (ADDR[2], ADDR[3], 'XCP', 92945878046), {'encoding': 'multisig'}, None],
 
-    ['issuance', (ADDR[0], None, 'PARENT', DP['quantity'] * 1, True, 'Parent asset', None, None), {'encoding': 'opreturn'}],
-    ['issuance', (ADDR[0], None, 'PARENT.already.issued', DP['quantity'] * 1, True, 'Child of parent', None, None), {'encoding': 'opreturn'}],
+    ['issuance', (ADDR[0], None, 'PARENT', DP['quantity'] * 1, True, None, None, 'Parent asset'), {'encoding': 'opreturn'}],
+    ['issuance', (ADDR[0], None, 'PARENT.already.issued', DP['quantity'] * 1, True, None, None, 'Child of parent'), {'encoding': 'opreturn'}],
 
     ['create_next_block', 500],
 
@@ -123,8 +123,8 @@ def generate_standard_scenario(address1, address2, order_matches):
         ['order', (address1, 'BTC', DP['small'], 'XCP', DP['small'] * 2, DP['expiration'], 0), {'encoding': 'multisig', 'fee_provided': DP['fee_provided']}],
         ['order', (address1, 'XCP', round(DP['small'] * 2.1), 'BTC', DP['small'], DP['expiration'], DP['fee_required']), {'encoding': 'multisig'}],
         ['btcpay', (address1, order_matches[0]), {'encoding': 'multisig'}],
-        ['issuance', (address1, None, 'BBBB', DP['quantity'] * 10, True, '', None, None), {'encoding': 'multisig'}],
-        ['issuance', (address1, None, 'BBBC', round(DP['quantity'] / 1000), False, 'foobar', None, None), {'encoding': 'multisig'}],
+        ['issuance', (address1, None, 'BBBB', DP['quantity'] * 10, True, None, None, ''), {'encoding': 'multisig'}],
+        ['issuance', (address1, None, 'BBBC', round(DP['quantity'] / 1000), False, None, None, 'foobar'), {'encoding': 'multisig'}],
         ['send', (address1, address2, 'BBBB', round(DP['quantity'] / 25)), {'encoding': 'multisig'}, None],
         ['send', (address1, address2, 'BBBC', round(DP['quantity'] / 190000)), {'encoding': 'multisig'}, None],
         ['dividend', (address1, 600, 'BBBB', 'XCP'), {'encoding': 'multisig'}],

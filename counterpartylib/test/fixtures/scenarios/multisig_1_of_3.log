@@ -67,13 +67,13 @@ Fee/KB 0.00025000
 New input: amount: 1.86956450; txid: 1ba2a0b4ee8543976aab629c78103c0ba86c60250c11d51f9bc40676487283b7; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.86948650 BTC
-Debit: 0.5 XCP from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #issuance fee# <af11bc43c2e85702af8be0a4558467839dbf917257fe6422dc2ae88250111b37>
-Issuance: 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 created 100000 of indivisible asset BBBC (af11bc43c2e85702af8be0a4558467839dbf917257fe6422dc2ae88250111b37) [valid]
-Credit: 100000 BBBC to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #issuance# <af11bc43c2e85702af8be0a4558467839dbf917257fe6422dc2ae88250111b37>
+Debit: 0.5 XCP from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #issuance fee# <3f9e2dc4f7a72dee0e2d3badd871324506fe6c8239f62b6aa35f316800d55846>
+Issuance: 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 created 100000 of indivisible asset BBBC (3f9e2dc4f7a72dee0e2d3badd871324506fe6c8239f62b6aa35f316800d55846) [valid]
+Credit: 100000 BBBC to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #issuance# <3f9e2dc4f7a72dee0e2d3badd871324506fe6c8239f62b6aa35f316800d55846>
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.86948650; txid: af11bc43c2e85702af8be0a4558467839dbf917257fe6422dc2ae88250111b37; vout: 1; confirmations: 1', 'amount: 0.50000000; txid: 90eb885df58d93c1d5fdc86a88257db69e6ac7904409929733250b3f7bbe5613; vout: 0; confirmations: 3']
+Sorted candidate UTXOs: ['amount: 1.86948650; txid: 3f9e2dc4f7a72dee0e2d3badd871324506fe6c8239f62b6aa35f316800d55846; vout: 1; confirmations: 1', 'amount: 0.50000000; txid: 90eb885df58d93c1d5fdc86a88257db69e6ac7904409929733250b3f7bbe5613; vout: 0; confirmations: 3']
 Fee/KB 0.00025000
-New input: amount: 1.86948650; txid: af11bc43c2e85702af8be0a4558467839dbf917257fe6422dc2ae88250111b37; vout: 1; confirmations: 1
+New input: amount: 1.86948650; txid: 3f9e2dc4f7a72dee0e2d3badd871324506fe6c8239f62b6aa35f316800d55846; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 1.86939000 BTC
 Debit: 0.04 BBBB from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #send# <30bfb2793bd1a65e5993edb9c3268db31bc96b8bf1f6e3bef037da4f4e93bc65>
