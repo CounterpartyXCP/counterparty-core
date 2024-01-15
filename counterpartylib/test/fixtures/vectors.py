@@ -3371,7 +3371,7 @@ UNITTEST_VECTOR = {
                         'calling_function': 'dispense',
                         'address': ADDR[0],
                         'asset': config.XCP,
-                        'block_index': DP['default_block_index'] - 1,
+                        'block_index': DP['default_block_index'],
                         'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                         'quantity': 100,
                     }}
@@ -3403,7 +3403,7 @@ UNITTEST_VECTOR = {
                         'calling_function': 'dispense',
                         'address': ADDR[0],
                         'asset': config.XCP,
-                        'block_index': DP['default_block_index'] - 1,
+                        'block_index': DP['default_block_index'],
                         'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                         'quantity': 100,
                     }}

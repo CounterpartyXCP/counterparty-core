@@ -1189,7 +1189,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
                              fee,
                              data)
                       )
-        
+
         for next_out in outs:
             cursor.execute('''INSERT INTO transaction_outputs(
                                 tx_index,
@@ -1203,11 +1203,11 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
                                  block_index,
                                  next_out["out_index"],
                                  next_out["destination"],
-                                 next_out["btc_amount"])    
+                                 next_out["btc_amount"])
                           )
-        
+
         cursor.close()
-        
+
         return tx_index + 1
     else:
         logger.getChild('list_tx.skip').debug('Skipping transaction: {}'.format(tx_hash))

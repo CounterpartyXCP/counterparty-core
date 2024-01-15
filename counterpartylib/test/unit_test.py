@@ -26,4 +26,7 @@ def test_vector(tx_name, method, inputs, outputs, error, records, comment, mock_
             util_test.insert_transaction(inputs[0], server_db)
             # insert message as 2nd arg
             inputs = inputs[:1] + (inputs[0]['data'][4:],) + inputs[1:]
+        elif method == 'dispense':
+            util_test.insert_transaction(inputs[0], server_db)
+
         util_test.check_outputs(tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, pytest_config, server_db)
