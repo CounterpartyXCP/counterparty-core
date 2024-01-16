@@ -12,12 +12,11 @@ jobs:
     steps:
       - checkout
 
-      - python/install-packages:
-          pkg-manager: pip
-
       - run:
           name: Run counterparty-lib setup and install
-          command: pip install hatch
+          command: |
+            pip install --upgrade pip
+            pip install hatch
 
       - persist_to_workspace:
           root: ~/
