@@ -7,7 +7,7 @@ orbs:
 jobs:
   build:
     docker:
-      - image: cimg/python:3.11.7-bookworm
+      - image: cimg/python:3.11.7
 
     steps:
       - checkout
@@ -26,7 +26,7 @@ jobs:
 
   test:
     docker:
-      - image: cimg/python:3.11.7-bookworm
+      - image: cimg/python:3.11.7
 
     steps:
       - attach_workspace:
@@ -43,7 +43,7 @@ jobs:
 
   test-reparse-testnet:
     docker:
-        - image: cimg/python:3.11.7-bookworm
+        - image: cimg/python:3.11.7
 
     steps:
       - attach_workspace:
@@ -67,7 +67,7 @@ jobs:
 
   test-reparse-mainnet:
     docker:
-        - image: cimg/python:3.11.7-bookworm
+        - image: cimg/python:3.11.7
 
     steps:
       - attach_workspace:
