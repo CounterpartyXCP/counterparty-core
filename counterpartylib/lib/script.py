@@ -5,11 +5,12 @@ Naming convention: a `pub` is either a pubkey or a pubkeyhash
 """
 
 import hashlib
-import bitcoin as bitcoinlib
 import binascii
 
+import bitcoin as bitcoinlib
 from bitcoin.core.key import CPubKey
 from bitcoin.bech32 import CBech32Data
+from Crypto.Hash import RIPEMD160
 
 from counterpartylib.lib import util
 from counterpartylib.lib import config
@@ -232,7 +233,7 @@ def pubkeyhash_array(address):
 
 def hash160(x):
     x = hashlib.sha256(x).digest()
-    m = hashlib.new('ripemd160')
+    m = RIPEMD160.new()
     m.update(x)
     return m.digest()
 
