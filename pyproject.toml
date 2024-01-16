@@ -6,10 +6,26 @@ build-backend = "hatchling.build"
 name = "counterparty-lib"
 requires-python = ">= 3.11"
 dynamic = ["version"]
-description = "Counterparty library"
+description = "Counterparty Protocol Reference Implementation"
 readme = "README.md"
-license-files = { paths = ["./LICENSE"] }
-
+license = "MIT"
+authors = [
+  { name = "Counterparty Developers", email = "dev@counterparty.io" },
+]
+keywords = ['counterparty', 'bitcoin', 'blockchain', 'crypto', 'cryptocurrency', 'wallet', 'exchange', 'trading', 'finance']
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Distributed Computing"
+]
 dependencies = [
     'apsw==3.44.2.0',
     'appdirs==1.4.4',
@@ -34,8 +50,11 @@ dependencies = [
     'itsdangerous==2.1.2',
 ]
 
+[project.urls]
+"Latest release" = "https://github.com/CounterpartyXCP/counterparty-lib/releases/latest"
+"Documentation" = "https://docs.counterparty.io/"
+"Source code" = "https://github.com/CounterpartyXCP/"
+"Home Page" = "https://counterparty.io/"
+
 [tool.hatch.version]
 path = "counterpartylib/lib/config.py"
-
-[project.scripts]
-tower = "towercli.tower:main"

@@ -34,3 +34,4 @@ profile.txt
 .python-version
 
 .eggs
+.venv
