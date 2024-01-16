@@ -35,3 +35,4 @@ profile.txt
 
 .eggs
 .venv
+test-results/

@@ -7,7 +7,7 @@ orbs:
 jobs:
   build:
     docker:
-      - image: cimg/python:3.6.15
+      - image: cimg/python:3.11.7-bookworm
 
     steps:
       - checkout
@@ -17,20 +17,16 @@ jobs:
 
       - run:
           name: Run counterparty-lib setup and install
-          command: python setup.py develop 
-
-      - run: 
-          name: Run apsw setup and install
-          command: python setup.py install_apsw
+          command: pip install hatch
 
       - persist_to_workspace:
           root: ~/
           paths:
-            - .      
+            - .
 
   test:
     docker:
-      - image: cimg/python:3.6.15
+      - image: cimg/python:3.11.7-bookworm
 
     steps:
       - attach_workspace:
@@ -40,15 +36,15 @@ jobs:
           name: "Run tests"
           command: |
             mkdir test-results
-            py.test --junitxml=test-results/junit.xml --verbose --skiptestbook=all --cov-config=.coveragerc --cov-report=term-missing --cov=./ counterpartylib
+            hatch run pytest --junitxml=test-results/junit.xml --verbose --skiptestbook=all --cov-config=.coveragerc --cov-report=term-missing --cov=./ counterpartylib
 
       - store_test_results:
           path: test-results
 
   test-reparse-testnet:
     docker:
-        - image: cimg/python:3.6.15
-    
+        - image: cimg/python:3.11.7-bookworm
+
     steps:
       - attach_workspace:
           at: ~/
@@ -64,15 +60,15 @@ jobs:
           name: "Run testnet reparse test"
           command: |
             mkdir test-results
-            py.test --junitxml=test-results/junit.xml --verbose --capture=no --skiptestbook=mainnet -k test_book counterpartylib/test/reparse_test.py
-      
+            hatch run pytest --junitxml=test-results/junit.xml --verbose --capture=no --skiptestbook=mainnet -k test_book counterpartylib/test/reparse_test.py
+
       - store_test_results:
           path: test-results
 
   test-reparse-mainnet:
     docker:
-        - image: cimg/python:3.6.15
-    
+        - image: cimg/python:3.11.7-bookworm
+
     steps:
       - attach_workspace:
           at: ~/
@@ -88,7 +84,7 @@ jobs:
           name: "Run testnet reparse test"
           command: |
             mkdir test-results
-            py.test --junitxml=test-results/junit.xml --verbose --capture=no --skiptestbook=testnet -k test_book counterpartylib/test/reparse_test.py
+            hatch run pytest --junitxml=test-results/junit.xml --verbose --capture=no --skiptestbook=testnet -k test_book counterpartylib/test/reparse_test.py
       
       - store_test_results:
           path: test-results
