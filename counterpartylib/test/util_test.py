@@ -663,8 +663,8 @@ def compare_strings(string1, string2):
     """Compare strings diff-style."""
     diff = list(difflib.unified_diff(string1.splitlines(1), string2.splitlines(1), n=0))
     if len(diff):
-        print("\nDifferences:")
-        print("\n".join(diff))
+        logger.info("\nDifferences:")
+        logger.info("\n".join(diff))
     return len(diff)
 
 def get_block_ledger(db, block_index):
@@ -686,7 +686,7 @@ def get_block_txlist(db, block_index):
     return txlist
 
 
-def reparse(testnet=True):
+def reparse(testnet=True, block_index=0):
     """
     Reparse all transaction from the database.
      - Create a new in-memory DB, copy the DB that is on-disk
@@ -716,17 +716,18 @@ def reparse(testnet=True):
 
     # Drop most tables (except blocks, transactions, undolog)
     memory_cursor = memory_db.cursor()
-    for table in blocks.TABLES + ['balances']:
-        memory_cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
+    for table in blocks.TABLES:
+        memory_cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
+    memory_cursor.execute('''DROP TABLE IF EXISTS balances''')
 
     # Check that all checkpoint blocks are in the database to be tested.
     if testnet:
         CHECKPOINTS = check.CHECKPOINTS_TESTNET
     else:
         CHECKPOINTS = check.CHECKPOINTS_MAINNET
-    for block_index in CHECKPOINTS.keys():
-        block_exists = bool(list(memory_cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,))))
-        assert block_exists, "block #%d does not exist" % block_index
+    for check_block_index in CHECKPOINTS.keys():
+        block_exists = bool(list(memory_cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (check_block_index,))))
+        assert block_exists, "block #%d does not exist" % check_block_index
 
     # Clean consensus hashes if first block hash don’t match with checkpoint.
     checkpoints = check.CHECKPOINTS_TESTNET if config.TESTNET else check.CHECKPOINTS_MAINNET
@@ -746,7 +747,7 @@ def reparse(testnet=True):
     previous_messages_hash = None
 
     # Reparse each block, if ConsensusError is thrown then the difference
-    memory_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
+    memory_cursor.execute('''SELECT * FROM blocks WHERE block_index > ? ORDER BY block_index''', (block_index,))
     for block in memory_cursor.fetchall():
         try:
             util.CURRENT_BLOCK_INDEX = block['block_index']

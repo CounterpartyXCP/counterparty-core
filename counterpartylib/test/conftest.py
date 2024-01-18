@@ -117,24 +117,23 @@ def pytest_generate_tests(metafunc):
                 args.append((scenario_name, INTEGRATION_SCENARIOS[scenario_name][1], INTEGRATION_SCENARIOS[scenario_name][0], metafunc.config))
         metafunc.parametrize('scenario_name, base_scenario_name, transactions, pytest_config', args)
     elif metafunc.function.__name__ == 'test_book':
-        if metafunc.config.getoption("skiptestbook") == 'all':
-            args = []
-        elif metafunc.config.getoption("skiptestbook") == 'testnet':
-            args = [False]
-        elif metafunc.config.getoption("skiptestbook") == 'mainnet':
-            args = [True]
+        if metafunc.config.getoption("testbook") == 'testnet':
+            metafunc.parametrize('testnet, block_index', [(True, metafunc.config.getoption("testbookblockindex"))])
+        elif metafunc.config.getoption("testbook") == 'mainnet':
+            metafunc.parametrize('testnet, block_index', [(False, metafunc.config.getoption("testbookblockindex"))])
         else:
-            args = [True, False]
-        metafunc.parametrize('testnet', args)
+            metafunc.parametrize('testnet, block_index', [])
+
 
 def pytest_addoption(parser):
     """Add useful test suite argument options."""
-    parser.addoption("--function", action="append", default=[], help="list of functions to test")
-    parser.addoption("--scenario", action="append", default=[], help="list of scenarios to test")
-    parser.addoption("--gentxhex", action='store_true', default=False, help="generate and print unsigned hex for *.compose() tests")
-    parser.addoption("--savescenarios", action='store_true', default=False, help="generate sql dump and log in .new files")
+    parser.addoption("--function", action="append", default=[], help="List of functions to test")
+    parser.addoption("--scenario", action="append", default=[], help="List of scenarios to test")
+    parser.addoption("--gentxhex", action='store_true', default=False, help="Generate and print unsigned hex for *.compose() tests")
+    parser.addoption("--savescenarios", action='store_true', default=False, help="Generate sql dump and log in .new files")
     parser.addoption("--alternative", action='store_true', default=False)
-    parser.addoption("--skiptestbook", default='no', help="skip test book(s) (use with one of the following values: `all`, `testnet` or `mainnet`)")
+    parser.addoption("--testbook", default='no', help="Include test book (use with one of the following values: `testnet` or `mainnet`)")
+    parser.addoption("--testbookblockindex", default=0, type=int, help="test book from this block index (default: 0)")
 
 
 @pytest.fixture(scope="function")

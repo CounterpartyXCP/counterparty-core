@@ -59,7 +59,7 @@ jobs:
           name: "Run testnet reparse test"
           command: |
             mkdir test-results
-            hatch run pytest --junitxml=test-results/junit.xml --verbose --capture=no --skiptestbook=mainnet -k test_book counterpartylib/test/reparse_test.py
+            hatch run pytest --junitxml=test-results/junit.xml --log-cli-level=INFO --show-capture=no --testbook=testnet -k test_book counterpartylib/test/reparse_test.py
 
       - store_test_results:
           path: test-results
@@ -83,7 +83,7 @@ jobs:
           name: "Run testnet reparse test"
           command: |
             mkdir test-results
-            hatch run pytest --junitxml=test-results/junit.xml --verbose --capture=no --skiptestbook=testnet -k test_book counterpartylib/test/reparse_test.py
+            hatch run pytest --junitxml=test-results/junit.xml --log-cli-level=INFO --show-capture=no --testbook=mainnet -k test_book counterpartylib/test/reparse_test.py
       
       - store_test_results:
           path: test-results

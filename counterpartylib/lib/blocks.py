@@ -173,7 +173,7 @@ def parse_block(db, block_index, block_time,
     first_undo_index = list(undolog_cursor.execute('''SELECT first_undo_index FROM undolog_block WHERE block_index == $block_index''',
         {'block_index': undolog_oldest_block_index}))
     if len(first_undo_index) == 1 and first_undo_index[0] is not None:
-        print('first_undo_index[0]', first_undo_index[0])
+        logger.debug('first_undo_index[0]', first_undo_index[0])
         undolog_cursor.execute('''DELETE FROM undolog WHERE undo_index < $undo_index''', 
                                {'undo_index': first_undo_index[0]['first_undo_index']})
     undolog_cursor.execute('''DELETE FROM undolog_block WHERE block_index < $block_index''',
@@ -226,6 +226,12 @@ def parse_block(db, block_index, block_time,
 def initialise(db):
     """Initialise data, create and populate the database."""
     cursor = db.cursor()
+
+    # Clean triggers
+    cursor.execute("SELECT name FROM sqlite_master WHERE type = 'trigger'")
+    triggers = [trigger['name'] for trigger in list(cursor)]
+    for trigger in triggers:
+        cursor.execute("DROP TRIGGER IF EXISTS {}".format(trigger))
 
     # Blocks
     cursor.execute('''CREATE TABLE IF NOT EXISTS blocks(
