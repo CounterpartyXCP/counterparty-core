@@ -1368,6 +1368,7 @@ def follow(db):
     if util.CURRENT_BLOCK_INDEX == 0:
         logger.warning('New database.')
         block_index = config.BLOCK_FIRST
+        database.update_version(db)
     else:
         block_index = util.CURRENT_BLOCK_INDEX + 1
 
