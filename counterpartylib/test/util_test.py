@@ -718,7 +718,14 @@ def reparse(testnet=True, block_index=0):
     memory_cursor = memory_db.cursor()
     for table in blocks.TABLES:
         memory_cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
-    memory_cursor.execute('''DROP TABLE IF EXISTS balances''')
+    # Rebuild balances table
+    memory_cursor.execute('''DELETE FROM balances''')
+    memory_cursor.execute('''SELECT * FROM credits''')
+    for credit in memory_cursor:
+        util.add_to_balance(memory_db, credit["address"], credit["asset"], credit["quantity"])
+    memory_cursor.execute('''SELECT * FROM debits''')
+    for debits in memory_cursor:
+        util.remove_from_balance(memory_db, debits["address"], debits["asset"], debits["quantity"])
 
     # Check that all checkpoint blocks are in the database to be tested.
     if testnet:

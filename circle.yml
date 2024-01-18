@@ -35,7 +35,7 @@ jobs:
           name: "Run tests"
           command: |
             mkdir test-results
-            hatch run pytest --junitxml=test-results/junit.xml --verbose --skiptestbook=all --cov-config=.coveragerc --cov-report=term-missing --cov=./ counterpartylib
+            hatch run pytest --junitxml=test-results/junit.xml --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./ counterpartylib
 
       - store_test_results:
           path: test-results

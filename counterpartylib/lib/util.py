@@ -362,6 +362,34 @@ def active_options(config, options):
     """Checks if options active in some given config."""
     return config & options == options
 
+
+def remove_from_balance(db, address, asset, quantity):
+    balance_cursor = db.cursor()
+
+    balance_cursor.execute('''SELECT * FROM balances \
+                            WHERE (address = ? AND asset = ?)''', (address, asset))
+    balances = balance_cursor.fetchall()
+    if not len(balances) == 1:
+        old_balance = 0
+    else:
+        old_balance = balances[0]['quantity']
+
+    if old_balance < quantity:
+        raise DebitError('Insufficient funds.')
+
+    balance = round(old_balance - quantity)
+    balance = min(balance, config.MAX_INT)
+    assert balance >= 0
+
+    bindings = {
+        'quantity': balance,
+        'address': address,
+        'asset': asset
+    }
+    sql='update balances set quantity = :quantity where (address = :address and asset = :asset)'
+    balance_cursor.execute(sql, bindings)
+
+
 class DebitError (Exception): pass
 def debit (db, address, asset, quantity, action=None, event=None):
     """Debit given address by quantity of asset."""
@@ -386,28 +414,7 @@ def debit (db, address, asset, quantity, action=None, event=None):
     if asset == config.BTC:
         raise exceptions.BalanceError('Cannot debit bitcoins from a {} address!'.format(config.XCP_NAME))
 
-    debit_cursor.execute('''SELECT * FROM balances \
-                            WHERE (address = ? AND asset = ?)''', (address, asset))
-    balances = debit_cursor.fetchall()
-    if not len(balances) == 1:
-        old_balance = 0
-    else:
-        old_balance = balances[0]['quantity']
-
-    if old_balance < quantity:
-        raise DebitError('Insufficient funds.')
-
-    balance = round(old_balance - quantity)
-    balance = min(balance, config.MAX_INT)
-    assert balance >= 0
-
-    bindings = {
-        'quantity': balance,
-        'address': address,
-        'asset': asset
-    }
-    sql='update balances set quantity = :quantity where (address = :address and asset = :asset)'
-    debit_cursor.execute(sql, bindings)
+    remove_from_balance(db, address, asset, quantity)
 
     # Record debit.
     bindings = {
@@ -423,6 +430,41 @@ def debit (db, address, asset, quantity, action=None, event=None):
     debit_cursor.close()
 
     BLOCK_LEDGER.append('{}{}{}{}'.format(block_index, address, asset, quantity))
+
+
+def add_to_balance(db, address, asset, quantity):
+    balance_cursor = db.cursor()
+
+    balance_cursor.execute('''SELECT * FROM balances \
+                             WHERE (address = ? AND asset = ?)''', (address, asset))
+    balances = balance_cursor.fetchall()
+    if len(balances) == 0:
+        assert balances == []
+
+        #update balances table with new balance
+        bindings = {
+            'address': address,
+            'asset': asset,
+            'quantity': quantity,
+        }
+        sql='insert into balances values(:address, :asset, :quantity)'
+        balance_cursor.execute(sql, bindings)
+    elif len(balances) > 1:
+        assert False
+    else:
+        old_balance = balances[0]['quantity']
+        assert type(old_balance) == int
+        balance = round(old_balance + quantity)
+        balance = min(balance, config.MAX_INT)
+
+        bindings = {
+            'quantity': balance,
+            'address': address,
+            'asset': asset
+        }
+        sql='update balances set quantity = :quantity where (address = :address and asset = :asset)'
+        balance_cursor.execute(sql, bindings)
+
 
 class CreditError (Exception): pass
 def credit (db, address, asset, quantity, action=None, event=None):
@@ -445,35 +487,7 @@ def credit (db, address, asset, quantity, action=None, event=None):
         if len(address) == 40:
             assert asset == config.XCP
 
-    credit_cursor.execute('''SELECT * FROM balances \
-                             WHERE (address = ? AND asset = ?)''', (address, asset))
-    balances = credit_cursor.fetchall()
-    if len(balances) == 0:
-        assert balances == []
-
-        #update balances table with new balance
-        bindings = {
-            'address': address,
-            'asset': asset,
-            'quantity': quantity,
-        }
-        sql='insert into balances values(:address, :asset, :quantity)'
-        credit_cursor.execute(sql, bindings)
-    elif len(balances) > 1:
-        assert False
-    else:
-        old_balance = balances[0]['quantity']
-        assert type(old_balance) == int
-        balance = round(old_balance + quantity)
-        balance = min(balance, config.MAX_INT)
-
-        bindings = {
-            'quantity': balance,
-            'address': address,
-            'asset': asset
-        }
-        sql='update balances set quantity = :quantity where (address = :address and asset = :asset)'
-        credit_cursor.execute(sql, bindings)
+    add_to_balance(db, address, asset, quantity)
 
     # Record credit.
     bindings = {
