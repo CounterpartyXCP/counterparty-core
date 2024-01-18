@@ -8,13 +8,14 @@ import json
 import time
 from decimal import Decimal as D
 
+from pycoin.coins.bitcoin.Tx import Tx
+from pycoin.satoshi.flags import SIGHASH_ALL
+from pycoin.encoding.sec import public_pair_to_hash160_sec
+from pycoin.ecdsa.secp256k1 import secp256k1_generator as generator_secp256k1
+
 from counterpartycli.wallet import bitcoincore, btcwallet
 from counterpartylib.lib import config, util, exceptions, script
 from counterpartycli.util import api, value_out
-
-from pycoin.tx import Tx, SIGHASH_ALL
-from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_hash160_sec
-from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
 
 class WalletError(Exception):
     pass
@@ -42,9 +43,9 @@ def pycoin_sign_raw_transaction(tx_hex, private_key_wif):
     else:
         allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_MAINNET]
 
-    secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(
+    secret_exponent, compressed = script.wif_to_tuple_of_secret_exponent_compressed(
                     private_key_wif, allowable_wif_prefixes=allowable_wif_prefixes)
-    public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
+    public_pair = script.public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
     hash160 = public_pair_to_hash160_sec(public_pair, compressed)
     hash160_lookup = {hash160: (secret_exponent, public_pair, compressed)}
 
