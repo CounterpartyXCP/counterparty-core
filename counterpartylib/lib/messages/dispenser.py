@@ -473,6 +473,9 @@ def dispense(db, tx):
     else:
         outs = [tx]
 
+    #if len(outs) == 0:
+    #    outs = [tx]
+
     dispense_index = 0
 
     for next_out in outs:

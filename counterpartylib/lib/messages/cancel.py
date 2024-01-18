@@ -66,8 +66,8 @@ def validate (db, source, offer_hash):
 
     return offer, offer_type, problems
 
-def compose (db, source, offer_hash):
 
+def compose (db, source, offer_hash):
     # Check that offer exists.
     offer, offer_type, problems = validate(db, source, offer_hash)
     if problems: raise exceptions.ComposeError(problems)
@@ -76,6 +76,7 @@ def compose (db, source, offer_hash):
     data = message_type.pack(ID)
     data += struct.pack(FORMAT, offer_hash_bytes)
     return (source, [], data)
+
 
 def parse (db, tx, message):
     cursor = db.cursor()

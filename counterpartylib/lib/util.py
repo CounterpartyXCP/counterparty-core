@@ -851,25 +851,24 @@ def get_value_by_block_index(change_name, block_index=None):
 
     if not block_index:
         block_index = CURRENT_BLOCK_INDEX
-    
+
+    max_block_index = -1
+
     if config.REGTEST:
-        max_block_index_testnet = -1
         for key, value in PROTOCOL_CHANGES[change_name]["testnet"]:
             if int(key) > int(max_block_index):
                 max_block_index = key
-            
         return PROTOCOL_CHANGES[change_name]["testnet"][max_block_index]["value"]
-    
+
     if config.TESTNET:
-        index_name = 'testnet'        
+        index_name = 'testnet'
     else:
         index_name = 'mainnet'
 
-    max_block_index = -1
     for key in PROTOCOL_CHANGES[change_name][index_name]:
         if int(key) > int(max_block_index) and block_index >= int(key):
             max_block_index = key
-            
+
     return PROTOCOL_CHANGES[change_name][index_name][max_block_index]["value"]
 
 def transfer(db, source, destination, asset, quantity, action, event):

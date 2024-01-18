@@ -64,6 +64,7 @@ with open(CURR_DIR + '/../mainnet_burns.csv', 'r') as f:
     for line in mainnet_burns_reader:
         MAINNET_BURNS[line['tx_hash']] = line
 
+
 def parse_tx(db, tx):
     """Parse the transaction, return True for success."""
     cursor = db.cursor()
