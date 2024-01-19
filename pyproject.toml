@@ -38,3 +38,6 @@ files = ["requirements.txt"]
 
 [tool.hatch.version]
 path = "counterpartylib/lib/config.py"
+
+[tool.hatch.build.targets.wheel]
+include = ["counterpartylib"]
