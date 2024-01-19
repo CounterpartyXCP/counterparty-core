@@ -3,7 +3,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from .bc_data_stream import BCDataStream
-from .utils import b2h, double_hash, ib2h, inverse_hash
+from .utils import b2h, double_hash, ib2h, inverse_hash, decode_value
 
 def open_leveldb(db_dir):
     try:
@@ -33,6 +33,7 @@ class BlockchainParser():
         tx_in['txid'] = ib2h(vds.read_bytes(32))
         tx_in['vout'] = vds.read_uint32()
         script_sig_size = vds.read_compact_size()
+
         tx_in['scriptSig'] = b2h(vds.read_bytes(script_sig_size))
         tx_in['sequence'] = vds.read_uint32()
         if tx_in['txid'] == '0000000000000000000000000000000000000000000000000000000000000000':
@@ -56,6 +57,13 @@ class BlockchainParser():
         start_pos = vds.read_cursor
         transaction['version'] = vds.read_int32()
 
+        flag = vds.read_bytes(2)
+        if flag == b'\x00\x01':
+            transaction['segwit'] = True
+        else:
+            transaction['segwit'] = False
+            vds.read_cursor = vds.read_cursor - 2
+
         transaction['vin'] = []
         for i in range(vds.read_compact_size()):
             transaction['vin'].append(self.read_tx_in(vds))
@@ -63,6 +71,15 @@ class BlockchainParser():
         transaction['vout'] = []
         for i in range(vds.read_compact_size()):
             transaction['vout'].append(self.read_tx_out(vds))
+
+        if transaction['segwit']:
+            for vin in transaction['vin']:
+                vin['tx_witnesses'] = []
+                witnesses_count = vds.read_compact_size()
+                for i in range(witnesses_count):
+                    witness_length = vds.read_compact_size()
+                    witness = b2h(vds.read_bytes(witness_length))
+                    vin['tx_witnesses'].append(witness)
 
         transaction['lock_time'] = vds.read_uint32()
         data = vds.input[start_pos:vds.read_cursor]
@@ -104,14 +121,15 @@ class BlockchainParser():
                 self.current_block_file.close()
             data_file_path = os.path.join(self.blocks_dir, 'blk%05d.dat' % (self.file_num,))
             self.current_block_file = open(data_file_path, "rb")
+            logger.info("data_file_path: %s" % data_file_path)
             self.data_stream = BCDataStream()
             self.data_stream.map_file(self.current_block_file, pos_in_file)
         else:
             self.data_stream.seek_file(pos_in_file)
 
     def read_raw_block(self, block_hash):
-        block_hash = binascii.unhexlify(inverse_hash(block_hash))
-        block_data = self.ldb.get(bytes('b', 'utf-8') + block_hash)
+        block_key = bytes('b', 'utf-8') + binascii.unhexlify(inverse_hash(block_hash))
+        block_data = self.ldb.get(block_key)
         ds = BCDataStream()
         ds.write(block_data)
 
@@ -132,8 +150,20 @@ class BlockchainParser():
         return block
 
     def read_raw_transaction(self, tx_hash):
-        tx_hash = binascii.unhexlify(inverse_hash(tx_hash))
-        tx_data = self.ldb.get(bytes('t', 'utf-8') + tx_hash)
+        i = 0
+        prefixes = []
+        for key, value in self.ldb.iterator():
+            if key[0] not in prefixes:
+                print("prefix: %s" % key[0])
+                print("key: %s" % key)
+                print("value: %s" % value)
+                prefixes.append(key[0])
+
+        tx_key = bytes('t', 'utf-8') + binascii.unhexlify(inverse_hash(tx_hash))
+        print("read_raw_transaction tx_hash: %s" % tx_hash)
+        print("read_raw_transaction tx_key: %s" % tx_key)
+        tx_data = self.ldb.get(tx_key)
+        print("tx_data: %s" % tx_data)
  
         ds = BCDataStream()
         ds.write(tx_data)
@@ -158,9 +188,17 @@ class ChainstateParser():
 
     def __init__(self, leveldb_dir):
         self.ldb = open_leveldb(leveldb_dir)
+        self.obfuscation_key = self.ldb.get(b'\x0e\x00obfuscate_key')[1:]
+
+    def get_value(self, key):
+        value = self.ldb.get(key)
+        if value:
+            value = decode_value(self.obfuscation_key, value)
+        return value
 
     def get_last_block_hash(self):
-        block_hash = self.ldb.get(bytes('B', 'utf-8'))
+        block_hash = self.get_value(bytes('B', 'utf-8'))
+        logger.info("block_hash B: %s" % block_hash)
         block_hash = ib2h(block_hash)
         return block_hash
 

@@ -1150,7 +1150,6 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
         out_index = 0
         for out in outputs:
             if out[0] != decoded_tx[0][0] and dispenser.is_dispensable(db, out[0], out[1]):
-                
                 source = decoded_tx[0][0]
                 destination = out[0]
                 btc_amount = out[1]
@@ -1221,7 +1220,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
 
     return tx_index
 
-def kickstart(db, bitcoind_dir):
+def kickstart(db, bitcoind_dir, force=False):
     if bitcoind_dir is None:
         if platform.system() == 'Darwin':
             bitcoind_dir = os.path.expanduser('~/Library/Application Support/Bitcoin/')
@@ -1238,7 +1237,7 @@ def kickstart(db, bitcoind_dir):
 - Ensure that bitcoind is stopped.
 - You must reindex bitcoind after the initialization is complete (restart with `-reindex=1`)
 - The initialization may take a while.''')
-    if input('Proceed with the initialization? (y/N) : ') != 'y':
+    if not force and input('Proceed with the initialization? (y/N) : ') != 'y':
         return
 
     if config.TESTNET:
@@ -1253,10 +1252,14 @@ def kickstart(db, bitcoind_dir):
     # Get hash of last known block.
     chain_parser = ChainstateParser(os.path.join(bitcoind_dir, 'chainstate'))
     last_hash = chain_parser.get_last_block_hash()
+    logger.info('Last known block hash: {}'.format(last_hash))
     chain_parser.close()
 
     # Start block parser.
-    block_parser = BlockchainParser(os.path.join(bitcoind_dir, 'blocks'), os.path.join(bitcoind_dir, 'blocks/index'))
+    block_parser = BlockchainParser(
+        os.path.join(bitcoind_dir, 'blocks'),
+        os.path.join(bitcoind_dir, 'blocks/index')
+    )
 
     current_hash = last_hash
     tx_index = 0
@@ -1275,7 +1278,8 @@ def kickstart(db, bitcoind_dir):
             # Get `tx_info`s for transactions in this block.
             block = block_parser.read_raw_block(current_hash)
             for tx in block['transactions']:
-                source, destination, btc_amount, fee, data = get_tx_info(tx['__data__'], block_parser=block_parser, block_index=block['block_index'])
+                #print(tx)
+                source, destination, btc_amount, fee, data, _ = get_tx_info(tx['__data__'], block_parser=block_parser, block_index=block['block_index'])
                 if source and (data or destination == config.UNSPENDABLE):
                     transactions.append((
                         tx['tx_hash'], block['block_index'], block['block_hash'], block['block_time'],
