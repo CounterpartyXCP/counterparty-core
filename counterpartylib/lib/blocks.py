@@ -496,8 +496,8 @@ def get_tx_info(tx_hex, block_parser=None, block_index=None, db=None):
         # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
         if util.enabled('dispensers', block_index):
             try:
-                return b'', None, None, None, None, _get_swap_tx(e.decodedTx, block_parser, block_index, db=db)
-            except DecodeError: # (DecodeError, backend.indexd.BackendRPCError) as e:
+                return b'', None, None, None, None, _get_swap_tx(e.decoded_tx, block_parser, block_index, db=db)
+            except: # (DecodeError, backend.indexd.BackendRPCError) as e:
                 return b'', None, None, None, None, None
         else:
             return b'', None, None, None, None, None
@@ -1280,6 +1280,7 @@ def kickstart(db, bitcoind_dir, force=False):
             block = block_parser.read_raw_block(current_hash)
             for tx in block['transactions']:
                 #print(tx)
+
                 source, destination, btc_amount, fee, data, _ = get_tx_info(tx['__data__'], block_parser=block_parser, block_index=block['block_index'])
                 if source and (data or destination == config.UNSPENDABLE):
                     transactions.append((
