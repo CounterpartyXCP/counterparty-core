@@ -171,7 +171,8 @@ class BlockchainParser():
     def close(self):
         if self.current_block_file:
             self.current_block_file.close()
-        self.ldb.close()
+        self.blocks_leveldb.close()
+        self.txindex_leveldb.close()
 
 class ChainstateParser():
 
