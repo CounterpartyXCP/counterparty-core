@@ -497,7 +497,7 @@ def get_tx_info(tx_hex, block_parser=None, block_index=None, db=None):
         if util.enabled('dispensers', block_index):
             try:
                 return b'', None, None, None, None, _get_swap_tx(e.decodedTx, block_parser, block_index, db=db)
-            except: # (DecodeError, backend.indexd.BackendRPCError) as e:
+            except DecodeError: # (DecodeError, backend.indexd.BackendRPCError) as e:
                 return b'', None, None, None, None, None
         else:
             return b'', None, None, None, None, None
@@ -881,8 +881,12 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
         data = b''
         for vin in ctx.vin:
             if util.enabled("prevout_segwit_fix"):
-                vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash))
-                vin_ctx = backend.deserialize(vin_tx)
+                if block_parser:
+                    vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
+                    vin_ctx = backend.deserialize(vin_tx['__data__'])
+                else:
+                    vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash))
+                    vin_ctx = backend.deserialize(vin_tx)
                 prevout_is_segwit = vin_ctx.has_witness()
             else:
                 prevout_is_segwit = p2sh_is_segwit
@@ -1256,10 +1260,7 @@ def kickstart(db, bitcoind_dir, force=False):
     chain_parser.close()
 
     # Start block parser.
-    block_parser = BlockchainParser(
-        os.path.join(bitcoind_dir, 'blocks'),
-        os.path.join(bitcoind_dir, 'blocks/index')
-    )
+    block_parser = BlockchainParser(bitcoind_dir)
 
     current_hash = last_hash
     tx_index = 0
@@ -1299,9 +1300,8 @@ def kickstart(db, bitcoind_dir, force=False):
                 transactions = list(reversed(transactions))
                 tx_chunks = [transactions[i:i+90] for i in range(0, len(transactions), 90)]
                 for tx_chunk in tx_chunks:
-                    sql = '''INSERT INTO transactions
-                                (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data)
-                             VALUES '''
+                    fields = 'tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data'
+                    sql = f"INSERT INTO transactions ({fields}) VALUES "
                     bindings = ()
                     bindings_place = []
                     # negative tx_index from -1 and inverse order for fast reordering   # TODO: Can this be clearer?

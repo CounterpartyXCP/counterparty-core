@@ -12,21 +12,23 @@ def open_leveldb(db_dir):
         raise Exception("Please install the plyvel package via pip3.")
 
     try:
-        return plyvel.DB(db_dir, create_if_missing=False)
+        return plyvel.DB(db_dir, create_if_missing=False, compression=None)
     except plyvel._plyvel.IOError as e:
         logger.info(str(e))
         raise Exception("Ensure that bitcoind is stopped.")
 
 class BlockchainParser():
 
-    def __init__(self, blocks_dir, leveldb_dir):
-        self.blocks_dir = blocks_dir 
-        self.leveldb_dir = leveldb_dir
+    def __init__(self, bitcoind_dir):
+        self.blocks_dir = os.path.join(bitcoind_dir, 'blocks')
         self.file_num = -1
         self.current_file_size = 0
         self.current_block_file = None
         self.data_stream = None
-        self.ldb = open_leveldb(self.leveldb_dir)
+        self.blocks_leveldb_path = os.path.join(self.blocks_dir, 'index')
+        self.blocks_leveldb = open_leveldb(self.blocks_leveldb_path)
+        self.txindex_leveldb_path = os.path.join(bitcoind_dir, 'indexes', 'txindex')
+        self.txindex_leveldb = open_leveldb(self.txindex_leveldb_path)
 
     def read_tx_in(self, vds):
         tx_in = {}
@@ -121,7 +123,6 @@ class BlockchainParser():
                 self.current_block_file.close()
             data_file_path = os.path.join(self.blocks_dir, 'blk%05d.dat' % (self.file_num,))
             self.current_block_file = open(data_file_path, "rb")
-            logger.info("data_file_path: %s" % data_file_path)
             self.data_stream = BCDataStream()
             self.data_stream.map_file(self.current_block_file, pos_in_file)
         else:
@@ -129,7 +130,7 @@ class BlockchainParser():
 
     def read_raw_block(self, block_hash):
         block_key = bytes('b', 'utf-8') + binascii.unhexlify(inverse_hash(block_hash))
-        block_data = self.ldb.get(block_key)
+        block_data = self.blocks_leveldb.get(block_key)
         ds = BCDataStream()
         ds.write(block_data)
 
@@ -150,20 +151,8 @@ class BlockchainParser():
         return block
 
     def read_raw_transaction(self, tx_hash):
-        i = 0
-        prefixes = []
-        for key, value in self.ldb.iterator():
-            if key[0] not in prefixes:
-                print("prefix: %s" % key[0])
-                print("key: %s" % key)
-                print("value: %s" % value)
-                prefixes.append(key[0])
-
         tx_key = bytes('t', 'utf-8') + binascii.unhexlify(inverse_hash(tx_hash))
-        print("read_raw_transaction tx_hash: %s" % tx_hash)
-        print("read_raw_transaction tx_key: %s" % tx_key)
-        tx_data = self.ldb.get(tx_key)
-        print("tx_data: %s" % tx_data)
+        tx_data = self.txindex_leveldb.get(tx_key)
  
         ds = BCDataStream()
         ds.write(tx_data)
