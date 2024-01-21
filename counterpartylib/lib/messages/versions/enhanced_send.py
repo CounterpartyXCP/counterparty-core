@@ -178,9 +178,9 @@ def parse (db, tx, message):
     # log invalid transactions
     if status != 'valid':
         if quantity is None:
-            logger.warn("Invalid send from %s with status %s. (%s)" % (tx['source'], status, tx['tx_hash']))
+            logger.warning("Invalid send from %s with status %s. (%s)" % (tx['source'], status, tx['tx_hash']))
         else:
-            logger.warn("Invalid send of %s %s from %s to %s. status is %s. (%s)" % (quantity, asset, tx['source'], destination, status, tx['tx_hash']))
+            logger.warning("Invalid send of %s %s from %s to %s. status is %s. (%s)" % (quantity, asset, tx['source'], destination, status, tx['tx_hash']))
 
 
     # Add parsed transaction to message-type–specific table.
@@ -199,7 +199,7 @@ def parse (db, tx, message):
         sql = 'insert into sends (tx_index, tx_hash, block_index, source, destination, asset, quantity, status, memo) values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :quantity, :status, :memo)'
         cursor.execute(sql, bindings)
     else:
-        logger.warn("Not storing [send] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.warning("Not storing [send] tx [%s]: %s" % (tx['tx_hash'], status))
         logger.debug("Bindings: %s" % (json.dumps(bindings), ))
 
 

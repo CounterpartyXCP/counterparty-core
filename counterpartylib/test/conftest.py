@@ -10,7 +10,7 @@ from datetime import datetime
 import pytest
 import bitcoin as bitcoinlib
 import pycoin
-from pycoin.tx import Tx
+from pycoin.coins.bitcoin import Tx
 import pprint
 import binascii
 import logging
@@ -108,33 +108,32 @@ DISABLE_ARC4_MOCKING = False
 def pytest_generate_tests(metafunc):
     """Generate all py.test cases. Checks for different types of tests and creates proper context."""
     if metafunc.function.__name__ == 'test_vector':
-        args = util_test.vector_to_args(UNITTEST_VECTOR, pytest.config.option.function)
-        metafunc.parametrize('tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, config_context', args)
+        args = util_test.vector_to_args(UNITTEST_VECTOR, metafunc.config.getoption("function"), metafunc.config)
+        metafunc.parametrize('tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, config_context, pytest_config', args)
     elif metafunc.function.__name__ == 'test_scenario':
         args = []
         for scenario_name in INTEGRATION_SCENARIOS:
-            if pytest.config.option.scenario == [] or scenario_name in pytest.config.option.scenario:
-                args.append((scenario_name, INTEGRATION_SCENARIOS[scenario_name][1], INTEGRATION_SCENARIOS[scenario_name][0]))
-        metafunc.parametrize('scenario_name, base_scenario_name, transactions', args)
+            if metafunc.config.getoption("scenario") == [] or scenario_name in metafunc.config.getoption("scenario"):
+                args.append((scenario_name, INTEGRATION_SCENARIOS[scenario_name][1], INTEGRATION_SCENARIOS[scenario_name][0], metafunc.config))
+        metafunc.parametrize('scenario_name, base_scenario_name, transactions, pytest_config', args)
     elif metafunc.function.__name__ == 'test_book':
-        if pytest.config.option.skiptestbook == 'all':
-            args = []
-        elif pytest.config.option.skiptestbook == 'testnet':
-            args = [False]
-        elif pytest.config.option.skiptestbook == 'mainnet':
-            args = [True]
+        if metafunc.config.getoption("testbook") == 'testnet':
+            metafunc.parametrize('testnet, block_index', [(True, metafunc.config.getoption("testbookblockindex"))])
+        elif metafunc.config.getoption("testbook") == 'mainnet':
+            metafunc.parametrize('testnet, block_index', [(False, metafunc.config.getoption("testbookblockindex"))])
         else:
-            args = [True, False]
-        metafunc.parametrize('testnet', args)
+            metafunc.parametrize('testnet, block_index', [])
+
 
 def pytest_addoption(parser):
     """Add useful test suite argument options."""
-    parser.addoption("--function", action="append", default=[], help="list of functions to test")
-    parser.addoption("--scenario", action="append", default=[], help="list of scenarios to test")
-    parser.addoption("--gentxhex", action='store_true', default=False, help="generate and print unsigned hex for *.compose() tests")
-    parser.addoption("--savescenarios", action='store_true', default=False, help="generate sql dump and log in .new files")
+    parser.addoption("--function", action="append", default=[], help="List of functions to test")
+    parser.addoption("--scenario", action="append", default=[], help="List of scenarios to test")
+    parser.addoption("--gentxhex", action='store_true', default=False, help="Generate and print unsigned hex for *.compose() tests")
+    parser.addoption("--savescenarios", action='store_true', default=False, help="Generate sql dump and log in .new files")
     parser.addoption("--alternative", action='store_true', default=False)
-    parser.addoption("--skiptestbook", default='no', help="skip test book(s) (use with one of the following values: `all`, `testnet` or `mainnet`)")
+    parser.addoption("--testbook", default='no', help="Include test book (use with one of the following values: `testnet` or `mainnet`)")
+    parser.addoption("--testbookblockindex", default=0, type=int, help="test book from this block index (default: 0)")
 
 
 @pytest.fixture(scope="function")
@@ -222,7 +221,7 @@ class MockUTXOSet(object):
         self.txouts = utxos or []
         self.spent_utxos = []
         self.rawtransactions_db = rawtransactions_db
-        # logger.warn('MockUTXOSet %d' % len(utxos))
+        # logger.warning('MockUTXOSet %d' % len(utxos))
 
     def get_unspent_txouts(self, address, unconfirmed=False, multisig_inputs=False, unspent_tx_hash=None):
         # filter by address
@@ -268,13 +267,13 @@ class MockUTXOSet(object):
             utxo['confirmations'] = (utxo['confirmations'] or 0) + 1
 
     def add_raw_transaction(self, raw_transaction, tx_id=None, confirmations=0):
-        tx = pycoin.tx.Tx.from_hex(raw_transaction)
+        tx = pycoin.coins.bitcoin.Tx.Tx.from_hex(raw_transaction)
         tx_id = tx_id or tx.id()
 
         txins = []
         for txin in tx.txs_in:
             txins.append({
-                'txid': pycoin.serialize.b2h_rev(txin.previous_hash),
+                'txid': pycoin.encoding.hexbytes.b2h_rev(txin.previous_hash),
                 'vout': txin.previous_index
             })
 
@@ -291,7 +290,7 @@ class MockUTXOSet(object):
                 'vout': idx
             })
 
-        # logger.warn('add_raw_transaction %d/%d' % (len(txins), len(txouts)))
+        # logger.warning('add_raw_transaction %d/%d' % (len(txins), len(txouts)))
         # logger.debug(pprint.pformat(txins))
         # logger.debug(pprint.pformat(txouts))
 

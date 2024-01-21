@@ -61,8 +61,6 @@ class BCDataStream(object):
     except IndexError:
       raise SerializationError("attempt to read past end of buffer")
 
-    return ''
-
   def read_boolean(self): return self.read_bytes(1)[0] != chr(0)
   def read_int16(self): return self._read_num('<h')
   def read_uint16(self): return self._read_num('<H')
@@ -83,11 +81,11 @@ class BCDataStream(object):
     size = self.input[self.read_cursor]
     self.read_cursor += 1
     if size == 253:
-      size = self._read_num('<H')
+      return self._read_num('<H')
     elif size == 254:
-      size = self._read_num('<I')
+      return  self._read_num('<I')
     elif size == 255:
-      size = self._read_num('<Q')
+      return self._read_num('<Q')
     return size
 
   def write_compact_size(self, size):

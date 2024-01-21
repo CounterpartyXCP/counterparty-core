@@ -499,8 +499,8 @@ def reparse(db, block_index=None, quiet=True):
     blocks.reparse(db, block_index=block_index, quiet=quiet)
 
 
-def kickstart(db, bitcoind_dir):
-    blocks.kickstart(db, bitcoind_dir=bitcoind_dir)
+def kickstart(db, bitcoind_dir, force=False):
+    blocks.kickstart(db, bitcoind_dir=bitcoind_dir, force=force)
 
 
 def vacuum(db):

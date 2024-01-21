@@ -21,7 +21,7 @@ import binascii
 import appdirs
 import pprint
 import pycoin
-from pycoin.tx import Tx
+from pycoin.coins.bitcoin import Tx
 import bitcoin as bitcoinlib
 logger = logging.getLogger(__name__)
 
@@ -105,7 +105,7 @@ def dump_database(db):
     lines = output.getvalue().split('\n')[8:]
     new_data = '\n'.join(lines)
     #clean ; in new line
-    new_data = re.sub('\)[\n\s]+;', ');', new_data)
+    new_data = re.sub(r'\)[\n\s]+;', ');', new_data)
     # apsw oddness: follwing sentence not always generated!
     new_data = new_data.replace('-- The values of various per-database settings\n', '')
 
@@ -231,7 +231,7 @@ UNIQUE_DUMMY_TX_HASH = {}
 def dummy_tx_hash(raw_transaction):
     global UNIQUE_DUMMY_TX_HASH
 
-    tx = pycoin.tx.Tx.from_hex(raw_transaction)
+    tx = pycoin.coins.bitcoin.Tx.Tx.from_hex(raw_transaction)
 
     # normalize inputs
     for txin in tx.txs_in:
@@ -247,7 +247,7 @@ def dummy_tx_hash(raw_transaction):
 
     # check we haven't created this before (if we do 2 exactly the sends for example)
     if tx_id in UNIQUE_DUMMY_TX_HASH:
-        logger.warn('BUMP TXID %s' % tx_id)
+        logger.warning('BUMP TXID %s' % tx_id)
         UNIQUE_DUMMY_TX_HASH[tx_id] += 1
         tx_id = hashlib.sha256('{}{}'.format(tx_id, UNIQUE_DUMMY_TX_HASH[tx_id]).encode('utf-8')).hexdigest()
     else:
@@ -265,6 +265,20 @@ def insert_transaction(transaction, db):
                       VALUES (?,?,?,?,?,?,?)''', block)
     keys = ",".join(transaction.keys())
     cursor.execute('''INSERT INTO transactions ({}) VALUES (?,?,?,?,?,?,?,?,?,?,?)'''.format(keys), tuple(transaction.values()))
+    # `dispenser.dispense()` needs some vouts. Let's say one vout per transaction.
+    cursor.execute('''INSERT INTO transaction_outputs(
+                                tx_index,
+                                tx_hash,
+                                block_index,
+                                out_index,
+                                destination,
+                                btc_amount) VALUES (?,?,?,?,?,?)''',
+                                (transaction['tx_index'],
+                                 transaction['tx_hash'],
+                                 transaction['block_index'],
+                                 0,
+                                 transaction["destination"],
+                                 transaction["btc_amount"]))
     cursor.close()
     util.CURRENT_BLOCK_INDEX = transaction['block_index']
 
@@ -524,18 +538,11 @@ def clean_scenario_dump(scenario_name, dump):
     """Replace addresses and hashes to compare a scenario with its base scenario."""
     dump = dump.replace(standard_scenarios_params[scenario_name]['address1'], 'address1')
     dump = dump.replace(standard_scenarios_params[scenario_name]['address2'], 'address2')
-    dump = re.sub('[a-f0-9]{64}', 'hash', dump)
-    dump = re.sub('X\'[A-F0-9]+\',1\);', '\'data\',1);', dump)
-    # ignore fee values by replacing them with 10000 satoshis
-    dump = re.sub(',\d+,\'data\',1\);', ',10000,\'data\',1);', dump)
-    dump = re.sub(',\d+,X\'\',1\);', ',10000,\'data\',1);', dump)
-    # ignore dust value by replacing them with 0 satoshis
-    dump = re.sub(',7800,(\d+),\'data\',1\);', ',0,\1,\'data\',1);', dump)
-    dump = re.sub(',5430,(\d+),\'data\',1\);', ',0,\1,\'data\',1);', dump)
-
+    dump = re.sub(r'[a-f0-9]{64}', 'hash', dump)
+    dump = re.sub(r'X\'[A-F0-9]+\',1\);', '\'data\',1);', dump)
     return dump
 
-def check_record(record, server_db):
+def check_record(record, server_db, pytest_config):
     """Allow direct record access to the db."""
     cursor = server_db.cursor()
 
@@ -559,7 +566,7 @@ def check_record(record, server_db):
         ok = (record.get('not', False) and count == 0) or count == 1
 
         if not ok:
-            if pytest.config.getoption('verbose') >= 2:
+            if pytest_config.getoption('verbose') >= 2:
                 print("expected values: ")
                 pprint.PrettyPrinter(indent=4).pprint(record['values'])
                 print("SELECT * FROM {} WHERE block_index = {}: ".format(record['table'], record['values']['block_index']))
@@ -570,7 +577,7 @@ def check_record(record, server_db):
                                  "conditions=" + ",".join(conditions) + " \n" +
                                  "bindings=" + ",".join(map(lambda v: str(v), bindings)))
 
-def vector_to_args(vector, functions=[]):
+def vector_to_args(vector, functions=[], pytest_config=None):
     """Translate from UNITTEST_VECTOR style to function arguments."""
     args = []
     for tx_name in sorted(vector.keys()):
@@ -583,7 +590,7 @@ def vector_to_args(vector, functions=[]):
                 mock_protocol_changes = params.get('mock_protocol_changes', None)
                 config_context = params.get('config_context', {})
                 if functions == [] or (tx_name + '.' + method) in functions:
-                    args.append((tx_name, method, params['in'], outputs, error, records, comment, mock_protocol_changes, config_context))
+                    args.append((tx_name, method, params['in'], outputs, error, records, comment, mock_protocol_changes, config_context, pytest_config))
     return args
 
 def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
@@ -606,7 +613,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         else:
             return tested_method(server_db, *inputs)
 
-def check_outputs(tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, server_db):
+def check_outputs(tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, pytest_config, server_db):
     """Check actual and expected outputs of a particular function."""
 
     try:
@@ -618,14 +625,22 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
     with MockProtocolChangesContext(**(mock_protocol_changes or {})):
         test_outputs = None
         if error is not None:
-            with pytest.raises(error[0]) as exception:
-                test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
+            if pytest_config.getoption('verbose') >= 2:
+                print("Expected error:", error[0], error[1])
+            if error[0] == "Warning":
+                with pytest.warns(None) as record:
+                    test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
+                assert str(record[0].message) == error[1]
+            else:
+                with pytest.raises(error[0]) as exception:
+                    test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
+                assert exception.value.args[0] == error[1]
         else:
             test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
-            if pytest.config.option.gentxhex and method == 'compose':
-                print('')
+            if pytest_config.getoption('gentxhex') and method == 'compose':
+                print('--------------------------')
                 tx_params = {
-                    'encoding': 'multisig'
+                    #'encoding': 'multisig'
                 }
                 if tx_name == 'order' and inputs[1]=='BTC':
                     print('give btc')
@@ -633,29 +648,28 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
                 unsigned_tx_hex = transaction.construct(server_db, test_outputs, **tx_params)
                 print(tx_name)
                 print(unsigned_tx_hex)
+                print('--------------------------')
 
         if outputs is not None:
             try:
                 assert outputs == test_outputs
             except AssertionError:
-                if pytest.config.getoption('verbose') >= 2:
+                if pytest_config.getoption('verbose') >= 2:
                     msg = "expected outputs don't match test_outputs:\nexpected_outputs=\n" + pprint.pformat(outputs) + "\ntest_outputs=\n" + pprint.pformat(test_outputs)
                 else:
                     msg = "expected outputs don't match test_outputs: expected_outputs=%s test_outputs=%s" % (outputs, test_outputs)
                 raise Exception(msg)
-        if error is not None:
-            assert str(exception.value) == error[1]
         if records is not None:
             for record in records:
-                check_record(record, server_db)
+                check_record(record, server_db, pytest_config)
 
 
 def compare_strings(string1, string2):
     """Compare strings diff-style."""
     diff = list(difflib.unified_diff(string1.splitlines(1), string2.splitlines(1), n=0))
     if len(diff):
-        print("\nDifferences:")
-        print("\n".join(diff))
+        logger.info("\nDifferences:")
+        logger.info("\n".join(diff))
     return len(diff)
 
 def get_block_ledger(db, block_index):
@@ -677,7 +691,7 @@ def get_block_txlist(db, block_index):
     return txlist
 
 
-def reparse(testnet=True):
+def reparse(testnet=True, block_index=0):
     """
     Reparse all transaction from the database.
      - Create a new in-memory DB, copy the DB that is on-disk
@@ -707,17 +721,25 @@ def reparse(testnet=True):
 
     # Drop most tables (except blocks, transactions, undolog)
     memory_cursor = memory_db.cursor()
-    for table in blocks.TABLES + ['balances']:
-        memory_cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
+    for table in blocks.TABLES:
+        memory_cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
+    # Rebuild balances table
+    memory_cursor.execute('''DELETE FROM balances''')
+    memory_cursor.execute('''SELECT * FROM credits''')
+    for credit in memory_cursor:
+        util.add_to_balance(memory_db, credit["address"], credit["asset"], credit["quantity"])
+    memory_cursor.execute('''SELECT * FROM debits''')
+    for debits in memory_cursor:
+        util.remove_from_balance(memory_db, debits["address"], debits["asset"], debits["quantity"])
 
     # Check that all checkpoint blocks are in the database to be tested.
     if testnet:
         CHECKPOINTS = check.CHECKPOINTS_TESTNET
     else:
         CHECKPOINTS = check.CHECKPOINTS_MAINNET
-    for block_index in CHECKPOINTS.keys():
-        block_exists = bool(list(memory_cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,))))
-        assert block_exists, "block #%d does not exist" % block_index
+    for check_block_index in CHECKPOINTS.keys():
+        block_exists = bool(list(memory_cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (check_block_index,))))
+        assert block_exists, "block #%d does not exist" % check_block_index
 
     # Clean consensus hashes if first block hash don’t match with checkpoint.
     checkpoints = check.CHECKPOINTS_TESTNET if config.TESTNET else check.CHECKPOINTS_MAINNET
@@ -737,7 +759,7 @@ def reparse(testnet=True):
     previous_messages_hash = None
 
     # Reparse each block, if ConsensusError is thrown then the difference
-    memory_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
+    memory_cursor.execute('''SELECT * FROM blocks WHERE block_index > ? ORDER BY block_index''', (block_index,))
     for block in memory_cursor.fetchall():
         try:
             util.CURRENT_BLOCK_INDEX = block['block_index']

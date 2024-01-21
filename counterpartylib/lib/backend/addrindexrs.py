@@ -376,16 +376,17 @@ def ensure_addrindexrs_connected():
                 "method": "server.version",
                 "params": []
             })
-            
+
             addrindexrs_version_label = addrindexrs_version["result"][0][12:] #12 is the length of "addrindexrs "
             addrindexrs_version_needed = util.get_value_by_block_index("addrindexrs_required_version")
-               
+
             if parse_version(addrindexrs_version_needed) > parse_version(addrindexrs_version_label):
                 logger.info("Wrong addrindexrs version: "+addrindexrs_version_needed+" is needed but "+addrindexrs_version_label+" was found")
                 _backend.stop()
                 sys.exit(config.EXITCODE_UPDATE_REQUIRED)
-            
+
         except Exception as e:
+            logger.info(f'Error connecting to AddrIndexRs! Retrying in a {backoff} seconds')
             logger.debug(e)
             time.sleep(backoff)
             backoff = min(backoff * 1.5, max_backoff)
