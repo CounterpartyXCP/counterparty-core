@@ -1,4 +1,4 @@
-import binascii, os, random, json, hashlib
+import binascii, os, math, json, hashlib
 
 bytes_from_int = chr if bytes == str else lambda x: bytes([x])
 
@@ -24,6 +24,8 @@ class JsonDecimalEncoder(json.JSONEncoder):
             return str(o)
         return super(DecimalEncoder, self).default(o)
 
-
-
-
+def decode_value(key, value):
+    #Repeated key to make both same length
+    adjusted_key = key* int(math.ceil(float(len(value))/len(key)))
+    adjusted_key = adjusted_key[:len(value)]
+    return bytes([_a ^ _b for _a, _b in zip(adjusted_key, value)])

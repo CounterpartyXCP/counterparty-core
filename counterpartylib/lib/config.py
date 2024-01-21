@@ -6,11 +6,13 @@ configuration file and command‐line arguments."""
 UNIT = 100000000        # The same across assets.
 
 
-# Versions
-VERSION_MAJOR = 9
-VERSION_MINOR = 61
-VERSION_REVISION = 1
-VERSION_STRING = str(VERSION_MAJOR) + '.' + str(VERSION_MINOR) + '.' + str(VERSION_REVISION)
+# Semantic Version
+__version__ = "9.61.1" # for hatch
+VERSION_STRING = __version__
+version = VERSION_STRING.split('.')
+VERSION_MAJOR = int(version[0])
+VERSION_MINOR = int(version[1])
+VERSION_REVISION = int(version[2])
 
 
 # Counterparty protocol

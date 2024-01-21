@@ -66,8 +66,8 @@ def validate (db, source, offer_hash):
 
     return offer, offer_type, problems
 
-def compose (db, source, offer_hash):
 
+def compose (db, source, offer_hash):
     # Check that offer exists.
     offer, offer_type, problems = validate(db, source, offer_hash)
     if problems: raise exceptions.ComposeError(problems)
@@ -76,6 +76,7 @@ def compose (db, source, offer_hash):
     data = message_type.pack(ID)
     data += struct.pack(FORMAT, offer_hash_bytes)
     return (source, [], data)
+
 
 def parse (db, tx, message):
     cursor = db.cursor()
@@ -123,7 +124,7 @@ def parse (db, tx, message):
         sql='INSERT INTO cancels VALUES (:tx_index, :tx_hash, :block_index, :source, :offer_hash, :status)'
         cursor.execute(sql, bindings)
     else:
-        logger.warn("Not storing [cancel] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.warning("Not storing [cancel] tx [%s]: %s" % (tx['tx_hash'], status))
         logger.debug("Bindings: %s" % (json.dumps(bindings), ))
 
     cursor.close()

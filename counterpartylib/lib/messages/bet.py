@@ -379,7 +379,7 @@ def parse (db, tx, message):
         sql = 'insert into bets values(:tx_index, :tx_hash, :block_index, :source, :feed_address, :bet_type, :deadline, :wager_quantity, :wager_remaining, :counterwager_quantity, :counterwager_remaining, :target_value, :leverage, :expiration, :expire_index, :fee_fraction_int, :status)'
         bet_parse_cursor.execute(sql, bindings)
     else:
-        logger.warn("Not storing [bet] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.warning("Not storing [bet] tx [%s]: %s" % (tx['tx_hash'], status))
         logger.debug("Bindings: %s" % (json.dumps(bindings), ))
 
     # Match.

@@ -169,7 +169,10 @@ def parse (db, tx, message):
     except (struct.error) as e:
         timestamp, value, fee_fraction_int, text = 0, None, 0, None
         status = 'invalid: could not unpack'
-
+    except AssertionError:
+        timestamp, value, fee_fraction_int, text = 0, None, 0, None
+        status = "invalid: could not unpack text"
+        
     if status == 'valid':
         # For SQLite3
         timestamp = min(timestamp, config.MAX_INT)
@@ -203,7 +206,7 @@ def parse (db, tx, message):
         sql = 'insert into broadcasts values(:tx_index, :tx_hash, :block_index, :source, :timestamp, :value, :fee_fraction_int, :text, :locked, :status)'
         cursor.execute(sql, bindings)
     else:
-        logger.warn("Not storing [broadcast] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.warning("Not storing [broadcast] tx [%s]: %s" % (tx['tx_hash'], status))
         logger.debug("Bindings: %s" % (json.dumps(bindings), ))
 
     # stop processing if broadcast is invalid for any reason

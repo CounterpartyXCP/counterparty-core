@@ -568,7 +568,7 @@ def construct (db, tx_info, encoding='auto',
             unsigned_tx_hex = unsigned_datatx_hex
         else:
             # we're just gonna return the pretx, it doesn't require any of the further checks
-            logger.warn('old_style_api = %s' % old_style_api)
+            logger.warning('old_style_api = %s' % old_style_api)
             return return_result([unsigned_pretx_hex], old_style_api=old_style_api)
 
     else:
