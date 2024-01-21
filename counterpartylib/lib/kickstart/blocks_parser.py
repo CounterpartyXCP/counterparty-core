@@ -3,7 +3,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from .bc_data_stream import BCDataStream
-from .utils import b2h, double_hash, ib2h, inverse_hash
+from .utils import b2h, double_hash, ib2h, inverse_hash, decode_value
 
 def open_leveldb(db_dir):
     try:
@@ -12,27 +12,30 @@ def open_leveldb(db_dir):
         raise Exception("Please install the plyvel package via pip3.")
 
     try:
-        return plyvel.DB(db_dir, create_if_missing=False)
+        return plyvel.DB(db_dir, create_if_missing=False, compression=None)
     except plyvel._plyvel.IOError as e:
         logger.info(str(e))
         raise Exception("Ensure that bitcoind is stopped.")
 
 class BlockchainParser():
 
-    def __init__(self, blocks_dir, leveldb_dir):
-        self.blocks_dir = blocks_dir 
-        self.leveldb_dir = leveldb_dir
+    def __init__(self, bitcoind_dir):
+        self.blocks_dir = os.path.join(bitcoind_dir, 'blocks')
         self.file_num = -1
         self.current_file_size = 0
         self.current_block_file = None
         self.data_stream = None
-        self.ldb = open_leveldb(self.leveldb_dir)
+        self.blocks_leveldb_path = os.path.join(self.blocks_dir, 'index')
+        self.blocks_leveldb = open_leveldb(self.blocks_leveldb_path)
+        self.txindex_leveldb_path = os.path.join(bitcoind_dir, 'indexes', 'txindex')
+        self.txindex_leveldb = open_leveldb(self.txindex_leveldb_path)
 
     def read_tx_in(self, vds):
         tx_in = {}
         tx_in['txid'] = ib2h(vds.read_bytes(32))
         tx_in['vout'] = vds.read_uint32()
         script_sig_size = vds.read_compact_size()
+
         tx_in['scriptSig'] = b2h(vds.read_bytes(script_sig_size))
         tx_in['sequence'] = vds.read_uint32()
         if tx_in['txid'] == '0000000000000000000000000000000000000000000000000000000000000000':
@@ -56,6 +59,13 @@ class BlockchainParser():
         start_pos = vds.read_cursor
         transaction['version'] = vds.read_int32()
 
+        flag = vds.read_bytes(2)
+        if flag == b'\x00\x01':
+            transaction['segwit'] = True
+        else:
+            transaction['segwit'] = False
+            vds.read_cursor = vds.read_cursor - 2
+
         transaction['vin'] = []
         for i in range(vds.read_compact_size()):
             transaction['vin'].append(self.read_tx_in(vds))
@@ -63,6 +73,15 @@ class BlockchainParser():
         transaction['vout'] = []
         for i in range(vds.read_compact_size()):
             transaction['vout'].append(self.read_tx_out(vds))
+
+        if transaction['segwit']:
+            for vin in transaction['vin']:
+                vin['tx_witnesses'] = []
+                witnesses_count = vds.read_compact_size()
+                for i in range(witnesses_count):
+                    witness_length = vds.read_compact_size()
+                    witness = b2h(vds.read_bytes(witness_length))
+                    vin['tx_witnesses'].append(witness)
 
         transaction['lock_time'] = vds.read_uint32()
         data = vds.input[start_pos:vds.read_cursor]
@@ -110,8 +129,8 @@ class BlockchainParser():
             self.data_stream.seek_file(pos_in_file)
 
     def read_raw_block(self, block_hash):
-        block_hash = binascii.unhexlify(inverse_hash(block_hash))
-        block_data = self.ldb.get(bytes('b', 'utf-8') + block_hash)
+        block_key = bytes('b', 'utf-8') + binascii.unhexlify(inverse_hash(block_hash))
+        block_data = self.blocks_leveldb.get(block_key)
         ds = BCDataStream()
         ds.write(block_data)
 
@@ -132,8 +151,8 @@ class BlockchainParser():
         return block
 
     def read_raw_transaction(self, tx_hash):
-        tx_hash = binascii.unhexlify(inverse_hash(tx_hash))
-        tx_data = self.ldb.get(bytes('t', 'utf-8') + tx_hash)
+        tx_key = bytes('t', 'utf-8') + binascii.unhexlify(inverse_hash(tx_hash))
+        tx_data = self.txindex_leveldb.get(tx_key)
  
         ds = BCDataStream()
         ds.write(tx_data)
@@ -152,15 +171,24 @@ class BlockchainParser():
     def close(self):
         if self.current_block_file:
             self.current_block_file.close()
-        self.ldb.close()
+        self.blocks_leveldb.close()
+        self.txindex_leveldb.close()
 
 class ChainstateParser():
 
     def __init__(self, leveldb_dir):
         self.ldb = open_leveldb(leveldb_dir)
+        self.obfuscation_key = self.ldb.get(b'\x0e\x00obfuscate_key')[1:]
+
+    def get_value(self, key):
+        value = self.ldb.get(key)
+        if value:
+            value = decode_value(self.obfuscation_key, value)
+        return value
 
     def get_last_block_hash(self):
-        block_hash = self.ldb.get(bytes('B', 'utf-8'))
+        block_hash = self.get_value(bytes('B', 'utf-8'))
+        logger.info("block_hash B: %s" % block_hash)
         block_hash = ib2h(block_hash)
         return block_hash
 

@@ -60,7 +60,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     # Examine asset.
     try:
         divisible = util.is_divisible(db, asset)
-    except AssetError:
+    except exceptions.AssetError:
         problems.append('no such asset, {}.'.format(asset))
         return None, None, problems, 0
     
@@ -74,7 +74,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     # Examine dividend asset.
     try:
         dividend_divisible = util.is_divisible(db, dividend_asset)
-    except AssetError:
+    except exceptions.AssetError:
         problems.append('no such dividend asset, {}.'.format(dividend_asset))
         return None, None, problems, 0
         
@@ -137,6 +137,8 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
 
     cursor.close()
 
+    if len(problems):
+        return  None, None, problems, 0
     return dividend_total, outputs, problems, fee
 
 def compose (db, source, quantity_per_unit, asset, dividend_asset):
@@ -216,7 +218,7 @@ def parse (db, tx, message):
         sql = 'insert into dividends values(:tx_index, :tx_hash, :block_index, :source, :asset, :dividend_asset, :quantity_per_unit, :fee_paid, :status)'
         dividend_parse_cursor.execute(sql, bindings)
     else:
-        logger.warn("Not storing [dividend] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.warning("Not storing [dividend] tx [%s]: %s" % (tx['tx_hash'], status))
         logger.debug("Bindings: %s" % (json.dumps(bindings), ))
 
     dividend_parse_cursor.close()

@@ -199,7 +199,7 @@ def parse (db, tx, message):
             cursor.execute(sql, bindings)
 
     if status != 'valid':
-        logger.warn("Not storing [mpma] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.warning("Not storing [mpma] tx [%s]: %s" % (tx['tx_hash'], status))
 
     cursor.close()
 

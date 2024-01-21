@@ -55,7 +55,13 @@ def exectracer(cursor, sql, bindings):
     # Record alteration in database.
     if category not in skip_tables:
         if bindings is not None:
-            log.message(db, bindings['block_index'], command, category, bindings)
+            if isinstance(bindings, dict):
+                log.message(db, bindings['block_index'], command, category, bindings)
+            # tx_index < 0 => kickstart
+            elif bindings[0] < 0 and sql.startswith('insert into transaction values (tx_index, tx_hash, block_index, '):
+                log.message(db, bindings[2], command, category, bindings[2])
+            else:
+                raise exceptions.DatabaseError('Unknown bindings type.')
     # Record alteration in computation of message feed hash for the block
     if category not in skip_tables_block_messages:
         # don't include asset_longname as part of the messages hash

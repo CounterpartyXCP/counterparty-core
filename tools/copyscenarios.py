@@ -2,29 +2,15 @@
 
 import sys
 import os
-import re
-import shutil
+import glob
 
-DIR = "counterpartylib/test/fixtures/scenarios"
-REGEX = r"^(?P<name>.*)\.new(?P<ext>\..*)$"
+CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+SCENARIOS_DIR = os.path.join(CURRENT_DIR, "..", "counterpartylib/test/fixtures/scenarios")
 
 dryrun = '--dry-run' in sys.argv or '--dryrun' in sys.argv
-args = list(filter(lambda a: a not in [__file__, '--dry-run', '--dryrun'], sys.argv))
 
-filematch = None
-if len(args) == 1:
-    filematch = args[0]
-elif len(args) > 1:
-    raise Exception("Too many arguments")
-
-for file in sorted(os.listdir(DIR)):
-    m = re.match(REGEX, file)
-    if m:
-        newfile = m.group('name') + m.group('ext')
-
-        if filematch and filematch not in newfile:
-            continue
-
-        print("%s -> %s" % (file, newfile))
-        if not dryrun:
-            shutil.copy(os.path.join(DIR, file), os.path.join(DIR, newfile))
+for new_fixture_path in glob.glob(os.path.join(SCENARIOS_DIR, "*.new.*")):
+    old_fixture_path = new_fixture_path.replace(".new.", ".")
+    print("Move {} to {}".format(new_fixture_path, old_fixture_path))
+    if not dryrun:
+        os.replace(new_fixture_path, old_fixture_path)

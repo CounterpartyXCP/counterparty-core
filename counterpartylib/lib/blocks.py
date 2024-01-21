@@ -64,6 +64,7 @@ with open(CURR_DIR + '/../mainnet_burns.csv', 'r') as f:
     for line in mainnet_burns_reader:
         MAINNET_BURNS[line['tx_hash']] = line
 
+
 def parse_tx(db, tx):
     """Parse the transaction, return True for success."""
     cursor = db.cursor()
@@ -131,9 +132,9 @@ def parse_tx(db, tx):
                 dispenser.dispense(db, tx)
             else:
                 cursor.execute('''UPDATE transactions \
-                                           SET supported=? \
-                                           WHERE tx_hash=?''',
-                                        (False, tx['tx_hash']))
+                                           SET supported=$supported \
+                                           WHERE tx_hash=$tx_hash''',
+                                        {'supported': False, 'tx_hash': tx['tx_hash']})
                 if tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
                     logger.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
                 cursor.close()
@@ -170,20 +171,22 @@ def parse_block(db, block_index, block_time,
 
     # Remove undolog records for any block older than we should be tracking
     undolog_oldest_block_index = block_index - config.UNDOLOG_MAX_PAST_BLOCKS
-    first_undo_index = list(undolog_cursor.execute('''SELECT first_undo_index FROM undolog_block WHERE block_index == ?''',
-        (undolog_oldest_block_index,)))
+    first_undo_index = list(undolog_cursor.execute('''SELECT first_undo_index FROM undolog_block WHERE block_index == $block_index''',
+        {'block_index': undolog_oldest_block_index}))
     if len(first_undo_index) == 1 and first_undo_index[0] is not None:
-        undolog_cursor.execute('''DELETE FROM undolog WHERE undo_index < ?''', (first_undo_index[0][0],))
-    undolog_cursor.execute('''DELETE FROM undolog_block WHERE block_index < ?''',
-        (undolog_oldest_block_index,))
+        logger.debug('first_undo_index[0]', first_undo_index[0])
+        undolog_cursor.execute('''DELETE FROM undolog WHERE undo_index < $undo_index''', 
+                               {'undo_index': first_undo_index[0]['first_undo_index']})
+    undolog_cursor.execute('''DELETE FROM undolog_block WHERE block_index < $block_index''',
+        {'block_index': undolog_oldest_block_index})
 
     # Set undolog barrier for this block
     if block_index != config.BLOCK_FIRST:
         undolog_cursor.execute('''INSERT OR REPLACE INTO undolog_block(block_index, first_undo_index)
-            SELECT ?, seq+1 FROM SQLITE_SEQUENCE WHERE name='undolog' ''', (block_index,))
+            SELECT $block_index, seq+1 FROM SQLITE_SEQUENCE WHERE name='undolog' ''', {'block_index': block_index})
     else:
         undolog_cursor.execute('''INSERT OR REPLACE INTO undolog_block(block_index, first_undo_index)
-            VALUES(?,?)''', (block_index, 1,))
+            VALUES($block_index,$first_undo_index)''', {'block_index': block_index, 'first_undo_index': 1})
     undolog_cursor.close()
 
     # Expire orders, bets and rps.
@@ -197,8 +200,8 @@ def parse_block(db, block_index, block_time,
     # Parse transactions, sorting them by type.
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM transactions \
-                      WHERE block_index=? ORDER BY tx_index''',
-                   (block_index,))
+                      WHERE block_index=$block_index ORDER BY tx_index''',
+                   {'block_index': block_index})
     txlist = []
     for tx in list(cursor):
         try:
@@ -207,7 +210,7 @@ def parse_block(db, block_index, block_time,
                                                 tx['btc_amount'], tx['fee'],
                                                 binascii.hexlify(tx['data']).decode('UTF-8')))
         except exceptions.ParseTransactionError as e:
-            logger.warn('ParseTransactionError for tx %s: %s' % (tx['tx_hash'], e))
+            logger.warning('ParseTransactionError for tx %s: %s' % (tx['tx_hash'], e))
             raise e
             #pass
 
@@ -224,6 +227,12 @@ def parse_block(db, block_index, block_time,
 def initialise(db):
     """Initialise data, create and populate the database."""
     cursor = db.cursor()
+
+    # Clean triggers
+    cursor.execute("SELECT name FROM sqlite_master WHERE type = 'trigger'")
+    triggers = [trigger['name'] for trigger in list(cursor)]
+    for trigger in triggers:
+        cursor.execute("DROP TRIGGER IF EXISTS {}".format(trigger))
 
     # Blocks
     cursor.execute('''CREATE TABLE IF NOT EXISTS blocks(
@@ -487,7 +496,7 @@ def get_tx_info(tx_hex, block_parser=None, block_index=None, db=None):
         # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
         if util.enabled('dispensers', block_index):
             try:
-                return b'', None, None, None, None, _get_swap_tx(e.decodedTx, block_parser, block_index, db=db)
+                return b'', None, None, None, None, _get_swap_tx(e.decoded_tx, block_parser, block_index, db=db)
             except: # (DecodeError, backend.indexd.BackendRPCError) as e:
                 return b'', None, None, None, None, None
         else:
@@ -872,8 +881,12 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
         data = b''
         for vin in ctx.vin:
             if util.enabled("prevout_segwit_fix"):
-                vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash))
-                vin_ctx = backend.deserialize(vin_tx)
+                if block_parser:
+                    vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
+                    vin_ctx = backend.deserialize(vin_tx['__data__'])
+                else:
+                    vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash))
+                    vin_ctx = backend.deserialize(vin_tx)
                 prevout_is_segwit = vin_ctx.has_witness()
             else:
                 prevout_is_segwit = p2sh_is_segwit
@@ -1141,7 +1154,6 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
         out_index = 0
         for out in outputs:
             if out[0] != decoded_tx[0][0] and dispenser.is_dispensable(db, out[0], out[1]):
-                
                 source = decoded_tx[0][0]
                 destination = out[0]
                 btc_amount = out[1]
@@ -1187,7 +1199,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
                              fee,
                              data)
                       )
-        
+
         for next_out in outs:
             cursor.execute('''INSERT INTO transaction_outputs(
                                 tx_index,
@@ -1201,18 +1213,18 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
                                  block_index,
                                  next_out["out_index"],
                                  next_out["destination"],
-                                 next_out["btc_amount"])    
+                                 next_out["btc_amount"])
                           )
-        
+
         cursor.close()
-        
+
         return tx_index + 1
     else:
         logger.getChild('list_tx.skip').debug('Skipping transaction: {}'.format(tx_hash))
 
     return tx_index
 
-def kickstart(db, bitcoind_dir):
+def kickstart(db, bitcoind_dir, force=False):
     if bitcoind_dir is None:
         if platform.system() == 'Darwin':
             bitcoind_dir = os.path.expanduser('~/Library/Application Support/Bitcoin/')
@@ -1229,7 +1241,7 @@ def kickstart(db, bitcoind_dir):
 - Ensure that bitcoind is stopped.
 - You must reindex bitcoind after the initialization is complete (restart with `-reindex=1`)
 - The initialization may take a while.''')
-    if input('Proceed with the initialization? (y/N) : ') != 'y':
+    if not force and input('Proceed with the initialization? (y/N) : ') != 'y':
         return
 
     if config.TESTNET:
@@ -1244,10 +1256,11 @@ def kickstart(db, bitcoind_dir):
     # Get hash of last known block.
     chain_parser = ChainstateParser(os.path.join(bitcoind_dir, 'chainstate'))
     last_hash = chain_parser.get_last_block_hash()
+    logger.info('Last known block hash: {}'.format(last_hash))
     chain_parser.close()
 
     # Start block parser.
-    block_parser = BlockchainParser(os.path.join(bitcoind_dir, 'blocks'), os.path.join(bitcoind_dir, 'blocks/index'))
+    block_parser = BlockchainParser(bitcoind_dir)
 
     current_hash = last_hash
     tx_index = 0
@@ -1266,7 +1279,9 @@ def kickstart(db, bitcoind_dir):
             # Get `tx_info`s for transactions in this block.
             block = block_parser.read_raw_block(current_hash)
             for tx in block['transactions']:
-                source, destination, btc_amount, fee, data = get_tx_info(tx['__data__'], block_parser=block_parser, block_index=block['block_index'])
+                #print(tx)
+
+                source, destination, btc_amount, fee, data, _ = get_tx_info(tx['__data__'], block_parser=block_parser, block_index=block['block_index'])
                 if source and (data or destination == config.UNSPENDABLE):
                     transactions.append((
                         tx['tx_hash'], block['block_index'], block['block_hash'], block['block_time'],
@@ -1286,9 +1301,8 @@ def kickstart(db, bitcoind_dir):
                 transactions = list(reversed(transactions))
                 tx_chunks = [transactions[i:i+90] for i in range(0, len(transactions), 90)]
                 for tx_chunk in tx_chunks:
-                    sql = '''INSERT INTO transactions
-                                (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data)
-                             VALUES '''
+                    fields = 'tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data'
+                    sql = f"INSERT INTO transactions ({fields}) VALUES "
                     bindings = ()
                     bindings_place = []
                     # negative tx_index from -1 and inverse order for fast reordering   # TODO: Can this be clearer?
@@ -1359,6 +1373,7 @@ def follow(db):
     if util.CURRENT_BLOCK_INDEX == 0:
         logger.warning('New database.')
         block_index = config.BLOCK_FIRST
+        database.update_version(db)
     else:
         block_index = util.CURRENT_BLOCK_INDEX + 1
 
@@ -1613,7 +1628,7 @@ def follow(db):
                         # Rollback.
                         raise MempoolError
                 except exceptions.ParseTransactionError as e:
-                    logger.warn('ParseTransactionError for tx %s: %s' % (tx_hash, e))
+                    logger.warning('ParseTransactionError for tx %s: %s' % (tx_hash, e))
                 except MempoolError:
                     pass
                     

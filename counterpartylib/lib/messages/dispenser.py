@@ -12,6 +12,7 @@ import json
 import pprint
 import struct
 import logging
+import warnings
 from math import floor
 logger = logging.getLogger(__name__)
 
@@ -211,6 +212,9 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
         if last_price is None:
             problems.append('The oracle address %s has not broadcasted any price yet' % oracle_address)
     
+    if give_quantity > config.MAX_INT or escrow_quantity > config.MAX_INT or mainchainrate > config.MAX_INT:
+        problems.append('integer overflow')
+
     if len(problems) > 0:
         return None, problems
     else:
@@ -423,12 +427,12 @@ def parse (db, tx, message):
                             'tx_index': existing[0]['tx_index']
                         }
                         sql = 'UPDATE dispensers SET status=:status, last_status_tx_hash=:last_status_tx_hash WHERE source=:source AND asset=:asset AND status IN (0,1)'
-                    
+
                     if close_from_another_address:
                         sql = sql + " AND origin=:origin"
                         bindings["origin"] = tx["source"]
                         bindings["source"] = action_address
-                    
+
                     cursor.execute(sql, bindings)
                 else:
                     status = 'dispenser inexistent'
@@ -436,19 +440,20 @@ def parse (db, tx, message):
                 status = 'invalid: status must be one of OPEN or CLOSE'
 
     if status != 'valid':
-        logger.warn("Not storing [dispenser] tx [%s]: %s" % (tx['tx_hash'], status))
+        # let use warnings.warn instead of logger.warning because we want to catch it in tests
+        warnings.warn("Not storing [dispenser] tx [%s]: %s" % (tx['tx_hash'], status))
 
     cursor.close()
 
 def is_dispensable(db, address, amount):
     cursor = db.cursor()
     cursor.execute('SELECT * FROM dispensers WHERE source=:source AND status IN (0,11)', {
-        'source': address,    
+        'source': address,
         #'status': [STATUS_OPEN, STATUS_CLOSING]
     })
     dispensers = cursor.fetchall()
     cursor.close()
-    
+
     for next_dispenser in dispensers:
         if next_dispenser["oracle_address"] != None:
             last_price, last_fee, last_fiat_label, last_updated = util.get_oracle_last_price(db, next_dispenser['oracle_address'], util.CURRENT_BLOCK_INDEX)
@@ -458,12 +463,12 @@ def is_dispensable(db, address, amount):
         else:
             if amount >= next_dispenser["satoshirate"]:
                 return True
-    
+
     return False
 
 def dispense(db, tx):
     cursor = db.cursor()
-    
+
     outs = []
     if util.enabled("multiple_dispenses"):
         cursor.execute('SELECT txs.source AS source, txs_outs.* FROM transaction_outputs txs_outs LEFT JOIN transactions txs ON txs.tx_hash = txs_outs.tx_hash WHERE txs_outs.tx_hash=:tx_hash ORDER BY txs_outs.out_index', {
@@ -472,9 +477,12 @@ def dispense(db, tx):
         outs = cursor.fetchall()
     else:
         outs = [tx]
-    
+
+    #if len(outs) == 0:
+    #    outs = [tx]
+
     dispense_index = 0
-        
+
     for next_out in outs:
         cursor.execute('SELECT * FROM dispensers WHERE source=:source AND status IN (0,11) ORDER BY asset', {
             'source': next_out['destination'],
@@ -493,7 +501,7 @@ def dispense(db, tx):
                     must_give = int(floor(((next_out['btc_amount'] / config.UNIT) * last_price)/fiatrate))
                 else:
                     must_give = int(floor(next_out['btc_amount'] / satoshirate))
-                    
+
                 remaining = int(floor(dispenser['give_remaining'] / give_quantity))
                 actually_given = min(must_give, remaining) * give_quantity
                 give_remaining = dispenser['give_remaining'] - actually_given
@@ -509,17 +517,17 @@ def dispense(db, tx):
                 # Checking if the dispenser reach its max dispenses limit
                 max_dispenses_limit = util.get_value_by_block_index("max_dispenses_limit", next_out["block_index"])
                 max_dispenser_limit_hit = False
-                
+
                 if max_dispenses_limit > 0:
                     sql = 'SELECT MAX(block_index) AS max_block_index FROM dispenser_refills WHERE dispenser_tx_hash = :dispenser_tx_hash'
                     cursor.execute(sql, {'dispenser_tx_hash': dispenser['tx_hash']})
                     max_block_index_result = cursor.fetchall()
                     from_block_index = 1
-                    
+
                     if len(max_block_index_result) > 0:
                         if max_block_index_result[0]["max_block_index"] is not None:
                             from_block_index = max_block_index_result[0]["max_block_index"]
-                    
+
                     sql = 'SELECT COUNT(*) AS dispenses_count FROM dispenses WHERE dispenser_tx_hash = :dispenser_tx_hash AND block_index >= :block_index'
                     cursor.execute(sql, {'dispenser_tx_hash': dispenser['tx_hash'], 'block_index': from_block_index})
                     dispenses_count_result = cursor.fetchall()[0]
