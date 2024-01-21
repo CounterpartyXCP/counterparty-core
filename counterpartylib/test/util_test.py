@@ -627,9 +627,14 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
         if error is not None:
             if pytest_config.getoption('verbose') >= 2:
                 print("Expected error:", error[0], error[1])
-            with pytest.raises(error[0]) as exception:
-                test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
-            assert exception.value.args[0] == error[1]
+            if error[0] == "Warning":
+                with pytest.warns(None) as record:
+                    test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
+                assert str(record[0].message) == error[1]
+            else:
+                with pytest.raises(error[0]) as exception:
+                    test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
+                assert exception.value.args[0] == error[1]
         else:
             test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
             if pytest_config.getoption('gentxhex') and method == 'compose':
