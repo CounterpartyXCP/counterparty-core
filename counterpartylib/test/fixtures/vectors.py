@@ -3250,6 +3250,18 @@ UNITTEST_VECTOR = {
             {
                 'in': (ADDR[0], 'PARENT', 0, 0, 0, 10, None, DP['burn_start'], None),
                 'out': (None, ['address doesnt has an open dispenser for asset PARENT'])
+            },
+            {
+                'in': (ADDR[0], config.XCP, config.MAX_INT + 1, 100, 100, 0, None, DP['burn_start'], None),
+                'out': (None, ['escrow_quantity must be greater or equal than give_quantity', 'integer overflow'])
+            },
+            {
+                'in': (ADDR[0], config.XCP, 100, config.MAX_INT + 1, 100, 0, None, DP['burn_start'], None),
+                'out': (None, ["address doesn't has enough balance of XCP (91875000000 < 9223372036854775808)", 'integer overflow'])
+            },
+            {
+                'in': (ADDR[0], config.XCP, 100, 100, config.MAX_INT + 1, 0, None, DP['burn_start'], None),
+                'out': (None, ['integer overflow'])
             }
         ],
         'compose': [
@@ -3264,6 +3276,10 @@ UNITTEST_VECTOR = {
             {
                 'in': (ADDR[0], 'PARENT', 100, 10000, 2345, 0),
                 'out': (ADDR[0], [], b'\x00\x00\x00\x0c\x00\x00\x00\x00\n\xa4\t}\x00\x00\x00\x00\x00\x00\x00d\x00\x00\x00\x00\x00\x00\'\x10\x00\x00\x00\x00\x00\x00\t)\x00')
+            },
+            {
+                'in': (ADDR[0], config.XCP, config.MAX_INT + 1, 100, 100, 0),
+                'error': (exceptions.ComposeError, ['escrow_quantity must be greater or equal than give_quantity', 'integer overflow'])
             }
         ],
         'parse': [
@@ -3330,6 +3346,19 @@ UNITTEST_VECTOR = {
                         'quantity': 100,
                     }}
                 ]
+            },
+            {
+                'mock_protocol_changes': { 'dispensers': True },
+                'in': ({
+                    'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'source': ADDR[5], 'supported': 1, 'block_index': 2344638,
+                    'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'],
+                    'btc_amount': 0, 'tx_index': 503, 'destination': '',
+                    # compose(ADDR[0], config.XCP, 100, 100, config.MAX_INT + 1, 0)
+                    # generated with overflow checking commented out
+                    'data': b'\x00\x00\x00\x0c\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00d\x00\x00\x00\x00\x00\x00\x00d\x80\x00\x00\x00\x00\x00\x00\x00\x00'
+                },),
+                'error': ("Warning", "Not storing [dispenser] tx [db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d]: invalid: address has a dispenser already opened for asset XCP with a different mainchainrate; integer overflow")
             },
         ],
         'is_dispensable': [

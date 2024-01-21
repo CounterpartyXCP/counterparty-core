@@ -12,6 +12,7 @@ import json
 import pprint
 import struct
 import logging
+import warnings
 from math import floor
 logger = logging.getLogger(__name__)
 
@@ -211,6 +212,9 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
         if last_price is None:
             problems.append('The oracle address %s has not broadcasted any price yet' % oracle_address)
     
+    if give_quantity > config.MAX_INT or escrow_quantity > config.MAX_INT or mainchainrate > config.MAX_INT:
+        problems.append('integer overflow')
+
     if len(problems) > 0:
         return None, problems
     else:
@@ -436,7 +440,8 @@ def parse (db, tx, message):
                 status = 'invalid: status must be one of OPEN or CLOSE'
 
     if status != 'valid':
-        logger.warning("Not storing [dispenser] tx [%s]: %s" % (tx['tx_hash'], status))
+        # let use warnings.warn instead of logger.warning because we want to catch it in tests
+        warnings.warn("Not storing [dispenser] tx [%s]: %s" % (tx['tx_hash'], status))
 
     cursor.close()
 
