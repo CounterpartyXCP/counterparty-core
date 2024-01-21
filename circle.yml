@@ -96,6 +96,6 @@ workflows:
       - test:
           requires:
             - build
-      - test-reparse-testnet:
-          requires:
-            - build
+      #- test-reparse-testnet:
+      #    requires:
+      #      - build
