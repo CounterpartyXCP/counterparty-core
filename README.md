@@ -14,7 +14,7 @@
 
 # Installation
 
-**WARNING** Master branch should only be used for testing. For production releases uses tagged releases.
+**WARNING** The `master` branch should only be used as a development target. For production, use only the latest tagged release.
 
 For a simple Docker-based install of the Counterparty software stack, see [this guide](http://counterparty.io/docs/federated_node/).
 
@@ -22,44 +22,63 @@ For a simple Docker-based install of the Counterparty software stack, see [this 
 # Manual installation
 
 Download the latest [Bitcoin Core](https://github.com/bitcoin/bitcoin/releases) and create
-a `bitcoin.conf` file with the following options:
+a `bitcoin.conf` file (by default located in `~.bitcoin/`) with the following options:
 
 ```
 rpcuser=bitcoinrpc
 rpcpassword=rpc
-server=1
-txindex=1
 rpctimeout=300
 zmqpubhashblock=tcp://127.0.0.1:28832
 zmqpubhashtx=tcp://127.0.0.1:28832
 addresstype=legacy
+server=1
+txindex=1
+prune=0
+mempoolfullrbf=1
 ```
 **Note:** you can and should replace the RPC credentials. Remember to use the changed RPC credentials throughout this document.
 
-Download and install latest addrindexrs:
+Adding the following lines, and opening up port `8333` to incoming traffic may improve your sync speed:
+
 ```
+listen=1
+dbcache=4000
+```
+
+Download and install latest `addrindexrs`:
+```
+$ sudo apt install cargo libclang-dev build-essential
 $ git clone https://github.com/CounterpartyXCP/addrindexrs.git
 $ cd addrindexrs
 $ cargo check
- -- Setup the appropiate environment variables --
-  - ADDRINDEXRS_JSONRPC_IMPORT=1
-  - ADDRINDEXRS_TXID_LIMIT=15000
-  - ADDRINDEXRS_COOKIE=user:password
-  - ADDRINDEXRS_INDEXER_RPC_ADDR=0.0.0.0:8432
-  - ADDRINDEXRS_DAEMON_RPC_ADDR=bitcoin:8332
- --
-$ cargo build --release
-$ cargo run --release
 ```
 
-You could run the indexd daemon with a process manager like `forever` or `pm2` (recommended).
+Set the following environment variables (for instance in your `.bashrc`):
+```
+export ADDRINDEXRS_JSONRPC_IMPORT=1
+export ADDRINDEXRS_TXID_LIMIT=15000
+export ADDRINDEXRS_COOKIE=user:password
+export ADDRINDEXRS_INDEXER_RPC_ADDR=0.0.0.0:8432
+export ADDRINDEXRS_DAEMON_RPC_ADDR=bitcoin:8332
+```
 
-Then, download and install `counterparty-lib`:
+Then continue with the build:
+
+```
+$ cargo build --release
+$ cargo run
+```
+
+NOTE: You may wish to run the `addrindexrs` daemon with a process manager like `forever` or `pm2`.
+
+
+Now, download and install `counterparty-lib`:
 
 ```
 $ git clone https://github.com/CounterpartyXCP/counterparty-lib.git
 $ cd counterparty-lib
-$ sudo pip3 install --upgrade .
+$ pip3 install --upgrade -r requirements.txt
+$ python3 setup.py install
 ```
 
 Followed by `counterparty-cli`:
@@ -67,12 +86,9 @@ Followed by `counterparty-cli`:
 ```
 $ git clone https://github.com/CounterpartyXCP/counterparty-cli.git
 $ cd counterparty-cli
-$ sudo pip3 install --upgrade -r requirements.txt
-$ sudo python3 setup.py install
+$ pip3 install --upgrade -r requirements.txt
+$ python3 setup.py install
 ```
-
-Note on **sudo**: both counterparty-lib and counterparty-server can be installed by non-sudoers. Please refer to external documentation for instructions on using pip without root access and other information related to custom install locations.
-
 
 Then, launch the daemon via:
 
@@ -80,6 +96,11 @@ Then, launch the daemon via:
 $ counterparty-server bootstrap
 $ counterparty-server --backend-password=rpc start
 ```
+
+**WARNING:** The `bootstrap` should not be used for commercial or public-facing nodes.
+
+**Note:** You will not be able to run `counterparty-server` until `addrindexrs` has caught up (and its RPC server is running), which in turn requires `bitcoind` have caught up as well.
+
 
 # Basic Usage
 
