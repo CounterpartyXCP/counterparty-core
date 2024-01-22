@@ -18,7 +18,7 @@ from Crypto.Cipher import ARC4
 
 logger = logging.getLogger()
 
-from counterpartylib.lib import log
+from counterpartylib.lib import log, blocks
 from counterpartylib import server
 log.set_logger(logger)
 
@@ -194,7 +194,7 @@ def cp_server(request):
     sqlfile = getattr(request.module, 'FIXTURE_SQL_FILE')
     options = getattr(request.module, 'FIXTURE_OPTIONS', {})
 
-    util_test.init_database(sqlfile, dbfile, options)
+    db = util_test.init_database(sqlfile, dbfile, options)
 
     # monkeypatch this here because init_mock_functions can run before cp_server
     if hasattr(config, 'PREFIX'):

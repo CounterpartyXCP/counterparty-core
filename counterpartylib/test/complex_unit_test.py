@@ -48,10 +48,15 @@ def test_alice_bob(server_db):
     assert bob_balance2 == bob_balance + v
 
     # check API result
-    result = util.api("get_balances", {"filters": [
-        {'field': 'address', 'op': '==', 'value': alice},
-        {'field': 'asset', 'op': '==', 'value': 'XCP'},
-    ]})
+    result = util.api("get_balances", {
+        "filters": [
+            {'field': 'address', 'op': '==', 'value': alice},
+            {'field': 'asset', 'op': '==', 'value': 'XCP'},
+        ],
+        "order_by": "block_index",
+        "order_dir": "desc",
+        "limit": 1,
+    })
 
     assert result[0]['quantity'] == alice_balance2
 

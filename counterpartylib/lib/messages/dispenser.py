@@ -178,8 +178,9 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
         problems.append('invalid status %i' % status)
 
     cursor = db.cursor()
-    cursor.execute('''SELECT quantity FROM balances \
-                      WHERE address = ? and asset = ?''', (source,asset,))
+    cursor.execute('''SELECT quantity FROM balances
+                   WHERE address = ? and asset = ?
+                   ORDER BY block_index DESC LIMIT 1''', (source,asset,))
     available = cursor.fetchall()
 
     if len(available) == 0:
@@ -346,12 +347,18 @@ def parse (db, tx, message):
                         # Create the new dispenser
                         try:
                             if dispenser_status == STATUS_OPEN_EMPTY_ADDRESS:
-                                cursor.execute('SELECT count(*) cnt FROM balances WHERE address=:address AND quantity > 0', {
+                                is_empty_address = True
+                                address_assets = cursor.execute('SELECT DISTINCT asset FROM balances WHERE address=:address GROUP BY asset', {
                                     'address': action_address
-                                })
-                                counts = cursor.fetchall()[0]
+                                }).fetchall()
+                                if len(address_assets) > 0:
+                                    for asset_name in address_assets:
+                                        asset_balance = util.get_balance(db, action_address, asset_name)
+                                        if asset_balance > 0:
+                                            is_empty_address = False
+                                            break
 
-                                if counts['cnt'] == 0:
+                                if is_empty_address:
                                     util.debit(db, tx['source'], asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
                                     util.credit(db, action_address, asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
                                     util.debit(db, action_address, asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])

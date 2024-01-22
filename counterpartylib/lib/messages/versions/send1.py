@@ -79,7 +79,9 @@ def compose (db, source, destination, asset, quantity):
         raise exceptions.ComposeError('quantity must be an int (in satoshi)')
 
     # Only for outgoing (incoming will overburn).
-    balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, asset)))
+    balances = list(cursor.execute('''SELECT * FROM balances
+                                   WHERE (address = ? AND asset = ?)
+                                   ORDER BY block_index DESC LIMIT 1''', (source, asset)))
     if not balances or balances[0]['quantity'] < quantity:
         raise exceptions.ComposeError('insufficient funds')
 
@@ -111,8 +113,9 @@ def parse (db, tx, message):
 
     if status == 'valid':
         # Oversend
-        cursor.execute('''SELECT * FROM balances \
-                                     WHERE (address = ? AND asset = ?)''', (tx['source'], asset))
+        cursor.execute('''SELECT * FROM balances
+                       WHERE (address = ? AND asset = ?)
+                       ORDER BY block_index DESC LIMIT 1''', (tx['source'], asset))
         balances = cursor.fetchall()
         if not balances:
             status = 'invalid: insufficient funds'

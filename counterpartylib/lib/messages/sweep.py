@@ -58,15 +58,19 @@ def validate (db, source, destination, flags, memo, block_index):
         problems.append('destination cannot be the same as source')
 
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, 'XCP'))
+    cursor.execute('''SELECT * FROM balances
+                   WHERE (address = ? AND asset = ?)
+                   ORDER BY block_index DESC LIMIT 1''', (source, 'XCP'))
     result = cursor.fetchall()
 
     antispamfee = util.get_value_by_block_index("sweep_antispam_fee", block_index)*config.UNIT
     total_fee = ANTISPAM_FEE
 
     if antispamfee > 0:
-        cursor.execute('''SELECT count(*) cnt FROM balances WHERE address = ?''', (source, ))
-        balances_count = cursor.fetchall()[0]['cnt']
+        address_assets = cursor.execute('SELECT DISTINCT asset FROM balances WHERE address=:address GROUP BY asset', {
+            'address': source
+        }).fetchall()
+        balances_count = len(address_assets)
 
         cursor.execute('''SELECT COUNT(DISTINCT(asset)) cnt FROM issuances WHERE issuer = ?''', (source, ))
         issuances_count = cursor.fetchall()[0]['cnt']
@@ -180,8 +184,16 @@ def parse (db, tx, message):
             status = 'invalid: insufficient balance for antispam fee for sweep'
 
     if status == 'valid':
-        cursor.execute('''SELECT * FROM balances WHERE address = ?''', (tx['source'],))
-        balances = cursor.fetchall()
+        cursor.execute('''SELECT * FROM balances WHERE address = ? ORDER BY asset, block_index DESC''', (tx['source'],))
+        balances_history = cursor.fetchall()
+        # keep only the last balance for each asset
+        balances = []
+        saved_balances = {}
+        for balance in balances_history:
+            if balance['asset'] not in saved_balances:
+                balances.append(balance)
+                saved_balances[balance['asset']] = True
+
         if flags & FLAG_BALANCES:
             for balance in balances:
                 util.debit(db, tx['source'], balance['asset'], balance['quantity'], action='sweep', event=tx['tx_hash'])

@@ -223,16 +223,16 @@ def initialise(db):
                    ''')
 
     # SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS`.
-    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(blocks)''')]
-    if 'ledger_hash' not in columns:
+    block_columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(blocks)''')]
+    if 'ledger_hash' not in block_columns:
         cursor.execute('''ALTER TABLE blocks ADD COLUMN ledger_hash TEXT''')
-    if 'txlist_hash' not in columns:
+    if 'txlist_hash' not in block_columns:
         cursor.execute('''ALTER TABLE blocks ADD COLUMN txlist_hash TEXT''')
-    if 'messages_hash' not in columns:
+    if 'messages_hash' not in block_columns:
         cursor.execute('''ALTER TABLE blocks ADD COLUMN messages_hash TEXT''')
-    if 'previous_block_hash' not in columns:
+    if 'previous_block_hash' not in block_columns:
         cursor.execute('''ALTER TABLE blocks ADD COLUMN previous_block_hash TEXT''')
-    if 'difficulty' not in columns:
+    if 'difficulty' not in block_columns:
         cursor.execute('''ALTER TABLE blocks ADD COLUMN difficulty TEXT''')
 
     # Check that first block in DB is BLOCK_FIRST.
@@ -328,6 +328,10 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       asset_idx ON balances (asset)
                    ''')
+    balances_columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(balances)''')]
+    if 'block_index' not in balances_columns:
+        cursor.execute('''ALTER TABLE balances ADD COLUMN block_index INTEGER''')
+        # TODO: add foreign key constraint
 
     # Assets
     # TODO: Store more asset info here?!

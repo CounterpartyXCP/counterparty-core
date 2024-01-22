@@ -241,8 +241,9 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
     if quantity or (block_index >= 315000 or config.TESTNET or config.REGTEST):   # Protocol change.
         if not reissuance or (block_index < 310000 and not config.TESTNET and not config.REGTEST):  # Pay fee only upon first issuance. (Protocol change.)
             cursor = db.cursor()
-            cursor.execute('''SELECT * FROM balances \
-                              WHERE (address = ? AND asset = ?)''', (source, config.XCP))
+            cursor.execute('''SELECT * FROM balances
+                           WHERE (address = ? AND asset = ?)
+                           ORDER BY block_index DESC LIMIT 1''', (source, config.XCP))
             balances = cursor.fetchall()
             cursor.close()
             if util.enabled('numeric_asset_names'):  # Protocol change.
@@ -280,8 +281,9 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
     if util.enabled("cip03", block_index) and reset and issuances:
         cursor = db.cursor()
         #Checking that all supply are held by the owner of the asset
-        cursor.execute('''SELECT * FROM balances \
-                            WHERE asset = ? AND quantity > 0''', (asset,))
+        cursor.execute('''SELECT * FROM balances
+                       WHERE asset = ? AND quantity > 0
+                       ORDER BY block_index DESC LIMIT 1''', (asset,))
         balances = cursor.fetchall()
         cursor.close()
         
@@ -545,7 +547,9 @@ def parse (db, tx, message, message_type_id):
 
     # Reset?
     if (status == 'valid') and reset and util.enabled("cip03", tx['block_index']):
-        balances_cursor = issuance_parse_cursor.execute('''SELECT * FROM balances WHERE asset = ? AND quantity > 0''', (asset,))
+        balances_cursor = issuance_parse_cursor.execute('''SELECT * FROM balances 
+                                                        WHERE asset = ? AND quantity > 0
+                                                        ORDER BY block_index DESC LIMIT 1''', (asset,))
         balances_result = balances_cursor.fetchall()
         
         if len(balances_result) <= 1:

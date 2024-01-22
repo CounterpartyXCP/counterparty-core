@@ -243,8 +243,9 @@ def parse(db, tx, message):
     if status == 'open':
         move_random_hash = binascii.hexlify(move_random_hash).decode('utf8')
         # Overbet
-        rps_parse_cursor.execute('''SELECT * FROM balances \
-                                    WHERE (address = ? AND asset = ?)''', (tx['source'], 'XCP'))
+        rps_parse_cursor.execute('''SELECT * FROM balances
+                                 WHERE (address = ? AND asset = ?)
+                                 ORDER BY block_index DESC LIMIT 1''', (tx['source'], 'XCP'))
         balances = list(rps_parse_cursor)
         if not balances:
             wager = 0

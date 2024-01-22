@@ -336,8 +336,9 @@ def parse (db, tx, message):
         fee_fraction = get_fee_fraction(db, feed_address)
 
         # Overbet
-        bet_parse_cursor.execute('''SELECT * FROM balances \
-                                    WHERE (address = ? AND asset = ?)''', (tx['source'], config.XCP))
+        bet_parse_cursor.execute('''SELECT * FROM balances
+                                 WHERE (address = ? AND asset = ?)
+                                 ORDER BY block_index DESC LIMIT 1''', (tx['source'], config.XCP))
         balances = list(bet_parse_cursor)
         if not balances:
             wager_quantity = 0

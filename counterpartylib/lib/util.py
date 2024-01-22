@@ -366,8 +366,9 @@ def active_options(config, options):
 def remove_from_balance(db, address, asset, quantity):
     balance_cursor = db.cursor()
 
-    balance_cursor.execute('''SELECT * FROM balances \
-                            WHERE (address = ? AND asset = ?)''', (address, asset))
+    balance_cursor.execute('''SELECT * FROM balances
+                           WHERE (address = ? AND asset = ?)
+                           ORDER BY block_index DESC LIMIT 1''', (address, asset))
     balances = balance_cursor.fetchall()
     if not len(balances) == 1:
         old_balance = 0
@@ -384,9 +385,10 @@ def remove_from_balance(db, address, asset, quantity):
     bindings = {
         'quantity': balance,
         'address': address,
-        'asset': asset
+        'asset': asset,
+        'block_index': CURRENT_BLOCK_INDEX
     }
-    sql='update balances set quantity = :quantity where (address = :address and asset = :asset)'
+    sql='INSERT INTO balances VALUES (:address, :asset, :quantity, :block_index)'
     balance_cursor.execute(sql, bindings)
 
 
@@ -425,7 +427,7 @@ def debit (db, address, asset, quantity, action=None, event=None):
         'action': action,
         'event': event
     }
-    sql='insert into debits values(:block_index, :address, :asset, :quantity, :action, :event)'
+    sql='INSERT INTO debits VALUES (:block_index, :address, :asset, :quantity, :action, :event)'
     debit_cursor.execute(sql, bindings)
     debit_cursor.close()
 
@@ -435,35 +437,23 @@ def debit (db, address, asset, quantity, action=None, event=None):
 def add_to_balance(db, address, asset, quantity):
     balance_cursor = db.cursor()
 
-    balance_cursor.execute('''SELECT * FROM balances \
-                             WHERE (address = ? AND asset = ?)''', (address, asset))
+    balance_cursor.execute('''SELECT * FROM balances
+                           WHERE (address = ? AND asset = ?)
+                           ORDER BY block_index DESC LIMIT 1''', (address, asset))
     balances = balance_cursor.fetchall()
-    if len(balances) == 0:
-        assert balances == []
+    old_balance = balances[0]['quantity'] if len(balances) > 0 else 0
+    assert type(old_balance) == int
+    balance = round(old_balance + quantity)
+    balance = min(balance, config.MAX_INT)
 
-        #update balances table with new balance
-        bindings = {
-            'address': address,
-            'asset': asset,
-            'quantity': quantity,
-        }
-        sql='insert into balances values(:address, :asset, :quantity)'
-        balance_cursor.execute(sql, bindings)
-    elif len(balances) > 1:
-        assert False
-    else:
-        old_balance = balances[0]['quantity']
-        assert type(old_balance) == int
-        balance = round(old_balance + quantity)
-        balance = min(balance, config.MAX_INT)
-
-        bindings = {
-            'quantity': balance,
-            'address': address,
-            'asset': asset
-        }
-        sql='update balances set quantity = :quantity where (address = :address and asset = :asset)'
-        balance_cursor.execute(sql, bindings)
+    bindings = {
+        'quantity': balance,
+        'address': address,
+        'asset': asset,
+        'block_index': CURRENT_BLOCK_INDEX,
+    }
+    sql='INSERT INTO balances VALUES (:address, :asset, :quantity, :block_index)'
+    balance_cursor.execute(sql, bindings)
 
 
 class CreditError (Exception): pass
@@ -498,7 +488,7 @@ def credit (db, address, asset, quantity, action=None, event=None):
         'action': action,
         'event': event
     }
-    sql='insert into credits values(:block_index, :address, :asset, :quantity, :action, :event)'
+    sql='INSERT INTO credits VALUES (:block_index, :address, :asset, :quantity, :action, :event)'
 
     credit_cursor.execute(sql, bindings)
     credit_cursor.close()
@@ -606,14 +596,16 @@ def holders(db, asset, exclude_empty_holders=False):
     holders = []
     cursor = db.cursor()
     # Balances
-    if exclude_empty_holders:
-        cursor.execute('''SELECT * FROM balances \
-                          WHERE asset = ? AND quantity > ?''', (asset, 0))
-    else:
-        cursor.execute('''SELECT * FROM balances \
-                          WHERE asset = ?''', (asset, ))
-
+    cursor.execute('''SELECT * FROM balances
+                       WHERE asset = ?
+                       ORDER BY address, block_index DESC''', (asset, ))
+    saved_balances = {}
     for balance in list(cursor):
+        if saved_balances.get(balance['address']) is not None:
+            continue
+        if exclude_empty_holders and balance['quantity'] == 0:
+            continue
+        saved_balances[balance['address']] = True
         holders.append({'address': balance['address'], 'address_quantity': balance['quantity'], 'escrow': None})
     # Funds escrowed in orders. (Protocol change.)
     cursor.execute('''SELECT * FROM orders \
@@ -758,8 +750,17 @@ def supplies (db):
     return {key: d1[key] - d2.get(key, 0) for key in d1.keys()}
 
 def held (db): #TODO: Rename ?
+    
     queries = [
-        "SELECT asset, SUM(quantity) AS total FROM balances GROUP BY asset",
+        """
+        SELECT asset, SUM(quantity) AS total FROM (
+            SELECT (address || asset) AS aa, address, asset, SUM(q) AS quantity FROM (
+                SELECT (address || asset) AS aa, address, asset, SUM(quantity) AS q FROM credits GROUP BY aa
+                UNION ALL
+                SELECT (address || asset) AS aa, address, asset, -1 * SUM(quantity) AS q FROM debits GROUP BY aa
+            ) GROUP BY aa
+        ) GROUP BY asset
+        """,
         "SELECT give_asset AS asset, SUM(give_remaining) AS total FROM orders WHERE status = 'open' GROUP BY asset",
         "SELECT give_asset AS asset, SUM(give_remaining) AS total FROM orders WHERE status = 'filled' and give_asset = 'XCP' and get_asset = 'BTC' GROUP BY asset",
         "SELECT forward_asset AS asset, SUM(forward_quantity) AS total FROM order_matches WHERE status = 'pending' GROUP BY asset",
@@ -812,10 +813,12 @@ def dhash_string(text):
     return binascii.hexlify(dhash(text)).decode()
 
 
-def get_balance (db, address, asset):
+def get_balance(db, address, asset):
     """Get balance of contract or address."""
     cursor = db.cursor()
-    balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (address, asset)))
+    balances = list(cursor.execute('''SELECT * FROM balances 
+                                   WHERE (address = ? AND asset = ?) 
+                                   ORDER BY block_index DESC LIMIT 1''', (address, asset)))
     cursor.close()
     if not balances: return 0
     else: return balances[0]['quantity']
