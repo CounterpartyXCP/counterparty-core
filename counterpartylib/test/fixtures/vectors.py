@@ -1003,6 +1003,26 @@ UNITTEST_VECTOR = {
                     'address': ADDR[4]
                 }}
             ]
+        }, {
+            'comment': 'test malformed message with incorrect length',
+            'mock_protocol_changes': {'broadcast_pack_text': True},
+            'in': ({'btc_amount': 1, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'source': ADDR[4], 'destination': '', 'block_index': DP['default_block_index'], 'fee': 10000, 'supported': 1, 'block_time': 310501000, 'tx_hash': '6b4a62b80f35b0e66df4591c8a445d453d995609e2df12afe93e742bea10dd86', 'tx_index': 502,
+                    'data': b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00LK@#A 28 CHARACTERS LONG TEXT'},),
+            'out': None,
+            'records': [
+                {'table': 'broadcasts', 'values': {
+                    'block_index': DP['default_block_index'],
+                    'fee_fraction_int': 0,
+                    'locked': 0,
+                    'source': ADDR[4],
+                    'status': 'invalid: could not unpack text',
+                    'text': None,
+                    'timestamp': 0,
+                    'tx_hash': '6b4a62b80f35b0e66df4591c8a445d453d995609e2df12afe93e742bea10dd86',
+                    'tx_index': 502,
+                    'value': None,
+                }}
+            ]
         }],
     },
     'burn': {

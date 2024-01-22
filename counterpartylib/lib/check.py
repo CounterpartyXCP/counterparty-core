@@ -193,8 +193,7 @@ def software_version():
     logger.debug('Checking version.')
 
     try:
-        host = 'https://counterpartyxcp.github.io/counterparty-lib/counterpartylib/protocol_changes.json'
-        response = requests.get(host, headers={'cache-control': 'no-cache'})
+        response = requests.get(config.PROTOCOL_CHANGES_URL, headers={'cache-control': 'no-cache'})
         versions = json.loads(response.text)
     except (requests.exceptions.ConnectionError, ConnectionRefusedError, ValueError) as e:
         logger.warning('Unable to check version! ' + str(sys.exc_info()[1]))
