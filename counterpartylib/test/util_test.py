@@ -711,7 +711,7 @@ def reparse(testnet=True, block_index=0):
         while not backup.done:
             backup.step(100)
 
-    # Drop most tables (except blocks, transactions, undolog)
+    # Drop most tables (except blocks and transactions)
     memory_cursor = memory_db.cursor()
     for table in blocks.TABLES:
         memory_cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))

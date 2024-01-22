@@ -207,7 +207,6 @@ Fee/KB 0.00025000
 New input: amount: 1.36739245; txid: 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1; vout: 2; confirmations: 83
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.36731445 BTC
-first_undo_index[0]
 Broadcast: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T19:33:22 with a fee of 5.0%% (16462eac6c795cea6e5985ee063867d8c61ae24373df02048186d28118d25bae) [valid]
 Credit: XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #bet settled# <16462eac6c795cea6e5985ee063867d8c61ae24373df02048186d28118d25bae>
 Credit: XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #bet settled# <16462eac6c795cea6e5985ee063867d8c61ae24373df02048186d28118d25bae>
@@ -294,7 +293,6 @@ Fee/KB 0.00025000
 New input: amount: 0.68986575; txid: e8baf787b9e4636a3cad0ffeb62992ad7abb160dc6506af0546f566dc178de7e; vout: 1; confirmations: 2
 final_fee inputs: 1 size: 239 final_fee 5975
 Size: 239 Fee: 0.00005975 Change quantity: 0.68980600 BTC
-first_undo_index[0]
 Broadcast: 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy at 2013-12-25T19:33:22 with a fee of 5.0%% (510f6feb902159622d83f64eae590a4fec88989869a20caf5804c313aa5e0186) [valid]
 data_btc_out=0 (data_value=0 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.68980600; txid: 510f6feb902159622d83f64eae590a4fec88989869a20caf5804c313aa5e0186; vout: 1; confirmations: 1', 'amount: 0.00005430; txid: f6a0f819e899b407cbfa07b4eff3d58902af3899abfbaa47d5f31d5b398e76e7; vout: 0; confirmations: 2']
@@ -734,7 +732,6 @@ Fee/KB 0.00025000
 New input: amount: 0.45818945; txid: 65d4048700fb8ae03f321be93c6669b8497f506a1f43920f96d994f43358c35b; vout: 1; confirmations: 383
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.45811145 BTC
-first_undo_index[0]
 Broadcast: myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM at 2013-12-25T19:33:20 with a fee of 5.0%% (3b95e07a2194174ac020de27e8b2b6ee24d5fc120f118df516ba28495657cf14) [valid]
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.45811145; txid: 3b95e07a2194174ac020de27e8b2b6ee24d5fc120f118df516ba28495657cf14; vout: 1; confirmations: 1']
@@ -751,7 +748,6 @@ Fee/KB 0.00025000
 New input: amount: 0.45797065; txid: 41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.45789265 BTC
-first_undo_index[0]
 Broadcast: myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM at 2013-12-25T19:33:22 with a fee of 0.0%% (870fb08b373705423f31ccd91fdbcabe135ad92d74e709a959dfa2e12f9a6638) [valid]
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.45789265; txid: 870fb08b373705423f31ccd91fdbcabe135ad92d74e709a959dfa2e12f9a6638; vout: 1; confirmations: 1', 'amount: 0.00005430; txid: 41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef; vout: 0; confirmations: 2']
@@ -759,7 +755,6 @@ Fee/KB 0.00025000
 New input: amount: 0.45789265; txid: 870fb08b373705423f31ccd91fdbcabe135ad92d74e709a959dfa2e12f9a6638; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.45781465 BTC
-first_undo_index[0]
 Broadcast: myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM locked his feed (685d7f99fa76a05201c3239a4e0d9060ea53307b171f6ad7d482a26c73e9c0d1) [valid]
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.45795545; txid: 4ab1a24283c1dbfc710be7b215d64e8a4510ee97af019e210049c25773b50beb; vout: 1; confirmations: 375']
@@ -767,7 +762,6 @@ Fee/KB 0.00025000
 New input: amount: 0.45795545; txid: 4ab1a24283c1dbfc710be7b215d64e8a4510ee97af019e210049c25773b50beb; vout: 1; confirmations: 375
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.45787745 BTC
-first_undo_index[0]
 Broadcast: mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 at 2013-12-25T19:33:24 with a fee of 0.0%% (7c437705c315212315c85c0b8ba09d358679c91be20b54f30929c5a6052426af) [valid]
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 1.36710990; txid: b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5; vout: 1; confirmations: 10', 'amount: 0.00005430; txid: 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1; vout: 0; confirmations: 472', 'amount: 0.00005430; txid: 5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93; vout: 0; confirmations: 471', 'amount: 0.00005430; txid: db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e; vout: 0; confirmations: 390']

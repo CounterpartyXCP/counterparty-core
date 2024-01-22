@@ -4275,11 +4275,11 @@ UNITTEST_VECTOR = {
         }],
         'last_message': [{
             'in': (),
-            'out': {'bindings': "['block_index']",
-                    'block_index': 310500,
-                    'category': 'replace',
+            'out': {'bindings': "['action', 'address', 'asset', 'block_index', 'event', 'quantity']",
+                    'block_index': 310498,
+                    'category': 'credits',
                     'command': 'insert',
-                    'message_index': 631,
+                    'message_index': 129,
                     'timestamp': 0}
         }],
         'get_asset_id': [{

@@ -728,7 +728,6 @@ class APIServer(threading.Thread):
             block_indexes_str = ','.join([str(x) for x in block_indexes])
             cursor = self.db.cursor()
 
-            # The blocks table gets rolled back from undolog, so min_message_index doesn't matter for this query
             cursor.execute('SELECT * FROM blocks WHERE block_index IN (%s) ORDER BY block_index ASC'
                 % (block_indexes_str,))
             blocks = cursor.fetchall()

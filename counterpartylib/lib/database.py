@@ -26,10 +26,6 @@ def exectracer(cursor, sql, bindings):
     # TODO: Need sanity checks here.
     sql = sql.lower()
 
-    if sql.startswith('create trigger') or sql.startswith('drop trigger'):
-        #CREATE TRIGGER stmts may include an "insert" or "update" as part of them
-        return True
-
     # Parse SQL.
     array = sql.split('(')[0].split(' ')
     command = array[0]
