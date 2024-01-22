@@ -911,109 +911,13 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
     destinations = '-'.join(destinations)
     return sources, destinations, btc_amount, round(fee), data, None
 
-def reinitialise(db, block_index=None):
-    """Drop all predefined tables and initialise the database once again."""
+
+def rollback(db, block_index=0):
+    # clean all tables
     cursor = db.cursor()
+    for table in TABLES + ['balances', 'blocks', 'transaction_outputs', 'transactions']:
+        cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
 
-    # Delete all of the results of parsing
-    for table in TABLES + ['balances']:
-        cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
-
-    # Create missing tables
-    initialise(db)
-
-    # clean consensus hashes if first block hash doesn't match with checkpoint.
-    if config.TESTNET:
-        checkpoints = check.CHECKPOINTS_TESTNET
-    elif config.REGTEST:
-        checkpoints = check.CHECKPOINTS_REGTEST
-    else:
-        checkpoints = check.CHECKPOINTS_MAINNET
-
-    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(blocks)''')]
-    for field in ['ledger_hash', 'txlist_hash']:
-        if field in columns:
-            sql = '''SELECT {} FROM blocks  WHERE block_index = ?'''.format(field)
-            first_block = list(cursor.execute(sql, (config.BLOCK_FIRST,)))
-            if first_block:
-                first_hash = first_block[0][field]
-                if first_hash != checkpoints[config.BLOCK_FIRST][field]:
-                    logger.info('First hash changed. Cleaning {}.'.format(field))
-                    cursor.execute('''UPDATE blocks SET {} = NULL'''.format(field))
-
-    # For rollbacks, just delete new blocks and then reparse what’s left.
-    if block_index:
-        cursor.execute('''DELETE FROM transaction_outputs WHERE block_index > ?''', (block_index,))
-        cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
-        cursor.execute('''DELETE FROM blocks WHERE block_index > ?''', (block_index,))
-    elif config.TESTNET or config.REGTEST:  # block_index NOT specified and we are running testnet
-        # just blow away the consensus hashes with a full testnet reparse, as we could activate
-        # new features retroactively, which could otherwise lead to ConsensusError exceptions being raised.
-        logger.info("Testnet/regtest full reparse detected: Clearing all consensus hashes before performing reparse.")
-        cursor.execute('''UPDATE blocks SET ledger_hash = NULL, txlist_hash = NULL, messages_hash = NULL''')
-
-    cursor.close()
-
-def reparse(db, block_index=None, quiet=False):
-    """Reparse all transactions (atomically). If block_index is set, rollback
-    to the end of that block.
-    """
-
-    if block_index:
-        logger.info('Rolling back transactions to block {}.'.format(block_index))
-    else:
-        logger.info('Reparsing all transactions.')
-
-    check.software_version()
-    reparse_start = time.time()
-
-    cursor = db.cursor()
-
-    if quiet:
-        root_logger = logging.getLogger()
-        root_level = logger.getEffectiveLevel()
-
-    with db:
-        reinitialise(db, block_index)
-
-        # Reparse all blocks, transactions.
-        if quiet:
-            root_logger.setLevel(logging.WARNING)
-
-        previous_ledger_hash, previous_txlist_hash, previous_messages_hash = None, None, None
-        cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
-        for block in cursor.fetchall():
-            util.CURRENT_BLOCK_INDEX = block['block_index']
-            previous_ledger_hash, previous_txlist_hash, previous_messages_hash, previous_found_messages_hash = parse_block(
-                                                                        db, block['block_index'], block['block_time'],
-                                                                        previous_ledger_hash=previous_ledger_hash,
-                                                                        previous_txlist_hash=previous_txlist_hash,
-                                                                        previous_messages_hash=previous_messages_hash)
-            if quiet and block['block_index'] % 10 == 0:  # every 10 blocks print status
-                root_logger.setLevel(logging.INFO)
-            logger.info('Block (re-parse): %s (hashes: L:%s / TX:%s / M:%s%s)' % (
-                block['block_index'], previous_ledger_hash[-5:], previous_txlist_hash[-5:], previous_messages_hash[-5:],
-                (' [overwrote %s]' % previous_found_messages_hash) if previous_found_messages_hash and previous_found_messages_hash != previous_messages_hash else ''))
-            if quiet and block['block_index'] % 10 == 0:
-                root_logger.setLevel(logging.WARNING)
-
-    if quiet:
-        root_logger.setLevel(root_level)
-
-    with db:
-        # Check for conservation of assets.
-        check.asset_conservation(db)
-
-        # Update database version number.
-        database.update_version(db)
-
-    cursor.close()
-    reparse_end = time.time()
-    logger.info("Reparse took {:.3f} minutes.".format((reparse_end - reparse_start) / 60.0))
-
-    # on full reparse - vacuum the DB afterwards for better subsequent performance (especially on non-SSDs)
-    if not block_index:
-        database.vacuum(db)
 
 def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=None, block_parser=None):
     assert type(tx_hash) == str
@@ -1321,11 +1225,10 @@ def follow(db):
             check.database_version(db)
         except check.DatabaseVersionError as e:
             logger.info(str(e))
-            # no need to reparse or rollback a new database
+            # no need to rollback a new database
             if block_index != config.BLOCK_FIRST:
-                reparse(db, block_index=e.reparse_block_index, quiet=False)
-            else: #version update was included in reparse(), so don't do it twice
-                database.update_version(db)
+                rollback(db, block_index=e.rollback_block_index, quiet=False)
+            database.update_version(db)
 
     logger.info('Resuming parsing.')
 
@@ -1402,7 +1305,7 @@ def follow(db):
                 log.message(db, block_index, 'reorg', None, {'block_index': current_index})
 
                 # Rollback the DB.
-                reparse(db, block_index=current_index-1, quiet=True)
+                rollback(db, block_index=current_index - 1)
                 block_index = current_index
                 tx_index = get_next_tx_index(db)
                 continue

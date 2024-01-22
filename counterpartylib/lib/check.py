@@ -120,7 +120,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
         except IndexError:
             previous_consensus_hash = None
         if not previous_consensus_hash:
-            raise ConsensusError('Empty previous {} for block {}. Please launch a `reparse`.'.format(field, block_index))
+            raise ConsensusError('Empty previous {} for block {}. Please launch a `rollback`.'.format(field, block_index))
 
     # Calculate current hash.
     if config.TESTNET:
@@ -222,9 +222,9 @@ def software_version():
 
 
 class DatabaseVersionError(Exception):
-    def __init__(self, message, reparse_block_index):
+    def __init__(self, message, rollback_block_index):
         super(DatabaseVersionError, self).__init__(message)
-        self.reparse_block_index = reparse_block_index
+        self.rollback_block_index = rollback_block_index
 
 def database_version(db):
     if config.FORCE:
@@ -235,8 +235,5 @@ def database_version(db):
     if version_major != config.VERSION_MAJOR:
         # Rollback database if major version has changed.
         raise DatabaseVersionError('Client major version number mismatch ({} ≠ {}).'.format(version_major, config.VERSION_MAJOR), config.BLOCK_FIRST)
-    elif version_minor != config.VERSION_MINOR:
-        # Reparse all transactions if minor version has changed.
-        raise DatabaseVersionError('Client minor version number mismatch ({} ≠ {}).'.format(version_minor, config.VERSION_MINOR), None)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
