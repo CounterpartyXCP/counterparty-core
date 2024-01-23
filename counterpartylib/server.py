@@ -471,7 +471,6 @@ def initialise_db():
 
 def connect_to_backend():
     if not config.FORCE:
-        logger.info('Connecting to backend.')
         backend.getblockcount()
 
 

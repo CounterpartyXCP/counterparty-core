@@ -24,6 +24,7 @@ import apsw
 import bitcoin as bitcoinlib
 from bitcoin.core.script import CScriptInvalidError
 
+from counterpartylib import server
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
