@@ -353,7 +353,7 @@ def parse (db, tx, message):
                                 }).fetchall()
                                 if len(address_assets) > 0:
                                     for asset_name in address_assets:
-                                        asset_balance = util.get_balance(db, action_address, asset_name)
+                                        asset_balance = util.get_balance(db, action_address, asset_name['asset'])
                                         if asset_balance > 0:
                                             is_empty_address = False
                                             break
