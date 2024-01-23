@@ -548,21 +548,21 @@ def parse (db, tx, message, message_type_id):
     # Reset?
     if (status == 'valid') and reset and util.enabled("cip03", tx['block_index']):
         balances_cursor = issuance_parse_cursor.execute('''SELECT * FROM balances 
-                                                        WHERE asset = ? AND quantity > 0
+                                                        WHERE asset = ?
                                                         ORDER BY block_index DESC LIMIT 1''', (asset,))
         balances_result = balances_cursor.fetchall()
-        
+
         if len(balances_result) <= 1:
             if len(balances_result) == 0:
                 issuances_cursor = issuance_parse_cursor.execute('''SELECT * FROM issuances WHERE asset = ? ORDER BY tx_index DESC''', (asset,))
                 issuances_result = issuances_cursor.fetchall()
-                
+
                 owner_balance = 0
                 owner_address = issuances_result[0]['issuer']
             else:
                 owner_balance = balances_result[0]["quantity"]
                 owner_address = balances_result[0]["address"]
-            
+
             if owner_address == tx['source']:
                 if owner_balance > 0:
                     util.debit(db, tx['source'], asset, owner_balance, 'reset destroy', tx['tx_hash'])
