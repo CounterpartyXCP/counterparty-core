@@ -162,6 +162,8 @@ def compose (db, source, quantity_per_unit, asset, dividend_asset):
 def parse (db, tx, message):
     dividend_parse_cursor = db.cursor()
 
+    fee = 0
+
     # Unpack message.
     try:
         if (tx['block_index'] > 288150 or config.TESTNET or config.REGTEST) and len(message) == LENGTH_2:
