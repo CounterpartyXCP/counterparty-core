@@ -2,7 +2,6 @@ import binascii
 import logging
 logger = logging.getLogger(__name__)
 import sys
-import functools
 import time
 from decimal import Decimal as D
 
@@ -119,7 +118,6 @@ def fee_per_kb(conf_target, mode, nblocks=None):
     return BACKEND().fee_per_kb(conf_target, mode, nblocks=nblocks)
 
 
-@functools.cache
 def deserialize(tx_hex):
     return bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
 
