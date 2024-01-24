@@ -153,7 +153,8 @@ def consensus_hash(db, field, previous_consensus_hash, content):
         checkpoints = CHECKPOINTS_MAINNET
 
     if field != 'messages_hash' and block_index in checkpoints and checkpoints[block_index][field] != calculated_hash:
-        raise ConsensusError('Incorrect {} hash for block {}.  Calculated {} but expected {}'.format(field, block_index, calculated_hash, checkpoints[block_index][field],))
+        error_message = 'Incorrect {} hash for block {}.  Calculated {} but expected {}'.format(field, block_index, calculated_hash, checkpoints[block_index][field])
+        raise ConsensusError(error_message)
 
     return calculated_hash, found_hash
 
@@ -235,5 +236,8 @@ def database_version(db):
     if version_major != config.VERSION_MAJOR:
         # Rollback database if major version has changed.
         raise DatabaseVersionError('Client major version number mismatch ({} ≠ {}).'.format(version_major, config.VERSION_MAJOR), config.BLOCK_FIRST)
-
+    elif version_minor != config.VERSION_MINOR:
+        # TODO: Reparse transactions from the vesion block if minor version has changed.
+        pass
+        # raise DatabaseVersionError('Client minor version number mismatch ({} ≠ {}).'.format(version_minor, config.VERSION_MINOR), None)
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

@@ -231,7 +231,7 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
                     #It means that the same origin has not opened other dispensers in this address
                         cursor.execute('''SELECT count(*) cnt FROM balances WHERE address = ?''', (query_address,))
                         existing_balances = cursor.fetchall()
-                    
+
                         if existing_balances[0]['cnt'] > 0:
                             problems.append('cannot open on another address if it has any balance history')
                         
@@ -246,9 +246,9 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
                     problems.append('cannot dispense %s' % asset) # How can we test this on a test vector?
         else:
             problems.append('address has already a dispenser about to close, no action can be taken until it closes')
-    
+
     cursor.close()
-    
+
     if oracle_address is not None and util.enabled('oracle_dispensers', block_index):
         last_price, last_fee, last_label, last_updated = util.get_oracle_last_price(db, oracle_address, block_index)
         

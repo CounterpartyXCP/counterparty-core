@@ -1090,9 +1090,6 @@ def kickstart(bitcoind_dir, force=False, last_hash=None, resume=True):
     else:
         first_hash = config.BLOCK_FIRST_MAINNET_HASH
 
-    #print("block: " + str(backend.get_oldest_tx("mtQ21ubev7pJkbycQzAVzc36y5jA1KjDjG")))
-    #exit()
-
     start_time_total = time.time()
 
     # Get hash of last known block.
