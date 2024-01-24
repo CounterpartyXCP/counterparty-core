@@ -10,8 +10,9 @@ def compare_strings(string1, string2):
     """Compare strings diff-style."""
     diff = list(difflib.unified_diff(string1.splitlines(1), string2.splitlines(1), n=0))
     if len(diff):
-        print("\nDifferences:")
+        print(f"\n{len(diff)} Differences:")
         print("\n".join(diff))
+        print(f"\n{len(diff)} differences")
     return len(diff)
 
 
@@ -19,26 +20,19 @@ def get_ledger(database_file):
     db = apsw.Connection(database_file, flags=apsw.SQLITE_OPEN_READONLY)
     cursor = db.cursor()
 
-    query = """SELECT 'credit' as table_name, * FROM credits ORDER BY block_index
+    query = """SELECT 'credit' as table_name, * FROM credits WHERE block_index
             UNION ALL
-            SELECT 'debits' as table_name, * FROM debits ORDER BY block_index"""
+            SELECT 'debits' as table_name, * FROM debits WHERE block_index
+            """
 
     cursor.execute(query)
 
     rows = []
     for row in cursor:
-        rows.append([
-            row['table_name'],
-            row['block_index'],
-            row['address'],
-            row['asset'],
-            row['quantity'],
-            row['calling_function'],
-            row['event'],
-        ])
+        rows.append(", ".join([str(x) for x in row]))
     rows_str = "\n".join(rows)
 
-    return "{database_file}\n{rows_str}"
+    return f"{database_file}\n{rows_str}"
 
 database_file_1 = sys.argv[1]
 database_file_2 = sys.argv[2]
