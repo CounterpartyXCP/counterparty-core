@@ -451,7 +451,6 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     logger.info('Running v{} of counterparty-lib.'.format(config.VERSION_STRING))
 
 
-
 def initialise_db():
     if config.FORCE:
         logger.warning('THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.')
@@ -491,6 +490,11 @@ def start_all(db):
 
     # Server
     blocks.follow(db)
+
+
+def reparse(db, block_index):
+    connect_to_backend()
+    blocks.reparse(db, block_index=block_index)
 
 
 def rollback(db, block_index=None, quiet=True):

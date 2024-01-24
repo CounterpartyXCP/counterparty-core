@@ -185,6 +185,7 @@ A `counterparty-client` configuration file looks like this:
 ## Versioning
 
 * Major version changes require a full (automatic) rebuild of the database.
+* Minor version changes require a(n automatic) database reparse.
 * All protocol changes are retroactive on testnet.
 
 ## Continuous integration

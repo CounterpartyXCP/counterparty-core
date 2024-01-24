@@ -50,7 +50,7 @@ from counterpartylib.lib import prefetcher
 NUM_PREFETCHER_THREADS = 10
 
 # Order matters for FOREIGN KEY constraints.
-TABLES = ['credits', 'debits', 'messages'] + \
+TABLES = ['balances', 'credits', 'debits', 'messages'] + \
          ['bet_match_resolutions', 'order_match_expirations', 'order_matches',
          'order_expirations', 'orders', 'bet_match_expirations', 'bet_matches',
          'bet_expirations', 'bets', 'broadcasts', 'btcpays', 'burns',
@@ -916,7 +916,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
 def rollback(db, block_index=0):
     # clean all tables
     cursor = db.cursor()
-    for table in TABLES + ['balances', 'blocks', 'transaction_outputs', 'transactions']:
+    for table in TABLES + ['blocks', 'transaction_outputs', 'transactions']:
         cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
 
 
@@ -1089,6 +1089,9 @@ def kickstart(bitcoind_dir, force=False, last_hash=None, resume=True):
         first_hash = config.BLOCK_FIRST_REGTEST_HASH
     else:
         first_hash = config.BLOCK_FIRST_MAINNET_HASH
+
+    #print("block: " + str(backend.get_oldest_tx("mtQ21ubev7pJkbycQzAVzc36y5jA1KjDjG")))
+    #exit()
 
     start_time_total = time.time()
 
