@@ -21,7 +21,7 @@ services:
       -  "-mempoolfullrbf=1"
 
     volumes:
-      - backend-data:/bitcoin/.bitcoin
+      - bitcoind-data:/bitcoin/.bitcoin
 
   addrindexrs:
     image: counterparty/addrindexrs
@@ -59,6 +59,6 @@ services:
       - "--api-log-file=1"
 
 volumes:
-  backend-data:
+  bitcoind-data:
   addrindexrs-data:
   counterparty-data:
