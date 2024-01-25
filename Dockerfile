@@ -1,6 +1,5 @@
 FROM ubuntu:22.04
 
-RUN uname -a
 RUN apt-get update
 RUN apt install -y python3-pip wget git
 
