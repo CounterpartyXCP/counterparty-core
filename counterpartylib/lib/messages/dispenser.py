@@ -356,13 +356,13 @@ def parse (db, tx, message):
                                             break
 
                                 if is_empty_address:
-                                    util.debit(db, tx['source'], asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
-                                    util.credit(db, action_address, asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
-                                    util.debit(db, action_address, asset, escrow_quantity, action='open dispenser empty addr', event=tx['tx_hash'])
+                                    util.debit(db, tx['source'], asset, escrow_quantity, tx['tx_index'], action='open dispenser empty addr', event=tx['tx_hash'])
+                                    util.credit(db, action_address, asset, escrow_quantity, tx['tx_index'], action='open dispenser empty addr', event=tx['tx_hash'])
+                                    util.debit(db, action_address, asset, escrow_quantity, tx['tx_index'], action='open dispenser empty addr', event=tx['tx_hash'])
                                 else:
                                     status = 'invalid: address not empty'
                             else:
-                                util.debit(db, tx['source'], asset, escrow_quantity, action='open dispenser', event=tx['tx_hash'])
+                                util.debit(db, tx['source'], asset, escrow_quantity, tx['tx_index'], action='open dispenser', event=tx['tx_hash'])
                         except util.DebitError as e:
                             status = 'invalid: insufficient funds'
 
@@ -421,7 +421,7 @@ def parse (db, tx, message):
                             }
                             
                             try:
-                                util.debit(db, tx['source'], asset, escrow_quantity, action='refill dispenser', event=tx['tx_hash'])
+                                util.debit(db, tx['source'], asset, escrow_quantity, tx['tx_index'], action='refill dispenser', event=tx['tx_hash'])
                                 sql = 'UPDATE dispensers SET give_remaining=:give_remaining \
                                     WHERE source=:source AND asset=:asset AND status=:status'
                                 cursor.execute(sql, bindings)
@@ -453,7 +453,7 @@ def parse (db, tx, message):
 
                 if len(existing) == 1:
                     if close_delay == 0:
-                        util.credit(db, tx['source'], asset, existing[0]['give_remaining'], action='close dispenser', event=tx['tx_hash'])
+                        util.credit(db, tx['source'], asset, existing[0]['give_remaining'], tx['tx_index'], action='close dispenser', event=tx['tx_hash'])
                         
                         bindings = {
                             'source': tx['source'],
@@ -558,7 +558,7 @@ def dispense(db, tx):
                 if util.enabled('zero_quantity_value_adjustment_1') and actually_given==0:
                     continue
 
-                util.credit(db, next_out['source'], dispenser['asset'], actually_given, action='dispense', event=next_out['tx_hash'])
+                util.credit(db, next_out['source'], dispenser['asset'], actually_given, tx['tx_index'], action='dispense', event=next_out['tx_hash'])
 
                 # Checking if the dispenser reach its max dispenses limit
                 max_dispenses_limit = util.get_value_by_block_index("max_dispenses_limit", next_out["block_index"])
@@ -595,7 +595,7 @@ def dispense(db, tx):
                             dispenser['closing_reason'] = "no_more_to_give"
                         
                         # return the remaining to the owner
-                        util.credit(db, dispenser['source'], dispenser['asset'], give_remaining, action=credit_action, event=next_out['tx_hash'])
+                        util.credit(db, dispenser['source'], dispenser['asset'], give_remaining, tx['tx_index'], action=credit_action, event=next_out['tx_hash'])
                     else:
                         dispenser['closing_reason'] = "depleted"
                     dispenser['status'] = STATUS_CLOSED
@@ -636,7 +636,8 @@ def close_pending(db, block_index):
         pending_dispensers = cursor.fetchall()
 
         for dispenser in pending_dispensers:
-            util.credit(db, dispenser['tx_source'], dispenser['asset'], dispenser['give_remaining'], action='close dispenser', event=dispenser['last_status_tx_hash'])
+            # use tx_index=0 for block actions
+            util.credit(db, dispenser['tx_source'], dispenser['asset'], dispenser['give_remaining'], 0, action='close dispenser', event=dispenser['last_status_tx_hash'])
                         
             bindings = {
                 'source': dispenser['tx_source'],

@@ -131,7 +131,7 @@ def parse (db, tx, message):
         if tx['btc_amount'] >= btc_quantity:
 
             # Credit source address for the currency that he bought with the bitcoins.
-            util.credit(db, tx['source'], escrowed_asset, escrowed_quantity, action='btcpay', event=tx['tx_hash'])
+            util.credit(db, tx['source'], escrowed_asset, escrowed_quantity, tx['tx_index'], action='btcpay', event=tx['tx_hash'])
             status = 'valid'
 
             # Update order match.

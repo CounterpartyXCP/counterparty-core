@@ -100,13 +100,13 @@ def parse (db, tx, message):
     if status == 'valid':
         # Cancel if order.
         if offer_type == 'order':
-            order.cancel_order(db, offer, 'cancelled', tx['block_index'])
+            order.cancel_order(db, offer, 'cancelled', tx['block_index'], tx['tx_index'])
         # Cancel if bet.
         elif offer_type == 'bet':
-            bet.cancel_bet(db, offer, 'cancelled', tx['block_index'])
+            bet.cancel_bet(db, offer, 'cancelled', tx['block_index'], tx['tx_index'])
         # Cancel if rps.
         elif offer_type == 'rps':
-            rps.cancel_rps(db, offer, 'cancelled', tx['block_index'])
+            rps.cancel_rps(db, offer, 'cancelled', tx['block_index'], tx['tx_index'])
         # If neither order or bet, mark as invalid.
         else:
             assert False

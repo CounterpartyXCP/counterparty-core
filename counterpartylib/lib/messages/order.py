@@ -172,7 +172,7 @@ def exact_penalty (db, address, block_index, order_match_id):
     return
 
 
-def cancel_order (db, order, status, block_index):
+def cancel_order (db, order, status, block_index, tx_index):
     cursor = db.cursor()
 
     # Update status of order.
@@ -185,7 +185,7 @@ def cancel_order (db, order, status, block_index):
     log.message(db, block_index, 'update', 'orders', bindings)
 
     if order['give_asset'] != config.BTC:    # Can’t credit BTC.
-        util.credit(db, order['source'], order['give_asset'], order['give_remaining'], action='cancel order', event=order['tx_hash'])
+        util.credit(db, order['source'], order['give_asset'], order['give_remaining'], tx_index, action='cancel order', event=order['tx_hash'])
 
     if status == 'expired':
         # Record offer expiration.
@@ -200,7 +200,7 @@ def cancel_order (db, order, status, block_index):
 
     cursor.close()
 
-def cancel_order_match (db, order_match, status, block_index):
+def cancel_order_match (db, order_match, status, block_index, tx_index):
     '''The only cancelling is an expiration.
     '''
 
@@ -237,7 +237,7 @@ def cancel_order_match (db, order_match, status, block_index):
         if order_match['forward_asset'] != config.BTC:
             util.credit(db, order_match['tx0_address'],
                         order_match['forward_asset'],
-                        order_match['forward_quantity'], action='order {}'.format(tx0_order_status), event=order_match['id'])
+                        order_match['forward_quantity'], tx_index, action='order {}'.format(tx0_order_status), event=order_match['id'])
     else:
         tx0_give_remaining = tx0_order['give_remaining'] + order_match['forward_quantity']
         tx0_get_remaining = tx0_order['get_remaining'] + order_match['backward_quantity']
@@ -273,7 +273,7 @@ def cancel_order_match (db, order_match, status, block_index):
         if order_match['backward_asset'] != config.BTC:
             util.credit(db, order_match['tx1_address'],
                         order_match['backward_asset'],
-                        order_match['backward_quantity'], action='order {}'.format(tx1_order_status), event=order_match['id'])
+                        order_match['backward_quantity'], tx_index, action='order {}'.format(tx1_order_status), event=order_match['id'])
     else:
         tx1_give_remaining = tx1_order['give_remaining'] + order_match['backward_quantity']
         tx1_get_remaining = tx1_order['get_remaining'] + order_match['forward_quantity']
@@ -451,7 +451,7 @@ def parse (db, tx, message):
     # Debit give quantity. (Escrow.)
     if status == 'open':
         if give_asset != config.BTC:  # No need (or way) to debit BTC.
-            util.debit(db, tx['source'], give_asset, give_quantity, action='open order', event=tx['tx_hash'])
+            util.debit(db, tx['source'], give_asset, give_quantity, tx['tx_index'], action='open order', event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
@@ -649,9 +649,9 @@ def match (db, tx, block_index=None):
                 status = 'completed'
                 # Credit.
                 util.credit(db, tx1['source'], tx1['get_asset'],
-                                    forward_quantity, action='order match', event=order_match_id)
+                                    forward_quantity, tx['block_index'], action='order match', event=order_match_id)
                 util.credit(db, tx0['source'], tx0['get_asset'],
-                                    backward_quantity, action='order match', event=order_match_id)
+                                    backward_quantity, tx['block_index'], action='order match', event=order_match_id)
 
             # Debit the order, even if it involves giving bitcoins, and so one
             # can't debit the sending account.
@@ -668,7 +668,7 @@ def match (db, tx, block_index=None):
                 if tx0['give_asset'] != config.BTC and tx0['get_asset'] != config.BTC:
                     # Fill order, and recredit give_remaining.
                     tx0_status = 'filled'
-                    util.credit(db, tx0['source'], tx0['give_asset'], tx0_give_remaining, event=tx1['tx_hash'], action='filled')
+                    util.credit(db, tx0['source'], tx0['give_asset'], tx0_give_remaining, tx['block_index'], event=tx1['tx_hash'], action='filled')
             bindings = {
                 'give_remaining': tx0_give_remaining,
                 'get_remaining': tx0_get_remaining,
@@ -685,7 +685,7 @@ def match (db, tx, block_index=None):
                 if tx1['give_asset'] != config.BTC and tx1['get_asset'] != config.BTC:
                     # Fill order, and recredit give_remaining.
                     tx1_status = 'filled'
-                    util.credit(db, tx1['source'], tx1['give_asset'], tx1_give_remaining, event=tx0['tx_hash'], action='filled')
+                    util.credit(db, tx1['source'], tx1['give_asset'], tx1_give_remaining, tx['block_index'], event=tx0['tx_hash'], action='filled')
             bindings = {
                 'give_remaining': tx1_give_remaining,
                 'get_remaining': tx1_get_remaining,
@@ -745,14 +745,14 @@ def expire (db, block_index):
                       WHERE (status = ? AND expire_index < ?)''', ('open', block_index))
     orders = list(cursor)
     for order in orders:
-        cancel_order(db, order, 'expired', block_index)
+        cancel_order(db, order, 'expired', block_index, 0)
 
     # Expire order_matches for BTC with no BTC.
     cursor.execute('''SELECT * FROM order_matches \
                       WHERE (status = ? and match_expire_index < ?)''', ('pending', block_index))
     order_matches = list(cursor)
     for order_match in order_matches:
-        cancel_order_match(db, order_match, 'expired', block_index)
+        cancel_order_match(db, order_match, 'expired', block_index, 0)
 
         # Expire btc sell order if match expires
         if util.enabled('btc_sell_expire_on_match_expire'):

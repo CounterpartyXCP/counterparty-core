@@ -172,7 +172,7 @@ def initialise (db):
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index))
                    ''')
 
-def cancel_bet (db, bet, status, block_index):
+def cancel_bet (db, bet, status, block_index, tx_index):
     cursor = db.cursor()
 
     # Update status of bet.
@@ -184,22 +184,22 @@ def cancel_bet (db, bet, status, block_index):
     cursor.execute(sql, bindings)
     log.message(db, block_index, 'update', 'bets', bindings)
 
-    util.credit(db, bet['source'], config.XCP, bet['wager_remaining'], action='recredit wager remaining', event=bet['tx_hash'])
+    util.credit(db, bet['source'], config.XCP, bet['wager_remaining'], tx_index, action='recredit wager remaining', event=bet['tx_hash'])
 
     cursor = db.cursor()
 
-def cancel_bet_match (db, bet_match, status, block_index):
+def cancel_bet_match (db, bet_match, status, block_index, tx_index):
     # Does not re‐open, re‐fill, etc. constituent bets.
 
     cursor = db.cursor()
 
     # Recredit tx0 address.
     util.credit(db, bet_match['tx0_address'], config.XCP,
-                bet_match['forward_quantity'], action='recredit forward quantity', event=bet_match['id'])
+                bet_match['forward_quantity'], tx_index, action='recredit forward quantity', event=bet_match['id'])
 
     # Recredit tx1 address.
     util.credit(db, bet_match['tx1_address'], config.XCP,
-                bet_match['backward_quantity'], action='recredit backward quantity', event=bet_match['id'])
+                bet_match['backward_quantity'], tx_index, action='recredit backward quantity', event=bet_match['id'])
 
     # Update status of bet match.
     bindings = {
@@ -350,7 +350,7 @@ def parse (db, tx, message):
 
     # Debit quantity wagered. (Escrow.)
     if status == 'open':
-        util.debit(db, tx['source'], config.XCP, wager_quantity, action='bet', event=tx['tx_hash'])
+        util.debit(db, tx['source'], config.XCP, wager_quantity, tx['tx_index'], action='bet', event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
@@ -488,7 +488,7 @@ def match (db, tx):
             if tx0_wager_remaining <= 0 or tx0_counterwager_remaining <= 0:
                 # Fill order, and recredit give_remaining.
                 tx0_status = 'filled'
-                util.credit(db, tx0['source'], config.XCP, tx0_wager_remaining, event=tx1['tx_hash'], action='filled')
+                util.credit(db, tx0['source'], config.XCP, tx0_wager_remaining, tx['tx_index'], event=tx1['tx_hash'], action='filled')
             bindings = {
                 'wager_remaining': tx0_wager_remaining,
                 'counterwager_remaining': tx0_counterwager_remaining,
@@ -503,7 +503,7 @@ def match (db, tx):
                 if tx1_wager_remaining <= 0 or tx1_counterwager_remaining <= 0:
                     # Fill order, and recredit give_remaining.
                     tx1_status = 'filled'
-                    util.credit(db, tx1['source'], config.XCP, tx1_wager_remaining, event=tx1['tx_hash'], action='filled')
+                    util.credit(db, tx1['source'], config.XCP, tx1_wager_remaining, tx['tx_index'], event=tx1['tx_hash'], action='filled')
             # tx1
             bindings = {
                 'wager_remaining': tx1_wager_remaining,
@@ -559,7 +559,8 @@ def expire (db, block_index, block_time):
     cursor.execute('''SELECT * FROM bets \
                       WHERE (status = ? AND expire_index < ?)''', ('open', block_index))
     for bet in cursor.fetchall():
-        cancel_bet(db, bet, 'expired', block_index)
+        # use tx_index=0 for block actions
+        cancel_bet(db, bet, 'expired', block_index, 0)
 
         # Record bet expiration.
         bindings = {
@@ -575,7 +576,8 @@ def expire (db, block_index, block_time):
     cursor.execute('''SELECT * FROM bet_matches \
                       WHERE (status = ? AND deadline < ?)''', ('pending', block_time - config.TWO_WEEKS))
     for bet_match in cursor.fetchall():
-        cancel_bet_match(db, bet_match, 'expired', block_index)
+        # use tx_index=0 for block actions
+        cancel_bet_match(db, bet_match, 'expired', block_index, 0)
 
         # Record bet match expiration.
         bindings = {

@@ -194,14 +194,14 @@ def parse (db, tx, message):
 
     if status == 'valid':
         # Debit.
-        util.debit(db, tx['source'], dividend_asset, dividend_total, action='dividend', event=tx['tx_hash'])
+        util.debit(db, tx['source'], dividend_asset, dividend_total, tx['tx_index'], action='dividend', event=tx['tx_hash'])
         if tx['block_index'] >= 330000 or config.TESTNET or config.REGTEST: # Protocol change.
-            util.debit(db, tx['source'], config.XCP, fee, action='dividend fee', event=tx['tx_hash'])
+            util.debit(db, tx['source'], config.XCP, fee, tx['tx_index'], action='dividend fee', event=tx['tx_hash'])
 
         # Credit.
         for output in outputs:
             if not util.enabled('dont_credit_zero_dividend') or output['dividend_quantity'] > 0:
-                util.credit(db, output['address'], dividend_asset, output['dividend_quantity'], action='dividend', event=tx['tx_hash'])
+                util.credit(db, output['address'], dividend_asset, output['dividend_quantity'], tx['tx_index'], action='dividend', event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

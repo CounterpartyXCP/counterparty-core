@@ -555,7 +555,7 @@ def parse (db, tx, message, message_type_id):
 
             if owner_address == tx['source']:
                 if owner_balance > 0:
-                    util.debit(db, tx['source'], asset, owner_balance, 'reset destroy', tx['tx_hash'])
+                    util.debit(db, tx['source'], asset, owner_balance, tx['tx_index'], 'reset destroy', tx['tx_hash'])
                     
                     bindings = {
                         'tx_index': tx['tx_index'],
@@ -597,7 +597,7 @@ def parse (db, tx, message, message_type_id):
             
                 # Credit.
                 if quantity:
-                    util.credit(db, tx['source'], asset, quantity, action="reset issuance", event=tx['tx_hash'])
+                    util.credit(db, tx['source'], asset, quantity, tx['tx_index'], action="reset issuance", event=tx['tx_hash'])
 
     else:
         if tx['destination']:
@@ -610,7 +610,7 @@ def parse (db, tx, message, message_type_id):
 
         # Debit fee.
         if status == 'valid':
-            util.debit(db, tx['source'], config.XCP, fee, action="issuance fee", event=tx['tx_hash'])
+            util.debit(db, tx['source'], config.XCP, fee, tx['tx_index'], action="issuance fee", event=tx['tx_hash'])
 
         # Lock?
         if not isinstance(lock,bool):
@@ -673,7 +673,7 @@ def parse (db, tx, message, message_type_id):
 
         # Credit.
         if status == 'valid' and quantity:
-            util.credit(db, tx['source'], asset, quantity, action="issuance", event=tx['tx_hash'])
+            util.credit(db, tx['source'], asset, quantity, tx['tx_index'], action="issuance", event=tx['tx_hash'])
 
         issuance_parse_cursor.close()
 

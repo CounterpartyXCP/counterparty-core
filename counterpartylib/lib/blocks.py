@@ -296,6 +296,9 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       asset_idx ON debits (asset)
                    ''')
+    debits_columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(debits)''')]
+    if 'tx_index' not in debits_columns:
+        cursor.execute('''ALTER TABLE debits ADD COLUMN tx_index INTEGER''')
 
     # (Valid) credits
     cursor.execute('''CREATE TABLE IF NOT EXISTS credits(
@@ -313,6 +316,9 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       asset_idx ON credits (asset)
                    ''')
+    credits_columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(credits)''')]
+    if 'tx_index' not in credits_columns:
+        cursor.execute('''ALTER TABLE credits ADD COLUMN tx_index INTEGER''')
 
     # Balances
     cursor.execute('''CREATE TABLE IF NOT EXISTS balances(
@@ -330,24 +336,11 @@ def initialise(db):
                       asset_idx ON balances (asset)
                    ''')
     balances_columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(balances)''')]
+    # TODO: add foreign key constraint
     if 'block_index' not in balances_columns:
-        logger.info('Adding block_index column to balances table...')
         cursor.execute('''ALTER TABLE balances ADD COLUMN block_index INTEGER''')
-        cursor.execute('''SELECT * FROM balances''')
-        for balance in cursor.fetchall():
-            balance_block_index = 0
-            for table_name in ['credits', 'debits']:
-                last_movement = list(cursor.execute(f'''SELECT * FROM {table_name}
-                                                            WHERE address=? AND asset=?
-                                                            ORDER BY block_index DESC LIMIT 1''',
-                                                            (balance['address'], balance['asset'])))
-                last_block_index = last_movement.pop()['block_index'] if len(last_movement) else 0
-                if last_block_index > balance_block_index:
-                    balance_block_index = last_block_index
-            assert balance_block_index != 0
-            cursor.execute('''UPDATE balances SET block_index=? WHERE address=? AND asset=?''', (balance_block_index, balance['address'], balance['asset']))
-
-        # TODO: add foreign key constraint
+    if 'tx_index' not in balances_columns:
+        cursor.execute('''ALTER TABLE balances ADD COLUMN tx_index INTEGER''')
 
     # Assets
     # TODO: Store more asset info here?!

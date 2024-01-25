@@ -170,8 +170,8 @@ def parse (db, tx, message):
             status = 'invalid: insufficient funds'
 
     if status == 'valid':
-        util.debit(db, tx['source'], asset, quantity, action='send', event=tx['tx_hash'])
-        util.credit(db, destination, asset, quantity, action='send', event=tx['tx_hash'])
+        util.debit(db, tx['source'], asset, quantity, tx['tx_index'], action='send', event=tx['tx_hash'])
+        util.credit(db, destination, asset, quantity, tx['tx_index'], action='send', event=tx['tx_hash'])
 
     # log invalid transactions
     if status != 'valid':

@@ -103,7 +103,7 @@ def parse (db, tx, MAINNET_BURNS, message=None):
             earned = round(burned * multiplier)
 
             # Credit source address with earned XCP.
-            util.credit(db, tx['source'], config.XCP, earned, action='burn', event=tx['tx_hash'])
+            util.credit(db, tx['source'], config.XCP, earned, tx['tx_index'], action='burn', event=tx['tx_hash'])
         else:
             burned = 0
             earned = 0
@@ -121,7 +121,7 @@ def parse (db, tx, MAINNET_BURNS, message=None):
         except KeyError:
             return
 
-        util.credit(db, line['source'], config.XCP, int(line['earned']), action='burn', event=line['tx_hash'])
+        util.credit(db, line['source'], config.XCP, int(line['earned']), tx['tx_index'], action='burn', event=line['tx_hash'])
 
         tx_index = tx['tx_index']
         tx_hash = line['tx_hash']

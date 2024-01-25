@@ -234,14 +234,14 @@ def parse (db, tx, message):
                               WHERE (status = ? AND feed_address = ?)''',
                            ('open', tx['source']))
             for i in list(cursor):
-                bet.cancel_bet(db, i, 'dropped', tx['block_index'])
+                bet.cancel_bet(db, i, 'dropped', tx['block_index'], tx['tx_index'])
         # Cancel Pending Bet Matches?
         if value == -3:
             cursor.execute('''SELECT * FROM bet_matches \
                               WHERE (status = ? AND feed_address = ?)''',
                            ('pending', tx['source']))
             for bet_match in list(cursor):
-                bet.cancel_bet_match(db, bet_match, 'dropped', tx['block_index'])
+                bet.cancel_bet_match(db, bet_match, 'dropped', tx['block_index'], tx['tx_index'])
         cursor.close()
         return
 
@@ -309,15 +309,15 @@ def parse (db, tx, message):
                     bull_credit = escrow_less_fee
                     bear_credit = 0
                     bet_match_status = 'settled: liquidated for bull'
-                    util.credit(db, bull_address, config.XCP, bull_credit, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                    util.credit(db, bull_address, config.XCP, bull_credit, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
                 elif bull_credit <= 0:
                     bull_credit = 0
                     bear_credit = escrow_less_fee
                     bet_match_status = 'settled: liquidated for bear'
-                    util.credit(db, bear_address, config.XCP, bear_credit, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                    util.credit(db, bear_address, config.XCP, bear_credit, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
 
                 # Pay fee to feed.
-                util.credit(db, bet_match['feed_address'], config.XCP, fee, action='feed fee', event=tx['tx_hash'])
+                util.credit(db, bet_match['feed_address'], config.XCP, fee, tx['tx_index'], action='feed fee', event=tx['tx_hash'])
 
                 # For logging purposes.
                 bindings = {
@@ -338,11 +338,11 @@ def parse (db, tx, message):
             elif timestamp >= bet_match['deadline']:
                 bet_match_status = 'settled'
 
-                util.credit(db, bull_address, config.XCP, bull_credit, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
-                util.credit(db, bear_address, config.XCP, bear_credit, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                util.credit(db, bull_address, config.XCP, bull_credit, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                util.credit(db, bear_address, config.XCP, bear_credit, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
 
                 # Pay fee to feed.
-                util.credit(db, bet_match['feed_address'], config.XCP, fee, action='feed fee', event=tx['tx_hash'])
+                util.credit(db, bet_match['feed_address'], config.XCP, fee, tx['tx_index'], action='feed fee', event=tx['tx_hash'])
 
                 # For logging purposes.
                 bindings = {
@@ -374,14 +374,14 @@ def parse (db, tx, message):
             if value == bet_match['target_value']:
                 winner = 'Equal'
                 bet_match_status = 'settled: for equal'
-                util.credit(db, equal_address, config.XCP, escrow_less_fee, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                util.credit(db, equal_address, config.XCP, escrow_less_fee, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
             else:
                 winner = 'NotEqual'
                 bet_match_status = 'settled: for notequal'
-                util.credit(db, notequal_address, config.XCP, escrow_less_fee, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                util.credit(db, notequal_address, config.XCP, escrow_less_fee, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
 
             # Pay fee to feed.
-            util.credit(db, bet_match['feed_address'], config.XCP, fee, action='feed fee', event=tx['tx_hash'])
+            util.credit(db, bet_match['feed_address'], config.XCP, fee, tx['tx_index'], action='feed fee', event=tx['tx_hash'])
 
             # For logging purposes.
             bindings = {

@@ -262,7 +262,11 @@ UNITTEST_VECTOR = {
         #     ]
         # }],
         'cancel_bet': [{
-            'in': ({'counterwager_quantity': 10, 'wager_remaining': 10, 'target_value': 0.0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'counterwager_remaining': 10, 'tx_index': 102, 'block_index': 310101, 'deadline': 1388000200, 'bet_type': 3, 'expiration': 1000, 'expire_index': 311101, 'tx_hash': 'db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e', 'leverage': 5040, 'wager_quantity': 10, 'fee_fraction_int': 5000000, 'status': 'open'}, 'filled', DP['default_block_index']),
+            'in': (
+                {'counterwager_quantity': 10, 'wager_remaining': 10, 'target_value': 0.0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'counterwager_remaining': 10, 'tx_index': 102, 'block_index': 310101, 'deadline': 1388000200, 'bet_type': 3, 'expiration': 1000, 'expire_index': 311101, 'tx_hash': 'db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e', 'leverage': 5040, 'wager_quantity': 10, 'fee_fraction_int': 5000000, 'status': 'open'},
+                'filled',
+                DP['default_block_index'],
+                0),
             'records': [
                 {'table': 'bets', 'values': {
                     'bet_type': 3,
@@ -286,7 +290,11 @@ UNITTEST_VECTOR = {
             ]
         }],
         'cancel_bet_match': [{
-            'in': ({'tx0_block_index': 310019, 'backward_quantity': 9, 'initial_value': 1, 'tx1_expiration': 100, 'id': '2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93', 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'status': 'settled', 'leverage': 5040, 'target_value': 0.0, 'fee_fraction_int': 5000000, 'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'deadline': 1388000001, 'tx1_bet_type': 0, 'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx0_index': 20, 'tx1_hash': '5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93', 'tx0_hash': '2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1', 'block_index': 310020, 'forward_quantity': 9, 'match_expire_index': 310119, 'tx1_block_index': 310020, 'tx0_expiration': 100, 'tx1_index': 21, 'tx0_bet_type': 1}, 'filled', DP['default_block_index']),
+            'in': (
+                {'tx0_block_index': 310019, 'backward_quantity': 9, 'initial_value': 1, 'tx1_expiration': 100, 'id': '2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93', 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'status': 'settled', 'leverage': 5040, 'target_value': 0.0, 'fee_fraction_int': 5000000, 'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'deadline': 1388000001, 'tx1_bet_type': 0, 'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx0_index': 20, 'tx1_hash': '5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93', 'tx0_hash': '2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1', 'block_index': 310020, 'forward_quantity': 9, 'match_expire_index': 310119, 'tx1_block_index': 310020, 'tx0_expiration': 100, 'tx1_index': 21, 'tx0_bet_type': 1}, 
+                'filled', 
+                DP['default_block_index'],
+                0),
             'records': [
                 {'table': 'bet_matches', 'values': {
                     'backward_quantity': 9,
@@ -4275,7 +4283,7 @@ UNITTEST_VECTOR = {
         }],
         'last_message': [{
             'in': (),
-            'out': {'bindings': "['action', 'address', 'asset', 'block_index', 'event', 'quantity']",
+            'out': {'bindings': "['action', 'address', 'asset', 'block_index', 'event', 'quantity', 'tx_index']",
                     'block_index': 310498,
                     'category': 'credits',
                     'command': 'insert',
@@ -4309,32 +4317,32 @@ UNITTEST_VECTOR = {
             'out': 'A{}'.format(26**12 + 101)
         }],
         'debit': [{
-            'in': (ADDR[0], 'XCP', 1),
+            'in': (ADDR[0], 'XCP', 1, 0),
             'out': None
         }, {
-            'in': (ADDR[0], 'BTC', DP['quantity']),
+            'in': (ADDR[0], 'BTC', DP['quantity'], 0),
             'error': (DebitError, 'Cannot debit bitcoins.')
         }, {
-            'in': (ADDR[0], 'BTC', -1 * DP['quantity']),
+            'in': (ADDR[0], 'BTC', -1 * DP['quantity'], 0),
             'error': (DebitError, 'Negative quantity.')
         }, {
-            'in': (ADDR[0], 'BTC', 1.1 * DP['quantity']),
+            'in': (ADDR[0], 'BTC', 1.1 * DP['quantity'], 0),
             'error': (DebitError, 'Quantity must be an integer.')
         }, {
-            'in': (ADDR[0], 'XCP', 2**40),
+            'in': (ADDR[0], 'XCP', 2**40, 0),
             'error': (DebitError, 'Insufficient funds.')
         }],
         'credit': [{
-            'in': (ADDR[0], 'XCP', 1),
+            'in': (ADDR[0], 'XCP', 1, 0),
             'out': None
         }, {
-            'in': (ADDR[0], 'BTC', DP['quantity']),
+            'in': (ADDR[0], 'BTC', DP['quantity'], 0),
             'error': (CreditError, 'Cannot debit bitcoins.')
         }, {
-            'in': (ADDR[0], 'BTC', -1 * DP['quantity']),
+            'in': (ADDR[0], 'BTC', -1 * DP['quantity'], 0),
             'error': (CreditError, 'Negative quantity.')
         }, {
-            'in': (ADDR[0], 'BTC', 1.1 * DP['quantity']),
+            'in': (ADDR[0], 'BTC', 1.1 * DP['quantity'], 0),
             'error': (CreditError, 'Quantity must be an integer.')
         }],
         'is_divisible': [{

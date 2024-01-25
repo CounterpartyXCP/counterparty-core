@@ -129,8 +129,8 @@ def parse (db, tx, message):
         if problems: status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':
-        util.debit(db, tx['source'], asset, quantity, action='send', event=tx['tx_hash'])
-        util.credit(db, tx['destination'], asset, quantity, action='send', event=tx['tx_hash'])
+        util.debit(db, tx['source'], asset, quantity, tx['tx_index'], action='send', event=tx['tx_hash'])
+        util.credit(db, tx['destination'], asset, quantity, tx['tx_index'], action='send', event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

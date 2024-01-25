@@ -363,7 +363,7 @@ def active_options(config, options):
     return config & options == options
 
 
-def remove_from_balance(db, address, asset, quantity):
+def remove_from_balance(db, address, asset, quantity, tx_index):
     balance_cursor = db.cursor()
 
     old_balance = get_balance(db, address, asset)
@@ -379,14 +379,15 @@ def remove_from_balance(db, address, asset, quantity):
         'quantity': balance,
         'address': address,
         'asset': asset,
-        'block_index': CURRENT_BLOCK_INDEX
+        'block_index': CURRENT_BLOCK_INDEX,
+        'tx_index': tx_index,
     }
-    sql='INSERT INTO balances VALUES (:address, :asset, :quantity, :block_index)'
+    sql='INSERT INTO balances VALUES (:address, :asset, :quantity, :block_index, :tx_index)'
     balance_cursor.execute(sql, bindings)
 
 
 class DebitError (Exception): pass
-def debit (db, address, asset, quantity, action=None, event=None):
+def debit (db, address, asset, quantity, tx_index, action=None, event=None):
     """Debit given address by quantity of asset."""
     block_index = CURRENT_BLOCK_INDEX
 
@@ -409,7 +410,7 @@ def debit (db, address, asset, quantity, action=None, event=None):
     if asset == config.BTC:
         raise exceptions.BalanceError('Cannot debit bitcoins from a {} address!'.format(config.XCP_NAME))
 
-    remove_from_balance(db, address, asset, quantity)
+    remove_from_balance(db, address, asset, quantity, tx_index)
 
     # Record debit.
     bindings = {
@@ -418,16 +419,17 @@ def debit (db, address, asset, quantity, action=None, event=None):
         'asset': asset,
         'quantity': quantity,
         'action': action,
-        'event': event
+        'event': event,
+        'tx_index': tx_index,
     }
-    sql='INSERT INTO debits VALUES (:block_index, :address, :asset, :quantity, :action, :event)'
+    sql='INSERT INTO debits VALUES (:block_index, :address, :asset, :quantity, :action, :event, :tx_index)'
     debit_cursor.execute(sql, bindings)
     debit_cursor.close()
 
     BLOCK_LEDGER.append('{}{}{}{}'.format(block_index, address, asset, quantity))
 
 
-def add_to_balance(db, address, asset, quantity):
+def add_to_balance(db, address, asset, quantity, tx_index):
     balance_cursor = db.cursor()
 
     old_balance = get_balance(db, address, asset)
@@ -439,13 +441,14 @@ def add_to_balance(db, address, asset, quantity):
         'address': address,
         'asset': asset,
         'block_index': CURRENT_BLOCK_INDEX,
+        'tx_index': tx_index,
     }
-    sql='INSERT INTO balances VALUES (:address, :asset, :quantity, :block_index)'
+    sql='INSERT INTO balances VALUES (:address, :asset, :quantity, :block_index, :tx_index)'
     balance_cursor.execute(sql, bindings)
 
 
 class CreditError (Exception): pass
-def credit (db, address, asset, quantity, action=None, event=None):
+def credit (db, address, asset, quantity, tx_index, action=None, event=None):
     """Credit given address by quantity of asset."""
     block_index = CURRENT_BLOCK_INDEX
 
@@ -465,7 +468,7 @@ def credit (db, address, asset, quantity, action=None, event=None):
         if len(address) == 40:
             assert asset == config.XCP
 
-    add_to_balance(db, address, asset, quantity)
+    add_to_balance(db, address, asset, quantity, tx_index)
 
     # Record credit.
     bindings = {
@@ -474,9 +477,10 @@ def credit (db, address, asset, quantity, action=None, event=None):
         'asset': asset,
         'quantity': quantity,
         'action': action,
-        'event': event
+        'event': event,
+        'tx_index': tx_index,
     }
-    sql='INSERT INTO credits VALUES (:block_index, :address, :asset, :quantity, :action, :event)'
+    sql='INSERT INTO credits VALUES (:block_index, :address, :asset, :quantity, :action, :event, :tx_index)'
 
     credit_cursor.execute(sql, bindings)
     credit_cursor.close()
@@ -806,7 +810,7 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False):
     cursor = db.cursor()
     balances = list(cursor.execute('''SELECT * FROM balances 
                                    WHERE (address = ? AND asset = ?) 
-                                   ORDER BY block_index DESC LIMIT 1''', (address, asset)))
+                                   ORDER BY block_index DESC, tx_index DESC LIMIT 1''', (address, asset)))
     cursor.close()
     if not balances and raise_error_if_no_balance:
         raise exceptions.BalanceError(f'No balance for this address and asset: {address}, {asset}.')
@@ -818,7 +822,7 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False):
 # TODO: try to that with one SQL query
 def get_address_balances(db, address):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM balances WHERE address = ? ORDER BY asset, block_index DESC''', (address,))
+    cursor.execute('''SELECT * FROM balances WHERE address = ? ORDER BY asset, block_index DESC, tx_index DESC''', (address,))
     balances_history = cursor.fetchall()
     # keep only the last balance for each asset
     balances = []
@@ -833,7 +837,7 @@ def get_address_balances(db, address):
 # TODO: try to that with one SQL query
 def get_asset_balances(db, asset):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM balances WHERE asset = ? ORDER BY address, block_index DESC''', (asset,))
+    cursor.execute('''SELECT * FROM balances WHERE asset = ? ORDER BY address, block_index DESC, tx_index DESC''', (asset,))
     balances_history = cursor.fetchall()
     # keep only the last balance for each address
     balances = []

@@ -172,9 +172,9 @@ def parse (db, tx, message):
             antispamfee = util.get_value_by_block_index("sweep_antispam_fee", tx['block_index'])*config.UNIT
             
             if antispamfee > 0:
-                util.debit(db, tx['source'], 'XCP', total_fee, action='sweep fee', event=tx['tx_hash'])
+                util.debit(db, tx['source'], 'XCP', total_fee, tx['tx_index'], action='sweep fee', event=tx['tx_hash'])
             else:
-                util.debit(db, tx['source'], 'XCP', fee_paid, action='sweep fee', event=tx['tx_hash'])
+                util.debit(db, tx['source'], 'XCP', fee_paid, tx['tx_index'], action='sweep fee', event=tx['tx_hash'])
         except BalanceError:
             destination, flags, memo_bytes = None, None, None
             status = 'invalid: insufficient balance for antispam fee for sweep'
@@ -184,8 +184,8 @@ def parse (db, tx, message):
 
         if flags & FLAG_BALANCES:
             for balance in balances:
-                util.debit(db, tx['source'], balance['asset'], balance['quantity'], action='sweep', event=tx['tx_hash'])
-                util.credit(db, destination, balance['asset'], balance['quantity'], action='sweep', event=tx['tx_hash'])
+                util.debit(db, tx['source'], balance['asset'], balance['quantity'], tx['tx_index'], action='sweep', event=tx['tx_hash'])
+                util.credit(db, destination, balance['asset'], balance['quantity'], tx['tx_index'], action='sweep', event=tx['tx_hash'])
 
         if flags & FLAG_OWNERSHIP:
             sweep_pos = 0

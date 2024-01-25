@@ -119,7 +119,7 @@ def parse (db, tx, message):
     try:
         asset, quantity, tag = unpack(db, message)
         validate(db, tx['source'], tx['destination'], asset, quantity)
-        util.debit(db, tx['source'], asset, quantity, 'destroy', tx['tx_hash'])
+        util.debit(db, tx['source'], asset, quantity, tx['tx_index'], 'destroy', tx['tx_hash'])
 
     except UnpackError as e:
         status = 'invalid: ' + ''.join(e.args)
