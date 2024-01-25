@@ -106,10 +106,8 @@ def compose (db, source, destination, asset, quantity, memo, memo_is_hex):
         raise exceptions.ComposeError('quantity must be an int (in satoshi)')
 
     # Only for outgoing (incoming will overburn).
-    balances = list(cursor.execute('''SELECT * FROM balances 
-                                   WHERE (address = ? AND asset = ?)
-                                   ORDER BY block_index DESC LIMIT 1''', (source, asset)))
-    if not balances or balances[0]['quantity'] < quantity:
+    balance = util.get_balance(db, source, asset)
+    if balance < quantity:
         raise exceptions.ComposeError('insufficient funds')
 
     # convert memo to memo_bytes based on memo_is_hex setting
@@ -167,11 +165,8 @@ def parse (db, tx, message):
 
     if status == 'valid':
         # verify balance is present
-        cursor.execute('''SELECT * FROM balances
-                       WHERE (address = ? AND asset = ?)
-                       ORDER BY block_index DESC LIMIT 1''', (tx['source'], asset))
-        balances = cursor.fetchall()
-        if not balances or balances[0]['quantity'] < quantity:
+        balance = util.get_balance(db, tx['source'], asset)
+        if balance < quantity:
             status = 'invalid: insufficient funds'
 
     if status == 'valid':

@@ -387,10 +387,8 @@ def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, exp
 
     # Check balance.
     if give_asset != config.BTC:
-        balances = list(cursor.execute('''SELECT * FROM balances
-                                       WHERE (address = ? AND asset = ?)
-                                       ORDER BY block_index DESC LIMIT 1''', (source, give_asset)))
-        if (not balances or balances[0]['quantity'] < give_quantity):
+        balance = util.get_balance(db, source, give_asset)
+        if balance < give_quantity:
             raise exceptions.ComposeError('insufficient funds')
 
     problems = validate(db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, util.CURRENT_BLOCK_INDEX)
@@ -427,15 +425,11 @@ def parse (db, tx, message):
             price = 0
 
         # Overorder
-        order_parse_cursor.execute('''SELECT * FROM balances
-                                   WHERE (address = ? AND asset = ?)
-                                   ORDER BY block_index DESC LIMIT 1''', (tx['source'], give_asset))
-        balances = list(order_parse_cursor)
+        balance = util.get_balance(db, tx['source'], give_asset)
         if give_asset != config.BTC:
-            if not balances:
+            if balance == 0:
                 give_quantity = 0
             else:
-                balance = balances[0]['quantity']
                 if balance < give_quantity:
                     give_quantity = balance
                     get_quantity = int(price * give_quantity)

@@ -366,14 +366,7 @@ def active_options(config, options):
 def remove_from_balance(db, address, asset, quantity):
     balance_cursor = db.cursor()
 
-    balance_cursor.execute('''SELECT * FROM balances
-                           WHERE (address = ? AND asset = ?)
-                           ORDER BY block_index DESC LIMIT 1''', (address, asset))
-    balances = balance_cursor.fetchall()
-    if not len(balances) == 1:
-        old_balance = 0
-    else:
-        old_balance = balances[0]['quantity']
+    old_balance = get_balance(db, address, asset)
 
     if old_balance < quantity:
         raise DebitError('Insufficient funds.')
@@ -437,12 +430,7 @@ def debit (db, address, asset, quantity, action=None, event=None):
 def add_to_balance(db, address, asset, quantity):
     balance_cursor = db.cursor()
 
-    balance_cursor.execute('''SELECT * FROM balances
-                           WHERE (address = ? AND asset = ?)
-                           ORDER BY block_index DESC LIMIT 1''', (address, asset))
-    balances = balance_cursor.fetchall()
-    old_balance = balances[0]['quantity'] if len(balances) > 0 else 0
-    assert type(old_balance) == int
+    old_balance = get_balance(db, address, asset)
     balance = round(old_balance + quantity)
     balance = min(balance, config.MAX_INT)
 
@@ -813,15 +801,48 @@ def dhash_string(text):
     return binascii.hexlify(dhash(text)).decode()
 
 
-def get_balance(db, address, asset):
+def get_balance(db, address, asset, raise_error_if_no_balance=False):
     """Get balance of contract or address."""
     cursor = db.cursor()
     balances = list(cursor.execute('''SELECT * FROM balances 
                                    WHERE (address = ? AND asset = ?) 
                                    ORDER BY block_index DESC LIMIT 1''', (address, asset)))
     cursor.close()
-    if not balances: return 0
-    else: return balances[0]['quantity']
+    if not balances and raise_error_if_no_balance:
+        raise exceptions.BalanceError(f'No balance for this address and asset: {address}, {asset}.')
+    if not balances:
+        return 0
+    return balances[0]['quantity']
+
+
+# TODO: try to that with one SQL query
+def get_address_balances(db, address):
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM balances WHERE address = ? ORDER BY asset, block_index DESC''', (address,))
+    balances_history = cursor.fetchall()
+    # keep only the last balance for each asset
+    balances = []
+    saved_balances = {}
+    for balance in balances_history:
+        if balance['asset'] not in saved_balances:
+            balances.append(balance)
+            saved_balances[balance['asset']] = True
+    return balances
+
+
+# TODO: try to that with one SQL query
+def get_asset_balances(db, asset):
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM balances WHERE asset = ? ORDER BY address, block_index DESC''', (asset,))
+    balances_history = cursor.fetchall()
+    # keep only the last balance for each address
+    balances = []
+    saved_balances = {}
+    for balance in balances_history:
+        if balance['address'] not in saved_balances:
+            balances.append(balance)
+            saved_balances[balance['address']] = True
+    return balances
 
 # Why on Earth does `binascii.hexlify()` return bytes?!
 def hexlify(x):

@@ -243,14 +243,10 @@ def parse(db, tx, message):
     if status == 'open':
         move_random_hash = binascii.hexlify(move_random_hash).decode('utf8')
         # Overbet
-        rps_parse_cursor.execute('''SELECT * FROM balances
-                                 WHERE (address = ? AND asset = ?)
-                                 ORDER BY block_index DESC LIMIT 1''', (tx['source'], 'XCP'))
-        balances = list(rps_parse_cursor)
-        if not balances:
+        balance = util.get_balance(db, tx['source'], 'XCP')
+        if balance == 0:
             wager = 0
         else:
-            balance = balances[0]['quantity']
             if balance < wager:
                 wager = balance
 

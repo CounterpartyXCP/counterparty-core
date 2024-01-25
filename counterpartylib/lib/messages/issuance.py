@@ -241,10 +241,7 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
     if quantity or (block_index >= 315000 or config.TESTNET or config.REGTEST):   # Protocol change.
         if not reissuance or (block_index < 310000 and not config.TESTNET and not config.REGTEST):  # Pay fee only upon first issuance. (Protocol change.)
             cursor = db.cursor()
-            cursor.execute('''SELECT * FROM balances
-                           WHERE (address = ? AND asset = ?)
-                           ORDER BY block_index DESC LIMIT 1''', (source, config.XCP))
-            balances = cursor.fetchall()
+            balance = util.get_balance(db, source, config.XCP)
             cursor.close()
             if util.enabled('numeric_asset_names'):  # Protocol change.
                 if subasset_longname is not None and util.enabled('subassets'): # Protocol change.
@@ -260,7 +257,7 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
                 fee = 5 * config.UNIT
             elif block_index > 281236 or config.TESTNET or config.REGTEST:    # Protocol change.
                 fee = 5
-            if fee and (not balances or balances[0]['quantity'] < fee):
+            if fee and (balance < fee):
                 problems.append('insufficient funds')
 
     if not (block_index >= 317500 or config.TESTNET or config.REGTEST):  # Protocol change.
@@ -279,14 +276,10 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
             problems.append('total quantity overflow')
 
     if util.enabled("cip03", block_index) and reset and issuances:
-        cursor = db.cursor()
+
         #Checking that all supply are held by the owner of the asset
-        cursor.execute('''SELECT * FROM balances
-                       WHERE asset = ? AND quantity > 0
-                       ORDER BY block_index DESC LIMIT 1''', (asset,))
-        balances = cursor.fetchall()
-        cursor.close()
-        
+        balances = util.get_asset_balances(db, asset)
+
         if (len(balances) == 0):
             if util.asset_supply(db, asset) > 0:
                 problems.append('Cannot reset an asset with no holder')
@@ -547,10 +540,7 @@ def parse (db, tx, message, message_type_id):
 
     # Reset?
     if (status == 'valid') and reset and util.enabled("cip03", tx['block_index']):
-        balances_cursor = issuance_parse_cursor.execute('''SELECT * FROM balances 
-                                                        WHERE asset = ?
-                                                        ORDER BY block_index DESC LIMIT 1''', (asset,))
-        balances_result = balances_cursor.fetchall()
+        balances_result = util.get_asset_balances(db, asset)
 
         if len(balances_result) <= 1:
             if len(balances_result) == 0:

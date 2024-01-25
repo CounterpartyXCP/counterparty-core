@@ -58,10 +58,8 @@ def validate (db, source, destination, flags, memo, block_index):
         problems.append('destination cannot be the same as source')
 
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM balances
-                   WHERE (address = ? AND asset = ?)
-                   ORDER BY block_index DESC LIMIT 1''', (source, 'XCP'))
-    result = cursor.fetchall()
+
+    result = util.get_balance(db, source, 'XCP')
 
     antispamfee = util.get_value_by_block_index("sweep_antispam_fee", block_index)*config.UNIT
     total_fee = ANTISPAM_FEE
@@ -77,12 +75,10 @@ def validate (db, source, destination, flags, memo, block_index):
 
         total_fee = int(balances_count * antispamfee * 2 + issuances_count * antispamfee * 4)
         
-        if result[0]['quantity'] < total_fee:
+        if result < total_fee:
             problems.append('insufficient XCP balance for sweep. Need %s XCP for antispam fee' % total_fee)
     else:
-        if len(result) == 0:
-            problems.append('insufficient XCP balance for sweep. Need %s XCP for antispam fee' % ANTISPAM_FEE_DECIMAL)
-        elif result[0]['quantity'] < ANTISPAM_FEE:
+        if result < ANTISPAM_FEE:
             problems.append('insufficient XCP balance for sweep. Need %s XCP for antispam fee' % ANTISPAM_FEE_DECIMAL)
 
     cursor.close()
@@ -184,15 +180,7 @@ def parse (db, tx, message):
             status = 'invalid: insufficient balance for antispam fee for sweep'
 
     if status == 'valid':
-        cursor.execute('''SELECT * FROM balances WHERE address = ? ORDER BY asset, block_index DESC''', (tx['source'],))
-        balances_history = cursor.fetchall()
-        # keep only the last balance for each asset
-        balances = []
-        saved_balances = {}
-        for balance in balances_history:
-            if balance['asset'] not in saved_balances:
-                balances.append(balance)
-                saved_balances[balance['asset']] = True
+        balances = util.get_address_balances(db, tx['source'])
 
         if flags & FLAG_BALANCES:
             for balance in balances:

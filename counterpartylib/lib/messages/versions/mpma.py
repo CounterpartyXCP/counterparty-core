@@ -101,10 +101,8 @@ def compose (db, source, asset_dest_quant_list, memo, memo_is_hex):
         if not isinstance(quantity, int):
             raise exceptions.ComposeError('quantities must be an int (in satoshis) for {}'.format(asset))
 
-        balances = list(cursor.execute('''SELECT * FROM balances
-                                       WHERE (address = ? AND asset = ?)
-                                       ORDER BY block_index DESC LIMIT 1''', (source, asset)))
-        if not balances or balances[0]['quantity'] < quantity:
+        balance = util.get_balance(db, source, asset)
+        if balance < quantity:
             raise exceptions.ComposeError('insufficient funds for {}'.format(asset))
 
     block_index = util.CURRENT_BLOCK_INDEX
@@ -143,12 +141,8 @@ def parse (db, tx, message):
                 status = 'invalid: asset %s invalid at block index %i' % (asset_id, tx['block_index'])
                 break
 
-            cursor.execute('''SELECT * FROM balances
-                           WHERE (address = ? AND asset = ?)
-                           ORDER BY block_index DESC LIMIT 1''', (tx['source'], asset_id))
-
-            balances = cursor.fetchall()
-            if not balances:
+            balance = util.get_balance(db, tx['source'], asset_id)
+            if not balance:
                 status = 'invalid: insufficient funds for asset %s, address %s has no balance' % (asset_id, tx['source'])
                 break
 
@@ -156,7 +150,7 @@ def parse (db, tx, message):
 
             total_sent = reduce(lambda p, t: p + t[1], credits, 0)
 
-            if balances[0]['quantity'] < total_sent:
+            if balance < total_sent:
                 status = 'invalid: insufficient funds for asset %s, needs %i' % (asset_id, total_sent)
                 break
 

@@ -178,15 +178,12 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
         problems.append('invalid status %i' % status)
 
     cursor = db.cursor()
-    cursor.execute('''SELECT quantity FROM balances
-                   WHERE address = ? and asset = ?
-                   ORDER BY block_index DESC LIMIT 1''', (source,asset,))
-    available = cursor.fetchall()
+    available = util.get_balance(db, source, asset)
 
-    if len(available) == 0:
+    if available == 0:
         problems.append('address doesn\'t has the asset %s' % asset)
-    elif len(available) >= 1 and available[0]['quantity'] < escrow_quantity:
-        problems.append('address doesn\'t has enough balance of %s (%i < %i)' % (asset, available[0]['quantity'], escrow_quantity))
+    elif available < escrow_quantity:
+        problems.append('address doesn\'t has enough balance of %s (%i < %i)' % (asset, available, escrow_quantity))
     else:
         if status == STATUS_OPEN_EMPTY_ADDRESS and not(open_address):
             open_address = source

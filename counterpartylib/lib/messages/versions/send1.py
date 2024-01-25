@@ -79,10 +79,8 @@ def compose (db, source, destination, asset, quantity):
         raise exceptions.ComposeError('quantity must be an int (in satoshi)')
 
     # Only for outgoing (incoming will overburn).
-    balances = list(cursor.execute('''SELECT * FROM balances
-                                   WHERE (address = ? AND asset = ?)
-                                   ORDER BY block_index DESC LIMIT 1''', (source, asset)))
-    if not balances or balances[0]['quantity'] < quantity:
+    balance = util.get_balance(db, source, asset)
+    if balance < quantity:
         raise exceptions.ComposeError('insufficient funds')
 
     block_index = util.CURRENT_BLOCK_INDEX
@@ -113,14 +111,14 @@ def parse (db, tx, message):
 
     if status == 'valid':
         # Oversend
-        cursor.execute('''SELECT * FROM balances
-                       WHERE (address = ? AND asset = ?)
-                       ORDER BY block_index DESC LIMIT 1''', (tx['source'], asset))
-        balances = cursor.fetchall()
-        if not balances:
+        # doesn't make sense (0 and no balance should be the same) but let's not break the protocol
+        try:
+            balance = util.get_balance(db, tx['source'], asset, raise_error_if_no_balance=True)
+            if balance < quantity:
+                quantity = min(balance, quantity)
+        except exceptions.BalanceError:
             status = 'invalid: insufficient funds'
-        elif balances[0]['quantity'] < quantity:
-            quantity = min(balances[0]['quantity'], quantity)
+       
 
     # For SQLite3
     if quantity:

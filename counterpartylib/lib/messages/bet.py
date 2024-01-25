@@ -336,14 +336,10 @@ def parse (db, tx, message):
         fee_fraction = get_fee_fraction(db, feed_address)
 
         # Overbet
-        bet_parse_cursor.execute('''SELECT * FROM balances
-                                 WHERE (address = ? AND asset = ?)
-                                 ORDER BY block_index DESC LIMIT 1''', (tx['source'], config.XCP))
-        balances = list(bet_parse_cursor)
-        if not balances:
+        balance = util.get_balance(db, tx['source'], config.XCP)
+        if balance == 0:
             wager_quantity = 0
         else:
-            balance = balances[0]['quantity']
             if balance < wager_quantity:
                 wager_quantity = balance
                 counterwager_quantity = int(util.price(wager_quantity, odds))
