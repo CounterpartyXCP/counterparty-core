@@ -52,24 +52,22 @@ Set the following environment variables (for instance in your `.bashrc`):
 ```
 export ADDRINDEXRS_JSONRPC_IMPORT=1
 export ADDRINDEXRS_TXID_LIMIT=15000
-export ADDRINDEXRS_COOKIE=user:password
+export ADDRINDEXRS_COOKIE=bitcoinrpc:rpc
 export ADDRINDEXRS_INDEXER_RPC_ADDR=0.0.0.0:8432
-export ADDRINDEXRS_DAEMON_RPC_ADDR=bitcoin:8332
+export ADDRINDEXRS_DAEMON_RPC_ADDR=localhost:8332
 ```
 
 Then continue with the build:
 
 ```
 $ cargo build --release
-$ cargo run
+$ cargo run --release
 ```
-
-NOTE: You may wish to run the `addrindexrs` daemon with a process manager like `forever` or `pm2`.
-
 
 Now, download and install `counterparty-lib`:
 
 ```
+$ sudo apt install python3-pip
 $ git clone https://github.com/CounterpartyXCP/counterparty-lib.git
 $ cd counterparty-lib
 $ pip3 install --upgrade -r requirements.txt
