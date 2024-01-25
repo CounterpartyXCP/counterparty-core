@@ -731,7 +731,7 @@ class MockProtocolChangesContext(object):
         for k in self._before_empty:
             del self.mock_protocol_changes[k]
 
-def reparse(testnet=True, checkpoint_count=3):
+def reparse(testnet=True, checkpoint_count=10):
     """
     Reparse all transaction from the database.
      - Create a new in-memory DB, copy the DB that is on-disk
@@ -765,41 +765,21 @@ def reparse(testnet=True, checkpoint_count=3):
     # we start one block after the checkpoint before the first one we want to check
     block_index = sorted(list(CHECKPOINTS.keys()))[-checkpoint_count - 1]
 
-    # Clean most tables (except blocks, transactions and transaction_outputs)
-    memory_cursor = memory_db.cursor()
-    logger.info(f"Deleting all table content from block {block_index + 1}...")
-    for table in blocks.TABLES:
-        memory_cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
-
     # Initialise missing tables
     blocks.initialise(memory_db)
-    previous_ledger_hash = None
-    previous_txlist_hash = None
-    previous_messages_hash = None
 
-    # Reparse each block, if ConsensusError is thrown then the difference
-    memory_cursor.execute('''SELECT * FROM blocks WHERE block_index > ? ORDER BY block_index''', (block_index,))
-    for block in memory_cursor.fetchall():
-        try:
-            util.CURRENT_BLOCK_INDEX = block['block_index']
-            previous_ledger_hash, previous_txlist_hash, previous_messages_hash, previous_found_messages_hash = blocks.parse_block(
-                                                                     memory_db, block['block_index'], block['block_time'],
-                                                                     previous_ledger_hash=previous_ledger_hash, ledger_hash=block['ledger_hash'],
-                                                                     previous_txlist_hash=previous_txlist_hash, txlist_hash=block['txlist_hash'],
-                                                                     previous_messages_hash=previous_messages_hash)
-            logger.info('Block (re-parse): %s (hashes: L:%s / TX:%s / M:%s%s)' % (
-                block['block_index'], previous_ledger_hash[-5:], previous_txlist_hash[-5:], previous_messages_hash[-5:],
-                (' [overwrote %s]' % previous_found_messages_hash) if previous_found_messages_hash and previous_found_messages_hash != previous_messages_hash else ''))
-
-        except check.ConsensusError as e:
-            message = str(e)
-            if message.find('ledger_hash') != -1:
-                new_ledger = get_block_ledger(memory_db, block['block_index'])
-                old_ledger = get_block_ledger(prod_db, block['block_index'])
-                compare_strings(old_ledger, new_ledger)
-            elif message.find('txlist_hash') != -1:
-                new_txlist = get_block_txlist(memory_db, block['block_index'])
-                old_txlist = get_block_txlist(prod_db, block['block_index'])
-                compare_strings(old_txlist, new_txlist)
-
-            raise e
+    try:
+        blocks.reparse(memory_db, block_index)
+    except check.ConsensusError as e:
+        message = str(e)
+        block_pos = message.index("block ") + 6
+        error_block_index = int(message[block_pos:message.index(" ", block_pos)])
+        if message.find('ledger_hash') != -1:
+            new_ledger = get_block_ledger(memory_db, error_block_index)
+            old_ledger = get_block_ledger(prod_db, error_block_index)
+            compare_strings(f"Old ledger:\n{old_ledger}", f"New ledger:\n{new_ledger}")
+        elif message.find('txlist_hash') != -1:
+            new_txlist = get_block_txlist(memory_db, error_block_index)
+            old_txlist = get_block_txlist(prod_db, error_block_index)
+            compare_strings(f"Old TX list:\n{old_txlist}", f"New TX list:\n{new_txlist}")
+        raise e
