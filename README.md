@@ -52,9 +52,9 @@ Set the following environment variables (for instance in your `.bashrc`):
 ```
 export ADDRINDEXRS_JSONRPC_IMPORT=1
 export ADDRINDEXRS_TXID_LIMIT=15000
-export ADDRINDEXRS_COOKIE=user:password
+export ADDRINDEXRS_COOKIE=bitcoinrpc:rpc
 export ADDRINDEXRS_INDEXER_RPC_ADDR=0.0.0.0:8432
-export ADDRINDEXRS_DAEMON_RPC_ADDR=bitcoin:8332
+export ADDRINDEXRS_DAEMON_RPC_ADDR=localhost:8332
 ```
 
 Then continue with the build:
