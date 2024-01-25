@@ -64,19 +64,10 @@ $ cargo build --release
 $ cargo run --release
 ```
 
-The Counterparty reference implementation requires Python 3.7 at present. The recommended installation method is with Anaconda, which may be downloaded from the [
-project website](https://www.anaconda.com/download). After installing Anaconda, create a virtual Python environment with:
-
-```
-$ conda create -n xcp python=3.7
-$ sudo apt install python3-pip
-```
-
-
 Now, download and install `counterparty-lib`:
 
 ```
-$ conda activate xcp
+$ sudo apt install python3-pip
 $ git clone https://github.com/CounterpartyXCP/counterparty-lib.git
 $ cd counterparty-lib
 $ pip3 install --upgrade -r requirements.txt
@@ -86,7 +77,6 @@ $ python3 setup.py install
 Followed by `counterparty-cli`:
 
 ```
-$ conda activate xcp
 $ git clone https://github.com/CounterpartyXCP/counterparty-cli.git
 $ cd counterparty-cli
 $ pip3 install --upgrade -r requirements.txt
