@@ -331,7 +331,22 @@ def initialise(db):
                    ''')
     balances_columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(balances)''')]
     if 'block_index' not in balances_columns:
+        logger.info('Adding block_index column to balances table...')
         cursor.execute('''ALTER TABLE balances ADD COLUMN block_index INTEGER''')
+        cursor.execute('''SELECT * FROM balances''')
+        for balance in cursor.fetchall():
+            balance_block_index = 0
+            for table_name in ['credits', 'debits']:
+                last_movement = list(cursor.execute(f'''SELECT * FROM {table_name}
+                                                            WHERE address=? AND asset=?
+                                                            ORDER BY block_index DESC LIMIT 1''',
+                                                            (balance['address'], balance['asset'])))
+                last_block_index = last_movement.pop()['block_index'] if len(last_movement) else 0
+                if last_block_index > balance_block_index:
+                    balance_block_index = last_block_index
+            assert balance_block_index != 0
+            cursor.execute('''UPDATE balances SET block_index=? WHERE address=? AND asset=?''', (balance_block_index, balance['address'], balance['asset']))
+
         # TODO: add foreign key constraint
 
     # Assets
