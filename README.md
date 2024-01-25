@@ -64,15 +64,14 @@ $ cargo build --release
 $ cargo run --release
 ```
 
-NOTE: You may wish to run the `addrindexrs` daemon with a process manager like `forever` or `pm2`.
-
-
-The Counterparty reference implementation requires Python 3.6 at present. The recommended installation method is with Anaconda, which may be downloaded from the [project website](https://www.anaconda.com/download). After installing Anaconda, create a virtual Python environment with:
+The Counterparty reference implementation requires Python 3.7 at present. The recommended installation method is with Anaconda, which may be downloaded from the [
+project website](https://www.anaconda.com/download). After installing Anaconda, create a virtual Python environment with:
 
 ```
-$ conda create -n xcp python=3.6
+$ conda create -n xcp python=3.7
 $ sudo apt install python3-pip
 ```
+
 
 Now, download and install `counterparty-lib`:
 
