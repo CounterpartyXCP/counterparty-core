@@ -730,3 +730,76 @@ class MockProtocolChangesContext(object):
             self.mock_protocol_changes[k] = self._before[k]
         for k in self._before_empty:
             del self.mock_protocol_changes[k]
+
+def reparse(testnet=True, checkpoint_count=3):
+    """
+    Reparse all transaction from the database.
+     - Create a new in-memory DB, copy the DB that is on-disk
+     - Reparse DB, automatically compares consensus hashes to the original ones from the on-disk DB
+    """
+    # create a new in-memory DB
+    options = dict(COUNTERPARTYD_OPTIONS)
+    server.initialise(database_file=':memory:', testnet=testnet, **options)
+    memory_db = database.get_connection(read_only=False)
+
+    # connect to the on-disk DB
+    data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+    prod_db_path = os.path.join(data_dir, '{}{}.db'.format(config.APP_NAME, '.testnet' if testnet else ''))
+    assert os.path.exists(prod_db_path), "database path {} does not exist".format(prod_db_path)
+    prod_db = apsw.Connection(prod_db_path)
+    prod_db.setrowtrace(database.rowtracer)
+
+    # Copy DB from file on disk (should be a DB file with at least all the checkpoints)
+    #  in-memory DB shouldn't have been written to yet up until this point
+    logger.info("Copying database from {} to memory...".format(prod_db_path))
+    with memory_db.backup("main", prod_db, "main") as backup:
+        while not backup.done:
+            backup.step(100)
+
+    # Check that all checkpoint blocks are in the database to be tested.
+    if testnet:
+        CHECKPOINTS = check.CHECKPOINTS_TESTNET
+    else:
+        CHECKPOINTS = check.CHECKPOINTS_MAINNET
+
+    # we start one block after the checkpoint before the first one we want to check
+    block_index = sorted(list(CHECKPOINTS.keys()))[-checkpoint_count - 1]
+
+    # Clean most tables (except blocks, transactions and transaction_outputs)
+    memory_cursor = memory_db.cursor()
+    logger.info(f"Deleting all table content from block {block_index + 1}...")
+    for table in blocks.TABLES:
+        memory_cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
+
+    # Initialise missing tables
+    blocks.initialise(memory_db)
+    previous_ledger_hash = None
+    previous_txlist_hash = None
+    previous_messages_hash = None
+
+    # Reparse each block, if ConsensusError is thrown then the difference
+    memory_cursor.execute('''SELECT * FROM blocks WHERE block_index > ? ORDER BY block_index''', (block_index,))
+    for block in memory_cursor.fetchall():
+        try:
+            util.CURRENT_BLOCK_INDEX = block['block_index']
+            previous_ledger_hash, previous_txlist_hash, previous_messages_hash, previous_found_messages_hash = blocks.parse_block(
+                                                                     memory_db, block['block_index'], block['block_time'],
+                                                                     previous_ledger_hash=previous_ledger_hash, ledger_hash=block['ledger_hash'],
+                                                                     previous_txlist_hash=previous_txlist_hash, txlist_hash=block['txlist_hash'],
+                                                                     previous_messages_hash=previous_messages_hash)
+            logger.info('Block (re-parse): %s (hashes: L:%s / TX:%s / M:%s%s)' % (
+                block['block_index'], previous_ledger_hash[-5:], previous_txlist_hash[-5:], previous_messages_hash[-5:],
+                (' [overwrote %s]' % previous_found_messages_hash) if previous_found_messages_hash and previous_found_messages_hash != previous_messages_hash else ''))
+
+        except check.ConsensusError as e:
+            message = str(e)
+            if message.find('ledger_hash') != -1:
+                new_ledger = get_block_ledger(memory_db, block['block_index'])
+                old_ledger = get_block_ledger(prod_db, block['block_index'])
+                compare_strings(old_ledger, new_ledger)
+            elif message.find('txlist_hash') != -1:
+                new_txlist = get_block_txlist(memory_db, block['block_index'])
+                old_txlist = get_block_txlist(prod_db, block['block_index'])
+                compare_strings(old_txlist, new_txlist)
+
+            raise e
