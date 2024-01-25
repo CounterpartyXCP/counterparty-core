@@ -1,4 +1,7 @@
---index-url https://pypi.python.org/simple/
-
-requests>=2.20.0
--e .
+appdirs==1.4.4
+setuptools-markdown==0.4.1
+prettytable==3.9.0
+colorlog==6.8.0
+python-dateutil==2.8.2
+requests==2.31.0
+counterparty-lib
