@@ -587,18 +587,33 @@ def holders(db, asset, exclude_empty_holders=False):
     """Return holders of the asset."""
     holders = []
     cursor = db.cursor()
+
     # Balances
-    cursor.execute('''SELECT * FROM balances
-                       WHERE asset = ?
-                       ORDER BY address, block_index DESC, tx_index DESC, rowid DESC''', (asset, ))
+    # Ugly way to get balances but we want to preserve the order with the old query
+    cursor.execute('''SELECT *, rowid FROM balances WHERE asset = ?''', (asset, ))
     saved_balances = {}
     for balance in list(cursor):
-        if saved_balances.get(balance['address']) is not None:
+        current_balance = saved_balances.get(f"{balance['asset']} {balance['address']}")
+        if current_balance is None:
+            saved_balances[f"{balance['asset']} {balance['address']}"] = (
+                balance['block_index'],
+                balance['tx_index'],
+                balance['rowid'],
+                balance['address'],
+                balance['quantity']
+            )
             continue
-        if exclude_empty_holders and balance['quantity'] == 0:
+        if balance['block_index'] > current_balance[0] or balance['tx_index'] > current_balance[1] or balance['rowid'] > current_balance[2]:
+            saved_balances[f"{balance['asset']} {balance['address']}"] = (
+                balance['block_index'],
+                balance['tx_index'],
+                balance['rowid'],
+                balance['address'],
+                balance['quantity'])
             continue
-        saved_balances[balance['address']] = True
-        holders.append({'address': balance['address'], 'address_quantity': balance['quantity'], 'escrow': None})
+    for holder in saved_balances.values():
+        holders.append({'address': holder[3], 'address_quantity': holder[4], 'escrow': None})
+
     # Funds escrowed in orders. (Protocol change.)
     cursor.execute('''SELECT * FROM orders \
                       WHERE give_asset = ? AND status = ?''', (asset, 'open'))
@@ -851,6 +866,7 @@ def get_asset_balances(db, asset):
             balances.append(balance)
             saved_balances[balance['address']] = True
     return balances
+
 
 # Why on Earth does `binascii.hexlify()` return bytes?!
 def hexlify(x):
