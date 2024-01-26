@@ -59,6 +59,9 @@ services:
       - data:/data
     entrypoint: "counterparty-server"         # TODO: `start` has to come after the flags.
     command:
+      - "--backend-connect=bitcoind"
+      - "--backend-port=8332"                 # mainnet
+      # - "--backend-port=18332"              # testnet
       - "--backend-user=bitcoinrpc"
       - "--backend-password=rpc"
       - "--indexd-connect=addrindexrs"
