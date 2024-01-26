@@ -21,7 +21,7 @@ services:
       -  "-mempoolfullrbf=1"
 
     volumes:
-      - bitcoind-data:/bitcoin/.bitcoin
+      - backend-data:/bitcoin/.bitcoin
 
   addrindexrs:
     image: counterparty/addrindexrs
@@ -31,14 +31,16 @@ services:
       - addrindexrs-data:/var/addrindexrs-data
     ports:
       - "8432:8432" 
-    environment:
-      - "ADDRINDEXRS_TXID_LIMIT=15000"
-      - "ADDRINDEXRS_JSONRPC_IMPORT=1"
-      - "ADDRINDEXRS_NETWORK=bitcoin"
-      - "ADDRINDEXRS_INDEXER_RPC_ADDR=0.0.0.0:8432"
-      - "ADDRINDEXRS_DAEMON_RPC_ADDR=bitcoind:8332"
-      - "ADDRINDEXRS_COOKIE=bitcoinrpc:rpc"
-      - "RUST_BACKTRACE=full"
+    command:
+      - "--addrindexrs-network=bitcoin"
+      - "--addrindexrs-indexr-rpc=0.0.0.0:8432
+      - "--addrindexrs-txid-limit=15000"
+      - "--jsonrpc-import=0"
+      - "--daemon-dir=/bitcoin/.bitcoin"
+      - "--addrindexrs-daemon-rpc=bitcoind:8332"
+      - "--addrindexrs-cookie=bitcoinrpc:rpc"
+      - "--verbose=3"
+      - "--rust-backtrace=full"
 
   counterparty-server:
     image: counterparty/counterparty-server
@@ -59,6 +61,5 @@ services:
       - "--api-log-file=1"
 
 volumes:
-  bitcoind-data:
-  addrindexrs-data:
+  backend-data:
   counterparty-data:
