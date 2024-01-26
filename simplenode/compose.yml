@@ -57,6 +57,7 @@ services:
       - addrindexrs
     volumes:
       - data:/data
+    entrypoint: "counterparty-server"         # TODO: `start` has to come after the flags.
     command:
       - "--backend-user=bitcoinrpc"
       - "--backend-password=rpc"
@@ -68,8 +69,10 @@ services:
       - "--rpc-host=0.0.0.0"
       - "--log-file=1"
       - "--api-log-file=1"
-      - "--data-dir=/data/counterparty/data"
-      - "--log-dir=/data/counterparty/log"
+      - "start"
+    environment:
+      - "XDG_DATA_HOME=/data/"
+      - "XDG_LOG_HOME=/data/"
 
 volumes:
   data:                                       # mainnet
