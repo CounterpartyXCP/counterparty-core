@@ -808,9 +808,9 @@ def dhash_string(text):
 def get_balance(db, address, asset, raise_error_if_no_balance=False):
     """Get balance of contract or address."""
     cursor = db.cursor()
-    balances = list(cursor.execute('''SELECT * FROM balances 
-                                   WHERE (address = ? AND asset = ?) 
-                                   ORDER BY block_index DESC, tx_index DESC LIMIT 1''', (address, asset)))
+    balances = list(cursor.execute('''SELECT * FROM balances
+                                   WHERE (address = ? AND asset = ?)
+                                   ORDER BY block_index DESC, tx_index DESC, rowid DESC LIMIT 1''', (address, asset)))
     cursor.close()
     if not balances and raise_error_if_no_balance:
         raise exceptions.BalanceError(f'No balance for this address and asset: {address}, {asset}.')
@@ -822,7 +822,9 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False):
 # TODO: try to that with one SQL query
 def get_address_balances(db, address):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM balances WHERE address = ? ORDER BY asset, block_index DESC, tx_index DESC''', (address,))
+    cursor.execute('''SELECT * FROM balances
+                   WHERE address = ?
+                   ORDER BY asset, block_index DESC, tx_index DESC, rowid DESC''', (address,))
     balances_history = cursor.fetchall()
     # keep only the last balance for each asset
     balances = []
@@ -837,7 +839,9 @@ def get_address_balances(db, address):
 # TODO: try to that with one SQL query
 def get_asset_balances(db, asset):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM balances WHERE asset = ? ORDER BY address, block_index DESC, tx_index DESC''', (asset,))
+    cursor.execute('''SELECT * FROM balances
+                   WHERE asset = ?
+                   ORDER BY address, block_index DESC, tx_index DESC, rowid DESC''', (asset,))
     balances_history = cursor.fetchall()
     # keep only the last balance for each address
     balances = []

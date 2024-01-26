@@ -20,9 +20,12 @@ def get_ledger(database_file):
     db = apsw.Connection(database_file, flags=apsw.SQLITE_OPEN_READONLY)
     cursor = db.cursor()
 
-    query = """SELECT 'credit' as table_name, * FROM credits WHERE block_index
+    credit_fields = "block_index, address, asset, quantity, calling_function, event"
+    debit_fields = "block_index, address, asset, quantity, action, event"
+    query = f"""SELECT 'credit' as table_name, {credit_fields} FROM credits
             UNION ALL
-            SELECT 'debits' as table_name, * FROM debits WHERE block_index
+            SELECT 'debits' as table_name, {debit_fields} FROM debits
+            ORDER BY block_index DESC
             """
 
     cursor.execute(query)
