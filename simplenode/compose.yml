@@ -45,11 +45,10 @@ services:
       - "--daemon-rpc-addr=bitcoind:8332"     # mainnet
       # - "--daemon-rpc-addr=bitcoind:18332"  # testnet
       - "--cookie=bitcoinrpc:rpc"
+      - "--jsonrpc-import=true"
       - "--daemon-dir=/bitcoin/.bitcoin"
       - "-vvv"
       - "--db-dir=/data/addrindexrs/db"
-    environment:
-      - ADDRINDEXRS_JSONRPC_IMPORT=false
 
   counterparty-server:
     image: counterparty/counterparty-server
@@ -73,4 +72,5 @@ services:
       - "--log-dir=/data/counterparty/log"
 
 volumes:
-  data:
+  data:                                       # mainnet
+  # data-testnet:                             # testnet
