@@ -4,11 +4,15 @@ services:
   bitcoind:
     image: kylemanna/bitcoind
     ports: 
-      - "8332:8332" 
+      - "8332:8332"                           # mainnet
+      # - "18332:18332"                       # testnet
     command: 
+      - "-chain=main"                         # mainnet
+      # - "-chain=test"                       # testnet
       - "-rpcallowip=0.0.0.0/0"
       - "-rpcbind=0.0.0.0"
-      - "-rpcport=8332"
+      - "-rpcport=8332"                       # mainnet
+      # - "-rpcport=18332"                    # testnet
       - "-rpcuser=bitcoinrpc"
       - "-rpcpassword=rpc"
       - "-listen=1"
@@ -30,12 +34,16 @@ services:
     volumes:
       - data:/data
     ports:
-      - "8432:8432" 
+      - "8432:8432"                           # mainnet
+      # - "18432:18432"                       # testnet
     command:
-      - "--network=bitcoin"
-      - "--indexer-rpc-addr=0.0.0.0:8432"
+      - "--network=bitcoin"                   # mainnet
+      # - "--network=testnet"                 # testnet
+      - "--indexer-rpc-addr=0.0.0.0:8432"     # mainnet
+      # - "--indexer-rpc-addr=0.0.0.0:18432"  # testnet
       - "--txid-limit=15000"
-      - "--daemon-rpc-addr=bitcoind:8332"
+      - "--daemon-rpc-addr=bitcoind:8332"     # mainnet
+      # - "--daemon-rpc-addr=bitcoind:18332"  # testnet
       - "--cookie=bitcoinrpc:rpc"
       - "--daemon-dir=/bitcoin/.bitcoin"
       - "-vvv"
@@ -54,7 +62,8 @@ services:
       - "--backend-user=bitcoinrpc"
       - "--backend-password=rpc"
       - "--indexd-connect=addrindexrs"
-      - "--indexd-port=8432"
+      - "--indexd-port=8432"                  # mainnet
+      # - "--indexd-port=18432"               # testnet 
       - "--rpc-user=rpc"
       - "--rpc-password=rpc"
       - "--rpc-host=0.0.0.0"
