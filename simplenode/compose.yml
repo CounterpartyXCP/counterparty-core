@@ -19,10 +19,9 @@ services:
       - "-prune=0"
       - "-dbcache=4000"
       - "-mempoolfullrbf=1"
-      - "-datadir=/data/bitcoin/"
 
     volumes:
-      - data:/data
+      - data:/bitcoin
 
   addrindexrs:
     image: counterparty/addrindexrs
@@ -38,11 +37,11 @@ services:
       - "--txid-limit=15000"
       - "--daemon-rpc-addr=bitcoind:8332"
       - "--cookie=bitcoinrpc:rpc"
-      - "--jsonrpc-import=0"
       - "--daemon-dir=/bitcoin/.bitcoin"
-      - "--verbose=3"
-      - "--rust-backtrace=full"
+      - "-vvv"
       - "--db-dir=/data/addrindexrs/db"
+    environment:
+      - ADDRINDEXRS_JSONRPC_IMPORT=false
 
   counterparty-server:
     image: counterparty/counterparty-server
