@@ -590,7 +590,7 @@ def holders(db, asset, exclude_empty_holders=False):
     # Balances
     cursor.execute('''SELECT * FROM balances
                        WHERE asset = ?
-                       ORDER BY address, block_index DESC''', (asset, ))
+                       ORDER BY address, block_index DESC, tx_index DESC, rowid DESC''', (asset, ))
     saved_balances = {}
     for balance in list(cursor):
         if saved_balances.get(balance['address']) is not None:
