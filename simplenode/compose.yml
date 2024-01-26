@@ -6,41 +6,43 @@ services:
     ports: 
       - "8332:8332" 
     command: 
-      -  "-rpcallowip=0.0.0.0/0"
-      -  "-rpcbind=0.0.0.0"
-      -  "-rpcport=8332"
-      -  "-rpcuser=bitcoinrpc"
-      -  "-rpcpassword=rpc"
-      -  "-listen=1"
-      -  "-server=1"
-      -  "-printtoconsole=1"
-      -  "-addresstype=legacy"
-      -  "-txindex=1"
-      -  "-prune=0"
-      -  "-dbcache=4000"
-      -  "-mempoolfullrbf=1"
+      - "-rpcallowip=0.0.0.0/0"
+      - "-rpcbind=0.0.0.0"
+      - "-rpcport=8332"
+      - "-rpcuser=bitcoinrpc"
+      - "-rpcpassword=rpc"
+      - "-listen=1"
+      - "-server=1"
+      - "-printtoconsole=1"
+      - "-addresstype=legacy"
+      - "-txindex=1"
+      - "-prune=0"
+      - "-dbcache=4000"
+      - "-mempoolfullrbf=1"
+      - "-datadir=/data/bitcoin/"
 
     volumes:
-      - backend-data:/bitcoin/.bitcoin
+      - data:/data
 
   addrindexrs:
     image: counterparty/addrindexrs
     links:
       - bitcoind
     volumes:
-      - addrindexrs-data:/var/addrindexrs-data
+      - data:/data
     ports:
       - "8432:8432" 
     command:
-      - "--addrindexrs-network=bitcoin"
-      - "--addrindexrs-indexr-rpc=0.0.0.0:8432
-      - "--addrindexrs-txid-limit=15000"
+      - "--network=bitcoin"
+      - "--indexer-rpc-addr=0.0.0.0:8432"
+      - "--txid-limit=15000"
+      - "--daemon-rpc-addr=bitcoind:8332"
+      - "--cookie=bitcoinrpc:rpc"
       - "--jsonrpc-import=0"
       - "--daemon-dir=/bitcoin/.bitcoin"
-      - "--addrindexrs-daemon-rpc=bitcoind:8332"
-      - "--addrindexrs-cookie=bitcoinrpc:rpc"
       - "--verbose=3"
       - "--rust-backtrace=full"
+      - "--db-dir=/data/addrindexrs/db"
 
   counterparty-server:
     image: counterparty/counterparty-server
@@ -48,7 +50,7 @@ services:
       - bitcoind
       - addrindexrs
     volumes:
-      - counterparty-data:/root/.local/share/counterparty/
+      - data:/data
     command:
       - "--backend-user=bitcoinrpc"
       - "--backend-password=rpc"
@@ -59,7 +61,8 @@ services:
       - "--rpc-host=0.0.0.0"
       - "--log-file=1"
       - "--api-log-file=1"
+      - "--data-dir=/data/counterparty/data"
+      - "--log-dir=/data/counterparty/log"
 
 volumes:
-  backend-data:
-  counterparty-data:
+  data:
