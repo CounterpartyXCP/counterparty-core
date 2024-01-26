@@ -148,7 +148,7 @@ def initialise(db):
                       tx1_address_idx ON order_match_expirations (tx1_address)
                    ''')
 
-def exact_penalty (db, address, block_index, order_match_id):
+def exact_penalty (db, address, block_index, order_match_id, tx_index):
     # Penalize addresses that don’t make BTC payments. If an address lets an
     # order match expire, expire sell BTC orders from that address.
     cursor = db.cursor()
@@ -158,7 +158,7 @@ def exact_penalty (db, address, block_index, order_match_id):
                                         WHERE (source = ? AND give_asset = ? AND status = ?)''',
                                      (address, config.BTC, 'open')))
     for bad_order in bad_orders:
-        cancel_order(db, bad_order, 'expired', block_index)
+        cancel_order(db, bad_order, 'expired', block_index, tx_index)
 
     if not (block_index >= 314250 or config.TESTNET or config.REGTEST):   # Protocol change.
         # Order matches.
@@ -166,7 +166,7 @@ def exact_penalty (db, address, block_index, order_match_id):
                                                    WHERE ((tx0_address = ? AND forward_asset = ?) OR (tx1_address = ? AND backward_asset = ?)) AND (status = ?)''',
                                          (address, config.BTC, address, config.BTC, 'pending')))
         for bad_order_match in bad_order_matches:
-            cancel_order_match(db, bad_order_match, 'expired', block_index)
+            cancel_order_match(db, bad_order_match, 'expired', block_index, tx_index)
 
     cursor.close()
     return
@@ -305,9 +305,9 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
     # Penalize tardiness.
     if block_index >= 313900 or config.TESTNET or config.REGTEST:  # Protocol change.
         if tx0_order['status'] == 'expired' and order_match['forward_asset'] == config.BTC:
-            exact_penalty(db, order_match['tx0_address'], block_index, order_match['id'])
+            exact_penalty(db, order_match['tx0_address'], block_index, order_match['id'], tx_index)
         if tx1_order['status'] == 'expired' and order_match['backward_asset'] == config.BTC:
-            exact_penalty(db, order_match['tx1_address'], block_index, order_match['id'])
+            exact_penalty(db, order_match['tx1_address'], block_index, order_match['id'], tx_index)
 
     # Re‐match.
     if block_index >= 310000 or config.TESTNET or config.REGTEST: # Protocol change.
