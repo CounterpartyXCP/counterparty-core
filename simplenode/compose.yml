@@ -1,0 +1,82 @@
+version: '3' 
+
+services:
+  bitcoind:
+    image: kylemanna/bitcoind
+    ports: 
+      - "8332:8332"                           # mainnet
+      # - "18332:18332"                       # testnet
+    command: 
+      - "-chain=main"                         # mainnet
+      # - "-chain=test"                       # testnet
+      - "-rpcallowip=0.0.0.0/0"
+      - "-rpcbind=0.0.0.0"
+      - "-rpcport=8332"                       # mainnet
+      # - "-rpcport=18332"                    # testnet
+      - "-rpcuser=bitcoinrpc"
+      - "-rpcpassword=rpc"
+      - "-listen=1"
+      - "-server=1"
+      - "-printtoconsole=1"
+      - "-addresstype=legacy"
+      - "-txindex=1"
+      - "-prune=0"
+      - "-dbcache=4000"
+      - "-mempoolfullrbf=1"
+
+    volumes:
+      - data:/bitcoin
+
+  addrindexrs:
+    image: counterparty/addrindexrs
+    links:
+      - bitcoind
+    volumes:
+      - data:/data
+    ports:
+      - "8432:8432"                           # mainnet
+      # - "18432:18432"                       # testnet
+    command:
+      - "--network=bitcoin"                   # mainnet
+      # - "--network=testnet"                 # testnet
+      - "--indexer-rpc-addr=0.0.0.0:8432"     # mainnet
+      # - "--indexer-rpc-addr=0.0.0.0:18432"  # testnet
+      - "--txid-limit=15000"
+      - "--daemon-rpc-addr=bitcoind:8332"     # mainnet
+      # - "--daemon-rpc-addr=bitcoind:18332"  # testnet
+      - "--cookie=bitcoinrpc:rpc"
+      - "--jsonrpc-import=true"
+      - "--daemon-dir=/bitcoin/.bitcoin"
+      - "-vvv"
+      - "--db-dir=/data/addrindexrs/db"
+
+  counterparty-server:
+    image: counterparty/counterparty-server
+    links:
+      - bitcoind
+      - addrindexrs
+    volumes:
+      - data:/data
+    entrypoint: "counterparty-server"         # TODO: `start` has to come after the flags.
+    command:
+      - "--backend-connect=bitcoind"
+      - "--backend-port=8332"                 # mainnet
+      # - "--backend-port=18332"              # testnet
+      - "--backend-user=bitcoinrpc"
+      - "--backend-password=rpc"
+      - "--indexd-connect=addrindexrs"
+      - "--indexd-port=8432"                  # mainnet
+      # - "--indexd-port=18432"               # testnet 
+      - "--rpc-user=rpc"
+      - "--rpc-password=rpc"
+      - "--rpc-host=0.0.0.0"
+      - "--log-file=1"
+      - "--api-log-file=1"
+      - "start"
+    environment:
+      - "XDG_DATA_HOME=/data/"
+      - "XDG_LOG_HOME=/data/"
+
+volumes:
+  data:                                       # mainnet
+  # data-testnet:                             # testnet

@@ -7,14 +7,31 @@
 **Note:** for the command-line interface to `counterparty-lib`, see [`counterparty-cli`](https://github.com/CounterpartyXCP/counterparty-cli).
 
 
-# Installation
+# Getting Started
 
-**WARNING** The `master` branch should only be used as a development target. For production, use only the latest tagged release.
+The simplest way to get your Counterparty node up and running is to use Docker Compose.
 
-For a simple Docker-based install of the Counterparty software stack, see [this guide](http://counterparty.io/docs/federated_node/).
+```
+$ sudo apt install docker-compose
+```
+
+Then, for `mainnet`, run:
+
+```bash
+$ docker-compose -f simplenode/compose.yml up
+```
+
+For `testnet`, modify the Docker Compose file in `simplenode/` and then run:
+```bash
+$ docker-compose -f simplenode/compose.yml -p simplenode-testnet up
+```
+
+Wait for your node to catch up with the network.
 
 
 # Manual installation
+
+**WARNING** The `master` branch should only be used as a development target. For production, use only the latest tagged release.
 
 Download the latest [Bitcoin Core](https://github.com/bitcoin/bitcoin/releases) and create
 a `bitcoin.conf` file (by default located in `~.bitcoin/`) with the following options:
@@ -41,32 +58,18 @@ dbcache=4000
 ```
 
 Download and install latest `addrindexrs`:
-```
+
+```bash
 $ sudo apt install cargo libclang-dev build-essential
 $ git clone https://github.com/CounterpartyXCP/addrindexrs.git
 $ cd addrindexrs
-$ cargo check
-```
-
-Set the following environment variables (for instance in your `.bashrc`):
-```
-export ADDRINDEXRS_JSONRPC_IMPORT=1
-export ADDRINDEXRS_TXID_LIMIT=15000
-export ADDRINDEXRS_COOKIE=bitcoinrpc:rpc
-export ADDRINDEXRS_INDEXER_RPC_ADDR=0.0.0.0:8432
-export ADDRINDEXRS_DAEMON_RPC_ADDR=localhost:8332
-```
-
-Then continue with the build:
-
-```
 $ cargo build --release
-$ cargo run --release
+$ cargo run --release -- -vvv --jsonrpc-import=1 --txid-limit=15000 --cookie="bitcoinrpc:rpc" --indexer-rpc-addr="0.0.0.0:8432" --daemon-rpc-addr="localhost:8332"
 ```
 
 Now, download and install `counterparty-lib`:
 
-```
+```bash
 $ sudo apt install python3-pip
 $ git clone https://github.com/CounterpartyXCP/counterparty-lib.git
 $ cd counterparty-lib
@@ -76,7 +79,7 @@ $ python3 setup.py install
 
 Followed by `counterparty-cli`:
 
-```
+```bash
 $ git clone https://github.com/CounterpartyXCP/counterparty-cli.git
 $ cd counterparty-cli
 $ pip3 install --upgrade -r requirements.txt
@@ -85,7 +88,7 @@ $ python3 setup.py install
 
 Then, launch the daemon via:
 
-```
+```bash
 $ counterparty-server bootstrap
 $ counterparty-server --backend-password=rpc start
 ```
