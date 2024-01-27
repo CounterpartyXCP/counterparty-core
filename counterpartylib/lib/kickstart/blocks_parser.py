@@ -108,8 +108,10 @@ class BlockchainParser():
         block_header['__header__'] = b2h(header)
         return block_header
 
-    def read_block(self, vds):
+    def read_block(self, vds, only_header=False):
         block = self.read_block_header(vds)
+        if only_header:
+            return block
         block['transaction_count'] = vds.read_compact_size()
         block['transactions'] = []
         for i in range(block['transaction_count']):
@@ -128,7 +130,7 @@ class BlockchainParser():
         else:
             self.data_stream.seek_file(pos_in_file)
 
-    def read_raw_block(self, block_hash):
+    def read_raw_block(self, block_hash, only_header=False):
         block_key = bytes('b', 'utf-8') + binascii.unhexlify(inverse_hash(block_hash))
         block_data = self.blocks_leveldb.get(block_key)
         ds = BCDataStream()
@@ -144,10 +146,8 @@ class BlockchainParser():
         block_header = ds.read_bytes(80)
 
         self.prepare_data_stream(file_num, block_pos_in_file)
-
-        block = self.read_block(self.data_stream)
+        block = self.read_block(self.data_stream, only_header=only_header)
         block['block_index'] = height
-
         return block
 
     def read_raw_transaction(self, tx_hash):
@@ -188,7 +188,6 @@ class ChainstateParser():
 
     def get_last_block_hash(self):
         block_hash = self.get_value(bytes('B', 'utf-8'))
-        logger.info("block_hash B: %s" % block_hash)
         block_hash = ib2h(block_hash)
         return block_hash
 
