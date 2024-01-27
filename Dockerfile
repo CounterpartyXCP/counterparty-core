@@ -23,7 +23,7 @@ RUN cd /root/counterparty-cli && \
     pip3 install --upgrade -r requirements.txt && \
     python3 setup.py install
 
-COPY docker/server.conf /root/.config/counterparty/server.conf
+COPY docker/counterparty-server/server.conf /root/.config/counterparty/server.conf
 
 EXPOSE 4000
 
