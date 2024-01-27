@@ -16,12 +16,13 @@ $ sudo apt install docker-compose
 ```
 
 Then, for `mainnet`, run:
-```
+
+```bash
 $ docker-compose -f simplenode/compose.yml up
 ```
 
 For `testnet`, modify the Docker Compose file in `simplenode/` and then run:
-```
+```bash
 $ docker-compose -f simplenode/compose.yml -p simplenode-testnet up
 ```
 
@@ -57,7 +58,8 @@ dbcache=4000
 ```
 
 Download and install latest `addrindexrs`:
-```
+
+```bash
 $ sudo apt install cargo libclang-dev build-essential
 $ git clone https://github.com/CounterpartyXCP/addrindexrs.git
 $ cd addrindexrs
@@ -67,7 +69,7 @@ $ cargo run --release -- -vvv --jsonrpc-import=1 --txid-limit=15000 --cookie="bi
 
 Now, download and install `counterparty-lib`:
 
-```
+```bash
 $ sudo apt install python3-pip
 $ git clone https://github.com/CounterpartyXCP/counterparty-lib.git
 $ cd counterparty-lib
@@ -77,7 +79,7 @@ $ python3 setup.py install
 
 Followed by `counterparty-cli`:
 
-```
+```bash
 $ git clone https://github.com/CounterpartyXCP/counterparty-cli.git
 $ cd counterparty-cli
 $ pip3 install --upgrade -r requirements.txt
@@ -86,7 +88,7 @@ $ python3 setup.py install
 
 Then, launch the daemon via:
 
-```
+```bash
 $ counterparty-server bootstrap
 $ counterparty-server --backend-password=rpc start
 ```
