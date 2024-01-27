@@ -209,7 +209,8 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
         adjust_get_sends_memo_filters(filters)
 
     # SELECT
-    statement = '''SELECT * FROM {}'''.format(table)
+    source = table if table != "balances" else f"({util.BALANCES_VIEW_QUERY})"
+    statement = '''SELECT * FROM {}'''.format(source)
     # WHERE
     bindings = []
     conditions = []

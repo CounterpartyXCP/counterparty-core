@@ -53,9 +53,6 @@ def test_alice_bob(server_db):
             {'field': 'address', 'op': '==', 'value': alice},
             {'field': 'asset', 'op': '==', 'value': 'XCP'},
         ],
-        "order_by": "block_index",
-        "order_dir": "desc",
-        "limit": 1,
     })
 
     assert result[0]['quantity'] == alice_balance2
