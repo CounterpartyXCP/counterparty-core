@@ -53,6 +53,12 @@ CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(CURR_DIR + '/../protocol_changes.json') as f:
     PROTOCOL_CHANGES = json.load(f)
 
+BALANCES_VIEW_QUERY = """
+    SELECT address, asset, quantity, (address || asset) AS aa, MAX(rowid)
+    FROM balances
+    GROUP BY aa
+"""
+
 class RPCError (Exception): pass
 
 # TODO: Move to `util_test.py`.
@@ -759,15 +765,7 @@ def supplies (db):
 def held (db): #TODO: Rename ?
     
     queries = [
-        """
-        SELECT asset, SUM(quantity) AS total FROM (
-            SELECT (address || asset) AS aa, address, asset, SUM(q) AS quantity FROM (
-                SELECT (address || asset) AS aa, address, asset, SUM(quantity) AS q FROM credits GROUP BY aa
-                UNION ALL
-                SELECT (address || asset) AS aa, address, asset, -1 * SUM(quantity) AS q FROM debits GROUP BY aa
-            ) GROUP BY aa
-        ) GROUP BY asset
-        """,
+        f"""SELECT asset, SUM(quantity) AS total FROM ({BALANCES_VIEW_QUERY}) GROUP BY asset""",
         "SELECT give_asset AS asset, SUM(give_remaining) AS total FROM orders WHERE status = 'open' GROUP BY asset",
         "SELECT give_asset AS asset, SUM(give_remaining) AS total FROM orders WHERE status = 'filled' and give_asset = 'XCP' and get_asset = 'BTC' GROUP BY asset",
         "SELECT forward_asset AS asset, SUM(forward_quantity) AS total FROM order_matches WHERE status = 'pending' GROUP BY asset",
@@ -823,6 +821,7 @@ def dhash_string(text):
 def get_balance(db, address, asset, raise_error_if_no_balance=False):
     """Get balance of contract or address."""
     cursor = db.cursor()
+    # rowid is enough but let's be verbose
     balances = list(cursor.execute('''SELECT * FROM balances
                                    WHERE (address = ? AND asset = ?)
                                    ORDER BY block_index DESC, tx_index DESC, rowid DESC LIMIT 1''', (address, asset)))
@@ -834,38 +833,21 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False):
     return balances[0]['quantity']
 
 
-# TODO: try to that with one SQL query
 def get_address_balances(db, address):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM balances
+    cursor.execute(f'''SELECT * FROM ({BALANCES_VIEW_QUERY})
                    WHERE address = ?
-                   ORDER BY asset, block_index DESC, tx_index DESC, rowid DESC''', (address,))
-    balances_history = cursor.fetchall()
-    # keep only the last balance for each asset
-    balances = []
-    saved_balances = {}
-    for balance in balances_history:
-        if balance['asset'] not in saved_balances:
-            balances.append(balance)
-            saved_balances[balance['asset']] = True
-    return balances
+                   ORDER BY asset''', (address,))
+    return cursor.fetchall()
 
 
 # TODO: try to that with one SQL query
 def get_asset_balances(db, asset):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM balances
+    cursor.execute(f'''SELECT * FROM ({BALANCES_VIEW_QUERY})
                    WHERE asset = ?
-                   ORDER BY address, block_index DESC, tx_index DESC, rowid DESC''', (asset,))
-    balances_history = cursor.fetchall()
-    # keep only the last balance for each address
-    balances = []
-    saved_balances = {}
-    for balance in balances_history:
-        if balance['address'] not in saved_balances:
-            balances.append(balance)
-            saved_balances[balance['address']] = True
-    return balances
+                   ORDER BY address''', (asset,))
+    return cursor.fetchall()
 
 
 # Why on Earth does `binascii.hexlify()` return bytes?!
