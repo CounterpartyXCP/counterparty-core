@@ -275,22 +275,25 @@ class AddrIndexRsThread (threading.Thread):
         self.is_killed = False
 
     def stop(self):
-        logging.debug('AddrIndexRs thread closing')
+        logging.warn('Killing address indexer connection thread.')
         self.send({"kill": True})
 
     def connect(self):
         self.lastId = 0
         while True:
-            logging.info('AddrIndexRs connecting...')
+            logging.info('Connecting to address indexer...')
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.settimeout(SOCKET_TIMEOUT)
             try:
+                logging.debug('Opening socket to address indexer at `{}:{}`'.format(self.host, self.port))
                 self.sock.connect((self.host, self.port))
-            except:
-                logging.info('Error connecting to AddrIndexRs! Retrying in a few seconds')
-                time.sleep(5.0)
+            except Exception as e:
+                self.stop()
+                logging.exception('Error when attempting to connect to address indexer!')
+                # time.sleep(5.0)
+                raise e
             else:
-                logging.info('Connected to AddrIndexRs!')
+                logging.info('Connected to address indexer.')
                 break
 
     def run(self):
@@ -298,55 +301,60 @@ class AddrIndexRsThread (threading.Thread):
         self.locker.acquire()
         self.connect()
         while self.locker.wait():
-            if not(self.is_killed) and self.message_to_send != None:
-                msg = self.message_to_send
-                self.message_to_send = None
-                retry_count = 15
-                while retry_count > 0:
-                    has_sent = False
-                    while not(has_sent) and msg:
-                        try:
-                            logging.debug('AddrIndexRs sending')
-                            self.sock.send(msg)
-                            has_sent = True
-                        except Exception as e:
-                            #try:
-                            logging.debug('AddrIndexRs error:' + e)
-                            self.connect()
-                            #except Exception as e2:
-                            #logging.debug('AddrIndexRs fatal error:' + e2)
+            if self.message_to_send and not self.is_killed:
 
-                    self.message_to_send = None
-                    data = b""
-                    parsed = False
-                    while not(parsed):
-                        try:
-                            data = data + self.sock.recv(READ_BUF_SIZE)
+                # Send message over socket.
+                has_sent = False
+                while not has_sent:
+                    try:
+                        logging.debug('Sending message to address indexer: {}'.format(self.message_to_send))
+                        self.sock.send(self.message_to_send)
+                        has_sent = True
+                    except Exception as e:
+                        logging.exception('Unknown error sending message to address indexer: {}'.format(msg))
+                        raise e
+
+                # Receive message over socket.
+                data = b""
+                parsed = False
+                while not parsed:
+                    try:
+                        data = data + self.sock.recv(READ_BUF_SIZE)
+                        try: 
                             self.message_result = json.loads(data.decode('utf-8'))
-                            retry_count = 0
                             parsed = True
-                            logging.debug('AddrIndexRs Recv complete!')
-                        except socket.timeout:
-                            logging.debug('AddrIndexRs Recv timeout error sending: '+str(msg))
-                            if retry_count <= 0:
-                                self.connect()
-                            self.message_result = None
-                            retry_count -= -1
-                        except socket.error as e:
-                            logging.debug('AddrIndexRs Recv error:' + str(e)+' with msg '+str(msg))
+                            self.message_to_send = None
+                            logging.debug('Successfully parsed response from address indexer: {}'. format(self.message_result))
+                            break
+                        except json.decoder.JSONDecodeError as e:
+                            logging.exception('Cannot parse response from address indexer: {}'.format(data))
                             self.connect()
-                        except Exception as e:
-                            logging.debug('AddrIndexRs Recv error:' + str(e)+' with msg '+str(msg))
-                            if retry_count <= 0:
-                                raise e
-                            self.message_result = None
-                            retry_count -= 1
-                        finally:
-                            self.locker.notify()
+
+                    except socket.timeout:
+                        logging.warn('Timeout waiting for response from address indexer on message: {}'.format(self.message_to_send))
+                        self.connect()
+                        self.message_result = None
+
+                    except ConnectionResetError as e:
+                        logging.warn('Connection to address indexer reset.')
+                        self.connect()
+                        self.message_result = None
+
+                    except socket.error as e:
+                        logging.exception('Address indexer socket error on message: {}'.format(self.message_to_send))
+                        raise e
+
+                    except Exception as e:
+                        logging.exception('Unknown error when connecting to address indexer.')
+                        raise e
+
+                    finally:
+                        self.locker.notify()
             else:
                 self.locker.notify()
+
         self.sock.close()
-        logging.debug('AddrIndexRs socket closed normally')
+        logging.debug('Closed socket to address indexer.')
 
     def send(self, msg):
         self.locker.acquire()
