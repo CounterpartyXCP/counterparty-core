@@ -41,7 +41,6 @@ rpcport=8332
 rpcuser=bitcoinrpc
 rpcpassword=rpc
 server=1
-printtoconsole=1
 addresstype=legacy
 txindex=1
 prune=0
@@ -149,7 +148,7 @@ Counterparty database files are by default named `counterparty.[testnet.]db` and
 
 ## Configuration File Format
 
-Manual configuration is not necessary for most use cases, but example configuration files may be found in the <docker/> directory.
+Manual configuration is not necessary for most use cases, but example configuration files may be found in the (docker/) directory.
 
 The ``force`` argument can be used either in the server configuration file or passed at runtime to make the server keep running in the case it loses connectivity with the Internet and falls behind the back-end database. This may be useful for *non-production* Counterparty servers that need to maintain RPC service availability even when the backend or counterparty server has no Internet connectivity.
 
