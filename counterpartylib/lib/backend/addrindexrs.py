@@ -281,31 +281,6 @@ class AddrIndexRsThread (threading.Thread):
         logging.warn('Killing address indexer connection thread.')
         self.send({"kill": True})
 
-    def receive_data(self):
-        data = b""
-        try:
-            data = data + self.sock.recv(READ_BUF_SIZE)
-            try: 
-                self.message_result = json.loads(data.decode('utf-8'))
-                self.message_to_send = None
-                logging.debug('Successfully parsed response from address indexer: {}'. format(self.message_result))
-                return True
-            except json.decoder.JSONDecodeError as e:
-                logging.debug('Cannot parse response from address indexer: {}'.format(data))
-                return False
-        except socket.timeout:
-            logging.debug('Timeout waiting for response from address indexer on message: {}'.format(self.message_to_send))
-            return False
-        except ConnectionResetError as e:
-            logging.debug('Connection to address indexer reset.')
-            return False
-        except socket.error as e:
-            logging.debug('Address indexer socket error on message: {}'.format(self.message_to_send))
-            return False
-        except Exception as e:
-            logging.exception('Unknown error when connecting to address indexer.')
-            raise e
-
     def connect(self):
         self.lastId = 0
         while True:
@@ -340,7 +315,7 @@ class AddrIndexRsThread (threading.Thread):
                         has_sent = True
                         backoff = BACKOFF_START
                     except Exception as e:
-                        logging.exception('Unknown error sending message to address indexer: {}'.format(msg))
+                        logging.exception('Unknown error sending message to address indexer: {}'.format(self.message_to_send))
                         logging.debug('Trying again in {} seconds.'.format(backoff))
                         time.sleep(backoff)
                         backoff = min(backoff * 1.5, BACKOFF_MAX)
@@ -348,16 +323,41 @@ class AddrIndexRsThread (threading.Thread):
                 # Receive message over socket.
                 parsed = False
                 while has_sent and not parsed:
-                    if self.receive_data():
-                        parsed = True
-                        backoff = BACKOFF_START
-                        break
-                    else:
-                        logging.debug('Trying again in {} seconds.'.format(backoff))
+                    data = b""
+                    try:
+                        data = data + self.sock.recv(READ_BUF_SIZE)
+                        try: 
+                            self.message_result = json.loads(data.decode('utf-8'))
+                            self.message_to_send = None
+                            logging.debug('Successfully parsed response from address indexer: {}'. format(self.message_result))
+                            parsed = True
+                            backoff = BACKOFF_START
+                        except json.decoder.JSONDecodeError as e:
+                            logging.debug('Cannot parse response from address indexer: {} Trying again in {} seconds.'.format(data, backoff))
+                            time.sleep(backoff)
+                            backoff = min(backoff * 1.5, BACKOFF_MAX)
+                    except socket.timeout:
+                        logging.debug('Timeout waiting for response from address indexer on message: {} Trying again in {} seconds.'.format(self.message_to_send, backoff))
                         time.sleep(backoff)
                         backoff = min(backoff * 1.5, BACKOFF_MAX)
+                    except ConnectionResetError as e:
+                        logging.debug('Connection to address indexer reset. Trying again in {} seconds.'.format(backoff))
+                        time.sleep(backoff)
+                        backoff = min(backoff * 1.5, BACKOFF_MAX)
+                    except socket.error as e:
+                        logging.debug('Address indexer socket error on message: {} Trying again in {} seconds.'.format(self.message_to_send, backoff))
+                        time.sleep(backoff)
+                        backoff = min(backoff * 1.5, BACKOFF_MAX)
+                    except Exception as e:
+                        logging.exception('Unknown error when connecting to address indexer.')
+                        time.sleep(backoff)
+                        backoff = min(backoff * 1.5, BACKOFF_MAX)
+                        raise e
+                    finally:
+                        self.locker.notify()
 
             else:
+                print('Notify!')
                 self.locker.notify()
 
         self.sock.close()
@@ -375,6 +375,7 @@ class AddrIndexRsThread (threading.Thread):
         return self.message_result
 
 def indexer_check_version():
+    logging.debug('Checking version of address indexer.')
     addrindexrs_version = Indexer_Thread.send({
         "method": "server.version",
         "params": []
@@ -387,6 +388,8 @@ def indexer_check_version():
         logger.info("Wrong addrindexrs version: "+addrindexrs_version_needed+" is needed but "+addrindexrs_version_label+" was found")
         Indexer_Thread.stop()
         sys.exit(config.EXITCODE_UPDATE_REQUIRED)
+    else:
+        logging.debug('Version check of address indexer passed ({} > {}).'.format(addrindexrs_version_label, addrindexrs_version_needed))
 
 def _script_pubkey_to_hash(spk):
     return hashlib.sha256(spk).digest()[::-1].hex()
