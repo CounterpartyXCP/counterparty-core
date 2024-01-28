@@ -23,6 +23,7 @@ SOCKET_TIMEOUT = 5.0
 BACKEND_PING_TIME = 30.0
 BACKOFF_START = 0.5
 BACKOFF_MAX = 5.0
+BACKOFF_FACTOR = 1.5
 
 Indexer_Thread = None
 raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)  # used in getrawtransaction_batch()
@@ -334,23 +335,15 @@ class AddrIndexRsThread (threading.Thread):
                         except json.decoder.JSONDecodeError as e:
                             logging.debug('Cannot parse response from address indexer: {} Trying again in {} seconds.'.format(data, backoff))
                             time.sleep(backoff)
-                            backoff = min(backoff * 1.5, BACKOFF_MAX)
-                    except socket.timeout:
-                        logging.debug('Timeout waiting for response from address indexer on message. Trying again in {} seconds.'.format(backoff))
+                            backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
+                    except (socket.timeout, socket.error, ConnectionResetError) as e:
+                        logging.debug('Error in connection to address indexer: {}. Trying again in {} seconds.'.format(e, backoff))
                         time.sleep(backoff)
-                        backoff = min(backoff * 1.5, BACKOFF_MAX)
-                    except ConnectionResetError as e:
-                        logging.debug('Connection to address indexer reset. Trying again in {} seconds.'.format(backoff))
-                        time.sleep(backoff)
-                        backoff = min(backoff * 1.5, BACKOFF_MAX)
-                    except socket.error as e:
-                        logging.debug('Address indexer socket error. Trying again in {} seconds.'.format(backoff))
-                        time.sleep(backoff)
-                        backoff = min(backoff * 1.5, BACKOFF_MAX)
+                        backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
                     except Exception as e:
                         logging.exception('Unknown error when connecting to address indexer.')
                         time.sleep(backoff)
-                        backoff = min(backoff * 1.5, BACKOFF_MAX)
+                        backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
                         raise e
                     finally:
                         self.locker.notify()
