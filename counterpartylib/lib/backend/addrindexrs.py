@@ -380,7 +380,10 @@ def indexer_check_version():
         "params": []
     })
 
-    addrindexrs_version_label = addrindexrs_version["result"][0][12:] #12 is the length of "addrindexrs "
+    try:
+        addrindexrs_version_label = addrindexrs_version["result"][0][12:] #12 is the length of "addrindexrs "
+    except TypeError as e:
+        logging.exception(addrindexrs_version)  # Ehhhhh?!?!
     addrindexrs_version_needed = util.get_value_by_block_index("addrindexrs_required_version")
 
     if parse_version(addrindexrs_version_needed) > parse_version(addrindexrs_version_label):

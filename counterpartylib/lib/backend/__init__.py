@@ -19,6 +19,7 @@ from counterpartylib.lib import exceptions
 from counterpartylib.lib.backend import addrindexrs
 
 MEMPOOL_CACHE_INITIALIZED = False
+_initialized = False
 
 PRETX_CACHE = {}
 
@@ -39,7 +40,10 @@ def sortkeypicker(keynames):
 
 def BACKEND():
     mdl = sys.modules['counterpartylib.lib.backend.{}'.format(config.BACKEND_NAME)]
-    mdl.init()
+    global _initialized
+    if not _initialized:
+        mdl.init()
+        _initialized = True
     return mdl
 
 def stop():

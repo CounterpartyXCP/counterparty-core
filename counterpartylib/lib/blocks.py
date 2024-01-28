@@ -1223,7 +1223,8 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
 
         return tx_index + 1
     else:
-        logger.getChild('list_tx.skip').debug('Skipping transaction: {}'.format(tx_hash))
+        # logger.getChild('list_tx.skip').debug('Skipping transaction: {}'.format(tx_hash)) # I think this is useless, and it's very verbose.
+        pass
 
     return tx_index
 
@@ -1487,7 +1488,7 @@ def follow(db):
 
             # Check version. (Don’t add any blocks to the database while
             # running an out‐of‐date client!)
-            check.software_version()
+            # TODO: check.software_version() # This is too much!
 
 
             # Get and parse transactions in this block (atomically).
