@@ -303,6 +303,7 @@
       "testnet_block_index": 2288000
   },
   "issuance_asset_serialization_format": {
+    "minimum_version_major": 0,
     "mainnet":{
       "1":{
         "value":">QQ??If"  
@@ -327,6 +328,7 @@
     }
   },
   "issuance_asset_serialization_length": {
+    "minimum_version_major": 0,
     "mainnet":{
       "1":{
         "value":26  
@@ -351,6 +353,7 @@
     }
   },
   "issuance_subasset_serialization_format": {
+    "minimum_version_major": 0,
     "mainnet":{
       "1":{
         "value":">QQ?B"  
@@ -372,6 +375,7 @@
     }
   },
   "issuance_subasset_serialization_length": {
+    "minimum_version_major": 0,
     "mainnet":{
       "1":{
         "value":18  
@@ -456,6 +460,7 @@
       "testnet_block_index": 2505725
   },
   "addrindexrs_required_version": {
+    "minimum_version_major": 0,
     "mainnet":{
       "0":{
         "value":"0.4.0"
@@ -474,6 +479,7 @@
     }
   },
   "max_dispenses_limit": {
+    "minimum_version_major": 0,
     "mainnet":{
       "1":{
         "value":0  
@@ -492,6 +498,7 @@
     }
   },
   "dispenser_close_delay": {
+    "minimum_version_major": 0,
     "mainnet":{
       "1":{
         "value":0
@@ -510,6 +517,7 @@
     }
   },
   "max_refills": {
+    "minimum_version_major": 0,
     "mainnet":{
       "1":{
         "value":0  
@@ -528,6 +536,7 @@
     }
   },
   "sweep_antispam_fee": {
+    "minimum_version_major": 0,
     "mainnet":{
       "1":{
         "value":0  
