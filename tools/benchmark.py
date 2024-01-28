@@ -239,87 +239,89 @@ def compare_strings(string1, string2):
         print(f"\n{len(diff)} differences")
     return len(diff)
 
+def execute_query(cursor, description, query, bindings=None):
+    print(description)
+    start_time = time.time()
+    if isinstance(query, list):
+        for q in query:
+            res = cursor.execute(q, bindings).fetchall()
+        print('Average duration: {:.5f}s'.format((time.time() - start_time) / len(query)))
+    else:
+        res = cursor.execute(query, bindings).fetchall()
+        print('Duration: {:.5f}s'.format(time.time() - start_time))
+    print()
+    return res
 
 BALANCES_VIEW_QUERY = """
-    SELECT address, asset, quantity, (address || asset) AS aa, MAX(rowid)
+    SELECT address, asset, quantity, MAX(rowid)
     FROM new_balances
-    GROUP BY aa
+    GROUP BY address, asset
 """
 
-def benchmark_new_balances():
+def benchmark_new_balances(old_balance_db):
     
-    db = apsw.Connection(BENCHMARK_DB, flags=apsw.SQLITE_OPEN_READONLY)
-    cursor = db.cursor()
+    old_db = apsw.Connection(old_balance_db, flags=apsw.SQLITE_OPEN_READONLY)
+    old_cursor = old_db.cursor()
 
-    rows_in_old_balances = cursor.execute("SELECT count(*) as cnt FROM old_balances").fetchone()[0]
+    new_db = apsw.Connection(BENCHMARK_DB, flags=apsw.SQLITE_OPEN_READONLY)
+    new_cursor = new_db.cursor()
+
+    rows_in_old_balances = old_cursor.execute("SELECT count(*) as cnt FROM balances").fetchone()[0]
     print("Rows in `old_balances`:", rows_in_old_balances)
-    rows_in_new_balances = cursor.execute("SELECT count(*) as cnt FROM new_balances").fetchone()[0]
+    rows_in_new_balances = new_cursor.execute("SELECT count(*) as cnt FROM new_balances").fetchone()[0]
     print("Rows in `new_balances`:", rows_in_new_balances)
     print()
 
-    print("Getting 1000 addresses with most assets from `old_balances`...")
-    start_time = time.time()
-    balances = cursor.execute("""
-                              SELECT address, count(asset) as cnt
-                              FROM old_balances
-                              GROUP BY address
-                              ORDER BY cnt DESC
-                              LIMIT 1000
-                              """).fetchall()
+    description = "Get 100 addresses with most assets from `old_balances`..."
+    query = """
+    SELECT address, count(asset) as cnt
+    FROM balances
+    GROUP BY address
+    ORDER BY cnt DESC
+    LIMIT 100
+    """
+    old_most_assets = execute_query(old_cursor, description, query)
 
-    print('Duration: {:.3f}s'.format(time.time() - start_time))
-    print()
 
-    print("Get balances for 1000 addresses with most assets from `old_balances`...")
-    start_time = time.time()
-    old_balances = []
-    count_old = 0
-    for balance in balances:
-        address_balances = cursor.execute("""
-                        SELECT asset, quantity FROM old_balances
-                        WHERE address = ?
-                        ORDER BY asset
-                        """, (balance[0],)).fetchall()
-        count_old += len(address_balances)
-        old_balances.append("\n".join([", ".join([str(x) for x in address_balance]) for address_balance in address_balances]))
-    print('Duration: {:.3f}s'.format(time.time() - start_time))
-    print()
+    description = "Get 100 addresses with most assets from `new_balances`..."
+    query = f"""
+    SELECT address, count(asset) as cnt
+    FROM ({BALANCES_VIEW_QUERY})
+    GROUP BY address
+    ORDER BY cnt DESC
+    LIMIT 100
+    """
+    new_most_assets = execute_query(new_cursor, description, query)
 
-    print("Getting 1000 addresses with most assets from `new_balances`...")
-    start_time = time.time()
-    balances = cursor.execute(f"""
-                                  SELECT address, count(asset) as cnt
-                                  FROM ({BALANCES_VIEW_QUERY})
-                                  GROUP BY address
-                                  ORDER BY cnt DESC
-                                  LIMIT 1000
-                                  """).fetchall()
-    #with open("new_balances_addresses.txt", "w") as f:
-    #    f.write("\n".join([balance[0] for balance in balances]))
 
-    print('Duration: {:.3f}s'.format(time.time() - start_time))
-    print()
+    description = "Get balances for 100 addresses with most assets from `old_balances`..."
+    queries = []
+    for asset in old_most_assets:
+        queries.append(f"""
+            SELECT asset, quantity
+            FROM balances
+            WHERE address = '{asset[0]}'
+        """)
+    execute_query(old_cursor, description, queries)
 
-    print("Get balances for 1000 addresses with most assets from `new_balances`...")
-    start_time = time.time()
-    new_balances = []
-    count_new = 0
-    for balance in balances:
-        address_balances = cursor.execute(f"""
-                        SELECT asset, quantity, (address || asset) AS aa, MAX(rowid)
-                        FROM new_balances
-                        WHERE address = ?
-                        GROUP BY aa
-                        ORDER BY asset
-                        """, (balance[0],)).fetchall()
-        count_new += len(address_balances)
-        new_balances.append("\n".join([", ".join([str(x) for x in address_balance]) for address_balance in address_balances]))
-    print('Duration: {:.3f}s'.format(time.time() - start_time))
-    print()
+
+    description = "Get balances for 100 addresses with most assets from `new_balances`..."
+    queries = []
+    for asset in new_most_assets:
+        queries.append(f"""
+            SELECT asset, quantity FROM (
+                SELECT address, asset, quantity, MAX(rowid)
+                FROM new_balances
+                WHERE address = '{asset[0]}'
+                GROUP BY address, asset
+            )
+        """)
+    execute_query(new_cursor, description, queries)
+
 
 BENCHMARK_DB="/home/tower/benchmark.db"
 
 #prepare_benchmark_db("/home/tower/counterparty.testnet.bootstrap.db")
-prepare_benchmark_db("/home/tower/counterparty.db")
-#benchmark_new_balances()
+#prepare_benchmark_db("/home/tower/counterparty.db")
+benchmark_new_balances("/home/tower/counterparty.db")
 
