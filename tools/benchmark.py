@@ -194,13 +194,13 @@ def prepare_benchmark_db(database_file):
 
     query = """
             SELECT * FROM
-            (SELECT 'credit' as table_name, address, asset, quantity, block_index FROM credits
-                UNION ALL
-            SELECT 'debits' as table_name, address, asset, quantity, block_index FROM debits)
+                (SELECT 'credit' as table_name, address, asset, quantity, block_index FROM credits
+                    UNION ALL
+                SELECT 'debits' as table_name, address, asset, quantity, block_index FROM debits)
             ORDER BY block_index
             """
     
-    cursor.execute(query)
+    """ cursor.execute(query)
     count = 1
     populate_start_time = time.time()
     print("Populating `old_balances`...")
@@ -211,7 +211,7 @@ def prepare_benchmark_db(database_file):
             remove_from_balanc_old(bench_db, *movement[1:4])
         print(f"{count}/{movements_count}", end="\r")
         count += 1
-    print('`old_balances` populated in: {:.3f}s'.format(time.time() - populate_start_time))
+    print('`old_balances` populated in: {:.3f}s'.format(time.time() - populate_start_time)) """
     
     cursor.execute(query)
     count = 1
@@ -226,7 +226,7 @@ def prepare_benchmark_db(database_file):
         count += 1
     print('`new_balances` populated in: {:.3f}s'.format(time.time() - populate_start_time))
     
-    copy_memory_db_to_disk("benchmark.db", bench_db)
+    copy_memory_db_to_disk(BENCHMARK_DB, bench_db)
     print()
 
 
@@ -248,7 +248,7 @@ BALANCES_VIEW_QUERY = """
 
 def benchmark_new_balances():
     
-    db = apsw.Connection("benchmark.db", flags=apsw.SQLITE_OPEN_READONLY)
+    db = apsw.Connection(BENCHMARK_DB, flags=apsw.SQLITE_OPEN_READONLY)
     cursor = db.cursor()
 
     rows_in_old_balances = cursor.execute("SELECT count(*) as cnt FROM old_balances").fetchone()[0]
@@ -260,14 +260,12 @@ def benchmark_new_balances():
     print("Getting 1000 addresses with most assets from `old_balances`...")
     start_time = time.time()
     balances = cursor.execute("""
-                                  SELECT address, count(asset) as cnt
-                                  FROM old_balances
-                                  GROUP BY address
-                                  ORDER BY cnt DESC
-                                  LIMIT 1000
-                                  """).fetchall()
-    #with open("old_balances_addresses.txt", "w") as f:
-    #    f.write("\n".join([balance[0] for balance in balances]))
+                              SELECT address, count(asset) as cnt
+                              FROM old_balances
+                              GROUP BY address
+                              ORDER BY cnt DESC
+                              LIMIT 1000
+                              """).fetchall()
 
     print('Duration: {:.3f}s'.format(time.time() - start_time))
     print()
@@ -319,8 +317,9 @@ def benchmark_new_balances():
     print('Duration: {:.3f}s'.format(time.time() - start_time))
     print()
 
+BENCHMARK_DB="/home/tower/benchmark.db"
 
 #prepare_benchmark_db("/home/tower/counterparty.testnet.bootstrap.db")
 prepare_benchmark_db("/home/tower/counterparty.db")
-benchmark_new_balances()
+#benchmark_new_balances()
 
