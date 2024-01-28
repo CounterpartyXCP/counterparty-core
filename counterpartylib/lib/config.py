@@ -139,6 +139,7 @@ API_LIMIT_ROWS = 1000
 
 MPMA_LIMIT = 1000
 
-PROTOCOL_CHANGES_URL = "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-lib/master/counterpartylib/protocol_changes.json"
+PROTOCOL_CHANGES_URL = "https://counterpartyxcp.github.io/counterparty-lib/counterpartylib/protocol_changes.json"
+
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
