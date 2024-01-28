@@ -664,7 +664,7 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
 
     # Only look for source if data were found or destination is UNSPENDABLE, for speed.
     if not data and destination != config.UNSPENDABLE:
-        raise BTCOnlyError('no data and not unspendable')
+        raise BTCOnlyError('no data and not unspendable', ctx)
 
     # Collect all possible source addresses; ignore coinbase transactions and anything but the simplest Pay‐to‐PubkeyHash inputs.
     source_list = []
