@@ -294,7 +294,6 @@ class AddrIndexRsThread (threading.Thread):
                 logging.error('Unknown error when attempting to connect to address indexer.')
                 time.sleep(5.0)
             else:
-                # TODO: logging.info('Connected to address indexer.')
                 break
 
     def run(self):
