@@ -239,7 +239,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                 raw_transactions_cache[tx_hash] = tx_hex
             elif skip_missing and 'error' in response and response['error']['code'] == -5:
                 raw_transactions_cache[tx_hash] = None
-                logging.debug('Missing TX with no raw info skipped (txhash: {}): {}'.format(
+                logger.debug('Missing TX with no raw info skipped (txhash: {}): {}'.format(
                     tx_hash_call_id.get(response.get('id', '??'), '??'), response['error']))
             else:
                 #TODO: this seems to happen for bogus transactions? Maybe handle it more gracefully than just erroring out?
@@ -254,7 +254,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
             else:
                 result[tx_hash] = raw_transactions_cache[tx_hash]['hex'] if raw_transactions_cache[tx_hash] is not None else None
         except KeyError as e: #shows up most likely due to finickyness with addrindex not always returning results that we need...
-            logging.error("Key error in addrindexrs still exists!!!!!")
+            logger.error("Key error in addrindexrs still exists!!!!!")
             _logger.warning("tx missing in rawtx cache: {} -- txhash_list size: {}, hash: {} / raw_transactions_cache size: {} / # rpc_batch calls: {} / txhash in noncached_txhashes: {} / txhash in txhash_list: {} -- list {}".format(
                 e, len(txhash_list), hashlib.md5(json.dumps(list(txhash_list)).encode()).hexdigest(), len(raw_transactions_cache), len(payload),
                 tx_hash in noncached_txhashes, tx_hash in txhash_list, list(txhash_list.difference(noncached_txhashes)) ))
@@ -279,7 +279,7 @@ class AddrIndexRsThread (threading.Thread):
         self.is_killed = False
 
     def stop(self):
-        logging.warn('Killing address indexer connection thread.')
+        logger.warn('Killing address indexer connection thread.')
         self.send({"kill": True})
 
     def connect(self):
@@ -288,11 +288,11 @@ class AddrIndexRsThread (threading.Thread):
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.settimeout(SOCKET_TIMEOUT)
             try:
-                logging.debug('Opening socket to address indexer at `{}:{}`'.format(self.host, self.port))
+                logger.debug('Opening socket to address indexer at `{}:{}`'.format(self.host, self.port))
                 self.sock.connect((self.host, self.port))
             except Exception as e:
-                logging.error('Unknown error when attempting to connect to address indexer.')
-                time.sleep(5.0)
+                logger.exception('Unknown error when attempting to connect to address indexer.')
+                sys.exit(1)
             else:
                 break
 
@@ -309,15 +309,13 @@ class AddrIndexRsThread (threading.Thread):
                 has_sent = False
                 while not has_sent:
                     try:
-                        logging.debug('Sending message to address indexer: {}'.format(self.message_to_send))
+                        logger.debug('Sending message to address indexer: {}'.format(self.message_to_send))
                         self.sock.send(self.message_to_send)
                         has_sent = True
                         backoff = BACKOFF_START
                     except Exception as e:
-                        logging.exception('Unknown error sending message to address indexer: {}'.format(self.message_to_send))
-                        logging.debug('Trying again in {} seconds.'.format(backoff))
-                        time.sleep(backoff)
-                        backoff = min(backoff * 1.5, BACKOFF_MAX)
+                        logger.exception('Unknown error sending message to address indexer: {}'.format(self.message_to_send))
+                        sys.exit(1)
 
                 # Receive message over socket.
                 parsed = False
@@ -342,19 +340,17 @@ class AddrIndexRsThread (threading.Thread):
                                     backoff = BACKOFF_START
                                     break
                             else:
-                                logging.debug('Empty response from address indexer. Trying again in {} seconds.'.format(backoff))
+                                logger.debug('Empty response from address indexer. Trying again in {} seconds.'.format(backoff))
                                 time.sleep(backoff)
                                 backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
 
                     except (socket.timeout, socket.error, ConnectionResetError) as e:
-                        logging.debug('Error in connection to address indexer: {}. Trying again in {} seconds.'.format(e, backoff))
+                        logger.debug('Error in connection to address indexer: {}. Trying again in {} seconds.'.format(e, backoff))
                         time.sleep(backoff)
                         backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
                     except Exception as e:
-                        logging.exception('Unknown error when connecting to address indexer.')
-                        time.sleep(backoff)
-                        backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
-                        raise e
+                        logger.exception('Unknown error when connecting to address indexer.')
+                        sys.exit(1)
                     finally:
                         self.locker.notify()
 
@@ -362,7 +358,7 @@ class AddrIndexRsThread (threading.Thread):
                 self.locker.notify()
 
         self.sock.close()
-        logging.debug('Closed socket to address indexer.')
+        logger.debug('Closed socket to address indexer.')
 
     def send(self, msg):
         self.locker.acquire()
@@ -376,7 +372,7 @@ class AddrIndexRsThread (threading.Thread):
         return self.message_result
 
 def indexer_check_version():
-    logging.debug('Checking version of address indexer.')
+    logger.debug('Checking version of address indexer.')
     addrindexrs_version = Indexer_Thread.send({
         "method": "server.version",
         "params": []
@@ -385,7 +381,8 @@ def indexer_check_version():
     try:
         addrindexrs_version_label = addrindexrs_version["result"][0][12:] #12 is the length of "addrindexrs "
     except TypeError as e:
-        logging.exception(addrindexrs_version)  # Ehhhhh?!?!
+        logger.exception('Error when checking address indexer version: {}'.format(addrindexrs_version))
+        sys.exit(1)
     addrindexrs_version_needed = util.get_value_by_block_index("addrindexrs_required_version")
 
     if parse_version(addrindexrs_version_needed) > parse_version(addrindexrs_version_label):
@@ -393,7 +390,7 @@ def indexer_check_version():
         Indexer_Thread.stop()
         sys.exit(config.EXITCODE_UPDATE_REQUIRED)
     else:
-        logging.debug('Version check of address indexer passed ({} > {}).'.format(addrindexrs_version_label, addrindexrs_version_needed))
+        logger.debug('Version check of address indexer passed ({} > {}).'.format(addrindexrs_version_label, addrindexrs_version_needed))
 
 def _script_pubkey_to_hash(spk):
     return hashlib.sha256(spk).digest()[::-1].hex()
@@ -538,7 +535,7 @@ def init():
     Indexer_Thread = AddrIndexRsThread(config.INDEXD_CONNECT, config.INDEXD_PORT)
     Indexer_Thread.daemon = True
     Indexer_Thread.start()
-    logging.info('Connecting to address indexer.')
+    logger.info('Connecting to address indexer.')
     indexer_check_version()
 
 def stop():
