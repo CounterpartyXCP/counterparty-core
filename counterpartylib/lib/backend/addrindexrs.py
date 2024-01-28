@@ -284,7 +284,6 @@ class AddrIndexRsThread (threading.Thread):
     def connect(self):
         self.lastId = 0
         while True:
-            logging.info('Connecting to address indexer.')
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.settimeout(SOCKET_TIMEOUT)
             try:
@@ -337,7 +336,7 @@ class AddrIndexRsThread (threading.Thread):
                             time.sleep(backoff)
                             backoff = min(backoff * 1.5, BACKOFF_MAX)
                     except socket.timeout:
-                        logging.debug('Timeout waiting for response from address indexer on message: {} Trying again in {} seconds.'.format(self.message_to_send, backoff))
+                        logging.debug('Timeout waiting for response from address indexer on message. Trying again in {} seconds.'.format(backoff))
                         time.sleep(backoff)
                         backoff = min(backoff * 1.5, BACKOFF_MAX)
                     except ConnectionResetError as e:
@@ -345,7 +344,7 @@ class AddrIndexRsThread (threading.Thread):
                         time.sleep(backoff)
                         backoff = min(backoff * 1.5, BACKOFF_MAX)
                     except socket.error as e:
-                        logging.debug('Address indexer socket error on message: {} Trying again in {} seconds.'.format(self.message_to_send, backoff))
+                        logging.debug('Address indexer socket error. Trying again in {} seconds.'.format(backoff))
                         time.sleep(backoff)
                         backoff = min(backoff * 1.5, BACKOFF_MAX)
                     except Exception as e:
@@ -534,6 +533,7 @@ def init():
     Indexer_Thread = AddrIndexRsThread(config.INDEXD_CONNECT, config.INDEXD_PORT)
     Indexer_Thread.daemon = True
     Indexer_Thread.start()
+    logging.info('Connecting to address indexer.')
     indexer_check_version()
 
 def stop():
