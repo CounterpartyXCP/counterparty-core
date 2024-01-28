@@ -23,7 +23,6 @@ services:
       - "-prune=0"
       - "-dbcache=4000"
       - "-mempoolfullrbf=1"
-
     volumes:
       - data:/bitcoin
 
@@ -45,10 +44,11 @@ services:
       - "--daemon-rpc-addr=bitcoind:8332"     # mainnet
       # - "--daemon-rpc-addr=bitcoind:18332"  # testnet
       - "--cookie=bitcoinrpc:rpc"
-      - "--jsonrpc-import=true"
       - "--daemon-dir=/bitcoin/.bitcoin"
       - "-vvv"
       - "--db-dir=/data/addrindexrs/db"
+    environment:
+      - ADDRINDEXRS_JSONRPC_IMPORT=true
 
   counterparty-server:
     image: counterparty/counterparty-server
