@@ -14,10 +14,12 @@ import logging
 logger = logging.getLogger(__name__)
 import collections
 import platform
-import apsw
 import csv
 import copy
 import http
+import shutil
+
+import apsw
 
 import bitcoin as bitcoinlib
 from bitcoin.core.script import CScriptInvalidError
