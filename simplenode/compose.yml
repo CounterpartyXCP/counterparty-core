@@ -50,8 +50,8 @@ services:
     environment:
       - ADDRINDEXRS_JSONRPC_IMPORT=true
 
-  counterparty-server:
-    image: counterparty/counterparty-server
+  counterparty-core:
+    image: counterparty/counterparty-core
     links:
       - bitcoind
       - addrindexrs
