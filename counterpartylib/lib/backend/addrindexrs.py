@@ -323,19 +323,30 @@ class AddrIndexRsThread (threading.Thread):
                 # Receive message over socket.
                 parsed = False
                 while has_sent and not parsed:
-                    data = b""
                     try:
-                        data = data + self.sock.recv(READ_BUF_SIZE)
-                        try: 
-                            self.message_result = json.loads(data.decode('utf-8'))
-                            self.message_to_send = None
-                            logging.debug('Successfully parsed response from address indexer: {}'. format(self.message_result))
-                            parsed = True
-                            backoff = BACKOFF_START
-                        except json.decoder.JSONDecodeError as e:
-                            logging.debug('Cannot parse response from address indexer: {} Trying again in {} seconds.'.format(data, backoff))
-                            time.sleep(backoff)
-                            backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
+
+                        # Keep reading data until we have a complete message
+                        data = b""
+                        while True:
+                            chunk = self.sock.recv(READ_BUF_SIZE)
+                            if chunk:
+                                data = data + chunk
+                                try: 
+                                    self.message_result = json.loads(data.decode('utf-8'))
+                                except json.decoder.JSONDecodeError as e:
+                                    # Incomplete message
+                                    pass
+                                else:
+                                    # Complete message
+                                    self.message_to_send = None
+                                    parsed = True
+                                    backoff = BACKOFF_START
+                                    break
+                            else:
+                                logging.debug('Empty response from address indexer. Trying again in {} seconds.'.format(backoff))
+                                time.sleep(backoff)
+                                backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
+
                     except (socket.timeout, socket.error, ConnectionResetError) as e:
                         logging.debug('Error in connection to address indexer: {}. Trying again in {} seconds.'.format(e, backoff))
                         time.sleep(backoff)
