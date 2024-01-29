@@ -21,9 +21,9 @@ from counterpartylib.lib import config, util, address
 READ_BUF_SIZE = 65536
 SOCKET_TIMEOUT = 5.0
 BACKEND_PING_TIME = 30.0
-BACKOFF_START = 0.5
-BACKOFF_MAX = 5.0
-BACKOFF_FACTOR = 1.5
+BACKOFF_START = 1
+BACKOFF_MAX = 8
+BACKOFF_FACTOR = 2
 
 Indexer_Thread = None
 raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)  # used in getrawtransaction_batch()
@@ -340,12 +340,12 @@ class AddrIndexRsThread (threading.Thread):
                                     backoff = BACKOFF_START
                                     break
                             else:
-                                logger.debug('Empty response from address indexer. Trying again in {} seconds.'.format(backoff))
+                                logger.debug('Empty response from address indexer. Trying again in {:d} seconds.'.format(backoff))
                                 time.sleep(backoff)
                                 backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
 
                     except (socket.timeout, socket.error, ConnectionResetError) as e:
-                        logger.debug('Error in connection to address indexer: {}. Trying again in {} seconds.'.format(e, backoff))
+                        logger.debug('Error in connection to address indexer: {}. Trying again in {:d} seconds.'.format(e, backoff))
                         time.sleep(backoff)
                         backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
                     except Exception as e:
