@@ -89,29 +89,27 @@ def reset_current_block_index(db):
 
 def dump_database(db):
     """Create a new database dump from db object as input."""
-    # TEMPORARY
-    # .dump command bugs when aspw.Shell is used with 'db' args instead 'args'
-    # but this way stay 20x faster than running scenario with file db
-    db_filename = tempfile.gettempdir() + '/tmpforbackup.db'
-    remove_database_files(db_filename)
-    filecon = apsw.Connection(db_filename)
-    with filecon.backup("main", db, "main") as backup:
+    memory_db = apsw.Connection(":memory:")
+    with memory_db.backup("main", db, "main") as backup:
         backup.step()
 
-    output = io.StringIO()
-    shell = apsw.Shell(stdout=output, args=(db_filename,))
-    #shell = apsw.Shell(stdout=output, db=db)
-    shell.process_command(".dump")
-    lines = output.getvalue().split('\n')[8:]
-    new_data = '\n'.join(lines)
-    #clean ; in new line
-    new_data = re.sub(r'\)[\n\s]+;', ');', new_data)
-    # apsw oddness: follwing sentence not always generated!
-    new_data = new_data.replace('-- The values of various per-database settings\n', '')
+    dump = ""
+    all_tables = ['blocks', 'transactions', 'transaction_outputs', 'balances', 'undolog', 'undolog_block']
+    all_tables += blocks.TABLES
+    for table in all_tables:
+        output = io.StringIO()
+        shell = apsw.Shell(stdout=output, db=memory_db)
+        #shell = apsw.Shell(stdout=output, db=db)
+        shell.process_command(f".dump {table}")
+        lines = output.getvalue().split('\n')[8:]
+        new_data = '\n'.join(lines)
+        #clean ; in new line
+        new_data = re.sub(r'\)[\n\s]+;', ');', new_data)
+        # apsw oddness: follwing sentence not always generated!
+        new_data = new_data.replace('-- The values of various per-database settings\n', '')
+        dump += new_data + "\n"
 
-    remove_database_files(db_filename)
-
-    return new_data
+    return dump
 
 def restore_database(database_filename, dump_filename):
     """Delete database dump, then opens another and loads it in-place."""
