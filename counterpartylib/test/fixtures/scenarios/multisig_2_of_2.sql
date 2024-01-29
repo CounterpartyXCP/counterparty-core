@@ -118,11 +118,12 @@ INSERT INTO blocks VALUES(310099,'3c4c2279cd7de0add5ec469648a845875495a7d54ebfb5
 INSERT INTO blocks VALUES(310100,'96925c05b3c7c80c716f5bef68d161c71d044252c766ca0e3f17f255764242cb',310100000,NULL,NULL,'384f8d2eda5f1b7b8273ef149ac37fcaa9ae51865fd57bd348339579b8a078eb','19ac618404aade5a0914a9a9c159ea229384be303a320b08b9915474beccf1df','510fe5af1ef1d590068fa11119ae2af25e4907beb5c707c0c6a17fd97fd5f97d');
 INSERT INTO blocks VALUES(310101,'369472409995ca1a2ebecbad6bf9dab38c378ab1e67e1bdf13d4ce1346731cd6',310101000,NULL,NULL,'5eff25450225c71f85f34466d6e359001eed8f05ea5042e7d65c30ccfeb6098f','7d02630f0fbe3e5c3b16766f1d04dd1a83c305f74f0546276d970b36e870ba8e','d00889cf36fa4e09ee17f949ee89e8a90c0bab77ce8292bd723ea908a7266032');
 -- Triggers and indices on  blocks
-CREATE INDEX block_index_idx ON blocks (block_index);
-CREATE INDEX index_hash_idx ON blocks (block_index, block_hash);
+CREATE INDEX block_index_idx ON blocks (block_index)
+                   ;
+CREATE INDEX index_hash_idx ON blocks (block_index, block_hash)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -171,13 +172,16 @@ INSERT INTO transactions VALUES(22,'6d3c6a9ea36e82a0e8162f69c68fc8bb95d316ad5586
 INSERT INTO transactions VALUES(23,'df080a76ceb263201901bc23c85c3e8dce4eca0e72c873131adaf2f46820e9f1',310022,'44435f9a99a0aa12a9bfabdc4cb8119f6ea6a6e1350d2d65445fb66a456db5fc',310022000,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','mvCounterpartyXXXXXXXXXXXXXXW24Hef',100000000,5625,X'',1);
 INSERT INTO transactions VALUES(24,'abc5e16e5a7a1a7dd7d38ff1351b252a3813d40a695ab798f6a26cb904f91ab1',310023,'d8cf5bec1bbcab8ca4f495352afde3b6572b7e1d61b3976872ebb8e9d30ccb08',310023000,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',1000,7650,X'0000000000000000000047680000000000002710',1);
 -- Triggers and indices on  transactions
-CREATE INDEX index_hash_index_idx ON transactions (tx_index, tx_hash, block_index);
-CREATE INDEX index_index_idx ON transactions (block_index, tx_index);
-CREATE INDEX tx_hash_idx ON transactions (tx_hash);
-CREATE INDEX tx_index_idx ON transactions (tx_index);
+CREATE INDEX index_hash_index_idx ON transactions (tx_index, tx_hash, block_index)
+                   ;
+CREATE INDEX index_index_idx ON transactions (block_index, tx_index)
+                   ;
+CREATE INDEX tx_hash_idx ON transactions (tx_hash)
+                   ;
+CREATE INDEX tx_index_idx ON transactions (tx_index)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -198,7 +202,6 @@ CREATE TABLE transaction_outputs(
                         FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -228,10 +231,10 @@ CREATE TRIGGER _balances_insert AFTER INSERT ON balances BEGIN
 CREATE TRIGGER _balances_update AFTER UPDATE ON balances BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE balances SET address='||quote(old.address)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||' WHERE rowid='||old.rowid);
                             END;
-CREATE INDEX address_asset_idx ON balances (address, asset);
+CREATE INDEX address_asset_idx ON balances (address, asset)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -389,7 +392,6 @@ DELETE FROM main.sqlite_sequence WHERE name='undolog';
 INSERT INTO main.sqlite_sequence VALUES ('undolog', 141);
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -505,7 +507,6 @@ INSERT INTO undolog_block VALUES(310100,142);
 INSERT INTO undolog_block VALUES(310101,142);
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -561,7 +562,6 @@ CREATE TRIGGER _credits_update AFTER UPDATE ON credits BEGIN
                             END;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -607,11 +607,12 @@ CREATE TRIGGER _debits_insert AFTER INSERT ON debits BEGIN
 CREATE TRIGGER _debits_update AFTER UPDATE ON debits BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE debits SET block_index='||quote(old.block_index)||',address='||quote(old.address)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||',action='||quote(old.action)||',event='||quote(old.event)||' WHERE rowid='||old.rowid);
                             END;
-CREATE INDEX address_idx ON debits (address);
-CREATE INDEX asset_idx ON debits (asset);
+CREATE INDEX address_idx ON debits (address)
+                   ;
+CREATE INDEX asset_idx ON debits (asset)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -827,10 +828,10 @@ INSERT INTO messages VALUES(195,310099,'insert','replace','[''block_index'']',0)
 INSERT INTO messages VALUES(196,310100,'insert','replace','[''block_index'']',0);
 INSERT INTO messages VALUES(197,310101,'insert','replace','[''block_index'']',0);
 -- Triggers and indices on  messages
-CREATE INDEX block_index_message_index_idx ON messages (block_index, message_index);
+CREATE INDEX block_index_message_index_idx ON messages (block_index, message_index)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -859,7 +860,6 @@ CREATE TRIGGER _order_match_expirations_update AFTER UPDATE ON order_match_expir
                             END;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -902,14 +902,18 @@ CREATE TRIGGER _order_matches_insert AFTER INSERT ON order_matches BEGIN
 CREATE TRIGGER _order_matches_update AFTER UPDATE ON order_matches BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE order_matches SET id='||quote(old.id)||',tx0_index='||quote(old.tx0_index)||',tx0_hash='||quote(old.tx0_hash)||',tx0_address='||quote(old.tx0_address)||',tx1_index='||quote(old.tx1_index)||',tx1_hash='||quote(old.tx1_hash)||',tx1_address='||quote(old.tx1_address)||',forward_asset='||quote(old.forward_asset)||',forward_quantity='||quote(old.forward_quantity)||',backward_asset='||quote(old.backward_asset)||',backward_quantity='||quote(old.backward_quantity)||',tx0_block_index='||quote(old.tx0_block_index)||',tx1_block_index='||quote(old.tx1_block_index)||',block_index='||quote(old.block_index)||',tx0_expiration='||quote(old.tx0_expiration)||',tx1_expiration='||quote(old.tx1_expiration)||',match_expire_index='||quote(old.match_expire_index)||',fee_paid='||quote(old.fee_paid)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
                             END;
-CREATE INDEX backward_status_idx ON order_matches (backward_asset, status);
-CREATE INDEX forward_status_idx ON order_matches (forward_asset, status);
-CREATE INDEX match_expire_idx ON order_matches (status, match_expire_index);
-CREATE INDEX tx0_address_idx ON order_matches (tx0_address);
-CREATE INDEX tx1_address_idx ON order_matches (tx1_address);
+CREATE INDEX backward_status_idx ON order_matches (backward_asset, status)
+                   ;
+CREATE INDEX forward_status_idx ON order_matches (forward_asset, status)
+                   ;
+CREATE INDEX match_expire_idx ON order_matches (status, match_expire_index)
+                   ;
+CREATE INDEX tx0_address_idx ON order_matches (tx0_address)
+                   ;
+CREATE INDEX tx1_address_idx ON order_matches (tx1_address)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -941,7 +945,6 @@ CREATE TRIGGER _order_expirations_update AFTER UPDATE ON order_expirations BEGIN
                             END;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -984,14 +987,18 @@ CREATE TRIGGER _orders_insert AFTER INSERT ON orders BEGIN
 CREATE TRIGGER _orders_update AFTER UPDATE ON orders BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE orders SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',give_asset='||quote(old.give_asset)||',give_quantity='||quote(old.give_quantity)||',give_remaining='||quote(old.give_remaining)||',get_asset='||quote(old.get_asset)||',get_quantity='||quote(old.get_quantity)||',get_remaining='||quote(old.get_remaining)||',expiration='||quote(old.expiration)||',expire_index='||quote(old.expire_index)||',fee_required='||quote(old.fee_required)||',fee_required_remaining='||quote(old.fee_required_remaining)||',fee_provided='||quote(old.fee_provided)||',fee_provided_remaining='||quote(old.fee_provided_remaining)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
                             END;
-CREATE INDEX expire_idx ON orders (expire_index, status);
-CREATE INDEX give_asset_idx ON orders (give_asset);
-CREATE INDEX give_get_status_idx ON orders (get_asset, give_asset, status);
-CREATE INDEX give_status_idx ON orders (give_asset, status);
-CREATE INDEX source_give_status_idx ON orders (source, give_asset, status);
+CREATE INDEX expire_idx ON orders (expire_index, status)
+                   ;
+CREATE INDEX give_asset_idx ON orders (give_asset)
+                   ;
+CREATE INDEX give_get_status_idx ON orders (get_asset, give_asset, status)
+                   ;
+CREATE INDEX give_status_idx ON orders (give_asset, status)
+                   ;
+CREATE INDEX source_give_status_idx ON orders (source, give_asset, status)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1020,7 +1027,6 @@ CREATE TRIGGER _bet_match_expirations_update AFTER UPDATE ON bet_match_expiratio
                             END;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1070,10 +1076,10 @@ CREATE TRIGGER _bet_matches_insert AFTER INSERT ON bet_matches BEGIN
 CREATE TRIGGER _bet_matches_update AFTER UPDATE ON bet_matches BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE bet_matches SET id='||quote(old.id)||',tx0_index='||quote(old.tx0_index)||',tx0_hash='||quote(old.tx0_hash)||',tx0_address='||quote(old.tx0_address)||',tx1_index='||quote(old.tx1_index)||',tx1_hash='||quote(old.tx1_hash)||',tx1_address='||quote(old.tx1_address)||',tx0_bet_type='||quote(old.tx0_bet_type)||',tx1_bet_type='||quote(old.tx1_bet_type)||',feed_address='||quote(old.feed_address)||',initial_value='||quote(old.initial_value)||',deadline='||quote(old.deadline)||',target_value='||quote(old.target_value)||',leverage='||quote(old.leverage)||',forward_quantity='||quote(old.forward_quantity)||',backward_quantity='||quote(old.backward_quantity)||',tx0_block_index='||quote(old.tx0_block_index)||',tx1_block_index='||quote(old.tx1_block_index)||',block_index='||quote(old.block_index)||',tx0_expiration='||quote(old.tx0_expiration)||',tx1_expiration='||quote(old.tx1_expiration)||',match_expire_index='||quote(old.match_expire_index)||',fee_fraction_int='||quote(old.fee_fraction_int)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
                             END;
-CREATE INDEX valid_feed_idx ON bet_matches (feed_address, status);
+CREATE INDEX valid_feed_idx ON bet_matches (feed_address, status)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1110,7 +1116,6 @@ CREATE TRIGGER _bet_match_resolutions_update AFTER UPDATE ON bet_match_resolutio
                             END;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1140,7 +1145,6 @@ CREATE TRIGGER _bet_expirations_update AFTER UPDATE ON bet_expirations BEGIN
                             END;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1186,10 +1190,10 @@ CREATE TRIGGER _bets_insert AFTER INSERT ON bets BEGIN
 CREATE TRIGGER _bets_update AFTER UPDATE ON bets BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE bets SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',feed_address='||quote(old.feed_address)||',bet_type='||quote(old.bet_type)||',deadline='||quote(old.deadline)||',wager_quantity='||quote(old.wager_quantity)||',wager_remaining='||quote(old.wager_remaining)||',counterwager_quantity='||quote(old.counterwager_quantity)||',counterwager_remaining='||quote(old.counterwager_remaining)||',target_value='||quote(old.target_value)||',leverage='||quote(old.leverage)||',expiration='||quote(old.expiration)||',expire_index='||quote(old.expire_index)||',fee_fraction_int='||quote(old.fee_fraction_int)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
                             END;
-CREATE INDEX feed_valid_bettype_idx ON bets (feed_address, status, bet_type);
+CREATE INDEX feed_valid_bettype_idx ON bets (feed_address, status, bet_type)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1225,12 +1229,14 @@ CREATE TRIGGER _broadcasts_insert AFTER INSERT ON broadcasts BEGIN
 CREATE TRIGGER _broadcasts_update AFTER UPDATE ON broadcasts BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE broadcasts SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',timestamp='||quote(old.timestamp)||',value='||quote(old.value)||',fee_fraction_int='||quote(old.fee_fraction_int)||',text='||quote(old.text)||',locked='||quote(old.locked)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
                             END;
-CREATE INDEX status_source_idx ON broadcasts (status, source);
-CREATE INDEX status_source_index_idx ON broadcasts (status, source, tx_index);
-CREATE INDEX timestamp_idx ON broadcasts (timestamp);
+CREATE INDEX status_source_idx ON broadcasts (status, source)
+                   ;
+CREATE INDEX status_source_index_idx ON broadcasts (status, source, tx_index)
+                   ;
+CREATE INDEX timestamp_idx ON broadcasts (timestamp)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1263,7 +1269,6 @@ CREATE TRIGGER _btcpays_update AFTER UPDATE ON btcpays BEGIN
                             END;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1296,7 +1301,6 @@ CREATE TRIGGER _burns_update AFTER UPDATE ON burns BEGIN
                             END;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1324,10 +1328,10 @@ CREATE TRIGGER _cancels_insert AFTER INSERT ON cancels BEGIN
 CREATE TRIGGER _cancels_update AFTER UPDATE ON cancels BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE cancels SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',offer_hash='||quote(old.offer_hash)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
                             END;
-CREATE INDEX cancels_block_index_idx ON cancels (block_index);
+CREATE INDEX cancels_block_index_idx ON cancels (block_index)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1362,7 +1366,6 @@ CREATE TRIGGER _dividends_update AFTER UPDATE ON dividends BEGIN
                             END;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1407,10 +1410,10 @@ CREATE TRIGGER _issuances_insert AFTER INSERT ON issuances BEGIN
 CREATE TRIGGER _issuances_update AFTER UPDATE ON issuances BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE issuances SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',msg_index='||quote(old.msg_index)||',block_index='||quote(old.block_index)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||',divisible='||quote(old.divisible)||',source='||quote(old.source)||',issuer='||quote(old.issuer)||',transfer='||quote(old.transfer)||',callable='||quote(old.callable)||',call_date='||quote(old.call_date)||',call_price='||quote(old.call_price)||',description='||quote(old.description)||',fee_paid='||quote(old.fee_paid)||',locked='||quote(old.locked)||',status='||quote(old.status)||',asset_longname='||quote(old.asset_longname)||',reset='||quote(old.reset)||' WHERE rowid='||old.rowid);
                             END;
-CREATE INDEX valid_asset_idx ON issuances (asset, status);
+CREATE INDEX valid_asset_idx ON issuances (asset, status)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1447,12 +1450,14 @@ CREATE TRIGGER _sends_insert AFTER INSERT ON sends BEGIN
 CREATE TRIGGER _sends_update AFTER UPDATE ON sends BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE sends SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',destination='||quote(old.destination)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||',status='||quote(old.status)||',msg_index='||quote(old.msg_index)||',memo='||quote(old.memo)||' WHERE rowid='||old.rowid);
                             END;
-CREATE INDEX destination_idx ON sends (destination);
-CREATE INDEX memo_idx ON sends (memo);
-CREATE INDEX source_idx ON sends (source);
+CREATE INDEX destination_idx ON sends (destination)
+                   ;
+CREATE INDEX memo_idx ON sends (memo)
+                   ;
+CREATE INDEX source_idx ON sends (source)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1481,7 +1486,6 @@ CREATE TRIGGER _rps_match_expirations_update AFTER UPDATE ON rps_match_expiratio
                             END;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1510,7 +1514,6 @@ CREATE TRIGGER _rps_expirations_update AFTER UPDATE ON rps_expirations BEGIN
                             END;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1540,10 +1543,10 @@ CREATE TRIGGER _rpsresolves_insert AFTER INSERT ON rpsresolves BEGIN
 CREATE TRIGGER _rpsresolves_update AFTER UPDATE ON rpsresolves BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE rpsresolves SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',move='||quote(old.move)||',random='||quote(old.random)||',rps_match_id='||quote(old.rps_match_id)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
                             END;
-CREATE INDEX rps_match_id_idx ON rpsresolves (rps_match_id);
+CREATE INDEX rps_match_id_idx ON rpsresolves (rps_match_id)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1584,12 +1587,14 @@ CREATE TRIGGER _rps_matches_insert AFTER INSERT ON rps_matches BEGIN
 CREATE TRIGGER _rps_matches_update AFTER UPDATE ON rps_matches BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE rps_matches SET id='||quote(old.id)||',tx0_index='||quote(old.tx0_index)||',tx0_hash='||quote(old.tx0_hash)||',tx0_address='||quote(old.tx0_address)||',tx1_index='||quote(old.tx1_index)||',tx1_hash='||quote(old.tx1_hash)||',tx1_address='||quote(old.tx1_address)||',tx0_move_random_hash='||quote(old.tx0_move_random_hash)||',tx1_move_random_hash='||quote(old.tx1_move_random_hash)||',wager='||quote(old.wager)||',possible_moves='||quote(old.possible_moves)||',tx0_block_index='||quote(old.tx0_block_index)||',tx1_block_index='||quote(old.tx1_block_index)||',block_index='||quote(old.block_index)||',tx0_expiration='||quote(old.tx0_expiration)||',tx1_expiration='||quote(old.tx1_expiration)||',match_expire_index='||quote(old.match_expire_index)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
                             END;
-CREATE INDEX rps_match_expire_idx ON rps_matches (status, match_expire_index);
-CREATE INDEX rps_tx0_address_idx ON rps_matches (tx0_address);
-CREATE INDEX rps_tx1_address_idx ON rps_matches (tx1_address);
+CREATE INDEX rps_match_expire_idx ON rps_matches (status, match_expire_index)
+                   ;
+CREATE INDEX rps_tx0_address_idx ON rps_matches (tx0_address)
+                   ;
+CREATE INDEX rps_tx1_address_idx ON rps_matches (tx1_address)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1622,10 +1627,10 @@ CREATE TRIGGER _rps_insert AFTER INSERT ON rps BEGIN
 CREATE TRIGGER _rps_update AFTER UPDATE ON rps BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE rps SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',possible_moves='||quote(old.possible_moves)||',wager='||quote(old.wager)||',move_random_hash='||quote(old.move_random_hash)||',expiration='||quote(old.expiration)||',expire_index='||quote(old.expire_index)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
                             END;
-CREATE INDEX matching_idx ON rps (wager, possible_moves);
+CREATE INDEX matching_idx ON rps (wager, possible_moves)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1655,10 +1660,10 @@ CREATE TRIGGER _destructions_insert AFTER INSERT ON destructions BEGIN
 CREATE TRIGGER _destructions_update AFTER UPDATE ON destructions BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE destructions SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||',tag='||quote(old.tag)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
                             END;
-CREATE INDEX status_idx ON destructions (status);
+CREATE INDEX status_idx ON destructions (status)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1688,11 +1693,12 @@ CREATE TRIGGER _assets_update AFTER UPDATE ON assets BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE assets SET asset_id='||quote(old.asset_id)||',asset_name='||quote(old.asset_name)||',block_index='||quote(old.block_index)||',asset_longname='||quote(old.asset_longname)||' WHERE rowid='||old.rowid);
                             END;
 CREATE UNIQUE INDEX asset_longname_idx ON assets(asset_longname);
-CREATE INDEX id_idx ON assets (asset_id);
-CREATE INDEX name_idx ON assets (asset_name);
+CREATE INDEX id_idx ON assets (asset_id)
+                   ;
+CREATE INDEX name_idx ON assets (asset_name)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1716,10 +1722,10 @@ CREATE TRIGGER _addresses_insert AFTER INSERT ON addresses BEGIN
 CREATE TRIGGER _addresses_update AFTER UPDATE ON addresses BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE addresses SET address='||quote(old.address)||',options='||quote(old.options)||',block_index='||quote(old.block_index)||' WHERE rowid='||old.rowid);
                             END;
-CREATE INDEX addresses_idx ON addresses (address);
+CREATE INDEX addresses_idx ON addresses (address)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1752,7 +1758,6 @@ CREATE TRIGGER _sweeps_update AFTER UPDATE ON sweeps BEGIN
                             END;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1784,11 +1789,12 @@ CREATE TRIGGER _dispensers_insert AFTER INSERT ON dispensers BEGIN
 CREATE TRIGGER _dispensers_update AFTER UPDATE ON dispensers BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE dispensers SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',asset='||quote(old.asset)||',give_quantity='||quote(old.give_quantity)||',escrow_quantity='||quote(old.escrow_quantity)||',satoshirate='||quote(old.satoshirate)||',status='||quote(old.status)||',give_remaining='||quote(old.give_remaining)||',oracle_address='||quote(old.oracle_address)||',last_status_tx_hash='||quote(old.last_status_tx_hash)||',origin='||quote(old.origin)||' WHERE rowid='||old.rowid);
                             END;
-CREATE INDEX dispensers_asset_idx ON dispensers (asset);
-CREATE INDEX dispensers_source_idx ON dispensers (source);
+CREATE INDEX dispensers_asset_idx ON dispensers (asset)
+                   ;
+CREATE INDEX dispensers_source_idx ON dispensers (source)
+                   ;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1822,7 +1828,6 @@ CREATE TRIGGER _dispenses_update AFTER UPDATE ON dispenses BEGIN
                             END;
 
 COMMIT TRANSACTION;
-
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;
@@ -1855,4 +1860,3 @@ CREATE TRIGGER _dispenser_refills_update AFTER UPDATE ON dispenser_refills BEGIN
                             END;
 
 COMMIT TRANSACTION;
-

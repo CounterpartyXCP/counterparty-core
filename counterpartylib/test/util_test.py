@@ -94,20 +94,14 @@ def dump_database(db):
         backup.step()
 
     dump = ""
-    all_tables = ['blocks', 'transactions', 'transaction_outputs', 'balances', 'undolog', 'undolog_block']
-    all_tables += blocks.TABLES
-    for table in all_tables:
+    base_tables = ['blocks', 'transactions', 'transaction_outputs', 'balances', 'undolog', 'undolog_block']
+    for table in base_tables + blocks.TABLES:
         output = io.StringIO()
         shell = apsw.Shell(stdout=output, db=memory_db)
-        #shell = apsw.Shell(stdout=output, db=db)
         shell.process_command(f".dump {table}")
         lines = output.getvalue().split('\n')[8:]
         new_data = '\n'.join(lines)
-        #clean ; in new line
-        new_data = re.sub(r'\)[\n\s]+;', ');', new_data)
-        # apsw oddness: follwing sentence not always generated!
-        new_data = new_data.replace('-- The values of various per-database settings\n', '')
-        dump += new_data + "\n"
+        dump += new_data
 
     return dump
 
