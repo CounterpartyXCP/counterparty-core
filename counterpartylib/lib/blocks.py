@@ -1453,6 +1453,11 @@ def follow(db):
         if block_index >= block_count - 100:
             prefetcher.stop_all(NUM_PREFETCHER_THREADS)
 
+        if block_index >= 100000:
+            import sys
+            logging.warn('Finished Test!')
+            sys.exit(1)
+
         # Get new blocks.
         if block_index <= block_count:
 
