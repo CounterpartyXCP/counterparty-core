@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 from logging import handlers as logging_handlers
 
-from counterpartylib.lib import backend, util
+from counterpartylib.lib import backend, util, config
 
 BLOCK_COUNT_CHECK_FREQ = 100
 BLOCKCHAIN_CACHE = {}
@@ -21,6 +21,10 @@ class Prefetcher(threading.Thread):
         self.stop_event = threading.Event()
         self.thread_index = thread_index
         self.num_threads = num_threads
+        if config.TESTNET:
+            self.block_first = BLOCK_FIRST_TESTNET
+        else:
+            self.block_first = BLOCK_FIRST_MAINNET
 
     def stop(self):
         self.stop_event.set()
@@ -39,7 +43,7 @@ class Prefetcher(threading.Thread):
         
             # TODO: Terribly hackish!
             if BLOCKCHAIN_CACHE:
-                fetch_block_index = max(BLOCK_FIRST_TESTNET-1, util.CURRENT_BLOCK_INDEX, max(BLOCKCHAIN_CACHE.keys())) + 1
+                fetch_block_index = max(self.block_first-1, util.CURRENT_BLOCK_INDEX, max(BLOCKCHAIN_CACHE.keys())) + 1
             else:
                 fetch_block_index = util.CURRENT_BLOCK_INDEX
             BLOCKCHAIN_CACHE[fetch_block_index] = None
