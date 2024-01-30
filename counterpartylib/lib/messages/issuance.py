@@ -163,12 +163,7 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
                 problems.append('call price for non‐callable asset')
 
     # Valid re-issuance?
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM issuances \
-                      WHERE (status = ? AND asset = ?)
-                      ORDER BY tx_index ASC''', ('valid', asset))
-    issuances = cursor.fetchall()
-    cursor.close()
+    issuances = ledger.get_issuances(db, asset, status='valid')
     reissued_asset_longname = None
     if issuances:
         reissuance = True
@@ -209,12 +204,7 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
 
     # validate parent ownership for subasset
     if subasset_longname is not None and not reissuance:
-        cursor = db.cursor()
-        cursor.execute('''SELECT * FROM issuances \
-                          WHERE (status = ? AND asset = ?)
-                          ORDER BY tx_index ASC''', ('valid', subasset_parent))
-        parent_issuances = cursor.fetchall()
-        cursor.close()
+        parent_issuances = ledger.get_issuances(db, subasset_parent, status='valid')
         if parent_issuances:
             last_parent_issuance = parent_issuances[-1]
             if last_parent_issuance['issuer'] != source:
@@ -224,10 +214,7 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
 
     # validate subasset issuance is not a duplicate
     if subasset_longname is not None and not reissuance:
-        cursor = db.cursor()
-        cursor.execute('''SELECT * FROM assets \
-                          WHERE (asset_longname = ?)''', (subasset_longname,))
-        assets = cursor.fetchall()
+        assets = ledger.get_assets_by_longname(db, subasset_longname)
         if len(assets) > 0:
             problems.append('subasset already exists')
 
@@ -303,11 +290,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
 
     # Callability is deprecated, so for re‐issuances set relevant parameters
     # to old values; for first issuances, make uncallable.
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM issuances \
-                      WHERE (status = ? AND asset = ?)
-                      ORDER BY tx_index ASC''', ('valid', asset))
-    issuances = cursor.fetchall()
+    issuances = ledger.get_issuances(db, asset, status='valid')
     if issuances:
         last_issuance = issuances[-1]
         callable_ = last_issuance['callable']
@@ -317,7 +300,6 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         callable_ = False
         call_date = 0
         call_price = 0.0
-    cursor.close()
 
     # check subasset
     subasset_parent = None
@@ -326,11 +308,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         subasset_parent, subasset_longname = util.parse_subasset_from_asset_name(asset)
         if subasset_longname is not None:
             # try to find an existing subasset
-            sa_cursor = db.cursor()
-            sa_cursor.execute('''SELECT * FROM assets \
-                              WHERE (asset_longname = ?)''', (subasset_longname,))
-            assets = sa_cursor.fetchall()
-            sa_cursor.close()
+            assets = ledger.get_assets_by_longname(db, subasset_longname)
             if len(assets) > 0:
                 # this is a reissuance
                 asset = assets[0]['asset_name']
@@ -544,8 +522,7 @@ def parse (db, tx, message, message_type_id):
 
         if len(balances_result) <= 1:
             if len(balances_result) == 0:
-                issuances_cursor = issuance_parse_cursor.execute('''SELECT * FROM issuances WHERE asset = ? ORDER BY tx_index DESC''', (asset,))
-                issuances_result = issuances_cursor.fetchall()
+                issuances_result = ledger.get_issuances(db, asset)
 
                 owner_balance = 0
                 owner_address = issuances_result[0]['issuer']
@@ -618,11 +595,7 @@ def parse (db, tx, message, message_type_id):
         if status == 'valid':
             if (description and description.lower() == 'lock') or lock:
                 lock = True
-                cursor = db.cursor()
-                issuances = list(cursor.execute('''SELECT * FROM issuances \
-                                                   WHERE (status = ? AND asset = ?)
-                                                   ORDER BY tx_index ASC''', ('valid', asset)))
-                cursor.close()
+                issuances = ledger.get_issuances(db, asset, status='valid')
                 if description.lower() == 'lock' and len(issuances) > 0:
                     description = issuances[-1]['description']  # Use last description
 

@@ -378,6 +378,46 @@ def get_asset_balances(db, asset):
     return cursor.fetchall()
 
 
+def get_asset_issuances_quantity(db, asset):
+    cursor = db.cursor()
+    cursor.execute('''SELECT COUNT(*) AS issuances_count FROM issuances \
+        WHERE (status = ? AND asset = ?)
+        ORDER BY tx_index DESC''', ('valid', asset))
+    issuances = cursor.fetchall()
+    return issuances[0]['issuances_count']  
+
+
+def get_asset_info(db, asset):
+    if asset == config.BTC or asset == config.XCP:
+        return {'divisible':True}
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM issuances \
+        WHERE (status = ? AND asset = ?)
+        ORDER BY tx_index DESC''', ('valid', asset))
+    issuances = cursor.fetchall()
+    return issuances[0]
+
+
+def get_issuances(db, asset, status=None):
+    cursor = db.cursor()
+    if status:
+        cursor.execute('''SELECT * FROM issuances \
+                        WHERE (status = ? AND asset = ?)
+                        ORDER BY tx_index ASC''', (status, asset))
+    else:
+        cursor.execute('''SELECT * FROM issuances \
+                        WHERE (asset = ?)
+                        ORDER BY tx_index ASC''', (asset,))
+    return cursor.fetchall()
+
+
+def get_assets_by_longname(db, asset_longname):
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM assets \
+        WHERE (asset_longname = ?)''', (asset_longname,))
+    return cursor.fetchall()
+
+
 def get_oracle_last_price(db, oracle_address, block_index):
     cursor = db.cursor()
     cursor.execute('SELECT * FROM broadcasts WHERE source=:source AND status=:status AND block_index<:block_index ORDER by tx_index DESC LIMIT 1', {

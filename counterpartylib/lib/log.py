@@ -231,7 +231,7 @@ def log (db, command, category, bindings):
             logger.debug('Database: set status of bet_match {} to {}.'.format(bindings['bet_match_id'], bindings['status']))
         elif category == 'dispensers':
             escrow_quantity = ''
-            divisible = get_asset_info(cursor, bindings['asset'])['divisible']
+            divisible = ledger.get_asset_info(db, bindings['asset'])['divisible']
             
             if "escrow_quantity" in bindings:
                 if divisible:
@@ -287,7 +287,7 @@ def log (db, command, category, bindings):
             logger.info('{} Payment: {} paid {} to {} for order match {} ({}) [{}]'.format(config.BTC, bindings['source'], output(bindings['btc_amount'], config.BTC), bindings['destination'], bindings['order_match_id'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'issuances':
-            if (get_asset_issuances_quantity(cursor, bindings["asset"]) == 0) or (bindings['quantity'] > 0): #This is the first issuance or the creation of more supply, so we have to log the creation of the token
+            if (ledger.get_asset_issuances_quantity(db, bindings["asset"]) == 0) or (bindings['quantity'] > 0): #This is the first issuance or the creation of more supply, so we have to log the creation of the token
                 if bindings['divisible']:
                     divisibility = 'divisible'
                     unit = config.UNIT
@@ -295,7 +295,7 @@ def log (db, command, category, bindings):
                     divisibility = 'indivisible'
                     unit = 1
                 try:
-                    quantity = ledger.value_out(cursor, bindings['quantity'], None, divisible=bindings['divisible'])
+                    quantity = ledger.value_out(db, bindings['quantity'], None, divisible=bindings['divisible'])
                 except Exception as e:
                     quantity = '?'
             
@@ -393,7 +393,7 @@ def log (db, command, category, bindings):
         elif category == 'destructions':
 
             try:
-                asset_info = get_asset_info(cursor, bindings['asset'])
+                asset_info = ledger.get_asset_info(db, bindings['asset'])
                 quantity = bindings['quantity']
                 if asset_info['divisible']:
                     quantity = "{:.8f}".format(quantity/config.UNIT)
@@ -416,7 +416,7 @@ def log (db, command, category, bindings):
             else:
                 each_price = "{:.8f}".format(each_price/config.UNIT) 
             
-            divisible = get_asset_info(cursor, bindings['asset'])['divisible']
+            divisible = ledger.get_asset_info(db, bindings['asset'])['divisible']
             
             if divisible:
                 escrow_quantity = "{:.8f}".format(escrow_quantity/config.UNIT) 
@@ -458,22 +458,6 @@ def get_lock_issuance(cursor, asset):
     
     return None
 
-def get_asset_issuances_quantity(cursor, asset):
-    cursor.execute('''SELECT COUNT(*) AS issuances_count FROM issuances \
-        WHERE (status = ? AND asset = ?)
-        ORDER BY tx_index DESC''', ('valid', asset))
-    issuances = cursor.fetchall()
-    return issuances[0]['issuances_count']  
-
-def get_asset_info(cursor, asset):
-    if asset == config.BTC or asset == config.XCP:
-        return {'divisible':True}
-    
-    cursor.execute('''SELECT * FROM issuances \
-        WHERE (status = ? AND asset = ?)
-        ORDER BY tx_index DESC''', ('valid', asset))
-    issuances = cursor.fetchall()
-    return issuances[0]
 
 def get_tx_info(cursor, tx_hash):
     cursor.execute('SELECT * FROM transactions WHERE tx_hash=:tx_hash', {
@@ -483,5 +467,3 @@ def get_tx_info(cursor, tx_hash):
     transaction = transactions[0]
     
     return transaction["btc_amount"]
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
