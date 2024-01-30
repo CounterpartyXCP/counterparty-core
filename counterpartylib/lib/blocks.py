@@ -1420,9 +1420,9 @@ def follow(db):
     logger.info('Resuming parsing.')
 
     # If we're far behind, start Prefetcher.
-    # block_count = backend.getblockcount()   # TODO: Retry logic
-    # if block_index <= block_count - 200:
-    prefetcher.start_all(NUM_PREFETCHER_THREADS)
+    block_count = backend.getblockcount()   # TODO: Need retry logic
+    if block_index <= block_count - 2000:
+        prefetcher.start_all(NUM_PREFETCHER_THREADS)
 
     # Get index of last transaction.
     tx_index = get_next_tx_index(db)
@@ -1453,7 +1453,6 @@ def follow(db):
         # Stop Prefetcher thread as we get close to today.
         if block_index >= block_count - 100:
             prefetcher.stop_all(NUM_PREFETCHER_THREADS)
-
 
         # Get new blocks.
         if block_index <= block_count:
@@ -1505,9 +1504,9 @@ def follow(db):
             # TODO check.software_version()
 
             # Get and parse transactions in this block (atomically).
-            logger.debug('Blockchain cache size: {}'.format(len(prefetcher.BLOCKCHAIN_CACHE)))
-            if current_index in prefetcher.BLOCKCHAIN_CACHE and prefetcher.BLOCKCHAIN_CACHE[current_index]: # TODO: Hackish!!!
-                logger.info('Cache hit! Block index: {}'.format(current_index))
+            # logger.debug('Blockchain cache size: {}'.format(len(prefetcher.BLOCKCHAIN_CACHE)))
+            if current_index in prefetcher.BLOCKCHAIN_CACHE and prefetcher.BLOCKCHAIN_CACHE[current_index] != None: # TODO: Hackish!!!
+                # logger.debug('Blockchain cache hit! Block index: {}'.format(current_index))
                 block_hash = prefetcher.BLOCKCHAIN_CACHE[current_index]['block_hash']
                 txhash_list = prefetcher.BLOCKCHAIN_CACHE[current_index]['txhash_list']
                 raw_transactions = prefetcher.BLOCKCHAIN_CACHE[current_index]['raw_transactions']
@@ -1516,7 +1515,7 @@ def follow(db):
                 block_difficulty = prefetcher.BLOCKCHAIN_CACHE[current_index]['block_difficulty']
                 del prefetcher.BLOCKCHAIN_CACHE[current_index]
             else:
-                logger.warning('Cache miss :/ Block index: {}'.format(current_index))
+                logger.warning('Blockchain cache miss :/ Block index: {}'.format(current_index))
                 block_hash = backend.getblockhash(current_index)
                 block = backend.getblock(block_hash)
                 previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)

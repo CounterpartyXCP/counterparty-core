@@ -22,9 +22,9 @@ class Prefetcher(threading.Thread):
         self.thread_index = thread_index
         self.num_threads = num_threads
         if config.TESTNET:
-            self.block_first = BLOCK_FIRST_TESTNET
+            self.block_first = config.BLOCK_FIRST_TESTNET
         else:
-            self.block_first = BLOCK_FIRST_MAINNET
+            self.block_first = config.BLOCK_FIRST
 
     def stop(self):
         self.stop_event.set()
@@ -41,14 +41,14 @@ class Prefetcher(threading.Thread):
                 time.sleep(10)
                 continue
         
-            # TODO: Terribly hackish!
+            # TODO: hackish!
             if BLOCKCHAIN_CACHE:
                 fetch_block_index = max(self.block_first-1, util.CURRENT_BLOCK_INDEX, max(BLOCKCHAIN_CACHE.keys())) + 1
             else:
                 fetch_block_index = util.CURRENT_BLOCK_INDEX
             BLOCKCHAIN_CACHE[fetch_block_index] = None
 
-            logger.debug('Fetching block {} with Prefetcher thread {}.'.format(fetch_block_index, self.thread_index))
+            # logger.debug('Fetching block {} with Prefetcher thread {}.'.format(fetch_block_index, self.thread_index))
             block_hash = backend.getblockhash(fetch_block_index)
             block = backend.getblock(block_hash)
             txhash_list, raw_transactions = backend.get_tx_list(block)
