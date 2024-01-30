@@ -14,6 +14,7 @@ from colorlog import ColoredFormatter
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
+from counterpartylib.lib import ledger
 
 class ModuleLoggingFilter(logging.Filter):
     """
@@ -211,7 +212,7 @@ def log (db, command, category, bindings):
                 else:
                     return str(util.value_out(db, quantity, asset)) + ' ' + asset
             else:
-                return str(util.value_out(db, quantity, asset))
+                return str(ledger.value_out(db, quantity, asset))
         except exceptions.AssetError:
             return '<AssetError>'
         except decimal.DivisionByZero:
@@ -255,7 +256,7 @@ def log (db, command, category, bindings):
                 else:    
                     operator_string = "operator marked the dispenser to close it"
             
-                if util.enabled("dispenser_origin_permission_extended", bindings['block_index']) and ("origin" in bindings) and bindings['source'] != bindings['origin']:
+                if ledger.enabled("dispenser_origin_permission_extended", bindings['block_index']) and ("origin" in bindings) and bindings['source'] != bindings['origin']:
                     if bindings["status"] == 10:
                         operator_string = "closed by origin"
                     else:    
@@ -294,7 +295,7 @@ def log (db, command, category, bindings):
                     divisibility = 'indivisible'
                     unit = 1
                 try:
-                    quantity = util.value_out(cursor, bindings['quantity'], None, divisible=bindings['divisible'])
+                    quantity = ledger.value_out(cursor, bindings['quantity'], None, divisible=bindings['divisible'])
                 except Exception as e:
                     quantity = '?'
             
@@ -408,9 +409,9 @@ def log (db, command, category, bindings):
             escrow_quantity = bindings['escrow_quantity']
             give_quantity = bindings['give_quantity']
             
-            if (bindings['oracle_address'] != None) and util.enabled('oracle_dispensers'):
+            if (bindings['oracle_address'] != None) and ledger.enabled('oracle_dispensers'):
                 each_price = "{:.2f}".format(each_price/100.0)
-                oracle_last_price, oracle_fee, currency, oracle_last_updated = util.get_oracle_last_price(db, bindings['oracle_address'], bindings['block_index'])
+                oracle_last_price, oracle_fee, currency, oracle_last_updated = ledger.get_oracle_last_price(db, bindings['oracle_address'], bindings['block_index'])
                 dispenser_label = 'oracle dispenser using {}'.format(bindings['oracle_address'])
             else:
                 each_price = "{:.8f}".format(each_price/config.UNIT) 
@@ -435,9 +436,9 @@ def log (db, command, category, bindings):
             dispensers = cursor.fetchall()
             dispenser = dispensers[0]
         
-            if (dispenser["oracle_address"] != None) and util.enabled('oracle_dispensers'):
+            if (dispenser["oracle_address"] != None) and ledger.enabled('oracle_dispensers'):
                 tx_btc_amount = get_tx_info(cursor, bindings['tx_hash'])/config.UNIT
-                oracle_last_price, oracle_fee, oracle_fiat_label, oracle_last_price_updated = util.get_oracle_last_price(db, dispenser["oracle_address"], bindings['block_index'])
+                oracle_last_price, oracle_fee, oracle_fiat_label, oracle_last_price_updated = ledger.get_oracle_last_price(db, dispenser["oracle_address"], bindings['block_index'])
                 fiatpaid = round(tx_btc_amount*oracle_last_price,2)
                 
                 logger.info('Dispense: {} from {} to {} for {:.8f} {} ({} {}) ({})'.format(output(bindings['dispense_quantity'], bindings['asset']), bindings['source'], bindings['destination'], tx_btc_amount, config.BTC, fiatpaid, oracle_fiat_label, bindings['tx_hash']))

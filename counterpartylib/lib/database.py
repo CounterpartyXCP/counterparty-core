@@ -8,7 +8,7 @@ import collections
 import copy
 
 from counterpartylib.lib import config
-from counterpartylib.lib import util
+from counterpartylib.lib import ledger
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import log
 
@@ -64,12 +64,12 @@ def exectracer(cursor, sql, bindings):
     if category not in skip_tables_block_messages:
         # don't include asset_longname as part of the messages hash
         #   until subassets are enabled
-        if category == 'issuances' and not util.enabled('subassets'):
+        if category == 'issuances' and not ledger.enabled('subassets'):
             if isinstance(bindings, dict) and 'asset_longname' in bindings: del bindings['asset_longname']
 
         # don't include memo as part of the messages hash
         #   until enhanced_sends are enabled
-        if category == 'sends' and not util.enabled('enhanced_sends'):
+        if category == 'sends' and not ledger.enabled('enhanced_sends'):
             if isinstance(bindings, dict) and 'memo' in bindings: del bindings['memo']
 
         sorted_bindings = sorted(bindings.items()) if isinstance(bindings, dict) else [bindings,]

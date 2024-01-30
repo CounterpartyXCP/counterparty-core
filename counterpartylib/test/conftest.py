@@ -18,7 +18,7 @@ from Crypto.Cipher import ARC4
 
 logger = logging.getLogger()
 
-from counterpartylib.lib import log, blocks
+from counterpartylib.lib import log, ledger
 from counterpartylib import server
 log.set_logger(logger)
 
@@ -47,7 +47,7 @@ MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
 DISABLE_ALL_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False # if true, never look at MOCK_PROTOCOL_CHANGES_AT_BLOCK
 ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False # if true, always check MOCK_PROTOCOL_CHANGES_AT_BLOCK
 ALWAYS_LATEST_PROTOCOL_CHANGES = False # Even when this is true, this can be overridden if allow_always_latest is False in MOCK_PROTOCOL_CHANGES_AT_BLOCK
-_enabled = util.enabled
+_enabled = ledger.enabled
 def enabled(change_name, block_index=None):
     # if explicitly set
     if change_name in MOCK_PROTOCOL_CHANGES:
@@ -57,7 +57,7 @@ def enabled(change_name, block_index=None):
     if shouldCheckForMockProtocolChangesAtBlock(change_name):
         _block_index = block_index
         if _block_index is None:
-            _block_index = util.CURRENT_BLOCK_INDEX
+            _block_index = ledger.CURRENT_BLOCK_INDEX
         logger = logging.getLogger(__name__)
         if _block_index >= MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]['block_index']:
             return True
@@ -66,15 +66,15 @@ def enabled(change_name, block_index=None):
     # used to force unit tests to always run against latest protocol changes
     if ALWAYS_LATEST_PROTOCOL_CHANGES:
         # KeyError to mimic real util.enabled
-        if change_name not in util.PROTOCOL_CHANGES:
+        if change_name not in ledger.PROTOCOL_CHANGES:
             raise KeyError(change_name)
 
-        # print("ALWAYS_LATEST_PROTOCOL_CHANGES {} {} enabled: {}".format(change_name,block_index or util.CURRENT_BLOCK_INDEX,True))
+        # print("ALWAYS_LATEST_PROTOCOL_CHANGES {} {} enabled: {}".format(change_name,block_index or ledger.CURRENT_BLOCK_INDEX,True))
         return True
     else:
-        # print("ALWAYS_LATEST_PROTOCOL_CHANGES {} {} enabled: {}".format(change_name,block_index or util.CURRENT_BLOCK_INDEX,_enabled(change_name, block_index)))
+        # print("ALWAYS_LATEST_PROTOCOL_CHANGES {} {} enabled: {}".format(change_name,block_index or ledger.CURRENT_BLOCK_INDEX,_enabled(change_name, block_index)))
         return _enabled(change_name, block_index)
-util.enabled = enabled
+ledger.enabled = enabled
 
 # This is true if ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK is set
 def shouldCheckForMockProtocolChangesAtBlock(change_name):

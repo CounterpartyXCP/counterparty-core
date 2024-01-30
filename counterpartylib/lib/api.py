@@ -35,7 +35,7 @@ from xmltodict import unparse as serialize_to_xml
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
-from counterpartylib.lib import check
+from counterpartylib.lib import ledger
 from counterpartylib.lib import backend
 from counterpartylib.lib import database
 from counterpartylib.lib import transaction
@@ -110,7 +110,7 @@ class DatabaseError(Exception):
     pass
 def check_database_state(db, blockcount):
     """Checks {} database to see if is caught up with backend.""".format(config.XCP_NAME)
-    if util.CURRENT_BLOCK_INDEX + 1 < blockcount:
+    if ledger.CURRENT_BLOCK_INDEX + 1 < blockcount:
         raise DatabaseError('{} database is behind backend.'.format(config.XCP_NAME))
     logger.debug('Database state check passed.')
     return
@@ -209,7 +209,7 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
         adjust_get_sends_memo_filters(filters)
 
     # SELECT
-    source = table if table != "balances" else f"({util.BALANCES_VIEW_QUERY})"
+    source = table if table != "balances" else f"({ledger.BALANCES_VIEW_QUERY})"
     statement = '''SELECT * FROM {}'''.format(source)
     # WHERE
     bindings = []
@@ -253,7 +253,7 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
     # legacy filters
     if not show_expired and table == 'orders':
         #Ignore BTC orders one block early.
-        expire_index = util.CURRENT_BLOCK_INDEX + 1
+        expire_index = ledger.CURRENT_BLOCK_INDEX + 1
         more_conditions.append('''((give_asset == ? AND expire_index > ?) OR give_asset != ?)''')
         bindings += [config.BTC, expire_index, config.BTC]
 
@@ -302,7 +302,7 @@ def adjust_get_balances_results(query_result, db):
     for balances_row in list(query_result):
         asset = balances_row['asset']
         if not asset in assets:
-            assets[asset] = util.is_divisible(db, asset)
+            assets[asset] = ledger.is_divisible(db, asset)
 
         balances_row['divisible'] = assets[asset]
         filtered_results.append(balances_row)
@@ -633,15 +633,15 @@ class APIServer(threading.Thread):
             if asset == 'BTC':
                 return  backend.get_btc_supply(normalize=False)
             elif asset == 'XCP':
-                return util.xcp_supply(self.db)
+                return ledger.xcp_supply(self.db)
             else:
-                asset = util.resolve_subasset_longname(self.db, asset)
-                return util.asset_supply(self.db, asset)
+                asset = ledger.resolve_subasset_longname(self.db, asset)
+                return ledger.asset_supply(self.db, asset)
 
         @dispatcher.add_method
         def get_xcp_supply():
             logger.warning("Deprecated method: `get_xcp_supply`")
-            return util.xcp_supply(self.db)
+            return ledger.xcp_supply(self.db)
 
         @dispatcher.add_method
         def get_asset_info(assets=None, asset=None):
@@ -652,14 +652,14 @@ class APIServer(threading.Thread):
                 raise APIError("assets must be a list of asset names, even if it just contains one entry")
             assetsInfo = []
             for asset in assets:
-                asset = util.resolve_subasset_longname(self.db, asset)
+                asset = ledger.resolve_subasset_longname(self.db, asset)
 
                 # BTC and XCP.
                 if asset in [config.BTC, config.XCP]:
                     if asset == config.BTC:
                         supply = backend.get_btc_supply(normalize=False)
                     else:
-                        supply = util.xcp_supply(self.db)
+                        supply = ledger.xcp_supply(self.db)
 
                     assetsInfo.append({
                         'asset': asset,
@@ -690,7 +690,7 @@ class APIServer(threading.Thread):
                     'owner': last_issuance['issuer'],
                     'divisible': bool(last_issuance['divisible']),
                     'locked': locked,
-                    'supply': util.asset_supply(self.db, asset),
+                    'supply': ledger.asset_supply(self.db, asset),
                     'description': last_issuance['description'],
                     'issuer': last_issuance['issuer']})
             return assetsInfo
@@ -765,7 +765,7 @@ class APIServer(threading.Thread):
 
             try:
                 cursor = self.db.cursor()
-                blocks = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (util.CURRENT_BLOCK_INDEX, )))
+                blocks = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (ledger.CURRENT_BLOCK_INDEX, )))
                 assert len(blocks) == 1
                 last_block = blocks[0]
                 cursor.close()
@@ -773,7 +773,7 @@ class APIServer(threading.Thread):
                 last_block = None
 
             try:
-                last_message = util.last_message(self.db)
+                last_message = ledger.last_message(self.db)
             except:
                 last_message = None
 
@@ -835,8 +835,8 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_holder_count(asset):
-            asset = util.resolve_subasset_longname(self.db, asset)
-            holders = util.holders(self.db, asset, True)
+            asset = ledger.resolve_subasset_longname(self.db, asset)
+            holders = ledger.holders(self.db, asset, True)
             addresses = []
             for holder in holders:
                 addresses.append(holder['address'])
@@ -844,8 +844,8 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_holders(asset):
-            asset = util.resolve_subasset_longname(self.db, asset)
-            holders = util.holders(self.db, asset, True)
+            asset = ledger.resolve_subasset_longname(self.db, asset)
+            holders = ledger.holders(self.db, asset, True)
             return holders
 
         @dispatcher.add_method
@@ -896,7 +896,7 @@ class APIServer(threading.Thread):
                 unpack_method = enhanced_send.unpack
             else:
                 raise APIError('unsupported message type')
-            unpacked = unpack_method(self.db, message, util.CURRENT_BLOCK_INDEX)
+            unpacked = unpack_method(self.db, message, ledger.CURRENT_BLOCK_INDEX)
             return message_type_id, unpacked
 
         @dispatcher.add_method
@@ -928,7 +928,7 @@ class APIServer(threading.Thread):
                 
                 if dispenser["oracle_address"] != None:
                     fiat_price = util.satoshirate_to_fiat(dispenser["satoshirate"])
-                    oracle_price, oracle_fee, oracle_fiat_label, oracle_price_last_updated = util.get_oracle_last_price(self.db, dispenser["oracle_address"], util.CURRENT_BLOCK_INDEX)
+                    oracle_price, oracle_fee, oracle_fiat_label, oracle_price_last_updated = ledger.get_oracle_last_price(self.db, dispenser["oracle_address"], ledger.CURRENT_BLOCK_INDEX)
                     
                     if (oracle_price > 0):
                         satoshi_price = math.ceil((fiat_price/oracle_price) * config.UNIT)

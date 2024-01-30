@@ -29,7 +29,7 @@ CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.ex
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
 from counterpartylib import server
-from counterpartylib.lib import (config, util, blocks, check, backend, database, transaction, exceptions)
+from counterpartylib.lib import (config, util, blocks, check, backend, database, transaction, exceptions, ledger)
 from counterpartylib.lib.backend.indexd import extract_addresses, extract_addresses_from_txlist
 
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP
@@ -81,10 +81,10 @@ def init_database(sqlfile, dbfile, options=None):
 def reset_current_block_index(db):
     cursor = db.cursor()
     latest_block = list(cursor.execute('''SELECT * FROM blocks ORDER BY block_index DESC LIMIT 1'''))[0]
-    util.CURRENT_BLOCK_INDEX = latest_block['block_index']
+    ledger.CURRENT_BLOCK_INDEX = latest_block['block_index']
     cursor.close()
 
-    return util.CURRENT_BLOCK_INDEX
+    return ledger.CURRENT_BLOCK_INDEX
 
 
 def dump_database(db):
@@ -129,7 +129,7 @@ def insert_block(db, block_index, parse_block=True):
     block = (block_index, block_hash, block_time, None, None, None, None)
     cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty)
                       VALUES (?,?,?,?,?,?,?)''', block)
-    util.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
+    ledger.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
     cursor.close()
 
     if parse_block:
@@ -180,7 +180,7 @@ def insert_raw_transaction(raw_transaction, db):
 
     MOCK_UTXO_SET.add_raw_transaction(raw_transaction, tx_id=tx_hash, confirmations=1)
 
-    util.CURRENT_BLOCK_INDEX = block_index
+    ledger.CURRENT_BLOCK_INDEX = block_index
     blocks.parse_block(db, block_index, block_time)
     return tx_hash, tx
 
@@ -272,7 +272,7 @@ def insert_transaction(transaction, db):
                                  transaction["destination"],
                                  transaction["btc_amount"]))
     cursor.close()
-    util.CURRENT_BLOCK_INDEX = transaction['block_index']
+    ledger.CURRENT_BLOCK_INDEX = transaction['block_index']
 
 
 def initialise_rawtransactions_db(db):
@@ -589,7 +589,8 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
     """Execute tested_method within context and arguments."""
     if tx_name == 'transaction' and method == 'construct':
         return tested_method(server_db, inputs[0], **inputs[1])
-    elif (tx_name == 'util' and (method in ['api','date_passed','price','generate_asset_id','generate_asset_name','dhash_string','enabled','get_url','hexlify','parse_subasset_from_asset_name','compact_subasset_longname','expand_subasset_longname',])) \
+    elif (tx_name == 'util' and (method in ['api', 'date_passed', 'dhash_string', 'get_url', 'hexlify', 'parse_subasset_from_asset_name', 'compact_subasset_longname', 'expand_subasset_longname',])) \
+        or (tx_name == 'ledger' and (method in ['price', 'generate_asset_id', 'generate_asset_name', 'enabled',])) \
         or tx_name == 'script' \
         or (tx_name == 'blocks' and (method[:len('get_tx_info')] == 'get_tx_info'))  \
         or tx_name == 'transaction' \

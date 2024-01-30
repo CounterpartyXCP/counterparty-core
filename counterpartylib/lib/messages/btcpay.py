@@ -12,6 +12,7 @@ from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 from counterpartylib.lib import log
 from counterpartylib.lib import message_type
+from counterpartylib.lib import ledger
 
 FORMAT = '>32s32s'
 LENGTH = 32 + 32
@@ -90,11 +91,11 @@ def validate (db, source, order_match_id, block_index):
 def compose (db, source, order_match_id):
     tx0_hash, tx1_hash = util.parse_id(order_match_id)
 
-    destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(db, source, order_match_id, util.CURRENT_BLOCK_INDEX)
+    destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(db, source, order_match_id, ledger.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
     # Warn if down to the wire.
-    time_left = order_match['match_expire_index'] - util.CURRENT_BLOCK_INDEX
+    time_left = order_match['match_expire_index'] - ledger.CURRENT_BLOCK_INDEX
     if time_left < 4:
         logger.warning('Only {} blocks until that order match expires. The payment might not make into the blockchain in time.'.format(time_left))
     if 10 - time_left < 4:
@@ -131,7 +132,7 @@ def parse (db, tx, message):
         if tx['btc_amount'] >= btc_quantity:
 
             # Credit source address for the currency that he bought with the bitcoins.
-            util.credit(db, tx['source'], escrowed_asset, escrowed_quantity, tx['tx_index'], action='btcpay', event=tx['tx_hash'])
+            ledger.credit(db, tx['source'], escrowed_asset, escrowed_quantity, tx['tx_index'], action='btcpay', event=tx['tx_hash'])
             status = 'valid'
 
             # Update order match.
@@ -144,7 +145,7 @@ def parse (db, tx, message):
             log.message(db, tx['block_index'], 'update', 'order_matches', bindings)
 
             # Update give and get order status as filled if order_match is completed
-            if util.enabled('btc_order_filled'):
+            if ledger.enabled('btc_order_filled'):
                 bindings = {
                     'status': 'pending',
                     'tx0_hash': tx0_hash,

@@ -22,7 +22,7 @@ from counterpartylib.lib import log
 logger = logging.getLogger(__name__)
 log.set_logger(logger)  # set root logger
 
-from counterpartylib.lib import api, config, util, exceptions, blocks, check, backend, database, transaction, script
+from counterpartylib.lib import api, config, util, ledger, blocks, backend, database, transaction
 
 D = decimal.Decimal
 
@@ -463,7 +463,7 @@ def initialise_db():
     logger.info('Connecting to database (SQLite %s).' % apsw.apswversion())
     db = database.get_connection(read_only=False,foreign_keys=config.CHECKDB,integrity_check=config.CHECKDB)
 
-    util.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
+    ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
 
     return db
 

@@ -35,6 +35,7 @@ from counterpartylib.lib import log
 from counterpartylib.lib import database
 from counterpartylib.lib import message_type
 from counterpartylib.lib import arc4
+from counterpartylib.lib import ledger
 from counterpartylib import server
 from counterpartylib.lib.transaction_helper import p2sh_encoding
 
@@ -101,17 +102,17 @@ def parse_tx(db, tx):
 
             if message_type_id == send.ID:
                 send.parse(db, tx, message)
-            elif message_type_id == enhanced_send.ID and util.enabled('enhanced_sends', block_index=tx['block_index']):
+            elif message_type_id == enhanced_send.ID and ledger.enabled('enhanced_sends', block_index=tx['block_index']):
                 enhanced_send.parse(db, tx, message)
-            elif message_type_id == mpma.ID and util.enabled('mpma_sends', block_index=tx['block_index']):
+            elif message_type_id == mpma.ID and ledger.enabled('mpma_sends', block_index=tx['block_index']):
                 mpma.parse(db, tx, message)
             elif message_type_id == order.ID:
                 order.parse(db, tx, message)
             elif message_type_id == btcpay.ID:
                 btcpay.parse(db, tx, message)
-            elif message_type_id == issuance.ID or (util.enabled("issuance_backwards_compatibility", block_index=tx['block_index']) and message_type_id == issuance.LR_ISSUANCE_ID):
+            elif message_type_id == issuance.ID or (ledger.enabled("issuance_backwards_compatibility", block_index=tx['block_index']) and message_type_id == issuance.LR_ISSUANCE_ID):
                 issuance.parse(db, tx, message, message_type_id)
-            elif (message_type_id == issuance.SUBASSET_ID and util.enabled('subassets', block_index=tx['block_index'])) or (util.enabled("issuance_backwards_compatibility", block_index=tx['block_index']) and message_type_id == issuance.LR_SUBASSET_ID):
+            elif (message_type_id == issuance.SUBASSET_ID and ledger.enabled('subassets', block_index=tx['block_index'])) or (ledger.enabled("issuance_backwards_compatibility", block_index=tx['block_index']) and message_type_id == issuance.LR_SUBASSET_ID):
                 issuance.parse(db, tx, message, message_type_id)
             elif message_type_id == broadcast.ID:
                 broadcast.parse(db, tx, message)
@@ -125,13 +126,13 @@ def parse_tx(db, tx):
                 rps.parse(db, tx, message)
             elif message_type_id == rpsresolve.ID and rps_enabled:
                 rpsresolve.parse(db, tx, message)
-            elif message_type_id == destroy.ID and util.enabled('destroy_reactivated', block_index=tx['block_index']):
+            elif message_type_id == destroy.ID and ledger.enabled('destroy_reactivated', block_index=tx['block_index']):
                 destroy.parse(db, tx, message)
-            elif message_type_id == sweep.ID and util.enabled('sweep_send', block_index=tx['block_index']):
+            elif message_type_id == sweep.ID and ledger.enabled('sweep_send', block_index=tx['block_index']):
                 sweep.parse(db, tx, message)
-            elif message_type_id == dispenser.ID and util.enabled('dispensers', block_index=tx['block_index']):
+            elif message_type_id == dispenser.ID and ledger.enabled('dispensers', block_index=tx['block_index']):
                 dispenser.parse(db, tx, message)
-            elif message_type_id == dispenser.DISPENSE_ID and util.enabled('dispensers', block_index=tx['block_index']):
+            elif message_type_id == dispenser.DISPENSE_ID and ledger.enabled('dispensers', block_index=tx['block_index']):
                 dispenser.dispense(db, tx)
             else:
                 cursor.execute('''UPDATE transactions \
@@ -163,10 +164,10 @@ def parse_block(db, block_index, block_time,
     The unused arguments `ledger_hash` and `txlist_hash` are for the test suite.
     """
 
-    util.BLOCK_LEDGER = []
+    ledger.BLOCK_LEDGER = []
     database.BLOCK_MESSAGES = []
 
-    assert block_index == util.CURRENT_BLOCK_INDEX
+    assert block_index == ledger.CURRENT_BLOCK_INDEX
 
     # Expire orders, bets and rps.
     order.expire(db, block_index)
@@ -197,7 +198,7 @@ def parse_block(db, block_index, block_time,
 
     # Calculate consensus hashes.
     new_txlist_hash, found_txlist_hash = check.consensus_hash(db, 'txlist_hash', previous_txlist_hash, txlist)
-    new_ledger_hash, found_ledger_hash = check.consensus_hash(db, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
+    new_ledger_hash, found_ledger_hash = check.consensus_hash(db, 'ledger_hash', previous_ledger_hash, ledger.BLOCK_LEDGER)
     new_messages_hash, found_messages_hash = check.consensus_hash(db, 'messages_hash', previous_messages_hash, database.BLOCK_MESSAGES)
 
     return new_ledger_hash, new_txlist_hash, new_messages_hash, found_messages_hash
@@ -445,7 +446,7 @@ def get_tx_info(tx_hex, block_parser=None, block_index=None, db=None):
         return b'', None, None, None, None, None
     except BTCOnlyError as e:
         # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
-        if util.enabled('dispensers', block_index):
+        if ledger.enabled('dispensers', block_index):
             try:
                 return b'', None, None, None, None, _get_swap_tx(e.decodedTx, block_parser, block_index, db=db)
             except: # (DecodeError, backend.indexd.BackendRPCError) as e:
@@ -463,7 +464,7 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None, db=None):
                     return False
                 else:
                     return {"pubkeyhash":asm[2],"address_version":config.ADDRESSVERSION}
-            elif (asm[0] == "OP_HASH160") and util.enabled('p2sh_dispensers_support'):
+            elif (asm[0] == "OP_HASH160") and ledger.enabled('p2sh_dispensers_support'):
                 if len(asm) != 3 or asm[-1] != 'OP_EQUAL':          
                     return False
                 else:
@@ -472,7 +473,7 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None, db=None):
         return False
 
     def get_address(scriptpubkey):
-        if util.enabled('correct_segwit_txids') and scriptpubkey.is_witness_v0_keyhash():
+        if ledger.enabled('correct_segwit_txids') and scriptpubkey.is_witness_v0_keyhash():
             pubkey = scriptpubkey[2:]
             address = str(bitcoinlib.bech32.CBech32Data.from_bytes(0, pubkey))
             return address
@@ -500,7 +501,7 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None, db=None):
         if address:
             destination = address
             btc_amount = vout.nValue
-        elif util.enabled('hotfix_dispensers_with_non_p2pkh'):
+        elif ledger.enabled('hotfix_dispensers_with_non_p2pkh'):
             asm = script.get_asm(vout.scriptPubKey)
             if asm[-1] == 'OP_CHECKSIG':
                 destination, new_data = decode_checksig(asm, decoded_tx)
@@ -510,7 +511,7 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None, db=None):
                 destination, new_data = decode_scripthash(asm)
             elif asm[0] == 'OP_RETURN':
                 pass #Just ignore.
-            elif util.enabled('segwit_support') and asm[0] == 0:
+            elif ledger.enabled('segwit_support') and asm[0] == 0:
                 # Segwit output
                 destination, new_data = decode_p2w(vout.scriptPubKey)
             else:
@@ -552,7 +553,7 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None, db=None):
                 new_source, new_data = decode_scripthash(asm)
                 if new_data or not new_source:
                     raise DecodeError('data in source')
-            elif util.enabled('segwit_support') and asm[0] == 0:
+            elif ledger.enabled('segwit_support') and asm[0] == 0:
                 # Segwit output
                 # Get the full transaction data for this input transaction.
                 new_source, new_data = decode_p2w(vout.scriptPubKey)
@@ -561,7 +562,7 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None, db=None):
 
             # old; append to sources, results in invalid addresses
             # new; first found source is source, the rest can be anything (to fund the TX for example)
-            if not (util.enabled('first_input_is_source') and len(sources)):
+            if not (ledger.enabled('first_input_is_source') and len(sources)):
                 # Collect unique sources.
                 if new_source not in sources:
                     sources.append(new_source)
@@ -801,7 +802,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
                 raise DecodeError('unrecognised output type')
         elif p2sh_support and asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
             new_destination, new_data = decode_scripthash(asm)
-        elif util.enabled('segwit_support') and asm[0] == 0:
+        elif ledger.enabled('segwit_support') and asm[0] == 0:
             # Segwit Vout, second param is redeemScript
             #redeemScript = asm[1]
             new_destination, new_data = decode_p2w(vout.scriptPubKey)
@@ -810,7 +811,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
         assert not (new_destination and new_data)
         assert new_destination != None or new_data != None  # `decode_*()` should never return `None, None`.
 
-        if util.enabled('null_data_check'):
+        if ledger.enabled('null_data_check'):
             if new_data == []:
                 raise DecodeError('new destination is `None`')
 
@@ -830,10 +831,10 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
 
     # P2SH encoding signalling
     p2sh_encoding_source = None
-    if util.enabled('p2sh_encoding') and data == b'P2SH':
+    if ledger.enabled('p2sh_encoding') and data == b'P2SH':
         data = b''
         for vin in ctx.vin:
-            if util.enabled("prevout_segwit_fix"):
+            if ledger.enabled("prevout_segwit_fix"):
                 if block_parser:
                     vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
                     vin_ctx = backend.deserialize(vin_tx['__data__'])
@@ -898,7 +899,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
             new_source, new_data = decode_scripthash(asm)
             if new_data or not new_source:
                 raise DecodeError('data in source')
-        elif util.enabled('segwit_support') and asm[0] == 0:
+        elif ledger.enabled('segwit_support') and asm[0] == 0:
             # Segwit output
             new_source, new_data = decode_p2w(vout.scriptPubKey)
         else:
@@ -906,7 +907,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
 
         # old; append to sources, results in invalid addresses
         # new; first found source is source, the rest can be anything (to fund the TX for example)
-        if not (util.enabled('first_input_is_source') and len(sources)):
+        if not (ledger.enabled('first_input_is_source') and len(sources)):
             # Collect unique sources.
             if new_source not in sources:
                 sources.append(new_source)
@@ -947,7 +948,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
 
     outs = []
     first_one = True #This is for backward compatibility with unique dispensers
-    if not source and decoded_tx and util.enabled('dispensers', block_index):
+    if not source and decoded_tx and ledger.enabled('dispensers', block_index):
         outputs = decoded_tx[1]
         out_index = 0
         for out in outputs:
@@ -959,7 +960,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
                 data = struct.pack(config.SHORT_TXTYPE_FORMAT, dispenser.DISPENSE_ID)
                 data += b'\x00'
                 
-                if util.enabled("multiple_dispenses"):
+                if ledger.enabled("multiple_dispenses"):
                     outs.append({"destination":out[0], "btc_amount":out[1], "out_index":out_index})
                 else:
                     break # Prevent inspection of further dispenses (only first one is valid)
@@ -971,7 +972,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
         block_hash = config.MEMPOOL_BLOCK_HASH
         block_index = config.MEMPOOL_BLOCK_INDEX
     else:
-        assert block_index == util.CURRENT_BLOCK_INDEX
+        assert block_index == ledger.CURRENT_BLOCK_INDEX
 
     if source and (data or destination == config.UNSPENDABLE or decoded_tx):
         logger.debug('Saving transaction: {}'.format(tx_hash))
@@ -1222,12 +1223,12 @@ def follow(db):
     initialise(db)
 
     # Get index of last block.
-    if util.CURRENT_BLOCK_INDEX == 0:
+    if ledger.CURRENT_BLOCK_INDEX == 0:
         logger.warning('New database.')
         block_index = config.BLOCK_FIRST
         database.update_version(db)
     else:
-        block_index = util.CURRENT_BLOCK_INDEX + 1
+        block_index = ledger.CURRENT_BLOCK_INDEX + 1
 
         # Check database version.
         try:
@@ -1345,7 +1346,7 @@ def follow(db):
                 block_difficulty = block.difficulty
 
             with db:
-                util.CURRENT_BLOCK_INDEX = block_index
+                ledger.CURRENT_BLOCK_INDEX = block_index
 
                 # List the block.
                 cursor.execute('''INSERT INTO blocks(

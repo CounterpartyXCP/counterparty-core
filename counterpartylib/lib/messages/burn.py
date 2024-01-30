@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 D = decimal.Decimal
 from fractions import Fraction
 
-from counterpartylib.lib import (config, exceptions, util)
+from counterpartylib.lib import (config, exceptions, util, ledger)
 
 """Burn {} to earn {} during a special period of time.""".format(config.BTC, config.XCP)
 
@@ -57,7 +57,7 @@ def validate (db, source, destination, quantity, block_index, overburn=False):
 def compose (db, source, quantity, overburn=False):
     cursor = db.cursor()
     destination = config.UNSPENDABLE
-    problems = validate(db, source, destination, quantity, util.CURRENT_BLOCK_INDEX, overburn=overburn)
+    problems = validate(db, source, destination, quantity, ledger.CURRENT_BLOCK_INDEX, overburn=overburn)
     if problems: raise exceptions.ComposeError(problems)
 
     # Check that a maximum of 1 BTC total is burned per address.
@@ -103,7 +103,7 @@ def parse (db, tx, MAINNET_BURNS, message=None):
             earned = round(burned * multiplier)
 
             # Credit source address with earned XCP.
-            util.credit(db, tx['source'], config.XCP, earned, tx['tx_index'], action='burn', event=tx['tx_hash'])
+            ledger.credit(db, tx['source'], config.XCP, earned, tx['tx_index'], action='burn', event=tx['tx_hash'])
         else:
             burned = 0
             earned = 0
@@ -121,7 +121,7 @@ def parse (db, tx, MAINNET_BURNS, message=None):
         except KeyError:
             return
 
-        util.credit(db, line['source'], config.XCP, int(line['earned']), tx['tx_index'], action='burn', event=line['tx_hash'])
+        ledger.credit(db, line['source'], config.XCP, int(line['earned']), tx['tx_index'], action='burn', event=line['tx_hash'])
 
         tx_index = tx['tx_index']
         tx_hash = line['tx_hash']

@@ -31,6 +31,7 @@ from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 from counterpartylib.lib import log
 from counterpartylib.lib import message_type
+from counterpartylib.lib import ledger
 
 # possible_moves wager move_random_hash expiration
 FORMAT = '>HQ32sI'
@@ -149,7 +150,7 @@ def cancel_rps (db, rps, status, block_index, tx_index):
     cursor.execute(sql, bindings)
     log.message(db, block_index, 'update', 'rps', bindings)
 
-    util.credit(db, rps['source'], 'XCP', rps['wager'], tx_index, action='recredit wager', event=rps['tx_hash'])
+    ledger.credit(db, rps['source'], 'XCP', rps['wager'], tx_index, action='recredit wager', event=rps['tx_hash'])
 
     cursor.close()
 
@@ -158,15 +159,15 @@ def update_rps_match_status (db, rps_match, status, block_index, tx_index):
 
     if status in ['expired', 'concluded: tie']:
         # Recredit tx0 address.
-        util.credit(db, rps_match['tx0_address'], 'XCP',
+        ledger.credit(db, rps_match['tx0_address'], 'XCP',
                     rps_match['wager'], tx_index, action='recredit wager', event=rps_match['id'])
         # Recredit tx1 address.
-        util.credit(db, rps_match['tx1_address'], 'XCP',
+        ledger.credit(db, rps_match['tx1_address'], 'XCP',
                     rps_match['wager'], tx_index, action='recredit wager', event=rps_match['id'])
     elif status.startswith('concluded'):
         # Credit the winner
         winner = rps_match['tx0_address'] if status == 'concluded: first player wins' else rps_match['tx1_address']
-        util.credit(db, winner, 'XCP',
+        ledger.credit(db, winner, 'XCP',
                     2 * rps_match['wager'], tx_index, action='wins', event=rps_match['id'])
 
     # Update status of rps match.
@@ -183,7 +184,7 @@ def update_rps_match_status (db, rps_match, status, block_index, tx_index):
 def validate (db, source, possible_moves, wager, move_random_hash, expiration, block_index):
     problems = []
 
-    if util.enabled('disable_rps'):
+    if ledger.enabled('disable_rps'):
         problems.append('rps disabled')
 
     if not isinstance(possible_moves, int):
@@ -219,7 +220,7 @@ def validate (db, source, possible_moves, wager, move_random_hash, expiration, b
 
 def compose(db, source, possible_moves, wager, move_random_hash, expiration):
 
-    problems = validate(db, source, possible_moves, wager, move_random_hash, expiration, util.CURRENT_BLOCK_INDEX)
+    problems = validate(db, source, possible_moves, wager, move_random_hash, expiration, ledger.CURRENT_BLOCK_INDEX)
 
     if problems: raise exceptions.ComposeError(problems)
 
@@ -243,7 +244,7 @@ def parse(db, tx, message):
     if status == 'open':
         move_random_hash = binascii.hexlify(move_random_hash).decode('utf8')
         # Overbet
-        balance = util.get_balance(db, tx['source'], 'XCP')
+        balance = ledger.get_balance(db, tx['source'], 'XCP')
         if balance == 0:
             wager = 0
         else:
@@ -255,7 +256,7 @@ def parse(db, tx, message):
 
     # Debit quantity wagered. (Escrow.)
     if status == 'open':
-        util.debit(db, tx['source'], 'XCP', wager, tx['tx_index'], action="open RPS", event=tx['tx_hash'])
+        ledger.debit(db, tx['source'], 'XCP', wager, tx['tx_index'], action="open RPS", event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
@@ -401,7 +402,7 @@ def expire (db, block_index):
             for rps in matched_rps:
                 cursor.execute('''UPDATE rps SET status = ? WHERE tx_index = ?''', ('open', rps['tx_index']))
                 # Re-debit XCP refund by close_rps_match.
-                util.debit(db, rps['source'], 'XCP', rps['wager'], tx['tx_index'], action='reopen RPS after matching expiration', event=rps_match['id'])
+                ledger.debit(db, rps['source'], 'XCP', rps['wager'], tx['tx_index'], action='reopen RPS after matching expiration', event=rps_match['id'])
                 # Rematch
                 match(db, {'tx_index': rps['tx_index']}, block_index)
 

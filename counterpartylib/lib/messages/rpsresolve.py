@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 import string
 
-from counterpartylib.lib import (config, exceptions, util, message_type)
+from counterpartylib.lib import (config, exceptions, util, message_type, ledger)
 from . import rps
 
 # move random rps_match_id
@@ -105,7 +105,7 @@ def compose (db, source, move, random, rps_match_id):
     if problems: raise exceptions.ComposeError(problems)
 
     # Warn if down to the wire.
-    time_left = rps_match['match_expire_index'] - util.CURRENT_BLOCK_INDEX
+    time_left = rps_match['match_expire_index'] - ledger.CURRENT_BLOCK_INDEX
     if time_left < 4:
         logger.warning('Only {} blocks until that rps match expires. The conclusion might not make into the blockchain in time.'.format(time_left))
 

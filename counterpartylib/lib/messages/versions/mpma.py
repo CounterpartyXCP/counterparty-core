@@ -12,7 +12,7 @@ from itertools import groupby
 logger = logging.getLogger(__name__)
 
 from bitstring import ReadError
-from counterpartylib.lib import (config, util, exceptions, util, message_type, address)
+from counterpartylib.lib import (config, util, exceptions, util, message_type, ledger)
 
 from .mpma_util.internals import (_decode_mpmaSendDecode, _encode_mpmaSend)
 
@@ -78,7 +78,7 @@ def validate (db, source, asset_dest_quant_list, block_index):
         if not destination:
             problems.append('destination is required for {}'.format(asset))
 
-        if util.enabled('options_require_memo'):
+        if ledger.enabled('options_require_memo'):
             results = cursor.execute('SELECT options FROM addresses WHERE address=?', (destination,))
             if results:
                 result = results.fetchone()
@@ -94,18 +94,18 @@ def compose (db, source, asset_dest_quant_list, memo, memo_is_hex):
 
     out_balances = util.accumulate([(t[0], t[2]) for t in asset_dest_quant_list])
     for (asset, quantity) in out_balances:
-        if util.enabled('mpma_subasset_support'):
+        if ledger.enabled('mpma_subasset_support'):
             # resolve subassets
-            asset = util.resolve_subasset_longname(db, asset)
+            asset = ledger.resolve_subasset_longname(db, asset)
 
         if not isinstance(quantity, int):
             raise exceptions.ComposeError('quantities must be an int (in satoshis) for {}'.format(asset))
 
-        balance = util.get_balance(db, source, asset)
+        balance = ledger.get_balance(db, source, asset)
         if balance < quantity:
             raise exceptions.ComposeError('insufficient funds for {}'.format(asset))
 
-    block_index = util.CURRENT_BLOCK_INDEX
+    block_index = ledger.CURRENT_BLOCK_INDEX
 
     cursor.close()
 
@@ -136,12 +136,12 @@ def parse (db, tx, message):
     if status == 'valid':
         for asset_id in unpacked:
             try:
-                asset = util.get_asset_name(db, asset_id, tx['block_index'])
+                asset = ledger.get_asset_name(db, asset_id, tx['block_index'])
             except (exceptions.AssetNameError) as e:
                 status = 'invalid: asset %s invalid at block index %i' % (asset_id, tx['block_index'])
                 break
 
-            balance = util.get_balance(db, tx['source'], asset_id)
+            balance = ledger.get_balance(db, tx['source'], asset_id)
             if not balance:
                 status = 'invalid: insufficient funds for asset %s, address %s has no balance' % (asset_id, tx['source'])
                 break
@@ -166,10 +166,10 @@ def parse (db, tx, message):
 
     if status == 'valid':
         for op in all_credits:
-            util.credit(db, op['destination'], op['asset'], op['quantity'], tx['tx_index'], action='mpma send', event=tx['tx_hash'])
+            ledger.credit(db, op['destination'], op['asset'], op['quantity'], tx['tx_index'], action='mpma send', event=tx['tx_hash'])
 
         for op in all_debits:
-            util.debit(db, tx['source'], op['asset'], op['quantity'], tx['tx_index'], action='mpma send', event=tx['tx_hash'])
+            ledger.debit(db, tx['source'], op['asset'], op['quantity'], tx['tx_index'], action='mpma send', event=tx['tx_hash'])
 
         # Enumeration of the plain sends needs to be deterministic, so we sort them by asset and then by address
         plain_sends = sorted(plain_sends, key=lambda x: ''.join([x[0], x[1]]))

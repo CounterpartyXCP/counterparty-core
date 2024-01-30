@@ -17,7 +17,7 @@ import functools
 import bitcoin.wallet
 from pkg_resources import parse_version
 
-from counterpartylib.lib import config, util, address
+from counterpartylib.lib import config, util, ledger
 
 READ_BUF_SIZE = 65536
 SOCKET_TIMEOUT = 5.0

@@ -36,6 +36,8 @@ from counterpartylib.lib import config
 from counterpartylib.lib import util
 from counterpartylib.lib import log
 from counterpartylib.lib import message_type
+from counterpartylib.lib import ledger
+
 from . import (bet)
 
 FORMAT = '>IdI'
@@ -78,7 +80,7 @@ def validate (db, source, timestamp, value, fee_fraction_int, text, block_index)
     if timestamp > config.MAX_INT or value > config.MAX_INT or fee_fraction_int > config.MAX_INT:
         problems.append('integer overflow')
 
-    if util.enabled('max_fee_fraction'):
+    if ledger.enabled('max_fee_fraction'):
         if fee_fraction_int >= config.UNIT:
             problems.append('fee fraction greater than or equal to 1')
     else:
@@ -104,7 +106,7 @@ def validate (db, source, timestamp, value, fee_fraction_int, text, block_index)
         if len(text) > 52:
             problems.append('text too long')
 
-    if util.enabled('options_require_memo') and text and text.lower().startswith('options'):
+    if ledger.enabled('options_require_memo') and text and text.lower().startswith('options'):
         try:
             # Check for options and if they are valid.
             options = util.parse_options_from_string(text)
@@ -120,13 +122,13 @@ def compose (db, source, timestamp, value, fee_fraction, text):
     # Store the fee fraction as an integer.
     fee_fraction_int = int(fee_fraction * 1e8)
 
-    problems = validate(db, source, timestamp, value, fee_fraction_int, text, util.CURRENT_BLOCK_INDEX)
+    problems = validate(db, source, timestamp, value, fee_fraction_int, text, ledger.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
     data = message_type.pack(ID)
 
     # always use custom length byte instead of problematic usage of 52p format and make sure to encode('utf-8') for length
-    if util.enabled('broadcast_pack_text'):
+    if ledger.enabled('broadcast_pack_text'):
         data += struct.pack(FORMAT, timestamp, value, fee_fraction_int)
         data += VarIntSerializer.serialize(len(text.encode('utf-8')))
         data += text.encode('utf-8')
@@ -144,7 +146,7 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        if util.enabled('broadcast_pack_text', tx['block_index']):
+        if ledger.enabled('broadcast_pack_text', tx['block_index']):
             timestamp, value, fee_fraction_int, rawtext = struct.unpack(FORMAT + '{}s'.format(len(message) - LENGTH), message)
             textlen = VarIntSerializer.deserialize(rawtext)
             if textlen == 0:
@@ -210,11 +212,11 @@ def parse (db, tx, message):
         logger.debug("Bindings: %s" % (json.dumps(bindings), ))
 
     # stop processing if broadcast is invalid for any reason
-    if util.enabled('broadcast_invalid_check') and status != 'valid':
+    if ledger.enabled('broadcast_invalid_check') and status != 'valid':
         return
 
     # Options? Should not fail to parse due to above checks.
-    if util.enabled('options_require_memo') and text and text.lower().startswith('options'):
+    if ledger.enabled('options_require_memo') and text and text.lower().startswith('options'):
         options = util.parse_options_from_string(text)
         if options is not False:
             op_bindings = {
@@ -247,7 +249,7 @@ def parse (db, tx, message):
 
     # stop processing if broadcast is invalid for any reason
     # @TODO: remove this check once broadcast_invalid_check has been activated
-    if util.enabled('max_fee_fraction') and status != 'valid':
+    if ledger.enabled('max_fee_fraction') and status != 'valid':
         return
 
     # Handle bet matches that use this feed.
@@ -265,7 +267,7 @@ def parse (db, tx, message):
         # to betters.
         total_escrow = bet_match['forward_quantity'] + bet_match['backward_quantity']
 
-        if util.enabled('inmutable_fee_fraction'):
+        if ledger.enabled('inmutable_fee_fraction'):
             fee_fraction = bet_match['fee_fraction_int'] / config.UNIT
         else:
             fee_fraction = fee_fraction_int / config.UNIT
@@ -309,15 +311,15 @@ def parse (db, tx, message):
                     bull_credit = escrow_less_fee
                     bear_credit = 0
                     bet_match_status = 'settled: liquidated for bull'
-                    util.credit(db, bull_address, config.XCP, bull_credit, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                    ledger.credit(db, bull_address, config.XCP, bull_credit, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
                 elif bull_credit <= 0:
                     bull_credit = 0
                     bear_credit = escrow_less_fee
                     bet_match_status = 'settled: liquidated for bear'
-                    util.credit(db, bear_address, config.XCP, bear_credit, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                    ledger.credit(db, bear_address, config.XCP, bear_credit, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
 
                 # Pay fee to feed.
-                util.credit(db, bet_match['feed_address'], config.XCP, fee, tx['tx_index'], action='feed fee', event=tx['tx_hash'])
+                ledger.credit(db, bet_match['feed_address'], config.XCP, fee, tx['tx_index'], action='feed fee', event=tx['tx_hash'])
 
                 # For logging purposes.
                 bindings = {
@@ -338,11 +340,11 @@ def parse (db, tx, message):
             elif timestamp >= bet_match['deadline']:
                 bet_match_status = 'settled'
 
-                util.credit(db, bull_address, config.XCP, bull_credit, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
-                util.credit(db, bear_address, config.XCP, bear_credit, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                ledger.credit(db, bull_address, config.XCP, bull_credit, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                ledger.credit(db, bear_address, config.XCP, bear_credit, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
 
                 # Pay fee to feed.
-                util.credit(db, bet_match['feed_address'], config.XCP, fee, tx['tx_index'], action='feed fee', event=tx['tx_hash'])
+                ledger.credit(db, bet_match['feed_address'], config.XCP, fee, tx['tx_index'], action='feed fee', event=tx['tx_hash'])
 
                 # For logging purposes.
                 bindings = {
@@ -374,14 +376,14 @@ def parse (db, tx, message):
             if value == bet_match['target_value']:
                 winner = 'Equal'
                 bet_match_status = 'settled: for equal'
-                util.credit(db, equal_address, config.XCP, escrow_less_fee, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                ledger.credit(db, equal_address, config.XCP, escrow_less_fee, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
             else:
                 winner = 'NotEqual'
                 bet_match_status = 'settled: for notequal'
-                util.credit(db, notequal_address, config.XCP, escrow_less_fee, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                ledger.credit(db, notequal_address, config.XCP, escrow_less_fee, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
 
             # Pay fee to feed.
-            util.credit(db, bet_match['feed_address'], config.XCP, fee, tx['tx_index'], action='feed fee', event=tx['tx_hash'])
+            ledger.credit(db, bet_match['feed_address'], config.XCP, fee, tx['tx_index'], action='feed fee', event=tx['tx_hash'])
 
             # For logging purposes.
             bindings = {

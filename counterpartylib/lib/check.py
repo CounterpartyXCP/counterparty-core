@@ -9,7 +9,7 @@ import sys
 from counterpartylib.lib import config
 from counterpartylib.lib import util
 from counterpartylib.lib import exceptions
-from counterpartylib.lib import backend
+from counterpartylib.lib import ledger
 from counterpartylib.lib import database
 
 CONSENSUS_HASH_SEED = 'We can only see a short distance ahead, but we can see plenty there that needs to be done.'
@@ -106,7 +106,7 @@ class ConsensusError(Exception):
 
 def consensus_hash(db, field, previous_consensus_hash, content):
     cursor = db.cursor()
-    block_index = util.CURRENT_BLOCK_INDEX
+    block_index = ledger.CURRENT_BLOCK_INDEX
 
     # Initialise previous hash on first block.
     if block_index <= config.BLOCK_FIRST:
@@ -163,14 +163,14 @@ class SanityError(Exception):
 
 def asset_conservation(db):
     logger.debug('Checking for conservation of assets.')
-    supplies = util.supplies(db)
-    held = util.held(db)
+    supplies = ledger.supplies(db)
+    held = ledger.held(db)
     for asset in supplies.keys():
         asset_issued = supplies[asset]
         asset_held = held[asset] if asset in held and held[asset] != None else 0
         if asset_issued != asset_held:
-            raise SanityError('{} {} issued ≠ {} {} held'.format(util.value_out(db, asset_issued, asset), asset, util.value_out(db, asset_held, asset), asset))
-        logger.debug('{} has been conserved ({} {} both issued and held)'.format(asset, util.value_out(db, asset_issued, asset), asset))
+            raise SanityError('{} {} issued ≠ {} {} held'.format(ledger.value_out(db, asset_issued, asset), asset, ledger.value_out(db, asset_held, asset), asset))
+        logger.debug('{} has been conserved ({} {} both issued and held)'.format(asset, ledger.value_out(db, asset_issued, asset), asset))
 
 class VersionError(Exception):
     pass
@@ -194,7 +194,7 @@ def check_change(protocol_change, change_name):
         explanation = 'Your version of {} is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(
             config.APP_NAME, config.VERSION_STRING, protocol_change['block_index'], protocol_change['minimum_version_major'], protocol_change['minimum_version_minor'],
             protocol_change['minimum_version_revision'], change_name)
-        if util.CURRENT_BLOCK_INDEX >= protocol_change['block_index']:
+        if ledger.CURRENT_BLOCK_INDEX >= protocol_change['block_index']:
             raise VersionUpdateRequiredError(explanation)
         else:
             warnings.warn(explanation)

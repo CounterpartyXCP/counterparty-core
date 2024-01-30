@@ -7,7 +7,7 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 
-from ... import (config, exceptions, util, message_type)
+from ... import (config, exceptions, util, message_type, ledger)
 
 FORMAT = '>QQ'
 LENGTH = 8 + 8
@@ -17,12 +17,12 @@ def unpack(db, message, block_index):
     # Only used for `unpack` API call at the moment.
     try:
         asset_id, quantity = struct.unpack(FORMAT, message)
-        asset = util.get_asset_name(db, asset_id, block_index)
+        asset = ledger.get_asset_name(db, asset_id, block_index)
 
     except struct.error:
         raise exceptions.UnpackError('could not unpack')
 
-    except AssetNameError:
+    except exceptions.AssetNameError:
         raise exceptions.UnpackError('asset id invalid')
 
     unpacked = {
@@ -47,11 +47,11 @@ def validate (db, source, destination, asset, quantity, block_index):
     if quantity > config.MAX_INT:
         problems.append('integer overflow')
 
-    if util.enabled('send_destination_required'):  # Protocol change.
+    if ledger.enabled('send_destination_required'):  # Protocol change.
         if not destination:
             problems.append('destination is required')
 
-    if util.enabled('options_require_memo'):
+    if ledger.enabled('options_require_memo'):
         # Check destination address options
 
         cursor = db.cursor()
@@ -72,23 +72,23 @@ def compose (db, source, destination, asset, quantity):
         return (source, [(destination, quantity)], None)
 
     # resolve subassets
-    asset = util.resolve_subasset_longname(db, asset)
+    asset = ledger.resolve_subasset_longname(db, asset)
 
     #quantity must be in int satoshi (not float, string, etc)
     if not isinstance(quantity, int):
         raise exceptions.ComposeError('quantity must be an int (in satoshi)')
 
     # Only for outgoing (incoming will overburn).
-    balance = util.get_balance(db, source, asset)
+    balance = ledger.get_balance(db, source, asset)
     if balance < quantity:
         raise exceptions.ComposeError('insufficient funds')
 
-    block_index = util.CURRENT_BLOCK_INDEX
+    block_index = ledger.CURRENT_BLOCK_INDEX
 
     problems = validate(db, source, destination, asset, quantity, block_index)
     if problems: raise exceptions.ComposeError(problems)
 
-    asset_id = util.get_asset_id(db, asset, block_index)
+    asset_id = ledger.get_asset_id(db, asset, block_index)
     data = message_type.pack(ID)
     data += struct.pack(FORMAT, asset_id, quantity)
 
@@ -103,7 +103,7 @@ def parse (db, tx, message):
         if len(message) != LENGTH:
             raise exceptions.UnpackError
         asset_id, quantity = struct.unpack(FORMAT, message)
-        asset = util.get_asset_name(db, asset_id, tx['block_index'])
+        asset = ledger.get_asset_name(db, asset_id, tx['block_index'])
         status = 'valid'
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         asset, quantity = None, None
@@ -113,7 +113,7 @@ def parse (db, tx, message):
         # Oversend
         # doesn't make sense (0 and no balance should be the same) but let's not break the protocol
         try:
-            balance = util.get_balance(db, tx['source'], asset, raise_error_if_no_balance=True)
+            balance = ledger.get_balance(db, tx['source'], asset, raise_error_if_no_balance=True)
             if balance < quantity:
                 quantity = min(balance, quantity)
         except exceptions.BalanceError:
@@ -129,8 +129,8 @@ def parse (db, tx, message):
         if problems: status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':
-        util.debit(db, tx['source'], asset, quantity, tx['tx_index'], action='send', event=tx['tx_hash'])
-        util.credit(db, tx['destination'], asset, quantity, tx['tx_index'], action='send', event=tx['tx_hash'])
+        ledger.debit(db, tx['source'], asset, quantity, tx['tx_index'], action='send', event=tx['tx_hash'])
+        ledger.credit(db, tx['destination'], asset, quantity, tx['tx_index'], action='send', event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

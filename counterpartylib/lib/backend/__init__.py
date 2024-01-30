@@ -14,6 +14,7 @@ from counterpartylib.lib import script
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import prefetcher
+from counterpartylib.lib import ledger
 
 from counterpartylib.lib.backend import addrindexrs
 

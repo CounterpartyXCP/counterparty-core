@@ -5,7 +5,7 @@ import struct
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import config
 from counterpartylib.lib import util
-from counterpartylib.lib import log
+from counterpartylib.lib import ledger
 from counterpartylib.lib import message_type
 from counterpartylib.lib import address
 from counterpartylib.lib.exceptions import *
@@ -59,9 +59,9 @@ def validate (db, source, destination, flags, memo, block_index):
 
     cursor = db.cursor()
 
-    result = util.get_balance(db, source, 'XCP')
+    result = ledger.get_balance(db, source, 'XCP')
 
-    antispamfee = util.get_value_by_block_index("sweep_antispam_fee", block_index)*config.UNIT
+    antispamfee = ledger.get_value_by_block_index("sweep_antispam_fee", block_index)*config.UNIT
     total_fee = ANTISPAM_FEE
 
     if antispamfee > 0:
@@ -102,7 +102,7 @@ def compose (db, source, destination, flags, memo):
         memo = memo.encode('utf-8')
         memo = struct.pack(">{}s".format(len(memo)), memo)
 
-    block_index = util.CURRENT_BLOCK_INDEX
+    block_index = ledger.CURRENT_BLOCK_INDEX
     problems, total_fee = validate(db, source, destination, flags, memo, block_index)
     if problems: raise exceptions.ComposeError(problems)
 
@@ -169,29 +169,29 @@ def parse (db, tx, message):
 
     if status == 'valid':
         try:
-            antispamfee = util.get_value_by_block_index("sweep_antispam_fee", tx['block_index'])*config.UNIT
+            antispamfee = ledger.get_value_by_block_index("sweep_antispam_fee", tx['block_index'])*config.UNIT
             
             if antispamfee > 0:
-                util.debit(db, tx['source'], 'XCP', total_fee, tx['tx_index'], action='sweep fee', event=tx['tx_hash'])
+                ledger.debit(db, tx['source'], 'XCP', total_fee, tx['tx_index'], action='sweep fee', event=tx['tx_hash'])
             else:
-                util.debit(db, tx['source'], 'XCP', fee_paid, tx['tx_index'], action='sweep fee', event=tx['tx_hash'])
+                ledger.debit(db, tx['source'], 'XCP', fee_paid, tx['tx_index'], action='sweep fee', event=tx['tx_hash'])
         except BalanceError:
             destination, flags, memo_bytes = None, None, None
             status = 'invalid: insufficient balance for antispam fee for sweep'
 
     if status == 'valid':
-        balances = util.get_address_balances(db, tx['source'])
+        balances = ledger.get_address_balances(db, tx['source'])
 
         if flags & FLAG_BALANCES:
             for balance in balances:
-                util.debit(db, tx['source'], balance['asset'], balance['quantity'], tx['tx_index'], action='sweep', event=tx['tx_hash'])
-                util.credit(db, destination, balance['asset'], balance['quantity'], tx['tx_index'], action='sweep', event=tx['tx_hash'])
+                ledger.debit(db, tx['source'], balance['asset'], balance['quantity'], tx['tx_index'], action='sweep', event=tx['tx_hash'])
+                ledger.credit(db, destination, balance['asset'], balance['quantity'], tx['tx_index'], action='sweep', event=tx['tx_hash'])
 
         if flags & FLAG_OWNERSHIP:
             sweep_pos = 0
             
             assets_issued = balances
-            if util.enabled("zero_balance_ownership_sweep_fix", tx["block_index"]):
+            if ledger.enabled("zero_balance_ownership_sweep_fix", tx["block_index"]):
                 cursor.execute('''SELECT DISTINCT(asset) FROM issuances WHERE issuer = ?''', (tx['source'],))
                 assets_issued = cursor.fetchall()
                 
