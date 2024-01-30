@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 log.set_logger(logger)  # set root logger
 
 from counterpartylib.lib import api, config, util, exceptions, blocks, check, backend, database, transaction, script
+from counterpartylib.lib import prefetcher
+NUM_FETCHER_THREADS = 5
 
 D = decimal.Decimal
 
@@ -490,7 +492,7 @@ def start_all(db):
     api_server.daemon = True
     api_server.start()
 
-    # Server.
+    # Server
     blocks.follow(db)
 
 

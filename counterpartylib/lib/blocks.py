@@ -45,6 +45,9 @@ from .kickstart.utils import ib2h
 
 from .exceptions import DecodeError, BTCOnlyError
 
+from counterpartylib.lib import prefetcher
+NUM_PREFETCHER_THREADS = 5
+
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
          ['bet_match_resolutions', 'order_match_expirations', 'order_matches',
@@ -1415,6 +1418,11 @@ def follow(db):
 
     logger.info('Resuming parsing.')
 
+    # If we're far behind, start Prefetcher.
+    block_count = backend.getblockcount()   # TODO: Retry logic
+    if block_index <= block_count - 200:
+        prefetcher.start_all(NUM_PREFETCHER_THREADS)
+
     # Get index of last transaction.
     tx_index = get_next_tx_index(db)
 
@@ -1428,6 +1436,7 @@ def follow(db):
     # processing of the new blocks a bit.
     while True:
         start_time = time.time()
+
         # Get block count.
         # If the backend is unreachable and `config.FORCE` is set, just sleep
         # and try again repeatedly.
@@ -1439,6 +1448,10 @@ def follow(db):
                 continue
             else:
                 raise e
+
+        # Stop Prefetcher thread as we get close to today.
+        if block_index >= block_count - 100:
+            prefetcher.stop_all(NUM_PREFETCHER_THREADS)
 
         # Get new blocks.
         if block_index <= block_count:
