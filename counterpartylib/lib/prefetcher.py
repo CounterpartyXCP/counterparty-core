@@ -39,7 +39,7 @@ class Prefetcher(threading.Thread):
         
             # TODO: Terribly hackish!
             if BLOCKCHAIN_CACHE:
-                fetch_block_index = max(util.CURRENT_BLOCK_INDEX, max(BLOCKCHAIN_CACHE.keys())) + 1
+                fetch_block_index = max(309999, util.CURRENT_BLOCK_INDEX, max(BLOCKCHAIN_CACHE.keys())) + 1
             else:
                 fetch_block_index = util.CURRENT_BLOCK_INDEX
             BLOCKCHAIN_CACHE[fetch_block_index] = None

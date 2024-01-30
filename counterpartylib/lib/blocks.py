@@ -1501,7 +1501,7 @@ def follow(db):
 
             # Check version. (Don’t add any blocks to the database while
             # running an out‐of‐date client!)
-            check.software_version()
+            # TODO check.software_version()
 
             # TODO
             if current_index >= 400000:
@@ -1509,20 +1509,36 @@ def follow(db):
                 logging.warn('Finished Test!')
                 sys.exit(1)
 
+            # else:
+                # logger.warning('Cache miss :/ Block index: {}'.format(current_index))
+            block_hash = backend.getblockhash(current_index)
+            block = backend.getblock(block_hash)
+            previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
+            block_time = block.nTime
+            txhash_list, raw_transactions = backend.get_tx_list(block)
+            block_difficulty = block.difficulty
+
             # Get and parse transactions in this block (atomically).
             logger.debug('Blockchain cache size: {}'.format(len(prefetcher.BLOCKCHAIN_CACHE)))
             if current_index in prefetcher.BLOCKCHAIN_CACHE and prefetcher.BLOCKCHAIN_CACHE[current_index]: # TODO: Hackish!!!
-                logger.debug('Cache hit! Block index: {}'.format(current_index))
-                block_hash, txhash_list, raw_transactions, previous_block_hash, block_time, block_difficulty = prefetcher.BLOCKCHAIN_CACHE[current_index]
+                logger.info('Cache hit! Block index: {}'.format(current_index))
+                block_hash2 = prefetcher.BLOCKCHAIN_CACHE[current_index]['block_hash']
+                txhash_list2 = prefetcher.BLOCKCHAIN_CACHE[current_index]['txhash_list']
+                raw_transactions2 = prefetcher.BLOCKCHAIN_CACHE[current_index]['raw_transactions']
+                previous_block_hash2= prefetcher.BLOCKCHAIN_CACHE[current_index]['previous_block_hash']
+                block_time2= prefetcher.BLOCKCHAIN_CACHE[current_index]['block_time']
+                block_difficulty2 = prefetcher.BLOCKCHAIN_CACHE[current_index]['block_difficulty']
                 del prefetcher.BLOCKCHAIN_CACHE[current_index]
+
+                assert block_hash == block_hash2
+                assert previous_block_hash == previous_block_hash2
+                assert txhash_list == txhash_list2
+                assert raw_transactions == raw_transactions2
+                logger.info('Assertions passed!')
             else:
-                logger.warning('Cache miss :/ Block index: {}'.format(current_index))
-                block_hash = backend.getblockhash(current_index)
-                block = backend.getblock(block_hash)
-                previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
-                block_time = block.nTime
-                txhash_list, raw_transactions = backend.get_tx_list(block)
-                block_difficulty = block.difficulty
+                logger.exception('Cache miss! {}'.format(current_index))
+                raise Exception
+
 
             with db:
                 util.CURRENT_BLOCK_INDEX = block_index
