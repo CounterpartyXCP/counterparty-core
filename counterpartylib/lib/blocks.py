@@ -1419,9 +1419,9 @@ def follow(db):
     logger.info('Resuming parsing.')
 
     # If we're far behind, start Prefetcher.
-    block_count = backend.getblockcount()   # TODO: Retry logic
-    if block_index <= block_count - 200:
-        prefetcher.start_all(NUM_PREFETCHER_THREADS)
+    # block_count = backend.getblockcount()   # TODO: Retry logic
+    # if block_index <= block_count - 200:
+    prefetcher.start_all(NUM_PREFETCHER_THREADS)
 
     # Get index of last transaction.
     tx_index = get_next_tx_index(db)
@@ -1453,10 +1453,6 @@ def follow(db):
         if block_index >= block_count - 100:
             prefetcher.stop_all(NUM_PREFETCHER_THREADS)
 
-        if block_index >= 100000:
-            import sys
-            logging.warn('Finished Test!')
-            sys.exit(1)
 
         # Get new blocks.
         if block_index <= block_count:
@@ -1507,13 +1503,22 @@ def follow(db):
             # running an out‐of‐date client!)
             check.software_version()
 
+            # TODO
+            # if current_index >= 100000:
+            #     import sys
+            #     logging.warn('Finished Test!')
+            #     sys.exit(1)
 
             # Get and parse transactions in this block (atomically).
+            # if current_index in prefetcher.BLOCKCHAIN_CACHE:
+            #     block_hash, txlist_hash, raw_transactions, previous_block_hash, block_time, block_difficulty = prefetcher.BLOCKCHAIN_CACHE[current_index]
+            # else:
             block_hash = backend.getblockhash(current_index)
             block = backend.getblock(block_hash)
             previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
             block_time = block.nTime
             txhash_list, raw_transactions = backend.get_tx_list(block)
+            block_difficulty = block.difficulty
 
             with db:
                 util.CURRENT_BLOCK_INDEX = block_index
@@ -1529,7 +1534,7 @@ def follow(db):
                                     block_hash,
                                     block_time,
                                     previous_block_hash,
-                                    block.difficulty)
+                                    block_difficulty)
                               )
 
                 # List the transactions in the block.
