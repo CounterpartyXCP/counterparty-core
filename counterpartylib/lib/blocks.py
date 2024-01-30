@@ -1504,21 +1504,25 @@ def follow(db):
             check.software_version()
 
             # TODO
-            # if current_index >= 100000:
-            #     import sys
-            #     logging.warn('Finished Test!')
-            #     sys.exit(1)
+            if current_index >= 400000:
+                import sys
+                logging.warn('Finished Test!')
+                sys.exit(1)
 
             # Get and parse transactions in this block (atomically).
-            # if current_index in prefetcher.BLOCKCHAIN_CACHE:
-            #     block_hash, txlist_hash, raw_transactions, previous_block_hash, block_time, block_difficulty = prefetcher.BLOCKCHAIN_CACHE[current_index]
-            # else:
-            block_hash = backend.getblockhash(current_index)
-            block = backend.getblock(block_hash)
-            previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
-            block_time = block.nTime
-            txhash_list, raw_transactions = backend.get_tx_list(block)
-            block_difficulty = block.difficulty
+            logger.debug('Blockchain cache size: {}'.format(len(prefetcher.BLOCKCHAIN_CACHE)))
+            if current_index in prefetcher.BLOCKCHAIN_CACHE and prefetcher.BLOCKCHAIN_CACHE[current_index]: # TODO: Hackish!!!
+                logger.debug('Cache hit! Block index: {}'.format(current_index))
+                block_hash, txhash_list, raw_transactions, previous_block_hash, block_time, block_difficulty = prefetcher.BLOCKCHAIN_CACHE[current_index]
+                del prefetcher.BLOCKCHAIN_CACHE[current_index]
+            else:
+                logger.warning('Cache miss :/ Block index: {}'.format(current_index))
+                block_hash = backend.getblockhash(current_index)
+                block = backend.getblock(block_hash)
+                previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
+                block_time = block.nTime
+                txhash_list, raw_transactions = backend.get_tx_list(block)
+                block_difficulty = block.difficulty
 
             with db:
                 util.CURRENT_BLOCK_INDEX = block_index

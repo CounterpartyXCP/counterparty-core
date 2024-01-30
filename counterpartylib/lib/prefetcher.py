@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 from logging import handlers as logging_handlers
 
-from counterpartylib.lib import backend
+from counterpartylib.lib import backend, util
 
 BLOCK_COUNT_CHECK_FREQ = 100
 BLOCKCHAIN_CACHE = {}
@@ -21,8 +21,6 @@ class Prefetcher(threading.Thread):
         self.stop_event = threading.Event()
         self.thread_index = thread_index
         self.num_threads = num_threads
-        self.block_count = backend.getblockcount()
-        assert self.num_threads < BLOCK_COUNT_CHECK_FREQ
 
     def stop(self):
         self.stop_event.set()
@@ -30,7 +28,6 @@ class Prefetcher(threading.Thread):
     def run(self):
         logger.info('Starting Prefetcher process.')
 
-        block_index = self.thread_index - 1
         while True:
             if self.stop_event.is_set():
                 break
@@ -39,25 +36,24 @@ class Prefetcher(threading.Thread):
                 logger.debug('Blockchain cache is full. Sleeping Prefetcher thread {}.'.format(self.thread_index))
                 time.sleep(10)
                 continue
+        
+            # TODO: Terribly hackish!
+            if BLOCKCHAIN_CACHE:
+                fetch_block_index = max(util.CURRENT_BLOCK_INDEX, max(BLOCKCHAIN_CACHE.keys())) + 1
+            else:
+                fetch_block_index = util.CURRENT_BLOCK_INDEX
+            BLOCKCHAIN_CACHE[fetch_block_index] = None
 
-            if block_index % BLOCK_COUNT_CHECK_FREQ == 0:
-                block_count = backend.getblockcount()
-            if block_index >= self.block_count:
-                self.stop_event.set()   # This is only for catching up when behind.
-                break
-
-            logger.debug('Fetching block {} with Prefetcher thread {}.'.format(block_index, self.thread_index))
-            block_hash = backend.getblockhash(block_index)
+            logger.debug('Fetching block {} with Prefetcher thread {}.'.format(fetch_block_index, self.thread_index))
+            block_hash = backend.getblockhash(fetch_block_index)
             block = backend.getblock(block_hash)
             txhash_list, raw_transactions = backend.get_tx_list(block)
-            BLOCKCHAIN_CACHE[block_index] = {'block_hash': block_hash,
+            BLOCKCHAIN_CACHE[fetch_block_index] = {'block_hash': block_hash,
                                              'txhash_list': txhash_list,
                                              'raw_transactions': raw_transactions,
                                              'previous_block_hash': bitcoinlib.core.b2lx(block.hashPrevBlock),
                                              'block_time': block.nTime,
                                              'block_difficulty': block.difficulty}
-
-            block_index += self.num_threads
 
 def start_all(num_prefetcher_threads):
     # Block Prefetcher and Indexer
