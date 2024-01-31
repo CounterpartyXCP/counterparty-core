@@ -6,6 +6,7 @@ import bitcoin as bitcoinlib
 import logging
 logger = logging.getLogger(__name__)
 from logging import handlers as logging_handlers
+import rocksdb
 
 from counterpartylib.lib import backend, util, config
 from counterpartylib.lib import script
@@ -15,6 +16,12 @@ BLOCK_COUNT_CHECK_FREQ = 100
 BLOCKCHAIN_CACHE = {}
 BLOCKCHAIN_CACHE_MAX_SIZE = 10000
 PREFETCHER_THREADS = []
+
+DB = None
+
+def init():
+    global DB
+    DB = rocksdb.DB("addressindex-testnet.db", rocksdb.Options(create_if_missing=True))
 
 class Prefetcher(threading.Thread):
 
@@ -36,12 +43,11 @@ class Prefetcher(threading.Thread):
             if self.stop_event.is_set():
                 break
 
+            # Pre-Fetch Block Data for In-Memory Cache
             if len(BLOCKCHAIN_CACHE) >= BLOCKCHAIN_CACHE_MAX_SIZE:
                 logger.debug('Blockchain cache is full. Sleeping Prefetcher thread {}.'.format(self.thread_index))
                 time.sleep(10)
                 continue
-
-            BLOCKCHAIN_CACHE[self.fetch_block_index] = None
 
             logger.debug('Fetching block {} with Prefetcher thread {}.'.format(self.fetch_block_index, self.thread_index))
             block_hash = backend.getblockhash(self.fetch_block_index)
@@ -54,7 +60,7 @@ class Prefetcher(threading.Thread):
                                              'block_time': block.nTime,
                                              'block_difficulty': block.difficulty}
 
-            # Index PubKeyHash -> PubKey
+            # Index PubKeyHash -> PubKey, Store On-Disk
             for tx_hash in txhash_list:
                 tx_hex = raw_transactions[tx_hash]
                 ctx = backend.deserialize(tx_hex)
@@ -73,10 +79,15 @@ class Prefetcher(threading.Thread):
                         pubkeyhash = asm[2]
                         pubkey = script.get_asm(vin.scriptSig)[1]
                         assert pubkeyhash == script.hash160(pubkey)
-                        print(pubkeyhash, script.hash160(pubkey))
 
+                        # Store PubKeyHash -> PubKey mapping in fast, on-disk key-value store.
+                        db.put(pubkeyhash.hex(), pubkey.hex())
+
+            # Record that all of the transactions in this block have been indexed.
+            db.put(self.fetch_block_index, True)
+
+            # Jump to next block to be processed!
             self.fetch_block_index += self.num_threads
-
 
 def start_all(num_prefetcher_threads):
     # Block Prefetcher and Indexer
