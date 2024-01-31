@@ -1424,6 +1424,8 @@ def follow(db):
     block_count = backend.getblockcount()   # TODO: Need retry logic
     if block_index <= block_count - 2000:
         prefetcher.start_all(NUM_PREFETCHER_THREADS)
+    else:
+        logger.debug('Not starting Prefetcher because we\'re not far enough behind.')
 
     # Get index of last transaction.
     tx_index = get_next_tx_index(db)
@@ -1453,7 +1455,7 @@ def follow(db):
 
         # Stop Prefetcher thread as we get close to today.
         if block_index >= block_count - 100:
-            prefetcher.stop_all(NUM_PREFETCHER_THREADS)
+            prefetcher.stop_all()
 
         # Get new blocks.
         if block_index <= block_count:

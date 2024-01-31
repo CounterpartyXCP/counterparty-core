@@ -43,7 +43,7 @@ class Prefetcher(threading.Thread):
 
             BLOCKCHAIN_CACHE[self.fetch_block_index] = None
 
-            #logger.debug('Fetching block {} with Prefetcher thread {}.'.format(self.fetch_block_index, self.thread_index))
+            logger.debug('Fetching block {} with Prefetcher thread {}.'.format(self.fetch_block_index, self.thread_index))
             block_hash = backend.getblockhash(self.fetch_block_index)
             block = backend.getblock(block_hash)
             txhash_list, raw_transactions = backend.get_tx_list(block)
@@ -92,8 +92,3 @@ def start_all(num_prefetcher_threads):
 def stop_all():
     for prefetcher_thread in PREFETCHER_THREADS:
         prefetcher_thread.stop_event.set()
-
-
-
-
-
