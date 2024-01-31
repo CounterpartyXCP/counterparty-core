@@ -50,14 +50,14 @@ NUM_PREFETCHER_THREADS = 5
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
-         ['bet_match_resolutions', 'order_match_expirations', 'order_matches',
-         'order_expirations', 'orders', 'bet_match_expirations', 'bet_matches',
-         'bet_expirations', 'bets', 'broadcasts', 'btcpays', 'burns',
-         'cancels', 'dividends', 'issuances', 'sends',
-         'rps_match_expirations', 'rps_expirations', 'rpsresolves',
-         'rps_matches', 'rps',
-         'destructions', 'assets', 'addresses', 'sweeps', 'dispensers', 'dispenses',
-         'dispenser_refills']
+         ['order_match_expirations', 'order_matches', 'order_expirations', 'orders',
+          'bet_match_expirations', 'bet_matches', 'bet_match_resolutions',
+          'bet_expirations', 'bets', 'broadcasts', 'btcpays', 'burns',
+          'cancels', 'dividends', 'issuances', 'sends',
+          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
+          'rps_matches', 'rps',
+          'destructions', 'assets', 'addresses', 'sweeps', 'dispensers', 'dispenses',
+          'dispenser_refills']
 # Compose list of tables tracked by undolog
 UNDOLOG_TABLES = copy.copy(TABLES)
 UNDOLOG_TABLES.remove('messages')

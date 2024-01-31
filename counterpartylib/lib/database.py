@@ -1,4 +1,6 @@
 import apsw
+import apsw.bestpractice
+apsw.bestpractice.apply(apsw.bestpractice.recommended)  # includes WAL mode
 import logging
 logger = logging.getLogger(__name__)
 import time
@@ -102,8 +104,6 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
                 logger.debug('Foreign Key Error: {}'.format(row))
             raise exceptions.DatabaseError('Foreign key check failed.')
 
-        # So that writers don’t block readers.
-        cursor.execute('''PRAGMA journal_mode = WAL''')
         logger.info('Foreign key check completed.')
 
     # Make case sensitive the `LIKE` operator.
@@ -113,6 +113,8 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
     if integrity_check:
         logger.info('Checking database integrity...')
         integral = False
+
+        # Try up to 10 times.
         for i in range(10): # DUPE
             try:
                 cursor.execute('''PRAGMA integrity_check''')
