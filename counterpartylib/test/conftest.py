@@ -368,8 +368,8 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         address = '_'.join([str(signatures_required)] + sorted(pubkeys) + [str(len(pubkeys))])
         return address
 
-    def mocked_getrawtransaction(tx_hash, verbose=False):
-        return util_test.getrawtransaction(rawtransactions_db, tx_hash, verbose=verbose)
+    def mocked_getrawtransaction(tx_hash, verbose=False, block_index=None):
+        return util_test.getrawtransaction(rawtransactions_db, tx_hash, verbose=verbose, block_index=block_index)
 
     def mocked_getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
         return util_test.getrawtransaction_batch(rawtransactions_db, txhash_list, verbose=verbose)
