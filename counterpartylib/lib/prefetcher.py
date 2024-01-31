@@ -58,23 +58,22 @@ class Prefetcher(threading.Thread):
             for tx_hash in txhash_list:
                 tx_hex = raw_transactions[tx_hash]
                 ctx = backend.deserialize(tx_hex)
+                if ctx.is_coinbase():
+                    continue
 
-                print(ctx.vin)
                 for vin in ctx.vin:
                     try:
-                        # vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=self.fetch_block_index - 1)
-                        vin_tx_hex = backend.getrawtransaction(ib2h(vin.prevout.hash))
+                        vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash))
                     except backend.addrindexrs.BackendRPCError:
                         continue
-
-                    vin_ctx = backend.deserialize(vin_tx_hex)
-                    print(vin_ctx)
-                    for vout in vin_ctx.vout:
-                        asm = script.get_asm(vout.scriptPubKey)
-                        if len(asm) == 5 and asm[0] == 'OP_DUP' and asm[1] == 'OP_HASH160' and asm[3] == 'OP_EQUALVERIFY' and asm[4] == 'OP_CHECKSIG':
-                            pubkeyhash = asm[2]
-                            pubkey = vin.scriptSig[1]   # TODO: integer
-                            print(pubkeyhash, pubkey)   # TODO
+                    vin_ctx = backend.deserialize(vin_tx)
+                    vout = vin_ctx.vout[vin.prevout.n]
+                    asm = script.get_asm(vout.scriptPubKey)
+                    if len(asm) == 5 and asm[0] == 'OP_DUP' and asm[1] == 'OP_HASH160' and asm[3] == 'OP_EQUALVERIFY' and asm[4] == 'OP_CHECKSIG':
+                        pubkeyhash = asm[2]
+                        pubkey = script.get_asm(vin.scriptSig)[1]
+                        assert pubkeyhash == script.hash160(pubkey)
+                        print(pubkeyhash, script.hash160(pubkey))
 
             self.fetch_block_index += self.num_threads
 

@@ -222,8 +222,8 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
     for tx_hash in txhash_list.difference(noncached_txhashes):
         raw_transactions_cache.refresh(tx_hash)
 
-    _logger.debug("getrawtransaction_batch: txhash_list size: {} / raw_transactions_cache size: {} / # getrawtransaction calls: {}".format(
-        len(txhash_list), len(raw_transactions_cache), len(payload)))
+    # _logger.debug("getrawtransaction_batch: txhash_list size: {} / raw_transactions_cache size: {} / # getrawtransaction calls: {}".format(
+    #     len(txhash_list), len(raw_transactions_cache), len(payload)))
 
     # populate cache
     if len(payload) > 0:
