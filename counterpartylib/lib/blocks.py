@@ -1243,12 +1243,43 @@ def copy_memory_db_to_disk(local_base, memory_db):
     db = server.initialise_db()
     # copy memory database to new database
     with db.backup("main", memory_db, "main") as backup:
-        while not backup.done:
-            backup.step(100)
+        backup.step()
     logger.info('Database copy duration: {:.3f}s'.format(time.time() - start_time_copy_db))
 
 
-def kickstart(bitcoind_dir, force=False, last_hash=None):
+def fetch_blocks(db, block_parser, last_known_hash):
+    cursor = db.cursor()
+    start_time_blocks_indexing = time.time()
+    # save blocks from last to first
+    current_hash = last_known_hash
+    lot_size = 100
+    block_count = 0
+    while True:
+        bindings_lot = ()
+        bindings_place = []
+        # gather some blocks
+        while len(bindings_lot) <= lot_size * 4:
+            # read block from bitcoind files
+            block = block_parser.read_raw_block(current_hash, only_header=True)
+            # prepare bindings
+            bindings_lot += (block['block_index'], block['block_hash'], block['block_time'], block['hash_prev'], block['bits'])
+            bindings_place.append('(?,?,?,?,?)')
+            current_hash = block['hash_prev']
+            block_count += 1
+            if block['block_index'] == config.BLOCK_FIRST:
+                break
+        # insert blocks by lot
+        cursor.execute(f'''INSERT INTO blocks (block_index, block_hash, block_time, previous_block_hash, difficulty)
+                              VALUES {', '.join(bindings_place)}''',
+                              bindings_lot)
+        print(f"Block {bindings_lot[0]} to {bindings_lot[-5]} inserted.", end="\r")
+        if block['block_index'] == config.BLOCK_FIRST:
+            break
+    logger.info('Blocks indexed in: {:.3f}s'.format(time.time() - start_time_blocks_indexing))
+    return block_count
+
+
+def kickstart(bitcoind_dir, force=False, last_hash=None, resume=True):
     if bitcoind_dir is None:
         if platform.system() == 'Darwin':
             bitcoind_dir = os.path.expanduser('~/Library/Application Support/Bitcoin/')
@@ -1261,7 +1292,8 @@ def kickstart(bitcoind_dir, force=False, last_hash=None):
 
     logger.warning(f'''Warning:
 - `{config.DATABASE}` will be moved to `{config.DATABASE}.old` and recreated from scratch.
-- Ensure that bitcoind is stopped.
+- Ensure `addrindexrs` is running and up to date.
+- Ensure that `bitcoind` is stopped.
 - The initialization may take a while.''')
     if not force and input('Proceed with the initialization? (y/N) : ') != 'y':
         return
@@ -1290,60 +1322,58 @@ def kickstart(bitcoind_dir, force=False, last_hash=None):
     local_base = config.DATABASE
     config.DATABASE = ':memory:'
     memory_db = server.initialise_db()
-    initialise(memory_db)
-    memory_cursor = memory_db.cursor()
 
-    start_time_blocks_indexing = time.time()
-    # save blocks from last to first
-    current_hash = last_known_hash
-    lot_size = 100
-    block_count = 0
-    while True:
-        bindings_lot = ()
-        bindings_place = []
-        # gather some blocks
-        while len(bindings_lot) <= lot_size * 4:
-            # read block from bitcoind files
-            block = block_parser.read_raw_block(current_hash, only_header=True)
-            # prepare bindings
-            bindings_lot += (block['block_index'], block['block_hash'], block['block_time'], block['hash_prev'], block['bits'])
-            bindings_place.append('(?,?,?,?,?)')
-            current_hash = block['hash_prev']
-            block_count += 1
-            if block['block_index'] == config.BLOCK_FIRST:
-                break
-        # insert blocks by lot
-        memory_cursor.execute(f'''INSERT INTO blocks (block_index, block_hash, block_time, previous_block_hash, difficulty)
-                              VALUES {', '.join(bindings_place)}''',
-                              bindings_lot)
-        print(f"Block {bindings_lot[0]} to {bindings_lot[-5]} inserted.", end="\r")
-        if block['block_index'] == config.BLOCK_FIRST:
-            break
-    logger.info('Blocks indexed in: {:.3f}s'.format(time.time() - start_time_blocks_indexing))
+    if os.path.exists(local_base) and resume:
+        logger.info(f"Resuming from disk database {local_base}...")
+        # copy disk database to memory database
+        local_base_db = apsw.Connection(local_base)
+        logger.info(f"Copying disk database to memory database...")
+        with memory_db.backup("main", local_base_db, "main") as backup:
+            backup.step()
+        # get block count
+        memory_cursor = memory_db.cursor()
+        memory_cursor.execute('''SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1''')
+        last_block_index = memory_cursor.fetchone()['block_index']
+        # get last parsed transaction
+        memory_cursor.execute('''SELECT block_index, tx_index FROM transactions ORDER BY block_index DESC, tx_index DESC LIMIT 1''')
+        last_transaction = memory_cursor.fetchone()
+        last_parsed_block = last_transaction['block_index']
+        block_count = last_block_index - last_parsed_block
+        tx_index = last_transaction['tx_index'] + 1
+        logger.info(f"Resuming from block {last_parsed_block}...")
+    else:
+        # intialize new database
+        initialise(memory_db)
+        # fill `blocks`` table from bitcoind files
+        block_count = fetch_blocks(memory_db, block_parser, last_known_hash)
+        last_parsed_block = 0
+        tx_index = 0
 
     try:
         # save transactions for each blocks from first to last
         # then parse the block
         start_time_all_blocks_parse = time.time()
-        tx_index = 0
-        memory_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
+        memory_cursor = memory_db.cursor()
+        memory_cursor.execute('''SELECT * FROM blocks WHERE block_index > ? ORDER BY block_index''', (last_parsed_block,))
         block_parsed_count = 0
         for db_block in memory_cursor:
             start_time_block_parse = time.time()
-            #print(db_block)
             util.CURRENT_BLOCK_INDEX = db_block['block_index']
             block = block_parser.read_raw_block(db_block['block_hash'])
-            for transaction in block['transactions']:
-                tx_index = list_tx(memory_db,
-                                    block['block_hash'],
-                                    block['block_index'],
-                                    block['block_time'],
-                                    transaction['tx_hash'],
-                                    tx_index,
-                                    tx_hex=transaction['__data__'],
-                                    block_parser=block_parser)
-            # Parse the transactions in the block.
-            parse_block(memory_db, block['block_index'], block['block_time'])
+            with memory_db: # ensure all the block or nothing
+                # save transactions
+                for transaction in block['transactions']:
+                    tx_index = list_tx(memory_db,
+                                        block['block_hash'],
+                                        block['block_index'],
+                                        block['block_time'],
+                                        transaction['tx_hash'],
+                                        tx_index,
+                                        tx_hex=transaction['__data__'],
+                                        block_parser=block_parser)
+                # Parse the transactions in the block.
+                parse_block(memory_db, block['block_index'], block['block_time'])
+            last_parsed_block = block['block_index']
             # let's have a nice message
             block_parsed_count += 1
             block_parsing_duration = time.time() - start_time_block_parse
@@ -1359,6 +1389,7 @@ def kickstart(bitcoind_dir, force=False, last_hash=None):
         # close memory database
         memory_cursor.close()
         copy_memory_db_to_disk(local_base, memory_db)
+        logger.info("Last parsed block: {}".format(last_parsed_block))
 
     logger.info('Kickstart done in: {:.3f}s'.format(time.time() - start_time_total))
 
