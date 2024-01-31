@@ -316,7 +316,7 @@ def save_rawtransaction(db, txid, tx_hex, confirmations=0):
     cursor.close()
 
 
-def getrawtransaction(db, txid, verbose=False):
+def getrawtransaction(db, txid, verbose=False, block_index=None):
     """
     Return raw transactions with specific hash.
 

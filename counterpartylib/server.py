@@ -490,7 +490,7 @@ def start_all(db):
     api_server.daemon = True
     api_server.start()
 
-    # Server.
+    # Server
     blocks.follow(db)
 
 
