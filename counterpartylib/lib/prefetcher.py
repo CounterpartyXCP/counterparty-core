@@ -30,7 +30,7 @@ class Prefetcher(threading.Thread):
         self.stop_event.set()
 
     def run(self):
-        logger.info('Starting Prefetcher process.')
+        logger.info('Starting Prefetcher process {}.'.format(self.thread_index))
 
         while True:
             if self.stop_event.is_set():
