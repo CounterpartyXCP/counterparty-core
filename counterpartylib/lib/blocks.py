@@ -46,7 +46,7 @@ from .kickstart.utils import ib2h
 from .exceptions import DecodeError, BTCOnlyError
 
 from counterpartylib.lib import prefetcher
-NUM_PREFETCHER_THREADS = 5
+NUM_PREFETCHER_THREADS = 10
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
@@ -1149,6 +1149,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
 
     # Get the important details about each transaction.
     if tx_hex is None:
+        logging.warning("tx_hex is None")
         tx_hex = backend.getrawtransaction(tx_hash) # TODO: This is the call that is stalling the process the most
 
     source, destination, btc_amount, fee, data, decoded_tx = get_tx_info(tx_hex, db=db, block_parser=block_parser, block_index=block_index)
