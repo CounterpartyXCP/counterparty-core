@@ -589,7 +589,7 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None, db=None):
                 vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
                 vin_ctx = backend.deserialize(vin_tx['__data__'])
             else:
-                vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash)) # TODO: Biggest penalty on parsing is here
+                vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=block_index) # TODO: Biggest penalty on parsing is here
                 vin_ctx = backend.deserialize(vin_tx)
             vout = vin_ctx.vout[vin.prevout.n]
 
@@ -627,9 +627,9 @@ def _get_tx_info(tx_hex, block_parser=None, block_index=None, p2sh_is_segwit=Fal
     if not block_index:
         block_index = util.CURRENT_BLOCK_INDEX
     if util.enabled('p2sh_addresses', block_index=block_index):   # Protocol change.
-        return  get_tx_info3(tx_hex, block_parser=block_parser, p2sh_is_segwit=p2sh_is_segwit)
+        return  get_tx_info3(tx_hex, block_parser=block_parser, p2sh_is_segwit=p2sh_is_segwit, block_index=block_index)
     elif util.enabled('multisig_addresses', block_index=block_index):   # Protocol change.
-        return get_tx_info2(tx_hex, block_parser=block_parser)
+        return get_tx_info2(tx_hex, block_parser=block_parser, block_index=block_index)
     else:
         return get_tx_info1(tx_hex, block_index, block_parser=block_parser)
 
@@ -730,7 +730,7 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
             vin_ctx = backend.deserialize(vin_tx['__data__'])
         else:
-            vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash))
+            vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=block_index)
             vin_ctx = backend.deserialize(vin_tx)
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
@@ -749,8 +749,8 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
 
     return source, destination, btc_amount, fee, data, None
 
-def get_tx_info3(tx_hex, block_parser=None, p2sh_is_segwit=False):
-    return get_tx_info2(tx_hex, block_parser=block_parser, p2sh_support=True, p2sh_is_segwit=p2sh_is_segwit)
+def get_tx_info3(tx_hex, block_parser=None, p2sh_is_segwit=False, block_index=None):
+    return get_tx_info2(tx_hex, block_parser=block_parser, p2sh_support=True, p2sh_is_segwit=p2sh_is_segwit, block_index=block_index)
 
 def arc4_decrypt(cyphertext, ctx):
     '''Un‐obfuscate. Initialise key once per attempt.'''
@@ -817,7 +817,7 @@ def decode_p2w(script_pubkey):
     except TypeError as e:
         raise DecodeError('bech32 decoding error')
 
-def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=False):
+def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=False, block_index=None):
     """Get multisig transaction info.
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
@@ -891,7 +891,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
                     vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
                     vin_ctx = backend.deserialize(vin_tx['__data__'])
                 else:
-                    vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash))
+                    vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=block_index)
                     vin_ctx = backend.deserialize(vin_tx)
                 prevout_is_segwit = vin_ctx.has_witness()
             else:
@@ -931,7 +931,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
             vin_ctx = backend.deserialize(vin_tx['__data__'])
         else:
-            vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash))
+            vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=block_index)
             vin_ctx = backend.deserialize(vin_tx)
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
@@ -1151,7 +1151,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
     if tx_hex is None:
         tx_hex = backend.getrawtransaction(tx_hash) # TODO: This is the call that is stalling the process the most
 
-    source, destination, btc_amount, fee, data, decoded_tx = get_tx_info(tx_hex, db=db, block_parser=block_parser)
+    source, destination, btc_amount, fee, data, decoded_tx = get_tx_info(tx_hex, db=db, block_parser=block_parser, block_index=block_index)
 
     outs = []
     first_one = True #This is for backward compatibility with unique dispensers
