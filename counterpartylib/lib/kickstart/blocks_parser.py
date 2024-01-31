@@ -30,6 +30,7 @@ class BlockchainParser():
         self.txindex_leveldb_path = os.path.join(bitcoind_dir, 'indexes', 'txindex')
         self.txindex_leveldb = open_leveldb(self.txindex_leveldb_path)
 
+
     def read_tx_in(self, vds):
         tx_in = {}
         tx_in['txid'] = ib2h(vds.read_bytes(32))
@@ -45,6 +46,7 @@ class BlockchainParser():
             }
         return tx_in
 
+
     def read_tx_out(self, vds):
         tx_out = {}
         tx_out['value'] = vds.read_int64() / 100000000
@@ -53,6 +55,7 @@ class BlockchainParser():
             'hex': b2h(script)
         }
         return tx_out
+
 
     def read_transaction(self, vds):
         transaction = {}
@@ -75,6 +78,7 @@ class BlockchainParser():
             transaction['vout'].append(self.read_tx_out(vds))
 
         if transaction['segwit']:
+            offset_before_tx_witnesses = vds.read_cursor - start_pos
             for vin in transaction['vin']:
                 vin['tx_witnesses'] = []
                 witnesses_count = vds.read_compact_size()
@@ -85,7 +89,10 @@ class BlockchainParser():
 
         transaction['lock_time'] = vds.read_uint32()
         data = vds.input[start_pos:vds.read_cursor]
-        transaction['tx_hash'] = ib2h(double_hash(data))
+        hash_data = data
+        if transaction['segwit']:
+            hash_data = data[:4] + data[6:offset_before_tx_witnesses] + data[-4:]
+        transaction['tx_hash'] = ib2h(double_hash(hash_data))
         transaction['__data__'] = b2h(data)
         return transaction
 
@@ -144,7 +151,6 @@ class BlockchainParser():
         block_pos_in_file = ds.read_var_int() - 8
         block_undo_pos_in_file = ds.read_var_int()
         block_header = ds.read_bytes(80)
-
         self.prepare_data_stream(file_num, block_pos_in_file)
         block = self.read_block(self.data_stream, only_header=only_header)
         block['block_index'] = height
