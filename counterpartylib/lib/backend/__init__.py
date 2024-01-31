@@ -15,6 +15,7 @@ from counterpartylib.lib import util
 from counterpartylib.lib import script
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
+from counterpartylib.lib import prefetcher
 
 from counterpartylib.lib.backend import addrindexrs
 
@@ -65,11 +66,14 @@ def cache_pretx(txid, rawtx):
 def clear_pretx(txid):
     del PRETX_CACHE[binascii.hexlify(txid).decode('utf8')]
 
-def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
+def getrawtransaction(tx_hash, verbose=False, skip_missing=False, block_index=None):
+    if block_index and block_index in prefetcher.BLOCKCHAIN_CACHE:
+        # TODO: it should be here!
+        if tx_hash in prefetcher.BLOCKCHAIN_CACHE[block_index]['raw_transactions']:
+            return prefetcher.BLOCKCHAIN_CACHE[block_index]['raw_transactions'][tx_hash]
     if tx_hash in PRETX_CACHE:
         return PRETX_CACHE[tx_hash]
-    else:
-        return BACKEND().getrawtransaction(tx_hash, verbose=verbose, skip_missing=skip_missing)
+    return BACKEND().getrawtransaction(tx_hash, verbose=verbose, skip_missing=skip_missing)
 
 def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
     return BACKEND().getrawtransaction_batch(txhash_list, verbose=verbose, skip_missing=skip_missing)
