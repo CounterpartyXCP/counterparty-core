@@ -163,7 +163,7 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
                 problems.append('call price for non‐callable asset')
 
     # Valid re-issuance?
-    issuances = ledger.get_issuances(db, asset, status='valid')
+    issuances = ledger.get_issuances(db, asset=asset, status='valid', first=True)
     reissued_asset_longname = None
     if issuances:
         reissuance = True
@@ -204,7 +204,7 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
 
     # validate parent ownership for subasset
     if subasset_longname is not None and not reissuance:
-        parent_issuances = ledger.get_issuances(db, subasset_parent, status='valid')
+        parent_issuances = ledger.get_issuances(db, asset=subasset_parent, status='valid', first=True)
         if parent_issuances:
             last_parent_issuance = parent_issuances[-1]
             if last_parent_issuance['issuer'] != source:
@@ -290,7 +290,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
 
     # Callability is deprecated, so for re‐issuances set relevant parameters
     # to old values; for first issuances, make uncallable.
-    issuances = ledger.get_issuances(db, asset, status='valid')
+    issuances = ledger.get_issuances(db, asset=asset, status='valid', first=True)
     if issuances:
         last_issuance = issuances[-1]
         callable_ = last_issuance['callable']
@@ -522,7 +522,7 @@ def parse (db, tx, message, message_type_id):
 
         if len(balances_result) <= 1:
             if len(balances_result) == 0:
-                issuances_result = ledger.get_issuances(db, asset)
+                issuances_result = ledger.get_issuances(db, asset=asset, first=True)
 
                 owner_balance = 0
                 owner_address = issuances_result[0]['issuer']
@@ -595,7 +595,7 @@ def parse (db, tx, message, message_type_id):
         if status == 'valid':
             if (description and description.lower() == 'lock') or lock:
                 lock = True
-                issuances = ledger.get_issuances(db, asset, status='valid')
+                issuances = ledger.get_issuances(db, asset=asset, status='valid', first=True)
                 if description.lower() == 'lock' and len(issuances) > 0:
                     description = issuances[-1]['description']  # Use last description
 

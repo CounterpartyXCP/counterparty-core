@@ -398,16 +398,21 @@ def get_asset_info(db, asset):
     return issuances[0]
 
 
-def get_issuances(db, asset, status=None):
+def get_issuances(db, asset=None, status=None, first=False):
     cursor = db.cursor()
-    if status:
-        cursor.execute('''SELECT * FROM issuances \
-                        WHERE (status = ? AND asset = ?)
-                        ORDER BY tx_index ASC''', (status, asset))
-    else:
-        cursor.execute('''SELECT * FROM issuances \
-                        WHERE (asset = ?)
-                        ORDER BY tx_index ASC''', (asset,))
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if status is not None:
+        where.append('status = ?')
+        bindings.append(status)
+    if asset is not None:
+        where.append('asset = ?')
+        bindings.append(asset)
+    query = f'''SELECT * FROM issuances WHERE ({" AND ".join(where)})'''
+    if first:
+        query += f''' ORDER BY tx_index ASC'''
+    cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
 
@@ -449,7 +454,7 @@ def get_broadcats_by_source(db, source, status):
     return cursor.fetchall()
 
 
-def get_bets(db, tx_index=None, status=None, feed_address=None, bet_type=None, expire_index=None):
+def get_bets(db, tx_index=None, status=None, feed_address=None, bet_type=None, expire_index=None, tx_hash=None):
     cursor = db.cursor()
     where = []
     bindings = []
@@ -468,6 +473,9 @@ def get_bets(db, tx_index=None, status=None, feed_address=None, bet_type=None, e
     if expire_index is not None:
         where.append('expire_index < ?')
         bindings.append(expire_index)
+    if tx_hash is not None:
+        where.append('tx_hash = ?')
+        bindings.append(tx_hash)
     query = f'''SELECT * FROM bets WHERE ({" AND ".join(where)})'''
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
@@ -489,6 +497,101 @@ def get_bet_matches(db, status=None, deadline=None, feed_address=None, order_by=
     query = f'''SELECT * FROM bet_matches WHERE ({" AND ".join(where)})'''
     if order_by is not None:
         query += f''' ORDER BY {order_by}'''
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+
+def find_order_matches(db, tx0_hash, tx1_hash):
+    cursor = db.cursor()
+    bindings = {
+        'status': 'pending',
+        'tx0_hash': tx0_hash,
+        'tx1_hash': tx1_hash
+    }
+    sql = '''SELECT * FROM order_matches
+             WHERE status = :status
+             AND ((tx0_hash in (:tx0_hash, :tx1_hash)) or ((tx1_hash in (:tx0_hash, :tx1_hash))))'''
+    cursor.execute(sql, bindings)
+    return cursor.fetchall()
+
+
+def find_bad_order_matches(db, tx0_address, forward_asset, tx1_address, backward_asset, status):
+    cursor = db.cursor()
+    query = '''SELECT * FROM order_matches
+            WHERE ((tx0_address = ? AND forward_asset = ?) OR (tx1_address = ? AND backward_asset = ?))
+            AND (status = ?)'''
+    bindings = (tx0_address, forward_asset, tx1_address, backward_asset, status)
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_order_matches(db, id=None, status=None):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if id is not None:
+        where.append('id = ?')
+        bindings.append(id)
+    if status is not None:
+        where.append('status = ?')
+        bindings.append(status)
+    query = f'''SELECT * FROM order_matches WHERE ({" AND ".join(where)})'''
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+
+def get_orders(db, tx_hash=None, source=None, give_asset=None, get_asset=None, status=None, tx_index=None, no_tx_hash=None):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if tx_hash is not None:
+        where.append('tx_hash = ?')
+        bindings.append(tx_hash)
+    if no_tx_hash is not None:
+        where.append('tx_hash != ?')
+        bindings.append(no_tx_hash)
+    if source is not None:
+        where.append('source = ?')
+        bindings.append(source)
+    if give_asset is not None:
+        where.append('give_asset = ?')
+        bindings.append(give_asset)
+    if get_asset is not None:
+        where.append('get_asset = ?')
+        bindings.append(get_asset)
+    if status is not None:
+        where.append('status = ?')
+        bindings.append(status)
+    if tx_index is not None:
+        where.append('tx_index = ?')
+        bindings.append(tx_index)
+    query = f'''SELECT * FROM orders WHERE ({" AND ".join(where)})'''
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+
+def get_rps(db, tx_hash=None):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if tx_hash is not None:
+        where.append('tx_hash = ?')
+        bindings.append(tx_hash)
+    query = f'''SELECT * FROM rps WHERE ({" AND ".join(where)})'''
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+def get_burns(db, status=None, source=None):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if status is not None:
+        where.append('status = ?')
+        bindings.append(status)
+    if source is not None:
+        where.append('source = ?')
+        bindings.append(source)
+    query = f'''SELECT * FROM burns WHERE ({" AND ".join(where)})'''
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 

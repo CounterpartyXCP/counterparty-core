@@ -61,7 +61,7 @@ def compose (db, source, quantity, overburn=False):
     if problems: raise exceptions.ComposeError(problems)
 
     # Check that a maximum of 1 BTC total is burned per address.
-    burns = list(cursor.execute('''SELECT * FROM burns WHERE (status = ? AND source = ?)''', ('valid', source)))
+    burns = ledger.get_burns(db, status='valid', source=source)
     already_burned = sum([burn['burned'] for burn in burns])
 
     if quantity > (1 * config.UNIT - already_burned) and not overburn:
@@ -88,9 +88,7 @@ def parse (db, tx, MAINNET_BURNS, message=None):
 
         if status == 'valid':
             # Calculate quantity of XCP earned. (Maximum 1 BTC in total, ever.)
-            cursor = db.cursor()
-            cursor.execute('''SELECT * FROM burns WHERE (status = ? AND source = ?)''', ('valid', tx['source']))
-            burns = cursor.fetchall()
+            burns = ledger.get_burns(db, status='valid', source=tx['source'])
             already_burned = sum([burn['burned'] for burn in burns])
             ONE = 1 * config.UNIT
             max_burn = ONE - already_burned

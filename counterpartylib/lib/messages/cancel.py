@@ -10,7 +10,7 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 
-from counterpartylib.lib import (config, exceptions, util, message_type)
+from counterpartylib.lib import (config, exceptions, ledger, message_type)
 from . import (order, bet, rps)
 
 FORMAT = '>32s'
@@ -40,14 +40,9 @@ def validate (db, source, offer_hash):
     problems = []
 
     # TODO: make query only if necessary
-    cursor = db.cursor()
-    cursor.execute('''SELECT * from orders WHERE tx_hash = ?''', (offer_hash,))
-    orders = list(cursor)
-    cursor.execute('''SELECT * from bets WHERE tx_hash = ?''', (offer_hash,))
-    bets = list(cursor)
-    cursor.execute('''SELECT * from rps WHERE tx_hash = ?''', (offer_hash,))
-    rps = list(cursor)
-    cursor.close()
+    orders = ledger.get_orders(db, tx_hash=offer_hash)
+    bets = ledger.get_bets(db, tx_hash=offer_hash)
+    rps = ledger.get_rps(db, tx_hash=offer_hash)
 
     offer_type = None
     if orders: offer_type = 'order'

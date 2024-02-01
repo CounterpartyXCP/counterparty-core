@@ -44,12 +44,7 @@ def initialise(db):
 def validate (db, source, order_match_id, block_index):
     problems = []
     order_match = None
-
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM order_matches \
-                      WHERE id = ?''', (order_match_id,))
-    order_matches = cursor.fetchall()
-    cursor.close()
+    order_matches = ledger.get_order_matches(db, id=order_match_id)
     if len(order_matches) == 0:
         problems.append('no such order match %s' % order_match_id)
         return None, None, None, None, order_match, problems
@@ -146,14 +141,7 @@ def parse (db, tx, message):
 
             # Update give and get order status as filled if order_match is completed
             if ledger.enabled('btc_order_filled'):
-                bindings = {
-                    'status': 'pending',
-                    'tx0_hash': tx0_hash,
-                    'tx1_hash': tx1_hash
-                }
-                sql='select * from order_matches where status = :status and ((tx0_hash in (:tx0_hash, :tx1_hash)) or ((tx1_hash in (:tx0_hash, :tx1_hash))))'
-                cursor.execute(sql, bindings)
-                order_matches = cursor.fetchall()
+                order_matches = ledger.find_order_matches(db, tx0_hash, tx1_hash)
                 if len(order_matches) == 0:
                     # mark both btc get and give orders as filled when order_match is completed and give or get remaining = 0
                     bindings = {

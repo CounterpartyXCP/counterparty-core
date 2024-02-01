@@ -154,17 +154,18 @@ def exact_penalty (db, address, block_index, order_match_id, tx_index):
     cursor = db.cursor()
 
     # Orders.
-    bad_orders = list(cursor.execute('''SELECT * FROM orders \
-                                        WHERE (source = ? AND give_asset = ? AND status = ?)''',
-                                     (address, config.BTC, 'open')))
+    bad_orders = ledger.get_orders(db, source=address, give_asset=config.BTC, status='open')
     for bad_order in bad_orders:
         cancel_order(db, bad_order, 'expired', block_index, tx_index)
 
     if not (block_index >= 314250 or config.TESTNET or config.REGTEST):   # Protocol change.
         # Order matches.
-        bad_order_matches = list(cursor.execute('''SELECT * FROM order_matches \
-                                                   WHERE ((tx0_address = ? AND forward_asset = ?) OR (tx1_address = ? AND backward_asset = ?)) AND (status = ?)''',
-                                         (address, config.BTC, address, config.BTC, 'pending')))
+        bad_order_matches = ledger.find_bad_order_matches(db,
+                                                        tx0_address=address,
+                                                        forward_asset=config.BTC,
+                                                        tx1_address=address,
+                                                        backward_asset=config.BTC,
+                                                        status='pending')
         for bad_order_match in bad_order_matches:
             cancel_order_match(db, bad_order_match, 'expired', block_index, tx_index)
 
@@ -203,19 +204,14 @@ def cancel_order (db, order, status, block_index, tx_index):
 def cancel_order_match (db, order_match, status, block_index, tx_index):
     '''The only cancelling is an expiration.
     '''
-
-    cursor = db.cursor()
-
     # Skip order matches just expired as a penalty. (Not very efficient.)
     if not (block_index >= 314250 or config.TESTNET or config.REGTEST):   # Protocol change.
-        order_matches = list(cursor.execute('''SELECT * FROM order_matches \
-                                               WHERE (id = ? AND status = ?)''',
-                                            (order_match['id'], 'expired')))
+        order_matches = ledger.get_order_matches(db, id=order_match['id'], status='expired')
         if order_matches:
-            cursor.close()
             return
 
     # Update status of order match.
+    cursor = db.cursor()
     bindings = {
         'status': status,
         'order_match_id': order_match['id']
@@ -227,9 +223,7 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
     order_match_id = util.make_id(order_match['tx0_hash'], order_match['tx1_hash'])
 
     # If tx0 is dead, credit address directly; if not, replenish give remaining, get remaining, and fee required remaining.
-    orders = list(cursor.execute('''SELECT * FROM orders \
-                                    WHERE tx_index = ?''',
-                                 (order_match['tx0_index'],)))
+    orders = ledger.get_orders(db, tx_index=order_match['tx0_index'])
     assert len(orders) == 1
     tx0_order = orders[0]
     if tx0_order['status'] in ('expired', 'cancelled'):
@@ -263,9 +257,7 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
         log.message(db, block_index, 'update', 'orders', bindings)
 
     # If tx1 is dead, credit address directly; if not, replenish give remaining, get remaining, and fee required remaining.
-    orders = list(cursor.execute('''SELECT * FROM orders \
-                                    WHERE tx_index = ?''',
-                                 (order_match['tx1_index'],)))
+    orders = ledger.get_orders(db, tx_index=order_match['tx1_index'])
     assert len(orders) == 1
     tx1_order = orders[0]
     if tx1_order['status'] in ('expired', 'cancelled'):
@@ -366,11 +358,9 @@ def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, ex
 
     if not give_quantity or not get_quantity:
         problems.append('zero give or zero get')
-    cursor.execute('select * from issuances where (status = ? and asset = ?)', ('valid', give_asset))
-    if give_asset not in (config.BTC, config.XCP) and not cursor.fetchall():
+    if give_asset not in (config.BTC, config.XCP) and not ledger.get_issuances(db, status='valid', asset=give_asset):
         problems.append('no such asset to give ({})'.format(give_asset))
-    cursor.execute('select * from issuances where (status = ? and asset = ?)', ('valid', get_asset))
-    if get_asset not in (config.BTC, config.XCP) and not cursor.fetchall():
+    if get_asset not in (config.BTC, config.XCP) and not ledger.get_issuances(db, status='valid', asset=get_asset):
         problems.append('no such asset to get ({})'.format(get_asset))
     if expiration > config.MAX_EXPIRATION:
         problems.append('expiration overflow')
@@ -491,8 +481,7 @@ def match (db, tx, block_index=None):
     cursor = db.cursor()
 
     # Get order in question.
-    orders = list(cursor.execute('''SELECT * FROM orders\
-                                    WHERE (tx_index = ? AND status = ?)''', (tx['tx_index'], 'open')))
+    orders = ledger.get_orders(db, tx_index=tx['tx_index'], status='open')
     if not orders:
         cursor.close()
         return
@@ -500,14 +489,14 @@ def match (db, tx, block_index=None):
         assert len(orders) == 1
     tx1 = orders[0]
 
-    cursor.execute('''SELECT * FROM orders \
-                      WHERE (give_asset=? AND get_asset=? AND status=? AND tx_hash != ?)''',
-                   (tx1['get_asset'], tx1['give_asset'], 'open', tx1['tx_hash']))
-
     tx1_give_remaining = tx1['give_remaining']
     tx1_get_remaining = tx1['get_remaining']
 
-    order_matches = cursor.fetchall()
+    order_matches = ledger.get_orders(db, 
+                                      give_asset=tx1['get_asset'],
+                                      get_asset=tx1['give_asset'],
+                                      status='open',
+                                      no_tx_hash=tx1['tx_hash'])
     if tx['block_index'] > 284500 or config.TESTNET or config.REGTEST:  # Protocol change.
         order_matches = sorted(order_matches, key=lambda x: x['tx_index'])                              # Sort by tx index second.
         order_matches = sorted(order_matches, key=lambda x: ledger.price(x['get_quantity'], x['give_quantity']))   # Sort by price first.
