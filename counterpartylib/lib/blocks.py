@@ -46,7 +46,7 @@ from .kickstart.utils import ib2h
 from .exceptions import DecodeError, BTCOnlyError
 
 from counterpartylib.lib import prefetcher
-NUM_PREFETCHER_THREADS = 10
+NUM_PREFETCHER_THREADS = 20
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \

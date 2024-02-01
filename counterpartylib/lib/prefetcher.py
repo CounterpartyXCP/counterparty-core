@@ -61,6 +61,7 @@ def start_all(num_prefetcher_threads):
         thread_first_block = block_first + thread_index - 1
         prefetcher_thread = Prefetcher(thread_index, num_prefetcher_threads, thread_first_block)
         prefetcher_thread.daemon = True
+        time.sleep(0.1) # avoid DOS
         prefetcher_thread.start()
         PREFETCHER_THREADS.append(prefetcher_thread)
 
