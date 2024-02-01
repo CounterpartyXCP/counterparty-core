@@ -1,9 +1,12 @@
 import os, json, time, logging, binascii
+from collections import OrderedDict
 import logging
 logger = logging.getLogger(__name__)
 
 from .bc_data_stream import BCDataStream
 from .utils import b2h, double_hash, ib2h, inverse_hash, decode_value
+
+TX_CACHE_MAX_SIZE = 10000
 
 def open_leveldb(db_dir):
     try:
@@ -29,6 +32,7 @@ class BlockchainParser():
         self.blocks_leveldb = open_leveldb(self.blocks_leveldb_path)
         self.txindex_leveldb_path = os.path.join(bitcoind_dir, 'indexes', 'txindex')
         self.txindex_leveldb = open_leveldb(self.txindex_leveldb_path)
+        self.tx_cache = OrderedDict()
 
 
     def read_tx_in(self, vds):
@@ -98,6 +102,12 @@ class BlockchainParser():
                 transaction['tx_hash'] = transaction['tx_id']
 
         transaction['__data__'] = b2h(data)
+
+        # save transaction to cache
+        self.tx_cache[transaction['tx_hash']] = transaction
+        if len(self.tx_cache) > TX_CACHE_MAX_SIZE:
+            self.tx_cache.popitem(last=False)
+
         return transaction
 
     def read_block_header(self, vds):
@@ -161,6 +171,11 @@ class BlockchainParser():
         return block
 
     def read_raw_transaction(self, tx_hash, use_txid=True):
+        # return transaction from cache if exists
+        if tx_hash in self.tx_cache:
+            return self.tx_cache[tx_hash]
+        #logger.warning('Transaction not found in cache, reading from disk.')
+
         tx_key = bytes('t', 'utf-8') + binascii.unhexlify(inverse_hash(tx_hash))
         tx_data = self.txindex_leveldb.get(tx_key)
  
