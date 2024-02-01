@@ -68,16 +68,9 @@ def clear_pretx(txid):
 
 def getrawtransaction(tx_hash, verbose=False, skip_missing=False, block_index=None):
     if block_index and block_index in prefetcher.BLOCKCHAIN_CACHE:
-        # TODO: it should be here!
-        logger.warning('Block index {} found in blockchain cache.'.format(block_index)) 
         if tx_hash in prefetcher.BLOCKCHAIN_CACHE[block_index]['raw_transactions']:
-            logger.warning('Cache hit! Transaction {} found in blockchain cache.'.format(tx_hash, block_index)) 
+            # logger.debug('Cache hit! Transaction {} found in blockchain cache.'.format(tx_hash, block_index)) 
             return prefetcher.BLOCKCHAIN_CACHE[block_index]['raw_transactions'][tx_hash]
-        else:
-            print(prefetcher.BLOCKCHAIN_CACHE[block_index]['raw_transactions'].keys())
-            logger.warning('Transaction {} not found in blockchain cache.'.format(tx_hash))
-    else:
-        logger.warning('Cache miss! Block index {} not found in blockchain cache.'.format(block_index)) 
     if tx_hash in PRETX_CACHE:
         return PRETX_CACHE[tx_hash]
     logger.warning('Cache miss! Transaction {} not found in blockchain cache.'.format(tx_hash, block_index)) 
