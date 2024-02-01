@@ -11,7 +11,7 @@ from counterpartylib.lib import backend, util, config
 
 BLOCK_COUNT_CHECK_FREQ = 100
 BLOCKCHAIN_CACHE = {}
-BLOCKCHAIN_CACHE_MAX_SIZE = 1000
+BLOCKCHAIN_CACHE_MAX_SIZE = 10000
 PREFETCHER_THREADS = []
 
 class Prefetcher(threading.Thread):
