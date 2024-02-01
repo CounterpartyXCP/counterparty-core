@@ -92,9 +92,7 @@ def validate (db, source, timestamp, value, fee_fraction_int, text, block_index)
     if not source:
         problems.append('null source address')
     # Check previous broadcast in this feed.
-    cursor = db.cursor()
-    broadcasts = list(cursor.execute('''SELECT * FROM broadcasts WHERE (status = ? AND source = ?) ORDER BY tx_index ASC''', ('valid', source)))
-    cursor.close()
+    broadcasts = ledger.get_broadcats_by_source(db, source, 'valid')
     if broadcasts:
         last_broadcast = broadcasts[-1]
         if last_broadcast['locked']:
@@ -232,17 +230,11 @@ def parse (db, tx, message):
     if value is None or value < 0:
         # Cancel Open Bets?
         if value == -2:
-            cursor.execute('''SELECT * FROM bets \
-                              WHERE (status = ? AND feed_address = ?)''',
-                           ('open', tx['source']))
-            for i in list(cursor):
+            for i in ledger.get_bets(db, status='open', feed_address=tx['source']):
                 bet.cancel_bet(db, i, 'dropped', tx['block_index'], tx['tx_index'])
         # Cancel Pending Bet Matches?
         if value == -3:
-            cursor.execute('''SELECT * FROM bet_matches \
-                              WHERE (status = ? AND feed_address = ?)''',
-                           ('pending', tx['source']))
-            for bet_match in list(cursor):
+            for bet_match in ledger.get_bet_matches(db, status='pending', feed_address=tx['source']):
                 bet.cancel_bet_match(db, bet_match, 'dropped', tx['block_index'], tx['tx_index'])
         cursor.close()
         return
@@ -253,11 +245,11 @@ def parse (db, tx, message):
         return
 
     # Handle bet matches that use this feed.
-    cursor.execute('''SELECT * FROM bet_matches \
-                      WHERE (status=? AND feed_address=?)
-                      ORDER BY tx1_index ASC, tx0_index ASC''',
-                   ('pending', tx['source']))
-    for bet_match in cursor.fetchall():
+    bet_matches = ledger.get_bet_matches(db, 
+                                         status='pending', 
+                                         feed_address=tx['source'], 
+                                         order_by='tx1_index ASC, tx0_index ASC')
+    for bet_match in bet_matches:
         broadcast_bet_match_cursor = db.cursor()
         bet_match_id = util.make_id(bet_match['tx0_hash'], bet_match['tx1_hash'])
         bet_match_status = None

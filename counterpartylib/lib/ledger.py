@@ -441,6 +441,59 @@ def get_oracle_last_price(db, oracle_address, block_index):
     return oracle_broadcast['value'], oracle_broadcast['fee_fraction_int'], fiat_label, oracle_broadcast['block_index']
 
 
+def get_broadcats_by_source(db, source, status):
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM broadcasts
+                   WHERE (status = ? AND source = ?)
+                   ORDER BY tx_index ASC''', (status, source))
+    return cursor.fetchall()
+
+
+def get_bets(db, tx_index=None, status=None, feed_address=None, bet_type=None, expire_index=None):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if tx_index is not None:
+        where.append('tx_index = ?')
+        bindings.append(tx_index)
+    if status is not None:
+        where.append('status = ?')
+        bindings.append(status)
+    if feed_address is not None:
+        where.append('feed_address = ?')
+        bindings.append(feed_address)
+    if bet_type is not None:
+        where.append('bet_type = ?')
+        bindings.append(bet_type)
+    if expire_index is not None:
+        where.append('expire_index < ?')
+        bindings.append(expire_index)
+    query = f'''SELECT * FROM bets WHERE ({" AND ".join(where)})'''
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+
+def get_bet_matches(db, status=None, deadline=None, feed_address=None, order_by=None):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if status is not None:
+        where.append('status = ?')
+        bindings.append(status)
+    if deadline is not None:
+        where.append('deadline < ?')
+        bindings.append(deadline)
+    if feed_address is not None:
+        where.append('feed_address = ?')
+        bindings.append(feed_address)
+    query = f'''SELECT * FROM bet_matches WHERE ({" AND ".join(where)})'''
+    if order_by is not None:
+        query += f''' ORDER BY {order_by}'''
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+
+
 ### SUPPLIES ###
 
 def holders(db, asset, exclude_empty_holders=False):

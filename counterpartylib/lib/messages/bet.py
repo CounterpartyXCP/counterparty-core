@@ -217,9 +217,8 @@ def cancel_bet_match (db, bet_match, status, block_index, tx_index):
 def get_fee_fraction (db, feed_address):
     '''Get fee fraction from last broadcast from the feed_address address.
     '''
-    cursor = db.cursor()
-    broadcasts = list(cursor.execute('''SELECT * FROM broadcasts WHERE (status = ? AND source = ?) ORDER BY tx_index ASC''', ('valid', feed_address)))
-    cursor.close()
+    broadcasts = ledger.get_broadcats_by_source(db, feed_address, 'valid')
+
     if broadcasts:
         last_broadcast = broadcasts[-1]
         fee_fraction_int = last_broadcast['fee_fraction_int']
@@ -240,9 +239,7 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
         problems.append('integer overflow')
 
     # Look at feed to be bet on.
-    cursor = db.cursor()
-    broadcasts = list(cursor.execute('''SELECT * FROM broadcasts WHERE (status = ? AND source = ?) ORDER BY tx_index ASC''', ('valid', feed_address)))
-    cursor.close()
+    broadcasts = ledger.get_broadcats_by_source(db, feed_address, 'valid')
     if not broadcasts:
         problems.append('feed doesn’t exist')
     elif not broadcasts[-1]['text']:
@@ -386,15 +383,12 @@ def parse (db, tx, message):
 
     bet_parse_cursor.close()
 
+
 def match (db, tx):
 
-    cursor = db.cursor()
-
     # Get bet in question.
-    bets = list(cursor.execute('''SELECT * FROM bets\
-                                  WHERE (tx_index = ? AND status = ?)''', (tx['tx_index'], 'open')))
+    bets = ledger.get_bets(db, tx_index=tx['tx_index'], status='open')
     if not bets:
-        cursor.close()
         return
     else:
         assert len(bets) == 1
@@ -406,12 +400,11 @@ def match (db, tx):
 
     feed_address = tx1['feed_address']
 
-    cursor.execute('''SELECT * FROM bets\
-                             WHERE (feed_address=? AND status=? AND bet_type=?)''',
-                             (tx1['feed_address'], 'open', counterbet_type))
+    cursor = db.cursor()
     tx1_wager_remaining = tx1['wager_remaining']
     tx1_counterwager_remaining = tx1['counterwager_remaining']
-    bet_matches = cursor.fetchall()
+
+    bet_matches = ledger.get_bets(db, feed_address=tx1['feed_address'], status='open', bet_type=counterbet_type)
     if tx['block_index'] > 284500 or config.TESTNET or config.REGTEST:  # Protocol change.
         sorted(bet_matches, key=lambda x: x['tx_index'])                                        # Sort by tx index second.
         sorted(bet_matches, key=lambda x: ledger.price(x['wager_quantity'], x['counterwager_quantity']))   # Sort by price first.
@@ -517,7 +510,7 @@ def match (db, tx):
             log.message(db, tx['block_index'], 'update', 'bets', bindings)
 
             # Get last value of feed.
-            broadcasts = list(cursor.execute('''SELECT * FROM broadcasts WHERE (status = ? AND source = ?) ORDER BY tx_index ASC''', ('valid', feed_address)))
+            broadcasts = ledger.get_broadcats_by_source(db, feed_address, 'valid')
             initial_value = broadcasts[-1]['value']
 
             # Record bet fulfillment.
@@ -557,9 +550,7 @@ def expire (db, block_index, block_time):
     cursor = db.cursor()
 
     # Expire bets and give refunds for the quantity wager_remaining.
-    cursor.execute('''SELECT * FROM bets \
-                      WHERE (status = ? AND expire_index < ?)''', ('open', block_index))
-    for bet in cursor.fetchall():
+    for bet in ledger.get_bets(db, status='open', expire_index=block_index):
         # use tx_index=0 for block actions
         cancel_bet(db, bet, 'expired', block_index, 0)
 
@@ -574,9 +565,7 @@ def expire (db, block_index, block_time):
         cursor.execute(sql, bindings)
 
     # Expire bet matches whose deadline is more than two weeks before the current block time.
-    cursor.execute('''SELECT * FROM bet_matches \
-                      WHERE (status = ? AND deadline < ?)''', ('pending', block_time - config.TWO_WEEKS))
-    for bet_match in cursor.fetchall():
+    for bet_match in ledger.get_bet_matches(db, status='pending', deadline=block_time - config.TWO_WEEKS):
         # use tx_index=0 for block actions
         cancel_bet_match(db, bet_match, 'expired', block_index, 0)
 
