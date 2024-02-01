@@ -1,9 +1,12 @@
 import os, json, time, logging, binascii
+from collections import OrderedDict
 import logging
 logger = logging.getLogger(__name__)
 
 from .bc_data_stream import BCDataStream
 from .utils import b2h, double_hash, ib2h, inverse_hash, decode_value
+
+TX_CACHE_MAX_SIZE = 10000
 
 def open_leveldb(db_dir):
     try:
@@ -29,6 +32,8 @@ class BlockchainParser():
         self.blocks_leveldb = open_leveldb(self.blocks_leveldb_path)
         self.txindex_leveldb_path = os.path.join(bitcoind_dir, 'indexes', 'txindex')
         self.txindex_leveldb = open_leveldb(self.txindex_leveldb_path)
+        self.tx_cache = OrderedDict()
+
 
     def read_tx_in(self, vds):
         tx_in = {}
@@ -45,6 +50,7 @@ class BlockchainParser():
             }
         return tx_in
 
+
     def read_tx_out(self, vds):
         tx_out = {}
         tx_out['value'] = vds.read_int64() / 100000000
@@ -54,7 +60,8 @@ class BlockchainParser():
         }
         return tx_out
 
-    def read_transaction(self, vds):
+
+    def read_transaction(self, vds, use_txid=True):
         transaction = {}
         start_pos = vds.read_cursor
         transaction['version'] = vds.read_int32()
@@ -75,6 +82,7 @@ class BlockchainParser():
             transaction['vout'].append(self.read_tx_out(vds))
 
         if transaction['segwit']:
+            offset_before_tx_witnesses = vds.read_cursor - start_pos
             for vin in transaction['vin']:
                 vin['tx_witnesses'] = []
                 witnesses_count = vds.read_compact_size()
@@ -85,8 +93,21 @@ class BlockchainParser():
 
         transaction['lock_time'] = vds.read_uint32()
         data = vds.input[start_pos:vds.read_cursor]
+
         transaction['tx_hash'] = ib2h(double_hash(data))
+        if transaction['segwit']:
+            hash_data = data[:4] + data[6:offset_before_tx_witnesses] + data[-4:]
+            transaction['tx_id'] = ib2h(double_hash(hash_data))
+            if use_txid:
+                transaction['tx_hash'] = transaction['tx_id']
+
         transaction['__data__'] = b2h(data)
+
+        # save transaction to cache
+        self.tx_cache[transaction['tx_hash']] = transaction
+        if len(self.tx_cache) > TX_CACHE_MAX_SIZE:
+            self.tx_cache.popitem(last=False)
+
         return transaction
 
     def read_block_header(self, vds):
@@ -108,14 +129,14 @@ class BlockchainParser():
         block_header['__header__'] = b2h(header)
         return block_header
 
-    def read_block(self, vds, only_header=False):
+    def read_block(self, vds, only_header=False, use_txid=True):
         block = self.read_block_header(vds)
         if only_header:
             return block
         block['transaction_count'] = vds.read_compact_size()
         block['transactions'] = []
         for i in range(block['transaction_count']):
-            block['transactions'].append(self.read_transaction(vds))
+            block['transactions'].append(self.read_transaction(vds, use_txid=use_txid))
         return block
 
     def prepare_data_stream(self, file_num, pos_in_file):
@@ -130,7 +151,7 @@ class BlockchainParser():
         else:
             self.data_stream.seek_file(pos_in_file)
 
-    def read_raw_block(self, block_hash, only_header=False):
+    def read_raw_block(self, block_hash, only_header=False, use_txid=True):
         block_key = bytes('b', 'utf-8') + binascii.unhexlify(inverse_hash(block_hash))
         block_data = self.blocks_leveldb.get(block_key)
         ds = BCDataStream()
@@ -144,13 +165,17 @@ class BlockchainParser():
         block_pos_in_file = ds.read_var_int() - 8
         block_undo_pos_in_file = ds.read_var_int()
         block_header = ds.read_bytes(80)
-
         self.prepare_data_stream(file_num, block_pos_in_file)
-        block = self.read_block(self.data_stream, only_header=only_header)
+        block = self.read_block(self.data_stream, only_header=only_header, use_txid=use_txid)
         block['block_index'] = height
         return block
 
-    def read_raw_transaction(self, tx_hash):
+    def read_raw_transaction(self, tx_hash, use_txid=True):
+        # return transaction from cache if exists
+        if tx_hash in self.tx_cache:
+            return self.tx_cache[tx_hash]
+        #logger.warning('Transaction not found in cache, reading from disk.')
+
         tx_key = bytes('t', 'utf-8') + binascii.unhexlify(inverse_hash(tx_hash))
         tx_data = self.txindex_leveldb.get(tx_key)
  
@@ -164,7 +189,7 @@ class BlockchainParser():
         
         self.prepare_data_stream(file_num, tx_pos_in_file)
 
-        transaction = self.read_transaction(self.data_stream)
+        transaction = self.read_transaction(self.data_stream, use_txid=use_txid)
 
         return transaction
 
