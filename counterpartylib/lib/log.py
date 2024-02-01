@@ -198,12 +198,14 @@ def log (db, command, category, bindings):
             bindings[element] = '<Error>'
 
     def output (quantity, asset):
-        if logging.DEBUG <= logger.getEffectiveLevel():
-            return '-'   # for speed
 
         try:
             if asset not in ('fraction', 'leverage'):
-                return str(util.value_out(db, quantity, asset)) + ' ' + asset
+                # Only log quantity at `DEBUG`, for speed.
+                if logging.DEBUG <= logger.getEffectiveLevel():
+                    return asset
+                else:
+                    return str(util.value_out(db, quantity, asset)) + ' ' + asset
             else:
                 return str(util.value_out(db, quantity, asset))
         except exceptions.AssetError:
