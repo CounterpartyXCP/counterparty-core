@@ -1,7 +1,7 @@
 import binascii
-from Crypto.Cipher import ARC4
+from arc4 import ARC4
 
 def init_arc4(seed):
     if isinstance(seed, str):
         seed = binascii.unhexlify(seed)
-    return ARC4.new(seed)
+    return ARC4(seed)
