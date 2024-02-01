@@ -46,7 +46,7 @@ from .kickstart.utils import ib2h
 from .exceptions import DecodeError, BTCOnlyError
 
 from counterpartylib.lib import prefetcher
-NUM_PREFETCHER_THREADS = 20
+NUM_PREFETCHER_THREADS = 5
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
@@ -1533,12 +1533,12 @@ def follow(db):
                                     block_time,
                                     previous_block_hash,
                                     difficulty) VALUES(?,?,?,?,?)''',
-                                    (block_index,
-                                    block_hash,
-                                    block_time,
-                                    previous_block_hash,
-                                    block_difficulty)
-                              )
+                               (block_index,
+                                block_hash,
+                                block_time,
+                                previous_block_hash,
+                                block_difficulty)
+                               )
 
                 # List the transactions in the block.
                 for tx_hash in txhash_list:

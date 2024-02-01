@@ -491,8 +491,15 @@ def start_all(db):
     api_server.start()
 
     # Server
-    blocks.follow(db)
-
+    import cProfile, pstats
+    profiler = cProfile.Profile()
+    profiler.enable()
+    try:
+        blocks.follow(db)
+    except:
+        profiler.disable()
+        stats = pstats.Stats(profiler).sort_stats('cumtime')
+        stats.print_stats()
 
 def reparse(db, block_index=None, quiet=True):
     connect_to_backend()
