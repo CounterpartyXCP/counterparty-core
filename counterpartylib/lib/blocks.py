@@ -776,7 +776,7 @@ def decode_opreturn(asm, ctx):
 
 def decode_checksig(asm, ctx):
     pubkeyhash = script.get_checksig(asm)
-    chunk = arc4_decrypt(pubkeyhash, ctx)
+    chunk = arc4_decrypt(pubkeyhash, ctx)   # TODO: This is slow!
     if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
         # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
         chunk_length = chunk[0]
