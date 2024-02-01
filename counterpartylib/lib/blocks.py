@@ -52,14 +52,14 @@ NUM_PREFETCHER_THREADS = 10
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['balances', 'credits', 'debits', 'messages'] + \
-         ['bet_match_resolutions', 'order_match_expirations', 'order_matches',
-         'order_expirations', 'orders', 'bet_match_expirations', 'bet_matches',
-         'bet_expirations', 'bets', 'broadcasts', 'btcpays', 'burns',
-         'cancels', 'dividends', 'issuances', 'sends',
-         'rps_match_expirations', 'rps_expirations', 'rpsresolves',
-         'rps_matches', 'rps',
-         'destructions', 'assets', 'addresses', 'sweeps', 'dispensers', 'dispenses',
-         'dispenser_refills']
+         ['order_match_expirations', 'order_matches', 'order_expirations', 'orders',
+          'bet_match_expirations', 'bet_matches', 'bet_match_resolutions',
+          'bet_expirations', 'bets', 'broadcasts', 'btcpays', 'burns',
+          'cancels', 'dividends', 'issuances', 'sends',
+          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
+          'rps_matches', 'rps',
+          'destructions', 'assets', 'addresses', 'sweeps', 'dispensers', 'dispenses',
+          'dispenser_refills']
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(CURR_DIR + '/../mainnet_burns.csv', 'r') as f:
@@ -572,10 +572,10 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None, db=None):
 def _get_tx_info(tx_hex, block_parser=None, block_index=None, p2sh_is_segwit=False):
     """Get the transaction info. Calls one of two subfunctions depending on signature type."""
     if not block_index:
-        block_index = util.CURRENT_BLOCK_INDEX
-    if util.enabled('p2sh_addresses', block_index=block_index):   # Protocol change.
+        block_index = ledger.CURRENT_BLOCK_INDEX
+    if ledger.enabled('p2sh_addresses', block_index=block_index):   # Protocol change.
         return  get_tx_info3(tx_hex, block_parser=block_parser, p2sh_is_segwit=p2sh_is_segwit, block_index=block_index)
-    elif util.enabled('multisig_addresses', block_index=block_index):   # Protocol change.
+    elif ledger.enabled('multisig_addresses', block_index=block_index):   # Protocol change.
         return get_tx_info2(tx_hex, block_parser=block_parser, block_index=block_index)
     else:
         return get_tx_info1(tx_hex, block_index, block_parser=block_parser)

@@ -5,189 +5,6 @@ PRAGMA page_size=4096;
 
 BEGIN TRANSACTION;
 
--- Table  addresses
-DROP TABLE IF EXISTS addresses;
-CREATE TABLE addresses(
-                      address TEXT UNIQUE,
-                      options INTEGER,
-                      block_index INTEGER);
--- Triggers and indices on  addresses
-CREATE INDEX addresses_idx ON addresses (address);
-
--- Table  assets
-DROP TABLE IF EXISTS assets;
-CREATE TABLE assets(
-                      asset_id TEXT UNIQUE,
-                      asset_name TEXT UNIQUE,
-                      block_index INTEGER,
-                      asset_longname TEXT);
-INSERT INTO assets VALUES('0','BTC',NULL,NULL);
-INSERT INTO assets VALUES('1','XCP',NULL,NULL);
-INSERT INTO assets VALUES('18279','BBBB',310005,NULL);
-INSERT INTO assets VALUES('18280','BBBC',310006,NULL);
--- Triggers and indices on  assets
-CREATE UNIQUE INDEX asset_longname_idx ON assets(asset_longname);
-CREATE INDEX id_idx ON assets (asset_id);
-CREATE INDEX name_idx ON assets (asset_name);
-
--- Table  balances
-DROP TABLE IF EXISTS balances;
-CREATE TABLE balances(
-                      address TEXT,
-                      asset TEXT,
-                      quantity INTEGER, block_index INTEGER, tx_index INTEGER);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',93000000000,310000,1);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92950000000,310001,2);
-INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',50000000,310001,2);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92845000000,310003,4);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92945000000,310004,5);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92895000000,310005,6);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',1000000000,310005,6);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92845000000,310006,7);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',100000,310006,7);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',996000000,310007,8);
-INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBB',4000000,310007,8);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',99474,310008,9);
-INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',526,310008,9);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92844999976,310009,10);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92844979976,310009,10);
-INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',50000024,310009,10);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92844559176,310010,11);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92844539176,310010,11);
-INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',50420824,310010,11);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92794539176,310012,13);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92769539176,310013,14);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92773789176,310013,14);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92778789176,310014,0);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92628789176,310014,15);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92278789176,310015,16);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92278789176,310015,16);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92278789176,310015,16);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',91528789176,310016,17);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',90878789176,310017,18);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',90878789176,310017,18);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',90878789176,310017,18);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',90937926676,310018,19);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',90941039176,310018,19);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',91100339176,310019,20);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',91416039176,310019,20);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',91441039176,310019,20);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92771039176,310020,21);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92841039176,310020,21);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',946000000,310021,22);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',149840926438,310022,23);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',149849426438,310023,0);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',89474,310023,24);
-INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',10526,310023,24);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',996000000,310032,0);
--- Triggers and indices on  balances
-CREATE INDEX address_asset_idx ON balances (address, asset);
-
--- Table  bet_expirations
-DROP TABLE IF EXISTS bet_expirations;
-CREATE TABLE bet_expirations(
-                      bet_index INTEGER PRIMARY KEY,
-                      bet_hash TEXT UNIQUE,
-                      source TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index),
-                      FOREIGN KEY (bet_index, bet_hash) REFERENCES bets(tx_index, tx_hash));
-INSERT INTO bet_expirations VALUES(13,'7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',310023);
-
--- Table  bet_match_expirations
-DROP TABLE IF EXISTS bet_match_expirations;
-CREATE TABLE bet_match_expirations(
-                      bet_match_id TEXT PRIMARY KEY,
-                      tx0_address TEXT,
-                      tx1_address TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (bet_match_id) REFERENCES bet_matches(id),
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index));
-
--- Table  bet_match_resolutions
-DROP TABLE IF EXISTS bet_match_resolutions;
-CREATE TABLE bet_match_resolutions(
-                      bet_match_id TEXT PRIMARY KEY,
-                      bet_match_type_id INTEGER,
-                      block_index INTEGER,
-                      winner TEXT,
-                      settled BOOL,
-                      bull_credit INTEGER,
-                      bear_credit INTEGER,
-                      escrow_less_fee INTEGER,
-                      fee INTEGER,
-                      FOREIGN KEY (bet_match_id) REFERENCES bet_matches(id),
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index));
-INSERT INTO bet_match_resolutions VALUES('7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81_e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42',1,310018,'0',0,59137500,NULL,NULL,3112500);
-INSERT INTO bet_match_resolutions VALUES('3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a_a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8',1,310019,'1',159300000,315700000,NULL,NULL,25000000);
-INSERT INTO bet_match_resolutions VALUES('194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5_72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207',5,310020,NULL,NULL,NULL,'NotEqual',1330000000,70000000);
-
--- Table  bet_matches
-DROP TABLE IF EXISTS bet_matches;
-CREATE TABLE bet_matches(
-                      id TEXT PRIMARY KEY,
-                      tx0_index INTEGER,
-                      tx0_hash TEXT,
-                      tx0_address TEXT,
-                      tx1_index INTEGER,
-                      tx1_hash TEXT,
-                      tx1_address TEXT,
-                      tx0_bet_type INTEGER,
-                      tx1_bet_type INTEGER,
-                      feed_address TEXT,
-                      initial_value INTEGER,
-                      deadline INTEGER,
-                      target_value REAL,
-                      leverage INTEGER,
-                      forward_quantity INTEGER,
-                      backward_quantity INTEGER,
-                      tx0_block_index INTEGER,
-                      tx1_block_index INTEGER,
-                      block_index INTEGER,
-                      tx0_expiration INTEGER,
-                      tx1_expiration INTEGER,
-                      match_expire_index INTEGER,
-                      fee_fraction_int INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx0_index, tx0_hash, tx0_block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
-INSERT INTO bet_matches VALUES('7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81_e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42',13,'7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',14,'e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000100,0.0,15120,41500000,20750000,310012,310013,310013,10,10,310022,99999999,'settled: liquidated for bear');
-INSERT INTO bet_matches VALUES('3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a_a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8',15,'3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',16,'a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000100,0.0,5040,150000000,350000000,310014,310015,310015,10,10,310024,99999999,'settled');
-INSERT INTO bet_matches VALUES('194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5_72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207',17,'194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',18,'72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,3,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000200,1.0,5040,750000000,650000000,310016,310017,310017,10,10,310026,99999999,'settled: for notequal');
--- Triggers and indices on  bet_matches
-CREATE INDEX valid_feed_idx ON bet_matches (feed_address, status);
-
--- Table  bets
-DROP TABLE IF EXISTS bets;
-CREATE TABLE bets(
-                      tx_index INTEGER UNIQUE,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      feed_address TEXT,
-                      bet_type INTEGER,
-                      deadline INTEGER,
-                      wager_quantity INTEGER,
-                      wager_remaining INTEGER,
-                      counterwager_quantity INTEGER,
-                      counterwager_remaining INTEGER,
-                      target_value REAL,
-                      leverage INTEGER,
-                      expiration INTEGER,
-                      expire_index INTEGER,
-                      fee_fraction_int INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      PRIMARY KEY (tx_index, tx_hash));
-INSERT INTO bets VALUES(13,'7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81',310012,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1388000100,50000000,8500000,25000000,4250000,0.0,15120,10,310022,99999999,'expired');
-INSERT INTO bets VALUES(14,'e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42',310013,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,1388000100,25000000,4250000,41500000,0,0.0,15120,10,310023,99999999,'filled');
-INSERT INTO bets VALUES(15,'3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a',310014,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1388000100,150000000,0,350000000,0,0.0,5040,10,310024,99999999,'filled');
-INSERT INTO bets VALUES(16,'a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8',310015,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,1388000100,350000000,0,150000000,0,0.0,5040,10,310025,99999999,'filled');
-INSERT INTO bets VALUES(17,'194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5',310016,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,1388000200,750000000,0,650000000,0,1.0,5040,10,310026,99999999,'filled');
-INSERT INTO bets VALUES(18,'72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207',310017,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,1388000200,650000000,0,750000000,0,1.0,5040,10,310027,99999999,'filled');
--- Triggers and indices on  bets
-CREATE INDEX feed_valid_bettype_idx ON bets (feed_address, status, bet_type);
-
 -- Table  blocks
 DROP TABLE IF EXISTS blocks;
 CREATE TABLE blocks(
@@ -306,33 +123,18 @@ CREATE INDEX block_index_idx ON blocks (block_index)
 CREATE INDEX index_hash_idx ON blocks (block_index, block_hash)
                    ;
 
--- Table  broadcasts
-DROP TABLE IF EXISTS broadcasts;
-CREATE TABLE broadcasts(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      timestamp INTEGER,
-                      value REAL,
-                      fee_fraction_int INTEGER,
-                      text TEXT,
-                      locked BOOL,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
-INSERT INTO broadcasts VALUES(12,'1afa4fa28e1ef63b2b67c288e078cfeb109a2b236558ab5544eedc7f171e0a84',310011,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000000,100.0,99999999,'Unit Test',0,'valid');
-INSERT INTO broadcasts VALUES(19,'065de641fd87c0b3ef893130ef4a3dca7643b7a35f6d18c721f34a7a36a5992f',310018,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000050,99.86166,5000000,'Unit Test',0,'valid');
-INSERT INTO broadcasts VALUES(20,'7cc015005c559686a8e10294015ca1773c0bcd9f4d7d9768deb4bb94cdd4a69e',310019,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000101,100.343,5000000,'Unit Test',0,'valid');
-INSERT INTO broadcasts VALUES(21,'0899b8bccef3403252fd7d37ec550eea3350845dca098368b84bf4c3c48d3fc9',310020,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000201,2.0,5000000,'Unit Test',0,'valid');
--- Triggers and indices on  broadcasts
-CREATE INDEX status_source_idx ON broadcasts (status, source);
-CREATE INDEX status_source_index_idx ON broadcasts (status, source, tx_index);
-CREATE INDEX timestamp_idx ON broadcasts (timestamp);
+COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=NONE;
+-- PRAGMA max_page_count=1073741823;
 
--- Table  btcpays
-DROP TABLE IF EXISTS btcpays;
-CREATE TABLE btcpays(
-                      tx_index INTEGER PRIMARY KEY,
+BEGIN TRANSACTION;
+
+-- Table  transactions
+DROP TABLE IF EXISTS transactions;
+CREATE TABLE transactions(
+                      tx_index INTEGER UNIQUE,
                       tx_hash TEXT UNIQUE,
                       block_index INTEGER,
                       block_hash TEXT,
@@ -340,37 +142,196 @@ CREATE TABLE btcpays(
                       source TEXT,
                       destination TEXT,
                       btc_amount INTEGER,
-                      order_match_id TEXT,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
-INSERT INTO btcpays VALUES(5,'843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099',310004,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',50000000,'6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c','valid');
+                      fee INTEGER,
+                      data BLOB,
+                      supported BOOL DEFAULT 1,
+                      FOREIGN KEY (block_index, block_hash) REFERENCES blocks(block_index, block_hash),
+                      PRIMARY KEY (tx_index, tx_hash, block_index));
+INSERT INTO transactions VALUES(1,'6dc5b0a33d4d4297e0f5cc2d23ae307951d32aab2d86b7fa147b385219f3a597',310000,'505d8d82c4ced7daddef7ed0b05ba12ecc664176887b938ef56c6af276f3b30c',310000000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mvCounterpartyXXXXXXXXXXXXXXW24Hef',62000000,5625,X'',1);
+INSERT INTO transactions VALUES(2,'3b273ba342ed8bd4ccd2ae28d3df7754768a6c65ec1cee4a6e84b4b4bdec8d8c',310001,'3c9f6a9c6cac46a9273bd3db39ad775acd5bc546378ec2fb0587e06e112cc78e',310001000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',5430,7650,X'0000000000000000000000010000000002FAF080',1);
+INSERT INTO transactions VALUES(3,'6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59',310002,'fbb60f1144e1f7d4dc036a4a158a10ea6dea2ba6283a723342a49b8eb5cc9964',310002000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','',0,1000000,X'0000000A00000000000000000000000002FAF08000000000000000010000000005F5E100000A0000000000000000',1);
+INSERT INTO transactions VALUES(4,'36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c',310003,'d50825dcb32bcf6f69994d616eba18de7718d3d859497e80751b2cb67e333e8a',310003000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','',0,6800,X'0000000A00000000000000010000000006422C4000000000000000000000000002FAF080000A00000000000DBBA0',1);
+INSERT INTO transactions VALUES(5,'843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099',310004,'60cdc0ac0e3121ceaa2c3885f21f5789f49992ffef6e6ff99f7da80e36744615',310004000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',50000000,9675,X'0000000B6BDB2EF465E9FC04060F58CED26C159DC983A616CB121C5E7954E66833444C5936D00F8C35A9C6ECC7DD0A64610B1C39A71110D1A95FACE6A2486A6A7A1FF83C',1);
+INSERT INTO transactions VALUES(6,'5d951d44d034cb6fd5dc5c98cd877c63f55c1ae108d335b6b6d991d072856adf',310005,'8005c2926b7ecc50376642bc661a49108b6dc62636463a5c492b123e2184cd9a',310005000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','',0,6800,X'000000140000000000004767000000003B9ACA000100000000000000000000',1);
+INSERT INTO transactions VALUES(7,'2b44f590422a3ab5b70fb1265a2e4f4d3b0bcb3de3f296dc7280924870ec8c59',310006,'bdad69d1669eace68b9f246de113161099d4f83322e2acf402c42defef3af2bb',310006000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','',0,6800,X'00000014000000000000476800000000000186A00000000000000000000006666F6F626172',1);
+INSERT INTO transactions VALUES(8,'5836fb23c2bb94eeb4b71cb8e3c622c6d943b3e4ed3aebee42d240445e615db8',310007,'10a642b96d60091d08234d17dfdecf3025eca41e4fc8e3bbe71a91c5a457cb4b',310007000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',5430,7650,X'00000000000000000000476700000000003D0900',1);
+INSERT INTO transactions VALUES(9,'843e6f7712b7847099502bda8a4bd7127c17a2799290b91ef1584a6bfe069412',310008,'47d0e3acbdc6916aeae95e987f9cfa16209b3df1e67bb38143b3422b32322c33',310008000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',5430,7650,X'000000000000000000004768000000000000020E',1);
+INSERT INTO transactions VALUES(10,'42ae2fd7f3a18f84334bc37aa88283e79d6bff0b234dbf97e788695957d75518',310009,'4d474992b141620bf3753863db7ee5e8af26cadfbba27725911f44fa657bc1c0',310009000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','',0,6800,X'00000032000000000000025800000000000047670000000000000001',1);
+INSERT INTO transactions VALUES(11,'201123e1ddbc4dab954fed0043a29fca770a9bd4268714354bb7991f01133c10',310010,'a58162dff81a32e6a29b075be759dbb9fa9b8b65303e69c78fb4d7b0acc37042',310010000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','',0,6800,X'00000032000000000000032000000000000047680000000000000001',1);
+INSERT INTO transactions VALUES(12,'1afa4fa28e1ef63b2b67c288e078cfeb109a2b236558ab5544eedc7f171e0a84',310011,'8042cc2ef293fd73d050f283fbd075c79dd4c49fdcca054dc0714fc3a50dc1bb',310011000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','',0,6800,X'0000001E52BB3300405900000000000005F5E0FF09556E69742054657374',1);
+INSERT INTO transactions VALUES(13,'7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81',310012,'cdba329019d93a67b31b79d05f76ce1b7791d430ea0d6c1c2168fe78d2f67677',310012000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',5430,7650,X'00000028000052BB33640000000002FAF08000000000017D7840000000000000000000003B100000000A',1);
+INSERT INTO transactions VALUES(14,'e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42',310013,'0425e5e832e4286757dc0228cd505b8d572081007218abd3a0983a3bcd502a61',310013000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',5430,7650,X'00000028000152BB336400000000017D78400000000002793D60000000000000000000003B100000000A',1);
+INSERT INTO transactions VALUES(15,'3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a',310014,'85b28d413ebda2968ed82ae53643677338650151b997ed1e4656158005b9f65f',310014000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',5430,7650,X'00000028000052BB33640000000008F0D1800000000014DC93800000000000000000000013B00000000A',1);
+INSERT INTO transactions VALUES(16,'a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8',310015,'4cf77d688f18f0c68c077db882f62e49f31859dfa6144372457cd73b29223922',310015000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',5430,7650,X'00000028000152BB33640000000014DC93800000000008F0D1800000000000000000000013B00000000A',1);
+INSERT INTO transactions VALUES(17,'194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5',310016,'99dc7d2627efb4e5e618a53b9898b4ca39c70e98fe9bf39f68a6c980f5b64ef9',310016000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',5430,7650,X'00000028000252BB33C8000000002CB417800000000026BE36803FF0000000000000000013B00000000A',1);
+INSERT INTO transactions VALUES(18,'72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207',310017,'8a4fedfbf734b91a5c5761a7bcb3908ea57169777a7018148c51ff611970e4a3',310017000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',5430,7650,X'00000028000352BB33C80000000026BE3680000000002CB417803FF0000000000000000013B00000000A',1);
+INSERT INTO transactions VALUES(19,'065de641fd87c0b3ef893130ef4a3dca7643b7a35f6d18c721f34a7a36a5992f',310018,'35c06f9e3de39e4e56ceb1d1a22008f52361c50dd0d251c0acbe2e3c2dba8ed3',310018000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','',0,6800,X'0000001E52BB33324058F7256FFC115E004C4B4009556E69742054657374',1);
+INSERT INTO transactions VALUES(20,'7cc015005c559686a8e10294015ca1773c0bcd9f4d7d9768deb4bb94cdd4a69e',310019,'114affa0c4f34b1ebf8e2778c9477641f60b5b9e8a69052158041d4c41893294',310019000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','',0,6800,X'0000001E52BB3365405915F3B645A1CB004C4B4009556E69742054657374',1);
+INSERT INTO transactions VALUES(21,'0899b8bccef3403252fd7d37ec550eea3350845dca098368b84bf4c3c48d3fc9',310020,'d93c79920e4a42164af74ecb5c6b903ff6055cdc007376c74dfa692c8d85ebc9',310020000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','',0,6800,X'0000001E52BB33C94000000000000000004C4B4009556E69742054657374',1);
+INSERT INTO transactions VALUES(22,'eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a',310021,'7c2460bb32c5749c856486393239bf7a0ac789587ac71f32e7237910da8097f2',310021000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','',0,6800,X'0000000A00000000000047670000000002FAF08000000000000000010000000002FAF080000A0000000000000000',1);
+INSERT INTO transactions VALUES(23,'c3f73d02e630cb2824f044e6d91f47b1ce351feff0339ea7b85652d24d8ff6bc',310022,'44435f9a99a0aa12a9bfabdc4cb8119f6ea6a6e1350d2d65445fb66a456db5fc',310022000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mvCounterpartyXXXXXXXXXXXXXXW24Hef',100000000,10150,X'',1);
+INSERT INTO transactions VALUES(24,'58b89d056b539d2cf9ddac4518ccca6744495127e0ce893eb71da2599cbf85ab',310023,'d8cf5bec1bbcab8ca4f495352afde3b6572b7e1d61b3976872ebb8e9d30ccb08',310023000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',5430,7650,X'0000000000000000000047680000000000002710',1);
+-- Triggers and indices on  transactions
+CREATE INDEX index_hash_index_idx ON transactions (tx_index, tx_hash, block_index)
+                   ;
+CREATE INDEX index_index_idx ON transactions (block_index, tx_index)
+                   ;
+CREATE INDEX tx_hash_idx ON transactions (tx_hash)
+                   ;
+CREATE INDEX tx_index_idx ON transactions (tx_index)
+                   ;
 
--- Table  burns
-DROP TABLE IF EXISTS burns;
-CREATE TABLE burns(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      burned INTEGER,
-                      earned INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
-INSERT INTO burns VALUES(1,'6dc5b0a33d4d4297e0f5cc2d23ae307951d32aab2d86b7fa147b385219f3a597',310000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',62000000,93000000000,'valid');
-INSERT INTO burns VALUES(23,'c3f73d02e630cb2824f044e6d91f47b1ce351feff0339ea7b85652d24d8ff6bc',310022,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',38000000,56999887262,'valid');
+COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=NONE;
+-- PRAGMA max_page_count=1073741823;
 
--- Table  cancels
-DROP TABLE IF EXISTS cancels;
-CREATE TABLE cancels(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      offer_hash TEXT,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
--- Triggers and indices on  cancels
-CREATE INDEX cancels_block_index_idx ON cancels (block_index);
+BEGIN TRANSACTION;
+
+-- Table  transaction_outputs
+DROP TABLE IF EXISTS transaction_outputs;
+CREATE TABLE transaction_outputs(
+                        tx_index,
+                        tx_hash TEXT, 
+                        block_index INTEGER,
+                        out_index INTEGER,
+                        destination TEXT,
+                        btc_amount INTEGER,
+                        PRIMARY KEY (tx_hash, out_index),
+                        FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+
+COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=NONE;
+-- PRAGMA max_page_count=1073741823;
+
+BEGIN TRANSACTION;
+
+-- Table  balances
+DROP TABLE IF EXISTS balances;
+CREATE TABLE balances(
+                      address TEXT,
+                      asset TEXT,
+                      quantity INTEGER, block_index INTEGER, tx_index INTEGER);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',93000000000,310000,1);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92950000000,310001,2);
+INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',50000000,310001,2);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92845000000,310003,4);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92945000000,310004,5);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92895000000,310005,6);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',1000000000,310005,6);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92845000000,310006,7);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',100000,310006,7);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',996000000,310007,8);
+INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBB',4000000,310007,8);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',99474,310008,9);
+INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',526,310008,9);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92844999976,310009,10);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92844979976,310009,10);
+INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',50000024,310009,10);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92844559176,310010,11);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92844539176,310010,11);
+INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',50420824,310010,11);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92794539176,310012,13);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92769539176,310013,14);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92773789176,310013,14);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92778789176,310014,0);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92628789176,310014,15);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92278789176,310015,16);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92278789176,310015,16);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92278789176,310015,16);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',91528789176,310016,17);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',90878789176,310017,18);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',90878789176,310017,18);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',90878789176,310017,18);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',90937926676,310018,19);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',90941039176,310018,19);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',91100339176,310019,20);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',91416039176,310019,20);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',91441039176,310019,20);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92771039176,310020,21);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92841039176,310020,21);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',946000000,310021,22);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',149840926438,310022,23);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',149849426438,310023,0);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',89474,310023,24);
+INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',10526,310023,24);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',996000000,310032,0);
+-- Triggers and indices on  balances
+CREATE INDEX address_asset_idx ON balances (address, asset)
+                   ;
+
+COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=NONE;
+-- PRAGMA max_page_count=1073741823;
+
+BEGIN TRANSACTION;
+
+-- Table  balances
+DROP TABLE IF EXISTS balances;
+CREATE TABLE balances(
+                      address TEXT,
+                      asset TEXT,
+                      quantity INTEGER, block_index INTEGER, tx_index INTEGER);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',93000000000,310000,1);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92950000000,310001,2);
+INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',50000000,310001,2);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92845000000,310003,4);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92945000000,310004,5);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92895000000,310005,6);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',1000000000,310005,6);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92845000000,310006,7);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',100000,310006,7);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',996000000,310007,8);
+INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBB',4000000,310007,8);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',99474,310008,9);
+INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',526,310008,9);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92844999976,310009,10);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92844979976,310009,10);
+INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',50000024,310009,10);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92844559176,310010,11);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92844539176,310010,11);
+INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',50420824,310010,11);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92794539176,310012,13);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92769539176,310013,14);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92773789176,310013,14);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92778789176,310014,0);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92628789176,310014,15);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92278789176,310015,16);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92278789176,310015,16);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92278789176,310015,16);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',91528789176,310016,17);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',90878789176,310017,18);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',90878789176,310017,18);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',90878789176,310017,18);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',90937926676,310018,19);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',90941039176,310018,19);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',91100339176,310019,20);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',91416039176,310019,20);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',91441039176,310019,20);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92771039176,310020,21);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',92841039176,310020,21);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',946000000,310021,22);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',149840926438,310022,23);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',149849426438,310023,0);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',89474,310023,24);
+INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',10526,310023,24);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',996000000,310032,0);
+-- Triggers and indices on  balances
+CREATE INDEX address_asset_idx ON balances (address, asset)
+                   ;
+
+COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=NONE;
+-- PRAGMA max_page_count=1073741823;
+
+BEGIN TRANSACTION;
 
 -- Table  credits
 DROP TABLE IF EXISTS credits;
@@ -446,125 +407,18 @@ INSERT INTO debits VALUES(310017,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',6500
 INSERT INTO debits VALUES(310021,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',50000000,'open order','eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a',22);
 INSERT INTO debits VALUES(310023,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',10000,'send','58b89d056b539d2cf9ddac4518ccca6744495127e0ce893eb71da2599cbf85ab',24);
 -- Triggers and indices on  debits
-CREATE INDEX address_idx ON debits (address);
-CREATE INDEX asset_idx ON debits (asset);
+CREATE INDEX address_idx ON debits (address)
+                   ;
+CREATE INDEX asset_idx ON debits (asset)
+                   ;
 
--- Table  destructions
-DROP TABLE IF EXISTS destructions;
-CREATE TABLE destructions(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      asset INTEGER,
-                      quantity INTEGER,
-                      tag TEXT,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
--- Triggers and indices on  destructions
-CREATE INDEX status_idx ON destructions (status);
+COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=NONE;
+-- PRAGMA max_page_count=1073741823;
 
--- Table  dispenser_refills
-DROP TABLE IF EXISTS dispenser_refills;
-CREATE TABLE dispenser_refills(
-                      tx_index INTEGER,
-                      tx_hash TEXT,
-                      block_index INTEGER,
-                      source TEXT,
-                      destination TEXT,
-                      asset TEXT,
-                      dispense_quantity INTEGER,
-                      dispenser_tx_hash TEXT,
-                      PRIMARY KEY (tx_index, tx_hash, source, destination),
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
-
--- Table  dispensers
-DROP TABLE IF EXISTS dispensers;
-CREATE TABLE dispensers(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      asset TEXT,
-                      give_quantity INTEGER,
-                      escrow_quantity INTEGER,
-                      satoshirate INTEGER,
-                      status INTEGER,
-                      give_remaining INTEGER, oracle_address TEXT, last_status_tx_hash TEXT, origin TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
--- Triggers and indices on  dispensers
-CREATE INDEX dispensers_asset_idx ON dispensers (asset);
-CREATE INDEX dispensers_source_idx ON dispensers (source);
-
--- Table  dispenses
-DROP TABLE IF EXISTS dispenses;
-CREATE TABLE dispenses(
-                      tx_index INTEGER,
-                      dispense_index INTEGER,
-                      tx_hash TEXT,
-                      block_index INTEGER,
-                      source TEXT,
-                      destination TEXT,
-                      asset TEXT,
-                      dispense_quantity INTEGER,
-                      dispenser_tx_hash TEXT,
-                      PRIMARY KEY (tx_index, dispense_index, source, destination),
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
-
--- Table  dividends
-DROP TABLE IF EXISTS dividends;
-CREATE TABLE dividends(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      asset TEXT,
-                      dividend_asset TEXT,
-                      quantity_per_unit INTEGER,
-                      fee_paid INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
-INSERT INTO dividends VALUES(10,'42ae2fd7f3a18f84334bc37aa88283e79d6bff0b234dbf97e788695957d75518',310009,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB','XCP',600,20000,'valid');
-INSERT INTO dividends VALUES(11,'201123e1ddbc4dab954fed0043a29fca770a9bd4268714354bb7991f01133c10',310010,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC','XCP',800,20000,'valid');
-
--- Table  issuances
-DROP TABLE IF EXISTS issuances;
-CREATE TABLE "issuances"(
-                              tx_index INTEGER,
-                              tx_hash TEXT,
-                              msg_index INTEGER DEFAULT 0,
-                              block_index INTEGER,
-                              asset TEXT,
-                              quantity INTEGER,
-                              divisible BOOL,
-                              source TEXT,
-                              issuer TEXT,
-                              transfer BOOL,
-                              callable BOOL,
-                              call_date INTEGER,
-                              call_price REAL,
-                              description TEXT,
-                              fee_paid INTEGER,
-                              locked BOOL,
-                              status TEXT,
-                              asset_longname TEXT,
-                              reset BOOL,
-                              PRIMARY KEY (tx_index, msg_index),
-                              FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                              UNIQUE (tx_hash, msg_index));
-INSERT INTO issuances VALUES(6,'5d951d44d034cb6fd5dc5c98cd877c63f55c1ae108d335b6b6d991d072856adf',0,310005,'BBBB',1000000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',50000000,0,'valid',NULL,0);
-INSERT INTO issuances VALUES(7,'2b44f590422a3ab5b70fb1265a2e4f4d3b0bcb3de3f296dc7280924870ec8c59',0,310006,'BBBC',100000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'foobar',50000000,0,'valid',NULL,0);
--- Triggers and indices on  issuances
-CREATE INDEX valid_asset_idx ON issuances (asset, status);
-
--- Table  mempool
-DROP TABLE IF EXISTS mempool;
-CREATE TABLE mempool(
-                      tx_hash TEXT,
-                      command TEXT,
-                      category TEXT,
-                      bindings TEXT,
-                      timestamp INTEGER);
+BEGIN TRANSACTION;
 
 -- Table  messages
 DROP TABLE IF EXISTS messages;
@@ -674,18 +528,13 @@ INSERT INTO messages VALUES(94,310032,'insert','order_expirations','[''block_ind
 CREATE INDEX block_index_message_index_idx ON messages (block_index, message_index)
                    ;
 
--- Table  order_expirations
-DROP TABLE IF EXISTS order_expirations;
-CREATE TABLE order_expirations(
-                      order_index INTEGER PRIMARY KEY,
-                      order_hash TEXT UNIQUE,
-                      source TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index),
-                      FOREIGN KEY (order_index, order_hash) REFERENCES orders(tx_index, tx_hash));
-INSERT INTO order_expirations VALUES(3,'6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',310013);
-INSERT INTO order_expirations VALUES(4,'36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',310014);
-INSERT INTO order_expirations VALUES(22,'eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',310032);
+COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=NONE;
+-- PRAGMA max_page_count=1073741823;
+
+BEGIN TRANSACTION;
 
 -- Table  order_match_expirations
 DROP TABLE IF EXISTS order_match_expirations;
@@ -731,11 +580,45 @@ CREATE TABLE order_matches(
                       FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 INSERT INTO order_matches VALUES('6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c',3,'6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',4,'36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',50000000,'XCP',100000000,310002,310003,310003,10,10,310023,857142,'completed');
 -- Triggers and indices on  order_matches
-CREATE INDEX backward_status_idx ON order_matches (backward_asset, status);
-CREATE INDEX forward_status_idx ON order_matches (forward_asset, status);
-CREATE INDEX match_expire_idx ON order_matches (status, match_expire_index);
-CREATE INDEX tx0_address_idx ON order_matches (tx0_address);
-CREATE INDEX tx1_address_idx ON order_matches (tx1_address);
+CREATE INDEX backward_status_idx ON order_matches (backward_asset, status)
+                   ;
+CREATE INDEX forward_status_idx ON order_matches (forward_asset, status)
+                   ;
+CREATE INDEX match_expire_idx ON order_matches (status, match_expire_index)
+                   ;
+CREATE INDEX tx0_address_idx ON order_matches (tx0_address)
+                   ;
+CREATE INDEX tx1_address_idx ON order_matches (tx1_address)
+                   ;
+
+COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=NONE;
+-- PRAGMA max_page_count=1073741823;
+
+BEGIN TRANSACTION;
+
+-- Table  order_expirations
+DROP TABLE IF EXISTS order_expirations;
+CREATE TABLE order_expirations(
+                      order_index INTEGER PRIMARY KEY,
+                      order_hash TEXT UNIQUE,
+                      source TEXT,
+                      block_index INTEGER,
+                      FOREIGN KEY (block_index) REFERENCES blocks(block_index),
+                      FOREIGN KEY (order_index, order_hash) REFERENCES orders(tx_index, tx_hash));
+INSERT INTO order_expirations VALUES(3,'6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',310013);
+INSERT INTO order_expirations VALUES(4,'36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',310014);
+INSERT INTO order_expirations VALUES(22,'eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',310032);
+
+COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=NONE;
+-- PRAGMA max_page_count=1073741823;
+
+BEGIN TRANSACTION;
 
 -- Table  orders
 DROP TABLE IF EXISTS orders;
@@ -763,11 +646,16 @@ INSERT INTO orders VALUES(3,'6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e795
 INSERT INTO orders VALUES(4,'36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c',310003,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',105000000,5000000,'BTC',50000000,0,10,310013,900000,42858,6800,6800,'expired');
 INSERT INTO orders VALUES(22,'eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a',310021,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',50000000,50000000,'XCP',50000000,50000000,10,310031,0,0,6800,6800,'expired');
 -- Triggers and indices on  orders
-CREATE INDEX expire_idx ON orders (expire_index, status);
-CREATE INDEX give_asset_idx ON orders (give_asset);
-CREATE INDEX give_get_status_idx ON orders (get_asset, give_asset, status);
-CREATE INDEX give_status_idx ON orders (give_asset, status);
-CREATE INDEX source_give_status_idx ON orders (source, give_asset, status);
+CREATE INDEX expire_idx ON orders (expire_index, status)
+                   ;
+CREATE INDEX give_asset_idx ON orders (give_asset)
+                   ;
+CREATE INDEX give_get_status_idx ON orders (get_asset, give_asset, status)
+                   ;
+CREATE INDEX give_status_idx ON orders (give_asset, status)
+                   ;
+CREATE INDEX source_give_status_idx ON orders (source, give_asset, status)
+                   ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -786,16 +674,6 @@ CREATE TABLE bet_match_expirations(
                       block_index INTEGER,
                       FOREIGN KEY (bet_match_id) REFERENCES bet_matches(id),
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index));
--- Triggers and indices on  bet_match_expirations
-CREATE TRIGGER _bet_match_expirations_delete BEFORE DELETE ON bet_match_expirations BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO bet_match_expirations(rowid,bet_match_id,tx0_address,tx1_address,block_index) VALUES('||old.rowid||','||quote(old.bet_match_id)||','||quote(old.tx0_address)||','||quote(old.tx1_address)||','||quote(old.block_index)||')');
-                            END;
-CREATE TRIGGER _bet_match_expirations_insert AFTER INSERT ON bet_match_expirations BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM bet_match_expirations WHERE rowid='||new.rowid);
-                            END;
-CREATE TRIGGER _bet_match_expirations_update AFTER UPDATE ON bet_match_expirations BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'UPDATE bet_match_expirations SET bet_match_id='||quote(old.bet_match_id)||',tx0_address='||quote(old.tx0_address)||',tx1_address='||quote(old.tx1_address)||',block_index='||quote(old.block_index)||' WHERE rowid='||old.rowid);
-                            END;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -838,15 +716,6 @@ INSERT INTO bet_matches VALUES('7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c
 INSERT INTO bet_matches VALUES('3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a_a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8',15,'3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',16,'a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000100,0.0,5040,150000000,350000000,310014,310015,310015,10,10,310024,99999999,'settled');
 INSERT INTO bet_matches VALUES('194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5_72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207',17,'194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',18,'72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,3,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000200,1.0,5040,750000000,650000000,310016,310017,310017,10,10,310026,99999999,'settled: for notequal');
 -- Triggers and indices on  bet_matches
-CREATE TRIGGER _bet_matches_delete BEFORE DELETE ON bet_matches BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO bet_matches(rowid,id,tx0_index,tx0_hash,tx0_address,tx1_index,tx1_hash,tx1_address,tx0_bet_type,tx1_bet_type,feed_address,initial_value,deadline,target_value,leverage,forward_quantity,backward_quantity,tx0_block_index,tx1_block_index,block_index,tx0_expiration,tx1_expiration,match_expire_index,fee_fraction_int,status) VALUES('||old.rowid||','||quote(old.id)||','||quote(old.tx0_index)||','||quote(old.tx0_hash)||','||quote(old.tx0_address)||','||quote(old.tx1_index)||','||quote(old.tx1_hash)||','||quote(old.tx1_address)||','||quote(old.tx0_bet_type)||','||quote(old.tx1_bet_type)||','||quote(old.feed_address)||','||quote(old.initial_value)||','||quote(old.deadline)||','||quote(old.target_value)||','||quote(old.leverage)||','||quote(old.forward_quantity)||','||quote(old.backward_quantity)||','||quote(old.tx0_block_index)||','||quote(old.tx1_block_index)||','||quote(old.block_index)||','||quote(old.tx0_expiration)||','||quote(old.tx1_expiration)||','||quote(old.match_expire_index)||','||quote(old.fee_fraction_int)||','||quote(old.status)||')');
-                            END;
-CREATE TRIGGER _bet_matches_insert AFTER INSERT ON bet_matches BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM bet_matches WHERE rowid='||new.rowid);
-                            END;
-CREATE TRIGGER _bet_matches_update AFTER UPDATE ON bet_matches BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'UPDATE bet_matches SET id='||quote(old.id)||',tx0_index='||quote(old.tx0_index)||',tx0_hash='||quote(old.tx0_hash)||',tx0_address='||quote(old.tx0_address)||',tx1_index='||quote(old.tx1_index)||',tx1_hash='||quote(old.tx1_hash)||',tx1_address='||quote(old.tx1_address)||',tx0_bet_type='||quote(old.tx0_bet_type)||',tx1_bet_type='||quote(old.tx1_bet_type)||',feed_address='||quote(old.feed_address)||',initial_value='||quote(old.initial_value)||',deadline='||quote(old.deadline)||',target_value='||quote(old.target_value)||',leverage='||quote(old.leverage)||',forward_quantity='||quote(old.forward_quantity)||',backward_quantity='||quote(old.backward_quantity)||',tx0_block_index='||quote(old.tx0_block_index)||',tx1_block_index='||quote(old.tx1_block_index)||',block_index='||quote(old.block_index)||',tx0_expiration='||quote(old.tx0_expiration)||',tx1_expiration='||quote(old.tx1_expiration)||',match_expire_index='||quote(old.match_expire_index)||',fee_fraction_int='||quote(old.fee_fraction_int)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
-                            END;
 CREATE INDEX valid_feed_idx ON bet_matches (feed_address, status)
                    ;
 
@@ -875,16 +744,6 @@ CREATE TABLE bet_match_resolutions(
 INSERT INTO bet_match_resolutions VALUES('7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81_e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42',1,310018,'0',0,59137500,NULL,NULL,3112500);
 INSERT INTO bet_match_resolutions VALUES('3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a_a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8',1,310019,'1',159300000,315700000,NULL,NULL,25000000);
 INSERT INTO bet_match_resolutions VALUES('194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5_72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207',5,310020,NULL,NULL,NULL,'NotEqual',1330000000,70000000);
--- Triggers and indices on  bet_match_resolutions
-CREATE TRIGGER _bet_match_resolutions_delete BEFORE DELETE ON bet_match_resolutions BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO bet_match_resolutions(rowid,bet_match_id,bet_match_type_id,block_index,winner,settled,bull_credit,bear_credit,escrow_less_fee,fee) VALUES('||old.rowid||','||quote(old.bet_match_id)||','||quote(old.bet_match_type_id)||','||quote(old.block_index)||','||quote(old.winner)||','||quote(old.settled)||','||quote(old.bull_credit)||','||quote(old.bear_credit)||','||quote(old.escrow_less_fee)||','||quote(old.fee)||')');
-                            END;
-CREATE TRIGGER _bet_match_resolutions_insert AFTER INSERT ON bet_match_resolutions BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM bet_match_resolutions WHERE rowid='||new.rowid);
-                            END;
-CREATE TRIGGER _bet_match_resolutions_update AFTER UPDATE ON bet_match_resolutions BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'UPDATE bet_match_resolutions SET bet_match_id='||quote(old.bet_match_id)||',bet_match_type_id='||quote(old.bet_match_type_id)||',block_index='||quote(old.block_index)||',winner='||quote(old.winner)||',settled='||quote(old.settled)||',bull_credit='||quote(old.bull_credit)||',bear_credit='||quote(old.bear_credit)||',escrow_less_fee='||quote(old.escrow_less_fee)||',fee='||quote(old.fee)||' WHERE rowid='||old.rowid);
-                            END;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -904,16 +763,6 @@ CREATE TABLE bet_expirations(
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index),
                       FOREIGN KEY (bet_index, bet_hash) REFERENCES bets(tx_index, tx_hash));
 INSERT INTO bet_expirations VALUES(13,'7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',310023);
--- Triggers and indices on  bet_expirations
-CREATE TRIGGER _bet_expirations_delete BEFORE DELETE ON bet_expirations BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO bet_expirations(rowid,bet_index,bet_hash,source,block_index) VALUES('||old.rowid||','||quote(old.bet_index)||','||quote(old.bet_hash)||','||quote(old.source)||','||quote(old.block_index)||')');
-                            END;
-CREATE TRIGGER _bet_expirations_insert AFTER INSERT ON bet_expirations BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM bet_expirations WHERE rowid='||new.rowid);
-                            END;
-CREATE TRIGGER _bet_expirations_update AFTER UPDATE ON bet_expirations BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'UPDATE bet_expirations SET bet_index='||quote(old.bet_index)||',bet_hash='||quote(old.bet_hash)||',source='||quote(old.source)||',block_index='||quote(old.block_index)||' WHERE rowid='||old.rowid);
-                            END;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -952,6 +801,7 @@ INSERT INTO bets VALUES(16,'a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d1
 INSERT INTO bets VALUES(17,'194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5',310016,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,1388000200,750000000,0,650000000,0,1.0,5040,10,310026,99999999,'filled');
 INSERT INTO bets VALUES(18,'72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207',310017,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,1388000200,650000000,0,750000000,0,1.0,5040,10,310027,99999999,'filled');
 -- Triggers and indices on  bets
+<<<<<<< HEAD
 CREATE TRIGGER _bets_delete BEFORE DELETE ON bets BEGIN
                             INSERT INTO undolog VALUES(NULL, 'INSERT INTO bets(rowid,tx_index,tx_hash,block_index,source,feed_address,bet_type,deadline,wager_quantity,wager_remaining,counterwager_quantity,counterwager_remaining,target_value,leverage,expiration,expire_index,fee_fraction_int,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.feed_address)||','||quote(old.bet_type)||','||quote(old.deadline)||','||quote(old.wager_quantity)||','||quote(old.wager_remaining)||','||quote(old.counterwager_quantity)||','||quote(old.counterwager_remaining)||','||quote(old.target_value)||','||quote(old.leverage)||','||quote(old.expiration)||','||quote(old.expire_index)||','||quote(old.fee_fraction_int)||','||quote(old.status)||')');
                             END;
@@ -961,6 +811,8 @@ CREATE TRIGGER _bets_insert AFTER INSERT ON bets BEGIN
 CREATE TRIGGER _bets_update AFTER UPDATE ON bets BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE bets SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',feed_address='||quote(old.feed_address)||',bet_type='||quote(old.bet_type)||',deadline='||quote(old.deadline)||',wager_quantity='||quote(old.wager_quantity)||',wager_remaining='||quote(old.wager_remaining)||',counterwager_quantity='||quote(old.counterwager_quantity)||',counterwager_remaining='||quote(old.counterwager_remaining)||',target_value='||quote(old.target_value)||',leverage='||quote(old.leverage)||',expiration='||quote(old.expiration)||',expire_index='||quote(old.expire_index)||',fee_fraction_int='||quote(old.fee_fraction_int)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
                             END;
+=======
+>>>>>>> 3507b01b (fix rebase)
 CREATE INDEX feed_valid_bettype_idx ON bets (feed_address, status, bet_type)
                    ;
 
@@ -991,6 +843,7 @@ INSERT INTO broadcasts VALUES(19,'065de641fd87c0b3ef893130ef4a3dca7643b7a35f6d18
 INSERT INTO broadcasts VALUES(20,'7cc015005c559686a8e10294015ca1773c0bcd9f4d7d9768deb4bb94cdd4a69e',310019,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000101,100.343,5000000,'Unit Test',0,'valid');
 INSERT INTO broadcasts VALUES(21,'0899b8bccef3403252fd7d37ec550eea3350845dca098368b84bf4c3c48d3fc9',310020,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000201,2.0,5000000,'Unit Test',0,'valid');
 -- Triggers and indices on  broadcasts
+<<<<<<< HEAD
 CREATE TRIGGER _broadcasts_delete BEFORE DELETE ON broadcasts BEGIN
                             INSERT INTO undolog VALUES(NULL, 'INSERT INTO broadcasts(rowid,tx_index,tx_hash,block_index,source,timestamp,value,fee_fraction_int,text,locked,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.timestamp)||','||quote(old.value)||','||quote(old.fee_fraction_int)||','||quote(old.text)||','||quote(old.locked)||','||quote(old.status)||')');
                             END;
@@ -1000,6 +853,8 @@ CREATE TRIGGER _broadcasts_insert AFTER INSERT ON broadcasts BEGIN
 CREATE TRIGGER _broadcasts_update AFTER UPDATE ON broadcasts BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE broadcasts SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',timestamp='||quote(old.timestamp)||',value='||quote(old.value)||',fee_fraction_int='||quote(old.fee_fraction_int)||',text='||quote(old.text)||',locked='||quote(old.locked)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
                             END;
+=======
+>>>>>>> 3507b01b (fix rebase)
 CREATE INDEX status_source_idx ON broadcasts (status, source)
                    ;
 CREATE INDEX status_source_index_idx ON broadcasts (status, source, tx_index)
@@ -1028,6 +883,7 @@ CREATE TABLE btcpays(
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 INSERT INTO btcpays VALUES(5,'843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099',310004,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',50000000,'6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c','valid');
+<<<<<<< HEAD
 -- Triggers and indices on  btcpays
 CREATE TRIGGER _btcpays_delete BEFORE DELETE ON btcpays BEGIN
                             INSERT INTO undolog VALUES(NULL, 'INSERT INTO btcpays(rowid,tx_index,tx_hash,block_index,source,destination,btc_amount,order_match_id,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.destination)||','||quote(old.btc_amount)||','||quote(old.order_match_id)||','||quote(old.status)||')');
@@ -1038,6 +894,8 @@ CREATE TRIGGER _btcpays_insert AFTER INSERT ON btcpays BEGIN
 CREATE TRIGGER _btcpays_update AFTER UPDATE ON btcpays BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE btcpays SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',destination='||quote(old.destination)||',btc_amount='||quote(old.btc_amount)||',order_match_id='||quote(old.order_match_id)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
                             END;
+=======
+>>>>>>> 3507b01b (fix rebase)
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1060,6 +918,7 @@ CREATE TABLE burns(
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 INSERT INTO burns VALUES(1,'6dc5b0a33d4d4297e0f5cc2d23ae307951d32aab2d86b7fa147b385219f3a597',310000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',62000000,93000000000,'valid');
 INSERT INTO burns VALUES(23,'c3f73d02e630cb2824f044e6d91f47b1ce351feff0339ea7b85652d24d8ff6bc',310022,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',38000000,56999887262,'valid');
+<<<<<<< HEAD
 -- Triggers and indices on  burns
 CREATE TRIGGER _burns_delete BEFORE DELETE ON burns BEGIN
                             INSERT INTO undolog VALUES(NULL, 'INSERT INTO burns(rowid,tx_index,tx_hash,block_index,source,burned,earned,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.burned)||','||quote(old.earned)||','||quote(old.status)||')');
@@ -1070,6 +929,8 @@ CREATE TRIGGER _burns_insert AFTER INSERT ON burns BEGIN
 CREATE TRIGGER _burns_update AFTER UPDATE ON burns BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE burns SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',burned='||quote(old.burned)||',earned='||quote(old.earned)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
                             END;
+=======
+>>>>>>> 3507b01b (fix rebase)
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1090,6 +951,7 @@ CREATE TABLE cancels(
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  cancels
+<<<<<<< HEAD
 CREATE TRIGGER _cancels_delete BEFORE DELETE ON cancels BEGIN
                             INSERT INTO undolog VALUES(NULL, 'INSERT INTO cancels(rowid,tx_index,tx_hash,block_index,source,offer_hash,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.offer_hash)||','||quote(old.status)||')');
                             END;
@@ -1099,6 +961,8 @@ CREATE TRIGGER _cancels_insert AFTER INSERT ON cancels BEGIN
 CREATE TRIGGER _cancels_update AFTER UPDATE ON cancels BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE cancels SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',offer_hash='||quote(old.offer_hash)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
                             END;
+=======
+>>>>>>> 3507b01b (fix rebase)
 CREATE INDEX cancels_block_index_idx ON cancels (block_index)
                    ;
 
@@ -1125,6 +989,7 @@ CREATE TABLE dividends(
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 INSERT INTO dividends VALUES(10,'42ae2fd7f3a18f84334bc37aa88283e79d6bff0b234dbf97e788695957d75518',310009,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB','XCP',600,20000,'valid');
 INSERT INTO dividends VALUES(11,'201123e1ddbc4dab954fed0043a29fca770a9bd4268714354bb7991f01133c10',310010,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC','XCP',800,20000,'valid');
+<<<<<<< HEAD
 -- Triggers and indices on  dividends
 CREATE TRIGGER _dividends_delete BEFORE DELETE ON dividends BEGIN
                             INSERT INTO undolog VALUES(NULL, 'INSERT INTO dividends(rowid,tx_index,tx_hash,block_index,source,asset,dividend_asset,quantity_per_unit,fee_paid,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.asset)||','||quote(old.dividend_asset)||','||quote(old.quantity_per_unit)||','||quote(old.fee_paid)||','||quote(old.status)||')');
@@ -1135,6 +1000,8 @@ CREATE TRIGGER _dividends_insert AFTER INSERT ON dividends BEGIN
 CREATE TRIGGER _dividends_update AFTER UPDATE ON dividends BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE dividends SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',asset='||quote(old.asset)||',dividend_asset='||quote(old.dividend_asset)||',quantity_per_unit='||quote(old.quantity_per_unit)||',fee_paid='||quote(old.fee_paid)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
                             END;
+=======
+>>>>>>> 3507b01b (fix rebase)
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1172,6 +1039,7 @@ CREATE TABLE "issuances"(
 INSERT INTO issuances VALUES(6,'5d951d44d034cb6fd5dc5c98cd877c63f55c1ae108d335b6b6d991d072856adf',0,310005,'BBBB',1000000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',50000000,0,'valid',NULL,0);
 INSERT INTO issuances VALUES(7,'2b44f590422a3ab5b70fb1265a2e4f4d3b0bcb3de3f296dc7280924870ec8c59',0,310006,'BBBC',100000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'foobar',50000000,0,'valid',NULL,0);
 -- Triggers and indices on  issuances
+<<<<<<< HEAD
 CREATE TRIGGER _issuances_delete BEFORE DELETE ON issuances BEGIN
                             INSERT INTO undolog VALUES(NULL, 'INSERT INTO issuances(rowid,tx_index,tx_hash,msg_index,block_index,asset,quantity,divisible,source,issuer,transfer,callable,call_date,call_price,description,fee_paid,locked,status,asset_longname,reset) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.msg_index)||','||quote(old.block_index)||','||quote(old.asset)||','||quote(old.quantity)||','||quote(old.divisible)||','||quote(old.source)||','||quote(old.issuer)||','||quote(old.transfer)||','||quote(old.callable)||','||quote(old.call_date)||','||quote(old.call_price)||','||quote(old.description)||','||quote(old.fee_paid)||','||quote(old.locked)||','||quote(old.status)||','||quote(old.asset_longname)||','||quote(old.reset)||')');
                             END;
@@ -1182,6 +1050,8 @@ CREATE TRIGGER _issuances_update AFTER UPDATE ON issuances BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE issuances SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',msg_index='||quote(old.msg_index)||',block_index='||quote(old.block_index)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||',divisible='||quote(old.divisible)||',source='||quote(old.source)||',issuer='||quote(old.issuer)||',transfer='||quote(old.transfer)||',callable='||quote(old.callable)||',call_date='||quote(old.call_date)||',call_price='||quote(old.call_price)||',description='||quote(old.description)||',fee_paid='||quote(old.fee_paid)||',locked='||quote(old.locked)||',status='||quote(old.status)||',asset_longname='||quote(old.asset_longname)||',reset='||quote(old.reset)||' WHERE rowid='||old.rowid);
                             END;
 CREATE INDEX status_asset_txindex_idx ON issuances(status, asset, tx_index DESC);
+=======
+>>>>>>> 3507b01b (fix rebase)
 CREATE INDEX valid_asset_idx ON issuances (asset, status)
                    ;
 
@@ -1213,6 +1083,7 @@ INSERT INTO sends VALUES(8,'5836fb23c2bb94eeb4b71cb8e3c622c6d943b3e4ed3aebee42d2
 INSERT INTO sends VALUES(9,'843e6f7712b7847099502bda8a4bd7127c17a2799290b91ef1584a6bfe069412',310008,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',526,'valid',0,NULL);
 INSERT INTO sends VALUES(24,'58b89d056b539d2cf9ddac4518ccca6744495127e0ce893eb71da2599cbf85ab',310023,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',10000,'valid',0,NULL);
 -- Triggers and indices on  sends
+<<<<<<< HEAD
 CREATE TRIGGER _sends_delete BEFORE DELETE ON sends BEGIN
                             INSERT INTO undolog VALUES(NULL, 'INSERT INTO sends(rowid,tx_index,tx_hash,block_index,source,destination,asset,quantity,status,msg_index,memo) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.destination)||','||quote(old.asset)||','||quote(old.quantity)||','||quote(old.status)||','||quote(old.msg_index)||','||quote(old.memo)||')');
                             END;
@@ -1222,6 +1093,8 @@ CREATE TRIGGER _sends_insert AFTER INSERT ON sends BEGIN
 CREATE TRIGGER _sends_update AFTER UPDATE ON sends BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE sends SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',destination='||quote(old.destination)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||',status='||quote(old.status)||',msg_index='||quote(old.msg_index)||',memo='||quote(old.memo)||' WHERE rowid='||old.rowid);
                             END;
+=======
+>>>>>>> 3507b01b (fix rebase)
 CREATE INDEX destination_idx ON sends (destination)
                    ;
 CREATE INDEX memo_idx ON sends (memo)
@@ -1246,6 +1119,7 @@ CREATE TABLE rps_match_expirations(
                       block_index INTEGER,
                       FOREIGN KEY (rps_match_id) REFERENCES rps_matches(id),
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index));
+<<<<<<< HEAD
 -- Triggers and indices on  rps_match_expirations
 CREATE TRIGGER _rps_match_expirations_delete BEFORE DELETE ON rps_match_expirations BEGIN
                             INSERT INTO undolog VALUES(NULL, 'INSERT INTO rps_match_expirations(rowid,rps_match_id,tx0_address,tx1_address,block_index) VALUES('||old.rowid||','||quote(old.rps_match_id)||','||quote(old.tx0_address)||','||quote(old.tx1_address)||','||quote(old.block_index)||')');
@@ -1256,6 +1130,8 @@ CREATE TRIGGER _rps_match_expirations_insert AFTER INSERT ON rps_match_expiratio
 CREATE TRIGGER _rps_match_expirations_update AFTER UPDATE ON rps_match_expirations BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE rps_match_expirations SET rps_match_id='||quote(old.rps_match_id)||',tx0_address='||quote(old.tx0_address)||',tx1_address='||quote(old.tx1_address)||',block_index='||quote(old.block_index)||' WHERE rowid='||old.rowid);
                             END;
+=======
+>>>>>>> 3507b01b (fix rebase)
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1289,8 +1165,23 @@ CREATE TABLE rpsresolves(
                       tx_index INTEGER PRIMARY KEY,
                       tx_hash TEXT UNIQUE,
                       block_index INTEGER,
-                      FOREIGN KEY (rps_match_id) REFERENCES rps_matches(id),
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index));
+                      source TEXT,
+                      move INTEGER,
+                      random TEXT,
+                      rps_match_id TEXT,
+                      status TEXT,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+-- Triggers and indices on  rpsresolves
+CREATE INDEX rps_match_id_idx ON rpsresolves (rps_match_id)
+                   ;
+
+COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=NONE;
+-- PRAGMA max_page_count=1073741823;
+
+BEGIN TRANSACTION;
 
 -- Table  rps_matches
 DROP TABLE IF EXISTS rps_matches;
@@ -1316,9 +1207,12 @@ CREATE TABLE rps_matches(
                       FOREIGN KEY (tx0_index, tx0_hash, tx0_block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                       FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  rps_matches
-CREATE INDEX rps_match_expire_idx ON rps_matches (status, match_expire_index);
-CREATE INDEX rps_tx0_address_idx ON rps_matches (tx0_address);
-CREATE INDEX rps_tx1_address_idx ON rps_matches (tx1_address);
+CREATE INDEX rps_match_expire_idx ON rps_matches (status, match_expire_index)
+                   ;
+CREATE INDEX rps_tx0_address_idx ON rps_matches (tx0_address)
+                   ;
+CREATE INDEX rps_tx1_address_idx ON rps_matches (tx1_address)
+                   ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1344,15 +1238,6 @@ CREATE TABLE rps(
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                       PRIMARY KEY (tx_index, tx_hash));
 -- Triggers and indices on  rps
-CREATE TRIGGER _rps_delete BEFORE DELETE ON rps BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO rps(rowid,tx_index,tx_hash,block_index,source,possible_moves,wager,move_random_hash,expiration,expire_index,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.possible_moves)||','||quote(old.wager)||','||quote(old.move_random_hash)||','||quote(old.expiration)||','||quote(old.expire_index)||','||quote(old.status)||')');
-                            END;
-CREATE TRIGGER _rps_insert AFTER INSERT ON rps BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM rps WHERE rowid='||new.rowid);
-                            END;
-CREATE TRIGGER _rps_update AFTER UPDATE ON rps BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'UPDATE rps SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',possible_moves='||quote(old.possible_moves)||',wager='||quote(old.wager)||',move_random_hash='||quote(old.move_random_hash)||',expiration='||quote(old.expiration)||',expire_index='||quote(old.expire_index)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
-                            END;
 CREATE INDEX matching_idx ON rps (wager, possible_moves)
                    ;
 
@@ -1376,32 +1261,61 @@ CREATE TABLE destructions(
                       tag TEXT,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
--- Triggers and indices on  rpsresolves
-CREATE INDEX rps_match_id_idx ON rpsresolves (rps_match_id);
+-- Triggers and indices on  destructions
+CREATE INDEX status_idx ON destructions (status)
+                   ;
 
--- Table  sends
-DROP TABLE IF EXISTS sends;
-CREATE TABLE "sends"(
-                              tx_index INTEGER,
-                              tx_hash TEXT,
-                              block_index INTEGER,
-                              source TEXT,
-                              destination TEXT,
-                              asset TEXT,
-                              quantity INTEGER,
-                              status TEXT,
-                              msg_index INTEGER DEFAULT 0, memo BLOB,
-                              PRIMARY KEY (tx_index, msg_index),
-                              FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                              UNIQUE (tx_hash, msg_index) ON CONFLICT FAIL);
-INSERT INTO sends VALUES(2,'3b273ba342ed8bd4ccd2ae28d3df7754768a6c65ec1cee4a6e84b4b4bdec8d8c',310001,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',50000000,'valid',0,NULL);
-INSERT INTO sends VALUES(8,'5836fb23c2bb94eeb4b71cb8e3c622c6d943b3e4ed3aebee42d240445e615db8',310007,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBB',4000000,'valid',0,NULL);
-INSERT INTO sends VALUES(9,'843e6f7712b7847099502bda8a4bd7127c17a2799290b91ef1584a6bfe069412',310008,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',526,'valid',0,NULL);
-INSERT INTO sends VALUES(24,'58b89d056b539d2cf9ddac4518ccca6744495127e0ce893eb71da2599cbf85ab',310023,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',10000,'valid',0,NULL);
--- Triggers and indices on  sends
-CREATE INDEX destination_idx ON sends (destination);
-CREATE INDEX memo_idx ON sends (memo);
-CREATE INDEX source_idx ON sends (source);
+COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=NONE;
+-- PRAGMA max_page_count=1073741823;
+
+BEGIN TRANSACTION;
+
+-- Table  assets
+DROP TABLE IF EXISTS assets;
+CREATE TABLE assets(
+                      asset_id TEXT UNIQUE,
+                      asset_name TEXT UNIQUE,
+                      block_index INTEGER,
+                      asset_longname TEXT);
+INSERT INTO assets VALUES('0','BTC',NULL,NULL);
+INSERT INTO assets VALUES('1','XCP',NULL,NULL);
+INSERT INTO assets VALUES('18279','BBBB',310005,NULL);
+INSERT INTO assets VALUES('18280','BBBC',310006,NULL);
+-- Triggers and indices on  assets
+CREATE UNIQUE INDEX asset_longname_idx ON assets(asset_longname);
+CREATE INDEX id_idx ON assets (asset_id)
+                   ;
+CREATE INDEX name_idx ON assets (asset_name)
+                   ;
+
+COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=NONE;
+-- PRAGMA max_page_count=1073741823;
+
+BEGIN TRANSACTION;
+
+-- Table  addresses
+DROP TABLE IF EXISTS addresses;
+CREATE TABLE addresses(
+                      address TEXT UNIQUE,
+                      options INTEGER,
+                      block_index INTEGER);
+-- Triggers and indices on  addresses
+CREATE INDEX addresses_idx ON addresses (address)
+                   ;
+
+COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=NONE;
+-- PRAGMA max_page_count=1073741823;
+
+BEGIN TRANSACTION;
 
 -- Table  sweeps
 DROP TABLE IF EXISTS sweeps;
@@ -1433,6 +1347,9 @@ CREATE TABLE dispensers(
                       block_index INTEGER,
                       source TEXT,
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 645fce36 (fix rebase)
                       asset TEXT,
                       give_quantity INTEGER,
                       escrow_quantity INTEGER,
@@ -1441,6 +1358,7 @@ CREATE TABLE dispensers(
                       give_remaining INTEGER, oracle_address TEXT, last_status_tx_hash TEXT, origin TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  dispensers
+<<<<<<< HEAD
 CREATE TRIGGER _dispensers_delete BEFORE DELETE ON dispensers BEGIN
                             INSERT INTO undolog VALUES(NULL, 'INSERT INTO dispensers(rowid,tx_index,tx_hash,block_index,source,asset,give_quantity,escrow_quantity,satoshirate,status,give_remaining,oracle_address,last_status_tx_hash,origin) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.asset)||','||quote(old.give_quantity)||','||quote(old.escrow_quantity)||','||quote(old.satoshirate)||','||quote(old.status)||','||quote(old.give_remaining)||','||quote(old.oracle_address)||','||quote(old.last_status_tx_hash)||','||quote(old.origin)||')');
                             END;
@@ -1470,6 +1388,12 @@ CREATE INDEX source_status_dix ON dispensers (source, status)
                    ;
 CREATE INDEX source_status_origin_idx ON dispensers (source, status, origin)
                    ;
+=======
+CREATE INDEX dispensers_asset_idx ON dispensers (asset)
+                   ;
+CREATE INDEX dispensers_source_idx ON dispensers (source)
+                   ;
+>>>>>>> 645fce36 (fix rebase)
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1493,6 +1417,7 @@ CREATE TABLE dispenses(
                       dispenser_tx_hash TEXT,
                       PRIMARY KEY (tx_index, dispense_index, source, destination),
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+<<<<<<< HEAD
 -- Triggers and indices on  dispenses
 CREATE TRIGGER _dispenses_delete BEFORE DELETE ON dispenses BEGIN
                             INSERT INTO undolog VALUES(NULL, 'INSERT INTO dispenses(rowid,tx_index,dispense_index,tx_hash,block_index,source,destination,asset,dispense_quantity,dispenser_tx_hash) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.dispense_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.destination)||','||quote(old.asset)||','||quote(old.dispense_quantity)||','||quote(old.dispenser_tx_hash)||')');
@@ -1507,6 +1432,8 @@ CREATE INDEX dispenses_block_index_idx ON dispenses (block_index)
                     ;
 CREATE INDEX dispenses_tx_hash_idx ON dispenses (tx_hash)
                     ;
+=======
+>>>>>>> 645fce36 (fix rebase)
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1529,6 +1456,7 @@ CREATE TABLE dispenser_refills(
                       dispenser_tx_hash TEXT,
                       PRIMARY KEY (tx_index, tx_hash, source, destination),
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+<<<<<<< HEAD
 -- Triggers and indices on  dispenser_refills
 CREATE TRIGGER _dispenser_refills_delete BEFORE DELETE ON dispenser_refills BEGIN
                             INSERT INTO undolog VALUES(NULL, 'INSERT INTO dispenser_refills(rowid,tx_index,tx_hash,block_index,source,destination,asset,dispense_quantity,dispenser_tx_hash) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.destination)||','||quote(old.asset)||','||quote(old.dispense_quantity)||','||quote(old.dispenser_tx_hash)||')');
@@ -1581,5 +1509,7 @@ CREATE INDEX index_index_idx ON transactions (block_index, tx_index);
 CREATE INDEX tx_hash_idx ON transactions (tx_hash);
 CREATE INDEX tx_index_idx ON transactions (tx_index);
 >>>>>>> e855f67b (remove undolog)
+=======
+>>>>>>> 645fce36 (fix rebase)
 
 COMMIT TRANSACTION;
