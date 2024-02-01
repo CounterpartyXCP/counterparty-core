@@ -57,7 +57,7 @@ class BlockchainParser():
         return tx_out
 
 
-    def read_transaction(self, vds):
+    def read_transaction(self, vds, use_txid=True):
         transaction = {}
         start_pos = vds.read_cursor
         transaction['version'] = vds.read_int32()
@@ -89,10 +89,14 @@ class BlockchainParser():
 
         transaction['lock_time'] = vds.read_uint32()
         data = vds.input[start_pos:vds.read_cursor]
-        hash_data = data
+
+        transaction['tx_hash'] = ib2h(double_hash(data))
         if transaction['segwit']:
             hash_data = data[:4] + data[6:offset_before_tx_witnesses] + data[-4:]
-        transaction['tx_hash'] = ib2h(double_hash(hash_data))
+            transaction['tx_id'] = ib2h(double_hash(hash_data))
+            if use_txid:
+                transaction['tx_hash'] = transaction['tx_id']
+
         transaction['__data__'] = b2h(data)
         return transaction
 
@@ -115,14 +119,14 @@ class BlockchainParser():
         block_header['__header__'] = b2h(header)
         return block_header
 
-    def read_block(self, vds, only_header=False):
+    def read_block(self, vds, only_header=False, use_txid=True):
         block = self.read_block_header(vds)
         if only_header:
             return block
         block['transaction_count'] = vds.read_compact_size()
         block['transactions'] = []
         for i in range(block['transaction_count']):
-            block['transactions'].append(self.read_transaction(vds))
+            block['transactions'].append(self.read_transaction(vds, use_txid=use_txid))
         return block
 
     def prepare_data_stream(self, file_num, pos_in_file):
@@ -137,7 +141,7 @@ class BlockchainParser():
         else:
             self.data_stream.seek_file(pos_in_file)
 
-    def read_raw_block(self, block_hash, only_header=False):
+    def read_raw_block(self, block_hash, only_header=False, use_txid=True):
         block_key = bytes('b', 'utf-8') + binascii.unhexlify(inverse_hash(block_hash))
         block_data = self.blocks_leveldb.get(block_key)
         ds = BCDataStream()
@@ -152,11 +156,11 @@ class BlockchainParser():
         block_undo_pos_in_file = ds.read_var_int()
         block_header = ds.read_bytes(80)
         self.prepare_data_stream(file_num, block_pos_in_file)
-        block = self.read_block(self.data_stream, only_header=only_header)
+        block = self.read_block(self.data_stream, only_header=only_header, use_txid=use_txid)
         block['block_index'] = height
         return block
 
-    def read_raw_transaction(self, tx_hash):
+    def read_raw_transaction(self, tx_hash, use_txid=True):
         tx_key = bytes('t', 'utf-8') + binascii.unhexlify(inverse_hash(tx_hash))
         tx_data = self.txindex_leveldb.get(tx_key)
  
@@ -170,7 +174,7 @@ class BlockchainParser():
         
         self.prepare_data_stream(file_num, tx_pos_in_file)
 
-        transaction = self.read_transaction(self.data_stream)
+        transaction = self.read_transaction(self.data_stream, use_txid=use_txid)
 
         return transaction
 

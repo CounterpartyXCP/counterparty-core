@@ -502,7 +502,7 @@ def get_tx_info(tx_hex, block_parser=None, block_index=None, db=None):
         # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
         if util.enabled('dispensers', block_index):
             try:
-                return b'', None, None, None, None, _get_swap_tx(e.decoded_tx, block_parser, block_index, db=db)
+                return b'', None, None, None, None, _get_swap_tx(e.decodedTx, block_parser, block_index, db=db)
             except: # (DecodeError, backend.indexd.BackendRPCError) as e:
                 return b'', None, None, None, None, None
         else:
@@ -1280,6 +1280,7 @@ def fetch_blocks(db, block_parser, last_known_hash):
 
 
 def kickstart(bitcoind_dir, force=False, last_hash=None, resume=True):
+    # determine bitoincore data directory
     if bitcoind_dir is None:
         if platform.system() == 'Darwin':
             bitcoind_dir = os.path.expanduser('~/Library/Application Support/Bitcoin/')
@@ -1359,7 +1360,7 @@ def kickstart(bitcoind_dir, force=False, last_hash=None, resume=True):
         for db_block in memory_cursor:
             start_time_block_parse = time.time()
             util.CURRENT_BLOCK_INDEX = db_block['block_index']
-            block = block_parser.read_raw_block(db_block['block_hash'])
+            block = block_parser.read_raw_block(db_block['block_hash'], use_txid=util.enabled("correct_segwit_txids"))
             with memory_db: # ensure all the block or nothing
                 # save transactions
                 for transaction in block['transactions']:
