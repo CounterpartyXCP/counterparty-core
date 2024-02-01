@@ -44,25 +44,26 @@ def rpc_call(payload):
         try:
             response = requests.post(url, data=json.dumps(payload), headers={'content-type': 'application/json'},
                 verify=(not config.BACKEND_SSL_NO_VERIFY), timeout=config.REQUESTS_TIMEOUT)
-            if i > 0:
-                logger.debug('Successfully connected.')
-            break
+
+            if response == None:
+                if config.TESTNET:
+                    network = 'testnet'
+                elif config.REGTEST:
+                    network = 'regtest'
+                else:
+                    network = 'mainnet'
+                raise BackendRPCError('Cannot communicate with backend at `{}`. (server is set to run on {}, is backend?)'.format(util.clean_url_for_log(url), network))
+            elif response.status_code in (401,):
+                raise BackendRPCError('Authorization error connecting to {}: {} {}'.format(util.clean_url_for_log(url), response.status_code, response.reason))
+            elif response.status_code not in (200, 500):
+                raise BackendRPCError(str(response.status_code) + ' ' + response.reason)
+
+            else:
+                break
+
         except (Timeout, ReadTimeout, ConnectionError):
             logger.debug('Could not connect to backend at `{}`. (Try {}/{})'.format(util.clean_url_for_log(url), i+1, TRIES))
             time.sleep(5)
-
-    if response == None:
-        if config.TESTNET:
-            network = 'testnet'
-        elif config.REGTEST:
-            network = 'regtest'
-        else:
-            network = 'mainnet'
-        raise BackendRPCError('Cannot communicate with backend at `{}`. (server is set to run on {}, is backend?)'.format(util.clean_url_for_log(url), network))
-    elif response.status_code in (401,):
-        raise BackendRPCError('Authorization error connecting to {}: {} {}'.format(util.clean_url_for_log(url), response.status_code, response.reason))
-    elif response.status_code not in (200, 500):
-        raise BackendRPCError(str(response.status_code) + ' ' + response.reason)
 
     # Handle json decode errors
     try:
@@ -346,11 +347,12 @@ class AddrIndexRsThread (threading.Thread):
 
                     except (socket.timeout, socket.error, ConnectionResetError) as e:
                         logger.debug('Error in connection to address indexer: {}. Trying again in {:d} seconds.'.format(e, backoff))
+                        has_sent = False    # TODO: Retry send?!
                         time.sleep(backoff)
                         backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
                     except Exception as e:
                         logger.exception('Unknown error when connecting to address indexer.')
-                        sys.exit(1)
+                        sys.exit(1) # TODO
                     finally:
                         self.locker.notify()
 
