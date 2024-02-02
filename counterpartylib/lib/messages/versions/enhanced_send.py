@@ -80,9 +80,9 @@ def validate (db, source, destination, asset, quantity, memo_bytes, block_index)
     if ledger.enabled('options_require_memo'):
         cursor = db.cursor()
         try:
-            results = cursor.execute('SELECT options FROM addresses WHERE address=?', (destination,))
+            results = ledger.get_addresses(db, address=destination)
             if results:
-                result = results.fetchone()
+                result = results[0]
                 if result and util.active_options(result['options'], config.ADDRESS_OPTION_REQUIRE_MEMO):
                     if memo_bytes is None or (len(memo_bytes) == 0):
                         problems.append('destination requires memo')

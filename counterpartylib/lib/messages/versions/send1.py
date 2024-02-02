@@ -55,9 +55,9 @@ def validate (db, source, destination, asset, quantity, block_index):
         # Check destination address options
 
         cursor = db.cursor()
-        results = cursor.execute('SELECT options FROM addresses WHERE address=?', (destination,))
+        results = ledger.get_addresses(db, address=destination)
         if results:
-            result = results.fetchone()
+            result = results[0]
             if result and util.active_options(result['options'], config.ADDRESS_OPTION_REQUIRE_MEMO):
                 problems.append('destination requires memo')
         cursor.close()

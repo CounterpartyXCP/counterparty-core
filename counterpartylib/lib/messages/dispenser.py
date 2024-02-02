@@ -188,22 +188,21 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
         if status == STATUS_OPEN_EMPTY_ADDRESS and not(open_address):
             open_address = source
             status = STATUS_OPEN
-        
-        
+
+        open_dispensers = []
         if ledger.enabled("dispenser_origin_permission_extended", block_index) and status == STATUS_CLOSED and open_address and open_address != source:
-            cursor.execute('''SELECT * FROM dispensers WHERE source = ? AND asset = ? AND status IN (0,11) AND origin=?''', (open_address, asset, source))
+            open_dispensers = ledger.get_dispensers(db, status_in=[0, 11], source=open_address, asset=asset, origin=source)
         else:
             query_address = open_address if status == STATUS_OPEN_EMPTY_ADDRESS else source
-            cursor.execute('''SELECT * FROM dispensers WHERE source = ? AND asset = ? AND status IN (0,11)''', (query_address, asset))
-        open_dispensers = cursor.fetchall()
+            open_dispensers = ledger.get_dispensers(db, status_in=[0, 11], source=query_address, asset=asset)
+
         if len(open_dispensers) == 0 or open_dispensers[0]["status"] != STATUS_CLOSING:
             if status == STATUS_OPEN or status == STATUS_OPEN_EMPTY_ADDRESS:
                 if len(open_dispensers) > 0:
                     max_refills = ledger.get_value_by_block_index("max_refills", block_index)
                     refilling_count = 0                
                     if max_refills > 0:
-                        cursor.execute('''SELECT count(*) cnt FROM dispenser_refills WHERE dispenser_tx_hash = ?''', (open_dispensers[0]["tx_hash"],))
-                        refilling_count = cursor.fetchall()[0]['cnt']
+                        refilling_count = ledger.get_refilling_count(db, dispenser_tx_hash=open_dispensers[0]["tx_hash"])
             
                     #It's a valid refill
                     if open_dispensers[0]['satoshirate'] == mainchainrate and open_dispensers[0]['give_quantity'] == give_quantity:
@@ -221,13 +220,14 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
             if status == STATUS_OPEN_EMPTY_ADDRESS:
                 #If an address is trying to refill a dispenser in a different address and it's the creator
                 if not (ledger.enabled("dispenser_origin_permission_extended", block_index) and (len(open_dispensers) > 0) and (open_dispensers[0]["origin"] == source)):
-                    cursor.execute('''SELECT count(*) cnt FROM dispensers WHERE source = ? AND status = ? AND origin = ?''', (query_address,STATUS_CLOSED,source))
-                    dispensers_from_same_origin = cursor.fetchall()
+                    dispensers_from_same_origin_count = ledger.get_dispensers_count(db,
+                                                                                    source=query_address,
+                                                                                    status=STATUS_CLOSED,
+                                                                                    origin=source)
                     
-                    if not (ledger.enabled("dispenser_origin_permission_extended", block_index) and dispensers_from_same_origin[0]['cnt'] > 0):
+                    if not (ledger.enabled("dispenser_origin_permission_extended", block_index) and dispensers_from_same_origin_count > 0):
                     #It means that the same origin has not opened other dispensers in this address
-                        cursor.execute('''SELECT count(*) cnt FROM balances WHERE address = ?''', (query_address,))
-                        existing_balances = cursor.fetchall()
+                        existing_balances = ledger.get_balances_count(db, query_address)
 
                         if existing_balances[0]['cnt'] > 0:
                             problems.append('cannot open on another address if it has any balance history')
@@ -324,12 +324,7 @@ def parse (db, tx, message):
             status = 'invalid: ' + '; '.join(problems)
         else:   
             if dispenser_status == STATUS_OPEN or dispenser_status == STATUS_OPEN_EMPTY_ADDRESS:
-                cursor.execute('SELECT * FROM dispensers WHERE source=:source AND asset=:asset AND status=:status', {
-                    'source': action_address,
-                    'asset': asset,
-                    'status': STATUS_OPEN
-                })
-                existing = cursor.fetchall()
+                existing = ledger.get_dispensers(db, source=action_address, asset=asset, status=STATUS_OPEN)
 
                 if len(existing) == 0:
                     if (oracle_address != None) and ledger.enabled('oracle_dispensers', tx['block_index']):
@@ -345,9 +340,7 @@ def parse (db, tx, message):
                         try:
                             if dispenser_status == STATUS_OPEN_EMPTY_ADDRESS:
                                 is_empty_address = True
-                                address_assets = cursor.execute('SELECT DISTINCT asset FROM balances WHERE address=:address GROUP BY asset', {
-                                    'address': action_address
-                                }).fetchall()
+                                address_assets = ledger.get_address_assets(db, action_address)
                                 if len(address_assets) > 0:
                                     for asset_name in address_assets:
                                         asset_balance = ledger.get_balance(db, action_address, asset_name['asset'])
@@ -409,23 +402,34 @@ def parse (db, tx, message):
                                 'action':'refill dispenser',
                                 'escrow_quantity':escrow_quantity
                             }
-                            bindings_refill = {
-                                'tx_index':tx["tx_index"],
-                                'tx_hash':tx["tx_hash"],
-                                'block_index':tx["block_index"],
-                                'source': tx['source'],
-                                'destination': action_address,
-                                'asset': asset,
-                                'dispenser_quantity': escrow_quantity,
-                                'status': STATUS_OPEN
-                            }
+                            
                             
                             try:
                                 ledger.debit(db, tx['source'], asset, escrow_quantity, tx['tx_index'], action='refill dispenser', event=tx['tx_hash'])
                                 sql = 'UPDATE dispensers SET give_remaining=:give_remaining \
                                     WHERE source=:source AND asset=:asset AND status=:status'
                                 cursor.execute(sql, bindings)
-                                sql = "INSERT INTO dispenser_refills VALUES(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :dispenser_quantity, (SELECT tx_hash FROM dispensers WHERE source=:destination AND asset=:asset AND status=:status))"
+
+                                dispenser_tx_hash = ledger.get_dispensers(db, source=action_address, asset=asset, status=STATUS_OPEN)[0]["tx_hash"]
+                                bindings_refill = {
+                                    'tx_index':tx["tx_index"],
+                                    'tx_hash':tx["tx_hash"],
+                                    'block_index':tx["block_index"],
+                                    'source': tx['source'],
+                                    'dispenser_quantity': escrow_quantity,
+                                    'dispenser_tx_hash': dispenser_tx_hash
+                                }
+                                sql = '''INSERT INTO dispenser_refills 
+                                         VALUES (
+                                            :tx_index, 
+                                            :tx_hash, 
+                                            :block_index, 
+                                            :source, 
+                                            :destination, 
+                                            :asset, 
+                                            :dispenser_quantity, 
+                                            :dispenser_tx_hash
+                                         )'''
                                 cursor.execute(sql, bindings_refill)
                             except (ledger.DebitError):
                                 status = 'insufficient funds'
@@ -436,20 +440,19 @@ def parse (db, tx, message):
             elif dispenser_status == STATUS_CLOSED:
                 close_delay = ledger.get_value_by_block_index("dispenser_close_delay", tx['block_index'])
                 close_from_another_address = ledger.enabled("dispenser_origin_permission_extended", tx['block_index']) and action_address and action_address != tx["source"]
-                query_dispenser = 'SELECT tx_index, give_remaining FROM dispensers WHERE source=:source AND asset=:asset AND status=:status'
-                query_bindings = {
-                    'source': tx['source'],
-                    'asset': asset,
-                    'status': STATUS_OPEN
-                }
-                
+
+                existing = []
                 if close_from_another_address:
-                    query_dispenser = query_dispenser + " AND origin=:origin"
-                    query_bindings["origin"] = tx["source"]
-                    query_bindings["source"] = action_address
-            
-                cursor.execute(query_dispenser, query_bindings)
-                existing = cursor.fetchall()
+                    existing = ledger.get_dispensers(db, 
+                                                     source=action_address, 
+                                                     asset=asset, 
+                                                     status=STATUS_OPEN, 
+                                                     origin=tx["source"])
+                else:
+                    existing = ledger.get_dispensers(db, 
+                                                     source=tx['source'], 
+                                                     asset=asset, 
+                                                     status=STATUS_OPEN)
 
                 if len(existing) == 1:
                     if close_delay == 0:
@@ -492,13 +495,7 @@ def parse (db, tx, message):
     cursor.close()
 
 def is_dispensable(db, address, amount):
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM dispensers WHERE source=:source AND status IN (0,11)', {
-        'source': address,
-        #'status': [STATUS_OPEN, STATUS_CLOSING]
-    })
-    dispensers = cursor.fetchall()
-    cursor.close()
+    dispensers = ledger.get_dispensers(db, source=address, status_in=[0, 11])
 
     for next_dispenser in dispensers:
         if next_dispenser["oracle_address"] != None:
@@ -517,24 +514,19 @@ def dispense(db, tx):
 
     outs = []
     if ledger.enabled("multiple_dispenses"):
-        cursor.execute('SELECT txs.source AS source, txs_outs.* FROM transaction_outputs txs_outs LEFT JOIN transactions txs ON txs.tx_hash = txs_outs.tx_hash WHERE txs_outs.tx_hash=:tx_hash ORDER BY txs_outs.out_index', {
-            'tx_hash': tx['tx_hash']
-        })
-        outs = cursor.fetchall()
+        outs = ledger.get_vouts(db, tx['tx_hash'])
     else:
         outs = [tx]
 
     #if len(outs) == 0:
     #    outs = [tx]
+    # or
+    # assert len(outs) > 0 ?
 
     dispense_index = 0
 
     for next_out in outs:
-        cursor.execute('SELECT * FROM dispensers WHERE source=:source AND status IN (0,11) ORDER BY asset', {
-            'source': next_out['destination'],
-            #'status': [STATUS_OPEN, STATUS_CLOSING]
-        })
-        dispensers = cursor.fetchall()
+        dispensers = ledger.get_dispensers(db, source=next_out['destination'], status_in=[0, 11])
 
         for dispenser in dispensers:
             satoshirate = dispenser['satoshirate']
@@ -565,19 +557,13 @@ def dispense(db, tx):
                 max_dispenser_limit_hit = False
 
                 if max_dispenses_limit > 0:
-                    sql = 'SELECT MAX(block_index) AS max_block_index FROM dispenser_refills WHERE dispenser_tx_hash = :dispenser_tx_hash'
-                    cursor.execute(sql, {'dispenser_tx_hash': dispenser['tx_hash']})
-                    max_block_index_result = cursor.fetchall()
+                    max_block_index_result = ledger.get_last_refills_block_index(db, dispenser['tx_hash'])
                     from_block_index = 1
-
                     if len(max_block_index_result) > 0:
                         if max_block_index_result[0]["max_block_index"] is not None:
                             from_block_index = max_block_index_result[0]["max_block_index"]
 
-                    sql = 'SELECT COUNT(*) AS dispenses_count FROM dispenses WHERE dispenser_tx_hash = :dispenser_tx_hash AND block_index >= :block_index'
-                    cursor.execute(sql, {'dispenser_tx_hash': dispenser['tx_hash'], 'block_index': from_block_index})
-                    dispenses_count_result = cursor.fetchall()[0]
-                    dispenses_count = dispenses_count_result["dispenses_count"]
+                    dispenses_count = ledger.get_dispenses_count(db, dispenser['tx_hash'], from_block_index)
                     
                     if dispenses_count+1 >= max_dispenses_limit:
                         max_dispenser_limit_hit = True
@@ -628,12 +614,7 @@ def close_pending(db, block_index):
     block_delay = ledger.get_value_by_block_index("dispenser_close_delay", block_index)
 
     if block_delay > 0:
-        cursor.execute('SELECT d.*, t.source AS tx_source, t.block_index AS tx_block_index FROM dispensers d LEFT JOIN transactions t ON t.tx_hash = d.last_status_tx_hash WHERE status=:status AND last_status_tx_hash IS NOT NULL AND :block_index>=t.block_index+:delay', {
-            'status': STATUS_CLOSING,
-            'delay': block_delay,
-            'block_index': block_index
-        })
-        pending_dispensers = cursor.fetchall()
+        pending_dispensers = ledger.get_pending_dispensers(db, status=STATUS_CLOSING, delay=block_delay, block_index=block_index)
 
         for dispenser in pending_dispensers:
             # use tx_index=0 for block actions

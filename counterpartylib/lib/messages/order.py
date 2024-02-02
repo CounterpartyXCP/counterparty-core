@@ -304,12 +304,8 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
     # Re‐match.
     if block_index >= 310000 or config.TESTNET or config.REGTEST: # Protocol change.
         if not (block_index >= 315000 or config.TESTNET or config.REGTEST):   # Protocol change.
-            cursor.execute('''SELECT * FROM transactions\
-                              WHERE tx_hash = ?''', (tx0_order['tx_hash'],))
-            match(db, list(cursor)[0], block_index)
-            cursor.execute('''SELECT * FROM transactions\
-                              WHERE tx_hash = ?''', (tx1_order['tx_hash'],))
-            match(db, list(cursor)[0], block_index)
+            match(db, ledger.get_transactions(db, tx_hash=tx0_order['tx_hash'])[0], block_index)
+            match(db, ledger.get_transactions(db, tx_hash=tx1_order['tx_hash'])[0], block_index)
 
     if status == 'expired':
         # Record order match expiration.
