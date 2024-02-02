@@ -13,6 +13,7 @@ import collections
 import binascii
 import hashlib
 import signal
+import functools
 import bitcoin.wallet
 from pkg_resources import parse_version
 
@@ -162,7 +163,9 @@ def getblockhash(blockcount):
 def getblock(block_hash):
     return rpc('getblock', [block_hash, False])
 
+@functools.lru_cache
 def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
+    logger.warning('Cache miss on transaction {}!'.format(tx_hash))
     return getrawtransaction_batch([tx_hash], verbose=verbose, skip_missing=skip_missing)[tx_hash]
 
 def getrawmempool():

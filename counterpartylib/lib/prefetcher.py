@@ -39,8 +39,6 @@ class Prefetcher(threading.Thread):
                 time.sleep(10)
                 continue
 
-            BLOCKCHAIN_CACHE[self.fetch_block_index] = None
-
             logger.debug('Fetching block {} with Prefetcher thread {}.'.format(self.fetch_block_index, self.thread_index))
             block_hash = backend.getblockhash(self.fetch_block_index)
             block = backend.getblock(block_hash)
@@ -61,7 +59,7 @@ def start_all(num_prefetcher_threads):
         thread_first_block = block_first + thread_index - 1
         prefetcher_thread = Prefetcher(thread_index, num_prefetcher_threads, thread_first_block)
         prefetcher_thread.daemon = True
-        time.sleep(0.1) # avoid DOS
+        time.sleep(0.05) # avoid DOS
         prefetcher_thread.start()
         PREFETCHER_THREADS.append(prefetcher_thread)
 
