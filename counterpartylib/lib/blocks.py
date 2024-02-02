@@ -1145,12 +1145,12 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
     assert type(tx_hash) == str
     cursor = db.cursor()
 
-    # TODO: I Think this is supposed to be a performance optimization but it makes parsing 40% slower.
     # Edge case: confirmed tx_hash also in mempool
-    # cursor.execute('''SELECT * FROM transactions WHERE tx_hash = ?''', (tx_hash,))
-    # transactions = list(cursor)
-    # if transactions:
-    #     return tx_index
+    # TODO: This is dog-slow.
+    cursor.execute('''SELECT * FROM transactions WHERE tx_hash = ?''', (tx_hash,))
+    transactions = list(cursor)
+    if transactions:
+        return tx_index
 
     # Get the important details about each transaction.
     if tx_hex is None:
