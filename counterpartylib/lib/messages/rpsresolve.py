@@ -54,9 +54,7 @@ def validate (db, source, move, random, rps_match_id):
         problems.append('random must be 16 bytes in hexadecimal format')
         return None, None, problems
 
-    cursor = db.cursor()
-    rps_matches = list(cursor.execute('''SELECT * FROM rps_matches WHERE id = ?''', (rps_match_id,)))
-    cursor.close()
+    rps_matches = ledger.get_rps_matches(db, id=rps_match_id)
     if len(rps_matches) == 0:
         problems.append('no such rps match')
         return None, rps_match, problems
@@ -159,8 +157,7 @@ def parse (db, tx, message):
         if rps_match_status == 'concluded':
             counter_txn = 0 if txn == 1 else 1
             counter_source = rps_match['tx{}_address'.format(counter_txn)]
-            sql = '''SELECT * FROM rpsresolves WHERE rps_match_id = ? AND source = ? AND status = ?'''
-            counter_games = list(cursor.execute(sql, (rps_match_id, counter_source, 'valid')))
+            counter_games = ledger.get_rpsresolves(db, source=counter_source, status='valid', rps_match_id=rps_match_id)
             assert len(counter_games) == 1
             counter_game = counter_games[0]
 

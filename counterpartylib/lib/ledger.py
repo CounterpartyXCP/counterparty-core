@@ -369,6 +369,26 @@ def get_address_balances(db, address):
     return cursor.fetchall()
 
 
+def get_balances_count(db, address):
+    cursor = db.cursor()
+    cursor.execute('SELECT DISTINCT asset FROM balances WHERE address=:address GROUP BY asset', {
+        'address': address
+    })
+    return len(cursor.fetchall())
+
+
+def get_issuances_count(db, address):
+    cursor = db.cursor()
+    cursor.execute('''SELECT COUNT(DISTINCT(asset)) cnt FROM issuances WHERE issuer = ?''', (address, ))
+    return cursor.fetchall()[0]['cnt']
+
+
+def get_asset_issued(db, address):
+    cursor = db.cursor()
+    cursor.execute('''SELECT DISTINCT(asset) FROM issuances WHERE issuer = ?''', (address,))
+    return cursor.fetchall()
+
+
 # TODO: try to that with one SQL query
 def get_asset_balances(db, asset):
     cursor = db.cursor()
@@ -525,7 +545,7 @@ def find_bad_order_matches(db, tx0_address, forward_asset, tx1_address, backward
     return cursor.fetchall()
 
 
-def get_order_matches(db, id=None, status=None):
+def get_order_matches(db, id=None, status=None, match_expire_index=None):
     cursor = db.cursor()
     where = []
     bindings = []
@@ -535,12 +555,23 @@ def get_order_matches(db, id=None, status=None):
     if status is not None:
         where.append('status = ?')
         bindings.append(status)
+    if match_expire_index is not None:
+        where.append('match_expire_index < ?')
+        bindings.append(match_expire_index)
     query = f'''SELECT * FROM order_matches WHERE ({" AND ".join(where)})'''
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
 
-def get_orders(db, tx_hash=None, source=None, give_asset=None, get_asset=None, status=None, tx_index=None, no_tx_hash=None):
+def get_orders(db,
+               tx_hash=None,
+               source=None,
+               give_asset=None,
+               get_asset=None,
+               status=None,
+               tx_index=None,
+               no_tx_hash=None,
+               expire_index=None):
     cursor = db.cursor()
     where = []
     bindings = []
@@ -565,21 +596,105 @@ def get_orders(db, tx_hash=None, source=None, give_asset=None, get_asset=None, s
     if tx_index is not None:
         where.append('tx_index = ?')
         bindings.append(tx_index)
+    if expire_index is not None:
+        where.append('expire_index < ?')
+        bindings.append(expire_index)
     query = f'''SELECT * FROM orders WHERE ({" AND ".join(where)})'''
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
 
-def get_rps(db, tx_hash=None):
+def get_rps(db, tx_hash=None, tx_index=None, tx_status=None, expire_index=None, status=None):
     cursor = db.cursor()
     where = []
     bindings = []
     if tx_hash is not None:
         where.append('tx_hash = ?')
         bindings.append(tx_hash)
+    if tx_index is not None:
+        where.append('tx_index = ?')
+        bindings.append(tx_index)
+    if tx_status is not None:
+        where.append('tx_status = ?')
+        bindings.append(tx_status)
+    if status is not None:
+        where.append('status = ?')
+        bindings.append(status)
+    if expire_index is not None:
+        where.append('expire_index < ?')
+        bindings.append(expire_index)
     query = f'''SELECT * FROM rps WHERE ({" AND ".join(where)})'''
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
+
+
+def find_matched_rps(db, tx0_hash, tx1_hash, expire_index):
+    cursor = db.cursor()
+    sql = '''SELECT * FROM rps WHERE tx_hash IN (?, ?) AND status = ? AND expire_index >= ?'''
+    bindings = (tx0_hash, tx1_hash, 'matched', expire_index)
+    cursor.execute(sql, bindings)
+    return cursor.fetchall()
+
+def find_rps_matches(db, possible_moves, wager, source, already_matched):
+    cursor = db.cursor()
+    bindings = (possible_moves, 'open', wager, source)
+    already_matched_cond = ''
+    if already_matched:
+        already_matched_cond = '''AND tx_hash NOT IN ({})'''.format(','.join(['?' for e in range(0, len(already_matched))]))
+        bindings += tuple(already_matched)
+    sql = '''SELECT * FROM rps WHERE (possible_moves = ? AND status = ? AND wager = ? AND source != ? {}) ORDER BY tx_index LIMIT 1'''.format(already_matched_cond)
+    cursor.execute(sql, bindings)
+    return cursor.fetchall()
+
+
+def get_rps_matches(db, id=None, status=None, match_expire_index=None, tx0_hash=None, tx1_hash=None, where_op='AND'):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if id is not None:
+        where.append('id = ?')
+        bindings.append(id)
+    if status is not None:
+        where.append('status = ?')
+        bindings.append(status)
+    if match_expire_index is not None:
+        where.append('match_expire_index < ?')
+        bindings.append(match_expire_index)
+    if tx0_hash is not None:
+        where.append('tx0_hash = ?')
+        bindings.append(tx0_hash)
+    if tx1_hash is not None:
+        where.append('tx1_hash = ?')
+        bindings.append(tx1_hash)
+    query = f'''SELECT * FROM rps_matches WHERE ({f" {where_op} ".join(where)})'''
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+
+def find_expired_rps_matches(db, block_index):
+    cursor = db.cursor()
+    expire_bindings = ('pending', 'pending and resolved', 'resolved and pending', block_index)
+    cursor.execute('''SELECT * FROM rps_matches WHERE (status IN (?, ?, ?) AND match_expire_index < ?)''', expire_bindings)
+    return cursor.fetchall()
+
+
+def get_rpsresolves(db, source=None, status=None, rps_match_id=None):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if source is not None:
+        where.append('source = ?')
+        bindings.append(source)
+    if status is not None:
+        where.append('status = ?')
+        bindings.append(status)
+    if rps_match_id is not None:
+        where.append('rps_match_id = ?')
+        bindings.append(rps_match_id)
+    query = f'''SELECT * FROM rpsresolves WHERE ({" AND ".join(where)})'''
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
 
 def get_burns(db, status=None, source=None):
     cursor = db.cursor()

@@ -284,7 +284,7 @@ def match (db, tx, block_index):
     cursor = db.cursor()
 
     # Get rps in question.
-    rps = list(cursor.execute('''SELECT * FROM rps WHERE tx_index = ? AND status = ?''', (tx['tx_index'], 'open')))
+    rps = ledger.get_rps(db, tx_index=tx['tx_index'], tx_status='open')
     if not rps:
         cursor.close()
         return
@@ -296,20 +296,14 @@ def match (db, tx, block_index):
     tx1_status = 'open'
 
     # Get rps match
-    bindings = (possible_moves, 'open', wager, tx1['source'])
     # dont match twice same RPS
     already_matched = []
-    old_rps_matches = cursor.execute('''SELECT * FROM rps_matches WHERE tx0_hash = ? OR tx1_hash = ?''', (tx1['tx_hash'], tx1['tx_hash']))
+    old_rps_matches = ledger.get_rps_matches(db, tx0_hash=tx1['tx_hash'], tx1_hash=tx1['tx_hash'], where_op="OR")
     for old_rps_match in old_rps_matches:
         counter_tx_hash = old_rps_match['tx1_hash'] if tx1['tx_hash'] == old_rps_match['tx0_hash'] else old_rps_match['tx0_hash']
         already_matched.append(counter_tx_hash)
-    already_matched_cond = ''
-    if already_matched:
-        already_matched_cond = '''AND tx_hash NOT IN ({})'''.format(','.join(['?' for e in range(0, len(already_matched))]))
-        bindings += tuple(already_matched)
 
-    sql = '''SELECT * FROM rps WHERE (possible_moves = ? AND status = ? AND wager = ? AND source != ? {}) ORDER BY tx_index LIMIT 1'''.format(already_matched_cond)
-    rps_matches = list(cursor.execute(sql, bindings))
+    rps_matches = ledger.find_rps_matches(db, possible_moves, wager, tx1['source'], already_matched)
 
     if rps_matches:
         tx0 = rps_matches[0]
@@ -355,8 +349,7 @@ def expire (db, block_index):
     cursor = db.cursor()
 
     # Expire rps and give refunds for the quantity wager.
-    cursor.execute('''SELECT * FROM rps WHERE (status = ? AND expire_index < ?)''', ('open', block_index))
-    for rps in cursor.fetchall():
+    for rps in ledger.get_orders(db, status='open', expire_index=block_index):
         # use tx_index=0 for block actions
         cancel_rps(db, rps, 'expired', block_index, 0)
 
@@ -371,9 +364,7 @@ def expire (db, block_index):
         cursor.execute(sql, bindings)
 
     # Expire rps matches
-    expire_bindings = ('pending', 'pending and resolved', 'resolved and pending', block_index)
-    cursor.execute('''SELECT * FROM rps_matches WHERE (status IN (?, ?, ?) AND match_expire_index < ?)''', expire_bindings)
-    for rps_match in cursor.fetchall():
+    for rps_match in ledger.find_expired_rps_matches(db, block_index):
 
         new_rps_match_status = 'expired'
         # pending loses against resolved
@@ -396,9 +387,7 @@ def expire (db, block_index):
 
         # Rematch not expired and not resolved RPS
         if new_rps_match_status == 'expired':
-            sql = '''SELECT * FROM rps WHERE tx_hash IN (?, ?) AND status = ? AND expire_index >= ?'''
-            bindings = (rps_match['tx0_hash'], rps_match['tx1_hash'], 'matched', block_index)
-            matched_rps = list(cursor.execute(sql, bindings))
+            matched_rps = ledger.find_matched_rps(db, rps_match['tx0_hash'], rps_match['tx1_hash'], expire_index=block_index)
             for rps in matched_rps:
                 cursor.execute('''UPDATE rps SET status = ? WHERE tx_index = ?''', ('open', rps['tx_index']))
                 # Re-debit XCP refund by close_rps_match.

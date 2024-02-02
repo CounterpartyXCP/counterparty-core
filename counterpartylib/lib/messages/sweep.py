@@ -65,13 +65,8 @@ def validate (db, source, destination, flags, memo, block_index):
     total_fee = ANTISPAM_FEE
 
     if antispamfee > 0:
-        address_assets = cursor.execute('SELECT DISTINCT asset FROM balances WHERE address=:address GROUP BY asset', {
-            'address': source
-        }).fetchall()
-        balances_count = len(address_assets)
-
-        cursor.execute('''SELECT COUNT(DISTINCT(asset)) cnt FROM issuances WHERE issuer = ?''', (source, ))
-        issuances_count = cursor.fetchall()[0]['cnt']
+        balances_count = ledger.get_balances_count(db, source)
+        issuances_count = ledger.get_issuances_count(db, source)
 
         total_fee = int(balances_count * antispamfee * 2 + issuances_count * antispamfee * 4)
         
@@ -189,17 +184,13 @@ def parse (db, tx, message):
 
         if flags & FLAG_OWNERSHIP:
             sweep_pos = 0
-            
+
             assets_issued = balances
             if ledger.enabled("zero_balance_ownership_sweep_fix", tx["block_index"]):
-                cursor.execute('''SELECT DISTINCT(asset) FROM issuances WHERE issuer = ?''', (tx['source'],))
-                assets_issued = cursor.fetchall()
-                
+                assets_issued = ledger.get_asset_issued(db, tx['source'])
+
             for next_asset_issued in assets_issued:
-                cursor.execute('''SELECT * FROM issuances \
-                                  WHERE (status = ? AND asset = ?)
-                                  ORDER BY tx_index ASC''', ('valid', next_asset_issued['asset']))
-                issuances = cursor.fetchall()
+                issuances =ledger.get_issuances(db, asset=next_asset_issued['asset'], status='valid', first=True)
                 if len(issuances) > 0:
                     last_issuance = issuances[-1]
                     if last_issuance['issuer'] == tx['source']:

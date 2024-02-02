@@ -517,14 +517,10 @@ def match (db, tx, block_index=None):
         tx0_get_remaining = tx0['get_remaining']
 
         # Ignore previous matches. (Both directions, just to be sure.)
-        cursor.execute('''SELECT * FROM order_matches
-                          WHERE id = ? ''', (util.make_id(tx0['tx_hash'], tx1['tx_hash']), ))
-        if list(cursor):
+        if ledger.get_order_matches(db, id=util.make_id(tx0['tx_hash'], tx1['tx_hash'])):
             logger.debug('Skipping: previous match')
             continue
-        cursor.execute('''SELECT * FROM order_matches
-                          WHERE id = ? ''', (util.make_id(tx1['tx_hash'], tx0['tx_hash']), ))
-        if list(cursor):
+        if ledger.get_order_matches(db, id=util.make_id(tx1['tx_hash'], tx0['tx_hash'])):
             logger.debug('Skipping: previous match')
             continue
 
@@ -730,51 +726,30 @@ def expire (db, block_index):
     cursor = db.cursor()
 
     # Expire orders and give refunds for the quantity give_remaining (if non-zero; if not BTC).
-    cursor.execute('''SELECT * FROM orders \
-                      WHERE (status = ? AND expire_index < ?)''', ('open', block_index))
-    orders = list(cursor)
+    orders = ledger.get_orders(db, status='open', expire_index=block_index)
     for order in orders:
         cancel_order(db, order, 'expired', block_index, 0)
 
     # Expire order_matches for BTC with no BTC.
-    cursor.execute('''SELECT * FROM order_matches \
-                      WHERE (status = ? and match_expire_index < ?)''', ('pending', block_index))
-    order_matches = list(cursor)
+    order_matches = ledger.get_order_matches(db, status='pending', match_expire_index=block_index)
     for order_match in order_matches:
         cancel_order_match(db, order_match, 'expired', block_index, 0)
 
         # Expire btc sell order if match expires
         if ledger.enabled('btc_sell_expire_on_match_expire'):
             # Check for other pending order matches involving either tx0_hash or tx1_hash
-            bindings = {
-                'status': 'pending',
-                'tx0_hash': order_match['tx0_hash'],
-                'tx1_hash': order_match['tx1_hash']
-            }
-            sql='select * from order_matches where status = :status and ((tx0_hash in (:tx0_hash, :tx1_hash)) or ((tx1_hash in (:tx0_hash, :tx1_hash))))'
-            cursor.execute(sql, bindings)
-            order_matches_pending = cursor.fetchall()
+            order_matches_pending = ledger.find_order_matches(db, tx0_hash=order_match['tx0_hash'], tx1_hash=order_match['tx1_hash'])
             # Set BTC sell order status as expired only if there are no pending order matches
             if len(order_matches_pending) == 0:
                 if order_match['backward_asset'] == "BTC" and order_match['status'] == "expired":
-                    cursor.execute('''SELECT * FROM orders \
-                                      WHERE tx_hash = ?''', (order_match['tx1_hash'],))
-                    cancel_order(db, list(cursor)[0], 'expired', block_index)
+                    cancel_order(db, ledger.get_orders(db, tx_hash=order_match['tx1_hash'])[0], 'expired', block_index)
                 if order_match['forward_asset'] == "BTC" and order_match['status'] == "expired":
-                    cursor.execute('''SELECT * FROM orders \
-                                      WHERE tx_hash = ?''', (order_match['tx0_hash'],))
-                    cancel_order(db, list(cursor)[0], 'expired', block_index)
+                    cancel_order(db, ledger.get_orders(db, tx_hash=order_match['tx0_hash'])[0], 'expired', block_index)
 
     if block_index >= 315000 or config.TESTNET or config.REGTEST: # Protocol change.
         # Re‐match.
         for order_match in order_matches:
-            cursor.execute('''SELECT * FROM transactions\
-                              WHERE tx_hash = ?''', (order_match['tx0_hash'],))
-            match(db, list(cursor)[0], block_index)
-            cursor.execute('''SELECT * FROM transactions\
-                              WHERE tx_hash = ?''', (order_match['tx1_hash'],))
-            match(db, list(cursor)[0], block_index)
+            match(db, ledger.get_orders(db, tx_hash=order_match['tx0_hash'])[0], block_index)
+            match(db, ledger.get_orders(db, tx_hash=order_match['tx1_hash'])[0], block_index)
 
     cursor.close()
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
