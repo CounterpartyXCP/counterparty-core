@@ -1410,6 +1410,7 @@ CREATE TRIGGER _issuances_insert AFTER INSERT ON issuances BEGIN
 CREATE TRIGGER _issuances_update AFTER UPDATE ON issuances BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE issuances SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',msg_index='||quote(old.msg_index)||',block_index='||quote(old.block_index)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||',divisible='||quote(old.divisible)||',source='||quote(old.source)||',issuer='||quote(old.issuer)||',transfer='||quote(old.transfer)||',callable='||quote(old.callable)||',call_date='||quote(old.call_date)||',call_price='||quote(old.call_price)||',description='||quote(old.description)||',fee_paid='||quote(old.fee_paid)||',locked='||quote(old.locked)||',status='||quote(old.status)||',asset_longname='||quote(old.asset_longname)||',reset='||quote(old.reset)||' WHERE rowid='||old.rowid);
                             END;
+CREATE INDEX status_asset_txindex_idx ON issuances(status, asset, tx_index DESC);
 CREATE INDEX valid_asset_idx ON issuances (asset, status)
                    ;
 

@@ -140,6 +140,10 @@ def set_up(logger, verbose=False, logfile=None, console_logfilter=None):
     import requests
     requests.packages.urllib3.disable_warnings()
 
+# we are using a function here for testing purposes
+def curr_time():
+    return int(time.time())
+
 def isodt (epoch_time):
     try:
         return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
@@ -175,7 +179,7 @@ def message(db, block_index, command, category, bindings, tx_hash=None):
         else:
             items.append(item)
 
-    current_time = int(time.time())
+    current_time = curr_time()
     bindings_string = str(items)
     cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings, :timestamp)',
                    (message_index, block_index, command, category, bindings_string, current_time))
