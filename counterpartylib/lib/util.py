@@ -516,7 +516,8 @@ def is_divisible(db, asset):
         cursor.execute('''SELECT * FROM issuances \
                           WHERE (status = ? AND asset = ?) ORDER BY tx_index DESC''', ('valid', asset))
         issuances = cursor.fetchall()
-        if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
+        if not issuances:
+            raise exceptions.AssetError('No such asset: {}'.format(asset))
         return issuances[0]['divisible']
 
 def get_asset_issuer(db, asset):

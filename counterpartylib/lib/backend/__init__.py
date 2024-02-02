@@ -68,11 +68,12 @@ def clear_pretx(txid):
 
 def getrawtransaction(tx_hash, verbose=False, skip_missing=False, block_index=None):
     if block_index and block_index in prefetcher.BLOCKCHAIN_CACHE:
-        # TODO: it should be here!
-        if tx_hash in prefetcher.BLOCKCHAIN_CACHE[block_index]['raw_transactions']:
-            return prefetcher.BLOCKCHAIN_CACHE[block_index]['raw_transactions'][tx_hash]
+        return prefetcher.BLOCKCHAIN_CACHE[block_index]['raw_transactions'][tx_hash]
+
     if tx_hash in PRETX_CACHE:
         return PRETX_CACHE[tx_hash]
+
+    # There's a separate LRU cache on the backend here, fwiw.
     return BACKEND().getrawtransaction(tx_hash, verbose=verbose, skip_missing=skip_missing)
 
 def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):

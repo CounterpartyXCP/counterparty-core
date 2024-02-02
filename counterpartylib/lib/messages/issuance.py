@@ -115,6 +115,11 @@ def initialise(db):
                       asset_longname_idx ON issuances (asset_longname)
                    ''')
 
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      status_asset_txindex_idx ON issuances(status, asset, tx_index DESC);
+                   ''')
+
+
 def validate (db, source, destination, asset, quantity, divisible, lock, reset, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index):
     problems = []
     fee = 0

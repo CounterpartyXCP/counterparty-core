@@ -140,6 +140,7 @@ def set_up(logger, verbose=False, logfile=None, console_logfilter=None):
     import requests
     requests.packages.urllib3.disable_warnings()
 
+# we are using a function here for testing purposes
 def curr_time():
     return int(time.time())
 
@@ -178,9 +179,10 @@ def message(db, block_index, command, category, bindings, tx_hash=None):
         else:
             items.append(item)
 
+    current_time = curr_time()
     bindings_string = str(items)
     cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings, :timestamp)',
-                   (message_index, block_index, command, category, bindings_string, curr_time()))
+                   (message_index, block_index, command, category, bindings_string, current_time))
 
     # Log only real transactions.
     if block_index != config.MEMPOOL_BLOCK_INDEX:
@@ -199,11 +201,15 @@ def log (db, command, category, bindings):
         except KeyError:
             bindings[element] = '<Error>'
 
-    # Slow?!
     def output (quantity, asset):
+
         try:
             if asset not in ('fraction', 'leverage'):
-                return str(util.value_out(db, quantity, asset)) + ' ' + asset
+                # Only log quantity at `DEBUG`, for speed.
+                if logging.DEBUG <= logger.getEffectiveLevel():
+                    return asset
+                else:
+                    return str(util.value_out(db, quantity, asset)) + ' ' + asset
             else:
                 return str(util.value_out(db, quantity, asset))
         except exceptions.AssetError:

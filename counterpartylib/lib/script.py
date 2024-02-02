@@ -272,10 +272,14 @@ def get_asm(scriptpubkey):
     return asm
 
 def get_checksig(asm):
-    if len(asm) == 5 and asm[0] == 'OP_DUP' and asm[1] == 'OP_HASH160' and asm[3] == 'OP_EQUALVERIFY' and asm[4] == 'OP_CHECKSIG':
-        pubkeyhash = asm[2]
-        if type(pubkeyhash) == bytes:
-            return pubkeyhash
+    try:
+        op_dup, op_hash160, pubkeyhash, op_equalverify, op_checksig = asm
+    except ValueError:
+        raise exceptions.DecodeError('invalid OP_CHECKSIG') from None
+    
+    if (op_dup, op_hash160, op_equalverify, op_checksig) == ('OP_DUP', 'OP_HASH160', 'OP_EQUALVERIFY', 'OP_CHECKSIG') and type(pubkeyhash) == bytes:
+        return pubkeyhash
+    
     raise exceptions.DecodeError('invalid OP_CHECKSIG')
 
 def get_checkmultisig(asm):

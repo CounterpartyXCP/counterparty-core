@@ -46,7 +46,7 @@ from .kickstart.utils import ib2h
 from .exceptions import DecodeError, BTCOnlyError
 
 from counterpartylib.lib import prefetcher
-NUM_PREFETCHER_THREADS = 5
+NUM_PREFETCHER_THREADS = 10
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
@@ -589,7 +589,8 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None, db=None):
                 vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
                 vin_ctx = backend.deserialize(vin_tx['__data__'])
             else:
-                vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=block_index) # TODO: Biggest penalty on parsing is here
+                # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
+                vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=None)
                 vin_ctx = backend.deserialize(vin_tx)
             vout = vin_ctx.vout[vin.prevout.n]
 
@@ -730,7 +731,8 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
             vin_ctx = backend.deserialize(vin_tx['__data__'])
         else:
-            vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=block_index)
+            # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
+            vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=None)
             vin_ctx = backend.deserialize(vin_tx)
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
@@ -776,7 +778,7 @@ def decode_opreturn(asm, ctx):
 
 def decode_checksig(asm, ctx):
     pubkeyhash = script.get_checksig(asm)
-    chunk = arc4_decrypt(pubkeyhash, ctx)
+    chunk = arc4_decrypt(pubkeyhash, ctx)   # TODO: This is slow!
     if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
         # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
         chunk_length = chunk[0]
@@ -891,7 +893,8 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
                     vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
                     vin_ctx = backend.deserialize(vin_tx['__data__'])
                 else:
-                    vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=block_index)
+                    # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
+                    vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=None)
                     vin_ctx = backend.deserialize(vin_tx)
                 prevout_is_segwit = vin_ctx.has_witness()
             else:
@@ -931,7 +934,8 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
             vin_ctx = backend.deserialize(vin_tx['__data__'])
         else:
-            vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=block_index)
+            # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
+            vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=None)  
             vin_ctx = backend.deserialize(vin_tx)
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
@@ -1141,15 +1145,16 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
     assert type(tx_hash) == str
     cursor = db.cursor()
 
+    # TODO: I Think this is supposed to be a performance optimization but it makes parsing 40% slower.
     # Edge case: confirmed tx_hash also in mempool
-    cursor.execute('''SELECT * FROM transactions WHERE tx_hash = ?''', (tx_hash,))
-    transactions = list(cursor)
-    if transactions:
-        return tx_index
+    # cursor.execute('''SELECT * FROM transactions WHERE tx_hash = ?''', (tx_hash,))
+    # transactions = list(cursor)
+    # if transactions:
+    #     return tx_index
 
     # Get the important details about each transaction.
     if tx_hex is None:
-        tx_hex = backend.getrawtransaction(tx_hash) # TODO: This is the call that is stalling the process the most
+        tx_hex = backend.getrawtransaction(tx_hash, block_index=block_index)
 
     source, destination, btc_amount, fee, data, decoded_tx = get_tx_info(tx_hex, db=db, block_parser=block_parser, block_index=block_index)
 
@@ -1536,7 +1541,7 @@ def follow(db):
 
             # Get and parse transactions in this block (atomically).
             # logger.debug('Blockchain cache size: {}'.format(len(prefetcher.BLOCKCHAIN_CACHE)))
-            if current_index in prefetcher.BLOCKCHAIN_CACHE and prefetcher.BLOCKCHAIN_CACHE[current_index] != None: # TODO: Hackish!!!
+            if current_index in prefetcher.BLOCKCHAIN_CACHE:
                 # logger.debug('Blockchain cache hit! Block index: {}'.format(current_index))
                 block_hash = prefetcher.BLOCKCHAIN_CACHE[current_index]['block_hash']
                 txhash_list = prefetcher.BLOCKCHAIN_CACHE[current_index]['txhash_list']

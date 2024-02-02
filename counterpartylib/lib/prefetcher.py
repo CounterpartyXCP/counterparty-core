@@ -11,7 +11,7 @@ from counterpartylib.lib import backend, util, config
 
 BLOCK_COUNT_CHECK_FREQ = 100
 BLOCKCHAIN_CACHE = {}
-BLOCKCHAIN_CACHE_MAX_SIZE = 1000
+BLOCKCHAIN_CACHE_MAX_SIZE = 10000
 PREFETCHER_THREADS = []
 
 class Prefetcher(threading.Thread):
@@ -39,9 +39,7 @@ class Prefetcher(threading.Thread):
                 time.sleep(10)
                 continue
 
-            BLOCKCHAIN_CACHE[self.fetch_block_index] = None
-
-            #logger.debug('Fetching block {} with Prefetcher thread {}.'.format(self.fetch_block_index, self.thread_index))
+            logger.debug('Fetching block {} with Prefetcher thread {}.'.format(self.fetch_block_index, self.thread_index))
             block_hash = backend.getblockhash(self.fetch_block_index)
             block = backend.getblock(block_hash)
             txhash_list, raw_transactions = backend.get_tx_list(block)
@@ -61,6 +59,7 @@ def start_all(num_prefetcher_threads):
         thread_first_block = block_first + thread_index - 1
         prefetcher_thread = Prefetcher(thread_index, num_prefetcher_threads, thread_first_block)
         prefetcher_thread.daemon = True
+        time.sleep(0.05) # avoid DOS
         prefetcher_thread.start()
         PREFETCHER_THREADS.append(prefetcher_thread)
 
