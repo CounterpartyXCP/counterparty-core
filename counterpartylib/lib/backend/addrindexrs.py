@@ -165,7 +165,7 @@ def getblock(block_hash):
 
 @functools.lru_cache
 def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
-    logger.warning('Cache miss on transaction {}!'.format(tx_hash))
+    logger.debug('Cache miss on transaction {}!'.format(tx_hash))
     return getrawtransaction_batch([tx_hash], verbose=verbose, skip_missing=skip_missing)[tx_hash]
 
 def getrawmempool():
