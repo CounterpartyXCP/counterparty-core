@@ -54,7 +54,8 @@ class Prefetcher(threading.Thread):
 
 def start_all(num_prefetcher_threads):
     # Block Prefetcher and Indexer
-    block_first = util.CURRENT_BLOCK_INDEX
+    block_first = config.BLOCK_FIRST_TESTNET if config.TESTNET else config.BLOCK_FIRST
+    block_first = util.CURRENT_BLOCK_INDEX or block_first
     for thread_index in range(1, num_prefetcher_threads + 1):
         thread_first_block = block_first + thread_index - 1
         prefetcher_thread = Prefetcher(thread_index, num_prefetcher_threads, thread_first_block)
