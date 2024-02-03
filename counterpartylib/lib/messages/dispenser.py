@@ -403,7 +403,7 @@ def parse (db, tx, message):
                                     'asset': asset,
                                     'status': STATUS_OPEN
                                 }
-                                ledger.update_table(db, 'dispensers', set_data, where_data)
+                                ledger.update_dispensers(db, set_data, where_data)
 
                                 dispenser_tx_hash = ledger.get_dispensers(db, source=action_address, asset=asset, status=STATUS_OPEN)[0]["tx_hash"]
                                 bindings_refill = {
@@ -476,7 +476,7 @@ def parse (db, tx, message):
                         where_data['origin'] = tx['source']
                         where_data['source'] = action_address
 
-                    ledger.update_table(db, 'dispensers', set_data, where_data)
+                    ledger.update_dispensers(db, set_data, where_data)
                 else:
                     status = 'dispenser inexistent'
             else:
@@ -594,7 +594,7 @@ def dispense(db, tx):
                     'give_quantity': dispenser['give_quantity'],
                     'status_in': [0, 11]
                 }
-                ledger.update_table(db, 'dispensers', set_data, where_data)
+                ledger.update_dispensers(db, set_data, where_data)
 
                 bindings = {
                     'tx_index': next_out['tx_index'],
@@ -637,4 +637,4 @@ def close_pending(db, block_index):
                 where_data["origin"] = dispenser['tx_source']
             else:
                 where_data["source"] = dispenser['tx_source']
-            ledger.update_table(db, 'dispensers', set_data, where_data)
+            ledger.update_dispensers(db, set_data, where_data)

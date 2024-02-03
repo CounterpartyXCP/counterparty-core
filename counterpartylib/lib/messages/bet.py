@@ -179,7 +179,7 @@ def cancel_bet (db, bet, status, block_index, tx_index):
     # Update status of bet.
     set_data = {'status': status}
     where_data = {'tx_hash': bet['tx_hash']}
-    ledger.update_table(db, 'bets', set_data, where_data)
+    ledger.update_bets(db, set_data, where_data)
     log.message(db, block_index, 'update', 'bets', set_data | where_data)
 
     ledger.credit(db, bet['source'], config.XCP, bet['wager_remaining'], tx_index, action='recredit wager remaining', event=bet['tx_hash'])
@@ -202,7 +202,7 @@ def cancel_bet_match (db, bet_match, status, block_index, tx_index):
     # Update status of bet match.
     set_data = {'status': status}
     where_data = {'id': bet_match['id']}
-    ledger.update_table(db, 'bet_matches', set_data, where_data)
+    ledger.update_bet_matches(db, set_data, where_data)
 
     log.message(db, block_index, 'update', 'bet_matches', {'status': status, 'bet_match_id': bet_match['id']})
 
@@ -485,7 +485,7 @@ def match (db, tx):
                 'status': tx0_status
             }
             where_data = {'tx_hash': tx0['tx_hash']}
-            ledger.update_table(db, 'bets', set_data, where_data)
+            ledger.update_bets(db, set_data, where_data)
 
             log.message(db, tx['block_index'], 'update', 'bets', set_data | where_data)
 
@@ -501,7 +501,7 @@ def match (db, tx):
                 'status': tx1_status
             }
             where_data = {'tx_hash': tx1['tx_hash']}
-            ledger.update_table(db, 'bets', set_data, where_data)
+            ledger.update_bets(db, set_data, where_data)
 
             log.message(db, tx['block_index'], 'update', 'bets', set_data | where_data)
 

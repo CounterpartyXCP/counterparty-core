@@ -137,7 +137,7 @@ def parse (db, tx, message):
             where_data = {
                 'id': order_match_id
             }
-            ledger.update_table(db, 'order_matches', set_data, where_data)
+            ledger.update_order_matches(db, set_data, where_data)
 
             log.message(db, tx['block_index'], 'update', 'order_matches', {
                 'status': 'completed',

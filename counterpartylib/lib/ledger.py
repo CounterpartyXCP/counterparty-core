@@ -902,6 +902,28 @@ def update_table(db, table_name, update_data, where_data):
     cursor.close()
 
 
+def update_bets(db, update_data, where_data):
+    update_table(db, 'bets', update_data, where_data)
+
+def update_bet_matches(db, update_data, where_data):
+    update_table(db, 'bet_matches', update_data, where_data)
+
+def update_orders(db, update_data, where_data):
+    update_table(db, 'orders', update_data, where_data)
+
+def update_order_matches(db, update_data, where_data):
+    update_table(db, 'order_matches', update_data, where_data)
+
+def update_rps(db, update_data, where_data):
+    update_table(db, 'rps', update_data, where_data)
+
+def update_rps_matches(db, update_data, where_data):
+    update_table(db, 'rps_matches', update_data, where_data)
+
+def update_dispensers(db, update_data, where_data):
+    update_table(db, 'dispensers', update_data, where_data)
+
+
 def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
     sql = '''UPDATE orders
              SET status = :status 

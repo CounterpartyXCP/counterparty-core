@@ -401,7 +401,7 @@ def parse (db, tx, message):
             where_data = {
                 'id': bet_match_id
             }
-            ledger.update_table(db, 'bet_matches', set_data, where_data)
+            ledger.update_bet_matches(db, set_data, where_data)
 
             log.message(db, tx['block_index'], 'update', 'bet_matches', {
                 'status': bet_match_status, 

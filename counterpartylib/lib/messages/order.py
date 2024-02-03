@@ -183,7 +183,7 @@ def cancel_order (db, order, status, block_index, tx_index):
     where_data = {
         'tx_hash': order['tx_hash']
     }
-    ledger.update_table(db, 'orders', set_data, where_data)
+    ledger.update_orders(db, set_data, where_data)
 
     log.message(db, block_index, 'update', 'orders', set_data | where_data)
 
@@ -219,7 +219,7 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
     where_data = {
         'id': order_match['id']
     }
-    ledger.update_table(db, 'order_matches', set_data, where_data)
+    ledger.update_order_matches(db, set_data, where_data)
 
     log.message(db, block_index, 'update', 'order_matches', {
         'status': status,
@@ -259,7 +259,7 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
         where_data = {
             'tx_hash': order_match['tx0_hash']
         }
-        ledger.update_table(db, 'orders', set_data, where_data)
+        ledger.update_orders(db, set_data, where_data)
 
         log.message(db, block_index, 'update', 'orders', set_data | where_data)
 
@@ -293,7 +293,7 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
         where_data = {
             'tx_hash': order_match['tx1_hash']
         }
-        ledger.update_table(db, 'orders', set_data, where_data)
+        ledger.update_orders(db, set_data, where_data)
 
         log.message(db, block_index, 'update', 'orders', set_data | where_data)
 
@@ -669,7 +669,7 @@ def match (db, tx, block_index=None):
             where_data = {
                 'tx_hash': tx0['tx_hash']
             }
-            ledger.update_table(db, 'orders', set_data, where_data)
+            ledger.update_orders(db, set_data, where_data)
 
             log.message(db, block_index, 'update', 'orders', set_data | where_data)
             # tx1
@@ -688,7 +688,7 @@ def match (db, tx, block_index=None):
             where_data = {
                 'tx_hash': tx1['tx_hash']
             }
-            ledger.update_table(db, 'orders', set_data, where_data)
+            ledger.update_orders(db, set_data, where_data)
 
             log.message(db, block_index, 'update', 'orders', set_data | where_data)
 
