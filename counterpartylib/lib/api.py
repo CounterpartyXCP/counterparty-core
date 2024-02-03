@@ -603,10 +603,7 @@ class APIServer(threading.Thread):
             if not isinstance(block_index, int):
                 raise APIError("block_index must be an integer.")
 
-            cursor = self.db.cursor()
-            cursor.execute('select * from messages where block_index = ? order by message_index asc', (block_index,))
-            messages = cursor.fetchall()
-            cursor.close()
+            messages = ledger.get_messages(self.db, block_index=block_index)
             return messages
 
         @dispatcher.add_method
@@ -621,11 +618,7 @@ class APIServer(threading.Thread):
                 if not isinstance(idx, int):
                     raise APIError("All items in message_indexes are not integers")
 
-            cursor = self.db.cursor()
-            cursor.execute('SELECT * FROM messages WHERE message_index IN (%s) ORDER BY message_index ASC'
-                % (','.join([str(x) for x in message_indexes]),))
-            messages = cursor.fetchall()
-            cursor.close()
+            messages = ledger.get_messages(self.db, message_index_in=message_indexes)
             return messages
 
         @dispatcher.add_method
@@ -733,9 +726,7 @@ class APIServer(threading.Thread):
                 % (block_indexes_str,))
             blocks = cursor.fetchall()
 
-            cursor.execute('SELECT * FROM messages WHERE block_index IN (%s) ORDER BY message_index ASC'
-                % (block_indexes_str,))
-            messages = collections.deque(cursor.fetchall())
+            messages = collections.deque(ledger.get_messages(self.db, block_index_in=block_indexes))
 
             # Discard any messages less than min_message_index
             if min_message_index:
@@ -819,14 +810,11 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_asset_names(longnames=False):
-            cursor = self.db.cursor()
+            all_assets = ledger.get_valid_assets(self.db)
             if longnames:
-                names = []
-                for row in cursor.execute("SELECT asset, asset_longname FROM issuances WHERE status = 'valid' GROUP BY asset ORDER BY asset ASC"):
-                    names.append({'asset': row['asset'], 'asset_longname': row['asset_longname']})
+                names = [{'asset': row['asset'], 'asset_longname': row['asset_longname']} for row in all_assets]
             else:
-                names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE status = 'valid' ORDER BY asset ASC")]
-            cursor.close()
+                names = [row['asset'] for row in all_assets]
             return names
 
         @dispatcher.add_method

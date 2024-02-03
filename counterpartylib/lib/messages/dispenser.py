@@ -392,23 +392,18 @@ def parse (db, tx, message):
                         
                         if status == 'valid':
                             # Refill the dispenser by the given amount
-                            bindings = {
-                                'source': tx['source'] if not ledger.enabled("dispenser_origin_permission_extended", tx['block_index']) else action_address,
-                                'asset': asset,
-                                'prev_status': dispenser_status,
-                                'give_remaining': existing[0]['give_remaining'] + escrow_quantity,
-                                'status': STATUS_OPEN,
-                                'block_index': tx['block_index'],
-                                'action':'refill dispenser',
-                                'escrow_quantity':escrow_quantity
-                            }
-                            
-                            
                             try:
                                 ledger.debit(db, tx['source'], asset, escrow_quantity, tx['tx_index'], action='refill dispenser', event=tx['tx_hash'])
-                                sql = 'UPDATE dispensers SET give_remaining=:give_remaining \
-                                    WHERE source=:source AND asset=:asset AND status=:status'
-                                cursor.execute(sql, bindings)
+                                
+                                set_data = {
+                                    'give_remaining': existing[0]['give_remaining'] + escrow_quantity,
+                                }
+                                where_data = {
+                                    'source': tx['source'] if not ledger.enabled("dispenser_origin_permission_extended", tx['block_index']) else action_address,
+                                    'asset': asset,
+                                    'status': STATUS_OPEN
+                                }
+                                ledger.update_table(db, 'dispensers', set_data, where_data)
 
                                 dispenser_tx_hash = ledger.get_dispensers(db, source=action_address, asset=asset, status=STATUS_OPEN)[0]["tx_hash"]
                                 bindings_refill = {
@@ -457,32 +452,31 @@ def parse (db, tx, message):
                 if len(existing) == 1:
                     if close_delay == 0:
                         ledger.credit(db, tx['source'], asset, existing[0]['give_remaining'], tx['tx_index'], action='close dispenser', event=tx['tx_hash'])
-                        
-                        bindings = {
-                            'source': tx['source'],
-                            'asset': asset,
+
+                        set_data = {
+                            'give_remaining': 0,
                             'status': STATUS_CLOSED,
-                            'block_index': tx['block_index'],
-                            'tx_index': existing[0]['tx_index']
                         }
-                        sql = 'UPDATE dispensers SET give_remaining=0, status=:status WHERE source=:source AND asset=:asset'
+                        where_data = {
+                            'source': tx['source'],
+                            'asset': asset
+                        }
                     else:
-                        bindings = {
+                        set_data = {
+                            'status': STATUS_CLOSING,
+                            'last_status_tx_hash': tx['tx_hash']
+                        }
+                        where_data = {
                             'source': tx['source'],
                             'asset': asset,
-                            'status': STATUS_CLOSING,
-                            'block_index': tx['block_index'],
-                            'last_status_tx_hash': tx['tx_hash'],
-                            'tx_index': existing[0]['tx_index']
+                            'status_in': [0, 1]
                         }
-                        sql = 'UPDATE dispensers SET status=:status, last_status_tx_hash=:last_status_tx_hash WHERE source=:source AND asset=:asset AND status IN (0,1)'
 
                     if close_from_another_address:
-                        sql = sql + " AND origin=:origin"
-                        bindings["origin"] = tx["source"]
-                        bindings["source"] = action_address
+                        where_data['origin'] = tx['source']
+                        where_data['source'] = action_address
 
-                    cursor.execute(sql, bindings)
+                    ledger.update_table(db, 'dispensers', set_data, where_data)
                 else:
                     status = 'dispenser inexistent'
             else:
@@ -588,8 +582,19 @@ def dispense(db, tx):
 
                 dispenser['block_index'] = next_out['block_index']
                 dispenser['prev_status'] = STATUS_OPEN
-                cursor.execute('UPDATE DISPENSERS SET give_remaining=:give_remaining, status=:status \
-                        WHERE source=:source AND asset=:asset AND satoshirate=:satoshirate AND give_quantity=:give_quantity AND status IN (0,11)', dispenser)
+
+                set_data = {
+                    'give_remaining': dispenser['give_remaining'],
+                    'status': dispenser['status'],
+                }
+                where_data = {
+                    'source': dispenser['source'],
+                    'asset': dispenser['asset'],
+                    'satoshirate': dispenser['satoshirate'],
+                    'give_quantity': dispenser['give_quantity'],
+                    'status_in': [0, 11]
+                }
+                ledger.update_table(db, 'dispensers', set_data, where_data)
 
                 bindings = {
                     'tx_index': next_out['tx_index'],
@@ -619,20 +624,17 @@ def close_pending(db, block_index):
         for dispenser in pending_dispensers:
             # use tx_index=0 for block actions
             ledger.credit(db, dispenser['tx_source'], dispenser['asset'], dispenser['give_remaining'], 0, action='close dispenser', event=dispenser['last_status_tx_hash'])
-                        
-            bindings = {
-                'source': dispenser['tx_source'],
-                'asset': dispenser['asset'],
+
+            set_data = {
+                'give_remaining': 0,
                 'status': STATUS_CLOSED,
-                'block_index': dispenser['tx_block_index'],
-                'tx_index': dispenser['tx_index']
             }
-            sql = 'UPDATE dispensers SET give_remaining=0, status=:status WHERE source=:source AND asset=:asset'
-            
-            #closed from another address
+            where_data = {
+                'asset': dispenser['asset'],
+            }
             if dispenser['tx_source'] != dispenser['source']:
-                sql = sql + " AND origin=:origin"
-                bindings["origin"] = dispenser['tx_source']
-                bindings["source"] = dispenser['source']
-                    
-            cursor.execute(sql, bindings)
+                where_data["source"] = dispenser['source']
+                where_data["origin"] = dispenser['tx_source']
+            else:
+                where_data["source"] = dispenser['tx_source']
+            ledger.update_table(db, 'dispensers', set_data, where_data)

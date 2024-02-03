@@ -149,23 +149,10 @@ def parse (db, tx, message):
                 order_matches = ledger.find_order_matches(db, tx0_hash, tx1_hash)
                 if len(order_matches) == 0:
                     # mark both btc get and give orders as filled when order_match is completed and give or get remaining = 0
-                    bindings = {
-                        'status': 'filled',
-                        'tx0_hash': tx0_hash,
-                        'tx1_hash': tx1_hash
-                    }
-                    sql='update orders set status = :status where ((tx_hash in (:tx0_hash, :tx1_hash)) and ((give_remaining = 0) or (get_remaining = 0)))'
-                    cursor.execute(sql, bindings)
+                    ledger.mark_order_as_filled(db, tx0_hash, tx1_hash)
                 else:
                     # always mark btc get order as filled when order_match is completed and give or get remaining = 0
-                    bindings = {
-                        'status': 'filled',
-                        'source': tx['destination'],
-                        'tx0_hash': tx0_hash,
-                        'tx1_hash': tx1_hash
-                    }
-                    sql='update orders set status = :status where ((tx_hash in (:tx0_hash, :tx1_hash)) and ((give_remaining = 0) or (get_remaining = 0)) and (source = :source))'
-                    cursor.execute(sql, bindings)
+                    ledger.mark_order_as_filled(db, tx0_hash, tx1_hash, source=tx['destination'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

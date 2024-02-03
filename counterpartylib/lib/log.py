@@ -155,12 +155,10 @@ def message(db, block_index, command, category, bindings, tx_hash=None):
     cursor = db.cursor()
 
     # Get last message index.
-    messages = list(cursor.execute('''SELECT * FROM messages
-                                      WHERE message_index = (SELECT MAX(message_index) from messages)'''))
-    if messages:
-        assert len(messages) == 1
-        message_index = messages[0]['message_index'] + 1
-    else:
+    try:
+        message = ledger.last_message(db)
+        message_index = message['message_index'] + 1
+    except exceptions.DatabaseError:
         message_index = 0
 
     # Not to be misleading…
@@ -305,7 +303,7 @@ def log (db, command, category, bindings):
                     logger.info('Issuance: {} created {} of {} asset {} ({}) [{}]'.format(bindings['source'], quantity, divisibility, bindings['asset'], bindings['tx_hash'], bindings['status']))
             
             if bindings['locked']:
-                lock_issuance = get_lock_issuance(cursor, bindings["asset"])
+                lock_issuance = get_lock_issuance(db, bindings["asset"])
                 
                 if (lock_issuance == None) or (lock_issuance['tx_hash'] == bindings['tx_hash']):
                     logger.info('Issuance: {} locked asset {} ({}) [{}]'.format(bindings['source'], bindings['asset'], bindings['tx_hash'], bindings['status']))
@@ -350,7 +348,7 @@ def log (db, command, category, bindings):
         elif category == 'rpsresolves':
 
             if bindings['status'] == 'valid':
-                rps_matches = list(cursor.execute('''SELECT * FROM rps_matches WHERE id = ?''', (bindings['rps_match_id'],)))
+                rps_matches = ledger.get_rps_matches(db, id=bindings['rps_match_id'])
                 assert len(rps_matches) == 1
                 rps_match = rps_matches[0]
                 log_message = 'RPS Resolved: {} is playing {} on a {}-moves game with {} with a wager of {} ({}) [{}]'.format(rps_match['tx0_address'], bindings['move'], rps_match['possible_moves'], rps_match['tx1_address'], output(rps_match['wager'], 'XCP'), rps_match['id'], rps_match['status'])
@@ -430,10 +428,7 @@ def log (db, command, category, bindings):
                 logger.info('Dispenser: {} closed a {} for asset {}'.format(bindings['source'], dispenser_label, bindings['asset']))
 
         elif category == 'dispenses':
-            cursor.execute('SELECT * FROM dispensers WHERE tx_hash=:tx_hash', {
-                'tx_hash': bindings['dispenser_tx_hash']
-            })
-            dispensers = cursor.fetchall()
+            dispensers = ledger.get_dispensers(db, tx_hash=bindings['dispenser_tx_hash'])
             dispenser = dispensers[0]
         
             if (dispenser["oracle_address"] != None) and ledger.enabled('oracle_dispensers'):
@@ -447,11 +442,8 @@ def log (db, command, category, bindings):
 
     cursor.close()
 
-def get_lock_issuance(cursor, asset):
-    cursor.execute('''SELECT * FROM issuances \
-        WHERE (status = ? AND asset = ? AND locked = ?)
-        ORDER BY tx_index ASC''', ('valid', asset, True))
-    issuances = cursor.fetchall()
+def get_lock_issuance(db, asset):
+    issuances = ledger.get_issuances(db, status='valid', asset=asset, locked=True, first=True)
     
     if len(issuances) > 0:
         return issuances[0]

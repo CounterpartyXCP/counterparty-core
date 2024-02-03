@@ -35,6 +35,24 @@ def last_message(db):
     return last_message
 
 
+def get_messages(db, block_index=None, block_index_in=None, message_index_in=None):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if block_index is not None:
+        where.append('block_index = ?')
+        bindings.append(block_index)
+    if block_index_in is not None:
+        where.append('block_index IN ({})'.format(','.join(['?' for e in range(0, len(block_index_in))])))
+        bindings += block_index_in
+    if message_index_in is not None:
+        where.append('message_index IN ({})'.format(','.join(['?' for e in range(0, len(message_index_in))])))
+        bindings += message_index_in
+    query = f'''SELECT * FROM messages WHERE ({" AND ".join(where)}) ORDER BY message_index ASC'''
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+
 def remove_from_balance(db, address, asset, quantity, tx_index):
     balance_cursor = db.cursor()
 
@@ -422,7 +440,7 @@ def get_asset_info(db, asset):
     return issuances[0]
 
 
-def get_issuances(db, asset=None, status=None, first=False):
+def get_issuances(db, asset=None, status=None, locked=None, first=False):
     cursor = db.cursor()
     cursor = db.cursor()
     where = []
@@ -433,6 +451,9 @@ def get_issuances(db, asset=None, status=None, first=False):
     if asset is not None:
         where.append('asset = ?')
         bindings.append(asset)
+    if locked is not None:
+        where.append('locked = ?')
+        bindings.append(locked)
     query = f'''SELECT * FROM issuances WHERE ({" AND ".join(where)})'''
     if first:
         query += f''' ORDER BY tx_index ASC'''
@@ -444,6 +465,15 @@ def get_assets_by_longname(db, asset_longname):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM assets \
         WHERE (asset_longname = ?)''', (asset_longname,))
+    return cursor.fetchall()
+
+def get_valid_assets(db):
+    cursor = db.cursor()
+    cursor.execute('''SELECT asset, asset_longname
+                   FROM issuances 
+                   WHERE status = 'valid' 
+                   GROUP BY asset 
+                   ORDER BY asset ASC''')
     return cursor.fetchall()
 
 
@@ -716,7 +746,7 @@ def get_burns(db, status=None, source=None):
     return cursor.fetchall()
 
 
-def get_dispensers(db, status_in=None, source=None, asset=None, origin=None, status=None):
+def get_dispensers(db, status_in=None, source=None, asset=None, origin=None, status=None, tx_hash=None):
     cursor = db.cursor()
     where = []
     bindings = []
@@ -735,6 +765,9 @@ def get_dispensers(db, status_in=None, source=None, asset=None, origin=None, sta
     if status is not None:
         where.append('status = ?')
         bindings.append(status)
+    if tx_hash is not None:
+        where.append('tx_hash = ?')
+        bindings.append(tx_hash)
     query = f'''SELECT * FROM dispensers WHERE ({" AND ".join(where)})'''
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
@@ -744,22 +777,6 @@ def get_refilling_count(db, dispenser_tx_hash):
     cursor = db.cursor()
     cursor.execute('''SELECT count(*) cnt FROM dispenser_refills WHERE dispenser_tx_hash = ?''', (dispenser_tx_hash,))
     return cursor.fetchall()[0]['cnt']
-
-
-def update_table(db, table_name, update_data, where_data):
-    cursor = db.cursor()
-    set = []
-    where = []
-    bindings = []
-    for key, value in update_data.items():
-        set.append(f'{key} = ?')
-        bindings.append(value)
-    for key, value in where_data.items():
-        where.append(f'{key} = ?')
-        bindings.append(value)
-    query = f'''UPDATE {table_name} SET {', '.join(set)} WHERE {' AND '.join(where)}'''
-    cursor.execute(query, tuple(bindings))
-    cursor.close()
 
 
 def get_pending_dispensers(db, status, delay, block_index):
@@ -860,6 +877,49 @@ def get_dispenser_info(db, tx_hash=None, tx_index=None):
              WHERE ({" AND ".join(where)})'''
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
+
+### UPDATES ###
+
+def update_table(db, table_name, update_data, where_data):
+    cursor = db.cursor()
+    set = []
+    where = []
+    bindings = []
+    for key, value in update_data.items():
+        set.append(f'{key} = ?')
+        bindings.append(value)
+    for key, value in where_data.items():
+        if key.endswith('_in'):
+            assert isinstance(value, list)
+            _key = key[:-3]
+            where.append(f'{_key} IN ({",".join(["?" for e in range(0, len(value))])})')
+            bindings += value
+        else:
+            where.append(f'{key} = ?')
+            bindings.append(value)
+    query = f'''UPDATE {table_name} SET {', '.join(set)} WHERE {' AND '.join(where)}'''
+    cursor.execute(query, tuple(bindings))
+    cursor.close()
+
+
+def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
+    sql = '''UPDATE orders
+             SET status = :status 
+             WHERE (
+                tx_hash in (:tx0_hash, :tx1_hash)
+                AND (give_remaining = 0 OR get_remaining = 0)
+             )'''
+    bindings = {
+        'status': 'filled',
+        'tx0_hash': tx0_hash,
+        'tx1_hash': tx1_hash,
+    }
+    if source is not None:
+        sql += ' AND source = :source'
+        bindings['source'] = source
+    cursor = db.cursor()
+    cursor.execute(sql, bindings)
+
 
 ### SUPPLIES ###
 
