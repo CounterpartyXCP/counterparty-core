@@ -394,13 +394,19 @@ def parse (db, tx, message):
 
         # Update the bet match’s status.
         if bet_match_status:
-            bindings = {
-                'status': bet_match_status,
-                'bet_match_id': util.make_id(bet_match['tx0_hash'], bet_match['tx1_hash'])
+            bet_match_id = util.make_id(bet_match['tx0_hash'], bet_match['tx1_hash'])
+            set_data = {
+                'status': bet_match_status
             }
-            sql='update bet_matches set status = :status where id = :bet_match_id'
-            cursor.execute(sql, bindings)
-            log.message(db, tx['block_index'], 'update', 'bet_matches', bindings)
+            where_data = {
+                'id': bet_match_id
+            }
+            ledger.update_table(db, 'bet_matches', set_data, where_data)
+
+            log.message(db, tx['block_index'], 'update', 'bet_matches', {
+                'status': bet_match_status, 
+                'bet_match_id': bet_match_id
+            })
 
         broadcast_bet_match_cursor.close()
 

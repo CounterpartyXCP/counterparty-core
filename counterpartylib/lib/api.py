@@ -675,7 +675,7 @@ class APIServer(threading.Thread):
 
                 # User‐created asset.
                 cursor = self.db.cursor()
-                issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?) ORDER BY block_index ASC''', ('valid', asset)))
+                issuances = ledger.get_issuances(self.db, asset=asset, status='valid', first=True)
                 cursor.close()
                 if not issuances:
                     continue #asset not found, most likely
@@ -911,12 +911,11 @@ class APIServer(threading.Thread):
             if tx_hash is None and tx_index is None:
                 raise APIError("You must provided a tx hash or a tx index")
             
+            dispensers = []
             if tx_hash is not None:
-                cursor.execute('SELECT d.*, a.asset_longname FROM dispensers d LEFT JOIN assets a ON a.asset_name = d.asset WHERE tx_hash=:tx_hash', {"tx_hash":tx_hash})
+                dispensers = get_dispenser_info(self.db, tx_hash=tx_hash)
             else:
-                cursor.execute('SELECT d.*, a.asset_longname FROM dispensers d LEFT JOIN assets a ON a.asset_name = d.asset WHERE tx_index=:tx_index', {"tx_index":tx_index})
-            
-            dispensers = cursor.fetchall()
+                dispensers = get_dispenser_info(self.db, tx_index=tx_index)
             
             if len(dispensers) == 1:
                 dispenser = dispensers[0]

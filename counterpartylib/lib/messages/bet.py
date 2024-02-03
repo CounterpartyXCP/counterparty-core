@@ -177,13 +177,10 @@ def cancel_bet (db, bet, status, block_index, tx_index):
     cursor = db.cursor()
 
     # Update status of bet.
-    bindings = {
-        'status': status,
-        'tx_hash': bet['tx_hash']
-    }
-    sql='update bets set status = :status where tx_hash = :tx_hash'
-    cursor.execute(sql, bindings)
-    log.message(db, block_index, 'update', 'bets', bindings)
+    set_data = {'status': status}
+    where_data = {'tx_hash': bet['tx_hash']}
+    ledger.update_table(db, 'bets', set_data, where_data)
+    log.message(db, block_index, 'update', 'bets', set_data | where_data)
 
     ledger.credit(db, bet['source'], config.XCP, bet['wager_remaining'], tx_index, action='recredit wager remaining', event=bet['tx_hash'])
 
@@ -203,13 +200,11 @@ def cancel_bet_match (db, bet_match, status, block_index, tx_index):
                 bet_match['backward_quantity'], tx_index, action='recredit backward quantity', event=bet_match['id'])
 
     # Update status of bet match.
-    bindings = {
-        'status': status,
-        'bet_match_id': bet_match['id']
-    }
-    sql='update bet_matches set status = :status where id = :bet_match_id'
-    cursor.execute(sql, bindings)
-    log.message(db, block_index, 'update', 'bet_matches', bindings)
+    set_data = {'status': status}
+    where_data = {'id': bet_match['id']}
+    ledger.update_table(db, 'bet_matches', set_data, where_data)
+
+    log.message(db, block_index, 'update', 'bet_matches', {'status': status, 'bet_match_id': bet_match['id']})
 
     cursor.close()
 
@@ -483,15 +478,16 @@ def match (db, tx):
                 # Fill order, and recredit give_remaining.
                 tx0_status = 'filled'
                 ledger.credit(db, tx0['source'], config.XCP, tx0_wager_remaining, tx['tx_index'], event=tx1['tx_hash'], action='filled')
-            bindings = {
+
+            set_data = {
                 'wager_remaining': tx0_wager_remaining,
                 'counterwager_remaining': tx0_counterwager_remaining,
-                'status': tx0_status,
-                'tx_hash': tx0['tx_hash']
+                'status': tx0_status
             }
-            sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining, status = :status where tx_hash = :tx_hash'
-            cursor.execute(sql, bindings)
-            log.message(db, tx['block_index'], 'update', 'bets', bindings)
+            where_data = {'tx_hash': tx0['tx_hash']}
+            ledger.update_table(db, 'bets', set_data, where_data)
+
+            log.message(db, tx['block_index'], 'update', 'bets', set_data | where_data)
 
             if tx1['block_index'] >= 292000 or config.TESTNET or config.REGTEST:  # Protocol change
                 if tx1_wager_remaining <= 0 or tx1_counterwager_remaining <= 0:
@@ -499,15 +495,15 @@ def match (db, tx):
                     tx1_status = 'filled'
                     ledger.credit(db, tx1['source'], config.XCP, tx1_wager_remaining, tx['tx_index'], event=tx1['tx_hash'], action='filled')
             # tx1
-            bindings = {
+            set_data = {
                 'wager_remaining': tx1_wager_remaining,
                 'counterwager_remaining': tx1_counterwager_remaining,
-                'status': tx1_status,
-                'tx_hash': tx1['tx_hash']
+                'status': tx1_status
             }
-            sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining, status = :status where tx_hash = :tx_hash'
-            cursor.execute(sql, bindings)
-            log.message(db, tx['block_index'], 'update', 'bets', bindings)
+            where_data = {'tx_hash': tx1['tx_hash']}
+            ledger.update_table(db, 'bets', set_data, where_data)
+
+            log.message(db, tx['block_index'], 'update', 'bets', set_data | where_data)
 
             # Get last value of feed.
             broadcasts = ledger.get_broadcats_by_source(db, feed_address, 'valid')

@@ -746,6 +746,22 @@ def get_refilling_count(db, dispenser_tx_hash):
     return cursor.fetchall()[0]['cnt']
 
 
+def update_table(db, table_name, update_data, where_data):
+    cursor = db.cursor()
+    set = []
+    where = []
+    bindings = []
+    for key, value in update_data.items():
+        set.append(f'{key} = ?')
+        bindings.append(value)
+    for key, value in where_data.items():
+        where.append(f'{key} = ?')
+        bindings.append(value)
+    query = f'''UPDATE {table_name} SET {', '.join(set)} WHERE {' AND '.join(where)}'''
+    cursor.execute(query, tuple(bindings))
+    cursor.close()
+
+
 def get_pending_dispensers(db, status, delay, block_index):
     cursor = db.cursor()
     query = '''SELECT d.*, t.source AS tx_source, t.block_index AS tx_block_index 
@@ -824,6 +840,24 @@ def get_addresses(db, address=None):
         where.append('address = ?')
         bindings.append(address)
     query = f'''SELECT * FROM addresses WHERE ({" AND ".join(where)})'''
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+def get_dispenser_info(db, tx_hash=None, tx_index=None):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if tx_hash is not None:
+        where.append('tx_hash = ?')
+        bindings.append(tx_hash)
+    if tx_index is not None:
+        where.append('tx_index = ?')
+        bindings.append(tx_index)
+
+    query = f'''SELECT d.*, a.asset_longname
+             FROM dispensers d
+             LEFT JOIN assets a ON a.asset_name = d.asset
+             WHERE ({" AND ".join(where)})'''
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
