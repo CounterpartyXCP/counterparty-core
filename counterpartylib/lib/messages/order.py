@@ -180,12 +180,9 @@ def cancel_order (db, order, status, block_index, tx_index):
     set_data = {
         'status': status,
     }
-    where_data = {
-        'tx_hash': order['tx_hash']
-    }
-    ledger.update_orders(db, set_data, where_data)
+    ledger.update_order(db, order['tx_hash'], set_data)
 
-    log.message(db, block_index, 'update', 'orders', set_data | where_data)
+    log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': order['tx_hash']})
 
     if order['give_asset'] != config.BTC:    # Can’t credit BTC.
         ledger.credit(db, order['source'], order['give_asset'], order['give_remaining'], tx_index, action='cancel order', event=order['tx_hash'])
@@ -213,20 +210,12 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
             return
 
     # Update status of order match.
-    set_data = {
-        'status': status,
-    }
-    where_data = {
-        'id': order_match['id']
-    }
-    ledger.update_order_matches(db, set_data, where_data)
+    ledger.update_order_match_status(db, order_match['id'], status)
 
     log.message(db, block_index, 'update', 'order_matches', {
         'status': status,
         'order_match_id': order_match['id']
     })
-
-    order_match_id = util.make_id(order_match['tx0_hash'], order_match['tx1_hash'])
 
     # If tx0 is dead, credit address directly; if not, replenish give remaining, get remaining, and fee required remaining.
     orders = ledger.get_orders(db, tx_index=order_match['tx0_index'])
@@ -256,12 +245,9 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
             'status': tx0_order_status,
             'fee_required_remaining': tx0_fee_required_remaining,
         }
-        where_data = {
-            'tx_hash': order_match['tx0_hash']
-        }
-        ledger.update_orders(db, set_data, where_data)
+        ledger.update_order(db, order_match['tx0_hash'], set_data)
 
-        log.message(db, block_index, 'update', 'orders', set_data | where_data)
+        log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': order_match['tx0_hash']})
 
     # If tx1 is dead, credit address directly; if not, replenish give remaining, get remaining, and fee required remaining.
     orders = ledger.get_orders(db, tx_index=order_match['tx1_index'])
@@ -290,12 +276,9 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
             'status': tx1_order_status,
             'fee_required_remaining': tx1_fee_required_remaining,
         }
-        where_data = {
-            'tx_hash': order_match['tx1_hash']
-        }
-        ledger.update_orders(db, set_data, where_data)
+        ledger.update_order(db, order_match['tx1_hash'], set_data)
 
-        log.message(db, block_index, 'update', 'orders', set_data | where_data)
+        log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': order_match['tx1_hash']})
 
     if block_index < 286500:    # Protocol change.
         # Sanity check: one of the two must have expired.
@@ -316,8 +299,10 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
             match(db, ledger.get_transactions(db, tx_hash=tx0_order['tx_hash'])[0], block_index)
             match(db, ledger.get_transactions(db, tx_hash=tx1_order['tx_hash'])[0], block_index)
 
+    
     if status == 'expired':
         # Record order match expiration.
+        cursor = db.cursor()
         bindings = {
             'order_match_id': order_match['id'],
             'tx0_address': order_match['tx0_address'],
@@ -326,8 +311,7 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
         }
         sql='insert into order_match_expirations values(:order_match_id, :tx0_address, :tx1_address, :block_index)'
         cursor.execute(sql, bindings)
-
-    cursor.close()
+        cursor.close()
 
 
 def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, block_index):
@@ -666,12 +650,9 @@ def match (db, tx, block_index=None):
                 'fee_provided_remaining': tx0_fee_provided_remaining,
                 'status': tx0_status,
             }
-            where_data = {
-                'tx_hash': tx0['tx_hash']
-            }
-            ledger.update_orders(db, set_data, where_data)
+            ledger.update_order(db, tx0['tx_hash'], set_data)
 
-            log.message(db, block_index, 'update', 'orders', set_data | where_data)
+            log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': tx0['tx_hash']})
             # tx1
             if tx1_give_remaining <= 0 or (tx1_get_remaining <= 0 and (block_index >= 292000 or config.TESTNET or config.REGTEST)):    # Protocol change
                 if tx1['give_asset'] != config.BTC and tx1['get_asset'] != config.BTC:
@@ -685,12 +666,9 @@ def match (db, tx, block_index=None):
                 'fee_provided_remaining': tx1_fee_provided_remaining,
                 'status': tx1_status,
             }
-            where_data = {
-                'tx_hash': tx1['tx_hash']
-            }
-            ledger.update_orders(db, set_data, where_data)
+            ledger.update_order(db, tx1['tx_hash'], set_data)
 
-            log.message(db, block_index, 'update', 'orders', set_data | where_data)
+            log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': tx1['tx_hash']})
 
             # Calculate when the match will expire.
             if block_index >= 308000 or config.TESTNET or config.REGTEST:      # Protocol change.

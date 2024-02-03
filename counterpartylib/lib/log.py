@@ -432,7 +432,7 @@ def log (db, command, category, bindings):
             dispenser = dispensers[0]
         
             if (dispenser["oracle_address"] != None) and ledger.enabled('oracle_dispensers'):
-                tx_btc_amount = get_tx_info(cursor, bindings['tx_hash'])/config.UNIT
+                tx_btc_amount = get_tx_info(db, bindings['tx_hash'])/config.UNIT
                 oracle_last_price, oracle_fee, oracle_fiat_label, oracle_last_price_updated = ledger.get_oracle_last_price(db, dispenser["oracle_address"], bindings['block_index'])
                 fiatpaid = round(tx_btc_amount*oracle_last_price,2)
                 
@@ -451,11 +451,8 @@ def get_lock_issuance(db, asset):
     return None
 
 
-def get_tx_info(cursor, tx_hash):
-    cursor.execute('SELECT * FROM transactions WHERE tx_hash=:tx_hash', {
-        'tx_hash': tx_hash
-    })
-    transactions = cursor.fetchall()
+def get_tx_info(db, tx_hash):
+    transactions = ledger.get_transactions(db, tx_hash=tx_hash)
     transaction = transactions[0]
     
     return transaction["btc_amount"]

@@ -555,89 +555,6 @@ def get_bet_matches(db, status=None, deadline=None, feed_address=None, order_by=
     return cursor.fetchall()
 
 
-def find_order_matches(db, tx0_hash, tx1_hash):
-    cursor = db.cursor()
-    bindings = {
-        'status': 'pending',
-        'tx0_hash': tx0_hash,
-        'tx1_hash': tx1_hash
-    }
-    sql = '''SELECT * FROM order_matches
-             WHERE status = :status
-             AND ((tx0_hash in (:tx0_hash, :tx1_hash)) or ((tx1_hash in (:tx0_hash, :tx1_hash))))'''
-    cursor.execute(sql, bindings)
-    return cursor.fetchall()
-
-
-def find_bad_order_matches(db, tx0_address, forward_asset, tx1_address, backward_asset, status):
-    cursor = db.cursor()
-    query = '''SELECT * FROM order_matches
-            WHERE ((tx0_address = ? AND forward_asset = ?) OR (tx1_address = ? AND backward_asset = ?))
-            AND (status = ?)'''
-    bindings = (tx0_address, forward_asset, tx1_address, backward_asset, status)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_order_matches(db, id=None, status=None, match_expire_index=None):
-    cursor = db.cursor()
-    where = []
-    bindings = []
-    if id is not None:
-        where.append('id = ?')
-        bindings.append(id)
-    if status is not None:
-        where.append('status = ?')
-        bindings.append(status)
-    if match_expire_index is not None:
-        where.append('match_expire_index < ?')
-        bindings.append(match_expire_index)
-    query = f'''SELECT * FROM order_matches WHERE ({" AND ".join(where)})'''
-    cursor.execute(query, tuple(bindings))
-    return cursor.fetchall()
-
-
-def get_orders(db,
-               tx_hash=None,
-               source=None,
-               give_asset=None,
-               get_asset=None,
-               status=None,
-               tx_index=None,
-               no_tx_hash=None,
-               expire_index=None):
-    cursor = db.cursor()
-    where = []
-    bindings = []
-    if tx_hash is not None:
-        where.append('tx_hash = ?')
-        bindings.append(tx_hash)
-    if no_tx_hash is not None:
-        where.append('tx_hash != ?')
-        bindings.append(no_tx_hash)
-    if source is not None:
-        where.append('source = ?')
-        bindings.append(source)
-    if give_asset is not None:
-        where.append('give_asset = ?')
-        bindings.append(give_asset)
-    if get_asset is not None:
-        where.append('get_asset = ?')
-        bindings.append(get_asset)
-    if status is not None:
-        where.append('status = ?')
-        bindings.append(status)
-    if tx_index is not None:
-        where.append('tx_index = ?')
-        bindings.append(tx_index)
-    if expire_index is not None:
-        where.append('expire_index < ?')
-        bindings.append(expire_index)
-    query = f'''SELECT * FROM orders WHERE ({" AND ".join(where)})'''
-    cursor.execute(query, tuple(bindings))
-    return cursor.fetchall()
-
-
 def get_rps(db, tx_hash=None, tx_index=None, tx_status=None, expire_index=None, status=None):
     cursor = db.cursor()
     where = []
@@ -849,6 +766,7 @@ def get_transactions(db, tx_hash=None):
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
+
 def get_addresses(db, address=None):
     cursor = db.cursor()
     where = []
@@ -859,6 +777,7 @@ def get_addresses(db, address=None):
     query = f'''SELECT * FROM addresses WHERE ({" AND ".join(where)})'''
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
+
 
 def get_dispenser_info(db, tx_hash=None, tx_index=None):
     cursor = db.cursor()
@@ -878,7 +797,10 @@ def get_dispenser_info(db, tx_hash=None, tx_index=None):
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
-### UPDATES ###
+
+#####################
+#      UPDATES      #
+#####################
 
 def update_table(db, table_name, update_data, where_data):
     cursor = db.cursor()
@@ -908,12 +830,6 @@ def update_bets(db, update_data, where_data):
 def update_bet_matches(db, update_data, where_data):
     update_table(db, 'bet_matches', update_data, where_data)
 
-def update_orders(db, update_data, where_data):
-    update_table(db, 'orders', update_data, where_data)
-
-def update_order_matches(db, update_data, where_data):
-    update_table(db, 'order_matches', update_data, where_data)
-
 def update_rps(db, update_data, where_data):
     update_table(db, 'rps', update_data, where_data)
 
@@ -922,6 +838,102 @@ def update_rps_matches(db, update_data, where_data):
 
 def update_dispensers(db, update_data, where_data):
     update_table(db, 'dispensers', update_data, where_data)
+
+
+#####################
+#       ORDERS      #
+#####################
+
+### SELECTS ###
+
+def find_order_matches(db, tx0_hash, tx1_hash):
+    cursor = db.cursor()
+    bindings = {
+        'status': 'pending',
+        'tx0_hash': tx0_hash,
+        'tx1_hash': tx1_hash
+    }
+    sql = '''SELECT * FROM order_matches
+             WHERE status = :status
+             AND ((tx0_hash in (:tx0_hash, :tx1_hash)) or ((tx1_hash in (:tx0_hash, :tx1_hash))))'''
+    cursor.execute(sql, bindings)
+    return cursor.fetchall()
+
+
+def find_bad_order_matches(db, tx0_address, forward_asset, tx1_address, backward_asset, status):
+    cursor = db.cursor()
+    query = '''SELECT * FROM order_matches
+            WHERE ((tx0_address = ? AND forward_asset = ?) OR (tx1_address = ? AND backward_asset = ?))
+            AND (status = ?)'''
+    bindings = (tx0_address, forward_asset, tx1_address, backward_asset, status)
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_order_matches(db, id=None, status=None, match_expire_index=None):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if id is not None:
+        where.append('id = ?')
+        bindings.append(id)
+    if status is not None:
+        where.append('status = ?')
+        bindings.append(status)
+    if match_expire_index is not None:
+        where.append('match_expire_index < ?')
+        bindings.append(match_expire_index)
+    query = f'''SELECT * FROM order_matches WHERE ({" AND ".join(where)})'''
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+
+def get_orders(db,
+               tx_hash=None,
+               source=None,
+               give_asset=None,
+               get_asset=None,
+               status=None,
+               tx_index=None,
+               no_tx_hash=None,
+               expire_index=None):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if tx_hash is not None:
+        where.append('tx_hash = ?')
+        bindings.append(tx_hash)
+    if no_tx_hash is not None:
+        where.append('tx_hash != ?')
+        bindings.append(no_tx_hash)
+    if source is not None:
+        where.append('source = ?')
+        bindings.append(source)
+    if give_asset is not None:
+        where.append('give_asset = ?')
+        bindings.append(give_asset)
+    if get_asset is not None:
+        where.append('get_asset = ?')
+        bindings.append(get_asset)
+    if status is not None:
+        where.append('status = ?')
+        bindings.append(status)
+    if tx_index is not None:
+        where.append('tx_index = ?')
+        bindings.append(tx_index)
+    if expire_index is not None:
+        where.append('expire_index < ?')
+        bindings.append(expire_index)
+    query = f'''SELECT * FROM orders WHERE ({" AND ".join(where)})'''
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+### UPDATES ###
+
+def update_order(db, tx_hash, update_data):
+    update_table(db, 'orders', update_data, {
+        'tx_hash': tx_hash
+    })
 
 
 def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
@@ -943,7 +955,18 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
     cursor.execute(sql, bindings)
 
 
-### SUPPLIES ###
+def update_order_match_status(db, id, status):
+    update_table(db, 'order_matches', {
+        'status': status
+    }, {
+        'id': id
+    })
+
+
+#####################
+#     SUPPLIES      #
+#####################
+
 
 def holders(db, asset, exclude_empty_holders=False):
     """Return holders of the asset."""
@@ -1156,10 +1179,12 @@ def held (db): #TODO: Rename ?
 
     return held
 
-### SUPPLIES ###
+
+#############################
+#     PROTOCOL CHANGES      #
+#############################
 
 
-### Protocol Changes ###
 def enabled(change_name, block_index=None):
     """Return True if protocol change is enabled."""
     if config.REGTEST:
