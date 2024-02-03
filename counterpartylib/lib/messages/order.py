@@ -177,13 +177,15 @@ def cancel_order (db, order, status, block_index, tx_index):
     cursor = db.cursor()
 
     # Update status of order.
-    bindings = {
+    set_data = {
         'status': status,
+    }
+    where_data = {
         'tx_hash': order['tx_hash']
     }
-    sql='update orders set status = :status where tx_hash = :tx_hash'
-    cursor.execute(sql, bindings)
-    log.message(db, block_index, 'update', 'orders', bindings)
+    ledger.update_table(db, 'orders', set_data, where_data)
+
+    log.message(db, block_index, 'update', 'orders', set_data | where_data)
 
     if order['give_asset'] != config.BTC:    # Can’t credit BTC.
         ledger.credit(db, order['source'], order['give_asset'], order['give_remaining'], tx_index, action='cancel order', event=order['tx_hash'])
@@ -211,14 +213,18 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
             return
 
     # Update status of order match.
-    cursor = db.cursor()
-    bindings = {
+    set_data = {
+        'status': status,
+    }
+    where_data = {
+        'id': order_match['id']
+    }
+    ledger.update_table(db, 'order_matches', set_data, where_data)
+
+    log.message(db, block_index, 'update', 'order_matches', {
         'status': status,
         'order_match_id': order_match['id']
-    }
-    sql='update order_matches set status = :status where id = :order_match_id'
-    cursor.execute(sql, bindings)
-    log.message(db, block_index, 'update', 'order_matches', bindings)
+    })
 
     order_match_id = util.make_id(order_match['tx0_hash'], order_match['tx1_hash'])
 
@@ -243,18 +249,19 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
         
         if (tx0_order_status == 'filled' and ledger.enabled("reopen_order_when_btcpay_expires_fix", block_index)): #This case could happen if a BTCpay expires and before the expiration, the order was filled by a correct BTCpay
             tx0_order_status = 'open' # So, we have to open the order again
-        
-        
-        bindings = {
+
+        set_data = {
             'give_remaining': tx0_give_remaining,
             'get_remaining': tx0_get_remaining,
             'status': tx0_order_status,
             'fee_required_remaining': tx0_fee_required_remaining,
+        }
+        where_data = {
             'tx_hash': order_match['tx0_hash']
         }
-        sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, status = :status where tx_hash = :tx_hash'
-        cursor.execute(sql, bindings)
-        log.message(db, block_index, 'update', 'orders', bindings)
+        ledger.update_table(db, 'orders', set_data, where_data)
+
+        log.message(db, block_index, 'update', 'orders', set_data | where_data)
 
     # If tx1 is dead, credit address directly; if not, replenish give remaining, get remaining, and fee required remaining.
     orders = ledger.get_orders(db, tx_index=order_match['tx1_index'])
@@ -276,17 +283,19 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
         tx1_order_status = tx1_order['status']
         if (tx1_order_status == 'filled' and ledger.enabled("reopen_order_when_btcpay_expires_fix", block_index)): #This case could happen if a BTCpay expires and before the expiration, the order was filled by a correct BTCpay
             tx1_order_status = 'open' # So, we have to open the order again
-        
-        bindings = {
+
+        set_data = {
             'give_remaining': tx1_give_remaining,
             'get_remaining': tx1_get_remaining,
             'status': tx1_order_status,
             'fee_required_remaining': tx1_fee_required_remaining,
+        }
+        where_data = {
             'tx_hash': order_match['tx1_hash']
         }
-        sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, status = :status where tx_hash = :tx_hash'
-        cursor.execute(sql, bindings)
-        log.message(db, block_index, 'update', 'orders', bindings)
+        ledger.update_table(db, 'orders', set_data, where_data)
+
+        log.message(db, block_index, 'update', 'orders', set_data | where_data)
 
     if block_index < 286500:    # Protocol change.
         # Sanity check: one of the two must have expired.
@@ -650,34 +659,38 @@ def match (db, tx, block_index=None):
                     # Fill order, and recredit give_remaining.
                     tx0_status = 'filled'
                     ledger.credit(db, tx0['source'], tx0['give_asset'], tx0_give_remaining, tx['block_index'], event=tx1['tx_hash'], action='filled')
-            bindings = {
+            set_data = {
                 'give_remaining': tx0_give_remaining,
                 'get_remaining': tx0_get_remaining,
                 'fee_required_remaining': tx0_fee_required_remaining,
                 'fee_provided_remaining': tx0_fee_provided_remaining,
                 'status': tx0_status,
+            }
+            where_data = {
                 'tx_hash': tx0['tx_hash']
             }
-            sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, fee_provided_remaining = :fee_provided_remaining, status = :status where tx_hash = :tx_hash'
-            cursor.execute(sql, bindings)
-            log.message(db, block_index, 'update', 'orders', bindings)
+            ledger.update_table(db, 'orders', set_data, where_data)
+
+            log.message(db, block_index, 'update', 'orders', set_data | where_data)
             # tx1
             if tx1_give_remaining <= 0 or (tx1_get_remaining <= 0 and (block_index >= 292000 or config.TESTNET or config.REGTEST)):    # Protocol change
                 if tx1['give_asset'] != config.BTC and tx1['get_asset'] != config.BTC:
                     # Fill order, and recredit give_remaining.
                     tx1_status = 'filled'
                     ledger.credit(db, tx1['source'], tx1['give_asset'], tx1_give_remaining, tx['block_index'], event=tx0['tx_hash'], action='filled')
-            bindings = {
+            set_data = {
                 'give_remaining': tx1_give_remaining,
                 'get_remaining': tx1_get_remaining,
                 'fee_required_remaining': tx1_fee_required_remaining,
                 'fee_provided_remaining': tx1_fee_provided_remaining,
                 'status': tx1_status,
+            }
+            where_data = {
                 'tx_hash': tx1['tx_hash']
             }
-            sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, fee_provided_remaining = :fee_provided_remaining, status = :status where tx_hash = :tx_hash'
-            cursor.execute(sql, bindings)
-            log.message(db, block_index, 'update', 'orders', bindings)
+            ledger.update_table(db, 'orders', set_data, where_data)
+
+            log.message(db, block_index, 'update', 'orders', set_data | where_data)
 
             # Calculate when the match will expire.
             if block_index >= 308000 or config.TESTNET or config.REGTEST:      # Protocol change.

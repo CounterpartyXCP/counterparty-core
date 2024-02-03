@@ -142,13 +142,15 @@ def cancel_rps (db, rps, status, block_index, tx_index):
     cursor = db.cursor()
 
     # Update status of rps.
-    bindings = {
-        'status': status,
+    set_data = {
+        'status': status
+    }
+    where_data = {
         'tx_hash': rps['tx_hash']
     }
-    sql='''UPDATE rps SET status = :status WHERE tx_hash = :tx_hash'''
-    cursor.execute(sql, bindings)
-    log.message(db, block_index, 'update', 'rps', bindings)
+    ledger.update_table(db, 'rps', set_data, where_data)
+
+    log.message(db, block_index, 'update', 'rps', set_data | where_data)
 
     ledger.credit(db, rps['source'], 'XCP', rps['wager'], tx_index, action='recredit wager', event=rps['tx_hash'])
 
@@ -171,13 +173,12 @@ def update_rps_match_status (db, rps_match, status, block_index, tx_index):
                     2 * rps_match['wager'], tx_index, action='wins', event=rps_match['id'])
 
     # Update status of rps match.
-    bindings = {
+    ledger.update_table(db, 'rps_matches', {'status': status}, {'id': rps_match['id']})
+    # Log
+    log.message(db, block_index, 'update', 'rps_matches', {
         'status': status,
         'rps_match_id': rps_match['id']
-    }
-    sql='UPDATE rps_matches SET status = :status WHERE id = :rps_match_id'
-    cursor.execute(sql, bindings)
-    log.message(db, block_index, 'update', 'rps_matches', bindings)
+    })
 
     cursor.close()
 
@@ -310,12 +311,14 @@ def match (db, tx, block_index):
 
         # update status
         for txn in [tx0, tx1]:
-            bindings = {
-                'status': 'matched',
+            set_data = {
+                'status': 'matched'
+            }
+            where_data = {
                 'tx_index': txn['tx_index']
             }
-            cursor.execute('''UPDATE rps SET status = :status WHERE tx_index = :tx_index''', bindings)
-            log.message(db, block_index, 'update', 'rps', bindings)
+            ledger.update_table(db, 'rps', set_data, where_data)
+            log.message(db, block_index, 'update', 'rps', set_data | where_data)
 
         bindings = {
             'id': util.make_id(tx0['tx_hash'], tx1['tx_hash']),
@@ -389,7 +392,7 @@ def expire (db, block_index):
         if new_rps_match_status == 'expired':
             matched_rps = ledger.find_matched_rps(db, rps_match['tx0_hash'], rps_match['tx1_hash'], expire_index=block_index)
             for rps in matched_rps:
-                cursor.execute('''UPDATE rps SET status = ? WHERE tx_index = ?''', ('open', rps['tx_index']))
+                ledger.update_table(db, 'rps', {'status': 'open'}, {'tx_index': rps['tx_index']})
                 # Re-debit XCP refund by close_rps_match.
                 ledger.debit(db, rps['source'], 'XCP', rps['wager'], tx['tx_index'], action='reopen RPS after matching expiration', event=rps_match['id'])
                 # Rematch

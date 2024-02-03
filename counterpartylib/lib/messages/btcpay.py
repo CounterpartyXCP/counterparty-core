@@ -131,13 +131,18 @@ def parse (db, tx, message):
             status = 'valid'
 
             # Update order match.
-            bindings = {
+            set_data = {
+                'status': 'completed'
+            }
+            where_data = {
+                'id': order_match_id
+            }
+            ledger.update_table(db, 'order_matches', set_data, where_data)
+
+            log.message(db, tx['block_index'], 'update', 'order_matches', {
                 'status': 'completed',
                 'order_match_id': order_match_id
-            }
-            sql='update order_matches set status = :status where id = :order_match_id'
-            cursor.execute(sql, bindings)
-            log.message(db, tx['block_index'], 'update', 'order_matches', bindings)
+            })
 
             # Update give and get order status as filled if order_match is completed
             if ledger.enabled('btc_order_filled'):
