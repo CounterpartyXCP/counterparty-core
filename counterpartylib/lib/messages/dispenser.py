@@ -64,13 +64,6 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       source_asset_status_idx ON dispensers (source, asset, status)
                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_status_origin_idx ON dispensers (source, status, origin)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_asset_status_origin_idx ON dispensers (source, asset, status, origin)
-                   ''')
-
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS dispenses(
                       tx_index INTEGER,
@@ -114,9 +107,6 @@ def initialise(db):
                         dispensers_status_idx ON dispensers (status)
                     ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        dispensers_last_status_tx_hash_idx ON dispensers (last_status_tx_hash)
-                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
                     dispensers_asset_idx ON dispensers (asset)
                 ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -140,9 +130,18 @@ def initialise(db):
     #this column will be used to know when a dispenser was marked to close
     if 'last_status_tx_hash' not in columns:
         cursor.execute('ALTER TABLE dispensers ADD COLUMN last_status_tx_hash TEXT') 
+        cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        dispensers_last_status_tx_hash_idx ON dispensers (last_status_tx_hash)
+                    ''')
         
     if "origin" not in columns:
         cursor.execute('ALTER TABLE dispensers ADD COLUMN origin TEXT')
+        cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      source_status_origin_idx ON dispensers (source, status, origin)
+                   ''')
+        cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        source_asset_status_origin_idx ON dispensers (source, asset, status, origin)
+                    ''')
         
         cursor.execute("UPDATE dispensers AS d SET origin = (SELECT t.source FROM transactions t WHERE d.tx_hash = t.tx_hash)")
         
