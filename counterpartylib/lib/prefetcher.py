@@ -1,28 +1,31 @@
-#! /usr/bin/python3
-
 import time
 import threading
-import bitcoin as bitcoinlib
+import queue
 import logging
-logger = logging.getLogger(__name__)
-from logging import handlers as logging_handlers
+
+import bitcoin as bitcoinlib
 
 from counterpartylib.lib import backend, util, config
+
+logger = logging.getLogger(__name__)
 
 BLOCK_COUNT_CHECK_FREQ = 100
 BLOCKCHAIN_CACHE = {}
 BLOCKCHAIN_CACHE_MAX_SIZE = 10000
 PREFETCHER_THREADS = []
+NEXT_BLOCK_TO_PREFETCH = queue.Queue()
+
+def next_block_index():
+    block_index = NEXT_BLOCK_TO_PREFETCH.get()
+    NEXT_BLOCK_TO_PREFETCH.put(block_index + 1)
+    return block_index
 
 class Prefetcher(threading.Thread):
 
-    def __init__(self, thread_index, num_threads, thread_first_block):
+    def __init__(self, thread_index):
         threading.Thread.__init__(self)
         self.stop_event = threading.Event()
         self.thread_index = thread_index
-        self.num_threads = num_threads
-        self.block_first = thread_first_block
-        self.fetch_block_index = thread_first_block
 
     def stop(self):
         self.stop_event.set()
@@ -39,26 +42,29 @@ class Prefetcher(threading.Thread):
                 time.sleep(10)
                 continue
 
-            logger.debug('Fetching block {} with Prefetcher thread {}.'.format(self.fetch_block_index, self.thread_index))
-            block_hash = backend.getblockhash(self.fetch_block_index)
+            block_index = next_block_index()
+            if not block_index:
+                continue
+
+            logger.debug('Fetching block {} with Prefetcher thread {}.'.format(block_index, self.thread_index))
+            block_hash = backend.getblockhash(block_index)
             block = backend.getblock(block_hash)
             txhash_list, raw_transactions = backend.get_tx_list(block)
-            BLOCKCHAIN_CACHE[self.fetch_block_index] = {'block_hash': block_hash,
+            BLOCKCHAIN_CACHE[block_index] = {'block_hash': block_hash,
                                              'txhash_list': txhash_list,
                                              'raw_transactions': raw_transactions,
                                              'previous_block_hash': bitcoinlib.core.b2lx(block.hashPrevBlock),
                                              'block_time': block.nTime,
                                              'block_difficulty': block.difficulty}
 
-            self.fetch_block_index += self.num_threads
 
 def start_all(num_prefetcher_threads):
     # Block Prefetcher and Indexer
     block_first = config.BLOCK_FIRST_TESTNET if config.TESTNET else config.BLOCK_FIRST
     block_first = util.CURRENT_BLOCK_INDEX or block_first
+    NEXT_BLOCK_TO_PREFETCH.put(block_first)
     for thread_index in range(1, num_prefetcher_threads + 1):
-        thread_first_block = block_first + thread_index - 1
-        prefetcher_thread = Prefetcher(thread_index, num_prefetcher_threads, thread_first_block)
+        prefetcher_thread = Prefetcher(thread_index)
         prefetcher_thread.daemon = True
         time.sleep(0.05) # avoid DOS
         prefetcher_thread.start()
