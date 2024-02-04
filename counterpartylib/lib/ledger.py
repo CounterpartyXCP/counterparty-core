@@ -804,7 +804,6 @@ def get_dispenser_info(db, tx_hash=None, tx_index=None):
 
 
 def insert_update(db, table_name, update_data, where_data, block_index, tx_index, more_where=""):
-    logger.warning(f'insert_update: {table_name} {update_data} {where_data} {block_index} {tx_index}')
     cursor = db.cursor()
     # select records to update
     where = []
@@ -835,8 +834,6 @@ def insert_update(db, table_name, update_data, where_data, block_index, tx_index
         fields_name = ', '.join(new_record.keys())
         fields_values = ', '.join([f':{key}' for key in new_record.keys()])
         insert_query = f'''INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})'''
-        logger.warning(insert_query)
-        logger.warning(new_record)
         cursor.execute(insert_query, new_record)
 
     cursor.close()

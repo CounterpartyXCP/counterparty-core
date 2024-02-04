@@ -119,8 +119,7 @@ def initialise(db):
 
     # Order Expirations
     cursor.execute('''CREATE TABLE IF NOT EXISTS order_expirations(
-                      order_index INTEGER PRIMARY KEY,
-                      order_hash TEXT UNIQUE,
+                      order_hash TEXT PRIMARY KEY,
                       source TEXT,
                       block_index INTEGER,
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index))
@@ -187,12 +186,11 @@ def cancel_order (db, order, status, block_index, tx_index):
     if status == 'expired':
         # Record offer expiration.
         bindings = {
-            'order_index': order['tx_index'],
             'order_hash': order['tx_hash'],
             'source': order['source'],
             'block_index': block_index
         }
-        sql='insert into order_expirations values(:order_index, :order_hash, :source, :block_index)'
+        sql='insert into order_expirations values(:order_hash, :source, :block_index)'
         cursor.execute(sql, bindings)
 
     cursor.close()
@@ -716,12 +714,12 @@ def expire (db, block_index):
     # Expire orders and give refunds for the quantity give_remaining (if non-zero; if not BTC).
     orders = ledger.get_orders_to_expire(db, block_index)
     for order in orders:
-        cancel_order(db, order, 'expired', block_index, 0)
+        cancel_order(db, order, 'expired', block_index, 0) # tx_index=0 for block action
 
     # Expire order_matches for BTC with no BTC.
     order_matches = ledger.get_order_matches_to_expire(db, block_index)
     for order_match in order_matches:
-        cancel_order_match(db, order_match, 'expired', block_index, 0)
+        cancel_order_match(db, order_match, 'expired', block_index, 0) # tx_index=0 for block action
 
         # Expire btc sell order if match expires
         if ledger.enabled('btc_sell_expire_on_match_expire'):

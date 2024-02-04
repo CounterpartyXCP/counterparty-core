@@ -1138,8 +1138,7 @@ BEGIN TRANSACTION;
 -- Table  order_expirations
 DROP TABLE IF EXISTS order_expirations;
 CREATE TABLE order_expirations(
-                      order_index INTEGER PRIMARY KEY,
-                      order_hash TEXT UNIQUE,
+                      order_hash TEXT PRIMARY KEY,
                       source TEXT,
                       block_index INTEGER,
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index));

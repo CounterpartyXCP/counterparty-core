@@ -41,6 +41,8 @@ Potential forward quantities: 50000000, 52500000
 Forward Quantity: 50000000
 Backward Quantity: 100000000
 Tx0 fee provided remaining: 0.01; required fee: 0.00857142
+Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered BTC for XCP in 10 blocks, with a provided fee of 0.01000000 BTC and a required fee of 0.00000000 BTC (6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59) [open]
+Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered XCP for BTC in 10 blocks, with a provided fee of 0.00006800 BTC and a required fee of 0.00900000 BTC (36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c) [open]
 Order Match: BTC for XCP (6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c) [pending]
 Order match has only -10 confirmation(s).
 data_btc_out=2000 (data_value=1000 len(data_array)=2)
@@ -50,6 +52,7 @@ New input: amount: 1.36880635; txid: 36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95
 final_fee inputs: 1 size: 387 final_fee 9675
 Size: 387 Fee: 0.00009675 Change quantity: 0.86868960 BTC
 Credit: XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #btcpay# <843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099>
+Order Match: BTC for XCP (6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c) [completed]
 Database: set status of order_match 6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c to completed.
 BTC Payment: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid BTC to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc for order match 6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c (843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099) [valid]
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
@@ -131,6 +134,7 @@ Fee/KB 0.00025000
 New input: amount: 0.86787720; txid: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 0.86773640 BTC
+Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered BTC for XCP in 10 blocks, with a provided fee of 0.01000000 BTC and a required fee of 0.00000000 BTC (6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59) [expired]
 Expired order: 6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59
 Debit: XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #bet# <e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42>
 Bet: XCP against XCP, by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
@@ -147,6 +151,7 @@ Fee/KB 0.00025000
 New input: amount: 0.86773640; txid: e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 0.86759560 BTC
+Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered XCP for BTC in 10 blocks, with a provided fee of 0.00006800 BTC and a required fee of 0.00900000 BTC (36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c) [expired]
 Credit: XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #cancel order# <36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c>
 Expired order: 36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c
 Debit: XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #bet# <3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a>
@@ -257,5 +262,6 @@ Expired bet: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81
 Debit: BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #send# <58b89d056b539d2cf9ddac4518ccca6744495127e0ce893eb71da2599cbf85ab>
 Credit: BBBC to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #send# <58b89d056b539d2cf9ddac4518ccca6744495127e0ce893eb71da2599cbf85ab>
 Send: BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (58b89d056b539d2cf9ddac4518ccca6744495127e0ce893eb71da2599cbf85ab) [valid]
+Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered BBBB for XCP in 10 blocks, with a provided fee of 0.00006800 BTC and a required fee of 0.00000000 BTC (eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a) [expired]
 Credit: BBBB to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #cancel order# <eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a>
 Expired order: eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a
