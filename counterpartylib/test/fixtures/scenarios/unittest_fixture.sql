@@ -507,15 +507,15 @@ INSERT INTO blocks VALUES(310488,'80b8dd5d7ce2e4886e6721095b892a39fb699980fe2bc1
 INSERT INTO blocks VALUES(310489,'2efdb36f986b3e3ccc6cc9b0c1c3cdcb07429fb43cbc0cc3b6c87d1b33f258b6',310489000,NULL,NULL,'716354a370f344980e98785a444b56b21188bc699e7fbd0c877b6f2fabf35efc','23d9af03e6aa29fbab29c8e2a5a0419680053bba19594105cc8ef4d3db05d418','386ffafa63884e623320c97373f79ba09a66ee380df401c45c0382b7e68c3d4c');
 INSERT INTO blocks VALUES(310490,'e2cb04b8a7368c95359c9d5ff33e64209200fb606de0d64b7c0f67bb1cb8d87c',310490000,NULL,NULL,'906a38f4256f50312891119c99721537992438af85421e317574ce1810e2b909','5f934032dce4102cd1d72d3f887526e78baa4a78991bc43cf0a1ebefe08fdec7','b7d54e00b2d07d2f6c6f31a67ff501da3be9d1adfdc013dfd0537695f2222aea');
 INSERT INTO blocks VALUES(310491,'811abd7cf2b768cfdaa84ab44c63f4463c96a368ead52125bf149cf0c7447b16',310491000,NULL,NULL,'3114d8091cfcaa9944c6fab49d51950535c4ef269877d58c372ed80b2b472ec6','f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8','07daabaaad40afd1fa1654822cf3c4e984ae409ad872114206b7836e42eb0ee1');
-INSERT INTO blocks VALUES(310492,'8a09b2faf0a7ad67eb4ab5c948b9769fc87eb2ec5e16108f2cde8bd9e6cf7607',310492000,NULL,NULL,'98af18583618fdeed545347c013763d068e8294405d265911cc5e1bc420bc740','daf4d2c1a1ad5206abcf7744bdd06fae99c442fb2607a843dcabb5727d02916e','d3a0c21a7239daeb6ba0913d90a2a862b2877c3631644dc54063e13b9b9e5969');
-INSERT INTO blocks VALUES(310493,'c19e2915b750279b2be4b52e57e5ce29f63dffb4e14d9aad30c9e820affc0cbf',310493000,NULL,NULL,'29119cd30a4733916fbfd0551506eaa16f7bb1bdfbdf8d17ac4e5bb20d1cb09c','7ec4cfa94544900c8e8732ad51be7cee6452aa1884ea940cd5c98862fb4aaba6','fb336609a8341298d1d4f1883b6abd3f4ca28a35c140a86d8952f776fdfe5292');
-INSERT INTO blocks VALUES(310494,'7dda1d3e12785313d5651ee5314d0aecf17588196f9150b10c55695dbaebee5d',310494000,NULL,NULL,'72d71bd72263699ea9f2b097ad141be5bc394f49d8b0b0a6b2ff6a87b0ee3919','9350c3ba33d0546d1194c5fa767ced28834b26246aedc56d89b1d48ec4f26014','4434caf455ed15569ef6498a8b1c5892b91ecb59b89edc0fd0c7faaaee0bb3a2');
-INSERT INTO blocks VALUES(310495,'4769aa7030f28a05a137a85ef4ee0c1765c37013773212b93ec90f1227168b67',310495000,NULL,NULL,'5a7e5a36882466373d576bb5f4ccd1bc72ecaf548b9589baa803a7275a7a24cd','09e9db121649cacd979fd18bbaa35e519361e727e7e072e2f2f86291160cdb29','1882de237250b5882acf2e25f2d414fa879abf26030b58e98452e44afa655542');
-INSERT INTO blocks VALUES(310496,'65884816927e8c566655e85c07bc2bc2c7ee26e625742f219939d43238fb31f8',310496000,NULL,NULL,'7ac6121c624b634f44695172761830926afe76bb18c4cc9195773f3a26966941','9eda85cce745579122ba9c6e24b63cd83f2e5161031a34e6ee9bf08b80823cb4','e2acfc1b5e74b0744761783c070c7a4315d565e9f17a448ff92fefb3b4831fa5');
-INSERT INTO blocks VALUES(310497,'f1118591fe79b8bf52ccf0c5de9826bfd266b1fdc24b44676cf22bbcc76d464e',310497000,NULL,NULL,'28c6e92b2299b9cbbb5953f8b7ff3de0fe962d15642ba27e43faa64e1935e819','ff8136601b9e0138a999d1f0467af6e8535a2bcdd2b622af7be0178a083b9519','b34ac9be96a3d44f29d7cd5b1b6fca84ebfb5061654148852a5bf99ff90e16da');
-INSERT INTO blocks VALUES(310498,'b7058b6d1ddc325a10bf33144937e06ce6025215b416518ae120da9440ae279e',310498000,NULL,NULL,'5fe6cdb0828379bf240fad99c68bba34e1889bbc19605ce5c297b82352264414','b488f6f0e6c233f202ee17c0843236d464144e79c870af88bae56355ae9372b7','d97d1d357be4ef8f486817041336443d8fbd671b3d5f8d913d2de409432a17a4');
-INSERT INTO blocks VALUES(310499,'1950e1a4d7fc820ed9603f6df6819c3c953c277c726340dec2a4253e261a1764',310499000,NULL,NULL,'b9fcbdafddd46fdda061f6e9f8744b426b6ca37e32b315df1098cbc7899ae9b9','032166892f568bb97f4f69ef5bdf49cc1b15cc9f8c7f6c1f3e1f9d54816ad7e5','2d32180e7606ab8acb9a7274319e84f48a416ed82fc9e27877a6641b9d80befd');
-INSERT INTO blocks VALUES(310500,'54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b',310500000,NULL,NULL,'5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d','35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1','9f570397ef4777452b75c18239378b08e8367da70d36d2676fc662d4900fc21b');
+INSERT INTO blocks VALUES(310492,'8a09b2faf0a7ad67eb4ab5c948b9769fc87eb2ec5e16108f2cde8bd9e6cf7607',310492000,NULL,NULL,'98af18583618fdeed545347c013763d068e8294405d265911cc5e1bc420bc740','daf4d2c1a1ad5206abcf7744bdd06fae99c442fb2607a843dcabb5727d02916e','9831d04cbda59317c77ef6feefcccb77c53552609048ea9f17a3919dc754e133');
+INSERT INTO blocks VALUES(310493,'c19e2915b750279b2be4b52e57e5ce29f63dffb4e14d9aad30c9e820affc0cbf',310493000,NULL,NULL,'29119cd30a4733916fbfd0551506eaa16f7bb1bdfbdf8d17ac4e5bb20d1cb09c','7ec4cfa94544900c8e8732ad51be7cee6452aa1884ea940cd5c98862fb4aaba6','efc1db392aaa49327f7974015efec700596970e37fd17153e7f72093b6d989ff');
+INSERT INTO blocks VALUES(310494,'7dda1d3e12785313d5651ee5314d0aecf17588196f9150b10c55695dbaebee5d',310494000,NULL,NULL,'72d71bd72263699ea9f2b097ad141be5bc394f49d8b0b0a6b2ff6a87b0ee3919','9350c3ba33d0546d1194c5fa767ced28834b26246aedc56d89b1d48ec4f26014','c153d587cd73427168493821c72458468467e6e5b5d565af5ffde524acb48ecf');
+INSERT INTO blocks VALUES(310495,'4769aa7030f28a05a137a85ef4ee0c1765c37013773212b93ec90f1227168b67',310495000,NULL,NULL,'5a7e5a36882466373d576bb5f4ccd1bc72ecaf548b9589baa803a7275a7a24cd','09e9db121649cacd979fd18bbaa35e519361e727e7e072e2f2f86291160cdb29','3248b315df2b2da8a3dd323a3e7519ed97a3aa3abd4dfbfe2539179491eb1bbc');
+INSERT INTO blocks VALUES(310496,'65884816927e8c566655e85c07bc2bc2c7ee26e625742f219939d43238fb31f8',310496000,NULL,NULL,'7ac6121c624b634f44695172761830926afe76bb18c4cc9195773f3a26966941','9eda85cce745579122ba9c6e24b63cd83f2e5161031a34e6ee9bf08b80823cb4','a4fdb2bcf41bd2e2e44586c1792479f2a006de5ebbd4f921360be2cb9bdbea59');
+INSERT INTO blocks VALUES(310497,'f1118591fe79b8bf52ccf0c5de9826bfd266b1fdc24b44676cf22bbcc76d464e',310497000,NULL,NULL,'28c6e92b2299b9cbbb5953f8b7ff3de0fe962d15642ba27e43faa64e1935e819','ff8136601b9e0138a999d1f0467af6e8535a2bcdd2b622af7be0178a083b9519','f75b6e1a1aed0864160e9286cb0c83237f241e405acb63dc27650c3bb17b7a99');
+INSERT INTO blocks VALUES(310498,'b7058b6d1ddc325a10bf33144937e06ce6025215b416518ae120da9440ae279e',310498000,NULL,NULL,'5fe6cdb0828379bf240fad99c68bba34e1889bbc19605ce5c297b82352264414','b488f6f0e6c233f202ee17c0843236d464144e79c870af88bae56355ae9372b7','c341439b6b64acf7f6ce4a517a56bb957a22f1f8f85f14a236d8207f4d6164d6');
+INSERT INTO blocks VALUES(310499,'1950e1a4d7fc820ed9603f6df6819c3c953c277c726340dec2a4253e261a1764',310499000,NULL,NULL,'b9fcbdafddd46fdda061f6e9f8744b426b6ca37e32b315df1098cbc7899ae9b9','032166892f568bb97f4f69ef5bdf49cc1b15cc9f8c7f6c1f3e1f9d54816ad7e5','829317110da4128e20845196cf95e5ef8756aad5cc93ee8c2f557373dcd14eed');
+INSERT INTO blocks VALUES(310500,'54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b',310500000,NULL,NULL,'5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d','35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1','17059188648d063f5169c838b8193ffd4c61ac913b2759ef9bed9d818a134156');
 -- Triggers and indices on  blocks
 CREATE INDEX block_index_idx ON blocks (block_index)
                    ;
@@ -1038,26 +1038,28 @@ INSERT INTO messages VALUES(106,310490,'insert','replace','[''address'', ''block
 INSERT INTO messages VALUES(107,310491,'insert','debits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
 INSERT INTO messages VALUES(108,310491,'insert','orders','[''block_index'', ''expiration'', ''expire_index'', ''fee_provided'', ''fee_provided_remaining'', ''fee_required'', ''fee_required_remaining'', ''get_asset'', ''get_quantity'', ''get_remaining'', ''give_asset'', ''give_quantity'', ''give_remaining'', ''source'', ''status'', ''tx_hash'', ''tx_index'']',0);
 INSERT INTO messages VALUES(109,310492,'insert','orders','[''block_index'', ''expiration'', ''expire_index'', ''fee_provided'', ''fee_provided_remaining'', ''fee_required'', ''fee_required_remaining'', ''get_asset'', ''get_quantity'', ''get_remaining'', ''give_asset'', ''give_quantity'', ''give_remaining'', ''source'', ''status'', ''tx_hash'', ''tx_index'']',0);
-INSERT INTO messages VALUES(110,310492,'update','orders','[''fee_provided_remaining'', ''fee_required_remaining'', ''get_remaining'', ''give_remaining'', ''status'', ''tx_hash'']',0);
+INSERT INTO messages VALUES(110,310492,'insert','orders','[''block_index'', ''expiration'', ''expire_index'', ''fee_provided'', ''fee_provided_remaining'', ''fee_required'', ''fee_required_remaining'', ''get_asset'', ''get_quantity'', ''get_remaining'', ''give_asset'', ''give_quantity'', ''give_remaining'', ''source'', ''status'', ''tx_hash'', ''tx_index'']',0);
 INSERT INTO messages VALUES(111,310492,'update','orders','[''fee_provided_remaining'', ''fee_required_remaining'', ''get_remaining'', ''give_remaining'', ''status'', ''tx_hash'']',0);
-INSERT INTO messages VALUES(112,310492,'insert','order_matches','[''backward_asset'', ''backward_quantity'', ''block_index'', ''fee_paid'', ''forward_asset'', ''forward_quantity'', ''id'', ''match_expire_index'', ''status'', ''tx0_address'', ''tx0_block_index'', ''tx0_expiration'', ''tx0_hash'', ''tx0_index'', ''tx1_address'', ''tx1_block_index'', ''tx1_expiration'', ''tx1_hash'', ''tx1_index'']',0);
-INSERT INTO messages VALUES(113,310493,'insert','credits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
-INSERT INTO messages VALUES(114,310493,'insert','burns','[''block_index'', ''burned'', ''earned'', ''source'', ''status'', ''tx_hash'', ''tx_index'']',0);
-INSERT INTO messages VALUES(115,310494,'insert','debits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
-INSERT INTO messages VALUES(116,310494,'insert','issuances','[''asset'', ''asset_longname'', ''block_index'', ''call_date'', ''call_price'', ''callable'', ''description'', ''divisible'', ''fee_paid'', ''issuer'', ''locked'', ''quantity'', ''reset'', ''source'', ''status'', ''transfer'', ''tx_hash'', ''tx_index'']',0);
-INSERT INTO messages VALUES(117,310494,'insert','credits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
-INSERT INTO messages VALUES(118,310495,'insert','debits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
-INSERT INTO messages VALUES(119,310495,'insert','credits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
-INSERT INTO messages VALUES(120,310495,'insert','sends','[''asset'', ''block_index'', ''destination'', ''quantity'', ''source'', ''status'', ''tx_hash'', ''tx_index'']',0);
-INSERT INTO messages VALUES(121,310496,'insert','debits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
-INSERT INTO messages VALUES(122,310496,'insert','credits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
-INSERT INTO messages VALUES(123,310496,'insert','sends','[''asset'', ''block_index'', ''destination'', ''quantity'', ''source'', ''status'', ''tx_hash'', ''tx_index'']',0);
-INSERT INTO messages VALUES(124,310497,'insert','debits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
-INSERT INTO messages VALUES(125,310497,'insert','issuances','[''asset'', ''asset_longname'', ''block_index'', ''call_date'', ''call_price'', ''callable'', ''description'', ''divisible'', ''fee_paid'', ''issuer'', ''locked'', ''quantity'', ''reset'', ''source'', ''status'', ''transfer'', ''tx_hash'', ''tx_index'']',0);
-INSERT INTO messages VALUES(126,310497,'insert','credits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
-INSERT INTO messages VALUES(127,310498,'insert','debits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
-INSERT INTO messages VALUES(128,310498,'insert','issuances','[''asset'', ''asset_longname'', ''block_index'', ''call_date'', ''call_price'', ''callable'', ''description'', ''divisible'', ''fee_paid'', ''issuer'', ''locked'', ''quantity'', ''reset'', ''source'', ''status'', ''transfer'', ''tx_hash'', ''tx_index'']',0);
-INSERT INTO messages VALUES(129,310498,'insert','credits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
+INSERT INTO messages VALUES(112,310492,'insert','orders','[''block_index'', ''expiration'', ''expire_index'', ''fee_provided'', ''fee_provided_remaining'', ''fee_required'', ''fee_required_remaining'', ''get_asset'', ''get_quantity'', ''get_remaining'', ''give_asset'', ''give_quantity'', ''give_remaining'', ''source'', ''status'', ''tx_hash'', ''tx_index'']',0);
+INSERT INTO messages VALUES(113,310492,'update','orders','[''fee_provided_remaining'', ''fee_required_remaining'', ''get_remaining'', ''give_remaining'', ''status'', ''tx_hash'']',0);
+INSERT INTO messages VALUES(114,310492,'insert','order_matches','[''backward_asset'', ''backward_quantity'', ''block_index'', ''fee_paid'', ''forward_asset'', ''forward_quantity'', ''id'', ''match_expire_index'', ''status'', ''tx0_address'', ''tx0_block_index'', ''tx0_expiration'', ''tx0_hash'', ''tx0_index'', ''tx1_address'', ''tx1_block_index'', ''tx1_expiration'', ''tx1_hash'', ''tx1_index'']',0);
+INSERT INTO messages VALUES(115,310493,'insert','credits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
+INSERT INTO messages VALUES(116,310493,'insert','burns','[''block_index'', ''burned'', ''earned'', ''source'', ''status'', ''tx_hash'', ''tx_index'']',0);
+INSERT INTO messages VALUES(117,310494,'insert','debits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
+INSERT INTO messages VALUES(118,310494,'insert','issuances','[''asset'', ''asset_longname'', ''block_index'', ''call_date'', ''call_price'', ''callable'', ''description'', ''divisible'', ''fee_paid'', ''issuer'', ''locked'', ''quantity'', ''reset'', ''source'', ''status'', ''transfer'', ''tx_hash'', ''tx_index'']',0);
+INSERT INTO messages VALUES(119,310494,'insert','credits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
+INSERT INTO messages VALUES(120,310495,'insert','debits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
+INSERT INTO messages VALUES(121,310495,'insert','credits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
+INSERT INTO messages VALUES(122,310495,'insert','sends','[''asset'', ''block_index'', ''destination'', ''quantity'', ''source'', ''status'', ''tx_hash'', ''tx_index'']',0);
+INSERT INTO messages VALUES(123,310496,'insert','debits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
+INSERT INTO messages VALUES(124,310496,'insert','credits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
+INSERT INTO messages VALUES(125,310496,'insert','sends','[''asset'', ''block_index'', ''destination'', ''quantity'', ''source'', ''status'', ''tx_hash'', ''tx_index'']',0);
+INSERT INTO messages VALUES(126,310497,'insert','debits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
+INSERT INTO messages VALUES(127,310497,'insert','issuances','[''asset'', ''asset_longname'', ''block_index'', ''call_date'', ''call_price'', ''callable'', ''description'', ''divisible'', ''fee_paid'', ''issuer'', ''locked'', ''quantity'', ''reset'', ''source'', ''status'', ''transfer'', ''tx_hash'', ''tx_index'']',0);
+INSERT INTO messages VALUES(128,310497,'insert','credits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
+INSERT INTO messages VALUES(129,310498,'insert','debits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
+INSERT INTO messages VALUES(130,310498,'insert','issuances','[''asset'', ''asset_longname'', ''block_index'', ''call_date'', ''call_price'', ''callable'', ''description'', ''divisible'', ''fee_paid'', ''issuer'', ''locked'', ''quantity'', ''reset'', ''source'', ''status'', ''transfer'', ''tx_hash'', ''tx_index'']',0);
+INSERT INTO messages VALUES(131,310498,'insert','credits','[''action'', ''address'', ''asset'', ''block_index'', ''event'', ''quantity'', ''tx_index'']',0);
 -- Triggers and indices on  messages
 CREATE INDEX block_index_message_index_idx ON messages (block_index, message_index)
                    ;
@@ -1077,7 +1079,6 @@ CREATE TABLE order_match_expirations(
                       tx0_address TEXT,
                       tx1_address TEXT,
                       block_index INTEGER,
-                      FOREIGN KEY (order_match_id) REFERENCES order_matches(id),
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index));
 
 COMMIT TRANSACTION;
@@ -1091,7 +1092,7 @@ BEGIN TRANSACTION;
 -- Table  order_matches
 DROP TABLE IF EXISTS order_matches;
 CREATE TABLE order_matches(
-                      id TEXT PRIMARY KEY,
+                      id TEXT,
                       tx0_index INTEGER,
                       tx0_hash TEXT,
                       tx0_address TEXT,
@@ -1140,8 +1141,7 @@ CREATE TABLE order_expirations(
                       order_hash TEXT UNIQUE,
                       source TEXT,
                       block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index),
-                      FOREIGN KEY (order_index, order_hash) REFERENCES orders(tx_index, tx_hash));
+                      FOREIGN KEY (block_index) REFERENCES blocks(block_index));
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1154,8 +1154,8 @@ BEGIN TRANSACTION;
 -- Table  orders
 DROP TABLE IF EXISTS orders;
 CREATE TABLE orders(
-                      tx_index INTEGER UNIQUE,
-                      tx_hash TEXT UNIQUE,
+                      tx_index INTEGER,
+                      tx_hash TEXT,
                       block_index INTEGER,
                       source TEXT,
                       give_asset TEXT,
@@ -1170,14 +1170,14 @@ CREATE TABLE orders(
                       fee_required_remaining INTEGER,
                       fee_provided INTEGER,
                       fee_provided_remaining INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      PRIMARY KEY (tx_index, tx_hash));
+                      status TEXT);
 INSERT INTO orders VALUES(7,'4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8',310006,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',100000000,100000000,'DIVISIBLE',100000000,100000000,2000,312006,0,0,6800,6800,'open');
 INSERT INTO orders VALUES(10,'21460d5c07284f9be9baf824927d0d4e4eb790e297f3162305841607b672349b',310009,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',100000000,100000000,'DIVISIBLE',100000000,100000000,2000,312009,0,0,6800,6800,'open');
 INSERT INTO orders VALUES(11,'1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a',310010,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',100000000,100000000,'BTC',1000000,1000000,2000,312010,900000,900000,6800,6800,'open');
 INSERT INTO orders VALUES(12,'a1768d7db2db3b9732b26df8c04db4b9a8535a1e5cf684a680e81e7c06f394b6',310011,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',666667,666667,'XCP',100000000,100000000,2000,312011,0,0,1000000,1000000,'open');
-INSERT INTO orders VALUES(492,'74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498',310491,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',100000000,0,'BTC',800000,0,2000,312491,900000,892800,6800,6800,'open');
+INSERT INTO orders VALUES(492,'74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498',310491,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',100000000,100000000,'BTC',800000,800000,2000,312491,900000,900000,6800,6800,'open');
+INSERT INTO orders VALUES(493,'1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81',310492,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BTC',800000,800000,'XCP',100000000,100000000,2000,312492,0,0,1000000,1000000,'open');
+INSERT INTO orders VALUES(493,'74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498',310492,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',100000000,0,'BTC',800000,0,2000,312491,900000,892800,6800,6800,'open');
 INSERT INTO orders VALUES(493,'1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81',310492,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BTC',800000,0,'XCP',100000000,0,2000,312492,0,0,1000000,992800,'open');
 -- Triggers and indices on  orders
 CREATE INDEX expire_idx ON orders (expire_index, status)

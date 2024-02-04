@@ -802,6 +802,46 @@ def get_dispenser_info(db, tx_hash=None, tx_index=None):
 #      UPDATES      #
 #####################
 
+
+def insert_update(db, table_name, update_data, where_data, block_index, tx_index, more_where=""):
+    logger.warning(f'insert_update: {table_name} {update_data} {where_data} {block_index} {tx_index}')
+    cursor = db.cursor()
+    # select records to update
+    where = []
+    bindings = []
+    for key, value in where_data.items():
+        if key.endswith('_in'):
+            assert isinstance(value, list)
+            _key = key[:-3]
+            where.append(f'{_key} IN ({",".join(["?" for e in range(0, len(value))])})')
+            bindings += value
+        else:
+            where.append(f'{key} = ?')
+            bindings.append(value)
+    select_query = f'''SELECT * FROM {table_name} WHERE {' AND '.join(where)} {more_where}'''
+    needs_update_list = cursor.execute(select_query, tuple(bindings))
+
+    for row in needs_update_list:
+        # update record
+        new_record = row.copy()
+        # updade needed fields
+        for key, value in update_data.items():
+            new_record[key] = value
+        # new block_index and tx_index
+        new_record['block_index'] = block_index
+        if 'tx_index' in new_record:
+            new_record['tx_index'] = tx_index
+        # insert new record
+        fields_name = ', '.join(new_record.keys())
+        fields_values = ', '.join([f':{key}' for key in new_record.keys()])
+        insert_query = f'''INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})'''
+        logger.warning(insert_query)
+        logger.warning(new_record)
+        cursor.execute(insert_query, new_record)
+
+    cursor.close()
+
+
 def update_table(db, table_name, update_data, where_data):
     cursor = db.cursor()
     set = []
@@ -846,121 +886,122 @@ def update_dispensers(db, update_data, where_data):
 
 ### SELECTS ###
 
-def find_order_matches(db, tx0_hash, tx1_hash):
+def get_pending_order_matches(db, tx0_hash, tx1_hash):
     cursor = db.cursor()
+    sql = ''' SELECT * FROM (
+        SELECT *, MAX(rowid) FROM order_matches
+        WHERE (
+            tx0_hash in (:tx0_hash, :tx1_hash) OR
+            tx1_hash in (:tx0_hash, :tx1_hash)
+        )
+        GROUP BY id
+    ) WHERE status = :status
+    '''
     bindings = {
         'status': 'pending',
         'tx0_hash': tx0_hash,
         'tx1_hash': tx1_hash
     }
-    sql = '''SELECT * FROM order_matches
-             WHERE status = :status
-             AND ((tx0_hash in (:tx0_hash, :tx1_hash)) or ((tx1_hash in (:tx0_hash, :tx1_hash))))'''
     cursor.execute(sql, bindings)
     return cursor.fetchall()
 
 
-def find_bad_order_matches(db, tx0_address, forward_asset, tx1_address, backward_asset, status):
+def get_pending_btc_order_matches(db, address):
     cursor = db.cursor()
-    query = '''SELECT * FROM order_matches
-            WHERE ((tx0_address = ? AND forward_asset = ?) OR (tx1_address = ? AND backward_asset = ?))
-            AND (status = ?)'''
-    bindings = (tx0_address, forward_asset, tx1_address, backward_asset, status)
+    query = '''SELECT * FROM (
+        SELECT *, MAX(rowid)
+        FROM order_matches
+        WHERE (tx0_address = ? AND forward_asset = ?) OR (tx1_address = ? AND backward_asset = ?))
+    ) WHERE status = ?
+    '''
+    bindings = (address, config.BTC, address, config.BTC, 'pending')
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
 
-def get_order_matches(db, id=None, status=None, match_expire_index=None):
+def get_order_match(db, id):
     cursor = db.cursor()
-    where = []
-    bindings = []
-    if id is not None:
-        where.append('id = ?')
-        bindings.append(id)
-    if status is not None:
-        where.append('status = ?')
-        bindings.append(status)
-    if match_expire_index is not None:
-        where.append('match_expire_index < ?')
-        bindings.append(match_expire_index)
-    query = f'''SELECT * FROM order_matches WHERE ({" AND ".join(where)})'''
-    cursor.execute(query, tuple(bindings))
+    cursor.execute('''SELECT * FROM order_matches WHERE id = ? ORDER BY rowid DESC LIMIT 1''', (id,))
     return cursor.fetchall()
 
 
-def get_orders(db,
-               tx_hash=None,
-               source=None,
-               give_asset=None,
-               get_asset=None,
-               status=None,
-               tx_index=None,
-               no_tx_hash=None,
-               expire_index=None):
+def get_order_matches_to_expire(db, block_index):
     cursor = db.cursor()
-    where = []
-    bindings = []
-    if tx_hash is not None:
-        where.append('tx_hash = ?')
-        bindings.append(tx_hash)
-    if no_tx_hash is not None:
-        where.append('tx_hash != ?')
-        bindings.append(no_tx_hash)
-    if source is not None:
-        where.append('source = ?')
-        bindings.append(source)
-    if give_asset is not None:
-        where.append('give_asset = ?')
-        bindings.append(give_asset)
-    if get_asset is not None:
-        where.append('get_asset = ?')
-        bindings.append(get_asset)
-    if status is not None:
-        where.append('status = ?')
-        bindings.append(status)
-    if tx_index is not None:
-        where.append('tx_index = ?')
-        bindings.append(tx_index)
-    if expire_index is not None:
-        where.append('expire_index < ?')
-        bindings.append(expire_index)
-    query = f'''SELECT * FROM orders WHERE ({" AND ".join(where)})'''
-    cursor.execute(query, tuple(bindings))
+    cursor.execute('''SELECT * FROM (
+                        SELECT *, MAX(rowid) FROM order_matches WHERE match_expire_index < ? GROUP BY id
+                      ) WHERE status = ?''', (block_index, 'pending'))
+    return cursor.fetchall()
+
+
+def get_order(db, tx_hash):
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1''', (tx_hash,))
+    return cursor.fetchall()
+
+
+def get_orders_to_expire(db, block_index):
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM (
+                        SELECT *, MAX(rowid) FROM orders WHERE expire_index < ? GROUP BY tx_hash
+                      ) WHERE status = ?''', (block_index, 'open'))
+    return cursor.fetchall()
+
+
+def get_open_btc_orders(db, address):
+    cursor = db.cursor()
+    query = '''SELECT * FROM (
+        SELECT *, MAX(rowid) FROM orders
+        WHERE (source = ? AND give_asset = ?)
+        GROUP BY tx_hash
+    ) WHERE status = ?
+    '''
+    bindings = (address, config.BTC, 'open')
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_matching_orders(db, tx_hash, give_asset, get_asset):
+    cursor = db.cursor()
+    query = ''' SELECT * FROM (
+        SELECT *, MAX(rowid) FROM orders
+        WHERE (tx_hash != ? AND give_asset = ? AND get_asset = ?)
+        GROUP BY tx_hash
+    ) WHERE status = ?
+    '''
+    bindings = (tx_hash, get_asset, give_asset, 'open')
+    cursor.execute(query, bindings)
     return cursor.fetchall()
 
 ### UPDATES ###
 
-def update_order(db, tx_hash, update_data):
-    update_table(db, 'orders', update_data, {
+def update_order(db, tx_hash, update_data, block_index, tx_index):
+    where_data = {
         'tx_hash': tx_hash
-    })
+    }
+    insert_update(db, 'orders', update_data, where_data, block_index, tx_index)
 
 
-def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
-    sql = '''UPDATE orders
-             SET status = :status 
-             WHERE (
-                tx_hash in (:tx0_hash, :tx1_hash)
-                AND (give_remaining = 0 OR get_remaining = 0)
-             )'''
-    bindings = {
-        'status': 'filled',
-        'tx0_hash': tx0_hash,
-        'tx1_hash': tx1_hash,
+def mark_order_as_filled(db, tx0_hash, tx1_hash, block_index, tx_index, source=None):
+    update_data = {
+        'status': 'filled'
+    }
+    where_data = {
+        'tx_hash_in': [tx0_hash, tx1_hash],
     }
     if source is not None:
-        sql += ' AND source = :source'
-        bindings['source'] = source
-    cursor = db.cursor()
-    cursor.execute(sql, bindings)
+        where_data['source'] = source
+    more_where = 'AND (give_remaining = 0 OR get_remaining = 0)'
+    insert_update(db, 'orders', update_data, where_data, block_index, tx_index, more_where=more_where)
 
 
-def update_order_match_status(db, id, status):
-    update_table(db, 'order_matches', {
+def update_order_match_status(db, id, status, block_index, tx_index):
+    update_data = {
         'status': status
-    }, {
+    }
+    where_data = {
         'id': id
-    })
+    }
+    insert_update(db, 'order_matches', update_data, where_data, block_index, tx_index)
 
 
 #####################

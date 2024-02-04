@@ -562,7 +562,8 @@ def check_record(record, server_db, pytest_config):
                 print("expected values: ")
                 pprint.PrettyPrinter(indent=4).pprint(record['values'])
                 print("SELECT * FROM {} WHERE block_index = {}: ".format(record['table'], record['values']['block_index']))
-                pprint.PrettyPrinter(indent=4).pprint(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
+                #pprint.PrettyPrinter(indent=4).pprint(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
+                pprint.PrettyPrinter(indent=4).pprint(list(cursor.execute('''SELECT * FROM {}'''.format(record['table']))))
 
             raise AssertionError("check_record \n" +
                                  "table=" + record['table'] + " \n" +

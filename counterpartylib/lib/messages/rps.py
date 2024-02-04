@@ -352,7 +352,7 @@ def expire (db, block_index):
     cursor = db.cursor()
 
     # Expire rps and give refunds for the quantity wager.
-    for rps in ledger.get_orders(db, status='open', expire_index=block_index):
+    for rps in ledger.get_rps(db, status='open', expire_index=block_index):
         # use tx_index=0 for block actions
         cancel_rps(db, rps, 'expired', block_index, 0)
 

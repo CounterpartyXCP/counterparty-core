@@ -4156,7 +4156,7 @@ UNITTEST_VECTOR = {
                     'block_index': 310498,
                     'category': 'credits',
                     'command': 'insert',
-                    'message_index': 129,
+                    'message_index': 131,
                     'timestamp': 0}
         }],
         'get_asset_id': [{

@@ -44,7 +44,7 @@ def initialise(db):
 def validate (db, source, order_match_id, block_index):
     problems = []
     order_match = None
-    order_matches = ledger.get_order_matches(db, id=order_match_id)
+    order_matches = ledger.get_order_match(db, id=order_match_id)
     if len(order_matches) == 0:
         problems.append('no such order match %s' % order_match_id)
         return None, None, None, None, order_match, problems
@@ -131,7 +131,7 @@ def parse (db, tx, message):
             status = 'valid'
 
             # Update order match.
-            ledger.update_order_match_status(db, order_match_id, 'completed')
+            ledger.update_order_match_status(db, order_match_id, 'completed', tx['block_index'], tx['tx_index'])
 
             log.message(db, tx['block_index'], 'update', 'order_matches', {
                 'status': 'completed',
@@ -140,13 +140,13 @@ def parse (db, tx, message):
 
             # Update give and get order status as filled if order_match is completed
             if ledger.enabled('btc_order_filled'):
-                order_matches = ledger.find_order_matches(db, tx0_hash, tx1_hash)
+                order_matches = ledger.get_pending_order_matches(db, tx0_hash, tx1_hash)
                 if len(order_matches) == 0:
                     # mark both btc get and give orders as filled when order_match is completed and give or get remaining = 0
-                    ledger.mark_order_as_filled(db, tx0_hash, tx1_hash)
+                    ledger.mark_order_as_filled(db, tx0_hash, tx1_hash, tx['block_index'], tx['tx_index'])
                 else:
                     # always mark btc get order as filled when order_match is completed and give or get remaining = 0
-                    ledger.mark_order_as_filled(db, tx0_hash, tx1_hash, source=tx['destination'])
+                    ledger.mark_order_as_filled(db, tx0_hash, tx1_hash, tx['block_index'], tx['tx_index'], source=tx['destination'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
