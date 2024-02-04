@@ -51,7 +51,7 @@ services:
       - ADDRINDEXRS_JSONRPC_IMPORT=true
 
   counterparty-server:
-    image: counterparty/counterparty-server
+    image: counterparty/counterparty
     links:
       - bitcoind
       - addrindexrs
