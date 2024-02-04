@@ -2647,7 +2647,23 @@ CREATE TRIGGER _dispensers_update AFTER UPDATE ON dispensers BEGIN
                             END;
 CREATE INDEX dispensers_asset_idx ON dispensers (asset)
                    ;
+CREATE INDEX dispensers_give_remaining_idx ON dispensers (give_remaining)
+                ;
+CREATE INDEX dispensers_last_status_tx_hash_idx ON dispensers (last_status_tx_hash)
+                    ;
 CREATE INDEX dispensers_source_idx ON dispensers (source)
+                   ;
+CREATE INDEX dispensers_status_block_index_idx ON dispensers (status, block_index)
+                ;
+CREATE INDEX dispensers_status_idx ON dispensers (status)
+                    ;
+CREATE INDEX source_asset_status_idx ON dispensers (source, asset, status)
+                   ;
+CREATE INDEX source_asset_status_origin_idx ON dispensers (source, asset, status, origin)
+                    ;
+CREATE INDEX source_status_dix ON dispensers (source, status)
+                   ;
+CREATE INDEX source_status_origin_idx ON dispensers (source, status, origin)
                    ;
 
 COMMIT TRANSACTION;
@@ -2682,6 +2698,10 @@ CREATE TRIGGER _dispenses_insert AFTER INSERT ON dispenses BEGIN
 CREATE TRIGGER _dispenses_update AFTER UPDATE ON dispenses BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE dispenses SET tx_index='||quote(old.tx_index)||',dispense_index='||quote(old.dispense_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',destination='||quote(old.destination)||',asset='||quote(old.asset)||',dispense_quantity='||quote(old.dispense_quantity)||',dispenser_tx_hash='||quote(old.dispenser_tx_hash)||' WHERE rowid='||old.rowid);
                             END;
+CREATE INDEX dispenses_block_index_idx ON dispenses (block_index)
+                    ;
+CREATE INDEX dispenses_tx_hash_idx ON dispenses (tx_hash)
+                    ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -2714,5 +2734,9 @@ CREATE TRIGGER _dispenser_refills_insert AFTER INSERT ON dispenser_refills BEGIN
 CREATE TRIGGER _dispenser_refills_update AFTER UPDATE ON dispenser_refills BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE dispenser_refills SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',destination='||quote(old.destination)||',asset='||quote(old.asset)||',dispense_quantity='||quote(old.dispense_quantity)||',dispenser_tx_hash='||quote(old.dispenser_tx_hash)||' WHERE rowid='||old.rowid);
                             END;
+CREATE INDEX dispenser_refills_block_index_idx ON dispenser_refills (block_index)
+                    ;
+CREATE INDEX dispenser_refills_tx_hash_idx ON dispenser_refills (tx_hash)
+                    ;
 
 COMMIT TRANSACTION;
