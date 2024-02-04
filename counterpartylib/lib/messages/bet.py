@@ -36,8 +36,8 @@ def initialise (db):
 
     # Bets.
     cursor.execute('''CREATE TABLE IF NOT EXISTS bets(
-                      tx_index INTEGER UNIQUE,
-                      tx_hash TEXT UNIQUE,
+                      tx_index INTEGER,
+                      tx_hash TEXT,
                       block_index INTEGER,
                       source TEXT,
                       feed_address TEXT,
@@ -52,15 +52,10 @@ def initialise (db):
                       expiration INTEGER,
                       expire_index INTEGER,
                       fee_fraction_int INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      PRIMARY KEY (tx_index, tx_hash))
+                      status TEXT)
                   ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       block_index_idx ON bets (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      index_hash_idx ON bets (tx_index, tx_hash)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       expire_idx ON bets (status, expire_index)
@@ -74,10 +69,17 @@ def initialise (db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       status_idx ON bets (status)
                    ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx_hash_idx ON bets (tx_hash)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx_index_idx ON bets (tx_index)
+                   ''')
+
 
     # Bet Matches
     cursor.execute('''CREATE TABLE IF NOT EXISTS bet_matches(
-                      id TEXT PRIMARY KEY,
+                      id TEXT,
                       tx0_index INTEGER,
                       tx0_hash TEXT,
                       tx0_address TEXT,
@@ -122,6 +124,9 @@ def initialise (db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       status_idx ON bet_matches (status)
                    ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      id_idx ON bet_matches (id)
+                   ''')
 
     # Bet Expirations
     cursor.execute('''CREATE TABLE IF NOT EXISTS bet_expirations(
@@ -129,8 +134,7 @@ def initialise (db):
                       bet_hash TEXT UNIQUE,
                       source TEXT,
                       block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index),
-                      FOREIGN KEY (bet_index, bet_hash) REFERENCES bets(tx_index, tx_hash))
+                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       block_index_idx ON bet_expirations (block_index)
@@ -145,7 +149,6 @@ def initialise (db):
                       tx0_address TEXT,
                       tx1_address TEXT,
                       block_index INTEGER,
-                      FOREIGN KEY (bet_match_id) REFERENCES bet_matches(id),
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index))
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -169,7 +172,6 @@ def initialise (db):
                       bear_credit INTEGER,
                       escrow_less_fee INTEGER,
                       fee INTEGER,
-                      FOREIGN KEY (bet_match_id) REFERENCES bet_matches(id),
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index))
                    ''')
 
@@ -178,9 +180,8 @@ def cancel_bet (db, bet, status, block_index, tx_index):
 
     # Update status of bet.
     set_data = {'status': status}
-    where_data = {'tx_hash': bet['tx_hash']}
-    ledger.update_bets(db, set_data, where_data)
-    log.message(db, block_index, 'update', 'bets', set_data | where_data)
+    ledger.update_bet(db, bet['tx_hash'], set_data, block_index, tx_index)
+    log.message(db, block_index, 'update', 'bets', set_data | {'tx_hash': bet['tx_hash']})
 
     ledger.credit(db, bet['source'], config.XCP, bet['wager_remaining'], tx_index, action='recredit wager remaining', event=bet['tx_hash'])
 
@@ -200,9 +201,7 @@ def cancel_bet_match (db, bet_match, status, block_index, tx_index):
                 bet_match['backward_quantity'], tx_index, action='recredit backward quantity', event=bet_match['id'])
 
     # Update status of bet match.
-    set_data = {'status': status}
-    where_data = {'id': bet_match['id']}
-    ledger.update_bet_matches(db, set_data, where_data)
+    ledger.update_bet_match_status(db, bet_match['id'], status, block_index, tx_index)
 
     log.message(db, block_index, 'update', 'bet_matches', {'status': status, 'bet_match_id': bet_match['id']})
 
@@ -379,14 +378,16 @@ def parse (db, tx, message):
     bet_parse_cursor.close()
 
 
-def match (db, tx):
+def match(db, tx):
 
     # Get bet in question.
-    bets = ledger.get_bets(db, tx_index=tx['tx_index'], status='open')
+    bets = ledger.get_bet(db, tx_hash=tx['tx_hash'])
     if not bets:
         return
     else:
         assert len(bets) == 1
+        if bets[0]['status'] != 'open':
+            return
     tx1 = bets[0]
 
     # Get counterbet_type.
@@ -399,7 +400,7 @@ def match (db, tx):
     tx1_wager_remaining = tx1['wager_remaining']
     tx1_counterwager_remaining = tx1['counterwager_remaining']
 
-    bet_matches = ledger.get_bets(db, feed_address=tx1['feed_address'], status='open', bet_type=counterbet_type)
+    bet_matches = ledger.get_matching_bets(db, tx1['feed_address'], counterbet_type)
     if tx['block_index'] > 284500 or config.TESTNET or config.REGTEST:  # Protocol change.
         sorted(bet_matches, key=lambda x: x['tx_index'])                                        # Sort by tx index second.
         sorted(bet_matches, key=lambda x: ledger.price(x['wager_quantity'], x['counterwager_quantity']))   # Sort by price first.
@@ -484,10 +485,9 @@ def match (db, tx):
                 'counterwager_remaining': tx0_counterwager_remaining,
                 'status': tx0_status
             }
-            where_data = {'tx_hash': tx0['tx_hash']}
-            ledger.update_bets(db, set_data, where_data)
+            ledger.update_bet(db, tx0['tx_hash'], set_data, tx['block_index'], tx['tx_index'])
 
-            log.message(db, tx['block_index'], 'update', 'bets', set_data | where_data)
+            log.message(db, tx['block_index'], 'update', 'bets', set_data | {'tx_hash': tx0['tx_hash']})
 
             if tx1['block_index'] >= 292000 or config.TESTNET or config.REGTEST:  # Protocol change
                 if tx1_wager_remaining <= 0 or tx1_counterwager_remaining <= 0:
@@ -500,10 +500,9 @@ def match (db, tx):
                 'counterwager_remaining': tx1_counterwager_remaining,
                 'status': tx1_status
             }
-            where_data = {'tx_hash': tx1['tx_hash']}
-            ledger.update_bets(db, set_data, where_data)
+            ledger.update_bet(db,tx1['tx_hash'], set_data, tx['block_index'], tx['tx_index'])
 
-            log.message(db, tx['block_index'], 'update', 'bets', set_data | where_data)
+            log.message(db, tx['block_index'], 'update', 'bets', set_data | {'tx_hash': tx1['tx_hash']})
 
             # Get last value of feed.
             broadcasts = ledger.get_broadcats_by_source(db, feed_address, 'valid')
@@ -546,7 +545,7 @@ def expire (db, block_index, block_time):
     cursor = db.cursor()
 
     # Expire bets and give refunds for the quantity wager_remaining.
-    for bet in ledger.get_bets(db, status='open', expire_index=block_index):
+    for bet in ledger.get_bets_to_expire(db, block_index):
         # use tx_index=0 for block actions
         cancel_bet(db, bet, 'expired', block_index, 0)
 
@@ -561,7 +560,7 @@ def expire (db, block_index, block_time):
         cursor.execute(sql, bindings)
 
     # Expire bet matches whose deadline is more than two weeks before the current block time.
-    for bet_match in ledger.get_bet_matches(db, status='pending', deadline=block_time - config.TWO_WEEKS):
+    for bet_match in ledger.get_bet_matches_to_expire(db, block_time):
         # use tx_index=0 for block actions
         cancel_bet_match(db, bet_match, 'expired', block_index, 0)
 

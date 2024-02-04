@@ -143,7 +143,9 @@ Tx0 Inverse Odds: 0.5; Tx1 Odds: 0.6024096385542169
 Potential forward quantities: 50000000, 41500000
 Forward Quantity: 41500000
 Backward Quantity: 20750000
+Bet: XCP against XCP, by 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3, on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3
 Credit: XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #filled# <ce9d3a5ea18ed454ddee80b75bd12abdd47de8e176d9c9dfc768c1233e729943>
+Bet: XCP against XCP, by 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3, on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3
 Bet Match: BullCFD for XCP against BearCFD for XCP on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 at 2013-12-25T19:35:00 that value, leveraged 3.0x (ef92dc4986fdfb4ccb6e101ee949d5307c554e8dd1619307548ec032a973f19c_ce9d3a5ea18ed454ddee80b75bd12abdd47de8e176d9c9dfc768c1233e729943) [pending]
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 1.86886650; txid: ce9d3a5ea18ed454ddee80b75bd12abdd47de8e176d9c9dfc768c1233e729943; vout: 2; confirmations: 1', 'amount: 0.50000000; txid: f0c58099c1614dcf2b8fd12be01c63427a5877b8c0367ecadea31ae9eb9714e6; vout: 0; confirmations: 10']
@@ -164,15 +166,15 @@ final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 1.86867350 BTC
 Debit: XCP from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #bet# <10c669ad89d61e1a983e179f66f355b1dd21e53d520fd4dc3bb5a6f9e5e24fcd>
 Bet: XCP against XCP, by 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3, on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3
-Considering: ef92dc4986fdfb4ccb6e101ee949d5307c554e8dd1619307548ec032a973f19c
-Skipping: leverages disagree.
 Considering: 6722884208180367a60c5c96ae86865dad3c63525a9498d716e98b5015ec2e3d
 Tx0 Inverse Odds: 2.3333333333333335; Tx1 Odds: 2.3333333333333335
 Potential forward quantities: 150000000, 150000000
 Forward Quantity: 150000000
 Backward Quantity: 350000000
 Credit: XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #filled# <10c669ad89d61e1a983e179f66f355b1dd21e53d520fd4dc3bb5a6f9e5e24fcd>
+Bet: XCP against XCP, by 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3, on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3
 Credit: XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #filled# <10c669ad89d61e1a983e179f66f355b1dd21e53d520fd4dc3bb5a6f9e5e24fcd>
+Bet: XCP against XCP, by 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3, on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3
 Bet Match: BullCFD for XCP against BearCFD for XCP on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 at 2013-12-25T19:35:00 that value, leveraged 1.0x (6722884208180367a60c5c96ae86865dad3c63525a9498d716e98b5015ec2e3d_10c669ad89d61e1a983e179f66f355b1dd21e53d520fd4dc3bb5a6f9e5e24fcd) [pending]
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 1.86867350; txid: 10c669ad89d61e1a983e179f66f355b1dd21e53d520fd4dc3bb5a6f9e5e24fcd; vout: 2; confirmations: 1', 'amount: 0.50000000; txid: f0c58099c1614dcf2b8fd12be01c63427a5877b8c0367ecadea31ae9eb9714e6; vout: 0; confirmations: 12']
@@ -196,7 +198,9 @@ Potential forward quantities: 750000000, 750000000
 Forward Quantity: 750000000
 Backward Quantity: 650000000
 Credit: XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #filled# <67497105b77192af401ec8024ad34de211592877dee8532dbe216d8a8f17dd0c>
+Bet: XCP against XCP, by 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3, on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3
 Credit: XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #filled# <67497105b77192af401ec8024ad34de211592877dee8532dbe216d8a8f17dd0c>
+Bet: XCP against XCP, by 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3, on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3
 Bet Match: Equal for XCP against NotEqual for XCP on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 at 2013-12-25T19:36:40 that value, leveraged 1.0x (caaceb9160747bd86fa4b3b4d090c9e1617285fae312eac2152bf3fabedcd2bc_67497105b77192af401ec8024ad34de211592877dee8532dbe216d8a8f17dd0c) [pending]
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 1.86848050; txid: 67497105b77192af401ec8024ad34de211592877dee8532dbe216d8a8f17dd0c; vout: 2; confirmations: 1', 'amount: 0.50000000; txid: f0c58099c1614dcf2b8fd12be01c63427a5877b8c0367ecadea31ae9eb9714e6; vout: 0; confirmations: 14']
@@ -208,6 +212,7 @@ Broadcast: 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjX
 Credit: XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #bet settled: liquidated for bear# <e87bf8dfeda7df143873ff042cc7a05dd590a6bef6a55c5832e22db1bd5e3bcd>
 Credit: XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #feed fee# <e87bf8dfeda7df143873ff042cc7a05dd590a6bef6a55c5832e22db1bd5e3bcd>
 Bet Match Force‐Liquidated: XCP credited to the bull, XCP credited to the bear, and XCP credited to the feed address (ef92dc4986fdfb4ccb6e101ee949d5307c554e8dd1619307548ec032a973f19c_ce9d3a5ea18ed454ddee80b75bd12abdd47de8e176d9c9dfc768c1233e729943)
+Bet Match: BullCFD for XCP against BearCFD for XCP on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 at 2013-12-25T19:35:00 that value, leveraged 3.0x (ef92dc4986fdfb4ccb6e101ee949d5307c554e8dd1619307548ec032a973f19c_ce9d3a5ea18ed454ddee80b75bd12abdd47de8e176d9c9dfc768c1233e729943) [settled: liquidated for bear]
 Database: set status of bet_match ef92dc4986fdfb4ccb6e101ee949d5307c554e8dd1619307548ec032a973f19c_ce9d3a5ea18ed454ddee80b75bd12abdd47de8e176d9c9dfc768c1233e729943 to settled: liquidated for bear.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 1.86840250; txid: e87bf8dfeda7df143873ff042cc7a05dd590a6bef6a55c5832e22db1bd5e3bcd; vout: 1; confirmations: 1', 'amount: 0.50000000; txid: f0c58099c1614dcf2b8fd12be01c63427a5877b8c0367ecadea31ae9eb9714e6; vout: 0; confirmations: 15']
@@ -220,6 +225,7 @@ Credit: XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfN
 Credit: XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #bet settled# <1fcd2de64aabc6c05796e28cbea31df45a25928c2cd8dd30d774c9e70c4e97df>
 Credit: XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #feed fee# <1fcd2de64aabc6c05796e28cbea31df45a25928c2cd8dd30d774c9e70c4e97df>
 Bet Match Settled: XCP credited to the bull, XCP credited to the bear, and XCP credited to the feed address (6722884208180367a60c5c96ae86865dad3c63525a9498d716e98b5015ec2e3d_10c669ad89d61e1a983e179f66f355b1dd21e53d520fd4dc3bb5a6f9e5e24fcd)
+Bet Match: BullCFD for XCP against BearCFD for XCP on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 at 2013-12-25T19:35:00 that value, leveraged 1.0x (6722884208180367a60c5c96ae86865dad3c63525a9498d716e98b5015ec2e3d_10c669ad89d61e1a983e179f66f355b1dd21e53d520fd4dc3bb5a6f9e5e24fcd) [settled]
 Database: set status of bet_match 6722884208180367a60c5c96ae86865dad3c63525a9498d716e98b5015ec2e3d_10c669ad89d61e1a983e179f66f355b1dd21e53d520fd4dc3bb5a6f9e5e24fcd to settled.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 1.86832450; txid: 1fcd2de64aabc6c05796e28cbea31df45a25928c2cd8dd30d774c9e70c4e97df; vout: 1; confirmations: 1', 'amount: 0.50000000; txid: f0c58099c1614dcf2b8fd12be01c63427a5877b8c0367ecadea31ae9eb9714e6; vout: 0; confirmations: 16']
@@ -231,6 +237,7 @@ Broadcast: 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjX
 Credit: XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #bet settled: for notequal# <dc4b57ad8a0b23dbc7ffc03f51e8076cd2418edf256b2660783bb0d1be0b8b73>
 Credit: XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #feed fee# <dc4b57ad8a0b23dbc7ffc03f51e8076cd2418edf256b2660783bb0d1be0b8b73>
 Bet Match Settled: NotEqual won the pot of XCP; XCP credited to the feed address (caaceb9160747bd86fa4b3b4d090c9e1617285fae312eac2152bf3fabedcd2bc_67497105b77192af401ec8024ad34de211592877dee8532dbe216d8a8f17dd0c)
+Bet Match: Equal for XCP against NotEqual for XCP on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 at 2013-12-25T19:36:40 that value, leveraged 1.0x (caaceb9160747bd86fa4b3b4d090c9e1617285fae312eac2152bf3fabedcd2bc_67497105b77192af401ec8024ad34de211592877dee8532dbe216d8a8f17dd0c) [settled: for notequal]
 Database: set status of bet_match caaceb9160747bd86fa4b3b4d090c9e1617285fae312eac2152bf3fabedcd2bc_67497105b77192af401ec8024ad34de211592877dee8532dbe216d8a8f17dd0c to settled: for notequal.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 1.86824650; txid: dc4b57ad8a0b23dbc7ffc03f51e8076cd2418edf256b2660783bb0d1be0b8b73; vout: 1; confirmations: 1', 'amount: 0.50000000; txid: f0c58099c1614dcf2b8fd12be01c63427a5877b8c0367ecadea31ae9eb9714e6; vout: 0; confirmations: 17']
@@ -254,6 +261,7 @@ Fee/KB 0.00025000
 New input: amount: 0.86811225; txid: 181709b341ec136f90975fdaa362c767ebd789e72f16d4e17348ab2985c1bd01; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 0.86801575 BTC
+Bet: XCP against XCP, by 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3, on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3
 Credit: XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #recredit wager remaining# <ef92dc4986fdfb4ccb6e101ee949d5307c554e8dd1619307548ec032a973f19c>
 Expired bet: ef92dc4986fdfb4ccb6e101ee949d5307c554e8dd1619307548ec032a973f19c
 Debit: BBBC from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #send# <f4a0c2582fb141e9451a7c00fa61afc147b9959c2dd20a1978950936fdb53831>

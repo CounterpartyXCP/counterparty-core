@@ -508,53 +508,6 @@ def get_broadcats_by_source(db, source, status):
     return cursor.fetchall()
 
 
-def get_bets(db, tx_index=None, status=None, feed_address=None, bet_type=None, expire_index=None, tx_hash=None):
-    cursor = db.cursor()
-    where = []
-    bindings = []
-    if tx_index is not None:
-        where.append('tx_index = ?')
-        bindings.append(tx_index)
-    if status is not None:
-        where.append('status = ?')
-        bindings.append(status)
-    if feed_address is not None:
-        where.append('feed_address = ?')
-        bindings.append(feed_address)
-    if bet_type is not None:
-        where.append('bet_type = ?')
-        bindings.append(bet_type)
-    if expire_index is not None:
-        where.append('expire_index < ?')
-        bindings.append(expire_index)
-    if tx_hash is not None:
-        where.append('tx_hash = ?')
-        bindings.append(tx_hash)
-    query = f'''SELECT * FROM bets WHERE ({" AND ".join(where)})'''
-    cursor.execute(query, tuple(bindings))
-    return cursor.fetchall()
-
-
-def get_bet_matches(db, status=None, deadline=None, feed_address=None, order_by=None):
-    cursor = db.cursor()
-    where = []
-    bindings = []
-    if status is not None:
-        where.append('status = ?')
-        bindings.append(status)
-    if deadline is not None:
-        where.append('deadline < ?')
-        bindings.append(deadline)
-    if feed_address is not None:
-        where.append('feed_address = ?')
-        bindings.append(feed_address)
-    query = f'''SELECT * FROM bet_matches WHERE ({" AND ".join(where)})'''
-    if order_by is not None:
-        query += f''' ORDER BY {order_by}'''
-    cursor.execute(query, tuple(bindings))
-    return cursor.fetchall()
-
-
 def get_rps(db, tx_hash=None, tx_index=None, tx_status=None, expire_index=None, status=None):
     cursor = db.cursor()
     where = []
@@ -860,13 +813,6 @@ def update_table(db, table_name, update_data, where_data):
     cursor.execute(query, tuple(bindings))
     cursor.close()
 
-
-def update_bets(db, update_data, where_data):
-    update_table(db, 'bets', update_data, where_data)
-
-def update_bet_matches(db, update_data, where_data):
-    update_table(db, 'bet_matches', update_data, where_data)
-
 def update_rps(db, update_data, where_data):
     update_table(db, 'rps', update_data, where_data)
 
@@ -875,6 +821,104 @@ def update_rps_matches(db, update_data, where_data):
 
 def update_dispensers(db, update_data, where_data):
     update_table(db, 'dispensers', update_data, where_data)
+
+#####################
+#       BETS        #
+#####################
+
+### SELECTS ###
+
+def get_pending_bet_matches(db, feed_address, order_by=None):
+    cursor = db.cursor()
+    query = '''SELECT * FROM (
+        SELECT *, MAX(rowid)
+        FROM bet_matches
+        WHERE feed_address = ?
+        GROUP BY id
+    ) WHERE status = ?
+    '''
+    if order_by is not None:
+        query += f''' ORDER BY {order_by}'''
+    bindings = (feed_address, 'pending')
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_bet_matches_to_expire(db, block_time):
+    cursor = db.cursor()
+    query = '''SELECT * FROM (
+        SELECT *, MAX(rowid) 
+        FROM bet_matches 
+        WHERE deadline < ? 
+        GROUP BY id
+    ) WHERE status = ?
+    '''
+    bindings = (block_time - config.TWO_WEEKS, 'pending')
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_bet(db, tx_hash):
+    cursor = db.cursor()
+    query = '''SELECT * FROM bets WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1'''
+    bindings = (tx_hash,)
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_bets_to_expire(db, block_index):
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM (
+                        SELECT *, MAX(rowid) FROM bets WHERE expire_index < ? GROUP BY tx_hash
+                      ) WHERE status = ?''', (block_index, 'open'))
+    return cursor.fetchall()
+
+
+def get_matching_bets(db, feed_address, bet_type):
+    cursor = db.cursor()
+    query = '''SELECT * FROM (
+        SELECT *, MAX(rowid) 
+        FROM bets
+        WHERE (feed_address = ? AND bet_type = ?)
+        GROUP BY tx_hash
+    ) WHERE status = ?
+    '''
+    bindings = (feed_address, bet_type, 'open')
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_open_bet_by_feed(db, feed_address):
+    cursor = db.cursor()
+    query = '''SELECT * FROM (
+        SELECT *, MAX(rowid) 
+        FROM bets
+        WHERE feed_address = ?
+        GROUP BY tx_hash
+    ) WHERE status = ?
+    '''
+    bindings = (feed_address, 'open')
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+### UPDATES ###
+
+def update_bet(db, tx_hash, update_data, block_index, tx_index):
+    where_data = {
+        'tx_hash': tx_hash
+    }
+    insert_update(db, 'bets', update_data, where_data, block_index, tx_index)
+
+
+def update_bet_match_status(db, id, status, block_index, tx_index):
+    update_data = {
+        'status': status
+    }
+    where_data = {
+        'id': id
+    }
+    insert_update(db, 'bet_matches', update_data, where_data, block_index, tx_index)
 
 
 #####################

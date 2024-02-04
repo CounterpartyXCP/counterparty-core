@@ -230,11 +230,11 @@ def parse (db, tx, message):
     if value is None or value < 0:
         # Cancel Open Bets?
         if value == -2:
-            for i in ledger.get_bets(db, status='open', feed_address=tx['source']):
+            for i in ledger.get_open_bet_by_feed(db, tx['source']):
                 bet.cancel_bet(db, i, 'dropped', tx['block_index'], tx['tx_index'])
         # Cancel Pending Bet Matches?
         if value == -3:
-            for bet_match in ledger.get_bet_matches(db, status='pending', feed_address=tx['source']):
+            for bet_match in ledger.get_pending_bet_matches(db, tx['source']):
                 bet.cancel_bet_match(db, bet_match, 'dropped', tx['block_index'], tx['tx_index'])
         cursor.close()
         return
@@ -245,10 +245,9 @@ def parse (db, tx, message):
         return
 
     # Handle bet matches that use this feed.
-    bet_matches = ledger.get_bet_matches(db, 
-                                         status='pending', 
-                                         feed_address=tx['source'], 
-                                         order_by='tx1_index ASC, tx0_index ASC')
+    bet_matches = ledger.get_pending_bet_matches(db,
+                                                 tx['source'],
+                                                 order_by='tx1_index ASC, tx0_index ASC')
     for bet_match in bet_matches:
         broadcast_bet_match_cursor = db.cursor()
         bet_match_id = util.make_id(bet_match['tx0_hash'], bet_match['tx1_hash'])
@@ -395,13 +394,7 @@ def parse (db, tx, message):
         # Update the bet match’s status.
         if bet_match_status:
             bet_match_id = util.make_id(bet_match['tx0_hash'], bet_match['tx1_hash'])
-            set_data = {
-                'status': bet_match_status
-            }
-            where_data = {
-                'id': bet_match_id
-            }
-            ledger.update_bet_matches(db, set_data, where_data)
+            ledger.update_bet_match_status(db, bet_match_id, bet_match_status, tx['block_index'], tx['tx_index'])
 
             log.message(db, tx['block_index'], 'update', 'bet_matches', {
                 'status': bet_match_status, 
@@ -411,5 +404,3 @@ def parse (db, tx, message):
         broadcast_bet_match_cursor.close()
 
     cursor.close()
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
