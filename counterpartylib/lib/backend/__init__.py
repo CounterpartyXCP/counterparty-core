@@ -136,12 +136,12 @@ def is_valid(address):
 def get_txhash_list(block):
     return [bitcoinlib.core.b2lx(ctx.GetHash()) for ctx in block.vtx]
 
-def get_tx_list(block):
+def get_tx_list(block, block_index=None):
     raw_transactions = {}
     tx_hash_list = []
 
     for ctx in block.vtx:
-        if util.enabled('correct_segwit_txids'):
+        if util.enabled('correct_segwit_txids', block_index=block_index):
             hsh = ctx.GetTxid()
         else:
             hsh = ctx.GetHash()
