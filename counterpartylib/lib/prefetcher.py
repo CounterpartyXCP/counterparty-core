@@ -49,7 +49,7 @@ class Prefetcher(threading.Thread):
             logger.debug('Fetching block {} with Prefetcher thread {}.'.format(block_index, self.thread_index))
             block_hash = backend.getblockhash(block_index)
             block = backend.getblock(block_hash)
-            txhash_list, raw_transactions = backend.get_tx_list(block)
+            txhash_list, raw_transactions = backend.get_tx_list(block, block_index=block_index)
             BLOCKCHAIN_CACHE[block_index] = {'block_hash': block_hash,
                                              'txhash_list': txhash_list,
                                              'raw_transactions': raw_transactions,
