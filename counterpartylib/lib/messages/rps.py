@@ -43,8 +43,8 @@ def initialise (db):
 
     # RPS (Rock-Paper-Scissors)
     cursor.execute('''CREATE TABLE IF NOT EXISTS rps(
-                      tx_index INTEGER UNIQUE,
-                      tx_hash TEXT UNIQUE,
+                      tx_index INTEGER,
+                      tx_hash TEXT,
                       block_index INTEGER,
                       source TEXT,
                       possible_moves INTEGER,
@@ -52,9 +52,7 @@ def initialise (db):
                       move_random_hash TEXT,
                       expiration INTEGER,
                       expire_index INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      PRIMARY KEY (tx_index, tx_hash))
+                      status TEXT)
                   ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       source_idx ON rps (source)
@@ -65,10 +63,16 @@ def initialise (db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       status_idx ON rps (status)
                    ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx_index_idx ON rps (tx_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx_hash_idx ON rps (tx_hash)
+                   ''')
 
     # RPS Matches
     cursor.execute('''CREATE TABLE IF NOT EXISTS rps_matches(
-                      id TEXT PRIMARY KEY,
+                      id TEXT,
                       tx0_index INTEGER,
                       tx0_hash TEXT,
                       tx0_address TEXT,
@@ -101,6 +105,9 @@ def initialise (db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       status_idx ON rps_matches (status)
                    ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      id_idx ON rps_matches (id)
+                   ''')
 
     # RPS Expirations
     cursor.execute('''CREATE TABLE IF NOT EXISTS rps_expirations(
@@ -108,8 +115,7 @@ def initialise (db):
                       rps_hash TEXT UNIQUE,
                       source TEXT,
                       block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index),
-                      FOREIGN KEY (rps_index, rps_hash) REFERENCES rps(tx_index, tx_hash))
+                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       block_index_idx ON rps_expirations (block_index)
@@ -124,7 +130,6 @@ def initialise (db):
                       tx0_address TEXT,
                       tx1_address TEXT,
                       block_index INTEGER,
-                      FOREIGN KEY (rps_match_id) REFERENCES rps_matches(id),
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index))
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -142,15 +147,13 @@ def cancel_rps (db, rps, status, block_index, tx_index):
     cursor = db.cursor()
 
     # Update status of rps.
-    set_data = {
-        'status': status
-    }
-    where_data = {
+    ledger.update_rps_status(db, rps['tx_hash'], status, block_index, tx_index)
+
+    message_data = {
+        'status': status,
         'tx_hash': rps['tx_hash']
     }
-    ledger.update_rps(db, set_data, where_data)
-
-    log.message(db, block_index, 'update', 'rps', set_data | where_data)
+    log.message(db, block_index, 'update', 'rps', message_data)
 
     ledger.credit(db, rps['source'], 'XCP', rps['wager'], tx_index, action='recredit wager', event=rps['tx_hash'])
 
@@ -173,7 +176,7 @@ def update_rps_match_status (db, rps_match, status, block_index, tx_index):
                     2 * rps_match['wager'], tx_index, action='wins', event=rps_match['id'])
 
     # Update status of rps match.
-    ledger.update_rps_matches(db, {'status': status}, {'id': rps_match['id']})
+    ledger.update_rps_match_status(db, rps_match['id'], status, block_index, tx_index)
     # Log
     log.message(db, block_index, 'update', 'rps_matches', {
         'status': status,
@@ -285,12 +288,15 @@ def match (db, tx, block_index):
     cursor = db.cursor()
 
     # Get rps in question.
-    rps = ledger.get_rps(db, tx_index=tx['tx_index'], tx_status='open')
+    rps = ledger.get_rps(db, tx['tx_hash'])
     if not rps:
         cursor.close()
         return
     else:
         assert len(rps) == 1
+        if rps[0]['status'] != 'open':
+            cursor.close()
+            return
     tx1 = rps[0]
     possible_moves = tx1['possible_moves']
     wager = tx1['wager']
@@ -299,26 +305,25 @@ def match (db, tx, block_index):
     # Get rps match
     # dont match twice same RPS
     already_matched = []
-    old_rps_matches = ledger.get_rps_matches(db, tx0_hash=tx1['tx_hash'], tx1_hash=tx1['tx_hash'], where_op="OR")
+    old_rps_matches = ledger.get_already_matched_rps(db, tx1['tx_hash'])
     for old_rps_match in old_rps_matches:
         counter_tx_hash = old_rps_match['tx1_hash'] if tx1['tx_hash'] == old_rps_match['tx0_hash'] else old_rps_match['tx0_hash']
         already_matched.append(counter_tx_hash)
 
-    rps_matches = ledger.find_rps_matches(db, possible_moves, wager, tx1['source'], already_matched)
+    rps_matches = ledger.get_matching_rps(db, possible_moves, wager, tx1['source'], already_matched)
 
     if rps_matches:
         tx0 = rps_matches[0]
 
         # update status
         for txn in [tx0, tx1]:
-            set_data = {
-                'status': 'matched'
-            }
-            where_data = {
+            ledger.update_rps_status(db, txn['tx_hash'], 'matched', block_index, tx['tx_index'])
+
+            message_data = {
+                'status': 'matched',
                 'tx_index': txn['tx_index']
             }
-            ledger.update_rps(db, set_data, where_data)
-            log.message(db, block_index, 'update', 'rps', set_data | where_data)
+            log.message(db, block_index, 'update', 'rps', message_data)
 
         bindings = {
             'id': util.make_id(tx0['tx_hash'], tx1['tx_hash']),
@@ -352,7 +357,7 @@ def expire (db, block_index):
     cursor = db.cursor()
 
     # Expire rps and give refunds for the quantity wager.
-    for rps in ledger.get_rps(db, status='open', expire_index=block_index):
+    for rps in ledger.get_rps_to_expire(db, block_index):
         # use tx_index=0 for block actions
         cancel_rps(db, rps, 'expired', block_index, 0)
 
@@ -367,7 +372,7 @@ def expire (db, block_index):
         cursor.execute(sql, bindings)
 
     # Expire rps matches
-    for rps_match in ledger.find_expired_rps_matches(db, block_index):
+    for rps_match in ledger.get_rps_matches_to_expire(db, block_index):
 
         new_rps_match_status = 'expired'
         # pending loses against resolved
@@ -390,15 +395,12 @@ def expire (db, block_index):
 
         # Rematch not expired and not resolved RPS
         if new_rps_match_status == 'expired':
-            matched_rps = ledger.find_matched_rps(db, rps_match['tx0_hash'], rps_match['tx1_hash'], expire_index=block_index)
+            matched_rps = ledger.get_matched_not_expired_rps(db, rps_match['tx0_hash'], rps_match['tx1_hash'], expire_index=block_index)
             for rps in matched_rps:
-                ledger.update_rps(db, {'status': 'open'}, {'tx_index': rps['tx_index']})
+                ledger.update_rps_status(db, rps['tx_hash'], 'open', block_index, 0) # tx_index=0 for block actions
                 # Re-debit XCP refund by close_rps_match.
-                ledger.debit(db, rps['source'], 'XCP', rps['wager'], tx['tx_index'], action='reopen RPS after matching expiration', event=rps_match['id'])
+                ledger.debit(db, rps['source'], 'XCP', rps['wager'], 0, action='reopen RPS after matching expiration', event=rps_match['id'])
                 # Rematch
                 match(db, {'tx_index': rps['tx_index']}, block_index)
 
     cursor.close()
-
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

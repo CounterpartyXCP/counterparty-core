@@ -1040,7 +1040,6 @@ CREATE TABLE rps_match_expirations(
                       tx0_address TEXT,
                       tx1_address TEXT,
                       block_index INTEGER,
-                      FOREIGN KEY (rps_match_id) REFERENCES rps_matches(id),
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index));
 
 COMMIT TRANSACTION;
@@ -1058,8 +1057,7 @@ CREATE TABLE rps_expirations(
                       rps_hash TEXT UNIQUE,
                       source TEXT,
                       block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index),
-                      FOREIGN KEY (rps_index, rps_hash) REFERENCES rps(tx_index, tx_hash));
+                      FOREIGN KEY (block_index) REFERENCES blocks(block_index));
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1096,7 +1094,7 @@ BEGIN TRANSACTION;
 -- Table  rps_matches
 DROP TABLE IF EXISTS rps_matches;
 CREATE TABLE rps_matches(
-                      id TEXT PRIMARY KEY,
+                      id TEXT,
                       tx0_index INTEGER,
                       tx0_hash TEXT,
                       tx0_address TEXT,
@@ -1135,8 +1133,8 @@ BEGIN TRANSACTION;
 -- Table  rps
 DROP TABLE IF EXISTS rps;
 CREATE TABLE rps(
-                      tx_index INTEGER UNIQUE,
-                      tx_hash TEXT UNIQUE,
+                      tx_index INTEGER,
+                      tx_hash TEXT,
                       block_index INTEGER,
                       source TEXT,
                       possible_moves INTEGER,
@@ -1144,9 +1142,7 @@ CREATE TABLE rps(
                       move_random_hash TEXT,
                       expiration INTEGER,
                       expire_index INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      PRIMARY KEY (tx_index, tx_hash));
+                      status TEXT);
 -- Triggers and indices on  rps
 CREATE INDEX matching_idx ON rps (wager, possible_moves)
                    ;

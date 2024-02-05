@@ -348,7 +348,7 @@ def log (db, command, category, bindings):
         elif category == 'rpsresolves':
 
             if bindings['status'] == 'valid':
-                rps_matches = ledger.get_rps_matches(db, id=bindings['rps_match_id'])
+                rps_matches = ledger.get_rps_match(db, id=bindings['rps_match_id'])
                 assert len(rps_matches) == 1
                 rps_match = rps_matches[0]
                 log_message = 'RPS Resolved: {} is playing {} on a {}-moves game with {} with a wager of {} ({}) [{}]'.format(rps_match['tx0_address'], bindings['move'], rps_match['possible_moves'], rps_match['tx1_address'], output(rps_match['wager'], 'XCP'), rps_match['id'], rps_match['status'])

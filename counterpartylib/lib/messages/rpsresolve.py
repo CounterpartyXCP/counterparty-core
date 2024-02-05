@@ -54,7 +54,7 @@ def validate (db, source, move, random, rps_match_id):
         problems.append('random must be 16 bytes in hexadecimal format')
         return None, None, problems
 
-    rps_matches = ledger.get_rps_matches(db, id=rps_match_id)
+    rps_matches = ledger.get_rps_match(db, id=rps_match_id)
     if len(rps_matches) == 0:
         problems.append('no such rps match')
         return None, rps_match, problems

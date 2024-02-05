@@ -507,100 +507,6 @@ def get_broadcats_by_source(db, source, status):
                    ORDER BY tx_index ASC''', (status, source))
     return cursor.fetchall()
 
-
-def get_rps(db, tx_hash=None, tx_index=None, tx_status=None, expire_index=None, status=None):
-    cursor = db.cursor()
-    where = []
-    bindings = []
-    if tx_hash is not None:
-        where.append('tx_hash = ?')
-        bindings.append(tx_hash)
-    if tx_index is not None:
-        where.append('tx_index = ?')
-        bindings.append(tx_index)
-    if tx_status is not None:
-        where.append('tx_status = ?')
-        bindings.append(tx_status)
-    if status is not None:
-        where.append('status = ?')
-        bindings.append(status)
-    if expire_index is not None:
-        where.append('expire_index < ?')
-        bindings.append(expire_index)
-    query = f'''SELECT * FROM rps WHERE ({" AND ".join(where)})'''
-    cursor.execute(query, tuple(bindings))
-    return cursor.fetchall()
-
-
-def find_matched_rps(db, tx0_hash, tx1_hash, expire_index):
-    cursor = db.cursor()
-    sql = '''SELECT * FROM rps WHERE tx_hash IN (?, ?) AND status = ? AND expire_index >= ?'''
-    bindings = (tx0_hash, tx1_hash, 'matched', expire_index)
-    cursor.execute(sql, bindings)
-    return cursor.fetchall()
-
-
-def find_rps_matches(db, possible_moves, wager, source, already_matched):
-    cursor = db.cursor()
-    bindings = (possible_moves, 'open', wager, source)
-    already_matched_cond = ''
-    if already_matched:
-        already_matched_cond = '''AND tx_hash NOT IN ({})'''.format(','.join(['?' for e in range(0, len(already_matched))]))
-        bindings += tuple(already_matched)
-    sql = '''SELECT * FROM rps WHERE (possible_moves = ? AND status = ? AND wager = ? AND source != ? {}) ORDER BY tx_index LIMIT 1'''.format(already_matched_cond)
-    cursor.execute(sql, bindings)
-    return cursor.fetchall()
-
-
-def get_rps_matches(db, id=None, status=None, match_expire_index=None, tx0_hash=None, tx1_hash=None, where_op='AND'):
-    cursor = db.cursor()
-    where = []
-    bindings = []
-    if id is not None:
-        where.append('id = ?')
-        bindings.append(id)
-    if status is not None:
-        where.append('status = ?')
-        bindings.append(status)
-    if match_expire_index is not None:
-        where.append('match_expire_index < ?')
-        bindings.append(match_expire_index)
-    if tx0_hash is not None:
-        where.append('tx0_hash = ?')
-        bindings.append(tx0_hash)
-    if tx1_hash is not None:
-        where.append('tx1_hash = ?')
-        bindings.append(tx1_hash)
-    query = f'''SELECT * FROM rps_matches WHERE ({f" {where_op} ".join(where)})'''
-    cursor.execute(query, tuple(bindings))
-    return cursor.fetchall()
-
-
-def find_expired_rps_matches(db, block_index):
-    cursor = db.cursor()
-    expire_bindings = ('pending', 'pending and resolved', 'resolved and pending', block_index)
-    cursor.execute('''SELECT * FROM rps_matches WHERE (status IN (?, ?, ?) AND match_expire_index < ?)''', expire_bindings)
-    return cursor.fetchall()
-
-
-def get_rpsresolves(db, source=None, status=None, rps_match_id=None):
-    cursor = db.cursor()
-    where = []
-    bindings = []
-    if source is not None:
-        where.append('source = ?')
-        bindings.append(source)
-    if status is not None:
-        where.append('status = ?')
-        bindings.append(status)
-    if rps_match_id is not None:
-        where.append('rps_match_id = ?')
-        bindings.append(rps_match_id)
-    query = f'''SELECT * FROM rpsresolves WHERE ({" AND ".join(where)})'''
-    cursor.execute(query, tuple(bindings))
-    return cursor.fetchall()
-
-
 def get_burns(db, status=None, source=None):
     cursor = db.cursor()
     where = []
@@ -813,14 +719,10 @@ def update_table(db, table_name, update_data, where_data):
     cursor.execute(query, tuple(bindings))
     cursor.close()
 
-def update_rps(db, update_data, where_data):
-    update_table(db, 'rps', update_data, where_data)
-
-def update_rps_matches(db, update_data, where_data):
-    update_table(db, 'rps_matches', update_data, where_data)
-
 def update_dispensers(db, update_data, where_data):
     update_table(db, 'dispensers', update_data, where_data)
+
+
 
 #####################
 #       BETS        #
@@ -1043,6 +945,133 @@ def update_order_match_status(db, id, status, block_index, tx_index):
         'id': id
     }
     insert_update(db, 'order_matches', update_data, where_data, block_index, tx_index)
+
+
+#####################
+#       RPS         #
+#####################
+
+### SELECTS ###
+
+def get_matched_not_expired_rps(db, tx0_hash, tx1_hash, expire_index):
+    cursor = db.cursor()
+    sql = ''' SELECT * FROM (
+        SELECT *, MAX(rowid) 
+        FROM rps 
+        WHERE tx_hash IN (?, ?) 
+        AND expire_index >= ?
+        GROUP BY tx_hash
+    ) WHERE status = ?
+    '''
+    bindings = (tx0_hash, tx1_hash, expire_index, 'matched')
+    cursor.execute(sql, bindings)
+    return cursor.fetchall()
+
+
+def get_already_matched_rps(db, tx_hash):
+    cursor = db.cursor()
+    query = '''SELECT *, MAX(rowid)
+            FORM rps_matches
+            WHERE tx0_hash = ? OR tx1_hash = ?
+            GROUP BY id'''
+    bindings = (tx_hash, tx_hash)
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_matching_rps(db, possible_moves, wager, source, already_matched):
+    cursor = db.cursor()
+    bindings = (possible_moves, wager, source)
+    already_matched_cond = ''
+    if already_matched:
+        already_matched_cond = '''AND tx_hash NOT IN ({})'''.format(','.join(['?' for e in range(0, len(already_matched))]))
+        bindings += tuple(already_matched)
+    bindings += ('open',)
+    sql = f'''SELECT * FROM (
+                SELECT *, MAX(rowid) FROM rps 
+                WHERE (possible_moves = ? AND wager = ? AND source != ? {already_matched_cond})
+                GROUP BY tx_hash
+            ) WHERE status = ?
+              ORDER BY tx_index LIMIT 1'''
+    cursor.execute(sql, bindings)
+    return cursor.fetchall()
+
+
+def get_rps_to_expire(db, block_index):
+    cursor = db.cursor()
+    query = '''SELECT * FROM (
+                    SELECT *, MAX(rowid) 
+                    FROM rps 
+                    WHERE expire_index < ? 
+                    GROUP BY tx_hash
+               ) WHERE status = ?'''
+    cursor.execute(query, (block_index, 'open'))
+    return cursor.fetchall()
+
+
+def get_rps(db, tx_hash):
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM rps WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1''', (tx_hash,))
+    return cursor.fetchall()
+
+
+def get_rps_matches_to_expire(db, block_index):
+    cursor = db.cursor()
+    query = '''SELECT * FROM (
+                    SELECT *, MAX(rowid) 
+                    FROM rps_matches 
+                    WHERE match_expire_index < ? 
+                    GROUP BY id
+               ) WHERE status IN (?, ? , ?)'''
+    bindings = (block_index, 'pending', 'pending and resolved', 'resolved and pending')
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_rps_match(db, id):
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM rps_matches WHERE id = ? ORDER BY rowid DESC LIMIT 1''', (id,))
+    return cursor.fetchall()
+
+
+def get_rpsresolves(db, source=None, status=None, rps_match_id=None):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if source is not None:
+        where.append('source = ?')
+        bindings.append(source)
+    if status is not None:
+        where.append('status = ?')
+        bindings.append(status)
+    if rps_match_id is not None:
+        where.append('rps_match_id = ?')
+        bindings.append(rps_match_id)
+    query = f'''SELECT * FROM rpsresolves WHERE ({" AND ".join(where)})'''
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+
+### UPDATES ###
+
+def update_rps_match_status(db, id, status, block_index, tx_index):
+    update_data = {
+        'status': status
+    }
+    where_data = {
+        'id': id
+    }
+    insert_update(db, 'rps_matches', update_data, where_data, block_index, tx_index)
+
+
+def update_rps_status(db, tx_hash, status, block_index, tx_index):
+    update_data = {
+        'status': status
+    }
+    where_data = {
+        'tx_hash': tx_hash
+    }
+    insert_update(db, 'rps', update_data, where_data, block_index, tx_index)
 
 
 #####################
