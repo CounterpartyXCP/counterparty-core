@@ -1346,7 +1346,7 @@ def holders(db, asset, exclude_empty_holders=False):
                 balance['quantity']
             )
             continue
-        if balance['block_index'] > current_balance[0] or balance['tx_index'] > current_balance[1] or balance['rowid'] > current_balance[2]:
+        if balance['rowid'] > current_balance[2]:
             saved_balances[f"{balance['asset']} {balance['address']}"] = (
                 balance['block_index'],
                 balance['tx_index'],
@@ -1362,6 +1362,7 @@ def holders(db, asset, exclude_empty_holders=False):
                       WHERE give_asset = ? AND status = ?''', (asset, 'open'))
     for order in list(cursor):
         holders.append({'address': order['source'], 'address_quantity': order['give_remaining'], 'escrow': order['tx_hash']})
+    
     # Funds escrowed in pending order matches. (Protocol change.)
     cursor.execute('''SELECT * FROM order_matches \
                       WHERE (forward_asset = ? AND status = ?)''', (asset, 'pending'))
@@ -1410,8 +1411,13 @@ def holders(db, asset, exclude_empty_holders=False):
 def xcp_created (db):
     """Return number of XCP created thus far."""
     cursor = db.cursor()
-    cursor.execute('''SELECT SUM(earned) AS total FROM burns \
-                      WHERE (status = ?)''', ('valid',))
+    query = '''
+        SELECT SUM(earned) AS total
+        FROM burns
+        WHERE (status = ?)
+    '''
+    bindings = ('valid',)
+    cursor.execute(query, bindings)
     total = list(cursor)[0]['total'] or 0
     cursor.close()
     return total
@@ -1420,21 +1426,44 @@ def xcp_created (db):
 def xcp_destroyed (db):
     """Return number of XCP destroyed thus far."""
     cursor = db.cursor()
-    # Destructions
-    cursor.execute('''SELECT SUM(quantity) AS total FROM destructions \
-                      WHERE (status = ? AND asset = ?)''', ('valid', config.XCP))
+    # Destructions.
+    query = '''
+        SELECT SUM(quantity) AS total
+        FROM destructions
+        WHERE (status = ? AND asset = ?)
+    '''
+    bindings = ('valid', config.XCP)
+    cursor.execute(query, bindings)
     destroyed_total = list(cursor)[0]['total'] or 0
+    
     # Subtract issuance fees.
-    cursor.execute('''SELECT SUM(fee_paid) AS total FROM issuances\
-                      WHERE status = ?''', ('valid',))
+    query = '''
+        SELECT SUM(fee_paid) AS total
+        FROM issuances
+        WHERE status = ?
+    '''
+    bindings = ('valid',)
+    cursor.execute(query, bindings)
     issuance_fee_total = list(cursor)[0]['total'] or 0
+    
     # Subtract dividend fees.
-    cursor.execute('''SELECT SUM(fee_paid) AS total FROM dividends\
-                      WHERE status = ?''', ('valid',))
+    query = '''
+        SELECT SUM(fee_paid) AS total
+        FROM dividends
+        WHERE status = ?
+    '''
+    bindings = ('valid',)
+    cursor.execute(query, bindings)
     dividend_fee_total = list(cursor)[0]['total'] or 0
+    
     # Subtract sweep fees.
-    cursor.execute('''SELECT SUM(fee_paid) AS total FROM sweeps\
-                      WHERE status = ?''', ('valid',))
+    query = '''
+        SELECT SUM(fee_paid) AS total
+        FROM sweeps
+        WHERE status = ?
+    '''
+    bindings = ('valid',)
+    cursor.execute(query, bindings)
     sweeps_fee_total = list(cursor)[0]['total'] or 0
     cursor.close()
     return destroyed_total + issuance_fee_total + dividend_fee_total + sweeps_fee_total
@@ -1449,8 +1478,14 @@ def creations (db):
     """Return creations."""
     cursor = db.cursor()
     creations = {config.XCP: xcp_created(db)}
-    cursor.execute('''SELECT asset, SUM(quantity) AS created FROM issuances \
-                      WHERE status = ? GROUP BY asset''', ('valid',))
+    query = '''
+        SELECT asset, SUM(quantity) AS created
+        FROM issuances
+        WHERE status = ?
+        GROUP BY asset
+    '''
+    bindings = ('valid',)
+    cursor.execute(query, bindings)
 
     for issuance in cursor:
         asset = issuance['asset']
@@ -1465,8 +1500,14 @@ def destructions (db):
     """Return destructions."""
     cursor = db.cursor()
     destructions = {config.XCP: xcp_destroyed(db)}
-    cursor.execute('''SELECT asset, SUM(quantity) AS destroyed FROM destructions \
-                      WHERE (status = ? AND asset != ?) GROUP BY asset''', ('valid', config.XCP))
+    query = '''
+        SELECT asset, SUM(quantity) AS destroyed
+        FROM destructions
+        WHERE (status = ? AND asset != ?)
+        GROUP BY asset
+    '''
+    bindings = ('valid', config.XCP)
+    cursor.execute(query, bindings)
 
     for destruction in cursor:
         asset = destruction['asset']
@@ -1480,8 +1521,13 @@ def destructions (db):
 def asset_issued_total (db, asset):
     """Return asset total issued."""
     cursor = db.cursor()
-    cursor.execute('''SELECT SUM(quantity) AS total FROM issuances \
-                      WHERE (status = ? AND asset = ?)''', ('valid', asset))
+    query = '''
+        SELECT SUM(quantity) AS total
+        FROM issuances
+        WHERE (status = ? AND asset = ?)
+    '''
+    bindings = ('valid', asset)
+    cursor.execute(query, bindings)
     issued_total = list(cursor)[0]['total'] or 0
     cursor.close()
     return issued_total
@@ -1490,8 +1536,13 @@ def asset_issued_total (db, asset):
 def asset_destroyed_total (db, asset):
     """Return asset total destroyed."""
     cursor = db.cursor()
-    cursor.execute('''SELECT SUM(quantity) AS total FROM destructions \
-                      WHERE (status = ? AND asset = ?)''', ('valid', asset))
+    query = '''
+        SELECT SUM(quantity) AS total
+        FROM destructions
+        WHERE (status = ? AND asset = ?)
+    '''
+    bindings = ('valid', asset)
+    cursor.execute(query, bindings)
     destroyed_total = list(cursor)[0]['total'] or 0
     cursor.close()
     return destroyed_total
