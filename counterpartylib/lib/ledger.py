@@ -234,9 +234,10 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False):
 def get_address_balances(db, address):
     cursor = db.cursor()
     query = f'''
-        SELECT * FROM ({BALANCES_VIEW_QUERY})
+        SELECT address, asset, quantity, MAX(rowid)
+        FROM balances
         WHERE address = ?
-        ORDER BY asset
+        GROUP BY address, asset
     '''
     bindings = (address,)
     cursor.execute(query, bindings)
@@ -504,8 +505,10 @@ def get_asset_issued(db, address):
 def get_asset_balances(db, asset):
     cursor = db.cursor()
     query = f'''
-        SELECT * FROM ({BALANCES_VIEW_QUERY})
+        SELECT address, asset, quantity, MAX(rowid)
+        FROM new_balances
         WHERE asset = ?
+        GROUP BY address, asset
         ORDER BY address
     '''
     bindings = (asset,)
@@ -1509,17 +1512,84 @@ def supplies (db):
 def held (db): #TODO: Rename ?
     
     queries = [
-        f"""SELECT asset, SUM(quantity) AS total FROM ({BALANCES_VIEW_QUERY}) GROUP BY asset""",
-        "SELECT give_asset AS asset, SUM(give_remaining) AS total FROM orders WHERE status = 'open' GROUP BY asset",
-        "SELECT give_asset AS asset, SUM(give_remaining) AS total FROM orders WHERE status = 'filled' and give_asset = 'XCP' and get_asset = 'BTC' GROUP BY asset",
-        "SELECT forward_asset AS asset, SUM(forward_quantity) AS total FROM order_matches WHERE status = 'pending' GROUP BY asset",
-        "SELECT backward_asset AS asset, SUM(backward_quantity) AS total FROM order_matches WHERE status = 'pending' GROUP BY asset",
-        "SELECT 'XCP' AS asset, SUM(wager_remaining) AS total FROM bets WHERE status = 'open'",
-        "SELECT 'XCP' AS asset, SUM(forward_quantity) AS total FROM bet_matches WHERE status = 'pending'",
-        "SELECT 'XCP' AS asset, SUM(backward_quantity) AS total FROM bet_matches WHERE status = 'pending'",
-        "SELECT 'XCP' AS asset, SUM(wager) AS total FROM rps WHERE status = 'open'",
-        "SELECT 'XCP' AS asset, SUM(wager * 2) AS total FROM rps_matches WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')",
-        "SELECT asset, SUM(give_remaining) AS total FROM dispensers WHERE status IN (0,1,11) GROUP BY asset",
+        '''
+        SELECT asset, SUM(quantity) AS total FROM (
+            SELECT address, asset, quantity, (address || asset) AS aa, MAX(rowid)
+            FROM balances
+            GROUP BY aa
+        ) GROUP BY asset
+        ''',
+        '''
+        SELECT give_asset AS asset, SUM(give_remaining) AS total FROM (
+            SELECT give_asset, give_remaining, MAX(rowid)
+            FROM orders
+            GROUP BY tx_hash
+        ) WHERE status = "open" GROUP BY asset
+        ''',
+        '''
+        SELECT give_asset AS asset, SUM(give_remaining) AS total FROM (
+            SELECT give_asset, give_remaining, MAX(rowid)
+            FROM orders
+            WHERE give_asset = "XCP" AND get_asset = "BTC"
+            GROUP BY tx_hash
+        ) WHERE status = "filled" GROUP BY asset
+        ''',
+        '''
+        SELECT forward_asset AS asset, SUM(forward_quantity) AS total FROM (
+            SELECT forward_asset, forward_quantity, MAX(rowid)
+            FROM order_matches
+            GROUP BY id
+        ) WHERE status = "pending" GROUP BY asset
+        ''',
+        '''
+        SELECT backward_asset AS asset, SUM(backward_quantity) AS total FROM (
+            SELECT backward_asset, backward_quantity, MAX(rowid)
+            FROM order_matches
+            GROUP BY id
+        ) WHERE status = "pending" GROUP BY asset
+        ''',
+        '''
+        SELECT "XCP" AS asset, SUM(wager_remaining) AS total FROM (
+            SELECT wager_remaining, MAX(rowid)
+            FROM bets
+            GROUP BY tx_hash
+        ) WHERE status = "open"
+        ''',
+        '''
+        SELECT "XCP" AS asset, SUM(forward_quantity) AS total FROM (
+            SELECT forward_quantity, MAX(rowid)
+            FROM bet_matches
+            GROUP BY id
+        ) WHERE status = "pending"
+        ''',
+        '''
+        SELECT "XCP" AS asset, SUM(backward_quantity) AS total FROM (
+            SELECT backward_quantity, MAX(rowid)
+            FROM bet_matches
+            GROUP BY id
+        ) WHERE status = "pending"
+        ''',
+        '''
+        SELECT 'XCP' AS asset, SUM(wager) AS total FROM (
+            SELECT wager, MAX(rowid)
+            FROM rps
+            GROUP BY tx_hash
+        ) WHERE status = 'open'
+        ''',
+        '''
+        SELECT "XCP" AS asset, SUM(wager * 2) AS total FROM (
+            SELECT wager, MAX(rowid)
+            FROM rps_matches
+            GROUP BY id
+        ) WHERE status IN ("pending", "pending and resolved", "resolved and pending")
+        ''',
+        '''
+        SELECT asset, SUM(give_remaining) AS total FROM (
+            SELECT asset, give_remaining, MAX(rowid)
+            FROM dispensers
+            GROUP BY tx_hash
+        ) WHERE status IN (0, 1, 11) GROUP BY asset
+        ''',
     ]
 
     sql = "SELECT asset, SUM(total) AS total FROM (" + " UNION ALL ".join(queries) + ") GROUP BY asset;"
