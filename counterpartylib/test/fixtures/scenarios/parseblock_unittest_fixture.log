@@ -395,3 +395,15 @@ New input: amount: 1.36696890; txid: 076ae3d8eeb7fb40d2ae27692340157c746d9832806
 final_fee inputs: 1 size: 262 final_fee 6550
 Size: 262 Fee: 0.00006550 Change quantity: 1.36690340 BTC
 Subasset Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 1.0 of divisible subasset PARENT.already.issued as numeric asset A95428956661682277 (0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf) [valid]
+Checking for conservation of assets.
+XCP has been conserved (6040.3184792 XCP both issued and held)
+A95428956661682277 has been conserved (1.0 A95428956661682277 both issued and held)
+CALLABLE has been conserved (0.00001 CALLABLE both issued and held)
+DIVIDEND has been conserved (0.000001 DIVIDEND both issued and held)
+DIVISIBLE has been conserved (1000.0 DIVISIBLE both issued and held)
+LOCKED has been conserved (0.00001 LOCKED both issued and held)
+LOCKEDPREV has been conserved (0.00001 LOCKEDPREV both issued and held)
+MAXI has been conserved (92233720368.54775807 MAXI both issued and held)
+NODIVISIBLE has been conserved (1000 NODIVISIBLE both issued and held)
+PARENT has been conserved (1.0 PARENT both issued and held)
+PAYTOSCRIPT has been conserved (1000 PAYTOSCRIPT both issued and held)

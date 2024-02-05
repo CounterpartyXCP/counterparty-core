@@ -1648,71 +1648,71 @@ def held (db): #TODO: Rename ?
         ''',
         '''
         SELECT give_asset AS asset, SUM(give_remaining) AS total FROM (
-            SELECT give_asset, give_remaining, MAX(rowid)
+            SELECT give_asset, give_remaining, status, MAX(rowid)
             FROM orders
             GROUP BY tx_hash
-        ) WHERE status = "open" GROUP BY asset
+        ) WHERE status = 'open' GROUP BY asset
         ''',
         '''
         SELECT give_asset AS asset, SUM(give_remaining) AS total FROM (
-            SELECT give_asset, give_remaining, MAX(rowid)
+            SELECT give_asset, give_remaining, status, MAX(rowid)
             FROM orders
-            WHERE give_asset = "XCP" AND get_asset = "BTC"
+            WHERE give_asset = 'XCP' AND get_asset = 'BTC'
             GROUP BY tx_hash
-        ) WHERE status = "filled" GROUP BY asset
+        ) WHERE status = 'filled' GROUP BY asset
         ''',
         '''
         SELECT forward_asset AS asset, SUM(forward_quantity) AS total FROM (
-            SELECT forward_asset, forward_quantity, MAX(rowid)
+            SELECT forward_asset, forward_quantity, status, MAX(rowid)
             FROM order_matches
             GROUP BY id
-        ) WHERE status = "pending" GROUP BY asset
+        ) WHERE status = 'pending' GROUP BY asset
         ''',
         '''
         SELECT backward_asset AS asset, SUM(backward_quantity) AS total FROM (
-            SELECT backward_asset, backward_quantity, MAX(rowid)
+            SELECT backward_asset, backward_quantity, status, MAX(rowid)
             FROM order_matches
             GROUP BY id
-        ) WHERE status = "pending" GROUP BY asset
+        ) WHERE status = 'pending' GROUP BY asset
         ''',
         '''
-        SELECT "XCP" AS asset, SUM(wager_remaining) AS total FROM (
-            SELECT wager_remaining, MAX(rowid)
+        SELECT 'XCP' AS asset, SUM(wager_remaining) AS total FROM (
+            SELECT wager_remaining, status, MAX(rowid)
             FROM bets
             GROUP BY tx_hash
-        ) WHERE status = "open"
+        ) WHERE status = 'open'
         ''',
         '''
-        SELECT "XCP" AS asset, SUM(forward_quantity) AS total FROM (
-            SELECT forward_quantity, MAX(rowid)
+        SELECT 'XCP' AS asset, SUM(forward_quantity) AS total FROM (
+            SELECT forward_quantity, status, MAX(rowid)
             FROM bet_matches
             GROUP BY id
-        ) WHERE status = "pending"
+        ) WHERE status = 'pending'
         ''',
         '''
-        SELECT "XCP" AS asset, SUM(backward_quantity) AS total FROM (
-            SELECT backward_quantity, MAX(rowid)
+        SELECT 'XCP' AS asset, SUM(backward_quantity) AS total FROM (
+            SELECT backward_quantity, status, MAX(rowid)
             FROM bet_matches
             GROUP BY id
-        ) WHERE status = "pending"
+        ) WHERE status = 'pending'
         ''',
         '''
         SELECT 'XCP' AS asset, SUM(wager) AS total FROM (
-            SELECT wager, MAX(rowid)
+            SELECT wager, status, MAX(rowid)
             FROM rps
             GROUP BY tx_hash
         ) WHERE status = 'open'
         ''',
         '''
-        SELECT "XCP" AS asset, SUM(wager * 2) AS total FROM (
-            SELECT wager, MAX(rowid)
+        SELECT 'XCP' AS asset, SUM(wager * 2) AS total FROM (
+            SELECT wager, status, MAX(rowid)
             FROM rps_matches
             GROUP BY id
-        ) WHERE status IN ("pending", "pending and resolved", "resolved and pending")
+        ) WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
         ''',
         '''
         SELECT asset, SUM(give_remaining) AS total FROM (
-            SELECT asset, give_remaining, MAX(rowid)
+            SELECT asset, give_remaining, status, MAX(rowid)
             FROM dispensers
             GROUP BY tx_hash
         ) WHERE status IN (0, 1, 11) GROUP BY asset

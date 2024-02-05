@@ -495,6 +495,8 @@ def run_scenario(scenario):
         else:
             create_next_block(db, block_index=config.BURN_START + tx[1], parse_block=tx[2] if len(tx) == 3 else True)
 
+    check.asset_conservation(db)
+
     dump = dump_database(db)
     log = logger_buff.getvalue()
 
