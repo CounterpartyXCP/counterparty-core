@@ -152,6 +152,9 @@ def isodt (epoch_time):
         return '<datetime>'
 
 def message(db, block_index, command, category, bindings, tx_hash=None):
+    if command == '\n':
+        return
+
     cursor = db.cursor()
 
     # Get last message index.

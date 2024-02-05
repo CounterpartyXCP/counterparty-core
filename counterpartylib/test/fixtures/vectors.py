@@ -4158,12 +4158,12 @@ UNITTEST_VECTOR = {
         }],
         'last_message': [{
             'in': (),
-            'out': {'bindings': "['action', 'address', 'asset', 'block_index', 'event', 'quantity', 'tx_index']",
-                    'block_index': 310498,
-                    'category': 'credits',
-                    'command': 'insert',
-                    'message_index': 134,
-                    'timestamp': 0}
+            'out': {'message_index': 66, 
+                     'block_index': 310498, 
+                     'command': 'insert', 
+                     'category': 'issuances', 
+                     'bindings': "['asset', 'asset_longname', 'block_index', 'call_date', 'call_price', 'callable', 'description', 'divisible', 'fee_paid', 'issuer', 'locked', 'quantity', 'reset', 'source', 'status', 'transfer', 'tx_hash', 'tx_index']",
+                     'timestamp': 0}
         }],
         'get_asset_id': [{
             'in': ('XCP', DP['default_block_index']),
