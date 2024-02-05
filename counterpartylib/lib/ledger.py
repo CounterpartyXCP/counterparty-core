@@ -1325,6 +1325,33 @@ def update_rps_status(db, tx_hash, status, block_index, tx_index):
 #     SUPPLIES      #
 #####################
 
+# Ugly way to get hilder but we want to preserve the order with the old query
+# to not break checkpoints
+def _get_holders(cursor, id_fields, hold_fields_1, hold_fields_2=None):
+    save_records = {}
+    for record in cursor:
+        id = ' '.join([record[field] for field in id_fields])
+        if id not in save_records:
+            save_records[id] = record
+            continue
+        if save_records[id]['rowid'] < record['rowid']:
+            save_records[id] = record
+            continue
+    holders = []
+    for holder in save_records.values():
+        holders.append({
+            'address': holder[hold_fields_1['address']],
+            'address_quantity': holder[hold_fields_1['address_quantity']],
+            'escrow': holder[hold_fields_1['escrow']] if 'escrow' in hold_fields_1 else None
+        })
+        if hold_fields_2 is not None:
+            holders.append({
+                'address': holder[hold_fields_2['address']],
+                'address_quantity': holder[hold_fields_2['address_quantity']],
+                'escrow': holder[hold_fields_2['escrow']] if 'escrow' in hold_fields_2 else None
+            })
+    return holders
+
 
 def holders(db, asset, exclude_empty_holders=False):
     """Return holders of the asset."""
@@ -1332,77 +1359,126 @@ def holders(db, asset, exclude_empty_holders=False):
     cursor = db.cursor()
 
     # Balances
-    # Ugly way to get balances but we want to preserve the order with the old query
-    cursor.execute('''SELECT *, rowid FROM balances WHERE asset = ?''', (asset, ))
-    saved_balances = {}
-    for balance in list(cursor):
-        current_balance = saved_balances.get(f"{balance['asset']} {balance['address']}")
-        if current_balance is None:
-            saved_balances[f"{balance['asset']} {balance['address']}"] = (
-                balance['block_index'],
-                balance['tx_index'],
-                balance['rowid'],
-                balance['address'],
-                balance['quantity']
-            )
-            continue
-        if balance['rowid'] > current_balance[2]:
-            saved_balances[f"{balance['asset']} {balance['address']}"] = (
-                balance['block_index'],
-                balance['tx_index'],
-                balance['rowid'],
-                balance['address'],
-                balance['quantity'])
-            continue
-    for holder in saved_balances.values():
-        holders.append({'address': holder[3], 'address_quantity': holder[4], 'escrow': None})
+    
+    query = '''
+        SELECT *, rowid
+        FROM balances
+        WHERE asset = ?
+    '''
+    bindings = (asset,)
+    if exclude_empty_holders:
+        query += ' AND quantity > ?'
+        bindings += (0,)
+    cursor.execute(query, bindings)
+    holders += _get_holders(
+        cursor,
+        ['asset', 'address'],
+        {'address': 'address', 'address_quantity': 'quantity'}
+    )
 
     # Funds escrowed in orders. (Protocol change.)
-    cursor.execute('''SELECT * FROM orders \
-                      WHERE give_asset = ? AND status = ?''', (asset, 'open'))
-    for order in list(cursor):
-        holders.append({'address': order['source'], 'address_quantity': order['give_remaining'], 'escrow': order['tx_hash']})
-    
+    query = '''
+        SELECT *, rowid FROM orders
+        WHERE give_asset = ? AND status = ?
+    '''
+    bindings = (asset, 'open')
+    cursor.execute(query, bindings)
+    holders += _get_holders(
+        cursor,
+        ['tx_hash'],
+        {'address': 'source', 'address_quantity': 'give_remaining', 'escrow': 'tx_hash'}
+    )
+
     # Funds escrowed in pending order matches. (Protocol change.)
-    cursor.execute('''SELECT * FROM order_matches \
-                      WHERE (forward_asset = ? AND status = ?)''', (asset, 'pending'))
-    for order_match in list(cursor):
-        holders.append({'address': order_match['tx0_address'], 'address_quantity': order_match['forward_quantity'], 'escrow': order_match['id']})
-    cursor.execute('''SELECT * FROM order_matches \
-                      WHERE (backward_asset = ? AND status = ?)''', (asset, 'pending'))
-    for order_match in list(cursor):
-        holders.append({'address': order_match['tx1_address'], 'address_quantity': order_match['backward_quantity'], 'escrow': order_match['id']})
+    query = '''
+        SELECT *, rowid FROM order_matches
+        WHERE (forward_asset = ? AND status = ?)
+    '''
+    bindings = (asset, 'pending')
+    cursor.execute(query, bindings)
+    holders += _get_holders(
+        cursor,
+        ['id'],
+        {'address': 'tx0_address', 'address_quantity': 'forward_quantity', 'escrow': 'id'},
+    )
+
+    query = '''
+        SELECT *, rowid FROM order_matches
+        WHERE (backward_asset = ? AND status = ?)
+    '''
+    bindings = (asset, 'pending')
+    cursor.execute(query, bindings)
+    holders += _get_holders(
+        cursor,
+        ['id'],
+        {'address': 'tx1_address', 'address_quantity': 'backward_quantity', 'escrow': 'id'}
+    )
 
     # Bets and RPS (and bet/rps matches) only escrow XCP.
     if asset == config.XCP:
-        cursor.execute('''SELECT * FROM bets \
-                          WHERE status = ?''', ('open',))
-        for bet in list(cursor):
-            holders.append({'address': bet['source'], 'address_quantity': bet['wager_remaining'], 'escrow': bet['tx_hash']})
-        cursor.execute('''SELECT * FROM bet_matches \
-                          WHERE status = ?''', ('pending',))
-        for bet_match in list(cursor):
-            holders.append({'address': bet_match['tx0_address'], 'address_quantity': bet_match['forward_quantity'], 'escrow': bet_match['id']})
-            holders.append({'address': bet_match['tx1_address'], 'address_quantity': bet_match['backward_quantity'], 'escrow': bet_match['id']})
+        query = '''
+            SELECT *, rowid FROM bets
+            WHERE status = ?
+        '''
+        bindings = ('open',)
+        cursor.execute(query, bindings)
+        holders += _get_holders(
+            cursor,
+            ['tx_hash'],
+            {'address': 'source', 'address_quantity': 'wager_remaining', 'escrow': 'tx_hash'}
+        )
 
-        cursor.execute('''SELECT * FROM rps \
-                          WHERE status = ?''', ('open',))
-        for rps in list(cursor):
-            holders.append({'address': rps['source'], 'address_quantity': rps['wager'], 'escrow': rps['tx_hash']})
-        cursor.execute('''SELECT * FROM rps_matches \
-                          WHERE status IN (?, ?, ?)''', ('pending', 'pending and resolved', 'resolved and pending'))
-        for rps_match in list(cursor):
-            holders.append({'address': rps_match['tx0_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
-            holders.append({'address': rps_match['tx1_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
+        query = '''
+            SELECT *, rowid FROM bet_matches
+            WHERE status = ?
+        '''
+        bindings = ('pending',)
+        cursor.execute(query, bindings)
+        holders += _get_holders(
+            cursor,
+            ['id'],
+            {'address': 'tx0_address', 'address_quantity': 'forward_quantity', 'escrow': 'id'},
+            {'address': 'tx1_address', 'address_quantity': 'backward_quantity', 'escrow': 'id'}
+        )
+
+        query = '''
+            SELECT *, rowid FROM rps
+            WHERE status = ?
+        '''
+        bindings = ('open',)
+        cursor.execute(query, bindings)
+        holders += _get_holders(
+            cursor,
+            ['tx_hash'],
+            {'address': 'source', 'address_quantity': 'wager', 'escrow': 'tx_hash'}
+        )
+
+        query = '''
+            SELECT *, rowid FROM rps_matches
+            WHERE status IN (?, ?, ?)
+        '''
+        bindings = ('pending', 'pending and resolved', 'resolved and pending')
+        cursor.execute(query, bindings)
+        holders += _get_holders(
+            cursor,
+            ['id'],
+            {'address': 'tx0_address', 'address_quantity': 'wager', 'escrow': 'id'},
+            {'address': 'tx1_address', 'address_quantity': 'wager', 'escrow': 'id'}
+        )
 
     if enabled('dispensers_in_holders'):
         # Funds escrowed in dispensers.
-        cursor.execute('''SELECT * FROM dispensers \
-                          WHERE asset = ? AND status = ?''', (asset, 0))
-
-
-        for dispenser in list(cursor):
-            holders.append({'address': dispenser['source'], 'address_quantity': dispenser['give_remaining'], 'escrow': None})
+        query = '''
+            SELECT * FROM dispensers
+            WHERE asset = ? AND status = ?
+        '''
+        bindings = (asset, 0)
+        cursor.execute(query, bindings)
+        holders += _get_holders(
+            cursor,
+            ['tx_hash'],
+            {'address': 'source', 'address_quantity': 'give_remaining'}
+        )
 
     cursor.close()
     return holders
