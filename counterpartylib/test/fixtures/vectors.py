@@ -3361,9 +3361,9 @@ UNITTEST_VECTOR = {
                 },),
                 'records': [
                     { 'table': 'dispensers', 'values': { # Some values here correspond to the original TX that opened the dispenser
-                        'tx_index': 108,
+                        'tx_index': 503,
                         'tx_hash': '9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec',
-                        'block_index': 310107,
+                        'block_index': DP['default_block_index'],
                         'source': ADDR[5],
                         'asset': config.XCP,
                         'give_quantity': 100,
@@ -3420,9 +3420,9 @@ UNITTEST_VECTOR = {
                 },),
                 'records': [
                     { 'table': 'dispensers', 'values': { # Some values here correspond to the original TX that opened the dispenser
-                        'tx_index': 108,
+                        'tx_index': 503,
                         'tx_hash': '9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec',
-                        'block_index': 310107,
+                        'block_index': DP['default_block_index'],
                         'source': ADDR[5],
                         'asset': config.XCP,
                         'give_quantity': 100,
@@ -3452,9 +3452,9 @@ UNITTEST_VECTOR = {
                 },),
                 'records': [
                     { 'table': 'dispensers', 'values': { # Some values here correspond to the original TX that opened the dispenser
-                        'tx_index': 108,
+                        'tx_index': 503,
                         'tx_hash': '9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec',
-                        'block_index': 310107,
+                        'block_index': DP['default_block_index'],
                         'source': ADDR[5],
                         'asset': config.XCP,
                         'give_quantity': 100,

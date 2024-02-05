@@ -1248,8 +1248,8 @@ BEGIN TRANSACTION;
 -- Table  dispensers
 DROP TABLE IF EXISTS dispensers;
 CREATE TABLE dispensers(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
+                      tx_index INTEGER,
+                      tx_hash TEXT,
                       block_index INTEGER,
                       source TEXT,
 <<<<<<< HEAD
@@ -1261,8 +1261,7 @@ CREATE TABLE dispensers(
                       escrow_quantity INTEGER,
                       satoshirate INTEGER,
                       status INTEGER,
-                      give_remaining INTEGER, oracle_address TEXT, last_status_tx_hash TEXT, origin TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+                      give_remaining INTEGER, oracle_address TEXT, last_status_tx_hash TEXT, origin TEXT);
 -- Triggers and indices on  dispensers
 <<<<<<< HEAD
 CREATE TRIGGER _dispensers_delete BEFORE DELETE ON dispensers BEGIN

@@ -428,7 +428,7 @@ def log (db, command, category, bindings):
                 logger.info('Dispenser: {} closed a {} for asset {}'.format(bindings['source'], dispenser_label, bindings['asset']))
 
         elif category == 'dispenses':
-            dispensers = ledger.get_dispensers(db, tx_hash=bindings['dispenser_tx_hash'])
+            dispensers = ledger.get_dispenser(db, tx_hash=bindings['dispenser_tx_hash'])
             dispenser = dispensers[0]
         
             if (dispenser["oracle_address"] != None) and ledger.enabled('oracle_dispensers'):

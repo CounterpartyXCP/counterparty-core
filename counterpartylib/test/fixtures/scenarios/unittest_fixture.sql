@@ -1789,8 +1789,8 @@ BEGIN TRANSACTION;
 -- Table  dispensers
 DROP TABLE IF EXISTS dispensers;
 CREATE TABLE dispensers(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
+                      tx_index INTEGER,
+                      tx_hash TEXT,
                       block_index INTEGER,
                       source TEXT,
                       asset TEXT,
@@ -1798,8 +1798,7 @@ CREATE TABLE dispensers(
                       escrow_quantity INTEGER,
                       satoshirate INTEGER,
                       status INTEGER,
-                      give_remaining INTEGER, oracle_address TEXT, last_status_tx_hash TEXT, origin TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+                      give_remaining INTEGER, oracle_address TEXT, last_status_tx_hash TEXT, origin TEXT);
 INSERT INTO dispensers VALUES(108,'9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec',310107,'munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b','XCP',100,100,100,0,100,NULL,NULL,'munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b');
 -- Triggers and indices on  dispensers
 CREATE INDEX dispensers_asset_idx ON dispensers (asset)

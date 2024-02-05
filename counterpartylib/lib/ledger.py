@@ -522,86 +522,6 @@ def get_burns(db, status=None, source=None):
     return cursor.fetchall()
 
 
-def get_dispensers(db, status_in=None, source=None, asset=None, origin=None, status=None, tx_hash=None):
-    cursor = db.cursor()
-    where = []
-    bindings = []
-    if status_in is not None:
-        where.append('status IN ({})'.format(','.join(['?' for e in range(0, len(status_in))])))
-        bindings += status_in
-    if source is not None:
-        where.append('source = ?')
-        bindings.append(source)
-    if asset is not None:
-        where.append('asset = ?')
-        bindings.append(asset)
-    if origin is not None:
-        where.append('origin = ?')
-        bindings.append(origin)
-    if status is not None:
-        where.append('status = ?')
-        bindings.append(status)
-    if tx_hash is not None:
-        where.append('tx_hash = ?')
-        bindings.append(tx_hash)
-    query = f'''SELECT * FROM dispensers WHERE ({" AND ".join(where)})'''
-    cursor.execute(query, tuple(bindings))
-    return cursor.fetchall()
-
-
-def get_refilling_count(db, dispenser_tx_hash):
-    cursor = db.cursor()
-    cursor.execute('''SELECT count(*) cnt FROM dispenser_refills WHERE dispenser_tx_hash = ?''', (dispenser_tx_hash,))
-    return cursor.fetchall()[0]['cnt']
-
-
-def get_pending_dispensers(db, status, delay, block_index):
-    cursor = db.cursor()
-    query = '''SELECT d.*, t.source AS tx_source, t.block_index AS tx_block_index 
-               FROM dispensers d 
-               LEFT JOIN transactions t ON t.tx_hash = d.last_status_tx_hash 
-               WHERE status = :status 
-               AND last_status_tx_hash IS NOT NULL 
-               AND :block_index >= t.block_index + :delay'''
-    bindings = {
-        'status': status,
-        'delay': delay,
-        'block_index': block_index
-    }
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_dispensers_count(db, source, status, origin):
-    cursor = db.cursor()
-    query = '''SELECT count(*) cnt FROM dispensers WHERE source = ? AND status = ? AND origin = ?'''
-    bindings = (source, status, origin)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()[0]['cnt']
-
-
-def get_dispenses_count(db, dispenser_tx_hash, from_block_index):
-    cursor = db.cursor()
-    sql = '''SELECT COUNT(*) AS dispenses_count 
-            FROM dispenses 
-            WHERE dispenser_tx_hash = :dispenser_tx_hash 
-            AND block_index >= :block_index'''
-    bindings = {
-        'dispenser_tx_hash': dispenser_tx_hash,
-        'block_index': from_block_index
-    }
-    cursor.execute(sql, bindings)
-    dispenses_count_result = cursor.fetchall()[0]
-    return dispenses_count_result["dispenses_count"]
-
-
-def get_last_refills_block_index(db, dispenser_tx_hash):
-    cursor = db.cursor()
-    sql = 'SELECT MAX(block_index) AS max_block_index FROM dispenser_refills WHERE dispenser_tx_hash = :dispenser_tx_hash'
-    cursor.execute(sql, {'dispenser_tx_hash': dispenser_tx_hash})
-    return cursor.fetchall()
-
-
 def get_vouts(db, tx_hash):
     cursor = db.cursor()
     query = '''SELECT txs.source AS source, txs_outs.*
@@ -638,29 +558,13 @@ def get_addresses(db, address=None):
     return cursor.fetchall()
 
 
-def get_dispenser_info(db, tx_hash=None, tx_index=None):
-    cursor = db.cursor()
-    where = []
-    bindings = []
-    if tx_hash is not None:
-        where.append('tx_hash = ?')
-        bindings.append(tx_hash)
-    if tx_index is not None:
-        where.append('tx_index = ?')
-        bindings.append(tx_index)
-
-    query = f'''SELECT d.*, a.asset_longname
-             FROM dispensers d
-             LEFT JOIN assets a ON a.asset_name = d.asset
-             WHERE ({" AND ".join(where)})'''
-    cursor.execute(query, tuple(bindings))
-    return cursor.fetchall()
-
-
 #####################
 #      UPDATES      #
 #####################
 
+# This function allows you to update a record using an INSERT. 
+# The `block_index`, `tx_index` and `rowid` fields allow you to 
+# order updates and retrieve the row with the current data.
 
 def insert_update(db, table_name, update_data, where_data, block_index, tx_index, more_where=""):
     cursor = db.cursor()
@@ -719,9 +623,148 @@ def update_table(db, table_name, update_data, where_data):
     cursor.execute(query, tuple(bindings))
     cursor.close()
 
-def update_dispensers(db, update_data, where_data):
-    update_table(db, 'dispensers', update_data, where_data)
 
+#####################
+#     DISPENSERS    #
+#####################
+
+### SELECTS ###
+
+def get_dispenser_info(db, tx_hash=None, tx_index=None):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if tx_hash is not None:
+        where.append('tx_hash = ?')
+        bindings.append(tx_hash)
+    if tx_index is not None:
+        where.append('tx_index = ?')
+        bindings.append(tx_index)
+
+    query = f'''SELECT d.*, a.asset_longname
+             FROM dispensers d
+             LEFT JOIN assets a ON a.asset_name = d.asset
+             WHERE ({" AND ".join(where)})
+             ORDER BY d.rowid DESC LIMIT 1'''
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+
+def get_refilling_count(db, dispenser_tx_hash):
+    cursor = db.cursor()
+    cursor.execute('''SELECT count(*) cnt 
+                   FROM dispenser_refills 
+                   WHERE dispenser_tx_hash = ?''', 
+                   (dispenser_tx_hash,))
+    return cursor.fetchall()[0]['cnt']
+
+
+def get_pending_dispensers(db, status, delay, block_index):
+    cursor = db.cursor()
+    query = '''
+        SELECT d.*, t.source AS tx_source, t.block_index AS tx_block_index FROM
+            (SELECT *, MAX(rowid)
+            FROM dispensers
+            WHERE :block_index >= t.block_index + :delay
+            GROUP BY tx_hash) AS d 
+        LEFT JOIN transactions t ON t.tx_hash = d.last_status_tx_hash
+        WHERE status = :status
+        AND last_status_tx_hash IS NOT NULL
+    '''
+    bindings = {
+        'status': status,
+        'delay': delay,
+        'block_index': block_index
+    }
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_dispensers_count(db, source, status, origin):
+    cursor = db.cursor()
+    query = '''
+        SELECT count(*) cnt FROM (
+            SELECT *, MAX(rowid)
+            FROM dispensers
+            WHERE source = ? AND origin = ?
+            GROUP BY source, origin
+        ) WHERE status = ?
+    '''
+    bindings = (source, origin, status)
+    cursor.execute(query, bindings)
+    return cursor.fetchall()[0]['cnt']
+
+
+def get_dispenses_count(db, dispenser_tx_hash, from_block_index):
+    cursor = db.cursor()
+    sql = '''SELECT COUNT(*) AS dispenses_count 
+            FROM dispenses 
+            WHERE dispenser_tx_hash = :dispenser_tx_hash 
+            AND block_index >= :block_index'''
+    bindings = {
+        'dispenser_tx_hash': dispenser_tx_hash,
+        'block_index': from_block_index
+    }
+    cursor.execute(sql, bindings)
+    dispenses_count_result = cursor.fetchall()[0]
+    return dispenses_count_result["dispenses_count"]
+
+
+def get_last_refills_block_index(db, dispenser_tx_hash):
+    cursor = db.cursor()
+    sql = '''SELECT MAX(block_index) AS max_block_index 
+             FROM dispenser_refills 
+             WHERE dispenser_tx_hash = :dispenser_tx_hash'''
+    cursor.execute(sql, {'dispenser_tx_hash': dispenser_tx_hash})
+    return cursor.fetchall()
+
+
+def get_dispenser(db, tx_hash):
+    cursor = db.cursor()
+    query = '''SELECT * FROM dispensers WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1'''
+    bindings = (tx_hash,)
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_dispensers(db, status_in=None, source=None, asset=None, origin=None, status=None, tx_hash=None):
+    cursor = db.cursor()
+    bindings = []
+    # where for immutable fields
+    first_where = []
+    if source is not None:
+        first_where.append('source = ?')
+        bindings.append(source)
+    if asset is not None:
+        first_where.append('asset = ?')
+        bindings.append(asset)
+    if origin is not None:
+        first_where.append('origin = ?')
+        bindings.append(origin)
+    # where for mutable fields
+    second_where = []
+    if status is not None:
+        second_where.append('status = ?')
+        bindings.append(status)
+    if status_in is not None:
+        second_where.append('status IN ({})'.format(','.join(['?' for e in range(0, len(status_in))])))
+        bindings += status_in
+    # build query
+    query = f'''SELECT * FROM (
+        SELECT *, MAX(rowid) 
+        FROM dispensers 
+        WHERE ({" AND ".join(first_where)})
+        GROUP BY tx_hash
+    ) WHERE ({" AND ".join(second_where)})
+    '''
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+
+### UPDATES ###
+
+def update_dispensers(db, update_data, where_data, block_index, tx_index):
+    insert_update(db, 'dispensers', update_data, where_data, block_index, tx_index)
 
 
 #####################

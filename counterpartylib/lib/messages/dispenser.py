@@ -39,8 +39,8 @@ STATUS_CLOSING = 11
 def initialise(db):
     cursor = db.cursor()
     cursor.execute('''CREATE TABLE IF NOT EXISTS dispensers(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
+                      tx_index INTEGER,
+                      tx_hash TEXT,
                       block_index INTEGER,
                       source TEXT,
                       asset TEXT,
@@ -48,8 +48,7 @@ def initialise(db):
                       escrow_quantity INTEGER,
                       satoshirate INTEGER,
                       status INTEGER,
-                      give_remaining INTEGER,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
+                      give_remaining INTEGER)
                    ''')
                       # Disallows invalids: FOREIGN KEY (order_match_id) REFERENCES order_matches(id))
     cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -59,10 +58,10 @@ def initialise(db):
                       dispensers_asset_idx ON dispensers (asset)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_status_dix ON dispensers (source, status)
+                      tx_index_idx ON dispensers (tx_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_asset_status_idx ON dispensers (source, asset, status)
+                      tx_hash_idx ON dispensers (tx_hash)
                    ''')
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS dispenses(
@@ -403,13 +402,13 @@ def parse (db, tx, message):
                                     'asset': asset,
                                     'status': STATUS_OPEN
                                 }
-                                ledger.update_dispensers(db, set_data, where_data)
+                                ledger.update_dispensers(db, set_data, where_data, tx["block_index"], tx['tx_index'])
 
                                 dispenser_tx_hash = ledger.get_dispensers(db, source=action_address, asset=asset, status=STATUS_OPEN)[0]["tx_hash"]
                                 bindings_refill = {
-                                    'tx_index':tx["tx_index"],
-                                    'tx_hash':tx["tx_hash"],
-                                    'block_index':tx["block_index"],
+                                    'tx_index': tx["tx_index"],
+                                    'tx_hash': tx["tx_hash"],
+                                    'block_index': tx["block_index"],
                                     'source': tx['source'],
                                     'dispenser_quantity': escrow_quantity,
                                     'dispenser_tx_hash': dispenser_tx_hash
@@ -476,7 +475,7 @@ def parse (db, tx, message):
                         where_data['origin'] = tx['source']
                         where_data['source'] = action_address
 
-                    ledger.update_dispensers(db, set_data, where_data)
+                    ledger.update_dispensers(db, set_data, where_data, tx['block_index'], tx['tx_index'])
                 else:
                     status = 'dispenser inexistent'
             else:
@@ -594,7 +593,7 @@ def dispense(db, tx):
                     'give_quantity': dispenser['give_quantity'],
                     'status_in': [0, 11]
                 }
-                ledger.update_dispensers(db, set_data, where_data)
+                ledger.update_dispensers(db, set_data, where_data, tx['block_index'], tx['tx_index'])
 
                 bindings = {
                     'tx_index': next_out['tx_index'],
@@ -637,4 +636,4 @@ def close_pending(db, block_index):
                 where_data["origin"] = dispenser['tx_source']
             else:
                 where_data["source"] = dispenser['tx_source']
-            ledger.update_dispensers(db, set_data, where_data)
+            ledger.update_dispensers(db, set_data, where_data, block_index, 0) # use tx_index=0 for block actions
