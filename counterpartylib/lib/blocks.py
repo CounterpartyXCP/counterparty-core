@@ -1488,7 +1488,7 @@ def follow(db):
 
         # Stop Prefetcher thread as we get close to today.
         if block_index >= block_count - 100:
-            prefetcher.stop_all(NUM_PREFETCHER_THREADS)
+            prefetcher.stop_all()
 
         # Get new blocks.
         if block_index <= block_count:
