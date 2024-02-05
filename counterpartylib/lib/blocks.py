@@ -1551,7 +1551,8 @@ def follow(db):
                 block_difficulty = prefetcher.BLOCKCHAIN_CACHE[current_index]['block_difficulty']
                 del prefetcher.BLOCKCHAIN_CACHE[current_index]
             else:
-                logger.warning('Blockchain cache miss :/ Block index: {}'.format(current_index))
+                if block_index < block_count - 100:
+                    logger.warning('Blockchain cache miss :/ Block index: {}'.format(current_index))
                 block_hash = backend.getblockhash(current_index)
                 block = backend.getblock(block_hash)
                 previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
