@@ -16,12 +16,6 @@ CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(CURR_DIR + '/../protocol_changes.json') as f:
     PROTOCOL_CHANGES = json.load(f)
 
-BALANCES_VIEW_QUERY = """
-    SELECT address, asset, quantity, (address || asset) AS aa, MAX(rowid)
-    FROM balances
-    GROUP BY aa
-"""
-
 
 ###########################
 #         MESSAGES        #
@@ -699,9 +693,9 @@ def get_addresses(db, address=None):
     return cursor.fetchall()
 
 
-#####################
-#      UPDATES      #
-#####################
+###############################
+#       UTIL FUNCTIONS        #
+###############################
 
 # This function allows you to update a record using an INSERT. 
 # The `block_index`, `tx_index` and `rowid` fields allow you to 
@@ -741,6 +735,80 @@ def insert_update(db, table_name, update_data, where_data, block_index, tx_index
         cursor.execute(insert_query, new_record)
 
     cursor.close()
+
+
+MUTABLE_FIELDS = {
+    'balances': ['quantity'],
+    'orders': ['give_remaining', 'get_remaining', 'fee_required_remaining', 'fee_provided_remaining', 'status'],
+    'order_matches': ['status'],
+    'bets': ['wager_remaining', 'counterwager_remaining', 'status'],
+    'bet_matches': ['status'],
+    'rps': ['status'],
+    'rps_matches': ['status'],
+    'dispensers': ['give_remaining', 'status', 'last_status_tx_hash'],
+}
+ID_FIELDS = {
+    'balances': ['address', 'asset'],
+    'orders': ['tx_hash'],
+    'order_matches': ['id'],
+    'bets': ['tx_hash'],
+    'bet_matches': ['id'],
+    'rps': ['tx_hash'],
+    'rps_matches': ['id'],
+    'dispensers': ['tx_hash'],
+}
+
+def _gen_where_and_binding(key, value):
+    where = ''
+    bindings = []
+    _key = key.replace('_in', '')
+    if key.endswith('_in'):
+        assert isinstance(value, list)
+        where = f'{_key} IN ({",".join(["?" for e in range(0, len(value))])})'
+        bindings += value
+    else:
+        where = f'{_key} = ?'
+        bindings.append(value)
+    return where, bindings
+
+
+def select_last_revision(db, table_name, where_data):
+    cursor = db.cursor()
+    if table_name not in MUTABLE_FIELDS.keys():
+        raise exceptions.UnknownTable(f'Unknown table: {table_name}')
+    query = '''
+        PRAGMA table_info(?)
+    '''
+    bindings = (table_name,)
+    columns = [column['name'] for column in cursor.execute(query, bindings)]
+    for key in where_data.keys():
+        _key = key.replace('_in', '')
+        if _key not in columns:
+            raise exceptions.UnknownField(f'Unknown field: {key}')
+
+    where_immutable = []
+    where_mutable = []
+    bindings = []
+    for key, value in where_data.items():
+        if key.replace('_in', '') not in MUTABLE_FIELDS[table_name]:
+            _where, _bindings = _gen_where_and_binding(key, value)
+            where_immutable.append(_where)
+            bindings += _bindings
+    for key, value in where_data.items():
+        if key.replace('_in', '') in MUTABLE_FIELDS[table_name]:
+            _where, _bindings = _gen_where_and_binding(key, value)
+            where_mutable.append(_where)
+            bindings += _bindings
+
+    query = f'''SELECT * FROM (
+        SELECT *, MAX(rowid)
+        FROM {table_name}
+        WHERE ({" AND ".join(where_immutable)})
+        GROUP BY {", ".join(ID_FIELDS[table_name])}
+    ) WHERE ({" AND ".join(where_mutable)})
+    '''
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
 
 
 #####################

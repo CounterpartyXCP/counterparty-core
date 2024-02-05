@@ -66,6 +66,49 @@ API_TABLES = ['assets', 'balances', 'credits', 'debits', 'bets', 'bet_matches',
               'rpsresolves', 'rps_matches', 'rps_expirations', 'rps_match_expirations',
               'mempool', 'sweeps', 'dispensers', 'dispenses','transactions']
 
+VIEW_QUERIES = {
+    'balances': '''
+        SELECT *, MAX(rowid)
+        FROM balances
+        GROUP BY address, asset
+    ''',
+    'orders': '''
+        SELECT *, MAX(rowid)
+        FROM orders
+        GROUP BY tx_hash
+    ''',
+    'order_matches': '''
+        SELECT *, MAX(rowid)
+        FROM order_matches
+        GROUP BY id
+    ''',
+    'bets': '''
+        SELECT *, MAX(rowid)
+        FROM bets
+        GROUP BY tx_hash
+    ''',
+    'bets_matches': '''
+        SELECT *, MAX(rowid)
+        FROM bet_matches
+        GROUP BY id
+    ''',
+    'rps': '''
+        SELECT *, MAX(rowid)
+        FROM rps
+        GROUP BY tx_hash
+    ''',
+    'rps_matches': '''
+        SELECT *, MAX(rowid)
+        FROM rps_matches
+        GROUP BY id
+    ''',
+    'dispensers': '''
+        SELECT *, MAX(rowid)
+        FROM dispensers
+        GROUP BY tx_hash
+    ''',
+}
+
 API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel', 'destroy',
                     'dividend', 'issuance', 'order', 'send',
                     'rps', 'rpsresolve', 'sweep', 'dispenser']
@@ -209,8 +252,8 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
         adjust_get_sends_memo_filters(filters)
 
     # SELECT
-    source = table if table != "balances" else f"({ledger.BALANCES_VIEW_QUERY})"
-    statement = '''SELECT * FROM {}'''.format(source)
+    source = VIEW_QUERIES[table] if table in VIEW_QUERIES else table
+    statement = '''SELECT * FROM ({})'''.format(source)
     # WHERE
     bindings = []
     conditions = []
@@ -292,7 +335,7 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
     
     if table == 'transactions':
         # for transactions, handle the data field properly
-        return adjust_get_transactions_results(query_result)    
+        return adjust_get_transactions_results(query_result)
 
     return query_result
 
