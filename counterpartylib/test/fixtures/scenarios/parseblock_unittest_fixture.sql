@@ -1046,9 +1046,7 @@ CREATE TABLE order_matches(
                       tx1_expiration INTEGER,
                       match_expire_index INTEGER,
                       fee_paid INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx0_index, tx0_hash, tx0_block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+                      status TEXT);
 INSERT INTO order_matches VALUES('74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498_1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81',492,'74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',493,'1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',100000000,'BTC',800000,310491,310492,310492,2000,2000,310512,7200,'pending');
 -- Triggers and indices on  order_matches
 CREATE INDEX backward_status_idx ON order_matches (backward_asset, status)
@@ -1177,9 +1175,7 @@ CREATE TABLE bet_matches(
                       tx1_expiration INTEGER,
                       match_expire_index INTEGER,
                       fee_fraction_int INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx0_index, tx0_hash, tx0_block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+                      status TEXT);
 INSERT INTO bet_matches VALUES('2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93',20,'2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',21,'5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',1,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,1388000001,0.0,5040,9,9,310019,310020,310020,100,100,310119,5000000,'pending');
 INSERT INTO bet_matches VALUES('2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93',20,'2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',21,'5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',1,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,1388000001,0.0,5040,9,9,310019,310020,310102,100,100,310119,5000000,'settled');
 -- Triggers and indices on  bet_matches
@@ -1575,9 +1571,7 @@ CREATE TABLE rps_matches(
                       tx0_expiration INTEGER,
                       tx1_expiration INTEGER,
                       match_expire_index INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx0_index, tx0_hash, tx0_block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+                      status TEXT);
 -- Triggers and indices on  rps_matches
 CREATE INDEX rps_match_expire_idx ON rps_matches (status, match_expire_index)
                    ;

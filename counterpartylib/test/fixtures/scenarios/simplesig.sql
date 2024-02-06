@@ -546,9 +546,7 @@ CREATE TABLE order_matches(
                       tx1_expiration INTEGER,
                       match_expire_index INTEGER,
                       fee_paid INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx0_index, tx0_hash, tx0_block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+                      status TEXT);
 INSERT INTO order_matches VALUES('6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c',3,'6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',4,'36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',50000000,'XCP',100000000,310002,310003,310003,10,10,310023,857142,'pending');
 INSERT INTO order_matches VALUES('6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c',3,'6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',4,'36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',50000000,'XCP',100000000,310002,310003,310004,10,10,310023,857142,'completed');
 -- Triggers and indices on  order_matches
@@ -681,9 +679,7 @@ CREATE TABLE bet_matches(
                       tx1_expiration INTEGER,
                       match_expire_index INTEGER,
                       fee_fraction_int INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx0_index, tx0_hash, tx0_block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+                      status TEXT);
 INSERT INTO bet_matches VALUES('7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81_e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42',13,'7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',14,'e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000100,0.0,15120,41500000,20750000,310012,310013,310013,10,10,310022,99999999,'pending');
 INSERT INTO bet_matches VALUES('3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a_a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8',15,'3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',16,'a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000100,0.0,5040,150000000,350000000,310014,310015,310015,10,10,310024,99999999,'pending');
 INSERT INTO bet_matches VALUES('194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5_72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207',17,'194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',18,'72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,3,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000200,1.0,5040,750000000,650000000,310016,310017,310017,10,10,310026,99999999,'pending');
@@ -1067,9 +1063,7 @@ CREATE TABLE rps_matches(
                       tx0_expiration INTEGER,
                       tx1_expiration INTEGER,
                       match_expire_index INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx0_index, tx0_hash, tx0_block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+                      status TEXT);
 -- Triggers and indices on  rps_matches
 CREATE INDEX rps_match_expire_idx ON rps_matches (status, match_expire_index)
                    ;
