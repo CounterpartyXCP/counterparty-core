@@ -125,6 +125,9 @@ def initialise (db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       id_idx ON bet_matches (id)
                    ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      deadline_idx ON bet_matches (deadline)
+                   ''')
 
     # Bet Expirations
     cursor.execute('''CREATE TABLE IF NOT EXISTS bet_expirations(

@@ -1226,6 +1226,8 @@ CREATE TRIGGER block_update_bet_matches
                            BEFORE UPDATE ON bet_matches BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
+CREATE INDEX deadline_idx ON bet_matches (deadline)
+                   ;
 CREATE INDEX valid_feed_idx ON bet_matches (feed_address, status)
                    ;
 

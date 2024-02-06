@@ -964,8 +964,8 @@ def get_dispensers(db, status_in=None, source=None, asset=None, origin=None, sta
         second_where_str = f'WHERE ({second_where_str})'
     query = f'''
         SELECT * FROM (
-            SELECT *, MAX(rowid) 
-            FROM dispensers 
+            SELECT *, MAX(rowid)
+            FROM dispensers
             {first_where_str}
             GROUP BY tx_hash
         ) {second_where_str}
@@ -1012,12 +1012,16 @@ def get_bet_matches_to_expire(db, block_time):
         SELECT * FROM (
             SELECT *, MAX(rowid) as rowid
             FROM bet_matches 
-            WHERE deadline < ? 
+            WHERE deadline < ? AND deadline > ?
             GROUP BY id
         ) WHERE status = ?
         ORDER BY rowid
     '''
-    bindings = (block_time - config.TWO_WEEKS, 'pending')
+    bindings = (
+        block_time - config.TWO_WEEKS,
+        block_time - 2 * config.TWO_WEEKS, # optimize query: assuming before that we have already expired
+        'pending'
+    )
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -1038,7 +1042,10 @@ def get_bets_to_expire(db, block_index):
     cursor = db.cursor()
     query = '''
         SELECT * FROM (
-            SELECT *, MAX(rowid) FROM bets WHERE expire_index < ? GROUP BY tx_hash
+            SELECT *, MAX(rowid)
+            FROM bets
+            WHERE expire_index = ? - 1
+            GROUP BY tx_hash
         ) WHERE status = ? 
         ORDER BY tx_index, tx_hash
     '''
@@ -1158,7 +1165,7 @@ def get_order_matches_to_expire(db, block_index):
     query = '''SELECT * FROM (
         SELECT *, MAX(rowid) AS rowid
         FROM order_matches
-        WHERE match_expire_index < ?
+        WHERE match_expire_index = ? - 1
         GROUP BY id
     ) WHERE status = ?
     ORDER BY rowid
@@ -1186,7 +1193,7 @@ def get_orders_to_expire(db, block_index):
         SELECT * FROM (
             SELECT *, MAX(rowid)
             FROM orders
-            WHERE expire_index < ?
+            WHERE expire_index = ? - 1
             GROUP BY tx_hash
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash
@@ -1323,7 +1330,7 @@ def get_rps_to_expire(db, block_index):
         SELECT * FROM (
             SELECT *, MAX(rowid) 
             FROM rps 
-            WHERE expire_index < ? 
+            WHERE expire_index = ? - 1
             GROUP BY tx_hash
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash

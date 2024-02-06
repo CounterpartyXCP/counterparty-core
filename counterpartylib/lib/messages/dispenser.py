@@ -488,6 +488,9 @@ def parse (db, tx, message):
     cursor.close()
 
 def is_dispensable(db, address, amount):
+    if address is None:
+        return False
+
     dispensers = ledger.get_dispensers(db, source=address, status_in=[0, 11])
 
     for next_dispenser in dispensers:
@@ -519,7 +522,9 @@ def dispense(db, tx):
     dispense_index = 0
 
     for next_out in outs:
-        dispensers = ledger.get_dispensers(db, source=next_out['destination'], status_in=[0, 11])
+        dispensers = []
+        if next_out['destination'] is not None:
+            dispensers = ledger.get_dispensers(db, source=next_out['destination'], status_in=[0, 11])
 
         for dispenser in dispensers:
             satoshirate = dispenser['satoshirate']
