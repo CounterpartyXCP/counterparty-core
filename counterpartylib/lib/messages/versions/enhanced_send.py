@@ -166,7 +166,7 @@ def parse (db, tx, message):
     if status == 'valid':
         # verify balance is present
         balance = ledger.get_balance(db, tx['source'], asset)
-        if balance < quantity:
+        if balance == 0 or balance < quantity:
             status = 'invalid: insufficient funds'
 
     if status == 'valid':

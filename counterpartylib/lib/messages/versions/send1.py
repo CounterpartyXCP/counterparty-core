@@ -114,6 +114,8 @@ def parse (db, tx, message):
         # doesn't make sense (0 and no balance should be the same) but let's not break the protocol
         try:
             balance = ledger.get_balance(db, tx['source'], asset, raise_error_if_no_balance=True)
+            if balance == 0:
+                raise exceptions.BalanceError
             if balance < quantity:
                 quantity = min(balance, quantity)
         except exceptions.BalanceError:
