@@ -141,6 +141,8 @@ New input: amount: 1.86877000; txid: 6722884208180367a60c5c96ae86865dad3c63525a9
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 1.86867350 BTC
 Bet: XCP against XCP, by 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3, on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3
+Considering: ef92dc4986fdfb4ccb6e101ee949d5307c554e8dd1619307548ec032a973f19c
+Skipping: leverages disagree.
 Considering: 6722884208180367a60c5c96ae86865dad3c63525a9498d716e98b5015ec2e3d
 Tx0 Inverse Odds: 2.3333333333333335; Tx1 Odds: 2.3333333333333335
 Potential forward quantities: 150000000, 150000000
