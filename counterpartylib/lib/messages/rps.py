@@ -89,9 +89,7 @@ def initialise (db):
                       tx0_expiration INTEGER,
                       tx1_expiration INTEGER,
                       match_expire_index INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx0_index, tx0_hash, tx0_block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
+                      status TEXT)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       rps_match_expire_idx ON rps_matches (status, match_expire_index)
