@@ -140,7 +140,7 @@ def get_tx_list(block, block_index=None):
     tx_hash_list = []
 
     for ctx in block.vtx:
-        if util.enabled('correct_segwit_txids', block_index=block_index):
+        if ledger.enabled('correct_segwit_txids', block_index=block_index):
             hsh = ctx.GetTxid()
         else:
             hsh = ctx.GetHash()

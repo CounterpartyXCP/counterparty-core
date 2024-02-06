@@ -32,7 +32,7 @@ from counterpartylib.lib import config, util, database, api, script, arc4
 # used to increment RPC port between test modules to avoid conflicts
 TEST_RPC_PORT = 9999
 
-# we swap out util.enabled with a custom one which has the option to mock the protocol changes
+# we swap out ledger.enabled with a custom one which has the option to mock the protocol changes
 MOCK_PROTOCOL_CHANGES = {
     'bytespersigop': False,    # default to False to avoid all old vectors breaking
 }
@@ -65,7 +65,7 @@ def enabled(change_name, block_index=None):
 
     # used to force unit tests to always run against latest protocol changes
     if ALWAYS_LATEST_PROTOCOL_CHANGES:
-        # KeyError to mimic real util.enabled
+        # KeyError to mimic real ledger.enabled
         if change_name not in ledger.PROTOCOL_CHANGES:
             raise KeyError(change_name)
 

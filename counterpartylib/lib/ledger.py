@@ -209,11 +209,10 @@ def transfer(db, source, destination, asset, quantity, action, event):
 def get_balance(db, address, asset, raise_error_if_no_balance=False):
     """Get balance of contract or address."""
     cursor = db.cursor()
-    # rowid is enough but let's be verbose
     query = '''
         SELECT * FROM balances
         WHERE (address = ? AND asset = ?)
-        ORDER BY block_index DESC, tx_index DESC, rowid DESC LIMIT 1
+        ORDER BY rowid DESC LIMIT 1
     '''
     bindings = (address, asset)
     balances = list(cursor.execute(query, bindings))
@@ -1446,8 +1445,12 @@ def holders(db, asset, exclude_empty_holders=False):
 
     # Funds escrowed in orders. (Protocol change.)
     query = '''
-        SELECT *, rowid FROM orders
-        WHERE give_asset = ? AND status = ?
+        SELECT * FROM (
+            SELECT *, MAX(rowid)
+            FROM orders
+            WHERE give_asset = ?
+            GROUP BY tx_hash
+        ) WHERE status = ?
     '''
     bindings = (asset, 'open')
     cursor.execute(query, bindings)
@@ -1459,20 +1462,27 @@ def holders(db, asset, exclude_empty_holders=False):
 
     # Funds escrowed in pending order matches. (Protocol change.)
     query = '''
-        SELECT *, rowid FROM order_matches
-        WHERE (forward_asset = ? AND status = ?)
+        SELECT * FROM (
+            SELECT *, MAX(rowid)
+            FROM order_matches
+            WHERE forward_asset = ?
+            GROUP BY id
+        ) WHERE status = ?
     '''
     bindings = (asset, 'pending')
     cursor.execute(query, bindings)
     holders += _get_holders(
         cursor,
         ['id'],
-        {'address': 'tx0_address', 'address_quantity': 'forward_quantity', 'escrow': 'id'},
+        {'address': 'tx0_address', 'address_quantity': 'forward_quantity', 'escrow': 'id'}
     )
 
     query = '''
-        SELECT *, rowid FROM order_matches
-        WHERE (backward_asset = ? AND status = ?)
+        SELECT * FROM (
+            SELECT *, MAX(rowid)
+            FROM order_matches
+            WHERE backward_asset = ?
+        ) WHERE status = ?
     '''
     bindings = (asset, 'pending')
     cursor.execute(query, bindings)
@@ -1485,8 +1495,11 @@ def holders(db, asset, exclude_empty_holders=False):
     # Bets and RPS (and bet/rps matches) only escrow XCP.
     if asset == config.XCP:
         query = '''
-            SELECT *, rowid FROM bets
-            WHERE status = ?
+            SELECT * FROM (
+                SELECT *, MAX(rowid)
+                FROM bets
+                GROUP BY tx_hash
+            ) WHERE status = ?
         '''
         bindings = ('open',)
         cursor.execute(query, bindings)
@@ -1497,8 +1510,11 @@ def holders(db, asset, exclude_empty_holders=False):
         )
 
         query = '''
-            SELECT *, rowid FROM bet_matches
-            WHERE status = ?
+            SELECT * FROM (
+                SELECT *, MAX(rowid)
+                FROM bet_matches
+                GROUP BY id
+            ) WHERE status = ?
         '''
         bindings = ('pending',)
         cursor.execute(query, bindings)
@@ -1510,8 +1526,11 @@ def holders(db, asset, exclude_empty_holders=False):
         )
 
         query = '''
-            SELECT *, rowid FROM rps
-            WHERE status = ?
+            SELECT * FROM (
+                SELECT *, MAX(rowid)
+                FROM rps
+                GROUP BY tx_hash
+            ) WHERE status = ?
         '''
         bindings = ('open',)
         cursor.execute(query, bindings)
@@ -1522,8 +1541,11 @@ def holders(db, asset, exclude_empty_holders=False):
         )
 
         query = '''
-            SELECT *, rowid FROM rps_matches
-            WHERE status IN (?, ?, ?)
+            SELECT * FROM (
+                SELECT *, MAX(rowid)
+                FROM rps_matches
+                GROUP BY id
+            ) WHERE status IN (?, ?, ?)
         '''
         bindings = ('pending', 'pending and resolved', 'resolved and pending')
         cursor.execute(query, bindings)
@@ -1537,8 +1559,12 @@ def holders(db, asset, exclude_empty_holders=False):
     if enabled('dispensers_in_holders'):
         # Funds escrowed in dispensers.
         query = '''
-            SELECT * FROM dispensers
-            WHERE asset = ? AND status = ?
+            SELECT * FROM (
+                SELECT *, MAX(rowid)
+                FROM dispensers
+                WHERE asset = ?
+                GROUP BY tx_hash
+            ) WHERE status = ?
         '''
         bindings = (asset, 0)
         cursor.execute(query, bindings)

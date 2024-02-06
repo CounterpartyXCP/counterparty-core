@@ -1152,8 +1152,8 @@ def kickstart(bitcoind_dir, force=False, last_hash=None, resume=True):
         block_parsed_count = 0
         for db_block in memory_cursor:
             start_time_block_parse = time.time()
-            util.CURRENT_BLOCK_INDEX = db_block['block_index']
-            block = block_parser.read_raw_block(db_block['block_hash'], use_txid=util.enabled("correct_segwit_txids"))
+            ledger.CURRENT_BLOCK_INDEX = db_block['block_index']
+            block = block_parser.read_raw_block(db_block['block_hash'], use_txid=ledger.enabled("correct_segwit_txids"))
             with memory_db: # ensure all the block or nothing
                 # save transactions
                 for transaction in block['transactions']:
