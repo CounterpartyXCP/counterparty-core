@@ -58,12 +58,6 @@ def initialise (db):
                       block_index_idx ON bets (block_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      expire_idx ON bets (status, expire_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      feed_valid_bettype_idx ON bets (feed_address, status, bet_type)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
                       source_idx ON bets (source)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -74,6 +68,15 @@ def initialise (db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       tx_index_idx ON bets (tx_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      feed_address_idx ON bets (feed_address)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      only_expire_index_idx ON bets (expire_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      feed_bettype_idx ON bets (feed_address, bet_type)
                    ''')
 
 

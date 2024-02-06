@@ -69,6 +69,9 @@ def initialise (db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       tx_hash_idx ON rps (tx_hash)
                    ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      expire_index_idx ON rps (expire_index)
+                   ''')
 
     # RPS Matches
     cursor.execute('''CREATE TABLE IF NOT EXISTS rps_matches(
@@ -105,6 +108,9 @@ def initialise (db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       id_idx ON rps_matches (id)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      match_expire_index_idx ON rps_matches (match_expire_index)
                    ''')
 
     # RPS Expirations

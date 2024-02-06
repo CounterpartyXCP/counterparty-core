@@ -50,16 +50,10 @@ def initialise(db):
                       index_hash_idx ON orders (tx_index, tx_hash)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      expire_idx ON orders (expire_index, status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
                       give_status_idx ON orders (give_asset, status)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       source_give_status_idx ON orders (source, give_asset, status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      give_get_status_idx ON orders (get_asset, give_asset, status)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       source_idx ON orders (source)
@@ -69,6 +63,15 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       tx_hash_idx ON orders (tx_hash)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      only_expire_idx ON orders (expire_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      only_give_get_status_idx ON orders (get_asset, give_asset)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      status_idx ON orders (status)
                    ''')
 
     # Order Matches
@@ -93,9 +96,9 @@ def initialise(db):
                       fee_paid INTEGER,
                       status TEXT)
                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      match_expire_idx ON order_matches (status, match_expire_index)
-                   ''')
+    #cursor.execute('''CREATE INDEX IF NOT EXISTS
+    #                  match_expire_idx ON order_matches (status, match_expire_index)
+    #               ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       forward_status_idx ON order_matches (forward_asset, status)
                    ''')
@@ -113,6 +116,12 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       id_idx ON order_matches (id)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      only_match_expire_idx ON order_matches (match_expire_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      status_idx ON order_matches (status)
                    ''')
 
     # Order Expirations
