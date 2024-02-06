@@ -2,12 +2,14 @@ import pprint
 import tempfile
 import pytest
 
+from apsw import ConstraintError
+
 from counterpartylib.test import conftest  # this is require near the top to do setup of the test suite
 from counterpartylib.test import util_test
 from counterpartylib.test.util_test import CURR_DIR
 from counterpartylib.test.fixtures.params import DP, ADDR
 
-from counterpartylib.lib import util, ledger
+from counterpartylib.lib import util, ledger, blocks, config
 
 FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql'
 FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
@@ -150,3 +152,18 @@ def test_alice_bob(server_db):
     bob_balance2 = ledger.get_balance(server_db, bob, 'XCP')
     assert alice_balance2 == alice_balance - v
     assert bob_balance2 == bob_balance + v
+
+
+@pytest.mark.usefixtures("api_server")
+def test_update_lock(server_db):
+    cursor = server_db.cursor()
+    for table in blocks.TABLES:
+        # don't test empty tables
+        rows_count = cursor.execute(f'SELECT COUNT(*) AS cnt FROM {table}').fetchone()
+        if rows_count is None or rows_count['cnt'] == 0:
+            continue
+        with pytest.raises(ConstraintError) as excinfo:
+            cursor.execute(f'''
+                UPDATE {table} SET block_index = :block_index
+            ''', {'block_index': 0})
+        assert str(excinfo.value) == "ConstraintError: UPDATES NOT ALLOWED"

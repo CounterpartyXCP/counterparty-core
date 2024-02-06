@@ -238,7 +238,7 @@ def initialise(db):
         cursor.execute('''ALTER TABLE blocks ADD COLUMN difficulty TEXT''')
 
     # Check that first block in DB is BLOCK_FIRST.
-    cursor.execute('''SELECT * from blocks ORDER BY block_index''')
+    cursor.execute('''SELECT * from blocks ORDER BY block_index LIMIT 1''')
     blocks = list(cursor)
     if len(blocks):
         if blocks[0]['block_index'] != config.BLOCK_FIRST:
@@ -436,6 +436,13 @@ def initialise(db):
                       timestamp INTEGER)
                   ''')
 
+    # Lock UPDATE on all tables
+    for table in TABLES:
+        cursor.execute(f'''CREATE TRIGGER IF NOT EXISTS block_update_{table}
+                           BEFORE UPDATE ON {table} BEGIN
+                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+                           END;
+                        ''')
     cursor.close()
 
 def get_tx_info(tx_hex, block_parser=None, block_index=None, db=None):
