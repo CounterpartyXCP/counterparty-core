@@ -212,7 +212,7 @@ UNITTEST_VECTOR = {
                     'status': 'filled',
                     'target_value': 0.0,
                     'tx_hash': 'db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e',
-                    'tx_index': 502,
+                    'tx_index': 102,
                     'wager_quantity': 10,
                     'wager_remaining': 0,
                 }}
@@ -284,7 +284,7 @@ UNITTEST_VECTOR = {
                     'counterwager_quantity': 10,
                     'wager_remaining': 10,
                     'counterwager_remaining': 10,
-                    'tx_index': 0,
+                    'tx_index': 102,
                     'fee_fraction_int': 5000000,
                     'status': 'filled',
                     'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
@@ -529,7 +529,7 @@ UNITTEST_VECTOR = {
                     'counterwager_quantity': 10,
                     'wager_remaining': 10,
                     'counterwager_remaining': 10,
-                    'tx_index': 502,
+                    'tx_index': 102,
                     'fee_fraction_int': 5000000,
                     'status': 'cancelled',
                     'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
@@ -782,7 +782,7 @@ UNITTEST_VECTOR = {
                     'status': 'dropped',
                     'target_value': 0.0,
                     'tx_hash': 'db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e',
-                    'tx_index': 502,
+                    'tx_index': 102,
                     'wager_quantity': 10,
                     'wager_remaining': 10,
                 }}
@@ -933,7 +933,7 @@ UNITTEST_VECTOR = {
                     'status': 'dropped',
                     'target_value': 0.0,
                     'tx_hash': 'db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e',
-                    'tx_index': 502,
+                    'tx_index': 102,
                     'wager_quantity': 10,
                     'wager_remaining': 10,
                 }}
@@ -3361,7 +3361,7 @@ UNITTEST_VECTOR = {
                 },),
                 'records': [
                     { 'table': 'dispensers', 'values': { # Some values here correspond to the original TX that opened the dispenser
-                        'tx_index': 503,
+                        'tx_index': 108,
                         'tx_hash': '9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec',
                         'block_index': DP['default_block_index'],
                         'source': ADDR[5],
@@ -3420,7 +3420,7 @@ UNITTEST_VECTOR = {
                 },),
                 'records': [
                     { 'table': 'dispensers', 'values': { # Some values here correspond to the original TX that opened the dispenser
-                        'tx_index': 503,
+                        'tx_index': 108,
                         'tx_hash': '9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec',
                         'block_index': DP['default_block_index'],
                         'source': ADDR[5],
@@ -3452,7 +3452,7 @@ UNITTEST_VECTOR = {
                 },),
                 'records': [
                     { 'table': 'dispensers', 'values': { # Some values here correspond to the original TX that opened the dispenser
-                        'tx_index': 503,
+                        'tx_index': 108,
                         'tx_hash': '9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec',
                         'block_index': DP['default_block_index'],
                         'source': ADDR[5],

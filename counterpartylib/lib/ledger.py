@@ -725,8 +725,11 @@ def insert_update(db, table_name, update_data, where_data, block_index, tx_index
             new_record[key] = value
         # new block_index and tx_index
         new_record['block_index'] = block_index
-        if 'tx_index' in new_record:
-            new_record['tx_index'] = tx_index
+        # let's keep the original tx_index so we can preserve order
+        # with the old queries (ordered by default by old primary key)
+        # TODO: restore with protocol change and checkpoints update
+        #if 'tx_index' in new_record:
+        #    new_record['tx_index'] = tx_index
         # insert new record
         fields_name = ', '.join(new_record.keys())
         fields_values = ', '.join([f':{key}' for key in new_record.keys()])
