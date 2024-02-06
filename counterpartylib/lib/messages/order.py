@@ -115,9 +115,6 @@ def initialise(db):
                       status_idx ON order_matches (status)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      index_hash_idx ON order_matches (tx_index, tx_hash)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
                       tx0_hash_idx ON order_matches (tx0_hash)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS

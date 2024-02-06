@@ -1122,7 +1122,7 @@ def get_pending_order_matches(db, tx0_hash, tx1_hash):
             )
             GROUP BY id
         ) WHERE status = :status
-        ORDER BY tx_index, tx_hash
+        ORDER BY rowid
     '''
     bindings = {
         'status': 'pending',
