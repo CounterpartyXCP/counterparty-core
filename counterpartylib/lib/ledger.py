@@ -956,13 +956,19 @@ def get_dispensers(db, status_in=None, source=None, asset=None, origin=None, sta
         second_where.append('status IN ({})'.format(','.join(['?' for e in range(0, len(status_in))])))
         bindings += status_in
     # build query
+    first_where_str = ' AND '.join(first_where)
+    if first_where_str != '':
+        first_where_str = f'WHERE ({first_where_str})'
+    second_where_str = ' AND '.join(second_where)
+    if second_where_str != '':
+        second_where_str = f'WHERE ({second_where_str})'
     query = f'''
         SELECT * FROM (
             SELECT *, MAX(rowid) 
             FROM dispensers 
-            WHERE ({" AND ".join(first_where)})
+            {first_where_str}
             GROUP BY tx_hash
-        ) WHERE ({" AND ".join(second_where)})
+        ) {second_where_str}
         ORDER BY tx_index
     '''
     cursor.execute(query, tuple(bindings))
