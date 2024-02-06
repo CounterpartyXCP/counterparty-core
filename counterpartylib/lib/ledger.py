@@ -861,6 +861,7 @@ def get_pending_dispensers(db, status, delay, block_index):
         LEFT JOIN transactions t ON t.tx_hash = d.last_status_tx_hash
         WHERE status = :status
         AND last_status_tx_hash IS NOT NULL
+        ORDER BY tx_index
     '''
     bindings = {
         'status': status,
@@ -959,6 +960,7 @@ def get_dispensers(db, status_in=None, source=None, asset=None, origin=None, sta
             WHERE ({" AND ".join(first_where)})
             GROUP BY tx_hash
         ) WHERE ({" AND ".join(second_where)})
+        ORDER BY tx_index
     '''
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
@@ -980,7 +982,7 @@ def get_pending_bet_matches(db, feed_address, order_by=None):
     cursor = db.cursor()
     query = '''
         SELECT * FROM (
-            SELECT *, MAX(rowid)
+            SELECT *, MAX(rowid) as rowid
             FROM bet_matches
             WHERE feed_address = ?
             GROUP BY id
@@ -988,6 +990,8 @@ def get_pending_bet_matches(db, feed_address, order_by=None):
     '''
     if order_by is not None:
         query += f''' ORDER BY {order_by}'''
+    else:
+        query += f''' ORDER BY rowid'''
     bindings = (feed_address, 'pending')
     cursor.execute(query, bindings)
     return cursor.fetchall()
@@ -997,11 +1001,12 @@ def get_bet_matches_to_expire(db, block_time):
     cursor = db.cursor()
     query = '''
         SELECT * FROM (
-            SELECT *, MAX(rowid) 
+            SELECT *, MAX(rowid) as rowid
             FROM bet_matches 
             WHERE deadline < ? 
             GROUP BY id
         ) WHERE status = ?
+        ORDER BY rowid
     '''
     bindings = (block_time - config.TWO_WEEKS, 'pending')
     cursor.execute(query, bindings)
@@ -1025,7 +1030,8 @@ def get_bets_to_expire(db, block_index):
     query = '''
         SELECT * FROM (
             SELECT *, MAX(rowid) FROM bets WHERE expire_index < ? GROUP BY tx_hash
-        ) WHERE status = ?
+        ) WHERE status = ? 
+        ORDER BY tx_index, tx_hash
     '''
     bindings = (block_index, 'open')
     cursor.execute(query, bindings)
@@ -1041,6 +1047,7 @@ def get_matching_bets(db, feed_address, bet_type):
             WHERE (feed_address = ? AND bet_type = ?)
             GROUP BY tx_hash
         ) WHERE status = ?
+        ORDER BY tx_index, tx_hash
     '''
     bindings = (feed_address, bet_type, 'open')
     cursor.execute(query, bindings)
@@ -1056,6 +1063,7 @@ def get_open_bet_by_feed(db, feed_address):
             WHERE feed_address = ?
             GROUP BY tx_hash
         ) WHERE status = ?
+        ORDER BY tx_index, tx_hash
     '''
     bindings = (feed_address, 'open')
     cursor.execute(query, bindings)
@@ -1098,6 +1106,7 @@ def get_pending_order_matches(db, tx0_hash, tx1_hash):
             )
             GROUP BY id
         ) WHERE status = :status
+        ORDER BY tx_index, tx_hash
     '''
     bindings = {
         'status': 'pending',
@@ -1112,10 +1121,11 @@ def get_pending_btc_order_matches(db, address):
     cursor = db.cursor()
     query = '''
         SELECT * FROM (
-            SELECT *, MAX(rowid)
+            SELECT *, MAX(rowid) AS rowid
             FROM order_matches
             WHERE (tx0_address = ? AND forward_asset = ?) OR (tx1_address = ? AND backward_asset = ?))
         ) WHERE status = ?
+        ORDER BY rowid
     '''
     bindings = (address, config.BTC, address, config.BTC, 'pending')
     cursor.execute(query, bindings)
@@ -1137,11 +1147,12 @@ def get_order_match(db, id):
 def get_order_matches_to_expire(db, block_index):
     cursor = db.cursor()
     query = '''SELECT * FROM (
-        SELECT *, MAX(rowid)
+        SELECT *, MAX(rowid) AS rowid
         FROM order_matches
         WHERE match_expire_index < ?
         GROUP BY id
     ) WHERE status = ?
+    ORDER BY rowid
     '''
     bindings = (block_index, 'pending')
     cursor.execute(query, bindings)
@@ -1169,6 +1180,7 @@ def get_orders_to_expire(db, block_index):
             WHERE expire_index < ?
             GROUP BY tx_hash
         ) WHERE status = ?
+        ORDER BY tx_index, tx_hash
     '''
     bindings = (block_index, 'open')
     cursor.execute(query, bindings)
@@ -1184,6 +1196,7 @@ def get_open_btc_orders(db, address):
             WHERE (source = ? AND give_asset = ?)
             GROUP BY tx_hash
         ) WHERE status = ?
+        ORDER BY tx_index, tx_hash
     '''
     bindings = (address, config.BTC, 'open')
     cursor.execute(query, bindings)
@@ -1199,6 +1212,7 @@ def get_matching_orders(db, tx_hash, give_asset, get_asset):
             WHERE (tx_hash != ? AND give_asset = ? AND get_asset = ?)
             GROUP BY tx_hash
         ) WHERE status = ?
+        ORDER BY tx_index, tx_hash
     '''
     bindings = (tx_hash, get_asset, give_asset, 'open')
     cursor.execute(query, bindings)
@@ -1252,6 +1266,7 @@ def get_matched_not_expired_rps(db, tx0_hash, tx1_hash, expire_index):
             AND expire_index >= ?
             GROUP BY tx_hash
         ) WHERE status = ?
+        ORDER BY tx_index, tx_hash
     '''
     bindings = (tx0_hash, tx1_hash, expire_index, 'matched')
     cursor.execute(query, bindings)
@@ -1261,10 +1276,11 @@ def get_matched_not_expired_rps(db, tx0_hash, tx1_hash, expire_index):
 def get_already_matched_rps(db, tx_hash):
     cursor = db.cursor()
     query = '''
-        SELECT *, MAX(rowid)
+        SELECT *, MAX(rowid) AS rowid
         FORM rps_matches
         WHERE tx0_hash = ? OR tx1_hash = ?
         GROUP BY id
+        ORDER BY rowid
     '''
     bindings = (tx_hash, tx_hash)
     cursor.execute(query, bindings)
@@ -1301,6 +1317,7 @@ def get_rps_to_expire(db, block_index):
             WHERE expire_index < ? 
             GROUP BY tx_hash
         ) WHERE status = ?
+        ORDER BY tx_index, tx_hash
     '''
     bindings = (block_index, 'open')
     cursor.execute(query, bindings)
@@ -1324,11 +1341,12 @@ def get_rps_matches_to_expire(db, block_index):
     cursor = db.cursor()
     query = '''
         SELECT * FROM (
-            SELECT *, MAX(rowid) 
+            SELECT *, MAX(rowid) AS rowid
             FROM rps_matches 
             WHERE match_expire_index < ? 
             GROUP BY id
         ) WHERE status IN (?, ? , ?)
+        ORDER BY rowid
     '''
     bindings = (block_index, 'pending', 'pending and resolved', 'resolved and pending')
     cursor.execute(query, bindings)
