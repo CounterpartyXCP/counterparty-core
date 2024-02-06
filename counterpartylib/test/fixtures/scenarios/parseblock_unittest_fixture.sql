@@ -1042,6 +1042,10 @@ CREATE TRIGGER block_update_order_match_expirations
                            BEFORE UPDATE ON order_match_expirations BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
+CREATE INDEX tx0_address_idx ON order_match_expirations (tx0_address)
+                   ;
+CREATE INDEX tx1_address_idx ON order_match_expirations (tx1_address)
+                   ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1075,19 +1079,23 @@ CREATE TABLE order_matches(
                       status TEXT);
 INSERT INTO order_matches VALUES('74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498_1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81',492,'74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',493,'1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',100000000,'BTC',800000,310491,310492,310492,2000,2000,310512,7200,'pending');
 -- Triggers and indices on  order_matches
-CREATE INDEX backward_status_idx ON order_matches (backward_asset, status)
+CREATE INDEX backward_idx ON order_matches (backward_asset)
                    ;
 CREATE TRIGGER block_update_order_matches
                            BEFORE UPDATE ON order_matches BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
-CREATE INDEX forward_status_idx ON order_matches (forward_asset, status)
+CREATE INDEX forward_idx ON order_matches (forward_asset)
                    ;
-CREATE INDEX match_expire_idx ON order_matches (status, match_expire_index)
+CREATE INDEX only_match_expire_idx ON order_matches (match_expire_index)
                    ;
-CREATE INDEX tx0_address_idx ON order_matches (tx0_address)
+CREATE INDEX tx0_address_forward_asset_idx ON order_matches (tx0_address, forward_asset)
                    ;
-CREATE INDEX tx1_address_idx ON order_matches (tx1_address)
+CREATE INDEX tx0_hash_idx ON order_matches (tx0_hash)
+                   ;
+CREATE INDEX tx1_address_backward_asset_idx ON order_matches (tx1_address, backward_asset)
+                   ;
+CREATE INDEX tx1_hash_idx ON order_matches (tx1_hash)
                    ;
 
 COMMIT TRANSACTION;
@@ -1152,15 +1160,13 @@ CREATE TRIGGER block_update_orders
                            BEFORE UPDATE ON orders BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
-CREATE INDEX expire_idx ON orders (expire_index, status)
-                   ;
 CREATE INDEX give_asset_idx ON orders (give_asset)
                    ;
-CREATE INDEX give_get_status_idx ON orders (get_asset, give_asset, status)
+CREATE INDEX give_source_idx ON orders (source, give_asset)
                    ;
-CREATE INDEX give_status_idx ON orders (give_asset, status)
+CREATE INDEX only_expire_idx ON orders (expire_index)
                    ;
-CREATE INDEX source_give_status_idx ON orders (source, give_asset, status)
+CREATE INDEX only_give_get_status_idx ON orders (get_asset, give_asset)
                    ;
 
 COMMIT TRANSACTION;
@@ -1228,8 +1234,6 @@ CREATE TRIGGER block_update_bet_matches
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
 CREATE INDEX deadline_idx ON bet_matches (deadline)
-                   ;
-CREATE INDEX valid_feed_idx ON bet_matches (feed_address, status)
                    ;
 
 COMMIT TRANSACTION;
@@ -1322,7 +1326,13 @@ CREATE TRIGGER block_update_bets
                            BEFORE UPDATE ON bets BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
-CREATE INDEX feed_valid_bettype_idx ON bets (feed_address, status, bet_type)
+CREATE INDEX feed_address_idx ON bets (feed_address)
+                   ;
+CREATE INDEX feed_bettype_idx ON bets (feed_address, bet_type)
+                   ;
+CREATE INDEX only_expire_index_idx ON bets (expire_index)
+                   ;
+CREATE INDEX tx_index_tx_hash_idx ON bets (tx_index, tx_hash)
                    ;
 
 COMMIT TRANSACTION;
@@ -1686,7 +1696,7 @@ CREATE TRIGGER block_update_rps_matches
                            BEFORE UPDATE ON rps_matches BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
-CREATE INDEX rps_match_expire_idx ON rps_matches (status, match_expire_index)
+CREATE INDEX match_expire_index_idx ON rps_matches (match_expire_index)
                    ;
 CREATE INDEX rps_tx0_address_idx ON rps_matches (tx0_address)
                    ;
@@ -1719,7 +1729,11 @@ CREATE TRIGGER block_update_rps
                            BEFORE UPDATE ON rps BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
+CREATE INDEX expire_index_idx ON rps (expire_index)
+                   ;
 CREATE INDEX matching_idx ON rps (wager, possible_moves)
+                   ;
+CREATE INDEX tx_index_hash_idx ON rps (tx_index, tx_hash)
                    ;
 
 COMMIT TRANSACTION;

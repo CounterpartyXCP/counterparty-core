@@ -1011,7 +1011,7 @@ def get_bet_matches_to_expire(db, block_time):
     query = '''
         SELECT * FROM (
             SELECT *, MAX(rowid) as rowid
-            FROM bet_matches 
+            FROM bet_matches
             WHERE deadline < ? AND deadline > ?
             GROUP BY id
         ) WHERE status = ?

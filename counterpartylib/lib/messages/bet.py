@@ -58,16 +58,10 @@ def initialise (db):
                       block_index_idx ON bets (block_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON bets (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
                       status_idx ON bets (status)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       tx_hash_idx ON bets (tx_hash)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx_index_idx ON bets (tx_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       feed_address_idx ON bets (feed_address)
@@ -77,6 +71,9 @@ def initialise (db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       feed_bettype_idx ON bets (feed_address, bet_type)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx_index_tx_hash_idx ON bets (tx_index, tx_hash)
                    ''')
 
 
@@ -108,28 +105,19 @@ def initialise (db):
                       status TEXT)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      match_expire_idx ON bet_matches (status, match_expire_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      valid_feed_idx ON bet_matches (feed_address, status)
+                      block_index_idx ON bet_matches (block_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       id_idx ON bet_matches (id)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx0_address_idx ON bet_matches (tx0_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx1_address_idx ON bet_matches (tx1_address)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       status_idx ON bet_matches (status)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      id_idx ON bet_matches (id)
+                      deadline_idx ON bet_matches (deadline)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      deadline_idx ON bet_matches (deadline)
+                      feed_address_idx ON bets (feed_address)
                    ''')
 
     # Bet Expirations

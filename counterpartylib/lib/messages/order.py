@@ -50,15 +50,6 @@ def initialise(db):
                       index_hash_idx ON orders (tx_index, tx_hash)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      give_status_idx ON orders (give_asset, status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_give_status_idx ON orders (source, give_asset, status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON orders (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
                       give_asset_idx ON orders (give_asset)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -72,6 +63,9 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       status_idx ON orders (status)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      give_source_idx ON orders (source, give_asset)
                    ''')
 
     # Order Matches
@@ -96,32 +90,38 @@ def initialise(db):
                       fee_paid INTEGER,
                       status TEXT)
                    ''')
-    #cursor.execute('''CREATE INDEX IF NOT EXISTS
-    #                  match_expire_idx ON order_matches (status, match_expire_index)
-    #               ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      forward_status_idx ON order_matches (forward_asset, status)
+                      block_index_idx ON order_matches (block_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      backward_status_idx ON order_matches (backward_asset, status)
+                      forward_idx ON order_matches (forward_asset)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      id_idx ON order_matches (id)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx0_address_idx ON order_matches (tx0_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx1_address_idx ON order_matches (tx1_address)
+                      backward_idx ON order_matches (backward_asset)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       id_idx ON order_matches (id)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx0_address_forward_asset_idx ON order_matches (tx0_address, forward_asset)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx1_address_backward_asset_idx ON order_matches (tx1_address, backward_asset)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       only_match_expire_idx ON order_matches (match_expire_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       status_idx ON order_matches (status)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      index_hash_idx ON order_matches (tx_index, tx_hash)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx0_hash_idx ON order_matches (tx0_hash)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx1_hash_idx ON order_matches (tx1_hash)
                    ''')
 
     # Order Expirations
