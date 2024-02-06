@@ -80,6 +80,7 @@ def main():
     parser_server = subparsers.add_parser('start', help='run the server')
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database')
+    parser_reparse.add_argument('block_index', type=int, help='the index of the last known good block')
 
     parser_vacuum = subparsers.add_parser('vacuum', help='VACUUM the database (to improve performance)')
 
@@ -162,10 +163,10 @@ def main():
 
     # PARSING
     if args.action == 'reparse':
-        server.reparse(db)
+        server.reparse(db, block_index=args.block_index)
 
     elif args.action == 'rollback':
-        server.reparse(db, block_index=args.block_index)
+        server.rollback(db, block_index=args.block_index)
 
     elif args.action == 'kickstart':
         server.kickstart(
