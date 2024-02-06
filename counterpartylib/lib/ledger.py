@@ -1115,7 +1115,7 @@ def get_pending_order_matches(db, tx0_hash, tx1_hash):
     cursor = db.cursor()
     query = '''
         SELECT * FROM (
-            SELECT *, MAX(rowid) FROM order_matches
+            SELECT *, MAX(rowid) as rowid FROM order_matches
             WHERE (
                 tx0_hash in (:tx0_hash, :tx1_hash) OR
                 tx1_hash in (:tx0_hash, :tx1_hash)
@@ -1151,7 +1151,7 @@ def get_pending_btc_order_matches(db, address):
 def get_order_match(db, id):
     cursor = db.cursor()
     query = '''
-        SELECT *
+        SELECT *, rowid
         FROM order_matches
         WHERE id = ?
         ORDER BY rowid DESC LIMIT 1'''
