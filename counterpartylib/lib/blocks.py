@@ -929,13 +929,6 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
     return sources, destinations, btc_amount, round(fee), data, None
 
 
-def rollback(db, block_index=0):
-    # clean all tables
-    cursor = db.cursor()
-    for table in TABLES + ['blocks', 'transaction_outputs', 'transactions']:
-        cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
-
-
 def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=None, block_parser=None):
     assert type(tx_hash) == str
     cursor = db.cursor()
@@ -1029,6 +1022,26 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
         pass
 
     return tx_index
+
+
+def rollback(db, block_index=0):
+    # clean all tables
+    cursor = db.cursor()
+    for table in TABLES + ['blocks', 'transaction_outputs', 'transactions']:
+        cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
+
+
+def reparse(db, block_index=0):
+    # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
+    cursor = db.cursor()
+    for table in TABLES:
+        cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
+
+    # reparse blocks
+    ledger.CURRENT_BLOCK_INDEX = block_index if block_index !=0 else config.BLOCK_FIRST
+    cursor.execute('''SELECT * FROM blocks WHERE block_index > ?''', (block_index,))
+    for block in cursor:
+        parse_block(db, block['block_index'], block['block_time'])
 
 
 def copy_memory_db_to_disk(local_base, memory_db):
