@@ -26,6 +26,7 @@ from counterpartylib.lib import util
 from counterpartylib.lib import log
 from counterpartylib.lib import message_type
 from counterpartylib.lib import ledger
+from counterpartylib.lib import database
 
 FORMAT = '>HIQQdII'
 LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4
@@ -34,138 +35,162 @@ ID = 40
 def initialise (db):
     cursor = db.cursor()
 
-    # Bets.
-    cursor.execute('''CREATE TABLE IF NOT EXISTS bets(
-                      tx_index INTEGER,
-                      tx_hash TEXT,
-                      block_index INTEGER,
-                      source TEXT,
-                      feed_address TEXT,
-                      bet_type INTEGER,
-                      deadline INTEGER,
-                      wager_quantity INTEGER,
-                      wager_remaining INTEGER,
-                      counterwager_quantity INTEGER,
-                      counterwager_remaining INTEGER,
-                      target_value REAL,
-                      leverage INTEGER,
-                      expiration INTEGER,
-                      expire_index INTEGER,
-                      fee_fraction_int INTEGER,
-                      status TEXT)
-                  ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON bets (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_idx ON bets (status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx_hash_idx ON bets (tx_hash)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      feed_address_idx ON bets (feed_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      only_expire_index_idx ON bets (expire_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      feed_bettype_idx ON bets (feed_address, bet_type)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx_index_tx_hash_idx ON bets (tx_index, tx_hash)
-                   ''')
+    indexes_to_drop = [
+        'block_index_idx',
+        'index_hash_idx',
+        'status_idx',
+        'tx_hash_idx',
+        'feed_address_idx',
+        'only_expire_index_idx',
+        'feed_bettype_idx',
+        'expire_idx',
+        'source_idx',
+        'match_expire_idx',
+        'valid_feed_idx',
+        'tx0_address_idx',
+        'tx1_address_idx',
+        'id_idx',
+        'deadline_idx',
+    ]
+    for index_name in [indexes_to_drop]:
+        cursor.execute(f'''DROP INDEX IF EXISTS {index_name}''')
 
+    # Bets.
+    create_bets_query = '''CREATE TABLE IF NOT EXISTS bets(
+                        tx_index INTEGER,
+                        tx_hash TEXT,
+                        block_index INTEGER,
+                        source TEXT,
+                        feed_address TEXT,
+                        bet_type INTEGER,
+                        deadline INTEGER,
+                        wager_quantity INTEGER,
+                        wager_remaining INTEGER,
+                        counterwager_quantity INTEGER,
+                        counterwager_remaining INTEGER,
+                        target_value REAL,
+                        leverage INTEGER,
+                        expiration INTEGER,
+                        expire_index INTEGER,
+                        fee_fraction_int INTEGER,
+                        status TEXT)
+                        '''
+    # create table
+    cursor.execute(create_bets_query)
+    # migrate old table
+    if database.field_is_pk(cursor, 'bets', 'tx_index'):
+        database.copy_old_table(cursor, 'bets', create_bets_query)
+    # create indexes
+    database.create_indexes(cursor, 'bets', [
+        ['block_index'],
+        ['tx_index', 'tx_hash'],
+        ['status'],
+        ['tx_hash'],
+        ['feed_address'],
+        ['expire_index'],
+        ['feed_address', 'bet_type'],
+    ])
 
     # Bet Matches
-    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_matches(
-                      id TEXT,
-                      tx0_index INTEGER,
-                      tx0_hash TEXT,
-                      tx0_address TEXT,
-                      tx1_index INTEGER,
-                      tx1_hash TEXT,
-                      tx1_address TEXT,
-                      tx0_bet_type INTEGER,
-                      tx1_bet_type INTEGER,
-                      feed_address TEXT,
-                      initial_value INTEGER,
-                      deadline INTEGER,
-                      target_value REAL,
-                      leverage INTEGER,
-                      forward_quantity INTEGER,
-                      backward_quantity INTEGER,
-                      tx0_block_index INTEGER,
-                      tx1_block_index INTEGER,
-                      block_index INTEGER,
-                      tx0_expiration INTEGER,
-                      tx1_expiration INTEGER,
-                      match_expire_index INTEGER,
-                      fee_fraction_int INTEGER,
-                      status TEXT)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON bet_matches (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      id_idx ON bet_matches (id)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_idx ON bet_matches (status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      deadline_idx ON bet_matches (deadline)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      feed_address_idx ON bets (feed_address)
-                   ''')
+    create_bet_matches_query = '''CREATE TABLE IF NOT EXISTS bet_matches(
+                                id TEXT,
+                                tx0_index INTEGER,
+                                tx0_hash TEXT,
+                                tx0_address TEXT,
+                                tx1_index INTEGER,
+                                tx1_hash TEXT,
+                                tx1_address TEXT,
+                                tx0_bet_type INTEGER,
+                                tx1_bet_type INTEGER,
+                                feed_address TEXT,
+                                initial_value INTEGER,
+                                deadline INTEGER,
+                                target_value REAL,
+                                leverage INTEGER,
+                                forward_quantity INTEGER,
+                                backward_quantity INTEGER,
+                                tx0_block_index INTEGER,
+                                tx1_block_index INTEGER,
+                                block_index INTEGER,
+                                tx0_expiration INTEGER,
+                                tx1_expiration INTEGER,
+                                match_expire_index INTEGER,
+                                fee_fraction_int INTEGER,
+                                status TEXT)
+                                '''
+    # create table
+    cursor.execute(create_bet_matches_query)
+    # migrate old table
+    if database.field_is_pk(cursor, 'bet_matches', 'id'):
+        database.copy_old_table(cursor, 'bet_matches', create_bet_matches_query)
+    # create indexes
+    database.create_indexes(cursor, 'bet_matches', [
+        ['block_index'],
+        ['id'],
+        ['status'],
+        ['deadline'],
+        ['tx0_address'],
+        ['tx1_address'],
+    ])
 
     # Bet Expirations
-    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_expirations(
-                      bet_index INTEGER PRIMARY KEY,
-                      bet_hash TEXT UNIQUE,
-                      source TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON bet_expirations (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON bet_expirations (source)
-                   ''')
+    create_bet_expirations_query = '''CREATE TABLE IF NOT EXISTS bet_expirations(
+                                    bet_index INTEGER PRIMARY KEY,
+                                    bet_hash TEXT UNIQUE,
+                                    source TEXT,
+                                    block_index INTEGER,
+                                    FOREIGN KEY (block_index) REFERENCES blocks(block_index))
+                                    '''
+    # create table
+    cursor.execute(create_bet_expirations_query)
+    # migrate old table
+    if database.has_fk_on(cursor, "bet_expirations", "bets.tx_index"):
+        database.copy_old_table(cursor, 'bet_expirations', create_bet_expirations_query)
+    # create indexes
+    database.create_indexes(cursor, 'bet_expirations', [
+        ['block_index'],
+        ['source'],
+    ])
 
     # Bet Match Expirations
-    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_match_expirations(
-                      bet_match_id TEXT PRIMARY KEY,
-                      tx0_address TEXT,
-                      tx1_address TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON bet_match_expirations (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx0_address_idx ON bet_match_expirations (tx0_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx1_address_idx ON bet_match_expirations (tx1_address)
-                   ''')
+    create_bet_match_expirations_query = '''CREATE TABLE IF NOT EXISTS bet_match_expirations(
+                                          bet_match_id TEXT PRIMARY KEY,
+                                          tx0_address TEXT,
+                                          tx1_address TEXT,
+                                          block_index INTEGER,
+                                          FOREIGN KEY (block_index) REFERENCES blocks(block_index))
+                                          '''
+    # create table
+    cursor.execute(create_bet_match_expirations_query)
+    # migrate old table
+    if database.has_fk_on(cursor, "bet_match_expirations", "bet_matches.id"):
+        database.copy_old_table(cursor, 'bet_match_expirations', create_bet_match_expirations_query)
+    # create indexes
+    database.create_indexes(cursor, 'bet_match_expirations', [
+        ['block_index'],
+        ['tx0_address'],
+        ['tx1_address'],
+    ])
 
     # Bet Match Resolutions
-    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_match_resolutions(
-                      bet_match_id TEXT PRIMARY KEY,
-                      bet_match_type_id INTEGER,
-                      block_index INTEGER,
-                      winner TEXT,
-                      settled BOOL,
-                      bull_credit INTEGER,
-                      bear_credit INTEGER,
-                      escrow_less_fee INTEGER,
-                      fee INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
-                   ''')
+    create_bet_match_resolutions_query = '''CREATE TABLE IF NOT EXISTS bet_match_resolutions(
+                                            bet_match_id TEXT PRIMARY KEY,
+                                            bet_match_type_id INTEGER,
+                                            block_index INTEGER,
+                                            winner TEXT,
+                                            settled BOOL,
+                                            bull_credit INTEGER,
+                                            bear_credit INTEGER,
+                                            escrow_less_fee INTEGER,
+                                            fee INTEGER,
+                                            FOREIGN KEY (block_index) REFERENCES blocks(block_index))
+                                            '''
+    # create table
+    cursor.execute(create_bet_match_resolutions_query)
+    # migrate old table
+    if database.has_fk_on(cursor, "bet_match_resolutions", "bet_matches.id"):
+        database.copy_old_table(cursor, 'bet_match_resolutions', create_bet_match_resolutions_query)
+
 
 def cancel_bet (db, bet, status, block_index, tx_index):
     cursor = db.cursor()
