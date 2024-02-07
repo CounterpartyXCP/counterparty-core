@@ -35,6 +35,7 @@ ID = 40
 def initialise (db):
     cursor = db.cursor()
 
+    # remove misnamed indexes
     database.drop_indexes(cursor, [
         'block_index_idx',
         'index_hash_idx',

@@ -1139,20 +1139,22 @@ BEGIN TRANSACTION;
 -- Table  rps_match_expirations
 DROP TABLE IF EXISTS rps_match_expirations;
 CREATE TABLE rps_match_expirations(
-                      rps_match_id TEXT PRIMARY KEY,
-                      tx0_address TEXT,
-                      tx1_address TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index));
+                                            rps_match_id TEXT PRIMARY KEY,
+                                            tx0_address TEXT,
+                                            tx1_address TEXT,
+                                            block_index INTEGER,
+                                            FOREIGN KEY (block_index) REFERENCES blocks(block_index));
 -- Triggers and indices on  rps_match_expirations
 CREATE TRIGGER block_update_rps_match_expirations
                            BEFORE UPDATE ON rps_match_expirations BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
-CREATE INDEX tx0_address_idx ON rps_match_expirations (tx0_address)
-                   ;
-CREATE INDEX tx1_address_idx ON rps_match_expirations (tx1_address)
-                   ;
+CREATE INDEX rps_match_expirations_block_index_idx ON rps_match_expirations (block_index)
+        ;
+CREATE INDEX rps_match_expirations_tx0_address_idx ON rps_match_expirations (tx0_address)
+        ;
+CREATE INDEX rps_match_expirations_tx1_address_idx ON rps_match_expirations (tx1_address)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1165,16 +1167,20 @@ BEGIN TRANSACTION;
 -- Table  rps_expirations
 DROP TABLE IF EXISTS rps_expirations;
 CREATE TABLE rps_expirations(
-                      rps_index INTEGER PRIMARY KEY,
-                      rps_hash TEXT UNIQUE,
-                      source TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index));
+                                    rps_index INTEGER PRIMARY KEY,
+                                    rps_hash TEXT UNIQUE,
+                                    source TEXT,
+                                    block_index INTEGER,
+                                    FOREIGN KEY (block_index) REFERENCES blocks(block_index));
 -- Triggers and indices on  rps_expirations
 CREATE TRIGGER block_update_rps_expirations
                            BEFORE UPDATE ON rps_expirations BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
+CREATE INDEX rps_expirations_block_index_idx ON rps_expirations (block_index)
+        ;
+CREATE INDEX rps_expirations_source_idx ON rps_expirations (source)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1215,35 +1221,39 @@ BEGIN TRANSACTION;
 -- Table  rps_matches
 DROP TABLE IF EXISTS rps_matches;
 CREATE TABLE rps_matches(
-                      id TEXT,
-                      tx0_index INTEGER,
-                      tx0_hash TEXT,
-                      tx0_address TEXT,
-                      tx1_index INTEGER,
-                      tx1_hash TEXT,
-                      tx1_address TEXT,
-                      tx0_move_random_hash TEXT,
-                      tx1_move_random_hash TEXT,
-                      wager INTEGER,
-                      possible_moves INTEGER,
-                      tx0_block_index INTEGER,
-                      tx1_block_index INTEGER,
-                      block_index INTEGER,
-                      tx0_expiration INTEGER,
-                      tx1_expiration INTEGER,
-                      match_expire_index INTEGER,
-                      status TEXT);
+                                id TEXT,
+                                tx0_index INTEGER,
+                                tx0_hash TEXT,
+                                tx0_address TEXT,
+                                tx1_index INTEGER,
+                                tx1_hash TEXT,
+                                tx1_address TEXT,
+                                tx0_move_random_hash TEXT,
+                                tx1_move_random_hash TEXT,
+                                wager INTEGER,
+                                possible_moves INTEGER,
+                                tx0_block_index INTEGER,
+                                tx1_block_index INTEGER,
+                                block_index INTEGER,
+                                tx0_expiration INTEGER,
+                                tx1_expiration INTEGER,
+                                match_expire_index INTEGER,
+                                status TEXT);
 -- Triggers and indices on  rps_matches
 CREATE TRIGGER block_update_rps_matches
                            BEFORE UPDATE ON rps_matches BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
-CREATE INDEX match_expire_index_idx ON rps_matches (match_expire_index)
-                   ;
-CREATE INDEX rps_tx0_address_idx ON rps_matches (tx0_address)
-                   ;
-CREATE INDEX rps_tx1_address_idx ON rps_matches (tx1_address)
-                   ;
+CREATE INDEX rps_matches_id_idx ON rps_matches (id)
+        ;
+CREATE INDEX rps_matches_match_expire_index_idx ON rps_matches (match_expire_index)
+        ;
+CREATE INDEX rps_matches_status_idx ON rps_matches (status)
+        ;
+CREATE INDEX rps_matches_tx0_address_idx ON rps_matches (tx0_address)
+        ;
+CREATE INDEX rps_matches_tx1_address_idx ON rps_matches (tx1_address)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1256,27 +1266,35 @@ BEGIN TRANSACTION;
 -- Table  rps
 DROP TABLE IF EXISTS rps;
 CREATE TABLE rps(
-                      tx_index INTEGER,
-                      tx_hash TEXT,
-                      block_index INTEGER,
-                      source TEXT,
-                      possible_moves INTEGER,
-                      wager INTEGER,
-                      move_random_hash TEXT,
-                      expiration INTEGER,
-                      expire_index INTEGER,
-                      status TEXT);
+                        tx_index INTEGER,
+                        tx_hash TEXT,
+                        block_index INTEGER,
+                        source TEXT,
+                        possible_moves INTEGER,
+                        wager INTEGER,
+                        move_random_hash TEXT,
+                        expiration INTEGER,
+                        expire_index INTEGER,
+                        status TEXT);
 -- Triggers and indices on  rps
 CREATE TRIGGER block_update_rps
                            BEFORE UPDATE ON rps BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
-CREATE INDEX expire_index_idx ON rps (expire_index)
-                   ;
-CREATE INDEX matching_idx ON rps (wager, possible_moves)
-                   ;
-CREATE INDEX tx_index_hash_idx ON rps (tx_index, tx_hash)
-                   ;
+CREATE INDEX rps_expire_index_idx ON rps (expire_index)
+        ;
+CREATE INDEX rps_source_idx ON rps (source)
+        ;
+CREATE INDEX rps_status_idx ON rps (status)
+        ;
+CREATE INDEX rps_tx_hash_idx ON rps (tx_hash)
+        ;
+CREATE INDEX rps_tx_index_idx ON rps (tx_index)
+        ;
+CREATE INDEX rps_tx_index_tx_hash_idx ON rps (tx_index, tx_hash)
+        ;
+CREATE INDEX rps_wager_possible_moves_idx ON rps (wager, possible_moves)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;

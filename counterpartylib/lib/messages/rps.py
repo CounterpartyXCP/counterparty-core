@@ -32,6 +32,7 @@ from counterpartylib.lib import util
 from counterpartylib.lib import log
 from counterpartylib.lib import message_type
 from counterpartylib.lib import ledger
+from counterpartylib.lib import database
 
 # possible_moves wager move_random_hash expiration
 FORMAT = '>HQ32sI'
@@ -41,110 +42,121 @@ ID = 80
 def initialise (db):
     cursor = db.cursor()
 
+    # remove misnamed indexes
+    database.drop_indexes(cursor, [
+        'source_idx',
+        'matching_idx',
+        'status_idx',
+        'rps_match_expire_idx',
+        'rps_tx0_address_idx',
+        'rps_tx1_address_idx',
+        'block_index_idx',
+        'tx0_address_idx',
+        'tx1_address_idx',
+    ])
+
     # RPS (Rock-Paper-Scissors)
-    cursor.execute('''CREATE TABLE IF NOT EXISTS rps(
-                      tx_index INTEGER,
-                      tx_hash TEXT,
-                      block_index INTEGER,
-                      source TEXT,
-                      possible_moves INTEGER,
-                      wager INTEGER,
-                      move_random_hash TEXT,
-                      expiration INTEGER,
-                      expire_index INTEGER,
-                      status TEXT)
-                  ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON rps (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      matching_idx ON rps (wager, possible_moves)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_idx ON rps (status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx_index_idx ON rps (tx_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx_hash_idx ON rps (tx_hash)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      expire_index_idx ON rps (expire_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx_index_hash_idx ON rps (tx_index, tx_hash)
-                   ''')
+    create_rps_query = '''CREATE TABLE IF NOT EXISTS rps(
+                        tx_index INTEGER,
+                        tx_hash TEXT,
+                        block_index INTEGER,
+                        source TEXT,
+                        possible_moves INTEGER,
+                        wager INTEGER,
+                        move_random_hash TEXT,
+                        expiration INTEGER,
+                        expire_index INTEGER,
+                        status TEXT)
+                        '''
+    # create table
+    cursor.execute(create_rps_query)
+    # migrate old table
+    if database.field_is_pk(cursor, 'rps', 'tx_index'):
+        database.copy_old_table(cursor, 'rps', create_rps_query)
+    # create indexes
+    database.create_indexes(cursor, 'rps', [
+        ['source'],
+        ['wager', 'possible_moves'],
+        ['status'],
+        ['tx_index'],
+        ['tx_hash'],
+        ['expire_index'],
+        ['tx_index', 'tx_hash'],
+    ])
 
     # RPS Matches
-    cursor.execute('''CREATE TABLE IF NOT EXISTS rps_matches(
-                      id TEXT,
-                      tx0_index INTEGER,
-                      tx0_hash TEXT,
-                      tx0_address TEXT,
-                      tx1_index INTEGER,
-                      tx1_hash TEXT,
-                      tx1_address TEXT,
-                      tx0_move_random_hash TEXT,
-                      tx1_move_random_hash TEXT,
-                      wager INTEGER,
-                      possible_moves INTEGER,
-                      tx0_block_index INTEGER,
-                      tx1_block_index INTEGER,
-                      block_index INTEGER,
-                      tx0_expiration INTEGER,
-                      tx1_expiration INTEGER,
-                      match_expire_index INTEGER,
-                      status TEXT)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      rps_tx0_address_idx ON rps_matches (tx0_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      rps_tx1_address_idx ON rps_matches (tx1_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_idx ON rps_matches (status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      id_idx ON rps_matches (id)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      match_expire_index_idx ON rps_matches (match_expire_index)
-                   ''')
+    create_rps_matches_query = '''CREATE TABLE IF NOT EXISTS rps_matches(
+                                id TEXT,
+                                tx0_index INTEGER,
+                                tx0_hash TEXT,
+                                tx0_address TEXT,
+                                tx1_index INTEGER,
+                                tx1_hash TEXT,
+                                tx1_address TEXT,
+                                tx0_move_random_hash TEXT,
+                                tx1_move_random_hash TEXT,
+                                wager INTEGER,
+                                possible_moves INTEGER,
+                                tx0_block_index INTEGER,
+                                tx1_block_index INTEGER,
+                                block_index INTEGER,
+                                tx0_expiration INTEGER,
+                                tx1_expiration INTEGER,
+                                match_expire_index INTEGER,
+                                status TEXT)
+                                '''
+    # create table
+    cursor.execute(create_rps_matches_query)
+    # migrate old table
+    if database.field_is_pk(cursor, 'rps_matches', 'id'):
+        database.copy_old_table(cursor, 'rps_matches', create_rps_matches_query)
+    # create indexes
+    database.create_indexes(cursor, 'rps_matches', [
+        ['tx0_address'],
+        ['tx1_address'],
+        ['status'],
+        ['id'],
+        ['match_expire_index'],
+    ])
 
     # RPS Expirations
-    cursor.execute('''CREATE TABLE IF NOT EXISTS rps_expirations(
-                      rps_index INTEGER PRIMARY KEY,
-                      rps_hash TEXT UNIQUE,
-                      source TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON rps_expirations (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON rps_expirations (source)
-                   ''')
+    create_rps_expirations_query = '''CREATE TABLE IF NOT EXISTS rps_expirations(
+                                    rps_index INTEGER PRIMARY KEY,
+                                    rps_hash TEXT UNIQUE,
+                                    source TEXT,
+                                    block_index INTEGER,
+                                    FOREIGN KEY (block_index) REFERENCES blocks(block_index))
+                                    '''
+    # create table
+    cursor.execute(create_rps_expirations_query)
+    # migrate old table
+    if database.has_fk_on(cursor, "rps_expirations", "rps.tx_index"):
+        database.copy_old_table(cursor, 'rps_expirations', create_rps_expirations_query)
+    # create indexes
+    database.create_indexes(cursor, 'rps_expirations', [
+        ['block_index'],
+        ['source'],
+    ])
 
     # RPS Match Expirations
-    cursor.execute('''CREATE TABLE IF NOT EXISTS rps_match_expirations(
-                      rps_match_id TEXT PRIMARY KEY,
-                      tx0_address TEXT,
-                      tx1_address TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON rps_match_expirations (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx0_address_idx ON rps_match_expirations (tx0_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx1_address_idx ON rps_match_expirations (tx1_address)
-                   ''')
+    create_rps_match_expirations_query = '''CREATE TABLE IF NOT EXISTS rps_match_expirations(
+                                            rps_match_id TEXT PRIMARY KEY,
+                                            tx0_address TEXT,
+                                            tx1_address TEXT,
+                                            block_index INTEGER,
+                                            FOREIGN KEY (block_index) REFERENCES blocks(block_index))
+                                            '''
+    # create table
+    cursor.execute(create_rps_match_expirations_query)
+    # migrate old table
+    if database.has_fk_on(cursor, "rps_match_expirations", "rps_matches.id"):
+        database.copy_old_table(cursor, 'rps_match_expirations', create_rps_match_expirations_query)
+    # create indexes
+    database.create_indexes(cursor, 'rps_match_expirations', [
+        ['block_index'],
+        ['tx0_address'],
+        ['tx1_address'],
+    ])
 
 
 def cancel_rps (db, rps, status, block_index, tx_index):
@@ -162,6 +174,7 @@ def cancel_rps (db, rps, status, block_index, tx_index):
     ledger.credit(db, rps['source'], 'XCP', rps['wager'], tx_index, action='recredit wager', event=rps['tx_hash'])
 
     cursor.close()
+
 
 def update_rps_match_status (db, rps_match, status, block_index, tx_index):
     cursor = db.cursor()
@@ -188,6 +201,7 @@ def update_rps_match_status (db, rps_match, status, block_index, tx_index):
     })
 
     cursor.close()
+
 
 def validate (db, source, possible_moves, wager, move_random_hash, expiration, block_index):
     problems = []
@@ -226,6 +240,7 @@ def validate (db, source, possible_moves, wager, move_random_hash, expiration, b
 
     return problems
 
+
 def compose(db, source, possible_moves, wager, move_random_hash, expiration):
 
     problems = validate(db, source, possible_moves, wager, move_random_hash, expiration, ledger.CURRENT_BLOCK_INDEX)
@@ -236,6 +251,7 @@ def compose(db, source, possible_moves, wager, move_random_hash, expiration):
     data += struct.pack(FORMAT, possible_moves, wager, binascii.unhexlify(move_random_hash), expiration)
 
     return (source, [], data)
+
 
 def parse(db, tx, message):
     rps_parse_cursor = db.cursor()
@@ -287,6 +303,7 @@ def parse(db, tx, message):
         match(db, tx, tx['block_index'])
 
     rps_parse_cursor.close()
+
 
 def match (db, tx, block_index):
     cursor = db.cursor()
@@ -356,6 +373,7 @@ def match (db, tx, block_index):
         cursor.execute(sql, bindings)
 
     cursor.close()
+
 
 def expire (db, block_index):
     cursor = db.cursor()
