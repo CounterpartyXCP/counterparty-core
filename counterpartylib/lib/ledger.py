@@ -67,7 +67,12 @@ def get_messages(db, block_index=None, block_index_in=None, message_index_in=Non
 def remove_from_balance(db, address, asset, quantity, tx_index):
     balance_cursor = db.cursor()
 
-    old_balance = get_balance(db, address, asset)
+    no_balance = False
+    try:
+        old_balance = get_balance(db, address, asset, raise_error_if_no_balance=True)
+    except exceptions.BalanceError:
+        old_balance = 0
+        no_balance = True
 
     if old_balance < quantity:
         raise DebitError('Insufficient funds.')
@@ -76,18 +81,19 @@ def remove_from_balance(db, address, asset, quantity, tx_index):
     balance = min(balance, config.MAX_INT)
     assert balance >= 0
 
-    bindings = {
-        'quantity': balance,
-        'address': address,
-        'asset': asset,
-        'block_index': CURRENT_BLOCK_INDEX,
-        'tx_index': tx_index,
-    }
-    query = '''
-        INSERT INTO balances
-        VALUES (:address, :asset, :quantity, :block_index, :tx_index)
-    '''
-    balance_cursor.execute(query, bindings)
+    if not no_balance: # don't create balance if quantity is 0 and there is no balance
+        bindings = {
+            'quantity': balance,
+            'address': address,
+            'asset': asset,
+            'block_index': CURRENT_BLOCK_INDEX,
+            'tx_index': tx_index,
+        }
+        query = '''
+            INSERT INTO balances
+            VALUES (:address, :asset, :quantity, :block_index, :tx_index)
+        '''
+        balance_cursor.execute(query, bindings)
 
 
 class DebitError (Exception): pass
