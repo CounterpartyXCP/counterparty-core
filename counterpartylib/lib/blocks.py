@@ -456,7 +456,7 @@ def get_tx_info(tx_hex, block_parser=None, block_index=None, db=None):
         if ledger.enabled('dispensers', block_index):
             try:
                 return b'', None, None, None, None, _get_swap_tx(e.decodedTx, block_parser, block_index, db=db)
-            except: # (DecodeError, backend.indexd.BackendRPCError) as e:
+            except DecodeError: # (DecodeError, backend.indexd.BackendRPCError) as e:
                 return b'', None, None, None, None, None
         else:
             return b'', None, None, None, None, None
@@ -1024,19 +1024,26 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
     return tx_index
 
 
+def clean_table_from(cursor, table, block_index):
+    cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
+
+
 def rollback(db, block_index=0):
     # clean all tables
     cursor = db.cursor()
     for table in TABLES + ['blocks', 'transaction_outputs', 'transactions']:
-        cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
+        clean_table_from(cursor, table, block_index)
+
+
+def clean_messages_tables(cursor, block_index=0):
+    # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
+    for table in TABLES:
+        clean_table_from(cursor, table, block_index)
 
 
 def reparse(db, block_index=0):
-    # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
     cursor = db.cursor()
-    for table in TABLES:
-        cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
-
+    clean_messages_tables(cursor, block_index=0)
     # reparse blocks
     ledger.CURRENT_BLOCK_INDEX = block_index if block_index !=0 else config.BLOCK_FIRST
     cursor.execute('''SELECT * FROM blocks WHERE block_index > ?''', (block_index,))
@@ -1092,7 +1099,7 @@ def fetch_blocks(db, block_parser, last_known_hash):
     return block_count
 
 
-def kickstart(bitcoind_dir, force=False, last_hash=None, resume=True):
+def kickstart(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None):
     # determine bitoincore data directory
     if bitcoind_dir is None:
         if platform.system() == 'Darwin':
@@ -1137,7 +1144,7 @@ def kickstart(bitcoind_dir, force=False, last_hash=None, resume=True):
     config.DATABASE = ':memory:'
     memory_db = server.initialise_db()
 
-    if os.path.exists(local_base) and resume:
+    if os.path.exists(local_base) and resume_from is not None:
         logger.info(f"Resuming from disk database {local_base}...")
         # copy disk database to memory database
         local_base_db = apsw.Connection(local_base)
@@ -1148,6 +1155,11 @@ def kickstart(bitcoind_dir, force=False, last_hash=None, resume=True):
         memory_cursor = memory_db.cursor()
         memory_cursor.execute('''SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1''')
         last_block_index = memory_cursor.fetchone()['block_index']
+        # clean tables from resume block
+        if resume_from != 'last':
+            resume_block_index = int(resume_from)
+            for table in TABLES + ['transaction_outputs', 'transactions']:
+                clean_table_from(memory_cursor, table, resume_block_index)
         # get last parsed transaction
         memory_cursor.execute('''SELECT block_index, tx_index FROM transactions ORDER BY block_index DESC, tx_index DESC LIMIT 1''')
         last_transaction = memory_cursor.fetchone()

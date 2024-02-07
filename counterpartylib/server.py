@@ -502,8 +502,8 @@ def rollback(db, block_index=None, quiet=True):
     blocks.rollback(db, block_index=block_index, quiet=quiet)
 
 
-def kickstart(bitcoind_dir, force=False, last_hash=None, resume=False):
-    blocks.kickstart(bitcoind_dir=bitcoind_dir, force=force, last_hash=last_hash, resume=resume)
+def kickstart(bitcoind_dir, force=False, last_hash=None, resume_from=None):
+    blocks.kickstart(bitcoind_dir=bitcoind_dir, force=force, last_hash=last_hash, resume_from=resume_from)
 
 
 def vacuum(db):
