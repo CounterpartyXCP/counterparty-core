@@ -189,6 +189,12 @@ def create_indexes(cursor, table, indexes):
         '''
         cursor.execute(query)
 
+
+def drop_indexes(cursor, indexes):
+    for index_name in [indexes]:
+        cursor.execute(f'''DROP INDEX IF EXISTS {index_name}''')
+
+
 def copy_old_table(cursor, table_name, new_create_query):
     cursor.execute(f'''ALTER TABLE {table_name} RENAME TO old_{table_name}''')
     cursor.execute(new_create_query)

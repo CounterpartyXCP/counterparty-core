@@ -532,20 +532,22 @@ BEGIN TRANSACTION;
 -- Table  order_match_expirations
 DROP TABLE IF EXISTS order_match_expirations;
 CREATE TABLE order_match_expirations(
-                      order_match_id TEXT PRIMARY KEY,
-                      tx0_address TEXT,
-                      tx1_address TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index));
+                                              order_match_id TEXT PRIMARY KEY,
+                                              tx0_address TEXT,
+                                              tx1_address TEXT,
+                                              block_index INTEGER,
+                                              FOREIGN KEY (block_index) REFERENCES blocks(block_index));
 -- Triggers and indices on  order_match_expirations
 CREATE TRIGGER block_update_order_match_expirations
                            BEFORE UPDATE ON order_match_expirations BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
-CREATE INDEX tx0_address_idx ON order_match_expirations (tx0_address)
-                   ;
-CREATE INDEX tx1_address_idx ON order_match_expirations (tx1_address)
-                   ;
+CREATE INDEX order_match_expirations_block_index_idx ON order_match_expirations (block_index)
+        ;
+CREATE INDEX order_match_expirations_tx0_address_idx ON order_match_expirations (tx0_address)
+        ;
+CREATE INDEX order_match_expirations_tx1_address_idx ON order_match_expirations (tx1_address)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -558,46 +560,52 @@ BEGIN TRANSACTION;
 -- Table  order_matches
 DROP TABLE IF EXISTS order_matches;
 CREATE TABLE order_matches(
-                      id TEXT,
-                      tx0_index INTEGER,
-                      tx0_hash TEXT,
-                      tx0_address TEXT,
-                      tx1_index INTEGER,
-                      tx1_hash TEXT,
-                      tx1_address TEXT,
-                      forward_asset TEXT,
-                      forward_quantity INTEGER,
-                      backward_asset TEXT,
-                      backward_quantity INTEGER,
-                      tx0_block_index INTEGER,
-                      tx1_block_index INTEGER,
-                      block_index INTEGER,
-                      tx0_expiration INTEGER,
-                      tx1_expiration INTEGER,
-                      match_expire_index INTEGER,
-                      fee_paid INTEGER,
-                      status TEXT);
+                                    id TEXT,
+                                    tx0_index INTEGER,
+                                    tx0_hash TEXT,
+                                    tx0_address TEXT,
+                                    tx1_index INTEGER,
+                                    tx1_hash TEXT,
+                                    tx1_address TEXT,
+                                    forward_asset TEXT,
+                                    forward_quantity INTEGER,
+                                    backward_asset TEXT,
+                                    backward_quantity INTEGER,
+                                    tx0_block_index INTEGER,
+                                    tx1_block_index INTEGER,
+                                    block_index INTEGER,
+                                    tx0_expiration INTEGER,
+                                    tx1_expiration INTEGER,
+                                    match_expire_index INTEGER,
+                                    fee_paid INTEGER,
+                                    status TEXT);
 INSERT INTO order_matches VALUES('025ca2c1784ca3c9389b9f227a5a04445908337e21e2ef9411c890e20aff61c0_c6881f7505bd7fe0742c2ce50490e21431705bf2df4368be43f423fa0c515aee',3,'025ca2c1784ca3c9389b9f227a5a04445908337e21e2ef9411c890e20aff61c0','2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',4,'c6881f7505bd7fe0742c2ce50490e21431705bf2df4368be43f423fa0c515aee','2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','BTC',50000000,'XCP',100000000,310002,310003,310003,10,10,310023,857142,'pending');
 INSERT INTO order_matches VALUES('025ca2c1784ca3c9389b9f227a5a04445908337e21e2ef9411c890e20aff61c0_c6881f7505bd7fe0742c2ce50490e21431705bf2df4368be43f423fa0c515aee',3,'025ca2c1784ca3c9389b9f227a5a04445908337e21e2ef9411c890e20aff61c0','2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',4,'c6881f7505bd7fe0742c2ce50490e21431705bf2df4368be43f423fa0c515aee','2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','BTC',50000000,'XCP',100000000,310002,310003,310004,10,10,310023,857142,'completed');
 -- Triggers and indices on  order_matches
-CREATE INDEX backward_idx ON order_matches (backward_asset)
-                   ;
 CREATE TRIGGER block_update_order_matches
                            BEFORE UPDATE ON order_matches BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
-CREATE INDEX forward_idx ON order_matches (forward_asset)
-                   ;
-CREATE INDEX only_match_expire_idx ON order_matches (match_expire_index)
-                   ;
-CREATE INDEX tx0_address_forward_asset_idx ON order_matches (tx0_address, forward_asset)
-                   ;
-CREATE INDEX tx0_hash_idx ON order_matches (tx0_hash)
-                   ;
-CREATE INDEX tx1_address_backward_asset_idx ON order_matches (tx1_address, backward_asset)
-                   ;
-CREATE INDEX tx1_hash_idx ON order_matches (tx1_hash)
-                   ;
+CREATE INDEX order_matches_backward_asset_idx ON order_matches (backward_asset)
+        ;
+CREATE INDEX order_matches_block_index_idx ON order_matches (block_index)
+        ;
+CREATE INDEX order_matches_forward_asset_idx ON order_matches (forward_asset)
+        ;
+CREATE INDEX order_matches_id_idx ON order_matches (id)
+        ;
+CREATE INDEX order_matches_match_expire_index_idx ON order_matches (match_expire_index)
+        ;
+CREATE INDEX order_matches_status_idx ON order_matches (status)
+        ;
+CREATE INDEX order_matches_tx0_address_forward_asset_idx ON order_matches (tx0_address, forward_asset)
+        ;
+CREATE INDEX order_matches_tx0_hash_idx ON order_matches (tx0_hash)
+        ;
+CREATE INDEX order_matches_tx1_address_backward_asset_idx ON order_matches (tx1_address, backward_asset)
+        ;
+CREATE INDEX order_matches_tx1_hash_idx ON order_matches (tx1_hash)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -610,10 +618,10 @@ BEGIN TRANSACTION;
 -- Table  order_expirations
 DROP TABLE IF EXISTS order_expirations;
 CREATE TABLE order_expirations(
-                      order_hash TEXT PRIMARY KEY,
-                      source TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index));
+                                        order_hash TEXT PRIMARY KEY,
+                                        source TEXT,
+                                        block_index INTEGER,
+                                        FOREIGN KEY (block_index) REFERENCES blocks(block_index));
 INSERT INTO order_expirations VALUES('025ca2c1784ca3c9389b9f227a5a04445908337e21e2ef9411c890e20aff61c0','2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',310013);
 INSERT INTO order_expirations VALUES('c6881f7505bd7fe0742c2ce50490e21431705bf2df4368be43f423fa0c515aee','2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',310014);
 INSERT INTO order_expirations VALUES('6d3c6a9ea36e82a0e8162f69c68fc8bb95d316ad5586a30553fbaf1717f4121e','2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',310032);
@@ -622,6 +630,10 @@ CREATE TRIGGER block_update_order_expirations
                            BEFORE UPDATE ON order_expirations BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
+CREATE INDEX order_expirations_block_index_idx ON order_expirations (block_index)
+        ;
+CREATE INDEX order_expirations_source_idx ON order_expirations (source)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -634,23 +646,23 @@ BEGIN TRANSACTION;
 -- Table  orders
 DROP TABLE IF EXISTS orders;
 CREATE TABLE orders(
-                      tx_index INTEGER,
-                      tx_hash TEXT,
-                      block_index INTEGER,
-                      source TEXT,
-                      give_asset TEXT,
-                      give_quantity INTEGER,
-                      give_remaining INTEGER,
-                      get_asset TEXT,
-                      get_quantity INTEGER,
-                      get_remaining INTEGER,
-                      expiration INTEGER,
-                      expire_index INTEGER,
-                      fee_required INTEGER,
-                      fee_required_remaining INTEGER,
-                      fee_provided INTEGER,
-                      fee_provided_remaining INTEGER,
-                      status TEXT);
+                            tx_index INTEGER,
+                            tx_hash TEXT,
+                            block_index INTEGER,
+                            source TEXT,
+                            give_asset TEXT,
+                            give_quantity INTEGER,
+                            give_remaining INTEGER,
+                            get_asset TEXT,
+                            get_quantity INTEGER,
+                            get_remaining INTEGER,
+                            expiration INTEGER,
+                            expire_index INTEGER,
+                            fee_required INTEGER,
+                            fee_required_remaining INTEGER,
+                            fee_provided INTEGER,
+                            fee_provided_remaining INTEGER,
+                            status TEXT);
 INSERT INTO orders VALUES(3,'025ca2c1784ca3c9389b9f227a5a04445908337e21e2ef9411c890e20aff61c0',310002,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','BTC',50000000,50000000,'XCP',100000000,100000000,10,310012,0,0,1000000,1000000,'open');
 INSERT INTO orders VALUES(4,'c6881f7505bd7fe0742c2ce50490e21431705bf2df4368be43f423fa0c515aee',310003,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','XCP',105000000,105000000,'BTC',50000000,50000000,10,310013,900000,900000,6800,6800,'open');
 INSERT INTO orders VALUES(3,'025ca2c1784ca3c9389b9f227a5a04445908337e21e2ef9411c890e20aff61c0',310003,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','BTC',50000000,0,'XCP',100000000,0,10,310012,0,0,1000000,142858,'open');
@@ -664,14 +676,22 @@ CREATE TRIGGER block_update_orders
                            BEFORE UPDATE ON orders BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
-CREATE INDEX give_asset_idx ON orders (give_asset)
-                   ;
-CREATE INDEX give_source_idx ON orders (source, give_asset)
-                   ;
-CREATE INDEX only_expire_idx ON orders (expire_index)
-                   ;
-CREATE INDEX only_give_get_status_idx ON orders (get_asset, give_asset)
-                   ;
+CREATE INDEX orders_block_index_idx ON orders (block_index)
+        ;
+CREATE INDEX orders_expire_index_idx ON orders (expire_index)
+        ;
+CREATE INDEX orders_get_asset_give_asset_idx ON orders (get_asset, give_asset)
+        ;
+CREATE INDEX orders_give_asset_idx ON orders (give_asset)
+        ;
+CREATE INDEX orders_source_give_asset_idx ON orders (source, give_asset)
+        ;
+CREATE INDEX orders_status_idx ON orders (status)
+        ;
+CREATE INDEX orders_tx_hash_idx ON orders (tx_hash)
+        ;
+CREATE INDEX orders_tx_index_tx_hash_idx ON orders (tx_index, tx_hash)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1129,6 +1149,10 @@ CREATE TRIGGER block_update_rps_match_expirations
                            BEFORE UPDATE ON rps_match_expirations BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
+CREATE INDEX tx0_address_idx ON rps_match_expirations (tx0_address)
+                   ;
+CREATE INDEX tx1_address_idx ON rps_match_expirations (tx1_address)
+                   ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;

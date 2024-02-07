@@ -15,6 +15,7 @@ from counterpartylib.lib import util
 from counterpartylib.lib import ledger
 from counterpartylib.lib import log
 from counterpartylib.lib import message_type
+from counterpartylib.lib import database
 
 FORMAT = '>QQQQHQ'
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
@@ -23,135 +24,139 @@ ID = 10
 def initialise(db):
     cursor = db.cursor()
 
+    database.drop_indexes(cursor, [
+        'block_index_idx',
+        'index_hash_idx',
+        'expire_idx',
+        'give_status_idx',
+        'source_give_status_idx',
+        'give_get_status_idx',
+        'source_idx',
+        'give_asset_idx',
+        'match_expire_idx'
+        'forward_status_idx',
+        'backward_status_idx',
+        'id_idx',
+        'tx0_address_idx',
+        'tx1_address_idx',
+    ])
+
     # Orders
-    cursor.execute('''CREATE TABLE IF NOT EXISTS orders(
-                      tx_index INTEGER,
-                      tx_hash TEXT,
-                      block_index INTEGER,
-                      source TEXT,
-                      give_asset TEXT,
-                      give_quantity INTEGER,
-                      give_remaining INTEGER,
-                      get_asset TEXT,
-                      get_quantity INTEGER,
-                      get_remaining INTEGER,
-                      expiration INTEGER,
-                      expire_index INTEGER,
-                      fee_required INTEGER,
-                      fee_required_remaining INTEGER,
-                      fee_provided INTEGER,
-                      fee_provided_remaining INTEGER,
-                      status TEXT)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON orders (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      index_hash_idx ON orders (tx_index, tx_hash)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      give_asset_idx ON orders (give_asset)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx_hash_idx ON orders (tx_hash)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      only_expire_idx ON orders (expire_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      only_give_get_status_idx ON orders (get_asset, give_asset)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_idx ON orders (status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      give_source_idx ON orders (source, give_asset)
-                   ''')
+    create_orders_query = '''CREATE TABLE IF NOT EXISTS orders(
+                            tx_index INTEGER,
+                            tx_hash TEXT,
+                            block_index INTEGER,
+                            source TEXT,
+                            give_asset TEXT,
+                            give_quantity INTEGER,
+                            give_remaining INTEGER,
+                            get_asset TEXT,
+                            get_quantity INTEGER,
+                            get_remaining INTEGER,
+                            expiration INTEGER,
+                            expire_index INTEGER,
+                            fee_required INTEGER,
+                            fee_required_remaining INTEGER,
+                            fee_provided INTEGER,
+                            fee_provided_remaining INTEGER,
+                            status TEXT)
+                            '''
+    # create table
+    cursor.execute(create_orders_query)
+    # migrate old table
+    if database.field_is_pk(cursor, 'orders', 'tx_index'):
+        database.copy_old_table(cursor, 'orders', create_orders_query)
+    # create indexes
+    database.create_indexes(cursor, 'orders', [
+        ['block_index'],
+        ['tx_index', 'tx_hash'],
+        ['give_asset'],
+        ['tx_hash'],
+        ['expire_index'],
+        ['get_asset', 'give_asset'],
+        ['status'],
+        ['source', 'give_asset'],
+    ])
 
     # Order Matches
-    cursor.execute('''CREATE TABLE IF NOT EXISTS order_matches(
-                      id TEXT,
-                      tx0_index INTEGER,
-                      tx0_hash TEXT,
-                      tx0_address TEXT,
-                      tx1_index INTEGER,
-                      tx1_hash TEXT,
-                      tx1_address TEXT,
-                      forward_asset TEXT,
-                      forward_quantity INTEGER,
-                      backward_asset TEXT,
-                      backward_quantity INTEGER,
-                      tx0_block_index INTEGER,
-                      tx1_block_index INTEGER,
-                      block_index INTEGER,
-                      tx0_expiration INTEGER,
-                      tx1_expiration INTEGER,
-                      match_expire_index INTEGER,
-                      fee_paid INTEGER,
-                      status TEXT)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON order_matches (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      forward_idx ON order_matches (forward_asset)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      backward_idx ON order_matches (backward_asset)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      id_idx ON order_matches (id)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx0_address_forward_asset_idx ON order_matches (tx0_address, forward_asset)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx1_address_backward_asset_idx ON order_matches (tx1_address, backward_asset)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      only_match_expire_idx ON order_matches (match_expire_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_idx ON order_matches (status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx0_hash_idx ON order_matches (tx0_hash)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx1_hash_idx ON order_matches (tx1_hash)
-                   ''')
+    create_order_matches_query = '''CREATE TABLE IF NOT EXISTS order_matches(
+                                    id TEXT,
+                                    tx0_index INTEGER,
+                                    tx0_hash TEXT,
+                                    tx0_address TEXT,
+                                    tx1_index INTEGER,
+                                    tx1_hash TEXT,
+                                    tx1_address TEXT,
+                                    forward_asset TEXT,
+                                    forward_quantity INTEGER,
+                                    backward_asset TEXT,
+                                    backward_quantity INTEGER,
+                                    tx0_block_index INTEGER,
+                                    tx1_block_index INTEGER,
+                                    block_index INTEGER,
+                                    tx0_expiration INTEGER,
+                                    tx1_expiration INTEGER,
+                                    match_expire_index INTEGER,
+                                    fee_paid INTEGER,
+                                    status TEXT)
+                                    '''
+    # create table
+    cursor.execute(create_order_matches_query)
+    # migrate old table
+    if database.field_is_pk(cursor, 'order_matches', 'id'):
+        database.copy_old_table(cursor, 'order_matches', create_order_matches_query)
+    # create indexes
+    database.create_indexes(cursor, 'order_matches', [
+        ['block_index'],
+        ['forward_asset'],
+        ['backward_asset'],
+        ['id'],
+        ['tx0_address', 'forward_asset'],
+        ['tx1_address', 'backward_asset'],
+        ['match_expire_index'],
+        ['status'],
+        ['tx0_hash'],
+        ['tx1_hash'],
+    ])
 
     # Order Expirations
-    cursor.execute('''CREATE TABLE IF NOT EXISTS order_expirations(
-                      order_hash TEXT PRIMARY KEY,
-                      source TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON order_expirations (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON order_expirations (source)
-                   ''')
+    create_order_expirations_query = '''CREATE TABLE IF NOT EXISTS order_expirations(
+                                        order_hash TEXT PRIMARY KEY,
+                                        source TEXT,
+                                        block_index INTEGER,
+                                        FOREIGN KEY (block_index) REFERENCES blocks(block_index))
+                                        '''
+    # create table
+    cursor.execute(create_order_expirations_query)
+    # migrate old table
+    if database.has_fk_on(cursor, "order_expirations", "orders.tx_index"):
+        database.copy_old_table(cursor, 'order_expirations', create_order_expirations_query)
+    # create indexes
+    database.create_indexes(cursor, 'order_expirations', [
+        ['block_index'],
+        ['source'],
+    ])
 
     # Order Match Expirations
-    cursor.execute('''CREATE TABLE IF NOT EXISTS order_match_expirations(
-                      order_match_id TEXT PRIMARY KEY,
-                      tx0_address TEXT,
-                      tx1_address TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON order_match_expirations (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx0_address_idx ON order_match_expirations (tx0_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx1_address_idx ON order_match_expirations (tx1_address)
-                   ''')
+    create_order_march_expirations_query = '''CREATE TABLE IF NOT EXISTS order_match_expirations(
+                                              order_match_id TEXT PRIMARY KEY,
+                                              tx0_address TEXT,
+                                              tx1_address TEXT,
+                                              block_index INTEGER,
+                                              FOREIGN KEY (block_index) REFERENCES blocks(block_index))
+                                              '''
+    # create table
+    cursor.execute(create_order_march_expirations_query)
+    # migrate old table
+    if database.has_fk_on(cursor, "order_match_expirations", "order_matches.id"):
+        database.copy_old_table(cursor, 'order_match_expirations', create_order_march_expirations_query)
+    # create indexes
+    database.create_indexes(cursor, 'order_match_expirations', [
+        ['block_index'],
+        ['tx0_address'],
+        ['tx1_address'],
+    ])
+
 
 def exact_penalty (db, address, block_index, order_match_id, tx_index):
     # Penalize addresses that don’t make BTC payments. If an address lets an

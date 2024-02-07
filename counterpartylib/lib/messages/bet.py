@@ -35,25 +35,18 @@ ID = 40
 def initialise (db):
     cursor = db.cursor()
 
-    indexes_to_drop = [
+    database.drop_indexes(cursor, [
         'block_index_idx',
         'index_hash_idx',
-        'status_idx',
-        'tx_hash_idx',
-        'feed_address_idx',
-        'only_expire_index_idx',
-        'feed_bettype_idx',
         'expire_idx',
+        'feed_valid_bettype_idx',
         'source_idx',
+        'status_idx',
         'match_expire_idx',
         'valid_feed_idx',
         'tx0_address_idx',
         'tx1_address_idx',
-        'id_idx',
-        'deadline_idx',
-    ]
-    for index_name in [indexes_to_drop]:
-        cursor.execute(f'''DROP INDEX IF EXISTS {index_name}''')
+    ])
 
     # Bets.
     create_bets_query = '''CREATE TABLE IF NOT EXISTS bets(
@@ -202,7 +195,6 @@ def cancel_bet (db, bet, status, block_index, tx_index):
 
     ledger.credit(db, bet['source'], config.XCP, bet['wager_remaining'], tx_index, action='recredit wager remaining', event=bet['tx_hash'])
 
-    cursor = db.cursor()
 
 def cancel_bet_match (db, bet_match, status, block_index, tx_index):
     # Does not re‐open, re‐fill, etc. constituent bets.
@@ -237,6 +229,7 @@ def get_fee_fraction (db, feed_address):
         else: return 0
     else:
         return 0
+
 
 def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
               counterwager_quantity, target_value, leverage, expiration, block_index):
@@ -299,6 +292,7 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
 
     return problems, leverage
 
+
 def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
             counterwager_quantity, target_value, leverage, expiration):
 
@@ -316,6 +310,7 @@ def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
                         wager_quantity, counterwager_quantity, target_value,
                         leverage, expiration)
     return (source, [(feed_address, None)], data)
+
 
 def parse (db, tx, message):
     bet_parse_cursor = db.cursor()
@@ -395,7 +390,7 @@ def parse (db, tx, message):
     bet_parse_cursor.close()
 
 
-def match(db, tx):
+def match (db, tx):
 
     # Get bet in question.
     bets = ledger.get_bet(db, tx_hash=tx['tx_hash'])
@@ -556,7 +551,7 @@ def match(db, tx):
             cursor.execute(sql, bindings)
 
     cursor.close()
-    return
+
 
 def expire (db, block_index, block_time):
     cursor = db.cursor()
@@ -592,5 +587,3 @@ def expire (db, block_index, block_time):
         cursor.execute(sql, bindings)
 
     cursor.close()
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
