@@ -23,6 +23,7 @@ from counterpartylib.lib import ledger
 from counterpartylib.lib import message_type
 from counterpartylib.lib import address
 from counterpartylib.lib import backend
+from counterpartylib.lib import database
 
 FORMAT = '>QQQQB'
 LENGTH = 33
@@ -38,122 +39,126 @@ STATUS_CLOSING = 11
 
 def initialise(db):
     cursor = db.cursor()
-    cursor.execute('''CREATE TABLE IF NOT EXISTS dispensers(
-                      tx_index INTEGER,
-                      tx_hash TEXT,
-                      block_index INTEGER,
-                      source TEXT,
-                      asset TEXT,
-                      give_quantity INTEGER,
-                      escrow_quantity INTEGER,
-                      satoshirate INTEGER,
-                      status INTEGER,
-                      give_remaining INTEGER)
-                   ''')
-                      # Disallows invalids: FOREIGN KEY (order_match_id) REFERENCES order_matches(id))
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      dispensers_source_idx ON dispensers (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      dispensers_asset_idx ON dispensers (asset)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx_index_idx ON dispensers (tx_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx_hash_idx ON dispensers (tx_hash)
-                   ''')
 
-    cursor.execute('''CREATE TABLE IF NOT EXISTS dispenses(
-                      tx_index INTEGER,
-                      dispense_index INTEGER,
-                      tx_hash TEXT,
-                      block_index INTEGER,
-                      source TEXT,
-                      destination TEXT,
-                      asset TEXT,
-                      dispense_quantity INTEGER,
-                      dispenser_tx_hash TEXT,
-                      PRIMARY KEY (tx_index, dispense_index, source, destination),
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   ''')
-                   
-    cursor.execute('''CREATE TABLE IF NOT EXISTS dispenser_refills(
-                      tx_index INTEGER,
-                      tx_hash TEXT,
-                      block_index INTEGER,
-                      source TEXT,
-                      destination TEXT,
-                      asset TEXT,
-                      dispense_quantity INTEGER,
-                      dispenser_tx_hash TEXT,
-                      PRIMARY KEY (tx_index, tx_hash, source, destination),
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   ''')                
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        dispenses_tx_hash_idx ON dispenses (tx_hash)
-                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        dispenses_block_index_idx ON dispenses (block_index)
-                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        dispenser_refills_tx_hash_idx ON dispenser_refills (tx_hash)
-                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        dispenser_refills_block_index_idx ON dispenser_refills (block_index)
-                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        dispensers_status_idx ON dispensers (status)
-                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                    dispensers_asset_idx ON dispensers (asset)
-                ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                    dispensers_source_idx ON dispensers (source)
-                ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                    dispensers_give_remaining_idx ON dispensers (give_remaining)
-                ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                    dispensers_status_block_index_idx ON dispensers (status, block_index)
-                ''')
+    # Dispensers
+    create_dispensers_query = '''CREATE TABLE IF NOT EXISTS dispensers(
+                                tx_index INTEGER,
+                                tx_hash TEXT,
+                                block_index INTEGER,
+                                source TEXT,
+                                asset TEXT,
+                                give_quantity INTEGER,
+                                escrow_quantity INTEGER,
+                                satoshirate INTEGER,
+                                status INTEGER,
+                                give_remaining INTEGER,
+                                oracle_address TEXT,
+                                last_status_tx_hash TEXT,
+                                origin TEXT)
+                                '''
+    # create tables
+    cursor.execute(create_dispensers_query)
 
-    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(dispenses)''')]
-    if 'dispenser_tx_hash' not in columns:
-        cursor.execute('ALTER TABLE dispenses ADD COLUMN dispenser_tx_hash TEXT')
-    
+    # add new columns if not exist
     columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(dispensers)''')]
     if 'oracle_address' not in columns:
         cursor.execute('ALTER TABLE dispensers ADD COLUMN oracle_address TEXT')
-    
-    #this column will be used to know when a dispenser was marked to close
     if 'last_status_tx_hash' not in columns:
+        #this column will be used to know when a dispenser was marked to close
         cursor.execute('ALTER TABLE dispensers ADD COLUMN last_status_tx_hash TEXT') 
-        cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        dispensers_last_status_tx_hash_idx ON dispensers (last_status_tx_hash)
-                    ''')
-        
     if "origin" not in columns:
         cursor.execute('ALTER TABLE dispensers ADD COLUMN origin TEXT')
-        cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_status_origin_idx ON dispensers (source, status, origin)
-                   ''')
-        cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        source_asset_status_origin_idx ON dispensers (source, asset, status, origin)
-                    ''')
-        
         cursor.execute("UPDATE dispensers AS d SET origin = (SELECT t.source FROM transactions t WHERE d.tx_hash = t.tx_hash)")
-        
+
+    # migrate old table
+    if database.field_is_pk(cursor, 'dispensers', 'tx_index'):
+        database.copy_old_table(cursor, 'dispensers', create_dispensers_query)
+
+    # create indexes
+    database.create_indexes(cursor, 'dispensers', [
+        ['block_index'],
+        ['source'],
+        ['asset'],
+        ['tx_index'],
+        ['tx_hash'],
+        ['status'],
+        ['give_remaining'],
+        ['status', 'block_index'],
+        ['source', 'origin'],
+        ['source', 'asset', 'origin'],
+        ['last_status_tx_hash']
+    ])
+
+    # Dispenses
+    create_dispensers_query = '''CREATE TABLE IF NOT EXISTS dispenses (
+                                tx_index INTEGER,
+                                dispense_index INTEGER,
+                                tx_hash TEXT,
+                                block_index INTEGER,
+                                source TEXT,
+                                destination TEXT,
+                                asset TEXT,
+                                dispense_quantity INTEGER,
+                                dispenser_tx_hash TEXT,
+                                PRIMARY KEY (tx_index, dispense_index, source, destination),
+                                FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
+                                '''
+    # create tables
+    cursor.execute(create_dispensers_query)
+
+    # add new columns if not exist
+    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(dispenses)''')]
+    if 'dispenser_tx_hash' not in columns:
+        cursor.execute('ALTER TABLE dispenses ADD COLUMN dispenser_tx_hash TEXT')
+
+    # create indexes
+    database.create_indexes(cursor, 'dispenses', [
+        ['tx_hash'],
+        ['block_index'],
+    ])
+
+    # Dispenser refills
+    create_dispenser_refills_query = '''CREATE TABLE IF NOT EXISTS dispenser_refills(
+                                        tx_index INTEGER,
+                                        tx_hash TEXT,
+                                        block_index INTEGER,
+                                        source TEXT,
+                                        destination TEXT,
+                                        asset TEXT,
+                                        dispense_quantity INTEGER,
+                                        dispenser_tx_hash TEXT,
+                                        PRIMARY KEY (tx_index, tx_hash, source, destination),
+                                        FOREIGN KEY (tx_index, tx_hash, block_index) 
+                                            REFERENCES transactions(tx_index, tx_hash, block_index))
+                                        '''
+    # create tables
+    cursor.execute(create_dispenser_refills_query)
+    # create indexes
+    database.create_indexes(cursor, 'dispenser_refills', [
+        ['tx_hash'],
+        ['block_index'],
+    ])
+    # fill dispenser_refills table
+    dispenser_refills_is_empty = cursor.execute("SELECT * FROM dispenser_refills LIMIT 1").fetchone() is None
+    if dispenser_refills_is_empty:
         cursor.execute('''INSERT INTO dispenser_refills 
-                          SELECT t.tx_index, deb.event, deb.block_index, deb.address, dis.source, deb.asset, deb.quantity, dis.tx_hash FROM debits deb 
+                          SELECT t.tx_index, deb.event, deb.block_index, deb.address,
+                                 dis.source, deb.asset, deb.quantity, dis.tx_hash 
+                          FROM debits deb 
                           LEFT JOIN transactions t ON t.tx_hash = deb.event 
                           LEFT JOIN dispensers dis ON 
                               dis.source = deb.address 
                               AND dis.asset = deb.asset 
-                              AND dis.tx_index = (SELECT max(dis2.tx_index) FROM dispensers dis2 WHERE dis2.source = deb.address AND dis2.asset = deb.asset AND dis2.block_index <= deb.block_index) 
-                          WHERE deb.action = 'refill dispenser' AND dis.source IS NOT NULL''');
-        
-        
+                              AND dis.tx_index = (
+                                  SELECT max(dis2.tx_index)
+                                  FROM dispensers dis2 
+                                  WHERE dis2.source = deb.address 
+                                  AND dis2.asset = deb.asset
+                                  AND dis2.block_index <= deb.block_index
+                              ) 
+                          WHERE deb.action = 'refill dispenser' AND dis.source IS NOT NULL''')
+
+
 def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, status, open_address, block_index, oracle_address):
     problems = []
     order_match = None
@@ -259,6 +264,7 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
     else:
         return asset_id, None
 
+
 def compose (db, source, asset, give_quantity, escrow_quantity, mainchainrate, status, open_address=None, oracle_address=None):
     assetid, problems = validate(db, source, asset, give_quantity, escrow_quantity, mainchainrate, status, open_address, ledger.CURRENT_BLOCK_INDEX, oracle_address)
     if problems: raise exceptions.ComposeError(problems)
@@ -277,6 +283,7 @@ def compose (db, source, asset, give_quantity, escrow_quantity, mainchainrate, s
         
     return (source, destination, data)
 
+
 def calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, oracle_address, block_index):
     last_price, last_fee, last_fiat_label, last_updated = ledger.get_oracle_last_price(db, oracle_address, block_index)
     last_fee_multiplier = (last_fee / config.UNIT)
@@ -291,6 +298,7 @@ def calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, orac
     oracle_fee_btc = int(total_quantity_btc * last_fee_multiplier *config.UNIT)
     
     return oracle_fee_btc
+
 
 def parse (db, tx, message):
     cursor = db.cursor()
@@ -487,6 +495,7 @@ def parse (db, tx, message):
 
     cursor.close()
 
+
 def is_dispensable(db, address, amount):
     if address is None:
         return False
@@ -504,6 +513,7 @@ def is_dispensable(db, address, amount):
                 return True
 
     return False
+
 
 def dispense(db, tx):
     cursor = db.cursor()
@@ -617,6 +627,7 @@ def dispense(db, tx):
                 dispense_index += 1
 
     cursor.close()
+
 
 def close_pending(db, block_index):
     cursor = db.cursor()

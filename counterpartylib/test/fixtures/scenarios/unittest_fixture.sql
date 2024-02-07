@@ -1931,16 +1931,19 @@ BEGIN TRANSACTION;
 -- Table  dispensers
 DROP TABLE IF EXISTS dispensers;
 CREATE TABLE dispensers(
-                      tx_index INTEGER,
-                      tx_hash TEXT,
-                      block_index INTEGER,
-                      source TEXT,
-                      asset TEXT,
-                      give_quantity INTEGER,
-                      escrow_quantity INTEGER,
-                      satoshirate INTEGER,
-                      status INTEGER,
-                      give_remaining INTEGER, oracle_address TEXT, last_status_tx_hash TEXT, origin TEXT);
+                                tx_index INTEGER,
+                                tx_hash TEXT,
+                                block_index INTEGER,
+                                source TEXT,
+                                asset TEXT,
+                                give_quantity INTEGER,
+                                escrow_quantity INTEGER,
+                                satoshirate INTEGER,
+                                status INTEGER,
+                                give_remaining INTEGER,
+                                oracle_address TEXT,
+                                last_status_tx_hash TEXT,
+                                origin TEXT);
 INSERT INTO dispensers VALUES(108,'9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec',310107,'munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b','XCP',100,100,100,0,100,NULL,NULL,'munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b');
 -- Triggers and indices on  dispensers
 CREATE TRIGGER block_update_dispensers
@@ -1948,21 +1951,27 @@ CREATE TRIGGER block_update_dispensers
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
 CREATE INDEX dispensers_asset_idx ON dispensers (asset)
-                   ;
+        ;
+CREATE INDEX dispensers_block_index_idx ON dispensers (block_index)
+        ;
 CREATE INDEX dispensers_give_remaining_idx ON dispensers (give_remaining)
-                ;
+        ;
 CREATE INDEX dispensers_last_status_tx_hash_idx ON dispensers (last_status_tx_hash)
-                    ;
+        ;
+CREATE INDEX dispensers_source_asset_origin_idx ON dispensers (source, asset, origin)
+        ;
 CREATE INDEX dispensers_source_idx ON dispensers (source)
-                   ;
+        ;
+CREATE INDEX dispensers_source_origin_idx ON dispensers (source, origin)
+        ;
 CREATE INDEX dispensers_status_block_index_idx ON dispensers (status, block_index)
-                ;
+        ;
 CREATE INDEX dispensers_status_idx ON dispensers (status)
-                    ;
-CREATE INDEX source_asset_status_origin_idx ON dispensers (source, asset, status, origin)
-                    ;
-CREATE INDEX source_status_origin_idx ON dispensers (source, status, origin)
-                   ;
+        ;
+CREATE INDEX dispensers_tx_hash_idx ON dispensers (tx_hash)
+        ;
+CREATE INDEX dispensers_tx_index_idx ON dispensers (tx_index)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1974,27 +1983,27 @@ BEGIN TRANSACTION;
 
 -- Table  dispenses
 DROP TABLE IF EXISTS dispenses;
-CREATE TABLE dispenses(
-                      tx_index INTEGER,
-                      dispense_index INTEGER,
-                      tx_hash TEXT,
-                      block_index INTEGER,
-                      source TEXT,
-                      destination TEXT,
-                      asset TEXT,
-                      dispense_quantity INTEGER,
-                      dispenser_tx_hash TEXT,
-                      PRIMARY KEY (tx_index, dispense_index, source, destination),
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+CREATE TABLE dispenses (
+                                tx_index INTEGER,
+                                dispense_index INTEGER,
+                                tx_hash TEXT,
+                                block_index INTEGER,
+                                source TEXT,
+                                destination TEXT,
+                                asset TEXT,
+                                dispense_quantity INTEGER,
+                                dispenser_tx_hash TEXT,
+                                PRIMARY KEY (tx_index, dispense_index, source, destination),
+                                FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  dispenses
 CREATE TRIGGER block_update_dispenses
                            BEFORE UPDATE ON dispenses BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
 CREATE INDEX dispenses_block_index_idx ON dispenses (block_index)
-                    ;
+        ;
 CREATE INDEX dispenses_tx_hash_idx ON dispenses (tx_hash)
-                    ;
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -2007,24 +2016,25 @@ BEGIN TRANSACTION;
 -- Table  dispenser_refills
 DROP TABLE IF EXISTS dispenser_refills;
 CREATE TABLE dispenser_refills(
-                      tx_index INTEGER,
-                      tx_hash TEXT,
-                      block_index INTEGER,
-                      source TEXT,
-                      destination TEXT,
-                      asset TEXT,
-                      dispense_quantity INTEGER,
-                      dispenser_tx_hash TEXT,
-                      PRIMARY KEY (tx_index, tx_hash, source, destination),
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+                                        tx_index INTEGER,
+                                        tx_hash TEXT,
+                                        block_index INTEGER,
+                                        source TEXT,
+                                        destination TEXT,
+                                        asset TEXT,
+                                        dispense_quantity INTEGER,
+                                        dispenser_tx_hash TEXT,
+                                        PRIMARY KEY (tx_index, tx_hash, source, destination),
+                                        FOREIGN KEY (tx_index, tx_hash, block_index) 
+                                            REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  dispenser_refills
 CREATE TRIGGER block_update_dispenser_refills
                            BEFORE UPDATE ON dispenser_refills BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
 CREATE INDEX dispenser_refills_block_index_idx ON dispenser_refills (block_index)
-                    ;
+        ;
 CREATE INDEX dispenser_refills_tx_hash_idx ON dispenser_refills (tx_hash)
-                    ;
+        ;
 
 COMMIT TRANSACTION;
