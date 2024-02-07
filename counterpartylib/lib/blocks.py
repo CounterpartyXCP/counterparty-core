@@ -208,6 +208,23 @@ def initialise(db):
     """Initialise data, create and populate the database."""
     cursor = db.cursor()
 
+    # remove misnamed indexes
+    database.drop_indexes(cursor, [
+        'block_index_idx',
+        'index_hash_idx',
+        'tx_index_idx',
+        'tx_hash_idx',
+        'index_index_idx',
+        'index_hash_index_idx',
+        'address_idx',
+        'asset_idx',
+        'name_idx',
+        'id_idx',
+        'addresses_idx',
+        'block_index_message_index_idx',
+        'asset_longname_idx',
+    ])
+
     # Blocks
     cursor.execute('''CREATE TABLE IF NOT EXISTS blocks(
                       block_index INTEGER UNIQUE,
@@ -216,12 +233,6 @@ def initialise(db):
                       previous_block_hash TEXT UNIQUE,
                       difficulty INTEGER,
                       PRIMARY KEY (block_index, block_hash))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON blocks (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      index_hash_idx ON blocks (block_index, block_hash)
                    ''')
 
     # SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS`.
@@ -236,6 +247,11 @@ def initialise(db):
         cursor.execute('''ALTER TABLE blocks ADD COLUMN previous_block_hash TEXT''')
     if 'difficulty' not in block_columns:
         cursor.execute('''ALTER TABLE blocks ADD COLUMN difficulty TEXT''')
+    
+    database.create_indexes(cursor, 'blocks', [
+        ['block_index'],
+        ['block_index', 'block_hash'],
+    ])
 
     # Check that first block in DB is BLOCK_FIRST.
     cursor.execute('''SELECT * from blocks ORDER BY block_index LIMIT 1''')
@@ -260,21 +276,13 @@ def initialise(db):
                       FOREIGN KEY (block_index, block_hash) REFERENCES blocks(block_index, block_hash),
                       PRIMARY KEY (tx_index, tx_hash, block_index))
                     ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON transactions (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx_index_idx ON transactions (tx_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx_hash_idx ON transactions (tx_hash)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      index_index_idx ON transactions (block_index, tx_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      index_hash_index_idx ON transactions (tx_index, tx_hash, block_index)
-                   ''')
+    database.create_indexes(cursor, 'transactions', [
+        ['block_index'],
+        ['tx_index'],
+        ['tx_hash'],
+        ['block_index', 'tx_index'],
+        ['tx_index', 'tx_hash', 'block_index'],
+    ])
 
     # Purge database of blocks, transactions from before BLOCK_FIRST.
     cursor.execute('''DELETE FROM blocks WHERE block_index < ?''', (config.BLOCK_FIRST,))
@@ -291,15 +299,15 @@ def initialise(db):
                       event TEXT,
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index))
                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      address_idx ON debits (address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      asset_idx ON debits (asset)
-                   ''')
+
     debits_columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(debits)''')]
     if 'tx_index' not in debits_columns:
         cursor.execute('''ALTER TABLE debits ADD COLUMN tx_index INTEGER''')
+    
+    database.create_indexes(cursor, 'debits', [
+        ['address'],
+        ['asset'],
+    ])
 
     # (Valid) credits
     cursor.execute('''CREATE TABLE IF NOT EXISTS credits(
@@ -311,15 +319,15 @@ def initialise(db):
                       event TEXT,
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index))
                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      address_idx ON credits (address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      asset_idx ON credits (asset)
-                   ''')
+
     credits_columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(credits)''')]
     if 'tx_index' not in credits_columns:
         cursor.execute('''ALTER TABLE credits ADD COLUMN tx_index INTEGER''')
+    
+    database.create_indexes(cursor, 'credits', [
+        ['address'],
+        ['asset'],
+    ])
 
     # Balances
     cursor.execute('''CREATE TABLE IF NOT EXISTS balances(
@@ -327,21 +335,20 @@ def initialise(db):
                       asset TEXT,
                       quantity INTEGER)
                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      address_asset_idx ON balances (address, asset)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      address_idx ON balances (address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      asset_idx ON balances (asset)
-                   ''')
+
     balances_columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(balances)''')]
     # TODO: add foreign key constraint
     if 'block_index' not in balances_columns:
         cursor.execute('''ALTER TABLE balances ADD COLUMN block_index INTEGER''')
     if 'tx_index' not in balances_columns:
         cursor.execute('''ALTER TABLE balances ADD COLUMN tx_index INTEGER''')
+    
+    database.create_indexes(cursor, 'balances', [
+        ['address', 'asset'],
+        ['address'],
+        ['asset'],
+        ['block_index'],
+    ])
 
     # Assets
     # TODO: Store more asset info here?!
@@ -351,19 +358,21 @@ def initialise(db):
                       block_index INTEGER,
                       asset_longname TEXT)
                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      name_idx ON assets (asset_name)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      id_idx ON assets (asset_id)
-                   ''')
+
+    database.create_indexes(cursor, 'assets', [
+        ['asset_name'],
+        ['asset_id'],
+    ])
 
     # Add asset_longname for sub-assets
     #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS`.
     columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(assets)''')]
     if 'asset_longname' not in columns:
         cursor.execute('''ALTER TABLE assets ADD COLUMN asset_longname TEXT''')
-    cursor.execute('''CREATE UNIQUE INDEX IF NOT EXISTS asset_longname_idx ON assets(asset_longname)''')
+
+    database.create_indexes(cursor, 'assets', [
+        ['asset_longname'],
+    ], unique=True)
 
     cursor.execute('''SELECT * FROM assets WHERE asset_name = ?''', ('BTC',))
     if not list(cursor):
@@ -377,9 +386,10 @@ def initialise(db):
                       options INTEGER,
                       block_index INTEGER)
                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      addresses_idx ON addresses (address)
-                   ''')
+
+    database.create_indexes(cursor, 'addresses', [
+        ['address'],
+    ])
 
     # Consolidated
     send.initialise(db)
@@ -407,12 +417,10 @@ def initialise(db):
                       timestamp INTEGER)
                   ''')
                       # TODO: FOREIGN KEY (block_index) REFERENCES blocks(block_index) DEFERRABLE INITIALLY DEFERRED)
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON messages (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_message_index_idx ON messages (block_index, message_index)
-                   ''')
+    database.create_indexes(cursor, 'messages', [
+        ['block_index'],
+        ['block_index', 'message_index'],
+    ])
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS transaction_outputs(
                         tx_index,

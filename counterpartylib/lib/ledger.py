@@ -890,6 +890,7 @@ def get_dispensers_count(db, source, status, origin):
             WHERE source = ? AND origin = ?
             GROUP BY source, origin
         ) WHERE status = ?
+        ORDER BY tx_index
     '''
     bindings = (source, origin, status)
     cursor.execute(query, bindings)

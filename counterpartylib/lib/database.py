@@ -180,12 +180,13 @@ def has_fk_on(cursor, table, foreign_key):
     return False
 
 
-def create_indexes(cursor, table, indexes):
+def create_indexes(cursor, table, indexes, unique=False):
     for index in indexes:
         index_name = f"{table}_{'_'.join(index)}_idx"
         fields = ', '.join(index)
+        unique_clause = 'UNIQUE' if unique else ''
         query = f'''
-            CREATE INDEX IF NOT EXISTS {index_name} ON {table} ({fields})
+            CREATE {unique_clause} INDEX IF NOT EXISTS {index_name} ON {table} ({fields})
         '''
         cursor.execute(query)
 

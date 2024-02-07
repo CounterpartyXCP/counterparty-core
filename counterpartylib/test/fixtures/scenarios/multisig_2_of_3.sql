@@ -118,10 +118,10 @@ INSERT INTO blocks VALUES(310099,'3c4c2279cd7de0add5ec469648a845875495a7d54ebfb5
 INSERT INTO blocks VALUES(310100,'96925c05b3c7c80c716f5bef68d161c71d044252c766ca0e3f17f255764242cb',310100000,NULL,NULL,'7e6a09386c3d8552a0dcc25b75143876a3046ebac0ff9cb09d6224ea7e2f3df9','2776deb848ce539546aada2bc1756d9de92b23e0a8d513f5dbfb1b0bb3be3bc5','208676b8b852c828592d00c41826464f76ff5d13b9b1893dadc709af1d8c56c8');
 INSERT INTO blocks VALUES(310101,'369472409995ca1a2ebecbad6bf9dab38c378ab1e67e1bdf13d4ce1346731cd6',310101000,NULL,NULL,'6903c0c5941f334f1374aa731e389b010043fc5940d4e9ae8b94480fb4fca030','6612c5f602f26ccc2cf4961f27e64c188ba405870cc0d7cf881c4e0fcb9a54ce','479617063d286f0cd7f14b809bdce46c0da9da159e106e9a844200e38f02afff');
 -- Triggers and indices on  blocks
-CREATE INDEX block_index_idx ON blocks (block_index)
-                   ;
-CREATE INDEX index_hash_idx ON blocks (block_index, block_hash)
-                   ;
+CREATE INDEX blocks_block_index_block_hash_idx ON blocks (block_index, block_hash)
+        ;
+CREATE INDEX blocks_block_index_idx ON blocks (block_index)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -172,14 +172,16 @@ INSERT INTO transactions VALUES(22,'4408350196e71533e054ef84d1bdc4ba4b0f693d2d98
 INSERT INTO transactions VALUES(23,'181709b341ec136f90975fdaa362c767ebd789e72f16d4e17348ab2985c1bd01',310022,'44435f9a99a0aa12a9bfabdc4cb8119f6ea6a6e1350d2d65445fb66a456db5fc',310022000,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','mvCounterpartyXXXXXXXXXXXXXXW24Hef',100000000,5625,X'',1);
 INSERT INTO transactions VALUES(24,'f4a0c2582fb141e9451a7c00fa61afc147b9959c2dd20a1978950936fdb53831',310023,'d8cf5bec1bbcab8ca4f495352afde3b6572b7e1d61b3976872ebb8e9d30ccb08',310023000,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3',1000,7650,X'0000000000000000000047680000000000002710',1);
 -- Triggers and indices on  transactions
-CREATE INDEX index_hash_index_idx ON transactions (tx_index, tx_hash, block_index)
-                   ;
-CREATE INDEX index_index_idx ON transactions (block_index, tx_index)
-                   ;
-CREATE INDEX tx_hash_idx ON transactions (tx_hash)
-                   ;
-CREATE INDEX tx_index_idx ON transactions (tx_index)
-                   ;
+CREATE INDEX transactions_block_index_idx ON transactions (block_index)
+        ;
+CREATE INDEX transactions_block_index_tx_index_idx ON transactions (block_index, tx_index)
+        ;
+CREATE INDEX transactions_tx_hash_idx ON transactions (tx_hash)
+        ;
+CREATE INDEX transactions_tx_index_idx ON transactions (tx_index)
+        ;
+CREATE INDEX transactions_tx_index_tx_hash_block_index_idx ON transactions (tx_index, tx_hash, block_index)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -260,8 +262,14 @@ INSERT INTO balances VALUES('2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZN
 INSERT INTO balances VALUES('2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3','BBBC',10526,310023,24);
 INSERT INTO balances VALUES('2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','BBBB',996000000,310032,0);
 -- Triggers and indices on  balances
-CREATE INDEX address_asset_idx ON balances (address, asset)
-                   ;
+CREATE INDEX balances_address_asset_idx ON balances (address, asset)
+        ;
+CREATE INDEX balances_address_idx ON balances (address)
+        ;
+CREATE INDEX balances_asset_idx ON balances (asset)
+        ;
+CREATE INDEX balances_block_index_idx ON balances (block_index)
+        ;
 CREATE TRIGGER block_update_balances
                            BEFORE UPDATE ON balances BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
@@ -326,8 +334,14 @@ INSERT INTO balances VALUES('2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZN
 INSERT INTO balances VALUES('2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3','BBBC',10526,310023,24);
 INSERT INTO balances VALUES('2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','BBBB',996000000,310032,0);
 -- Triggers and indices on  balances
-CREATE INDEX address_asset_idx ON balances (address, asset)
-                   ;
+CREATE INDEX balances_address_asset_idx ON balances (address, asset)
+        ;
+CREATE INDEX balances_address_idx ON balances (address)
+        ;
+CREATE INDEX balances_asset_idx ON balances (asset)
+        ;
+CREATE INDEX balances_block_index_idx ON balances (block_index)
+        ;
 CREATE TRIGGER block_update_balances
                            BEFORE UPDATE ON balances BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
@@ -382,6 +396,10 @@ CREATE TRIGGER block_update_credits
                            BEFORE UPDATE ON credits BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
+CREATE INDEX credits_address_idx ON credits (address)
+        ;
+CREATE INDEX credits_asset_idx ON credits (asset)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -420,14 +438,14 @@ INSERT INTO debits VALUES(310017,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddV
 INSERT INTO debits VALUES(310021,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','BBBB',50000000,'open order','4408350196e71533e054ef84d1bdc4ba4b0f693d2d98d240d3c697b553078ab7',22);
 INSERT INTO debits VALUES(310023,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','BBBC',10000,'send','f4a0c2582fb141e9451a7c00fa61afc147b9959c2dd20a1978950936fdb53831',24);
 -- Triggers and indices on  debits
-CREATE INDEX address_idx ON debits (address)
-                   ;
-CREATE INDEX asset_idx ON debits (asset)
-                   ;
 CREATE TRIGGER block_update_debits
                            BEFORE UPDATE ON debits BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
+CREATE INDEX debits_address_idx ON debits (address)
+        ;
+CREATE INDEX debits_asset_idx ON debits (asset)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -514,12 +532,14 @@ INSERT INTO messages VALUES(64,310032,'insert','orders','[''block_index'', ''exp
 INSERT INTO messages VALUES(65,310032,'update','orders','[''status'', ''tx_hash'']',0);
 INSERT INTO messages VALUES(66,310032,'insert','order_expirations','[''block_index'', ''order_hash'', ''source'']',0);
 -- Triggers and indices on  messages
-CREATE INDEX block_index_message_index_idx ON messages (block_index, message_index)
-                   ;
 CREATE TRIGGER block_update_messages
                            BEFORE UPDATE ON messages BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
+CREATE INDEX messages_block_index_idx ON messages (block_index)
+        ;
+CREATE INDEX messages_block_index_message_index_idx ON messages (block_index, message_index)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1081,6 +1101,8 @@ CREATE TABLE "issuances"(
 INSERT INTO issuances VALUES(6,'9238105e39efd4b7d428ad14011ad0c0f366bdcd150afa954e1f25c0cf4c2cc9',0,310005,'BBBB',1000000000,1,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'',50000000,0,'valid',NULL,0);
 INSERT INTO issuances VALUES(7,'19d9d6059edf351635fa19ad867ccfa1db3959a5109fc63729430110a661b6e8',0,310006,'BBBC',100000,0,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'foobar',50000000,0,'valid',NULL,0);
 -- Triggers and indices on  issuances
+CREATE INDEX asset_longname_idx ON issuances (asset_longname)
+                   ;
 CREATE TRIGGER block_update_issuances
                            BEFORE UPDATE ON issuances BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
@@ -1117,6 +1139,10 @@ INSERT INTO sends VALUES(8,'b25659252f68f162d96cf2cf3070b30e5913b472cbace76985e3
 INSERT INTO sends VALUES(9,'592e248181970aa6f97f2cfe133323d3ffb2095dd7f411cfd20b1ab611238a11',310008,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3','BBBC',526,'valid',0,NULL);
 INSERT INTO sends VALUES(24,'f4a0c2582fb141e9451a7c00fa61afc147b9959c2dd20a1978950936fdb53831',310023,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3','BBBC',10000,'valid',0,NULL);
 -- Triggers and indices on  sends
+CREATE INDEX asset_idx ON sends (asset)
+                   ;
+CREATE INDEX block_index_idx ON sends (block_index)
+                   ;
 CREATE TRIGGER block_update_sends
                            BEFORE UPDATE ON sends BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
@@ -1317,6 +1343,8 @@ CREATE TABLE destructions(
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  destructions
+CREATE INDEX address_idx ON destructions (source)
+                   ;
 CREATE TRIGGER block_update_destructions
                            BEFORE UPDATE ON destructions BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
@@ -1344,15 +1372,16 @@ INSERT INTO assets VALUES('1','XCP',NULL,NULL);
 INSERT INTO assets VALUES('18279','BBBB',310005,NULL);
 INSERT INTO assets VALUES('18280','BBBC',310006,NULL);
 -- Triggers and indices on  assets
-CREATE UNIQUE INDEX asset_longname_idx ON assets(asset_longname);
+CREATE INDEX assets_asset_id_idx ON assets (asset_id)
+        ;
+CREATE UNIQUE INDEX assets_asset_longname_idx ON assets (asset_longname)
+        ;
+CREATE INDEX assets_asset_name_idx ON assets (asset_name)
+        ;
 CREATE TRIGGER block_update_assets
                            BEFORE UPDATE ON assets BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
-CREATE INDEX id_idx ON assets (asset_id)
-                   ;
-CREATE INDEX name_idx ON assets (asset_name)
-                   ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1369,8 +1398,8 @@ CREATE TABLE addresses(
                       options INTEGER,
                       block_index INTEGER);
 -- Triggers and indices on  addresses
-CREATE INDEX addresses_idx ON addresses (address)
-                   ;
+CREATE INDEX addresses_address_idx ON addresses (address)
+        ;
 CREATE TRIGGER block_update_addresses
                            BEFORE UPDATE ON addresses BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
