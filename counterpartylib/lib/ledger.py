@@ -975,7 +975,7 @@ def get_dispensers(db, status_in=None, source=None, asset=None, origin=None, sta
             SELECT *, MAX(rowid)
             FROM dispensers
             {first_where_str}
-            GROUP BY tx_hash
+            GROUP BY asset, source
         ) {second_where_str}
         {order_clause}
     '''
