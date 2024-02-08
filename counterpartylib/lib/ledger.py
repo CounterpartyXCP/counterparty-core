@@ -940,7 +940,7 @@ def get_dispenser(db, tx_hash):
     return cursor.fetchall()
 
 
-def get_dispensers(db, status_in=None, source=None, asset=None, origin=None, status=None, tx_hash=None):
+def get_dispensers(db, status_in=None, source=None, asset=None, origin=None, status=None, tx_hash=None, order_by=None):
     cursor = db.cursor()
     bindings = []
     # where for immutable fields
@@ -969,6 +969,7 @@ def get_dispensers(db, status_in=None, source=None, asset=None, origin=None, sta
     second_where_str = ' AND '.join(second_where)
     if second_where_str != '':
         second_where_str = f'WHERE ({second_where_str})'
+    order_clause = f'ORDER BY {order_by}' if order_by is not None else 'ORDER BY tx_index'
     query = f'''
         SELECT * FROM (
             SELECT *, MAX(rowid)
@@ -976,7 +977,7 @@ def get_dispensers(db, status_in=None, source=None, asset=None, origin=None, sta
             {first_where_str}
             GROUP BY tx_hash
         ) {second_where_str}
-        ORDER BY tx_index
+        {order_clause}
     '''
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()

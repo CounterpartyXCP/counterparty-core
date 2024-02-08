@@ -534,7 +534,7 @@ def dispense(db, tx):
     for next_out in outs:
         dispensers = []
         if next_out['destination'] is not None:
-            dispensers = ledger.get_dispensers(db, source=next_out['destination'], status_in=[0, 11])
+            dispensers = ledger.get_dispensers(db, source=next_out['destination'], status_in=[0, 11], order_by="asset")
 
         for dispenser in dispensers:
             satoshirate = dispenser['satoshirate']
