@@ -888,7 +888,7 @@ def get_dispensers_count(db, source, status, origin):
             SELECT *, MAX(rowid)
             FROM dispensers
             WHERE source = ? AND origin = ?
-            GROUP BY source, origin
+            GROUP BY tx_hash
         ) WHERE status = ?
         ORDER BY tx_index
     '''
