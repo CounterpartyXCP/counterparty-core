@@ -1605,7 +1605,7 @@ def holders(db, asset, exclude_empty_holders=False):
                 SELECT *, MAX(rowid)
                 FROM dispensers
                 WHERE asset = ?
-                GROUP BY tx_hash
+                GROUP BY source, asset
             ) WHERE status = ?
         '''
         bindings = (asset, 0)
