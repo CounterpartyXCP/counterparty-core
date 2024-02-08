@@ -90,7 +90,7 @@ def main():
     parser_kickstart = subparsers.add_parser('kickstart', help='rapidly build database by reading from Bitcoin Core blockchain')
     parser_kickstart.add_argument('--bitcoind-dir', help='Bitcoin Core data directory')
     parser_kickstart.add_argument('--last-hash', help='Last block to parse')
-    parser_kickstart.add_argument('--resume', action='store_true', default=False, help='Try to resume parsing from last block parsed')
+    parser_kickstart.add_argument('--resume-from', help='`last` or a block index. Try to resume parsing from the given block. `last` will resume from the last block in the database.')
 
     parser_bootstrap = subparsers.add_parser('bootstrap', help='bootstrap database with hosted snapshot')
     parser_bootstrap.add_argument('-q', '--quiet', dest='quiet', action='store_true', help='suppress progress bar')
@@ -173,7 +173,7 @@ def main():
             bitcoind_dir=args.bitcoind_dir, 
             force=args.force,
             last_hash=args.last_hash,
-            resume=args.resume)
+            resume_from=args.resume_from)
 
     elif args.action == 'start':
         server.start_all(db)
