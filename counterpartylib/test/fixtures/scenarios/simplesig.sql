@@ -949,12 +949,14 @@ CREATE TRIGGER block_update_broadcasts
                            BEFORE UPDATE ON broadcasts BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
-CREATE INDEX status_source_idx ON broadcasts (status, source)
-                   ;
-CREATE INDEX status_source_index_idx ON broadcasts (status, source, tx_index)
-                   ;
-CREATE INDEX timestamp_idx ON broadcasts (timestamp)
-                   ;
+CREATE INDEX broadcasts_block_index_idx ON broadcasts (block_index)
+        ;
+CREATE INDEX broadcasts_status_source_idx ON broadcasts (status, source)
+        ;
+CREATE INDEX broadcasts_status_source_tx_index_idx ON broadcasts (status, source, tx_index)
+        ;
+CREATE INDEX broadcasts_timestamp_idx ON broadcasts (timestamp)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -982,6 +984,12 @@ CREATE TRIGGER block_update_btcpays
                            BEFORE UPDATE ON btcpays BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
+CREATE INDEX btcpays_block_index_idx ON btcpays (block_index)
+        ;
+CREATE INDEX btcpays_destination_idx ON btcpays (destination)
+        ;
+CREATE INDEX btcpays_source_idx ON btcpays (source)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1009,6 +1017,10 @@ CREATE TRIGGER block_update_burns
                            BEFORE UPDATE ON burns BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
+CREATE INDEX burns_source_idx ON burns (source)
+        ;
+CREATE INDEX burns_status_idx ON burns (status)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1034,7 +1046,9 @@ CREATE TRIGGER block_update_cancels
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
 CREATE INDEX cancels_block_index_idx ON cancels (block_index)
-                   ;
+        ;
+CREATE INDEX cancels_source_idx ON cancels (source)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1064,6 +1078,12 @@ CREATE TRIGGER block_update_dividends
                            BEFORE UPDATE ON dividends BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
+CREATE INDEX dividends_asset_idx ON dividends (asset)
+        ;
+CREATE INDEX dividends_block_index_idx ON dividends (block_index)
+        ;
+CREATE INDEX dividends_source_idx ON dividends (source)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1101,15 +1121,22 @@ CREATE TABLE "issuances"(
 INSERT INTO issuances VALUES(6,'5d951d44d034cb6fd5dc5c98cd877c63f55c1ae108d335b6b6d991d072856adf',0,310005,'BBBB',1000000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',50000000,0,'valid',NULL,0);
 INSERT INTO issuances VALUES(7,'2b44f590422a3ab5b70fb1265a2e4f4d3b0bcb3de3f296dc7280924870ec8c59',0,310006,'BBBC',100000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'foobar',50000000,0,'valid',NULL,0);
 -- Triggers and indices on  issuances
-CREATE INDEX asset_longname_idx ON issuances (asset_longname)
-                   ;
 CREATE TRIGGER block_update_issuances
                            BEFORE UPDATE ON issuances BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
-CREATE INDEX status_asset_txindex_idx ON issuances(status, asset, tx_index DESC);
-CREATE INDEX valid_asset_idx ON issuances (asset, status)
-                   ;
+CREATE INDEX issuances_asset_longname_idx ON issuances (asset_longname)
+        ;
+CREATE INDEX issuances_asset_status_idx ON issuances (asset, status)
+        ;
+CREATE INDEX issuances_block_index_idx ON issuances (block_index)
+        ;
+CREATE INDEX issuances_source_idx ON issuances (source)
+        ;
+CREATE INDEX issuances_status_asset_tx_index_idx ON issuances (status, asset, tx_index DESC)
+        ;
+CREATE INDEX issuances_status_idx ON issuances (status)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1139,20 +1166,20 @@ INSERT INTO sends VALUES(8,'5836fb23c2bb94eeb4b71cb8e3c622c6d943b3e4ed3aebee42d2
 INSERT INTO sends VALUES(9,'843e6f7712b7847099502bda8a4bd7127c17a2799290b91ef1584a6bfe069412',310008,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',526,'valid',0,NULL);
 INSERT INTO sends VALUES(24,'58b89d056b539d2cf9ddac4518ccca6744495127e0ce893eb71da2599cbf85ab',310023,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',10000,'valid',0,NULL);
 -- Triggers and indices on  sends
-CREATE INDEX asset_idx ON sends (asset)
-                   ;
-CREATE INDEX block_index_idx ON sends (block_index)
-                   ;
 CREATE TRIGGER block_update_sends
                            BEFORE UPDATE ON sends BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
-CREATE INDEX destination_idx ON sends (destination)
-                   ;
-CREATE INDEX memo_idx ON sends (memo)
-                   ;
-CREATE INDEX source_idx ON sends (source)
-                   ;
+CREATE INDEX sends_asset_idx ON sends (asset)
+        ;
+CREATE INDEX sends_block_index_idx ON sends (block_index)
+        ;
+CREATE INDEX sends_destination_idx ON sends (destination)
+        ;
+CREATE INDEX sends_memo_idx ON sends (memo)
+        ;
+CREATE INDEX sends_source_idx ON sends (source)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1233,8 +1260,12 @@ CREATE TRIGGER block_update_rpsresolves
                            BEFORE UPDATE ON rpsresolves BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
-CREATE INDEX rps_match_id_idx ON rpsresolves (rps_match_id)
-                   ;
+CREATE INDEX rpsresolves_block_index_idx ON rpsresolves (block_index)
+        ;
+CREATE INDEX rpsresolves_rps_match_id_idx ON rpsresolves (rps_match_id)
+        ;
+CREATE INDEX rpsresolves_source_idx ON rpsresolves (source)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1343,14 +1374,14 @@ CREATE TABLE destructions(
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  destructions
-CREATE INDEX address_idx ON destructions (source)
-                   ;
 CREATE TRIGGER block_update_destructions
                            BEFORE UPDATE ON destructions BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
-CREATE INDEX status_idx ON destructions (status)
-                   ;
+CREATE INDEX destructions_source_idx ON destructions (source)
+        ;
+CREATE INDEX destructions_status_idx ON destructions (status)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1431,6 +1462,14 @@ CREATE TRIGGER block_update_sweeps
                            BEFORE UPDATE ON sweeps BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
+CREATE INDEX sweeps_block_index_idx ON sweeps (block_index)
+        ;
+CREATE INDEX sweeps_destination_idx ON sweeps (destination)
+        ;
+CREATE INDEX sweeps_memo_idx ON sweeps (memo)
+        ;
+CREATE INDEX sweeps_source_idx ON sweeps (source)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;

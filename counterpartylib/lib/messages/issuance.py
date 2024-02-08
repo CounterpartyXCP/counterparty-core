@@ -11,7 +11,7 @@ import logging
 logger = logging.getLogger(__name__)
 D = decimal.Decimal
 
-from counterpartylib.lib import (config, util, exceptions, util, message_type, ledger)
+from counterpartylib.lib import (config, util, exceptions, util, message_type, ledger, database)
 
 FORMAT_1 = '>QQ?'
 LENGTH_1 = 8 + 8 + 1
@@ -32,6 +32,17 @@ DESCRIPTION_NULL_ACTION = "NULL"
 
 def initialise(db):
     cursor = db.cursor()
+
+    # remove misnamed indexes
+    database.drop_indexes(cursor, [
+        'block_index_idx',
+        'valid_asset_idx',
+        'status_idx',
+        'source_idx',
+        'asset_longname_idx',
+        'status_asset_txindex_idx'
+    ])
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS issuances(
                       tx_index INTEGER PRIMARY KEY,
                       tx_hash TEXT UNIQUE,
@@ -98,26 +109,14 @@ def initialise(db):
             cursor.execute('DROP TABLE issuances')
             cursor.execute('ALTER TABLE new_issuances RENAME TO issuances')
 
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON issuances (block_index)
-                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      valid_asset_idx ON issuances (asset, status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_idx ON issuances (status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON issuances (source)
-                   ''')
-
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      asset_longname_idx ON issuances (asset_longname)
-                   ''')
-
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_asset_txindex_idx ON issuances(status, asset, tx_index DESC);
-                   ''')
+    database.create_indexes(cursor, 'issuances', [
+        ['block_index'],
+        ['asset', 'status'],
+        ['status'],
+        ['source'],
+        ['asset_longname'],
+        ['status', 'asset', 'tx_index DESC']
+    ])
 
 
 def validate (db, source, destination, asset, quantity, divisible, lock, reset, callable_, call_date, call_price, description, subasset_parent, subasset_longname, block_index):
@@ -392,6 +391,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         destination_outputs = []
     return (source, destination_outputs, data)
 
+
 def parse (db, tx, message, message_type_id):
     issuance_parse_cursor = db.cursor()
     asset_format = ledger.get_value_by_block_index("issuance_asset_serialization_format",tx['block_index'])
@@ -649,5 +649,3 @@ def parse (db, tx, message, message_type_id):
             ledger.credit(db, tx['source'], asset, quantity, tx['tx_index'], action="issuance", event=tx['tx_hash'])
 
         issuance_parse_cursor.close()
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

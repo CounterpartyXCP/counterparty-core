@@ -4,7 +4,7 @@ import struct
 
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import config
-from counterpartylib.lib import util
+from counterpartylib.lib import database
 from counterpartylib.lib import ledger
 from counterpartylib.lib import message_type
 from counterpartylib.lib import address
@@ -25,6 +25,15 @@ FLAGS_ALL = FLAG_BINARY_MEMO | FLAG_BALANCES | FLAG_OWNERSHIP
 
 def initialise(db):
     cursor = db.cursor()
+
+    # remove misnamed indexes
+    database.drop_indexes(cursor, [
+        'block_index_idx',
+        'source_idx',
+        'destination_idx',
+        'memo_idx',
+    ])
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS sweeps(
                       tx_index INTEGER PRIMARY KEY,
                       tx_hash TEXT UNIQUE,
@@ -37,18 +46,13 @@ def initialise(db):
                       fee_paid INTEGER,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON sweeps (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON sweeps (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      destination_idx ON sweeps (destination)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      memo_idx ON sweeps (memo)
-                   ''')
+
+    database.create_indexes(cursor, 'sweeps', [
+        ['block_index'],
+        ['source'],
+        ['destination'],
+        ['memo'],
+    ])
 
 
 def validate (db, source, destination, flags, memo, block_index):
@@ -88,6 +92,7 @@ def validate (db, source, destination, flags, memo, block_index):
 
     return problems, total_fee
 
+
 def compose (db, source, destination, flags, memo):
     if memo is None:
         memo = b''
@@ -108,6 +113,7 @@ def compose (db, source, destination, flags, memo):
     data += memo
 
     return (source, [], data)
+
 
 def unpack(db, message, block_index):
     try:
@@ -136,6 +142,7 @@ def unpack(db, message, block_index):
       'memo': memo_bytes,
     }
     return unpacked
+
 
 def parse (db, tx, message):
     cursor = db.cursor()

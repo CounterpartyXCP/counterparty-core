@@ -13,6 +13,7 @@ from counterpartylib.lib import util
 from counterpartylib.lib import log
 from counterpartylib.lib import message_type
 from counterpartylib.lib import ledger
+from counterpartylib.lib import database
 
 FORMAT = '>32s32s'
 LENGTH = 32 + 32
@@ -20,6 +21,14 @@ ID = 11
 
 def initialise(db):
     cursor = db.cursor()
+
+    # remove misnamed indexes
+    database.drop_indexes(cursor, [
+        'block_index_idx',
+        'source_idx',
+        'destination_idx',
+    ])
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS btcpays(
                       tx_index INTEGER PRIMARY KEY,
                       tx_hash TEXT UNIQUE,
@@ -31,16 +40,14 @@ def initialise(db):
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
-                      # Disallows invalids: FOREIGN KEY (order_match_id) REFERENCES order_matches(id))
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON btcpays (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON btcpays (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      destination_idx ON btcpays (destination)
-                   ''')
+
+    database.create_indexes(cursor, 'btcpays', [
+        ['block_index'],
+        ['source'],
+        ['destination'],
+    ])
+
+
 def validate (db, source, order_match_id, block_index):
     problems = []
     order_match = None
@@ -83,6 +90,7 @@ def validate (db, source, order_match_id, block_index):
 
     return destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems
 
+
 def compose (db, source, order_match_id):
     tx0_hash, tx1_hash = util.parse_id(order_match_id)
 
@@ -100,6 +108,7 @@ def compose (db, source, order_match_id):
     data = message_type.pack(ID)
     data += struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
     return (source, [(destination, btc_quantity)], data)
+
 
 def parse (db, tx, message):
     cursor = db.cursor()
@@ -168,5 +177,3 @@ def parse (db, tx, message):
 
 
     cursor.close()
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

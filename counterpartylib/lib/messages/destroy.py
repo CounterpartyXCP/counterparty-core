@@ -7,7 +7,7 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 
-from counterpartylib.lib import util
+from counterpartylib.lib import database
 from counterpartylib.lib import config
 from counterpartylib.lib import script
 from counterpartylib.lib import message_type
@@ -23,6 +23,13 @@ ID = 110
 
 def initialise(db):
     cursor = db.cursor()
+
+    # remove misnamed indexes
+    database.drop_indexes(cursor, [
+        'status_idx',
+        'address_idx',
+    ])
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS destructions(
                       tx_index INTEGER PRIMARY KEY,
                       tx_hash TEXT UNIQUE,
@@ -34,12 +41,11 @@ def initialise(db):
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_idx ON destructions (status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      address_idx ON destructions (source)
-                   ''')
+
+    database.create_indexes(cursor, 'destructions', [
+        ['status'],
+        ['source'],
+    ])
 
 
 def pack(db, asset, quantity, tag):

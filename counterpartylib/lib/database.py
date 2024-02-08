@@ -182,7 +182,8 @@ def has_fk_on(cursor, table, foreign_key):
 
 def create_indexes(cursor, table, indexes, unique=False):
     for index in indexes:
-        index_name = f"{table}_{'_'.join(index)}_idx"
+        field_names = [field.split(' ')[0] for field in index]
+        index_name = f"{table}_{'_'.join(field_names)}_idx"
         fields = ', '.join(index)
         unique_clause = 'UNIQUE' if unique else ''
         query = f'''

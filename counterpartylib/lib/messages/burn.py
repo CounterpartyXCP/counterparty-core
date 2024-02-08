@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 D = decimal.Decimal
 from fractions import Fraction
 
-from counterpartylib.lib import (config, exceptions, util, ledger)
+from counterpartylib.lib import (config, exceptions, database, ledger)
 
 """Burn {} to earn {} during a special period of time.""".format(config.BTC, config.XCP)
 
@@ -16,6 +16,13 @@ ID = 60
 
 def initialise (db):
     cursor = db.cursor()
+
+    # remove misnamed indexes
+    database.drop_indexes(cursor, [
+        'status_idx',
+        'address_idx',
+    ])
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS burns(
                       tx_index INTEGER PRIMARY KEY,
                       tx_hash TEXT UNIQUE,
@@ -26,12 +33,12 @@ def initialise (db):
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_idx ON burns (status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      address_idx ON burns (source)
-                   ''')
+
+    database.create_indexes(cursor, 'burns', [
+        ['status'],
+        ['source'],
+    ])
+
 
 def validate (db, source, destination, quantity, block_index, overburn=False):
     problems = []

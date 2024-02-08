@@ -37,6 +37,7 @@ from counterpartylib.lib import util
 from counterpartylib.lib import log
 from counterpartylib.lib import message_type
 from counterpartylib.lib import ledger
+from counterpartylib.lib import database
 
 from . import (bet)
 
@@ -47,6 +48,15 @@ ID = 30
 
 def initialise(db):
     cursor = db.cursor()
+
+    # remove misnamed indexes
+    database.drop_indexes(cursor, [
+        'block_index_idx',
+        'status_source_idx',
+        'status_source_index_idx',
+        'timestamp_idx',
+    ])
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS broadcasts(
                       tx_index INTEGER PRIMARY KEY,
                       tx_hash TEXT UNIQUE,
@@ -60,18 +70,13 @@ def initialise(db):
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON broadcasts (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_source_idx ON broadcasts (status, source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_source_index_idx ON broadcasts (status, source, tx_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      timestamp_idx ON broadcasts (timestamp)
-                   ''')
+
+    database.create_indexes(cursor, 'broadcasts', [
+        ['block_index'],
+        ['status', 'source'],
+        ['status', 'source', 'tx_index'],
+        ['timestamp'],
+    ])
 
 def validate (db, source, timestamp, value, fee_fraction_int, text, block_index):
     problems = []

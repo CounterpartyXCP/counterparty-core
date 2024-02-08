@@ -8,7 +8,7 @@ D = decimal.Decimal
 import logging
 logger = logging.getLogger(__name__)
 
-from counterpartylib.lib import (config, exceptions, util, message_type, ledger)
+from counterpartylib.lib import (config, exceptions, database, message_type, ledger)
 
 FORMAT_1 = '>QQ'
 LENGTH_1 = 8 + 8
@@ -18,6 +18,14 @@ ID = 50
 
 def initialise (db):
     cursor = db.cursor()
+
+    # remove misnamed indexes
+    database.drop_indexes(cursor, [
+        'block_index_idx',
+        'source_idx',
+        'asset_idx',
+    ])
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS dividends(
                       tx_index INTEGER PRIMARY KEY,
                       tx_hash TEXT UNIQUE,
@@ -30,15 +38,13 @@ def initialise (db):
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON dividends (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON dividends (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      asset_idx ON dividends (asset)
-                   ''')
+
+    database.create_indexes(cursor, 'dividends', [
+        ['block_index'],
+        ['source'],
+        ['asset'],
+    ])
+
 
 def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index):
     cursor = db.cursor()
@@ -141,6 +147,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
         return  None, None, problems, 0
     return dividend_total, outputs, problems, fee
 
+
 def compose (db, source, quantity_per_unit, asset, dividend_asset):
     # resolve subassets
     asset = ledger.resolve_subasset_longname(db, asset)
@@ -158,6 +165,7 @@ def compose (db, source, quantity_per_unit, asset, dividend_asset):
     data = message_type.pack(ID)
     data += struct.pack(FORMAT_2, quantity_per_unit, asset_id, dividend_asset_id)
     return (source, [], data)
+
 
 def parse (db, tx, message):
     dividend_parse_cursor = db.cursor()
@@ -224,5 +232,3 @@ def parse (db, tx, message):
         logger.debug("Bindings: %s" % (json.dumps(bindings), ))
 
     dividend_parse_cursor.close()
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

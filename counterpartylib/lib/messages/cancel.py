@@ -10,7 +10,7 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 
-from counterpartylib.lib import (config, exceptions, ledger, message_type)
+from counterpartylib.lib import (database, exceptions, ledger, message_type)
 from . import (order, bet, rps)
 
 FORMAT = '>32s'
@@ -19,6 +19,12 @@ ID = 70
 
 def initialise (db):
     cursor = db.cursor()
+
+    # remove misnamed indexes
+    database.drop_indexes(cursor, [
+        'source_idx',
+    ])
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS cancels(
                       tx_index INTEGER PRIMARY KEY,
                       tx_hash TEXT UNIQUE,
@@ -29,12 +35,11 @@ def initialise (db):
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
                       # Offer hash is not a foreign key. (And it cannot be, because of some invalid cancels.)
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      cancels_block_index_idx ON cancels (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON cancels (source)
-                   ''')
+
+    database.create_indexes(cursor, 'cancels', [
+        ['block_index'],
+        ['source'],
+    ])
 
 def validate (db, source, offer_hash):
     problems = []

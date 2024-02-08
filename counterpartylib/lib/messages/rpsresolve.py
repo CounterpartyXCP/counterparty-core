@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 import string
 
-from counterpartylib.lib import (config, exceptions, util, message_type, ledger)
+from counterpartylib.lib import (database, exceptions, util, message_type, ledger)
 from . import rps
 
 # move random rps_match_id
@@ -16,6 +16,14 @@ ID = 81
 
 def initialise (db):
     cursor = db.cursor()
+
+    # remove misnamed indexes
+    database.drop_indexes(cursor, [
+        'block_index_idx',
+        'source_idx',
+        'rps_match_id_idx'
+    ])
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS rpsresolves(
                       tx_index INTEGER PRIMARY KEY,
                       tx_hash TEXT UNIQUE,
@@ -27,15 +35,13 @@ def initialise (db):
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON rpsresolves (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON rpsresolves (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      rps_match_id_idx ON rpsresolves (rps_match_id)
-                   ''')
+
+    database.create_indexes(cursor, 'rpsresolves', [
+        ['block_index'],
+        ['source'],
+        ['rps_match_id'],
+    ])
+
 
 def validate (db, source, move, random, rps_match_id):
     problems = []
@@ -96,6 +102,7 @@ def validate (db, source, move, random, rps_match_id):
 
     return txn, rps_match, problems
 
+
 def compose (db, source, move, random, rps_match_id):
     tx0_hash, tx1_hash = util.parse_id(rps_match_id)
 
@@ -113,6 +120,7 @@ def compose (db, source, move, random, rps_match_id):
     data = message_type.pack(ID)
     data += struct.pack(FORMAT, move, random_bytes, tx0_hash_bytes, tx1_hash_bytes)
     return (source, [], data)
+
 
 def parse (db, tx, message):
     cursor = db.cursor()
@@ -176,6 +184,7 @@ def parse (db, tx, message):
     cursor.execute(sql, rpsresolves_bindings)
 
     cursor.close()
+
 
 # https://en.wikipedia.org/wiki/Rock-paper-scissors#Additional_weapons:
 def resolve_game(db, resovlerps1, resovlerps2):
