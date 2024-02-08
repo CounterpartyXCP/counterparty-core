@@ -414,10 +414,12 @@ def parse (db, tx, message):
 
                                 dispenser_tx_hash = ledger.get_dispensers(db, source=action_address, asset=asset, status=STATUS_OPEN)[0]["tx_hash"]
                                 bindings_refill = {
-                                    'tx_index': tx["tx_index"],
-                                    'tx_hash': tx["tx_hash"],
-                                    'block_index': tx["block_index"],
+                                    'tx_index':tx["tx_index"],
+                                    'tx_hash':tx["tx_hash"],
+                                    'block_index':tx["block_index"],
                                     'source': tx['source'],
+                                    'destination': action_address,
+                                    'asset': asset,
                                     'dispenser_quantity': escrow_quantity,
                                     'dispenser_tx_hash': dispenser_tx_hash
                                 }
