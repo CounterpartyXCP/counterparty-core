@@ -464,12 +464,13 @@ def get_tx_info(tx_hex, block_parser=None, block_index=None, db=None):
         if ledger.enabled('dispensers', block_index):
             try:
                 return b'', None, None, None, None, _get_swap_tx(e.decodedTx, block_parser, block_index, db=db)
-            except DecodeError: # (DecodeError, backend.indexd.BackendRPCError) as e:
+            except: # (DecodeError, backend.indexd.BackendRPCError) as e:
                 return b'', None, None, None, None, None
         else:
             return b'', None, None, None, None, None
 
 def _get_swap_tx(decoded_tx, block_parser=None, block_index=None, db=None):
+
     def get_pubkeyhash(scriptpubkey):
         asm = script.get_asm(scriptpubkey)
         
@@ -536,6 +537,7 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None, db=None):
                 amount = vout.nValue
             else:
                 logger.error('cannot parse destination address or new_data found: ' + str(asm))
+
 
         if db != None and dispenser.is_dispensable(db, destination, btc_amount):
             check_sources = True
@@ -680,7 +682,7 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
 
     # Only look for source if data were found or destination is UNSPENDABLE, for speed.
     if not data and destination != config.UNSPENDABLE:
-        raise BTCOnlyError('no data and not unspendable', ctx)
+        raise BTCOnlyError('no data and not unspendable')
 
     # Collect all possible source addresses; ignore coinbase transactions and anything but the simplest Pay‐to‐PubkeyHash inputs.
     source_list = []
@@ -884,7 +886,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
             data += new_data
     # Only look for source if data were found or destination is `UNSPENDABLE`,
     # for speed.
-    if not data and destinations != [config.UNSPENDABLE,]:
+    if not data and destinations != [config.UNSPENDABLE,]: 
         raise BTCOnlyError('no data and not unspendable', ctx)
 
     # Collect all (unique) source addresses.
@@ -1173,6 +1175,16 @@ def kickstart(bitcoind_dir, force=False, last_hash=None, resume=True, resume_fro
             resume_block_index = int(resume_from)
             for table in TABLES + ['transaction_outputs', 'transactions']:
                 clean_table_from(memory_cursor, table, resume_block_index)
+            memory_cursor.execute('''UPDATE blocks
+                                     SET txlist_hash = :txlist_hash, 
+                                         ledger_hash = :ledger_hash,
+                                         messages_hash = :messages_hash
+                                     WHERE block_index > :block_index''', {
+                                      'txlist_hash': None,
+                                      'ledger_hash': None,
+                                      'messages_hash': None,
+                                      'block_index': resume_block_index
+                                    })
         # get last parsed transaction
         memory_cursor.execute('''SELECT block_index, tx_index FROM transactions ORDER BY block_index DESC, tx_index DESC LIMIT 1''')
         last_transaction = memory_cursor.fetchone()
@@ -1213,6 +1225,8 @@ def kickstart(bitcoind_dir, force=False, last_hash=None, resume=True, resume_fro
                 # Parse the transactions in the block.
                 parse_block(memory_db, block['block_index'], block['block_time'])
             last_parsed_block = block['block_index']
+            if block['block_hash'] == last_known_hash:
+                break
             # let's have a nice message
             block_parsed_count += 1
             block_parsing_duration = time.time() - start_time_block_parse

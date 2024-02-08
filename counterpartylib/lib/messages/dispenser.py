@@ -498,7 +498,7 @@ def parse (db, tx, message):
 
 def is_dispensable(db, address, amount):
     if address is None:
-        raise exceptions.DecodeError
+        return False
 
     dispensers = ledger.get_dispensers(db, source=address, status_in=[0, 11])
 
