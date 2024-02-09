@@ -212,7 +212,7 @@ def transfer(db, source, destination, asset, quantity, action, event):
     credit(db, destination, asset, quantity, action=action, event=event)
 
 
-def get_balance(db, address, asset, raise_error_if_no_balance=False):
+def get_balance(db, address, asset, raise_error_if_no_balance=False, return_list=False):
     """Get balance of contract or address."""
     cursor = db.cursor()
     query = '''
@@ -223,6 +223,8 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False):
     bindings = (address, asset)
     balances = list(cursor.execute(query, bindings))
     cursor.close()
+    if return_list:
+        return balances
     if not balances and raise_error_if_no_balance:
         raise exceptions.BalanceError(f'No balance for this address and asset: {address}, {asset}.')
     if not balances:

@@ -182,11 +182,11 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
         problems.append('invalid status %i' % status)
 
     cursor = db.cursor()
-    available = ledger.get_balance(db, source, asset)
+    available = ledger.get_balance(db, source, asset, return_list=True)
 
-    if available == 0:
+    if len(available) == 0:
         problems.append('address doesn\'t has the asset %s' % asset)
-    elif available < escrow_quantity:
+    elif len(available) >= 1 and available[0]['quantity'] < escrow_quantity:
         problems.append('address doesn\'t has enough balance of %s (%i < %i)' % (asset, available, escrow_quantity))
     else:
         if status == STATUS_OPEN_EMPTY_ADDRESS and not(open_address):
@@ -320,13 +320,12 @@ def parse (db, tx, message):
         assetid, give_quantity, mainchainrate, asset = None, None, None, None
         status = 'invalid: could not unpack'
 
-    
     if status == 'valid':
         if ledger.enabled("dispenser_parsing_validation", ledger.CURRENT_BLOCK_INDEX):
             asset_id, problems = validate(db, tx['source'], asset, give_quantity, escrow_quantity, mainchainrate, dispenser_status, action_address if dispenser_status in [STATUS_OPEN_EMPTY_ADDRESS, STATUS_CLOSED] else None, tx['block_index'], oracle_address)
         else:
             problems = None
-        
+
         if problems:
             status = 'invalid: ' + '; '.join(problems)
         else:   
