@@ -720,7 +720,7 @@ def insert_update(db, table_name, update_data, where_data, block_index, tx_index
         else:
             where.append(f'{key} = ?')
             bindings.append(value)
-    select_query = f'''SELECT * FROM {table_name} WHERE {' AND '.join(where)} {more_where}'''
+    select_query = f'''SELECT *, rowid FROM {table_name} WHERE {' AND '.join(where)} {more_where}'''
     needs_update_list = cursor.execute(select_query, tuple(bindings))
 
     for row in needs_update_list:
@@ -737,6 +737,8 @@ def insert_update(db, table_name, update_data, where_data, block_index, tx_index
         #if 'tx_index' in new_record:
         #    new_record['tx_index'] = tx_index
         # insert new record
+        if 'rowid' in new_record:
+            del new_record['rowid']
         fields_name = ', '.join(new_record.keys())
         fields_values = ', '.join([f':{key}' for key in new_record.keys()])
         insert_query = f'''INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})'''
@@ -1253,16 +1255,38 @@ def update_order(db, tx_hash, update_data, block_index, tx_index):
 
 
 def mark_order_as_filled(db, tx0_hash, tx1_hash, block_index, tx_index, source=None):
-    update_data = {
-        'status': 'filled'
+
+    select_bindings = {
+        'tx0_hash': tx0_hash,
+        'tx1_hash': tx1_hash
     }
-    where_data = {
-        'tx_hash_in': [tx0_hash, tx1_hash],
-    }
+
+    where_source = ''
     if source is not None:
-        where_data['source'] = source
-    more_where = 'AND (give_remaining = 0 OR get_remaining = 0)'
-    insert_update(db, 'orders', update_data, where_data, block_index, tx_index, more_where=more_where)
+        where_source = f' AND source = :source'
+        select_bindings['source'] = source
+
+    select_query = f'''
+        SELECT * FROM (
+            SELECT *, MAX(rowid) as rowid
+            FROM orders
+            WHERE
+                tx_hash in (:tx0_hash, :tx1_hash)
+                {where_source}
+            GROUP BY tx_hash
+        ) WHERE give_remaining = 0 OR get_remaining = 0
+    '''
+
+    cursor = db.cursor()
+    cursor.execute(select_query, select_bindings)
+    for order in cursor:
+        update_data = {
+            'status': 'filled'
+        }
+        where_data = {
+            'rowid': order['rowid'],
+        }
+        insert_update(db, 'orders', update_data, where_data, block_index, tx_index)
 
 
 def update_order_match_status(db, id, status, block_index, tx_index):
