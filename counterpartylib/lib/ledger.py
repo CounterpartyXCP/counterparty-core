@@ -1474,7 +1474,7 @@ def update_rps_status(db, tx_hash, status, block_index, tx_index):
 
 # Ugly way to get hilder but we want to preserve the order with the old query
 # to not break checkpoints
-def _get_holders(cursor, id_fields, hold_fields_1, hold_fields_2=None, exclude_empty_holders=False):
+def _get_holders(cursor, id_fields, hold_fields_1, hold_fields_2=None, exclude_empty_holders=False, table=None):
     save_records = {}
     for record in cursor:
         id = ' '.join([str(record[field]) for field in id_fields])
@@ -1491,7 +1491,8 @@ def _get_holders(cursor, id_fields, hold_fields_1, hold_fields_2=None, exclude_e
             holders.append({
                 'address': holder[hold_fields_1['address']],
                 'address_quantity': holder[hold_fields_1['address_quantity']],
-                'escrow': holder[hold_fields_1['escrow']] if 'escrow' in hold_fields_1 else None
+                'escrow': holder[hold_fields_1['escrow']] if 'escrow' in hold_fields_1 else None,
+                #'table': table
             })
         if hold_fields_2 is not None:
             if holder[hold_fields_2['address_quantity']] > 0 or \
@@ -1499,7 +1500,8 @@ def _get_holders(cursor, id_fields, hold_fields_1, hold_fields_2=None, exclude_e
                 holders.append({
                     'address': holder[hold_fields_2['address']],
                     'address_quantity': holder[hold_fields_2['address_quantity']],
-                    'escrow': holder[hold_fields_2['escrow']] if 'escrow' in hold_fields_2 else None
+                    'escrow': holder[hold_fields_2['escrow']] if 'escrow' in hold_fields_2 else None,
+                    #'table': table
                 })
     return holders
 
@@ -1522,7 +1524,8 @@ def holders(db, asset, exclude_empty_holders=False):
         cursor,
         ['asset', 'address'],
         {'address': 'address', 'address_quantity': 'quantity'},
-        exclude_empty_holders=exclude_empty_holders
+        exclude_empty_holders=exclude_empty_holders,
+        table='balances'
     )
 
     # Funds escrowed in orders. (Protocol change.)
@@ -1541,7 +1544,8 @@ def holders(db, asset, exclude_empty_holders=False):
         cursor,
         ['tx_hash'],
         {'address': 'source', 'address_quantity': 'give_remaining', 'escrow': 'tx_hash'},
-        #exclude_empty_holders=exclude_empty_holders
+        #exclude_empty_holders=exclude_empty_holders,
+        table='orders'
     )
 
     # Funds escrowed in pending order matches. (Protocol change.)
@@ -1560,7 +1564,8 @@ def holders(db, asset, exclude_empty_holders=False):
         cursor,
         ['id'],
         {'address': 'tx0_address', 'address_quantity': 'forward_quantity', 'escrow': 'id'},
-        #exclude_empty_holders=exclude_empty_holders
+        #exclude_empty_holders=exclude_empty_holders,
+        table='order_matches'
     )
 
     query = '''
@@ -1577,7 +1582,8 @@ def holders(db, asset, exclude_empty_holders=False):
         cursor,
         ['id'],
         {'address': 'tx1_address', 'address_quantity': 'backward_quantity', 'escrow': 'id'},
-        #exclude_empty_holders=exclude_empty_holders
+        #exclude_empty_holders=exclude_empty_holders,
+        table='order_matches'
     )
 
     # Bets and RPS (and bet/rps matches) only escrow XCP.
@@ -1596,7 +1602,8 @@ def holders(db, asset, exclude_empty_holders=False):
             cursor,
             ['tx_hash'],
             {'address': 'source', 'address_quantity': 'wager_remaining', 'escrow': 'tx_hash'},
-            #exclude_empty_holders=exclude_empty_holders
+            #exclude_empty_holders=exclude_empty_holders,
+            table='bets'
         )
 
         query = '''
@@ -1614,7 +1621,8 @@ def holders(db, asset, exclude_empty_holders=False):
             ['id'],
             {'address': 'tx0_address', 'address_quantity': 'forward_quantity', 'escrow': 'id'},
             {'address': 'tx1_address', 'address_quantity': 'backward_quantity', 'escrow': 'id'},
-            #exclude_empty_holders=exclude_empty_holders
+            #exclude_empty_holders=exclude_empty_holders,
+            table='bet_matches'
         )
 
         query = '''
@@ -1631,7 +1639,8 @@ def holders(db, asset, exclude_empty_holders=False):
             cursor,
             ['tx_hash'],
             {'address': 'source', 'address_quantity': 'wager', 'escrow': 'tx_hash'},
-            #exclude_empty_holders=exclude_empty_holders
+            #exclude_empty_holders=exclude_empty_holders,
+            table='rps'
         )
 
         query = '''
@@ -1649,7 +1658,8 @@ def holders(db, asset, exclude_empty_holders=False):
             ['id'],
             {'address': 'tx0_address', 'address_quantity': 'wager', 'escrow': 'id'},
             {'address': 'tx1_address', 'address_quantity': 'wager', 'escrow': 'id'},
-            #exclude_empty_holders=exclude_empty_holders
+            #exclude_empty_holders=exclude_empty_holders,
+            table='rps_matches'
         )
 
     if enabled('dispensers_in_holders'):
@@ -1659,7 +1669,7 @@ def holders(db, asset, exclude_empty_holders=False):
                 SELECT *, MAX(rowid)
                 FROM dispensers
                 WHERE asset = ?
-                GROUP BY source, asset, satoshirate, give_quantity
+                GROUP BY source, asset
             ) WHERE status = ?
             ORDER BY tx_index
         '''
@@ -1667,9 +1677,10 @@ def holders(db, asset, exclude_empty_holders=False):
         cursor.execute(query, bindings)
         holders += _get_holders(
             cursor,
-            ['source', 'asset', 'satoshirate', 'give_quantity'],
+            ['tx_hash', 'source', 'asset', 'satoshirate', 'give_quantity'],
             {'address': 'source', 'address_quantity': 'give_remaining'},
-            #exclude_empty_holders=exclude_empty_holders
+            #exclude_empty_holders=exclude_empty_holders,
+            table='dispensers'
         )
 
     cursor.close()

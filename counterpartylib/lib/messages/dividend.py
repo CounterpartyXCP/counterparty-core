@@ -83,7 +83,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     except exceptions.AssetError:
         problems.append('no such dividend asset, {}.'.format(dividend_asset))
         return None, None, problems, 0
-        
+
     # Calculate dividend quantities.
     exclude_empty = False
     if ledger.enabled('zero_quantity_value_adjustment_1'):
