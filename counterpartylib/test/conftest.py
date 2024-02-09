@@ -117,12 +117,7 @@ def pytest_generate_tests(metafunc):
                 args.append((scenario_name, INTEGRATION_SCENARIOS[scenario_name][1], INTEGRATION_SCENARIOS[scenario_name][0], metafunc.config))
         metafunc.parametrize('scenario_name, base_scenario_name, transactions, pytest_config', args)
     elif metafunc.function.__name__ == 'test_book':
-        if metafunc.config.getoption("testbook") == 'testnet':
-            metafunc.parametrize('testnet, block_index', [(True,)])
-        elif metafunc.config.getoption("testbook") == 'mainnet':
-            metafunc.parametrize('testnet, block_index', [(False,)])
-        else:
-            metafunc.parametrize('testnet, block_index', [])
+        metafunc.parametrize('book', [(metafunc.config.getoption("testbook"),)])
 
 
 def pytest_addoption(parser):
