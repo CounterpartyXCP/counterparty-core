@@ -1175,6 +1175,12 @@ def kickstart(bitcoind_dir, force=False, last_hash=None, resume=True, resume_fro
             resume_block_index = int(resume_from)
             for table in TABLES + ['transaction_outputs', 'transactions']:
                 clean_table_from(memory_cursor, table, resume_block_index)
+        # get last parsed transaction
+        memory_cursor.execute('''SELECT block_index, tx_index FROM transactions ORDER BY block_index DESC, tx_index DESC LIMIT 1''')
+        last_transaction = memory_cursor.fetchone()
+        last_parsed_block = last_transaction['block_index']
+        # clean hashes
+        if resume_from != 'last':
             memory_cursor.execute('''UPDATE blocks
                                      SET txlist_hash = :txlist_hash, 
                                          ledger_hash = :ledger_hash,
@@ -1183,12 +1189,9 @@ def kickstart(bitcoind_dir, force=False, last_hash=None, resume=True, resume_fro
                                       'txlist_hash': None,
                                       'ledger_hash': None,
                                       'messages_hash': None,
-                                      'block_index': resume_block_index
+                                      'block_index': last_parsed_block
                                     })
-        # get last parsed transaction
-        memory_cursor.execute('''SELECT block_index, tx_index FROM transactions ORDER BY block_index DESC, tx_index DESC LIMIT 1''')
-        last_transaction = memory_cursor.fetchone()
-        last_parsed_block = last_transaction['block_index']
+
         block_count = last_block_index - last_parsed_block
         tx_index = last_transaction['tx_index'] + 1
         logger.info(f"Resuming from block {last_parsed_block}...")
