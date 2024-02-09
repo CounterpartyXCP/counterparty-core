@@ -1520,6 +1520,7 @@ def holders(db, asset, exclude_empty_holders=False):
             WHERE give_asset = ?
             GROUP BY tx_hash
         ) WHERE status = ?
+        ORDER BY tx_index
     '''
     bindings = (asset, 'open')
     cursor.execute(query, bindings)
@@ -1538,6 +1539,7 @@ def holders(db, asset, exclude_empty_holders=False):
             WHERE forward_asset = ?
             GROUP BY id
         ) WHERE status = ?
+        ORDER BY id
     '''
     bindings = (asset, 'pending')
     cursor.execute(query, bindings)
@@ -1554,6 +1556,7 @@ def holders(db, asset, exclude_empty_holders=False):
             FROM order_matches
             WHERE backward_asset = ?
         ) WHERE status = ?
+        ORDER BY id
     '''
     bindings = (asset, 'pending')
     cursor.execute(query, bindings)
@@ -1572,6 +1575,7 @@ def holders(db, asset, exclude_empty_holders=False):
                 FROM bets
                 GROUP BY tx_hash
             ) WHERE status = ?
+            ORDER BY tx_index
         '''
         bindings = ('open',)
         cursor.execute(query, bindings)
@@ -1588,6 +1592,7 @@ def holders(db, asset, exclude_empty_holders=False):
                 FROM bet_matches
                 GROUP BY id
             ) WHERE status = ?
+            ORDER BY id
         '''
         bindings = ('pending',)
         cursor.execute(query, bindings)
@@ -1605,6 +1610,7 @@ def holders(db, asset, exclude_empty_holders=False):
                 FROM rps
                 GROUP BY tx_hash
             ) WHERE status = ?
+            ORDER BY tx_index
         '''
         bindings = ('open',)
         cursor.execute(query, bindings)
@@ -1621,6 +1627,7 @@ def holders(db, asset, exclude_empty_holders=False):
                 FROM rps_matches
                 GROUP BY id
             ) WHERE status IN (?, ?, ?)
+            ORDER BY id
         '''
         bindings = ('pending', 'pending and resolved', 'resolved and pending')
         cursor.execute(query, bindings)
