@@ -187,7 +187,7 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
     if len(available) == 0:
         problems.append('address doesn\'t has the asset %s' % asset)
     elif len(available) >= 1 and available[0]['quantity'] < escrow_quantity:
-        problems.append('address doesn\'t has enough balance of %s (%i < %i)' % (asset, available, escrow_quantity))
+        problems.append('address doesn\'t has enough balance of %s (%i < %i)' % (asset, available[0]['quantity'], escrow_quantity))
     else:
         if status == STATUS_OPEN_EMPTY_ADDRESS and not(open_address):
             open_address = source
