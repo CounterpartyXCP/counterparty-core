@@ -877,12 +877,12 @@ def get_refilling_count(db, dispenser_tx_hash):
 def get_pending_dispensers(db, status, delay, block_index):
     cursor = db.cursor()
     query = '''
-        SELECT d.*, t.source AS tx_source, t.block_index AS tx_block_index FROM
-            (SELECT *, MAX(rowid)
-            FROM dispensers
+        SELECT * FROM
+            (SELECT d.*, t.source AS tx_source, t.block_index AS tx_block_index, MAX(d.rowid) AS rowid
+            FROM dispensers AS d
+            LEFT JOIN transactions t ON t.tx_hash = d.last_status_tx_hash
             WHERE :block_index >= t.block_index + :delay
-            GROUP BY tx_hash) AS d 
-        LEFT JOIN transactions t ON t.tx_hash = d.last_status_tx_hash
+            GROUP BY d.source, d.asset)
         WHERE status = :status
         AND last_status_tx_hash IS NOT NULL
         ORDER BY tx_index

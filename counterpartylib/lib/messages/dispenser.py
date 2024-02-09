@@ -650,11 +650,6 @@ def close_pending(db, block_index):
                 'status': STATUS_CLOSED,
             }
             where_data = {
-                'asset': dispenser['asset'],
+                'rowid': dispenser['rowid']
             }
-            if dispenser['tx_source'] != dispenser['source']:
-                where_data["source"] = dispenser['source']
-                where_data["origin"] = dispenser['tx_source']
-            else:
-                where_data["source"] = dispenser['tx_source']
             ledger.update_dispensers(db, set_data, where_data, block_index, 0) # use tx_index=0 for block actions

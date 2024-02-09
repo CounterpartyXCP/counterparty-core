@@ -69,7 +69,7 @@ def validate (db, source, destination, flags, memo, block_index):
     total_fee = ANTISPAM_FEE
 
     if antispamfee > 0:
-        balances_count = ledger.get_balances_count(db, source)
+        balances_count = ledger.get_balances_count(db, source)[0]['cnt']
         issuances_count = ledger.get_issuances_count(db, source)
 
         total_fee = int(balances_count * antispamfee * 2 + issuances_count * antispamfee * 4)
