@@ -118,9 +118,9 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize('scenario_name, base_scenario_name, transactions, pytest_config', args)
     elif metafunc.function.__name__ == 'test_book':
         if metafunc.config.getoption("testbook") == 'testnet':
-            metafunc.parametrize('testnet, block_index', [(True, metafunc.config.getoption("testbookblockindex"))])
+            metafunc.parametrize('testnet, block_index', [(True,)])
         elif metafunc.config.getoption("testbook") == 'mainnet':
-            metafunc.parametrize('testnet, block_index', [(False, metafunc.config.getoption("testbookblockindex"))])
+            metafunc.parametrize('testnet, block_index', [(False,)])
         else:
             metafunc.parametrize('testnet, block_index', [])
 
@@ -133,7 +133,6 @@ def pytest_addoption(parser):
     parser.addoption("--savescenarios", action='store_true', default=False, help="Generate sql dump and log in .new files")
     parser.addoption("--alternative", action='store_true', default=False)
     parser.addoption("--testbook", default='no', help="Include test book (use with one of the following values: `testnet` or `mainnet`)")
-    parser.addoption("--testbookblockindex", default=0, type=int, help="test book from this block index (default: 0)")
 
 
 @pytest.fixture(scope="function")

@@ -4,5 +4,5 @@ from counterpartylib.test import conftest  # this is require near the top to do 
 from counterpartylib.test import util_test
 
 
-def test_book(testnet, block_index):
+def test_book(testnet=True):
     util_test.reparse(testnet=testnet)

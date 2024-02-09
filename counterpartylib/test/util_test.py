@@ -750,7 +750,7 @@ def reparse(testnet=True, checkpoint_count=10):
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
     prod_db_path = os.path.join(data_dir, '{}{}.db'.format(config.APP_NAME, '.testnet' if testnet else ''))
     assert os.path.exists(prod_db_path), "database path {} does not exist".format(prod_db_path)
-    prod_db = apsw.Connection(prod_db_path)
+    prod_db = apsw.Connection(prod_db_path, flags=apsw.SQLITE_OPEN_READONLY)
     prod_db.setrowtrace(database.rowtracer)
 
     # Copy DB from file on disk (should be a DB file with at least all the checkpoints)
