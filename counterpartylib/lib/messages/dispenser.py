@@ -611,6 +611,7 @@ def dispense(db, tx):
                     'asset': dispenser['asset'],
                     'satoshirate': dispenser['satoshirate'],
                     'give_quantity': dispenser['give_quantity'],
+                    'tx_hash': dispenser['tx_hash'],
                     'status_in': [0, 11]
                 }
                 ledger.update_dispensers(db, set_data, where_data, tx['block_index'], tx['tx_index'])
