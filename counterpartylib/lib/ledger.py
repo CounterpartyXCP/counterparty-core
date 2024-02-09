@@ -1464,7 +1464,7 @@ def update_rps_status(db, tx_hash, status, block_index, tx_index):
 def _get_holders(cursor, id_fields, hold_fields_1, hold_fields_2=None, exclude_empty_holders=False):
     save_records = {}
     for record in cursor:
-        id = ' '.join([record[field] for field in id_fields])
+        id = ' '.join([str(record[field]) for field in id_fields])
         if id not in save_records:
             save_records[id] = record
             continue
@@ -1641,12 +1641,13 @@ def holders(db, asset, exclude_empty_holders=False):
                 WHERE asset = ?
                 GROUP BY source, asset, satoshirate, give_quantity
             ) WHERE status = ?
+            ORDER BY tx_index
         '''
         bindings = (asset, 0)
         cursor.execute(query, bindings)
         holders += _get_holders(
             cursor,
-            ['tx_hash'],
+            ['source', 'asset', 'satoshirate', 'give_quantity'],
             {'address': 'source', 'address_quantity': 'give_remaining'},
             #exclude_empty_holders=exclude_empty_holders
         )
