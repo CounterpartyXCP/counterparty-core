@@ -408,7 +408,9 @@ def parse (db, tx, message):
                                 where_data = {
                                     'source': tx['source'] if not ledger.enabled("dispenser_origin_permission_extended", tx['block_index']) else action_address,
                                     'asset': asset,
-                                    'status': STATUS_OPEN
+                                    'status': STATUS_OPEN,
+                                    'satoshirate': mainchainrate,
+                                    'give_quantity': give_quantity
                                 }
                                 ledger.update_dispensers(db, set_data, where_data, tx["block_index"], tx['tx_index'])
 
@@ -438,9 +440,10 @@ def parse (db, tx, message):
                             except (ledger.DebitError):
                                 status = 'insufficient funds'
                     else:
-                        status = 'invalid: can only refill dispenser from source or origin'                             
+                        status = 'invalid: can only refill dispenser from source or origin'
                 else:
                     status = 'can only have one open dispenser per asset per address'
+
             elif dispenser_status == STATUS_CLOSED:
                 close_delay = ledger.get_value_by_block_index("dispenser_close_delay", tx['block_index'])
                 close_from_another_address = ledger.enabled("dispenser_origin_permission_extended", tx['block_index']) and action_address and action_address != tx["source"]
