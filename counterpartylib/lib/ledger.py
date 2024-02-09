@@ -505,7 +505,7 @@ def get_asset_balances(db, asset):
     cursor = db.cursor()
     query = f'''
         SELECT address, asset, quantity, MAX(rowid)
-        FROM new_balances
+        FROM balances
         WHERE asset = ?
         GROUP BY address, asset
         ORDER BY address
