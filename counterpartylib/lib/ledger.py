@@ -257,7 +257,18 @@ def get_address_assets(db, address):
 
 
 def get_balances_count(db, address):
-    return len(get_address_assets(db, address))
+    cursor = db.cursor()
+    query = '''
+        SELECT COUNT(*) AS cnt FROM (
+            SELECT DISTINCT asset
+            FROM balances
+            WHERE address=:address
+            GROUP BY asset
+        )
+    '''
+    bindings = {'address': address}
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
 
 
 #####################
