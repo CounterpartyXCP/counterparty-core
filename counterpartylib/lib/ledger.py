@@ -987,8 +987,8 @@ def get_dispensers(db, status_in=None, source=None, asset=None, origin=None, sta
     order_clause = f'ORDER BY {order_by}' if order_by is not None else 'ORDER BY tx_index'
     group_clause = f'GROUP BY {group_by}' if group_by is not None else 'GROUP BY asset, source'
     query = f'''
-        SELECT * FROM (
-            SELECT *, MAX(rowid)
+        SELECT *, rowid FROM (
+            SELECT *, MAX(rowid) as rowid
             FROM dispensers
             {first_where_str}
             {group_clause}

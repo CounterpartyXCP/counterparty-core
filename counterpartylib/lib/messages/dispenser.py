@@ -470,7 +470,8 @@ def parse (db, tx, message):
                         }
                         where_data = {
                             'source': tx['source'],
-                            'asset': asset
+                            'asset': asset,
+                            'rowid': existing[0]['rowid']
                         }
                     else:
                         set_data = {
@@ -480,7 +481,8 @@ def parse (db, tx, message):
                         where_data = {
                             'source': tx['source'],
                             'asset': asset,
-                            'status_in': [0, 1]
+                            'status_in': [0, 1],
+                            'rowid': existing[0]['rowid']
                         }
 
                     if close_from_another_address:
