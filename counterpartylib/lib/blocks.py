@@ -1043,6 +1043,8 @@ def rollback(db, block_index=0):
     cursor = db.cursor()
     for table in TABLES + ['blocks', 'transaction_outputs', 'transactions']:
         clean_table_from(cursor, table, block_index)
+    cursor.close()
+    logger.info('Database rolled back to block_index {}'.format(block_index))
 
 
 def clean_messages_tables(cursor, block_index=0):

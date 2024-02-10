@@ -497,9 +497,9 @@ def reparse(db, block_index):
     blocks.reparse(db, block_index=block_index)
 
 
-def rollback(db, block_index=None, quiet=True):
+def rollback(db, block_index=None):
     connect_to_backend()
-    blocks.rollback(db, block_index=block_index, quiet=quiet)
+    blocks.rollback(db, block_index=block_index)
 
 
 def kickstart(bitcoind_dir, force=False, last_hash=None, resume_from=None):
