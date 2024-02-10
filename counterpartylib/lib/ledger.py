@@ -1001,7 +1001,10 @@ def get_dispensers(db, status_in=None, source=None, asset=None, origin=None, sta
 
 ### UPDATES ###
 
-def update_dispensers(db, update_data, where_data, block_index, tx_index):
+def update_dispenser(db, rowid, update_data, block_index, tx_index):
+    where_data = {
+        'rowid': rowid
+    }
     insert_update(db, 'dispensers', update_data, where_data, block_index, tx_index)
 
 

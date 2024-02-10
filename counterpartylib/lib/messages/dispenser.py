@@ -404,14 +404,7 @@ def parse (db, tx, message):
                                 set_data = {
                                     'give_remaining': existing[0]['give_remaining'] + escrow_quantity,
                                 }
-                                where_data = {
-                                    'source': tx['source'] if not ledger.enabled("dispenser_origin_permission_extended", tx['block_index']) else action_address,
-                                    'asset': asset,
-                                    'status': STATUS_OPEN,
-                                    'satoshirate': mainchainrate,
-                                    'give_quantity': give_quantity
-                                }
-                                ledger.update_dispensers(db, set_data, where_data, tx["block_index"], tx['tx_index'])
+                                ledger.update_dispenser(db, existing[0]['rowid'], set_data, tx["block_index"], tx['tx_index'])
 
                                 dispenser_tx_hash = ledger.get_dispensers(db, source=action_address, asset=asset, status=STATUS_OPEN)[0]["tx_hash"]
                                 bindings_refill = {
@@ -468,28 +461,12 @@ def parse (db, tx, message):
                             'give_remaining': 0,
                             'status': STATUS_CLOSED,
                         }
-                        where_data = {
-                            'source': tx['source'],
-                            'asset': asset,
-                            'rowid': existing[0]['rowid']
-                        }
                     else:
                         set_data = {
                             'status': STATUS_CLOSING,
                             'last_status_tx_hash': tx['tx_hash']
                         }
-                        where_data = {
-                            'source': tx['source'],
-                            'asset': asset,
-                            'status_in': [0, 1],
-                            'rowid': existing[0]['rowid']
-                        }
-
-                    if close_from_another_address:
-                        where_data['origin'] = tx['source']
-                        where_data['source'] = action_address
-
-                    ledger.update_dispensers(db, set_data, where_data, tx['block_index'], tx['tx_index'])
+                    ledger.update_dispenser(db, existing[0]['rowid'], set_data, tx['block_index'], tx['tx_index'])
                 else:
                     status = 'dispenser inexistent'
             else:
@@ -607,15 +584,7 @@ def dispense(db, tx):
                     'give_remaining': dispenser['give_remaining'],
                     'status': dispenser['status'],
                 }
-                where_data = {
-                    'source': dispenser['source'],
-                    'asset': dispenser['asset'],
-                    'satoshirate': dispenser['satoshirate'],
-                    'give_quantity': dispenser['give_quantity'],
-                    'tx_hash': dispenser['tx_hash'],
-                    'status_in': [0, 11]
-                }
-                ledger.update_dispensers(db, set_data, where_data, tx['block_index'], tx['tx_index'])
+                ledger.update_dispenser(db, dispenser['rowid'], set_data, tx['block_index'], tx['tx_index'])
 
                 bindings = {
                     'tx_index': next_out['tx_index'],
@@ -651,7 +620,4 @@ def close_pending(db, block_index):
                 'give_remaining': 0,
                 'status': STATUS_CLOSED,
             }
-            where_data = {
-                'rowid': dispenser['rowid']
-            }
-            ledger.update_dispensers(db, set_data, where_data, block_index, 0) # use tx_index=0 for block actions
+            ledger.update_dispenser(db, dispenser['rowid'], set_data, block_index, 0) # use tx_index=0 for block actions
