@@ -1110,11 +1110,6 @@ def fetch_blocks(db, block_parser, last_known_hash):
 
 
 def kickstart(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None):
-
-    ledger.CURRENT_BLOCK_INDEX = 0
-    check_addrindxrs = backend.get_oldest_tx("tb1qdc8sffcagklck3j0jfpg6try7qh3ucvgmpzc5n")
-    print(check_addrindxrs)
-
     # determine bitoincore data directory
     if bitcoind_dir is None:
         if platform.system() == 'Darwin':
