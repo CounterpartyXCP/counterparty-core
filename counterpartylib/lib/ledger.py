@@ -2,6 +2,7 @@ import logging
 import fractions
 import json
 import os
+from decimal import Decimal as D
 
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import config
