@@ -10,7 +10,7 @@ import apsw
 
 MAX_INT = 2**63 - 1
 
-def remove_from_balanc_old(db, address, asset, quantity):
+def remove_from_balance_old(db, address, asset, quantity):
     balance_cursor = db.cursor()
 
     balance_cursor.execute('''SELECT quantity FROM old_balances
@@ -208,7 +208,7 @@ def prepare_benchmark_db(database_file):
         if movement[0] == 'credit':
             add_to_balance_old(bench_db, *movement[1:4])
         else:
-            remove_from_balanc_old(bench_db, *movement[1:4])
+            remove_from_balance_old(bench_db, *movement[1:4])
         print(f"{count}/{movements_count}", end="\r")
         count += 1
     print('`old_balances` populated in: {:.3f}s'.format(time.time() - populate_start_time)) """
