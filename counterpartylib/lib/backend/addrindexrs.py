@@ -17,7 +17,7 @@ import functools
 import bitcoin.wallet
 from pkg_resources import parse_version
 
-from counterpartylib.lib import config, util, address
+from counterpartylib.lib import config, util, ledger
 
 READ_BUF_SIZE = 65536
 SOCKET_TIMEOUT = 5.0
@@ -388,7 +388,7 @@ def indexer_check_version():
     except TypeError as e:
         logger.exception('Error when checking address indexer version: {}'.format(addrindexrs_version))
         sys.exit(1)
-    addrindexrs_version_needed = util.get_value_by_block_index("addrindexrs_required_version")
+    addrindexrs_version_needed = ledger.get_value_by_block_index("addrindexrs_required_version")
 
     if parse_version(addrindexrs_version_needed) > parse_version(addrindexrs_version_label):
         logger.info("Wrong addrindexrs version: "+addrindexrs_version_needed+" is needed but "+addrindexrs_version_label+" was found")

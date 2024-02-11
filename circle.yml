@@ -40,7 +40,7 @@ jobs:
       - store_test_results:
           path: test-results
 
-  test-reparse-testnet:
+  test-book-testnet:
     docker:
         - image: cimg/python:3.11.6
 
@@ -56,15 +56,15 @@ jobs:
             tar -C ~/.local/share/counterparty -xvzf ~/.local/share/counterparty/counterparty-db-testnet.latest.tar.gz
 
       - run:
-          name: "Run testnet reparse test"
+          name: "Run testnet book test"
           command: |
             mkdir test-results
-            hatch run pytest --junitxml=test-results/junit.xml --log-cli-level=INFO --show-capture=no --testbook=testnet -k test_book counterpartylib/test/reparse_test.py
+            hatch run pytest --junitxml=test-results/junit.xml --log-cli-level=INFO --show-capture=no --testbook=testnet -k test_book counterpartylib/test/book_test.py
 
       - store_test_results:
           path: test-results
 
-  test-reparse-mainnet:
+  test-book-mainnet:
     docker:
         - image: cimg/python:3.11.6
 
@@ -80,10 +80,10 @@ jobs:
             tar -C ~/.local/share/counterparty -xvzf ~/.local/share/counterparty/counterparty-db.latest.tar.gz
 
       - run:
-          name: "Run testnet reparse test"
+          name: "Run mainnet book test"
           command: |
             mkdir test-results
-            hatch run pytest --junitxml=test-results/junit.xml --log-cli-level=INFO --show-capture=no --testbook=mainnet -k test_book counterpartylib/test/reparse_test.py
+            hatch run pytest --junitxml=test-results/junit.xml --log-cli-level=INFO --show-capture=no --testbook=mainnet -k test_book counterpartylib/test/book_test.py
       
       - store_test_results:
           path: test-results
@@ -96,6 +96,6 @@ workflows:
       - test:
           requires:
             - build
-      #- test-reparse-testnet:
+      #- test-book-testnet:
       #    requires:
       #      - build

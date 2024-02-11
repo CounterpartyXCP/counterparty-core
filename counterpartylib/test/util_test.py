@@ -29,7 +29,7 @@ CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.ex
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
 from counterpartylib import server
-from counterpartylib.lib import (config, util, blocks, check, backend, database, transaction, exceptions)
+from counterpartylib.lib import (config, util, blocks, check, backend, database, transaction, exceptions, ledger)
 from counterpartylib.lib.backend.indexd import extract_addresses, extract_addresses_from_txlist
 
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP
@@ -81,10 +81,10 @@ def init_database(sqlfile, dbfile, options=None):
 def reset_current_block_index(db):
     cursor = db.cursor()
     latest_block = list(cursor.execute('''SELECT * FROM blocks ORDER BY block_index DESC LIMIT 1'''))[0]
-    util.CURRENT_BLOCK_INDEX = latest_block['block_index']
+    ledger.CURRENT_BLOCK_INDEX = latest_block['block_index']
     cursor.close()
 
-    return util.CURRENT_BLOCK_INDEX
+    return ledger.CURRENT_BLOCK_INDEX
 
 
 def dump_database(db):
@@ -129,7 +129,7 @@ def insert_block(db, block_index, parse_block=True):
     block = (block_index, block_hash, block_time, None, None, None, None)
     cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty)
                       VALUES (?,?,?,?,?,?,?)''', block)
-    util.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
+    ledger.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
     cursor.close()
 
     if parse_block:
@@ -180,7 +180,7 @@ def insert_raw_transaction(raw_transaction, db):
 
     MOCK_UTXO_SET.add_raw_transaction(raw_transaction, tx_id=tx_hash, confirmations=1)
 
-    util.CURRENT_BLOCK_INDEX = block_index
+    ledger.CURRENT_BLOCK_INDEX = block_index
     blocks.parse_block(db, block_index, block_time)
     return tx_hash, tx
 
@@ -272,7 +272,7 @@ def insert_transaction(transaction, db):
                                  transaction["destination"],
                                  transaction["btc_amount"]))
     cursor.close()
-    util.CURRENT_BLOCK_INDEX = transaction['block_index']
+    ledger.CURRENT_BLOCK_INDEX = transaction['block_index']
 
 
 def initialise_rawtransactions_db(db):
@@ -495,6 +495,8 @@ def run_scenario(scenario):
         else:
             create_next_block(db, block_index=config.BURN_START + tx[1], parse_block=tx[2] if len(tx) == 3 else True)
 
+    check.asset_conservation(db)
+
     dump = dump_database(db)
     log = logger_buff.getvalue()
 
@@ -562,7 +564,8 @@ def check_record(record, server_db, pytest_config):
                 print("expected values: ")
                 pprint.PrettyPrinter(indent=4).pprint(record['values'])
                 print("SELECT * FROM {} WHERE block_index = {}: ".format(record['table'], record['values']['block_index']))
-                pprint.PrettyPrinter(indent=4).pprint(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
+                #pprint.PrettyPrinter(indent=4).pprint(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
+                pprint.PrettyPrinter(indent=4).pprint(list(cursor.execute('''SELECT * FROM {}'''.format(record['table']))))
 
             raise AssertionError("check_record \n" +
                                  "table=" + record['table'] + " \n" +
@@ -589,7 +592,8 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
     """Execute tested_method within context and arguments."""
     if tx_name == 'transaction' and method == 'construct':
         return tested_method(server_db, inputs[0], **inputs[1])
-    elif (tx_name == 'util' and (method in ['api','date_passed','price','generate_asset_id','generate_asset_name','dhash_string','enabled','get_url','hexlify','parse_subasset_from_asset_name','compact_subasset_longname','expand_subasset_longname',])) \
+    elif (tx_name == 'util' and (method in ['api', 'date_passed', 'dhash_string', 'get_url', 'hexlify', 'parse_subasset_from_asset_name', 'compact_subasset_longname', 'expand_subasset_longname',])) \
+        or (tx_name == 'ledger' and (method in ['price', 'generate_asset_id', 'generate_asset_name', 'enabled',])) \
         or tx_name == 'script' \
         or (tx_name == 'blocks' and (method[:len('get_tx_info')] == 'get_tx_info'))  \
         or tx_name == 'transaction' \
@@ -683,101 +687,6 @@ def get_block_txlist(db, block_index):
     return txlist
 
 
-def reparse(testnet=True, block_index=0):
-    """
-    Reparse all transaction from the database.
-     - Create a new in-memory DB, copy the DB that is on-disk
-     - Reparse DB, automatically compares consensus hashes to the original ones from the on-disk DB
-    """
-    options = dict(COUNTERPARTYD_OPTIONS)
-    server.initialise(database_file=':memory:', testnet=testnet, **options)
-
-    logger = logging.getLogger()
-
-    if testnet:
-        config.PREFIX = b'TESTXXXX'
-
-    memory_db = database.get_connection(read_only=False)
-
-    data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
-    prod_db_path = os.path.join(data_dir, '{}{}.db'.format(config.APP_NAME, '.testnet' if testnet else ''))
-    assert os.path.exists(prod_db_path), "database path {} does not exist".format(prod_db_path)
-    prod_db = apsw.Connection(prod_db_path)
-    prod_db.setrowtrace(database.rowtracer)
-
-    # Copy DB from file on disk (should be a DB file with at least all the checkpoints)
-    #  in-memory DB shouldn't have been written to yet up until this point
-    with memory_db.backup("main", prod_db, "main") as backup:
-        while not backup.done:
-            backup.step(100)
-
-    # Drop most tables (except blocks, transactions, undolog)
-    memory_cursor = memory_db.cursor()
-    for table in blocks.TABLES:
-        memory_cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
-    # Rebuild balances table
-    memory_cursor.execute('''DELETE FROM balances''')
-    memory_cursor.execute('''SELECT * FROM credits''')
-    for credit in memory_cursor:
-        util.add_to_balance(memory_db, credit["address"], credit["asset"], credit["quantity"])
-    memory_cursor.execute('''SELECT * FROM debits''')
-    for debits in memory_cursor:
-        util.remove_from_balance(memory_db, debits["address"], debits["asset"], debits["quantity"])
-
-    # Check that all checkpoint blocks are in the database to be tested.
-    if testnet:
-        CHECKPOINTS = check.CHECKPOINTS_TESTNET
-    else:
-        CHECKPOINTS = check.CHECKPOINTS_MAINNET
-    for check_block_index in CHECKPOINTS.keys():
-        block_exists = bool(list(memory_cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (check_block_index,))))
-        assert block_exists, "block #%d does not exist" % check_block_index
-
-    # Clean consensus hashes if first block hash don’t match with checkpoint.
-    checkpoints = check.CHECKPOINTS_TESTNET if config.TESTNET else check.CHECKPOINTS_MAINNET
-    columns = [column['name'] for column in memory_cursor.execute('''PRAGMA table_info(blocks)''')]
-    for field in ['ledger_hash', 'txlist_hash']:
-        if field in columns:
-            sql = '''SELECT {} FROM blocks  WHERE block_index = ?'''.format(field)
-            first_hash = list(memory_cursor.execute(sql, (config.BLOCK_FIRST,)))[0][field]
-            if first_hash != checkpoints[config.BLOCK_FIRST][field]:
-                logger.info('First hash changed. Cleaning {}.'.format(field))
-                memory_cursor.execute('''UPDATE blocks SET {} = NULL'''.format(field))
-
-    # Initialise missing tables
-    blocks.initialise(memory_db)
-    previous_ledger_hash = None
-    previous_txlist_hash = None
-    previous_messages_hash = None
-
-    # Reparse each block, if ConsensusError is thrown then the difference
-    memory_cursor.execute('''SELECT * FROM blocks WHERE block_index > ? ORDER BY block_index''', (block_index,))
-    for block in memory_cursor.fetchall():
-        try:
-            util.CURRENT_BLOCK_INDEX = block['block_index']
-            previous_ledger_hash, previous_txlist_hash, previous_messages_hash, previous_found_messages_hash = blocks.parse_block(
-                                                                     memory_db, block['block_index'], block['block_time'],
-                                                                     previous_ledger_hash=previous_ledger_hash, ledger_hash=block['ledger_hash'],
-                                                                     previous_txlist_hash=previous_txlist_hash, txlist_hash=block['txlist_hash'],
-                                                                     previous_messages_hash=previous_messages_hash)
-            logger.info('Block (re-parse): %s (hashes: L:%s / TX:%s / M:%s%s)' % (
-                block['block_index'], previous_ledger_hash[-5:], previous_txlist_hash[-5:], previous_messages_hash[-5:],
-                (' [overwrote %s]' % previous_found_messages_hash) if previous_found_messages_hash and previous_found_messages_hash != previous_messages_hash else ''))
-
-        except check.ConsensusError as e:
-            message = str(e)
-            if message.find('ledger_hash') != -1:
-                new_ledger = get_block_ledger(memory_db, block['block_index'])
-                old_ledger = get_block_ledger(prod_db, block['block_index'])
-                compare_strings(old_ledger, new_ledger)
-            elif message.find('txlist_hash') != -1:
-                new_txlist = get_block_txlist(memory_db, block['block_index'])
-                old_txlist = get_block_txlist(prod_db, block['block_index'])
-                compare_strings(old_txlist, new_txlist)
-
-            raise e
-
-
 class ConfigContext(object):
     def __init__(self, **kwargs):
         self.config = config
@@ -825,3 +734,56 @@ class MockProtocolChangesContext(object):
             self.mock_protocol_changes[k] = self._before[k]
         for k in self._before_empty:
             del self.mock_protocol_changes[k]
+
+def reparse(testnet=True, checkpoint_count=10):
+    """
+    Reparse all transaction from the database.
+     - Create a new in-memory DB, copy the DB that is on-disk
+     - Reparse DB, automatically compares consensus hashes to the original ones from the on-disk DB
+    """
+    # create a new in-memory DB
+    options = dict(COUNTERPARTYD_OPTIONS)
+    server.initialise(database_file=':memory:', testnet=testnet, **options)
+    memory_db = database.get_connection(read_only=False)
+
+    # connect to the on-disk DB
+    data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+    prod_db_path = os.path.join(data_dir, '{}{}.db'.format(config.APP_NAME, '.testnet' if testnet else ''))
+    assert os.path.exists(prod_db_path), "database path {} does not exist".format(prod_db_path)
+    prod_db = apsw.Connection(prod_db_path, flags=apsw.SQLITE_OPEN_READONLY)
+    prod_db.setrowtrace(database.rowtracer)
+
+    # Copy DB from file on disk (should be a DB file with at least all the checkpoints)
+    #  in-memory DB shouldn't have been written to yet up until this point
+    logger.info("Copying database from {} to memory...".format(prod_db_path))
+    with memory_db.backup("main", prod_db, "main") as backup:
+        while not backup.done:
+            backup.step(100)
+
+    # Check that all checkpoint blocks are in the database to be tested.
+    if testnet:
+        CHECKPOINTS = check.CHECKPOINTS_TESTNET
+    else:
+        CHECKPOINTS = check.CHECKPOINTS_MAINNET
+
+    # we start one block after the checkpoint before the first one we want to check
+    block_index = sorted(list(CHECKPOINTS.keys()))[-checkpoint_count - 1]
+
+    # Initialise missing tables
+    blocks.initialise(memory_db)
+
+    try:
+        blocks.reparse(memory_db, block_index)
+    except check.ConsensusError as e:
+        message = str(e)
+        block_pos = message.index("block ") + 6
+        error_block_index = int(message[block_pos:message.index(" ", block_pos)])
+        if message.find('ledger_hash') != -1:
+            new_ledger = get_block_ledger(memory_db, error_block_index)
+            old_ledger = get_block_ledger(prod_db, error_block_index)
+            compare_strings(f"Old ledger:\n{old_ledger}", f"New ledger:\n{new_ledger}")
+        elif message.find('txlist_hash') != -1:
+            new_txlist = get_block_txlist(memory_db, error_block_index)
+            old_txlist = get_block_txlist(prod_db, error_block_index)
+            compare_strings(f"Old TX list:\n{old_txlist}", f"New TX list:\n{new_txlist}")
+        raise e

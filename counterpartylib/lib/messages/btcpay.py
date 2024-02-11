@@ -12,6 +12,8 @@ from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 from counterpartylib.lib import log
 from counterpartylib.lib import message_type
+from counterpartylib.lib import ledger
+from counterpartylib.lib import database
 
 FORMAT = '>32s32s'
 LENGTH = 32 + 32
@@ -19,6 +21,14 @@ ID = 11
 
 def initialise(db):
     cursor = db.cursor()
+
+    # remove misnamed indexes
+    database.drop_indexes(cursor, [
+        'block_index_idx',
+        'source_idx',
+        'destination_idx',
+    ])
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS btcpays(
                       tx_index INTEGER PRIMARY KEY,
                       tx_hash TEXT UNIQUE,
@@ -30,25 +40,18 @@ def initialise(db):
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
-                      # Disallows invalids: FOREIGN KEY (order_match_id) REFERENCES order_matches(id))
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON btcpays (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON btcpays (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      destination_idx ON btcpays (destination)
-                   ''')
+
+    database.create_indexes(cursor, 'btcpays', [
+        ['block_index'],
+        ['source'],
+        ['destination'],
+    ])
+
+
 def validate (db, source, order_match_id, block_index):
     problems = []
     order_match = None
-
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM order_matches \
-                      WHERE id = ?''', (order_match_id,))
-    order_matches = cursor.fetchall()
-    cursor.close()
+    order_matches = ledger.get_order_match(db, id=order_match_id)
     if len(order_matches) == 0:
         problems.append('no such order match %s' % order_match_id)
         return None, None, None, None, order_match, problems
@@ -87,14 +90,15 @@ def validate (db, source, order_match_id, block_index):
 
     return destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems
 
+
 def compose (db, source, order_match_id):
     tx0_hash, tx1_hash = util.parse_id(order_match_id)
 
-    destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(db, source, order_match_id, util.CURRENT_BLOCK_INDEX)
+    destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(db, source, order_match_id, ledger.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
     # Warn if down to the wire.
-    time_left = order_match['match_expire_index'] - util.CURRENT_BLOCK_INDEX
+    time_left = order_match['match_expire_index'] - ledger.CURRENT_BLOCK_INDEX
     if time_left < 4:
         logger.warning('Only {} blocks until that order match expires. The payment might not make into the blockchain in time.'.format(time_left))
     if 10 - time_left < 4:
@@ -104,6 +108,7 @@ def compose (db, source, order_match_id):
     data = message_type.pack(ID)
     data += struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
     return (source, [(destination, btc_quantity)], data)
+
 
 def parse (db, tx, message):
     cursor = db.cursor()
@@ -131,47 +136,26 @@ def parse (db, tx, message):
         if tx['btc_amount'] >= btc_quantity:
 
             # Credit source address for the currency that he bought with the bitcoins.
-            util.credit(db, tx['source'], escrowed_asset, escrowed_quantity, action='btcpay', event=tx['tx_hash'])
+            ledger.credit(db, tx['source'], escrowed_asset, escrowed_quantity, tx['tx_index'], action='btcpay', event=tx['tx_hash'])
             status = 'valid'
 
             # Update order match.
-            bindings = {
+            ledger.update_order_match_status(db, order_match_id, 'completed', tx['block_index'], tx['tx_index'])
+
+            log.message(db, tx['block_index'], 'update', 'order_matches', {
                 'status': 'completed',
                 'order_match_id': order_match_id
-            }
-            sql='update order_matches set status = :status where id = :order_match_id'
-            cursor.execute(sql, bindings)
-            log.message(db, tx['block_index'], 'update', 'order_matches', bindings)
+            })
 
             # Update give and get order status as filled if order_match is completed
-            if util.enabled('btc_order_filled'):
-                bindings = {
-                    'status': 'pending',
-                    'tx0_hash': tx0_hash,
-                    'tx1_hash': tx1_hash
-                }
-                sql='select * from order_matches where status = :status and ((tx0_hash in (:tx0_hash, :tx1_hash)) or ((tx1_hash in (:tx0_hash, :tx1_hash))))'
-                cursor.execute(sql, bindings)
-                order_matches = cursor.fetchall()
+            if ledger.enabled('btc_order_filled'):
+                order_matches = ledger.get_pending_order_matches(db, tx0_hash, tx1_hash)
                 if len(order_matches) == 0:
                     # mark both btc get and give orders as filled when order_match is completed and give or get remaining = 0
-                    bindings = {
-                        'status': 'filled',
-                        'tx0_hash': tx0_hash,
-                        'tx1_hash': tx1_hash
-                    }
-                    sql='update orders set status = :status where ((tx_hash in (:tx0_hash, :tx1_hash)) and ((give_remaining = 0) or (get_remaining = 0)))'
-                    cursor.execute(sql, bindings)
+                    ledger.mark_order_as_filled(db, tx0_hash, tx1_hash, tx['block_index'], tx['tx_index'])
                 else:
                     # always mark btc get order as filled when order_match is completed and give or get remaining = 0
-                    bindings = {
-                        'status': 'filled',
-                        'source': tx['destination'],
-                        'tx0_hash': tx0_hash,
-                        'tx1_hash': tx1_hash
-                    }
-                    sql='update orders set status = :status where ((tx_hash in (:tx0_hash, :tx1_hash)) and ((give_remaining = 0) or (get_remaining = 0)) and (source = :source))'
-                    cursor.execute(sql, bindings)
+                    ledger.mark_order_as_filled(db, tx0_hash, tx1_hash, tx['block_index'], tx['tx_index'], source=tx['destination'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
@@ -193,5 +177,3 @@ def parse (db, tx, message):
 
 
     cursor.close()
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

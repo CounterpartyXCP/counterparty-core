@@ -7,10 +7,11 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 
-from counterpartylib.lib import util
+from counterpartylib.lib import database
 from counterpartylib.lib import config
 from counterpartylib.lib import script
 from counterpartylib.lib import message_type
+from counterpartylib.lib import ledger
 from counterpartylib.lib.script import AddressError
 from counterpartylib.lib.exceptions import *
 
@@ -22,6 +23,13 @@ ID = 110
 
 def initialise(db):
     cursor = db.cursor()
+
+    # remove misnamed indexes
+    database.drop_indexes(cursor, [
+        'status_idx',
+        'address_idx',
+    ])
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS destructions(
                       tx_index INTEGER PRIMARY KEY,
                       tx_hash TEXT UNIQUE,
@@ -33,12 +41,11 @@ def initialise(db):
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_idx ON destructions (status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      address_idx ON destructions (source)
-                   ''')
+
+    database.create_indexes(cursor, 'destructions', [
+        ['status'],
+        ['source'],
+    ])
 
 
 def pack(db, asset, quantity, tag):
@@ -50,7 +57,7 @@ def pack(db, asset, quantity, tag):
     else:
         tag = b''
 
-    data += struct.pack(FORMAT, util.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX), quantity)
+    data += struct.pack(FORMAT, ledger.get_asset_id(db, asset, ledger.CURRENT_BLOCK_INDEX), quantity)
     data += tag
     return data
 
@@ -59,7 +66,7 @@ def unpack(db, message):
     try:
         asset_id, quantity = struct.unpack(FORMAT, message[0:16])
         tag = message[16:]
-        asset = util.get_asset_name(db, asset_id, util.CURRENT_BLOCK_INDEX)
+        asset = ledger.get_asset_name(db, asset_id, ledger.CURRENT_BLOCK_INDEX)
 
     except struct.error:
         raise UnpackError('could not unpack')
@@ -73,7 +80,7 @@ def unpack(db, message):
 def validate (db, source, destination, asset, quantity):
 
     try:
-        util.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX)
+        ledger.get_asset_id(db, asset, ledger.CURRENT_BLOCK_INDEX)
     except AssetError:
         raise ValidateError('asset invalid')
 
@@ -97,13 +104,13 @@ def validate (db, source, destination, asset, quantity):
     if quantity < 0:
         raise ValidateError('quantity negative')
 
-    if util.get_balance(db, source, asset) < quantity:
+    if ledger.get_balance(db, source, asset) < quantity:
         raise BalanceError('balance insufficient')
 
 
 def compose (db, source, asset, quantity, tag):
     # resolve subassets
-    asset = util.resolve_subasset_longname(db, asset)
+    asset = ledger.resolve_subasset_longname(db, asset)
 
     validate(db, source, None, asset, quantity)
     data = pack(db, asset, quantity, tag)
@@ -119,7 +126,7 @@ def parse (db, tx, message):
     try:
         asset, quantity, tag = unpack(db, message)
         validate(db, tx['source'], tx['destination'], asset, quantity)
-        util.debit(db, tx['source'], asset, quantity, 'destroy', tx['tx_hash'])
+        ledger.debit(db, tx['source'], asset, quantity, tx['tx_index'], 'destroy', tx['tx_hash'])
 
     except UnpackError as e:
         status = 'invalid: ' + ''.join(e.args)

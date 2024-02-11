@@ -20,7 +20,8 @@ from counterpartylib.lib import exceptions
 from counterpartylib.lib import script
 from counterpartylib.lib.messages import issuance
 from counterpartylib.lib.api import APIError
-from counterpartylib.lib.util import (DebitError, CreditError, QuantityError, RPCError)
+from counterpartylib.lib.util import (QuantityError, RPCError)
+from counterpartylib.lib.ledger import (DebitError, CreditError)
 from fractions import Fraction
 from counterpartylib.lib import address
 
@@ -174,7 +175,8 @@ UNITTEST_VECTOR = {
                 }}
             ]
         }, {
-            'in': ({'supported': 1, 'data': b'\x00\x00\x00(\x00\x02R\xbb3\xc8\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x13\xb0\x00\x00\x03\xe8', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'btc_amount': 5430, 'block_index': DP['default_block_index'], 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'tx_hash': '30b9ca8488a931dffa1d8d3ac8f1c51360a29cedb7c703840becc8a95f81188c', 'block_time': 310501000, 'fee': 10000},),
+            'in': (
+                {'supported': 1, 'data': b'\x00\x00\x00(\x00\x02R\xbb3\xc8\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x13\xb0\x00\x00\x03\xe8', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'btc_amount': 5430, 'block_index': DP['default_block_index'], 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'tx_hash': '30b9ca8488a931dffa1d8d3ac8f1c51360a29cedb7c703840becc8a95f81188c', 'block_time': 310501000, 'fee': 10000},),
             'records': [
                 {'table': 'bets', 'values': {
                     'bet_type': 2,
@@ -197,7 +199,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'bets', 'values': {
                     'bet_type': 3,
-                    'block_index': 310101,
+                    'block_index': DP['default_block_index'],
                     'counterwager_quantity': 10,
                     'counterwager_remaining': 0,
                     'deadline': 1388000200,
@@ -231,7 +233,7 @@ UNITTEST_VECTOR = {
         }],
         # TODO: Test match by calling parse. Add all skipping modes
         'match': [{
-            'in': ({'tx_index': 99999999},),
+            'in': ({'tx_index': 99999999, 'tx_hash':'fakehash'},),
             'out': None
         }, {
             'in': ({'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58',
@@ -261,14 +263,23 @@ UNITTEST_VECTOR = {
         #         }}
         #     ]
         # }],
+        
         'cancel_bet': [{
-            'in': ({'counterwager_quantity': 10, 'wager_remaining': 10, 'target_value': 0.0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'counterwager_remaining': 10, 'tx_index': 102, 'block_index': 310101, 'deadline': 1388000200, 'bet_type': 3, 'expiration': 1000, 'expire_index': 311101, 'tx_hash': 'db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e', 'leverage': 5040, 'wager_quantity': 10, 'fee_fraction_int': 5000000, 'status': 'open'}, 'filled', DP['default_block_index']),
+            'in': (
+                {
+                    'counterwager_quantity': 10,
+                    'wager_remaining': 10,
+                    'target_value': 0.0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'counterwager_remaining': 10, 'tx_index': 102, 'block_index': 310101, 'deadline': 1388000200, 'bet_type': 3, 'expiration': 1000, 'expire_index': 311101, 'tx_hash': 'db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e', 'leverage': 5040, 'wager_quantity': 10, 'fee_fraction_int': 5000000, 'status': 'open'
+                },
+                'filled',
+                DP['default_block_index'],
+                0),
             'records': [
                 {'table': 'bets', 'values': {
                     'bet_type': 3,
                     'expiration': 1000,
                     'expire_index': 311101,
-                    'block_index': 310101,
+                    'block_index': DP['default_block_index'],
                     'deadline': 1388000200,
                     'counterwager_quantity': 10,
                     'wager_remaining': 10,
@@ -286,11 +297,15 @@ UNITTEST_VECTOR = {
             ]
         }],
         'cancel_bet_match': [{
-            'in': ({'tx0_block_index': 310019, 'backward_quantity': 9, 'initial_value': 1, 'tx1_expiration': 100, 'id': '2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93', 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'status': 'settled', 'leverage': 5040, 'target_value': 0.0, 'fee_fraction_int': 5000000, 'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'deadline': 1388000001, 'tx1_bet_type': 0, 'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx0_index': 20, 'tx1_hash': '5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93', 'tx0_hash': '2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1', 'block_index': 310020, 'forward_quantity': 9, 'match_expire_index': 310119, 'tx1_block_index': 310020, 'tx0_expiration': 100, 'tx1_index': 21, 'tx0_bet_type': 1}, 'filled', DP['default_block_index']),
+            'in': (
+                {'tx0_block_index': 310019, 'backward_quantity': 9, 'initial_value': 1, 'tx1_expiration': 100, 'id': '2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93', 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'status': 'settled', 'leverage': 5040, 'target_value': 0.0, 'fee_fraction_int': 5000000, 'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'deadline': 1388000001, 'tx1_bet_type': 0, 'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx0_index': 20, 'tx1_hash': '5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93', 'tx0_hash': '2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1', 'block_index': 310020, 'forward_quantity': 9, 'match_expire_index': 310119, 'tx1_block_index': 310020, 'tx0_expiration': 100, 'tx1_index': 21, 'tx0_bet_type': 1}, 
+                'filled', 
+                DP['default_block_index'],
+                0),
             'records': [
                 {'table': 'bet_matches', 'values': {
                     'backward_quantity': 9,
-                    'block_index': 310020,
+                    'block_index': DP['default_block_index'],
                     'deadline': 1388000001,
                     'fee_fraction_int': 5000000,
                     'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
@@ -509,7 +524,7 @@ UNITTEST_VECTOR = {
                     'bet_type': 3,
                     'expiration': 1000,
                     'expire_index': 311101,
-                    'block_index': 310101,
+                    'block_index': DP['default_block_index'],
                     'deadline': 1388000200,
                     'counterwager_quantity': 10,
                     'wager_remaining': 10,
@@ -754,7 +769,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'bets', 'values': {
                     'bet_type': 3,
-                    'block_index': 310101,
+                    'block_index': DP['default_block_index'],
                     'counterwager_quantity': 10,
                     'counterwager_remaining': 10,
                     'deadline': 1388000200,
@@ -905,7 +920,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'bets', 'values': {
                     'bet_type': 3,
-                    'block_index': 310101,
+                    'block_index': DP['default_block_index'],
                     'counterwager_quantity': 10,
                     'counterwager_remaining': 10,
                     'deadline': 1388000200,
@@ -3348,7 +3363,7 @@ UNITTEST_VECTOR = {
                     { 'table': 'dispensers', 'values': { # Some values here correspond to the original TX that opened the dispenser
                         'tx_index': 108,
                         'tx_hash': '9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec',
-                        'block_index': 310107,
+                        'block_index': DP['default_block_index'],
                         'source': ADDR[5],
                         'asset': config.XCP,
                         'give_quantity': 100,
@@ -3407,7 +3422,7 @@ UNITTEST_VECTOR = {
                     { 'table': 'dispensers', 'values': { # Some values here correspond to the original TX that opened the dispenser
                         'tx_index': 108,
                         'tx_hash': '9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec',
-                        'block_index': 310107,
+                        'block_index': DP['default_block_index'],
                         'source': ADDR[5],
                         'asset': config.XCP,
                         'give_quantity': 100,
@@ -3439,7 +3454,7 @@ UNITTEST_VECTOR = {
                     { 'table': 'dispensers', 'values': { # Some values here correspond to the original TX that opened the dispenser
                         'tx_index': 108,
                         'tx_hash': '9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec',
-                        'block_index': 310107,
+                        'block_index': DP['default_block_index'],
                         'source': ADDR[5],
                         'asset': config.XCP,
                         'give_quantity': 100,
@@ -4074,6 +4089,336 @@ UNITTEST_VECTOR = {
             'out': ['02513522cbf07b0bd553b0d8f8414c476c9275334fd3edfa368386412e3a193558']
         }]
     },
+    'ledger': {
+        'generate_asset_id': [{
+            'in': ('BTC', DP['default_block_index']),
+            'out': 0
+        }, {
+            'in': ('XCP', DP['default_block_index']),
+            'out': 1
+        }, {
+            'in': ('BCD', 308000),
+            'error': (exceptions.AssetNameError, 'too short')
+        }, {
+            'in': ('ABCD', 308000),
+            'error': (exceptions.AssetNameError, 'non‐numeric asset name starts with ‘A’')
+        }, {
+            'in': ('A{}'.format(26**12), 308000),
+            'error': (exceptions.AssetNameError, 'numeric asset name not in range')
+        }, {
+            'in': ('A{}'.format(2**64), 308000),
+            'error': (exceptions.AssetNameError, 'numeric asset name not in range')
+        }, {
+            'in': ('A{}'.format(26**12 + 1), 308000),
+            'out': 26**12 + 1
+        }, {
+            'in': ('A{}'.format(2**64 - 1), 308000),
+            'out': 2**64 - 1
+        }, {
+            'in': ('LONGASSETNAMES', 308000),
+            'error': (exceptions.AssetNameError, 'long asset names must be numeric')
+        }, {
+            'in': ('BCDE_F', 308000),
+            'error': (exceptions.AssetNameError, "invalid character:")
+        }, {
+            'in': ('BAAA', 308000),
+            'out': 26**3
+        }, {
+            'in': ('ZZZZZZZZZZZZ', 308000),
+            'out': 26**12 - 1
+        }],
+        'generate_asset_name': [{
+            'in': (0, DP['default_block_index']),
+            'out': 'BTC'
+        }, {
+            'in': (1, DP['default_block_index']),
+            'out': 'XCP'
+        }, {
+            'in': (26**12 - 1, 308000),
+            'out': 'ZZZZZZZZZZZZ'
+        }, {
+            'in': (26**3, 308000),
+            'out': 'BAAA'
+        }, {
+            'in': (2**64 - 1, 308000),
+            'out': 'A{}'.format(2**64 - 1)
+        }, {
+            'in': (26**12 + 1, 308000),
+            'out': 'A{}'.format(26**12 + 1)
+        }, {
+            'in': (26**3 - 1, 308000),
+            'error': (exceptions.AssetIDError, 'too low')
+        }, {
+            'in': (2**64, 308000),
+            'error': (exceptions.AssetIDError, 'too high')
+        }],
+        'price': [{
+            'in': (1, 10),
+            'out': Fraction(1, 10)
+        }],
+        'last_message': [{
+            'in': (),
+            'out': {'message_index': 66, 
+                     'block_index': 310498, 
+                     'command': 'insert', 
+                     'category': 'issuances', 
+                     'bindings': "['asset', 'asset_longname', 'block_index', 'call_date', 'call_price', 'callable', 'description', 'divisible', 'fee_paid', 'issuer', 'locked', 'quantity', 'reset', 'source', 'status', 'transfer', 'tx_hash', 'tx_index']",
+                     'timestamp': 0}
+        }],
+        'get_asset_id': [{
+            'in': ('XCP', DP['default_block_index']),
+            'out': 1
+        }, {
+            'in': ('BTC', DP['default_block_index']),
+            'out': 0
+        }, {
+            'in': ('foobar', DP['default_block_index']),
+            'error': (exceptions.AssetError, 'No such asset: foobar')
+        }],
+        'resolve_subasset_longname': [{
+            'in': ('XCP',),
+            'out': 'XCP'
+        }, {
+            'in': ('PARENT',),
+            'out': 'PARENT'
+        }, {
+            'in': ('PARENT.nonexistent.subasset',),
+            'out': 'PARENT.nonexistent.subasset'
+        }, {
+            'in': ('PARENT.ILEGAL^^^',),
+            'out': 'PARENT.ILEGAL^^^'
+        }, {
+            'in': ('PARENT.already.issued',),
+            'out': 'A{}'.format(26**12 + 101)
+        }],
+        'debit': [{
+            'in': (ADDR[0], 'XCP', 1, 0),
+            'out': None
+        }, {
+            'in': (ADDR[0], 'BTC', DP['quantity'], 0),
+            'error': (DebitError, 'Cannot debit bitcoins.')
+        }, {
+            'in': (ADDR[0], 'BTC', -1 * DP['quantity'], 0),
+            'error': (DebitError, 'Negative quantity.')
+        }, {
+            'in': (ADDR[0], 'BTC', 1.1 * DP['quantity'], 0),
+            'error': (DebitError, 'Quantity must be an integer.')
+        }, {
+            'in': (ADDR[0], 'XCP', 2**40, 0),
+            'error': (DebitError, 'Insufficient funds.')
+        }],
+        'credit': [{
+            'in': (ADDR[0], 'XCP', 1, 0),
+            'out': None
+        }, {
+            'in': (ADDR[0], 'BTC', DP['quantity'], 0),
+            'error': (CreditError, 'Cannot debit bitcoins.')
+        }, {
+            'in': (ADDR[0], 'BTC', -1 * DP['quantity'], 0),
+            'error': (CreditError, 'Negative quantity.')
+        }, {
+            'in': (ADDR[0], 'BTC', 1.1 * DP['quantity'], 0),
+            'error': (CreditError, 'Quantity must be an integer.')
+        }],
+        'is_divisible': [{
+            'in': ('XCP',),
+            'out': True
+        }, {
+            'in': ('BTC',),
+            'out': True
+        }, {
+            'in': ('DIVISIBLE',),
+            'out': True
+        }, {
+            'in': ('NODIVISIBLE',),
+            'out': False
+        }, {
+            'in': ('foobar',),
+            'error': (exceptions.AssetError, 'No such asset: foobar')
+        }],
+        'value_in': [{
+            'in': (1.1, 'leverage',),
+            'out': 1
+        }, {
+            'in': (1/10, 'fraction',),
+            'out': 0.1
+        }, {
+            'in': (1, 'NODIVISIBLE',),
+            'out': 1
+        }, {
+            'in': (1.111111111111, 'DIVISIBLE',),
+            'error': (QuantityError, 'Divisible assets have only eight decimal places of precision.')
+        }, {
+            'in': (1.1, 'NODIVISIBLE',),
+            'error': (QuantityError, 'Fractional quantities of indivisible assets.')
+        }],
+        'value_out': [{
+            'in': (1.1, 'leverage',),
+            'out': '1.1'
+        }, {
+            'in': (1/10, 'fraction',),
+            'out': '10.0%'
+        }, {
+            'in': (1, 'NODIVISIBLE',),
+            'out': 1
+        }, {
+            'in': (1.1, 'NODIVISIBLE',),
+            'error': (QuantityError, 'Fractional quantities of indivisible assets.')
+        }],
+        'xcp_created': [{
+            'in': (),
+            'out': 604506847920
+        }],
+        'xcp_destroyed': [{
+            'in': (),
+            'out': 475000000
+        }],
+        'xcp_supply': [{
+            'in': (),
+            'out': 604031847920,
+        }],
+        'creations': [{
+            'in': (),
+            'out': {'XCP': 604506847920,
+                    'CALLABLE': 1000,
+                    'DIVIDEND': 100,
+                    'DIVISIBLE': 100000000000,
+                    'LOCKED': 1000,
+                    'LOCKEDPREV': 1000,
+                    'MAXI': 9223372036854775807,
+                    'NODIVISIBLE': 1000,
+                    'PAYTOSCRIPT': 1000,
+                    'A95428956661682277': 100000000,
+                    'PARENT': 100000000}
+        }],
+        'destructions': [{
+            'in': (),
+            'out': {'XCP': 475000000}
+        }],
+        'asset_supply': [{
+            'in': ('DIVISIBLE',),
+            'out': 100000000000,
+        }],
+        'supplies': [{
+            'in': (),
+            'out':  {'XCP': 604031847920,
+                     'CALLABLE': 1000,
+                     'DIVIDEND': 100,
+                     'DIVISIBLE': 100000000000,
+                     'LOCKED': 1000,
+                     'LOCKEDPREV': 1000,
+                     'MAXI': 9223372036854775807,
+                     'NODIVISIBLE': 1000,
+                     'PAYTOSCRIPT': 1000,
+                     'A95428956661682277': 100000000,
+                     'PARENT': 100000000}
+        }],
+        'get_balance': [{
+            'in': (ADDR[0], 'XCP'),
+            'out': 91875000000
+        }, {
+            'in': (ADDR[0], 'foobar'),
+            'out': 0
+        }],
+        'get_asset_name': [{
+            'in': (1, DP['default_block_index']),
+            'out': 'XCP'
+        }, {
+            'in': (0, DP['default_block_index']),
+            'out': 'BTC'
+        }, {
+            'in': (453, DP['default_block_index']),
+            'out': 0
+        }],
+        'enabled': [{
+            'in': ('numeric_asset_names',),
+            'out': True
+        }, {
+            'in': ('foobar',),
+            'error': (KeyError, "foobar")
+        }, {
+            'mock_protocol_changes': {'numeric_asset_names': False},
+            'in': ('numeric_asset_names',),
+            'out': False
+        }],
+        'holders': [{
+            'in': ('XCP',),
+            'out': [{'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'address_quantity': 91875000000,
+                    'escrow': None},
+                    {'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
+                    'address_quantity': 99999990,
+                    'escrow': None},
+                    {'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
+                    'address_quantity': 300000000,
+                    'escrow': None},
+                    {'address': 'myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM',
+                    'address_quantity': 92999138812,
+                    'escrow': None},
+                    {'address': 'munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b',
+                    'address_quantity': 92999130360,
+                    'escrow': None},
+                    {'address': 'mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42',
+                    'address_quantity': 92949122099,
+                    'escrow': None},
+                    {'address': 'mrPk7hTeZWjjSCrMTC2ET4SAUThQt7C4uK',
+                    'address_quantity': 14999857,
+                    'escrow': None},
+                    {'address': '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy',
+                    'address_quantity': 46449548498,
+                    'escrow': None},
+                    {'address': 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+                    'address_quantity': 92999030129,
+                    'escrow': None},
+                    {'address': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH',
+                    'address_quantity': 0,
+                    'escrow': None},
+                    {'address': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj',
+                    'address_quantity': 92945878046,
+                    'escrow': None},
+                    {'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'address_quantity': 100000000,
+                    'escrow': '4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8'},
+                    {'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'address_quantity': 100000000,
+                    'escrow': '21460d5c07284f9be9baf824927d0d4e4eb790e297f3162305841607b672349b'},
+                    {'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'address_quantity': 100000000,
+                    'escrow': '1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a'},
+                    {'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'address_quantity': 0,
+                    'escrow': '74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498'},
+                    {'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'address_quantity': 100000000,
+                    'escrow': '74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498_1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81'},
+                    {'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
+                    'address_quantity': 10,
+                    'escrow': 'db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e'},
+                    {'address': '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy',
+                    'address_quantity': 10,
+                    'escrow': 'd79b590e4ec3e74cbc3eb4d0f956ce7abb0e3af2ccac85ff90ed8acf13f2e048'},
+                    {'address': 'myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM',
+                    'address_quantity': 9,
+                    'escrow': '41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef'},
+                    {'address': 'munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b',
+                    'address_quantity': 100,
+                    'escrow': None}]
+        }, {
+            'in': ('DIVISIBLE',),
+            'out': [{'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'address_quantity': 98800000000,
+                    'escrow': None},
+                    {'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
+                    'address_quantity': 100000000,
+                    'escrow': None},
+                    {'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
+                    'address_quantity': 1000000000,
+                    'escrow': None},
+                    {'address': '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy',
+                    'address_quantity': 100000000,
+                    'escrow': None}]
+        }],
+    },
     'util': {
         'api': [{
             'in': ('create_burn', {'source': ADDR[1], 'quantity': DP['burn_quantity'], 'encoding': 'multisig'}),
@@ -4199,72 +4544,6 @@ UNITTEST_VECTOR = {
             'out': [2, {'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'asset': 'XCP', 'memo': None, 'quantity': 50000000}]
         }],
 
-        'generate_asset_id': [{
-            'in': ('BTC', DP['default_block_index']),
-            'out': 0
-        }, {
-            'in': ('XCP', DP['default_block_index']),
-            'out': 1
-        }, {
-            'in': ('BCD', 308000),
-            'error': (exceptions.AssetNameError, 'too short')
-        }, {
-            'in': ('ABCD', 308000),
-            'error': (exceptions.AssetNameError, 'non‐numeric asset name starts with ‘A’')
-        }, {
-            'in': ('A{}'.format(26**12), 308000),
-            'error': (exceptions.AssetNameError, 'numeric asset name not in range')
-        }, {
-            'in': ('A{}'.format(2**64), 308000),
-            'error': (exceptions.AssetNameError, 'numeric asset name not in range')
-        }, {
-            'in': ('A{}'.format(26**12 + 1), 308000),
-            'out': 26**12 + 1
-        }, {
-            'in': ('A{}'.format(2**64 - 1), 308000),
-            'out': 2**64 - 1
-        }, {
-            'in': ('LONGASSETNAMES', 308000),
-            'error': (exceptions.AssetNameError, 'long asset names must be numeric')
-        }, {
-            'in': ('BCDE_F', 308000),
-            'error': (exceptions.AssetNameError, "invalid character:")
-        }, {
-            'in': ('BAAA', 308000),
-            'out': 26**3
-        }, {
-            'in': ('ZZZZZZZZZZZZ', 308000),
-            'out': 26**12 - 1
-        }],
-        'generate_asset_name': [{
-            'in': (0, DP['default_block_index']),
-            'out': 'BTC'
-        }, {
-            'in': (1, DP['default_block_index']),
-            'out': 'XCP'
-        }, {
-            'in': (26**12 - 1, 308000),
-            'out': 'ZZZZZZZZZZZZ'
-        }, {
-            'in': (26**3, 308000),
-            'out': 'BAAA'
-        }, {
-            'in': (2**64 - 1, 308000),
-            'out': 'A{}'.format(2**64 - 1)
-        }, {
-            'in': (26**12 + 1, 308000),
-            'out': 'A{}'.format(26**12 + 1)
-        }, {
-            'in': (26**3 - 1, 308000),
-            'error': (exceptions.AssetIDError, 'too low')
-        }, {
-            'in': (2**64, 308000),
-            'error': (exceptions.AssetIDError, 'too high')
-        }],
-        'price': [{
-            'in': (1, 10),
-            'out': Fraction(1, 10)
-        }],
         'dhash_string': [{
             'in': ('foobar',),
             'out': '3f2c7ccae98af81e44c0ec419659f50d8b7d48c681e5d57fc747d0461e42dda1'
@@ -4272,191 +4551,6 @@ UNITTEST_VECTOR = {
         'hexlify': [{
             'in': (b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\x0b\xfc\xe3',),
             'out': '0000001400000000000bfce3'
-        }],
-        'last_message': [{
-            'in': (),
-            'out': {'bindings': "['block_index']",
-                    'block_index': 310500,
-                    'category': 'replace',
-                    'command': 'insert',
-                    'message_index': 631,
-                    'timestamp': 0}
-        }],
-        'get_asset_id': [{
-            'in': ('XCP', DP['default_block_index']),
-            'out': 1
-        }, {
-            'in': ('BTC', DP['default_block_index']),
-            'out': 0
-        }, {
-            'in': ('foobar', DP['default_block_index']),
-            'error': (exceptions.AssetError, 'No such asset: foobar')
-        }],
-        'resolve_subasset_longname': [{
-            'in': ('XCP',),
-            'out': 'XCP'
-        }, {
-            'in': ('PARENT',),
-            'out': 'PARENT'
-        }, {
-            'in': ('PARENT.nonexistent.subasset',),
-            'out': 'PARENT.nonexistent.subasset'
-        }, {
-            'in': ('PARENT.ILEGAL^^^',),
-            'out': 'PARENT.ILEGAL^^^'
-        }, {
-            'in': ('PARENT.already.issued',),
-            'out': 'A{}'.format(26**12 + 101)
-        }],
-        'debit': [{
-            'in': (ADDR[0], 'XCP', 1),
-            'out': None
-        }, {
-            'in': (ADDR[0], 'BTC', DP['quantity']),
-            'error': (DebitError, 'Cannot debit bitcoins.')
-        }, {
-            'in': (ADDR[0], 'BTC', -1 * DP['quantity']),
-            'error': (DebitError, 'Negative quantity.')
-        }, {
-            'in': (ADDR[0], 'BTC', 1.1 * DP['quantity']),
-            'error': (DebitError, 'Quantity must be an integer.')
-        }, {
-            'in': (ADDR[0], 'XCP', 2**40),
-            'error': (DebitError, 'Insufficient funds.')
-        }],
-        'credit': [{
-            'in': (ADDR[0], 'XCP', 1),
-            'out': None
-        }, {
-            'in': (ADDR[0], 'BTC', DP['quantity']),
-            'error': (CreditError, 'Cannot debit bitcoins.')
-        }, {
-            'in': (ADDR[0], 'BTC', -1 * DP['quantity']),
-            'error': (CreditError, 'Negative quantity.')
-        }, {
-            'in': (ADDR[0], 'BTC', 1.1 * DP['quantity']),
-            'error': (CreditError, 'Quantity must be an integer.')
-        }],
-        'is_divisible': [{
-            'in': ('XCP',),
-            'out': True
-        }, {
-            'in': ('BTC',),
-            'out': True
-        }, {
-            'in': ('DIVISIBLE',),
-            'out': True
-        }, {
-            'in': ('NODIVISIBLE',),
-            'out': False
-        }, {
-            'in': ('foobar',),
-            'error': (exceptions.AssetError, 'No such asset: foobar')
-        }],
-        'value_in': [{
-            'in': (1.1, 'leverage',),
-            'out': 1
-        }, {
-            'in': (1/10, 'fraction',),
-            'out': 0.1
-        }, {
-            'in': (1, 'NODIVISIBLE',),
-            'out': 1
-        }, {
-            'in': (1.111111111111, 'DIVISIBLE',),
-            'error': (QuantityError, 'Divisible assets have only eight decimal places of precision.')
-        }, {
-            'in': (1.1, 'NODIVISIBLE',),
-            'error': (QuantityError, 'Fractional quantities of indivisible assets.')
-        }],
-        'value_out': [{
-            'in': (1.1, 'leverage',),
-            'out': '1.1'
-        }, {
-            'in': (1/10, 'fraction',),
-            'out': '10.0%'
-        }, {
-            'in': (1, 'NODIVISIBLE',),
-            'out': 1
-        }, {
-            'in': (1.1, 'NODIVISIBLE',),
-            'error': (QuantityError, 'Fractional quantities of indivisible assets.')
-        }],
-        'xcp_created': [{
-            'in': (),
-            'out': 604506847920
-        }],
-        'xcp_destroyed': [{
-            'in': (),
-            'out': 475000000
-        }],
-        'xcp_supply': [{
-            'in': (),
-            'out': 604031847920,
-        }],
-        'creations': [{
-            'in': (),
-            'out': {'XCP': 604506847920,
-                    'CALLABLE': 1000,
-                    'DIVIDEND': 100,
-                    'DIVISIBLE': 100000000000,
-                    'LOCKED': 1000,
-                    'LOCKEDPREV': 1000,
-                    'MAXI': 9223372036854775807,
-                    'NODIVISIBLE': 1000,
-                    'PAYTOSCRIPT': 1000,
-                    'A95428956661682277': 100000000,
-                    'PARENT': 100000000}
-        }],
-        'destructions': [{
-            'in': (),
-            'out': {'XCP': 475000000}
-        }],
-        'asset_supply': [{
-            'in': ('DIVISIBLE',),
-            'out': 100000000000,
-        }],
-        'supplies': [{
-            'in': (),
-            'out':  {'XCP': 604031847920,
-                     'CALLABLE': 1000,
-                     'DIVIDEND': 100,
-                     'DIVISIBLE': 100000000000,
-                     'LOCKED': 1000,
-                     'LOCKEDPREV': 1000,
-                     'MAXI': 9223372036854775807,
-                     'NODIVISIBLE': 1000,
-                     'PAYTOSCRIPT': 1000,
-                     'A95428956661682277': 100000000,
-                     'PARENT': 100000000}
-        }],
-        'get_balance': [{
-            'in': (ADDR[0], 'XCP'),
-            'out': 91875000000
-        }, {
-            'in': (ADDR[0], 'foobar'),
-            'out': 0
-        }],
-        'get_asset_name': [{
-            'in': (1, DP['default_block_index']),
-            'out': 'XCP'
-        }, {
-            'in': (0, DP['default_block_index']),
-            'out': 'BTC'
-        }, {
-            'in': (453, DP['default_block_index']),
-            'out': 0
-        }],
-        'enabled': [{
-            'in': ('numeric_asset_names',),
-            'out': True
-        }, {
-            'in': ('foobar',),
-            'error': (KeyError, "foobar")
-        }, {
-            'mock_protocol_changes': {'numeric_asset_names': False},
-            'in': ('numeric_asset_names',),
-            'out': False
         }],
         'date_passed': [{
             'comment': 'date in the past, mock function overrides this one and always returns `False` in the test suite',

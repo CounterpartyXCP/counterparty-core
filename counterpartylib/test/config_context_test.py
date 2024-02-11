@@ -6,7 +6,7 @@ from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP
 from counterpartylib.test import util_test
 from counterpartylib.test.util_test import CURR_DIR
 
-from counterpartylib.lib import (blocks, config, util)
+from counterpartylib.lib import (blocks, config, ledger)
 
 
 FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/parseblock_unittest_fixture.sql'
@@ -28,14 +28,14 @@ def test_config_context(cp_server):
 
 
 def test_mock_protocol_changes(cp_server):
-    assert util.enabled('multisig_addresses') == True
+    assert ledger.enabled('multisig_addresses') == True
 
     with util_test.MockProtocolChangesContext(multisig_addresses=False):
-        assert util.enabled('multisig_addresses') == False
+        assert ledger.enabled('multisig_addresses') == False
 
         with util_test.MockProtocolChangesContext(multisig_addresses=None):
-                assert util.enabled('multisig_addresses') == None
+                assert ledger.enabled('multisig_addresses') == None
 
-        assert util.enabled('multisig_addresses') == False
+        assert ledger.enabled('multisig_addresses') == False
 
-    assert util.enabled('multisig_addresses') == True
+    assert ledger.enabled('multisig_addresses') == True

@@ -1,9 +1,7 @@
-import getpass
 import binascii
 import logging
 logger = logging.getLogger(__name__)
 import sys
-import json
 import time
 from decimal import Decimal as D
 
@@ -16,6 +14,7 @@ from counterpartylib.lib import script
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import prefetcher
+from counterpartylib.lib import ledger
 
 from counterpartylib.lib.backend import addrindexrs
 
@@ -141,7 +140,7 @@ def get_tx_list(block, block_index=None):
     tx_hash_list = []
 
     for ctx in block.vtx:
-        if util.enabled('correct_segwit_txids', block_index=block_index):
+        if ledger.enabled('correct_segwit_txids', block_index=block_index):
             hsh = ctx.GetTxid()
         else:
             hsh = ctx.GetHash()

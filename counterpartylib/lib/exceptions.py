@@ -50,4 +50,10 @@ class EncodingError(Exception):
 class OptionsError(Exception):
     pass
 
+class UnknownTable(Exception):
+    pass
+
+class UnknownField(Exception):
+    pass
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
