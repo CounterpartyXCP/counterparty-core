@@ -31,6 +31,7 @@ from counterpartylib.lib import script
 from counterpartylib.lib import backend
 from counterpartylib.lib import arc4
 from counterpartylib.lib import ledger
+from counterpartylib.lib import gettxinfo
 from counterpartylib.lib.transaction_helper import serializer, p2sh_encoding
 
 
@@ -600,7 +601,7 @@ def construct (db, tx_info, encoding='auto',
     try:
         if pretx_txid and unsigned_pretx:
             backend.cache_pretx(pretx_txid, unsigned_pretx)
-        parsed_source, parsed_destination, x, y, parsed_data, extra = blocks._get_tx_info(unsigned_tx_hex, p2sh_is_segwit=script.is_bech32(desired_source))
+        parsed_source, parsed_destination, x, y, parsed_data, extra = gettxinfo._get_tx_info(unsigned_tx_hex, p2sh_is_segwit=script.is_bech32(desired_source))
 
         if encoding == 'p2sh':
             # make_canonical can't determine the address, so we blindly change the desired to the parsed
