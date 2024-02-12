@@ -423,6 +423,9 @@ def expire (db, block_index):
                 # Re-debit XCP refund by close_rps_match.
                 ledger.debit(db, rps['source'], 'XCP', rps['wager'], 0, action='reopen RPS after matching expiration', event=rps_match['id'])
                 # Rematch
-                match(db, {'tx_index': rps['tx_index']}, block_index)
+                match(db, {
+                    'tx_index': rps['tx_index'],
+                    'tx_hash': rps['tx_hash'],
+                }, block_index)
 
     cursor.close()
