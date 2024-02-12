@@ -734,7 +734,13 @@ def insert_update(db, table_name, update_data, where_data, block_index, tx_index
         else:
             where.append(f'{key} = ?')
             bindings.append(value)
-    select_query = f'''SELECT *, rowid FROM {table_name} WHERE {' AND '.join(where)} {more_where}'''
+    select_query = f'''
+        SELECT *, rowid
+        FROM {table_name}
+        WHERE {' AND '.join(where)} {more_where}
+        ORDER BY rowid DESC
+        LIMIT 1
+        '''
     needs_update_list = cursor.execute(select_query, tuple(bindings))
 
     for row in needs_update_list:
