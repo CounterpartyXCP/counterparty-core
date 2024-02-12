@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 log.set_logger(logger)  # set root logger
 
 from counterpartylib.lib import api, config, util, ledger, blocks, backend, database, transaction
-
+from counterpartylib.lib import kickstart as kickstarter
 D = decimal.Decimal
 
 
@@ -503,7 +503,7 @@ def rollback(db, block_index=None):
 
 
 def kickstart(bitcoind_dir, force=False, last_hash=None, resume_from=None):
-    blocks.kickstart(bitcoind_dir=bitcoind_dir, force=force, last_hash=last_hash, resume_from=resume_from)
+    kickstarter.run(bitcoind_dir=bitcoind_dir, force=force, last_hash=last_hash, resume_from=resume_from)
 
 
 def vacuum(db):
