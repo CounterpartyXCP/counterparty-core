@@ -178,7 +178,7 @@ def parse (db, tx, message):
             else:
                 rps_match_status = 'concluded: {} player wins'.format('first' if txn == 0 else 'second')
 
-        rps.update_rps_match_status(db, rps_match, rps_match_status, tx['block_index'])
+        rps.update_rps_match_status(db, rps_match, rps_match_status, tx['block_index'], tx['tx_index'])
 
     sql = '''INSERT INTO rpsresolves VALUES (:tx_index, :tx_hash, :block_index, :source, :move, :random, :rps_match_id, :status)'''
     cursor.execute(sql, rpsresolves_bindings)

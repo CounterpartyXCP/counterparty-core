@@ -1349,7 +1349,7 @@ def get_already_matched_rps(db, tx_hash):
     cursor = db.cursor()
     query = '''
         SELECT *, MAX(rowid) AS rowid
-        FORM rps_matches
+        FROM rps_matches
         WHERE tx0_hash = ? OR tx1_hash = ?
         GROUP BY id
         ORDER BY rowid
