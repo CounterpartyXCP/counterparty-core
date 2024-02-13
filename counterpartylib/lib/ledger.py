@@ -1501,7 +1501,7 @@ def _get_holders(cursor, id_fields, hold_fields_1, hold_fields_2=None, exclude_e
                 'address': holder[hold_fields_1['address']],
                 'address_quantity': holder[hold_fields_1['address_quantity']],
                 'escrow': holder[hold_fields_1['escrow']] if 'escrow' in hold_fields_1 else None,
-                'table': table
+                #'table': table # for debugging purposes
             })
         if hold_fields_2 is not None:
             if holder[hold_fields_2['address_quantity']] > 0 or \
@@ -1510,7 +1510,7 @@ def _get_holders(cursor, id_fields, hold_fields_1, hold_fields_2=None, exclude_e
                     'address': holder[hold_fields_2['address']],
                     'address_quantity': holder[hold_fields_2['address_quantity']],
                     'escrow': holder[hold_fields_2['escrow']] if 'escrow' in hold_fields_2 else None,
-                    'table': table
+                    #'table': table # for debugging purposes
                 })
     return holders
 

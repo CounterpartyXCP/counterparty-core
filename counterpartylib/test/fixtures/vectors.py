@@ -233,7 +233,7 @@ UNITTEST_VECTOR = {
         }],
         # TODO: Test match by calling parse. Add all skipping modes
         'match': [{
-            'in': ({'tx_index': 99999999, 'tx_hash':'fakehash'},),
+            'in': ({'tx_index': 99999999, 'tx_hash':'fakehash'}, DP['default_block_index']),
             'out': None
         }, {
             'in': ({'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58',
@@ -246,7 +246,7 @@ UNITTEST_VECTOR = {
                     'fee': 10000,
                     'tx_hash': 'a0ed83b170344b996bdd71799dd774ab10f5410f8572079a292f681d36ebc42c',
                     'tx_index': 502,
-                   },),
+                   }, DP['default_block_index']),
             'out': None
         }],
         # Testing expiration of normal bets is impossible - either the bet is expired automatically with expiry < DP['default_block_index'] - 1 or
