@@ -466,11 +466,11 @@ def parse (db, tx, message):
 
     # Match.
     if status == 'open' and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
-        match(db, tx, tx['block_index'])
+        match(db, tx)
 
     order_parse_cursor.close()
 
-def match (db, tx, block_index):
+def match (db, tx, block_index = None):
 
     cursor = db.cursor()
 
@@ -507,7 +507,10 @@ def match (db, tx, block_index):
     for tx0 in order_matches:
         order_match_id = util.make_id(tx0['tx_hash'], tx1['tx_hash'])
         if not block_index:
-            block_index = max(tx0['block_index'], tx1['block_index'])
+            block_index = max(
+                ledger.get_order_first_block_index(cursor, tx0['tx_hash']),
+                ledger.get_order_first_block_index(cursor, tx1['tx_hash']),
+            )
         if tx1_status != 'open': break
 
         logger.debug('Considering: ' + tx0['tx_hash'])
@@ -702,7 +705,7 @@ def match (db, tx, block_index):
                 'backward_quantity': backward_quantity,
                 'tx0_block_index': tx0['block_index'],
                 'tx1_block_index': tx1['block_index'],
-                'block_index': max(tx0['block_index'], tx1['block_index']),
+                'block_index': block_index,
                 'tx0_expiration': tx0['expiration'],
                 'tx1_expiration': tx1['expiration'],
                 'match_expire_index': match_expire_index,

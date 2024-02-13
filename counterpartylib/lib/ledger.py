@@ -689,6 +689,7 @@ def get_vouts(db, tx_hash):
 
 
 def get_transactions(db, tx_hash=None):
+    logger.warning(tx_hash)
     cursor = db.cursor()
     where = []
     bindings = []
@@ -750,7 +751,7 @@ def insert_update(db, table_name, update_data, where_data, block_index, tx_index
         for key, value in update_data.items():
             new_record[key] = value
         # new block_index and tx_index
-        new_record['block_index'] = block_index
+        new_record['block_index'] = CURRENT_BLOCK_INDEX
         # let's keep the original tx_index so we can preserve order
         # with the old queries (ordered by default by old primary key)
         # TODO: restore with protocol change and checkpoints update
@@ -1221,6 +1222,17 @@ def get_order(db, tx_hash):
     return cursor.fetchall()
 
 
+def get_order_first_block_index(cursor, tx_hash):
+    query = '''
+        SELECT block_index FROM orders 
+        WHERE tx_hash = ? 
+        ORDER BY rowid ASC LIMIT 1
+    '''
+    bindings = (tx_hash,)
+    cursor.execute(query, bindings)
+    return cursor.fetchone()['block_index']
+
+
 def get_orders_to_expire(db, block_index):
     cursor = db.cursor()
     query = '''
@@ -1501,7 +1513,7 @@ def _get_holders(cursor, id_fields, hold_fields_1, hold_fields_2=None, exclude_e
                 'address': holder[hold_fields_1['address']],
                 'address_quantity': holder[hold_fields_1['address_quantity']],
                 'escrow': holder[hold_fields_1['escrow']] if 'escrow' in hold_fields_1 else None,
-                #'table': table # for debugging purposes
+                'table': table # for debugging purposes
             })
         if hold_fields_2 is not None:
             if holder[hold_fields_2['address_quantity']] > 0 or \
@@ -1510,7 +1522,7 @@ def _get_holders(cursor, id_fields, hold_fields_1, hold_fields_2=None, exclude_e
                     'address': holder[hold_fields_2['address']],
                     'address_quantity': holder[hold_fields_2['address_quantity']],
                     'escrow': holder[hold_fields_2['escrow']] if 'escrow' in hold_fields_2 else None,
-                    #'table': table # for debugging purposes
+                    'table': table # for debugging purposes
                 })
     return holders
 

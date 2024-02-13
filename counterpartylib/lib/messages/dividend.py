@@ -90,6 +90,9 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
         exclude_empty = True
     holders = ledger.holders(db, asset, exclude_empty)
 
+    import json
+    #logger.warning(json.dumps(holders, indent=4))
+
     outputs = []
     addresses = []
     dividend_total = 0
