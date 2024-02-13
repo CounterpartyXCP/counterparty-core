@@ -180,25 +180,10 @@ def _get_swap_tx(db, decoded_tx, block_index, block_parser=None):
             destination = address
             btc_amount = vout.nValue
         elif ledger.enabled('hotfix_dispensers_with_non_p2pkh'):
-            asm = script.get_asm(vout.scriptPubKey)
-            if asm[-1] == 'OP_CHECKSIG':
-                destination, new_data = decode_checksig(asm, decoded_tx)
-            elif asm[-1] == 'OP_CHECKMULTISIG':
-                destination, new_data = decode_checkmultisig(asm, decoded_tx)
-            elif asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
-                destination, new_data = decode_scripthash(asm)
-            elif asm[0] == 'OP_RETURN':
-                pass #Just ignore.
-            elif ledger.enabled('segwit_support') and asm[0] == 0:
-                # Segwit output
-                destination, new_data = decode_p2w(vout.scriptPubKey)
-            else:
-                logger.error('unrecognised scriptPubkey. Just ignore this: ' + str(asm))
+            logger.debug('see issue #1408')
 
-            if destination and not new_data:
-                amount = vout.nValue
-            else:
-                logger.error('cannot parse destination address or new_data found: ' + str(asm))
+        if destination is None or btc_amount is None:
+            continue
 
         if dispenser.is_dispensable(db, destination, btc_amount):
             check_sources = True
