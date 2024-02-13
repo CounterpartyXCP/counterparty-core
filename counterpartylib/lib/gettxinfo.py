@@ -148,7 +148,7 @@ def _get_tx_info(tx_hex, block_parser=None, block_index=None, p2sh_is_segwit=Fal
         block_index = ledger.CURRENT_BLOCK_INDEX
 
     if ledger.enabled('p2sh_addresses', block_index=block_index):   # Protocol change.
-        return get_tx_info2(
+        return get_tx_info(
             tx_hex,
             block_index,
             block_parser=block_parser,
@@ -156,13 +156,13 @@ def _get_tx_info(tx_hex, block_parser=None, block_index=None, p2sh_is_segwit=Fal
             p2sh_is_segwit=p2sh_is_segwit,
         )
     elif ledger.enabled('multisig_addresses', block_index=block_index):   # Protocol change.
-        return get_tx_info2(
+        return get_tx_info(
             tx_hex,
             block_index,
             block_parser=block_parser,
         )
     else:
-        return get_tx_info1(
+        return get_tx_info_legacy(
             tx_hex,
             block_index,
             block_parser=block_parser
@@ -248,107 +248,7 @@ def _get_swap_tx(db, decoded_tx, block_index, block_parser=None):
     return (sources, outputs)
 
 
-def get_tx_info1(tx_hex, block_index, block_parser=None):
-    """Get singlesig transaction info.
-    The destination, if it exists, always comes before the data output; the
-    change, if it exists, always comes after.
-    """
-    ctx = backend.deserialize(tx_hex)
-
-    # Fee is the input values minus output values.
-    fee = 0
-
-    # Get destination output and data output.
-    destination, btc_amount, data = None, None, b''
-    pubkeyhash_encoding = False
-    for vout in ctx.vout:
-        fee -= vout.nValue
-
-        # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
-        asm = script.get_asm(vout.scriptPubKey)
-        if len(asm) == 2 and asm[0] == 'OP_RETURN':                                             # OP_RETURN
-            if type(asm[1]) != bytes:
-                continue
-            data_chunk = asm[1]
-            data += data_chunk
-        elif len(asm) == 5 and asm[0] == 1 and asm[3] == 2 and asm[4] == 'OP_CHECKMULTISIG':    # Multi-sig
-            if type(asm[2]) != bytes:
-                continue
-            data_pubkey = asm[2]
-            data_chunk_length = data_pubkey[0]  # No ord() necessary.
-            data_chunk = data_pubkey[1:data_chunk_length + 1]
-            data += data_chunk
-        elif len(asm) == 5 and (block_index >= 293000 or config.TESTNET or config.REGTEST):    # Protocol change.
-            # Be strict.
-            pubkeyhash, address_version = get_pubkeyhash(vout.scriptPubKey, block_index)
-            if not pubkeyhash:
-                continue
-
-            if ctx.is_coinbase():
-                raise DecodeError('coinbase transaction')
-            obj1 = arc4.init_arc4(ctx.vin[0].prevout.hash[::-1])
-            data_pubkey = obj1.decrypt(pubkeyhash)
-            if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
-                pubkeyhash_encoding = True
-                data_chunk_length = data_pubkey[0]  # No ord() necessary.
-                data_chunk = data_pubkey[1:data_chunk_length + 1]
-                if data_chunk[-8:] == config.PREFIX:
-                    data += data_chunk[:-8]
-                    break
-                else:
-                    data += data_chunk
-
-        # Destination is the first output before the data.
-        if not destination and not btc_amount and not data:
-            address = get_address(vout.scriptPubKey, block_index)
-            if address:
-                destination = address
-                btc_amount = vout.nValue
-
-    # Check for, and strip away, prefix (except for burns).
-    if destination == config.UNSPENDABLE:
-        pass
-    elif data[:len(config.PREFIX)] == config.PREFIX:
-        data = data[len(config.PREFIX):]
-    else:
-        raise DecodeError('no prefix')
-
-    # Only look for source if data were found or destination is UNSPENDABLE, for speed.
-    if not data and destination != config.UNSPENDABLE:
-        raise BTCOnlyError('no data and not unspendable')
-
-    # Collect all possible source addresses; ignore coinbase transactions and anything but the simplest Pay‐to‐PubkeyHash inputs.
-    source_list = []
-    for vin in ctx.vin[:]:                                               # Loop through input transactions.
-        if vin.prevout.is_null():
-            raise DecodeError('coinbase transaction')
-         # Get the full transaction data for this input transaction.
-        if block_parser:
-            vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
-            vin_ctx = backend.deserialize(vin_tx['__data__'])
-        else:
-            # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
-            vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=None)
-            vin_ctx = backend.deserialize(vin_tx)
-        vout = vin_ctx.vout[vin.prevout.n]
-        fee += vout.nValue
-
-        address = get_address(vout.scriptPubKey, block_index)
-        if not address:
-            raise DecodeError('invalid scriptpubkey')
-        else:
-            source_list.append(address)
-
-    # Require that all possible source addresses be the same.
-    if all(x == source_list[0] for x in source_list):
-        source = source_list[0]
-    else:
-        source = None
-
-    return source, destination, btc_amount, fee, data, None
-
-
-def get_tx_info2(tx_hex, block_index, block_parser=None, p2sh_support=False, p2sh_is_segwit=False):
+def get_tx_info(tx_hex, block_index, block_parser=None, p2sh_support=False, p2sh_is_segwit=False):
     """Get multisig transaction info.
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
@@ -428,7 +328,7 @@ def get_tx_info2(tx_hex, block_index, block_parser=None, p2sh_support=False, p2s
                 prevout_is_segwit = vin_ctx.has_witness()
             else:
                 prevout_is_segwit = p2sh_is_segwit
-                
+
             # Ignore transactions with invalid script.
             try:
                 asm = script.get_asm(vin.scriptSig)
@@ -504,3 +404,102 @@ def get_tx_info2(tx_hex, block_index, block_parser=None, p2sh_support=False, p2s
 
     destinations = '-'.join(destinations)
     return sources, destinations, btc_amount, round(fee), data, None
+
+
+def get_tx_info_legacy(tx_hex, block_index, block_parser=None):
+    """Get singlesig transaction info.
+    The destination, if it exists, always comes before the data output; the
+    change, if it exists, always comes after.
+    """
+    ctx = backend.deserialize(tx_hex)
+
+    # Fee is the input values minus output values.
+    fee = 0
+
+    # Get destination output and data output.
+    destination, btc_amount, data = None, None, b''
+    pubkeyhash_encoding = False
+    for vout in ctx.vout:
+        fee -= vout.nValue
+
+        # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
+        asm = script.get_asm(vout.scriptPubKey)
+        if len(asm) == 2 and asm[0] == 'OP_RETURN':                                             # OP_RETURN
+            if type(asm[1]) != bytes:
+                continue
+            data_chunk = asm[1]
+            data += data_chunk
+        elif len(asm) == 5 and asm[0] == 1 and asm[3] == 2 and asm[4] == 'OP_CHECKMULTISIG':    # Multi-sig
+            if type(asm[2]) != bytes:
+                continue
+            data_pubkey = asm[2]
+            data_chunk_length = data_pubkey[0]  # No ord() necessary.
+            data_chunk = data_pubkey[1:data_chunk_length + 1]
+            data += data_chunk
+        elif len(asm) == 5 and (block_index >= 293000 or config.TESTNET or config.REGTEST):    # Protocol change.
+            # Be strict.
+            pubkeyhash, address_version = get_pubkeyhash(vout.scriptPubKey, block_index)
+            if not pubkeyhash:
+                continue
+
+            if ctx.is_coinbase():
+                raise DecodeError('coinbase transaction')
+            data_pubkey = arc4_decrypt(pubkeyhash, ctx)
+            if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
+                pubkeyhash_encoding = True
+                data_chunk_length = data_pubkey[0]  # No ord() necessary.
+                data_chunk = data_pubkey[1:data_chunk_length + 1]
+                if data_chunk[-8:] == config.PREFIX:
+                    data += data_chunk[:-8]
+                    break
+                else:
+                    data += data_chunk
+
+        # Destination is the first output before the data.
+        if not destination and not btc_amount and not data:
+            address = get_address(vout.scriptPubKey, block_index)
+            if address:
+                destination = address
+                btc_amount = vout.nValue
+
+    # Check for, and strip away, prefix (except for burns).
+    if destination == config.UNSPENDABLE:
+        pass
+    elif data[:len(config.PREFIX)] == config.PREFIX:
+        data = data[len(config.PREFIX):]
+    else:
+        raise DecodeError('no prefix')
+
+    # Only look for source if data were found or destination is UNSPENDABLE, for speed.
+    if not data and destination != config.UNSPENDABLE:
+        raise BTCOnlyError('no data and not unspendable')
+
+    # Collect all possible source addresses; ignore coinbase transactions and anything but the simplest Pay‐to‐PubkeyHash inputs.
+    source_list = []
+    for vin in ctx.vin[:]:                                               # Loop through input transactions.
+        if vin.prevout.is_null():
+            raise DecodeError('coinbase transaction')
+         # Get the full transaction data for this input transaction.
+        if block_parser:
+            vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
+            vin_ctx = backend.deserialize(vin_tx['__data__'])
+        else:
+            # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
+            vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=None)
+            vin_ctx = backend.deserialize(vin_tx)
+        vout = vin_ctx.vout[vin.prevout.n]
+        fee += vout.nValue
+
+        address = get_address(vout.scriptPubKey, block_index)
+        if not address:
+            raise DecodeError('invalid scriptpubkey')
+        else:
+            source_list.append(address)
+
+    # Require that all possible source addresses be the same.
+    if all(x == source_list[0] for x in source_list):
+        source = source_list[0]
+    else:
+        source = None
+
+    return source, destination, btc_amount, fee, data, None
