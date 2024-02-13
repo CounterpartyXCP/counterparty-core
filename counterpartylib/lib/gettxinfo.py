@@ -13,6 +13,118 @@ from counterpartylib.lib.messages import dispenser
 logger = logging.getLogger(__name__)
 
 
+def arc4_decrypt(cyphertext, ctx):
+    '''Un‐obfuscate. Initialise key once per attempt.'''
+    key = arc4.init_arc4(ctx.vin[0].prevout.hash[::-1])
+    return key.decrypt(cyphertext)
+
+
+def get_opreturn(asm):
+    if len(asm) == 2 and asm[0] == 'OP_RETURN':
+        pubkeyhash = asm[1]
+        if type(pubkeyhash) == bytes:
+            return pubkeyhash
+    raise DecodeError('invalid OP_RETURN')
+
+
+def decode_opreturn(asm, ctx):
+    chunk = get_opreturn(asm)
+    chunk = arc4_decrypt(chunk, ctx)
+    if chunk[:len(config.PREFIX)] == config.PREFIX:             # Data
+        destination, data = None, chunk[len(config.PREFIX):]
+    else:
+        raise DecodeError('unrecognised OP_RETURN output')
+
+    return destination, data
+
+
+def decode_checksig(asm, ctx):
+    pubkeyhash = script.get_checksig(asm)
+    chunk = arc4_decrypt(pubkeyhash, ctx)   # TODO: This is slow!
+    if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
+        # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
+        chunk_length = chunk[0]
+        chunk = chunk[1:chunk_length + 1]
+        destination, data = None, chunk[len(config.PREFIX):]
+    else:                                                       # Destination
+        pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
+        destination, data = script.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
+
+    return destination, data
+
+
+def decode_scripthash(asm):
+    destination = script.base58_check_encode(binascii.hexlify(asm[1]).decode('utf-8'), config.P2SH_ADDRESSVERSION)
+
+    return destination, None
+
+
+def decode_checkmultisig(asm, ctx):
+    pubkeys, signatures_required = script.get_checkmultisig(asm)
+    chunk = b''
+    for pubkey in pubkeys[:-1]:     # (No data in last pubkey.)
+        chunk += pubkey[1:-1]       # Skip sign byte and nonce byte.
+    chunk = arc4_decrypt(chunk, ctx)
+    if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
+        # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
+        chunk_length = chunk[0]
+        chunk = chunk[1:chunk_length + 1]
+        destination, data = None, chunk[len(config.PREFIX):]
+    else:                                                       # Destination
+        pubkeyhashes = [script.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
+        destination, data = script.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes)), None
+
+    return destination, data
+
+
+def decode_p2w(script_pubkey):
+    try:
+        bech32 = bitcoinlib.bech32.CBech32Data.from_bytes(0, script_pubkey[2:22])
+        return str(bech32), None
+    except TypeError as e:
+        raise DecodeError('bech32 decoding error')
+
+
+def get_pubkeyhash(scriptpubkey, block_index):
+    asm = script.get_asm(scriptpubkey)
+    if ledger.enabled('multisig_addresses', block_index=block_index):
+        if len(asm) > 0:
+
+            if asm[0] == "OP_DUP":
+                if len(asm) != 5 or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':            
+                    return None, None
+                else:
+                    return asm[2], config.ADDRESSVERSION
+
+            elif (asm[0] == "OP_HASH160") and ledger.enabled('p2sh_dispensers_support'):
+                if len(asm) != 3 or asm[-1] != 'OP_EQUAL':          
+                    return None, None
+                else:
+                    return asm[1], config.P2SH_ADDRESSVERSION
+        return None, None
+    else:
+        if len(asm) != 5 or asm[0] != 'OP_DUP' or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':
+            return None, None
+        return asm[2], config.ADDRESSVERSION
+
+
+def get_address(scriptpubkey, block_index):
+    if ledger.enabled('correct_segwit_txids') and scriptpubkey.is_witness_v0_keyhash():
+        pubkey = scriptpubkey[2:]
+        address = str(bitcoinlib.bech32.CBech32Data.from_bytes(0, pubkey))
+        return address
+    else:
+        pubkeyhash, address_version = get_pubkeyhash(scriptpubkey, block_index)
+        if not pubkeyhash:
+            return False
+        pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
+        address = script.base58_check_encode(pubkeyhash, address_version)
+        # Test decoding of address.
+        if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != script.base58_check_decode(address, address_version):
+            return False
+        return address
+
+
 def get_tx_info(tx_hex, block_parser=None, block_index=None, db=None):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
     try:
@@ -23,56 +135,45 @@ def get_tx_info(tx_hex, block_parser=None, block_index=None, db=None):
         # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
         if ledger.enabled('dispensers', block_index):
             try:
-                return b'', None, None, None, None, _get_swap_tx(e.decodedTx, block_parser, block_index, db=db)
+                return b'', None, None, None, None, _get_swap_tx(db, e.decodedTx, block_parser, block_index)
             except: # (DecodeError, backend.indexd.BackendRPCError) as e:
                 return b'', None, None, None, None, None
         else:
             return b'', None, None, None, None, None
 
 
-def _get_swap_tx(decoded_tx, block_parser=None, block_index=None, db=None):
+def _get_tx_info(tx_hex, block_parser=None, block_index=None, p2sh_is_segwit=False):
+    """Get the transaction info. Calls one of two subfunctions depending on signature type."""
+    if not block_index:
+        block_index = ledger.CURRENT_BLOCK_INDEX
 
-    def get_pubkeyhash(scriptpubkey):
-        asm = script.get_asm(scriptpubkey)
-        
-        if len(asm) > 0:
-            if asm[0] == "OP_DUP":
-                if len(asm) != 5 or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':            
-                    return False
-                else:
-                    return {"pubkeyhash":asm[2],"address_version":config.ADDRESSVERSION}
-            elif (asm[0] == "OP_HASH160") and ledger.enabled('p2sh_dispensers_support'):
-                if len(asm) != 3 or asm[-1] != 'OP_EQUAL':          
-                    return False
-                else:
-                    return {"pubkeyhash":asm[1],"address_version":config.P2SH_ADDRESSVERSION}
-                
-        return False
+    if ledger.enabled('p2sh_addresses', block_index=block_index):   # Protocol change.
+        return get_tx_info2(
+            tx_hex,
+            block_index,
+            block_parser=block_parser,
+            p2sh_support=True,
+            p2sh_is_segwit=p2sh_is_segwit,
+        )
+    elif ledger.enabled('multisig_addresses', block_index=block_index):   # Protocol change.
+        return get_tx_info2(
+            tx_hex,
+            block_index,
+            block_parser=block_parser,
+        )
+    else:
+        return get_tx_info1(
+            tx_hex,
+            block_index,
+            block_parser=block_parser
+        )
 
-    def get_address(scriptpubkey):
-        if ledger.enabled('correct_segwit_txids') and scriptpubkey.is_witness_v0_keyhash():
-            pubkey = scriptpubkey[2:]
-            address = str(bitcoinlib.bech32.CBech32Data.from_bytes(0, pubkey))
-            return address
-        else:
-            pubkeyhashdict = get_pubkeyhash(scriptpubkey)
-            if not pubkeyhashdict:
-                return False
-            pubkeyhash = pubkeyhashdict["pubkeyhash"]
-            address_version = pubkeyhashdict["address_version"]
-            
-            pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
-            address = script.base58_check_encode(pubkeyhash, address_version)
-            # Test decoding of address.
-            if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != script.base58_check_decode(address, address_version):
-                return False
 
-            return address
-
+def _get_swap_tx(db, decoded_tx, block_index, block_parser=None):
     outputs = []
-    check_sources = db == None # If we didn't get passed a database cursor, assume we have to check for dispenser
+    check_sources = False
     for vout in decoded_tx.vout:
-        address = get_address(vout.scriptPubKey)
+        address = get_address(vout.scriptPubKey, block_index)
         destination = None
         btc_amount = None
         if address:
@@ -99,8 +200,7 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None, db=None):
             else:
                 logger.error('cannot parse destination address or new_data found: ' + str(asm))
 
-
-        if db != None and dispenser.is_dispensable(db, destination, btc_amount):
+        if dispenser.is_dispensable(db, destination, btc_amount):
             check_sources = True
             outputs.append((destination, btc_amount))
 
@@ -147,16 +247,6 @@ def _get_swap_tx(decoded_tx, block_parser=None, block_index=None, db=None):
 
     return (sources, outputs)
 
-def _get_tx_info(tx_hex, block_parser=None, block_index=None, p2sh_is_segwit=False):
-    """Get the transaction info. Calls one of two subfunctions depending on signature type."""
-    if not block_index:
-        block_index = ledger.CURRENT_BLOCK_INDEX
-    if ledger.enabled('p2sh_addresses', block_index=block_index):   # Protocol change.
-        return  get_tx_info3(tx_hex, block_parser=block_parser, p2sh_is_segwit=p2sh_is_segwit, block_index=block_index)
-    elif ledger.enabled('multisig_addresses', block_index=block_index):   # Protocol change.
-        return get_tx_info2(tx_hex, block_parser=block_parser, block_index=block_index)
-    else:
-        return get_tx_info1(tx_hex, block_index, block_parser=block_parser)
 
 def get_tx_info1(tx_hex, block_index, block_parser=None):
     """Get singlesig transaction info.
@@ -164,24 +254,6 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
     change, if it exists, always comes after.
     """
     ctx = backend.deserialize(tx_hex)
-
-    def get_pubkeyhash(scriptpubkey):
-        asm = script.get_asm(scriptpubkey)
-        if len(asm) != 5 or asm[0] != 'OP_DUP' or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':
-            return False
-        return asm[2]
-
-    def get_address(scriptpubkey):
-        pubkeyhash = get_pubkeyhash(scriptpubkey)
-        if not pubkeyhash:
-            return False
-        pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
-        address = script.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
-        # Test decoding of address.
-        if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != script.base58_check_decode(address, config.ADDRESSVERSION):
-            return False
-
-        return address
 
     # Fee is the input values minus output values.
     fee = 0
@@ -208,7 +280,7 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
             data += data_chunk
         elif len(asm) == 5 and (block_index >= 293000 or config.TESTNET or config.REGTEST):    # Protocol change.
             # Be strict.
-            pubkeyhash = get_pubkeyhash(vout.scriptPubKey)
+            pubkeyhash, address_version = get_pubkeyhash(vout.scriptPubKey, block_index)
             if not pubkeyhash:
                 continue
 
@@ -228,7 +300,7 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
 
         # Destination is the first output before the data.
         if not destination and not btc_amount and not data:
-            address = get_address(vout.scriptPubKey)
+            address = get_address(vout.scriptPubKey, block_index)
             if address:
                 destination = address
                 btc_amount = vout.nValue
@@ -261,7 +333,7 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
 
-        address = get_address(vout.scriptPubKey)
+        address = get_address(vout.scriptPubKey, block_index)
         if not address:
             raise DecodeError('invalid scriptpubkey')
         else:
@@ -275,75 +347,8 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
 
     return source, destination, btc_amount, fee, data, None
 
-def get_tx_info3(tx_hex, block_parser=None, p2sh_is_segwit=False, block_index=None):
-    return get_tx_info2(tx_hex, block_parser=block_parser, p2sh_support=True, p2sh_is_segwit=p2sh_is_segwit, block_index=block_index)
 
-def arc4_decrypt(cyphertext, ctx):
-    '''Un‐obfuscate. Initialise key once per attempt.'''
-    key = arc4.init_arc4(ctx.vin[0].prevout.hash[::-1])
-    return key.decrypt(cyphertext)
-
-def get_opreturn(asm):
-    if len(asm) == 2 and asm[0] == 'OP_RETURN':
-        pubkeyhash = asm[1]
-        if type(pubkeyhash) == bytes:
-            return pubkeyhash
-    raise DecodeError('invalid OP_RETURN')
-
-def decode_opreturn(asm, ctx):
-    chunk = get_opreturn(asm)
-    chunk = arc4_decrypt(chunk, ctx)
-    if chunk[:len(config.PREFIX)] == config.PREFIX:             # Data
-        destination, data = None, chunk[len(config.PREFIX):]
-    else:
-        raise DecodeError('unrecognised OP_RETURN output')
-
-    return destination, data
-
-def decode_checksig(asm, ctx):
-    pubkeyhash = script.get_checksig(asm)
-    chunk = arc4_decrypt(pubkeyhash, ctx)   # TODO: This is slow!
-    if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
-        # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
-        chunk_length = chunk[0]
-        chunk = chunk[1:chunk_length + 1]
-        destination, data = None, chunk[len(config.PREFIX):]
-    else:                                                       # Destination
-        pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
-        destination, data = script.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
-
-    return destination, data
-
-def decode_scripthash(asm):
-    destination = script.base58_check_encode(binascii.hexlify(asm[1]).decode('utf-8'), config.P2SH_ADDRESSVERSION)
-
-    return destination, None
-
-def decode_checkmultisig(asm, ctx):
-    pubkeys, signatures_required = script.get_checkmultisig(asm)
-    chunk = b''
-    for pubkey in pubkeys[:-1]:     # (No data in last pubkey.)
-        chunk += pubkey[1:-1]       # Skip sign byte and nonce byte.
-    chunk = arc4_decrypt(chunk, ctx)
-    if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
-        # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
-        chunk_length = chunk[0]
-        chunk = chunk[1:chunk_length + 1]
-        destination, data = None, chunk[len(config.PREFIX):]
-    else:                                                       # Destination
-        pubkeyhashes = [script.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
-        destination, data = script.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes)), None
-
-    return destination, data
-
-def decode_p2w(script_pubkey):
-    try:
-        bech32 = bitcoinlib.bech32.CBech32Data.from_bytes(0, script_pubkey[2:22])
-        return str(bech32), None
-    except TypeError as e:
-        raise DecodeError('bech32 decoding error')
-
-def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=False, block_index=None):
+def get_tx_info2(tx_hex, block_index, block_parser=None, p2sh_support=False, p2sh_is_segwit=False):
     """Get multisig transaction info.
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
@@ -445,6 +450,7 @@ def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False, p2sh_is_segwit=F
             assert not new_destination
 
             data += new_data
+
     # Only look for source if data were found or destination is `UNSPENDABLE`,
     # for speed.
     if not data and destinations != [config.UNSPENDABLE,]: 

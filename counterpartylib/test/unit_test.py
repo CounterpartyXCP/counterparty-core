@@ -21,6 +21,7 @@ def test_vector(tx_name, method, inputs, outputs, error, records, comment, mock_
         # force unit tests to always run against latest protocol changes
         from counterpartylib.test import conftest
         conftest.ALWAYS_LATEST_PROTOCOL_CHANGES = True
+        conftest.ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = True
         conftest.RANDOM_ASSET_INT = 26**12 + 1
 
         if method == 'parse':
