@@ -118,6 +118,9 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
         memory_cursor.execute('''SELECT block_index, tx_index FROM transactions ORDER BY block_index DESC, tx_index DESC LIMIT 1''')
         last_transaction = memory_cursor.fetchone()
         last_parsed_block = last_transaction['block_index']
+        # clean tables from last parsed block
+        for table in blocks.TABLES:
+            blocks.clean_table_from(memory_cursor, table, last_parsed_block)
         # clean hashes
         if resume_from != 'last':
             memory_cursor.execute('''UPDATE blocks

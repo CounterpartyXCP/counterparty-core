@@ -386,12 +386,12 @@ def parse (db, tx, message):
 
     # Match.
     if status == 'open' and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
-        match(db, tx)
+        match(db, tx, tx['block_index'])
 
     bet_parse_cursor.close()
 
 
-def match (db, tx):
+def match (db, tx, block_index):
 
     # Get bet in question.
     bets = ledger.get_bet(db, tx_hash=tx['tx_hash'])

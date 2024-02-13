@@ -1173,7 +1173,7 @@ def get_pending_btc_order_matches(db, address):
         SELECT * FROM (
             SELECT *, MAX(rowid) AS rowid
             FROM order_matches
-            WHERE (tx0_address = ? AND forward_asset = ?) OR (tx1_address = ? AND backward_asset = ?))
+            WHERE (tx0_address = ? AND forward_asset = ?) OR (tx1_address = ? AND backward_asset = ?)
         ) WHERE status = ?
         ORDER BY rowid
     '''
@@ -1332,13 +1332,12 @@ def get_matched_not_expired_rps(db, tx0_hash, tx1_hash, expire_index):
     cursor = db.cursor()
     query = '''
         SELECT * FROM (
-            SELECT *, MAX(rowid) 
+            SELECT *, MAX(rowid) as rowid
             FROM rps 
             WHERE tx_hash IN (?, ?) 
             AND expire_index >= ?
             GROUP BY tx_hash
         ) WHERE status = ?
-        ORDER BY tx_index, tx_hash
     '''
     bindings = (tx0_hash, tx1_hash, expire_index, 'matched')
     cursor.execute(query, bindings)
@@ -1502,7 +1501,7 @@ def _get_holders(cursor, id_fields, hold_fields_1, hold_fields_2=None, exclude_e
                 'address': holder[hold_fields_1['address']],
                 'address_quantity': holder[hold_fields_1['address_quantity']],
                 'escrow': holder[hold_fields_1['escrow']] if 'escrow' in hold_fields_1 else None,
-                #'table': table
+                'table': table
             })
         if hold_fields_2 is not None:
             if holder[hold_fields_2['address_quantity']] > 0 or \
@@ -1511,7 +1510,7 @@ def _get_holders(cursor, id_fields, hold_fields_1, hold_fields_2=None, exclude_e
                     'address': holder[hold_fields_2['address']],
                     'address_quantity': holder[hold_fields_2['address_quantity']],
                     'escrow': holder[hold_fields_2['escrow']] if 'escrow' in hold_fields_2 else None,
-                    #'table': table
+                    'table': table
                 })
     return holders
 
