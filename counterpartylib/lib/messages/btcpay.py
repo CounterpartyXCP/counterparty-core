@@ -140,7 +140,7 @@ def parse (db, tx, message):
             status = 'valid'
 
             # Update order match.
-            ledger.update_order_match_status(db, order_match_id, 'completed', tx['block_index'], tx['tx_index'])
+            ledger.update_order_match_status(db, order_match_id, 'completed')
 
             log.message(db, tx['block_index'], 'update', 'order_matches', {
                 'status': 'completed',
@@ -152,10 +152,10 @@ def parse (db, tx, message):
                 order_matches = ledger.get_pending_order_matches(db, tx0_hash, tx1_hash)
                 if len(order_matches) == 0:
                     # mark both btc get and give orders as filled when order_match is completed and give or get remaining = 0
-                    ledger.mark_order_as_filled(db, tx0_hash, tx1_hash, tx['block_index'], tx['tx_index'])
+                    ledger.mark_order_as_filled(db, tx0_hash, tx1_hash)
                 else:
                     # always mark btc get order as filled when order_match is completed and give or get remaining = 0
-                    ledger.mark_order_as_filled(db, tx0_hash, tx1_hash, tx['block_index'], tx['tx_index'], source=tx['destination'])
+                    ledger.mark_order_as_filled(db, tx0_hash, tx1_hash, source=tx['destination'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
