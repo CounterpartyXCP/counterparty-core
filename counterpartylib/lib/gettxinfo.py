@@ -168,7 +168,7 @@ def get_transaction_sources(decoded_tx, block_parser=None):
             if new_source not in sources:
                 sources.append(new_source)
 
-    return sources, outputs_value
+    return '-'.join(sources), outputs_value
 
 
 def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit, block_parser=None):
@@ -218,45 +218,6 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit, block_parser=No
     return p2sh_encoding_source, data, outputs_value
 
 
-def get_tx_info(db, tx_hex, block_index, block_parser=None):
-    """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
-    try:
-        return _get_tx_info(db, tx_hex, block_index, block_parser)
-    except DecodeError as e:
-        return b'', None, None, None, None, None
-    except BTCOnlyError as e:
-        return b'', None, None, None, None, None
-
-
-def _get_tx_info(db, tx_hex, block_index, block_parser=None, p2sh_is_segwit=False):
-    """Get the transaction info. Calls one of two subfunctions depending on signature type."""
-    if not block_index:
-        block_index = ledger.CURRENT_BLOCK_INDEX
-
-    if ledger.enabled('p2sh_addresses', block_index=block_index):   # Protocol change.
-        return get_tx_info_new(
-            db,
-            tx_hex,
-            block_index,
-            block_parser=block_parser,
-            p2sh_support=True,
-            p2sh_is_segwit=p2sh_is_segwit,
-        )
-    elif ledger.enabled('multisig_addresses', block_index=block_index):   # Protocol change.
-        return get_tx_info_new(
-            db,
-            tx_hex,
-            block_index,
-            block_parser=block_parser,
-        )
-    else:
-        return get_tx_info_legacy(
-            tx_hex,
-            block_index,
-            block_parser=block_parser
-        )
-
-
 def get_dispensers_outputs(db, potential_dispensers):
     outputs = []
     for (destination, btc_amount) in potential_dispensers:
@@ -267,24 +228,12 @@ def get_dispensers_outputs(db, potential_dispensers):
     return outputs
 
 
-def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=False, p2sh_is_segwit=False):
-    """Get multisig transaction info.
-    The destinations, if they exists, always comes before the data output; the
-    change, if it exists, always comes after.
-    """
-    # Decode transaction binary.
-    ctx = backend.deserialize(tx_hex)
-
-    # Ignore coinbase transactions.
-    if ctx.is_coinbase():
-        raise DecodeError('coinbase transaction')
-
+def parse_transaction_vouts(ctx, p2sh_support):
     # Get destinations and data outputs.
-    destinations, btc_amount, fee, data = [], 0, 0, b''
-    potential_dispensers = []
+    destinations, btc_amount, fee, data, potential_dispensers = [], 0, 0, b'', []
 
     for vout in ctx.vout:
-        potential_dispensers.append(None)
+        potential_dispensers.append((None, None))
         # Fee is the input values minus output values.
         output_value = vout.nValue
         fee -= output_value
@@ -297,7 +246,6 @@ def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=Fal
 
         if asm[0] == 'OP_RETURN':
             new_destination, new_data = decode_opreturn(asm, ctx)
-            potential_dispensers[-1] = (None, None)
         elif asm[-1] == 'OP_CHECKSIG':
             new_destination, new_data = decode_checksig(asm, ctx)
             potential_dispensers[-1] = (new_destination, output_value)
@@ -311,8 +259,6 @@ def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=Fal
             new_destination, new_data = decode_scripthash(asm)
             if ledger.enabled('p2sh_dispensers_support'):
                 potential_dispensers[-1] = (new_destination, output_value)
-            else:
-                potential_dispensers[-1] = (None, None)
         elif ledger.enabled('segwit_support') and asm[0] == 0:
             # Segwit Vout, second param is redeemScript
             #redeemScript = asm[1]
@@ -320,8 +266,6 @@ def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=Fal
             # Reproduce buggy fix. See #1408
             if ledger.enabled('correct_segwit_txids') and not ledger.enabled('hotfix_dispensers_with_non_p2pkh'):
                 potential_dispensers[-1] = (new_destination, output_value)
-            else:
-                potential_dispensers[-1] = (None, None)
         else:
             raise DecodeError('unrecognised output type')
         assert not (new_destination and new_data)
@@ -340,6 +284,24 @@ def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=Fal
                 break
             else:                   # Data.
                 data += new_data
+
+    return destinations, btc_amount, fee, data, potential_dispensers
+
+
+def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=False, p2sh_is_segwit=False):
+    """Get multisig transaction info.
+    The destinations, if they exists, always comes before the data output; the
+    change, if it exists, always comes after.
+    """
+    # Decode transaction binary.
+    ctx = backend.deserialize(tx_hex)
+
+    # Ignore coinbase transactions.
+    if ctx.is_coinbase():
+        raise DecodeError('coinbase transaction')
+
+    # Get destinations and data outputs.
+    destinations, btc_amount, fee, data, potential_dispensers = parse_transaction_vouts(ctx, p2sh_support)
 
     # source can be determined by parsing the p2sh_data transaction
     #   or from the first spent output
@@ -371,7 +333,6 @@ def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=Fal
         sources, outputs_value = get_transaction_sources(ctx, block_parser=block_parser)
         if not fee_added:
             fee += outputs_value
-        sources = '-'.join(sources)
     else: # use the source from the p2sh data source
         sources = p2sh_encoding_source
 
@@ -479,3 +440,42 @@ def get_tx_info_legacy(tx_hex, block_index, block_parser=None):
         source = None
 
     return source, destination, btc_amount, fee, data, None
+
+
+def _get_tx_info(db, tx_hex, block_index, block_parser=None, p2sh_is_segwit=False):
+    """Get the transaction info. Calls one of two subfunctions depending on signature type."""
+    if not block_index:
+        block_index = ledger.CURRENT_BLOCK_INDEX
+
+    if ledger.enabled('p2sh_addresses', block_index=block_index):   # Protocol change.
+        return get_tx_info_new(
+            db,
+            tx_hex,
+            block_index,
+            block_parser=block_parser,
+            p2sh_support=True,
+            p2sh_is_segwit=p2sh_is_segwit,
+        )
+    elif ledger.enabled('multisig_addresses', block_index=block_index):   # Protocol change.
+        return get_tx_info_new(
+            db,
+            tx_hex,
+            block_index,
+            block_parser=block_parser,
+        )
+    else:
+        return get_tx_info_legacy(
+            tx_hex,
+            block_index,
+            block_parser=block_parser
+        )
+
+
+def get_tx_info(db, tx_hex, block_index, block_parser=None):
+    """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
+    try:
+        return _get_tx_info(db, tx_hex, block_index, block_parser)
+    except DecodeError as e:
+        return b'', None, None, None, None, None
+    except BTCOnlyError as e:
+        return b'', None, None, None, None, None
