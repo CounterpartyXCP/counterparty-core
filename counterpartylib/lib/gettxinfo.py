@@ -317,7 +317,8 @@ def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=Fal
             # Segwit Vout, second param is redeemScript
             #redeemScript = asm[1]
             new_destination, new_data = decode_p2w(vout.scriptPubKey)
-            if ledger.enabled('correct_segwit_txids'):
+            # Reproduce buggy fix. See #1408
+            if ledger.enabled('correct_segwit_txids') and not ledger.enabled('hotfix_dispensers_with_non_p2pkh'):
                 potential_dispensers[-1] = (new_destination, output_value)
             else:
                 potential_dispensers[-1] = (None, None)
