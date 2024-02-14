@@ -225,14 +225,7 @@ def get_tx_info(db, tx_hex, block_index, block_parser=None):
     except DecodeError as e:
         return b'', None, None, None, None, None
     except BTCOnlyError as e:
-        # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
-        if ledger.enabled('dispensers', block_index):
-            try:
-                return b'', None, None, None, None, _get_swap_tx(db, e.decodedTx, block_index, block_parser)
-            except: # (DecodeError, backend.indexd.BackendRPCError) as e:
-                return b'', None, None, None, None, None
-        else:
-            return b'', None, None, None, None, None
+        return b'', None, None, None, None, None
 
 
 def _get_tx_info(db, tx_hex, block_index, block_parser=None, p2sh_is_segwit=False):
@@ -264,9 +257,8 @@ def _get_tx_info(db, tx_hex, block_index, block_parser=None, p2sh_is_segwit=Fals
         )
 
 
-def _get_swap_tx(db, decoded_tx, block_index, block_parser=None):
+def get_dispensers_outputs(db, decoded_tx, block_index):
     outputs = []
-    check_sources = False
     for vout in decoded_tx.vout:
         address = get_address(vout.scriptPubKey, block_index)
         destination = None
@@ -281,16 +273,9 @@ def _get_swap_tx(db, decoded_tx, block_index, block_parser=None):
             continue
 
         if dispenser.is_dispensable(db, destination, btc_amount):
-            check_sources = True
             outputs.append((destination, btc_amount))
 
-    # Collect all (unique) source addresses.
-    #   if we haven't found them yet
-    sources = []
-    if check_sources:
-        sources, outputs_value = get_transaction_sources(decoded_tx, block_parser=block_parser)
-
-    return (sources, outputs)
+    return outputs
 
 
 def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=False, p2sh_is_segwit=False):
@@ -368,8 +353,11 @@ def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=Fal
 
     # Only look for source if data were found or destination is `UNSPENDABLE`,
     # for speed.
-    if not data and destinations != [config.UNSPENDABLE,]: 
-        raise BTCOnlyError('no data and not unspendable', ctx)
+    dispensers_outputs = []
+    if not data and destinations != [config.UNSPENDABLE,]:
+        dispensers_outputs = get_dispensers_outputs(db, ctx, block_index)
+        if len(dispensers_outputs) == 0:
+            raise BTCOnlyError('no data and not unspendable')
 
     # Collect all (unique) source addresses.
     #   if we haven't found them yet
@@ -380,6 +368,9 @@ def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=Fal
         sources = '-'.join(sources)
     else: # use the source from the p2sh data source
         sources = p2sh_encoding_source
+
+    if not data and destinations != [config.UNSPENDABLE,]:
+        return b'', None, None, None, None, (sources, dispensers_outputs)
 
     destinations = '-'.join(destinations)
     return sources, destinations, btc_amount, round(fee), data, None
