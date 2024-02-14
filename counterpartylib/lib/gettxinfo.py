@@ -357,8 +357,11 @@ def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=Fal
     # for speed.
     dispensers_outputs = []
     if not data and destinations != [config.UNSPENDABLE,]:
-        dispensers_outputs = get_dispensers_outputs(db, potential_dispensers)
-        if len(dispensers_outputs) == 0:
+        if ledger.enabled('dispensers', block_index):
+            dispensers_outputs = get_dispensers_outputs(db, potential_dispensers)
+            if len(dispensers_outputs) == 0:
+                raise BTCOnlyError('no data and not unspendable')
+        else:
             raise BTCOnlyError('no data and not unspendable')
 
     # Collect all (unique) source addresses.
