@@ -416,5 +416,3 @@ def extract_pubkeys(pub):
         if not is_pubkeyhash(pub):
             pubkeys.append(pub)
     return pubkeys
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

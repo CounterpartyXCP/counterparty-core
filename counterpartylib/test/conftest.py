@@ -42,7 +42,8 @@ MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
     'enhanced_sends': {'block_index': 310999, 'allow_always_latest': False},  # override to be true only at block 310999
     'issuance_lock_fix': {'block_index': 310502, 'allow_always_latest': False},  # override to be true only at block 310502
     'segwit_support': {'block_index': 0, 'allow_always_latest': False},  # override to be true only at block 310999,
-    'dispensers': {'block_index': 0, 'allow_always_latest': True}
+    'dispensers': {'block_index': 0, 'allow_always_latest': True},
+    'multisig_addresses': {'block_index': 310502, 'allow_always_latest': True},
 }
 DISABLE_ALL_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False # if true, never look at MOCK_PROTOCOL_CHANGES_AT_BLOCK
 ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False # if true, always check MOCK_PROTOCOL_CHANGES_AT_BLOCK
@@ -58,7 +59,6 @@ def enabled(change_name, block_index=None):
         _block_index = block_index
         if _block_index is None:
             _block_index = ledger.CURRENT_BLOCK_INDEX
-        logger = logging.getLogger(__name__)
         if _block_index >= MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]['block_index']:
             return True
         return False
@@ -80,17 +80,13 @@ ledger.enabled = enabled
 def shouldCheckForMockProtocolChangesAtBlock(change_name):
     if DISABLE_ALL_MOCK_PROTOCOL_CHANGES_AT_BLOCK:
         return False
-
     if change_name not in MOCK_PROTOCOL_CHANGES_AT_BLOCK:
         return False
-
     if ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK:
         return True
-
     if 'allow_always_latest' in MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name] \
         and not MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]['allow_always_latest']:
         return True
-
     return False
 
 
