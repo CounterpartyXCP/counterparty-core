@@ -19,7 +19,7 @@ from counterpartylib.lib import util
 from counterpartylib.lib import config
 from counterpartylib.lib import api
 from counterpartylib.lib import backend
-from counterpartylib.lib import blocks
+from counterpartylib.lib import ledger
 from counterpartylib.lib import gettxinfo
 from counterpartylib.lib import exceptions
 from counterpartylib.lib.transaction_helper import serializer
@@ -37,7 +37,11 @@ def test_p2sh_encoding_composed(server_db):
         # BTC Mainnet tx d90dc8637fd2ab9ae39b7c2929c793c5d28d7dea672afb02fb4001637085e9a1
         datatxhex = "010000000102d2b137e49e930ef3e436b342713d8d07bd378e773c915a5938993d81dc7e6000000000fdab0147304402207848293e88563750f647e949cb594cdbec0beb4070faac73040d77d479420f8302201e0ac32788e98bd984279102b7382576d7ddb4b125d1d507725cbd12d97a2908014d60014d1401434e5452505254590300010042276049e5518791be2ffe2c301f5dfe9ef85dd0400001720034b0410000000000000001500000006a79811e000000000000000054000079cec1665f4800000000000000050000000ca91f2d660000000000000005402736c8de6e34d54000000000000001500c5e4c71e081ceb00000000000000054000000045dc03ec4000000000000000500004af1271cf5fc00000000000000054001e71f8464432780000000000000015000002e1e4191f0d0000000000000005400012bc4aaac2a54000000000000001500079c7e774e411c00000000000000054000000045dc0a6f00000000000000015000002e1e486f661000000000000000540001c807abe13908000000000000000475410426156245525daa71f2e84a40797bcf28099a2c508662a8a33324a703597b9aa2661a79a82ffb4caaa9b15f4094622fbfa85f8b9dc7381f991f5a265421391cc3ad0075740087ffffffff0100000000000000000e6a0c31d52bf3b404aefaf596cfd000000000"
         config.PREFIX = b'CNTRPRTY'
-        parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = gettxinfo._get_tx_info(datatxhex)
+        parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = gettxinfo._get_tx_info(
+            server_db,
+            datatxhex,
+            ledger.CURRENT_BLOCK_INDEX
+        )
         print('!!!!!!!!!!!!!!!!>1')
         print(parsed_source)
         print(parsed_destination)
@@ -108,7 +112,11 @@ def test_p2sh_encoding(server_db):
 
         # first transaction should be considered BTC only
         with pytest.raises(exceptions.BTCOnlyError):
-            gettxinfo._get_tx_info(pretxhex)
+            gettxinfo._get_tx_info(
+                server_db,
+                pretxhex,
+                ledger.CURRENT_BLOCK_INDEX
+            )
 
         # store transaction
         pretxid, _ = util_test.insert_raw_transaction(pretxhex, server_db)
@@ -173,7 +181,11 @@ def test_p2sh_encoding(server_db):
         # 00000000                                                                                    | locktime
 
         # verify parsed result
-        parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = gettxinfo._get_tx_info(datatxhex)
+        parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = gettxinfo._get_tx_info(
+            server_db,
+            datatxhex,
+            ledger.CURRENT_BLOCK_INDEX
+        )
         #assert parsed_source == source # make_canonical cannot calculate this address
         assert parsed_data == binascii.unhexlify("00000002" "0000000000000001" "0000000000000064" "6f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec")  # ID=enhanced_send(0x02) ASSET=XCP(0x01) VALUE=100(0x64) destination_pubkey(0x6f8d...d6ec)
         assert parsed_btc_amount == 0
@@ -323,7 +335,11 @@ def test_p2sh_encoding_long_data(server_db):
         # 00000000                                                                                              | locktime
 
         # verify parsed result
-        parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = gettxinfo._get_tx_info(datatxhex)
+        parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = gettxinfo._get_tx_info(
+            server_db,
+            datatxhex,
+            ledger.CURRENT_BLOCK_INDEX
+        )
         #assert parsed_source == source # make_canonical can't calculate this address
 
         assert parsed_data == binascii.unhexlify("0000001e5a21aad6000000000000000000000000") + b'The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. The quick brown fox jumped over the lazy dog. '  # ID=enhanced_send(0x1e) ASSET=XCP(0x01) VALUE=100(0x64) destination_pubkey(0x6f8d...d6ec)
@@ -413,7 +429,11 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
         datatx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(datatxhex))
 
         # parse the transaction
-        parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = gettxinfo._get_tx_info(datatxhex)
+        parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = gettxinfo._get_tx_info(
+            server_db,
+            datatxhex,
+            ledger.CURRENT_BLOCK_INDEX
+        )
         assert parsed_source == source
         assert parsed_data == binascii.unhexlify("00000002" "0000000000000001" "0000000000000064" "6f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec")  # ID=enhanced_send(0x02) ASSET=XCP(0x01) VALUE=100(0x64) destination_pubkey(0x6f8d...d6ec)
         assert parsed_btc_amount == 0

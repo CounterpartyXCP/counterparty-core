@@ -169,7 +169,7 @@ def insert_raw_transaction(raw_transaction, db):
     tx = None
     tx_index = block_index - config.BURN_START + 1
     try:
-        source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(raw_transaction)
+        source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(db, raw_transaction, block_index)
         transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
         cursor.execute('''INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?)''', transaction)
         tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
@@ -197,7 +197,7 @@ def insert_unconfirmed_raw_transaction(raw_transaction, db):
     tx_index = tx_index[0]['tx_index'] if len(tx_index) else 0
     tx_index = tx_index + 1
 
-    source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(raw_transaction)
+    source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(db, raw_transaction, ledger.CURRENT_BLOCK_INDEX)
     tx = {
         'tx_index': tx_index,
         'tx_hash': tx_hash,
@@ -595,7 +595,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
     elif (tx_name == 'util' and (method in ['api', 'date_passed', 'dhash_string', 'get_url', 'hexlify', 'parse_subasset_from_asset_name', 'compact_subasset_longname', 'expand_subasset_longname',])) \
         or (tx_name == 'ledger' and (method in ['price', 'generate_asset_id', 'generate_asset_name', 'enabled',])) \
         or tx_name == 'script' \
-        or (tx_name == 'gettxinfo' and (method[:len('get_tx_info')] == 'get_tx_info'))  \
+        or method == 'get_tx_info_legacy' \
         or tx_name == 'transaction' \
         or tx_name == 'transaction_helper.serializer' \
         or method == 'sortkeypicker' \

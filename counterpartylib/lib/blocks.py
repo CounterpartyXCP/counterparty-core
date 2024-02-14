@@ -469,7 +469,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
     if tx_hex is None:
         tx_hex = backend.getrawtransaction(tx_hash, block_index=block_index)
 
-    source, destination, btc_amount, fee, data, decoded_tx = get_tx_info(tx_hex, db=db, block_parser=block_parser, block_index=block_index)
+    source, destination, btc_amount, fee, data, decoded_tx = get_tx_info(db, tx_hex, block_index, block_parser=block_parser)
 
     outs = []
     first_one = True #This is for backward compatibility with unique dispensers

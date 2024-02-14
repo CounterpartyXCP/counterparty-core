@@ -125,30 +125,31 @@ def get_address(scriptpubkey, block_index):
         return address
 
 
-def get_tx_info(tx_hex, block_parser=None, block_index=None, db=None):
+def get_tx_info(db, tx_hex, block_index, block_parser=None):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
     try:
-        return _get_tx_info(tx_hex, block_parser, block_index)
+        return _get_tx_info(db, tx_hex, block_index, block_parser)
     except DecodeError as e:
         return b'', None, None, None, None, None
     except BTCOnlyError as e:
         # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
         if ledger.enabled('dispensers', block_index):
             try:
-                return b'', None, None, None, None, _get_swap_tx(db, e.decodedTx, block_parser, block_index)
+                return b'', None, None, None, None, _get_swap_tx(db, e.decodedTx, block_index, block_parser)
             except: # (DecodeError, backend.indexd.BackendRPCError) as e:
                 return b'', None, None, None, None, None
         else:
             return b'', None, None, None, None, None
 
 
-def _get_tx_info(tx_hex, block_parser=None, block_index=None, p2sh_is_segwit=False):
+def _get_tx_info(db, tx_hex, block_index, block_parser=None, p2sh_is_segwit=False):
     """Get the transaction info. Calls one of two subfunctions depending on signature type."""
     if not block_index:
         block_index = ledger.CURRENT_BLOCK_INDEX
 
     if ledger.enabled('p2sh_addresses', block_index=block_index):   # Protocol change.
-        return get_tx_info(
+        return get_tx_info_new(
+            db,
             tx_hex,
             block_index,
             block_parser=block_parser,
@@ -156,7 +157,8 @@ def _get_tx_info(tx_hex, block_parser=None, block_index=None, p2sh_is_segwit=Fal
             p2sh_is_segwit=p2sh_is_segwit,
         )
     elif ledger.enabled('multisig_addresses', block_index=block_index):   # Protocol change.
-        return get_tx_info(
+        return get_tx_info_new(
+            db,
             tx_hex,
             block_index,
             block_parser=block_parser,
@@ -233,7 +235,7 @@ def _get_swap_tx(db, decoded_tx, block_index, block_parser=None):
     return (sources, outputs)
 
 
-def get_tx_info(tx_hex, block_index, block_parser=None, p2sh_support=False, p2sh_is_segwit=False):
+def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=False, p2sh_is_segwit=False):
     """Get multisig transaction info.
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.

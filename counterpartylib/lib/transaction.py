@@ -601,7 +601,12 @@ def construct (db, tx_info, encoding='auto',
     try:
         if pretx_txid and unsigned_pretx:
             backend.cache_pretx(pretx_txid, unsigned_pretx)
-        parsed_source, parsed_destination, x, y, parsed_data, extra = gettxinfo._get_tx_info(unsigned_tx_hex, p2sh_is_segwit=script.is_bech32(desired_source))
+        parsed_source, parsed_destination, x, y, parsed_data, extra = gettxinfo._get_tx_info(
+            db,
+            unsigned_tx_hex,
+            ledger.CURRENT_BLOCK_INDEX,
+            p2sh_is_segwit=script.is_bech32(desired_source)
+        )
 
         if encoding == 'p2sh':
             # make_canonical can't determine the address, so we blindly change the desired to the parsed
