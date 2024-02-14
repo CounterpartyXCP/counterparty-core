@@ -125,6 +125,52 @@ def get_address(scriptpubkey, block_index):
         return address
 
 
+def get_transaction_sources(decoded_tx, block_parser=None):
+    sources = []
+    outputs_value = 0
+
+    for vin in decoded_tx.vin[:]:                   # Loop through inputs.
+        if block_parser:
+            vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
+            vin_ctx = backend.deserialize(vin_tx['__data__'])
+        else:
+            # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
+            vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=None)
+            vin_ctx = backend.deserialize(vin_tx)
+        
+        vout = vin_ctx.vout[vin.prevout.n]
+        outputs_value += vout.nValue
+
+        asm = script.get_asm(vout.scriptPubKey)
+        if asm[-1] == 'OP_CHECKSIG':
+            new_source, new_data = decode_checksig(asm, decoded_tx)
+            if new_data or not new_source:
+                raise DecodeError('data in source')
+        elif asm[-1] == 'OP_CHECKMULTISIG':
+            new_source, new_data = decode_checkmultisig(asm, decoded_tx)
+            if new_data or not new_source:
+                raise DecodeError('data in source')
+        elif asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
+            new_source, new_data = decode_scripthash(asm)
+            if new_data or not new_source:
+                raise DecodeError('data in source')
+        elif ledger.enabled('segwit_support') and asm[0] == 0:
+            # Segwit output
+            # Get the full transaction data for this input transaction.
+            new_source, new_data = decode_p2w(vout.scriptPubKey)
+        else:
+            raise DecodeError('unrecognised source type')
+
+        # old; append to sources, results in invalid addresses
+        # new; first found source is source, the rest can be anything (to fund the TX for example)
+        if not (ledger.enabled('first_input_is_source') and len(sources)):
+            # Collect unique sources.
+            if new_source not in sources:
+                sources.append(new_source)
+
+    return sources, outputs_value
+
+
 def get_tx_info(db, tx_hex, block_index, block_parser=None):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
     try:
@@ -195,42 +241,7 @@ def _get_swap_tx(db, decoded_tx, block_index, block_parser=None):
     #   if we haven't found them yet
     sources = []
     if check_sources:
-        for vin in decoded_tx.vin[:]:                   # Loop through inputs.
-            if block_parser:
-                vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
-                vin_ctx = backend.deserialize(vin_tx['__data__'])
-            else:
-                # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
-                vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=None)
-                vin_ctx = backend.deserialize(vin_tx)
-            vout = vin_ctx.vout[vin.prevout.n]
-
-            asm = script.get_asm(vout.scriptPubKey)
-            if asm[-1] == 'OP_CHECKSIG':
-                new_source, new_data = decode_checksig(asm, decoded_tx)
-                if new_data or not new_source:
-                    raise DecodeError('data in source')
-            elif asm[-1] == 'OP_CHECKMULTISIG':
-                new_source, new_data = decode_checkmultisig(asm, decoded_tx)
-                if new_data or not new_source:
-                    raise DecodeError('data in source')
-            elif asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
-                new_source, new_data = decode_scripthash(asm)
-                if new_data or not new_source:
-                    raise DecodeError('data in source')
-            elif ledger.enabled('segwit_support') and asm[0] == 0:
-                # Segwit output
-                # Get the full transaction data for this input transaction.
-                new_source, new_data = decode_p2w(vout.scriptPubKey)
-            else:
-                raise DecodeError('unrecognised source type')
-
-            # old; append to sources, results in invalid addresses
-            # new; first found source is source, the rest can be anything (to fund the TX for example)
-            if not (ledger.enabled('first_input_is_source') and len(sources)):
-                # Collect unique sources.
-                if new_source not in sources:
-                    sources.append(new_source)
+        sources, outputs_value = get_transaction_sources(decoded_tx, block_parser=block_parser)
 
     return (sources, outputs)
 
@@ -351,45 +362,9 @@ def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=Fal
     # Collect all (unique) source addresses.
     #   if we haven't found them yet
     if p2sh_encoding_source is None:
-        for vin in ctx.vin[:]:                   # Loop through inputs.
-            # Get the full transaction data for this input transaction.
-            if block_parser:
-                vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
-                vin_ctx = backend.deserialize(vin_tx['__data__'])
-            else:
-                # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
-                vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=None)  
-                vin_ctx = backend.deserialize(vin_tx)
-            
-            vout = vin_ctx.vout[vin.prevout.n]
-            if not fee_added:
-                fee += vout.nValue
-
-            asm = script.get_asm(vout.scriptPubKey)
-            if asm[-1] == 'OP_CHECKSIG':
-                new_source, new_data = decode_checksig(asm, ctx)
-                if new_data or not new_source:
-                    raise DecodeError('data in source')
-            elif asm[-1] == 'OP_CHECKMULTISIG':
-                new_source, new_data = decode_checkmultisig(asm, ctx)
-                if new_data or not new_source:
-                    raise DecodeError('data in source')
-            elif p2sh_support and asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
-                new_source, new_data = decode_scripthash(asm)
-                if new_data or not new_source:
-                    raise DecodeError('data in source')
-            elif ledger.enabled('segwit_support') and asm[0] == 0:
-                # Segwit output
-                new_source, new_data = decode_p2w(vout.scriptPubKey)
-            else:
-                raise DecodeError('unrecognised source type')
-
-            # old; append to sources, results in invalid addresses
-            # new; first found source is source, the rest can be anything (to fund the TX for example)
-            if not (ledger.enabled('first_input_is_source') and len(sources)):
-                # Collect unique sources.
-                if new_source not in sources:
-                    sources.append(new_source)
+        sources, outputs_value = get_transaction_sources(ctx, block_parser=block_parser)
+        if not fee_added:
+            fee += outputs_value
         sources = '-'.join(sources)
     else: # use the source from the p2sh data source
         sources = p2sh_encoding_source
