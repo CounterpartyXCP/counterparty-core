@@ -171,6 +171,53 @@ def get_transaction_sources(decoded_tx, block_parser=None):
     return sources, outputs_value
 
 
+def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit, block_parser=None):
+    p2sh_encoding_source = None
+    data = b''
+    outputs_value = 0
+
+    for vin in decoded_tx.vin:
+        if block_parser:
+            vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
+            vin_ctx = backend.deserialize(vin_tx['__data__'])
+        else:
+            # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
+            vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=None)
+            vin_ctx = backend.deserialize(vin_tx)
+
+        if ledger.enabled("prevout_segwit_fix"):
+            prevout_is_segwit = vin_ctx.has_witness()
+        else:
+            prevout_is_segwit = p2sh_is_segwit
+        
+        vout = vin_ctx.vout[vin.prevout.n]
+        outputs_value += vout.nValue
+
+        # Ignore transactions with invalid script.
+        try:
+            asm = script.get_asm(vin.scriptSig)
+        except CScriptInvalidError as e:
+            raise DecodeError(e)
+
+        new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm, p2sh_is_segwit=prevout_is_segwit)
+        # this could be a p2sh source address with no encoded data
+        if new_data is None:
+            continue;
+
+        if new_source is not None:
+            if p2sh_encoding_source is not None and new_source != p2sh_encoding_source:
+                # this p2sh data input has a bad source address
+                raise DecodeError('inconsistent p2sh inputs')
+
+            p2sh_encoding_source = new_source
+
+        assert not new_destination
+
+        data += new_data
+
+    return p2sh_encoding_source, data, outputs_value
+
+
 def get_tx_info(db, tx_hex, block_index, block_parser=None):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
     try:
@@ -313,46 +360,11 @@ def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=Fal
     # P2SH encoding signalling
     p2sh_encoding_source = None
     if ledger.enabled('p2sh_encoding') and data == b'P2SH':
-        data = b''
-        for vin in ctx.vin:
-            if block_parser:
-                vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
-                vin_ctx = backend.deserialize(vin_tx['__data__'])
-            else:
-                # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
-                vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=None)
-                vin_ctx = backend.deserialize(vin_tx)
-
-            if ledger.enabled("prevout_segwit_fix"):
-                prevout_is_segwit = vin_ctx.has_witness()
-            else:
-                prevout_is_segwit = p2sh_is_segwit
-            
-            vout = vin_ctx.vout[vin.prevout.n]
-            fee += vout.nValue
-            fee_added = True
-
-            # Ignore transactions with invalid script.
-            try:
-                asm = script.get_asm(vin.scriptSig)
-            except CScriptInvalidError as e:
-                raise DecodeError(e)
-
-            new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm, p2sh_is_segwit=prevout_is_segwit)
-            # this could be a p2sh source address with no encoded data
-            if new_data is None:
-              continue;
-
-            if new_source is not None:
-                if p2sh_encoding_source is not None and new_source != p2sh_encoding_source:
-                    # this p2sh data input has a bad source address
-                    raise DecodeError('inconsistent p2sh inputs')
-
-                p2sh_encoding_source = new_source
-
-            assert not new_destination
-
-            data += new_data
+        p2sh_encoding_source, data, outputs_value = get_transaction_source_from_p2sh(
+            ctx, p2sh_is_segwit, block_parser=block_parser
+        )
+        fee += outputs_value
+        fee_added = True
 
     # Only look for source if data were found or destination is `UNSPENDABLE`,
     # for speed.
