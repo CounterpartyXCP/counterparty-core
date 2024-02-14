@@ -257,24 +257,13 @@ def _get_tx_info(db, tx_hex, block_index, block_parser=None, p2sh_is_segwit=Fals
         )
 
 
-def get_dispensers_outputs(db, decoded_tx, block_index):
+def get_dispensers_outputs(db, potential_dispensers):
     outputs = []
-    for vout in decoded_tx.vout:
-        address = get_address(vout.scriptPubKey, block_index)
-        destination = None
-        btc_amount = None
-        if address:
-            destination = address
-            btc_amount = vout.nValue
-        elif ledger.enabled('hotfix_dispensers_with_non_p2pkh'):
-            logger.debug('see issue #1408')
-
+    for (destination, btc_amount) in potential_dispensers:
         if destination is None or btc_amount is None:
             continue
-
         if dispenser.is_dispensable(db, destination, btc_amount):
             outputs.append((destination, btc_amount))
-
     return outputs
 
 
@@ -292,8 +281,10 @@ def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=Fal
 
     # Get destinations and data outputs.
     destinations, btc_amount, fee, data = [], 0, 0, b''
+    potential_dispensers = []
 
     for vout in ctx.vout:
+        potential_dispensers.append(None)
         # Fee is the input values minus output values.
         output_value = vout.nValue
         fee -= output_value
@@ -306,19 +297,30 @@ def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=Fal
 
         if asm[0] == 'OP_RETURN':
             new_destination, new_data = decode_opreturn(asm, ctx)
+            potential_dispensers[-1] = (None, None)
         elif asm[-1] == 'OP_CHECKSIG':
             new_destination, new_data = decode_checksig(asm, ctx)
+            potential_dispensers[-1] = (new_destination, output_value)
         elif asm[-1] == 'OP_CHECKMULTISIG':
             try:
                 new_destination, new_data = decode_checkmultisig(asm, ctx)
+                potential_dispensers[-1] = (new_destination, output_value)
             except:
                 raise DecodeError('unrecognised output type')
         elif p2sh_support and asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
             new_destination, new_data = decode_scripthash(asm)
+            if ledger.enabled('p2sh_dispensers_support'):
+                potential_dispensers[-1] = (new_destination, output_value)
+            else:
+                potential_dispensers[-1] = (None, None)
         elif ledger.enabled('segwit_support') and asm[0] == 0:
             # Segwit Vout, second param is redeemScript
             #redeemScript = asm[1]
             new_destination, new_data = decode_p2w(vout.scriptPubKey)
+            if ledger.enabled('correct_segwit_txids'):
+                potential_dispensers[-1] = (new_destination, output_value)
+            else:
+                potential_dispensers[-1] = (None, None)
         else:
             raise DecodeError('unrecognised output type')
         assert not (new_destination and new_data)
@@ -355,7 +357,7 @@ def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=Fal
     # for speed.
     dispensers_outputs = []
     if not data and destinations != [config.UNSPENDABLE,]:
-        dispensers_outputs = get_dispensers_outputs(db, ctx, block_index)
+        dispensers_outputs = get_dispensers_outputs(db, potential_dispensers)
         if len(dispensers_outputs) == 0:
             raise BTCOnlyError('no data and not unspendable')
 
