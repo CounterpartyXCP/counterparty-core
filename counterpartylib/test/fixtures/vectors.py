@@ -233,7 +233,7 @@ UNITTEST_VECTOR = {
         }],
         # TODO: Test match by calling parse. Add all skipping modes
         'match': [{
-            'in': ({'tx_index': 99999999, 'tx_hash':'fakehash'}, DP['default_block_index']),
+            'in': ({'tx_index': 99999999, 'tx_hash':'fakehash'},),
             'out': None
         }, {
             'in': ({'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58',
@@ -246,7 +246,7 @@ UNITTEST_VECTOR = {
                     'fee': 10000,
                     'tx_hash': 'a0ed83b170344b996bdd71799dd774ab10f5410f8572079a292f681d36ebc42c',
                     'tx_index': 502,
-                   }, DP['default_block_index']),
+                   },),
             'out': None
         }],
         # Testing expiration of normal bets is impossible - either the bet is expired automatically with expiry < DP['default_block_index'] - 1 or
@@ -279,7 +279,7 @@ UNITTEST_VECTOR = {
                     'bet_type': 3,
                     'expiration': 1000,
                     'expire_index': 311101,
-                    'block_index': DP['default_block_index'],
+                    'block_index': 310500,
                     'deadline': 1388000200,
                     'counterwager_quantity': 10,
                     'wager_remaining': 10,
@@ -305,7 +305,7 @@ UNITTEST_VECTOR = {
             'records': [
                 {'table': 'bet_matches', 'values': {
                     'backward_quantity': 9,
-                    'block_index': DP['default_block_index'],
+                    'block_index': 310500,
                     'deadline': 1388000001,
                     'fee_fraction_int': 5000000,
                     'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',

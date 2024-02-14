@@ -689,7 +689,6 @@ def get_vouts(db, tx_hash):
 
 
 def get_transactions(db, tx_hash=None):
-    logger.warning(tx_hash)
     cursor = db.cursor()
     where = []
     bindings = []
@@ -1513,7 +1512,7 @@ def _get_holders(cursor, id_fields, hold_fields_1, hold_fields_2=None, exclude_e
                 'address': holder[hold_fields_1['address']],
                 'address_quantity': holder[hold_fields_1['address_quantity']],
                 'escrow': holder[hold_fields_1['escrow']] if 'escrow' in hold_fields_1 else None,
-                'table': table # for debugging purposes
+                #'table': table # for debugging purposes
             })
         if hold_fields_2 is not None:
             if holder[hold_fields_2['address_quantity']] > 0 or \
@@ -1522,7 +1521,7 @@ def _get_holders(cursor, id_fields, hold_fields_1, hold_fields_2=None, exclude_e
                     'address': holder[hold_fields_2['address']],
                     'address_quantity': holder[hold_fields_2['address_quantity']],
                     'escrow': holder[hold_fields_2['escrow']] if 'escrow' in hold_fields_2 else None,
-                    'table': table # for debugging purposes
+                    #'table': table # for debugging purposes
                 })
     return holders
 
@@ -1577,7 +1576,6 @@ def holders(db, asset, exclude_empty_holders=False):
             WHERE forward_asset = ?
             GROUP BY id
         ) WHERE status = ?
-        ORDER BY id
     '''
     bindings = (asset, 'pending')
     cursor.execute(query, bindings)
@@ -1586,16 +1584,16 @@ def holders(db, asset, exclude_empty_holders=False):
         ['id'],
         {'address': 'tx0_address', 'address_quantity': 'forward_quantity', 'escrow': 'id'},
         #exclude_empty_holders=exclude_empty_holders,
-        table='order_matches'
+        table='order_matches1'
     )
 
     query = '''
         SELECT * FROM (
-            SELECT *, MAX(rowid)
+            SELECT *, MAX(rowid) AS rowid
             FROM order_matches
             WHERE backward_asset = ?
         ) WHERE status = ?
-        ORDER BY id
+        ORDER BY rowid
     '''
     bindings = (asset, 'pending')
     cursor.execute(query, bindings)
@@ -1604,7 +1602,7 @@ def holders(db, asset, exclude_empty_holders=False):
         ['id'],
         {'address': 'tx1_address', 'address_quantity': 'backward_quantity', 'escrow': 'id'},
         #exclude_empty_holders=exclude_empty_holders,
-        table='order_matches'
+        table='order_matches2'
     )
 
     # Bets and RPS (and bet/rps matches) only escrow XCP.
@@ -1633,7 +1631,6 @@ def holders(db, asset, exclude_empty_holders=False):
                 FROM bet_matches
                 GROUP BY id
             ) WHERE status = ?
-            ORDER BY id
         '''
         bindings = ('pending',)
         cursor.execute(query, bindings)
@@ -1670,7 +1667,6 @@ def holders(db, asset, exclude_empty_holders=False):
                 FROM rps_matches
                 GROUP BY id
             ) WHERE status IN (?, ?, ?)
-            ORDER BY id
         '''
         bindings = ('pending', 'pending and resolved', 'resolved and pending')
         cursor.execute(query, bindings)
