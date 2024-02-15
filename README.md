@@ -63,7 +63,7 @@ $ cd addrindexrs
  -- Set the necessary environment variables --
   - ADDRINDEXRS_JSONRPC_IMPORT=1
   - ADDRINDEXRS_TXID_LIMIT=15000
-  - ADDRINDEXRS_COOKIE=bitcoinrpc:rpc
+  - ADDRINDEXRS_COOKIE=rpc:rpc
   - ADDRINDEXRS_INDEXER_RPC_ADDR=0.0.0.0:8432
   - ADDRINDEXRS_DAEMON_RPC_ADDR=localhost:8332
  --
