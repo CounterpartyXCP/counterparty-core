@@ -9,7 +9,7 @@ import sys
 from counterpartylib.lib import config
 from counterpartylib.lib import util
 from counterpartylib.lib import exceptions
-from counterpartylib.lib import backend
+from counterpartylib.lib import ledger
 from counterpartylib.lib import database
 
 CONSENSUS_HASH_SEED = 'We can only see a short distance ahead, but we can see plenty there that needs to be done.'
@@ -89,11 +89,14 @@ CHECKPOINTS_TESTNET = {
     1350000: {'ledger_hash': 'f96e6aff578896a4568fb69f72aa0a8b52eb9ebffefca4bd7368790341cd821d', 'txlist_hash': '83e7d31217af274b13889bd8b9f8f61afcd7996c2c8913e9b53b1d575f54b7c1'},
     1400000: {'ledger_hash': '85a23f6fee9ce9c80fa335729312183ff014920bbf297095ac77c4105fb67e17', 'txlist_hash': 'eee762f34a3f82e6332c58e0c256757d97ca308719323af78bf5924f08463e12'},
     1600000: {'ledger_hash': 'f2d54a74ca0974e3d22d4499f10579bb9afbf761178a0a127832f59496c8c24a', 'txlist_hash': 'f720b44719e01a1dbcffe572947a88d943c4841365bea744debc7d26007611c9'},
-    1800000: {'ledger_hash': '7175ab22a4e9ad10bd9f393f11652c24c4b7e1c55f7b50c79414efae6514772d', 'txlist_hash': '4916aee65f30c053ba0f9c385ac2b5e85cc7a984f323bc9d5929636c60c9e8d2'},
-    2000000: {'ledger_hash': 'ea1dcf1890a9a1ada202473ae3e82f2d404e622728b961e1406454ce7cbd17b2', 'txlist_hash': '79249281e49719805533be84006c2c48be7ea0c3d14048c1205458c90e7b3158'},
-    2200000: {'ledger_hash': 'e14ea626b8b9ceff4d9a787e7f4bd53ea1c0c32016e1268364fbf8197a31a93f', 'txlist_hash': 'cdb4838ccd0c4152c44193244b40be67b01d693e148b4fdec6566e1ab0ebd597'},
-    2400000: {'ledger_hash': 'cb0674d6896bbc39a7800de36c1f7732edfd28a764a91a44863ed00b7b9d1392', 'txlist_hash': 'a2d515b8bfc4671b16dc5f981cfb91e77e6e41b0bbb79597063a382b134798d0'},
-    2570000: {'ledger_hash': 'b6e4f5b68bc5ccc3470a80a1c71dc4b39f0689f8995f85e16ca5efd4c90c594f', 'txlist_hash': '17246b7281152234cc5d5c17037ec82e7ece6940498956ef104abb44ef499d01'},
+    1700000: {'ledger_hash': 'afb9f59bd6ffa51e847ec4495eedb182e449bac341b1bf2b9ccfacaec15ef4b6', 'txlist_hash': '473eab0cf9c07dd869d57839d886efca0b03769672cbb659dc542d748cf77711'},
+    1800000: {'ledger_hash': '09060e590d936f67e6248b60496d1bdd94143cfa935be6a16246d2edec59da9b', 'txlist_hash': 'bc26c44d4ce55be408b38fe14e4659fa655a8386e2d389fe3b7bfb25b4364bd3'},
+    1900000: {'ledger_hash': '357da2e773cab15472419cba2deec47462003a64bf416970ebf47e91b4fac85a', 'txlist_hash': '2b4d321495f04a3065bdd4f0987fd86a54669fb85426152eb1b4a1b8fd11d799'},
+    2000000: {'ledger_hash': 'a2575c20d58a4e69a1d19ceb2e1d615b3b1052e92d5a34c61b03bbab4cc4efc0', 'txlist_hash': '79249281e49719805533be84006c2c48be7ea0c3d14048c1205458c90e7b3158'},
+    2200000: {'ledger_hash': 'c74b27600be79479bf4be3f4499e05283381a6996f3151db69bff10b29b95a10', 'txlist_hash': '8f4ffacc471fd80c8327d163ebe7ff26a0d00ec03672acaff911d16eb37547fd'},
+    2400000: {'ledger_hash': '5c0606e2729d9b2a2181388231fd816ce3279c4183137bf62e9c699dbdc2f140', 'txlist_hash': '36bbd14c69e5fc17cb1e69303affcb808909757395d28e3e3da83394260bf0dd'},
+    2500000: {'ledger_hash': '76262b272c47b5a17f19ffa0ba72256617bd18e51fad4c3c5b3c776cb3a1037b', 'txlist_hash': '26567e5c45a59426b2bcdeb177167a92c5fc21e8fd2000ae9a24eb09e3945f70'},
+    2540000: {'ledger_hash': '6d3e77f1c059b062f4eb131cc8eb1d8355598de756905d83803df0009a514f48', 'txlist_hash': '45e134cb4196bc5cfb4ef9b356e02025f752a9bc0ae635bc9ced2c471ecfcb6c'},
 }
 
 CONSENSUS_HASH_VERSION_REGTEST = 1
@@ -106,7 +109,7 @@ class ConsensusError(Exception):
 
 def consensus_hash(db, field, previous_consensus_hash, content):
     cursor = db.cursor()
-    block_index = util.CURRENT_BLOCK_INDEX
+    block_index = ledger.CURRENT_BLOCK_INDEX
 
     # Initialise previous hash on first block.
     if block_index <= config.BLOCK_FIRST:
@@ -120,7 +123,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
         except IndexError:
             previous_consensus_hash = None
         if not previous_consensus_hash:
-            raise ConsensusError('Empty previous {} for block {}. Please launch a `reparse`.'.format(field, block_index))
+            raise ConsensusError('Empty previous {} for block {}. Please launch a `rollback`.'.format(field, block_index))
 
     # Calculate current hash.
     if config.TESTNET:
@@ -153,7 +156,8 @@ def consensus_hash(db, field, previous_consensus_hash, content):
         checkpoints = CHECKPOINTS_MAINNET
 
     if field != 'messages_hash' and block_index in checkpoints and checkpoints[block_index][field] != calculated_hash:
-        raise ConsensusError('Incorrect {} hash for block {}.  Calculated {} but expected {}'.format(field, block_index, calculated_hash, checkpoints[block_index][field],))
+        error_message = 'Incorrect {} hash for block {}.  Calculated {} but expected {}'.format(field, block_index, calculated_hash, checkpoints[block_index][field])
+        raise ConsensusError(error_message)
 
     return calculated_hash, found_hash
 
@@ -162,14 +166,14 @@ class SanityError(Exception):
 
 def asset_conservation(db):
     logger.debug('Checking for conservation of assets.')
-    supplies = util.supplies(db)
-    held = util.held(db)
+    supplies = ledger.supplies(db)
+    held = ledger.held(db)
     for asset in supplies.keys():
         asset_issued = supplies[asset]
         asset_held = held[asset] if asset in held and held[asset] != None else 0
         if asset_issued != asset_held:
-            raise SanityError('{} {} issued ≠ {} {} held'.format(util.value_out(db, asset_issued, asset), asset, util.value_out(db, asset_held, asset), asset))
-        logger.debug('{} has been conserved ({} {} both issued and held)'.format(asset, util.value_out(db, asset_issued, asset), asset))
+            raise SanityError('{} {} issued ≠ {} {} held'.format(ledger.value_out(db, asset_issued, asset), asset, ledger.value_out(db, asset_held, asset), asset))
+        logger.debug('{} has been conserved ({} {} both issued and held)'.format(asset, ledger.value_out(db, asset_issued, asset), asset))
 
 class VersionError(Exception):
     pass
@@ -193,7 +197,7 @@ def check_change(protocol_change, change_name):
         explanation = 'Your version of {} is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(
             config.APP_NAME, config.VERSION_STRING, protocol_change['block_index'], protocol_change['minimum_version_major'], protocol_change['minimum_version_minor'],
             protocol_change['minimum_version_revision'], change_name)
-        if util.CURRENT_BLOCK_INDEX >= protocol_change['block_index']:
+        if ledger.CURRENT_BLOCK_INDEX >= protocol_change['block_index']:
             raise VersionUpdateRequiredError(explanation)
         else:
             warnings.warn(explanation)
@@ -201,7 +205,7 @@ def check_change(protocol_change, change_name):
 def software_version():
     if config.FORCE:
         return
-    logger.debug('Checking version.')
+    logger.debug('Checking Counterparty version.')
 
     try:
         response = requests.get(config.PROTOCOL_CHANGES_URL, headers={'cache-control': 'no-cache'})
@@ -222,9 +226,9 @@ def software_version():
 
 
 class DatabaseVersionError(Exception):
-    def __init__(self, message, reparse_block_index):
+    def __init__(self, message, rollback_block_index):
         super(DatabaseVersionError, self).__init__(message)
-        self.reparse_block_index = reparse_block_index
+        self.rollback_block_index = rollback_block_index
 
 def database_version(db):
     if config.FORCE:
@@ -236,7 +240,7 @@ def database_version(db):
         # Rollback database if major version has changed.
         raise DatabaseVersionError('Client major version number mismatch ({} ≠ {}).'.format(version_major, config.VERSION_MAJOR), config.BLOCK_FIRST)
     elif version_minor != config.VERSION_MINOR:
-        # Reparse all transactions if minor version has changed.
-        raise DatabaseVersionError('Client minor version number mismatch ({} ≠ {}).'.format(version_minor, config.VERSION_MINOR), None)
-
+        # TODO: Reparse transactions from the vesion block if minor version has changed.
+        pass
+        # raise DatabaseVersionError('Client minor version number mismatch ({} ≠ {}).'.format(version_minor, config.VERSION_MINOR), None)
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

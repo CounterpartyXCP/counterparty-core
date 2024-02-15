@@ -5,7 +5,7 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 
-from counterpartylib.lib import (config, util, exceptions, util, message_type, address)
+from counterpartylib.lib import (config, util, exceptions, util, message_type, address, ledger)
 
 FORMAT = '>QQ21s'
 LENGTH = 8 + 8 + 21
@@ -30,7 +30,7 @@ def unpack(db, message, block_index):
         full_address = address.unpack(short_address_bytes)
 
         # asset id to name
-        asset = util.generate_asset_name(asset_id, block_index)
+        asset = ledger.generate_asset_name(asset_id, block_index)
         if asset == config.BTC:
             raise exceptions.AssetNameError('{} not allowed'.format(config.BTC))
 
@@ -77,12 +77,12 @@ def validate (db, source, destination, asset, quantity, memo_bytes, block_index)
     if memo_bytes is not None and len(memo_bytes) > MAX_MEMO_LENGTH:
       problems.append('memo is too long')
 
-    if util.enabled('options_require_memo'):
+    if ledger.enabled('options_require_memo'):
         cursor = db.cursor()
         try:
-            results = cursor.execute('SELECT options FROM addresses WHERE address=?', (destination,))
+            results = ledger.get_addresses(db, address=destination)
             if results:
-                result = results.fetchone()
+                result = results[0]
                 if result and util.active_options(result['options'], config.ADDRESS_OPTION_REQUIRE_MEMO):
                     if memo_bytes is None or (len(memo_bytes) == 0):
                         problems.append('destination requires memo')
@@ -99,15 +99,15 @@ def compose (db, source, destination, asset, quantity, memo, memo_is_hex):
         return (source, [(destination, quantity)], None)
 
     # resolve subassets
-    asset = util.resolve_subasset_longname(db, asset)
+    asset = ledger.resolve_subasset_longname(db, asset)
 
     #quantity must be in int satoshi (not float, string, etc)
     if not isinstance(quantity, int):
         raise exceptions.ComposeError('quantity must be an int (in satoshi)')
 
     # Only for outgoing (incoming will overburn).
-    balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, asset)))
-    if not balances or balances[0]['quantity'] < quantity:
+    balance = ledger.get_balance(db, source, asset)
+    if balance < quantity:
         raise exceptions.ComposeError('insufficient funds')
 
     # convert memo to memo_bytes based on memo_is_hex setting
@@ -119,12 +119,12 @@ def compose (db, source, destination, asset, quantity, memo, memo_is_hex):
         memo = memo.encode('utf-8')
         memo_bytes = struct.pack(">{}s".format(len(memo)), memo)
 
-    block_index = util.CURRENT_BLOCK_INDEX
+    block_index = ledger.CURRENT_BLOCK_INDEX
 
     problems = validate(db, source, destination, asset, quantity, memo_bytes, block_index)
     if problems: raise exceptions.ComposeError(problems)
 
-    asset_id = util.get_asset_id(db, asset, block_index)
+    asset_id = ledger.get_asset_id(db, asset, block_index)
 
     short_address_bytes = address.pack(destination)
 
@@ -165,15 +165,13 @@ def parse (db, tx, message):
 
     if status == 'valid':
         # verify balance is present
-        cursor.execute('''SELECT * FROM balances \
-                                     WHERE (address = ? AND asset = ?)''', (tx['source'], asset))
-        balances = cursor.fetchall()
-        if not balances or balances[0]['quantity'] < quantity:
+        balance = ledger.get_balance(db, tx['source'], asset)
+        if balance == 0 or balance < quantity:
             status = 'invalid: insufficient funds'
 
     if status == 'valid':
-        util.debit(db, tx['source'], asset, quantity, action='send', event=tx['tx_hash'])
-        util.credit(db, destination, asset, quantity, action='send', event=tx['tx_hash'])
+        ledger.debit(db, tx['source'], asset, quantity, tx['tx_index'], action='send', event=tx['tx_hash'])
+        ledger.credit(db, destination, asset, quantity, tx['tx_index'], action='send', event=tx['tx_hash'])
 
     # log invalid transactions
     if status != 'valid':

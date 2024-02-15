@@ -13,15 +13,20 @@ import collections
 import binascii
 import hashlib
 import signal
+import functools
 import bitcoin.wallet
 from pkg_resources import parse_version
 
-from counterpartylib.lib import config, util, address
+from counterpartylib.lib import config, util, ledger
 
 READ_BUF_SIZE = 65536
 SOCKET_TIMEOUT = 5.0
 BACKEND_PING_TIME = 30.0
+BACKOFF_START = 1
+BACKOFF_MAX = 8
+BACKOFF_FACTOR = 2
 
+Indexer_Thread = None
 raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)  # used in getrawtransaction_batch()
 
 class BackendRPCError(Exception):
@@ -40,25 +45,26 @@ def rpc_call(payload):
         try:
             response = requests.post(url, data=json.dumps(payload), headers={'content-type': 'application/json'},
                 verify=(not config.BACKEND_SSL_NO_VERIFY), timeout=config.REQUESTS_TIMEOUT)
-            if i > 0:
-                logger.debug('Successfully connected.')
-            break
+
+            if response == None:
+                if config.TESTNET:
+                    network = 'testnet'
+                elif config.REGTEST:
+                    network = 'regtest'
+                else:
+                    network = 'mainnet'
+                raise BackendRPCError('Cannot communicate with backend at `{}`. (server is set to run on {}, is backend?)'.format(util.clean_url_for_log(url), network))
+            elif response.status_code in (401,):
+                raise BackendRPCError('Authorization error connecting to {}: {} {}'.format(util.clean_url_for_log(url), response.status_code, response.reason))
+            elif response.status_code not in (200, 500):
+                raise BackendRPCError(str(response.status_code) + ' ' + response.reason)
+
+            else:
+                break
+
         except (Timeout, ReadTimeout, ConnectionError):
             logger.debug('Could not connect to backend at `{}`. (Try {}/{})'.format(util.clean_url_for_log(url), i+1, TRIES))
             time.sleep(5)
-
-    if response == None:
-        if config.TESTNET:
-            network = 'testnet'
-        elif config.REGTEST:
-            network = 'regtest'
-        else:
-            network = 'mainnet'
-        raise BackendRPCError('Cannot communicate with backend at `{}`. (server is set to run on {}, is backend?)'.format(util.clean_url_for_log(url), network))
-    elif response.status_code in (401,):
-        raise BackendRPCError('Authorization error connecting to {}: {} {}'.format(util.clean_url_for_log(url), response.status_code, response.reason))
-    elif response.status_code not in (200, 500):
-        raise BackendRPCError(str(response.status_code) + ' ' + response.reason)
 
     # Handle json decode errors
     try:
@@ -157,7 +163,9 @@ def getblockhash(blockcount):
 def getblock(block_hash):
     return rpc('getblock', [block_hash, False])
 
+@functools.lru_cache
 def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
+    logger.debug('Cache miss on transaction {}!'.format(tx_hash))
     return getrawtransaction_batch([tx_hash], verbose=verbose, skip_missing=skip_missing)[tx_hash]
 
 def getrawmempool():
@@ -235,7 +243,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                 raw_transactions_cache[tx_hash] = tx_hex
             elif skip_missing and 'error' in response and response['error']['code'] == -5:
                 raw_transactions_cache[tx_hash] = None
-                logging.debug('Missing TX with no raw info skipped (txhash: {}): {}'.format(
+                logger.debug('Missing TX with no raw info skipped (txhash: {}): {}'.format(
                     tx_hash_call_id.get(response.get('id', '??'), '??'), response['error']))
             else:
                 #TODO: this seems to happen for bogus transactions? Maybe handle it more gracefully than just erroring out?
@@ -250,7 +258,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
             else:
                 result[tx_hash] = raw_transactions_cache[tx_hash]['hex'] if raw_transactions_cache[tx_hash] is not None else None
         except KeyError as e: #shows up most likely due to finickyness with addrindex not always returning results that we need...
-            print("Key error in addrindexrs still exists!!!!!")
+            logger.error("Key error in addrindexrs still exists!!!!!")
             _logger.warning("tx missing in rawtx cache: {} -- txhash_list size: {}, hash: {} / raw_transactions_cache size: {} / # rpc_batch calls: {} / txhash in noncached_txhashes: {} / txhash in txhash_list: {} -- list {}".format(
                 e, len(txhash_list), hashlib.md5(json.dumps(list(txhash_list)).encode()).hexdigest(), len(raw_transactions_cache), len(payload),
                 tx_hash in noncached_txhashes, tx_hash in txhash_list, list(txhash_list.difference(noncached_txhashes)) ))
@@ -275,78 +283,87 @@ class AddrIndexRsThread (threading.Thread):
         self.is_killed = False
 
     def stop(self):
-        logging.debug('AddrIndexRs thread closing')
+        logger.warn('Killing address indexer connection thread.')
         self.send({"kill": True})
 
     def connect(self):
         self.lastId = 0
         while True:
-            logging.info('AddrIndexRs connecting...')
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.settimeout(SOCKET_TIMEOUT)
             try:
+                logger.debug('Opening socket to address indexer at `{}:{}`'.format(self.host, self.port))
                 self.sock.connect((self.host, self.port))
-            except:
-                logging.info('Error connecting to AddrIndexRs! Retrying in a few seconds')
-                time.sleep(5.0)
+            except Exception as e:
+                logger.exception('Unknown error when attempting to connect to address indexer.')
+                sys.exit(1)
             else:
-                logging.info('Connected to AddrIndexRs!')
                 break
 
     def run(self):
         self.locker = threading.Condition()
         self.locker.acquire()
         self.connect()
+        backoff = BACKOFF_START
         while self.locker.wait():
-            if not(self.is_killed) and self.message_to_send != None:
-                msg = self.message_to_send
-                self.message_to_send = None
-                retry_count = 15
-                while retry_count > 0:
-                    has_sent = False
-                    while not(has_sent) and msg:
-                        try:
-                            logging.debug('AddrIndexRs sending')
-                            self.sock.send(msg)
-                            has_sent = True
-                        except Exception as e:
-                            #try:
-                            logging.debug('AddrIndexRs error:' + e)
-                            self.connect()
-                            #except Exception as e2:
-                            #logging.debug('AddrIndexRs fatal error:' + e2)
+            if self.message_to_send and not self.is_killed:
+                self.message_result = None
 
-                    self.message_to_send = None
-                    data = b""
-                    parsed = False
-                    while not(parsed):
-                        try:
-                            data = data + self.sock.recv(READ_BUF_SIZE)
-                            self.message_result = json.loads(data.decode('utf-8'))
-                            retry_count = 0
-                            parsed = True
-                            logging.debug('AddrIndexRs Recv complete!')
-                        except socket.timeout:
-                            logging.debug('AddrIndexRs Recv timeout error sending: '+str(msg))
-                            if retry_count <= 0:
-                                self.connect()
-                            self.message_result = None
-                            retry_count -= -1
-                        except socket.error as e:
-                            logging.debug('AddrIndexRs Recv error:' + str(e)+' with msg '+str(msg))
-                            self.connect()
-                        except Exception as e:
-                            logging.debug('AddrIndexRs Recv error:' + str(e)+' with msg '+str(msg))
-                            if retry_count <= 0:
-                                raise e
-                            self.message_result = None
-                            retry_count -= 1
-                        finally:
-                            self.locker.notify()
+                # Send message over socket.
+                has_sent = False
+                while not has_sent:
+                    try:
+                        logger.debug('Sending message to address indexer: {}'.format(self.message_to_send))
+                        self.sock.send(self.message_to_send)
+                        has_sent = True
+                        backoff = BACKOFF_START
+                    except Exception as e:
+                        logger.exception('Unknown error sending message to address indexer: {}'.format(self.message_to_send))
+                        sys.exit(1)
+
+                # Receive message over socket.
+                parsed = False
+                while has_sent and not parsed:
+                    try:
+
+                        # Keep reading data until we have a complete message
+                        data = b""
+                        while True:
+                            chunk = self.sock.recv(READ_BUF_SIZE)
+                            if chunk:
+                                data = data + chunk
+                                try: 
+                                    self.message_result = json.loads(data.decode('utf-8'))
+                                except json.decoder.JSONDecodeError as e:
+                                    # Incomplete message
+                                    pass
+                                else:
+                                    # Complete message
+                                    self.message_to_send = None
+                                    parsed = True
+                                    backoff = BACKOFF_START
+                                    break
+                            else:
+                                logger.debug('Empty response from address indexer. Trying again in {:d} seconds.'.format(backoff))
+                                time.sleep(backoff)
+                                backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
+
+                    except (socket.timeout, socket.error, ConnectionResetError) as e:
+                        logger.debug('Error in connection to address indexer: {}. Trying again in {:d} seconds.'.format(e, backoff))
+                        has_sent = False    # TODO: Retry send?!
+                        time.sleep(backoff)
+                        backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
+                    except Exception as e:
+                        logger.exception('Unknown error when connecting to address indexer.')
+                        sys.exit(1) # TODO
+                    finally:
+                        self.locker.notify()
+
             else:
                 self.locker.notify()
+
         self.sock.close()
-        logging.debug('AddrIndexRs socket closed normally')
+        logger.debug('Closed socket to address indexer.')
 
     def send(self, msg):
         self.locker.acquire()
@@ -359,37 +376,26 @@ class AddrIndexRsThread (threading.Thread):
         self.locker.release()
         return self.message_result
 
+def indexer_check_version():
+    logger.debug('Checking version of address indexer.')
+    addrindexrs_version = Indexer_Thread.send({
+        "method": "server.version",
+        "params": []
+    })
 
-_backend = None
+    try:
+        addrindexrs_version_label = addrindexrs_version["result"][0][12:] #12 is the length of "addrindexrs "
+    except TypeError as e:
+        logger.exception('Error when checking address indexer version: {}'.format(addrindexrs_version))
+        sys.exit(1)
+    addrindexrs_version_needed = ledger.get_value_by_block_index("addrindexrs_required_version")
 
-def ensure_addrindexrs_connected():
-    global _backend
-    backoff = 500
-    max_backoff = 5000
-    while _backend == None:
-        try:
-            _backend = AddrIndexRsThread(config.INDEXD_CONNECT, config.INDEXD_PORT)
-            _backend.daemon = True
-            _backend.start()
-
-            addrindexrs_version = _backend.send({
-                "method": "server.version",
-                "params": []
-            })
-
-            addrindexrs_version_label = addrindexrs_version["result"][0][12:] #12 is the length of "addrindexrs "
-            addrindexrs_version_needed = util.get_value_by_block_index("addrindexrs_required_version")
-
-            if parse_version(addrindexrs_version_needed) > parse_version(addrindexrs_version_label):
-                logger.info("Wrong addrindexrs version: "+addrindexrs_version_needed+" is needed but "+addrindexrs_version_label+" was found")
-                _backend.stop()
-                sys.exit(config.EXITCODE_UPDATE_REQUIRED)
-
-        except Exception as e:
-            logger.info(f'Error connecting to AddrIndexRs! Retrying in a {backoff} seconds')
-            logger.debug(e)
-            time.sleep(backoff)
-            backoff = min(backoff * 1.5, max_backoff)
+    if parse_version(addrindexrs_version_needed) > parse_version(addrindexrs_version_label):
+        logger.info("Wrong addrindexrs version: "+addrindexrs_version_needed+" is needed but "+addrindexrs_version_label+" was found")
+        Indexer_Thread.stop()
+        sys.exit(config.EXITCODE_UPDATE_REQUIRED)
+    else:
+        logger.debug('Version check of address indexer passed ({} > {}).'.format(addrindexrs_version_label, addrindexrs_version_needed))
 
 def _script_pubkey_to_hash(spk):
     return hashlib.sha256(spk).digest()[::-1].hex()
@@ -432,10 +438,8 @@ def unpack_vout(outpoint, tx, block_count):
     }
 
 def get_unspent_txouts(source):
-    ensure_addrindexrs_connected()
-
     block_count = getblockcount()
-    result = _backend.send({
+    result = Indexer_Thread.send({
         "method": "blockchain.scripthash.get_utxos",
         "params": [_address_to_hash(source)]
     })
@@ -497,10 +501,8 @@ def get_unspent_txouts(source):
 #
 # }
 def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
-    ensure_addrindexrs_connected()
-
     hsh = _address_to_hash(address)
-    txs = _backend.send({
+    txs = Indexer_Thread.send({
         "method": "blockchain.scripthash.get_history",
         "params": [hsh]
     })["result"]
@@ -516,10 +518,8 @@ def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
         return batch
 
 def get_oldest_tx(address):
-    ensure_addrindexrs_connected()
-
     hsh = _address_to_hash(address)
-    call_result = _backend.send({
+    call_result = Indexer_Thread.send({
         "method": "blockchain.scripthash.get_oldest_tx",
         "params": [hsh]
     })
@@ -536,8 +536,13 @@ def getindexblocksbehind():
     return 0
 
 def init():
-    ensure_addrindexrs_connected()
+    global Indexer_Thread
+    Indexer_Thread = AddrIndexRsThread(config.INDEXD_CONNECT, config.INDEXD_PORT)
+    Indexer_Thread.daemon = True
+    Indexer_Thread.start()
+    logger.info('Connecting to address indexer.')
+    indexer_check_version()
 
 def stop():
-    if '_backend' in globals():
-        _backend.stop()
+    if 'Indexer_Thread' in globals():
+        Indexer_Thread.stop()

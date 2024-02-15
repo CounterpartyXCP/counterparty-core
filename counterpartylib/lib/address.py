@@ -5,6 +5,7 @@ import struct
 import bitcoin
 from counterpartylib.lib import config
 from counterpartylib.lib import script
+from counterpartylib.lib import ledger
 
 def address_scriptpubkey(address):
     try:
@@ -18,7 +19,7 @@ def pack(address):
     """
     Converts a base58 bitcoin address into a 21 byte bytes object
     """
-    from .util import enabled # Here to account for test mock changes
+    from .ledger import enabled # Here to account for test mock changes
 
     if enabled('segwit_support'):
         try:
@@ -49,7 +50,7 @@ def unpack(short_address_bytes):
     """
     Converts a 21 byte prefix and public key hash into a full base58 bitcoin address
     """
-    from .util import enabled # Here to account for test mock changes
+    from .ledger import enabled # Here to account for test mock changes
 
     if enabled('segwit_support') and short_address_bytes[0] >= 0x80 and short_address_bytes[0] <= 0x8F:
         # we have a segwit address here

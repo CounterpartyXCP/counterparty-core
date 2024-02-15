@@ -8,7 +8,7 @@ from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP, ADDR
 from counterpartylib.test.util_test import CURR_DIR
 from counterpartylib.test import util_test
 
-from counterpartylib.lib import (blocks, transaction, api, backend, util, exceptions)
+from counterpartylib.lib import (blocks, transaction, api, ledger, util, exceptions)
 
 
 FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql'
@@ -16,7 +16,7 @@ FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
 
 
 def test_bytespersigop(server_db):
-    assert util.enabled('bytespersigop') == False
+    assert ledger.enabled('bytespersigop') == False
 
     # ADDR[0], bytespersigop=False, desc 41 bytes, opreturn
     txhex = api.compose_transaction(
@@ -55,7 +55,7 @@ def test_bytespersigop(server_db):
 
     # enable byterpersigop
     with util_test.MockProtocolChangesContext(bytespersigop=True):
-        assert util.enabled('bytespersigop') == True
+        assert ledger.enabled('bytespersigop') == True
 
         # ADDR[0], bytespersigop=True, desc 41 bytes, opreturn
         txhex = api.compose_transaction(

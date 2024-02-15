@@ -11,7 +11,7 @@ from bitstring import BitArray, BitStream, ConstBitStream, ReadError
 
 logger = logging.getLogger(__name__)
 
-from counterpartylib.lib import (config, util, exceptions, util, message_type, address)
+from counterpartylib.lib import (config, util, exceptions, util, ledger, address)
 
 ## encoding functions
 
@@ -87,8 +87,8 @@ def _encode_constructSendList(send_asset, lut, sends):
     ]
 
 def _solve_asset(db, assetName, block_index):
-    asset = util.resolve_subasset_longname(db, assetName)
-    return util.get_asset_id(db, asset, block_index)
+    asset = ledger.resolve_subasset_longname(db, assetName)
+    return ledger.get_asset_id(db, asset, block_index)
 
 def _encode_compressSendList(db, nbits, send, block_index):
     r = BitArray()
@@ -177,7 +177,7 @@ def _decode_decodeSendList(stream, nbits, lut, block_index):
         numRecipients = 1
         rangeLimit = numRecipients
     sendList = []
-    asset = util.generate_asset_name(asset_id, block_index)
+    asset = ledger.generate_asset_name(asset_id, block_index)
     for i in range(0, rangeLimit):
         if nbits > 0:
             idx = stream.read('uint:%i' % nbits)

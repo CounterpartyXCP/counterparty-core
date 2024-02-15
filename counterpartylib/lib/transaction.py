@@ -30,6 +30,8 @@ from counterpartylib.lib import util
 from counterpartylib.lib import script
 from counterpartylib.lib import backend
 from counterpartylib.lib import arc4
+from counterpartylib.lib import ledger
+from counterpartylib.lib import gettxinfo
 from counterpartylib.lib.transaction_helper import serializer, p2sh_encoding
 
 
@@ -182,7 +184,7 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
     final_fee = fee_per_kb
     desired_input_count = 1
 
-    if encoding == 'multisig' and data_array and util.enabled('bytespersigop'):
+    if encoding == 'multisig' and data_array and ledger.enabled('bytespersigop'):
         desired_input_count = len(data_array) * 2
 
 
@@ -357,9 +359,9 @@ def construct (db, tx_info, encoding='auto',
             if len(data) + len(config.PREFIX) <= config.OP_RETURN_MAX_SIZE:
                 encoding = 'opreturn'
             else:
-                encoding = 'p2sh' if not old_style_api and util.enabled('p2sh_encoding') else 'multisig'  # p2sh is not possible with old_style_api
+                encoding = 'p2sh' if not old_style_api and ledger.enabled('p2sh_encoding') else 'multisig'  # p2sh is not possible with old_style_api
 
-        elif desired_encoding == 'p2sh' and not util.enabled('p2sh_encoding'):
+        elif desired_encoding == 'p2sh' and not ledger.enabled('p2sh_encoding'):
             raise exceptions.TransactionError('P2SH encoding not enabled yet')
 
         elif encoding not in ('pubkeyhash', 'multisig', 'opreturn', 'p2sh'):
@@ -599,7 +601,12 @@ def construct (db, tx_info, encoding='auto',
     try:
         if pretx_txid and unsigned_pretx:
             backend.cache_pretx(pretx_txid, unsigned_pretx)
-        parsed_source, parsed_destination, x, y, parsed_data, extra = blocks._get_tx_info(unsigned_tx_hex, p2sh_is_segwit=script.is_bech32(desired_source))
+        parsed_source, parsed_destination, x, y, parsed_data, extra = gettxinfo._get_tx_info(
+            db,
+            unsigned_tx_hex,
+            ledger.CURRENT_BLOCK_INDEX,
+            p2sh_is_segwit=script.is_bech32(desired_source)
+        )
 
         if encoding == 'p2sh':
             # make_canonical can't determine the address, so we blindly change the desired to the parsed

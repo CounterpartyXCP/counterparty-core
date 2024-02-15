@@ -18,7 +18,7 @@ from Crypto.Cipher import ARC4
 
 logger = logging.getLogger()
 
-from counterpartylib.lib import log
+from counterpartylib.lib import log, ledger
 from counterpartylib import server
 log.set_logger(logger)
 
@@ -32,7 +32,7 @@ from counterpartylib.lib import config, util, database, api, script, arc4
 # used to increment RPC port between test modules to avoid conflicts
 TEST_RPC_PORT = 9999
 
-# we swap out util.enabled with a custom one which has the option to mock the protocol changes
+# we swap out ledger.enabled with a custom one which has the option to mock the protocol changes
 MOCK_PROTOCOL_CHANGES = {
     'bytespersigop': False,    # default to False to avoid all old vectors breaking
 }
@@ -42,12 +42,13 @@ MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
     'enhanced_sends': {'block_index': 310999, 'allow_always_latest': False},  # override to be true only at block 310999
     'issuance_lock_fix': {'block_index': 310502, 'allow_always_latest': False},  # override to be true only at block 310502
     'segwit_support': {'block_index': 0, 'allow_always_latest': False},  # override to be true only at block 310999,
-    'dispensers': {'block_index': 0, 'allow_always_latest': True}
+    'dispensers': {'block_index': 0, 'allow_always_latest': True},
+    'multisig_addresses': {'block_index': 310502, 'allow_always_latest': True},
 }
 DISABLE_ALL_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False # if true, never look at MOCK_PROTOCOL_CHANGES_AT_BLOCK
 ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = False # if true, always check MOCK_PROTOCOL_CHANGES_AT_BLOCK
 ALWAYS_LATEST_PROTOCOL_CHANGES = False # Even when this is true, this can be overridden if allow_always_latest is False in MOCK_PROTOCOL_CHANGES_AT_BLOCK
-_enabled = util.enabled
+_enabled = ledger.enabled
 def enabled(change_name, block_index=None):
     # if explicitly set
     if change_name in MOCK_PROTOCOL_CHANGES:
@@ -57,40 +58,35 @@ def enabled(change_name, block_index=None):
     if shouldCheckForMockProtocolChangesAtBlock(change_name):
         _block_index = block_index
         if _block_index is None:
-            _block_index = util.CURRENT_BLOCK_INDEX
-        logger = logging.getLogger(__name__)
+            _block_index = ledger.CURRENT_BLOCK_INDEX
         if _block_index >= MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]['block_index']:
             return True
         return False
 
     # used to force unit tests to always run against latest protocol changes
     if ALWAYS_LATEST_PROTOCOL_CHANGES:
-        # KeyError to mimic real util.enabled
-        if change_name not in util.PROTOCOL_CHANGES:
+        # KeyError to mimic real ledger.enabled
+        if change_name not in ledger.PROTOCOL_CHANGES:
             raise KeyError(change_name)
 
-        # print("ALWAYS_LATEST_PROTOCOL_CHANGES {} {} enabled: {}".format(change_name,block_index or util.CURRENT_BLOCK_INDEX,True))
+        # print("ALWAYS_LATEST_PROTOCOL_CHANGES {} {} enabled: {}".format(change_name,block_index or ledger.CURRENT_BLOCK_INDEX,True))
         return True
     else:
-        # print("ALWAYS_LATEST_PROTOCOL_CHANGES {} {} enabled: {}".format(change_name,block_index or util.CURRENT_BLOCK_INDEX,_enabled(change_name, block_index)))
+        # print("ALWAYS_LATEST_PROTOCOL_CHANGES {} {} enabled: {}".format(change_name,block_index or ledger.CURRENT_BLOCK_INDEX,_enabled(change_name, block_index)))
         return _enabled(change_name, block_index)
-util.enabled = enabled
+ledger.enabled = enabled
 
 # This is true if ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK is set
 def shouldCheckForMockProtocolChangesAtBlock(change_name):
     if DISABLE_ALL_MOCK_PROTOCOL_CHANGES_AT_BLOCK:
         return False
-
     if change_name not in MOCK_PROTOCOL_CHANGES_AT_BLOCK:
         return False
-
     if ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK:
         return True
-
     if 'allow_always_latest' in MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name] \
         and not MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]['allow_always_latest']:
         return True
-
     return False
 
 
@@ -117,12 +113,7 @@ def pytest_generate_tests(metafunc):
                 args.append((scenario_name, INTEGRATION_SCENARIOS[scenario_name][1], INTEGRATION_SCENARIOS[scenario_name][0], metafunc.config))
         metafunc.parametrize('scenario_name, base_scenario_name, transactions, pytest_config', args)
     elif metafunc.function.__name__ == 'test_book':
-        if metafunc.config.getoption("testbook") == 'testnet':
-            metafunc.parametrize('testnet, block_index', [(True, metafunc.config.getoption("testbookblockindex"))])
-        elif metafunc.config.getoption("testbook") == 'mainnet':
-            metafunc.parametrize('testnet, block_index', [(False, metafunc.config.getoption("testbookblockindex"))])
-        else:
-            metafunc.parametrize('testnet, block_index', [])
+        metafunc.parametrize('book', [(metafunc.config.getoption("testbook"),)])
 
 
 def pytest_addoption(parser):
@@ -133,7 +124,6 @@ def pytest_addoption(parser):
     parser.addoption("--savescenarios", action='store_true', default=False, help="Generate sql dump and log in .new files")
     parser.addoption("--alternative", action='store_true', default=False)
     parser.addoption("--testbook", default='no', help="Include test book (use with one of the following values: `testnet` or `mainnet`)")
-    parser.addoption("--testbookblockindex", default=0, type=int, help="test book from this block index (default: 0)")
 
 
 @pytest.fixture(scope="function")
@@ -194,7 +184,7 @@ def cp_server(request):
     sqlfile = getattr(request.module, 'FIXTURE_SQL_FILE')
     options = getattr(request.module, 'FIXTURE_OPTIONS', {})
 
-    util_test.init_database(sqlfile, dbfile, options)
+    db = util_test.init_database(sqlfile, dbfile, options)
 
     # monkeypatch this here because init_mock_functions can run before cp_server
     if hasattr(config, 'PREFIX'):
@@ -368,8 +358,8 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         address = '_'.join([str(signatures_required)] + sorted(pubkeys) + [str(len(pubkeys))])
         return address
 
-    def mocked_getrawtransaction(tx_hash, verbose=False):
-        return util_test.getrawtransaction(rawtransactions_db, tx_hash, verbose=verbose)
+    def mocked_getrawtransaction(tx_hash, verbose=False, block_index=None):
+        return util_test.getrawtransaction(rawtransactions_db, tx_hash, verbose=verbose, block_index=block_index)
 
     def mocked_getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
         return util_test.getrawtransaction_batch(rawtransactions_db, txhash_list, verbose=verbose)

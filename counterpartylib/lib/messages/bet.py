@@ -25,6 +25,8 @@ from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 from counterpartylib.lib import log
 from counterpartylib.lib import message_type
+from counterpartylib.lib import ledger
+from counterpartylib.lib import database
 
 FORMAT = '>HIQQdII'
 LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4
@@ -33,182 +35,185 @@ ID = 40
 def initialise (db):
     cursor = db.cursor()
 
+    # remove misnamed indexes
+    database.drop_indexes(cursor, [
+        'block_index_idx',
+        'index_hash_idx',
+        'expire_idx',
+        'feed_valid_bettype_idx',
+        'source_idx',
+        'status_idx',
+        'match_expire_idx',
+        'valid_feed_idx',
+        'tx0_address_idx',
+        'tx1_address_idx',
+    ])
+
     # Bets.
-    cursor.execute('''CREATE TABLE IF NOT EXISTS bets(
-                      tx_index INTEGER UNIQUE,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      feed_address TEXT,
-                      bet_type INTEGER,
-                      deadline INTEGER,
-                      wager_quantity INTEGER,
-                      wager_remaining INTEGER,
-                      counterwager_quantity INTEGER,
-                      counterwager_remaining INTEGER,
-                      target_value REAL,
-                      leverage INTEGER,
-                      expiration INTEGER,
-                      expire_index INTEGER,
-                      fee_fraction_int INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      PRIMARY KEY (tx_index, tx_hash))
-                  ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON bets (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      index_hash_idx ON bets (tx_index, tx_hash)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      expire_idx ON bets (status, expire_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      feed_valid_bettype_idx ON bets (feed_address, status, bet_type)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON bets (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_idx ON bets (status)
-                   ''')
+    create_bets_query = '''CREATE TABLE IF NOT EXISTS bets(
+                        tx_index INTEGER,
+                        tx_hash TEXT,
+                        block_index INTEGER,
+                        source TEXT,
+                        feed_address TEXT,
+                        bet_type INTEGER,
+                        deadline INTEGER,
+                        wager_quantity INTEGER,
+                        wager_remaining INTEGER,
+                        counterwager_quantity INTEGER,
+                        counterwager_remaining INTEGER,
+                        target_value REAL,
+                        leverage INTEGER,
+                        expiration INTEGER,
+                        expire_index INTEGER,
+                        fee_fraction_int INTEGER,
+                        status TEXT)
+                        '''
+    # create table
+    cursor.execute(create_bets_query)
+    # migrate old table
+    if database.field_is_pk(cursor, 'bets', 'tx_index'):
+        database.copy_old_table(cursor, 'bets', create_bets_query)
+    # create indexes
+    database.create_indexes(cursor, 'bets', [
+        ['block_index'],
+        ['tx_index', 'tx_hash'],
+        ['status'],
+        ['tx_hash'],
+        ['feed_address'],
+        ['expire_index'],
+        ['feed_address', 'bet_type'],
+    ])
 
     # Bet Matches
-    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_matches(
-                      id TEXT PRIMARY KEY,
-                      tx0_index INTEGER,
-                      tx0_hash TEXT,
-                      tx0_address TEXT,
-                      tx1_index INTEGER,
-                      tx1_hash TEXT,
-                      tx1_address TEXT,
-                      tx0_bet_type INTEGER,
-                      tx1_bet_type INTEGER,
-                      feed_address TEXT,
-                      initial_value INTEGER,
-                      deadline INTEGER,
-                      target_value REAL,
-                      leverage INTEGER,
-                      forward_quantity INTEGER,
-                      backward_quantity INTEGER,
-                      tx0_block_index INTEGER,
-                      tx1_block_index INTEGER,
-                      block_index INTEGER,
-                      tx0_expiration INTEGER,
-                      tx1_expiration INTEGER,
-                      match_expire_index INTEGER,
-                      fee_fraction_int INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx0_index, tx0_hash, tx0_block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      match_expire_idx ON bet_matches (status, match_expire_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      valid_feed_idx ON bet_matches (feed_address, status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      id_idx ON bet_matches (id)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx0_address_idx ON bet_matches (tx0_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx1_address_idx ON bet_matches (tx1_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_idx ON bet_matches (status)
-                   ''')
+    create_bet_matches_query = '''CREATE TABLE IF NOT EXISTS bet_matches(
+                                id TEXT,
+                                tx0_index INTEGER,
+                                tx0_hash TEXT,
+                                tx0_address TEXT,
+                                tx1_index INTEGER,
+                                tx1_hash TEXT,
+                                tx1_address TEXT,
+                                tx0_bet_type INTEGER,
+                                tx1_bet_type INTEGER,
+                                feed_address TEXT,
+                                initial_value INTEGER,
+                                deadline INTEGER,
+                                target_value REAL,
+                                leverage INTEGER,
+                                forward_quantity INTEGER,
+                                backward_quantity INTEGER,
+                                tx0_block_index INTEGER,
+                                tx1_block_index INTEGER,
+                                block_index INTEGER,
+                                tx0_expiration INTEGER,
+                                tx1_expiration INTEGER,
+                                match_expire_index INTEGER,
+                                fee_fraction_int INTEGER,
+                                status TEXT)
+                                '''
+    # create table
+    cursor.execute(create_bet_matches_query)
+    # migrate old table
+    if database.field_is_pk(cursor, 'bet_matches', 'id'):
+        database.copy_old_table(cursor, 'bet_matches', create_bet_matches_query)
+    # create indexes
+    database.create_indexes(cursor, 'bet_matches', [
+        ['block_index'],
+        ['id'],
+        ['status'],
+        ['deadline'],
+        ['tx0_address'],
+        ['tx1_address'],
+    ])
 
     # Bet Expirations
-    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_expirations(
-                      bet_index INTEGER PRIMARY KEY,
-                      bet_hash TEXT UNIQUE,
-                      source TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index),
-                      FOREIGN KEY (bet_index, bet_hash) REFERENCES bets(tx_index, tx_hash))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON bet_expirations (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON bet_expirations (source)
-                   ''')
+    create_bet_expirations_query = '''CREATE TABLE IF NOT EXISTS bet_expirations(
+                                    bet_index INTEGER PRIMARY KEY,
+                                    bet_hash TEXT UNIQUE,
+                                    source TEXT,
+                                    block_index INTEGER,
+                                    FOREIGN KEY (block_index) REFERENCES blocks(block_index))
+                                    '''
+    # create table
+    cursor.execute(create_bet_expirations_query)
+    # migrate old table
+    if database.has_fk_on(cursor, "bet_expirations", "bets.tx_index"):
+        database.copy_old_table(cursor, 'bet_expirations', create_bet_expirations_query)
+    # create indexes
+    database.create_indexes(cursor, 'bet_expirations', [
+        ['block_index'],
+        ['source'],
+    ])
 
     # Bet Match Expirations
-    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_match_expirations(
-                      bet_match_id TEXT PRIMARY KEY,
-                      tx0_address TEXT,
-                      tx1_address TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (bet_match_id) REFERENCES bet_matches(id),
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON bet_match_expirations (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx0_address_idx ON bet_match_expirations (tx0_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx1_address_idx ON bet_match_expirations (tx1_address)
-                   ''')
+    create_bet_match_expirations_query = '''CREATE TABLE IF NOT EXISTS bet_match_expirations(
+                                          bet_match_id TEXT PRIMARY KEY,
+                                          tx0_address TEXT,
+                                          tx1_address TEXT,
+                                          block_index INTEGER,
+                                          FOREIGN KEY (block_index) REFERENCES blocks(block_index))
+                                          '''
+    # create table
+    cursor.execute(create_bet_match_expirations_query)
+    # migrate old table
+    if database.has_fk_on(cursor, "bet_match_expirations", "bet_matches.id"):
+        database.copy_old_table(cursor, 'bet_match_expirations', create_bet_match_expirations_query)
+    # create indexes
+    database.create_indexes(cursor, 'bet_match_expirations', [
+        ['block_index'],
+        ['tx0_address'],
+        ['tx1_address'],
+    ])
 
     # Bet Match Resolutions
-    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_match_resolutions(
-                      bet_match_id TEXT PRIMARY KEY,
-                      bet_match_type_id INTEGER,
-                      block_index INTEGER,
-                      winner TEXT,
-                      settled BOOL,
-                      bull_credit INTEGER,
-                      bear_credit INTEGER,
-                      escrow_less_fee INTEGER,
-                      fee INTEGER,
-                      FOREIGN KEY (bet_match_id) REFERENCES bet_matches(id),
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
-                   ''')
+    create_bet_match_resolutions_query = '''CREATE TABLE IF NOT EXISTS bet_match_resolutions(
+                                            bet_match_id TEXT PRIMARY KEY,
+                                            bet_match_type_id INTEGER,
+                                            block_index INTEGER,
+                                            winner TEXT,
+                                            settled BOOL,
+                                            bull_credit INTEGER,
+                                            bear_credit INTEGER,
+                                            escrow_less_fee INTEGER,
+                                            fee INTEGER,
+                                            FOREIGN KEY (block_index) REFERENCES blocks(block_index))
+                                            '''
+    # create table
+    cursor.execute(create_bet_match_resolutions_query)
+    # migrate old table
+    if database.has_fk_on(cursor, "bet_match_resolutions", "bet_matches.id"):
+        database.copy_old_table(cursor, 'bet_match_resolutions', create_bet_match_resolutions_query)
 
-def cancel_bet (db, bet, status, block_index):
+
+def cancel_bet (db, bet, status, block_index, tx_index):
     cursor = db.cursor()
 
     # Update status of bet.
-    bindings = {
-        'status': status,
-        'tx_hash': bet['tx_hash']
-    }
-    sql='update bets set status = :status where tx_hash = :tx_hash'
-    cursor.execute(sql, bindings)
-    log.message(db, block_index, 'update', 'bets', bindings)
+    set_data = {'status': status}
+    ledger.update_bet(db, bet['tx_hash'], set_data)
+    log.message(db, block_index, 'update', 'bets', set_data | {'tx_hash': bet['tx_hash']})
 
-    util.credit(db, bet['source'], config.XCP, bet['wager_remaining'], action='recredit wager remaining', event=bet['tx_hash'])
+    ledger.credit(db, bet['source'], config.XCP, bet['wager_remaining'], tx_index, action='recredit wager remaining', event=bet['tx_hash'])
 
-    cursor = db.cursor()
 
-def cancel_bet_match (db, bet_match, status, block_index):
+def cancel_bet_match (db, bet_match, status, block_index, tx_index):
     # Does not re‐open, re‐fill, etc. constituent bets.
 
     cursor = db.cursor()
 
     # Recredit tx0 address.
-    util.credit(db, bet_match['tx0_address'], config.XCP,
-                bet_match['forward_quantity'], action='recredit forward quantity', event=bet_match['id'])
+    ledger.credit(db, bet_match['tx0_address'], config.XCP,
+                bet_match['forward_quantity'], tx_index, action='recredit forward quantity', event=bet_match['id'])
 
     # Recredit tx1 address.
-    util.credit(db, bet_match['tx1_address'], config.XCP,
-                bet_match['backward_quantity'], action='recredit backward quantity', event=bet_match['id'])
+    ledger.credit(db, bet_match['tx1_address'], config.XCP,
+                bet_match['backward_quantity'], tx_index, action='recredit backward quantity', event=bet_match['id'])
 
     # Update status of bet match.
-    bindings = {
-        'status': status,
-        'bet_match_id': bet_match['id']
-    }
-    sql='update bet_matches set status = :status where id = :bet_match_id'
-    cursor.execute(sql, bindings)
-    log.message(db, block_index, 'update', 'bet_matches', bindings)
+    ledger.update_bet_match_status(db, bet_match['id'], status)
+
+    log.message(db, block_index, 'update', 'bet_matches', {'status': status, 'bet_match_id': bet_match['id']})
 
     cursor.close()
 
@@ -216,9 +221,8 @@ def cancel_bet_match (db, bet_match, status, block_index):
 def get_fee_fraction (db, feed_address):
     '''Get fee fraction from last broadcast from the feed_address address.
     '''
-    cursor = db.cursor()
-    broadcasts = list(cursor.execute('''SELECT * FROM broadcasts WHERE (status = ? AND source = ?) ORDER BY tx_index ASC''', ('valid', feed_address)))
-    cursor.close()
+    broadcasts = ledger.get_broadcats_by_source(db, feed_address, 'valid')
+
     if broadcasts:
         last_broadcast = broadcasts[-1]
         fee_fraction_int = last_broadcast['fee_fraction_int']
@@ -226,6 +230,7 @@ def get_fee_fraction (db, feed_address):
         else: return 0
     else:
         return 0
+
 
 def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
               counterwager_quantity, target_value, leverage, expiration, block_index):
@@ -239,9 +244,7 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
         problems.append('integer overflow')
 
     # Look at feed to be bet on.
-    cursor = db.cursor()
-    broadcasts = list(cursor.execute('''SELECT * FROM broadcasts WHERE (status = ? AND source = ?) ORDER BY tx_index ASC''', ('valid', feed_address)))
-    cursor.close()
+    broadcasts = ledger.get_broadcats_by_source(db, feed_address, 'valid')
     if not broadcasts:
         problems.append('feed doesn’t exist')
     elif not broadcasts[-1]['text']:
@@ -290,14 +293,15 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
 
     return problems, leverage
 
+
 def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
             counterwager_quantity, target_value, leverage, expiration):
 
-    if util.get_balance(db, source, config.XCP) < wager_quantity:
+    if ledger.get_balance(db, source, config.XCP) < wager_quantity:
         raise exceptions.ComposeError('insufficient funds')
 
     problems, leverage = validate(db, source, feed_address, bet_type, deadline, wager_quantity,
-                        counterwager_quantity, target_value, leverage, expiration, util.CURRENT_BLOCK_INDEX)
+                        counterwager_quantity, target_value, leverage, expiration, ledger.CURRENT_BLOCK_INDEX)
     if util.date_passed(deadline):
         problems.append('deadline passed')
     if problems: raise exceptions.ComposeError(problems)
@@ -307,6 +311,7 @@ def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
                         wager_quantity, counterwager_quantity, target_value,
                         leverage, expiration)
     return (source, [(feed_address, None)], data)
+
 
 def parse (db, tx, message):
     bet_parse_cursor = db.cursor()
@@ -329,23 +334,20 @@ def parse (db, tx, message):
     feed_address = tx['destination']
     if status == 'open':
         try:
-            odds = util.price(wager_quantity, counterwager_quantity)
+            odds = ledger.price(wager_quantity, counterwager_quantity)
         except ZeroDivisionError:
             odds = 0
 
         fee_fraction = get_fee_fraction(db, feed_address)
 
         # Overbet
-        bet_parse_cursor.execute('''SELECT * FROM balances \
-                                    WHERE (address = ? AND asset = ?)''', (tx['source'], config.XCP))
-        balances = list(bet_parse_cursor)
-        if not balances:
+        balance = ledger.get_balance(db, tx['source'], config.XCP)
+        if balance == 0:
             wager_quantity = 0
         else:
-            balance = balances[0]['quantity']
             if balance < wager_quantity:
                 wager_quantity = balance
-                counterwager_quantity = int(util.price(wager_quantity, odds))
+                counterwager_quantity = int(ledger.price(wager_quantity, odds))
 
         problems, leverage = validate(db, tx['source'], feed_address, bet_type, deadline, wager_quantity,
                             counterwager_quantity, target_value, leverage, expiration, tx['block_index'])
@@ -353,7 +355,7 @@ def parse (db, tx, message):
 
     # Debit quantity wagered. (Escrow.)
     if status == 'open':
-        util.debit(db, tx['source'], config.XCP, wager_quantity, action='bet', event=tx['tx_hash'])
+        ledger.debit(db, tx['source'], config.XCP, wager_quantity, tx['tx_index'], action='bet', event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
@@ -388,18 +390,17 @@ def parse (db, tx, message):
 
     bet_parse_cursor.close()
 
+
 def match (db, tx):
 
-    cursor = db.cursor()
-
     # Get bet in question.
-    bets = list(cursor.execute('''SELECT * FROM bets\
-                                  WHERE (tx_index = ? AND status = ?)''', (tx['tx_index'], 'open')))
+    bets = ledger.get_bet(db, tx_hash=tx['tx_hash'])
     if not bets:
-        cursor.close()
         return
     else:
         assert len(bets) == 1
+        if bets[0]['status'] != 'open':
+            return
     tx1 = bets[0]
 
     # Get counterbet_type.
@@ -408,15 +409,14 @@ def match (db, tx):
 
     feed_address = tx1['feed_address']
 
-    cursor.execute('''SELECT * FROM bets\
-                             WHERE (feed_address=? AND status=? AND bet_type=?)''',
-                             (tx1['feed_address'], 'open', counterbet_type))
+    cursor = db.cursor()
     tx1_wager_remaining = tx1['wager_remaining']
     tx1_counterwager_remaining = tx1['counterwager_remaining']
-    bet_matches = cursor.fetchall()
+
+    bet_matches = ledger.get_matching_bets(db, tx1['feed_address'], counterbet_type)
     if tx['block_index'] > 284500 or config.TESTNET or config.REGTEST:  # Protocol change.
         sorted(bet_matches, key=lambda x: x['tx_index'])                                        # Sort by tx index second.
-        sorted(bet_matches, key=lambda x: util.price(x['wager_quantity'], x['counterwager_quantity']))   # Sort by price first.
+        sorted(bet_matches, key=lambda x: ledger.price(x['wager_quantity'], x['counterwager_quantity']))   # Sort by price first.
 
     tx1_status = tx1['status']
     for tx0 in bet_matches:
@@ -453,18 +453,18 @@ def match (db, tx):
 
         # If the odds agree, make the trade. The found order sets the odds,
         # and they trade as much as they can.
-        tx0_odds = util.price(tx0['wager_quantity'], tx0['counterwager_quantity'])
-        tx0_inverse_odds = util.price(tx0['counterwager_quantity'], tx0['wager_quantity'])
-        tx1_odds = util.price(tx1['wager_quantity'], tx1['counterwager_quantity'])
+        tx0_odds = ledger.price(tx0['wager_quantity'], tx0['counterwager_quantity'])
+        tx0_inverse_odds = ledger.price(tx0['counterwager_quantity'], tx0['wager_quantity'])
+        tx1_odds = ledger.price(tx1['wager_quantity'], tx1['counterwager_quantity'])
 
-        if tx['block_index'] < 286000: tx0_inverse_odds = util.price(1, tx0_odds) # Protocol change.
+        if tx['block_index'] < 286000: tx0_inverse_odds = ledger.price(1, tx0_odds) # Protocol change.
 
         logger.debug('Tx0 Inverse Odds: {}; Tx1 Odds: {}'.format(float(tx0_inverse_odds), float(tx1_odds)))
         if tx0_inverse_odds > tx1_odds:
             logger.debug('Skipping: price mismatch.')
         else:
-            logger.debug('Potential forward quantities: {}, {}'.format(tx0_wager_remaining, int(util.price(tx1_wager_remaining, tx1_odds))))
-            forward_quantity = int(min(tx0_wager_remaining, int(util.price(tx1_wager_remaining, tx1_odds))))
+            logger.debug('Potential forward quantities: {}, {}'.format(tx0_wager_remaining, int(ledger.price(tx1_wager_remaining, tx1_odds))))
+            forward_quantity = int(min(tx0_wager_remaining, int(ledger.price(tx1_wager_remaining, tx1_odds))))
             logger.debug('Forward Quantity: {}'.format(forward_quantity))
             backward_quantity = round(forward_quantity / tx0_odds)
             logger.debug('Backward Quantity: {}'.format(backward_quantity))
@@ -491,35 +491,34 @@ def match (db, tx):
             if tx0_wager_remaining <= 0 or tx0_counterwager_remaining <= 0:
                 # Fill order, and recredit give_remaining.
                 tx0_status = 'filled'
-                util.credit(db, tx0['source'], config.XCP, tx0_wager_remaining, event=tx1['tx_hash'], action='filled')
-            bindings = {
+                ledger.credit(db, tx0['source'], config.XCP, tx0_wager_remaining, tx['tx_index'], event=tx1['tx_hash'], action='filled')
+
+            set_data = {
                 'wager_remaining': tx0_wager_remaining,
                 'counterwager_remaining': tx0_counterwager_remaining,
-                'status': tx0_status,
-                'tx_hash': tx0['tx_hash']
+                'status': tx0_status
             }
-            sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining, status = :status where tx_hash = :tx_hash'
-            cursor.execute(sql, bindings)
-            log.message(db, tx['block_index'], 'update', 'bets', bindings)
+            ledger.update_bet(db, tx0['tx_hash'], set_data)
+
+            log.message(db, tx['block_index'], 'update', 'bets', set_data | {'tx_hash': tx0['tx_hash']})
 
             if tx1['block_index'] >= 292000 or config.TESTNET or config.REGTEST:  # Protocol change
                 if tx1_wager_remaining <= 0 or tx1_counterwager_remaining <= 0:
                     # Fill order, and recredit give_remaining.
                     tx1_status = 'filled'
-                    util.credit(db, tx1['source'], config.XCP, tx1_wager_remaining, event=tx1['tx_hash'], action='filled')
+                    ledger.credit(db, tx1['source'], config.XCP, tx1_wager_remaining, tx['tx_index'], event=tx1['tx_hash'], action='filled')
             # tx1
-            bindings = {
+            set_data = {
                 'wager_remaining': tx1_wager_remaining,
                 'counterwager_remaining': tx1_counterwager_remaining,
-                'status': tx1_status,
-                'tx_hash': tx1['tx_hash']
+                'status': tx1_status
             }
-            sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining, status = :status where tx_hash = :tx_hash'
-            cursor.execute(sql, bindings)
-            log.message(db, tx['block_index'], 'update', 'bets', bindings)
+            ledger.update_bet(db,tx1['tx_hash'], set_data)
+
+            log.message(db, tx['block_index'], 'update', 'bets', set_data | {'tx_hash': tx1['tx_hash']})
 
             # Get last value of feed.
-            broadcasts = list(cursor.execute('''SELECT * FROM broadcasts WHERE (status = ? AND source = ?) ORDER BY tx_index ASC''', ('valid', feed_address)))
+            broadcasts = ledger.get_broadcats_by_source(db, feed_address, 'valid')
             initial_value = broadcasts[-1]['value']
 
             # Record bet fulfillment.
@@ -542,7 +541,7 @@ def match (db, tx):
                 'backward_quantity': backward_quantity,
                 'tx0_block_index': tx0['block_index'],
                 'tx1_block_index': tx1['block_index'],
-                'block_index': max(tx0['block_index'], tx1['block_index']),
+                'block_index': min(tx0['block_index'], tx1['block_index']),
                 'tx0_expiration': tx0['expiration'],
                 'tx1_expiration': tx1['expiration'],
                 'match_expire_index': min(tx0['expire_index'], tx1['expire_index']),
@@ -553,16 +552,15 @@ def match (db, tx):
             cursor.execute(sql, bindings)
 
     cursor.close()
-    return
+
 
 def expire (db, block_index, block_time):
     cursor = db.cursor()
 
     # Expire bets and give refunds for the quantity wager_remaining.
-    cursor.execute('''SELECT * FROM bets \
-                      WHERE (status = ? AND expire_index < ?)''', ('open', block_index))
-    for bet in cursor.fetchall():
-        cancel_bet(db, bet, 'expired', block_index)
+    for bet in ledger.get_bets_to_expire(db, block_index):
+        # use tx_index=0 for block actions
+        cancel_bet(db, bet, 'expired', block_index, 0)
 
         # Record bet expiration.
         bindings = {
@@ -575,10 +573,9 @@ def expire (db, block_index, block_time):
         cursor.execute(sql, bindings)
 
     # Expire bet matches whose deadline is more than two weeks before the current block time.
-    cursor.execute('''SELECT * FROM bet_matches \
-                      WHERE (status = ? AND deadline < ?)''', ('pending', block_time - config.TWO_WEEKS))
-    for bet_match in cursor.fetchall():
-        cancel_bet_match(db, bet_match, 'expired', block_index)
+    for bet_match in ledger.get_bet_matches_to_expire(db, block_time):
+        # use tx_index=0 for block actions
+        cancel_bet_match(db, bet_match, 'expired', block_index, 0)
 
         # Record bet match expiration.
         bindings = {
@@ -591,5 +588,3 @@ def expire (db, block_index, block_time):
         cursor.execute(sql, bindings)
 
     cursor.close()
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

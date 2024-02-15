@@ -10,7 +10,7 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 
-from counterpartylib.lib import (config, exceptions, util, message_type)
+from counterpartylib.lib import (database, exceptions, ledger, message_type)
 from . import (order, bet, rps)
 
 FORMAT = '>32s'
@@ -19,6 +19,12 @@ ID = 70
 
 def initialise (db):
     cursor = db.cursor()
+
+    # remove misnamed indexes
+    database.drop_indexes(cursor, [
+        'source_idx',
+    ])
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS cancels(
                       tx_index INTEGER PRIMARY KEY,
                       tx_hash TEXT UNIQUE,
@@ -29,25 +35,19 @@ def initialise (db):
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
                       # Offer hash is not a foreign key. (And it cannot be, because of some invalid cancels.)
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      cancels_block_index_idx ON cancels (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON cancels (source)
-                   ''')
+
+    database.create_indexes(cursor, 'cancels', [
+        ['block_index'],
+        ['source'],
+    ])
 
 def validate (db, source, offer_hash):
     problems = []
 
     # TODO: make query only if necessary
-    cursor = db.cursor()
-    cursor.execute('''SELECT * from orders WHERE tx_hash = ?''', (offer_hash,))
-    orders = list(cursor)
-    cursor.execute('''SELECT * from bets WHERE tx_hash = ?''', (offer_hash,))
-    bets = list(cursor)
-    cursor.execute('''SELECT * from rps WHERE tx_hash = ?''', (offer_hash,))
-    rps = list(cursor)
-    cursor.close()
+    orders = ledger.get_order(db, tx_hash=offer_hash)
+    bets = ledger.get_bet(db, tx_hash=offer_hash)
+    rps = ledger.get_rps(db, tx_hash=offer_hash)
 
     offer_type = None
     if orders: offer_type = 'order'
@@ -100,13 +100,13 @@ def parse (db, tx, message):
     if status == 'valid':
         # Cancel if order.
         if offer_type == 'order':
-            order.cancel_order(db, offer, 'cancelled', tx['block_index'])
+            order.cancel_order(db, offer, 'cancelled', tx['block_index'], tx['tx_index'])
         # Cancel if bet.
         elif offer_type == 'bet':
-            bet.cancel_bet(db, offer, 'cancelled', tx['block_index'])
+            bet.cancel_bet(db, offer, 'cancelled', tx['block_index'], tx['tx_index'])
         # Cancel if rps.
         elif offer_type == 'rps':
-            rps.cancel_rps(db, offer, 'cancelled', tx['block_index'])
+            rps.cancel_rps(db, offer, 'cancelled', tx['block_index'], tx['tx_index'])
         # If neither order or bet, mark as invalid.
         else:
             assert False

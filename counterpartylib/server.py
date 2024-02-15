@@ -22,8 +22,8 @@ from counterpartylib.lib import log
 logger = logging.getLogger(__name__)
 log.set_logger(logger)  # set root logger
 
-from counterpartylib.lib import api, config, util, exceptions, blocks, check, backend, database, transaction, script
-
+from counterpartylib.lib import api, config, util, ledger, blocks, backend, database, transaction
+from counterpartylib.lib import kickstart as kickstarter
 D = decimal.Decimal
 
 
@@ -451,7 +451,6 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     logger.info('Running v{} of counterparty-lib.'.format(config.VERSION_STRING))
 
 
-
 def initialise_db():
     if config.FORCE:
         logger.warning('THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.')
@@ -464,14 +463,13 @@ def initialise_db():
     logger.info('Connecting to database (SQLite %s).' % apsw.apswversion())
     db = database.get_connection(read_only=False,foreign_keys=config.CHECKDB,integrity_check=config.CHECKDB)
 
-    util.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
+    ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
 
     return db
 
 
 def connect_to_backend():
     if not config.FORCE:
-        logger.info('Connecting to backend.')
         backend.getblockcount()
 
 
@@ -490,17 +488,22 @@ def start_all(db):
     api_server.daemon = True
     api_server.start()
 
-    # Server.
+    # Server
     blocks.follow(db)
 
 
-def reparse(db, block_index=None, quiet=True):
+def reparse(db, block_index):
     connect_to_backend()
-    blocks.reparse(db, block_index=block_index, quiet=quiet)
+    blocks.reparse(db, block_index=block_index)
 
 
-def kickstart(bitcoind_dir, force=False):
-    blocks.kickstart(bitcoind_dir=bitcoind_dir, force=force)
+def rollback(db, block_index=None):
+    connect_to_backend()
+    blocks.rollback(db, block_index=block_index)
+
+
+def kickstart(bitcoind_dir, force=False, last_hash=None, resume_from=None):
+    kickstarter.run(bitcoind_dir=bitcoind_dir, force=force, last_hash=last_hash, resume_from=resume_from)
 
 
 def vacuum(db):

@@ -1,4 +1,6 @@
 import apsw
+import apsw.bestpractice
+apsw.bestpractice.apply(apsw.bestpractice.recommended)  # includes WAL mode
 import logging
 logger = logging.getLogger(__name__)
 import time
@@ -6,7 +8,7 @@ import collections
 import copy
 
 from counterpartylib.lib import config
-from counterpartylib.lib import util
+from counterpartylib.lib import ledger
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import log
 
@@ -19,14 +21,11 @@ def rowtracer(cursor, sql):
         dictionary[name] = sql[index]
     return dictionary
 
+
 def exectracer(cursor, sql, bindings):
     # This means that all changes to database must use a very simple syntax.
     # TODO: Need sanity checks here.
     sql = sql.lower()
-
-    if sql.startswith('create trigger') or sql.startswith('drop trigger'):
-        #CREATE TRIGGER stmts may include an "insert" or "update" as part of them
-        return True
 
     # Parse SQL.
     array = sql.split('(')[0].split(' ')
@@ -50,7 +49,7 @@ def exectracer(cursor, sql, bindings):
     skip_tables_block_messages = copy.copy(skip_tables)
     if command == 'update':
         # List message manually.
-        skip_tables += ['orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches']
+        skip_tables += ['orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'dispensers']
 
     # Record alteration in database.
     if category not in skip_tables:
@@ -66,18 +65,19 @@ def exectracer(cursor, sql, bindings):
     if category not in skip_tables_block_messages:
         # don't include asset_longname as part of the messages hash
         #   until subassets are enabled
-        if category == 'issuances' and not util.enabled('subassets'):
+        if category == 'issuances' and not ledger.enabled('subassets'):
             if isinstance(bindings, dict) and 'asset_longname' in bindings: del bindings['asset_longname']
 
         # don't include memo as part of the messages hash
         #   until enhanced_sends are enabled
-        if category == 'sends' and not util.enabled('enhanced_sends'):
+        if category == 'sends' and not ledger.enabled('enhanced_sends'):
             if isinstance(bindings, dict) and 'memo' in bindings: del bindings['memo']
 
         sorted_bindings = sorted(bindings.items()) if isinstance(bindings, dict) else [bindings,]
         BLOCK_MESSAGES.append('{}{}{}'.format(command, category, sorted_bindings))
 
     return True
+
 
 class DatabaseIntegrityError(exceptions.DatabaseError):
     pass
@@ -102,8 +102,6 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
                 logger.debug('Foreign Key Error: {}'.format(row))
             raise exceptions.DatabaseError('Foreign key check failed.')
 
-        # So that writers don’t block readers.
-        cursor.execute('''PRAGMA journal_mode = WAL''')
         logger.info('Foreign key check completed.')
 
     # Make case sensitive the `LIKE` operator.
@@ -113,6 +111,8 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
     if integrity_check:
         logger.info('Checking database integrity...')
         integral = False
+
+        # Try up to 10 times.
         for i in range(10): # DUPE
             try:
                 cursor.execute('''PRAGMA integrity_check''')
@@ -134,6 +134,7 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
     cursor.close()
     return db
 
+
 def version(db):
     cursor = db.cursor()
     user_version = cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
@@ -148,11 +149,13 @@ def version(db):
         version_major = user_version // 1000
     return version_major, version_minor
 
+
 def update_version(db):
     cursor = db.cursor()
     user_version = (config.VERSION_MAJOR * 1000) + config.VERSION_MINOR
     cursor.execute('PRAGMA user_version = {}'.format(user_version)) # Syntax?!
     logger.info('Database version number updated.')
+
 
 def vacuum(db):
     logger.info('Starting database VACUUM. This may take awhile...')
@@ -160,4 +163,42 @@ def vacuum(db):
     cursor.execute('VACUUM')
     logger.info('Database VACUUM completed.')
 
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
+
+def field_is_pk(cursor, table, field):
+    cursor.execute(f"PRAGMA table_info({table})")
+    for row in cursor:
+        if row["name"] == field and row["pk"] == 1:
+            return True
+    return False
+
+
+def has_fk_on(cursor, table, foreign_key):
+    cursor.execute(f"PRAGMA foreign_key_list ({table})")
+    for row in cursor:
+        if f"{row['table']}.{row['to']}" == foreign_key:
+            return True
+    return False
+
+
+def create_indexes(cursor, table, indexes, unique=False):
+    for index in indexes:
+        field_names = [field.split(' ')[0] for field in index]
+        index_name = f"{table}_{'_'.join(field_names)}_idx"
+        fields = ', '.join(index)
+        unique_clause = 'UNIQUE' if unique else ''
+        query = f'''
+            CREATE {unique_clause} INDEX IF NOT EXISTS {index_name} ON {table} ({fields})
+        '''
+        cursor.execute(query)
+
+
+def drop_indexes(cursor, indexes):
+    for index_name in [indexes]:
+        cursor.execute(f'''DROP INDEX IF EXISTS {index_name}''')
+
+
+def copy_old_table(cursor, table_name, new_create_query):
+    cursor.execute(f'''ALTER TABLE {table_name} RENAME TO old_{table_name}''')
+    cursor.execute(new_create_query)
+    cursor.execute(f'''INSERT INTO {table_name} SELECT * FROM old_{table_name}''')
+    cursor.execute(f'''DROP TABLE old_{table_name}''')

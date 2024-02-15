@@ -15,6 +15,7 @@ from Crypto.Hash import RIPEMD160
 from counterpartylib.lib import util
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
+from counterpartylib.lib import ledger
 
 b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
@@ -46,7 +47,7 @@ def validate(address, allow_p2sh=True):
     # Check validity by attempting to decode.
     for pubkeyhash in pubkeyhashes:
         try:
-            if util.enabled('segwit_support'):
+            if ledger.enabled('segwit_support'):
                 if not is_bech32(pubkeyhash):
                     base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
             else:
@@ -56,7 +57,7 @@ def validate(address, allow_p2sh=True):
                 raise e
             base58_check_decode(pubkeyhash, config.P2SH_ADDRESSVERSION)
         except Base58Error as e:
-            if not util.enabled('segwit_support') or not is_bech32(pubkeyhash):
+            if not ledger.enabled('segwit_support') or not is_bech32(pubkeyhash):
                 raise e
 
 
@@ -272,10 +273,14 @@ def get_asm(scriptpubkey):
     return asm
 
 def get_checksig(asm):
-    if len(asm) == 5 and asm[0] == 'OP_DUP' and asm[1] == 'OP_HASH160' and asm[3] == 'OP_EQUALVERIFY' and asm[4] == 'OP_CHECKSIG':
-        pubkeyhash = asm[2]
-        if type(pubkeyhash) == bytes:
-            return pubkeyhash
+    try:
+        op_dup, op_hash160, pubkeyhash, op_equalverify, op_checksig = asm
+    except ValueError:
+        raise exceptions.DecodeError('invalid OP_CHECKSIG') from None
+    
+    if (op_dup, op_hash160, op_equalverify, op_checksig) == ('OP_DUP', 'OP_HASH160', 'OP_EQUALVERIFY', 'OP_CHECKSIG') and type(pubkeyhash) == bytes:
+        return pubkeyhash
+    
     raise exceptions.DecodeError('invalid OP_CHECKSIG')
 
 def get_checkmultisig(asm):
@@ -385,7 +390,7 @@ def make_pubkeyhash(address):
             pubkeyhashes.append(pubkeyhash)
         pubkeyhash_address = construct_array(signatures_required, pubkeyhashes, signatures_possible)
     else:
-        if util.enabled('segwit_support') and is_bech32(address):
+        if ledger.enabled('segwit_support') and is_bech32(address):
             pubkeyhash_address = address # Some bech32 addresses are valid base58 data
         elif is_pubkeyhash(address):
             pubkeyhash_address = address
@@ -405,11 +410,9 @@ def extract_pubkeys(pub):
                 pubkeys.append(pub)
     elif is_p2sh(pub):
         pass
-    elif util.enabled('segwit_support') and is_bech32(pub):
+    elif ledger.enabled('segwit_support') and is_bech32(pub):
         pass
     else:
         if not is_pubkeyhash(pub):
             pubkeys.append(pub)
     return pubkeys
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

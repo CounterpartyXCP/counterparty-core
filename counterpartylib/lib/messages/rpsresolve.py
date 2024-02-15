@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 import string
 
-from counterpartylib.lib import (config, exceptions, util, message_type)
+from counterpartylib.lib import (database, exceptions, util, message_type, ledger)
 from . import rps
 
 # move random rps_match_id
@@ -16,6 +16,14 @@ ID = 81
 
 def initialise (db):
     cursor = db.cursor()
+
+    # remove misnamed indexes
+    database.drop_indexes(cursor, [
+        'block_index_idx',
+        'source_idx',
+        'rps_match_id_idx'
+    ])
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS rpsresolves(
                       tx_index INTEGER PRIMARY KEY,
                       tx_hash TEXT UNIQUE,
@@ -27,15 +35,13 @@ def initialise (db):
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON rpsresolves (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON rpsresolves (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      rps_match_id_idx ON rpsresolves (rps_match_id)
-                   ''')
+
+    database.create_indexes(cursor, 'rpsresolves', [
+        ['block_index'],
+        ['source'],
+        ['rps_match_id'],
+    ])
+
 
 def validate (db, source, move, random, rps_match_id):
     problems = []
@@ -54,9 +60,7 @@ def validate (db, source, move, random, rps_match_id):
         problems.append('random must be 16 bytes in hexadecimal format')
         return None, None, problems
 
-    cursor = db.cursor()
-    rps_matches = list(cursor.execute('''SELECT * FROM rps_matches WHERE id = ?''', (rps_match_id,)))
-    cursor.close()
+    rps_matches = ledger.get_rps_match(db, id=rps_match_id)
     if len(rps_matches) == 0:
         problems.append('no such rps match')
         return None, rps_match, problems
@@ -98,6 +102,7 @@ def validate (db, source, move, random, rps_match_id):
 
     return txn, rps_match, problems
 
+
 def compose (db, source, move, random, rps_match_id):
     tx0_hash, tx1_hash = util.parse_id(rps_match_id)
 
@@ -105,7 +110,7 @@ def compose (db, source, move, random, rps_match_id):
     if problems: raise exceptions.ComposeError(problems)
 
     # Warn if down to the wire.
-    time_left = rps_match['match_expire_index'] - util.CURRENT_BLOCK_INDEX
+    time_left = rps_match['match_expire_index'] - ledger.CURRENT_BLOCK_INDEX
     if time_left < 4:
         logger.warning('Only {} blocks until that rps match expires. The conclusion might not make into the blockchain in time.'.format(time_left))
 
@@ -115,6 +120,7 @@ def compose (db, source, move, random, rps_match_id):
     data = message_type.pack(ID)
     data += struct.pack(FORMAT, move, random_bytes, tx0_hash_bytes, tx1_hash_bytes)
     return (source, [], data)
+
 
 def parse (db, tx, message):
     cursor = db.cursor()
@@ -159,8 +165,7 @@ def parse (db, tx, message):
         if rps_match_status == 'concluded':
             counter_txn = 0 if txn == 1 else 1
             counter_source = rps_match['tx{}_address'.format(counter_txn)]
-            sql = '''SELECT * FROM rpsresolves WHERE rps_match_id = ? AND source = ? AND status = ?'''
-            counter_games = list(cursor.execute(sql, (rps_match_id, counter_source, 'valid')))
+            counter_games = ledger.get_rpsresolves(db, source=counter_source, status='valid', rps_match_id=rps_match_id)
             assert len(counter_games) == 1
             counter_game = counter_games[0]
 
@@ -173,12 +178,13 @@ def parse (db, tx, message):
             else:
                 rps_match_status = 'concluded: {} player wins'.format('first' if txn == 0 else 'second')
 
-        rps.update_rps_match_status(db, rps_match, rps_match_status, tx['block_index'])
+        rps.update_rps_match_status(db, rps_match, rps_match_status, tx['block_index'], tx['tx_index'])
 
     sql = '''INSERT INTO rpsresolves VALUES (:tx_index, :tx_hash, :block_index, :source, :move, :random, :rps_match_id, :status)'''
     cursor.execute(sql, rpsresolves_bindings)
 
     cursor.close()
+
 
 # https://en.wikipedia.org/wiki/Rock-paper-scissors#Additional_weapons:
 def resolve_game(db, resovlerps1, resovlerps2):

@@ -4,6 +4,7 @@ import pytest
 from counterpartylib.test import conftest  # this is require near the top to do setup of the test suite
 from counterpartylib.test import util_test
 from counterpartylib.test.util_test import CURR_DIR
+from counterpartylib.lib import check, exceptions
 
 FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql'
 FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
@@ -20,6 +21,7 @@ def test_vector(tx_name, method, inputs, outputs, error, records, comment, mock_
         # force unit tests to always run against latest protocol changes
         from counterpartylib.test import conftest
         conftest.ALWAYS_LATEST_PROTOCOL_CHANGES = True
+        conftest.ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = True
         conftest.RANDOM_ASSET_INT = 26**12 + 1
 
         if method == 'parse':
@@ -30,3 +32,7 @@ def test_vector(tx_name, method, inputs, outputs, error, records, comment, mock_
             util_test.insert_transaction(inputs[0], server_db)
 
         util_test.check_outputs(tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, pytest_config, server_db)
+        # dont check asset conservation after direct call to credit or debit
+        # and also when canceling a non existent bet match
+        if f"{tx_name}.{method}" not in ['ledger.credit', 'ledger.debit', 'bet.cancel_bet_match']:
+            check.asset_conservation(server_db)

@@ -14,6 +14,7 @@ from colorlog import ColoredFormatter
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
+from counterpartylib.lib import ledger
 
 class ModuleLoggingFilter(logging.Filter):
     """
@@ -140,6 +141,7 @@ def set_up(logger, verbose=False, logfile=None, console_logfilter=None):
     import requests
     requests.packages.urllib3.disable_warnings()
 
+# we are using a function here for testing purposes
 def curr_time():
     return int(time.time())
 
@@ -150,15 +152,16 @@ def isodt (epoch_time):
         return '<datetime>'
 
 def message(db, block_index, command, category, bindings, tx_hash=None):
+    if command == '\n':
+        return
+
     cursor = db.cursor()
 
     # Get last message index.
-    messages = list(cursor.execute('''SELECT * FROM messages
-                                      WHERE message_index = (SELECT MAX(message_index) from messages)'''))
-    if messages:
-        assert len(messages) == 1
-        message_index = messages[0]['message_index'] + 1
-    else:
+    try:
+        message = ledger.last_message(db)
+        message_index = message['message_index'] + 1
+    except exceptions.DatabaseError:
         message_index = 0
 
     # Not to be misleading…
@@ -178,9 +181,10 @@ def message(db, block_index, command, category, bindings, tx_hash=None):
         else:
             items.append(item)
 
+    current_time = curr_time()
     bindings_string = str(items)
     cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings, :timestamp)',
-                   (message_index, block_index, command, category, bindings_string, curr_time()))
+                   (message_index, block_index, command, category, bindings_string, current_time))
 
     # Log only real transactions.
     if block_index != config.MEMPOOL_BLOCK_INDEX:
@@ -199,13 +203,17 @@ def log (db, command, category, bindings):
         except KeyError:
             bindings[element] = '<Error>'
 
-    # Slow?!
     def output (quantity, asset):
+
         try:
             if asset not in ('fraction', 'leverage'):
-                return str(util.value_out(db, quantity, asset)) + ' ' + asset
+                # Only log quantity at `DEBUG`, for speed.
+                if logging.DEBUG <= logger.getEffectiveLevel():
+                    return asset
+                else:
+                    return str(util.value_out(db, quantity, asset)) + ' ' + asset
             else:
-                return str(util.value_out(db, quantity, asset))
+                return str(ledger.value_out(db, quantity, asset))
         except exceptions.AssetError:
             return '<AssetError>'
         except decimal.DivisionByZero:
@@ -224,7 +232,7 @@ def log (db, command, category, bindings):
             logger.debug('Database: set status of bet_match {} to {}.'.format(bindings['bet_match_id'], bindings['status']))
         elif category == 'dispensers':
             escrow_quantity = ''
-            divisible = get_asset_info(cursor, bindings['asset'])['divisible']
+            divisible = ledger.get_asset_info(db, bindings['asset'])['divisible']
             
             if "escrow_quantity" in bindings:
                 if divisible:
@@ -249,7 +257,7 @@ def log (db, command, category, bindings):
                 else:    
                     operator_string = "operator marked the dispenser to close it"
             
-                if util.enabled("dispenser_origin_permission_extended", bindings['block_index']) and ("origin" in bindings) and bindings['source'] != bindings['origin']:
+                if ledger.enabled("dispenser_origin_permission_extended", bindings['block_index']) and ("origin" in bindings) and bindings['source'] != bindings['origin']:
                     if bindings["status"] == 10:
                         operator_string = "closed by origin"
                     else:    
@@ -280,7 +288,7 @@ def log (db, command, category, bindings):
             logger.info('{} Payment: {} paid {} to {} for order match {} ({}) [{}]'.format(config.BTC, bindings['source'], output(bindings['btc_amount'], config.BTC), bindings['destination'], bindings['order_match_id'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'issuances':
-            if (get_asset_issuances_quantity(cursor, bindings["asset"]) == 0) or (bindings['quantity'] > 0): #This is the first issuance or the creation of more supply, so we have to log the creation of the token
+            if (ledger.get_asset_issuances_quantity(db, bindings["asset"]) == 0) or (bindings['quantity'] > 0): #This is the first issuance or the creation of more supply, so we have to log the creation of the token
                 if bindings['divisible']:
                     divisibility = 'divisible'
                     unit = config.UNIT
@@ -288,7 +296,7 @@ def log (db, command, category, bindings):
                     divisibility = 'indivisible'
                     unit = 1
                 try:
-                    quantity = util.value_out(cursor, bindings['quantity'], None, divisible=bindings['divisible'])
+                    quantity = ledger.value_out(db, bindings['quantity'], None, divisible=bindings['divisible'])
                 except Exception as e:
                     quantity = '?'
             
@@ -298,7 +306,7 @@ def log (db, command, category, bindings):
                     logger.info('Issuance: {} created {} of {} asset {} ({}) [{}]'.format(bindings['source'], quantity, divisibility, bindings['asset'], bindings['tx_hash'], bindings['status']))
             
             if bindings['locked']:
-                lock_issuance = get_lock_issuance(cursor, bindings["asset"])
+                lock_issuance = get_lock_issuance(db, bindings["asset"])
                 
                 if (lock_issuance == None) or (lock_issuance['tx_hash'] == bindings['tx_hash']):
                     logger.info('Issuance: {} locked asset {} ({}) [{}]'.format(bindings['source'], bindings['asset'], bindings['tx_hash'], bindings['status']))
@@ -343,7 +351,7 @@ def log (db, command, category, bindings):
         elif category == 'rpsresolves':
 
             if bindings['status'] == 'valid':
-                rps_matches = list(cursor.execute('''SELECT * FROM rps_matches WHERE id = ?''', (bindings['rps_match_id'],)))
+                rps_matches = ledger.get_rps_match(db, id=bindings['rps_match_id'])
                 assert len(rps_matches) == 1
                 rps_match = rps_matches[0]
                 log_message = 'RPS Resolved: {} is playing {} on a {}-moves game with {} with a wager of {} ({}) [{}]'.format(rps_match['tx0_address'], bindings['move'], rps_match['possible_moves'], rps_match['tx1_address'], output(rps_match['wager'], 'XCP'), rps_match['id'], rps_match['status'])
@@ -386,7 +394,7 @@ def log (db, command, category, bindings):
         elif category == 'destructions':
 
             try:
-                asset_info = get_asset_info(cursor, bindings['asset'])
+                asset_info = ledger.get_asset_info(db, bindings['asset'])
                 quantity = bindings['quantity']
                 if asset_info['divisible']:
                     quantity = "{:.8f}".format(quantity/config.UNIT)
@@ -402,14 +410,14 @@ def log (db, command, category, bindings):
             escrow_quantity = bindings['escrow_quantity']
             give_quantity = bindings['give_quantity']
             
-            if (bindings['oracle_address'] != None) and util.enabled('oracle_dispensers'):
+            if (bindings['oracle_address'] != None) and ledger.enabled('oracle_dispensers'):
                 each_price = "{:.2f}".format(each_price/100.0)
-                oracle_last_price, oracle_fee, currency, oracle_last_updated = util.get_oracle_last_price(db, bindings['oracle_address'], bindings['block_index'])
+                oracle_last_price, oracle_fee, currency, oracle_last_updated = ledger.get_oracle_last_price(db, bindings['oracle_address'], bindings['block_index'])
                 dispenser_label = 'oracle dispenser using {}'.format(bindings['oracle_address'])
             else:
                 each_price = "{:.8f}".format(each_price/config.UNIT) 
             
-            divisible = get_asset_info(cursor, bindings['asset'])['divisible']
+            divisible = ledger.get_asset_info(db, bindings['asset'])['divisible']
             
             if divisible:
                 escrow_quantity = "{:.8f}".format(escrow_quantity/config.UNIT) 
@@ -423,15 +431,12 @@ def log (db, command, category, bindings):
                 logger.info('Dispenser: {} closed a {} for asset {}'.format(bindings['source'], dispenser_label, bindings['asset']))
 
         elif category == 'dispenses':
-            cursor.execute('SELECT * FROM dispensers WHERE tx_hash=:tx_hash', {
-                'tx_hash': bindings['dispenser_tx_hash']
-            })
-            dispensers = cursor.fetchall()
+            dispensers = ledger.get_dispenser(db, tx_hash=bindings['dispenser_tx_hash'])
             dispenser = dispensers[0]
         
-            if (dispenser["oracle_address"] != None) and util.enabled('oracle_dispensers'):
-                tx_btc_amount = get_tx_info(cursor, bindings['tx_hash'])/config.UNIT
-                oracle_last_price, oracle_fee, oracle_fiat_label, oracle_last_price_updated = util.get_oracle_last_price(db, dispenser["oracle_address"], bindings['block_index'])
+            if (dispenser["oracle_address"] != None) and ledger.enabled('oracle_dispensers'):
+                tx_btc_amount = get_tx_info(db, bindings['tx_hash'])/config.UNIT
+                oracle_last_price, oracle_fee, oracle_fiat_label, oracle_last_price_updated = ledger.get_oracle_last_price(db, dispenser["oracle_address"], bindings['block_index'])
                 fiatpaid = round(tx_btc_amount*oracle_last_price,2)
                 
                 logger.info('Dispense: {} from {} to {} for {:.8f} {} ({} {}) ({})'.format(output(bindings['dispense_quantity'], bindings['asset']), bindings['source'], bindings['destination'], tx_btc_amount, config.BTC, fiatpaid, oracle_fiat_label, bindings['tx_hash']))
@@ -440,41 +445,17 @@ def log (db, command, category, bindings):
 
     cursor.close()
 
-def get_lock_issuance(cursor, asset):
-    cursor.execute('''SELECT * FROM issuances \
-        WHERE (status = ? AND asset = ? AND locked = ?)
-        ORDER BY tx_index ASC''', ('valid', asset, True))
-    issuances = cursor.fetchall()
+def get_lock_issuance(db, asset):
+    issuances = ledger.get_issuances(db, status='valid', asset=asset, locked=True, first=True)
     
     if len(issuances) > 0:
         return issuances[0]
     
     return None
 
-def get_asset_issuances_quantity(cursor, asset):
-    cursor.execute('''SELECT COUNT(*) AS issuances_count FROM issuances \
-        WHERE (status = ? AND asset = ?)
-        ORDER BY tx_index DESC''', ('valid', asset))
-    issuances = cursor.fetchall()
-    return issuances[0]['issuances_count']  
 
-def get_asset_info(cursor, asset):
-    if asset == config.BTC or asset == config.XCP:
-        return {'divisible':True}
-    
-    cursor.execute('''SELECT * FROM issuances \
-        WHERE (status = ? AND asset = ?)
-        ORDER BY tx_index DESC''', ('valid', asset))
-    issuances = cursor.fetchall()
-    return issuances[0]
-
-def get_tx_info(cursor, tx_hash):
-    cursor.execute('SELECT * FROM transactions WHERE tx_hash=:tx_hash', {
-        'tx_hash': tx_hash
-    })
-    transactions = cursor.fetchall()
+def get_tx_info(db, tx_hash):
+    transactions = ledger.get_transactions(db, tx_hash=tx_hash)
     transaction = transactions[0]
     
     return transaction["btc_amount"]
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
