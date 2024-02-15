@@ -27,6 +27,9 @@ classifiers = [
     "Topic :: System :: Distributed Computing"
 ]
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.hatch.metadata.hooks.requirements_txt]
 files = ["requirements.txt"]
 
