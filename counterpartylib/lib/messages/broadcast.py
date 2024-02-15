@@ -399,7 +399,7 @@ def parse (db, tx, message):
         # Update the bet match’s status.
         if bet_match_status:
             bet_match_id = util.make_id(bet_match['tx0_hash'], bet_match['tx1_hash'])
-            ledger.update_bet_match_status(db, bet_match_id, bet_match_status, tx['block_index'], tx['tx_index'])
+            ledger.update_bet_match_status(db, bet_match_id, bet_match_status)
 
             log.message(db, tx['block_index'], 'update', 'bet_matches', {
                 'status': bet_match_status, 

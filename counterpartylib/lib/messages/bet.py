@@ -191,7 +191,7 @@ def cancel_bet (db, bet, status, block_index, tx_index):
 
     # Update status of bet.
     set_data = {'status': status}
-    ledger.update_bet(db, bet['tx_hash'], set_data, block_index, tx_index)
+    ledger.update_bet(db, bet['tx_hash'], set_data)
     log.message(db, block_index, 'update', 'bets', set_data | {'tx_hash': bet['tx_hash']})
 
     ledger.credit(db, bet['source'], config.XCP, bet['wager_remaining'], tx_index, action='recredit wager remaining', event=bet['tx_hash'])
@@ -211,7 +211,7 @@ def cancel_bet_match (db, bet_match, status, block_index, tx_index):
                 bet_match['backward_quantity'], tx_index, action='recredit backward quantity', event=bet_match['id'])
 
     # Update status of bet match.
-    ledger.update_bet_match_status(db, bet_match['id'], status, block_index, tx_index)
+    ledger.update_bet_match_status(db, bet_match['id'], status)
 
     log.message(db, block_index, 'update', 'bet_matches', {'status': status, 'bet_match_id': bet_match['id']})
 
@@ -498,7 +498,7 @@ def match (db, tx):
                 'counterwager_remaining': tx0_counterwager_remaining,
                 'status': tx0_status
             }
-            ledger.update_bet(db, tx0['tx_hash'], set_data, tx['block_index'], tx['tx_index'])
+            ledger.update_bet(db, tx0['tx_hash'], set_data)
 
             log.message(db, tx['block_index'], 'update', 'bets', set_data | {'tx_hash': tx0['tx_hash']})
 
@@ -513,7 +513,7 @@ def match (db, tx):
                 'counterwager_remaining': tx1_counterwager_remaining,
                 'status': tx1_status
             }
-            ledger.update_bet(db,tx1['tx_hash'], set_data, tx['block_index'], tx['tx_index'])
+            ledger.update_bet(db,tx1['tx_hash'], set_data)
 
             log.message(db, tx['block_index'], 'update', 'bets', set_data | {'tx_hash': tx1['tx_hash']})
 
@@ -541,7 +541,7 @@ def match (db, tx):
                 'backward_quantity': backward_quantity,
                 'tx0_block_index': tx0['block_index'],
                 'tx1_block_index': tx1['block_index'],
-                'block_index': max(tx0['block_index'], tx1['block_index']),
+                'block_index': min(tx0['block_index'], tx1['block_index']),
                 'tx0_expiration': tx0['expiration'],
                 'tx1_expiration': tx1['expiration'],
                 'match_expire_index': min(tx0['expire_index'], tx1['expire_index']),

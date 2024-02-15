@@ -186,7 +186,7 @@ def cancel_order (db, order, status, block_index, tx_index):
     set_data = {
         'status': status,
     }
-    ledger.update_order(db, order['tx_hash'], set_data, block_index, tx_index)
+    ledger.update_order(db, order['tx_hash'], set_data)
 
     log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': order['tx_hash']})
 
@@ -215,7 +215,7 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
             return
 
     # Update status of order match.
-    ledger.update_order_match_status(db, order_match['id'], status, block_index, tx_index)
+    ledger.update_order_match_status(db, order_match['id'], status)
 
     log.message(db, block_index, 'update', 'order_matches', {
         'status': status,
@@ -250,7 +250,7 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
             'status': tx0_order_status,
             'fee_required_remaining': tx0_fee_required_remaining,
         }
-        ledger.update_order(db, order_match['tx0_hash'], set_data, block_index, tx_index)
+        ledger.update_order(db, order_match['tx0_hash'], set_data)
 
         log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': order_match['tx0_hash']})
 
@@ -281,7 +281,7 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
             'status': tx1_order_status,
             'fee_required_remaining': tx1_fee_required_remaining,
         }
-        ledger.update_order(db, order_match['tx1_hash'], set_data, block_index, tx_index)
+        ledger.update_order(db, order_match['tx1_hash'], set_data)
 
         log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': order_match['tx1_hash']})
 
@@ -470,7 +470,7 @@ def parse (db, tx, message):
 
     order_parse_cursor.close()
 
-def match (db, tx, block_index=None):
+def match (db, tx, block_index = None):
 
     cursor = db.cursor()
 
@@ -507,7 +507,10 @@ def match (db, tx, block_index=None):
     for tx0 in order_matches:
         order_match_id = util.make_id(tx0['tx_hash'], tx1['tx_hash'])
         if not block_index:
-            block_index = max(tx0['block_index'], tx1['block_index'])
+            block_index = max(
+                ledger.get_order_first_block_index(cursor, tx0['tx_hash']),
+                ledger.get_order_first_block_index(cursor, tx1['tx_hash']),
+            )
         if tx1_status != 'open': break
 
         logger.debug('Considering: ' + tx0['tx_hash'])
@@ -659,7 +662,7 @@ def match (db, tx, block_index=None):
                 'fee_provided_remaining': tx0_fee_provided_remaining,
                 'status': tx0_status,
             }
-            ledger.update_order(db, tx0['tx_hash'], set_data, tx['block_index'], tx['tx_index'])
+            ledger.update_order(db, tx0['tx_hash'], set_data)
 
             log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': tx0['tx_hash']})
             # tx1
@@ -675,7 +678,7 @@ def match (db, tx, block_index=None):
                 'fee_provided_remaining': tx1_fee_provided_remaining,
                 'status': tx1_status,
             }
-            ledger.update_order(db, tx1['tx_hash'], set_data, tx['block_index'], tx['tx_index'])
+            ledger.update_order(db, tx1['tx_hash'], set_data)
 
             log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': tx1['tx_hash']})
 

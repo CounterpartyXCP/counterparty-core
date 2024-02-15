@@ -279,7 +279,7 @@ UNITTEST_VECTOR = {
                     'bet_type': 3,
                     'expiration': 1000,
                     'expire_index': 311101,
-                    'block_index': DP['default_block_index'],
+                    'block_index': 310500,
                     'deadline': 1388000200,
                     'counterwager_quantity': 10,
                     'wager_remaining': 10,
@@ -305,7 +305,7 @@ UNITTEST_VECTOR = {
             'records': [
                 {'table': 'bet_matches', 'values': {
                     'backward_quantity': 9,
-                    'block_index': DP['default_block_index'],
+                    'block_index': 310500,
                     'deadline': 1388000001,
                     'fee_fraction_int': 5000000,
                     'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',

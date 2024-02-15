@@ -145,6 +145,12 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
 
     if len(problems):
         return  None, None, problems, 0
+
+    # preserve order with old queries
+    # TODO: remove and update checkpoints
+    if not config.TESTNET and block_index in [313590, 313594]:
+        outputs.append(outputs.pop(-3))
+
     return dividend_total, outputs, problems, fee
 
 

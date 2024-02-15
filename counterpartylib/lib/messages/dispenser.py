@@ -404,7 +404,7 @@ def parse (db, tx, message):
                                 set_data = {
                                     'give_remaining': existing[0]['give_remaining'] + escrow_quantity,
                                 }
-                                ledger.update_dispenser(db, existing[0]['rowid'], set_data, tx["block_index"], tx['tx_index'])
+                                ledger.update_dispenser(db, existing[0]['rowid'], set_data)
 
                                 dispenser_tx_hash = ledger.get_dispensers(db, source=action_address, asset=asset, status=STATUS_OPEN)[0]["tx_hash"]
                                 bindings_refill = {
@@ -466,7 +466,7 @@ def parse (db, tx, message):
                             'status': STATUS_CLOSING,
                             'last_status_tx_hash': tx['tx_hash']
                         }
-                    ledger.update_dispenser(db, existing[0]['rowid'], set_data, tx['block_index'], tx['tx_index'])
+                    ledger.update_dispenser(db, existing[0]['rowid'], set_data)
                 else:
                     status = 'dispenser inexistent'
             else:
@@ -584,7 +584,7 @@ def dispense(db, tx):
                     'give_remaining': dispenser['give_remaining'],
                     'status': dispenser['status'],
                 }
-                ledger.update_dispenser(db, dispenser['rowid'], set_data, tx['block_index'], tx['tx_index'])
+                ledger.update_dispenser(db, dispenser['rowid'], set_data)
 
                 bindings = {
                     'tx_index': next_out['tx_index'],
@@ -620,4 +620,4 @@ def close_pending(db, block_index):
                 'give_remaining': 0,
                 'status': STATUS_CLOSED,
             }
-            ledger.update_dispenser(db, dispenser['rowid'], set_data, block_index, 0) # use tx_index=0 for block actions
+            ledger.update_dispenser(db, dispenser['rowid'], set_data) # use tx_index=0 for block actions

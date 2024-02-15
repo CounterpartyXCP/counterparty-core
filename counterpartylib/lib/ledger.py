@@ -717,52 +717,41 @@ def get_addresses(db, address=None):
 ###############################
 
 # This function allows you to update a record using an INSERT. 
-# The `block_index`, `tx_index` and `rowid` fields allow you to 
+# The `block_index` and `rowid` fields allow you to 
 # order updates and retrieve the row with the current data.
 
-def insert_update(db, table_name, update_data, where_data, block_index, tx_index, more_where=""):
+def insert_update(db, table_name, id_name, id_value, update_data):
     cursor = db.cursor()
     # select records to update
-    where = []
-    bindings = []
-    for key, value in where_data.items():
-        if key.endswith('_in'):
-            assert isinstance(value, list)
-            _key = key[:-3]
-            where.append(f'{_key} IN ({",".join(["?" for e in range(0, len(value))])})')
-            bindings += value
-        else:
-            where.append(f'{key} = ?')
-            bindings.append(value)
     select_query = f'''
         SELECT *, rowid
         FROM {table_name}
-        WHERE {' AND '.join(where)} {more_where}
+        WHERE {id_name} = ?
         ORDER BY rowid DESC
         LIMIT 1
-        '''
-    needs_update_list = cursor.execute(select_query, tuple(bindings))
+    '''
+    bindings = (id_value,)
+    need_update_record = cursor.execute(select_query, bindings).fetchone()
 
-    for row in needs_update_list:
-        # update record
-        new_record = row.copy()
-        # updade needed fields
-        for key, value in update_data.items():
-            new_record[key] = value
-        # new block_index and tx_index
-        new_record['block_index'] = block_index
-        # let's keep the original tx_index so we can preserve order
-        # with the old queries (ordered by default by old primary key)
-        # TODO: restore with protocol change and checkpoints update
-        #if 'tx_index' in new_record:
-        #    new_record['tx_index'] = tx_index
-        # insert new record
-        if 'rowid' in new_record:
-            del new_record['rowid']
-        fields_name = ', '.join(new_record.keys())
-        fields_values = ', '.join([f':{key}' for key in new_record.keys()])
-        insert_query = f'''INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})'''
-        cursor.execute(insert_query, new_record)
+    # update record
+    new_record = need_update_record.copy()
+    # updade needed fields
+    for key, value in update_data.items():
+        new_record[key] = value
+    # new block_index and tx_index
+    new_record['block_index'] = CURRENT_BLOCK_INDEX
+    # let's keep the original tx_index so we can preserve order
+    # with the old queries (ordered by default by old primary key)
+    # TODO: restore with protocol change and checkpoints update
+    #if 'tx_index' in new_record:
+    #    new_record['tx_index'] = tx_index
+    # insert new record
+    if 'rowid' in new_record:
+        del new_record['rowid']
+    fields_name = ', '.join(new_record.keys())
+    fields_values = ', '.join([f':{key}' for key in new_record.keys()])
+    insert_query = f'''INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})'''
+    cursor.execute(insert_query, new_record)
 
     cursor.close()
 
@@ -1008,11 +997,8 @@ def get_dispensers(db, status_in=None, source=None, asset=None, origin=None, sta
 
 ### UPDATES ###
 
-def update_dispenser(db, rowid, update_data, block_index, tx_index):
-    where_data = {
-        'rowid': rowid
-    }
-    insert_update(db, 'dispensers', update_data, where_data, block_index, tx_index)
+def update_dispenser(db, rowid, update_data):
+    insert_update(db, 'dispensers', 'rowid', rowid, update_data)
 
 
 #####################
@@ -1122,21 +1108,15 @@ def get_open_bet_by_feed(db, feed_address):
 
 ### UPDATES ###
 
-def update_bet(db, tx_hash, update_data, block_index, tx_index):
-    where_data = {
-        'tx_hash': tx_hash
-    }
-    insert_update(db, 'bets', update_data, where_data, block_index, tx_index)
+def update_bet(db, tx_hash, update_data):
+    insert_update(db, 'bets', 'tx_hash', tx_hash, update_data)
 
 
-def update_bet_match_status(db, id, status, block_index, tx_index):
+def update_bet_match_status(db, id, status):
     update_data = {
         'status': status
     }
-    where_data = {
-        'id': id
-    }
-    insert_update(db, 'bet_matches', update_data, where_data, block_index, tx_index)
+    insert_update(db, 'bet_matches', 'id', id, update_data)
 
 
 #####################
@@ -1173,7 +1153,7 @@ def get_pending_btc_order_matches(db, address):
         SELECT * FROM (
             SELECT *, MAX(rowid) AS rowid
             FROM order_matches
-            WHERE (tx0_address = ? AND forward_asset = ?) OR (tx1_address = ? AND backward_asset = ?))
+            WHERE (tx0_address = ? AND forward_asset = ?) OR (tx1_address = ? AND backward_asset = ?)
         ) WHERE status = ?
         ORDER BY rowid
     '''
@@ -1219,6 +1199,17 @@ def get_order(db, tx_hash):
     bindings = (tx_hash,)
     cursor.execute(query, bindings)
     return cursor.fetchall()
+
+
+def get_order_first_block_index(cursor, tx_hash):
+    query = '''
+        SELECT block_index FROM orders 
+        WHERE tx_hash = ? 
+        ORDER BY rowid ASC LIMIT 1
+    '''
+    bindings = (tx_hash,)
+    cursor.execute(query, bindings)
+    return cursor.fetchone()['block_index']
 
 
 def get_orders_to_expire(db, block_index):
@@ -1270,14 +1261,11 @@ def get_matching_orders(db, tx_hash, give_asset, get_asset):
 
 ### UPDATES ###
 
-def update_order(db, tx_hash, update_data, block_index, tx_index):
-    where_data = {
-        'tx_hash': tx_hash
-    }
-    insert_update(db, 'orders', update_data, where_data, block_index, tx_index)
+def update_order(db, tx_hash, update_data):
+    insert_update(db, 'orders', 'tx_hash', tx_hash, update_data)
 
 
-def mark_order_as_filled(db, tx0_hash, tx1_hash, block_index, tx_index, source=None):
+def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
 
     select_bindings = {
         'tx0_hash': tx0_hash,
@@ -1306,20 +1294,14 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, block_index, tx_index, source=N
         update_data = {
             'status': 'filled'
         }
-        where_data = {
-            'rowid': order['rowid'],
-        }
-        insert_update(db, 'orders', update_data, where_data, block_index, tx_index)
+        insert_update(db, 'orders', 'rowid', order['rowid'], update_data)
 
 
-def update_order_match_status(db, id, status, block_index, tx_index):
+def update_order_match_status(db, id, status):
     update_data = {
         'status': status
     }
-    where_data = {
-        'id': id
-    }
-    insert_update(db, 'order_matches', update_data, where_data, block_index, tx_index)
+    insert_update(db, 'order_matches', 'id', id, update_data)
 
 
 #####################
@@ -1332,13 +1314,12 @@ def get_matched_not_expired_rps(db, tx0_hash, tx1_hash, expire_index):
     cursor = db.cursor()
     query = '''
         SELECT * FROM (
-            SELECT *, MAX(rowid) 
+            SELECT *, MAX(rowid) as rowid
             FROM rps 
             WHERE tx_hash IN (?, ?) 
             AND expire_index >= ?
             GROUP BY tx_hash
         ) WHERE status = ?
-        ORDER BY tx_index, tx_hash
     '''
     bindings = (tx0_hash, tx1_hash, expire_index, 'matched')
     cursor.execute(query, bindings)
@@ -1458,24 +1439,18 @@ def get_rpsresolves(db, source=None, status=None, rps_match_id=None):
 
 ### UPDATES ###
 
-def update_rps_match_status(db, id, status, block_index, tx_index):
+def update_rps_match_status(db, id, status):
     update_data = {
         'status': status
     }
-    where_data = {
-        'id': id
-    }
-    insert_update(db, 'rps_matches', update_data, where_data, block_index, tx_index)
+    insert_update(db, 'rps_matches', 'id', id, update_data)
 
 
-def update_rps_status(db, tx_hash, status, block_index, tx_index):
+def update_rps_status(db, tx_hash, status):
     update_data = {
         'status': status
     }
-    where_data = {
-        'tx_hash': tx_hash
-    }
-    insert_update(db, 'rps', update_data, where_data, block_index, tx_index)
+    insert_update(db, 'rps', 'tx_hash', tx_hash, update_data)
 
 
 #####################
@@ -1502,7 +1477,7 @@ def _get_holders(cursor, id_fields, hold_fields_1, hold_fields_2=None, exclude_e
                 'address': holder[hold_fields_1['address']],
                 'address_quantity': holder[hold_fields_1['address_quantity']],
                 'escrow': holder[hold_fields_1['escrow']] if 'escrow' in hold_fields_1 else None,
-                #'table': table
+                #'table': table # for debugging purposes
             })
         if hold_fields_2 is not None:
             if holder[hold_fields_2['address_quantity']] > 0 or \
@@ -1511,7 +1486,7 @@ def _get_holders(cursor, id_fields, hold_fields_1, hold_fields_2=None, exclude_e
                     'address': holder[hold_fields_2['address']],
                     'address_quantity': holder[hold_fields_2['address_quantity']],
                     'escrow': holder[hold_fields_2['escrow']] if 'escrow' in hold_fields_2 else None,
-                    #'table': table
+                    #'table': table # for debugging purposes
                 })
     return holders
 
@@ -1566,7 +1541,6 @@ def holders(db, asset, exclude_empty_holders=False):
             WHERE forward_asset = ?
             GROUP BY id
         ) WHERE status = ?
-        ORDER BY id
     '''
     bindings = (asset, 'pending')
     cursor.execute(query, bindings)
@@ -1575,16 +1549,16 @@ def holders(db, asset, exclude_empty_holders=False):
         ['id'],
         {'address': 'tx0_address', 'address_quantity': 'forward_quantity', 'escrow': 'id'},
         #exclude_empty_holders=exclude_empty_holders,
-        table='order_matches'
+        table='order_matches1'
     )
 
     query = '''
         SELECT * FROM (
-            SELECT *, MAX(rowid)
+            SELECT *, MAX(rowid) AS rowid
             FROM order_matches
             WHERE backward_asset = ?
         ) WHERE status = ?
-        ORDER BY id
+        ORDER BY rowid
     '''
     bindings = (asset, 'pending')
     cursor.execute(query, bindings)
@@ -1593,7 +1567,7 @@ def holders(db, asset, exclude_empty_holders=False):
         ['id'],
         {'address': 'tx1_address', 'address_quantity': 'backward_quantity', 'escrow': 'id'},
         #exclude_empty_holders=exclude_empty_holders,
-        table='order_matches'
+        table='order_matches2'
     )
 
     # Bets and RPS (and bet/rps matches) only escrow XCP.
@@ -1622,7 +1596,6 @@ def holders(db, asset, exclude_empty_holders=False):
                 FROM bet_matches
                 GROUP BY id
             ) WHERE status = ?
-            ORDER BY id
         '''
         bindings = ('pending',)
         cursor.execute(query, bindings)
@@ -1659,7 +1632,6 @@ def holders(db, asset, exclude_empty_holders=False):
                 FROM rps_matches
                 GROUP BY id
             ) WHERE status IN (?, ?, ?)
-            ORDER BY id
         '''
         bindings = ('pending', 'pending and resolved', 'resolved and pending')
         cursor.execute(query, bindings)
