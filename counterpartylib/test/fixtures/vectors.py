@@ -3821,7 +3821,7 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'invalid bitcoin address: bad checksum',
             'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP7',),
-            'error': (script.Base58ChecksumError, 'Checksum mismatch: 0x00285aa2 ≠ 0x00285aa1')
+            'error': (script.Base58Error, 'invalid base58 string')
         }, {
             'comment': 'valid multi‐sig',
             'in': ('1_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),
@@ -3918,11 +3918,11 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'wrong version byte',
             'in': ('26UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM', b'\x00'),
-            'error': (script.VersionByteError, 'incorrect version byte')
+            'error': (script.Base58Error, 'invalid base58 string')
         }, {
             'comment': 'invalid mainnet bitcoin address: bad checksum',
             'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvN', b'\x00'),
-            'error': (script.Base58ChecksumError, 'Checksum mismatch: 0xd61967f7 ≠ 0xd61967f6')
+            'error': (script.Base58Error, 'invalid base58 string')
         }, {
             'comment': 'valid testnet bitcoin address that we use in many tests',
             'in': (ADDR[0], b'\x6f'),
@@ -3930,7 +3930,7 @@ UNITTEST_VECTOR = {
         }, {
             'comment': 'invalid mainnet bitcoin address: invalid character',
             'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjv0', b'\x00'),
-            'error': (script.Base58Error, "Not a valid Base58 character: ‘0’")
+            'error': (script.Base58Error, "invalid base58 string")
         }],
         # base58_decode is the raw decoding, we use the test cases from base58_check_decode
         'base58_decode': [{

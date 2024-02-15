@@ -11,6 +11,7 @@ import bitcoin as bitcoinlib
 from bitcoin.core.key import CPubKey
 from bitcoin.bech32 import CBech32Data
 from Crypto.Hash import RIPEMD160
+from pycoin_rs import b58
 
 from counterpartylib.lib import util
 from counterpartylib.lib import config
@@ -77,7 +78,7 @@ def base58_encode(binary):
     return res
 
 
-def base58_check_encode(original, version):
+def base58_check_encode_py(original, version):
     """Check if base58 encoding is valid."""
     b = binascii.unhexlify(bytes(original, 'utf-8'))
     d = version + b
@@ -100,6 +101,10 @@ def base58_check_encode(original, version):
         raise AddressError('encoded address does not decode properly')
 
     return address
+
+
+def base58_check_encode(original, version):
+    return b58.b58_encode(version + binascii.unhexlify(original))
 
 
 def base58_decode(s):
@@ -140,7 +145,7 @@ def base58_check_decode_parts(s):
     return addrbyte, data, chk0
 
 
-def base58_check_decode(s, version):
+def base58_check_decode_py(s, version):
     """Decode from base58 and return data part."""
 
     addrbyte, data, chk0 = base58_check_decode_parts(s)
@@ -153,6 +158,18 @@ def base58_check_decode(s, version):
         raise Base58ChecksumError('Checksum mismatch: 0x{} ≠ 0x{}'.format(util.hexlify(chk0), util.hexlify(chk1)))
 
     return data
+
+
+def base58_check_decode(s, version):
+    try:
+        decoded = b58.b58_decode(s)
+    except BaseException: # TODO: update pycoin_rs to raise a specific exception
+        raise Base58Error('invalid base58 string')
+
+    if decoded[0] != ord(version):
+        raise VersionByteError('incorrect version byte')
+
+    return decoded[1:]
 
 
 def is_multisig(address):
