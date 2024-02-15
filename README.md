@@ -38,7 +38,7 @@ a `bitcoin.conf` file (by default located in `~.bitcoin/`) with the following op
 
 ```
 rpcport=8332
-rpcuser=bitcoinrpc
+rpcuser=rpc
 rpcpassword=rpc
 server=1
 addresstype=legacy
