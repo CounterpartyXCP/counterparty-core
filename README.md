@@ -60,8 +60,15 @@ Download and install latest `addrindexrs`:
 $ sudo apt install cargo libclang-dev build-essential
 $ git clone https://github.com/CounterpartyXCP/addrindexrs.git
 $ cd addrindexrs
+ -- Set the necessary environment variables --
+  - ADDRINDEXRS_JSONRPC_IMPORT=1
+  - ADDRINDEXRS_TXID_LIMIT=15000
+  - ADDRINDEXRS_COOKIE=bitcoinrpc:rpc
+  - ADDRINDEXRS_INDEXER_RPC_ADDR=0.0.0.0:8432
+  - ADDRINDEXRS_DAEMON_RPC_ADDR=localhost:8332
+ --
 $ cargo build --release
-$ cargo run --release -- -vvv --jsonrpc-import=1 --txid-limit=15000 --cookie="bitcoinrpc:rpc" --indexer-rpc-addr="0.0.0.0:8432" --daemon-rpc-addr="localhost:8332"
+$ cargo run --release -- -vvv
 ```
 
 Now, download and install `counterparty-lib`:
