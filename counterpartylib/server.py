@@ -236,7 +236,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     if backend_password:
         config.BACKEND_PASSWORD = backend_password
     else:
-        raise ConfigurationError('backend RPC password not set. (Use configuration file or --backend-password=PASSWORD)')
+        config.BACKEND_PASSWORD = 'rpc'
 
     # Backend Core RPC SSL
     if backend_ssl:

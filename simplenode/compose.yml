@@ -13,7 +13,7 @@ services:
       - "-rpcbind=0.0.0.0"
       - "-rpcport=8332"                       # mainnet
       # - "-rpcport=18332"                    # testnet
-      - "-rpcuser=bitcoinrpc"
+      - "-rpcuser=rpc"
       - "-rpcpassword=rpc"
       - "-listen=1"
       - "-server=1"
@@ -43,14 +43,14 @@ services:
       - "--txid-limit=15000"
       - "--daemon-rpc-addr=bitcoind:8332"     # mainnet
       # - "--daemon-rpc-addr=bitcoind:18332"  # testnet
-      - "--cookie=bitcoinrpc:rpc"
+      - "--cookie=rpc:rpc"
       - "--daemon-dir=/bitcoin/.bitcoin"
       - "-vvv"
       - "--db-dir=/data/addrindexrs/db"
     environment:
       - ADDRINDEXRS_JSONRPC_IMPORT=true
 
-  counterparty-server:
+  counterparty-core:
     image: counterparty/counterparty
     links:
       - bitcoind
@@ -63,7 +63,7 @@ services:
       - "--backend-connect=bitcoind"
       - "--backend-port=8332"                 # mainnet
       # - "--backend-port=18332"              # testnet
-      - "--backend-user=bitcoinrpc"
+      - "--backend-user=rpc"
       - "--backend-password=rpc"
       - "--indexd-connect=addrindexrs"
       - "--indexd-port=8432"                  # mainnet

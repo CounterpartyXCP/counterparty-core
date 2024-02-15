@@ -29,7 +29,7 @@ $ docker-compose -f simplenode/compose.yml -p simplenode-testnet up
 Wait for your node to catch up with the network.
 
 
-# Manual installation
+# Manual Installation
 
 **WARNING** The `master` branch should only be used as a development target. For production, use only the latest tagged release.
 
@@ -37,18 +37,15 @@ Download the latest [Bitcoin Core](https://github.com/bitcoin/bitcoin/releases) 
 a `bitcoin.conf` file (by default located in `~.bitcoin/`) with the following options:
 
 ```
-rpcuser=bitcoinrpc
+rpcport=8332
+rpcuser=rpc
 rpcpassword=rpc
-rpctimeout=300
-zmqpubhashblock=tcp://127.0.0.1:28832
-zmqpubhashtx=tcp://127.0.0.1:28832
-addresstype=legacy
 server=1
+addresstype=legacy
 txindex=1
 prune=0
 mempoolfullrbf=1
 ```
-**Note:** you can and should replace the RPC credentials. Remember to use the changed RPC credentials throughout this document.
 
 Adding the following lines, and opening up port `8333` to incoming traffic may improve your sync speed:
 
@@ -63,8 +60,15 @@ Download and install latest `addrindexrs`:
 $ sudo apt install cargo libclang-dev build-essential
 $ git clone https://github.com/CounterpartyXCP/addrindexrs.git
 $ cd addrindexrs
+ -- Set the necessary environment variables --
+  - ADDRINDEXRS_JSONRPC_IMPORT=1
+  - ADDRINDEXRS_TXID_LIMIT=15000
+  - ADDRINDEXRS_COOKIE=bitcoinrpc:rpc
+  - ADDRINDEXRS_INDEXER_RPC_ADDR=0.0.0.0:8432
+  - ADDRINDEXRS_DAEMON_RPC_ADDR=localhost:8332
+ --
 $ cargo build --release
-$ cargo run --release -- -vvv --jsonrpc-import=1 --txid-limit=15000 --cookie="bitcoinrpc:rpc" --indexer-rpc-addr="0.0.0.0:8432" --daemon-rpc-addr="localhost:8332"
+$ cargo run --release -- -vvv
 ```
 
 Now, download and install `counterparty-lib`:
@@ -72,9 +76,9 @@ Now, download and install `counterparty-lib`:
 ```bash
 $ sudo apt install python3-pip
 $ git clone https://github.com/CounterpartyXCP/counterparty-lib.git
-$ cd counterparty-lib
-$ pip3 install --upgrade -r requirements.txt
-$ python3 setup.py install
+$ brew install leveldb                                                # macOS-only
+$ CFLAGS="-I/opt/homebrew/include -L/opt/homebrew/lib"                # macOS-only
+$ pip3 install -e .
 ```
 
 Followed by `counterparty-cli`:
@@ -82,15 +86,14 @@ Followed by `counterparty-cli`:
 ```bash
 $ git clone https://github.com/CounterpartyXCP/counterparty-cli.git
 $ cd counterparty-cli
-$ pip3 install --upgrade -r requirements.txt
-$ python3 setup.py install
+$ pip3 install -e .
 ```
 
 Then, launch the daemon via:
 
 ```bash
 $ counterparty-server bootstrap
-$ counterparty-server --backend-password=rpc start
+$ counterparty-server start
 ```
 
 **WARNING:** The `bootstrap` should not be used for commercial or public-facing nodes.
@@ -100,7 +103,7 @@ $ counterparty-server --backend-password=rpc start
 
 # Basic Usage
 
-## Via command-line
+## via command-line
 
 (Requires `counterparty-cli` to be installed.)
 
@@ -152,32 +155,9 @@ Counterparty database files are by default named `counterparty.[testnet.]db` and
 
 ## Configuration File Format
 
-Manual configuration is not necessary for most use cases. "back-end" and "wallet" are used to access Bitcoin server RPC.
-
-A `counterparty-server` configuration file looks like this:
-
-	[Default]
-	backend-name = indexd
-	backend-user = <user>
-	backend-password = <password>
-	indexd-connect = localhost
-	indexd-port = 8432
-	rpc-host = 0.0.0.0
-	rpc-user = <rpcuser>
-	rpc-password = <rpcpassword>
+Manual configuration is not necessary for most use cases, but example configuration files may be found in the (docker/) directory.
 
 The ``force`` argument can be used either in the server configuration file or passed at runtime to make the server keep running in the case it loses connectivity with the Internet and falls behind the back-end database. This may be useful for *non-production* Counterparty servers that need to maintain RPC service availability even when the backend or counterparty server has no Internet connectivity.
-
-A `counterparty-client` configuration file looks like this:
-
-	[Default]
-	wallet-name = bitcoincore
-	wallet-connect = localhost
-	wallet-user = <user>
-	wallet-password = <password>
-	counterparty-rpc-connect = localhost
-	counterparty-rpc-user = <rpcuser>
-	counterparty-rpc-password = <password>
 
 
 # Developer notes
@@ -187,10 +167,6 @@ A `counterparty-client` configuration file looks like this:
 * Major version changes require a full (automatic) rebuild of the database.
 * Minor version changes require a(n automatic) database reparse.
 * All protocol changes are retroactive on testnet.
-
-## Continuous integration
- - TravisCI is setup to run all tests with 1 command and generate a coverage report and let `python-coveralls` parse and upload it.
- - CircleCI is setup to split the tests as much as possible to make it easier to read the error reports.
 
 
 # Further Reading
