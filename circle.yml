@@ -17,6 +17,7 @@ jobs:
           command: |
             pip install --upgrade pip
             pip install hatch
+            curl https://sh.rustup.rs -sSf | sh -s -- -y
 
       - persist_to_workspace:
           root: ~/
