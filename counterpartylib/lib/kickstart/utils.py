@@ -1,5 +1,7 @@
 import binascii, os, math, json, hashlib
 
+from pycoin_rs import utils as pycoin_rs_utils
+
 bytes_from_int = chr if bytes == str else lambda x: bytes([x])
 
 def b2h(b):
@@ -9,14 +11,13 @@ def random_hex(length):
     return binascii.b2a_hex(os.urandom(length))
 
 def double_hash(b): 
-	return hashlib.sha256(hashlib.sha256(b).digest()).digest()
+    return hashlib.sha256(hashlib.sha256(b).digest()).digest()
 
 def inverse_hash(hashstring):
-	hashstring = hashstring[::-1]
-	return ''.join([hashstring[i:i+2][::-1] for i in range(0, len(hashstring), 2)])
+    return pycoin_rs_utils.inverse_hash(hashstring)
 
 def ib2h(b):
-	return inverse_hash(b2h(b))
+    return inverse_hash(b2h(b))
 
 class JsonDecimalEncoder(json.JSONEncoder):
     def default(self, o):
