@@ -73,6 +73,8 @@ $ cargo run --release -- -vvv
 
 Now, download and install `counterparty-lib`:
 
+Make sure ~/.local/bin is in $PATH.
+
 ```bash
 $ sudo apt install python3-pip
 $ git clone https://github.com/CounterpartyXCP/counterparty-lib.git
