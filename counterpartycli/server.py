@@ -80,6 +80,7 @@ def main():
     parser_server = subparsers.add_parser('start', help='run the server')
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database')
+    parser_reparse.add_argument('block_index', type=int, help='the index of the last known good block')
 
     parser_vacuum = subparsers.add_parser('vacuum', help='VACUUM the database (to improve performance)')
 
@@ -88,6 +89,8 @@ def main():
 
     parser_kickstart = subparsers.add_parser('kickstart', help='rapidly build database by reading from Bitcoin Core blockchain')
     parser_kickstart.add_argument('--bitcoind-dir', help='Bitcoin Core data directory')
+    parser_kickstart.add_argument('--last-hash', help='Last block to parse')
+    parser_kickstart.add_argument('--resume-from', help='`last` or a block index. Try to resume parsing from the given block. `last` will resume from the last block in the database.')
 
     parser_bootstrap = subparsers.add_parser('bootstrap', help='bootstrap database with hosted snapshot')
     parser_bootstrap.add_argument('-q', '--quiet', dest='quiet', action='store_true', help='suppress progress bar')
@@ -123,8 +126,8 @@ def main():
                 raise e
 
     # Configuration
-    COMMANDS_WITH_DB = ['reparse', 'rollback', 'kickstart', 'start', 'vacuum', 'checkdb']
-    COMMANDS_WITH_CONFIG = ['debug_config']
+    COMMANDS_WITH_DB = ['reparse', 'rollback', 'start', 'vacuum', 'checkdb']
+    COMMANDS_WITH_CONFIG = ['debug_config', 'kickstart']
     if args.action in COMMANDS_WITH_DB or args.action in COMMANDS_WITH_CONFIG:
         init_args = dict(database_file=args.database_file,
                                 log_file=args.log_file, api_log_file=args.api_log_file,
@@ -160,13 +163,17 @@ def main():
 
     # PARSING
     if args.action == 'reparse':
-        server.reparse(db)
-
-    elif args.action == 'rollback':
         server.reparse(db, block_index=args.block_index)
 
+    elif args.action == 'rollback':
+        server.rollback(db, block_index=args.block_index)
+
     elif args.action == 'kickstart':
-        server.kickstart(db, bitcoind_dir=args.bitcoind_dir)
+        server.kickstart(
+            bitcoind_dir=args.bitcoind_dir, 
+            force=args.force,
+            last_hash=args.last_hash,
+            resume_from=args.resume_from)
 
     elif args.action == 'start':
         server.start_all(db)

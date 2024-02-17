@@ -7,7 +7,8 @@ import calendar
 import dateutil.parser
 
 from counterpartylib.lib import script, config, blocks, exceptions, api, transaction
-from counterpartylib.lib.util import make_id, BET_TYPE_NAME, BET_TYPE_ID, dhash, generate_asset_name
+from counterpartylib.lib.util import make_id, BET_TYPE_NAME, BET_TYPE_ID, dhash
+from counterpartylib.lib.ledger import generate_asset_name
 from counterpartylib.lib.kickstart.utils import ib2h
 from counterpartycli import util
 from counterpartycli import wallet
