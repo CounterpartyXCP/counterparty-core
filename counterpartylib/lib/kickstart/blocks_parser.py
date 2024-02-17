@@ -1,10 +1,12 @@
-import os, json, time, logging, binascii
+import os, logging, binascii, time
+from multiprocessing import Process, Queue
 from collections import OrderedDict
-import logging
-logger = logging.getLogger(__name__)
 
 from .bc_data_stream import BCDataStream
 from .utils import b2h, double_hash, ib2h, inverse_hash, decode_value
+from counterpartylib.lib import ledger
+
+logger = logging.getLogger(__name__)
 
 TX_CACHE_MAX_SIZE = 10000
 
@@ -20,19 +22,59 @@ def open_leveldb(db_dir):
         logger.info(str(e))
         raise Exception("Ensure that bitcoind is stopped.")
 
+
+def fetch_blocks(bitcoind_dir, db, queue, first_block_index):
+    parser = BlockchainParser(bitcoind_dir)
+    cursor = db.cursor()
+    try:
+        cursor.execute('''
+                            SELECT * FROM blocks
+                            WHERE block_index > ?
+                            ORDER BY block_index
+                            ''',
+                            (first_block_index ,))
+        for db_block in cursor:
+            while queue.full():
+                time.sleep(1)
+            block = parser.read_raw_block(
+                db_block['block_hash'], 
+                use_txid=ledger.enabled("correct_segwit_txids", block_index=db_block['block_index'])
+            )
+            queue.put(block)
+        queue.put(None)
+    finally:
+        parser.close()
+        cursor.close()
+
+
 class BlockchainParser():
 
-    def __init__(self, bitcoind_dir):
+    def __init__(self, bitcoind_dir, db=None, first_block_index=0):
         self.blocks_dir = os.path.join(bitcoind_dir, 'blocks')
         self.file_num = -1
         self.current_file_size = 0
         self.current_block_file = None
         self.data_stream = None
-        self.blocks_leveldb_path = os.path.join(self.blocks_dir, 'index')
-        self.blocks_leveldb = open_leveldb(self.blocks_leveldb_path)
-        self.txindex_leveldb_path = os.path.join(bitcoind_dir, 'indexes', 'txindex')
-        self.txindex_leveldb = open_leveldb(self.txindex_leveldb_path)
+        
         self.tx_cache = OrderedDict()
+        if db is not None:
+            self.blocks_leveldb = None
+            self.txindex_leveldb_path = os.path.join(bitcoind_dir, 'indexes', 'txindex')
+            self.txindex_leveldb = open_leveldb(self.txindex_leveldb_path)
+            self.queue = Queue(100)
+            self.fetch_process = Process(target=fetch_blocks, args=(
+                bitcoind_dir, db, self.queue, first_block_index
+            ))
+            self.fetch_process.start()
+        else:
+            self.blocks_leveldb_path = os.path.join(self.blocks_dir, 'index')
+            self.blocks_leveldb = open_leveldb(self.blocks_leveldb_path)
+            self.txindex_leveldb = None
+            self.fetch_process = None
+
+
+    def next_block(self):
+        return self.queue.get()
 
 
     def read_tx_in(self, vds):
@@ -103,12 +145,15 @@ class BlockchainParser():
 
         transaction['__data__'] = b2h(data)
 
+        return transaction
+
+
+    def put_in_cache(self, transaction):
         # save transaction to cache
         self.tx_cache[transaction['tx_hash']] = transaction
         if len(self.tx_cache) > TX_CACHE_MAX_SIZE:
             self.tx_cache.popitem(last=False)
 
-        return transaction
 
     def read_block_header(self, vds):
         block_header = {}
@@ -152,6 +197,7 @@ class BlockchainParser():
             self.data_stream.seek_file(pos_in_file)
 
     def read_raw_block(self, block_hash, only_header=False, use_txid=True):
+        #print('Reading raw block:', block_hash, only_header)
         block_key = bytes('b', 'utf-8') + binascii.unhexlify(inverse_hash(block_hash))
         block_data = self.blocks_leveldb.get(block_key)
         ds = BCDataStream()
@@ -168,6 +214,7 @@ class BlockchainParser():
         self.prepare_data_stream(file_num, block_pos_in_file)
         block = self.read_block(self.data_stream, only_header=only_header, use_txid=use_txid)
         block['block_index'] = height
+        block['tx_count'] = tx_count
         return block
 
     def read_raw_transaction(self, tx_hash, use_txid=True):
@@ -196,8 +243,13 @@ class BlockchainParser():
     def close(self):
         if self.current_block_file:
             self.current_block_file.close()
-        self.blocks_leveldb.close()
-        self.txindex_leveldb.close()
+        if self.blocks_leveldb:
+            self.blocks_leveldb.close()
+        if self.txindex_leveldb:
+            self.txindex_leveldb.close()
+        if self.fetch_process:
+            self.fetch_process.terminate()
+            self.fetch_process.join()
 
 class ChainstateParser():
 

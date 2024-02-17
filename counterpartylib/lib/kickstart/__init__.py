@@ -28,7 +28,8 @@ def copy_memory_db_to_disk(local_base, memory_db):
     logger.info('Database copy duration: {:.3f}s'.format(time.time() - start_time_copy_db))
 
 
-def fetch_blocks(db, block_parser, last_known_hash):
+def fetch_blocks(db, bitcoind_dir, last_known_hash):
+    block_parser = BlockchainParser(bitcoind_dir)
     cursor = db.cursor()
     start_time_blocks_indexing = time.time()
     # save blocks from last to first
@@ -56,8 +57,52 @@ def fetch_blocks(db, block_parser, last_known_hash):
         print(f"Block {bindings_lot[0]} to {bindings_lot[-5]} inserted.", end="\r")
         if block['block_index'] == config.BLOCK_FIRST:
             break
+    block_parser.close()
     logger.info('Blocks indexed in: {:.3f}s'.format(time.time() - start_time_blocks_indexing))
     return block_count
+
+
+def copy_disk_db_to_memory(local_base, memory_db, resume_from):
+    logger.info(f"Resuming from disk database {local_base}...")
+    # copy disk database to memory database
+    local_base_db = apsw.Connection(local_base)
+    logger.info(f"Copying disk database to memory database...")
+    with memory_db.backup("main", local_base_db, "main") as backup:
+        backup.step()
+    # get block count
+    memory_cursor = memory_db.cursor()
+    memory_cursor.execute('''SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1''')
+    last_block_index = memory_cursor.fetchone()['block_index']
+    # clean tables from resume block
+    if resume_from != 'last':
+        resume_block_index = int(resume_from)
+        for table in blocks.TABLES + ['transaction_outputs', 'transactions']:
+            blocks.clean_table_from(memory_cursor, table, resume_block_index)
+    # get last parsed transaction
+    memory_cursor.execute('''SELECT block_index, tx_index FROM transactions ORDER BY block_index DESC, tx_index DESC LIMIT 1''')
+    last_transaction = memory_cursor.fetchone()
+    last_parsed_block = last_transaction['block_index']
+    # clean tables from last parsed block
+    for table in blocks.TABLES:
+        blocks.clean_table_from(memory_cursor, table, last_parsed_block)
+    # clean hashes
+    if resume_from != 'last':
+        memory_cursor.execute('''UPDATE blocks
+                                    SET txlist_hash = :txlist_hash, 
+                                        ledger_hash = :ledger_hash,
+                                        messages_hash = :messages_hash
+                                    WHERE block_index > :block_index''', {
+                                    'txlist_hash': None,
+                                    'ledger_hash': None,
+                                    'messages_hash': None,
+                                    'block_index': last_parsed_block
+                                })
+
+    block_count = last_block_index - last_parsed_block
+    tx_index = last_transaction['tx_index'] + 1
+    logger.info(f"Resuming from block {last_parsed_block}...")
+
+    return block_count, tx_index, last_parsed_block
 
 
 def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None):
@@ -90,75 +135,43 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
         chain_parser.close()
     logger.info('Last known block hash: {}'.format(last_hash))
 
-    # Start block parser.
-    block_parser = BlockchainParser(bitcoind_dir)
-
     # initialise in memory database
     local_base = config.DATABASE
     config.DATABASE = ':memory:'
     memory_db = server.initialise_db()
 
     if os.path.exists(local_base) and resume_from is not None:
-        logger.info(f"Resuming from disk database {local_base}...")
-        # copy disk database to memory database
-        local_base_db = apsw.Connection(local_base)
-        logger.info(f"Copying disk database to memory database...")
-        with memory_db.backup("main", local_base_db, "main") as backup:
-            backup.step()
-        # get block count
-        memory_cursor = memory_db.cursor()
-        memory_cursor.execute('''SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1''')
-        last_block_index = memory_cursor.fetchone()['block_index']
-        # clean tables from resume block
-        if resume_from != 'last':
-            resume_block_index = int(resume_from)
-            for table in blocks.TABLES + ['transaction_outputs', 'transactions']:
-                blocks.clean_table_from(memory_cursor, table, resume_block_index)
-        # get last parsed transaction
-        memory_cursor.execute('''SELECT block_index, tx_index FROM transactions ORDER BY block_index DESC, tx_index DESC LIMIT 1''')
-        last_transaction = memory_cursor.fetchone()
-        last_parsed_block = last_transaction['block_index']
-        # clean tables from last parsed block
-        for table in blocks.TABLES:
-            blocks.clean_table_from(memory_cursor, table, last_parsed_block)
-        # clean hashes
-        if resume_from != 'last':
-            memory_cursor.execute('''UPDATE blocks
-                                     SET txlist_hash = :txlist_hash, 
-                                         ledger_hash = :ledger_hash,
-                                         messages_hash = :messages_hash
-                                     WHERE block_index > :block_index''', {
-                                      'txlist_hash': None,
-                                      'ledger_hash': None,
-                                      'messages_hash': None,
-                                      'block_index': last_parsed_block
-                                    })
-
-        block_count = last_block_index - last_parsed_block
-        tx_index = last_transaction['tx_index'] + 1
-        logger.info(f"Resuming from block {last_parsed_block}...")
+        block_count, tx_index, last_parsed_block = copy_disk_db_to_memory(
+            local_base, memory_db, resume_from
+        )
     else:
         # intialize new database
         blocks.initialise(memory_db)
         # fill `blocks`` table from bitcoind files
-        block_count = fetch_blocks(memory_db, block_parser, last_known_hash)
+        block_count = fetch_blocks(memory_db, bitcoind_dir, last_known_hash)
         last_parsed_block = 0
         tx_index = 0
+    
+
+    # Start block parser.
+    block_parser = BlockchainParser(bitcoind_dir, memory_db, last_parsed_block)
 
     try:
         # save transactions for each blocks from first to last
         # then parse the block
         start_time_all_blocks_parse = time.time()
-        memory_cursor = memory_db.cursor()
-        memory_cursor.execute('''SELECT * FROM blocks WHERE block_index > ? ORDER BY block_index''', (last_parsed_block,))
         block_parsed_count = 0
-        for db_block in memory_cursor:
+        #logger.warning("Parsing blocks...")
+        block = block_parser.next_block()
+        while block is not None:
+            #logger.warning("Got: ", block['block_index'])
             start_time_block_parse = time.time()
-            ledger.CURRENT_BLOCK_INDEX = db_block['block_index']
-            block = block_parser.read_raw_block(db_block['block_hash'], use_txid=ledger.enabled("correct_segwit_txids"))
+            ledger.CURRENT_BLOCK_INDEX = block['block_index']
             with memory_db: # ensure all the block or nothing
                 # save transactions
                 for transaction in block['transactions']:
+                    # Cache transaction. We do that here because the block is fetched by another process.
+                    block_parser.put_in_cache(transaction)
                     tx_index = blocks.list_tx(memory_db,
                                             block['block_hash'],
                                             block['block_index'],
@@ -172,6 +185,7 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
             last_parsed_block = block['block_index']
             if block['block_hash'] == last_known_hash:
                 break
+            block = block_parser.next_block()
             # let's have a nice message
             block_parsed_count += 1
             block_parsing_duration = time.time() - start_time_block_parse
@@ -184,8 +198,7 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
             print(message, end="\r")
         logger.info('All blocks parsed in: {:.3f}s'.format(time.time() - start_time_all_blocks_parse))
     finally:
-        # close memory database
-        memory_cursor.close()
+        block_parser.close()
         copy_memory_db_to_disk(local_base, memory_db)
         logger.info("Last parsed block: {}".format(last_parsed_block))
 
