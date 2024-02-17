@@ -10,6 +10,7 @@ from counterpartylib.lib.script import (
     base58_check_encode_py,
     get_asm,
 )
+from counterpartylib.lib.gettxinfo import decode_p2w
 
 from counterpartylib.lib.opcodes import *
 
@@ -115,3 +116,33 @@ def test_get_asm():
         3,
         OP_CHECKMULTISIG
     ]
+
+def test_decode_p2w():
+   
+    script_pubkey = b'\x00\x14u\x1ev\xe8\x19\x91\x96\xd4T\x94\x1cE\xd1\xb3\xa3#\xf1C;\xd6'
+    bech32 = utils.script_to_address(script_pubkey, 'testnet')
+    assert bech32 == "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx"
+
+    bech32 = utils.script_to_address(script_pubkey, 'mainnet')
+    assert bech32 == "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4"
+
+    #iterations = 1000000
+    iterations = 100
+
+    print()
+
+    start_time = time.time()
+    for i in range(iterations):
+        bech32 = decode_p2w(script_pubkey)
+        assert bech32 == ("tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx", None)
+    python_duration = time.time() - start_time
+    print(f'{iterations} decode_p2w with python: {python_duration}s')
+
+    start_time = time.time()
+    for i in range(iterations):
+        bech32 = utils.script_to_address(script_pubkey, 'testnet')
+        assert bech32 == "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx"
+    rust_duration = time.time() - start_time
+    print(f'{iterations} decode_p2w with rust: {rust_duration}s')
+
+    assert python_duration > rust_duration
