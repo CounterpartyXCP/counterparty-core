@@ -315,6 +315,15 @@ def script_to_asm(scriptpubkey):
         raise exceptions.DecodeError('invalid script')
 
 
+def script_to_address(scriptpubkey):
+    try:
+        network = 'mainnet' if config.TESTNET == False else 'testnet'
+        script = bytes(scriptpubkey, 'utf-8') if type(scriptpubkey) == str else bytes(scriptpubkey)
+        return utils.script_to_address(script, network)
+    except BaseException as e:
+        raise exceptions.DecodeError('scriptpubkey decoding error')
+
+
 def get_checksig(asm):
     try:
         op_dup, op_hash160, pubkeyhash, op_equalverify, op_checksig = asm

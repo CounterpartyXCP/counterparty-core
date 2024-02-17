@@ -79,14 +79,6 @@ def decode_checkmultisig(asm, ctx):
     return destination, data
 
 
-def decode_p2w(script_pubkey):
-    try:
-        bech32 = bitcoinlib.bech32.CBech32Data.from_bytes(0, script_pubkey[2:22])
-        return str(bech32), None
-    except TypeError as e:
-        raise DecodeError('bech32 decoding error')
-
-
 def get_pubkeyhash(scriptpubkey, block_index):
     asm = script.script_to_asm(scriptpubkey)
     if ledger.enabled('multisig_addresses', block_index=block_index):
@@ -112,8 +104,7 @@ def get_pubkeyhash(scriptpubkey, block_index):
 
 def get_address(scriptpubkey, block_index):
     if ledger.enabled('correct_segwit_txids') and scriptpubkey.is_witness_v0_keyhash():
-        pubkey = scriptpubkey[2:]
-        address = str(bitcoinlib.bech32.CBech32Data.from_bytes(0, pubkey))
+        address = script.script_to_address(scriptpubkey)
         return address
     else:
         pubkeyhash, address_version = get_pubkeyhash(scriptpubkey, block_index)
@@ -158,8 +149,8 @@ def get_transaction_sources(decoded_tx, block_parser=None):
                 raise DecodeError('data in source')
         elif ledger.enabled('segwit_support') and asm[0] == b'':
             # Segwit output
-            # Get the full transaction data for this input transaction.
-            new_source, new_data = decode_p2w(vout.scriptPubKey)
+            new_source = script.script_to_address(vout.scriptPubKey)
+            new_data = None
         else:
             raise DecodeError('unrecognised source type')
 
@@ -257,7 +248,8 @@ def parse_transaction_vouts(ctx, p2sh_support):
         elif ledger.enabled('segwit_support') and asm[0] == b'':
             # Segwit Vout, second param is redeemScript
             #redeemScript = asm[1]
-            new_destination, new_data = decode_p2w(vout.scriptPubKey)
+            new_destination = script.script_to_address(vout.scriptPubKey)
+            new_data = None
             # Reproduce buggy fix. See #1408
             if ledger.enabled('correct_segwit_txids') and not ledger.enabled('hotfix_dispensers_with_non_p2pkh'):
                 potential_dispensers[-1] = (new_destination, output_value)
