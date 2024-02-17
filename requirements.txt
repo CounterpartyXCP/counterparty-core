@@ -21,4 +21,4 @@ Werkzeug==3.0.1
 itsdangerous==2.1.2
 plyvel==1.5.1
 arc4==0.4.0
-pycoin_rs @ git+https://github.com/richardkiss/pycoin_rs
+pycoin_rs @ git+https://github.com/CounterpartyXCP/pycoin_rs
