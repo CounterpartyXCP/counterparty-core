@@ -480,7 +480,7 @@ def test_p2sh_signed_multisig_script_decoding():
 
         ctx = backend.deserialize(txHex)
         vin = ctx.vin[0]
-        asm = script.get_asm(vin.scriptSig)
+        asm = script.script_to_asm(vin.scriptSig)
         new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm)
 
         assert new_data == binascii.unhexlify('1e5a3ae08000000000000000000000000073434950203620737570706f727473207573696e672070327368206164647265737365732061732074686520736f7572636520616464726573732062757420726571756972657320616e206164646974696f6e616c20696e70757420696e207468652064617461207472616e73616374696f6e2e')
