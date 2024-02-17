@@ -371,6 +371,8 @@ class AddrIndexRsThread (threading.Thread):
             msg["id"] = self.lastId
             self.lastId += 1
             self.message_to_send = (json.dumps(msg) + "\n").encode('utf8')
+        else:
+            self.is_killed = True
         self.locker.notify()
         self.locker.wait()
         self.locker.release()
@@ -524,7 +526,7 @@ def get_oldest_tx(address):
         "params": [hsh]
     })
     
-    if not ("error" in call_result):
+    if call_result is not None and not ("error" in call_result):
         txs = call_result["result"]
         return txs
         
