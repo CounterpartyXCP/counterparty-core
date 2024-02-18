@@ -371,10 +371,10 @@ class AddrIndexRsThread (threading.Thread):
             msg["id"] = self.lastId
             self.lastId += 1
             self.message_to_send = (json.dumps(msg) + "\n").encode('utf8')
+            self.locker.notify()
+            self.locker.wait()
         else:
             self.is_killed = True
-        self.locker.notify()
-        self.locker.wait()
         self.locker.release()
         return self.message_result
 
