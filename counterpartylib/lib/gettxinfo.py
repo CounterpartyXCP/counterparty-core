@@ -9,6 +9,8 @@ from counterpartylib.lib.exceptions import DecodeError, BTCOnlyError
 from counterpartylib.lib.kickstart.utils import ib2h
 from counterpartylib.lib.transaction_helper import p2sh_encoding
 from counterpartylib.lib.messages import dispenser
+from counterpartylib.lib.opcodes import *
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +22,7 @@ def arc4_decrypt(cyphertext, ctx):
 
 
 def get_opreturn(asm):
-    if len(asm) == 2 and asm[0] == 'OP_RETURN':
+    if len(asm) == 2 and asm[0] == OP_RETURN:
         pubkeyhash = asm[1]
         if type(pubkeyhash) == bytes:
             return pubkeyhash
@@ -77,41 +79,32 @@ def decode_checkmultisig(asm, ctx):
     return destination, data
 
 
-def decode_p2w(script_pubkey):
-    try:
-        bech32 = bitcoinlib.bech32.CBech32Data.from_bytes(0, script_pubkey[2:22])
-        return str(bech32), None
-    except TypeError as e:
-        raise DecodeError('bech32 decoding error')
-
-
 def get_pubkeyhash(scriptpubkey, block_index):
-    asm = script.get_asm(scriptpubkey)
+    asm = script.script_to_asm(scriptpubkey)
     if ledger.enabled('multisig_addresses', block_index=block_index):
         if len(asm) > 0:
 
-            if asm[0] == "OP_DUP":
-                if len(asm) != 5 or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':            
+            if asm[0] == OP_DUP:
+                if len(asm) != 5 or asm[1] != OP_HASH160 or asm[3] != OP_EQUALVERIFY or asm[4] != OP_CHECKSIG:            
                     return None, None
                 else:
                     return asm[2], config.ADDRESSVERSION
 
-            elif (asm[0] == "OP_HASH160") and ledger.enabled('p2sh_dispensers_support'):
+            elif (asm[0] == OP_HASH160) and ledger.enabled('p2sh_dispensers_support'):
                 if len(asm) != 3 or asm[-1] != 'OP_EQUAL':          
                     return None, None
                 else:
                     return asm[1], config.P2SH_ADDRESSVERSION
         return None, None
     else:
-        if len(asm) != 5 or asm[0] != 'OP_DUP' or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':
+        if len(asm) != 5 or asm[0] != OP_DUP or asm[1] != OP_HASH160 or asm[3] != OP_EQUALVERIFY or asm[4] != OP_CHECKSIG:
             return None, None
         return asm[2], config.ADDRESSVERSION
 
 
 def get_address(scriptpubkey, block_index):
     if ledger.enabled('correct_segwit_txids') and scriptpubkey.is_witness_v0_keyhash():
-        pubkey = scriptpubkey[2:]
-        address = str(bitcoinlib.bech32.CBech32Data.from_bytes(0, pubkey))
+        address = script.script_to_address(scriptpubkey)
         return address
     else:
         pubkeyhash, address_version = get_pubkeyhash(scriptpubkey, block_index)
@@ -141,23 +134,23 @@ def get_transaction_sources(decoded_tx, block_parser=None):
         vout = vin_ctx.vout[vin.prevout.n]
         outputs_value += vout.nValue
 
-        asm = script.get_asm(vout.scriptPubKey)
-        if asm[-1] == 'OP_CHECKSIG':
+        asm = script.script_to_asm(vout.scriptPubKey)
+        if asm[-1] == OP_CHECKSIG:
             new_source, new_data = decode_checksig(asm, decoded_tx)
             if new_data or not new_source:
                 raise DecodeError('data in source')
-        elif asm[-1] == 'OP_CHECKMULTISIG':
+        elif asm[-1] == OP_CHECKMULTISIG:
             new_source, new_data = decode_checkmultisig(asm, decoded_tx)
             if new_data or not new_source:
                 raise DecodeError('data in source')
-        elif asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
+        elif asm[0] == OP_HASH160 and asm[-1] == OP_EQUAL and len(asm) == 3:
             new_source, new_data = decode_scripthash(asm)
             if new_data or not new_source:
                 raise DecodeError('data in source')
-        elif ledger.enabled('segwit_support') and asm[0] == 0:
+        elif ledger.enabled('segwit_support') and asm[0] == b'':
             # Segwit output
-            # Get the full transaction data for this input transaction.
-            new_source, new_data = decode_p2w(vout.scriptPubKey)
+            new_source = script.script_to_address(vout.scriptPubKey)
+            new_data = None
         else:
             raise DecodeError('unrecognised source type')
 
@@ -194,10 +187,7 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit, block_parser=No
         outputs_value += vout.nValue
 
         # Ignore transactions with invalid script.
-        try:
-            asm = script.get_asm(vin.scriptSig)
-        except CScriptInvalidError as e:
-            raise DecodeError(e)
+        asm = script.script_to_asm(vin.scriptSig)
 
         new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm, p2sh_is_segwit=prevout_is_segwit)
         # this could be a p2sh source address with no encoded data
@@ -239,30 +229,27 @@ def parse_transaction_vouts(ctx, p2sh_support):
         fee -= output_value
 
         # Ignore transactions with invalid script.
-        try:
-            asm = script.get_asm(vout.scriptPubKey)
-        except CScriptInvalidError as e:
-            raise DecodeError(e)
-
-        if asm[0] == 'OP_RETURN':
+        asm = script.script_to_asm(vout.scriptPubKey)
+        if asm[0] == OP_RETURN:
             new_destination, new_data = decode_opreturn(asm, ctx)
-        elif asm[-1] == 'OP_CHECKSIG':
+        elif asm[-1] == OP_CHECKSIG:
             new_destination, new_data = decode_checksig(asm, ctx)
             potential_dispensers[-1] = (new_destination, output_value)
-        elif asm[-1] == 'OP_CHECKMULTISIG':
+        elif asm[-1] == OP_CHECKMULTISIG:
             try:
                 new_destination, new_data = decode_checkmultisig(asm, ctx)
                 potential_dispensers[-1] = (new_destination, output_value)
             except:
                 raise DecodeError('unrecognised output type')
-        elif p2sh_support and asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
+        elif p2sh_support and asm[0] == OP_HASH160 and asm[-1] == OP_EQUAL and len(asm) == 3:
             new_destination, new_data = decode_scripthash(asm)
             if ledger.enabled('p2sh_dispensers_support'):
                 potential_dispensers[-1] = (new_destination, output_value)
-        elif ledger.enabled('segwit_support') and asm[0] == 0:
+        elif ledger.enabled('segwit_support') and asm[0] == b'':
             # Segwit Vout, second param is redeemScript
             #redeemScript = asm[1]
-            new_destination, new_data = decode_p2w(vout.scriptPubKey)
+            new_destination = script.script_to_address(vout.scriptPubKey)
+            new_data = None
             # Reproduce buggy fix. See #1408
             if ledger.enabled('correct_segwit_txids') and not ledger.enabled('hotfix_dispensers_with_non_p2pkh'):
                 potential_dispensers[-1] = (new_destination, output_value)
@@ -360,13 +347,13 @@ def get_tx_info_legacy(tx_hex, block_index, block_parser=None):
         fee -= vout.nValue
 
         # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
-        asm = script.get_asm(vout.scriptPubKey)
-        if len(asm) == 2 and asm[0] == 'OP_RETURN':                                             # OP_RETURN
+        asm = script.script_to_asm(vout.scriptPubKey)
+        if len(asm) == 2 and asm[0] == OP_RETURN:                                             # OP_RETURN
             if type(asm[1]) != bytes:
                 continue
             data_chunk = asm[1]
             data += data_chunk
-        elif len(asm) == 5 and asm[0] == 1 and asm[3] == 2 and asm[4] == 'OP_CHECKMULTISIG':    # Multi-sig
+        elif len(asm) == 5 and asm[0] == 1 and asm[3] == 2 and asm[4] == OP_CHECKMULTISIG:    # Multi-sig
             if type(asm[2]) != bytes:
                 continue
             data_pubkey = asm[2]

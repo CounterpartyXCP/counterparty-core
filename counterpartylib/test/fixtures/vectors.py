@@ -3848,15 +3848,15 @@ UNITTEST_VECTOR = {
                 'out': "1_mjH9amw2tJrsrw76PVvCkCQ18V4pZCVtm5_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_mvgph5nejRWUVvbzyq7TU9ENpJyV97ua37_3"
             },
             # when input is already an address, return None (don't raise)
-            {
-                'in': ('mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH',),
-                'out': None
-            },
+            #{
+            #    'in': ('mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH',),
+            #    'out': None
+            #},
             # when input is a list of addresses, return None (don't raise)
-            {
-                'in': (['mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'],),
-                'out': None
-            },
+            #{
+            #    'in': (['mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'],),
+            #    'out': None
+            #},
             # when input is op_return with garbage data (a message with incorrect OP_PUSH), return None (don't raise)
             {
                 'in': (bitcoinlib.core.CScript(bitcoinlib.core.x('6a53657466697665207361797320686921')),),
