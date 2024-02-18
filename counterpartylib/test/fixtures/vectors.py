@@ -3847,20 +3847,17 @@ UNITTEST_VECTOR = {
                 'in': (bitcoinlib.core.CScript(bitcoinlib.core.x('5121035ca51ea175f108a1c63588683dc4c43a7146c46799f864a300263c0813f5fe352102309a14a1a30202f2e76f46acdb2917752371ca42b97460f7928ade8ecb02ea17210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97753ae')),),
                 'out': "1_mjH9amw2tJrsrw76PVvCkCQ18V4pZCVtm5_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_mvgph5nejRWUVvbzyq7TU9ENpJyV97ua37_3"
             },
-            # when input is already an address, return None (don't raise)
-            #{
-            #    'in': ('mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH',),
-            #    'out': None
-            #},
-            # when input is a list of addresses, return None (don't raise)
-            #{
-            #    'in': (['mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'],),
-            #    'out': None
-            #},
-            # when input is op_return with garbage data (a message with incorrect OP_PUSH), return None (don't raise)
+            {
+                'in': ('mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH',),
+                'error': (exceptions.DecodeError, 'invalid script')
+            },
+            {
+                'in': (['mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'],),
+                'error': (exceptions.DecodeError, 'invalid script')
+            },
             {
                 'in': (bitcoinlib.core.CScript(bitcoinlib.core.x('6a53657466697665207361797320686921')),),
-                'error': (exceptions.PushDataDecodeError, 'invalid pushdata due to truncation')
+                'error': (exceptions.DecodeError, 'invalid script')
             }, {
                 'comment': 'p2pkh',
                 'in': (bitcoinlib.core.CScript(bitcoinlib.core.x('76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac')),),

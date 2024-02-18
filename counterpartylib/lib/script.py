@@ -308,10 +308,12 @@ def get_asm(scriptpubkey):
 def script_to_asm(scriptpubkey):
     try:
         script = bytes(scriptpubkey, 'utf-8') if type(scriptpubkey) == str else bytes(scriptpubkey)
-        return utils.script_to_asm(script)
+        asm = utils.script_to_asm(script)
+        if asm[-1] == OP_CHECKMULTISIG:
+            asm[-2] = int.from_bytes(asm[-2])
+            asm[0] = int.from_bytes(asm[0])
+        return asm
     except BaseException as e:
-        if str(e) == "not yet implemented":
-            return get_asm(scriptpubkey)
         raise exceptions.DecodeError('invalid script')
 
 
