@@ -3,11 +3,12 @@ import os
 import time
 import shutil
 import platform
+import signal
 
 import apsw
 
 from counterpartylib import server
-from counterpartylib.lib import config, blocks, ledger
+from counterpartylib.lib import config, blocks, ledger, backend
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser, ChainstateParser
 
 logger = logging.getLogger(__name__)
@@ -106,6 +107,9 @@ def copy_disk_db_to_memory(local_base, memory_db, resume_from):
 
 
 def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None):
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)
+    signal.signal(signal.SIGINT, signal.default_int_handler)
+
     # determine bitoincore data directory
     if bitcoind_dir is None:
         if platform.system() == 'Darwin':
@@ -151,7 +155,6 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
         block_count = fetch_blocks(memory_db, bitcoind_dir, last_known_hash)
         last_parsed_block = 0
         tx_index = 0
-    
 
     # Start block parser.
     block_parser = BlockchainParser(bitcoind_dir, memory_db, last_parsed_block)
@@ -161,10 +164,8 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
         # then parse the block
         start_time_all_blocks_parse = time.time()
         block_parsed_count = 0
-        #logger.warning("Parsing blocks...")
         block = block_parser.next_block()
         while block is not None:
-            #logger.warning("Got: ", block['block_index'])
             start_time_block_parse = time.time()
             ledger.CURRENT_BLOCK_INDEX = block['block_index']
             with memory_db: # ensure all the block or nothing
@@ -197,7 +198,10 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
             message += f" Expected duration: {expected_duration:.3f}s."
             print(message, end="\r")
         logger.info('All blocks parsed in: {:.3f}s'.format(time.time() - start_time_all_blocks_parse))
+    except KeyboardInterrupt:
+        logger.warning('Keyboard interrupt. Stopping...')
     finally:
+        backend.stop()
         block_parser.close()
         copy_memory_db_to_disk(local_base, memory_db)
         logger.info("Last parsed block: {}".format(last_parsed_block))
