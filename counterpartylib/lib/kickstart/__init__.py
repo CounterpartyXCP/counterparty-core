@@ -106,6 +106,8 @@ def copy_disk_db_to_memory(local_base, memory_db, resume_from):
     return block_count, tx_index, last_parsed_block
 
 
+# imitates the bitcoinlib class interface
+# to be used directly by get_tx_info()
 class COutPoint:
     def __init__(self, hash, n):
         self.hash = hash
@@ -141,6 +143,9 @@ class CTransaction:
 
     def is_coinbase(self):
         return self.coinbase
+
+    def has_witness(self):
+        return self.wit.vtxinwit != ()
 
 def dict_to_class(tx):
     ct_vins = ()
