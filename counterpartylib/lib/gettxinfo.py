@@ -122,18 +122,22 @@ def get_transaction_sources(decoded_tx, block_parser=None):
     outputs_value = 0
 
     for vin in decoded_tx.vin[:]:                   # Loop through inputs.
+        scriptPubKey = None
         if block_parser:
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
-            vin_ctx = backend.deserialize(vin_tx['__data__'])
+            vout = vin_tx["vout"][vin.prevout.n]
+            outputs_value += vout["nValue"]
+            scriptPubKey = vout["scriptPubKey"]
         else:
             # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
             vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=None)
             vin_ctx = backend.deserialize(vin_tx)
+            vout = vin_ctx.vout[vin.prevout.n]
+            outputs_value += vout.nValue
+            scriptPubKey = vout.scriptPubKey
         
-        vout = vin_ctx.vout[vin.prevout.n]
-        outputs_value += vout.nValue
+        asm = script.script_to_asm(scriptPubKey)
 
-        asm = script.script_to_asm(vout.scriptPubKey)
         if asm[-1] == OP_CHECKSIG:
             new_source, new_data = decode_checksig(asm, decoded_tx)
             if new_data or not new_source:
@@ -148,7 +152,7 @@ def get_transaction_sources(decoded_tx, block_parser=None):
                 raise DecodeError('data in source')
         elif ledger.enabled('segwit_support') and asm[0] == b'':
             # Segwit output
-            new_source = script.script_to_address(vout.scriptPubKey)
+            new_source = script.script_to_address(scriptPubKey)
             new_data = None
         else:
             raise DecodeError('unrecognised source type')
@@ -171,19 +175,26 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit, block_parser=No
     for vin in decoded_tx.vin:
         if block_parser:
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
-            vin_ctx = backend.deserialize(vin_tx['__data__'])
+
+            if ledger.enabled("prevout_segwit_fix"):
+                prevout_is_segwit = vin_tx['segwit']
+            else:
+                prevout_is_segwit = p2sh_is_segwit
+
+            vout = vin_tx["vout"][vin.prevout.n]
+            outputs_value += vout["nValue"]
         else:
             # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
             vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=None)
             vin_ctx = backend.deserialize(vin_tx)
 
-        if ledger.enabled("prevout_segwit_fix"):
-            prevout_is_segwit = vin_ctx.has_witness()
-        else:
-            prevout_is_segwit = p2sh_is_segwit
-        
-        vout = vin_ctx.vout[vin.prevout.n]
-        outputs_value += vout.nValue
+            if ledger.enabled("prevout_segwit_fix"):
+                prevout_is_segwit = vin_ctx.has_witness()
+            else:
+                prevout_is_segwit = p2sh_is_segwit
+            
+            vout = vin_ctx.vout[vin.prevout.n]
+            outputs_value += vout.nValue
 
         # Ignore transactions with invalid script.
         asm = script.script_to_asm(vin.scriptSig)
@@ -403,17 +414,21 @@ def get_tx_info_legacy(tx_hex, block_index, block_parser=None):
         if vin.prevout.is_null():
             raise DecodeError('coinbase transaction')
          # Get the full transaction data for this input transaction.
+        scriptPubKey = None
         if block_parser:
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
-            vin_ctx = backend.deserialize(vin_tx['__data__'])
+            vout = vin_tx["vout"][vin.prevout.n]
+            fee += vout["nValue"]
+            scriptPubKey = vout["scriptPubKey"]
         else:
             # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
             vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=None)
             vin_ctx = backend.deserialize(vin_tx)
-        vout = vin_ctx.vout[vin.prevout.n]
-        fee += vout.nValue
+            vout = vin_ctx.vout[vin.prevout.n]
+            fee += vout.nValue
+            scriptPubKey = vout.scriptPubKey
 
-        address = get_address(vout.scriptPubKey, block_index)
+        address = get_address(scriptPubKey, block_index)
         if not address:
             raise DecodeError('invalid scriptpubkey')
         else:
