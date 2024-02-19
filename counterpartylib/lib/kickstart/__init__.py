@@ -82,7 +82,11 @@ def copy_disk_db_to_memory(local_base, memory_db, resume_from):
     # get last parsed transaction
     memory_cursor.execute('''SELECT block_index, tx_index FROM transactions ORDER BY block_index DESC, tx_index DESC LIMIT 1''')
     last_transaction = memory_cursor.fetchone()
-    last_parsed_block = last_transaction['block_index']
+    last_parsed_block = config.BLOCK_FIRST - 1
+    tx_index = 0
+    if last_transaction is not None:
+        last_parsed_block = last_transaction['block_index']
+        tx_index = last_transaction['tx_index'] + 1
     # clean tables from last parsed block
     for table in blocks.TABLES:
         blocks.clean_table_from(memory_cursor, table, last_parsed_block)
@@ -100,7 +104,7 @@ def copy_disk_db_to_memory(local_base, memory_db, resume_from):
                                 })
 
     block_count = last_block_index - last_parsed_block
-    tx_index = last_transaction['tx_index'] + 1
+
     logger.info(f"Resuming from block {last_parsed_block}...")
 
     return block_count, tx_index, last_parsed_block
