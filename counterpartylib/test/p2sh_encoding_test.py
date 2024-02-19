@@ -39,7 +39,7 @@ def test_p2sh_encoding_composed(server_db):
         config.PREFIX = b'CNTRPRTY'
         parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = gettxinfo._get_tx_info(
             server_db,
-            datatxhex,
+            backend.deserialize(datatxhex),
             ledger.CURRENT_BLOCK_INDEX
         )
         print('!!!!!!!!!!!!!!!!>1')
@@ -114,7 +114,7 @@ def test_p2sh_encoding(server_db):
         with pytest.raises(exceptions.BTCOnlyError):
             gettxinfo._get_tx_info(
                 server_db,
-                pretxhex,
+                backend.deserialize(pretxhex),
                 ledger.CURRENT_BLOCK_INDEX
             )
 
@@ -183,7 +183,7 @@ def test_p2sh_encoding(server_db):
         # verify parsed result
         parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = gettxinfo._get_tx_info(
             server_db,
-            datatxhex,
+            backend.deserialize(datatxhex),
             ledger.CURRENT_BLOCK_INDEX
         )
         #assert parsed_source == source # make_canonical cannot calculate this address
@@ -337,7 +337,7 @@ def test_p2sh_encoding_long_data(server_db):
         # verify parsed result
         parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = gettxinfo._get_tx_info(
             server_db,
-            datatxhex,
+            backend.deserialize(datatxhex),
             ledger.CURRENT_BLOCK_INDEX
         )
         #assert parsed_source == source # make_canonical can't calculate this address
@@ -431,7 +431,7 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
         # parse the transaction
         parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = gettxinfo._get_tx_info(
             server_db,
-            datatxhex,
+            backend.deserialize(datatxhex),
             ledger.CURRENT_BLOCK_INDEX
         )
         assert parsed_source == source

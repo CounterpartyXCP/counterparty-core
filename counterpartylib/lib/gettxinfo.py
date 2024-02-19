@@ -15,9 +15,9 @@ from counterpartylib.lib.opcodes import *
 logger = logging.getLogger(__name__)
 
 
-def arc4_decrypt(cyphertext, ctx):
+def arc4_decrypt(cyphertext, decoded_tx):
     '''Un‐obfuscate. Initialise key once per attempt.'''
-    key = arc4.init_arc4(ctx.vin[0].prevout.hash[::-1])
+    key = arc4.init_arc4(decoded_tx.vin[0].prevout.hash[::-1])
     return key.decrypt(cyphertext)
 
 
@@ -29,9 +29,9 @@ def get_opreturn(asm):
     raise DecodeError('invalid OP_RETURN')
 
 
-def decode_opreturn(asm, ctx):
+def decode_opreturn(asm, decoded_tx):
     chunk = get_opreturn(asm)
-    chunk = arc4_decrypt(chunk, ctx)
+    chunk = arc4_decrypt(chunk, decoded_tx)
     if chunk[:len(config.PREFIX)] == config.PREFIX:             # Data
         destination, data = None, chunk[len(config.PREFIX):]
     else:
@@ -40,9 +40,9 @@ def decode_opreturn(asm, ctx):
     return destination, data
 
 
-def decode_checksig(asm, ctx):
+def decode_checksig(asm, decoded_tx):
     pubkeyhash = script.get_checksig(asm)
-    chunk = arc4_decrypt(pubkeyhash, ctx)   # TODO: This is slow!
+    chunk = arc4_decrypt(pubkeyhash, decoded_tx)   # TODO: This is slow!
     if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
         # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
         chunk_length = chunk[0]
@@ -60,12 +60,12 @@ def decode_scripthash(asm):
     return destination, None
 
 
-def decode_checkmultisig(asm, ctx):
+def decode_checkmultisig(asm, decoded_tx):
     pubkeys, signatures_required = script.get_checkmultisig(asm)
     chunk = b''
     for pubkey in pubkeys[:-1]:     # (No data in last pubkey.)
         chunk += pubkey[1:-1]       # Skip sign byte and nonce byte.
-    chunk = arc4_decrypt(chunk, ctx)
+    chunk = arc4_decrypt(chunk, decoded_tx)
     if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
         # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
         chunk_length = chunk[0]
@@ -228,11 +228,11 @@ def get_dispensers_outputs(db, potential_dispensers):
     return outputs
 
 
-def parse_transaction_vouts(ctx, p2sh_support):
+def parse_transaction_vouts(decoded_tx, p2sh_support):
     # Get destinations and data outputs.
     destinations, btc_amount, fee, data, potential_dispensers = [], 0, 0, b'', []
 
-    for vout in ctx.vout:
+    for vout in decoded_tx.vout:
         potential_dispensers.append((None, None))
         # Fee is the input values minus output values.
         output_value = vout.nValue
@@ -241,13 +241,13 @@ def parse_transaction_vouts(ctx, p2sh_support):
         # Ignore transactions with invalid script.
         asm = script.script_to_asm(vout.scriptPubKey)
         if asm[0] == OP_RETURN:
-            new_destination, new_data = decode_opreturn(asm, ctx)
+            new_destination, new_data = decode_opreturn(asm, decoded_tx)
         elif asm[-1] == OP_CHECKSIG:
-            new_destination, new_data = decode_checksig(asm, ctx)
+            new_destination, new_data = decode_checksig(asm, decoded_tx)
             potential_dispensers[-1] = (new_destination, output_value)
         elif asm[-1] == OP_CHECKMULTISIG:
             try:
-                new_destination, new_data = decode_checkmultisig(asm, ctx)
+                new_destination, new_data = decode_checkmultisig(asm, decoded_tx)
                 potential_dispensers[-1] = (new_destination, output_value)
             except:
                 raise DecodeError('unrecognised output type')
@@ -285,20 +285,18 @@ def parse_transaction_vouts(ctx, p2sh_support):
     return destinations, btc_amount, fee, data, potential_dispensers
 
 
-def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=False, p2sh_is_segwit=False):
+def get_tx_info_new(db, decoded_tx, block_index, block_parser=None, p2sh_support=False, p2sh_is_segwit=False):
     """Get multisig transaction info.
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
-    # Decode transaction binary.
-    ctx = backend.deserialize(tx_hex)
 
     # Ignore coinbase transactions.
-    if ctx.is_coinbase():
+    if decoded_tx.is_coinbase():
         raise DecodeError('coinbase transaction')
 
     # Get destinations and data outputs.
-    destinations, btc_amount, fee, data, potential_dispensers = parse_transaction_vouts(ctx, p2sh_support)
+    destinations, btc_amount, fee, data, potential_dispensers = parse_transaction_vouts(decoded_tx, p2sh_support)
 
     # source can be determined by parsing the p2sh_data transaction
     #   or from the first spent output
@@ -308,7 +306,7 @@ def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=Fal
     p2sh_encoding_source = None
     if ledger.enabled('p2sh_encoding') and data == b'P2SH':
         p2sh_encoding_source, data, outputs_value = get_transaction_source_from_p2sh(
-            ctx, p2sh_is_segwit, block_parser=block_parser
+            decoded_tx, p2sh_is_segwit, block_parser=block_parser
         )
         fee += outputs_value
         fee_added = True
@@ -327,25 +325,24 @@ def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=Fal
     # Collect all (unique) source addresses.
     #   if we haven't found them yet
     if p2sh_encoding_source is None:
-        sources, outputs_value = get_transaction_sources(ctx, block_parser=block_parser)
+        sources, outputs_value = get_transaction_sources(decoded_tx, block_parser=block_parser)
         if not fee_added:
             fee += outputs_value
     else: # use the source from the p2sh data source
         sources = p2sh_encoding_source
 
     if not data and destinations != [config.UNSPENDABLE,]:
-        return b'', None, None, None, None, ([sources], dispensers_outputs)
+        return b'', None, None, None, None, (sources.split("-"), dispensers_outputs)
 
     destinations = '-'.join(destinations)
     return sources, destinations, btc_amount, round(fee), data, None
 
 
-def get_tx_info_legacy(tx_hex, block_index, block_parser=None):
+def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
     """Get singlesig transaction info.
     The destination, if it exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
-    ctx = backend.deserialize(tx_hex)
 
     # Fee is the input values minus output values.
     fee = 0
@@ -353,7 +350,7 @@ def get_tx_info_legacy(tx_hex, block_index, block_parser=None):
     # Get destination output and data output.
     destination, btc_amount, data = None, None, b''
     pubkeyhash_encoding = False
-    for vout in ctx.vout:
+    for vout in decoded_tx.vout:
         fee -= vout.nValue
 
         # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
@@ -376,9 +373,9 @@ def get_tx_info_legacy(tx_hex, block_index, block_parser=None):
             if not pubkeyhash:
                 continue
 
-            if ctx.is_coinbase():
+            if decoded_tx.is_coinbase():
                 raise DecodeError('coinbase transaction')
-            data_pubkey = arc4_decrypt(pubkeyhash, ctx)
+            data_pubkey = arc4_decrypt(pubkeyhash, decoded_tx)
             if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
                 pubkeyhash_encoding = True
                 data_chunk_length = data_pubkey[0]  # No ord() necessary.
@@ -410,7 +407,7 @@ def get_tx_info_legacy(tx_hex, block_index, block_parser=None):
 
     # Collect all possible source addresses; ignore coinbase transactions and anything but the simplest Pay‐to‐PubkeyHash inputs.
     source_list = []
-    for vin in ctx.vin[:]:                                               # Loop through input transactions.
+    for vin in decoded_tx.vin[:]:                                               # Loop through input transactions.
         if vin.prevout.is_null():
             raise DecodeError('coinbase transaction')
          # Get the full transaction data for this input transaction.
@@ -443,7 +440,7 @@ def get_tx_info_legacy(tx_hex, block_index, block_parser=None):
     return source, destination, btc_amount, fee, data, None
 
 
-def _get_tx_info(db, tx_hex, block_index, block_parser=None, p2sh_is_segwit=False):
+def _get_tx_info(db, decoded_tx, block_index, block_parser=None, p2sh_is_segwit=False):
     """Get the transaction info. Calls one of two subfunctions depending on signature type."""
     if not block_index:
         block_index = ledger.CURRENT_BLOCK_INDEX
@@ -451,7 +448,7 @@ def _get_tx_info(db, tx_hex, block_index, block_parser=None, p2sh_is_segwit=Fals
     if ledger.enabled('p2sh_addresses', block_index=block_index):   # Protocol change.
         return get_tx_info_new(
             db,
-            tx_hex,
+            decoded_tx,
             block_index,
             block_parser=block_parser,
             p2sh_support=True,
@@ -460,22 +457,22 @@ def _get_tx_info(db, tx_hex, block_index, block_parser=None, p2sh_is_segwit=Fals
     elif ledger.enabled('multisig_addresses', block_index=block_index):   # Protocol change.
         return get_tx_info_new(
             db,
-            tx_hex,
+            decoded_tx,
             block_index,
             block_parser=block_parser,
         )
     else:
         return get_tx_info_legacy(
-            tx_hex,
+            decoded_tx,
             block_index,
             block_parser=block_parser
         )
 
 
-def get_tx_info(db, tx_hex, block_index, block_parser=None):
+def get_tx_info(db, decoded_tx, block_index, block_parser=None):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
     try:
-        return _get_tx_info(db, tx_hex, block_index, block_parser)
+        return _get_tx_info(db, decoded_tx, block_index, block_parser)
     except DecodeError as e:
         return b'', None, None, None, None, None
     except BTCOnlyError as e:

@@ -110,6 +110,11 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     signal.signal(signal.SIGINT, signal.default_int_handler)
 
+    #ledger.CURRENT_BLOCK_INDEX = 0
+    #backend.BACKEND()
+    #check_addrindexrs = backend.get_oldest_tx("34qkc2iac6RsyxZVfyE2S5U5WcRsbg2dpK")
+    #print("check_addrindexrs: ", check_addrindexrs)
+
     # determine bitoincore data directory
     if bitcoind_dir is None:
         if platform.system() == 'Darwin':
@@ -173,13 +178,14 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
                 for transaction in block['transactions']:
                     # Cache transaction. We do that here because the block is fetched by another process.
                     block_parser.put_in_cache(transaction)
+                    decoded_tx = backend.deserialize(transaction['__data__'])
                     tx_index = blocks.list_tx(memory_db,
                                             block['block_hash'],
                                             block['block_index'],
                                             block['block_time'],
                                             transaction['tx_hash'],
                                             tx_index,
-                                            tx_hex=transaction['__data__'],
+                                            decoded_tx=decoded_tx,
                                             block_parser=block_parser)
                 # Parse the transactions in the block.
                 blocks.parse_block(memory_db, block['block_index'], block['block_time'])

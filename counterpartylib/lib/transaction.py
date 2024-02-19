@@ -603,7 +603,7 @@ def construct (db, tx_info, encoding='auto',
             backend.cache_pretx(pretx_txid, unsigned_pretx)
         parsed_source, parsed_destination, x, y, parsed_data, extra = gettxinfo._get_tx_info(
             db,
-            unsigned_tx_hex,
+            backend.deserialize(unsigned_tx_hex),
             ledger.CURRENT_BLOCK_INDEX,
             p2sh_is_segwit=script.is_bech32(desired_source)
         )
