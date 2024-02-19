@@ -185,10 +185,10 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
 
     ledger.CURRENT_BLOCK_INDEX = 0
     backend.BACKEND()
-    #check_addrindexrs = backend.get_oldest_tx("34qkc2iac6RsyxZVfyE2S5U5WcRsbg2dpK")
-    check_addrindexrs = backend.get_oldest_tx("tb1qurdetpdk8zg2thzx3g77qkgr7a89cp2m429t9c")
+    check_address = "tb1qurdetpdk8zg2thzx3g77qkgr7a89cp2m429t9c" if config.TESTNET else "34qkc2iac6RsyxZVfyE2S5U5WcRsbg2dpK"
+    check_addrindexrs = backend.get_oldest_tx(check_address)
     print("check_addrindexrs: ", check_addrindexrs)
-    #exit()
+    assert check_addrindexrs != {}
 
     # determine bitoincore data directory
     if bitcoind_dir is None:
