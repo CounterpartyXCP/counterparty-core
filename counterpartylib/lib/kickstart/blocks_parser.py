@@ -87,6 +87,7 @@ class BlockchainParser():
         script_sig_size = vds.read_compact_size()
         tx_in['scriptSig'] = vds.read_bytes(script_sig_size)
         tx_in['nSequence'] = vds.read_uint32()
+        tx_in['coinbase'] = False
         if tx_in['hash'] == '0000000000000000000000000000000000000000000000000000000000000000':
             tx_in['coinbase'] = True
         return tx_in
@@ -117,8 +118,7 @@ class BlockchainParser():
         for i in range(vds.read_compact_size()):
             vin = self.read_tx_in(vds)
             transaction['vin'].append(vin)
-            if 'coinbase' in vin:
-                transaction['coinbase'] = True
+            transaction['coinbase'] = transaction['coinbase'] or vin['coinbase']
 
         transaction['vout'] = []
         for i in range(vds.read_compact_size()):

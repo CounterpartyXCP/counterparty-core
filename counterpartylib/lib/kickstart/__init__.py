@@ -109,12 +109,16 @@ def copy_disk_db_to_memory(local_base, memory_db, resume_from):
 # imitates the bitcoinlib class interface
 # to be used directly by get_tx_info()
 class COutPoint:
-    def __init__(self, hash, n):
+    def __init__(self, hash, n, coinbase):
         self.hash = hash
         self.n = n
+        self.coinbase = coinbase
+
+    def is_null(self):
+        return self.coinbase
 
 class CTxIn:
-    def __init__(self, hash, n, scriptSig, nSequence):
+    def __init__(self, hash, n, scriptSig, nSequence, coinbase):
         self.prevout = COutPoint(hash, n)
         self.scriptSig = scriptSig
         self.nSequence = nSequence
@@ -151,12 +155,29 @@ def dict_to_class(tx):
     ct_vins = ()
     ct_vouts = ()
     for vin in tx['vin']:
-        ct_vins += (CTxIn(vin['hash'], vin['n'], vin['scriptSig'], vin['nSequence']),)
+        ct_vins += (CTxIn(
+            vin['hash'],
+            vin['n'],
+            vin['scriptSig'],
+            vin['nSequence'],
+            vin['nSequence'],
+            vin['coinbase']),
+        )
     for vout in tx['vout']:
-        ct_vouts += (CTxOut(vout['nValue'], vout['scriptPubKey']),)
+        ct_vouts += (CTxOut(
+            vout['nValue'],
+            vout['scriptPubKey']),
+        )
     wit = CTxWitness(tuple(tx['vtxinwit']))
 
-    return CTransaction(tx['lock_time'], tx['version'], ct_vins, ct_vouts, wit, tx['coinbase'])
+    return CTransaction(
+        tx['lock_time'],
+        tx['version'],
+        ct_vins,
+        ct_vouts,
+        wit,
+        tx['coinbase']
+    )
 
 
 def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None):
