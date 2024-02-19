@@ -82,7 +82,11 @@ def copy_disk_db_to_memory(local_base, memory_db, resume_from):
     # get last parsed transaction
     memory_cursor.execute('''SELECT block_index, tx_index FROM transactions ORDER BY block_index DESC, tx_index DESC LIMIT 1''')
     last_transaction = memory_cursor.fetchone()
-    last_parsed_block = last_transaction['block_index']
+    last_parsed_block = config.BLOCK_FIRST - 1
+    tx_index = 0
+    if last_transaction is not None:
+        last_parsed_block = last_transaction['block_index']
+        tx_index = last_transaction['tx_index'] + 1
     # clean tables from last parsed block
     for table in blocks.TABLES:
         blocks.clean_table_from(memory_cursor, table, last_parsed_block)
@@ -100,20 +104,26 @@ def copy_disk_db_to_memory(local_base, memory_db, resume_from):
                                 })
 
     block_count = last_block_index - last_parsed_block
-    tx_index = last_transaction['tx_index'] + 1
+
     logger.info(f"Resuming from block {last_parsed_block}...")
 
     return block_count, tx_index, last_parsed_block
 
 
+# imitates the bitcoinlib class interface
+# to be used directly by get_tx_info()
 class COutPoint:
-    def __init__(self, hash, n):
+    def __init__(self, hash, n, coinbase):
         self.hash = hash
         self.n = n
+        self.coinbase = coinbase
+
+    def is_null(self):
+        return self.coinbase
 
 class CTxIn:
-    def __init__(self, hash, n, scriptSig, nSequence):
-        self.prevout = COutPoint(hash, n)
+    def __init__(self, hash, n, scriptSig, nSequence, coinbase):
+        self.prevout = COutPoint(hash, n, coinbase)
         self.scriptSig = scriptSig
         self.nSequence = nSequence
 
@@ -142,26 +152,47 @@ class CTransaction:
     def is_coinbase(self):
         return self.coinbase
 
+    def has_witness(self):
+        return self.wit.vtxinwit != ()
+
 def dict_to_class(tx):
     ct_vins = ()
     ct_vouts = ()
     for vin in tx['vin']:
-        ct_vins += (CTxIn(vin['hash'], vin['n'], vin['scriptSig'], vin['nSequence']),)
+        ct_vins += (CTxIn(
+            vin['hash'],
+            vin['n'],
+            vin['scriptSig'],
+            vin['nSequence'],
+            vin['coinbase']),
+        )
     for vout in tx['vout']:
-        ct_vouts += (CTxOut(vout['nValue'], vout['scriptPubKey']),)
+        ct_vouts += (CTxOut(
+            vout['nValue'],
+            vout['scriptPubKey']),
+        )
     wit = CTxWitness(tuple(tx['vtxinwit']))
 
-    return CTransaction(tx['lock_time'], tx['version'], ct_vins, ct_vouts, wit, tx['coinbase'])
+    return CTransaction(
+        tx['lock_time'],
+        tx['version'],
+        ct_vins,
+        ct_vouts,
+        wit,
+        tx['coinbase']
+    )
 
 
 def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None):
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     signal.signal(signal.SIGINT, signal.default_int_handler)
 
-    #ledger.CURRENT_BLOCK_INDEX = 0
-    #backend.BACKEND()
-    #check_addrindexrs = backend.get_oldest_tx("34qkc2iac6RsyxZVfyE2S5U5WcRsbg2dpK")
-    #print("check_addrindexrs: ", check_addrindexrs)
+    ledger.CURRENT_BLOCK_INDEX = 0
+    backend.BACKEND()
+    check_address = "tb1qurdetpdk8zg2thzx3g77qkgr7a89cp2m429t9c" if config.TESTNET else "34qkc2iac6RsyxZVfyE2S5U5WcRsbg2dpK"
+    check_addrindexrs = backend.get_oldest_tx(check_address)
+    print("check_addrindexrs: ", check_addrindexrs)
+    assert check_addrindexrs != {}
 
     # determine bitoincore data directory
     if bitcoind_dir is None:
@@ -173,6 +204,9 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
             bitcoind_dir = os.path.expanduser('~/.bitcoin')
     if not os.path.isdir(bitcoind_dir):
         raise Exception('Bitcoin Core data directory not found at {}. Use --bitcoind-dir parameter.'.format(bitcoind_dir))
+
+    if config.TESTNET:
+        bitcoind_dir = os.path.join(bitcoind_dir, 'testnet3')
 
     logger.warning(f'''Warning:
 - `{config.DATABASE}` will be moved to `{config.DATABASE}.old` and recreated from scratch.
