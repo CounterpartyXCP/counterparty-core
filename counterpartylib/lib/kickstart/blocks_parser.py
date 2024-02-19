@@ -8,6 +8,9 @@ from counterpartylib.lib import ledger
 
 logger = logging.getLogger(__name__)
 
+import multiprocessing
+multiprocessing.set_start_method("fork", force=True)
+
 TX_CACHE_MAX_SIZE = 10000
 
 def open_leveldb(db_dir):
