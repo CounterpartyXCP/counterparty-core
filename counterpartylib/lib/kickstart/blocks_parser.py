@@ -95,7 +95,7 @@ class BlockchainParser():
 
     def read_tx_out(self, vds):
         tx_out = {}
-        tx_out['nValue'] = vds.read_int64() / 100000000
+        tx_out['nValue'] = vds.read_int64()
         script = vds.read_bytes(vds.read_compact_size())
         tx_out['scriptPubKey'] = script
         return tx_out
