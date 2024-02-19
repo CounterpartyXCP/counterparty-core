@@ -119,7 +119,7 @@ class COutPoint:
 
 class CTxIn:
     def __init__(self, hash, n, scriptSig, nSequence, coinbase):
-        self.prevout = COutPoint(hash, n)
+        self.prevout = COutPoint(hash, n, coinbase)
         self.scriptSig = scriptSig
         self.nSequence = nSequence
 
@@ -160,7 +160,6 @@ def dict_to_class(tx):
             vin['n'],
             vin['scriptSig'],
             vin['nSequence'],
-            vin['nSequence'],
             vin['coinbase']),
         )
     for vout in tx['vout']:
@@ -184,10 +183,12 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     signal.signal(signal.SIGINT, signal.default_int_handler)
 
-    #ledger.CURRENT_BLOCK_INDEX = 0
-    #backend.BACKEND()
+    ledger.CURRENT_BLOCK_INDEX = 0
+    backend.BACKEND()
     #check_addrindexrs = backend.get_oldest_tx("34qkc2iac6RsyxZVfyE2S5U5WcRsbg2dpK")
-    #print("check_addrindexrs: ", check_addrindexrs)
+    check_addrindexrs = backend.get_oldest_tx("tb1qurdetpdk8zg2thzx3g77qkgr7a89cp2m429t9c")
+    print("check_addrindexrs: ", check_addrindexrs)
+    #exit()
 
     # determine bitoincore data directory
     if bitcoind_dir is None:
@@ -199,6 +200,9 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
             bitcoind_dir = os.path.expanduser('~/.bitcoin')
     if not os.path.isdir(bitcoind_dir):
         raise Exception('Bitcoin Core data directory not found at {}. Use --bitcoind-dir parameter.'.format(bitcoind_dir))
+
+    if config.TESTNET:
+        bitcoind_dir = os.path.join(bitcoind_dir, 'testnet3')
 
     logger.warning(f'''Warning:
 - `{config.DATABASE}` will be moved to `{config.DATABASE}.old` and recreated from scratch.
