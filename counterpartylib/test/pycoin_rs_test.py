@@ -1,4 +1,5 @@
 import time
+import binascii
 
 import pytest
 import bitcoin as bitcoinlib
@@ -12,6 +13,7 @@ from counterpartylib.lib.script import (
     base58_check_encode_py,
     get_asm,
     script_to_asm,
+    get_checksig,
 )
 
 from counterpartylib.lib.opcodes import *
@@ -117,6 +119,18 @@ def test_get_asm():
             3,
             OP_CHECKMULTISIG
         ]
+    
+    script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
+    asm = script_to_asm(binascii.unhexlify(script))
+    assert asm == [
+        OP_DUP,
+        OP_HASH160,
+        b'\xa3\xec`\xfbR/\xdfb\xc9\x0e\xec\x19\x81Wx\x13\xd8\xf8\xa5\x8a',
+        OP_EQUALVERIFY,
+        OP_CHECKSIG
+    ]
+    pubkeyhash = get_checksig(asm)
+    assert pubkeyhash == b'\xa3\xec`\xfbR/\xdfb\xc9\x0e\xec\x19\x81Wx\x13\xd8\xf8\xa5\x8a'
 
 
 def script_to_address():
