@@ -57,6 +57,9 @@ services:
       - addrindexrs
     volumes:
       - data:/data
+    ports:
+      - "4000:4000"                           # mainnet
+      # - "14000:14000"                       # testnet
     entrypoint: "counterparty-server"         # TODO: `start` has to come after the flags.
     command:
       # "--testnet"                           # testnet
