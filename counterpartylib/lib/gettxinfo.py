@@ -51,7 +51,6 @@ def decode_checksig(asm, ctx):
     else:                                                       # Destination
         pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
         destination, data = script.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
-
     return destination, data
 
 
@@ -324,7 +323,7 @@ def get_tx_info_new(db, tx_hex, block_index, block_parser=None, p2sh_support=Fal
         sources = p2sh_encoding_source
 
     if not data and destinations != [config.UNSPENDABLE,]:
-        return b'', None, None, None, None, (sources, dispensers_outputs)
+        return b'', None, None, None, None, ([sources], dispensers_outputs)
 
     destinations = '-'.join(destinations)
     return sources, destinations, btc_amount, round(fee), data, None
