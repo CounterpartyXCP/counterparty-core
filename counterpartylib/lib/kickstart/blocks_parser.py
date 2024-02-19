@@ -78,16 +78,13 @@ class BlockchainParser():
 
 
     def read_tx_in(self, vds):
-        tx_in = {
-            "prevout": {
-                "hash": vds.read_bytes(32),
-                "n": vds.read_uint32()
-            }
-        }
+        tx_in = {}
+        tx_in["hash"] = vds.read_bytes(32)
+        tx_in["n"] = vds.read_uint32()
         script_sig_size = vds.read_compact_size()
         tx_in['scriptSig'] = vds.read_bytes(script_sig_size)
-        tx_in['sequence'] = vds.read_uint32()
-        if tx_in["prevout"]['hash'] == '0000000000000000000000000000000000000000000000000000000000000000':
+        tx_in['nSequence'] = vds.read_uint32()
+        if tx_in['hash'] == '0000000000000000000000000000000000000000000000000000000000000000':
             tx_in['coinbase'] = True
         return tx_in
 
@@ -112,23 +109,27 @@ class BlockchainParser():
             transaction['segwit'] = False
             vds.read_cursor = vds.read_cursor - 2
 
+        transaction['coinbase'] = False
         transaction['vin'] = []
         for i in range(vds.read_compact_size()):
-            transaction['vin'].append(self.read_tx_in(vds))
+            vin = self.read_tx_in(vds)
+            transaction['vin'].append(vin)
+            if 'coinbase' in vin:
+                transaction['coinbase'] = True
 
         transaction['vout'] = []
         for i in range(vds.read_compact_size()):
             transaction['vout'].append(self.read_tx_out(vds))
 
+        transaction['vtxinwit'] = []
         if transaction['segwit']:
             offset_before_tx_witnesses = vds.read_cursor - start_pos
             for vin in transaction['vin']:
-                vin['tx_witnesses'] = []
                 witnesses_count = vds.read_compact_size()
                 for i in range(witnesses_count):
                     witness_length = vds.read_compact_size()
                     witness = vds.read_bytes(witness_length)
-                    vin['tx_witnesses'].append(witness)
+                    transaction['vtxinwit'].append(witness)
 
         transaction['lock_time'] = vds.read_uint32()
         data = vds.input[start_pos:vds.read_cursor]
