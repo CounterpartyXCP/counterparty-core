@@ -454,7 +454,7 @@ def initialise(db):
     cursor.close()
 
 
-def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=None, block_parser=None):
+def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=None, decoded_tx=None, block_parser=None):
     assert type(tx_hash) == str
     cursor = db.cursor()
 
@@ -466,19 +466,27 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
         return tx_index
 
     # Get the important details about each transaction.
-    if tx_hex is None:
-        tx_hex = backend.getrawtransaction(tx_hash, block_index=block_index)
+    if decoded_tx is None:
+        if tx_hex is None:
+            tx_hex = backend.getrawtransaction(tx_hash, block_index=block_index)
+        decoded_tx = backend.deserialize(tx_hex)
 
-    source, destination, btc_amount, fee, data, decoded_tx = get_tx_info(db, tx_hex, block_index, block_parser=block_parser)
+    source, destination, btc_amount, fee, data, dispensers = get_tx_info(
+        db,
+        decoded_tx,
+        block_index,
+        block_parser=block_parser
+    )
 
+    # TODO: Move in get_tx_info()
     outs = []
     first_one = True #This is for backward compatibility with unique dispensers
-    if not source and decoded_tx and ledger.enabled('dispensers', block_index):
-        outputs = decoded_tx[1]
+    if not source and dispensers and ledger.enabled('dispensers', block_index):
+        outputs = dispensers[1]
         out_index = 0
         for out in outputs:
-            if out[0] != decoded_tx[0][0] and dispenser.is_dispensable(db, out[0], out[1]):
-                source = decoded_tx[0][0]
+            if out[0] != dispensers[0][0] and dispenser.is_dispensable(db, out[0], out[1]):
+                source = dispensers[0][0]
                 destination = out[0]
                 btc_amount = out[1]
                 fee = 0
@@ -499,7 +507,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
     else:
         assert block_index == ledger.CURRENT_BLOCK_INDEX
 
-    if source and (data or destination == config.UNSPENDABLE or decoded_tx):
+    if source and (data or destination == config.UNSPENDABLE or dispensers):
         logger.debug('Saving transaction: {}'.format(tx_hash))
         cursor.execute('''INSERT INTO transactions(
                             tx_index,
@@ -627,7 +635,7 @@ def follow(db):
             logger.info(str(e))
             # no need to rollback a new database
             if block_index != config.BLOCK_FIRST:
-                rollback(db, block_index=e.rollback_block_index, quiet=False)
+                rollback(db, block_index=e.rollback_block_index)
             database.update_version(db)
 
     logger.info('Resuming parsing.')

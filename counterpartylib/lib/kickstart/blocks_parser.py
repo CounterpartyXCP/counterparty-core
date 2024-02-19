@@ -79,27 +79,21 @@ class BlockchainParser():
 
     def read_tx_in(self, vds):
         tx_in = {}
-        tx_in['txid'] = ib2h(vds.read_bytes(32))
-        tx_in['vout'] = vds.read_uint32()
+        tx_in["hash"] = vds.read_bytes(32)
+        tx_in["n"] = vds.read_uint32()
         script_sig_size = vds.read_compact_size()
-
-        tx_in['scriptSig'] = b2h(vds.read_bytes(script_sig_size))
-        tx_in['sequence'] = vds.read_uint32()
-        if tx_in['txid'] == '0000000000000000000000000000000000000000000000000000000000000000':
-            tx_in = {
-                'coinbase': tx_in['scriptSig'],
-                'sequence': tx_in['sequence']
-            }
+        tx_in['scriptSig'] = vds.read_bytes(script_sig_size)
+        tx_in['nSequence'] = vds.read_uint32()
+        if tx_in['hash'] == '0000000000000000000000000000000000000000000000000000000000000000':
+            tx_in['coinbase'] = True
         return tx_in
 
 
     def read_tx_out(self, vds):
         tx_out = {}
-        tx_out['value'] = vds.read_int64() / 100000000
+        tx_out['nValue'] = vds.read_int64() / 100000000
         script = vds.read_bytes(vds.read_compact_size())
-        tx_out['scriptPubKey'] = {
-            'hex': b2h(script)
-        }
+        tx_out['scriptPubKey'] = script
         return tx_out
 
 
@@ -115,23 +109,27 @@ class BlockchainParser():
             transaction['segwit'] = False
             vds.read_cursor = vds.read_cursor - 2
 
+        transaction['coinbase'] = False
         transaction['vin'] = []
         for i in range(vds.read_compact_size()):
-            transaction['vin'].append(self.read_tx_in(vds))
+            vin = self.read_tx_in(vds)
+            transaction['vin'].append(vin)
+            if 'coinbase' in vin:
+                transaction['coinbase'] = True
 
         transaction['vout'] = []
         for i in range(vds.read_compact_size()):
             transaction['vout'].append(self.read_tx_out(vds))
 
+        transaction['vtxinwit'] = []
         if transaction['segwit']:
             offset_before_tx_witnesses = vds.read_cursor - start_pos
             for vin in transaction['vin']:
-                vin['tx_witnesses'] = []
                 witnesses_count = vds.read_compact_size()
                 for i in range(witnesses_count):
                     witness_length = vds.read_compact_size()
-                    witness = b2h(vds.read_bytes(witness_length))
-                    vin['tx_witnesses'].append(witness)
+                    witness = vds.read_bytes(witness_length)
+                    transaction['vtxinwit'].append(witness)
 
         transaction['lock_time'] = vds.read_uint32()
         data = vds.input[start_pos:vds.read_cursor]
@@ -171,7 +169,7 @@ class BlockchainParser():
         header_end = vds.read_cursor
         header = vds.input[header_start:header_end]
         block_header['block_hash'] = ib2h(double_hash(header))
-        block_header['__header__'] = b2h(header)
+        #block_header['__header__'] = b2h(header)
         return block_header
 
     def read_block(self, vds, only_header=False, use_txid=True):
