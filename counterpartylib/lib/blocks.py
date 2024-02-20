@@ -564,7 +564,7 @@ def clean_table_from(cursor, table, block_index):
 def rollback(db, block_index=0):
     # clean all tables
     cursor = db.cursor()
-    for table in TABLES + ['blocks', 'transaction_outputs', 'transactions']:
+    for table in TABLES + ['transaction_outputs', 'transactions', 'blocks']:
         clean_table_from(cursor, table, block_index)
     cursor.close()
     logger.info('Database rolled back to block_index {}'.format(block_index))
