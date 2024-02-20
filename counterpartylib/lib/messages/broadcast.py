@@ -97,7 +97,7 @@ def validate (db, source, timestamp, value, fee_fraction_int, text, block_index)
     if not source:
         problems.append('null source address')
     # Check previous broadcast in this feed.
-    broadcasts = ledger.get_broadcats_by_source(db, source, 'valid')
+    broadcasts = ledger.get_broadcasts_by_source(db, source, 'valid')
     if broadcasts:
         last_broadcast = broadcasts[-1]
         if last_broadcast['locked']:
