@@ -275,7 +275,6 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
             last_parsed_block = block['block_index']
             if block['block_hash'] == last_known_hash:
                 break
-            block = block_parser.next_block()
             # let's have a nice message
             block_parsed_count += 1
             block_parsing_duration = time.time() - start_time_block_parse
@@ -286,6 +285,8 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
             expected_duration = (cumulated_duration / block_parsed_count) * block_count
             message += f" Expected duration: {expected_duration:.3f}s."
             print(message, end="\r")
+            # get next block
+            block = block_parser.next_block()
         logger.info('All blocks parsed in: {:.3f}s'.format(time.time() - start_time_all_blocks_parse))
     except KeyboardInterrupt:
         logger.warning('Keyboard interrupt. Stopping...')
