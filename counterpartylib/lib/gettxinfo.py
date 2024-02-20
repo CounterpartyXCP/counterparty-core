@@ -260,8 +260,7 @@ def parse_transaction_vouts(decoded_tx, p2sh_support):
             #redeemScript = asm[1]
             new_destination = script.script_to_address(vout.scriptPubKey)
             new_data = None
-            # Reproduce buggy fix. See #1408
-            if ledger.enabled('correct_segwit_txids') and not ledger.enabled('hotfix_dispensers_with_non_p2pkh'):
+            if ledger.enabled('correct_segwit_txids'):
                 potential_dispensers[-1] = (new_destination, output_value)
         else:
             raise DecodeError('unrecognised output type')
