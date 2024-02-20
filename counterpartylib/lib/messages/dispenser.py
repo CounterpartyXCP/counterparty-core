@@ -489,6 +489,8 @@ def is_dispensable(db, address, amount):
         if next_dispenser["oracle_address"] != None:
             last_price, last_fee, last_fiat_label, last_updated = ledger.get_oracle_last_price(db, next_dispenser['oracle_address'], ledger.CURRENT_BLOCK_INDEX)
             fiatrate = util.satoshirate_to_fiat(next_dispenser["satoshirate"])
+            if fiatrate == 0 or last_price == 0:
+                return False
             if amount >= fiatrate/last_price:
                 return True
         else:
