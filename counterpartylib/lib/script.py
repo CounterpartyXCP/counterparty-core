@@ -321,7 +321,17 @@ def script_to_address(scriptpubkey):
     try:
         network = 'mainnet' if config.TESTNET == False else 'testnet'
         script = bytes(scriptpubkey, 'utf-8') if type(scriptpubkey) == str else bytes(scriptpubkey)
-        return utils.script_to_address(script, network)
+        address = utils.script_to_address(script, network)
+
+         # reproduce bug with the old decode_p2w() function
+        if config.TESTNET and ledger.CURRENT_BLOCK_INDEX == 2431884 and \
+            address == "tb1qudy5g780rm5yxnp9c7atvq6uas957qk2pxc84d26uv84w4c3jd8qay4mhj":
+            address = "tb1qudy5g780rm5yxnp9c7atvq6uas957qk2jrekv4"
+        if config.TESTNET and ledger.CURRENT_BLOCK_INDEX == 2434482 and \
+            address == "tb1qu9ns8lzf2lylqk04yv6ax5rrywkm8kl543u3xxh75n0pta3pue4qhuh94m":
+            address = "tb1qu9ns8lzf2lylqk04yv6ax5rrywkm8kl5u606fz"
+
+        return address
     except BaseException as e:
         raise exceptions.DecodeError('scriptpubkey decoding error')
 
