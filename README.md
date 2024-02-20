@@ -12,18 +12,18 @@
 The simplest way to get your Counterparty node up and running is to use Docker Compose.
 
 ```
-$ sudo apt install docker-compose
+sudo apt install docker-compose
 ```
 
 Then, for `mainnet`, run:
 
 ```bash
-$ docker-compose -f simplenode/compose.yml up
+docker-compose -f simplenode/compose.yml up
 ```
 
 For `testnet`, modify the Docker Compose file in `simplenode/` and then run:
 ```bash
-$ docker-compose -f simplenode/compose.yml -p simplenode-testnet up
+docker-compose -f simplenode/compose.yml -p simplenode-testnet up
 ```
 
 Wait for your node to catch up with the network.
@@ -57,18 +57,17 @@ dbcache=4000
 Download and install latest `addrindexrs`:
 
 ```bash
-$ sudo apt install cargo libclang-dev build-essential
-$ git clone https://github.com/CounterpartyXCP/addrindexrs.git
-$ cd addrindexrs
- -- Set the necessary environment variables --
-  - ADDRINDEXRS_JSONRPC_IMPORT=1
-  - ADDRINDEXRS_TXID_LIMIT=15000
-  - ADDRINDEXRS_COOKIE=rpc:rpc
-  - ADDRINDEXRS_INDEXER_RPC_ADDR=0.0.0.0:8432
-  - ADDRINDEXRS_DAEMON_RPC_ADDR=localhost:8332
- --
-$ cargo build --release
-$ cargo run --release -- -vvv
+sudo apt install cargo libclang-dev build-essential
+git clone https://github.com/CounterpartyXCP/addrindexrs.git
+cd addrindexrs
+# Set the necessary environment variables
+export ADDRINDEXRS_JSONRPC_IMPORT=1
+export ADDRINDEXRS_TXID_LIMIT=15000
+export ADDRINDEXRS_COOKIE=rpc:rpc
+export ADDRINDEXRS_INDEXER_RPC_ADDR=0.0.0.0:8432
+export ADDRINDEXRS_DAEMON_RPC_ADDR=localhost:8332
+cargo build --release
+cargo run --release -- -vvv
 ```
 
 Now, download and install `counterparty-lib`:
@@ -76,26 +75,26 @@ Now, download and install `counterparty-lib`:
 Make sure ~/.local/bin is in $PATH.
 
 ```bash
-$ sudo apt install python3-pip
-$ git clone https://github.com/CounterpartyXCP/counterparty-lib.git
-$ brew install leveldb                                                # macOS-only
-$ CFLAGS="-I/opt/homebrew/include -L/opt/homebrew/lib"                # macOS-only
-$ pip3 install -e .
+sudo apt install python3-pip
+git clone https://github.com/CounterpartyXCP/counterparty-lib.git
+brew install leveldb                                                # macOS-only
+CFLAGS="-I/opt/homebrew/include -L/opt/homebrew/lib"                # macOS-only
+pip3 install -e .
 ```
 
 Followed by `counterparty-cli`:
 
 ```bash
-$ git clone https://github.com/CounterpartyXCP/counterparty-cli.git
-$ cd counterparty-cli
-$ pip3 install -e .
+git clone https://github.com/CounterpartyXCP/counterparty-cli.git
+cd counterparty-cli
+pip3 install -e .
 ```
 
 Then, launch the daemon via:
 
 ```bash
-$ counterparty-server bootstrap
-$ counterparty-server start
+counterparty-server bootstrap
+counterparty-server start
 ```
 
 **WARNING:** The `bootstrap` should not be used for commercial or public-facing nodes.
@@ -110,17 +109,17 @@ $ counterparty-server start
 (Requires `counterparty-cli` to be installed.)
 
 * The first time you run the server, you may bootstrap the local database with:
-	`$ counterparty-server bootstrap`
+	`counterparty-server bootstrap`
 
 * Start the server with:
-	`$ counterparty-server start`
+	`counterparty-server start`
 
 * Check the status of the server with:
-	`$ counterparty-client getinfo`
+	`counterparty-client getinfo`
 
 * For additional command-line arguments and options:
-	`$ counterparty-server --help`
-	`$ counterparty-client --help`
+	`counterparty-server --help`
+	`counterparty-client --help`
 
 ## Via Python
 
@@ -136,7 +135,7 @@ $ python3
 # Configuration and Operation
 
 The paths to the **configuration** files, **log** files and **database** files are printed to the screen when starting the server in ‘verbose’ mode:
-	`$ counterparty-server --verbose start`
+	`counterparty-server --verbose start`
 
 By default, the **configuration files** are named `server.conf` and `client.conf` and located in the following directories:
 
