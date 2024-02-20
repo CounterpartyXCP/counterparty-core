@@ -3,6 +3,7 @@
 #
 import struct
 import mmap
+from io import BytesIO
 from .exceptions import SerializationError
 
 class BCDataStream(object):
@@ -23,6 +24,11 @@ class BCDataStream(object):
   def map_file(self, file, start):  # Initialize with bytes from file
     self.input = mmap.mmap(file.fileno(), 0, access=mmap.ACCESS_READ)
     self.read_cursor = start
+
+  def map_hex(self, data):  # Initialize with hex string
+    data_bytes = bytes.fromhex(data)
+    self.input = data_bytes
+    self.read_cursor = 0
 
   def seek_file(self, position):
     self.read_cursor = position
