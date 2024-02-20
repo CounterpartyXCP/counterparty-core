@@ -8,7 +8,7 @@ import signal
 import apsw
 
 from counterpartylib import server
-from counterpartylib.lib import config, blocks, ledger, backend
+from counterpartylib.lib import config, blocks, ledger, backend, database
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser, ChainstateParser
 
 logger = logging.getLogger(__name__)
@@ -238,6 +238,7 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
     else:
         # intialize new database
         blocks.initialise(memory_db)
+        database.update_version(memory_db)
         # fill `blocks`` table from bitcoind files
         block_count = fetch_blocks(memory_db, bitcoind_dir, last_known_hash)
         last_parsed_block = 0
