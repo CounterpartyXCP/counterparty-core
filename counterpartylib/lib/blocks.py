@@ -461,10 +461,11 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
 
     # Edge case: confirmed tx_hash also in mempool
     # TODO: This is dog-slow.
-    cursor.execute('''SELECT * FROM transactions WHERE tx_hash = ?''', (tx_hash,))
-    transactions = list(cursor)
-    if transactions:
-        return tx_index
+    if block_parser is None: # skip on kickstart
+        cursor.execute('''SELECT * FROM transactions WHERE tx_hash = ?''', (tx_hash,))
+        transactions = list(cursor)
+        if transactions:
+            return tx_index
 
     # Get the important details about each transaction.
     if decoded_tx is None:
