@@ -110,79 +110,6 @@ def copy_disk_db_to_memory(local_base, memory_db, resume_from):
     return block_count, tx_index, last_parsed_block
 
 
-# imitates the bitcoinlib class interface
-# to be used directly by get_tx_info()
-class COutPoint:
-    def __init__(self, hash, n, coinbase):
-        self.hash = hash
-        self.n = n
-        self.coinbase = coinbase
-
-    def is_null(self):
-        return self.coinbase
-
-class CTxIn:
-    def __init__(self, hash, n, scriptSig, nSequence, coinbase):
-        self.prevout = COutPoint(hash, n, coinbase)
-        self.scriptSig = scriptSig
-        self.nSequence = nSequence
-
-class CTxOut:
-    def __init__(self, nValue, scriptPubKey):
-        self.nValue = nValue
-        self.scriptPubKey = scriptPubKey
-
-class CTxWitness:
-    def __init__(self, vtxinwit=()):
-        self.vtxinwit = vtxinwit
-
-class CTxInWitness:
-    def __init__(self, scriptWitness):
-        self.scriptWitness = scriptWitness
-
-class CTransaction:
-    def __init__(self, nLockTime=0, nVersion=1, vin=(), vout=(), wit=CTxWitness(), coinbase=False):
-        self.nVersion = nVersion
-        self.vin = vin
-        self.vout = vout
-        self.nLockTime = nLockTime
-        self.wit = wit
-        self.coinbase = coinbase
-
-    def is_coinbase(self):
-        return self.coinbase
-
-    def has_witness(self):
-        return self.wit.vtxinwit != ()
-
-def dict_to_class(tx):
-    ct_vins = ()
-    ct_vouts = ()
-    for vin in tx['vin']:
-        ct_vins += (CTxIn(
-            vin['hash'],
-            vin['n'],
-            vin['scriptSig'],
-            vin['nSequence'],
-            vin['coinbase']),
-        )
-    for vout in tx['vout']:
-        ct_vouts += (CTxOut(
-            vout['nValue'],
-            vout['scriptPubKey']),
-        )
-    wit = CTxWitness(tuple(tx['vtxinwit']))
-
-    return CTransaction(
-        tx['lock_time'],
-        tx['version'],
-        ct_vins,
-        ct_vouts,
-        wit,
-        tx['coinbase']
-    )
-
-
 def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None):
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     signal.signal(signal.SIGINT, signal.default_int_handler)
@@ -261,7 +188,6 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
                 for transaction in block['transactions']:
                     # Cache transaction. We do that here because the block is fetched by another process.
                     block_parser.put_in_cache(transaction)
-                    #decoded_tx = dict_to_class(transaction)
                     tx_index = blocks.list_tx(memory_db,
                                             block['block_hash'],
                                             block['block_index'],
