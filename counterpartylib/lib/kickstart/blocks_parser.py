@@ -52,7 +52,7 @@ def fetch_blocks(bitcoind_dir, db, queue, first_block_index):
 
 class BlockchainParser():
 
-    def __init__(self, bitcoind_dir=None, db=None, first_block_index=0):
+    def __init__(self, bitcoind_dir=None, db=None, first_block_index=0, queue_size=100):
         if bitcoind_dir is None: # for deserialize_tx()
             return
 
@@ -67,7 +67,7 @@ class BlockchainParser():
             self.blocks_leveldb = None
             self.txindex_leveldb_path = os.path.join(bitcoind_dir, 'indexes', 'txindex')
             self.txindex_leveldb = open_leveldb(self.txindex_leveldb_path)
-            self.queue = Queue(100)
+            self.queue = Queue(queue_size)
             self.fetch_process = Process(target=fetch_blocks, args=(
                 bitcoind_dir, db, self.queue, first_block_index
             ))

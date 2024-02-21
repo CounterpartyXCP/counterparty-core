@@ -110,7 +110,7 @@ def copy_disk_db_to_memory(local_base, memory_db, resume_from):
     return block_count, tx_index, last_parsed_block
 
 
-def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None):
+def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_size=None):
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     signal.signal(signal.SIGINT, signal.default_int_handler)
 
@@ -132,8 +132,10 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
     if not os.path.isdir(bitcoind_dir):
         raise Exception('Bitcoin Core data directory not found at {}. Use --bitcoind-dir parameter.'.format(bitcoind_dir))
 
+    default_queue_size = 100
     if config.TESTNET:
         bitcoind_dir = os.path.join(bitcoind_dir, 'testnet3')
+        default_queue_size = 1000
 
     logger.warning(f'''Warning:
 - `{config.DATABASE}` will be moved to `{config.DATABASE}.old` and recreated from scratch.
@@ -172,7 +174,8 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
         tx_index = 0
 
     # Start block parser.
-    block_parser = BlockchainParser(bitcoind_dir, memory_db, last_parsed_block)
+    queue_size = max_queue_size if max_queue_size is not None else default_queue_size
+    block_parser = BlockchainParser(bitcoind_dir, memory_db, last_parsed_block, queue_size)
 
     try:
         # save transactions for each blocks from first to last
