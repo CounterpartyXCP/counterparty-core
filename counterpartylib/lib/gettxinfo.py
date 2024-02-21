@@ -1,5 +1,6 @@
 import binascii
 import logging
+import struct
 
 import bitcoin as bitcoinlib
 from bitcoin.core.script import CScriptInvalidError
@@ -221,7 +222,33 @@ def get_dispensers_outputs(db, potential_dispensers):
             continue
         if dispenser.is_dispensable(db, destination, btc_amount):
             outputs.append((destination, btc_amount))
+            if not ledger.enabled("multiple_dispenses"):
+                break
     return outputs
+
+
+def get_dispensers_tx_info(sources, dispensers_outputs):
+    source, destination, btc_amount, fee, data, outs = b'', None, None, None, None, []
+
+    dispenser_source = sources.split("-")[0]
+    out_index = 0
+    for out in dispensers_outputs:
+        if out[0] != dispenser_source:
+            source = dispenser_source
+            destination = out[0]
+            btc_amount = out[1]
+            fee = 0
+            data = struct.pack(config.SHORT_TXTYPE_FORMAT, dispenser.DISPENSE_ID)
+            data += b'\x00'
+
+            if ledger.enabled("multiple_dispenses"):
+                outs.append({"destination":out[0], "btc_amount":out[1], "out_index":out_index})
+            else:
+                break # Prevent inspection of further dispenses (only first one is valid)
+
+        out_index = out_index + 1
+
+    return source, destination, btc_amount, fee, data, outs
 
 
 def parse_transaction_vouts(decoded_tx, p2sh_support):
@@ -327,10 +354,12 @@ def get_tx_info_new(db, decoded_tx, block_index, block_parser=None, p2sh_support
         sources = p2sh_encoding_source
 
     if not data and destinations != [config.UNSPENDABLE,]:
-        return b'', None, None, None, None, (sources.split("-"), dispensers_outputs)
+        assert ledger.enabled('dispensers', block_index) # else an exception would have been raised above
+        assert len(dispensers_outputs) > 0 # else an exception would have been raised above
+        return get_dispensers_tx_info(sources, dispensers_outputs)
 
     destinations = '-'.join(destinations)
-    return sources, destinations, btc_amount, round(fee), data, None
+    return sources, destinations, btc_amount, round(fee), data, []
 
 
 def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
@@ -433,7 +462,7 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
     else:
         source = None
 
-    return source, destination, btc_amount, fee, data, None
+    return source, destination, btc_amount, fee, data, []
 
 
 def _get_tx_info(db, decoded_tx, block_index, block_parser=None, p2sh_is_segwit=False):
