@@ -1,5 +1,6 @@
 import binascii
 import logging
+import struct
 
 import bitcoin as bitcoinlib
 from bitcoin.core.script import CScriptInvalidError
@@ -226,6 +227,30 @@ def get_dispensers_outputs(db, potential_dispensers):
     return outputs
 
 
+def get_dispensers_tx_info(sources, dispensers_outputs):
+    source, destination, btc_amount, fee, data, outs = b'', None, None, None, None, []
+
+    dispenser_source = sources.split("-")[0]
+    out_index = 0
+    for out in dispensers_outputs:
+        if out[0] != dispenser_source:
+            source = dispenser_source
+            destination = out[0]
+            btc_amount = out[1]
+            fee = 0
+            data = struct.pack(config.SHORT_TXTYPE_FORMAT, dispenser.DISPENSE_ID)
+            data += b'\x00'
+
+            if ledger.enabled("multiple_dispenses"):
+                outs.append({"destination":out[0], "btc_amount":out[1], "out_index":out_index})
+            else:
+                break # Prevent inspection of further dispenses (only first one is valid)
+
+        out_index = out_index + 1
+
+    return source, destination, btc_amount, fee, data, outs
+
+
 def parse_transaction_vouts(decoded_tx, p2sh_support):
     # Get destinations and data outputs.
     destinations, btc_amount, fee, data, potential_dispensers = [], 0, 0, b'', []
@@ -329,9 +354,9 @@ def get_tx_info_new(db, decoded_tx, block_index, block_parser=None, p2sh_support
         sources = p2sh_encoding_source
 
     if not data and destinations != [config.UNSPENDABLE,]:
+        assert ledger.enabled('dispensers', block_index) # else an exception would have been raised above
         assert len(dispensers_outputs) > 0 # else an exception would have been raised above
-        dispensers = (sources.split("-"), dispensers_outputs)
-        return b'', None, None, None, None, dispensers
+        return get_dispensers_tx_info(sources, dispensers_outputs)
 
     destinations = '-'.join(destinations)
     return sources, destinations, btc_amount, round(fee), data, None

@@ -473,34 +473,12 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
             tx_hex = backend.getrawtransaction(tx_hash, block_index=block_index)
         decoded_tx = BlockchainParser().deserialize_tx(tx_hex)
 
-    source, destination, btc_amount, fee, data, dispensers = get_tx_info(
+    source, destination, btc_amount, fee, data, dispensers_outs = get_tx_info(
         db,
         decoded_tx,
         block_index,
         block_parser=block_parser
     )
-
-    outs = []
-    # This is for backward compatibility with unique dispensers
-    if not source and dispensers and ledger.enabled('dispensers', block_index):
-        outputs = dispensers[1]
-        dispenser_source = dispensers[0][0]
-        out_index = 0
-        for out in outputs:
-            if out[0] != dispenser_source:
-                source = dispenser_source
-                destination = out[0]
-                btc_amount = out[1]
-                fee = 0
-                data = struct.pack(config.SHORT_TXTYPE_FORMAT, dispenser.DISPENSE_ID)
-                data += b'\x00'
-                
-                if ledger.enabled("multiple_dispenses"):
-                    outs.append({"destination":out[0], "btc_amount":out[1], "out_index":out_index})
-                else:
-                    break # Prevent inspection of further dispenses (only first one is valid)
-                    
-            out_index = out_index + 1
 
     # For mempool
     if block_hash == None:
@@ -509,7 +487,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
     else:
         assert block_index == ledger.CURRENT_BLOCK_INDEX
 
-    if source and (data or destination == config.UNSPENDABLE or dispensers):
+    if source and (data or destination == config.UNSPENDABLE or dispensers_outs):
         logger.debug('Saving transaction: {}'.format(tx_hash))
         cursor.execute('''INSERT INTO transactions(
                             tx_index,
@@ -534,7 +512,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
                              data)
                       )
 
-        for next_out in outs:
+        for next_out in dispensers_outs:
             cursor.execute('''INSERT INTO transaction_outputs(
                                 tx_index,
                                 tx_hash,
