@@ -480,15 +480,15 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
         block_parser=block_parser
     )
 
-    # TODO: Move in get_tx_info()
     outs = []
-    first_one = True #This is for backward compatibility with unique dispensers
+    # This is for backward compatibility with unique dispensers
     if not source and dispensers and ledger.enabled('dispensers', block_index):
         outputs = dispensers[1]
+        dispenser_source = dispensers[0][0]
         out_index = 0
         for out in outputs:
-            if out[0] != dispensers[0][0] and dispenser.is_dispensable(db, out[0], out[1]):
-                source = dispensers[0][0]
+            if out[0] != dispenser_source:
+                source = dispenser_source
                 destination = out[0]
                 btc_amount = out[1]
                 fee = 0

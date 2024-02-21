@@ -327,7 +327,9 @@ def get_tx_info_new(db, decoded_tx, block_index, block_parser=None, p2sh_support
         sources = p2sh_encoding_source
 
     if not data and destinations != [config.UNSPENDABLE,]:
-        return b'', None, None, None, None, (sources.split("-"), dispensers_outputs)
+        assert len(dispensers_outputs) > 0 # else an exception would have been raised above
+        dispensers = (sources.split("-"), dispensers_outputs)
+        return b'', None, None, None, None, dispensers
 
     destinations = '-'.join(destinations)
     return sources, destinations, btc_amount, round(fee), data, None
