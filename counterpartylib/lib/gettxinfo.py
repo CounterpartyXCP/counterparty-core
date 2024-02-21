@@ -359,7 +359,7 @@ def get_tx_info_new(db, decoded_tx, block_index, block_parser=None, p2sh_support
         return get_dispensers_tx_info(sources, dispensers_outputs)
 
     destinations = '-'.join(destinations)
-    return sources, destinations, btc_amount, round(fee), data, None
+    return sources, destinations, btc_amount, round(fee), data, []
 
 
 def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
@@ -462,7 +462,7 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
     else:
         source = None
 
-    return source, destination, btc_amount, fee, data, None
+    return source, destination, btc_amount, fee, data, []
 
 
 def _get_tx_info(db, decoded_tx, block_index, block_parser=None, p2sh_is_segwit=False):
