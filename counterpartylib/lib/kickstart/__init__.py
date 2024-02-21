@@ -224,7 +224,7 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
         chain_parser = ChainstateParser(os.path.join(bitcoind_dir, 'chainstate'))
         last_known_hash = chain_parser.get_last_block_hash()
         chain_parser.close()
-    logger.info('Last known block hash: {}'.format(last_hash))
+    logger.info('Last known block hash: {}'.format(last_known_hash))
 
     # initialise in memory database
     local_base = config.DATABASE
