@@ -31,6 +31,7 @@ sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 from counterpartylib import server
 from counterpartylib.lib import (config, util, blocks, check, backend, database, transaction, exceptions, ledger, gettxinfo)
 from counterpartylib.lib.backend.indexd import extract_addresses, extract_addresses_from_txlist
+from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
 
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP
 from counterpartylib.test.fixtures.scenarios import UNITTEST_FIXTURE, INTEGRATION_SCENARIOS, standard_scenarios_params
@@ -171,7 +172,7 @@ def insert_raw_transaction(raw_transaction, db):
     try:
         source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
             db,
-            backend.deserialize(raw_transaction),
+            BlockchainParser().deserialize_tx(raw_transaction, True),
             block_index
         )
         transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
@@ -201,7 +202,11 @@ def insert_unconfirmed_raw_transaction(raw_transaction, db):
     tx_index = tx_index[0]['tx_index'] if len(tx_index) else 0
     tx_index = tx_index + 1
 
-    source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(db, backend.deserialize(raw_transaction), ledger.CURRENT_BLOCK_INDEX)
+    source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
+        db,
+        BlockchainParser().deserialize_tx(raw_transaction, True),
+        ledger.CURRENT_BLOCK_INDEX
+    )
     tx = {
         'tx_index': tx_index,
         'tx_hash': tx_hash,
@@ -292,7 +297,7 @@ def prefill_rawtransactions_db(db):
             wallet_unspent = json.load(listunspent_test_file)
             for output in wallet_unspent:
                 txid = output['txid']
-                tx = backend.deserialize(output['txhex'])
+                tx = BlockchainParser().deserialize_tx(output['txhex'], True)
                 cursor.execute('INSERT INTO raw_transactions VALUES (?, ?, ?)', (txid, output['txhex'], output['confirmations']))
     cursor.close()
 

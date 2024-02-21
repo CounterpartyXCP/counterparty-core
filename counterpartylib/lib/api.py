@@ -43,6 +43,7 @@ from counterpartylib.lib import blocks
 from counterpartylib.lib import script
 from counterpartylib.lib import message_type
 from counterpartylib.lib import gettxinfo
+from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
 from counterpartylib.lib.messages import send
 from counterpartylib.lib.messages.versions import enhanced_send
 from counterpartylib.lib.messages import order
@@ -913,7 +914,11 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_tx_info(tx_hex, block_index=None):
             # block_index mandatory for transactions before block 335000
-            source, destination, btc_amount, fee, data, extra = gettxinfo.get_tx_info(self.db, backend.deserialize(tx_hex), block_index=block_index)
+            source, destination, btc_amount, fee, data, extra = gettxinfo.get_tx_info(
+                self.db,
+                BlockchainParser().deserialize_tx(tx_hex),
+                block_index=block_index
+            )
             return source, destination, btc_amount, fee, util.hexlify(data) if data else ''
 
         @dispatcher.add_method

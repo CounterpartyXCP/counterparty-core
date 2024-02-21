@@ -67,7 +67,7 @@ class BlockchainParser():
             self.blocks_leveldb = None
             self.txindex_leveldb_path = os.path.join(bitcoind_dir, 'indexes', 'txindex')
             self.txindex_leveldb = open_leveldb(self.txindex_leveldb_path)
-            self.queue = Queue(1000)
+            self.queue = Queue(100)
             self.fetch_process = Process(target=fetch_blocks, args=(
                 bitcoind_dir, db, self.queue, first_block_index
             ))
@@ -247,10 +247,15 @@ class BlockchainParser():
         return transaction
 
 
-    def deserialize_tx(self, tx_hex, use_txid=True):
+    def deserialize_tx(self, tx_hex, use_txid=None):
         ds = BCDataStream()
         ds.map_hex(tx_hex)
-        return self.read_transaction(ds, use_txid=use_txid)
+        if use_txid is None:
+            use_txid = ledger.enabled("correct_segwit_txids")
+        return self.read_transaction(
+            ds,
+            use_txid=use_txid
+        )
 
 
     def close(self):

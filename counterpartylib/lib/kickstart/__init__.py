@@ -261,15 +261,14 @@ def run(bitcoind_dir, force=False, last_hash=None, resume=True, resume_from=None
                 for transaction in block['transactions']:
                     # Cache transaction. We do that here because the block is fetched by another process.
                     block_parser.put_in_cache(transaction)
-                    #decoded_tx = backend.deserialize(transaction['__data__'])
-                    decoded_tx = dict_to_class(transaction)
+                    #decoded_tx = dict_to_class(transaction)
                     tx_index = blocks.list_tx(memory_db,
                                             block['block_hash'],
                                             block['block_index'],
                                             block['block_time'],
                                             transaction['tx_hash'],
                                             tx_index,
-                                            decoded_tx=decoded_tx,
+                                            decoded_tx=transaction,
                                             block_parser=block_parser)
                 # Parse the transactions in the block.
                 blocks.parse_block(memory_db, block['block_index'], block['block_time'])

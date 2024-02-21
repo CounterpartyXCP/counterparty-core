@@ -33,7 +33,7 @@ from counterpartylib.lib import arc4
 from counterpartylib.lib import ledger
 from counterpartylib.lib import gettxinfo
 from counterpartylib.lib.transaction_helper import serializer, p2sh_encoding
-
+from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
 
 # Constants
 OP_RETURN = b'\x6a'
@@ -603,7 +603,7 @@ def construct (db, tx_info, encoding='auto',
             backend.cache_pretx(pretx_txid, unsigned_pretx)
         parsed_source, parsed_destination, x, y, parsed_data, extra = gettxinfo._get_tx_info(
             db,
-            backend.deserialize(unsigned_tx_hex),
+            BlockchainParser().deserialize_tx(unsigned_tx_hex),
             ledger.CURRENT_BLOCK_INDEX,
             p2sh_is_segwit=script.is_bech32(desired_source)
         )

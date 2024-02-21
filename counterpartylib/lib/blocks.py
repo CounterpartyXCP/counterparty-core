@@ -39,6 +39,7 @@ from counterpartylib.lib import ledger
 from counterpartylib import server
 from counterpartylib.lib.transaction_helper import p2sh_encoding
 from counterpartylib.lib.gettxinfo import get_tx_info
+from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
 
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, destroy, sweep, dispenser)
 from .messages.versions import enhanced_send, mpma
@@ -469,7 +470,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
     if decoded_tx is None:
         if tx_hex is None:
             tx_hex = backend.getrawtransaction(tx_hash, block_index=block_index)
-        decoded_tx = backend.deserialize(tx_hex)
+        decoded_tx = BlockchainParser().deserialize_tx(tx_hex)
 
     source, destination, btc_amount, fee, data, dispensers = get_tx_info(
         db,
