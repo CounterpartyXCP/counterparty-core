@@ -589,14 +589,17 @@ def reparse(db, block_index=0):
 
 def last_db_index(db):
     cursor = db.cursor()
-    try:
-        blocks = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)'''))
-        try:
-            return blocks[0]['block_index']
-        except IndexError:
-            return 0
-    except apsw.SQLError:
+    query = "SELECT name FROM sqlite_master WHERE type='table' AND name='blocks'"
+    if len(list(cursor.execute(query))) == 0:
         return 0
+
+    query = "SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1"
+    blocks = list(cursor.execute(query))
+    if len(blocks) == 0:
+        return 0
+
+    return blocks[0]['block_index']
+
 
 def get_next_tx_index(db):
     """Return index of next transaction."""
