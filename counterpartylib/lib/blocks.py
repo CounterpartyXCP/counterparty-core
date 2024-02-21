@@ -39,6 +39,7 @@ from counterpartylib.lib import ledger
 from counterpartylib import server
 from counterpartylib.lib.transaction_helper import p2sh_encoding
 from counterpartylib.lib.gettxinfo import get_tx_info
+from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
 
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, destroy, sweep, dispenser)
 from .messages.versions import enhanced_send, mpma
@@ -460,16 +461,17 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
 
     # Edge case: confirmed tx_hash also in mempool
     # TODO: This is dog-slow.
-    cursor.execute('''SELECT * FROM transactions WHERE tx_hash = ?''', (tx_hash,))
-    transactions = list(cursor)
-    if transactions:
-        return tx_index
+    if block_parser is None: # skip on kickstart
+        cursor.execute('''SELECT * FROM transactions WHERE tx_hash = ?''', (tx_hash,))
+        transactions = list(cursor)
+        if transactions:
+            return tx_index
 
     # Get the important details about each transaction.
     if decoded_tx is None:
         if tx_hex is None:
             tx_hex = backend.getrawtransaction(tx_hash, block_index=block_index)
-        decoded_tx = backend.deserialize(tx_hex)
+        decoded_tx = BlockchainParser().deserialize_tx(tx_hex)
 
     source, destination, btc_amount, fee, data, dispensers = get_tx_info(
         db,
@@ -588,14 +590,17 @@ def reparse(db, block_index=0):
 
 def last_db_index(db):
     cursor = db.cursor()
-    try:
-        blocks = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)'''))
-        try:
-            return blocks[0]['block_index']
-        except IndexError:
-            return 0
-    except apsw.SQLError:
+    query = "SELECT name FROM sqlite_master WHERE type='table' AND name='blocks'"
+    if len(list(cursor.execute(query))) == 0:
         return 0
+
+    query = "SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1"
+    blocks = list(cursor.execute(query))
+    if len(blocks) == 0:
+        return 0
+
+    return blocks[0]['block_index']
+
 
 def get_next_tx_index(db):
     """Return index of next transaction."""

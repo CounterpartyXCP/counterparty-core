@@ -24,6 +24,7 @@ from counterpartylib.lib import gettxinfo
 from counterpartylib.lib import exceptions
 from counterpartylib.lib.transaction_helper import serializer
 from counterpartylib.lib.transaction_helper import p2sh_encoding
+from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
 
 FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql'
 FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
@@ -39,7 +40,7 @@ def test_p2sh_encoding_composed(server_db):
         config.PREFIX = b'CNTRPRTY'
         parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = gettxinfo._get_tx_info(
             server_db,
-            backend.deserialize(datatxhex),
+            BlockchainParser().deserialize_tx(datatxhex, True),
             ledger.CURRENT_BLOCK_INDEX
         )
         print('!!!!!!!!!!!!!!!!>1')
@@ -114,7 +115,7 @@ def test_p2sh_encoding(server_db):
         with pytest.raises(exceptions.BTCOnlyError):
             gettxinfo._get_tx_info(
                 server_db,
-                backend.deserialize(pretxhex),
+                BlockchainParser().deserialize_tx(pretxhex, True),
                 ledger.CURRENT_BLOCK_INDEX
             )
 
@@ -183,7 +184,7 @@ def test_p2sh_encoding(server_db):
         # verify parsed result
         parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = gettxinfo._get_tx_info(
             server_db,
-            backend.deserialize(datatxhex),
+            BlockchainParser().deserialize_tx(datatxhex, True),
             ledger.CURRENT_BLOCK_INDEX
         )
         #assert parsed_source == source # make_canonical cannot calculate this address
@@ -337,7 +338,7 @@ def test_p2sh_encoding_long_data(server_db):
         # verify parsed result
         parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = gettxinfo._get_tx_info(
             server_db,
-            backend.deserialize(datatxhex),
+            BlockchainParser().deserialize_tx(datatxhex, True),
             ledger.CURRENT_BLOCK_INDEX
         )
         #assert parsed_source == source # make_canonical can't calculate this address
@@ -431,7 +432,7 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
         # parse the transaction
         parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = gettxinfo._get_tx_info(
             server_db,
-            backend.deserialize(datatxhex),
+            BlockchainParser().deserialize_tx(datatxhex, True),
             ledger.CURRENT_BLOCK_INDEX
         )
         assert parsed_source == source
@@ -478,9 +479,9 @@ def test_p2sh_signed_multisig_script_decoding():
     with util_test.ConfigContext(PREFIX=b'CNTRPRTY'):
         txHex = "0100000001bae95e59f83e55035f566dc0e3034f79f0d670dc6d6a0d207a11b4e49e9baecf00000000fd0301483045022100d2d38c2d98285e44a271e91894622fa85044469257dbfc15a49e1ba98cddaf8002202b06bf0ca9d65af9f9c96db13c7585b4cd66cabedba269f9b70659dd8e456c46014cb84c8d434e5452505254591e5a3ae08000000000000000000000000073434950203620737570706f727473207573696e672070327368206164647265737365732061732074686520736f7572636520616464726573732062757420726571756972657320616e206164646974696f6e616c20696e70757420696e207468652064617461207472616e73616374696f6e2e752102e53b79237cacdc221cff4c0fb320223cac3e0fe30a682a22f19a70a3975aa3f8ad0075740087ffffffff0100000000000000000e6a0c804e42751677319b884a2d1b00000000"
 
-        ctx = backend.deserialize(txHex)
-        vin = ctx.vin[0]
-        asm = script.script_to_asm(vin.scriptSig)
+        ctx = BlockchainParser().deserialize_tx(txHex, True)
+        vin = ctx["vin"][0]
+        asm = script.script_to_asm(vin["scriptSig"])
         new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm)
 
         assert new_data == binascii.unhexlify('1e5a3ae08000000000000000000000000073434950203620737570706f727473207573696e672070327368206164647265737365732061732074686520736f7572636520616464726573732062757420726571756972657320616e206164646974696f6e616c20696e70757420696e207468652064617461207472616e73616374696f6e2e')

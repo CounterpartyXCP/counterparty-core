@@ -29,6 +29,7 @@ from counterpartylib.test.fixtures.scenarios import INTEGRATION_SCENARIOS
 
 from counterpartylib.lib import config, util, database, api, script, arc4
 
+
 # used to increment RPC port between test modules to avoid conflicts
 TEST_RPC_PORT = 9999
 

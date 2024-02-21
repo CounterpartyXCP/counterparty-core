@@ -7,6 +7,7 @@ from bitcoin.core.script import CScriptInvalidError
 from counterpartylib.lib import ledger, script, config, backend, arc4
 from counterpartylib.lib.exceptions import DecodeError, BTCOnlyError
 from counterpartylib.lib.kickstart.utils import ib2h
+from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
 from counterpartylib.lib.transaction_helper import p2sh_encoding
 from counterpartylib.lib.messages import dispenser
 from counterpartylib.lib.opcodes import *
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def arc4_decrypt(cyphertext, decoded_tx):
     '''Un‐obfuscate. Initialise key once per attempt.'''
-    key = arc4.init_arc4(decoded_tx.vin[0].prevout.hash[::-1])
+    key = arc4.init_arc4(decoded_tx["vin"][0]["hash"][::-1])
     return key.decrypt(cyphertext)
 
 
@@ -101,8 +102,13 @@ def get_pubkeyhash(scriptpubkey, block_index):
         return asm[2], config.ADDRESSVERSION
 
 
+def is_witness_v0_keyhash(scriptpubkey):
+        """Returns true if this is a scriptpubkey for V0 P2WPKH. """
+        return len(scriptpubkey) == 22 and scriptpubkey[0:2] == b'\x00\x14'
+
+
 def get_address(scriptpubkey, block_index):
-    if ledger.enabled('correct_segwit_txids') and scriptpubkey.is_witness_v0_keyhash():
+    if ledger.enabled('correct_segwit_txids') and is_witness_v0_keyhash(scriptpubkey):
         address = script.script_to_address(scriptpubkey)
         return address
     else:
@@ -121,21 +127,19 @@ def get_transaction_sources(decoded_tx, block_parser=None):
     sources = []
     outputs_value = 0
 
-    for vin in decoded_tx.vin[:]:                   # Loop through inputs.
+    for vin in decoded_tx["vin"][:]:                   # Loop through inputs.
         scriptPubKey = None
         if block_parser:
-            vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
-            vout = vin_tx["vout"][vin.prevout.n]
-            outputs_value += vout["nValue"]
-            scriptPubKey = vout["scriptPubKey"]
+            vin_ctx = block_parser.read_raw_transaction(ib2h(vin["hash"]))
         else:
             # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
-            vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=None)
-            vin_ctx = backend.deserialize(vin_tx)
-            vout = vin_ctx.vout[vin.prevout.n]
-            outputs_value += vout.nValue
-            scriptPubKey = vout.scriptPubKey
-        
+            vin_tx = backend.getrawtransaction(ib2h(vin["hash"]), block_index=None)
+            vin_ctx = BlockchainParser().deserialize_tx(vin_tx)
+
+        vout = vin_ctx["vout"][vin["n"]]
+        outputs_value += vout["nValue"]
+        scriptPubKey = vout["scriptPubKey"]
+
         asm = script.script_to_asm(scriptPubKey)
 
         if asm[-1] == OP_CHECKSIG:
@@ -172,32 +176,24 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit, block_parser=No
     data = b''
     outputs_value = 0
 
-    for vin in decoded_tx.vin:
+    for vin in decoded_tx["vin"]:
         if block_parser:
-            vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
-
-            if ledger.enabled("prevout_segwit_fix"):
-                prevout_is_segwit = vin_tx['segwit']
-            else:
-                prevout_is_segwit = p2sh_is_segwit
-
-            vout = vin_tx["vout"][vin.prevout.n]
-            outputs_value += vout["nValue"]
+            vin_ctx = block_parser.read_raw_transaction(ib2h(vin["hash"]))
         else:
             # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
-            vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=None)
-            vin_ctx = backend.deserialize(vin_tx)
+            vin_tx = backend.getrawtransaction(ib2h(vin["hash"]), block_index=None)
+            vin_ctx = BlockchainParser().deserialize_tx(vin_tx)
 
-            if ledger.enabled("prevout_segwit_fix"):
-                prevout_is_segwit = vin_ctx.has_witness()
-            else:
-                prevout_is_segwit = p2sh_is_segwit
-            
-            vout = vin_ctx.vout[vin.prevout.n]
-            outputs_value += vout.nValue
+        if ledger.enabled("prevout_segwit_fix"):
+            prevout_is_segwit = len(vin_ctx['vtxinwit']) > 0
+        else:
+            prevout_is_segwit = p2sh_is_segwit
+        
+        vout = vin_ctx["vout"][vin["n"]]
+        outputs_value += vout["nValue"]
 
         # Ignore transactions with invalid script.
-        asm = script.script_to_asm(vin.scriptSig)
+        asm = script.script_to_asm(vin["scriptSig"])
 
         new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm, p2sh_is_segwit=prevout_is_segwit)
         # this could be a p2sh source address with no encoded data
@@ -232,14 +228,14 @@ def parse_transaction_vouts(decoded_tx, p2sh_support):
     # Get destinations and data outputs.
     destinations, btc_amount, fee, data, potential_dispensers = [], 0, 0, b'', []
 
-    for vout in decoded_tx.vout:
+    for vout in decoded_tx["vout"]:
         potential_dispensers.append((None, None))
         # Fee is the input values minus output values.
-        output_value = vout.nValue
+        output_value = vout["nValue"]
         fee -= output_value
 
         # Ignore transactions with invalid script.
-        asm = script.script_to_asm(vout.scriptPubKey)
+        asm = script.script_to_asm(vout["scriptPubKey"])
         if asm[0] == OP_RETURN:
             new_destination, new_data = decode_opreturn(asm, decoded_tx)
         elif asm[-1] == OP_CHECKSIG:
@@ -258,7 +254,7 @@ def parse_transaction_vouts(decoded_tx, p2sh_support):
         elif ledger.enabled('segwit_support') and asm[0] == b'':
             # Segwit Vout, second param is redeemScript
             #redeemScript = asm[1]
-            new_destination = script.script_to_address(vout.scriptPubKey)
+            new_destination = script.script_to_address(vout["scriptPubKey"])
             new_data = None
             if ledger.enabled('correct_segwit_txids'):
                 potential_dispensers[-1] = (new_destination, output_value)
@@ -291,7 +287,7 @@ def get_tx_info_new(db, decoded_tx, block_index, block_parser=None, p2sh_support
     """
 
     # Ignore coinbase transactions.
-    if decoded_tx.is_coinbase():
+    if decoded_tx['coinbase']:
         raise DecodeError('coinbase transaction')
 
     # Get destinations and data outputs.
@@ -349,11 +345,11 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
     # Get destination output and data output.
     destination, btc_amount, data = None, None, b''
     pubkeyhash_encoding = False
-    for vout in decoded_tx.vout:
-        fee -= vout.nValue
+    for vout in decoded_tx["vout"]:
+        fee -= vout["nValue"]
 
         # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
-        asm = script.script_to_asm(vout.scriptPubKey)
+        asm = script.script_to_asm(vout["scriptPubKey"])
         if len(asm) == 2 and asm[0] == OP_RETURN:                                             # OP_RETURN
             if type(asm[1]) != bytes:
                 continue
@@ -368,12 +364,13 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
             data += data_chunk
         elif len(asm) == 5 and (block_index >= 293000 or config.TESTNET or config.REGTEST):    # Protocol change.
             # Be strict.
-            pubkeyhash, address_version = get_pubkeyhash(vout.scriptPubKey, block_index)
+            pubkeyhash, address_version = get_pubkeyhash(vout["scriptPubKey"], block_index)
             if not pubkeyhash:
                 continue
 
-            if decoded_tx.is_coinbase():
+            if decoded_tx["coinbase"]:
                 raise DecodeError('coinbase transaction')
+
             data_pubkey = arc4_decrypt(pubkeyhash, decoded_tx)
             if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
                 pubkeyhash_encoding = True
@@ -387,10 +384,10 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
 
         # Destination is the first output before the data.
         if not destination and not btc_amount and not data:
-            address = get_address(vout.scriptPubKey, block_index)
+            address = get_address(vout["scriptPubKey"], block_index)
             if address:
                 destination = address
-                btc_amount = vout.nValue
+                btc_amount = vout["nValue"]
 
     # Check for, and strip away, prefix (except for burns).
     if destination == config.UNSPENDABLE:
@@ -406,23 +403,23 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
 
     # Collect all possible source addresses; ignore coinbase transactions and anything but the simplest Pay‐to‐PubkeyHash inputs.
     source_list = []
-    for vin in decoded_tx.vin[:]:                                               # Loop through input transactions.
-        if vin.prevout.is_null():
+    for vin in decoded_tx["vin"][:]:                                               # Loop through input transactions.
+
+        if vin["coinbase"]:
             raise DecodeError('coinbase transaction')
+
          # Get the full transaction data for this input transaction.
         scriptPubKey = None
         if block_parser:
-            vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
-            vout = vin_tx["vout"][vin.prevout.n]
-            fee += vout["nValue"]
-            scriptPubKey = vout["scriptPubKey"]
+            vin_ctx = block_parser.read_raw_transaction(ib2h(vin["hash"]))
         else:
             # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
-            vin_tx = backend.getrawtransaction(ib2h(vin.prevout.hash), block_index=None)
-            vin_ctx = backend.deserialize(vin_tx)
-            vout = vin_ctx.vout[vin.prevout.n]
-            fee += vout.nValue
-            scriptPubKey = vout.scriptPubKey
+            vin_tx = backend.getrawtransaction(ib2h(vin["hash"]), block_index=None)
+            vin_ctx = BlockchainParser().deserialize_tx(vin_tx)
+
+        vout = vin_ctx["vout"][vin["n"]]
+        fee += vout["nValue"]
+        scriptPubKey = vout["scriptPubKey"]
 
         address = get_address(scriptPubKey, block_index)
         if not address:

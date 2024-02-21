@@ -52,7 +52,10 @@ def fetch_blocks(bitcoind_dir, db, queue, first_block_index):
 
 class BlockchainParser():
 
-    def __init__(self, bitcoind_dir, db=None, first_block_index=0):
+    def __init__(self, bitcoind_dir=None, db=None, first_block_index=0, queue_size=100):
+        if bitcoind_dir is None: # for deserialize_tx()
+            return
+
         self.blocks_dir = os.path.join(bitcoind_dir, 'blocks')
         self.file_num = -1
         self.current_file_size = 0
@@ -64,7 +67,7 @@ class BlockchainParser():
             self.blocks_leveldb = None
             self.txindex_leveldb_path = os.path.join(bitcoind_dir, 'indexes', 'txindex')
             self.txindex_leveldb = open_leveldb(self.txindex_leveldb_path)
-            self.queue = Queue(1000)
+            self.queue = Queue(queue_size)
             self.fetch_process = Process(target=fetch_blocks, args=(
                 bitcoind_dir, db, self.queue, first_block_index
             ))
@@ -88,7 +91,7 @@ class BlockchainParser():
         tx_in['scriptSig'] = vds.read_bytes(script_sig_size)
         tx_in['nSequence'] = vds.read_uint32()
         tx_in['coinbase'] = False
-        if tx_in['hash'] == '0000000000000000000000000000000000000000000000000000000000000000':
+        if tx_in['hash'] == b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00':
             tx_in['coinbase'] = True
         return tx_in
 
@@ -175,6 +178,7 @@ class BlockchainParser():
         #block_header['__header__'] = b2h(header)
         return block_header
 
+
     def read_block(self, vds, only_header=False, use_txid=True):
         block = self.read_block_header(vds)
         if only_header:
@@ -184,6 +188,7 @@ class BlockchainParser():
         for i in range(block['transaction_count']):
             block['transactions'].append(self.read_transaction(vds, use_txid=use_txid))
         return block
+
 
     def prepare_data_stream(self, file_num, pos_in_file):
         if self.data_stream is None or file_num != self.file_num:
@@ -240,6 +245,18 @@ class BlockchainParser():
         transaction = self.read_transaction(self.data_stream, use_txid=use_txid)
 
         return transaction
+
+
+    def deserialize_tx(self, tx_hex, use_txid=None):
+        ds = BCDataStream()
+        ds.map_hex(tx_hex)
+        if use_txid is None:
+            use_txid = ledger.enabled("correct_segwit_txids")
+        return self.read_transaction(
+            ds,
+            use_txid=use_txid
+        )
+
 
     def close(self):
         if self.current_block_file:
