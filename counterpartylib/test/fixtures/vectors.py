@@ -344,7 +344,7 @@ UNITTEST_VECTOR = {
                         5430,
                         10000,
                         b'\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n',
-                        None)
+                        [])
             },
             # data in OP_CHECKMULTISIG script
             {
@@ -355,7 +355,7 @@ UNITTEST_VECTOR = {
                         5430,
                         10000,
                         b'\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n',
-                        None)
+                        [])
             },
             # data in OP_CHECKMULTISIG script, destination = p2sh
             {
@@ -366,7 +366,7 @@ UNITTEST_VECTOR = {
                         5430,
                         10000,
                         b'\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n',
-                        None)
+                        [])
             },
             {
                 # 2 sources is actually invalid, but pre-first_input_is_source this was the consensus!
@@ -379,7 +379,7 @@ UNITTEST_VECTOR = {
                         5430,
                         10000,
                         b'\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n',
-                        None)
+                        [])
             },
             {
                 'comment': 'data in OP_CHECKMULTISIG script, with first_input_is_source, 1 source',
@@ -390,7 +390,7 @@ UNITTEST_VECTOR = {
                         5430,
                         10000,
                         b'\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n',
-                        None)
+                        [])
             }
         ],
         'get_tx_info_legacy': [
@@ -402,7 +402,7 @@ UNITTEST_VECTOR = {
                         5430,
                         10000,
                         b'\x00\x00\x00(\x00\x00R\xbb3d\x00TESTXXXX\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00TESTXXXX\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00TESTXXXX\x00\x00\x00;\x10\x00\x00\x00\n\x9b\xb3Q\x92(6\xc8\x86\x81i\x87\xe1\x0b\x03\xb8_8v\x8b',
-                        None),
+                        []),
             },
             # # data in OP_CHECKMULTISIG script, unsupported by get_tx_info1
             # {
@@ -425,7 +425,7 @@ UNITTEST_VECTOR = {
                         5430,
                         10000,
                         b'\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n',
-                        None)
+                        [])
             },
             # data in OP_CHECKMULTISIG script
             {
@@ -436,7 +436,7 @@ UNITTEST_VECTOR = {
                         5430,
                         10000,
                         b'\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n',
-                        None)
+                        [])
             },
             # data in OP_CHECKMULTISIG script, destination = p2sh, unsupported by get_tx_info2
             {
@@ -457,7 +457,7 @@ UNITTEST_VECTOR = {
                         5430,
                         10000,
                         b'\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n',
-                        None)
+                        [])
             },
             # data in OP_CHECKMULTISIG script
             {
@@ -470,7 +470,7 @@ UNITTEST_VECTOR = {
                         5430,
                         10000,
                         b'\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n',
-                        None)
+                        [])
             },
             # data in OP_CHECKMULTISIG script, destination = p2sh, unsupported by get_tx_info2
             {
@@ -483,7 +483,7 @@ UNITTEST_VECTOR = {
                         5430,
                         10000,
                         b'\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n',
-                        None)
+                        [])
             },
             {
                 'in': (BlockchainParser().deserialize_tx('0100000001aee668de98ef5f37d4962b620b0ec3deed8bbd4c2fb8ddedaf36c2e8ca5e51a7060000001976a914f3a6b6e4a093e5a5b9da76977a5270fd4d62553e88acffffffff04781e000000000000695121027c6a5e4412be80b5ccd5aa0ea685a21e7a577a5e390d138288841d06514b47992103b00007171817fb044e8a5464e3e274210dd64cf68cca9ea9c3e06df384aae6b22103d928d7d5bbe6f435da935ed382a0061c4a22bdc9b60a2ce6deb7d0f134d22eef53ae781e000000000000695121037c6a5e4412be80b5cc13bde2d9b04fd2cd1fc7ff664c0d3b6d8133163857b08f2103bb6fba40bee91bb02b54835b32f14b9e04016bfa34411ec64f09e3a9586efd5d2103d928d7d5bbe6f435da935ed382a0061c4a22bdc9b60a2ce6deb7d0f134d22eef53ae781e00000000000069512102696a5e4412be80b5ccd6aa0ac9a95e43ca49a21d40f762fadc1aab1c25909fb02102176c68252c6b855d7967aee372f14b772c963b2aa0411ec64f09e3a951eefd3e2103d928d7d5bbe6f435da935ed382a0061c4a22bdc9b60a2ce6deb7d0f134d22eef53aea8d37700000000001976a914f3a6b6e4a093e5a5b9da76977a5270fd4d62553e88ac00000000', use_txid=True),
