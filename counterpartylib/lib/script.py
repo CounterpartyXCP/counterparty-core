@@ -324,7 +324,8 @@ BAD_ADDRESSES = {
     # mainnet
     '675550-bc1qmj7zxs9arakv82c28zrsypj8a3r35fu78jyfldzpfhesu0w4n7tqw23az4': 'bc1qmj7zxs9arakv82c28zrsypj8a3r35fu7pure55',
     '706207-bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupckt6q4mpttt53wcgw5zkqyw35cd': 'bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupc6q5xx6',
-    '709410-bc1qcv6gpxjvmv03ss7renvpdfmltfmjrnsdwy2gdjr8xjmdltcnr4vsth4ze7': 'bc1qcv6gpxjvmv03ss7renvpdfmltfmjrnsdy30wl7'
+    '709410-bc1qcv6gpxjvmv03ss7renvpdfmltfmjrnsdwy2gdjr8xjmdltcnr4vsth4ze7': 'bc1qcv6gpxjvmv03ss7renvpdfmltfmjrnsdy30wl7',
+    '711342-bc1qmfk84cztyfffqdsstthngv6t58xj6tntuc3yr3nmmx4fn7ax696q2jh3y7': 'bc1qmfk84cztyfffqdsstthngv6t58xj6tnt8uf8hc',
 }
 def script_to_address(scriptpubkey):
     try:
