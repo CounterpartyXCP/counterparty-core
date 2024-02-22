@@ -332,6 +332,8 @@ def script_to_address(scriptpubkey):
         else:
             if ledger.CURRENT_BLOCK_INDEX == 675550 and address == "bc1qmj7zxs9arakv82c28zrsypj8a3r35fu78jyfldzpfhesu0w4n7tqw23az4":
                 address = "bc1qmj7zxs9arakv82c28zrsypj8a3r35fu7pure55"
+            elif ledger.CURRENT_BLOCK_INDEX == 706207 and address == "bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupckt6q4mpttt53wcgw5zkqyw35cd":
+                address = "bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupc6q5xx6"
 
         return address
     except BaseException as e:
