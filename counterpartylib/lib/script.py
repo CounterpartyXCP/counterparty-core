@@ -316,7 +316,13 @@ def script_to_asm(scriptpubkey):
     except BaseException as e:
         raise exceptions.DecodeError('invalid script')
 
-
+BAD_ADDRESSES = {
+    '2431884-tb1qudy5g780rm5yxnp9c7atvq6uas957qk2pxc84d26uv84w4c3jd8qay4mhj': 'tb1qudy5g780rm5yxnp9c7atvq6uas957qk2jrekv4',
+    '2434482-tb1qu9ns8lzf2lylqk04yv6ax5rrywkm8kl543u3xxh75n0pta3pue4qhuh94m': 'tb1qu9ns8lzf2lylqk04yv6ax5rrywkm8kl5u606fz',
+    '675550-bc1qmj7zxs9arakv82c28zrsypj8a3r35fu78jyfldzpfhesu0w4n7tqw23az4': 'bc1qmj7zxs9arakv82c28zrsypj8a3r35fu7pure55',
+    '706207-bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupckt6q4mpttt53wcgw5zkqyw35cd': 'bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupc6q5xx6',
+    '709410-bc1qcv6gpxjvmv03ss7renvpdfmltfmjrnsdwy2gdjr8xjmdltcnr4vsth4ze7': 'bc1qcv6gpxjvmv03ss7renvpdfmltfmjrnsdy30wl7'
+}
 def script_to_address(scriptpubkey):
     try:
         network = 'mainnet' if config.TESTNET == False else 'testnet'
@@ -324,18 +330,8 @@ def script_to_address(scriptpubkey):
         address = utils.script_to_address(script, network)
 
          # reproduce bug with the old decode_p2w() function
-        if config.TESTNET:
-            if ledger.CURRENT_BLOCK_INDEX == 2431884 and address == "tb1qudy5g780rm5yxnp9c7atvq6uas957qk2pxc84d26uv84w4c3jd8qay4mhj":
-                address = "tb1qudy5g780rm5yxnp9c7atvq6uas957qk2jrekv4"
-            elif ledger.CURRENT_BLOCK_INDEX == 2434482 and address == "tb1qu9ns8lzf2lylqk04yv6ax5rrywkm8kl543u3xxh75n0pta3pue4qhuh94m":
-                address = "tb1qu9ns8lzf2lylqk04yv6ax5rrywkm8kl5u606fz"
-        else:
-            if ledger.CURRENT_BLOCK_INDEX == 675550 and address == "bc1qmj7zxs9arakv82c28zrsypj8a3r35fu78jyfldzpfhesu0w4n7tqw23az4":
-                address = "bc1qmj7zxs9arakv82c28zrsypj8a3r35fu7pure55"
-            elif ledger.CURRENT_BLOCK_INDEX == 706207 and address == "bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupckt6q4mpttt53wcgw5zkqyw35cd":
-                address = "bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupc6q5xx6"
-            elif ledger.CURRENT_BLOCK_INDEX == 709410 and address == "bc1qcv6gpxjvmv03ss7renvpdfmltfmjrnsdwy2gdjr8xjmdltcnr4vsth4ze7":
-                address = "bc1qcv6gpxjvmv03ss7renvpdfmltfmjrnsdy30wl7"
+        if f"{ledger.CURRENT_BLOCK_INDEX}-{address}" in BAD_ADDRESSES:
+            address = BAD_ADDRESSES[f"{ledger.CURRENT_BLOCK_INDEX}-{address}"]
 
         return address
     except BaseException as e:
