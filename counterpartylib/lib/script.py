@@ -316,9 +316,12 @@ def script_to_asm(scriptpubkey):
     except BaseException as e:
         raise exceptions.DecodeError('invalid script')
 
+# f'{block_index}-{script_to_address(scriptpubkey)}': f'{decode_p2w(scriptpubkey)}'
 BAD_ADDRESSES = {
+    # tesnet
     '2431884-tb1qudy5g780rm5yxnp9c7atvq6uas957qk2pxc84d26uv84w4c3jd8qay4mhj': 'tb1qudy5g780rm5yxnp9c7atvq6uas957qk2jrekv4',
     '2434482-tb1qu9ns8lzf2lylqk04yv6ax5rrywkm8kl543u3xxh75n0pta3pue4qhuh94m': 'tb1qu9ns8lzf2lylqk04yv6ax5rrywkm8kl5u606fz',
+    # mainnet
     '675550-bc1qmj7zxs9arakv82c28zrsypj8a3r35fu78jyfldzpfhesu0w4n7tqw23az4': 'bc1qmj7zxs9arakv82c28zrsypj8a3r35fu7pure55',
     '706207-bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupckt6q4mpttt53wcgw5zkqyw35cd': 'bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupc6q5xx6',
     '709410-bc1qcv6gpxjvmv03ss7renvpdfmltfmjrnsdwy2gdjr8xjmdltcnr4vsth4ze7': 'bc1qcv6gpxjvmv03ss7renvpdfmltfmjrnsdy30wl7'
