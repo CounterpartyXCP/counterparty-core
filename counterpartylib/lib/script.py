@@ -328,6 +328,7 @@ BAD_ADDRESSES = {
     '711342-bc1qmfk84cztyfffqdsstthngv6t58xj6tntuc3yr3nmmx4fn7ax696q2jh3y7': 'bc1qmfk84cztyfffqdsstthngv6t58xj6tnt8uf8hc',
     '711417-bc1q08udlxcvdjmrenecx26lnlt6kp67lsnxttaarn3j6zj2hld07fgsn4avkh': 'bc1q08udlxcvdjmrenecx26lnlt6kp67lsnxzd2ag8',
     '713108-bc1qnewecfxr65eplygyw2xsng2uuvsgh6wpk6p33gsnx3rwq4jl3n9qyesnlw': 'bc1qnewecfxr65eplygyw2xsng2uuvsgh6wpkgyjsz',
+    '717322-bc1ql3gt2uk4pyr67s8hn40y3qlrvwn5r7nftx85nks3skv0sjuq39rqxdjf2g': 'bc1ql3gt2uk4pyr67s8hn40y3qlrvwn5r7nfp0c57p',
 }
 def script_to_address(scriptpubkey):
     try:
