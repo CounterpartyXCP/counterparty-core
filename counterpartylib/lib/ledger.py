@@ -514,15 +514,16 @@ def get_asset_issued(db, address):
     return cursor.fetchall()
 
 
-# TODO: try to that with one SQL query
 def get_asset_balances(db, asset):
     cursor = db.cursor()
     query = f'''
-        SELECT address, asset, quantity, MAX(rowid)
-        FROM balances
-        WHERE asset = ?
-        GROUP BY address, asset
-        ORDER BY address
+        SELECT * FROM (
+            SELECT address, asset, quantity, MAX(rowid)
+            FROM balances
+            WHERE asset = ?
+            GROUP BY address, asset
+            ORDER BY address
+        ) WHERE quantity > 0
     '''
     bindings = (asset,)
     cursor.execute(query, bindings)
