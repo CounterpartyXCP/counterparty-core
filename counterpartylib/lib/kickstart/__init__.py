@@ -231,7 +231,7 @@ def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_s
             message += f" Expected duration: {expected_duration:.3f}s."
             print(message, end="\r")
             # get next block
-            if debug_block is not None:
+            if debug_block is not None and block['block_index'] == int(debug_block):
                 block = None
             else:
                 block = block_parser.next_block()
