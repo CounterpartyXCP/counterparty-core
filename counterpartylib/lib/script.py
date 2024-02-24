@@ -6,6 +6,7 @@ Naming convention: a `pub` is either a pubkey or a pubkeyhash
 
 import hashlib
 import binascii
+import functools
 
 import bitcoin as bitcoinlib
 from bitcoin.core.key import CPubKey
@@ -286,6 +287,7 @@ def bech32_to_scripthash(address):
     return bytes(bech32)
 
 
+@functools.cache
 def get_asm(scriptpubkey):
     # TODO: When is an exception thrown here? Can this `try` block be tighter? Can it be replaced by a conditional?
     try:
@@ -305,6 +307,7 @@ def get_asm(scriptpubkey):
     return asm
 
 
+@functools.cache
 def script_to_asm(scriptpubkey):
     try:
         script = bytes(scriptpubkey, 'utf-8') if type(scriptpubkey) == str else bytes(scriptpubkey)
@@ -315,6 +318,7 @@ def script_to_asm(scriptpubkey):
         return asm
     except BaseException as e:
         raise exceptions.DecodeError('invalid script')
+
 
 # f'{block_index}-{script_to_address(scriptpubkey)}': f'{decode_p2w(scriptpubkey)}'
 BAD_ADDRESSES = {
@@ -329,16 +333,44 @@ BAD_ADDRESSES = {
     '711417-bc1q08udlxcvdjmrenecx26lnlt6kp67lsnxttaarn3j6zj2hld07fgsn4avkh': 'bc1q08udlxcvdjmrenecx26lnlt6kp67lsnxzd2ag8',
     '713108-bc1qnewecfxr65eplygyw2xsng2uuvsgh6wpk6p33gsnx3rwq4jl3n9qyesnlw': 'bc1qnewecfxr65eplygyw2xsng2uuvsgh6wpkgyjsz',
     '717322-bc1ql3gt2uk4pyr67s8hn40y3qlrvwn5r7nftx85nks3skv0sjuq39rqxdjf2g': 'bc1ql3gt2uk4pyr67s8hn40y3qlrvwn5r7nfp0c57p',
+    '718552-bc1qwzj0jxl65ze5a9hqrmnr8ygycgsvctratf7d0rd5tqrj4swq8zws4eg8u3': 'bc1qwzj0jxl65ze5a9hqrmnr8ygycgsvctra2krt2y',
+    '718926-bc1qtjfmsnaa3zte7avxgpc5tp3n8dvksa7qqv2ftvmjmuf6vlgva0vsjw8xmf': 'bc1qtjfmsnaa3zte7avxgpc5tp3n8dvksa7qzjxegv',
+    '719361-bc1qh6awyk7mljfh8m6dt4c9grsaq3u9khytt0ktgl3npusnzt02ke5qknu3da': 'bc1qh6awyk7mljfh8m6dt4c9grsaq3u9khytq5xv6q',
+    '719804-bc1qf8fhznt8lnnrc24zjskxrghvvfngjpgfe8ssp5t9ppfmzm0a7yzqelly03': 'bc1qf8fhznt8lnnrc24zjskxrghvvfngjpgffu9z48',
+    '720270-bc1qaxjsnmkem70y4kh089fr9cll0aecqv4afmujlw4j5k9d7n82hc3qdngalk': 'bc1qaxjsnmkem70y4kh089fr9cll0aecqv4aechlaj',
+    '721335-bc1q7lxr8c9r8fx7a3e79r3ycp0uycchl5jugvy6pnfp8j6rg56avh6qz8wx42': 'bc1q7lxr8c9r8fx7a3e79r3ycp0uycchl5juljxq6a',
+    '722422-bc1qwzj0jxl65ze5a9hqrmnr8ygycgsvctratf7d0rd5tqrj4swq8zws4eg8u3': 'bc1qwzj0jxl65ze5a9hqrmnr8ygycgsvctra2krt2y',
+    '722741-bc1qry2hcfl067vaqdq3khry6engj0gpmweepevp75qd8efcwl8j0wsqvzzce9': 'bc1qry2hcfl067vaqdq3khry6engj0gpmwee58dzer',
+    '723213-bc1qfx8s3d7vj2m82hcdqpc4yeafng9ydqrqcgmz3dtdwetm95ua3ups7adl56': 'bc1qfx8s3d7vj2m82hcdqpc4yeafng9ydqrqyzq4st',
+    '724942-bc1qvketfkv0c6sv4x023ae4aprly7xvqcuad2dmqpdflf0t7rd0ewwsq55z46': 'bc1qvketfkv0c6sv4x023ae4aprly7xvqcua2nhqqr',
+    '724954-bc1q9wu266dexw0upuvme627uyhj9c4agtxr5gvdkm7f6w5dpahnlwfqfexmdy': 'bc1q9wu266dexw0upuvme627uyhj9c4agtxrvplk6n',
+    '725761-bc1qtsafn3yp7ldnk0n8xhl8qajc3ex3vdlehn67x6422g9ffkpn5jqquv268u': 'bc1qtsafn3yp7ldnk0n8xhl8qajc3ex3vdlehgz8r6',
+    '725906-bc1qwzj0jxl65ze5a9hqrmnr8ygycgsvctratf7d0rd5tqrj4swq8zws4eg8u3': 'bc1qwzj0jxl65ze5a9hqrmnr8ygycgsvctra2krt2y',
+    '727175-bc1qwe27pg5khnlavdess22xv476ur3v6ftzc8yrk8cwudtfc23hptssgwvl6c': 'bc1qwe27pg5khnlavdess22xv476ur3v6ftzha7ay8',
+    '730719-bc1q7vlsdw4ya0m0h87jpf3u8x3fzeqp787nllt0ehmgqyz5s7ejknxqplrwx2': 'bc1q7vlsdw4ya0m0h87jpf3u8x3fzeqp787nxp7zrz',
+    '730884-bc1qq3rljq7rej7z80eqkm0xpmag0wdvcrvk2qpaj46msp369fp2cegs86q8xr': 'bc1qq3rljq7rej7z80eqkm0xpmag0wdvcrvkwaqfll',
+    '732351-bc1qmp4aq6zvm2nzny75yqyrptdtp4f3nur8ypt395c0msdylm0tp8asgj6j97': 'bc1qmp4aq6zvm2nzny75yqyrptdtp4f3nur86nhkmx',
+    '732701-bc1qlkacwq8nhylu58p4xquaczq83edtdukpwg8wnnulk5sq7zzc3sjscfhsc9': 'bc1qlkacwq8nhylu58p4xquaczq83edtdukp5ug39a',
+    '732705-bc1qelquv8hf7km6dg77t2ft8kln873509wtcd38jmvv3y47kkdgh5hqu3feay': 'bc1qelquv8hf7km6dg77t2ft8kln873509wtqefdqz',
+    '734920-bc1ql9wn97d2xhpkpvvxldhg82kr6eplsv434fkd80n6vg29kpdqsw6ses9ea8': 'bc1ql9wn97d2xhpkpvvxldhg82kr6eplsv43j0h62q',
+    '738151-bc1qcd52n69ps78tjumlky5dxm7g6e5aer48lkyjyqja9mwtadsk5q2qjtrsc9': 'bc1qcd52n69ps78tjumlky5dxm7g6e5aer48p05xzn',
+    '738151-bc1q9lcmgf3t89txr3ncmehp2l6h94ppsvc839pcldgdtcd33yfextssnd4efk': 'bc1q9lcmgf3t89txr3ncmehp2l6h94ppsvc87a6hn9',
+    '740527-bc1qjgchsxj0ra0x4frvfw45y3nwhwpxgrtljtnwwulcvuh3wpzy3xkst0e2xt': 'bc1qjgchsxj0ra0x4frvfw45y3nwhwpxgrtlqvh54n',
+    '746425-bc1qwfgdjyy95aay2686fn74h6a4nu9eev6np7q4fn204dkj3274frlqrskvx0': 'bc1qwfgdjyy95aay2686fn74h6a4nu9eev6np0mzee',
+    '747656-bc1qz707axlr7wtvy6k7lesde52jecpeeqe2qahg8vkdc47469g588nqpmsq0u': 'bc1qz707axlr7wtvy6k7lesde52jecpeeqe2lmrehl',
+    '752024-bc1q08fy7sv8p59ly4mrfuccd6kwwqsaq04mmjwfxvt9ls4vm2l2s8lsrls7ws': 'bc1q08fy7sv8p59ly4mrfuccd6kwwqsaq04mspyrv0',
 }
+
+#@functools.cache
 def script_to_address(scriptpubkey):
     try:
         network = 'mainnet' if config.TESTNET == False else 'testnet'
         script = bytes(scriptpubkey, 'utf-8') if type(scriptpubkey) == str else bytes(scriptpubkey)
+
         address = utils.script_to_address(script, network)
 
-         # reproduce bug with the old decode_p2w() function
-        if f"{ledger.CURRENT_BLOCK_INDEX}-{address}" in BAD_ADDRESSES:
-            address = BAD_ADDRESSES[f"{ledger.CURRENT_BLOCK_INDEX}-{address}"]
+        # reproduce bug with the old decode_p2w() function
+        address = BAD_ADDRESSES.get(f"{ledger.CURRENT_BLOCK_INDEX}-{address}", address)
 
         return address
     except BaseException as e:
