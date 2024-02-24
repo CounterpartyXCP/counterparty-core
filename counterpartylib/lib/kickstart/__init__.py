@@ -115,11 +115,11 @@ def copy_disk_db_to_memory(local_base, memory_db, resume_from):
     return prepare_db_for_resume(memory_db, resume_from)
 
 
-def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_size=None, debug_block=None):
+def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_size=None, debug_block=None, use_disk_db=False):
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     signal.signal(signal.SIGINT, signal.default_int_handler)
 
-    use_memory_db = True
+    use_memory_db = not use_disk_db
     if debug_block is not None:
         use_memory_db = False
         resume_from = int(debug_block) - 1
