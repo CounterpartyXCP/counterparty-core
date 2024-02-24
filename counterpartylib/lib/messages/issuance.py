@@ -522,7 +522,7 @@ def parse (db, tx, message, message_type_id):
 
         if len(balances_result) <= 1:
             if len(balances_result) == 0:
-                issuances_result = ledger.get_issuances(db, asset=asset, first=True)
+                issuances_result = ledger.get_issuances(db, asset=asset, last=True)
 
                 owner_balance = 0
                 owner_address = issuances_result[0]['issuer']
