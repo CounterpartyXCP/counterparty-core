@@ -67,18 +67,22 @@ export ADDRINDEXRS_COOKIE=rpc:rpc
 export ADDRINDEXRS_INDEXER_RPC_ADDR=0.0.0.0:8432
 export ADDRINDEXRS_DAEMON_RPC_ADDR=localhost:8332
 cargo build --release
+ulimit -n 8192
 cargo run --release -- -vvv
 ```
 
 Now, download and install `counterparty-lib`:
 
-Make sure ~/.local/bin is in $PATH.
+Make sure `~/.local/bin` is in your `$PATH`, as well as `$HOME/.cargo/bin`.
+
+**Note:** Python 3.11 is currently required.
 
 ```bash
 sudo apt install python3-pip
 git clone https://github.com/CounterpartyXCP/counterparty-lib.git
 brew install leveldb                                                # macOS-only
 CFLAGS="-I/opt/homebrew/include -L/opt/homebrew/lib"                # macOS-only
+cargo install maturin
 pip3 install -e .
 ```
 
