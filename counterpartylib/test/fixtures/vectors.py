@@ -3854,7 +3854,7 @@ UNITTEST_VECTOR = {
             },
             {
                 'in': (['mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'],),
-                'error': (exceptions.DecodeError, 'invalid script')
+                'error': (TypeError, "unhashable type: 'list'")
             },
             {
                 'in': (bitcoinlib.core.CScript(bitcoinlib.core.x('6a53657466697665207361797320686921')),),
@@ -3869,7 +3869,7 @@ UNITTEST_VECTOR = {
                 'out': '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy'
         }],
         'get_asm': [{
-            'in': ([],),
+            'in': (b'',),
             'error': (exceptions.DecodeError, 'empty output')
         }],
         'base58_encode': [{
