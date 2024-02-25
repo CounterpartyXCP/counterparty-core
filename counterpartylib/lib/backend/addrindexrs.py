@@ -40,6 +40,7 @@ def rpc_call(payload):
     url = config.BACKEND_URL
     response = None
     TRIES = 12
+
     for i in range(TRIES):
         try:
             response = requests.post(url, data=json.dumps(payload), headers={'content-type': 'application/json'},
