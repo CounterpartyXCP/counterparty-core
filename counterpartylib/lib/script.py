@@ -381,6 +381,26 @@ BAD_ADDRESSES = {
     '801560-bc1qm00nan6e87c9af33gm4a2ujc0qvjj5lqj7lfu7sw7yfrr5mm8epqejmuqj': 'bc1qm00nan6e87c9af33gm4a2ujc0qvjj5lq9vjkve',
     '801574-bc1qfvkmkxyxhcvqk0s7vckatp60mxht9gwq2z660pmj2pgrj0dgqp2s782qlm': 'bc1qfvkmkxyxhcvqk0s7vckatp60mxht9gwq86hhx2',
     '802911-bc1q7mdlmz382xzrx5z0mcu3862uczqezql0uusru4na6rtrkjg0z55qkgpzm9': 'bc1q7mdlmz382xzrx5z0mcu3862uczqezql02ef2rd',
+    '804444-bc1qp2g69mfm4m6whdufxq9mslp5cu6khny4l0v4pp3qgn6k705gkvzs7sf3n9': 'bc1qp2g69mfm4m6whdufxq9mslp5cu6khny473d57u',
+    '805083-bc1qp4ds9qqkhutk3up0jr679gtdlr4z5emp2yu7am9ljae07lm8n2wq4sc8gu': 'bc1qp4ds9qqkhutk3up0jr679gtdlr4z5empmymk09',
+    '805371-bc1qx6slrx7nyy0hn20ejn2s0xdjr43xrjzjqrzac8h46v3pqjlhuz0qksurnz': 'bc1qx6slrx7nyy0hn20ejn2s0xdjr43xrjzjq3qs6l',
+    '805691-bc1qjrp0hkghkj20x8a53dulvwstda0lfs22357wp8j57dfck2dy5q6skqx3ed': 'bc1qjrp0hkghkj20x8a53dulvwstda0lfs22a3dv85',
+    '806505-bc1qrv9uz6e3zlak8tuaj44swgtwt0g8zt68z5ujrt5vmmjad5jmvmpqp5dh09': 'bc1qrv9uz6e3zlak8tuaj44swgtwt0g8zt68sxnc5u',
+    '807030-bc1qwfgdjyy95aay2686fn74h6a4nu9eev6np7q4fn204dkj3274frlqrskvx0': 'bc1qwfgdjyy95aay2686fn74h6a4nu9eev6np0mzee',
+    '808462-bc1q6jn5ymkta9n5gtqedl7ttu8fkvqvnfy30gkjv2u02h86xgu8qzqsvg44jx': 'bc1q6jn5ymkta9n5gtqedl7ttu8fkvqvnfy373zvqx',
+    '809814-bc1qknv5w4y5lup0m3dzla5249lkd0uupr6hr0xjpv9rq68y5fdfug4q4r722s': 'bc1qknv5w4y5lup0m3dzla5249lkd0uupr6h5nqfcd',
+    '810256-bc1q6j98pk2xkmu95mtgj5vk3gt37zr3jkqng5sau5na47d8xrknrkzqpe8rv4': 'bc1q6j98pk2xkmu95mtgj5vk3gt37zr3jkqnr43at6',
+    '810670-bc1q46jrn9s6rz7syjr93kujp7hmewaadsl5ddrv0gd40qzcnqt7ynpsua4y37': 'bc1q46jrn9s6rz7syjr93kujp7hmewaadsl5rlxv7f',
+    '811542-bc1q6mh8jk0xa04lfh27fwcm03585n0lcygkht4g3srf2cpa4cjmlruq75fa0a': 'bc1q6mh8jk0xa04lfh27fwcm03585n0lcygkelwtps',
+    '811847-bc1qahn8wtngd4mdnthjknp7vlhzuqe7mahkrqscgg9q8ngw6n82hwfsk33k5e': 'bc1qahn8wtngd4mdnthjknp7vlhzuqe7mahk9nwyr3',
+    '813766-bc1q96a40aftulh8fhkq30gqllp5y70uz02hyshuus2tgvswq26f72jq329spz': 'bc1q96a40aftulh8fhkq30gqllp5y70uz02h2lms00',
+    '813991-bc1q9p3x7hma6p8gckq9dg8qpp8e5cs955tzfeyhhvk5m3utte9etujs2ra046': 'bc1q9p3x7hma6p8gckq9dg8qpp8e5cs955tz6fzz9u',
+    '814379-bc1qlmjaracv3dkxqpf75jnhpev8uptexmr8ctl8a0nrptgftqlfw5lqtdkdc5': 'bc1qlmjaracv3dkxqpf75jnhpev8uptexmr8hlsjqa',
+    '814436-bc1qvhvwd5a4pfm2p856t9xwws2p4jcs0s49uwen0m8akaawvq8x5hnq9n7t05': 'bc1qvhvwd5a4pfm2p856t9xwws2p4jcs0s49vq0236',
+    '814513-bc1qduennc6trafx8ne6khgzrwvw8tn96h0jw3u89puxgge6gedkttzq08fnd0': 'bc1qduennc6trafx8ne6khgzrwvw8tn96h0jtr92e6',
+    '815732-bc1qnl03w2lgs82fgrjwe7fkuqwlsk7275t89k0tml9rr02nzqlet7hq6c4r24': 'bc1qnl03w2lgs82fgrjwe7fkuqwlsk7275t8kdwvw3',
+    '815966-bc1qvrjuk7t779q607v8m36yy0j7rscnvl4mxenn0klfvjy5ph93mflssd7qrc': 'bc1qvrjuk7t779q607v8m36yy0j7rscnvl4m5k37jq',
+
 }
 
 #@functools.cache
