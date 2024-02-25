@@ -884,7 +884,7 @@ def get_pending_dispensers(db, status, delay, block_index):
             (SELECT d.*, t.source AS tx_source, t.block_index AS tx_block_index, MAX(d.rowid) AS rowid
             FROM dispensers AS d
             LEFT JOIN transactions t ON t.tx_hash = d.last_status_tx_hash
-            WHERE :block_index >= t.block_index + :delay
+            WHERE :block_index = t.block_index + :delay
             GROUP BY d.source, d.asset)
         WHERE status = :status
         AND last_status_tx_hash IS NOT NULL
