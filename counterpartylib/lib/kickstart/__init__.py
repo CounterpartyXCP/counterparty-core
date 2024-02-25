@@ -170,6 +170,9 @@ def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_s
     if use_memory_db:
         config.DATABASE = ':memory:'
     kickstart_db = server.initialise_db()
+    cursor = kickstart_db.cursor()
+    cursor.execute('PRAGMA auto_vacuum = 1')
+    cursor.close()
 
     if os.path.exists(local_base) and resume_from is not None:
         if use_memory_db:
