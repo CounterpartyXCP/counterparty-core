@@ -40,7 +40,6 @@ def rpc_call(payload):
     url = config.BACKEND_URL
     response = None
     TRIES = 12
-
     for i in range(TRIES):
         try:
             response = requests.post(url, data=json.dumps(payload), headers={'content-type': 'application/json'},
@@ -281,6 +280,8 @@ class AddrIndexRsThread (threading.Thread):
         self.message_to_send = None
         self.message_result = None
         self.is_killed = False
+
+        print(host, port)
 
     def stop(self):
         logger.warn('Killing address indexer connection thread.')
@@ -539,6 +540,7 @@ def getindexblocksbehind():
 
 def init():
     global Indexer_Thread
+    print(config.INDEXD_PORT)
     Indexer_Thread = AddrIndexRsThread(config.INDEXD_CONNECT, config.INDEXD_PORT)
     Indexer_Thread.daemon = True
     Indexer_Thread.start()

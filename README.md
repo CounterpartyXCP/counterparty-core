@@ -37,7 +37,6 @@ Download the latest [Bitcoin Core](https://github.com/bitcoin/bitcoin/releases) 
 a `bitcoin.conf` file (by default located in `~.bitcoin/`) with the following options:
 
 ```
-rpcport=8332
 rpcuser=rpc
 rpcpassword=rpc
 server=1
@@ -64,8 +63,6 @@ cd addrindexrs
 export ADDRINDEXRS_JSONRPC_IMPORT=1
 export ADDRINDEXRS_TXID_LIMIT=15000
 export ADDRINDEXRS_COOKIE=rpc:rpc
-export ADDRINDEXRS_INDEXER_RPC_ADDR=0.0.0.0:8432
-export ADDRINDEXRS_DAEMON_RPC_ADDR=localhost:8332
 cargo build --release
 ulimit -n 8192
 cargo run --release -- -vvv

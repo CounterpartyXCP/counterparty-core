@@ -230,7 +230,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     if backend_user:
         config.BACKEND_USER = backend_user
     else:
-        config.BACKEND_USER = 'bitcoinrpc'
+        config.BACKEND_USER = 'rpc'
 
     # Backend Core RPC password (Bitcoin Core)
     if backend_password:
@@ -449,6 +449,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
         config.ESTIMATE_FEE_PER_KB = estimate_fee_per_kb
 
     logger.info('Running v{} of counterparty-lib.'.format(config.VERSION_STRING))
+    print(config.BACKEND_PORT, config.INDEXD_PORT, config.BACKEND_USER)
 
 
 def initialise_db():
