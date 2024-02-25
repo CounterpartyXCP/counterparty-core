@@ -400,7 +400,7 @@ BAD_ADDRESSES = {
     '814513-bc1qduennc6trafx8ne6khgzrwvw8tn96h0jw3u89puxgge6gedkttzq08fnd0': 'bc1qduennc6trafx8ne6khgzrwvw8tn96h0jtr92e6',
     '815732-bc1qnl03w2lgs82fgrjwe7fkuqwlsk7275t89k0tml9rr02nzqlet7hq6c4r24': 'bc1qnl03w2lgs82fgrjwe7fkuqwlsk7275t8kdwvw3',
     '815966-bc1qvrjuk7t779q607v8m36yy0j7rscnvl4mxenn0klfvjy5ph93mflssd7qrc': 'bc1qvrjuk7t779q607v8m36yy0j7rscnvl4m5k37jq',
-
+    '820818-bc1qpx40lk8luqqpqjjxf9rqqqgpqyqysqzgqqq0lkcqgvqpqzcvpcxqlnp0ns': 'bc1qpx40lk8luqqpqjjxf9rqqqgpqyqysqzg3hra0j',
 }
 
 #@functools.cache
