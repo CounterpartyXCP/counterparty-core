@@ -281,8 +281,6 @@ class AddrIndexRsThread (threading.Thread):
         self.message_result = None
         self.is_killed = False
 
-        print(host, port)
-
     def stop(self):
         logger.warn('Killing address indexer connection thread.')
         self.send({"kill": True})
@@ -540,7 +538,6 @@ def getindexblocksbehind():
 
 def init():
     global Indexer_Thread
-    print(config.INDEXD_PORT)
     Indexer_Thread = AddrIndexRsThread(config.INDEXD_CONNECT, config.INDEXD_PORT)
     Indexer_Thread.daemon = True
     Indexer_Thread.start()
