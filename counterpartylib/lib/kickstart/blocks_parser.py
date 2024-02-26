@@ -2,6 +2,7 @@ import os, logging, binascii, time
 from multiprocessing import Process, JoinableQueue
 from collections import OrderedDict
 import pickle
+import signal
 
 import apsw
 
@@ -30,6 +31,9 @@ def open_leveldb(db_dir):
 
 
 def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config):
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)
+    signal.signal(signal.SIGINT, signal.default_int_handler)
+
     config.REGTEST = parser_config['REGTEST']
     config.TESTNET = parser_config['TESTNET']
     db = apsw.Connection(db_path, flags=apsw.SQLITE_OPEN_READONLY)
@@ -55,6 +59,7 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
     finally:
         parser.close()
         cursor.close()
+        db.close()
 
 
 class BlockchainParser():
