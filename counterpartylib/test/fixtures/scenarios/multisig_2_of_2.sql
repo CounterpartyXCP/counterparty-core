@@ -1494,7 +1494,7 @@ CREATE TABLE dispensers(
                                 give_remaining INTEGER,
                                 oracle_address TEXT,
                                 last_status_tx_hash TEXT,
-                                origin TEXT);
+                                origin TEXT, dispense_count INTEGER DEFAULT 0);
 -- Triggers and indices on  dispensers
 CREATE TRIGGER block_update_dispensers
                            BEFORE UPDATE ON dispensers BEGIN
@@ -1551,6 +1551,8 @@ CREATE TRIGGER block_update_dispenses
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
 CREATE INDEX dispenses_block_index_idx ON dispenses (block_index)
+        ;
+CREATE INDEX dispenses_dispenser_tx_hash_idx ON dispenses (dispenser_tx_hash)
         ;
 CREATE INDEX dispenses_tx_hash_idx ON dispenses (tx_hash)
         ;
