@@ -37,7 +37,8 @@ def fetch_blocks(bitcoind_dir, db, queue, first_block_index):
                             ''',
                             (first_block_index ,))
         for db_block in cursor:
-            while queue.full():
+            if queue.full():
+                logger.warning('Queue is full, sleeping for 1 second.')
                 time.sleep(1)
             block = parser.read_raw_block(
                 db_block['block_hash'], 
