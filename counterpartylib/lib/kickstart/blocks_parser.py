@@ -1,5 +1,5 @@
 import os, logging, binascii, time
-from multiprocessing import Process, Queue
+from multiprocessing import Process, JoinableQueue
 from collections import OrderedDict
 
 from .bc_data_stream import BCDataStream
@@ -38,8 +38,8 @@ def fetch_blocks(bitcoind_dir, db, queue, first_block_index):
                             (first_block_index ,))
         for db_block in cursor:
             if queue.full():
-                logger.warning('Queue is full, sleeping for 1 second.')
-                time.sleep(1)
+                logger.warning('Queue is full, waiting for blocks to be parsed.')
+                queue.join()
             block = parser.read_raw_block(
                 db_block['block_hash'], 
                 use_txid=ledger.enabled("correct_segwit_txids", block_index=db_block['block_index'])
@@ -68,7 +68,7 @@ class BlockchainParser():
             self.blocks_leveldb = None
             self.txindex_leveldb_path = os.path.join(bitcoind_dir, 'indexes', 'txindex')
             self.txindex_leveldb = open_leveldb(self.txindex_leveldb_path)
-            self.queue = Queue(queue_size)
+            self.queue = JoinableQueue(queue_size)
             self.fetch_process = Process(target=fetch_blocks, args=(
                 bitcoind_dir, db, self.queue, first_block_index
             ))
@@ -82,6 +82,9 @@ class BlockchainParser():
 
     def next_block(self):
         return self.queue.get()
+
+    def block_parsed(self):
+        self.queue.task_done()
 
 
     def read_tx_in(self, vds):
