@@ -222,8 +222,6 @@ def get_dispensers_outputs(db, potential_dispensers):
             continue
         if dispenser.is_dispensable(db, destination, btc_amount):
             outputs.append((destination, btc_amount))
-            if not ledger.enabled("multiple_dispenses"):
-                break
     return outputs
 
 

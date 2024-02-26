@@ -514,8 +514,7 @@ def get_asset_issued(db, address):
     return cursor.fetchall()
 
 
-# TODO: try to that with one SQL query
-def get_asset_balances(db, asset):
+def get_asset_balances(db, asset, exclude_zero_balances=True):
     cursor = db.cursor()
     query = f'''
         SELECT address, asset, quantity, MAX(rowid)
@@ -524,6 +523,12 @@ def get_asset_balances(db, asset):
         GROUP BY address, asset
         ORDER BY address
     '''
+    if exclude_zero_balances:
+        query = f'''
+            SELECT * FROM (
+                {query}
+            ) WHERE quantity > 0
+        '''
     bindings = (asset,)
     cursor.execute(query, bindings)
     return cursor.fetchall()
@@ -558,7 +563,7 @@ def get_asset_info(db, asset):
     return issuances[0]
 
 
-def get_issuances(db, asset=None, status=None, locked=None, first=False):
+def get_issuances(db, asset=None, status=None, locked=None, first=False, last=False):
     cursor = db.cursor()
     cursor = db.cursor()
     where = []
@@ -575,6 +580,8 @@ def get_issuances(db, asset=None, status=None, locked=None, first=False):
     query = f'''SELECT * FROM issuances WHERE ({" AND ".join(where)})'''
     if first:
         query += f''' ORDER BY tx_index ASC'''
+    elif last:
+        query += f''' ORDER BY tx_index DESC'''
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -877,7 +884,7 @@ def get_pending_dispensers(db, status, delay, block_index):
             (SELECT d.*, t.source AS tx_source, t.block_index AS tx_block_index, MAX(d.rowid) AS rowid
             FROM dispensers AS d
             LEFT JOIN transactions t ON t.tx_hash = d.last_status_tx_hash
-            WHERE :block_index >= t.block_index + :delay
+            WHERE :block_index = t.block_index + :delay
             GROUP BY d.source, d.asset)
         WHERE status = :status
         AND last_status_tx_hash IS NOT NULL
