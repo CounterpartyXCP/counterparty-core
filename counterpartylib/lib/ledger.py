@@ -707,6 +707,14 @@ def get_transactions(db, tx_hash=None):
     return cursor.fetchall()
 
 
+def get_transaction_source(db, tx_hash):
+    cursor = db.cursor()
+    query = f'''SELECT source FROM transactions WHERE tx_hash = ?'''
+    bindings = (tx_hash,)
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchone()['source']
+
+
 def get_addresses(db, address=None):
     cursor = db.cursor()
     where = []
@@ -877,7 +885,7 @@ def get_refilling_count(db, dispenser_tx_hash):
     return cursor.fetchall()[0]['cnt']
 
 
-def get_pending_dispensers(db, status, delay, block_index):
+def get_pending_dispensers_old(db, status, delay, block_index):
     cursor = db.cursor()
     query = '''
         SELECT * FROM
@@ -888,6 +896,26 @@ def get_pending_dispensers(db, status, delay, block_index):
             GROUP BY d.source, d.asset)
         WHERE status = :status
         AND last_status_tx_hash IS NOT NULL
+        ORDER BY tx_index
+    '''
+    bindings = {
+        'status': status,
+        'delay': delay,
+        'block_index': block_index
+    }
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_pending_dispensers(db, status, delay, block_index):
+    cursor = db.cursor()
+    query = '''
+        SELECT d.*, t.source AS tx_source, t.block_index AS tx_block_index, MAX(d.rowid) AS rowid
+        FROM dispensers AS d
+        LEFT JOIN transactions t ON t.tx_hash = d.last_status_tx_hash
+        WHERE :block_index = t.block_index + :delay
+        AND status = :status
+        GROUP BY d.source, d.asset
         ORDER BY tx_index
     '''
     bindings = {
