@@ -403,7 +403,8 @@ BAD_ADDRESSES = {
     '820818-bc1qpx40lk8luqqpqjjxf9rqqqgpqyqysqzgqqq0lkcqgvqpqzcvpcxqlnp0ns': 'bc1qpx40lk8luqqpqjjxf9rqqqgpqyqysqzg3hra0j',
 }
 
-#@functools.cache
+
+@functools.cache
 def script_to_address(scriptpubkey):
     try:
         network = 'mainnet' if config.TESTNET == False else 'testnet'
