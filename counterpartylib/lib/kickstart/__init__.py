@@ -115,11 +115,11 @@ def copy_disk_db_to_memory(local_base, memory_db, resume_from):
     return prepare_db_for_resume(memory_db, resume_from)
 
 
-def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_size=None, debug_block=None, use_disk_db=False):
+def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_size=None, debug_block=None, use_disk_db=True):
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     signal.signal(signal.SIGINT, signal.default_int_handler)
 
-    use_memory_db = not use_disk_db
+    use_memory_db = False
     if debug_block is not None:
         use_memory_db = False
         resume_from = int(debug_block) - 1
@@ -194,7 +194,7 @@ def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_s
 
     # Start block parser.
     queue_size = max_queue_size if max_queue_size is not None else default_queue_size
-    block_parser = BlockchainParser(bitcoind_dir, kickstart_db, last_parsed_block, queue_size)
+    block_parser = BlockchainParser(bitcoind_dir, config.DATABASE, last_parsed_block, queue_size)
 
     try:
         # save transactions for each blocks from first to last

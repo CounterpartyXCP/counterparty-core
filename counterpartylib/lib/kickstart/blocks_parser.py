@@ -2,14 +2,16 @@ import os, logging, binascii, time
 from multiprocessing import Process, JoinableQueue
 from collections import OrderedDict
 
+import apsw
+
 from .bc_data_stream import BCDataStream
 from .utils import b2h, double_hash, ib2h, inverse_hash, decode_value
-from counterpartylib.lib import ledger
+from counterpartylib.lib import ledger, config
 
 logger = logging.getLogger(__name__)
 
 import multiprocessing
-multiprocessing.set_start_method("fork", force=True)
+multiprocessing.set_start_method("spawn", force=True)
 
 TX_CACHE_MAX_SIZE = 10000
 
@@ -26,12 +28,15 @@ def open_leveldb(db_dir):
         raise Exception("Ensure that bitcoind is stopped.")
 
 
-def fetch_blocks(bitcoind_dir, db, queue, first_block_index):
+def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config):
+    config.REGTEST = parser_config['REGTEST']
+    config.TESTNET = parser_config['TESTNET']
+    db = apsw.Connection(db_path, flags=apsw.SQLITE_OPEN_READONLY)
     parser = BlockchainParser(bitcoind_dir)
     cursor = db.cursor()
     try:
         cursor.execute('''
-                            SELECT * FROM blocks
+                            SELECT block_hash, block_index FROM blocks
                             WHERE block_index > ?
                             ORDER BY block_index
                             ''',
@@ -41,8 +46,8 @@ def fetch_blocks(bitcoind_dir, db, queue, first_block_index):
                 logger.warning('Queue is full, waiting for blocks to be parsed.')
                 queue.join()
             block = parser.read_raw_block(
-                db_block['block_hash'], 
-                use_txid=ledger.enabled("correct_segwit_txids", block_index=db_block['block_index'])
+                db_block[0], 
+                use_txid=ledger.enabled("correct_segwit_txids", block_index=db_block[1])
             )
             queue.put(block)
         queue.put(None)
@@ -70,7 +75,10 @@ class BlockchainParser():
             self.txindex_leveldb = open_leveldb(self.txindex_leveldb_path)
             self.queue = JoinableQueue(queue_size)
             self.fetch_process = Process(target=fetch_blocks, args=(
-                bitcoind_dir, db, self.queue, first_block_index
+                bitcoind_dir, db, self.queue, first_block_index, {
+                    'REGTEST': config.REGTEST,
+                    'TESTNET': config.TESTNET,
+                }
             ))
             self.fetch_process.start()
         else:
