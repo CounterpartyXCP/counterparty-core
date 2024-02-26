@@ -44,8 +44,8 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
                             (first_block_index ,))
         for db_block in cursor:
             if queue.full():
-                logger.warning('Queue is full, waiting for blocks to be parsed.')
-                queue.join()
+                logger.warning('Queue is full, waiting one second..')
+                time.sleep(1)
             block = parser.read_raw_block(
                 db_block[0], 
                 use_txid=ledger.enabled("correct_segwit_txids", block_index=db_block[1])
