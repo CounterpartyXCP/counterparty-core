@@ -553,17 +553,8 @@ def dispense(db, tx):
                 max_dispenses_limit = ledger.get_value_by_block_index("max_dispenses_limit", next_out["block_index"])
                 max_dispenser_limit_hit = False
 
-                if max_dispenses_limit > 0:
-                    #max_block_index_result = ledger.get_last_refills_block_index(db, dispenser['tx_hash'])
-                    #from_block_index = 1
-                    #if len(max_block_index_result) > 0:
-                    #    if max_block_index_result[0]["max_block_index"] is not None:
-                    #        from_block_index = max_block_index_result[0]["max_block_index"]
-
-                    #dispenses_count = ledger.get_dispenses_count(db, dispenser['tx_hash'], from_block_index)
-
-                    if dispenser['dispense_count'] + 1 >= max_dispenses_limit:
-                        max_dispenser_limit_hit = True
+                if max_dispenses_limit > 0 and dispenser['dispense_count'] + 1 >= max_dispenses_limit:
+                    max_dispenser_limit_hit = True
 
                 dispenser['give_remaining'] = give_remaining
                 if give_remaining < dispenser['give_quantity'] or max_dispenser_limit_hit:
