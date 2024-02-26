@@ -2011,7 +2011,8 @@ CREATE TABLE dispensers(
                                 give_remaining INTEGER,
                                 oracle_address TEXT,
                                 last_status_tx_hash TEXT,
-                                origin TEXT, dispense_count INTEGER DEFAULT 0);
+                                origin TEXT,
+                                dispense_count INTEGER DEFAULT 0);
 INSERT INTO dispensers VALUES(108,'9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec',310107,'munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b','XCP',100,100,100,0,100,NULL,NULL,'munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b',0);
 -- Triggers and indices on  dispensers
 CREATE TRIGGER block_update_dispensers
