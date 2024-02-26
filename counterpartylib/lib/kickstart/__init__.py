@@ -174,6 +174,8 @@ def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_s
     cursor.execute('PRAGMA auto_vacuum = 1')
     cursor.close()
 
+    blocks.initialise(kickstart_db)
+
     if os.path.exists(local_base) and resume_from is not None:
         if use_memory_db:
             block_count, tx_index, last_parsed_block = copy_disk_db_to_memory(
@@ -184,8 +186,6 @@ def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_s
                 kickstart_db, resume_from
             )
     else:
-        # intialize new database
-        blocks.initialise(kickstart_db)
         database.update_version(kickstart_db)
         # fill `blocks`` table from bitcoind files
         block_count = fetch_blocks(kickstart_db, bitcoind_dir, last_known_hash)
