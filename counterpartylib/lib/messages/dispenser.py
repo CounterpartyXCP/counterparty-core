@@ -54,7 +54,8 @@ def initialise(db):
                                 give_remaining INTEGER,
                                 oracle_address TEXT,
                                 last_status_tx_hash TEXT,
-                                origin TEXT)
+                                origin TEXT,
+                                dispense_count INTEGER DEFAULT 0)
                                 '''
     # create tables
     cursor.execute(create_dispensers_query)
