@@ -11,8 +11,6 @@ services:
       # - "-chain=test"                       # testnet
       - "-rpcallowip=0.0.0.0/0"
       - "-rpcbind=0.0.0.0"
-      - "-rpcport=8332"                       # mainnet
-      # - "-rpcport=18332"                    # testnet
       - "-rpcuser=rpc"
       - "-rpcpassword=rpc"
       - "-listen=1"
@@ -38,12 +36,10 @@ services:
     command:
       - "--network=bitcoin"                   # mainnet
       # - "--network=testnet"                 # testnet
-      - "--indexer-rpc-addr=0.0.0.0:8432"     # mainnet
-      # - "--indexer-rpc-addr=0.0.0.0:18432"  # testnet
-      - "--txid-limit=15000"
-      - "--daemon-rpc-addr=bitcoind:8332"     # mainnet
-      # - "--daemon-rpc-addr=bitcoind:18332"  # testnet
+      - "--indexer-rpc-host=0.0.0.0"
+      - "--daemon-rpc-host=0.0.0.0"
       - "--cookie=rpc:rpc"
+      - "--txid-limit=15000"
       - "--daemon-dir=/bitcoin/.bitcoin"
       - "-vvv"
       - "--db-dir=/data/addrindexrs/db"
@@ -64,13 +60,9 @@ services:
     command:
       # "--testnet"                           # testnet
       - "--backend-connect=bitcoind"
-      - "--backend-port=8332"                 # mainnet
-      # - "--backend-port=18332"              # testnet
       - "--backend-user=rpc"
       - "--backend-password=rpc"
       - "--indexd-connect=addrindexrs"
-      - "--indexd-port=8432"                  # mainnet
-      # - "--indexd-port=18432"               # testnet 
       - "--rpc-user=rpc"
       - "--rpc-password=rpc"
       - "--rpc-host=0.0.0.0"
