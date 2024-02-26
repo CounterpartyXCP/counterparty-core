@@ -608,7 +608,6 @@ def dispense(db, tx):
 
 
 def close_pending(db, block_index):
-    cursor = db.cursor()
     block_delay = ledger.get_value_by_block_index("dispenser_close_delay", block_index)
 
     if block_delay > 0:
