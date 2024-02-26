@@ -37,11 +37,7 @@ services:
       - "--network=bitcoin"                   # mainnet
       # - "--network=testnet"                 # testnet
       - "--indexer-rpc-host=0.0.0.0"
-      - "--indexer-rpc-port=8432"             # mainnet
-      # - "--indexer-rpc-port=18432"          # testnet
       - "--daemon-rpc-host=0.0.0.0"
-      - "--daemon-rpc-port=8332"              # mainnet
-      # - "--daemon-rpc-port=18332"           # testnet
       - "--cookie=rpc:rpc"
       - "--txid-limit=15000"
       - "--daemon-dir=/bitcoin/.bitcoin"
