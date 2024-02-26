@@ -1,6 +1,7 @@
 import os, logging, binascii, time
 from multiprocessing import Process, JoinableQueue
 from collections import OrderedDict
+import pickle
 
 import apsw
 
@@ -49,7 +50,7 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
                 db_block[0], 
                 use_txid=ledger.enabled("correct_segwit_txids", block_index=db_block[1])
             )
-            queue.put(block)
+            queue.put(pickle.dumps(block, protocol=pickle.HIGHEST_PROTOCOL))
         queue.put(None)
     finally:
         parser.close()
@@ -89,7 +90,7 @@ class BlockchainParser():
 
 
     def next_block(self):
-        return self.queue.get()
+        return pickle.loads(self.queue.get())
 
     def block_parsed(self):
         self.queue.task_done()
