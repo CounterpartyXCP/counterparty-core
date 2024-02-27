@@ -384,10 +384,13 @@ def log (db, command, category, bindings):
             logger.info('Expired RPS Match: {}'.format(bindings['rps_match_id']))
 
         elif category == 'destructions':
-            asset_info = get_asset_info(cursor, bindings['asset'])
-            quantity = bindings['quantity']
-            if asset_info['divisible']:
-                quantity = "{:.8f}".format(quantity/config.UNIT)
+            try:
+                asset_info = get_asset_info(cursor, bindings['asset'])
+                quantity = bindings['quantity']
+                if asset_info['divisible']:
+                    quantity = "{:.8f}".format(quantity/config.UNIT)
+            except IndexError as e:
+                quantity = '?'
 
             logger.info('Destruction: {} destroyed {} {} with tag ‘{}’({}) [{}]'.format(bindings['source'], quantity, bindings['asset'], bindings['tag'], bindings['tx_hash'], bindings['status']))
 
