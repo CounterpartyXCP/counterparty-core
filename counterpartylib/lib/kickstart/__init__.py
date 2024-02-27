@@ -150,6 +150,7 @@ def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_s
     cursor = kickstart_db.cursor()
     cursor.execute('PRAGMA auto_vacuum = 1')
     cursor.execute('PRAGMA journal_mode = PERSIST')
+    cursor.execute('PRAGMA journal_size_limit = 0')
     cursor.close()
 
     blocks.initialise(kickstart_db)
