@@ -509,8 +509,7 @@ def kickstart(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_q
         last_hash=last_hash,
         resume_from=resume_from,
         max_queue_size=max_queue_size,
-        debug_block=debug_block,
-        use_disk_db=use_disk_db
+        debug_block=debug_block
     )
 
 
