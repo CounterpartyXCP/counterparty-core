@@ -6,7 +6,6 @@ Naming convention: a `pub` is either a pubkey or a pubkeyhash
 
 import hashlib
 import binascii
-import functools
 
 import bitcoin as bitcoinlib
 from bitcoin.core.key import CPubKey
@@ -287,7 +286,6 @@ def bech32_to_scripthash(address):
     return bytes(bech32)
 
 
-@functools.cache
 def get_asm(scriptpubkey):
     # TODO: When is an exception thrown here? Can this `try` block be tighter? Can it be replaced by a conditional?
     try:
@@ -307,7 +305,6 @@ def get_asm(scriptpubkey):
     return asm
 
 
-@functools.cache
 def script_to_asm(scriptpubkey):
     try:
         script = bytes(scriptpubkey, 'utf-8') if type(scriptpubkey) == str else bytes(scriptpubkey)
@@ -404,7 +401,6 @@ BAD_ADDRESSES = {
 }
 
 
-@functools.cache
 def script_to_address(scriptpubkey):
     try:
         network = 'mainnet' if config.TESTNET == False else 'testnet'
