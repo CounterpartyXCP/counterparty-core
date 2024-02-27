@@ -3854,7 +3854,7 @@ UNITTEST_VECTOR = {
             },
             {
                 'in': (['mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'],),
-                'error': (TypeError, "unhashable type: 'list'")
+                'error': (exceptions.DecodeError, 'invalid script')
             },
             {
                 'in': (bitcoinlib.core.CScript(bitcoinlib.core.x('6a53657466697665207361797320686921')),),
