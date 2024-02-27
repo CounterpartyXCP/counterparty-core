@@ -125,7 +125,8 @@ def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_s
     ]
     if resume_from is not None:
         warnings.pop(0)
-    logger.warning(f'''Warning:\n{"\n.join(warnings)"}''')
+    message = "\n" + "\n".join(warnings)
+    logger.warning(f'''Warning:{message}''')
 
     if not force and input('Proceed with the initialization? (y/N) : ') != 'y':
         return
@@ -148,6 +149,7 @@ def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_s
     kickstart_db = server.initialise_db()
     cursor = kickstart_db.cursor()
     cursor.execute('PRAGMA auto_vacuum = 1')
+    cursor.execute('PRAGMA journal_mode = PERSIST')
     cursor.close()
 
     blocks.initialise(kickstart_db)
