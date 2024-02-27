@@ -93,7 +93,6 @@ def main():
     parser_kickstart.add_argument('--resume-from', help='`last` or a block index. Try to resume parsing from the given block. `last` will resume from the last block in the database.')
     parser_kickstart.add_argument('--max-queue-size', type=int, help='Size of the multiprocessing.Queue for parsing blocks')
     parser_kickstart.add_argument('--debug-block', type=int, help='Run kickstart for a single block; Don\'t use memory database for fast starting and shutdown.')
-    parser_kickstart.add_argument('--use-disk-db', action='store_true', help='Use disk database for parsing blocks', default=False)
 
     parser_bootstrap = subparsers.add_parser('bootstrap', help='bootstrap database with hosted snapshot')
     parser_bootstrap.add_argument('-q', '--quiet', dest='quiet', action='store_true', help='suppress progress bar')
@@ -178,8 +177,7 @@ def main():
             last_hash=args.last_hash,
             resume_from=args.resume_from,
             max_queue_size=args.max_queue_size,
-            debug_block=args.debug_block,
-            use_disk_db=args.use_disk_db)
+            debug_block=args.debug_block)
 
     elif args.action == 'start':
         server.start_all(db)
