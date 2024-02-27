@@ -484,6 +484,23 @@ def parse (db, tx, message):
     cursor.close()
 
 
+def amount_is_dispensable(db, amount, satoshirate, oracle_address):
+    if oracle_address != None:
+        last_price, last_fee, last_fiat_label, last_updated = ledger.get_oracle_last_price(
+            db, oracle_address, ledger.CURRENT_BLOCK_INDEX
+        )
+        fiatrate = util.satoshirate_to_fiat(satoshirate)
+        if fiatrate == 0 or last_price == 0:
+            return False
+        if amount >= fiatrate/last_price:
+            return True
+    else:
+        if amount >= satoshirate:
+            return True
+
+    return None
+
+
 def is_dispensable(db, address, amount):
     if address is None:
         return False
@@ -491,18 +508,43 @@ def is_dispensable(db, address, amount):
     dispensers = ledger.get_dispensers(db, source=address, status_in=[0, 11])
 
     for next_dispenser in dispensers:
-        if next_dispenser["oracle_address"] != None:
-            last_price, last_fee, last_fiat_label, last_updated = ledger.get_oracle_last_price(db, next_dispenser['oracle_address'], ledger.CURRENT_BLOCK_INDEX)
-            fiatrate = util.satoshirate_to_fiat(next_dispenser["satoshirate"])
-            if fiatrate == 0 or last_price == 0:
-                return False
-            if amount >= fiatrate/last_price:
-                return True
-        else:
-            if amount >= next_dispenser["satoshirate"]:
-                return True
+        is_ok_or_not = amount_is_dispensable(
+            db,
+            amount,
+            next_dispenser["satoshirate"],
+            next_dispenser["oracle_address"]
+        )
+        if is_ok_or_not is not None:
+            return is_ok_or_not
 
     return False
+
+
+def are_dispensables(db, addresses, amounts):
+    assert len(addresses) == len(amounts)
+    result = [False] * len(addresses)
+
+    dispensers = ledger.get_dispensers(db, source_in=addresses, status_in=[0, 11])
+    dispensers_by_address = {}
+    for next_dispenser in dispensers:
+        if next_dispenser["source"] not in dispensers_by_address:
+            dispensers_by_address[next_dispenser["source"]] = []
+        dispensers_by_address[next_dispenser["source"]].append(next_dispenser)
+
+    for i, address in enumerate(addresses):
+        if address in dispensers_by_address:
+            for next_dispenser in dispensers_by_address[address]:
+                is_ok_or_not = amount_is_dispensable(
+                    db,
+                    amounts[i],
+                    next_dispenser["satoshirate"],
+                    next_dispenser["oracle_address"]
+                )
+                if is_ok_or_not is not None:
+                    result[i] = is_ok_or_not
+                    break
+
+    return result
 
 
 def dispense(db, tx):
