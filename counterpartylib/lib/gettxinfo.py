@@ -216,20 +216,12 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit, block_parser=No
 
 
 def get_dispensers_outputs(db, potential_dispensers):
-    addresses = []
-    amounts = []
+    outputs = []
     for (destination, btc_amount) in potential_dispensers:
         if destination is None or btc_amount is None:
             continue
-        addresses.append(destination)
-        amounts.append(btc_amount)
-
-    dispensables = dispenser.are_dispensables(db, addresses, amounts)
-    outputs = []
-    for i in range(len(dispensables)):
-        if dispensables[i]:
-            outputs.append((addresses[i], amounts[i]))
-
+        if dispenser.is_dispensable(db, destination, btc_amount):
+            outputs.append((destination, btc_amount))
     return outputs
 
 
