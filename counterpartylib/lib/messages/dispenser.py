@@ -202,15 +202,18 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
                     problems.append('cannot dispense %s' % asset) # How can we test this on a test vector?
         else:
             problems.append('address has already a dispenser about to close, no action can be taken until it closes')
-    
+
     cursor.close()
-    
+
     if oracle_address is not None and util.enabled('oracle_dispensers', block_index):
         last_price, last_fee, last_label, last_updated = util.get_oracle_last_price(db, oracle_address, block_index)
-        
+
         if last_price is None:
             problems.append('The oracle address %s has not broadcasted any price yet' % oracle_address)
-    
+
+    if give_quantity > config.MAX_INT or escrow_quantity > config.MAX_INT or mainchainrate > config.MAX_INT:
+        problems.append('integer overflow')
+
     if len(problems) > 0:
         return None, problems
     else:
