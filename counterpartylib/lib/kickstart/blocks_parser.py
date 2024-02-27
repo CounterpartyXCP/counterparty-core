@@ -1,5 +1,5 @@
-import os, logging, binascii, time
-from multiprocessing import Process, JoinableQueue
+import os, logging, binascii
+from multiprocessing import Process, JoinableQueue, shared_memory
 from collections import OrderedDict
 import pickle
 import signal
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 import multiprocessing
 multiprocessing.set_start_method("spawn", force=True)
 
-TX_CACHE_MAX_SIZE = 10000
+TX_CACHE_MAX_SIZE = 5000
 
 def open_leveldb(db_dir):
     try:
@@ -49,12 +49,17 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
         for db_block in cursor:
             if queue.full():
                 logger.warning('Queue is full, waiting one second..')
-                time.sleep(1)
+                queue.join()
             block = parser.read_raw_block(
                 db_block[0], 
                 use_txid=ledger.enabled("correct_segwit_txids", block_index=db_block[1])
             )
-            queue.put(pickle.dumps(block, protocol=pickle.HIGHEST_PROTOCOL))
+            serialized_block = pickle.dumps(block, protocol=pickle.HIGHEST_PROTOCOL)
+            shm = shared_memory.SharedMemory(name=db_block[0], create=True, size=len(serialized_block))
+            shm.buf[:len(serialized_block)] = serialized_block
+            queue.put(shm.name)
+            shm.close()
+            #queue.put(pickle.dumps(block, protocol=pickle.HIGHEST_PROTOCOL))
         queue.put(None)
     finally:
         parser.close()
@@ -64,7 +69,7 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
 
 class BlockchainParser():
 
-    def __init__(self, bitcoind_dir=None, db=None, first_block_index=0, queue_size=100):
+    def __init__(self, bitcoind_dir=None, db_path=None, first_block_index=0, queue_size=100):
         if bitcoind_dir is None: # for deserialize_tx()
             return
 
@@ -75,13 +80,13 @@ class BlockchainParser():
         self.data_stream = None
         
         self.tx_cache = OrderedDict()
-        if db is not None:
+        if db_path is not None:
             self.blocks_leveldb = None
             self.txindex_leveldb_path = os.path.join(bitcoind_dir, 'indexes', 'txindex')
             self.txindex_leveldb = open_leveldb(self.txindex_leveldb_path)
             self.queue = JoinableQueue(queue_size)
             self.fetch_process = Process(target=fetch_blocks, args=(
-                bitcoind_dir, db, self.queue, first_block_index, {
+                bitcoind_dir, db_path, self.queue, first_block_index, {
                     'REGTEST': config.REGTEST,
                     'TESTNET': config.TESTNET,
                 }
@@ -95,7 +100,15 @@ class BlockchainParser():
 
 
     def next_block(self):
-        return pickle.loads(self.queue.get())
+        block_hash = self.queue.get()
+        if block_hash is None:
+            return None
+        shm = shared_memory.SharedMemory(name=block_hash)
+        block = pickle.loads(shm.buf[:shm.size])
+        shm.close()
+        shm.unlink()
+        return block
+
 
     def block_parsed(self):
         self.queue.task_done()
