@@ -117,11 +117,16 @@ def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_s
         bitcoind_dir = os.path.join(bitcoind_dir, 'testnet3')
         default_queue_size = 1000
 
-    logger.warning(f'''Warning:
-- `{config.DATABASE}` will be moved to `{config.DATABASE}.old` and recreated from scratch.
-- Ensure `addrindexrs` is running and up to date.
-- Ensure that `bitcoind` is stopped.
-- The initialization may take a while.''')
+    warnings = [
+        f'- `{config.DATABASE}` will be moved to `{config.DATABASE}.old` and recreated from scratch.',
+        '- Ensure `addrindexrs` is running and up to date.',
+        '- Ensure that `bitcoind` is stopped.',
+        '- The initialization may take a while.',
+    ]
+    if resume_from is not None:
+        warnings.pop(0)
+    logger.warning(f'''Warning:\n{"\n.join(warnings)"}''')
+
     if not force and input('Proceed with the initialization? (y/N) : ') != 'y':
         return
 
@@ -135,7 +140,11 @@ def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_s
         chain_parser.close()
     logger.info('Last known block hash: {}'.format(last_known_hash))
 
-    # initialise in memory database
+    # backup old database
+    if os.path.exists(config.DATABASE) and resume_from is None:
+        os.rename(config.DATABASE, config.DATABASE + '.old')
+
+    # initialise database
     kickstart_db = server.initialise_db()
     cursor = kickstart_db.cursor()
     cursor.execute('PRAGMA auto_vacuum = 1')
