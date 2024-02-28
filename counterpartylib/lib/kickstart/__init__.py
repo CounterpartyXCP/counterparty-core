@@ -110,6 +110,18 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     signal.signal(signal.SIGINT, signal.default_int_handler)
 
+    # display warnings
+    warnings = [
+        '- Ensure `addrindexrs` is running and up to date.',
+        '- Ensure that `bitcoind` is stopped.',
+        '- The initialization may take a while.',
+    ]
+    message = "\n" + "\n".join(warnings)
+    logger.warning(f'''Warning:{message}''')
+    if not force and input('Proceed with the initialization? (y/N) : ') != 'y':
+        return
+
+    # check addrindexrs
     ledger.CURRENT_BLOCK_INDEX = 0
     backend.BACKEND()
     check_addrindexrs = {}
@@ -130,24 +142,8 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
             bitcoind_dir = os.path.expanduser('~/.bitcoin')
     if not os.path.isdir(bitcoind_dir):
         raise Exception('Bitcoin Core data directory not found at {}. Use --bitcoind-dir parameter.'.format(bitcoind_dir))
-
-    default_queue_size = 100
     if config.TESTNET:
         bitcoind_dir = os.path.join(bitcoind_dir, 'testnet3')
-        default_queue_size = 1000
-
-    warnings = [
-        '- Ensure `addrindexrs` is running and up to date.',
-        '- Ensure that `bitcoind` is stopped.',
-        '- The initialization may take a while.',
-    ]
-    message = "\n" + "\n".join(warnings)
-    logger.warning(f'''Warning:{message}''')
-
-    if not force and input('Proceed with the initialization? (y/N) : ') != 'y':
-        return
-
-    start_time_total = time.time()
 
     # Get hash of last known block.
     chain_parser = ChainstateParser(os.path.join(bitcoind_dir, 'chainstate'))
@@ -173,7 +169,7 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
         user_version = cursor.execute('PRAGMA user_version').fetchall()[0][0]
         version_major = user_version // 1000
         if version_major < 10:
-            logger.warning(f"New kickstart detected.")
+            logger.warning(f"Version lower than 10.0 detected. Kickstart must be done from the first block.")
             logger.warning(f"Old database will me moved to {config.DATABASE}.old and a new database will be created from scratch.")
             if not force and input('Continue? (y/N) : ') != 'y':
                 return
@@ -186,6 +182,9 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
         # copy old database
         shutil.copy(config.DATABASE, config.DATABASE + '.old')
 
+    # initialize main timer
+    start_time_total = time.time()
+
     # initialise database
     kickstart_db = server.initialise_db()
     blocks.initialise(kickstart_db)
@@ -196,11 +195,19 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     if not resuming:
         fetch_blocks(cursor, bitcoind_dir, last_known_hash)
 
+    # get last block index
     block_count, tx_index, last_parsed_block = prepare_db_for_resume(cursor)
 
-    # Start block parser.
+    # determine queue size
+    default_queue_size = 100
+    if config.TESTNET:
+        default_queue_size = 1000
     queue_size = max_queue_size if max_queue_size is not None else default_queue_size
+    # Start block parser.
     block_parser = BlockchainParser(bitcoind_dir, config.DATABASE, last_parsed_block, queue_size)
+
+    #log_level = logging.DEBUG if verbose else logging.INFO
+    logger.setLevel(logging.ERROR)
 
     message = ""
     try:
@@ -259,21 +266,28 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
             else:
                 block = block_parser.next_block()
         logger.info('All blocks parsed in: {:.3f}s'.format(time.time() - start_time_all_blocks_parse))
-        # remove kickstart tables if all blocks have been parsed
-        clean_kicstart_blocks(kickstart_db)
+    except FileNotFoundError:
+        pass # block file not found on stopping
     except KeyboardInterrupt:
         if message != "":
             print(message)
-        logger.warning('Keyboard interrupt. Stopping...')
+            message = ""
+        print('Keyboard interrupt. Stopping...')
+    finally:
+        if message != "":
+            print(message)
+        print("Cleaning up, please wait...")
         # empyt queue to clean shared memory
         try:
             while block is not None:
                 block = block_parser.next_block()
+                block_parser.block_parsed()
         except FileNotFoundError:
             pass
-    finally:
         backend.stop()
         block_parser.close()
-        logger.info("Last parsed block: {}".format(last_parsed_block))
+        # remove kickstart tables if all blocks have been parsed
+        clean_kicstart_blocks(kickstart_db)
+        print("Last parsed block: {}".format(last_parsed_block))
 
-    logger.info('Kickstart done in: {:.3f}s'.format(time.time() - start_time_total))
+    print('Kickstart done in: {:.3f}s'.format(time.time() - start_time_total))
