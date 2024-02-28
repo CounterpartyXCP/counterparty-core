@@ -114,10 +114,13 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
 
     ledger.CURRENT_BLOCK_INDEX = 0
     backend.BACKEND()
-    check_address = "tb1qurdetpdk8zg2thzx3g77qkgr7a89cp2m429t9c" if config.TESTNET else "34qkc2iac6RsyxZVfyE2S5U5WcRsbg2dpK"
-    check_addrindexrs = backend.get_oldest_tx(check_address)
-    print("check_addrindexrs: ", check_addrindexrs)
-    assert check_addrindexrs != {}
+    check_addrindexrs = {}
+    while check_addrindexrs == {}:
+        check_address = "tb1qurdetpdk8zg2thzx3g77qkgr7a89cp2m429t9c" if config.TESTNET else "34qkc2iac6RsyxZVfyE2S5U5WcRsbg2dpK"
+        check_addrindexrs = backend.get_oldest_tx(check_address)
+        if check_addrindexrs == {}:
+            logger.warning('`addrindexrs` is not ready. Waiting one second.')
+            time.sleep(1)
 
     # determine bitoincore data directory
     if bitcoind_dir is None:
