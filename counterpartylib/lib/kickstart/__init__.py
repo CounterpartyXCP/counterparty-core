@@ -15,7 +15,7 @@ from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser, Chains
 logger = logging.getLogger(__name__)
 
 
-def fetch_blocks(cursor, bitcoind_dir, last_known_hash):
+def fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block):
     block_parser = BlockchainParser(bitcoind_dir)
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS kickstart_blocks (
@@ -53,14 +53,14 @@ def fetch_blocks(cursor, bitcoind_dir, last_known_hash):
             bindings_place.append('(?,?,?,?,?,?)')
             current_hash = block['hash_prev']
             block_count += 1
-            if block['block_index'] == config.BLOCK_FIRST:
+            if block['block_index'] == first_block:
                 break
         # insert blocks by lot
         cursor.execute(f'''INSERT INTO kickstart_blocks (block_index, block_hash, block_time, previous_block_hash, difficulty, tx_count)
                               VALUES {', '.join(bindings_place)}''',
                               bindings_lot)
         print(f"Block {bindings_lot[0]} to {bindings_lot[-6]} inserted.", end="\r")
-        if block['block_index'] == config.BLOCK_FIRST:
+        if block['block_index'] == first_block:
             break
     block_parser.close()
     logger.info('Blocks indexed in: {:.3f}s'.format(time.time() - start_time_blocks_indexing))
@@ -194,7 +194,10 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
 
     # create `kickstart_blocks` table if necessary
     if not resuming:
-        fetch_blocks(cursor, bitcoind_dir, last_known_hash)
+        first_block = config.BLOCK_FIRST
+        if not new_database:
+            first_block = cursor.execute('SELECT block_index FROM blocks ORDER BY block_index ASC LIMIT 1').fetchone()['block_index']
+        fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block)
 
     # get last block index
     block_count, tx_index, last_parsed_block = prepare_db_for_resume(cursor)
