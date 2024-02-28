@@ -202,6 +202,7 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     queue_size = max_queue_size if max_queue_size is not None else default_queue_size
     block_parser = BlockchainParser(bitcoind_dir, config.DATABASE, last_parsed_block, queue_size)
 
+    message = ""
     try:
         # save transactions for each blocks from first to last
         # then parse the block
@@ -261,6 +262,8 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
         # remove kickstart tables if all blocks have been parsed
         clean_kicstart_blocks(kickstart_db)
     except KeyboardInterrupt:
+        if message != "":
+            print(message)
         logger.warning('Keyboard interrupt. Stopping...')
         # empyt queue to clean shared memory
         try:
