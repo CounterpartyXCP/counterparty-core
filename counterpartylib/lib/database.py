@@ -60,7 +60,9 @@ def exectracer(cursor, sql, bindings):
             elif bindings[0] < 0 and sql.startswith('insert into transaction values (tx_index, tx_hash, block_index, '):
                 log.message(db, bindings[2], command, category, bindings[2])
             else:
-                raise exceptions.DatabaseError('Unknown bindings type.')
+                #raise exceptions.DatabaseError('Unknown bindings type.')
+                pass # just pass until we remove this function
+
     # Record alteration in computation of message feed hash for the block
     if category not in skip_tables_block_messages:
         # don't include asset_longname as part of the messages hash

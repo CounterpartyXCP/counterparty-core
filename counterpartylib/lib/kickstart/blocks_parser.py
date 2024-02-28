@@ -40,7 +40,7 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
     parser = BlockchainParser(bitcoind_dir)
     cursor = db.cursor()
     try:
-        cursor.execute('''SELECT block_hash, block_index FROM blocks
+        cursor.execute('''SELECT block_hash, block_index FROM kickstart_blocks
                         WHERE block_index > ?
                         ORDER BY block_index
                         ''',
