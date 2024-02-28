@@ -986,7 +986,7 @@ def get_dispenser(db, tx_hash):
     return cursor.fetchall()
 
 
-def get_dispensers(db, status_in=None, source=None, asset=None, origin=None, status=None, tx_hash=None, order_by=None, group_by=None):
+def get_dispensers(db, status_in=None, source_in=None, source=None, asset=None, origin=None, status=None, tx_hash=None, order_by=None, group_by=None):
     cursor = db.cursor()
     bindings = []
     # where for immutable fields
@@ -994,6 +994,9 @@ def get_dispensers(db, status_in=None, source=None, asset=None, origin=None, sta
     if source is not None:
         first_where.append('source = ?')
         bindings.append(source)
+    if source_in is not None:
+        first_where.append('source IN ({})'.format(','.join(['?' for e in range(0, len(source_in))])))
+        bindings += source_in
     if asset is not None:
         first_where.append('asset = ?')
         bindings.append(asset)

@@ -502,15 +502,14 @@ def rollback(db, block_index=None):
     blocks.rollback(db, block_index=block_index)
 
 
-def kickstart(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_size=None, debug_block=None, use_disk_db=False):
+def kickstart(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_size=None, debug_block=None):
     kickstarter.run(
         bitcoind_dir=bitcoind_dir,
         force=force,
         last_hash=last_hash,
         resume_from=resume_from,
         max_queue_size=max_queue_size,
-        debug_block=debug_block,
-        use_disk_db=use_disk_db
+        debug_block=debug_block
     )
 
 

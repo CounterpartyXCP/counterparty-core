@@ -54,7 +54,8 @@ def initialise(db):
                                 give_remaining INTEGER,
                                 oracle_address TEXT,
                                 last_status_tx_hash TEXT,
-                                origin TEXT)
+                                origin TEXT,
+                                dispense_count INTEGER DEFAULT 0)
                                 '''
     # create tables
     cursor.execute(create_dispensers_query)
@@ -69,6 +70,8 @@ def initialise(db):
     if "origin" not in columns:
         cursor.execute('ALTER TABLE dispensers ADD COLUMN origin TEXT')
         cursor.execute("UPDATE dispensers AS d SET origin = (SELECT t.source FROM transactions t WHERE d.tx_hash = t.tx_hash)")
+    if "dispense_count" not in columns:
+        cursor.execute('ALTER TABLE dispensers ADD COLUMN dispense_count INTEGER DEFAULT 0')
 
     # migrate old table
     if database.field_is_pk(cursor, 'dispensers', 'tx_index'):
@@ -115,6 +118,7 @@ def initialise(db):
     database.create_indexes(cursor, 'dispenses', [
         ['tx_hash'],
         ['block_index'],
+        ['dispenser_tx_hash']
     ])
 
     # Dispenser refills
@@ -403,6 +407,7 @@ def parse (db, tx, message):
                                 
                                 set_data = {
                                     'give_remaining': existing[0]['give_remaining'] + escrow_quantity,
+                                    'dispense_count': 0 # reset the dispense count on refill
                                 }
                                 ledger.update_dispenser(db, existing[0]['rowid'], set_data)
 
@@ -549,17 +554,8 @@ def dispense(db, tx):
                 max_dispenses_limit = ledger.get_value_by_block_index("max_dispenses_limit", next_out["block_index"])
                 max_dispenser_limit_hit = False
 
-                if max_dispenses_limit > 0:
-                    max_block_index_result = ledger.get_last_refills_block_index(db, dispenser['tx_hash'])
-                    from_block_index = 1
-                    if len(max_block_index_result) > 0:
-                        if max_block_index_result[0]["max_block_index"] is not None:
-                            from_block_index = max_block_index_result[0]["max_block_index"]
-
-                    dispenses_count = ledger.get_dispenses_count(db, dispenser['tx_hash'], from_block_index)
-                    
-                    if dispenses_count+1 >= max_dispenses_limit:
-                        max_dispenser_limit_hit = True
+                if max_dispenses_limit > 0 and dispenser['dispense_count'] + 1 >= max_dispenses_limit:
+                    max_dispenser_limit_hit = True
 
                 dispenser['give_remaining'] = give_remaining
                 if give_remaining < dispenser['give_quantity'] or max_dispenser_limit_hit:
@@ -585,6 +581,7 @@ def dispense(db, tx):
                 set_data = {
                     'give_remaining': dispenser['give_remaining'],
                     'status': dispenser['status'],
+                    'dispense_count': dispenser['dispense_count'] + 1
                 }
                 ledger.update_dispenser(db, dispenser['rowid'], set_data)
 

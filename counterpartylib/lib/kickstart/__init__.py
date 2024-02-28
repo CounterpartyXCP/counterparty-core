@@ -1,33 +1,14 @@
 import logging
 import os
 import time
-import shutil
 import platform
 import signal
-
-import apsw
 
 from counterpartylib import server
 from counterpartylib.lib import config, blocks, ledger, backend, database
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser, ChainstateParser
 
 logger = logging.getLogger(__name__)
-
-
-def copy_memory_db_to_disk(local_base, memory_db):
-    logger.info("Copying in memory database to disk...")
-    start_time_copy_db = time.time()
-    # backup old database
-    if os.path.exists(local_base):
-        shutil.copyfile(local_base, local_base + '.old')
-        os.remove(local_base)
-    # initialize new database
-    config.DATABASE = local_base
-    db = server.initialise_db()
-    # copy memory database to new database
-    with db.backup("main", memory_db, "main") as backup:
-        backup.step()
-    logger.info('Database copy duration: {:.3f}s'.format(time.time() - start_time_copy_db))
 
 
 def fetch_blocks(db, bitcoind_dir, last_known_hash):
@@ -105,23 +86,12 @@ def prepare_db_for_resume(db, resume_from):
     return block_count, tx_index, last_parsed_block
 
 
-def copy_disk_db_to_memory(local_base, memory_db, resume_from):
-    logger.info(f"Resuming from disk database {local_base}...")
-    # copy disk database to memory database
-    local_base_db = apsw.Connection(local_base)
-    logger.info(f"Copying disk database to memory database...")
-    with memory_db.backup("main", local_base_db, "main") as backup:
-        backup.step()
-    return prepare_db_for_resume(memory_db, resume_from)
+def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_size=None, debug_block=None):
 
-
-def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_size=None, debug_block=None, use_disk_db=False):
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     signal.signal(signal.SIGINT, signal.default_int_handler)
 
-    use_memory_db = not use_disk_db
     if debug_block is not None:
-        use_memory_db = False
         resume_from = int(debug_block) - 1
 
     ledger.CURRENT_BLOCK_INDEX = 0
@@ -147,11 +117,17 @@ def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_s
         bitcoind_dir = os.path.join(bitcoind_dir, 'testnet3')
         default_queue_size = 1000
 
-    logger.warning(f'''Warning:
-- `{config.DATABASE}` will be moved to `{config.DATABASE}.old` and recreated from scratch.
-- Ensure `addrindexrs` is running and up to date.
-- Ensure that `bitcoind` is stopped.
-- The initialization may take a while.''')
+    warnings = [
+        f'- `{config.DATABASE}` will be moved to `{config.DATABASE}.old` and recreated from scratch.',
+        '- Ensure `addrindexrs` is running and up to date.',
+        '- Ensure that `bitcoind` is stopped.',
+        '- The initialization may take a while.',
+    ]
+    if resume_from is not None:
+        warnings.pop(0)
+    message = "\n" + "\n".join(warnings)
+    logger.warning(f'''Warning:{message}''')
+
     if not force and input('Proceed with the initialization? (y/N) : ') != 'y':
         return
 
@@ -165,27 +141,24 @@ def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_s
         chain_parser.close()
     logger.info('Last known block hash: {}'.format(last_known_hash))
 
-    # initialise in memory database
-    local_base = config.DATABASE
-    if use_memory_db:
-        config.DATABASE = ':memory:'
+    # backup old database
+    if os.path.exists(config.DATABASE) and resume_from is None:
+        os.rename(config.DATABASE, config.DATABASE + '.old')
+
+    # initialise database
     kickstart_db = server.initialise_db()
     cursor = kickstart_db.cursor()
     cursor.execute('PRAGMA auto_vacuum = 1')
+    cursor.execute('PRAGMA journal_size_limit = 0')
     cursor.close()
 
-    if os.path.exists(local_base) and resume_from is not None:
-        if use_memory_db:
-            block_count, tx_index, last_parsed_block = copy_disk_db_to_memory(
-                local_base, kickstart_db, resume_from
-            )
-        else:
-            block_count, tx_index, last_parsed_block = prepare_db_for_resume(
-                kickstart_db, resume_from
-            )
+    blocks.initialise(kickstart_db)
+
+    if os.path.exists(config.DATABASE) and resume_from is not None:
+        block_count, tx_index, last_parsed_block = prepare_db_for_resume(
+            kickstart_db, resume_from
+        )
     else:
-        # intialize new database
-        blocks.initialise(kickstart_db)
         database.update_version(kickstart_db)
         # fill `blocks`` table from bitcoind files
         block_count = fetch_blocks(kickstart_db, bitcoind_dir, last_known_hash)
@@ -194,7 +167,7 @@ def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_s
 
     # Start block parser.
     queue_size = max_queue_size if max_queue_size is not None else default_queue_size
-    block_parser = BlockchainParser(bitcoind_dir, kickstart_db, last_parsed_block, queue_size)
+    block_parser = BlockchainParser(bitcoind_dir, config.DATABASE, last_parsed_block, queue_size)
 
     try:
         # save transactions for each blocks from first to last
@@ -234,6 +207,7 @@ def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_s
             message += f" Expected duration: {expected_duration:.3f}s."
             print(message, end="\r")
             # get next block
+            block_parser.block_parsed()
             if debug_block is not None and block['block_index'] == int(debug_block):
                 block = None
             else:
@@ -244,8 +218,6 @@ def run(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_s
     finally:
         backend.stop()
         block_parser.close()
-        if use_memory_db:
-            copy_memory_db_to_disk(local_base, kickstart_db)
         logger.info("Last parsed block: {}".format(last_parsed_block))
 
     logger.info('Kickstart done in: {:.3f}s'.format(time.time() - start_time_total))
