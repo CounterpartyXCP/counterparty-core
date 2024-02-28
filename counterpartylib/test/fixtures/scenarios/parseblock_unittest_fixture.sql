@@ -1,6 +1,6 @@
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -526,7 +526,7 @@ CREATE INDEX blocks_block_index_idx ON blocks (block_index)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -614,7 +614,7 @@ CREATE INDEX transactions_tx_index_tx_hash_block_index_idx ON transactions (tx_i
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -634,7 +634,7 @@ CREATE TABLE transaction_outputs(
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -730,7 +730,7 @@ CREATE TRIGGER block_update_balances
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -826,7 +826,7 @@ CREATE TRIGGER block_update_balances
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -888,7 +888,7 @@ CREATE INDEX credits_asset_idx ON credits (asset)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -950,7 +950,7 @@ CREATE INDEX debits_asset_idx ON debits (asset)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1044,7 +1044,7 @@ CREATE INDEX messages_block_index_message_index_idx ON messages (block_index, me
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1072,7 +1072,7 @@ CREATE INDEX order_match_expirations_tx1_address_idx ON order_match_expirations 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1129,7 +1129,7 @@ CREATE INDEX order_matches_tx1_hash_idx ON order_matches (tx1_hash)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1154,7 +1154,7 @@ CREATE INDEX order_expirations_source_idx ON order_expirations (source)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1212,7 +1212,7 @@ CREATE INDEX orders_tx_index_tx_hash_idx ON orders (tx_index, tx_hash)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1240,7 +1240,7 @@ CREATE TRIGGER block_update_bet_match_expirations
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1295,7 +1295,7 @@ CREATE TRIGGER block_update_bet_matches
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1323,7 +1323,7 @@ CREATE TRIGGER block_update_bet_match_resolutions
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1349,7 +1349,7 @@ CREATE TRIGGER block_update_bet_expirations
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1404,7 +1404,7 @@ CREATE TRIGGER block_update_bets
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1448,7 +1448,7 @@ CREATE INDEX broadcasts_timestamp_idx ON broadcasts (timestamp)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1480,7 +1480,7 @@ CREATE INDEX btcpays_source_idx ON btcpays (source)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1517,7 +1517,7 @@ CREATE INDEX burns_status_idx ON burns (status)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1545,7 +1545,7 @@ CREATE INDEX cancels_source_idx ON cancels (source)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1578,7 +1578,7 @@ CREATE INDEX dividends_source_idx ON dividends (source)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1642,7 +1642,7 @@ CREATE INDEX issuances_status_idx ON issuances (status)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1692,7 +1692,7 @@ CREATE INDEX sends_source_idx ON sends (source)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1720,7 +1720,7 @@ CREATE INDEX rps_match_expirations_tx1_address_idx ON rps_match_expirations (tx1
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1746,7 +1746,7 @@ CREATE INDEX rps_expirations_source_idx ON rps_expirations (source)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1778,7 +1778,7 @@ CREATE INDEX rpsresolves_source_idx ON rpsresolves (source)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1823,7 +1823,7 @@ CREATE INDEX rps_matches_tx1_address_idx ON rps_matches (tx1_address)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1864,7 +1864,7 @@ CREATE INDEX rps_wager_possible_moves_idx ON rps (wager, possible_moves)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1894,7 +1894,7 @@ CREATE INDEX destructions_status_idx ON destructions (status)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1933,7 +1933,7 @@ CREATE TRIGGER block_update_assets
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1957,7 +1957,7 @@ CREATE TRIGGER block_update_addresses
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -1992,7 +1992,7 @@ CREATE INDEX sweeps_source_idx ON sweeps (source)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -2046,7 +2046,7 @@ CREATE INDEX dispensers_tx_index_idx ON dispensers (tx_index)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
@@ -2080,7 +2080,7 @@ CREATE INDEX dispenses_tx_hash_idx ON dispenses (tx_hash)
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
 -- PRAGMA encoding='UTF-8';
--- PRAGMA auto_vacuum=NONE;
+-- PRAGMA auto_vacuum=FULL;
 -- PRAGMA max_page_count=1073741823;
 
 BEGIN TRANSACTION;
