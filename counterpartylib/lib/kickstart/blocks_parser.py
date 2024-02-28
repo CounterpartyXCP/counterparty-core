@@ -49,6 +49,7 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
         cursor.close()
         db.close()
 
+        shm = None
         for db_block in all_blocks:
             if queue.full():
                 logger.warning('Queue is full, waiting one second..')
@@ -64,6 +65,10 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
             shm.close()
             #queue.put(pickle.dumps(block, protocol=pickle.HIGHEST_PROTOCOL))
         queue.put(None)
+    except KeyboardInterrupt:
+        if shm:
+            shm.close()
+            shm.unlink()
     finally:
         parser.close()
 
@@ -79,7 +84,9 @@ class BlockchainParser():
         self.current_file_size = 0
         self.current_block_file = None
         self.data_stream = None
-        
+        self.shm = None
+        self.queue = None
+
         self.tx_cache = OrderedDict()
         if db_path is not None:
             self.blocks_leveldb = None
@@ -104,10 +111,10 @@ class BlockchainParser():
         block_hash = self.queue.get()
         if block_hash is None:
             return None
-        shm = shared_memory.SharedMemory(name=block_hash)
-        block = pickle.loads(shm.buf[:shm.size])
-        shm.close()
-        shm.unlink()
+        self.shm = shared_memory.SharedMemory(name=block_hash)
+        block = pickle.loads(self.shm.buf[:self.shm.size])
+        self.shm.close()
+        self.shm.unlink()
         return block
 
 
@@ -300,6 +307,15 @@ class BlockchainParser():
         if self.fetch_process:
             self.fetch_process.terminate()
             self.fetch_process.join()
+        if self.shm:
+            try:
+                self.shm.close()
+                self.shm.unlink()
+            except FileNotFoundError:
+                pass
+        if self.queue:
+            self.queue.close()
+
 
 class ChainstateParser():
 

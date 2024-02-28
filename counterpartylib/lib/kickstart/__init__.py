@@ -262,6 +262,12 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
         clean_kicstart_blocks(kickstart_db)
     except KeyboardInterrupt:
         logger.warning('Keyboard interrupt. Stopping...')
+        # empyt queue to clean shared memory
+        try:
+            while block is not None:
+                block = block_parser.next_block()
+        except FileNotFoundError:
+            pass
     finally:
         backend.stop()
         block_parser.close()
