@@ -7,6 +7,7 @@ import shutil
 from queue import Empty
 
 import apsw
+from halo import Halo
 
 from counterpartylib import server
 from counterpartylib.lib import config, blocks, ledger, backend, database, log
@@ -101,12 +102,12 @@ def prepare_db_for_resume(cursor):
 
     block_count = last_block_index - last_parsed_block
 
-    print(f"Resuming from block {last_parsed_block}...")
-
     return block_count, tx_index, last_parsed_block
 
 
 def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
+
+    spinner_style = "bouncingBar"
 
     if not config.VERBOSE:
         log.ROOT_LOGGER.setLevel(logging.ERROR)
@@ -129,16 +130,18 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
             return
 
     # check addrindexrs
-    print("Connecting to `addrindexrs`...")
-    ledger.CURRENT_BLOCK_INDEX = 0
-    backend.BACKEND()
-    check_addrindexrs = {}
-    while check_addrindexrs == {}:
-        check_address = "tb1qurdetpdk8zg2thzx3g77qkgr7a89cp2m429t9c" if config.TESTNET else "34qkc2iac6RsyxZVfyE2S5U5WcRsbg2dpK"
-        check_addrindexrs = backend.get_oldest_tx(check_address)
-        if check_addrindexrs == {}:
-            logger.info('`addrindexrs` is not ready. Waiting one second.')
-            time.sleep(1)
+    step = 'Connecting to `addrindexrs`...'
+    with Halo(text=step, spinner=spinner_style):
+        ledger.CURRENT_BLOCK_INDEX = 0
+        backend.BACKEND()
+        check_addrindexrs = {}
+        while check_addrindexrs == {}:
+            check_address = "tb1qurdetpdk8zg2thzx3g77qkgr7a89cp2m429t9c" if config.TESTNET else "34qkc2iac6RsyxZVfyE2S5U5WcRsbg2dpK"
+            check_addrindexrs = backend.get_oldest_tx(check_address)
+            if check_addrindexrs == {}:
+                logger.info('`addrindexrs` is not ready. Waiting one second.')
+                time.sleep(1)
+    print(f'[OK] {step}')
 
     # determine bitoincore data directory
     if bitcoind_dir is None:
@@ -154,77 +157,87 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
         bitcoind_dir = os.path.join(bitcoind_dir, 'testnet3')
 
     # Get hash of last known block.
-    print("Getting last known block hash...")
-    chain_parser = ChainstateParser(os.path.join(bitcoind_dir, 'chainstate'))
-    last_known_hash = chain_parser.get_last_block_hash()
-    chain_parser.close()
-    #print('Last known block hash: {}'.format(last_known_hash))
+    step = 'Getting last known block hash...'
+    with Halo(text=step, spinner=spinner_style):
+        chain_parser = ChainstateParser(os.path.join(bitcoind_dir, 'chainstate'))
+        last_known_hash = chain_parser.get_last_block_hash()
+        chain_parser.close()
+        #print('Last known block hash: {}'.format(last_known_hash))
+    print(f'[OK] {step}')
 
     new_database = not os.path.exists(config.DATABASE)
 
     # check if we are resuming
-    print("Checking database state...")
-    current_db = apsw.Connection(config.DATABASE)
-    cursor = current_db.cursor()
-    resuming = False
-    if not new_database:
-        query = "SELECT name FROM sqlite_master WHERE type='table' AND name='kickstart_blocks'"
-        if len(list(cursor.execute(query))) == 1:
-            resuming = True
-    cursor.close()
-    current_db.close()
+    step = 'Checking database state...'
+    with Halo(text=step, spinner=spinner_style):
+        current_db = apsw.Connection(config.DATABASE)
+        cursor = current_db.cursor()
+        resuming = False
+        if not new_database:
+            query = "SELECT name FROM sqlite_master WHERE type='table' AND name='kickstart_blocks'"
+            if len(list(cursor.execute(query))) == 1:
+                resuming = True
+        cursor.close()
+        current_db.close()
+    print(f'[OK] {step}')
 
     # backup old database
-    print("Backing up database...")
-    if not new_database and not resuming:
-        user_version = cursor.execute('PRAGMA user_version').fetchall()[0][0]
-        version_major = user_version // 1000
-        if version_major < 10:
-            if not force:
-                print(f"Version lower than 10.0 detected. Kickstart must be done from the first block.")
-                print(f"Old database will me moved to {config.DATABASE}.old and a new database will be created from scratch.")
-                if input('Continue? (y/N) : ') != 'y':
-                    return
-            # move old database
-            os.rename(config.DATABASE, config.DATABASE + '.old')
+    step = 'Backing up database...'
+    with Halo(text=step, spinner=spinner_style):
+        if not new_database and not resuming:
+            user_version = cursor.execute('PRAGMA user_version').fetchall()[0][0]
+            version_major = user_version // 1000
+            if version_major < 10:
+                if not force:
+                    print(f"Version lower than 10.0 detected. Kickstart must be done from the first block.")
+                    print(f"Old database will me moved to {config.DATABASE}.old and a new database will be created from scratch.")
+                    if input('Continue? (y/N) : ') != 'y':
+                        return
+                # move old database
+                os.rename(config.DATABASE, config.DATABASE + '.old')
+            else:
+                # copy old database
+                shutil.copy(config.DATABASE, config.DATABASE + '.old')
         else:
             # copy old database
             shutil.copy(config.DATABASE, config.DATABASE + '.old')
-    else:
-        # copy old database
-        shutil.copy(config.DATABASE, config.DATABASE + '.old')
+    print(f'[OK] {step}')
 
     # initialize main timer
     start_time_total = time.time()
 
     # initialise database
-    print("Initialising database...")
-    kickstart_db = server.initialise_db()
-    blocks.initialise(kickstart_db)
-    database.update_version(kickstart_db)
-    cursor = kickstart_db.cursor()
+    step = 'Initialising database...'
+    with Halo(text=step, spinner=spinner_style):
+        kickstart_db = server.initialise_db()
+        blocks.initialise(kickstart_db)
+        database.update_version(kickstart_db)
+        cursor = kickstart_db.cursor()
 
-    if debug_block is not None:
-        blocks.rollback(kickstart_db, int(debug_block) - 1)
+        if debug_block is not None:
+            blocks.rollback(kickstart_db, int(debug_block) - 1)
 
-    # create `kickstart_blocks` table if necessary
-    if not resuming:
-        first_block = config.BLOCK_FIRST
-        if not new_database:
-            first_block = cursor.execute('SELECT block_index FROM blocks ORDER BY block_index ASC LIMIT 1').fetchone()['block_index']
-        fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block)
+        # create `kickstart_blocks` table if necessary
+        if not resuming:
+            first_block = config.BLOCK_FIRST
+            if not new_database:
+                first_block = cursor.execute('SELECT block_index FROM blocks ORDER BY block_index ASC LIMIT 1').fetchone()['block_index']
+            fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block)
 
-    # get last block index
-    block_count, tx_index, last_parsed_block = prepare_db_for_resume(cursor)
+        # get last block index
+        block_count, tx_index, last_parsed_block = prepare_db_for_resume(cursor)
+    print(f'[OK] {step}')
 
-    # determine queue size
-    print("Starting blocks parser...")
-    default_queue_size = 100
-    if config.TESTNET:
-        default_queue_size = 1000
-    queue_size = max_queue_size if max_queue_size is not None else default_queue_size
-    # Start block parser.
-    block_parser = BlockchainParser(bitcoind_dir, config.DATABASE, last_parsed_block, queue_size)
+    step = f'Starting blocks parser from block {last_parsed_block}...'
+    with Halo(text=step, spinner=spinner_style):
+        # determine queue size
+        default_queue_size = 100
+        if config.TESTNET:
+            default_queue_size = 1000
+        queue_size = max_queue_size if max_queue_size is not None else default_queue_size
+        # Start block parser.
+        block_parser = BlockchainParser(bitcoind_dir, config.DATABASE, last_parsed_block, queue_size)
+    print(f'[OK] {step}')
 
     message = ""
     try:
