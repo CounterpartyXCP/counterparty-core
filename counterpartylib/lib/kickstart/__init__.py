@@ -4,6 +4,7 @@ import time
 import platform
 import signal
 import shutil
+from queue import Empty
 
 import apsw
 
@@ -206,9 +207,6 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     # Start block parser.
     block_parser = BlockchainParser(bitcoind_dir, config.DATABASE, last_parsed_block, queue_size)
 
-    #log_level = logging.DEBUG if verbose else logging.INFO
-    logger.setLevel(logging.ERROR)
-
     message = ""
     try:
         # save transactions for each blocks from first to last
@@ -280,9 +278,9 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
         # empyt queue to clean shared memory
         try:
             while block is not None:
-                block = block_parser.next_block()
+                block = block_parser.next_block(timeout=1)
                 block_parser.block_parsed()
-        except FileNotFoundError:
+        except (Empty, FileNotFoundError):
             pass
         backend.stop()
         block_parser.close()

@@ -107,8 +107,8 @@ class BlockchainParser():
             self.fetch_process = None
 
 
-    def next_block(self):
-        block_hash = self.queue.get()
+    def next_block(self, timeout=None):
+        block_hash = self.queue.get(timeout=timeout)
         if block_hash is None:
             return None
         self.shm = shared_memory.SharedMemory(name=block_hash)
