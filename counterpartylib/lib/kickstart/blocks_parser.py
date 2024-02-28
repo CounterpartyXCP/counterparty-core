@@ -40,13 +40,16 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
     parser = BlockchainParser(bitcoind_dir)
     cursor = db.cursor()
     try:
-        cursor.execute('''
-                            SELECT block_hash, block_index FROM blocks
-                            WHERE block_index > ?
-                            ORDER BY block_index
-                            ''',
-                            (first_block_index ,))
-        for db_block in cursor:
+        cursor.execute('''SELECT block_hash, block_index FROM blocks
+                        WHERE block_index > ?
+                        ORDER BY block_index
+                        ''',
+                        (first_block_index ,))
+        all_blocks = cursor.fetchall()
+        cursor.close()
+        db.close()
+
+        for db_block in all_blocks:
             if queue.full():
                 logger.warning('Queue is full, waiting one second..')
                 queue.join()
@@ -63,8 +66,6 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
         queue.put(None)
     finally:
         parser.close()
-        cursor.close()
-        db.close()
 
 
 class BlockchainParser():
