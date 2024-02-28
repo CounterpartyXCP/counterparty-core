@@ -3,6 +3,7 @@ from multiprocessing import Process, JoinableQueue, shared_memory
 from collections import OrderedDict
 import pickle
 import signal
+import time
 
 import apsw
 
@@ -52,7 +53,7 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
         shm = None
         for db_block in all_blocks:
             if queue.full():
-                logger.warning('Queue is full, waiting one second..')
+                logger.debug('Queue is full, waiting for blocks to be parsed.')
                 queue.join()
             block = parser.read_raw_block(
                 db_block[0], 

@@ -175,6 +175,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
         config.LOG = log_file
 
     # Set up logging.
+    config.VERBOSE = verbose
     log.set_up(log.ROOT_LOGGER, verbose=verbose, logfile=config.LOG, console_logfilter=console_logfilter)
     if config.LOG:
         logger.debug('Writing server log to file: `{}`'.format(config.LOG))

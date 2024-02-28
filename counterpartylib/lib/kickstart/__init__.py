@@ -9,7 +9,7 @@ from queue import Empty
 import apsw
 
 from counterpartylib import server
-from counterpartylib.lib import config, blocks, ledger, backend, database
+from counterpartylib.lib import config, blocks, ledger, backend, database, log
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser, ChainstateParser
 
 logger = logging.getLogger(__name__)
@@ -101,28 +101,35 @@ def prepare_db_for_resume(cursor):
 
     block_count = last_block_index - last_parsed_block
 
-    logger.info(f"Resuming from block {last_parsed_block}...")
+    print(f"Resuming from block {last_parsed_block}...")
 
     return block_count, tx_index, last_parsed_block
 
 
 def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
 
+    if not config.VERBOSE:
+        log.ROOT_LOGGER.setLevel(logging.ERROR)
+    else:
+        log.ROOT_LOGGER.setLevel(logging.INFO)
+
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     signal.signal(signal.SIGINT, signal.default_int_handler)
 
-    # display warnings
-    warnings = [
-        '- Ensure `addrindexrs` is running and up to date.',
-        '- Ensure that `bitcoind` is stopped.',
-        '- The initialization may take a while.',
-    ]
-    message = "\n" + "\n".join(warnings)
-    logger.warning(f'''Warning:{message}''')
-    if not force and input('Proceed with the initialization? (y/N) : ') != 'y':
-        return
+    if not force:
+        # display warnings
+        warnings = [
+            '- Ensure `addrindexrs` is running and up to date.',
+            '- Ensure that `bitcoind` is stopped.',
+            '- The initialization may take a while.',
+        ]
+        message = "\n" + "\n".join(warnings)
+        print(f'''Warning:{message}''')
+        if input('Proceed with the initialization? (y/N) : ') != 'y':
+            return
 
     # check addrindexrs
+    print("Connecting to `addrindexrs`...")
     ledger.CURRENT_BLOCK_INDEX = 0
     backend.BACKEND()
     check_addrindexrs = {}
@@ -130,7 +137,7 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
         check_address = "tb1qurdetpdk8zg2thzx3g77qkgr7a89cp2m429t9c" if config.TESTNET else "34qkc2iac6RsyxZVfyE2S5U5WcRsbg2dpK"
         check_addrindexrs = backend.get_oldest_tx(check_address)
         if check_addrindexrs == {}:
-            logger.warning('`addrindexrs` is not ready. Waiting one second.')
+            logger.info('`addrindexrs` is not ready. Waiting one second.')
             time.sleep(1)
 
     # determine bitoincore data directory
@@ -147,14 +154,16 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
         bitcoind_dir = os.path.join(bitcoind_dir, 'testnet3')
 
     # Get hash of last known block.
+    print("Getting last known block hash...")
     chain_parser = ChainstateParser(os.path.join(bitcoind_dir, 'chainstate'))
     last_known_hash = chain_parser.get_last_block_hash()
     chain_parser.close()
-    logger.info('Last known block hash: {}'.format(last_known_hash))
+    #print('Last known block hash: {}'.format(last_known_hash))
 
     new_database = not os.path.exists(config.DATABASE)
 
     # check if we are resuming
+    print("Checking database state...")
     current_db = apsw.Connection(config.DATABASE)
     cursor = current_db.cursor()
     resuming = False
@@ -166,14 +175,16 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     current_db.close()
 
     # backup old database
+    print("Backing up database...")
     if not new_database and not resuming:
         user_version = cursor.execute('PRAGMA user_version').fetchall()[0][0]
         version_major = user_version // 1000
         if version_major < 10:
-            logger.warning(f"Version lower than 10.0 detected. Kickstart must be done from the first block.")
-            logger.warning(f"Old database will me moved to {config.DATABASE}.old and a new database will be created from scratch.")
-            if not force and input('Continue? (y/N) : ') != 'y':
-                return
+            if not force:
+                print(f"Version lower than 10.0 detected. Kickstart must be done from the first block.")
+                print(f"Old database will me moved to {config.DATABASE}.old and a new database will be created from scratch.")
+                if input('Continue? (y/N) : ') != 'y':
+                    return
             # move old database
             os.rename(config.DATABASE, config.DATABASE + '.old')
         else:
@@ -187,6 +198,7 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     start_time_total = time.time()
 
     # initialise database
+    print("Initialising database...")
     kickstart_db = server.initialise_db()
     blocks.initialise(kickstart_db)
     database.update_version(kickstart_db)
@@ -206,6 +218,7 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     block_count, tx_index, last_parsed_block = prepare_db_for_resume(cursor)
 
     # determine queue size
+    print("Starting blocks parser...")
     default_queue_size = 100
     if config.TESTNET:
         default_queue_size = 1000
@@ -269,7 +282,7 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
                 block = None
             else:
                 block = block_parser.next_block()
-        logger.info('All blocks parsed in: {:.3f}s'.format(time.time() - start_time_all_blocks_parse))
+        print('All blocks parsed in: {:.3f}s'.format(time.time() - start_time_all_blocks_parse))
     except FileNotFoundError:
         pass # block file not found on stopping
     except KeyboardInterrupt:
