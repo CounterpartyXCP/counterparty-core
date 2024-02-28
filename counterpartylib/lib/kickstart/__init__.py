@@ -14,9 +14,8 @@ from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser, Chains
 logger = logging.getLogger(__name__)
 
 
-def fetch_blocks(db, bitcoind_dir, last_known_hash):
+def fetch_blocks(cursor, bitcoind_dir, last_known_hash):
     block_parser = BlockchainParser(bitcoind_dir)
-    cursor = db.cursor()
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS kickstart_blocks (
                       block_index INTEGER UNIQUE,
@@ -82,9 +81,8 @@ def clean_kicstart_blocks(db):
         cursor.execute('''DROP TABLE kickstart_blocks''')
 
 
-def prepare_db_for_resume(db):
+def prepare_db_for_resume(cursor):
     # get block count
-    cursor = db.cursor()
     cursor.execute('''SELECT block_index FROM kickstart_blocks ORDER BY block_index DESC LIMIT 1''')
     last_block_index = cursor.fetchone()['block_index']
 
@@ -170,32 +168,35 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     cursor.close()
     current_db.close()
 
+    # backup old database
     if not new_database and not resuming:
-        logger.warning(f"New kickstart detected.")
-        logger.warning(f"Old database will me moved to {config.DATABASE}.old and a new database will be created from scratch.")
-        if not force and input('Continue? (y/N) : ') != 'y':
-            return
-        # move old database
-        os.rename(config.DATABASE, config.DATABASE + '.old')
+        user_version = cursor.execute('PRAGMA user_version').fetchall()[0][0]
+        version_major = user_version // 1000
+        if version_major < 10:
+            logger.warning(f"New kickstart detected.")
+            logger.warning(f"Old database will me moved to {config.DATABASE}.old and a new database will be created from scratch.")
+            if not force and input('Continue? (y/N) : ') != 'y':
+                return
+            # move old database
+            os.rename(config.DATABASE, config.DATABASE + '.old')
+        else:
+            # copy old database
+            shutil.copy(config.DATABASE, config.DATABASE + '.old')
     else:
         # copy old database
         shutil.copy(config.DATABASE, config.DATABASE + '.old')
 
+    # initialise database
     kickstart_db = server.initialise_db()
     blocks.initialise(kickstart_db)
-
-    if resuming:
-        block_count, tx_index, last_parsed_block = prepare_db_for_resume(kickstart_db)
-    else:
-        database.update_version(kickstart_db)
-        # fill `blocks`` table from bitcoind files
-        block_count = fetch_blocks(kickstart_db, bitcoind_dir, last_known_hash)
-        last_parsed_block = 0
-        tx_index = 0
-
+    database.update_version(kickstart_db)
     cursor = kickstart_db.cursor()
-    cursor.execute('PRAGMA auto_vacuum = 1')
-    cursor.execute('PRAGMA journal_size_limit = 0')
+
+    # create `kickstart_blocks` table if necessary
+    if not resuming:
+        fetch_blocks(cursor, bitcoind_dir, last_known_hash)
+
+    block_count, tx_index, last_parsed_block = prepare_db_for_resume(cursor)
 
     # Start block parser.
     queue_size = max_queue_size if max_queue_size is not None else default_queue_size

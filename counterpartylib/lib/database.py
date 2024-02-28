@@ -130,6 +130,9 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
             raise exceptions.DatabaseError('Could not perform integrity check.')
         logger.info('Integrity check completed.')
 
+    cursor.execute('PRAGMA auto_vacuum = 1')
+    cursor.execute('PRAGMA journal_size_limit = 0')
+
     db.setrowtrace(rowtracer)
     db.setexectrace(exectracer)
 
