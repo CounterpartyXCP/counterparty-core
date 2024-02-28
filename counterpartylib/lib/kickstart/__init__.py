@@ -192,6 +192,9 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     database.update_version(kickstart_db)
     cursor = kickstart_db.cursor()
 
+    if debug_block is not None:
+        blocks.rollback(kickstart_db, int(debug_block) - 1)
+
     # create `kickstart_blocks` table if necessary
     if not resuming:
         first_block = config.BLOCK_FIRST
