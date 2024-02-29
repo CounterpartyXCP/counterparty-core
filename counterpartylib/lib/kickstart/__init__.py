@@ -314,7 +314,7 @@ def cleanup(kickstart_db, block_parser):
 
 def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     # set log level
-    if not config.VERBOSE:
+    if not config.VERBOSE and debug_block is None:
         log.ROOT_LOGGER.setLevel(logging.ERROR)
     else:
         log.ROOT_LOGGER.setLevel(logging.INFO)
