@@ -22,4 +22,5 @@ itsdangerous==2.1.2
 plyvel==1.5.1
 arc4==0.4.0
 halo==0.0.31
+termcolor==2.4.0
 pycoin_rs @ git+https://github.com/CounterpartyXCP/pycoin_rs
