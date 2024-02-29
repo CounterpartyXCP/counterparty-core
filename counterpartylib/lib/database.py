@@ -60,7 +60,9 @@ def exectracer(cursor, sql, bindings):
             elif bindings[0] < 0 and sql.startswith('insert into transaction values (tx_index, tx_hash, block_index, '):
                 log.message(db, bindings[2], command, category, bindings[2])
             else:
-                raise exceptions.DatabaseError('Unknown bindings type.')
+                #raise exceptions.DatabaseError('Unknown bindings type.')
+                pass # just pass until we remove this function
+
     # Record alteration in computation of message feed hash for the block
     if category not in skip_tables_block_messages:
         # don't include asset_longname as part of the messages hash
@@ -127,6 +129,10 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
         if not integral:
             raise exceptions.DatabaseError('Could not perform integrity check.')
         logger.info('Integrity check completed.')
+
+    cursor.execute('PRAGMA auto_vacuum = 1')
+    cursor.execute('PRAGMA synchronous = normal')
+    cursor.execute('PRAGMA journal_size_limit = 6144000')
 
     db.setrowtrace(rowtracer)
     db.setexectrace(exectracer)

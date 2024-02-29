@@ -175,6 +175,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
         config.LOG = log_file
 
     # Set up logging.
+    config.VERBOSE = verbose
     log.set_up(log.ROOT_LOGGER, verbose=verbose, logfile=config.LOG, console_logfilter=console_logfilter)
     if config.LOG:
         logger.debug('Writing server log to file: `{}`'.format(config.LOG))
@@ -502,12 +503,10 @@ def rollback(db, block_index=None):
     blocks.rollback(db, block_index=block_index)
 
 
-def kickstart(bitcoind_dir, force=False, last_hash=None, resume_from=None, max_queue_size=None, debug_block=None):
+def kickstart(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     kickstarter.run(
         bitcoind_dir=bitcoind_dir,
         force=force,
-        last_hash=last_hash,
-        resume_from=resume_from,
         max_queue_size=max_queue_size,
         debug_block=debug_block
     )

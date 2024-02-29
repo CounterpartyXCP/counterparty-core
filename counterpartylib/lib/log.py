@@ -81,7 +81,7 @@ def set_logger(logger):
 
 LOGGING_SETUP = False
 LOGGING_TOFILE_SETUP = False
-def set_up(logger, verbose=False, logfile=None, console_logfilter=None):
+def set_up(logger, verbose=False, logfile=None, console_logfilter=None, quiet=False):
     global LOGGING_SETUP
     global LOGGING_TOFILE_SETUP
 
@@ -107,7 +107,11 @@ def set_up(logger, verbose=False, logfile=None, console_logfilter=None):
         return
     LOGGING_SETUP = True
 
-    log_level = logging.DEBUG if verbose else logging.INFO
+    log_level = logging.INFO
+    if quiet:
+        log_level = logging.ERROR
+    elif verbose:
+        log_level = logging.DEBUG
     logger.setLevel(log_level)
 
     # Console Logging

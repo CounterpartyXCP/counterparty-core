@@ -3,6 +3,7 @@ from multiprocessing import Process, JoinableQueue, shared_memory
 from collections import OrderedDict
 import pickle
 import signal
+import time
 
 import apsw
 
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 import multiprocessing
 multiprocessing.set_start_method("spawn", force=True)
 
-TX_CACHE_MAX_SIZE = 5000
+TX_CACHE_MAX_SIZE = 15000
 
 def open_leveldb(db_dir):
     try:
@@ -40,7 +41,7 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
     parser = BlockchainParser(bitcoind_dir)
     cursor = db.cursor()
     try:
-        cursor.execute('''SELECT block_hash, block_index FROM blocks
+        cursor.execute('''SELECT block_hash, block_index FROM kickstart_blocks
                         WHERE block_index > ?
                         ORDER BY block_index
                         ''',
@@ -49,9 +50,10 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
         cursor.close()
         db.close()
 
+        shm = None
         for db_block in all_blocks:
             if queue.full():
-                logger.warning('Queue is full, waiting one second..')
+                logger.debug('Queue is full, waiting for blocks to be parsed.')
                 queue.join()
             block = parser.read_raw_block(
                 db_block[0], 
@@ -64,6 +66,10 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
             shm.close()
             #queue.put(pickle.dumps(block, protocol=pickle.HIGHEST_PROTOCOL))
         queue.put(None)
+    except KeyboardInterrupt:
+        if shm:
+            shm.close()
+            shm.unlink()
     finally:
         parser.close()
 
@@ -79,7 +85,9 @@ class BlockchainParser():
         self.current_file_size = 0
         self.current_block_file = None
         self.data_stream = None
-        
+        self.shm = None
+        self.queue = None
+
         self.tx_cache = OrderedDict()
         if db_path is not None:
             self.blocks_leveldb = None
@@ -100,14 +108,14 @@ class BlockchainParser():
             self.fetch_process = None
 
 
-    def next_block(self):
-        block_hash = self.queue.get()
+    def next_block(self, timeout=None):
+        block_hash = self.queue.get(timeout=timeout)
         if block_hash is None:
             return None
-        shm = shared_memory.SharedMemory(name=block_hash)
-        block = pickle.loads(shm.buf[:shm.size])
-        shm.close()
-        shm.unlink()
+        self.shm = shared_memory.SharedMemory(name=block_hash)
+        block = pickle.loads(self.shm.buf[:self.shm.size])
+        self.shm.close()
+        self.shm.unlink()
         return block
 
 
@@ -300,6 +308,15 @@ class BlockchainParser():
         if self.fetch_process:
             self.fetch_process.terminate()
             self.fetch_process.join()
+        if self.shm:
+            try:
+                self.shm.close()
+                self.shm.unlink()
+            except FileNotFoundError:
+                pass
+        if self.queue:
+            self.queue.close()
+
 
 class ChainstateParser():
 
