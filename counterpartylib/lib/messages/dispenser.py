@@ -7,12 +7,8 @@
 # It's a very simple but powerful semantic to allow swaps to operate on-chain.
 #
 
-import binascii
-import json
-import pprint
 import struct
 import logging
-import warnings
 from math import floor
 logger = logging.getLogger(__name__)
 
@@ -478,8 +474,7 @@ def parse (db, tx, message):
                 status = 'invalid: status must be one of OPEN or CLOSE'
 
     if status != 'valid':
-        # let use warnings.warn instead of logger.warning because we want to catch it in tests
-        warnings.warn("Not storing [dispenser] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.warning("Not storing [dispenser] tx [%s]: %s" % (tx['tx_hash'], status))
 
     cursor.close()
 

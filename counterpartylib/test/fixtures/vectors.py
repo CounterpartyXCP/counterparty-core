@@ -3416,7 +3416,8 @@ UNITTEST_VECTOR = {
                     # generated with overflow checking commented out
                     'data': b'\x00\x00\x00\x0c\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00d\x00\x00\x00\x00\x00\x00\x00d\x80\x00\x00\x00\x00\x00\x00\x00\x00'
                 },),
-                'error': ("Warning", "Not storing [dispenser] tx [db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d]: invalid: address has a dispenser already opened for asset XCP with a different mainchainrate; integer overflow")
+                #'error': ("Warning", "Not storing [dispenser] tx [db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d]: invalid: address has a dispenser already opened for asset XCP with a different mainchainrate; integer overflow")
+                'out': None
             },
         ],
         'is_dispensable': [
