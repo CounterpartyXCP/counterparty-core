@@ -201,7 +201,7 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
         version_major = user_version // 1000
         if version_major < 10:
             if not force:
-                print(colored(f"Version lower than 10.0.0 detected. Kickstart must be done from the first block.", "yellow"))
+                print(colored(f"Version lower than v10.0.0 detected. Kickstart must be done from the first block.", "yellow"))
                 print(colored(f"Old database will me moved to {config.DATABASE}.old and a new database will be created from scratch.", "yellow"))
                 if input(colored('Continue? (y/N): ', 'magenta')) != 'y':
                     return
