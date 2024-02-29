@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 import multiprocessing
 multiprocessing.set_start_method("spawn", force=True)
 
-TX_CACHE_MAX_SIZE = 5000
+TX_CACHE_MAX_SIZE = 15000
 
 def open_leveldb(db_dir):
     try:
