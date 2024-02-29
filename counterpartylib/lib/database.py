@@ -131,7 +131,8 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
         logger.info('Integrity check completed.')
 
     cursor.execute('PRAGMA auto_vacuum = 1')
-    cursor.execute('PRAGMA journal_size_limit = 0')
+    cursor.execute('PRAGMA synchronous = normal')
+    cursor.execute('PRAGMA journal_size_limit = 6144000')
 
     db.setrowtrace(rowtracer)
     db.setexectrace(exectracer)
