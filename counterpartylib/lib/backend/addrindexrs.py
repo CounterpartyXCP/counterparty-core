@@ -355,6 +355,7 @@ class AddrIndexRsThread (threading.Thread):
                         backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
                     except Exception as e:
                         logger.exception('Unknown error when connecting to address indexer.')
+                        self.locker.notify()
                         sys.exit(1) # TODO
                     finally:
                         self.locker.notify()
@@ -520,10 +521,6 @@ def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
         return batch
 
 def get_oldest_tx(address):
-    # TODO: `addrindexrs` just don't like this address. Fix it.
-    if address == "12J5BxE7SxUEFv1xxCJV6unKQt6uqaipBX":
-        return {}
-
     hsh = _address_to_hash(address)
     call_result = Indexer_Thread.send({
         "method": "blockchain.scripthash.get_oldest_tx",
