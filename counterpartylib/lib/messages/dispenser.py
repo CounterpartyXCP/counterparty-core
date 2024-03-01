@@ -299,8 +299,21 @@ def calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, orac
     
     return oracle_fee_btc
 
+# Reproduce unknown fixed bug: close dispenser calls from another address not recognized
+DECODE_ERROR = {
+    "7ab00290e8df838485e14d5a1bcf120787068a7f096edb75f7ba566333949f34": True,
+    "5ad5ae0e721f6c2bf54ed27fb78d026d2a41ca36b2fd91df4ae3aefd5f8ad9a2": True,
+    "820d9e3a8733a79556bdee98b124adcd844d6a40d61e9502a6f87fca2ed29bd5": True,
+    "c5a10ff52202b74971ea78a0e300c1038c82aedfec9c7f744dcf507bc07b27b0": True,
+    "6b265de0e37c4f2c0503f5b465b806fcc58e74901663f61819da9c5258729093": True,
+    "971a45311e539bcf2cc4d61a75ef7c05130f78cc928535b23e87ceadf6dc1b04": True,
+    "85e17c81f80d040f98077bcb49882654d1f222cf4bdeba4cf81aaf70213431ce": True,
+}
 
 def parse (db, tx, message):
+    if DECODE_ERROR.get(tx['tx_hash']):
+        return
+
     cursor = db.cursor()
 
     # Unpack message.
@@ -440,20 +453,18 @@ def parse (db, tx, message):
             elif dispenser_status == STATUS_CLOSED:
                 close_delay = ledger.get_value_by_block_index("dispenser_close_delay", tx['block_index'])
                 close_from_another_address = ledger.enabled("dispenser_origin_permission_extended", tx['block_index']) and action_address and action_address != tx["source"]
-
                 existing = []
                 if close_from_another_address:
-                    existing = ledger.get_dispensers(db, 
-                                                     source=action_address, 
-                                                     asset=asset, 
-                                                     status=STATUS_OPEN, 
+                    existing = ledger.get_dispensers(db,
+                                                     source=action_address,
+                                                     asset=asset,
+                                                     status=STATUS_OPEN,
                                                      origin=tx["source"])
                 else:
-                    existing = ledger.get_dispensers(db, 
-                                                     source=tx['source'], 
-                                                     asset=asset, 
+                    existing = ledger.get_dispensers(db,
+                                                     source=tx['source'],
+                                                     asset=asset,
                                                      status=STATUS_OPEN)
-
                 if len(existing) == 1:
                     if close_delay == 0:
                         ledger.credit(db, tx['source'], asset, existing[0]['give_remaining'], tx['tx_index'], action='close dispenser', event=tx['tx_hash'])

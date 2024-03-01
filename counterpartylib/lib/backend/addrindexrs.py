@@ -355,6 +355,7 @@ class AddrIndexRsThread (threading.Thread):
                         backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
                     except Exception as e:
                         logger.exception('Unknown error when connecting to address indexer.')
+                        self.locker.notify()
                         sys.exit(1) # TODO
                     finally:
                         self.locker.notify()
@@ -520,6 +521,7 @@ def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
         return batch
 
 def get_oldest_tx(address):
+    print("get_oldest_tx old")
     hsh = _address_to_hash(address)
     call_result = Indexer_Thread.send({
         "method": "blockchain.scripthash.get_oldest_tx",
@@ -529,7 +531,7 @@ def get_oldest_tx(address):
     if call_result is not None and not ("error" in call_result):
         txs = call_result["result"]
         return txs
-        
+
     return {}
 
 # Returns the number of blocks the backend is behind the node
@@ -548,3 +550,75 @@ def init():
 def stop():
     if 'Indexer_Thread' in globals():
         Indexer_Thread.stop()
+
+
+# Basic class to communicate with addrindexrs.
+# No locking thread.
+# Assume only one instance of this class is used at a time and not concurrently.
+# This class does not handle most of the errors, it's up to the caller to do so.
+# This class does not check ID in the response.
+# This class assumes response are always not longer than READ_BUF_SIZE (65536 bytes).
+class AddrindexrsSocket:
+
+    def __init__(self):
+        self.next_message_id = 0
+        self.connect()
+
+
+    def connect(self):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.settimeout(SOCKET_TIMEOUT)
+        self.sock.connect((config.INDEXD_CONNECT, config.INDEXD_PORT))
+
+
+    def _send(self, query, timeout=SOCKET_TIMEOUT):
+        query["id"] = self.next_message_id
+
+        message = (json.dumps(query) + "\n").encode('utf8')
+
+        self.sock.send(message)
+
+        self.next_message_id += 1
+
+        start_time = time.time()
+        while True:
+            try:
+                data = self.sock.recv(READ_BUF_SIZE)
+            except TimeoutError:
+                return {}
+            if data:
+                try:
+                    response = json.loads(data.decode('utf-8'))
+                except json.decoder.JSONDecodeError:
+                    return {}
+                if not response:
+                    return {}
+                if "error" in response:
+                    return {}
+                if "result" not in response:
+                    return {}
+                return response["result"]
+
+            duration = time.time() - start_time
+            if duration > timeout:
+                return {}
+
+
+    def send(self, query, timeout=SOCKET_TIMEOUT, retry=0):
+        try:
+            return self._send(query, timeout=timeout)
+        except BrokenPipeError:
+            if retry > 3:
+                raise Exception("Too many retries, please check addrindexrs")
+            self.sock.close()
+            self.connect()
+            return self.send(query, timeout=timeout, retry=retry + 1)
+
+
+    def get_oldest_tx(self, address, timeout=SOCKET_TIMEOUT):
+        hsh = _address_to_hash(address)
+        query = {
+            "method": "blockchain.scripthash.get_oldest_tx",
+            "params": [hsh]
+        }
+        return self.send(query, timeout=timeout)

@@ -13,6 +13,7 @@ from termcolor import colored
 from counterpartylib import server
 from counterpartylib.lib import config, blocks, ledger, backend, database, log
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser, ChainstateParser
+from counterpartylib.lib.backend.addrindexrs import AddrindexrsSocket
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ def confirm_kickstart():
     print(f'''{warnings_message}''')
     confirmation_message = colored('Proceed with the initialization? (y/N): ', "magenta")
     if input(confirmation_message) != 'y':
-        return
+        exit()
 
 
 def fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner):
@@ -130,7 +131,7 @@ def connect_to_addrindexrs():
         backend.BACKEND()
         check_addrindexrs = {}
         while check_addrindexrs == {}:
-            check_address = "tb1qurdetpdk8zg2thzx3g77qkgr7a89cp2m429t9c" if config.TESTNET else "34qkc2iac6RsyxZVfyE2S5U5WcRsbg2dpK"
+            check_address = "tb1qurdetpdk8zg2thzx3g77qkgr7a89cp2m429t9c" if config.TESTNET else "1GsjsKKT4nH4GPmDnaxaZEDWgoBpmexwMA"
             check_addrindexrs = backend.get_oldest_tx(check_address)
             if check_addrindexrs == {}:
                 logger.info('`addrindexrs` is not ready. Waiting one second.')
@@ -314,7 +315,7 @@ def cleanup(kickstart_db, block_parser):
 
 def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     # set log level
-    if not config.VERBOSE:
+    if not config.VERBOSE and debug_block is None:
         log.ROOT_LOGGER.setLevel(logging.ERROR)
     else:
         log.ROOT_LOGGER.setLevel(logging.INFO)
@@ -326,6 +327,10 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     # display warnings
     if not force:
         confirm_kickstart()
+
+    # override backend get_oldest_tx
+    addrindexrs = AddrindexrsSocket()
+    backend.get_oldest_tx = addrindexrs.get_oldest_tx
 
     # check addrindexrs
     connect_to_addrindexrs()
