@@ -7,7 +7,7 @@ name = "counterparty-cli"
 requires-python = ">= 3.11"
 dynamic = ["version", "dependencies"]
 description = "Counterparty Protocol Command-Line Interface"
-readme = "README.md"
+readme = "../README.md"
 license = "MIT"
 authors = [
   { name = "Counterparty Developers", email = "dev@counterparty.io" },
