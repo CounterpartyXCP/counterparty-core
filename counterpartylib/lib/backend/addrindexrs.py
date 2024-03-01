@@ -521,6 +521,7 @@ def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
         return batch
 
 def get_oldest_tx(address):
+    print("get_oldest_tx old")
     hsh = _address_to_hash(address)
     call_result = Indexer_Thread.send({
         "method": "blockchain.scripthash.get_oldest_tx",
@@ -551,20 +552,22 @@ def stop():
         Indexer_Thread.stop()
 
 
-# Basic class to communicate with addrindexrs
-# No locking thread
-# Assume only one instance of this class is used at a time and not concurrently
-# This class does not handle most of the errors, it's up to the caller to do so
-# Tihs class does not check ID in the response
+# Basic class to communicate with addrindexrs.
+# No locking thread.
+# Assume only one instance of this class is used at a time and not concurrently.
+# This class does not handle most of the errors, it's up to the caller to do so.
+# This class does not check ID in the response.
+# This class assumes response are always not longer than READ_BUF_SIZE (65536 bytes).
 class AddrindexrsSocket:
 
     def __init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.settimeout(SOCKET_TIMEOUT)
         self.sock.connect((config.INDEXD_CONNECT, config.INDEXD_PORT))
         self.next_message_id = 0
 
 
-    def send(self, query, timeout=5):
+    def send(self, query, timeout=SOCKET_TIMEOUT):
         query["id"] = self.next_message_id
 
         message = (json.dumps(query) + "\n").encode('utf8')
@@ -576,9 +579,15 @@ class AddrindexrsSocket:
 
         start_time = time.time()
         while True:
-            data = self.sock.recv(READ_BUF_SIZE)
+            try:
+                data = self.sock.recv(READ_BUF_SIZE)
+            except TimeoutError:
+                return {}
             if data:
-                response = json.loads(data.decode('utf-8'))
+                try:
+                    response = json.loads(data.decode('utf-8'))
+                except json.decoder.JSONDecodeError:
+                    return {}
                 if not response:
                     return {}
                 if "error" in response:
@@ -589,10 +598,10 @@ class AddrindexrsSocket:
 
             duration = time.time() - start_time
             if duration > timeout:
-                raise TimeoutError("Timeout waiting for oldest tx from addrindexrs")
+                return {}
 
 
-    def get_oldest_tx(self, address, timeout=5):
+    def get_oldest_tx(self, address, timeout=SOCKET_TIMEOUT):
         hsh = _address_to_hash(address)
         query = {
             "method": "blockchain.scripthash.get_oldest_tx",
