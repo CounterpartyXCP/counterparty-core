@@ -561,19 +561,22 @@ def stop():
 class AddrindexrsSocket:
 
     def __init__(self):
+        self.next_message_id = 0
+        self.connect()
+
+
+    def connect(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(SOCKET_TIMEOUT)
         self.sock.connect((config.INDEXD_CONNECT, config.INDEXD_PORT))
-        self.next_message_id = 0
 
 
-    def send(self, query, timeout=SOCKET_TIMEOUT):
+    def _send(self, query, timeout=SOCKET_TIMEOUT):
         query["id"] = self.next_message_id
 
         message = (json.dumps(query) + "\n").encode('utf8')
-        sent = self.sock.send(message)
-        if sent == 0:
-            raise RuntimeError("socket connection broken")
+
+        self.sock.send(message)
 
         self.next_message_id += 1
 
@@ -599,6 +602,17 @@ class AddrindexrsSocket:
             duration = time.time() - start_time
             if duration > timeout:
                 return {}
+
+
+    def send(self, query, timeout=SOCKET_TIMEOUT, retry=0):
+        try:
+            return self._send(query, timeout=timeout)
+        except BrokenPipeError:
+            if retry > 3:
+                raise Exception("Too many retries, please check addrindexrs")
+            self.sock.close()
+            self.connect()
+            return self.send(query, timeout=timeout, retry=retry + 1)
 
 
     def get_oldest_tx(self, address, timeout=SOCKET_TIMEOUT):
