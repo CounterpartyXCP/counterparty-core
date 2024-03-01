@@ -31,7 +31,7 @@ def confirm_kickstart():
     print(f'''{warnings_message}''')
     confirmation_message = colored('Proceed with the initialization? (y/N): ', "magenta")
     if input(confirmation_message) != 'y':
-        return
+        exit()
 
 
 def fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner):
@@ -130,7 +130,7 @@ def connect_to_addrindexrs():
         backend.BACKEND()
         check_addrindexrs = {}
         while check_addrindexrs == {}:
-            check_address = "tb1qurdetpdk8zg2thzx3g77qkgr7a89cp2m429t9c" if config.TESTNET else "34qkc2iac6RsyxZVfyE2S5U5WcRsbg2dpK"
+            check_address = "tb1qurdetpdk8zg2thzx3g77qkgr7a89cp2m429t9c" if config.TESTNET else "1GsjsKKT4nH4GPmDnaxaZEDWgoBpmexwMA"
             check_addrindexrs = backend.get_oldest_tx(check_address)
             if check_addrindexrs == {}:
                 logger.info('`addrindexrs` is not ready. Waiting one second.')
