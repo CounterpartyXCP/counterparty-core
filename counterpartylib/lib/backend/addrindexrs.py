@@ -549,3 +549,53 @@ def init():
 def stop():
     if 'Indexer_Thread' in globals():
         Indexer_Thread.stop()
+
+
+# Basic class to communicate with addrindexrs
+# No locking thread
+# Assume only one instance of this class is used at a time and not concurrently
+# This class does not handle most of the errors, it's up to the caller to do so
+# Tihs class does not check ID in the response
+class AddrindexrsSocket:
+
+    def __init__(self):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.connect((config.INDEXD_CONNECT, config.INDEXD_PORT))
+        self.next_message_id = 0
+
+
+    def send(self, query, timeout=5):
+        query["id"] = self.next_message_id
+
+        message = (json.dumps(query) + "\n").encode('utf8')
+        sent = self.sock.send(message)
+        if sent == 0:
+            raise RuntimeError("socket connection broken")
+
+        self.next_message_id += 1
+
+        start_time = time.time()
+        while True:
+            data = self.sock.recv(READ_BUF_SIZE)
+            if data:
+                response = json.loads(data.decode('utf-8'))
+                if not response:
+                    return {}
+                if "error" in response:
+                    return {}
+                if "result" not in response:
+                    return {}
+                return response["result"]
+
+            duration = time.time() - start_time
+            if duration > timeout:
+                raise TimeoutError("Timeout waiting for oldest tx from addrindexrs")
+
+
+    def get_oldest_tx(self, address, timeout=5):
+        hsh = _address_to_hash(address)
+        query = {
+            "method": "blockchain.scripthash.get_oldest_tx",
+            "params": [hsh]
+        }
+        return self.send(query, timeout=timeout)

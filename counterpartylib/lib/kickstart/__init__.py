@@ -13,6 +13,7 @@ from termcolor import colored
 from counterpartylib import server
 from counterpartylib.lib import config, blocks, ledger, backend, database, log
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser, ChainstateParser
+from counterpartylib.lib.backend.addrindexrs import AddrindexrsSocket
 
 logger = logging.getLogger(__name__)
 
@@ -326,6 +327,10 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     # display warnings
     if not force:
         confirm_kickstart()
+
+    # override backend get_oldest_tx
+    addrindexrs = AddrindexrsSocket()
+    backend.get_oldest_tx = addrindexrs.get_oldest_tx
 
     # check addrindexrs
     connect_to_addrindexrs()
