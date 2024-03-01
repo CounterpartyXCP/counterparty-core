@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling==1.14.0", "hatch-requirements-txt==0.4.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "counterparty-lib"
+requires-python = ">= 3.11"
+dynamic = ["version", "dependencies"]
+description = "Counterparty Protocol Reference Implementation"
+readme = "../README.md"
+license = "MIT"
+authors = [
+  { name = "Counterparty Developers", email = "dev@counterparty.io" },
+]
+keywords = ['counterparty', 'bitcoin', 'blockchain', 'crypto', 'cryptocurrency', 'wallet', 'exchange', 'trading', 'finance']
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Distributed Computing"
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.metadata.hooks.requirements_txt]
+files = ["requirements.txt"]
+
+[project.urls]
+"Latest release" = "https://github.com/CounterpartyXCP/counterparty-lib/releases/latest"
+"Documentation" = "https://docs.counterparty.io/"
+"Source code" = "https://github.com/CounterpartyXCP/"
+"Home Page" = "https://counterparty.io/"
+
+[tool.hatch.version]
+path = "counterpartylib/lib/config.py"
+
+[tool.hatch.build.targets.wheel]
+include = ["counterpartylib"]

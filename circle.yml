@@ -36,6 +36,7 @@ jobs:
           command: |
             curl https://sh.rustup.rs -sSf | sh -s -- -y
             source "$HOME/.cargo/env"
+            cd counterparty-lib
             mkdir test-results
             hatch run pytest --junitxml=test-results/junit.xml --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./ counterpartylib
 
