@@ -1,7 +1,0 @@
-language: python
-python:
-- "3.4"
-install:
-- pip install -r requirements.txt
-- python setup.py install
-script: echo "Correctly installed"
