@@ -1,6 +1,7 @@
 env
 venv
 docs/_build/*
+target/
 
 profile.txt
 

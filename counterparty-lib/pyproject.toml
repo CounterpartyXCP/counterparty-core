@@ -44,3 +44,8 @@ path = "counterpartylib/lib/config.py"
 
 [tool.hatch.build.targets.wheel]
 include = ["counterpartylib"]
+
+[tool.hatch.envs.default]
+pre-install-commands = [
+  "pip install -e ../counterparty-rs",
+]
