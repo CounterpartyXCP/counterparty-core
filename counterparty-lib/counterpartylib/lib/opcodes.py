@@ -1,6 +1,6 @@
 # push value
 def to_bytes(i):
-  i.to_bytes(1, 'big')
+  return i.to_bytes(1, 'big')
 
 OP_0 = to_bytes(0x00)
 OP_FALSE = OP_0
