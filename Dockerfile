@@ -27,6 +27,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 
 # install maturin
 RUN pip3.11 install maturin
+# Fix ERROR: Cannot uninstall 'blinker'. It is a distutils installed project and thus we cannot accurately determine which files belong to it which would lead to only a partial uninstall.
 RUN apt-get remove python3-blinker -y
 
 # copy repository
