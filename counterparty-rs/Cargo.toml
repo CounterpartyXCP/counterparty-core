@@ -20,3 +20,4 @@ par-map = "0.1.4"
 
 [build-dependencies]
 vergen = { version = "8.2.6", features = ["build", "cargo", "git", "gitcl", "rustc"] }
+pyo3-build-config = "0.20.3"

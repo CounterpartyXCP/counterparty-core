@@ -1,4 +1,4 @@
-from pycoin_rs import b58
+from counterparty_rs import b58
 
 def test_b58_check_decode():
 

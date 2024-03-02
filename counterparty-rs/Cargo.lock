@@ -213,6 +213,7 @@ dependencies = [
  "bs58",
  "par-map",
  "pyo3",
+ "pyo3-build-config 0.20.3",
  "ripemd",
  "sha256",
  "vergen",
@@ -594,7 +595,7 @@ dependencies = [
  "libc",
  "memoffset",
  "parking_lot",
- "pyo3-build-config",
+ "pyo3-build-config 0.17.3",
  "pyo3-ffi",
  "pyo3-macros",
  "unindent",
@@ -611,13 +612,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "pyo3-build-config"
+version = "0.20.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "deaa5745de3f5231ce10517a1f5dd97d53e5a2fd77aa6b5842292085831d48d7"
+dependencies = [
+ "once_cell",
+ "target-lexicon",
+]
+
+[[package]]
 name = "pyo3-ffi"
 version = "0.17.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0f6cb136e222e49115b3c51c32792886defbfb0adead26a688142b346a0b9ffc"
 dependencies = [
  "libc",
- "pyo3-build-config",
+ "pyo3-build-config 0.17.3",
 ]
 
 [[package]]
