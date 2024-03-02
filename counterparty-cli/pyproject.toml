@@ -32,6 +32,7 @@ files = ["requirements.txt"]
 
 [tool.hatch.envs.default]
 pre-install-commands = [
+  "pip install -e ../counterparty-rs",
   "pip install -e ../counterparty-lib",
 ]
 
