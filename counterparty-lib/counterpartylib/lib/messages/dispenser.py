@@ -308,6 +308,8 @@ DECODE_ERROR = {
     "6b265de0e37c4f2c0503f5b465b806fcc58e74901663f61819da9c5258729093": True,
     "971a45311e539bcf2cc4d61a75ef7c05130f78cc928535b23e87ceadf6dc1b04": True,
     "85e17c81f80d040f98077bcb49882654d1f222cf4bdeba4cf81aaf70213431ce": True,
+    # testnet
+    "e0226ba71237e028e46ad4d7c5fbdd595b4c83d1eb53543dd53cf9d342671b7c": True,
 }
 
 def parse (db, tx, message):
