@@ -5,7 +5,6 @@ import platform
 import signal
 import shutil
 from queue import Empty
-from multiprocessing import resource_tracker
 
 import apsw
 from halo import Halo
@@ -14,34 +13,13 @@ from termcolor import colored
 from counterpartylib import server
 from counterpartylib.lib import config, blocks, ledger, backend, database, log
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser, ChainstateParser
+from counterpartylib.lib.kickstart.utils import remove_shm_from_resource_tracker
 from counterpartylib.lib.backend.addrindexrs import AddrindexrsSocket
 
 logger = logging.getLogger(__name__)
 
 OK_GREEN = colored("[OK]", "green")
 SPINNER_STYLE = "bouncingBar"
-
-
-def remove_shm_from_resource_tracker():
-    """Monkey-patch multiprocessing.resource_tracker so SharedMemory won't be tracked
-
-    More details at: https://bugs.python.org/issue38119
-    """
-
-    def fix_register(name, rtype):
-        if rtype == "shared_memory":
-            return
-        return resource_tracker._resource_tracker.register(self, name, rtype)
-    resource_tracker.register = fix_register
-
-    def fix_unregister(name, rtype):
-        if rtype == "shared_memory":
-            return
-        return resource_tracker._resource_tracker.unregister(self, name, rtype)
-    resource_tracker.unregister = fix_unregister
-
-    if "shared_memory" in resource_tracker._CLEANUP_FUNCS:
-        del resource_tracker._CLEANUP_FUNCS["shared_memory"]
 
 
 def confirm_kickstart():
@@ -102,7 +80,7 @@ def fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner):
         cursor.execute(f'''INSERT INTO kickstart_blocks (block_index, block_hash, block_time, previous_block_hash, difficulty, tx_count)
                               VALUES {', '.join(bindings_place)}''',
                               bindings_lot)
-        spinner.text = f"Block {bindings_lot[0]} to {bindings_lot[-6]} inserted."
+        spinner.text = f"Initialising database: block {bindings_lot[0]} to {bindings_lot[-6]} inserted."
         if block['block_index'] == first_block:
             break
     block_parser.close()
@@ -203,9 +181,8 @@ def intialize_kickstart_db(bitcoind_dir, last_known_hash, resuming, new_database
         if not resuming:
             first_block = config.BLOCK_FIRST
             if not new_database:
-                first_block = cursor.execute('SELECT block_index FROM blocks ORDER BY block_index ASC LIMIT 1').fetchone()['block_index']
+                first_block = cursor.execute('SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1').fetchone()['block_index']
             fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner)
-
         # get last block index
         spinner.text = step
         block_count, tx_index, last_parsed_block = prepare_db_for_resume(cursor)
@@ -311,14 +288,14 @@ def parse_block(kickstart_db, cursor, block, block_parser, tx_index):
 
 def generate_progression_message(block, tx_index, start_time_block_parse, start_time_all_blocks_parse, block_parsed_count, block_count):
     block_parsing_duration = time.time() - start_time_block_parse
-    message = f"Block {block['block_index']} parsed in {block_parsing_duration:.3f}s."
-    message += f" {block_parsed_count} blocks parsed."
-    message += f" {tx_index} txs indexed."
     cumulated_duration = time.time() - start_time_all_blocks_parse
     expected_duration = (cumulated_duration / block_parsed_count) * block_count
     remaining_duration = expected_duration - cumulated_duration
-    message += f" {cumulated_duration:.3f}s / {expected_duration:.3f}s ({remaining_duration:.3f}s)."
-    return message
+    current_block = f"Block {block['block_index']} parsed in {block_parsing_duration:.3f}s"
+    blocks_parsed = f"{block_parsed_count}/{block_count} blocks parsed"
+    txs_indexed = f"{tx_index} txs indexed"
+    duration = f"{cumulated_duration:.3f}s/{expected_duration:.3f}s ({remaining_duration:.3f}s)"
+    return f"{current_block} [{blocks_parsed} - {txs_indexed} - {duration}]"
 
 
 def cleanup(kickstart_db, block_parser):
@@ -424,7 +401,6 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
             block = block_parser.next_block()
 
         spinner.stop()
-        print('All blocks parsed in: {:.3f}s'.format(time.time() - start_time_all_blocks_parse))
     except FileNotFoundError:
         pass # block file not found on stopping
     except KeyboardInterrupt:

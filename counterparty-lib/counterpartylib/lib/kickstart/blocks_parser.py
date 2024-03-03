@@ -8,7 +8,7 @@ import time
 import apsw
 
 from .bc_data_stream import BCDataStream
-from .utils import b2h, double_hash, ib2h, inverse_hash, decode_value
+from .utils import b2h, double_hash, ib2h, inverse_hash, decode_value, remove_shm_from_resource_tracker
 from counterpartylib.lib import ledger, config, gettxinfo
 from counterpartylib.lib.exceptions import DecodeError
 
@@ -35,6 +35,7 @@ def open_leveldb(db_dir):
 def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config):
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     signal.signal(signal.SIGINT, signal.default_int_handler)
+    remove_shm_from_resource_tracker()
 
     for attribute in parser_config:
         setattr(config, attribute, parser_config[attribute])
@@ -71,7 +72,10 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
         
             serialized_block = pickle.dumps(block, protocol=pickle.HIGHEST_PROTOCOL)
             block_length = len(serialized_block)
-            shm = shared_memory.SharedMemory(name=db_block[0], create=True, size=block_length)
+            try:
+                shm = shared_memory.SharedMemory(name=db_block[0], create=True, size=block_length)
+            except FileExistsError:
+                shm = shared_memory.SharedMemory(name=db_block[0])
             shm.buf[:block_length] = serialized_block
             queue.put(shm.name)
             shm.close()
