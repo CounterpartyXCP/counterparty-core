@@ -5,6 +5,7 @@ import platform
 import signal
 import shutil
 from queue import Empty
+from multiprocessing import resource_tracker
 
 import apsw
 from halo import Halo
@@ -19,6 +20,28 @@ logger = logging.getLogger(__name__)
 
 OK_GREEN = colored("[OK]", "green")
 SPINNER_STYLE = "bouncingBar"
+
+
+def remove_shm_from_resource_tracker():
+    """Monkey-patch multiprocessing.resource_tracker so SharedMemory won't be tracked
+
+    More details at: https://bugs.python.org/issue38119
+    """
+
+    def fix_register(name, rtype):
+        if rtype == "shared_memory":
+            return
+        return resource_tracker._resource_tracker.register(self, name, rtype)
+    resource_tracker.register = fix_register
+
+    def fix_unregister(name, rtype):
+        if rtype == "shared_memory":
+            return
+        return resource_tracker._resource_tracker.unregister(self, name, rtype)
+    resource_tracker.unregister = fix_unregister
+
+    if "shared_memory" in resource_tracker._CLEANUP_FUNCS:
+        del resource_tracker._CLEANUP_FUNCS["shared_memory"]
 
 
 def confirm_kickstart():
@@ -244,10 +267,12 @@ def backup_if_needed(new_database, resuming):
                 return
             # move old database
             backup_db(move=True)
+            return True
         else:
             backup_db()
     elif not new_database:
         backup_db()
+    return new_database
 
 
 def parse_block(kickstart_db, cursor, block, block_parser, tx_index):
@@ -287,24 +312,23 @@ def parse_block(kickstart_db, cursor, block, block_parser, tx_index):
 def generate_progression_message(block, tx_index, start_time_block_parse, start_time_all_blocks_parse, block_parsed_count, block_count):
     block_parsing_duration = time.time() - start_time_block_parse
     message = f"Block {block['block_index']} parsed in {block_parsing_duration:.3f}s."
-    message += f" {tx_index} transactions indexed."
+    message += f" {block_parsed_count} blocks parsed."
+    message += f" {tx_index} txs indexed."
     cumulated_duration = time.time() - start_time_all_blocks_parse
-    message += f" Cumulated duration: {cumulated_duration:.3f}s."
     expected_duration = (cumulated_duration / block_parsed_count) * block_count
-    message += f" Expected duration: {expected_duration:.3f}s."
+    remaining_duration = expected_duration - cumulated_duration
+    message += f" {cumulated_duration:.3f}s / {expected_duration:.3f}s ({remaining_duration:.3f}s)."
     return message
 
 
 def cleanup(kickstart_db, block_parser):
+    remove_shm_from_resource_tracker()
     step = 'Cleaning up...'
     with Halo(text=step, spinner=SPINNER_STYLE):
         # empyt queue to clean shared memory
         try:
             block_parser.block_parsed()
             block_parser.close()
-            #block = block_parser.next_block(timeout=1)
-            #while block is not None:
-            #    block = block_parser.next_block(timeout=1)
         except (Empty, FileNotFoundError):
             pass
         backend.stop()
@@ -349,7 +373,7 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
 
     # backup old database
     if not force:
-        backup_if_needed(new_database, resuming)
+        new_database = backup_if_needed(new_database, resuming)
 
     # initialize main timer
     start_time_total = time.time()
@@ -378,26 +402,26 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
             start_time_block_parse = time.time()
             # parse block
             tx_index = parse_block(kickstart_db, cursor, block, block_parser, tx_index)
-            # check if we are done
-            if block['block_hash'] == last_known_hash:
-                break
             # update last parsed block
             last_parsed_block = block['block_index']
             # update block parsed count
             block_parsed_count += 1
             # let's have a nice message
-            spinner.text = generate_progression_message(
+            message = generate_progression_message(
                 block, tx_index,
                 start_time_block_parse, start_time_all_blocks_parse,
                 block_parsed_count, block_count
             )
+            spinner.text = message
             # notify block parsed
             block_parser.block_parsed()
-            # get next block
+            # check if we are done
+            if block['block_hash'] == last_known_hash:
+                break
             if debug_block is not None and block['block_index'] == int(debug_block):
-                block = None
-            else:
-                block = block_parser.next_block()
+                break
+            # get next block
+            block = block_parser.next_block()
 
         spinner.stop()
         print('All blocks parsed in: {:.3f}s'.format(time.time() - start_time_all_blocks_parse))
