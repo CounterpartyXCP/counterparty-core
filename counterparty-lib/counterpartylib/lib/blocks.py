@@ -538,27 +538,38 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
 
 
 def clean_table_from(cursor, table, block_index):
+    logger.info('Cleaning table {} from block_index {}...'.format(table, block_index))
     cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
+
+
+def clean_messages_tables(cursor, block_index=0):
+    # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
+    cursor.execute('''PRAGMA foreign_keys=OFF''')
+    for table in TABLES:
+        clean_table_from(cursor, table, block_index)
+    cursor.execute('''PRAGMA foreign_keys=ON''')
+
+
+def clean_transactions_tables(cursor, block_index=0):
+    # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
+    cursor.execute('''PRAGMA foreign_keys=OFF''')
+    for table in ['transaction_outputs', 'transactions', 'blocks']:
+        clean_table_from(cursor, table, block_index)
+    cursor.execute('''PRAGMA foreign_keys=ON''')
 
 
 def rollback(db, block_index=0):
     # clean all tables
     cursor = db.cursor()
-    for table in TABLES + ['transaction_outputs', 'transactions', 'blocks']:
-        clean_table_from(cursor, table, block_index)
+    clean_messages_tables(cursor, block_index=block_index)
+    clean_transactions_tables(cursor, block_index=block_index)
     cursor.close()
     logger.info('Database rolled back to block_index {}'.format(block_index))
 
 
-def clean_messages_tables(cursor, block_index=0):
-    # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
-    for table in TABLES:
-        clean_table_from(cursor, table, block_index)
-
-
 def reparse(db, block_index=0):
     cursor = db.cursor()
-    clean_messages_tables(cursor, block_index=0)
+    clean_messages_tables(cursor, block_index=block_index)
     # reparse blocks
     ledger.CURRENT_BLOCK_INDEX = block_index if block_index !=0 else config.BLOCK_FIRST
     cursor.execute('''SELECT * FROM blocks WHERE block_index > ?''', (block_index,))
