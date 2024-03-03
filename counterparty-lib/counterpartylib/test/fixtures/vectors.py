@@ -442,7 +442,12 @@ UNITTEST_VECTOR = {
             {
                 'in': (BlockchainParser().deserialize_tx('0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff03361500000000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e87781e000000000000695121035ca51ea175f108a1c63588683dc4c43a7146c46799f864a300263c0813f5fe352102309a14a1a30202f2e76f46acdb2917752371ca42b97460f7928ade8ecb02ea17210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97753ae4286f505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000', use_txid=True),
                        DP['default_block_index'],),
-                'error': (exceptions.DecodeError, 'unrecognised output type')
+                'out': ('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
+                   '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy',
+                    5430,
+                    10000,
+                    b'\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n',
+                    [])
             },
             #'get_tx_info3'
             # data in OP_CHECKSIG script
