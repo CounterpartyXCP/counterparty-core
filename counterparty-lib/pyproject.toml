@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "counterparty-lib"
-requires-python = ">= 3.11"
+requires-python = ">= 3.10"
 dynamic = ["version", "dependencies"]
 description = "Counterparty Protocol Reference Implementation"
 readme = "../README.md"
