@@ -43,6 +43,7 @@ from counterpartylib import server
 from counterpartylib.lib.transaction_helper import p2sh_encoding
 from counterpartylib.lib.gettxinfo import get_tx_info
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
+from counterpartylib.lib.kickstart import generate_progression_message, connect_to_addrindexrs
 
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, destroy, sweep, dispenser)
 from .messages.versions import enhanced_send, mpma
@@ -578,13 +579,41 @@ def rollback(db, block_index=0):
 
 
 def reparse(db, block_index=0):
+    step = "Connecting to `bitcoind`..."
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        backend.getblockcount()
+    print(f'{OK_GREEN} {step}')
+
+    connect_to_addrindexrs()
+
     cursor = db.cursor()
-    clean_messages_tables(cursor, block_index=block_index)
+    # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
+    step = f"Cleaning database from block {block_index}..."
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        clean_messages_tables(cursor, block_index=block_index)
+    print(f'{OK_GREEN} {step}')
+
     # reparse blocks
-    cursor.execute('''SELECT * FROM blocks WHERE block_index > ? ORDER BY block_index''', (block_index,))
-    for block in cursor:
-        ledger.CURRENT_BLOCK_INDEX = block['block_index']
-        parse_block(db, block['block_index'], block['block_time'])
+    start_time_all_blocks_parse = time.time()
+    block_parsed_count = 0
+    count_query = "SELECT COUNT(*) AS cnt FROM blocks WHERE block_index > ?"
+    block_count = cursor.execute(count_query, (block_index,)).fetchone()['cnt']
+    step = f"Reparsing blocks from block {block_index}..."
+    with Halo(text=step, spinner=SPINNER_STYLE) as spinner:
+        cursor.execute('''SELECT * FROM blocks WHERE block_index > ? ORDER BY block_index''', (block_index,))
+        for block in cursor:
+            start_time_block_parse = time.time()
+            ledger.CURRENT_BLOCK_INDEX = block['block_index']
+            parse_block(db, block['block_index'], block['block_time'])
+            block_parsed_count += 1
+            message = generate_progression_message(
+                block,
+                start_time_block_parse, start_time_all_blocks_parse,
+                block_parsed_count, block_count
+            )
+            spinner.text = message
+    print(f'{OK_GREEN} {message}')
+    print('All blocks reparsed in {:.2f}s'.format(time.time() - start_time_all_blocks_parse))
 
 
 def last_db_index(db):

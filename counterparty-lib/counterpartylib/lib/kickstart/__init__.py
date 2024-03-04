@@ -286,16 +286,18 @@ def parse_block(kickstart_db, cursor, block, block_parser, tx_index):
     return tx_index
 
 
-def generate_progression_message(block, tx_index, start_time_block_parse, start_time_all_blocks_parse, block_parsed_count, block_count):
+def generate_progression_message(block, start_time_block_parse, start_time_all_blocks_parse, block_parsed_count, block_count, tx_index=None):
     block_parsing_duration = time.time() - start_time_block_parse
     cumulated_duration = time.time() - start_time_all_blocks_parse
     expected_duration = (cumulated_duration / block_parsed_count) * block_count
     remaining_duration = expected_duration - cumulated_duration
     current_block = f"Block {block['block_index']} parsed in {block_parsing_duration:.3f}s"
     blocks_parsed = f"{block_parsed_count}/{block_count} blocks parsed"
-    txs_indexed = f"{tx_index} txs indexed"
+    txs_indexed = " - "
+    if tx_index is not None:
+        txs_indexed = f" - tx_index: {tx_index} - "
     duration = f"{cumulated_duration:.3f}s/{expected_duration:.3f}s ({remaining_duration:.3f}s)"
-    return f"{current_block} [{blocks_parsed} - {txs_indexed} - {duration}]"
+    return f"{current_block} [{blocks_parsed}{txs_indexed}{duration}]"
 
 
 def cleanup(kickstart_db, block_parser):
@@ -315,12 +317,6 @@ def cleanup(kickstart_db, block_parser):
 
 
 def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
-    # set log level
-    if not config.VERBOSE and debug_block is None:
-        log.ROOT_LOGGER.setLevel(logging.ERROR)
-    else:
-        log.ROOT_LOGGER.setLevel(logging.INFO)
-
     # default signal handlers
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     signal.signal(signal.SIGINT, signal.default_int_handler)
@@ -381,9 +377,10 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
             block_parsed_count += 1
             # let's have a nice message
             message = generate_progression_message(
-                block, tx_index,
+                block,
                 start_time_block_parse, start_time_all_blocks_parse,
-                block_parsed_count, block_count
+                block_parsed_count, block_count,
+                tx_index
             )
             spinner.text = message
             # notify block parsed
