@@ -22,7 +22,6 @@ COPY ./counterparty-cli /counterparty-cli
 
 # install counterparty-lib
 WORKDIR /counterparty-rs
-RUN cargo build
 RUN pip3 install .
 
 # install counterparty-lib
