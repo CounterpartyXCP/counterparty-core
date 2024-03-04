@@ -125,21 +125,6 @@ def prepare_db_for_resume(cursor):
     return block_count, tx_index, last_parsed_block
 
 
-def connect_to_addrindexrs():
-    step = 'Connecting to `addrindexrs`...'
-    with Halo(text=step, spinner=SPINNER_STYLE):
-        ledger.CURRENT_BLOCK_INDEX = 0
-        backend.BACKEND()
-        check_addrindexrs = {}
-        while check_addrindexrs == {}:
-            check_address = "tb1qurdetpdk8zg2thzx3g77qkgr7a89cp2m429t9c" if config.TESTNET else "1GsjsKKT4nH4GPmDnaxaZEDWgoBpmexwMA"
-            check_addrindexrs = backend.get_oldest_tx(check_address)
-            if check_addrindexrs == {}:
-                logger.info('`addrindexrs` is not ready. Waiting one second.')
-                time.sleep(1)
-    print(f'{OK_GREEN} {step}')
-
-
 def get_bitcoind_dir(bitcoind_dir=None):
     if bitcoind_dir is None:
         if platform.system() == 'Darwin':
@@ -286,20 +271,6 @@ def parse_block(kickstart_db, cursor, block, block_parser, tx_index):
     return tx_index
 
 
-def generate_progression_message(block, start_time_block_parse, start_time_all_blocks_parse, block_parsed_count, block_count, tx_index=None):
-    block_parsing_duration = time.time() - start_time_block_parse
-    cumulated_duration = time.time() - start_time_all_blocks_parse
-    expected_duration = (cumulated_duration / block_parsed_count) * block_count
-    remaining_duration = expected_duration - cumulated_duration
-    current_block = f"Block {block['block_index']} parsed in {block_parsing_duration:.3f}s"
-    blocks_parsed = f"{block_parsed_count}/{block_count} blocks parsed"
-    txs_indexed = " - "
-    if tx_index is not None:
-        txs_indexed = f" - tx_index: {tx_index} - "
-    duration = f"{cumulated_duration:.3f}s/{expected_duration:.3f}s ({remaining_duration:.3f}s)"
-    return f"{current_block} [{blocks_parsed}{txs_indexed}{duration}]"
-
-
 def cleanup(kickstart_db, block_parser):
     remove_shm_from_resource_tracker()
     step = 'Cleaning up...'
@@ -326,7 +297,7 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
         confirm_kickstart()
 
     # check addrindexrs
-    connect_to_addrindexrs()
+    server.connect_to_addrindexrs()
 
     # determine bitoincore data directory
     bitcoind_dir = get_bitcoind_dir(bitcoind_dir)
@@ -376,7 +347,7 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
             # update block parsed count
             block_parsed_count += 1
             # let's have a nice message
-            message = generate_progression_message(
+            message = blocks.generate_progression_message(
                 block,
                 start_time_block_parse, start_time_all_blocks_parse,
                 block_parsed_count, block_count,

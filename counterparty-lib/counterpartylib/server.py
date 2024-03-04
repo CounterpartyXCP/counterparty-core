@@ -18,6 +18,9 @@ import bitcoin as bitcoinlib
 import logging
 from urllib.parse import quote_plus as urlencode
 
+from halo import Halo
+from termcolor import colored
+
 from counterpartylib.lib import log
 logger = logging.getLogger(__name__)
 log.set_logger(logger)  # set root logger
@@ -26,6 +29,8 @@ from counterpartylib.lib import api, config, util, ledger, blocks, backend, data
 from counterpartylib.lib import kickstart as kickstarter
 D = decimal.Decimal
 
+OK_GREEN = colored("[OK]", "green")
+SPINNER_STYLE = "bouncingBar"
 
 class ConfigurationError(Exception):
     pass
@@ -473,6 +478,21 @@ def initialise_db():
 def connect_to_backend():
     if not config.FORCE:
         backend.getblockcount()
+
+
+def connect_to_addrindexrs():
+    step = 'Connecting to `addrindexrs`...'
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        ledger.CURRENT_BLOCK_INDEX = 0
+        backend.BACKEND()
+        check_addrindexrs = {}
+        while check_addrindexrs == {}:
+            check_address = "tb1qurdetpdk8zg2thzx3g77qkgr7a89cp2m429t9c" if config.TESTNET else "1GsjsKKT4nH4GPmDnaxaZEDWgoBpmexwMA"
+            check_addrindexrs = backend.get_oldest_tx(check_address)
+            if check_addrindexrs == {}:
+                logger.info('`addrindexrs` is not ready. Waiting one second.')
+                time.sleep(1)
+    print(f'{OK_GREEN} {step}')
 
 
 def start_all(db):

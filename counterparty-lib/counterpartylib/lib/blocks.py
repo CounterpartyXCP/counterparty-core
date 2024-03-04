@@ -43,7 +43,6 @@ from counterpartylib import server
 from counterpartylib.lib.transaction_helper import p2sh_encoding
 from counterpartylib.lib.gettxinfo import get_tx_info
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
-from counterpartylib.lib.kickstart import generate_progression_message, connect_to_addrindexrs
 
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, destroy, sweep, dispenser)
 from .messages.versions import enhanced_send, mpma
@@ -578,13 +577,22 @@ def rollback(db, block_index=0):
     print('Rollback done in {:.2f}s'.format(time.time() - start_time))
 
 
-def reparse(db, block_index=0):
-    step = "Connecting to `bitcoind`..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
-        backend.getblockcount()
-    print(f'{OK_GREEN} {step}')
+def generate_progression_message(block, start_time_block_parse, start_time_all_blocks_parse, block_parsed_count, block_count, tx_index=None):
+    block_parsing_duration = time.time() - start_time_block_parse
+    cumulated_duration = time.time() - start_time_all_blocks_parse
+    expected_duration = (cumulated_duration / block_parsed_count) * block_count
+    remaining_duration = expected_duration - cumulated_duration
+    current_block = f"Block {block['block_index']} parsed in {block_parsing_duration:.3f}s"
+    blocks_parsed = f"{block_parsed_count}/{block_count} blocks parsed"
+    txs_indexed = " - "
+    if tx_index is not None:
+        txs_indexed = f" - tx_index: {tx_index} - "
+    duration = f"{cumulated_duration:.3f}s/{expected_duration:.3f}s ({remaining_duration:.3f}s)"
+    return f"{current_block} [{blocks_parsed}{txs_indexed}{duration}]"
 
-    connect_to_addrindexrs()
+
+def reparse(db, block_index=0):
+    server.connect_to_addrindexrs()
 
     cursor = db.cursor()
     # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
