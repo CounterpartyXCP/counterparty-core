@@ -81,7 +81,7 @@ def set_logger(logger):
 
 LOGGING_SETUP = False
 LOGGING_TOFILE_SETUP = False
-def set_up(logger, verbose=False, logfile=None, console_logfilter=None, quiet=False):
+def set_up(logger, verbose=False, logfile=None, console_logfilter=None, quiet=True):
     global LOGGING_SETUP
     global LOGGING_TOFILE_SETUP
 
