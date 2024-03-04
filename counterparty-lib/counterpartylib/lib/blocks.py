@@ -24,6 +24,9 @@ import apsw
 import bitcoin as bitcoinlib
 from bitcoin.core.script import CScriptInvalidError
 
+from halo import Halo
+from termcolor import colored
+
 from counterpartylib import server
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
@@ -69,6 +72,8 @@ with open(CURR_DIR + '/../mainnet_burns.csv', 'r') as f:
     for line in mainnet_burns_reader:
         MAINNET_BURNS[line['tx_hash']] = line
 
+OK_GREEN = colored("[OK]", "green")
+SPINNER_STYLE = "bouncingBar"
 
 def parse_tx(db, tx):
     """Parse the transaction, return True for success."""
@@ -560,11 +565,16 @@ def clean_transactions_tables(cursor, block_index=0):
 
 def rollback(db, block_index=0):
     # clean all tables
-    cursor = db.cursor()
-    clean_messages_tables(cursor, block_index=block_index)
-    clean_transactions_tables(cursor, block_index=block_index)
-    cursor.close()
-    logger.info('Database rolled back to block_index {}'.format(block_index))
+    start_time = time.time()
+    step = f"Cleaning database from block {block_index}..."
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        cursor = db.cursor()
+        clean_messages_tables(cursor, block_index=block_index)
+        clean_transactions_tables(cursor, block_index=block_index)
+        cursor.close()
+        logger.info('Database rolled back to block_index {}'.format(block_index))
+    print(f'{OK_GREEN} {step}')
+    print('Rollback done in {:.2f}s'.format(time.time() - start_time))
 
 
 def reparse(db, block_index=0):
