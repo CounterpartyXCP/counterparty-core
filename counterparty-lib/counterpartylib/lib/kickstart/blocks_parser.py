@@ -41,7 +41,6 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
         setattr(config, attribute, parser_config[attribute])
 
     db = apsw.Connection(db_path, flags=apsw.SQLITE_OPEN_READONLY)
-    parser = BlockchainParser(bitcoind_dir)
     cursor = db.cursor()
     try:
         cursor.execute('''SELECT block_hash, block_index FROM kickstart_blocks
@@ -53,6 +52,7 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
         cursor.close()
         db.close()
 
+        parser = BlockchainParser(bitcoind_dir)
         shm = None
         for db_block in all_blocks:
             if queue.full():
@@ -72,10 +72,11 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
         
             serialized_block = pickle.dumps(block, protocol=pickle.HIGHEST_PROTOCOL)
             block_length = len(serialized_block)
+            name = db_block[0][-8:]
             try:
-                shm = shared_memory.SharedMemory(name=db_block[0], create=True, size=block_length)
+                shm = shared_memory.SharedMemory(name, create=True, size=block_length)
             except FileExistsError:
-                shm = shared_memory.SharedMemory(name=db_block[0])
+                shm = shared_memory.SharedMemory(name)
             shm.buf[:block_length] = serialized_block
             queue.put(shm.name)
             shm.close()
