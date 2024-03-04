@@ -72,7 +72,7 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
         
             serialized_block = pickle.dumps(block, protocol=pickle.HIGHEST_PROTOCOL)
             block_length = len(serialized_block)
-            name = db_block[0][:19]
+            name = db_block[0][-8:]
             try:
                 shm = shared_memory.SharedMemory(name, create=True, size=block_length)
             except FileExistsError:
