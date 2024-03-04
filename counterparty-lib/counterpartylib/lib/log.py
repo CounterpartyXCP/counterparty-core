@@ -107,11 +107,12 @@ def set_up(logger, verbose=False, logfile=None, console_logfilter=None, quiet=Tr
         return
     LOGGING_SETUP = True
 
-    log_level = logging.INFO
-    if quiet:
-        log_level = logging.ERROR
-    elif verbose:
+    if verbose and not quiet:
         log_level = logging.DEBUG
+    elif verbose and quiet:
+        log_level = logging.INFO
+    else:
+        log_level = logging.ERROR
     logger.setLevel(log_level)
 
     # Console Logging
