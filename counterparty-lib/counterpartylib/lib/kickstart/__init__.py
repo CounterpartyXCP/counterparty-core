@@ -329,10 +329,6 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     if not force:
         confirm_kickstart()
 
-    # override backend get_oldest_tx
-    addrindexrs = AddrindexrsSocket()
-    backend.get_oldest_tx = addrindexrs.get_oldest_tx
-
     # check addrindexrs
     connect_to_addrindexrs()
 
