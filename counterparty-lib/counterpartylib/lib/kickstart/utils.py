@@ -1,6 +1,6 @@
 import binascii, os, math, json, hashlib
 
-from pycoin_rs import utils as pycoin_rs_utils
+from counterparty_rs import utils as pycoin_rs_utils
 
 bytes_from_int = chr if bytes == str else lambda x: bytes([x])
 

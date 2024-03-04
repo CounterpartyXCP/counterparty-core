@@ -11,7 +11,7 @@ import bitcoin as bitcoinlib
 from bitcoin.core.key import CPubKey
 from bitcoin.bech32 import CBech32Data
 from Crypto.Hash import RIPEMD160
-from pycoin_rs import b58, utils
+from counterparty_rs import b58, utils
 
 from counterpartylib.lib import util
 from counterpartylib.lib import config

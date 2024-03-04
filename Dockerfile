@@ -27,15 +27,23 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 
 # install maturin
 RUN pip3.11 install maturin
+# Fix ERROR: Cannot uninstall 'blinker'. It is a distutils installed project and thus we cannot accurately determine which files belong to it which would lead to only a partial uninstall.
+RUN apt-get remove python3-blinker -y
 
 # copy repository
 COPY README.md /README.md
+COPY ./counterparty-rs /counterparty-rs
 COPY ./counterparty-lib /counterparty-lib
 COPY ./counterparty-cli /counterparty-cli
 
 # install counterparty-lib
+WORKDIR /counterparty-rs
+RUN cargo build
+RUN pip3.11 install .
+
+# install counterparty-lib
 WORKDIR /counterparty-lib
-RUN pip3.11 install --ignore-installed .
+RUN pip3.11 install .
 
 # install counterparty-cli
 WORKDIR /counterparty-cli

@@ -18,7 +18,7 @@ from counterpartylib.lib.script import (
 
 from counterpartylib.lib.opcodes import *
 
-from pycoin_rs import utils
+from counterparty_rs import utils
 
 def test_pycoin_rs():
 
