@@ -571,9 +571,9 @@ def reparse(db, block_index=0):
     cursor = db.cursor()
     clean_messages_tables(cursor, block_index=block_index)
     # reparse blocks
-    ledger.CURRENT_BLOCK_INDEX = block_index if block_index !=0 else config.BLOCK_FIRST
-    cursor.execute('''SELECT * FROM blocks WHERE block_index > ?''', (block_index,))
+    cursor.execute('''SELECT * FROM blocks WHERE block_index > ? ORDER BY block_index''', (block_index,))
     for block in cursor:
+        ledger.CURRENT_BLOCK_INDEX = block['block_index']
         parse_block(db, block['block_index'], block['block_time'])
 
 

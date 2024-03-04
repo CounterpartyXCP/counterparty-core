@@ -494,6 +494,7 @@ def start_all(db):
 
 
 def reparse(db, block_index):
+    connect_to_backend()
     blocks.reparse(db, block_index=block_index)
 
 
