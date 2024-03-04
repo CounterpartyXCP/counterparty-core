@@ -8,8 +8,9 @@ import time
 import apsw
 
 from .bc_data_stream import BCDataStream
-from .utils import b2h, double_hash, ib2h, inverse_hash, decode_value
-from counterpartylib.lib import ledger, config
+from .utils import b2h, double_hash, ib2h, inverse_hash, decode_value, remove_shm_from_resource_tracker
+from counterpartylib.lib import ledger, config, gettxinfo
+from counterpartylib.lib.exceptions import DecodeError
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +35,11 @@ def open_leveldb(db_dir):
 def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config):
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     signal.signal(signal.SIGINT, signal.default_int_handler)
+    remove_shm_from_resource_tracker()
 
-    config.REGTEST = parser_config['REGTEST']
-    config.TESTNET = parser_config['TESTNET']
+    for attribute in parser_config:
+        setattr(config, attribute, parser_config[attribute])
+
     db = apsw.Connection(db_path, flags=apsw.SQLITE_OPEN_READONLY)
     parser = BlockchainParser(bitcoind_dir)
     cursor = db.cursor()
@@ -59,12 +62,23 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
                 db_block[0], 
                 use_txid=ledger.enabled("correct_segwit_txids", block_index=db_block[1])
             )
+
+            ledger.CURRENT_BLOCK_INDEX = db_block[1]
+            for i, transaction in enumerate(block['transactions']):
+                try:
+                    block['transactions'][i]['parsed_vouts'] = gettxinfo.parse_transaction_vouts(block['transactions'][i])
+                except DecodeError:
+                    block['transactions'][i]['parsed_vouts'] = "DecodeError"
+        
             serialized_block = pickle.dumps(block, protocol=pickle.HIGHEST_PROTOCOL)
-            shm = shared_memory.SharedMemory(name=db_block[0], create=True, size=len(serialized_block))
-            shm.buf[:len(serialized_block)] = serialized_block
+            block_length = len(serialized_block)
+            try:
+                shm = shared_memory.SharedMemory(name=db_block[0], create=True, size=block_length)
+            except FileExistsError:
+                shm = shared_memory.SharedMemory(name=db_block[0])
+            shm.buf[:block_length] = serialized_block
             queue.put(shm.name)
             shm.close()
-            #queue.put(pickle.dumps(block, protocol=pickle.HIGHEST_PROTOCOL))
         queue.put(None)
     except KeyboardInterrupt:
         if shm:
@@ -94,11 +108,12 @@ class BlockchainParser():
             self.txindex_leveldb_path = os.path.join(bitcoind_dir, 'indexes', 'txindex')
             self.txindex_leveldb = open_leveldb(self.txindex_leveldb_path)
             self.queue = JoinableQueue(queue_size)
+            parser_config = {}
+            for attribute in dir(config):
+                if attribute.isupper():
+                    parser_config[attribute] = getattr(config, attribute)
             self.fetch_process = Process(target=fetch_blocks, args=(
-                bitcoind_dir, db_path, self.queue, first_block_index, {
-                    'REGTEST': config.REGTEST,
-                    'TESTNET': config.TESTNET,
-                }
+                bitcoind_dir, db_path, self.queue, first_block_index, parser_config
             ))
             self.fetch_process.start()
         else:

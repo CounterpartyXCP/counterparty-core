@@ -520,8 +520,7 @@ def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
 
         return batch
 
-def get_oldest_tx(address):
-    print("get_oldest_tx old")
+def get_oldest_tx_legacy(address):
     hsh = _address_to_hash(address)
     call_result = Indexer_Thread.send({
         "method": "blockchain.scripthash.get_oldest_tx",
@@ -622,3 +621,12 @@ class AddrindexrsSocket:
             "params": [hsh]
         }
         return self.send(query, timeout=timeout)
+
+
+ADDRINDEXRS_CLIENT = None
+
+def get_oldest_tx(address):
+    global ADDRINDEXRS_CLIENT
+    if ADDRINDEXRS_CLIENT is None:
+        ADDRINDEXRS_CLIENT = AddrindexrsSocket()
+    return ADDRINDEXRS_CLIENT.get_oldest_tx(address)

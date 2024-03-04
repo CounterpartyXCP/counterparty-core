@@ -249,7 +249,7 @@ def get_dispensers_tx_info(sources, dispensers_outputs):
     return source, destination, btc_amount, fee, data, outs
 
 
-def parse_transaction_vouts(decoded_tx, p2sh_support):
+def parse_transaction_vouts(decoded_tx):
     # Get destinations and data outputs.
     destinations, btc_amount, fee, data, potential_dispensers = [], 0, 0, b'', []
 
@@ -272,7 +272,7 @@ def parse_transaction_vouts(decoded_tx, p2sh_support):
                 potential_dispensers[-1] = (new_destination, output_value)
             except:
                 raise DecodeError('unrecognised output type')
-        elif p2sh_support and asm[0] == OP_HASH160 and asm[-1] == OP_EQUAL and len(asm) == 3:
+        elif ledger.enabled('p2sh_addresses') and asm[0] == OP_HASH160 and asm[-1] == OP_EQUAL and len(asm) == 3:
             new_destination, new_data = decode_scripthash(asm)
             if ledger.enabled('p2sh_dispensers_support'):
                 potential_dispensers[-1] = (new_destination, output_value)
@@ -305,7 +305,7 @@ def parse_transaction_vouts(decoded_tx, p2sh_support):
     return destinations, btc_amount, fee, data, potential_dispensers
 
 
-def get_tx_info_new(db, decoded_tx, block_index, block_parser=None, p2sh_support=False, p2sh_is_segwit=False):
+def get_tx_info_new(db, decoded_tx, block_index, block_parser=None, p2sh_is_segwit=False):
     """Get multisig transaction info.
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
@@ -316,7 +316,12 @@ def get_tx_info_new(db, decoded_tx, block_index, block_parser=None, p2sh_support
         raise DecodeError('coinbase transaction')
 
     # Get destinations and data outputs.
-    destinations, btc_amount, fee, data, potential_dispensers = parse_transaction_vouts(decoded_tx, p2sh_support)
+    if 'parsed_vouts' in decoded_tx:
+        if decoded_tx['parsed_vouts'] == "DecodeError":
+            raise DecodeError('unrecognised output type')
+        destinations, btc_amount, fee, data, potential_dispensers = decoded_tx['parsed_vouts']
+    else:
+        destinations, btc_amount, fee, data, potential_dispensers = parse_transaction_vouts(decoded_tx)
 
     # source can be determined by parsing the p2sh_data transaction
     #   or from the first spent output
@@ -474,7 +479,6 @@ def _get_tx_info(db, decoded_tx, block_index, block_parser=None, p2sh_is_segwit=
             decoded_tx,
             block_index,
             block_parser=block_parser,
-            p2sh_support=True,
             p2sh_is_segwit=p2sh_is_segwit,
         )
     elif ledger.enabled('multisig_addresses', block_index=block_index):   # Protocol change.

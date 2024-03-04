@@ -24,6 +24,9 @@ import apsw
 import bitcoin as bitcoinlib
 from bitcoin.core.script import CScriptInvalidError
 
+from halo import Halo
+from termcolor import colored
+
 from counterpartylib import server
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
@@ -69,6 +72,8 @@ with open(CURR_DIR + '/../mainnet_burns.csv', 'r') as f:
     for line in mainnet_burns_reader:
         MAINNET_BURNS[line['tx_hash']] = line
 
+OK_GREEN = colored("[OK]", "green")
+SPINNER_STYLE = "bouncingBar"
 
 def parse_tx(db, tx):
     """Parse the transaction, return True for success."""
@@ -538,32 +543,85 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
 
 
 def clean_table_from(cursor, table, block_index):
+    logger.info('Cleaning table {} from block_index {}...'.format(table, block_index))
     cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
-
-
-def rollback(db, block_index=0):
-    # clean all tables
-    cursor = db.cursor()
-    for table in TABLES + ['transaction_outputs', 'transactions', 'blocks']:
-        clean_table_from(cursor, table, block_index)
-    cursor.close()
-    logger.info('Database rolled back to block_index {}'.format(block_index))
 
 
 def clean_messages_tables(cursor, block_index=0):
     # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
+    cursor.execute('''PRAGMA foreign_keys=OFF''')
     for table in TABLES:
         clean_table_from(cursor, table, block_index)
+    cursor.execute('''PRAGMA foreign_keys=ON''')
+
+
+def clean_transactions_tables(cursor, block_index=0):
+    # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
+    cursor.execute('''PRAGMA foreign_keys=OFF''')
+    for table in ['transaction_outputs', 'transactions', 'blocks']:
+        clean_table_from(cursor, table, block_index)
+    cursor.execute('''PRAGMA foreign_keys=ON''')
+
+
+def rollback(db, block_index=0):
+    # clean all tables
+    start_time = time.time()
+    step = f"Cleaning database from block {block_index}..."
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        cursor = db.cursor()
+        clean_messages_tables(cursor, block_index=block_index)
+        clean_transactions_tables(cursor, block_index=block_index)
+        cursor.close()
+        logger.info('Database rolled back to block_index {}'.format(block_index))
+    print(f'{OK_GREEN} {step}')
+    print('Rollback done in {:.2f}s'.format(time.time() - start_time))
+
+
+def generate_progression_message(block, start_time_block_parse, start_time_all_blocks_parse, block_parsed_count, block_count, tx_index=None):
+    block_parsing_duration = time.time() - start_time_block_parse
+    cumulated_duration = time.time() - start_time_all_blocks_parse
+    expected_duration = (cumulated_duration / block_parsed_count) * block_count
+    remaining_duration = expected_duration - cumulated_duration
+    current_block = f"Block {block['block_index']} parsed in {block_parsing_duration:.3f}s"
+    blocks_parsed = f"{block_parsed_count}/{block_count} blocks parsed"
+    txs_indexed = " - "
+    if tx_index is not None:
+        txs_indexed = f" - tx_index: {tx_index} - "
+    duration = f"{cumulated_duration:.3f}s/{expected_duration:.3f}s ({remaining_duration:.3f}s)"
+    return f"{current_block} [{blocks_parsed}{txs_indexed}{duration}]"
 
 
 def reparse(db, block_index=0):
+    server.connect_to_addrindexrs()
+
     cursor = db.cursor()
-    clean_messages_tables(cursor, block_index=0)
+    # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
+    step = f"Cleaning database from block {block_index}..."
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        clean_messages_tables(cursor, block_index=block_index)
+    print(f'{OK_GREEN} {step}')
+
     # reparse blocks
-    ledger.CURRENT_BLOCK_INDEX = block_index if block_index !=0 else config.BLOCK_FIRST
-    cursor.execute('''SELECT * FROM blocks WHERE block_index > ?''', (block_index,))
-    for block in cursor:
-        parse_block(db, block['block_index'], block['block_time'])
+    start_time_all_blocks_parse = time.time()
+    block_parsed_count = 0
+    count_query = "SELECT COUNT(*) AS cnt FROM blocks WHERE block_index > ?"
+    block_count = cursor.execute(count_query, (block_index,)).fetchone()['cnt']
+    step = f"Reparsing blocks from block {block_index}..."
+    with Halo(text=step, spinner=SPINNER_STYLE) as spinner:
+        cursor.execute('''SELECT * FROM blocks WHERE block_index > ? ORDER BY block_index''', (block_index,))
+        for block in cursor:
+            start_time_block_parse = time.time()
+            ledger.CURRENT_BLOCK_INDEX = block['block_index']
+            parse_block(db, block['block_index'], block['block_time'])
+            block_parsed_count += 1
+            message = generate_progression_message(
+                block,
+                start_time_block_parse, start_time_all_blocks_parse,
+                block_parsed_count, block_count
+            )
+            spinner.text = message
+    print(f'{OK_GREEN} {message}')
+    print('All blocks reparsed in {:.2f}s'.format(time.time() - start_time_all_blocks_parse))
 
 
 def last_db_index(db):

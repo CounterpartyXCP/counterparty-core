@@ -13,6 +13,7 @@ from termcolor import colored
 from counterpartylib import server
 from counterpartylib.lib import config, blocks, ledger, backend, database, log
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser, ChainstateParser
+from counterpartylib.lib.kickstart.utils import remove_shm_from_resource_tracker
 from counterpartylib.lib.backend.addrindexrs import AddrindexrsSocket
 
 logger = logging.getLogger(__name__)
@@ -79,7 +80,7 @@ def fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner):
         cursor.execute(f'''INSERT INTO kickstart_blocks (block_index, block_hash, block_time, previous_block_hash, difficulty, tx_count)
                               VALUES {', '.join(bindings_place)}''',
                               bindings_lot)
-        spinner.text = f"Block {bindings_lot[0]} to {bindings_lot[-6]} inserted."
+        spinner.text = f"Initialising database: block {bindings_lot[0]} to {bindings_lot[-6]} inserted."
         if block['block_index'] == first_block:
             break
     block_parser.close()
@@ -124,21 +125,6 @@ def prepare_db_for_resume(cursor):
     return block_count, tx_index, last_parsed_block
 
 
-def connect_to_addrindexrs():
-    step = 'Connecting to `addrindexrs`...'
-    with Halo(text=step, spinner=SPINNER_STYLE):
-        ledger.CURRENT_BLOCK_INDEX = 0
-        backend.BACKEND()
-        check_addrindexrs = {}
-        while check_addrindexrs == {}:
-            check_address = "tb1qurdetpdk8zg2thzx3g77qkgr7a89cp2m429t9c" if config.TESTNET else "1GsjsKKT4nH4GPmDnaxaZEDWgoBpmexwMA"
-            check_addrindexrs = backend.get_oldest_tx(check_address)
-            if check_addrindexrs == {}:
-                logger.info('`addrindexrs` is not ready. Waiting one second.')
-                time.sleep(1)
-    print(f'{OK_GREEN} {step}')
-
-
 def get_bitcoind_dir(bitcoind_dir=None):
     if bitcoind_dir is None:
         if platform.system() == 'Darwin':
@@ -180,9 +166,8 @@ def intialize_kickstart_db(bitcoind_dir, last_known_hash, resuming, new_database
         if not resuming:
             first_block = config.BLOCK_FIRST
             if not new_database:
-                first_block = cursor.execute('SELECT block_index FROM blocks ORDER BY block_index ASC LIMIT 1').fetchone()['block_index']
+                first_block = cursor.execute('SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1').fetchone()['block_index']
             fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner)
-
         # get last block index
         spinner.text = step
         block_count, tx_index, last_parsed_block = prepare_db_for_resume(cursor)
@@ -244,10 +229,12 @@ def backup_if_needed(new_database, resuming):
                 return
             # move old database
             backup_db(move=True)
+            return True
         else:
             backup_db()
     elif not new_database:
         backup_db()
+    return new_database
 
 
 def parse_block(kickstart_db, cursor, block, block_parser, tx_index):
@@ -284,27 +271,14 @@ def parse_block(kickstart_db, cursor, block, block_parser, tx_index):
     return tx_index
 
 
-def generate_progression_message(block, tx_index, start_time_block_parse, start_time_all_blocks_parse, block_parsed_count, block_count):
-    block_parsing_duration = time.time() - start_time_block_parse
-    message = f"Block {block['block_index']} parsed in {block_parsing_duration:.3f}s."
-    message += f" {tx_index} transactions indexed."
-    cumulated_duration = time.time() - start_time_all_blocks_parse
-    message += f" Cumulated duration: {cumulated_duration:.3f}s."
-    expected_duration = (cumulated_duration / block_parsed_count) * block_count
-    message += f" Expected duration: {expected_duration:.3f}s."
-    return message
-
-
 def cleanup(kickstart_db, block_parser):
+    remove_shm_from_resource_tracker()
     step = 'Cleaning up...'
     with Halo(text=step, spinner=SPINNER_STYLE):
         # empyt queue to clean shared memory
         try:
             block_parser.block_parsed()
             block_parser.close()
-            #block = block_parser.next_block(timeout=1)
-            #while block is not None:
-            #    block = block_parser.next_block(timeout=1)
         except (Empty, FileNotFoundError):
             pass
         backend.stop()
@@ -314,12 +288,6 @@ def cleanup(kickstart_db, block_parser):
 
 
 def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
-    # set log level
-    if not config.VERBOSE and debug_block is None:
-        log.ROOT_LOGGER.setLevel(logging.ERROR)
-    else:
-        log.ROOT_LOGGER.setLevel(logging.INFO)
-
     # default signal handlers
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     signal.signal(signal.SIGINT, signal.default_int_handler)
@@ -328,12 +296,8 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     if not force:
         confirm_kickstart()
 
-    # override backend get_oldest_tx
-    addrindexrs = AddrindexrsSocket()
-    backend.get_oldest_tx = addrindexrs.get_oldest_tx
-
     # check addrindexrs
-    connect_to_addrindexrs()
+    server.connect_to_addrindexrs()
 
     # determine bitoincore data directory
     bitcoind_dir = get_bitcoind_dir(bitcoind_dir)
@@ -349,7 +313,7 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
 
     # backup old database
     if not force:
-        backup_if_needed(new_database, resuming)
+        new_database = backup_if_needed(new_database, resuming)
 
     # initialize main timer
     start_time_total = time.time()
@@ -378,29 +342,29 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
             start_time_block_parse = time.time()
             # parse block
             tx_index = parse_block(kickstart_db, cursor, block, block_parser, tx_index)
-            # check if we are done
-            if block['block_hash'] == last_known_hash:
-                break
             # update last parsed block
             last_parsed_block = block['block_index']
             # update block parsed count
             block_parsed_count += 1
             # let's have a nice message
-            spinner.text = generate_progression_message(
-                block, tx_index,
+            message = blocks.generate_progression_message(
+                block,
                 start_time_block_parse, start_time_all_blocks_parse,
-                block_parsed_count, block_count
+                block_parsed_count, block_count,
+                tx_index
             )
+            spinner.text = message
             # notify block parsed
             block_parser.block_parsed()
-            # get next block
+            # check if we are done
+            if block['block_hash'] == last_known_hash:
+                break
             if debug_block is not None and block['block_index'] == int(debug_block):
-                block = None
-            else:
-                block = block_parser.next_block()
+                break
+            # get next block
+            block = block_parser.next_block()
 
         spinner.stop()
-        print('All blocks parsed in: {:.3f}s'.format(time.time() - start_time_all_blocks_parse))
     except FileNotFoundError:
         pass # block file not found on stopping
     except KeyboardInterrupt:

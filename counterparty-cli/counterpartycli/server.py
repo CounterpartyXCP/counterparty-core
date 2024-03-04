@@ -18,7 +18,8 @@ from counterpartycli import APP_VERSION
 APP_NAME = 'counterparty-server'
 
 CONFIG_ARGS = [
-    [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'default': False, 'help': 'sets log level to DEBUG instead of WARNING'}],
+    [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'default': False, 'help': 'sets log level to DEBUG or INFO if --quiet is set'}],
+    [('--quiet',), {'dest': 'quiet', 'action': 'store_true', 'default': True, 'help': 'sets log level to ERROR or INFO if --verbose is set'}],
     [('--testnet',), {'action': 'store_true', 'default': False, 'help': 'use {} testnet addresses and block numbers'.format(config.BTC_NAME)}],
     [('--testcoin',), {'action': 'store_true', 'default': False, 'help': 'use the test {} network on every blockchain'.format(config.XCP_NAME)}],
     [('--regtest',), {'action': 'store_true', 'default': False, 'help': 'use {} regtest addresses and block numbers'.format(config.BTC_NAME)}],
@@ -102,7 +103,7 @@ def main():
 
     args = parser.parse_args()
 
-    log.set_up(log.ROOT_LOGGER, verbose=args.verbose, console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None))
+    log.set_up(log.ROOT_LOGGER, verbose=args.verbose, quiet=args.quiet, console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None))
 
     logger.info('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
 
@@ -148,7 +149,8 @@ def main():
                                 requests_timeout=args.requests_timeout,
                                 rpc_batch_size=args.rpc_batch_size,
                                 check_asset_conservation=not args.no_check_asset_conservation,
-                                force=args.force, verbose=args.verbose, console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None),
+                                force=args.force, verbose=args.verbose, quiet=args.quiet,
+                                console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None),
                                 p2sh_dust_return_pubkey=args.p2sh_dust_return_pubkey,
                                 utxo_locks_max_addresses=args.utxo_locks_max_addresses,
                                 utxo_locks_max_age=args.utxo_locks_max_age,
