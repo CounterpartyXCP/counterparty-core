@@ -1,0 +1,85 @@
+name: Build & Test
+
+on:
+  push:
+    branches: [ "github" ]
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: [ "github" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.10"
+  COUNTERPARTY_RS_DIR: "./counterparty-rs"
+
+jobs:
+  macos:
+    runs-on: macos-latest #x86_64
+    steps:
+      - uses: actions/checkout@v3
+
+      # Install dependencies
+  
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          default: true
+
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Install leveldb
+        run: |
+          brew install leveldb
+
+      - name: Install pytest and build module
+        run: |
+          pip install pytest
+          python -m pip install --upgrade build
+
+      # Build counterparty packages
+
+      - name: Build counterparty-rs
+        uses: messense/maturin-action@v1
+        with:
+          args: --release --out dist --sdist -m ${{ env.COUNTERPARTY_RS_DIR }}/Cargo.toml
+
+      - name: Build counterparty-lib
+        run: |
+          cd counterparty-lib && python -m build --out ../dist
+
+      - name: Build counterparty-cli
+        run: |
+          cd counterparty-cli && python -m build --out ../dist
+
+      # Install counterparty packages
+
+      - name: Install wheels
+        run: |
+          pip install dist/*.whl --force-reinstall
+
+      # Run counterparty-lib tests
+
+      - name: Run counterparty-lib tests
+        run: |
+          cd counterparty-lib
+          pytest
+
+      # Upload wheels
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: dist
