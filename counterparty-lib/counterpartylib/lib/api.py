@@ -1153,7 +1153,7 @@ class APIServer(threading.Thread):
                 try:
                     query_data = get_rows(self.db, table=query_type, filters=data_filter, filterop=operator)
                 except APIError as error:
-                    return flask.Response(str(error), 400, mimetype='application/json')
+                    return flask.Response('API Error', 400, mimetype='application/json')
 
             # See which encoding to choose from.
             file_format = flask_request.headers['Accept']
