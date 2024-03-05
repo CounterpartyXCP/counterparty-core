@@ -37,7 +37,7 @@ jobs:
         pip install evdev
     - name: Analysing dependencies with licence_scanner
       run: |
-        python counterparty-lib/counterpartylib/tools/checklicences.py
+        python counterparty-lib/tools/checklicences.py
     - name: Upload SARIF
       uses: github/codeql-action/upload-sarif/@v2
       with:
