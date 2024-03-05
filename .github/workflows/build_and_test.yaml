@@ -125,8 +125,6 @@ jobs:
 
       - name: Build counterparty-lib
         run: |
-          export LIBRARY_PATH="$LIBRARY_PATH:$(brew --prefix)/lib"
-          export CPATH="$CPATH:$(brew --prefix)/include"
           cd counterparty-lib && python -m build --out ../dist
 
       - name: Build counterparty-cli
@@ -137,6 +135,8 @@ jobs:
 
       - name: Install wheels
         run: |
+          export LIBRARY_PATH="$LIBRARY_PATH:$(brew --prefix)/lib"
+          export CPATH="$CPATH:$(brew --prefix)/include"
           pip install dist/*.whl --force-reinstall
 
       # Run counterparty-lib tests
