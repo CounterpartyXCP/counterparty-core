@@ -65,8 +65,10 @@ allowed-licences = [
     'Mozilla public license 2.0 (mpl 2.0)',
     'Python software foundation license',
     'The Unlicense (Unlicense)',
+    'Public domain',
+    'Creative Commons Zero, CC-0',
 ]
 allowed-packages = [
-    'tower-cli', 'tower-lib',
-    'pycairo',
+    'counterparty-cli', 'counterparty-lib', 'counterparty-rs',
+    'maturin', 'apsw', 
 ]
