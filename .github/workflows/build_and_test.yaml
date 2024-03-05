@@ -110,6 +110,8 @@ jobs:
       - name: Install leveldb
         run: |
           brew install leveldb
+          export LIBRARY_PATH="$LIBRARY_PATH:$(brew --prefix)/lib"
+          export CPATH="$CPATH:$(brew --prefix)/include"
 
       - name: Install pytest and build module
         run: |
@@ -152,7 +154,7 @@ jobs:
           name: wheels
           path: dist
   
-  ubuntu-22.04:
+  ubuntu-22-04:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
