@@ -109,7 +109,7 @@ jobs:
 
       - name: Install leveldb
         run: |
-          brew install leveldb
+          brew install leveldb openssl
 
       - name: Install pytest and build module
         run: |
