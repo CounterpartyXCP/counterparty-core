@@ -310,8 +310,8 @@ def script_to_asm(scriptpubkey):
         script = bytes(scriptpubkey, 'utf-8') if type(scriptpubkey) == str else bytes(scriptpubkey)
         asm = utils.script_to_asm(script)
         if asm[-1] == OP_CHECKMULTISIG:
-            asm[-2] = int.from_bytes(asm[-2])
-            asm[0] = int.from_bytes(asm[0])
+            asm[-2] = int.from_bytes(asm[-2], 'big')
+            asm[0] = int.from_bytes(asm[0], 'big')
         return asm
     except BaseException as e:
         raise exceptions.DecodeError('invalid script')
