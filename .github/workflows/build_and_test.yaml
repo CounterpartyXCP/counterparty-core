@@ -109,8 +109,8 @@ jobs:
 
       - name: Install pytest and build module
         run: |
-          pip3 install pytest
-          python3 -m pip install --upgrade build
+          pip3.10 install pytest
+          python3.10 -m pip install --upgrade build
 
       # Build counterparty packages
 
@@ -121,11 +121,11 @@ jobs:
 
       - name: Build counterparty-lib
         run: |
-          cd counterparty-lib && python3 -m build --out ../dist
+          cd counterparty-lib && python3.10 -m build --out ../dist
 
       - name: Build counterparty-cli
         run: |
-          cd counterparty-cli && python3 -m build --out ../dist
+          cd counterparty-cli && python3.10 -m build --out ../dist
 
       # Install counterparty packages
 
@@ -133,7 +133,7 @@ jobs:
         run: |
           export LIBRARY_PATH="$LIBRARY_PATH:$(brew --prefix)/lib"
           export CPATH="$CPATH:$(brew --prefix)/include"
-          pip3 install dist/*.whl --force-reinstall
+          pip3.10 install dist/*.whl --force-reinstall
 
       # Run counterparty-lib tests
 
