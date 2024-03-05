@@ -30,7 +30,7 @@ jobs:
         sudo apt-get update -y
         sudo apt-get install -y libgirepository1.0-dev libleveldb-dev
         python -m pip install --upgrade pip
-        pip install license_scanner maturin
+        pip install license_scanner maturin sh
         pip install -e counterparty-rs
         pip install -e counterparty-lib
         pip install -e counterparty-cli
