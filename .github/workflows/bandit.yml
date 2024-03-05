@@ -14,7 +14,7 @@ name: Bandit
 on:
   push:
     branches: [ "master", "develop" ]
-  pull_request:
+  pull_request_target:
     # The branches below must be a subset of the branches above
     branches: [ "master", "develop" ]
 
