@@ -1,0 +1,2 @@
+exclude_dirs: ['counterparty-lib/counterpartylib/test/']
+skips: ['B101']
