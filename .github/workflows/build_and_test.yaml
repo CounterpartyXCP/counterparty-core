@@ -91,10 +91,10 @@ jobs:
 
       # Install dependencies
   
-      - uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
+      #- uses: actions/setup-python@v4
+      #  with:
+      #    python-version: ${{ env.PYTHON_VERSION }}
+      #    cache: 'pip'
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -109,12 +109,13 @@ jobs:
 
       - name: Install leveldb
         run: |
-          brew install leveldb openssl
+          brew install python@3.10 leveldb openssl
+          echo '/opt/homebrew/opt/python@3.10/libexec/bin' >> $GITHUB_PATH
 
       - name: Install pytest and build module
         run: |
-          pip install pytest
-          python -m pip install --upgrade build
+          pip3.10 install pytest
+          python3.10 -m pip install --upgrade build
 
       # Build counterparty packages
 
@@ -125,11 +126,11 @@ jobs:
 
       - name: Build counterparty-lib
         run: |
-          cd counterparty-lib && python -m build --out ../dist
+          cd counterparty-lib && python3.10 -m build --out ../dist
 
       - name: Build counterparty-cli
         run: |
-          cd counterparty-cli && python -m build --out ../dist
+          cd counterparty-cli && python3.10 -m build --out ../dist
 
       # Install counterparty packages
 
@@ -137,7 +138,7 @@ jobs:
         run: |
           export LIBRARY_PATH="$LIBRARY_PATH:$(brew --prefix)/lib"
           export CPATH="$CPATH:$(brew --prefix)/include"
-          pip install dist/*.whl --force-reinstall
+          pip3.10 install dist/*.whl --force-reinstall
 
       # Run counterparty-lib tests
 
