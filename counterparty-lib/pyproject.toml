@@ -49,3 +49,24 @@ include = ["counterpartylib"]
 pre-install-commands = [
   "pip install -e ../counterparty-rs",
 ]
+
+[tool.license_scanner]
+allowed-licences = [
+    'Apache license',
+    'Apache license 2.0',
+    'BSD 2-clause license',
+    'BSD 3-clause license',
+    'BSD license',
+    'GNU general public license v2 (gplv2)',
+    'GNU lesser general public license',
+    'GNU lesser general public license v2 (lgplv2)',
+    'GNU lesser general public license v3 (lgplv3)',
+    'ISC license (iscl)', 'MIT license',
+    'Mozilla public license 2.0 (mpl 2.0)',
+    'Python software foundation license',
+    'The Unlicense (Unlicense)',
+]
+allowed-packages = [
+    'tower-cli', 'tower-lib',
+    'pycairo',
+]
