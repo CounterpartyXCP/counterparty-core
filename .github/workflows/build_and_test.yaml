@@ -110,8 +110,6 @@ jobs:
       - name: Install leveldb
         run: |
           brew install leveldb
-          export LIBRARY_PATH="$LIBRARY_PATH:$(brew --prefix)/lib"
-          export CPATH="$CPATH:$(brew --prefix)/include"
 
       - name: Install pytest and build module
         run: |
@@ -127,6 +125,8 @@ jobs:
 
       - name: Build counterparty-lib
         run: |
+          export LIBRARY_PATH="$LIBRARY_PATH:$(brew --prefix)/lib"
+          export CPATH="$CPATH:$(brew --prefix)/include"
           cd counterparty-lib && python -m build --out ../dist
 
       - name: Build counterparty-cli
@@ -175,7 +175,7 @@ jobs:
 
       - name: Install leveldb
         run: |
-          apt-get install -y libleveldb-dev
+          sudo apt-get install -y libleveldb-dev
 
       - name: Install pytest and build module
         run: |
