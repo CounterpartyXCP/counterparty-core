@@ -11,12 +11,10 @@
 # https://pypi.org/project/bandit/ is Apache v2.0 licensed, by PyCQA
 
 name: Bandit
+
 on:
   push:
-    branches: [ "master", "develop" ]
-  pull_request:
-    # The branches below must be a subset of the branches above
-    branches: [ "master", "develop" ]
+    branches: "**"
 
 jobs:
   bandit:
