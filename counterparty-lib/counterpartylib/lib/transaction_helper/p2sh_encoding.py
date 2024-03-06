@@ -193,7 +193,7 @@ def decode_data_redeem_script(redeemScript, p2sh_is_segwit=False):
                                 redeemScript[pos + 3 + uniqueOffsetLength] == 0 and \
                                 redeemScript[pos + 4 + uniqueOffsetLength] == bitcoinlib.core.script.OP_EQUAL
         except Exception as e:
-            pass #traceback.print_exc()
+            return None, None, False, None
 
     return pubkey, source, redeem_script_is_valid, found_data
 

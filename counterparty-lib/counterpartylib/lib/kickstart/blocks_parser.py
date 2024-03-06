@@ -1,7 +1,8 @@
 import os, logging, binascii
 from multiprocessing import Process, JoinableQueue, shared_memory
 from collections import OrderedDict
-import pickle
+# Used to pickle and unpickle blocks from shared_memory
+import pickle # nosec B403
 import signal
 import time
 
@@ -129,7 +130,7 @@ class BlockchainParser():
         if block_hash is None:
             return None
         self.shm = shared_memory.SharedMemory(name=block_hash)
-        block = pickle.loads(self.shm.buf[:self.shm.size])
+        block = pickle.loads(self.shm.buf[:self.shm.size]) # nosec B301
         self.shm.close()
         self.shm.unlink()
         return block

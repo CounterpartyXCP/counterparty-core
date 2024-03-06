@@ -46,7 +46,8 @@ def generate_config_file(filename, config_args, known_config={}, overwrite=False
 
     with open(filename, 'w', encoding='utf8') as config_file:
         config_file.writelines("\n".join(config_lines))
-    os.chmod(filename, 0o660)
+    # user and group have "rw" access
+    os.chmod(filename, 0o660) # nosec B103
 
 def extract_old_config():
     old_config = {}

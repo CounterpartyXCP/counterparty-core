@@ -194,7 +194,8 @@ def expand_subasset_longname(raw_bytes):
 
 
 def generate_random_asset ():
-    return 'A' + str(random.randint(26**12 + 1, 2**64 - 1))
+    # Standard pseudo-random generators are suitable for our purpose.
+    return 'A' + str(random.randint(26**12 + 1, 2**64 - 1)) # nosec B311
 
 
 def parse_options_from_string(string):
