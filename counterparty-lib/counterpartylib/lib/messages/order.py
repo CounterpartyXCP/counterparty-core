@@ -240,7 +240,7 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
         else:
             tx0_fee_required_remaining = tx0_order['fee_required_remaining']
         tx0_order_status = tx0_order['status']
-        
+
         if (tx0_order_status == 'filled' and ledger.enabled("reopen_order_when_btcpay_expires_fix", block_index)): #This case could happen if a BTCpay expires and before the expiration, the order was filled by a correct BTCpay
             tx0_order_status = 'open' # So, we have to open the order again
 
@@ -304,7 +304,7 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
             match(db, ledger.get_transactions(db, tx_hash=tx0_order['tx_hash'])[0], block_index)
             match(db, ledger.get_transactions(db, tx_hash=tx1_order['tx_hash'])[0], block_index)
 
-    
+
     if status == 'expired':
         # Record order match expiration.
         cursor = db.cursor()

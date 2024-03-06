@@ -82,7 +82,7 @@ def print_asset(asset):
     print(os.linesep.join(lines))
 
 def print_wallet(wallet):
-    lines = [] 
+    lines = []
     for address in wallet['addresses']:
         table = PrettyTable(['Asset', 'Balance'])
         for asset in wallet['addresses'][address]:

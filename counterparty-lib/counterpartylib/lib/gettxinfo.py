@@ -86,13 +86,13 @@ def get_pubkeyhash(scriptpubkey, block_index):
         if len(asm) > 0:
 
             if asm[0] == OP_DUP:
-                if len(asm) != 5 or asm[1] != OP_HASH160 or asm[3] != OP_EQUALVERIFY or asm[4] != OP_CHECKSIG:            
+                if len(asm) != 5 or asm[1] != OP_HASH160 or asm[3] != OP_EQUALVERIFY or asm[4] != OP_CHECKSIG:
                     return None, None
                 else:
                     return asm[2], config.ADDRESSVERSION
 
             elif (asm[0] == OP_HASH160) and ledger.enabled('p2sh_dispensers_support'):
-                if len(asm) != 3 or asm[-1] != 'OP_EQUAL':          
+                if len(asm) != 3 or asm[-1] != 'OP_EQUAL':
                     return None, None
                 else:
                     return asm[1], config.P2SH_ADDRESSVERSION
@@ -189,7 +189,7 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit, block_parser=No
             prevout_is_segwit = len(vin_ctx['vtxinwit']) > 0
         else:
             prevout_is_segwit = p2sh_is_segwit
-        
+
         vout = vin_ctx["vout"][vin["n"]]
         outputs_value += vout["nValue"]
 

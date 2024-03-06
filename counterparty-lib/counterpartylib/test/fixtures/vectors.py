@@ -264,7 +264,7 @@ UNITTEST_VECTOR = {
         #         }}
         #     ]
         # }],
-        
+
         'cancel_bet': [{
             'in': (
                 {
@@ -299,8 +299,8 @@ UNITTEST_VECTOR = {
         }],
         'cancel_bet_match': [{
             'in': (
-                {'tx0_block_index': 310019, 'backward_quantity': 9, 'initial_value': 1, 'tx1_expiration': 100, 'id': '2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93', 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'status': 'settled', 'leverage': 5040, 'target_value': 0.0, 'fee_fraction_int': 5000000, 'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'deadline': 1388000001, 'tx1_bet_type': 0, 'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx0_index': 20, 'tx1_hash': '5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93', 'tx0_hash': '2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1', 'block_index': 310020, 'forward_quantity': 9, 'match_expire_index': 310119, 'tx1_block_index': 310020, 'tx0_expiration': 100, 'tx1_index': 21, 'tx0_bet_type': 1}, 
-                'filled', 
+                {'tx0_block_index': 310019, 'backward_quantity': 9, 'initial_value': 1, 'tx1_expiration': 100, 'id': '2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93', 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'status': 'settled', 'leverage': 5040, 'target_value': 0.0, 'fee_fraction_int': 5000000, 'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'deadline': 1388000001, 'tx1_bet_type': 0, 'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx0_index': 20, 'tx1_hash': '5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93', 'tx0_hash': '2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1', 'block_index': 310020, 'forward_quantity': 9, 'match_expire_index': 310119, 'tx1_block_index': 310020, 'tx0_expiration': 100, 'tx1_index': 21, 'tx0_bet_type': 1},
+                'filled',
                 DP['default_block_index'],
                 0),
             'records': [
@@ -4184,10 +4184,10 @@ UNITTEST_VECTOR = {
         }],
         'last_message': [{
             'in': (),
-            'out': {'message_index': 66, 
-                     'block_index': 310498, 
-                     'command': 'insert', 
-                     'category': 'issuances', 
+            'out': {'message_index': 66,
+                     'block_index': 310498,
+                     'command': 'insert',
+                     'category': 'issuances',
                      'bindings': "['asset', 'asset_longname', 'block_index', 'call_date', 'call_price', 'callable', 'description', 'divisible', 'fee_paid', 'issuer', 'locked', 'quantity', 'reset', 'source', 'status', 'transfer', 'tx_hash', 'tx_index']",
                      'timestamp': 0}
         }],

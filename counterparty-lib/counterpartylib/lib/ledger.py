@@ -27,7 +27,7 @@ def last_message(db):
     """Return latest message from the db."""
     cursor = db.cursor()
     query = '''
-        SELECT * FROM messages 
+        SELECT * FROM messages
         WHERE message_index = (
             SELECT MAX(message_index) from messages
         )
@@ -199,7 +199,7 @@ def credit (db, address, asset, quantity, tx_index, action=None, event=None):
         'tx_index': tx_index,
     }
     query = '''
-        INSERT INTO credits 
+        INSERT INTO credits
         VALUES (:block_index, :address, :asset, :quantity, :action, :event, :tx_index)
     '''
     credit_cursor.execute(query, bindings)
@@ -359,7 +359,7 @@ def get_asset_id (db, asset_name, block_index):
         return generate_asset_id(asset_name, block_index)
     cursor = db.cursor()
     query = '''
-        SELECT * FROM assets 
+        SELECT * FROM assets
         WHERE asset_name = ?
     '''
     bindings = (asset_name,)
@@ -377,7 +377,7 @@ def get_asset_name (db, asset_id, block_index):
         return generate_asset_name(asset_id, block_index)
     cursor = db.cursor()
     query = '''
-        SELECT * FROM assets 
+        SELECT * FROM assets
         WHERE asset_id = ?
     '''
     bindings = (str(asset_id),)
@@ -403,7 +403,7 @@ def resolve_subasset_longname(db, asset_name):
         if subasset_longname is not None:
             cursor = db.cursor()
             query = '''
-                SELECT asset_name FROM assets 
+                SELECT asset_name FROM assets
                 WHERE asset_longname = ?
             '''
             bindings = (subasset_longname,)
@@ -546,7 +546,7 @@ def get_asset_issuances_quantity(db, asset):
     bindings = ('valid', asset)
     cursor.execute(query, bindings)
     issuances = cursor.fetchall()
-    return issuances[0]['issuances_count']  
+    return issuances[0]['issuances_count']
 
 
 def get_asset_info(db, asset):
@@ -603,9 +603,9 @@ def get_valid_assets(db):
     cursor = db.cursor()
     query = '''
         SELECT asset, asset_longname
-        FROM issuances 
-        WHERE status = 'valid' 
-        GROUP BY asset 
+        FROM issuances
+        WHERE status = 'valid'
+        GROUP BY asset
         ORDER BY asset ASC
     '''
     cursor.execute(query)
@@ -632,17 +632,17 @@ def get_oracle_last_price(db, oracle_address, block_index):
     cursor.execute(query, bindings)
     broadcasts = cursor.fetchall()
     cursor.close()
-    
+
     if len(broadcasts) == 0:
         return None, None, None, None
-    
+
     oracle_broadcast = broadcasts[0]
     oracle_label = oracle_broadcast["text"].split("-")
     if len(oracle_label) == 2:
         fiat_label = oracle_label[1]
-    else:   
+    else:
         fiat_label = ""
-    
+
     return oracle_broadcast['value'], oracle_broadcast['fee_fraction_int'], fiat_label, oracle_broadcast['block_index']
 
 
@@ -736,8 +736,8 @@ def get_addresses(db, address=None):
 #       UTIL FUNCTIONS        #
 ###############################
 
-# This function allows you to update a record using an INSERT. 
-# The `block_index` and `rowid` fields allow you to 
+# This function allows you to update a record using an INSERT.
+# The `block_index` and `rowid` fields allow you to
 # order updates and retrieve the row with the current data.
 
 def insert_update(db, table_name, id_name, id_value, update_data):
@@ -882,8 +882,8 @@ def get_dispenser_info(db, tx_hash=None, tx_index=None):
 def get_refilling_count(db, dispenser_tx_hash):
     cursor = db.cursor()
     query = '''
-        SELECT count(*) cnt 
-        FROM dispenser_refills 
+        SELECT count(*) cnt
+        FROM dispenser_refills
         WHERE dispenser_tx_hash = ?
     '''
     bindings = (dispenser_tx_hash,)
@@ -952,9 +952,9 @@ def get_dispensers_count(db, source, status, origin):
 def get_dispenses_count(db, dispenser_tx_hash, from_block_index):
     cursor = db.cursor()
     query = '''
-        SELECT COUNT(*) AS dispenses_count 
-        FROM dispenses 
-        WHERE dispenser_tx_hash = :dispenser_tx_hash 
+        SELECT COUNT(*) AS dispenses_count
+        FROM dispenses
+        WHERE dispenser_tx_hash = :dispenser_tx_hash
         AND block_index >= :block_index
     '''
     bindings = {
@@ -969,8 +969,8 @@ def get_dispenses_count(db, dispenser_tx_hash, from_block_index):
 def get_last_refills_block_index(db, dispenser_tx_hash):
     cursor = db.cursor()
     query = '''
-        SELECT MAX(block_index) AS max_block_index 
-        FROM dispenser_refills 
+        SELECT MAX(block_index) AS max_block_index
+        FROM dispenser_refills
         WHERE dispenser_tx_hash = :dispenser_tx_hash
     '''
     bindings = {
@@ -983,8 +983,8 @@ def get_last_refills_block_index(db, dispenser_tx_hash):
 def get_dispenser(db, tx_hash):
     cursor = db.cursor()
     query = '''
-        SELECT * FROM dispensers 
-        WHERE tx_hash = ? 
+        SELECT * FROM dispensers
+        WHERE tx_hash = ?
         ORDER BY rowid DESC LIMIT 1
     '''
     bindings = (tx_hash,)
@@ -1094,8 +1094,8 @@ def get_bet_matches_to_expire(db, block_time):
 def get_bet(db, tx_hash):
     cursor = db.cursor()
     query = '''
-        SELECT * FROM bets 
-        WHERE tx_hash = ? 
+        SELECT * FROM bets
+        WHERE tx_hash = ?
         ORDER BY rowid DESC LIMIT 1
     '''
     bindings = (tx_hash,)
@@ -1111,7 +1111,7 @@ def get_bets_to_expire(db, block_index):
             FROM bets
             WHERE expire_index = ? - 1
             GROUP BY tx_hash
-        ) WHERE status = ? 
+        ) WHERE status = ?
         ORDER BY tx_index, tx_hash
     '''
     bindings = (block_index, 'open')
@@ -1123,7 +1123,7 @@ def get_matching_bets(db, feed_address, bet_type):
     cursor = db.cursor()
     query = '''
         SELECT * FROM (
-            SELECT *, MAX(rowid) 
+            SELECT *, MAX(rowid)
             FROM bets
             WHERE (feed_address = ? AND bet_type = ?)
             GROUP BY tx_hash
@@ -1139,7 +1139,7 @@ def get_open_bet_by_feed(db, feed_address):
     cursor = db.cursor()
     query = '''
         SELECT * FROM (
-            SELECT *, MAX(rowid) 
+            SELECT *, MAX(rowid)
             FROM bets
             WHERE feed_address = ?
             GROUP BY tx_hash
@@ -1237,8 +1237,8 @@ def get_order_matches_to_expire(db, block_index):
 def get_order(db, tx_hash):
     cursor = db.cursor()
     query = '''
-        SELECT * FROM orders 
-        WHERE tx_hash = ? 
+        SELECT * FROM orders
+        WHERE tx_hash = ?
         ORDER BY rowid DESC LIMIT 1
     '''
     bindings = (tx_hash,)
@@ -1248,8 +1248,8 @@ def get_order(db, tx_hash):
 
 def get_order_first_block_index(cursor, tx_hash):
     query = '''
-        SELECT block_index FROM orders 
-        WHERE tx_hash = ? 
+        SELECT block_index FROM orders
+        WHERE tx_hash = ?
         ORDER BY rowid ASC LIMIT 1
     '''
     bindings = (tx_hash,)
@@ -1361,8 +1361,8 @@ def get_matched_not_expired_rps(db, tx0_hash, tx1_hash, expire_index):
     query = '''
         SELECT * FROM (
             SELECT *, MAX(rowid) as rowid
-            FROM rps 
-            WHERE tx_hash IN (?, ?) 
+            FROM rps
+            WHERE tx_hash IN (?, ?)
             AND expire_index >= ?
             GROUP BY tx_hash
         ) WHERE status = ?
@@ -1398,7 +1398,7 @@ def get_matching_rps(db, possible_moves, wager, source, already_matched_tx_hashe
     # no sql injection here
     query = f'''
         SELECT * FROM (
-            SELECT *, MAX(rowid) FROM rps 
+            SELECT *, MAX(rowid) FROM rps
             WHERE (possible_moves = ? AND wager = ? AND source != ? {already_matched_cond})
             GROUP BY tx_hash
         ) WHERE status = ?
@@ -1412,8 +1412,8 @@ def get_rps_to_expire(db, block_index):
     cursor = db.cursor()
     query = '''
         SELECT * FROM (
-            SELECT *, MAX(rowid) 
-            FROM rps 
+            SELECT *, MAX(rowid)
+            FROM rps
             WHERE expire_index = ? - 1
             GROUP BY tx_hash
         ) WHERE status = ?
@@ -1427,9 +1427,9 @@ def get_rps_to_expire(db, block_index):
 def get_rps(db, tx_hash):
     cursor = db.cursor()
     query = '''
-        SELECT * FROM rps 
-        WHERE tx_hash = ? 
-        ORDER BY rowid DESC 
+        SELECT * FROM rps
+        WHERE tx_hash = ?
+        ORDER BY rowid DESC
         LIMIT 1
     '''
     bindings = (tx_hash,)
@@ -1442,8 +1442,8 @@ def get_rps_matches_to_expire(db, block_index):
     query = '''
         SELECT * FROM (
             SELECT *, MAX(rowid) AS rowid
-            FROM rps_matches 
-            WHERE match_expire_index < ? 
+            FROM rps_matches
+            WHERE match_expire_index < ?
             GROUP BY id
         ) WHERE status IN (?, ? , ?)
         ORDER BY rowid
@@ -1456,9 +1456,9 @@ def get_rps_matches_to_expire(db, block_index):
 def get_rps_match(db, id):
     cursor = db.cursor()
     query = '''
-        SELECT * FROM rps_matches 
-        WHERE id = ? 
-        ORDER BY rowid 
+        SELECT * FROM rps_matches
+        WHERE id = ?
+        ORDER BY rowid
         DESC LIMIT 1
     '''
     bindings = (id,)
@@ -1545,7 +1545,7 @@ def holders(db, asset, exclude_empty_holders=False):
     cursor = db.cursor()
 
     # Balances
-    
+
     query = '''
         SELECT *, rowid
         FROM balances
@@ -1744,7 +1744,7 @@ def xcp_destroyed (db):
     bindings = ('valid', config.XCP)
     cursor.execute(query, bindings)
     destroyed_total = list(cursor)[0]['total'] or 0
-    
+
     # Subtract issuance fees.
     query = '''
         SELECT SUM(fee_paid) AS total
@@ -1754,7 +1754,7 @@ def xcp_destroyed (db):
     bindings = ('valid',)
     cursor.execute(query, bindings)
     issuance_fee_total = list(cursor)[0]['total'] or 0
-    
+
     # Subtract dividend fees.
     query = '''
         SELECT SUM(fee_paid) AS total
@@ -1764,7 +1764,7 @@ def xcp_destroyed (db):
     bindings = ('valid',)
     cursor.execute(query, bindings)
     dividend_fee_total = list(cursor)[0]['total'] or 0
-    
+
     # Subtract sweep fees.
     query = '''
         SELECT SUM(fee_paid) AS total
@@ -1870,7 +1870,7 @@ def supplies (db):
 
 
 def held (db): #TODO: Rename ?
-    
+
     queries = [
         '''
         SELECT asset, SUM(quantity) AS total FROM (

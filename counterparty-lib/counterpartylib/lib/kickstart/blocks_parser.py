@@ -60,7 +60,7 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
                 logger.debug('Queue is full, waiting for blocks to be parsed.')
                 queue.join()
             block = parser.read_raw_block(
-                db_block[0], 
+                db_block[0],
                 use_txid=ledger.enabled("correct_segwit_txids", block_index=db_block[1])
             )
 
@@ -70,7 +70,7 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
                     block['transactions'][i]['parsed_vouts'] = gettxinfo.parse_transaction_vouts(block['transactions'][i])
                 except DecodeError:
                     block['transactions'][i]['parsed_vouts'] = "DecodeError"
-        
+
             serialized_block = pickle.dumps(block, protocol=pickle.HIGHEST_PROTOCOL)
             block_length = len(serialized_block)
             name = db_block[0][-8:]
@@ -288,7 +288,7 @@ class BlockchainParser():
 
         tx_key = bytes('t', 'utf-8') + binascii.unhexlify(inverse_hash(tx_hash))
         tx_data = self.txindex_leveldb.get(tx_key)
- 
+
         ds = BCDataStream()
         ds.write(tx_data)
 
@@ -296,7 +296,7 @@ class BlockchainParser():
         block_pos_in_file = ds.read_var_int()
         tx_pos_in_block = ds.read_var_int()
         tx_pos_in_file = block_pos_in_file + 80 + tx_pos_in_block
-        
+
         self.prepare_data_stream(file_num, tx_pos_in_file)
 
         transaction = self.read_transaction(self.data_stream, use_txid=use_txid)

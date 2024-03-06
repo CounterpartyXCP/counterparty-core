@@ -51,8 +51,8 @@ def calculate_outputs(destination_outputs, data_array, fee_per_kb, exact_fee=Non
             data_value = [data_value for i in range(len(data_array))]
             data_value[len(data_array)-1] = data_value[len(data_array)-1] + remain_fee
             data_btc_out = exact_fee
-    
-    data_output = (data_array, data_value)          
+
+    data_output = (data_array, data_value)
 
     logger.getChild('p2shdebug').debug(f'datatx size: {datatx_size} fee: {datatx_necessary_fee}')
     logger.getChild('p2shdebug').debug(f'pretx output size: {pretx_output_size}')

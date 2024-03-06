@@ -49,7 +49,7 @@ def fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner):
                       PRIMARY KEY (block_index, block_hash))
                    ''')
     cursor.execute('''DELETE FROM kickstart_blocks''')
-    
+
     start_time_blocks_indexing = time.time()
     # save blocks from last to first
     current_hash = last_known_hash
@@ -243,7 +243,7 @@ def parse_block(kickstart_db, cursor, block, block_parser, tx_index):
     with kickstart_db: # ensure all the block or nothing
         # insert block
         cursor.execute('''
-            INSERT INTO blocks 
+            INSERT INTO blocks
                 (block_index, block_hash, block_time, previous_block_hash, difficulty)
             VALUES (?, ?, ?, ?, ?)
         ''', (

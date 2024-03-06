@@ -24,7 +24,7 @@ class LockedWalletError(WalletError):
     pass
 
 def WALLET():
-    return sys.modules[f'counterpartycli.wallet.{config.WALLET_NAME}'] 
+    return sys.modules[f'counterpartycli.wallet.{config.WALLET_NAME}']
 
 def get_wallet_addresses():
     return WALLET().get_wallet_addresses()
@@ -136,10 +136,10 @@ def asset(asset_name):
         })
     else:
         issuances = api('get_issuances', {
-            'filters': [('asset', '==', asset_name),], 
-            'status': 'valid', 
-            'order_by': 'tx_index', 
-            'order_dir': 'DESC', 
+            'filters': [('asset', '==', asset_name),],
+            'status': 'valid',
+            'order_by': 'tx_index',
+            'order_dir': 'DESC',
         })
         if not issuances:
             raise WalletError('Asset not found')

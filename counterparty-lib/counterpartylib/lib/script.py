@@ -422,10 +422,10 @@ def get_checksig(asm):
         op_dup, op_hash160, pubkeyhash, op_equalverify, op_checksig = asm
     except ValueError:
         raise exceptions.DecodeError('invalid OP_CHECKSIG') from None
-    
+
     if (op_dup, op_hash160, op_equalverify, op_checksig) == (OP_DUP, OP_HASH160, OP_EQUALVERIFY, OP_CHECKSIG) and type(pubkeyhash) == bytes:
         return pubkeyhash
-    
+
     raise exceptions.DecodeError('invalid OP_CHECKSIG')
 
 

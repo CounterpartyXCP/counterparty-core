@@ -325,17 +325,17 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
 
 
     query_result = db_query(db, statement, tuple(bindings))
-    
+
     if table == 'balances':
         return adjust_get_balances_results(query_result, db)
 
     if table == 'destructions':
         return adjust_get_destructions_results(query_result)
-        
+
     if table == 'sends':
         # for sends, handle the memo field properly
         return adjust_get_sends_results(query_result)
-    
+
     if table == 'transactions':
         # for transactions, handle the data field properly
         return adjust_get_transactions_results(query_result)
@@ -389,7 +389,7 @@ def adjust_get_sends_results(query_result):
             else:
                 if type(send_row['memo']) == str:
                     send_row['memo'] = bytes(send_row['memo'], 'utf-8')
-                    
+
                 send_row['memo_hex'] = binascii.hexlify(send_row['memo']).decode('utf8')
                 send_row['memo'] = send_row['memo'].decode('utf-8')
         except UnicodeDecodeError:
@@ -686,7 +686,7 @@ class APIServer(threading.Thread):
         def get_asset_info(assets=None, asset=None):
             if asset is not None:
                 assets = [asset]
-            
+
             if not isinstance(assets, list):
                 raise APIError("assets must be a list of asset names, even if it just contains one entry")
             assetsInfo = []
@@ -952,16 +952,16 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_dispenser_info(tx_hash=None, tx_index=None):
             cursor = self.db.cursor()
-            
+
             if tx_hash is None and tx_index is None:
                 raise APIError("You must provided a tx hash or a tx index")
-            
+
             dispensers = []
             if tx_hash is not None:
                 dispensers = get_dispenser_info(self.db, tx_hash=tx_hash)
             else:
                 dispensers = get_dispenser_info(self.db, tx_index=tx_index)
-            
+
             if len(dispensers) == 1:
                 dispenser = dispensers[0]
                 oracle_price = ""
@@ -969,16 +969,16 @@ class APIServer(threading.Thread):
                 fiat_price = ""
                 oracle_price_last_updated = ""
                 oracle_fiat_label = ""
-                
+
                 if dispenser["oracle_address"] != None:
                     fiat_price = util.satoshirate_to_fiat(dispenser["satoshirate"])
                     oracle_price, oracle_fee, oracle_fiat_label, oracle_price_last_updated = ledger.get_oracle_last_price(self.db, dispenser["oracle_address"], ledger.CURRENT_BLOCK_INDEX)
-                    
+
                     if (oracle_price > 0):
                         satoshi_price = math.ceil((fiat_price/oracle_price) * config.UNIT)
                     else:
                         raise APIError("Last oracle price is zero")
-                
+
                 return {
                     "tx_index": dispenser["tx_index"],
                     "tx_hash": dispenser["tx_hash"],
@@ -998,10 +998,10 @@ class APIServer(threading.Thread):
                     "oracle_price_last_updated": oracle_price_last_updated,
                     "asset_longname": dispenser["asset_longname"]
                 }
-            
+
             return {}
 
-        
+
 
         def _set_cors_headers(response):
             if not config.RPC_NO_ALLOW_CORS:

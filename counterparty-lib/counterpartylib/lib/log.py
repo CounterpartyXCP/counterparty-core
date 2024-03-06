@@ -238,14 +238,14 @@ def log (db, command, category, bindings):
         elif category == 'dispensers':
             escrow_quantity = ''
             divisible = ledger.get_asset_info(db, bindings['asset'])['divisible']
-            
+
             if "escrow_quantity" in bindings:
                 if divisible:
                     quantity = bindings["escrow_quantity"]/config.UNIT
                     escrow_quantity = f"{quantity:.8f}"
-                else:                
+                else:
                     escrow_quantity = bindings["escrow_quantity"]
-            
+
             if ("action" in bindings) and bindings["action"] == 'refill dispenser':
                 logger.info(f"Dispenser: {bindings['source']} refilled a dispenser with {escrow_quantity} {bindings['asset']}")
             elif "prev_status" in bindings: #There was a dispense
@@ -255,20 +255,20 @@ def log (db, command, category, bindings):
                             logger.info(f"Dispenser: {bindings['source']} closed dispenser for {bindings['asset']} (dispenser empty)")
                         elif bindings["closing_reason"] == "max_dispenses_reached":
                             logger.info(f"Dispenser: {bindings['source']} closed dispenser for {bindings['asset']} (dispenser reached max dispenses limit)")
-                        
+
             elif bindings["status"] == 10 or bindings["status"] == 11: #Address closed the dispenser
-            
+
                 if bindings["status"] == 10:
                     operator_string = "operator closed"
-                else:    
+                else:
                     operator_string = "operator marked the dispenser to close it"
-            
+
                 if ledger.enabled("dispenser_origin_permission_extended", bindings['block_index']) and ("origin" in bindings) and bindings['source'] != bindings['origin']:
                     if bindings["status"] == 10:
                         operator_string = "closed by origin"
-                    else:    
+                    else:
                         operator_string = "marked to close by origin"
-            
+
                 logger.info(f"Dispenser: {bindings['source']} closed dispenser for {bindings['asset']} ({operator_string})")
         # TODO: elif category == 'balances':
             # logger.debug(f"Database: set balance of {bindings['address']} in {bindings['asset']} to {output(bindings['quantity']}."")
@@ -305,21 +305,21 @@ def log (db, command, category, bindings):
                     quantity = ledger.value_out(db, bindings['quantity'], None, divisible=bindings['divisible'])
                 except Exception as e:
                     quantity = '?'
-            
+
                 if 'asset_longname' in bindings and bindings['asset_longname'] is not None:
                     logger.info(f"Subasset Issuance: {bindings['source']} created {quantity} of {divisibility} subasset {bindings['asset_longname']} as numeric asset {bindings['asset']} ({bindings['tx_hash']}) [{bindings['status']}]")
                 else:
                     logger.info(f"Issuance: {bindings['source']} created {quantity} of {divisibility} asset {bindings['asset']} ({bindings['tx_hash']}) [{bindings['status']}]")
-            
+
             if bindings['locked']:
                 lock_issuance = get_lock_issuance(db, bindings["asset"])
-                
+
                 if (lock_issuance == None) or (lock_issuance['tx_hash'] == bindings['tx_hash']):
                     logger.info(f"Issuance: {bindings['source']} locked asset {bindings['asset']} ({bindings['tx_hash']}) [{bindings['status']}]")
-            
+
             if bindings['transfer']:
                 logger.info(f"Issuance: {bindings['source']} transfered asset {bindings['asset']} to {bindings['issuer']} ({bindings['tx_hash']}) [{bindings['status']}]")
-            
+
         elif category == 'broadcasts':
             if bindings['locked']:
                 logger.info(f"Broadcast: {bindings['source']} locked his feed ({bindings['tx_hash']}) [{bindings['status']}]")
@@ -415,20 +415,20 @@ def log (db, command, category, bindings):
             dispenser_label = 'dispenser'
             escrow_quantity = bindings['escrow_quantity']
             give_quantity = bindings['give_quantity']
-            
+
             if (bindings['oracle_address'] != None) and ledger.enabled('oracle_dispensers'):
                 each_price = f"{each_price/100.0:.2f}"
                 oracle_last_price, oracle_fee, currency, oracle_last_updated = ledger.get_oracle_last_price(db, bindings['oracle_address'], bindings['block_index'])
                 dispenser_label = f"oracle dispenser using {bindings['oracle_address']}"
             else:
                 each_price = f"{each_price/config.UNIT:.8f}"
-            
+
             divisible = ledger.get_asset_info(db, bindings['asset'])['divisible']
-            
+
             if divisible:
                 escrow_quantity = f"{escrow_quantity/config.UNIT:.8f}"
                 give_quantity = f"{give_quantity/config.UNIT:.8f}"
-            
+
             if bindings['status'] == 0:
                 logger.info(f"Dispenser: {bindings['source']} opened a {dispenser_label} for asset {bindings['asset']} with {escrow_quantity} balance, giving {give_quantity} {bindings['asset']} for each {each_price} {currency}")
             elif bindings['status'] == 1:
@@ -439,12 +439,12 @@ def log (db, command, category, bindings):
         elif category == 'dispenses':
             dispensers = ledger.get_dispenser(db, tx_hash=bindings['dispenser_tx_hash'])
             dispenser = dispensers[0]
-        
+
             if (dispenser["oracle_address"] != None) and ledger.enabled('oracle_dispensers'):
                 tx_btc_amount = get_tx_info(db, bindings['tx_hash'])/config.UNIT
                 oracle_last_price, oracle_fee, oracle_fiat_label, oracle_last_price_updated = ledger.get_oracle_last_price(db, dispenser["oracle_address"], bindings['block_index'])
                 fiatpaid = round(tx_btc_amount*oracle_last_price,2)
-                
+
                 logger.info(f"Dispense: {output(bindings['dispense_quantity'], bindings['asset'])} from {bindings['source']} to {bindings['destination']} for {tx_btc_amount:.8f} {config.BTC} ({fiatpaid} {oracle_fiat_label}) ({bindings['tx_hash']})")
             else:
                 logger.info(f"Dispense: {output(bindings['dispense_quantity'], bindings['asset'])} from {bindings['source']} to {bindings['destination']} ({bindings['tx_hash']})")
@@ -453,15 +453,15 @@ def log (db, command, category, bindings):
 
 def get_lock_issuance(db, asset):
     issuances = ledger.get_issuances(db, status='valid', asset=asset, locked=True, first=True)
-    
+
     if len(issuances) > 0:
         return issuances[0]
-    
+
     return None
 
 
 def get_tx_info(db, tx_hash):
     transactions = ledger.get_transactions(db, tx_hash=tx_hash)
     transaction = transactions[0]
-    
+
     return transaction["btc_amount"]

@@ -202,9 +202,9 @@ def after_py2exe_build(win_dist_dir):
     zip_path = f'{win_dist_dir}.zip'
     zip_folder(win_dist_dir, zip_path)
 
-    # Open,close, read file and calculate MD5 on its contents 
+    # Open,close, read file and calculate MD5 on its contents
     with open(zip_path, 'rb') as zip_file:
-        data = zip_file.read()    
+        data = zip_file.read()
         md5 = hashlib.md5(data, usedforsecurity=False).hexdigest()
 
     # include MD5 in the zip name

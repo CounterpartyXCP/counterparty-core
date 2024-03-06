@@ -331,7 +331,7 @@ class AddrIndexRsThread (threading.Thread):
                             chunk = self.sock.recv(READ_BUF_SIZE)
                             if chunk:
                                 data = data + chunk
-                                try: 
+                                try:
                                     self.message_result = json.loads(data.decode('utf-8'))
                                 except json.decoder.JSONDecodeError as e:
                                     # Incomplete message
@@ -511,7 +511,7 @@ def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
 
     if only_tx_hashes:
         return txs
-    else:   
+    else:
         batch = getrawtransaction_batch([x["tx_hash"] for x in txs], verbose=True)
 
         if not(unconfirmed):
@@ -525,7 +525,7 @@ def get_oldest_tx_legacy(address):
         "method": "blockchain.scripthash.get_oldest_tx",
         "params": [hsh]
     })
-    
+
     if call_result is not None and not ("error" in call_result):
         txs = call_result["result"]
         return txs

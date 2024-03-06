@@ -255,7 +255,7 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
     assert isinstance(quantity, int)
     if reset and ledger.enabled("cip03", block_index):#reset will overwrite the quantity
         if quantity > config.MAX_INT:
-            problems.append('total quantity overflow')  
+            problems.append('total quantity overflow')
     else:
         total = sum([issuance['quantity'] for issuance in issuances])
         if total + quantity > config.MAX_INT:
@@ -318,21 +318,21 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
 
     asset_id = ledger.generate_asset_id(asset, ledger.CURRENT_BLOCK_INDEX)
     asset_name = ledger.generate_asset_name(asset_id, ledger.CURRENT_BLOCK_INDEX) #This will remove leading zeros in the numeric assets
-    
+
     call_date, call_price, problems, fee, validated_description, divisible, lock, reset, reissuance, reissued_asset_longname = validate(db, source, transfer_destination, asset_name, quantity, divisible, lock, reset, callable_, call_date, call_price, description, subasset_parent, subasset_longname, ledger.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
     if subasset_longname is None or reissuance:
         asset_format = ledger.get_value_by_block_index("issuance_asset_serialization_format")
         asset_format_length = ledger.get_value_by_block_index("issuance_asset_serialization_length")
-        
+
         # Type 20 standard issuance FORMAT_2 >QQ??If
         #   used for standard issuances and all reissuances
         if ledger.enabled("issuance_backwards_compatibility"):
             data = message_type.pack(LR_ISSUANCE_ID)
-        else:    
+        else:
             data = message_type.pack(ID)
-        
+
         if description == None and ledger.enabled("issuance_description_special_null"):
             #a special message is created to be catched by the parse function
             curr_format = asset_format + f'{len(DESCRIPTION_MARK_BYTE) + len(DESCRIPTION_NULL_ACTION)}s'
@@ -342,7 +342,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
                 curr_format = FORMAT_2 + f'{len(validated_description) + 1}p'
             else:
                 curr_format = asset_format + f'{len(validated_description)}s'
-            
+
             encoded_description = validated_description.encode('utf-8')
 
         if (asset_format_length <= 19):# callbacks parameters were removed
@@ -367,21 +367,21 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         compacted_subasset_length = len(compacted_subasset_longname)
         if ledger.enabled("issuance_backwards_compatibility"):
             data = message_type.pack(LR_SUBASSET_ID)
-        else:    
+        else:
             data = message_type.pack(SUBASSET_ID)
-        
+
         if description == None and ledger.enabled("issuance_description_special_null"):
             #a special message is created to be catched by the parse function
             curr_format = subasset_format + f'{compacted_subasset_length}s' + f'{len(DESCRIPTION_MARK_BYTE) + len(DESCRIPTION_NULL_ACTION)}s'
             encoded_description = DESCRIPTION_MARK_BYTE+DESCRIPTION_NULL_ACTION.encode('utf-8')
-        else:       
-            curr_format = subasset_format + f'{compacted_subasset_length}s' + f'{len(validated_description)}s'          
+        else:
+            curr_format = subasset_format + f'{compacted_subasset_length}s' + f'{len(validated_description)}s'
             encoded_description = validated_description.encode('utf-8')
-        
+
         if subasset_format_length <= 18:
             data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, compacted_subasset_length, compacted_subasset_longname, encoded_description)
         elif subasset_format_length <= 19:# param reset was inserted
-            data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if reset else 0, compacted_subasset_length, compacted_subasset_longname, encoded_description) 
+            data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if reset else 0, compacted_subasset_length, compacted_subasset_longname, encoded_description)
         elif subasset_format_length <= 20:# param lock was inserted
             data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if lock else 0, 1 if reset else 0, compacted_subasset_length, compacted_subasset_longname, encoded_description)
 
@@ -410,14 +410,14 @@ def parse (db, tx, message, message_type_id):
             # parse a subasset original issuance message
             lock = None
             reset = None
-            
+
             if subasset_format_length <= 18:
                 asset_id, quantity, divisible, compacted_subasset_length = struct.unpack(subasset_format, message[0:subasset_format_length])
             elif subasset_format_length <= 19:# param reset was inserted
-                asset_id, quantity, divisible, reset, compacted_subasset_length = struct.unpack(subasset_format, message[0:subasset_format_length])            
+                asset_id, quantity, divisible, reset, compacted_subasset_length = struct.unpack(subasset_format, message[0:subasset_format_length])
             elif subasset_format_length <= 20:# param lock was inserted
                 asset_id, quantity, divisible, lock, reset, compacted_subasset_length = struct.unpack(subasset_format, message[0:subasset_format_length])
-                
+
             description_length = len(message) - subasset_format_length - compacted_subasset_length
             if description_length < 0:
                 logger.warning(f"invalid subasset length: [issuance] tx [{tx['tx_hash']}]: {compacted_subasset_length}")
@@ -436,13 +436,13 @@ def parse (db, tx, message, message_type_id):
                         if description_data[1:].decode('utf-8') == DESCRIPTION_NULL_ACTION:
                             description = None
                     except UnicodeDecodeError:
-                        description = '' 
+                        description = ''
         elif (tx['block_index'] > 283271 or config.TESTNET or config.REGTEST) and len(message) >= asset_format_length: # Protocol change.
             if (len(message) - asset_format_length <= 42) and not ledger.enabled('pascal_string_removed'):
                 curr_format = asset_format + f'{len(message) - asset_format_length}p'
             else:
                 curr_format = asset_format + f'{len(message) - asset_format_length}s'
-            
+
             lock = None
             reset = None
             if (asset_format_length <= 19):# callbacks parameters were removed
@@ -454,7 +454,7 @@ def parse (db, tx, message, message_type_id):
                 asset_id, quantity, divisible, reset, callable_, call_date, call_price, description = struct.unpack(curr_format, message)
             elif (asset_format_length <= 28):# param lock was inserted
                 asset_id, quantity, divisible, lock, reset, callable_, call_date, call_price, description = struct.unpack(curr_format, message)
-            
+
             call_price = round(call_price, 6) # TODO: arbitrary
             try:
                 description = description.decode('utf-8')
@@ -466,7 +466,7 @@ def parse (db, tx, message, message_type_id):
                         if description_data[1:].decode('utf-8') == DESCRIPTION_NULL_ACTION:
                             description = None
                     except UnicodeDecodeError:
-                        description = ''        
+                        description = ''
         else:
             if len(message) != LENGTH_1:
                 raise exceptions.UnpackError
@@ -474,20 +474,20 @@ def parse (db, tx, message, message_type_id):
             lock, reset, callable_, call_date, call_price, description = False, False, False, 0, 0.0, ''
         try:
             asset = ledger.generate_asset_name(asset_id, tx['block_index'])
-                        
+
             ##This is for backwards compatibility with assets names longer than 12 characters
             if asset.startswith('A'):
                 namedAsset = ledger.get_asset_name(db, asset_id, tx['block_index'])
-            
+
                 if (namedAsset != 0):
                     asset = namedAsset
-            
+
             if description == None:
                 try:
                     description = ledger.get_asset_description(db, asset)
                 except exceptions.AssetError:
                     description = ""
-            
+
             status = 'valid'
         except exceptions.AssetIDError:
             asset = None
@@ -533,7 +533,7 @@ def parse (db, tx, message, message_type_id):
             if owner_address == tx['source']:
                 if owner_balance > 0:
                     ledger.debit(db, tx['source'], asset, owner_balance, tx['tx_index'], 'reset destroy', tx['tx_hash'])
-                    
+
                     bindings = {
                         'tx_index': tx['tx_index'],
                         'tx_hash': tx['tx_hash'],
@@ -547,7 +547,7 @@ def parse (db, tx, message, message_type_id):
                        }
                     sql = 'insert into destructions values(:tx_index, :tx_hash, :block_index, :source, :asset, :quantity, :tag, :status)'
                     issuance_parse_cursor.execute(sql, bindings)
-        
+
                 bindings= {
                     'tx_index': tx['tx_index'],
                     'tx_hash': tx['tx_hash'],
@@ -568,10 +568,10 @@ def parse (db, tx, message, message_type_id):
                     'reset': True,
                     'asset_longname': reissued_asset_longname,
                 }
-            
+
                 sql='insert into issuances values(:tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :reset)'
                 issuance_parse_cursor.execute(sql, bindings)
-            
+
                 # Credit.
                 if quantity:
                     ledger.credit(db, tx['source'], asset, quantity, tx['tx_index'], action="reset issuance", event=tx['tx_hash'])

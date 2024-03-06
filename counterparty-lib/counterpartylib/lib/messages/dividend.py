@@ -69,11 +69,11 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     except exceptions.AssetError:
         problems.append(f'no such asset, {asset}.')
         return None, None, problems, 0
-    
+
     # Only issuer can pay dividends.
     if block_index >= 320000 or config.TESTNET or config.REGTEST:   # Protocol change.
         issuer = ledger.get_asset_issuer(db, asset)
-    
+
         if issuer != source:
             problems.append('only issuer can pay dividends')
 

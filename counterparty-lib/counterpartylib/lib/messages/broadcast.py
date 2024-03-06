@@ -177,7 +177,7 @@ def parse (db, tx, message):
     except AssertionError:
         timestamp, value, fee_fraction_int, text = 0, None, 0, None
         status = "invalid: could not unpack text"
-        
+
     if status == 'valid':
         # For SQLite3
         timestamp = min(timestamp, config.MAX_INT)
@@ -402,7 +402,7 @@ def parse (db, tx, message):
             ledger.update_bet_match_status(db, bet_match_id, bet_match_status)
 
             log.message(db, tx['block_index'], 'update', 'bet_matches', {
-                'status': bet_match_status, 
+                'status': bet_match_status,
                 'bet_match_id': bet_match_id
             })
 

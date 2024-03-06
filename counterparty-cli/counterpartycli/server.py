@@ -99,7 +99,7 @@ def main():
 
     parser_checkdb = subparsers.add_parser('checkdb', help='do an integrity check on the database')
 
-    
+
 
     args = parser.parse_args()
 
@@ -172,7 +172,7 @@ def main():
 
     elif args.action == 'kickstart':
         server.kickstart(
-            bitcoind_dir=args.bitcoind_dir, 
+            bitcoind_dir=args.bitcoind_dir,
             force=args.force,
             max_queue_size=args.max_queue_size,
             debug_block=args.debug_block)
@@ -188,7 +188,7 @@ def main():
 
     elif args.action == 'checkdb':
         print("Database integrity check done!")
-    
+
     else:
         parser.print_help()
 

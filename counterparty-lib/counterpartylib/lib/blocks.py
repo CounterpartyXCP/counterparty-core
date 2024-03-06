@@ -251,7 +251,7 @@ def initialise(db):
         cursor.execute('''ALTER TABLE blocks ADD COLUMN previous_block_hash TEXT''')
     if 'difficulty' not in block_columns:
         cursor.execute('''ALTER TABLE blocks ADD COLUMN difficulty TEXT''')
-    
+
     database.create_indexes(cursor, 'blocks', [
         ['block_index'],
         ['block_index', 'block_hash'],
@@ -307,7 +307,7 @@ def initialise(db):
     debits_columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(debits)''')]
     if 'tx_index' not in debits_columns:
         cursor.execute('''ALTER TABLE debits ADD COLUMN tx_index INTEGER''')
-    
+
     database.create_indexes(cursor, 'debits', [
         ['address'],
         ['asset'],
@@ -327,7 +327,7 @@ def initialise(db):
     credits_columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(credits)''')]
     if 'tx_index' not in credits_columns:
         cursor.execute('''ALTER TABLE credits ADD COLUMN tx_index INTEGER''')
-    
+
     database.create_indexes(cursor, 'credits', [
         ['address'],
         ['asset'],
@@ -346,7 +346,7 @@ def initialise(db):
         cursor.execute('''ALTER TABLE balances ADD COLUMN block_index INTEGER''')
     if 'tx_index' not in balances_columns:
         cursor.execute('''ALTER TABLE balances ADD COLUMN tx_index INTEGER''')
-    
+
     database.create_indexes(cursor, 'balances', [
         ['address', 'asset'],
         ['address'],
@@ -428,7 +428,7 @@ def initialise(db):
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS transaction_outputs(
                         tx_index,
-                        tx_hash TEXT, 
+                        tx_hash TEXT,
                         block_index INTEGER,
                         out_index INTEGER,
                         destination TEXT,
@@ -878,15 +878,15 @@ def follow(db):
 
             parsed_txs_count = 0
             for tx_hash in parse_txs:
-                
+
                 # Get block count everytime we parse some mempool_txs. If there is a new block, we just interrupt this process
                 if parsed_txs_count % 100 == 0:
                     if len(parse_txs) > 1000:
                         logger.info(f"Mempool parsed txs count:{parsed_txs_count} from {len(parse_txs)}")
-                    
+
                     try:
                         block_count = backend.getblockcount()
-                        
+
                         if block_index <= block_count:
                             logger.info("Mempool parsing interrupted, there are blocks to parse")
                             break #Interrupt the process if there is a new block to parse
@@ -894,7 +894,7 @@ def follow(db):
                         # Keep parsing what we have, anyway if there is a temporary problem with the server,
                         # normal parse won't work
                         pass
-            
+
                 try:
                     with db:
                         # List the fake block.
@@ -942,8 +942,8 @@ def follow(db):
                     logger.warning(f'ParseTransactionError for tx {tx_hash}: {e}')
                 except MempoolError:
                     pass
-                    
-                parsed_txs_count = parsed_txs_count + 1 
+
+                parsed_txs_count = parsed_txs_count + 1
 
             if parsed_txs_count < len(parse_txs):
                 continue #if parse didn't finish is an interruption

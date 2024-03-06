@@ -176,7 +176,7 @@ def prepare_benchmark_db(database_file):
     bench_cursor.execute('''CREATE INDEX IF NOT EXISTS
                       asset_idx ON new_balances (asset)
                    ''')
-    
+
     bench_cursor.execute('''CREATE TABLE IF NOT EXISTS old_balances(
                       address TEXT,
                       asset TEXT,
@@ -199,7 +199,7 @@ def prepare_benchmark_db(database_file):
                 SELECT 'debits' as table_name, address, asset, quantity, block_index FROM debits)
             ORDER BY block_index
             """
-    
+
     """ cursor.execute(query)
     count = 1
     populate_start_time = time.time()
@@ -212,7 +212,7 @@ def prepare_benchmark_db(database_file):
         print(f"{count}/{movements_count}", end="\r")
         count += 1
     print(f'`old_balances` populated in: {time.time() - populate_start_time:.3f}s') """
-    
+
     cursor.execute(query)
     count = 1
     populate_start_time = time.time()
@@ -225,7 +225,7 @@ def prepare_benchmark_db(database_file):
         print(f"{count}/{movements_count}", end="\r")
         count += 1
     print(f'`new_balances` populated in: {time.time() - populate_start_time:.3f}s')
-    
+
     copy_memory_db_to_disk(BENCHMARK_DB, bench_db)
     print()
 
@@ -259,7 +259,7 @@ BALANCES_VIEW_QUERY = """
 """
 
 def benchmark_new_balances(old_balance_db):
-    
+
     old_db = apsw.Connection(old_balance_db, flags=apsw.SQLITE_OPEN_READONLY)
     old_cursor = old_db.cursor()
 

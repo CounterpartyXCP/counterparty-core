@@ -118,7 +118,7 @@ def parse (db, tx, message):
                 quantity = min(balance, quantity)
         except exceptions.BalanceError:
             status = 'invalid: insufficient funds'
-       
+
 
     # For SQLite3
     if quantity:
