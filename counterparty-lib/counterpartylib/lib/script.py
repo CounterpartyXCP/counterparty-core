@@ -121,7 +121,7 @@ def base58_decode(s):
         n += digit
 
     # Convert the integer to bytes
-    h = '%x' % n
+    h = f'{n:x}'
     if len(h) % 2:
         h = '0' + h
     res = binascii.unhexlify(h.encode('utf8'))

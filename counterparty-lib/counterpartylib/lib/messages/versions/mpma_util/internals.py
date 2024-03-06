@@ -52,7 +52,7 @@ def _encode_memo(memo=None, is_hex=False):
             # signal a 1 bit for hex encoded memos
             barr.append('0b1')
             if type(memo) is str: # append the string as hex-string
-                barr.append('uint:6=%i' % (len(memo) >> 1))
+                barr.append(f'uint:6={len(memo) >> 1}')
                 memo = f'0x{memo}'
             else:
                 barr.append(f'uint:6={len(memo)}')
@@ -92,13 +92,14 @@ def _solve_asset(db, assetName, block_index):
 
 def _encode_compressSendList(db, nbits, send, block_index):
     r = BitArray()
-    r.append('uintbe:64=%i' % _solve_asset(db, send['assetName'], block_index))
-    r.append('uint:%i=%i' % (nbits, len(send['sendList'])-1))
+    r.append(f"uintbe:64={_solve_asset(db, send['assetName'], block_index)}")
+    r.append(f"uint:{nbits}={len(send['sendList'])-1}")
+
     for sendItem in send['sendList']:
         idx = sendItem[0]
         amnt = sendItem[1]
-        r.append('uint:%i=%i' % (nbits, idx))
-        r.append('uintbe:64=%i' % amnt)
+        r.append(f'uint:{nbits}={idx}')
+        r.append(f'uintbe:64={amnt}')
 
         try:
             memoStr = _encode_memo(memo=sendItem[2], is_hex=sendItem[3])
@@ -171,7 +172,7 @@ def _decode_decodeSendList(stream, nbits, lut, block_index):
     asset_id = stream.read('uintbe:64')
 
     if nbits > 0:
-        numRecipients = stream.read('uint:%i' % nbits)
+        numRecipients = stream.read(f'uint:{nbits}')
         rangeLimit = numRecipients + 1
     else:
         numRecipients = 1
@@ -180,7 +181,7 @@ def _decode_decodeSendList(stream, nbits, lut, block_index):
     asset = ledger.generate_asset_name(asset_id, block_index)
     for i in range(0, rangeLimit):
         if nbits > 0:
-            idx = stream.read('uint:%i' % nbits)
+            idx = stream.read(f'uint:{nbits}')
         else:
             idx = 0
         addr = lut[idx]
@@ -209,7 +210,7 @@ def _decode_memo(stream):
     if stream.read('bool'):
         is_hex = stream.read('bool')
         mlen = stream.read('uint:6')
-        data = stream.read('bytes:%i' % mlen)
+        data = stream.read(f'bytes:{mlen}')
 
         if not(is_hex):
             # is an utf8 string

@@ -207,7 +207,7 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
     if not isinstance(limit, int):
         raise APIError('Invalid limit')
     elif config.API_LIMIT_ROWS != 0 and limit > config.API_LIMIT_ROWS:
-        raise APIError('Limit should be lower or equal to %i' % config.API_LIMIT_ROWS)
+        raise APIError(f'Limit should be lower or equal to {config.API_LIMIT_ROWS}')
     elif config.API_LIMIT_ROWS != 0 and limit == 0:
         raise APIError('Limit should be greater than 0')
     if not isinstance(offset, int):

@@ -252,7 +252,7 @@ class BlockchainParser():
             self.file_num = file_num
             if self.current_block_file:
                 self.current_block_file.close()
-            data_file_path = os.path.join(self.blocks_dir, 'blk%05d.dat' % (self.file_num,))
+            data_file_path = os.path.join(self.blocks_dir, f'blk{self.file_num:05d}.dat')
             self.current_block_file = open(data_file_path, "rb")
             self.data_stream = BCDataStream()
             self.data_stream.map_file(self.current_block_file, pos_in_file)

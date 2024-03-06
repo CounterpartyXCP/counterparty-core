@@ -83,7 +83,7 @@ def validate (db, source, destination, flags, memo, block_index):
     cursor.close()
 
     if flags > FLAGS_ALL:
-        problems.append('invalid flags %i' % flags)
+        problems.append(f'invalid flags {flags}')
     elif not(flags & (FLAG_BALANCES | FLAG_OWNERSHIP)):
         problems.append('must specify which kind of transfer in flags')
 

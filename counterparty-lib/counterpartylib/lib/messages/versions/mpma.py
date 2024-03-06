@@ -138,7 +138,7 @@ def parse (db, tx, message):
             try:
                 asset = ledger.get_asset_name(db, asset_id, tx['block_index'])
             except (exceptions.AssetNameError) as e:
-                status = 'invalid: asset %s invalid at block index %i' % (asset_id, tx['block_index'])
+                status = f"invalid: asset {asset_id} invalid at block index {tx['block_index']}"
                 break
 
             balance = ledger.get_balance(db, tx['source'], asset_id)
@@ -151,7 +151,7 @@ def parse (db, tx, message):
             total_sent = reduce(lambda p, t: p + t[1], credits, 0)
 
             if balance < total_sent:
-                status = 'invalid: insufficient funds for asset %s, needs %i' % (asset_id, total_sent)
+                status = f'invalid: insufficient funds for asset {asset_id}, needs {total_sent}'
                 break
 
             if status == 'valid':

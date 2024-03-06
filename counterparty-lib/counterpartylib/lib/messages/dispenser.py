@@ -179,7 +179,7 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
         if escrow_quantity < give_quantity:
             problems.append('escrow_quantity must be greater or equal than give_quantity')
     elif not(status == STATUS_CLOSED):
-        problems.append('invalid status %i' % status)
+        problems.append(f'invalid status {status}')
 
     cursor = db.cursor()
     available = ledger.get_balance(db, source, asset, return_list=True)
@@ -187,7 +187,7 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
     if len(available) == 0:
         problems.append(f'address doesn\'t has the asset {asset}')
     elif len(available) >= 1 and available[0]['quantity'] < escrow_quantity:
-        problems.append('address doesn\'t has enough balance of %s (%i < %i)' % (asset, available[0]['quantity'], escrow_quantity))
+        problems.append(f"address doesn\'t has enough balance of {asset} ({available[0]['quantity']} < {escrow_quantity})")
     else:
         if status == STATUS_OPEN_EMPTY_ADDRESS and not(open_address):
             open_address = source
