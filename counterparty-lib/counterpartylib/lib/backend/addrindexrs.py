@@ -53,9 +53,9 @@ def rpc_call(payload):
                     network = 'regtest'
                 else:
                     network = 'mainnet'
-                raise BackendRPCError('Cannot communicate with backend at `{}`. (server is set to run on {}, is backend?)'.format(util.clean_url_for_log(url), network))
+                raise BackendRPCError(f'Cannot communicate with backend at `{util.clean_url_for_log(url)}`. (server is set to run on {network}, is backend?)')
             elif response.status_code in (401,):
-                raise BackendRPCError('Authorization error connecting to {}: {} {}'.format(util.clean_url_for_log(url), response.status_code, response.reason))
+                raise BackendRPCError(f'Authorization error connecting to {util.clean_url_for_log(url)}: {response.status_code} {response.reason}')
             elif response.status_code not in (200, 500):
                 raise BackendRPCError(str(response.status_code) + ' ' + response.reason)
 
@@ -63,14 +63,14 @@ def rpc_call(payload):
                 break
 
         except (Timeout, ReadTimeout, ConnectionError):
-            logger.debug('Could not connect to backend at `{}`. (Try {}/{})'.format(util.clean_url_for_log(url), i+1, TRIES))
+            logger.debug(f'Could not connect to backend at `{util.clean_url_for_log(url)}`. (Try {i + 1}/{TRIES})')
             time.sleep(5)
 
     # Handle json decode errors
     try:
         response_json = response.json()
     except json.decoder.JSONDecodeError as e:
-        raise BackendRPCError('Received invalid JSON from backend with a response of {}'.format(str(response.status_code) + ' ' + response.reason))
+        raise BackendRPCError(f"Received invalid JSON from backend with a response of {str(response.status_code) + ' ' + response.reason}")
 
     # Batch query returns a list
     if isinstance(response_json, list):
@@ -78,7 +78,7 @@ def rpc_call(payload):
     if 'error' not in response_json.keys() or response_json['error'] == None:
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
-        raise BackendRPCError('{} Is `txindex` enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
+        raise BackendRPCError(f"{response_json['error']} Is `txindex` enabled in {config.BTC_NAME} Core?")
     elif response_json['error']['code'] in [-28, -8, -2]:
         # “Verifying blocks...” or “Block height out of range” or “The network does not appear to fully agree!“
         logger.debug('Backend not ready. Sleeping for ten seconds.')
@@ -87,7 +87,7 @@ def rpc_call(payload):
         time.sleep(10)
         return rpc_call(payload)
     else:
-        raise BackendRPCError('Error connecting to {}: {}'.format(util.clean_url_for_log(url), response_json['error']))
+        raise BackendRPCError(f"Error connecting to {util.clean_url_for_log(url)}: {response_json['error']}")
 
 def rpc(method, params):
     payload = {
@@ -114,7 +114,7 @@ def rpc_batch(request_list):
     return list(responses)
 
 def extract_addresses(txhash_list):
-    logger.debug('extract_addresses, txs: %d' % (len(txhash_list), ))
+    logger.debug(f'extract_addresses, txs: {len(txhash_list)}')
     tx_hashes_tx = getrawtransaction_batch(txhash_list, verbose=True)
 
     return extract_addresses_from_txlist(tx_hashes_tx, getrawtransaction_batch)
@@ -124,7 +124,7 @@ def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
     helper for extract_addresses, seperated so we can pass in a mocked _getrawtransaction_batch for test purposes
     """
 
-    logger.debug('extract_addresses_from_txlist, txs: %d' % (len(tx_hashes_tx.keys()), ))
+    logger.debug(f'extract_addresses_from_txlist, txs: {len(tx_hashes_tx.keys())}')
     tx_hashes_addresses = {}
     tx_inputs_hashes = set()  # use set to avoid duplicates
 
@@ -136,7 +136,7 @@ def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
 
         tx_inputs_hashes.update([vin['txid'] for vin in tx['vin']])
 
-    logger.debug('extract_addresses, input TXs: %d' % (len(tx_inputs_hashes), ))
+    logger.debug(f'extract_addresses, input TXs: {len(tx_inputs_hashes)}')
 
     # chunk txs to avoid huge memory spikes
     for tx_inputs_hashes_chunk in util.chunkify(list(tx_inputs_hashes), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE):
@@ -165,7 +165,7 @@ def getblock(block_hash):
 
 @functools.lru_cache
 def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
-    logger.debug('Cache miss on transaction {}!'.format(tx_hash))
+    logger.debug(f'Cache miss on transaction {tx_hash}!')
     return getrawtransaction_batch([tx_hash], verbose=verbose, skip_missing=skip_missing)[tx_hash]
 
 def getrawmempool():
@@ -215,7 +215,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
             #call_id = binascii.hexlify(os.urandom(5)).decode('utf8') # Don't drain urandom
             global monotonic_call_id
             monotonic_call_id = monotonic_call_id + 1
-            call_id = "{}".format(monotonic_call_id)
+            call_id = f"{monotonic_call_id}"
             payload.append({
                 "method": 'getrawtransaction',
                 "params": [tx_hash, 1],
@@ -247,7 +247,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                     tx_hash_call_id.get(response.get('id', '??'), '??'), response['error']))
             else:
                 #TODO: this seems to happen for bogus transactions? Maybe handle it more gracefully than just erroring out?
-                raise BackendRPCError('{} (txhash:: {})'.format(response['error'], tx_hash_call_id.get(response.get('id', '??'), '??')))
+                raise BackendRPCError(f"{response['error']} (txhash:: {tx_hash_call_id.get(response.get('id', '??'), '??')})")
 
     # get transactions from cache
     result = {}
@@ -292,7 +292,7 @@ class AddrIndexRsThread (threading.Thread):
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.settimeout(SOCKET_TIMEOUT)
             try:
-                logger.debug('Opening socket to address indexer at `{}:{}`'.format(self.host, self.port))
+                logger.debug(f'Opening socket to address indexer at `{self.host}:{self.port}`')
                 self.sock.connect((self.host, self.port))
             except Exception as e:
                 logger.exception('Unknown error when attempting to connect to address indexer.')
@@ -313,12 +313,12 @@ class AddrIndexRsThread (threading.Thread):
                 has_sent = False
                 while not has_sent:
                     try:
-                        logger.debug('Sending message to address indexer: {}'.format(self.message_to_send))
+                        logger.debug(f'Sending message to address indexer: {self.message_to_send}')
                         self.sock.send(self.message_to_send)
                         has_sent = True
                         backoff = BACKOFF_START
                     except Exception as e:
-                        logger.exception('Unknown error sending message to address indexer: {}'.format(self.message_to_send))
+                        logger.exception(f'Unknown error sending message to address indexer: {self.message_to_send}')
                         sys.exit(1)
 
                 # Receive message over socket.
@@ -344,12 +344,12 @@ class AddrIndexRsThread (threading.Thread):
                                     backoff = BACKOFF_START
                                     break
                             else:
-                                logger.debug('Empty response from address indexer. Trying again in {:d} seconds.'.format(backoff))
+                                logger.debug(f'Empty response from address indexer. Trying again in {backoff:d} seconds.')
                                 time.sleep(backoff)
                                 backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
 
                     except (socket.timeout, socket.error, ConnectionResetError) as e:
-                        logger.debug('Error in connection to address indexer: {}. Trying again in {:d} seconds.'.format(e, backoff))
+                        logger.debug(f'Error in connection to address indexer: {e}. Trying again in {backoff:d} seconds.')
                         has_sent = False    # TODO: Retry send?!
                         time.sleep(backoff)
                         backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
@@ -389,7 +389,7 @@ def indexer_check_version():
     try:
         addrindexrs_version_label = addrindexrs_version["result"][0][12:] #12 is the length of "addrindexrs "
     except TypeError as e:
-        logger.exception('Error when checking address indexer version: {}'.format(addrindexrs_version))
+        logger.exception(f'Error when checking address indexer version: {addrindexrs_version}')
         sys.exit(1)
     addrindexrs_version_needed = ledger.get_value_by_block_index("addrindexrs_required_version")
 
@@ -398,7 +398,7 @@ def indexer_check_version():
         Indexer_Thread.stop()
         sys.exit(config.EXITCODE_UPDATE_REQUIRED)
     else:
-        logger.debug('Version check of address indexer passed ({} > {}).'.format(addrindexrs_version_label, addrindexrs_version_needed))
+        logger.debug(f'Version check of address indexer passed ({addrindexrs_version_label} > {addrindexrs_version_needed}).')
 
 def _script_pubkey_to_hash(spk):
     return hashlib.sha256(spk).digest()[::-1].hex()

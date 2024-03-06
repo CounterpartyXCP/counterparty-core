@@ -1655,21 +1655,21 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], None, 'DIVISIBLE', 2**63-1, True, None, None, False, None, None, 'Maximum quantity', None, None, DP['default_block_index']),
             'out': (0, 0.0, ['total quantity overflow'], 0, 'Maximum quantity', True, False, False, True, None)
         }, {
-            'in': (ADDR[0], None, 'A{}'.format(26**12 + 1), 1000, True, None, None, False, None, None, 'description', 'NOTFOUND', 'NOTFOUND.child1', DP['default_block_index']),
+            'in': (ADDR[0], None, f'A{26 ** 12 + 1}', 1000, True, None, None, False, None, None, 'description', 'NOTFOUND', 'NOTFOUND.child1', DP['default_block_index']),
             'out': (0, 0.0, ['parent asset not found'], 25000000, 'description', True, False, False, False, None)
         }, {
-            'in': (ADDR[1], None, 'A{}'.format(26**12 + 1), 100000000, True, None, None, False, None, None, 'description', 'PARENT', 'PARENT.child1', DP['default_block_index']),
+            'in': (ADDR[1], None, f'A{26 ** 12 + 1}', 100000000, True, None, None, False, None, None, 'description', 'PARENT', 'PARENT.child1', DP['default_block_index']),
             'out': (0, 0.0, ['parent asset owned by another address'], 25000000, 'description', True, False, False, False, None)
         }, {
-            'in': (ADDR[0], None, 'A{}'.format(26**12 + 1), 100000000, True, None, None, False, None, None, 'description', 'NOTFOUND', 'NOTFOUND.child1', DP['default_block_index']),
+            'in': (ADDR[0], None, f'A{26 ** 12 + 1}', 100000000, True, None, None, False, None, None, 'description', 'NOTFOUND', 'NOTFOUND.child1', DP['default_block_index']),
             'out': (0, 0.0, ['parent asset not found'], 25000000, 'description', True, False, False, False, None)
         }, {
             'comment': 'A subasset name must be unique',
-            'in': (ADDR[0], None, 'A{}'.format(26**12 + 1), 100000000, True, None, None, False, None, None, 'description', 'PARENT', 'PARENT.already.issued', DP['default_block_index']),
+            'in': (ADDR[0], None, f'A{26 ** 12 + 1}', 100000000, True, None, None, False, None, None, 'description', 'PARENT', 'PARENT.already.issued', DP['default_block_index']),
             'out': (0, 0.0, ['subasset already exists'], 25000000, 'description', True, False, False, False, None)
         }, {
             'comment': 'cannot change subasset name through a reissuance description modification',
-            'in': (ADDR[0], None, 'A{}'.format(26**12 + 101), 200000000, True, None, None, False, None, None, 'description', 'PARENT', 'PARENT.changed.name', DP['default_block_index']),
+            'in': (ADDR[0], None, f'A{26 ** 12 + 101}', 200000000, True, None, None, False, None, None, 'description', 'PARENT', 'PARENT.changed.name', DP['default_block_index']),
             'out': (0, 0.0, [], 0, 'description', True, False, False, True, 'PARENT.already.issued')
         }, {
             'in': (ADDR[0], None, 'UNRELATED', 1000, True, None, None, False, None, None, 'description', 'PARENT', 'PARENT.child1', DP['default_block_index']),
@@ -1721,13 +1721,13 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], None, 'MAXIMUM', 2**63-1, True, False, None, 'Maximum quantity'),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x16\x00\x00\x00\x00\xdd\x96\xd2t\x7f\xff\xff\xff\xff\xff\xff\xff\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00Maximum quantity')
         }, {
-            'in': (ADDR[0], None, 'A{}'.format(2**64 - 1), 1000, None, False, None, None),
+            'in': (ADDR[0], None, f'A{2 ** 64 - 1}', 1000, None, False, None, None),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x16\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL')
         }, {
-            'in': (ADDR[0], None, 'A{}'.format(2**64), 1000, True, False, None, ''),
+            'in': (ADDR[0], None, f'A{2 ** 64}', 1000, True, False, None, ''),
             'error': (exceptions.AssetNameError, 'numeric asset name not in range')
         }, {
-            'in': (ADDR[0], None, 'A{}'.format(26**12), 1000, True, False, None, ''),
+            'in': (ADDR[0], None, f'A{26 ** 12}', 1000, True, False, None, ''),
             'error': (exceptions.AssetNameError, 'numeric asset name not in range')
         }, {
             'comment': 'basic child asset',
@@ -1777,7 +1777,7 @@ UNITTEST_VECTOR = {
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], binascii.unhexlify('1701530821671b10010000000005f5e100010a57c6f36de23a1f5f4c46'))
             # 17|01530821671b1001|0000000005f5e100|01|0a|57c6f36de23a1f5f4c46
         }, {
-            'in': (ADDR[0], None, 'A{}'.format(26**12 + 101), 200000000, True, None, None, 'description'),
+            'in': (ADDR[0], None, f'A{26 ** 12 + 101}', 200000000, True, None, None, 'description'),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x16\x01S\x08!g\x1b\x10e\x00\x00\x00\x00\x0b\xeb\xc2\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00description')
         }, {
             'in': (ADDR[0], ADDR[1], 'DIVISIBLEB', 0, True, False, None, 'second divisible asset'),
@@ -2049,7 +2049,7 @@ UNITTEST_VECTOR = {
             'in': ({'data': binascii.unhexlify('0000001501530821671b10010000000005f5e100010a57c6f36de23a1f5f4c46'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
             'records': [
                 {'table': 'issuances', 'values': {
-                    'asset': 'A{}'.format(26**12 + 1),
+                    'asset': f'A{26 ** 12 + 1}',
                     'asset_longname': 'PARENT.child1',
                     'block_index': DP['default_block_index'],
                     'description': '',
@@ -2066,7 +2066,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'A{}'.format(26**12 + 1),
+                    'asset': f'A{26 ** 12 + 1}',
                     'block_index': DP['default_block_index'],
                     'calling_function': 'issuance',
                     'event': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace',
@@ -2082,7 +2082,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'assets', 'values': {
                     'asset_id': int(26**12 + 1),
-                    'asset_name': 'A{}'.format(26**12 + 1),
+                    'asset_name': f'A{26 ** 12 + 1}',
                     'block_index': DP['default_block_index'],
                     'asset_longname': 'PARENT.child1',
                 }}
@@ -2092,7 +2092,7 @@ UNITTEST_VECTOR = {
             'in': ({'data': binascii.unhexlify('0000001501530821671b10010000000005f5e100010a57c6f36de23a1f5f4c4668656c6c6f20776f726c64'), 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.SUBASSET_ID,),
             'records': [
                 {'table': 'issuances', 'values': {
-                    'asset': 'A{}'.format(26**12 + 1),
+                    'asset': f'A{26 ** 12 + 1}',
                     'asset_longname': 'PARENT.child1',
                     'block_index': DP['default_block_index'],
                     'description': 'hello world',
@@ -2109,7 +2109,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'credits', 'values': {
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'asset': 'A{}'.format(26**12 + 1),
+                    'asset': f'A{26 ** 12 + 1}',
                     'block_index': DP['default_block_index'],
                     'calling_function': 'issuance',
                     'event': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace',
@@ -2125,7 +2125,7 @@ UNITTEST_VECTOR = {
                 }},
                 {'table': 'assets', 'values': {
                     'asset_id': int(26**12 + 1),
-                    'asset_name': 'A{}'.format(26**12 + 1),
+                    'asset_name': f'A{26 ** 12 + 1}',
                     'block_index': DP['default_block_index'],
                     'asset_longname': 'PARENT.child1',
                 }}
@@ -2262,7 +2262,7 @@ UNITTEST_VECTOR = {
             'in': ({'data': b'\x00\x00\x00\x16\x01S\x08!g\x1b\x10e\x00\x00\x00\x00\x0b\xeb\xc2\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00description', 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}, issuance.ID,),
             'records': [
                 {'table': 'issuances', 'values': {
-                    'asset': 'A{}'.format(26**12 + 101),
+                    'asset': f'A{26 ** 12 + 101}',
                     'asset_longname': 'PARENT.already.issued',
                     'block_index': DP['default_block_index'],
                     'description': 'description',
@@ -3292,7 +3292,7 @@ UNITTEST_VECTOR = {
             },
             {
                 'in': (ADDR[0], config.BTC, 100, 100, 100, 0, None, DP['burn_start'], None),
-                'out': (None, ['cannot dispense %s' % config.BTC])
+                'out': (None, [f'cannot dispense {config.BTC}'])
             },
             {
                 'in': (ADDR[0], config.XCP, 100, 100, 100, 5, None, DP['burn_start'], None),
@@ -3304,11 +3304,11 @@ UNITTEST_VECTOR = {
             },
             {
                 'in': (ADDR[5], config.XCP, 100, 100, 120, 0, None, DP['burn_start'], None),
-                'out': (None, ['address has a dispenser already opened for asset %s with a different mainchainrate' % config.XCP])
+                'out': (None, [f'address has a dispenser already opened for asset {config.XCP} with a different mainchainrate'])
             },
             {
                 'in': (ADDR[5], config.XCP, 120, 120, 100, 0, None, DP['burn_start'], None),
-                'out': (None, ['address has a dispenser already opened for asset %s with a different give_quantity' % config.XCP])
+                'out': (None, [f'address has a dispenser already opened for asset {config.XCP} with a different give_quantity'])
             },
             {
                 'in': (ADDR[0], 'PARENT', 0, 0, 0, 10, None, DP['burn_start'], None),
@@ -4129,16 +4129,16 @@ UNITTEST_VECTOR = {
             'in': ('ABCD', 308000),
             'error': (exceptions.AssetNameError, 'non‐numeric asset name starts with ‘A’')
         }, {
-            'in': ('A{}'.format(26**12), 308000),
+            'in': (f'A{26 ** 12}', 308000),
             'error': (exceptions.AssetNameError, 'numeric asset name not in range')
         }, {
-            'in': ('A{}'.format(2**64), 308000),
+            'in': (f'A{2 ** 64}', 308000),
             'error': (exceptions.AssetNameError, 'numeric asset name not in range')
         }, {
-            'in': ('A{}'.format(26**12 + 1), 308000),
+            'in': (f'A{26 ** 12 + 1}', 308000),
             'out': 26**12 + 1
         }, {
-            'in': ('A{}'.format(2**64 - 1), 308000),
+            'in': (f'A{2 ** 64 - 1}', 308000),
             'out': 2**64 - 1
         }, {
             'in': ('LONGASSETNAMES', 308000),
@@ -4167,10 +4167,10 @@ UNITTEST_VECTOR = {
             'out': 'BAAA'
         }, {
             'in': (2**64 - 1, 308000),
-            'out': 'A{}'.format(2**64 - 1)
+            'out': f'A{2 ** 64 - 1}'
         }, {
             'in': (26**12 + 1, 308000),
-            'out': 'A{}'.format(26**12 + 1)
+            'out': f'A{26 ** 12 + 1}'
         }, {
             'in': (26**3 - 1, 308000),
             'error': (exceptions.AssetIDError, 'too low')
@@ -4215,7 +4215,7 @@ UNITTEST_VECTOR = {
             'out': 'PARENT.ILEGAL^^^'
         }, {
             'in': ('PARENT.already.issued',),
-            'out': 'A{}'.format(26**12 + 101)
+            'out': f'A{26 ** 12 + 101}'
         }],
         'debit': [{
             'in': (ADDR[0], 'XCP', 1, 0),
@@ -4486,7 +4486,7 @@ UNITTEST_VECTOR = {
             'in': ('create_issuance', {'source': ADDR[0], 'transfer_destination': MULTISIGADDR[0], 'asset': 'DIVISIBLE', 'quantity': 0, 'divisible': True, 'description': '', 'encoding': 'multisig'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03e8030000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aee8030000000000006951210258415bf04af834423d3dd7adb2dc727aa153863ef89fba5aee7a331af1e4874b210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae6239ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
-            'in': ('create_issuance', {'source': ADDR[0], 'asset': 'A{}'.format(2**64 - 1), 'quantity': 1000, 'encoding': 'multisig'}),
+            'in': ('create_issuance', {'source': ADDR[0], 'asset': f'A{2 ** 64 - 1}', 'quantity': 1000, 'encoding': 'multisig'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02e8030000000000006951210255415bf04af834423d3dd7adb2238d85fcf79a8a619fba5aee7a331919e4870d210254da540fb2663b75268d992d550ad0c2431643bab28ced783cd94079bbe7244d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae9c40ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': '1',
@@ -4811,7 +4811,7 @@ UNITTEST_VECTOR = {
             'out': ([])
         }, {
             'in': (ADDR[0], ADDR[1], 'BTC', DP['quantity'], None, 1),
-            'out': (['cannot send {}'.format(config.BTC)])
+            'out': ([f'cannot send {config.BTC}'])
         }, {
             'in': (ADDR[0], ADDR[1], 'XCP', DP['quantity'] / 3, None, 1),
             'out': (['quantity must be in satoshis'])
@@ -5241,25 +5241,25 @@ UNITTEST_VECTOR = {
             'out': (['send list cannot have only one element'])
         }, {
             'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], 0.1)], 1),
-            'out': (['quantities must be an int (in satoshis) for XCP to {}'.format(ADDR[1])])
+            'out': ([f'quantities must be an int (in satoshis) for XCP to {ADDR[1]}'])
         }, {
             'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], -DP['quantity'])], 1),
-            'out': (['negative quantity for XCP to {}'.format(ADDR[1])])
+            'out': ([f'negative quantity for XCP to {ADDR[1]}'])
         }, {
             'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], 0)], 1),
-            'out': (['zero quantity for XCP to {}'.format(ADDR[1])])
+            'out': ([f'zero quantity for XCP to {ADDR[1]}'])
         }, {
             'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], config.MAX_INT + 1)], 1),
-            'out': (['integer overflow for XCP to {}'.format(ADDR[1])])
+            'out': ([f'integer overflow for XCP to {ADDR[1]}'])
         }, {
             'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', None, DP['quantity'])], 1),
             'out': (['destination is required for XCP'])
         }, {
             'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('BTC', ADDR[1], DP['quantity'])], 1),
-            'out': (['cannot send BTC to {}'.format(ADDR[1])])
+            'out': ([f'cannot send BTC to {ADDR[1]}'])
         }, {
             'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[6], DP['quantity'])], 1),
-            'out': (['destination {} requires memo'.format(ADDR[6])])
+            'out': ([f'destination {ADDR[6]} requires memo'])
         }, {
             'in': (ADDR[0], [('XCP', ADDR[2], DP['quantity']), ('XCP', ADDR[1], DP['quantity'])], 1),
             'out': ([])

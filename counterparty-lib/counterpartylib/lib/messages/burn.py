@@ -10,7 +10,7 @@ from fractions import Fraction
 
 from counterpartylib.lib import (config, exceptions, database, ledger)
 
-"""Burn {} to earn {} during a special period of time.""".format(config.BTC, config.XCP)
+f"""Burn {config.BTC} to earn {config.XCP} during a special period of time."""
 
 ID = 60
 
@@ -72,7 +72,7 @@ def compose (db, source, quantity, overburn=False):
     already_burned = sum([burn['burned'] for burn in burns])
 
     if quantity > (1 * config.UNIT - already_burned) and not overburn:
-        raise exceptions.ComposeError('1 {} may be burned per address'.format(config.BTC))
+        raise exceptions.ComposeError(f'1 {config.BTC} may be burned per address')
 
     cursor.close()
     return (source, [(destination, quantity)], None)
@@ -151,8 +151,8 @@ def parse (db, tx, MAINNET_BURNS, message=None):
         sql = 'insert into burns values(:tx_index, :tx_hash, :block_index, :source, :burned, :earned, :status)'
         burn_parse_cursor.execute(sql, bindings)
     else:
-        logger.warning("Not storing [burn] tx [%s]: %s" % (tx['tx_hash'], status))
-        logger.debug("Bindings: %s" % (json.dumps(bindings), ))
+        logger.warning(f"Not storing [burn] tx [{tx['tx_hash']}]: {status}")
+        logger.debug(f"Bindings: {json.dumps(bindings)}")
 
     burn_parse_cursor.close()
 

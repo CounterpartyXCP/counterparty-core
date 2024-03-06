@@ -165,7 +165,7 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
     asset_id = None
 
     if asset == config.BTC:
-        problems.append('cannot dispense %s' % config.BTC)
+        problems.append(f'cannot dispense {config.BTC}')
         return None, problems
 
     # resolve subassets
@@ -185,7 +185,7 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
     available = ledger.get_balance(db, source, asset, return_list=True)
 
     if len(available) == 0:
-        problems.append('address doesn\'t has the asset %s' % asset)
+        problems.append(f'address doesn\'t has the asset {asset}')
     elif len(available) >= 1 and available[0]['quantity'] < escrow_quantity:
         problems.append('address doesn\'t has enough balance of %s (%i < %i)' % (asset, available[0]['quantity'], escrow_quantity))
     else:
@@ -214,12 +214,12 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
                             problems.append('the dispenser reached its maximum refilling')
                     else:
                         if open_dispensers[0]['satoshirate'] != mainchainrate:
-                            problems.append('address has a dispenser already opened for asset %s with a different mainchainrate' % asset)
+                            problems.append(f'address has a dispenser already opened for asset {asset} with a different mainchainrate')
                         if open_dispensers[0]['give_quantity'] != give_quantity:
-                            problems.append('address has a dispenser already opened for asset %s with a different give_quantity' % asset)
+                            problems.append(f'address has a dispenser already opened for asset {asset} with a different give_quantity')
             elif status == STATUS_CLOSED:               
                 if len(open_dispensers) == 0:
-                    problems.append('address doesnt has an open dispenser for asset %s' % asset)
+                    problems.append(f'address doesnt has an open dispenser for asset {asset}')
 
             if status == STATUS_OPEN_EMPTY_ADDRESS:
                 #If an address is trying to refill a dispenser in a different address and it's the creator
@@ -244,7 +244,7 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
             if len(problems) == 0:
                 asset_id = ledger.generate_asset_id(asset, block_index)
                 if asset_id == 0:
-                    problems.append('cannot dispense %s' % asset) # How can we test this on a test vector?
+                    problems.append(f'cannot dispense {asset}') # How can we test this on a test vector?
         else:
             problems.append('address has already a dispenser about to close, no action can be taken until it closes')
 
@@ -254,7 +254,7 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
         last_price, last_fee, last_label, last_updated = ledger.get_oracle_last_price(db, oracle_address, block_index)
         
         if last_price is None:
-            problems.append('The oracle address %s has not broadcasted any price yet' % oracle_address)
+            problems.append(f'The oracle address {oracle_address} has not broadcasted any price yet')
     
     if give_quantity > config.MAX_INT or escrow_quantity > config.MAX_INT or mainchainrate > config.MAX_INT:
         problems.append('integer overflow')
@@ -487,7 +487,7 @@ def parse (db, tx, message):
                 status = 'invalid: status must be one of OPEN or CLOSE'
 
     if status != 'valid':
-        logger.warning("Not storing [dispenser] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.warning(f"Not storing [dispenser] tx [{tx['tx_hash']}]: {status}")
 
     cursor.close()
 

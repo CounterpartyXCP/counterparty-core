@@ -127,7 +127,7 @@ def fix_win32_unicode():
                         try:
                             self._stream.flush()
                         except Exception as e:
-                            _complain("%s.flush: %r from %r" % (self.name, e, self._stream))
+                            _complain(f"{self.name}.flush: {e!r} from {self._stream!r}")
                             raise
 
                 def write(self, text):
@@ -147,13 +147,13 @@ def fix_win32_unicode():
                                 # <http://tahoe-lafs.org/trac/tahoe-lafs/ticket/1232>.
                                 retval = WriteConsoleW(self._hConsole, text, min(remaining, 10000), byref(n), None)
                                 if retval == 0 or n.value == 0:
-                                    raise IOError("WriteConsoleW returned %r, n.value = %r" % (retval, n.value))
+                                    raise IOError(f"WriteConsoleW returned {retval!r}, n.value = {n.value!r}")
                                 remaining -= n.value
                                 if not remaining:
                                     break
                                 text = text[n.value:]
                     except Exception as e:
-                        _complain("%s.write: %r" % (self.name, e))
+                        _complain(f"{self.name}.write: {e!r}")
                         raise
 
                 def writelines(self, lines):
@@ -161,7 +161,7 @@ def fix_win32_unicode():
                         for line in lines:
                             self.write(line)
                     except Exception as e:
-                        _complain("%s.writelines: %r" % (self.name, e))
+                        _complain(f"{self.name}.writelines: {e!r}")
                         raise
 
             if real_stdout:
@@ -174,7 +174,7 @@ def fix_win32_unicode():
             else:
                 sys.stderr = UnicodeOutput(None, sys.stderr, old_stderr_fileno, '<Unicode redirected stderr>')
     except Exception as e:
-        _complain("exception %r while fixing up sys.stdout and sys.stderr" % (e,))
+        _complain(f"exception {e!r} while fixing up sys.stdout and sys.stderr")
 
 
     # While we're at it, let's unmangle the command-line arguments:

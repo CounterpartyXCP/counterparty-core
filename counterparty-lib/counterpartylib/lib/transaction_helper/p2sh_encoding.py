@@ -223,17 +223,17 @@ def make_p2sh_encoding_redeemscript(datachunk, n, pubKey=None, multisig_pubkeys=
     #redeemScript = CScript(datachunk) + CScript(dataDropScript + verifyOwnerScript + cleanupScript)
     redeemScript = CScript(dataDropScript + verifyOwnerScript + cleanupScript)
 
-    _logger.debug('datachunk %s' % (binascii.hexlify(datachunk)))
-    _logger.debug('dataDropScript %s (%s)' % (repr(CScript(dataDropScript)), binascii.hexlify(CScript(dataDropScript))))
-    _logger.debug('verifyOwnerScript %s (%s)' % (repr(CScript(verifyOwnerScript)), binascii.hexlify(CScript(verifyOwnerScript))))
-    _logger.debug('entire redeemScript %s (%s)' % (repr(redeemScript), binascii.hexlify(redeemScript)))
+    _logger.debug(f'datachunk {binascii.hexlify(datachunk)}')
+    _logger.debug(f'dataDropScript {repr(CScript(dataDropScript))} ({binascii.hexlify(CScript(dataDropScript))})')
+    _logger.debug(f'verifyOwnerScript {repr(CScript(verifyOwnerScript))} ({binascii.hexlify(CScript(verifyOwnerScript))})')
+    _logger.debug(f'entire redeemScript {repr(redeemScript)} ({binascii.hexlify(redeemScript)})')
 
     #scriptSig = CScript([]) + redeemScript  # PUSH(datachunk) + redeemScript
     scriptSig = CScript([redeemScript])
     outputScript = redeemScript.to_p2sh_scriptPubKey()
 
-    _logger.debug('scriptSig %s (%s)' % (repr(scriptSig), binascii.hexlify(scriptSig)))
-    _logger.debug('outputScript %s (%s)' % (repr(outputScript), binascii.hexlify(outputScript)))
+    _logger.debug(f'scriptSig {repr(scriptSig)} ({binascii.hexlify(scriptSig)})')
+    _logger.debug(f'outputScript {repr(outputScript)} ({binascii.hexlify(outputScript)})')
 
     # outputScript looks like OP_HASH160 {{ hash160([redeemScript]) }} OP_EQUALVERIFY
     # redeemScript looks like OP_DROP {{ pubkey }} OP_CHECKSIGVERIFY {{ n }} OP_DROP OP_DEPTH 0 OP_EQUAL

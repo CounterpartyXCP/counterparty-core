@@ -50,10 +50,10 @@ def get_messages(db, block_index=None, block_index_in=None, message_index_in=Non
         where.append('block_index = ?')
         bindings.append(block_index)
     if block_index_in is not None:
-        where.append('block_index IN ({})'.format(','.join(['?' for e in range(0, len(block_index_in))])))
+        where.append(f"block_index IN ({','.join(['?' for e in range(0, len(block_index_in))])})")
         bindings += block_index_in
     if message_index_in is not None:
-        where.append('message_index IN ({})'.format(','.join(['?' for e in range(0, len(message_index_in))])))
+        where.append(f"message_index IN ({','.join(['?' for e in range(0, len(message_index_in))])})")
         bindings += message_index_in
     # no sql injection here
     query = f'''SELECT * FROM messages WHERE ({" AND ".join(where)}) ORDER BY message_index ASC''' # nosec B608
@@ -120,7 +120,7 @@ def debit (db, address, asset, quantity, tx_index, action=None, event=None):
             assert asset == config.XCP
 
     if asset == config.BTC:
-        raise exceptions.BalanceError('Cannot debit bitcoins from a {} address!'.format(config.XCP_NAME))
+        raise exceptions.BalanceError(f'Cannot debit bitcoins from a {config.XCP_NAME} address!')
 
     remove_from_balance(db, address, asset, quantity, tx_index)
 
@@ -141,7 +141,7 @@ def debit (db, address, asset, quantity, tx_index, action=None, event=None):
     debit_cursor.execute(query, bindings)
     debit_cursor.close()
 
-    BLOCK_LEDGER.append('{}{}{}{}'.format(block_index, address, asset, quantity))
+    BLOCK_LEDGER.append(f'{block_index}{address}{asset}{quantity}')
 
 
 def add_to_balance(db, address, asset, quantity, tx_index):
@@ -205,7 +205,7 @@ def credit (db, address, asset, quantity, tx_index, action=None, event=None):
     credit_cursor.execute(query, bindings)
     credit_cursor.close()
 
-    BLOCK_LEDGER.append('{}{}{}{}'.format(block_index, address, asset, quantity))
+    BLOCK_LEDGER.append(f'{block_index}{address}{asset}{quantity}')
 
 
 def transfer(db, source, destination, asset, quantity, action, event):
@@ -368,7 +368,7 @@ def get_asset_id (db, asset_name, block_index):
     if len(assets) == 1:
         return int(assets[0]['asset_id'])
     else:
-        raise exceptions.AssetError('No such asset: {}'.format(asset_name))
+        raise exceptions.AssetError(f'No such asset: {asset_name}')
 
 
 def get_asset_name (db, asset_id, block_index):
@@ -397,7 +397,7 @@ def resolve_subasset_longname(db, asset_name):
         try:
             subasset_parent, subasset_longname = util.parse_subasset_from_asset_name(asset_name)
         except Exception as e:
-            logger.warning("Invalid subasset {}".format(asset_name))
+            logger.warning(f"Invalid subasset {asset_name}")
             subasset_longname = None
 
         if subasset_longname is not None:
@@ -430,7 +430,7 @@ def is_divisible(db, asset):
         bindings = ('valid', asset)
         cursor.execute(query, bindings)
         issuances = cursor.fetchall()
-        if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
+        if not issuances: raise exceptions.AssetError(f'No such asset: {asset}')
         return issuances[0]['divisible']
 
 
@@ -470,7 +470,7 @@ def get_asset_issuer(db, asset):
         bindings = ('valid', asset)
         cursor.execute(query, bindings)
         issuances = cursor.fetchall()
-        if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
+        if not issuances: raise exceptions.AssetError(f'No such asset: {asset}')
         return issuances[0]['issuer']
 
 
@@ -487,7 +487,7 @@ def get_asset_description(db, asset):
         bindings = ('valid', asset)
         cursor.execute(query, bindings)
         issuances = cursor.fetchall()
-        if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
+        if not issuances: raise exceptions.AssetError(f'No such asset: {asset}')
         return issuances[0]['description']
 
 
@@ -1001,7 +1001,7 @@ def get_dispensers(db, status_in=None, source_in=None, source=None, asset=None, 
         first_where.append('source = ?')
         bindings.append(source)
     if source_in is not None:
-        first_where.append('source IN ({})'.format(','.join(['?' for e in range(0, len(source_in))])))
+        first_where.append(f"source IN ({','.join(['?' for e in range(0, len(source_in))])})")
         bindings += source_in
     if asset is not None:
         first_where.append('asset = ?')
@@ -1015,7 +1015,7 @@ def get_dispensers(db, status_in=None, source_in=None, source=None, asset=None, 
         second_where.append('status = ?')
         bindings.append(status)
     if status_in is not None:
-        second_where.append('status IN ({})'.format(','.join(['?' for e in range(0, len(status_in))])))
+        second_where.append(f"status IN ({','.join(['?' for e in range(0, len(status_in))])})")
         bindings += status_in
     # build query
     first_where_str = ' AND '.join(first_where)

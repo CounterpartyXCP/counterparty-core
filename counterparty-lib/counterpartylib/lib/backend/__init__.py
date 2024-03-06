@@ -39,7 +39,7 @@ def sortkeypicker(keynames):
     return getit
 
 def BACKEND():
-    mdl = sys.modules['counterpartylib.lib.backend.{}'.format(config.BACKEND_NAME)]
+    mdl = sys.modules[f'counterpartylib.lib.backend.{config.BACKEND_NAME}']
     global _initialized
     if not _initialized:
         mdl.init()
@@ -166,7 +166,7 @@ def sort_unspent_txouts(unspent, unconfirmed=False, dust_size=config.DEFAULT_REG
     return unspent
 
 def get_btc_supply(normalize=False):
-    """returns the total supply of {} (based on what Bitcoin Core says the current block height is)""".format(config.BTC)
+    f"""returns the total supply of {config.BTC} (based on what Bitcoin Core says the current block height is)"""
     block_count = getblockcount()
     blocks_remaining = block_count
     total_supply = 0
@@ -286,7 +286,7 @@ def init_mempool_cache():
         BACKEND().getrawtransaction_batch(vin_txhash_list[:max_remaining_num_tx], skip_missing=True, verbose=True)
 
     MEMPOOL_CACHE_INITIALIZED = True
-    logger.info('Mempool cache initialized: {:.2f}s for {:,} transactions'.format(time.time() - start, num_tx + min(max_remaining_num_tx, len(vin_txhash_list))))
+    logger.info(f'Mempool cache initialized: {time.time() - start:.2f}s for {num_tx + min(max_remaining_num_tx, len(vin_txhash_list)):,} transactions')
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

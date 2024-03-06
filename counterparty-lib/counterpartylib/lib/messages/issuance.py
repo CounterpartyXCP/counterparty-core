@@ -124,7 +124,7 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
     fee = 0
 
     if asset in (config.BTC, config.XCP):
-        problems.append('cannot issue {} or {}'.format(config.BTC, config.XCP))
+        problems.append(f'cannot issue {config.BTC} or {config.XCP}')
 
     if call_date is None: call_date = 0
     if call_price is None: call_price = 0.0
@@ -335,13 +335,13 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         
         if description == None and ledger.enabled("issuance_description_special_null"):
             #a special message is created to be catched by the parse function
-            curr_format = asset_format + '{}s'.format(len(DESCRIPTION_MARK_BYTE)+len(DESCRIPTION_NULL_ACTION))
+            curr_format = asset_format + f'{len(DESCRIPTION_MARK_BYTE) + len(DESCRIPTION_NULL_ACTION)}s'
             encoded_description = DESCRIPTION_MARK_BYTE+DESCRIPTION_NULL_ACTION.encode('utf-8')
         else:
             if (len(validated_description) <= 42) and not ledger.enabled('pascal_string_removed'):
-                curr_format = FORMAT_2 + '{}p'.format(len(validated_description) + 1)
+                curr_format = FORMAT_2 + f'{len(validated_description) + 1}p'
             else:
-                curr_format = asset_format + '{}s'.format(len(validated_description))
+                curr_format = asset_format + f'{len(validated_description)}s'
             
             encoded_description = validated_description.encode('utf-8')
 
@@ -372,10 +372,10 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, lock,
         
         if description == None and ledger.enabled("issuance_description_special_null"):
             #a special message is created to be catched by the parse function
-            curr_format = subasset_format + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(DESCRIPTION_MARK_BYTE)+len(DESCRIPTION_NULL_ACTION))
+            curr_format = subasset_format + f'{compacted_subasset_length}s' + f'{len(DESCRIPTION_MARK_BYTE) + len(DESCRIPTION_NULL_ACTION)}s'
             encoded_description = DESCRIPTION_MARK_BYTE+DESCRIPTION_NULL_ACTION.encode('utf-8')
         else:       
-            curr_format = subasset_format + '{}s'.format(compacted_subasset_length) + '{}s'.format(len(validated_description))          
+            curr_format = subasset_format + f'{compacted_subasset_length}s' + f'{len(validated_description)}s'          
             encoded_description = validated_description.encode('utf-8')
         
         if subasset_format_length <= 18:
@@ -404,7 +404,7 @@ def parse (db, tx, message, message_type_id):
         subasset_longname = None
         if message_type_id == LR_SUBASSET_ID or message_type_id == SUBASSET_ID:
             if not ledger.enabled('subassets', block_index=tx['block_index']):
-                logger.warning("subassets are not enabled at block %s" % tx['block_index'])
+                logger.warning(f"subassets are not enabled at block {tx['block_index']}")
                 raise exceptions.UnpackError
 
             # parse a subasset original issuance message
@@ -420,9 +420,9 @@ def parse (db, tx, message, message_type_id):
                 
             description_length = len(message) - subasset_format_length - compacted_subasset_length
             if description_length < 0:
-                logger.warning("invalid subasset length: [issuance] tx [%s]: %s" % (tx['tx_hash'], compacted_subasset_length))
+                logger.warning(f"invalid subasset length: [issuance] tx [{tx['tx_hash']}]: {compacted_subasset_length}")
                 raise exceptions.UnpackError
-            messages_format = '>{}s{}s'.format(compacted_subasset_length, description_length)
+            messages_format = f'>{compacted_subasset_length}s{description_length}s'
             compacted_subasset_longname, description = struct.unpack(messages_format, message[subasset_format_length:])
             subasset_longname = util.expand_subasset_longname(compacted_subasset_longname)
             callable_, call_date, call_price = False, 0, 0.0
@@ -439,9 +439,9 @@ def parse (db, tx, message, message_type_id):
                         description = '' 
         elif (tx['block_index'] > 283271 or config.TESTNET or config.REGTEST) and len(message) >= asset_format_length: # Protocol change.
             if (len(message) - asset_format_length <= 42) and not ledger.enabled('pascal_string_removed'):
-                curr_format = asset_format + '{}p'.format(len(message) - asset_format_length)
+                curr_format = asset_format + f'{len(message) - asset_format_length}p'
             else:
-                curr_format = asset_format + '{}s'.format(len(message) - asset_format_length)
+                curr_format = asset_format + f'{len(message) - asset_format_length}s'
             
             lock = None
             reset = None
@@ -641,8 +641,8 @@ def parse (db, tx, message, message_type_id):
             sql='insert into issuances values(:tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :reset)'
             issuance_parse_cursor.execute(sql, bindings)
         else:
-            logger.warning("Not storing [issuance] tx [%s]: %s" % (tx['tx_hash'], status))
-            logger.debug("Bindings: %s" % (json.dumps(bindings), ))
+            logger.warning(f"Not storing [issuance] tx [{tx['tx_hash']}]: {status}")
+            logger.debug(f"Bindings: {json.dumps(bindings)}")
 
         # Credit.
         if status == 'valid' and quantity:

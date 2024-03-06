@@ -16,10 +16,10 @@ REGEX = r"^(?P<change>[+-])INSERT INTO transactions VALUES\((?P<tx_index>\d+),'(
 dryrun = '--dry-run' in sys.argv or '--dryrun' in sys.argv
 args = list(filter(lambda a: a not in [__file__, '--dry-run', '--dryrun'], sys.argv))
 
-diffcmd = 'git --no-pager diff %s' % UNITTEST_FIXTURE_SQL
+diffcmd = f'git --no-pager diff {UNITTEST_FIXTURE_SQL}'
 if len(args) == 1:
     commit = args[0]
-    diffcmd = 'git --no-pager show %s %s' % (commit, UNITTEST_FIXTURE_SQL)
+    diffcmd = f'git --no-pager show {commit} {UNITTEST_FIXTURE_SQL}'
 
 elif len(args) > 1:
     raise Exception("Too many arguments")
@@ -58,7 +58,7 @@ with open(UNITTEST_VECTORS_PY, 'r') as f:
     for tx_index, old_txid in sorted(old_txid_map.items(), key=lambda kv: kv[0]):
         new_txid = new_txid_map[tx_index]
 
-        print("%s -> %s" % (old_txid, new_txid))
+        print(f"{old_txid} -> {new_txid}")
 
         filedata = filedata.replace(old_txid, new_txid)
         filedata = filedata.replace(to_literal_byte_string(old_txid), to_literal_byte_string(new_txid))

@@ -11,6 +11,6 @@ dryrun = '--dry-run' in sys.argv or '--dryrun' in sys.argv
 
 for new_fixture_path in glob.glob(os.path.join(SCENARIOS_DIR, "*.new.*")):
     old_fixture_path = new_fixture_path.replace(".new.", ".")
-    print("Move {} to {}".format(new_fixture_path, old_fixture_path))
+    print(f"Move {new_fixture_path} to {old_fixture_path}")
     if not dryrun:
         os.replace(new_fixture_path, old_fixture_path)

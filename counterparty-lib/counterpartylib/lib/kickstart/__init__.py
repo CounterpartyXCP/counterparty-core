@@ -84,7 +84,7 @@ def fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner):
         if block['block_index'] == first_block:
             break
     block_parser.close()
-    spinner.text = 'Blocks indexed in: {:.3f}s'.format(time.time() - start_time_blocks_indexing)
+    spinner.text = f'Blocks indexed in: {time.time() - start_time_blocks_indexing:.3f}s'
     return block_count
 
 
@@ -134,7 +134,7 @@ def get_bitcoind_dir(bitcoind_dir=None):
         else:
             bitcoind_dir = os.path.expanduser('~/.bitcoin')
     if not os.path.isdir(bitcoind_dir):
-        raise Exception('Bitcoin Core data directory not found at {}. Use --bitcoind-dir parameter.'.format(bitcoind_dir))
+        raise Exception(f'Bitcoin Core data directory not found at {bitcoind_dir}. Use --bitcoind-dir parameter.')
     if config.TESTNET:
         bitcoind_dir = os.path.join(bitcoind_dir, 'testnet3')
     return bitcoind_dir
@@ -383,5 +383,5 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
         # cleaning up
         cleanup(kickstart_db, block_parser)
         # end message
-        print("Last parsed block: {}".format(last_parsed_block))
-        print('Kickstart done in: {:.3f}s'.format(time.time() - start_time_total))
+        print(f"Last parsed block: {last_parsed_block}")
+        print(f'Kickstart done in: {time.time() - start_time_total:.3f}s')

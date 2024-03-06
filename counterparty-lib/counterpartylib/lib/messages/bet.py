@@ -381,8 +381,8 @@ def parse (db, tx, message):
         sql = 'insert into bets values(:tx_index, :tx_hash, :block_index, :source, :feed_address, :bet_type, :deadline, :wager_quantity, :wager_remaining, :counterwager_quantity, :counterwager_remaining, :target_value, :leverage, :expiration, :expire_index, :fee_fraction_int, :status)'
         bet_parse_cursor.execute(sql, bindings)
     else:
-        logger.warning("Not storing [bet] tx [%s]: %s" % (tx['tx_hash'], status))
-        logger.debug("Bindings: %s" % (json.dumps(bindings), ))
+        logger.warning(f"Not storing [bet] tx [{tx['tx_hash']}]: {status}")
+        logger.debug(f"Bindings: {json.dumps(bindings)}")
 
     # Match.
     if status == 'open' and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
@@ -459,15 +459,15 @@ def match (db, tx):
 
         if tx['block_index'] < 286000: tx0_inverse_odds = ledger.price(1, tx0_odds) # Protocol change.
 
-        logger.debug('Tx0 Inverse Odds: {}; Tx1 Odds: {}'.format(float(tx0_inverse_odds), float(tx1_odds)))
+        logger.debug(f'Tx0 Inverse Odds: {float(tx0_inverse_odds)}; Tx1 Odds: {float(tx1_odds)}')
         if tx0_inverse_odds > tx1_odds:
             logger.debug('Skipping: price mismatch.')
         else:
-            logger.debug('Potential forward quantities: {}, {}'.format(tx0_wager_remaining, int(ledger.price(tx1_wager_remaining, tx1_odds))))
+            logger.debug(f'Potential forward quantities: {tx0_wager_remaining}, {int(ledger.price(tx1_wager_remaining, tx1_odds))}')
             forward_quantity = int(min(tx0_wager_remaining, int(ledger.price(tx1_wager_remaining, tx1_odds))))
-            logger.debug('Forward Quantity: {}'.format(forward_quantity))
+            logger.debug(f'Forward Quantity: {forward_quantity}')
             backward_quantity = round(forward_quantity / tx0_odds)
-            logger.debug('Backward Quantity: {}'.format(backward_quantity))
+            logger.debug(f'Backward Quantity: {backward_quantity}')
 
             if not forward_quantity:
                 logger.debug('Skipping: zero forward quantity.')

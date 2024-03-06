@@ -38,7 +38,7 @@ def rpc_call(payload):
                 logger.debug('Successfully connected.')
             break
         except (Timeout, ReadTimeout, ConnectionError):
-            logger.debug('Could not connect to backend at `{}`. (Try {}/{})'.format(util.clean_url_for_log(url), i+1, TRIES))
+            logger.debug(f'Could not connect to backend at `{util.clean_url_for_log(url)}`. (Try {i + 1}/{TRIES})')
             time.sleep(5)
 
     if response == None:
@@ -48,9 +48,9 @@ def rpc_call(payload):
             network = 'regtest'
         else:
             network = 'mainnet'
-        raise BackendRPCError('Cannot communicate with backend at `{}`. (server is set to run on {}, is backend?)'.format(util.clean_url_for_log(url), network))
+        raise BackendRPCError(f'Cannot communicate with backend at `{util.clean_url_for_log(url)}`. (server is set to run on {network}, is backend?)')
     elif response.status_code in (401,):
-        raise BackendRPCError('Authorization error connecting to {}: {} {}'.format(util.clean_url_for_log(url), response.status_code, response.reason))
+        raise BackendRPCError(f'Authorization error connecting to {util.clean_url_for_log(url)}: {response.status_code} {response.reason}')
     elif response.status_code not in (200, 500):
         raise BackendRPCError(str(response.status_code) + ' ' + response.reason)
 
@@ -58,7 +58,7 @@ def rpc_call(payload):
     try:
         response_json = response.json()
     except json.decoder.JSONDecodeError as e:
-        raise BackendRPCError('Received invalid JSON from backend with a response of {}'.format(str(response.status_code) + ' ' + response.reason))
+        raise BackendRPCError(f"Received invalid JSON from backend with a response of {str(response.status_code) + ' ' + response.reason}")
 
     # Batch query returns a list
     if isinstance(response_json, list):
@@ -66,7 +66,7 @@ def rpc_call(payload):
     if 'error' not in response_json.keys() or response_json['error'] == None:
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
-        raise BackendRPCError('{} Is `txindex` enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
+        raise BackendRPCError(f"{response_json['error']} Is `txindex` enabled in {config.BTC_NAME} Core?")
     elif response_json['error']['code'] in [-28, -8, -2]:
         # “Verifying blocks...” or “Block height out of range” or “The network does not appear to fully agree!“
         logger.debug('Backend not ready. Sleeping for ten seconds.')
@@ -75,7 +75,7 @@ def rpc_call(payload):
         time.sleep(10)
         return rpc_call(payload)
     else:
-        raise BackendRPCError('Error connecting to {}: {}'.format(util.clean_url_for_log(url), response_json['error']))
+        raise BackendRPCError(f"Error connecting to {util.clean_url_for_log(url)}: {response_json['error']}")
 
 def rpc(method, params):
     payload = {
@@ -103,7 +103,7 @@ def rpc_batch(request_list):
 
 
 def extract_addresses(txhash_list):
-    logger.debug('extract_addresses, txs: %d' % (len(txhash_list), ))
+    logger.debug(f'extract_addresses, txs: {len(txhash_list)}')
     tx_hashes_tx = getrawtransaction_batch(txhash_list, verbose=True)
 
     return extract_addresses_from_txlist(tx_hashes_tx, getrawtransaction_batch)
@@ -114,7 +114,7 @@ def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
     helper for extract_addresses, seperated so we can pass in a mocked _getrawtransaction_batch for test purposes
     """
 
-    logger.debug('extract_addresses_from_txlist, txs: %d' % (len(tx_hashes_tx.keys()), ))
+    logger.debug(f'extract_addresses_from_txlist, txs: {len(tx_hashes_tx.keys())}')
     tx_hashes_addresses = {}
     tx_inputs_hashes = set()  # use set to avoid duplicates
 
@@ -126,7 +126,7 @@ def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
 
         tx_inputs_hashes.update([vin['txid'] for vin in tx['vin']])
 
-    logger.debug('extract_addresses, input TXs: %d' % (len(tx_inputs_hashes), ))
+    logger.debug(f'extract_addresses, input TXs: {len(tx_inputs_hashes)}')
 
     # chunk txs to avoid huge memory spikes
     for tx_inputs_hashes_chunk in util.chunkify(list(tx_inputs_hashes), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE):
@@ -231,7 +231,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                     tx_hash_call_id.get(response.get('id', '??'), '??'), response['error']))
             else:
                 #TODO: this seems to happen for bogus transactions? Maybe handle it more gracefully than just erroring out?
-                raise BackendRPCError('{} (txhash:: {})'.format(response['error'], tx_hash_call_id.get(response.get('id', '??'), '??')))
+                raise BackendRPCError(f"{response['error']} (txhash:: {tx_hash_call_id.get(response.get('id', '??'), '??')})")
 
     # get transactions from cache
     result = {}
@@ -285,7 +285,7 @@ def indexd_rpc_call(path):
         response = requests.get(url, headers={'content-type': 'application/json'},
             timeout=config.REQUESTS_TIMEOUT)
     except (Timeout, ReadTimeout, ConnectionError):
-        logger.debug('Could not connect to backend at `{}`.'.format(util.clean_url_for_log(url),))
+        logger.debug(f'Could not connect to backend at `{util.clean_url_for_log(url)}`.')
 
     if response == None:
         if config.TESTNET:
@@ -294,17 +294,17 @@ def indexd_rpc_call(path):
             network = 'regtest'
         else:
             network = 'mainnet'
-        raise IndexdRPCError('Cannot communicate with {} indexd server at `{}`.'.format(network, util.clean_url_for_log(url)))
+        raise IndexdRPCError(f'Cannot communicate with {network} indexd server at `{util.clean_url_for_log(url)}`.')
     elif response.status_code == 400:
-        raise IndexdRPCError('Indexd returned error: {} {} {}'.format(response.status_code, response.reason, response.text))
+        raise IndexdRPCError(f'Indexd returned error: {response.status_code} {response.reason} {response.text}')
     elif response.status_code not in (200, 500):
-        raise IndexdRPCError("Bad response from {}: {} {}".format(util.clean_url_for_log(url), response.status_code, response.reason))
+        raise IndexdRPCError(f"Bad response from {util.clean_url_for_log(url)}: {response.status_code} {response.reason}")
 
     # Return result, with error handling.
     response_json = response.json()
     if isinstance(response_json, (list, tuple)) or 'error' not in response_json.keys() or response_json['error'] == None:
         return response_json
     else:
-        raise IndexdRPCError('{}'.format(response_json['error']))
+        raise IndexdRPCError(f"{response_json['error']}")
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

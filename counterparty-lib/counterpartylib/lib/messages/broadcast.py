@@ -137,9 +137,9 @@ def compose (db, source, timestamp, value, fee_fraction, text):
         data += text.encode('utf-8')
     else:
         if len(text) <= 52:
-            curr_format = FORMAT + '{}p'.format(len(text) + 1)
+            curr_format = FORMAT + f'{len(text) + 1}p'
         else:
-            curr_format = FORMAT + '{}s'.format(len(text))
+            curr_format = FORMAT + f'{len(text)}s'
 
         data += struct.pack(curr_format, timestamp, value, fee_fraction_int, text.encode('utf-8'))
     return (source, [], data)
@@ -150,7 +150,7 @@ def parse (db, tx, message):
     # Unpack message.
     try:
         if ledger.enabled('broadcast_pack_text', tx['block_index']):
-            timestamp, value, fee_fraction_int, rawtext = struct.unpack(FORMAT + '{}s'.format(len(message) - LENGTH), message)
+            timestamp, value, fee_fraction_int, rawtext = struct.unpack(FORMAT + f'{len(message) - LENGTH}s', message)
             textlen = VarIntSerializer.deserialize(rawtext)
             if textlen == 0:
                 text = b''
@@ -160,9 +160,9 @@ def parse (db, tx, message):
             assert len(text) == textlen
         else:
             if len(message) - LENGTH <= 52:
-                curr_format = FORMAT + '{}p'.format(len(message) - LENGTH)
+                curr_format = FORMAT + f'{len(message) - LENGTH}p'
             else:
-                curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
+                curr_format = FORMAT + f'{len(message) - LENGTH}s'
 
             timestamp, value, fee_fraction_int, text = struct.unpack(curr_format, message)
 
@@ -211,8 +211,8 @@ def parse (db, tx, message):
         sql = 'insert into broadcasts values(:tx_index, :tx_hash, :block_index, :source, :timestamp, :value, :fee_fraction_int, :text, :locked, :status)'
         cursor.execute(sql, bindings)
     else:
-        logger.warning("Not storing [broadcast] tx [%s]: %s" % (tx['tx_hash'], status))
-        logger.debug("Bindings: %s" % (json.dumps(bindings), ))
+        logger.warning(f"Not storing [broadcast] tx [{tx['tx_hash']}]: {status}")
+        logger.debug(f"Bindings: {json.dumps(bindings)}")
 
     # stop processing if broadcast is invalid for any reason
     if ledger.enabled('broadcast_invalid_check') and status != 'valid':
@@ -307,12 +307,12 @@ def parse (db, tx, message):
                     bull_credit = escrow_less_fee
                     bear_credit = 0
                     bet_match_status = 'settled: liquidated for bull'
-                    ledger.credit(db, bull_address, config.XCP, bull_credit, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                    ledger.credit(db, bull_address, config.XCP, bull_credit, tx['tx_index'], action=f'bet {bet_match_status}', event=tx['tx_hash'])
                 elif bull_credit <= 0:
                     bull_credit = 0
                     bear_credit = escrow_less_fee
                     bet_match_status = 'settled: liquidated for bear'
-                    ledger.credit(db, bear_address, config.XCP, bear_credit, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                    ledger.credit(db, bear_address, config.XCP, bear_credit, tx['tx_index'], action=f'bet {bet_match_status}', event=tx['tx_hash'])
 
                 # Pay fee to feed.
                 ledger.credit(db, bet_match['feed_address'], config.XCP, fee, tx['tx_index'], action='feed fee', event=tx['tx_hash'])
@@ -336,8 +336,8 @@ def parse (db, tx, message):
             elif timestamp >= bet_match['deadline']:
                 bet_match_status = 'settled'
 
-                ledger.credit(db, bull_address, config.XCP, bull_credit, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
-                ledger.credit(db, bear_address, config.XCP, bear_credit, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                ledger.credit(db, bull_address, config.XCP, bull_credit, tx['tx_index'], action=f'bet {bet_match_status}', event=tx['tx_hash'])
+                ledger.credit(db, bear_address, config.XCP, bear_credit, tx['tx_index'], action=f'bet {bet_match_status}', event=tx['tx_hash'])
 
                 # Pay fee to feed.
                 ledger.credit(db, bet_match['feed_address'], config.XCP, fee, tx['tx_index'], action='feed fee', event=tx['tx_hash'])
@@ -372,11 +372,11 @@ def parse (db, tx, message):
             if value == bet_match['target_value']:
                 winner = 'Equal'
                 bet_match_status = 'settled: for equal'
-                ledger.credit(db, equal_address, config.XCP, escrow_less_fee, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                ledger.credit(db, equal_address, config.XCP, escrow_less_fee, tx['tx_index'], action=f'bet {bet_match_status}', event=tx['tx_hash'])
             else:
                 winner = 'NotEqual'
                 bet_match_status = 'settled: for notequal'
-                ledger.credit(db, notequal_address, config.XCP, escrow_less_fee, tx['tx_index'], action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                ledger.credit(db, notequal_address, config.XCP, escrow_less_fee, tx['tx_index'], action=f'bet {bet_match_status}', event=tx['tx_hash'])
 
             # Pay fee to feed.
             ledger.credit(db, bet_match['feed_address'], config.XCP, fee, tx['tx_index'], action='feed fee', event=tx['tx_hash'])

@@ -146,7 +146,7 @@ def parse_tx(db, tx):
                                            WHERE tx_hash=$tx_hash''',
                                         {'supported': False, 'tx_hash': tx['tx_hash']})
                 if tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
-                    logger.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
+                    logger.info(f"Unsupported transaction: hash {tx['tx_hash']}; data {tx['data']}")
                 cursor.close()
                 return False
 
@@ -156,7 +156,7 @@ def parse_tx(db, tx):
 
             return True
     except Exception as e:
-        raise exceptions.ParseTransactionError("%s" % e)
+        raise exceptions.ParseTransactionError(f"{e}")
     finally:
         cursor.close()
 
@@ -196,7 +196,7 @@ def parse_block(db, block_index, block_time,
                                                 tx['btc_amount'], tx['fee'],
                                                 binascii.hexlify(tx['data']).decode('UTF-8')))
         except exceptions.ParseTransactionError as e:
-            logger.warning('ParseTransactionError for tx %s: %s' % (tx['tx_hash'], e))
+            logger.warning(f"ParseTransactionError for tx {tx['tx_hash']}: {e}")
             raise e
             #pass
 
@@ -264,7 +264,7 @@ def initialise(db):
     blocks = list(cursor)
     if len(blocks):
         if blocks[0]['block_index'] != config.BLOCK_FIRST:
-            raise exceptions.DatabaseError('First block in database is not block {}.'.format(config.BLOCK_FIRST))
+            raise exceptions.DatabaseError(f'First block in database is not block {config.BLOCK_FIRST}.')
 
     # Transactions
     cursor.execute('''CREATE TABLE IF NOT EXISTS transactions(
@@ -493,7 +493,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
         assert block_index == ledger.CURRENT_BLOCK_INDEX
 
     if source and (data or destination == config.UNSPENDABLE or dispensers_outs):
-        logger.debug('Saving transaction: {}'.format(tx_hash))
+        logger.debug(f'Saving transaction: {tx_hash}')
         cursor.execute('''INSERT INTO transactions(
                             tx_index,
                             tx_hash,
@@ -543,9 +543,9 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
 
 
 def clean_table_from(cursor, table, block_index):
-    logger.info('Cleaning table {} from block_index {}...'.format(table, block_index))
+    logger.info(f'Cleaning table {table} from block_index {block_index}...')
     # internal function, no sql injection here
-    cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,)) # nosec B608
+    cursor.execute(f'''DELETE FROM {table} WHERE block_index > ?''', (block_index,)) # nosec B608
 
 
 def clean_messages_tables(cursor, block_index=0):
@@ -573,9 +573,9 @@ def rollback(db, block_index=0):
         clean_messages_tables(cursor, block_index=block_index)
         clean_transactions_tables(cursor, block_index=block_index)
         cursor.close()
-        logger.info('Database rolled back to block_index {}'.format(block_index))
+        logger.info(f'Database rolled back to block_index {block_index}')
     print(f'{OK_GREEN} {step}')
-    print('Rollback done in {:.2f}s'.format(time.time() - start_time))
+    print(f'Rollback done in {time.time() - start_time:.2f}s')
 
 
 def generate_progression_message(block, start_time_block_parse, start_time_all_blocks_parse, block_parsed_count, block_count, tx_index=None):
@@ -622,7 +622,7 @@ def reparse(db, block_index=0):
             )
             spinner.text = message
     print(f'{OK_GREEN} {message}')
-    print('All blocks reparsed in {:.2f}s'.format(time.time() - start_time_all_blocks_parse))
+    print(f'All blocks reparsed in {time.time() - start_time_all_blocks_parse:.2f}s')
 
 
 def last_db_index(db):
@@ -726,7 +726,7 @@ def follow(db):
                 if current_index == config.BLOCK_FIRST:
                     break
 
-                logger.debug('Checking that block {} is not an orphan.'.format(current_index))
+                logger.debug(f'Checking that block {current_index} is not an orphan.')
                 # Backend parent hash.
                 current_hash = backend.getblockhash(current_index)
                 current_cblock = backend.getblock(current_hash)
@@ -751,7 +751,7 @@ def follow(db):
             # Rollback for reorganisation.
             if requires_rollback:
                 # Record reorganisation.
-                logger.warning('Blockchain reorganisation at block {}.'.format(current_index))
+                logger.warning(f'Blockchain reorganisation at block {current_index}.')
                 log.message(db, block_index, 'reorg', None, {'block_index': current_index})
 
                 # Rollback the DB.
@@ -777,7 +777,7 @@ def follow(db):
                 del prefetcher.BLOCKCHAIN_CACHE[current_index]
             else:
                 if block_index < block_count - 100:
-                    logger.warning('Blockchain cache miss :/ Block index: {}'.format(current_index))
+                    logger.warning(f'Blockchain cache miss :/ Block index: {current_index}')
                 block_hash = backend.getblockhash(current_index)
                 block = backend.getblock(block_hash)
                 previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
@@ -884,7 +884,7 @@ def follow(db):
                 # Get block count everytime we parse some mempool_txs. If there is a new block, we just interrupt this process
                 if parsed_txs_count % 100 == 0:
                     if len(parse_txs) > 1000:
-                        logger.info("Mempool parsed txs count:{} from {}".format(parsed_txs_count, len(parse_txs)))
+                        logger.info(f"Mempool parsed txs count:{parsed_txs_count} from {len(parse_txs)}")
                     
                     try:
                         block_count = backend.getblockcount()
@@ -941,7 +941,7 @@ def follow(db):
                         # Rollback.
                         raise MempoolError
                 except exceptions.ParseTransactionError as e:
-                    logger.warning('ParseTransactionError for tx %s: %s' % (tx_hash, e))
+                    logger.warning(f'ParseTransactionError for tx {tx_hash}: {e}')
                 except MempoolError:
                     pass
                     

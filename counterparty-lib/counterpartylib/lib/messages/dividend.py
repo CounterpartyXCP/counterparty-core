@@ -51,10 +51,10 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     problems = []
 
     if asset == config.BTC:
-        problems.append('cannot pay dividends to holders of {}'.format(config.BTC))
+        problems.append(f'cannot pay dividends to holders of {config.BTC}')
     if asset == config.XCP:
         if (not block_index >= 317500) or block_index >= 320000 or config.TESTNET or config.REGTEST:   # Protocol change.
-            problems.append('cannot pay dividends to holders of {}'.format(config.XCP))
+            problems.append(f'cannot pay dividends to holders of {config.XCP}')
 
     if quantity_per_unit <= 0:
         problems.append('non‐positive quantity per unit')
@@ -67,7 +67,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     try:
         divisible = ledger.is_divisible(db, asset)
     except exceptions.AssetError:
-        problems.append('no such asset, {}.'.format(asset))
+        problems.append(f'no such asset, {asset}.')
         return None, None, problems, 0
     
     # Only issuer can pay dividends.
@@ -81,7 +81,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     try:
         dividend_divisible = ledger.is_divisible(db, dividend_asset)
     except exceptions.AssetError:
-        problems.append('no such dividend asset, {}.'.format(dividend_asset))
+        problems.append(f'no such dividend asset, {dividend_asset}.')
         return None, None, problems, 0
 
     # Calculate dividend quantities.
@@ -120,7 +120,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     if dividend_asset != config.BTC:
         dividend_balances = ledger.get_balance(db, source, dividend_asset)
         if dividend_balances < dividend_total:
-            problems.append('insufficient funds ({})'.format(dividend_asset))
+            problems.append(f'insufficient funds ({dividend_asset})')
 
     fee = 0
     if not problems and dividend_asset != config.BTC:
@@ -130,12 +130,12 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
         if fee:
             balance = ledger.get_balance(db, source, config.XCP)
             if balance < fee:
-                problems.append('insufficient funds ({})'.format(config.XCP))
+                problems.append(f'insufficient funds ({config.XCP})')
 
     if not problems and dividend_asset == config.XCP:
         total_cost = dividend_total + fee
         if dividend_balances < total_cost:
-            problems.append('insufficient funds ({})'.format(dividend_asset))
+            problems.append(f'insufficient funds ({dividend_asset})')
 
     # For SQLite3
     if fee > config.MAX_INT or dividend_total > config.MAX_INT:
@@ -161,7 +161,7 @@ def compose (db, source, quantity_per_unit, asset, dividend_asset):
 
     dividend_total, outputs, problems, fee = validate(db, source, quantity_per_unit, asset, dividend_asset, ledger.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
-    logger.info('Total quantity to be distributed in dividends: {} {}'.format(ledger.value_out(db, dividend_total, dividend_asset), dividend_asset))
+    logger.info(f'Total quantity to be distributed in dividends: {ledger.value_out(db, dividend_total, dividend_asset)} {dividend_asset}')
 
     if dividend_asset == config.BTC:
         return (source, [(output['address'], output['dividend_quantity']) for output in outputs], None)
@@ -197,7 +197,7 @@ def parse (db, tx, message):
         status = 'invalid: could not unpack'
 
     if dividend_asset == config.BTC:
-        status = 'invalid: cannot pay {} dividends within protocol'.format(config.BTC)
+        status = f'invalid: cannot pay {config.BTC} dividends within protocol'
 
     if status == 'valid':
         # For SQLite3
@@ -234,7 +234,7 @@ def parse (db, tx, message):
         sql = 'insert into dividends values(:tx_index, :tx_hash, :block_index, :source, :asset, :dividend_asset, :quantity_per_unit, :fee_paid, :status)'
         dividend_parse_cursor.execute(sql, bindings)
     else:
-        logger.warning("Not storing [dividend] tx [%s]: %s" % (tx['tx_hash'], status))
-        logger.debug("Bindings: %s" % (json.dumps(bindings), ))
+        logger.warning(f"Not storing [dividend] tx [{tx['tx_hash']}]: {status}")
+        logger.debug(f"Bindings: {json.dumps(bindings)}")
 
     dividend_parse_cursor.close()

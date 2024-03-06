@@ -122,7 +122,7 @@ def test_p2sh_encoding(server_db):
         # store transaction
         pretxid, _ = util_test.insert_raw_transaction(pretxhex, server_db)
 
-        logger.debug('pretxid %s' % (pretxid))
+        logger.debug(f'pretxid {pretxid}')
 
         # check that when we do another, unrelated, send that it won't use our UTXO
         result = api.compose_transaction(
@@ -270,7 +270,7 @@ def test_p2sh_encoding_long_data(server_db):
 
         # store transaction
         pretxid, _ = util_test.insert_raw_transaction(pretxhex, server_db)
-        logger.debug('pretxid %s' % (pretxid))
+        logger.debug(f'pretxid {pretxid}')
 
         # now compose the data transaction
         result = api.compose_transaction(
@@ -387,7 +387,7 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
             multisig_pubkeys_required=2
         )
         redeemScript = bitcoinlib.core.script.CScript(redeemScript)
-        assert repr(redeemScript) == "CScript([x('{}'), OP_DROP, 2, x('{}'), x('{}'), x('{}'), 3, OP_CHECKMULTISIGVERIFY, 0, OP_DROP, OP_DEPTH, 0, OP_EQUAL])".format(data_drop.hex(), DP['pubkey'][ADDR[0]], DP['pubkey'][ADDR[1]], DP['pubkey'][ADDR[2]])
+        assert repr(redeemScript) == f"CScript([x('{data_drop.hex()}'), OP_DROP, 2, x('{DP['pubkey'][ADDR[0]]}'), x('{DP['pubkey'][ADDR[1]]}'), x('{DP['pubkey'][ADDR[2]]}'), 3, OP_CHECKMULTISIGVERIFY, 0, OP_DROP, OP_DEPTH, 0, OP_EQUAL])"
 
         # setup transaction
         fee = 20000
@@ -409,7 +409,7 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
 
         # store transaction
         pretxid, _ = util_test.insert_raw_transaction(pretxhex, server_db)
-        logger.debug('pretxid %s' % (pretxid))
+        logger.debug(f'pretxid {pretxid}')
 
         # now compose the data transaction
         result = api.compose_transaction(
@@ -497,7 +497,7 @@ def test_benchmark_outkey_vin():
     tt = time.time()
     ttn1 = ((tt - t) / m)
 
-    print(tt - t, "%f" % ttn1)
+    print(tt - t, f"{ttn1:f}")
 
     t = time.time()
     for n in range(m):
@@ -508,7 +508,7 @@ def test_benchmark_outkey_vin():
     tt = time.time()
     ttn2 = ((tt - t) / m)
 
-    print(tt - t, "%f" % ttn2)
+    print(tt - t, f"{ttn2:f}")
 
     t = time.time()
     for n in range(m):
@@ -520,7 +520,7 @@ def test_benchmark_outkey_vin():
     tt = time.time()
     ttn3 = ((tt - t) / m)
 
-    print(tt - t, "%f" % ttn3)
+    print(tt - t, f"{ttn3:f}")
 
     # not sure what to do here since the speed depends on the machine ...
     assert ttn1 < 0.0001

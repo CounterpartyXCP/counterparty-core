@@ -11,12 +11,12 @@ assert len(sys.argv) == 2, "path to DB required"
 
 dbfile = sys.argv[1]
 dbdir = os.path.dirname(dbfile)
-tmpdir = "%s/upgradesqlitepagesize" % dbdir
-sqlfile = "%s/dump.sql" % tmpdir
-tmpfile = "%s/%s" % (tmpdir, os.path.basename(dbfile))
+tmpdir = f"{dbdir}/upgradesqlitepagesize"
+sqlfile = f"{tmpdir}/dump.sql"
+tmpfile = f"{tmpdir}/{os.path.basename(dbfile)}"
 
 if not os.path.isfile(dbfile):
-    print("dbfile %s does not exist" % dbfile)
+    print(f"dbfile {dbfile} does not exist")
     sys.exit(1)
 
 try:
@@ -28,24 +28,24 @@ except FileExistsError:
 
 print("creating .sql dump of DB...")
 pdump = Popen(["sqlite3", dbfile], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-output = pdump.communicate(bytes("""
+output = pdump.communicate(bytes(f"""
 .headers ON
 .mode csv
-.output %s
+.output {sqlfile}
 .dump
 .output stdout
 .exit
-""" % sqlfile, "utf-8"))
+""", "utf-8"))
 print(output)
 assert pdump.wait() == 0
 
 print("preparing new DB...")
 ppre = Popen(["sqlite3", tmpfile], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-output = ppre.communicate(bytes("""
+output = ppre.communicate(bytes(f"""
 PRAGMA journal_mode = OFF;
 PRAGMA synchronous = OFF;
-PRAGMA page_size=%s;
-""" % PAGE_SIZE, "utf-8"))
+PRAGMA page_size={PAGE_SIZE};
+""", "utf-8"))
 print(output)
 assert ppre.wait() == 0
 

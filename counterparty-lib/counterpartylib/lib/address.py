@@ -37,7 +37,7 @@ def pack(address):
             except bitcoin.base58.InvalidBase58Error as e:
                 raise e
             except Exception as e:
-                raise Exception(('The address {} is not a valid bitcoin address ({})').format(address,'testnet' if config.TESTNET or config.REGTEST else 'mainnet'))
+                raise Exception(f"The address {address} is not a valid bitcoin address ({'testnet' if config.TESTNET or config.REGTEST else 'mainnet'})")
     else:
         try:
             short_address_bytes = bitcoin.base58.decode(address)[:-4]

@@ -31,14 +31,14 @@ class Prefetcher(threading.Thread):
         self.stop_event.set()
 
     def run(self):
-        logger.info('Starting Prefetcher process {}.'.format(self.thread_index))
+        logger.info(f'Starting Prefetcher process {self.thread_index}.')
 
         while True:
             if self.stop_event.is_set():
                 break
 
             if len(BLOCKCHAIN_CACHE) >= BLOCKCHAIN_CACHE_MAX_SIZE:
-                logger.debug('Blockchain cache is full. Sleeping Prefetcher thread {}.'.format(self.thread_index))
+                logger.debug(f'Blockchain cache is full. Sleeping Prefetcher thread {self.thread_index}.')
                 time.sleep(10)
                 continue
 
@@ -46,7 +46,7 @@ class Prefetcher(threading.Thread):
             if not block_index:
                 continue
 
-            logger.debug('Fetching block {} with Prefetcher thread {}.'.format(block_index, self.thread_index))
+            logger.debug(f'Fetching block {block_index} with Prefetcher thread {self.thread_index}.')
             block_hash = backend.getblockhash(block_index)
             block = backend.getblock(block_hash)
             txhash_list, raw_transactions = backend.get_tx_list(block, block_index=block_index)

@@ -43,7 +43,7 @@ def sigterm_handler(_signo, _stack_frame):
         signal_name = 'SIGINT'
     else:
         assert False
-    logger.info('Received {}.'.format(signal_name))
+    logger.info(f'Received {signal_name}.')
 
     if 'api_server' in globals():
         logger.info('Stopping API server.')
@@ -73,7 +73,7 @@ def get_lock():
     else:
         socket_family = socket.AF_UNIX
         socket_address = '\0' + config.DATABASE
-        error = 'Another copy of server is currently writing to database {}'.format(config.DATABASE)
+        error = f'Another copy of server is currently writing to database {config.DATABASE}'
 
     lock_socket = socket.socket(socket_family, socket.SOCK_DGRAM)
     try:
@@ -157,7 +157,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     if database_file:
         config.DATABASE = database_file
     else:
-        filename = '{}{}.db'.format(config.APP_NAME, network)
+        filename = f'{config.APP_NAME}{network}.db'
         config.DATABASE = os.path.join(data_dir, filename)
 
     if checkdb:
@@ -174,7 +174,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     if log_file is False:  # no file logging
         config.LOG = None
     elif not log_file:  # default location
-        filename = 'server{}.log'.format(network)
+        filename = f'server{network}.log'
         config.LOG = os.path.join(log_dir, filename)
     else:  # user-specified location
         config.LOG = log_file
@@ -184,17 +184,17 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     config.QUIET = quiet
     log.set_up(log.ROOT_LOGGER, verbose=verbose, quiet=quiet, logfile=config.LOG, console_logfilter=console_logfilter)
     if config.LOG:
-        logger.debug('Writing server log to file: `{}`'.format(config.LOG))
+        logger.debug(f'Writing server log to file: `{config.LOG}`')
 
     if api_log_file is False:  # no file logging
         config.API_LOG = None
     elif not api_log_file:  # default location
-        filename = 'server{}.access.log'.format(network)
+        filename = f'server{network}.access.log'
         config.API_LOG = os.path.join(log_dir, filename)
     else:  # user-specified location
         config.API_LOG = api_log_file
     if config.API_LOG:
-        logger.debug('Writing API accesses log to file: `{}`'.format(config.API_LOG))
+        logger.debug(f'Writing API accesses log to file: `{config.API_LOG}`')
 
     # Log unhandled errors.
     def handle_exception(exc_type, exc_value, exc_traceback):
@@ -455,7 +455,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     if estimate_fee_per_kb is not None:
         config.ESTIMATE_FEE_PER_KB = estimate_fee_per_kb
 
-    logger.info('Running v{} of counterparty-lib.'.format(config.VERSION_STRING))
+    logger.info(f'Running v{config.VERSION_STRING} of counterparty-lib.')
 
 
 def initialise_db():
@@ -467,7 +467,7 @@ def initialise_db():
         get_lock()
 
     # Database
-    logger.info('Connecting to database (SQLite %s).' % apsw.apswversion())
+    logger.info(f'Connecting to database (SQLite {apsw.apswversion()}).')
     db = database.get_connection(read_only=False,foreign_keys=config.CHECKDB,integrity_check=config.CHECKDB)
 
     ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)

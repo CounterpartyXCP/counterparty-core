@@ -137,7 +137,7 @@ def copy_memory_db_to_disk(local_base, memory_db):
     with db.backup("main", memory_db, "main") as backup:
         while not backup.done:
             backup.step(100)
-    print('Database copy duration: {:.3f}s'.format(time.time() - start_time_copy_db))
+    print(f'Database copy duration: {time.time() - start_time_copy_db:.3f}s')
 
 
 def prepare_benchmark_db(database_file):
@@ -224,7 +224,7 @@ def prepare_benchmark_db(database_file):
             remove_from_balance_new(bench_db, *movement[1:], 0)
         print(f"{count}/{movements_count}", end="\r")
         count += 1
-    print('`new_balances` populated in: {:.3f}s'.format(time.time() - populate_start_time))
+    print(f'`new_balances` populated in: {time.time() - populate_start_time:.3f}s')
     
     copy_memory_db_to_disk(BENCHMARK_DB, bench_db)
     print()
@@ -245,10 +245,10 @@ def execute_query(cursor, description, query, bindings=None):
     if isinstance(query, list):
         for q in query:
             res = cursor.execute(q, bindings).fetchall()
-        print('Average duration: {:.5f}s'.format((time.time() - start_time) / len(query)))
+        print(f'Average duration: {(time.time() - start_time) / len(query):.5f}s')
     else:
         res = cursor.execute(query, bindings).fetchall()
-        print('Duration: {:.5f}s'.format(time.time() - start_time))
+        print(f'Duration: {time.time() - start_time:.5f}s')
     print()
     return res
 

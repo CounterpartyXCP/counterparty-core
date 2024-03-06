@@ -136,27 +136,27 @@ class APIError(Exception):
 class BackendError(Exception):
     pass
 def check_backend_state():
-    """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)
+    f"""Checks blocktime of last block to see if {config.BTC_NAME} Core is running behind."""
     block_count = backend.getblockcount()
     block_hash = backend.getblockhash(block_count)
     cblock = backend.getblock(block_hash)
     time_behind = time.time() - cblock.nTime   # TODO: Block times are not very reliable.
     if time_behind > 60 * 60 * 2:   # Two hours.
-        raise BackendError('Bitcoind is running about {} hours behind.'.format(round(time_behind / 3600)))
+        raise BackendError(f'Bitcoind is running about {round(time_behind / 3600)} hours behind.')
 
     # check backend index
     blocks_behind = backend.getindexblocksbehind()
     if blocks_behind > 5:
-        raise BackendError('Indexd is running {} blocks behind.'.format(blocks_behind))
+        raise BackendError(f'Indexd is running {blocks_behind} blocks behind.')
 
     logger.debug('Backend state check passed.')
 
 class DatabaseError(Exception):
     pass
 def check_database_state(db, blockcount):
-    """Checks {} database to see if is caught up with backend.""".format(config.XCP_NAME)
+    f"""Checks {config.XCP_NAME} database to see if is caught up with backend."""
     if ledger.CURRENT_BLOCK_INDEX + 1 < blockcount:
-        raise DatabaseError('{} database is behind backend.'.format(config.XCP_NAME))
+        raise DatabaseError(f'{config.XCP_NAME} database is behind backend.')
     logger.debug('Database state check passed.')
     return
 
@@ -171,7 +171,7 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
     for word in forbidden_words:
         #This will find if the forbidden word is in the statement as a whole word. For example, "transactions" will be allowed because the "s" at the end
         if re.search(r"\b"+word+"\b", statement.lower()):
-            raise APIError("Forbidden word in query: '{}'.".format(word))
+            raise APIError(f"Forbidden word in query: '{word}'.")
 
     if hasattr(callback, '__call__'):
         cursor.execute(statement, bindings)
@@ -193,7 +193,7 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
     def value_to_marker(value):
         # if value is an array place holder is (?,?,?,..)
         if isinstance(value, list):
-            return '''({})'''.format(','.join(['?' for e in range(0, len(value))]))
+            return f'''({','.join(['?' for e in range(0, len(value))])})'''
         else:
             return '''?'''
 
@@ -239,13 +239,13 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
     for filter_ in filters:
         for field in ['field', 'op', 'value']: #should have all fields
             if field not in filter_:
-                raise APIError("A specified filter is missing the '%s' field" % field)
+                raise APIError(f"A specified filter is missing the '{field}' field")
         if not isinstance(filter_['value'], (str, int, float, list)):
-            raise APIError("Invalid value for the field '%s'" % filter_['field'])
+            raise APIError(f"Invalid value for the field '{filter_['field']}'")
         if isinstance(filter_['value'], list) and filter_['op'].upper() not in ['IN', 'NOT IN']:
-            raise APIError("Invalid value for the field '%s'" % filter_['field'])
+            raise APIError(f"Invalid value for the field '{filter_['field']}'")
         if filter_['op'].upper() not in ['=', '==', '!=', '>', '<', '>=', '<=', 'IN', 'LIKE', 'NOT IN', 'NOT LIKE']:
-            raise APIError("Invalid operator for the field '%s'" % filter_['field'])
+            raise APIError(f"Invalid operator for the field '{filter_['field']}'")
         if 'case_sensitive' in filter_ and not isinstance(filter_['case_sensitive'], bool):
             raise APIError("case_sensitive must be a boolean")
 
@@ -256,17 +256,17 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
     # SELECT
     source = VIEW_QUERIES[table] if table in VIEW_QUERIES else table
     # no sql injection here
-    statement = '''SELECT * FROM ({})'''.format(source) # nosec B608
+    statement = f'''SELECT * FROM ({source})''' # nosec B608
     # WHERE
     bindings = []
     conditions = []
     for filter_ in filters:
         case_sensitive = False if 'case_sensitive' not in filter_ else filter_['case_sensitive']
         if filter_['op'] == 'LIKE' and case_sensitive == False:
-            filter_['field'] = '''UPPER({})'''.format(filter_['field'])
+            filter_['field'] = f'''UPPER({filter_['field']})'''
             filter_['value'] = filter_['value'].upper()
         marker = value_to_marker(filter_['value'])
-        conditions.append('''{} {} {}'''.format(filter_['field'], filter_['op'], marker))
+        conditions.append(f'''{filter_['field']} {filter_['op']} {marker}''')
         if isinstance(filter_['value'], list):
             bindings += filter_['value']
         else:
@@ -290,7 +290,7 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
 
     # status
     if isinstance(status, list) and len(status) > 0:
-        more_conditions.append('''status IN {}'''.format(value_to_marker(status)))
+        more_conditions.append(f'''status IN {value_to_marker(status)}''')
         bindings += status
     elif isinstance(status, str) and status != '':
         more_conditions.append('''status == ?''')
@@ -307,21 +307,21 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
         statement += ''' WHERE'''
         all_conditions = []
         if len(conditions) > 0:
-            all_conditions.append('''({})'''.format(''' {} '''.format(filterop.upper()).join(conditions)))
+            all_conditions.append(f'''({' {} '.format(filterop.upper()).join(conditions)})''')
         if len(more_conditions) > 0:
-            all_conditions.append('''({})'''.format(''' AND '''.join(more_conditions)))
-        statement += ''' {}'''.format(''' AND '''.join(all_conditions))
+            all_conditions.append(f'''({' AND '.join(more_conditions)})''')
+        statement += f''' {' AND '.join(all_conditions)}'''
 
     # ORDER BY
     if order_by != None:
-        statement += ''' ORDER BY {}'''.format(order_by)
+        statement += f''' ORDER BY {order_by}'''
         if order_dir != None:
-            statement += ''' {}'''.format(order_dir.upper())
+            statement += f''' {order_dir.upper()}'''
     # LIMIT
     if limit and limit > 0:
-        statement += ''' LIMIT {}'''.format(limit)
+        statement += f''' LIMIT {limit}'''
         if offset:
-            statement += ''' OFFSET {}'''.format(offset)
+            statement += f''' OFFSET {offset}'''
 
 
     query_result = db_query(db, statement, tuple(bindings))
@@ -450,9 +450,9 @@ def compose_transaction(db, name, params,
     # Check validity of collected pubkeys.
     for pubkey in provided_pubkeys:
         if not script.is_fully_valid(binascii.unhexlify(pubkey)):
-            raise script.AddressError('invalid public key: {}'.format(pubkey))
+            raise script.AddressError(f'invalid public key: {pubkey}')
 
-    compose_method = sys.modules['counterpartylib.lib.messages.{}'.format(name)].compose
+    compose_method = sys.modules[f'counterpartylib.lib.messages.{name}'].compose
     compose_params = inspect.getfullargspec(compose_method)[0]
     missing_params = [p for p in compose_params if p not in params and p != 'db']
     for param in missing_params:
@@ -597,7 +597,7 @@ class APIServer(threading.Thread):
 
         for table in API_TABLES:
             new_method = generate_get_method(table)
-            new_method.__name__ = 'get_{}'.format(table)
+            new_method.__name__ = f'get_{table}'
             dispatcher.add_method(new_method)
 
         @dispatcher.add_method
@@ -632,7 +632,7 @@ class APIServer(threading.Thread):
                     return compose_transaction(self.db, name=tx, params=transaction_args, **common_args)
                 except (TypeError, script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
                     # TypeError happens when unexpected keyword arguments are passed in
-                    error_msg = "Error composing {} transaction via API: {}".format(tx, str(error))
+                    error_msg = f"Error composing {tx} transaction via API: {str(error)}"
                     logging.warning(error_msg)
                     logging.warning(traceback.format_exc())
                     raise JSONRPCDispatchException(code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg)
@@ -641,7 +641,7 @@ class APIServer(threading.Thread):
 
         for tx in API_TRANSACTIONS:
             create_method = generate_create_method(tx)
-            create_method.__name__ = 'create_{}'.format(tx)
+            create_method.__name__ = f'create_{tx}'
             dispatcher.add_method(create_method)
 
         @dispatcher.add_method
@@ -1098,7 +1098,7 @@ class APIServer(threading.Thread):
             elif url_action == 'get':
                 compose = False
             else:
-                error = 'Invalid action "%s".' % url_action
+                error = f'Invalid action "{url_action}".'
                 return flask.Response(error, 400, mimetype='application/json')
 
             # Get all arguments passed via URL.
@@ -1111,7 +1111,7 @@ class APIServer(threading.Thread):
             # Check if message type or table name are valid.
             if (compose and query_type not in API_TRANSACTIONS) or \
                (not compose and query_type not in API_TABLES):
-                error = 'No such query type in supported queries: "%s".' % query_type
+                error = f'No such query type in supported queries: "{query_type}".'
                 return flask.Response(error, 400, mimetype='application/json')
 
             # Parse the additional arguments.
@@ -1173,7 +1173,7 @@ class APIServer(threading.Thread):
                 # Hence we end up with multiple query_type roots. To combat this we put it in a separate item dict.
                 response_data = serialize_to_xml({query_type: {'item': query_data}})
             else:
-                error = 'Invalid file format: "%s".' % file_format
+                error = f'Invalid file format: "{file_format}".'
                 return flask.Response(error, 400, mimetype='application/json')
 
             response = flask.Response(response_data, 200, mimetype=file_format)

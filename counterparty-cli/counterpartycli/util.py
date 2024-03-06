@@ -73,11 +73,11 @@ def rpc(url, method, params=None, ssl_verify=False, tries=1):
         except requests.exceptions.Timeout as e:
             raise e
         except requests.exceptions.ConnectionError:
-            logger.debug('Could not connect to {}. (Try {}/{})'.format(url, i+1, tries))
+            logger.debug(f'Could not connect to {url}. (Try {i+1}/{tries})')
             time.sleep(5)
 
     if response == None:
-        raise RPCError('Cannot communicate with {}.'.format(url))
+        raise RPCError(f'Cannot communicate with {url}.')
     elif response.status_code not in (200, 500):
         raise RPCError(str(response.status_code) + ' ' + response.reason + ' ' + response.text)
 
@@ -86,7 +86,7 @@ def rpc(url, method, params=None, ssl_verify=False, tries=1):
     if 'error' not in response_json.keys() or response_json['error'] == None:
         return response_json['result']
     else:
-        raise RPCError('{}'.format(response_json['error']))
+        raise RPCError(f"{response_json['error']}")
 
 def api(method, params=None):
     return rpc(config.COUNTERPARTY_RPC, method, params=params, ssl_verify=config.COUNTERPARTY_RPC_SSL_VERIFY)
@@ -102,7 +102,7 @@ def is_divisible(asset):
         bindings = ['valid', asset]
         issuances = api('sql', {'query': sql, 'bindings': bindings})
 
-        if not issuances: raise AssetError('No such asset: {}'.format(asset))
+        if not issuances: raise AssetError(f'No such asset: {asset}')
         return issuances[0]['divisible']
 
 def value_in(quantity, asset, divisible=None):
@@ -123,16 +123,16 @@ def bootstrap(testnet=False, overwrite=True, ask_confirmation=False, quiet=False
         if check.CONSENSUS_HASH_VERSION_TESTNET < 7:
             BOOTSTRAP_URL = 'https://counterparty.io/bootstrap/counterparty-db-testnet.latest.tar.gz'
         else:
-            BOOTSTRAP_URL = 'https://counterparty.io/bootstrap/counterparty-db-testnet-{}.latest.tar.gz'.format(check.CONSENSUS_HASH_VERSION_TESTNET)
+            BOOTSTRAP_URL = f'https://counterparty.io/bootstrap/counterparty-db-testnet-{check.CONSENSUS_HASH_VERSION_TESTNET}.latest.tar.gz'
         TARBALL_PATH = os.path.join(tempfile.gettempdir(), 'counterpartyd-testnet-db.latest.tar.gz')
-        DATABASE_PATH = os.path.join(data_dir, '{}.testnet.db'.format(config.APP_NAME))
+        DATABASE_PATH = os.path.join(data_dir, f'{config.APP_NAME}.testnet.db')
     else:
         if check.CONSENSUS_HASH_VERSION_MAINNET < 3:
             BOOTSTRAP_URL = 'https://counterparty.io/bootstrap/counterparty-db.latest.tar.gz'
         else:
-            BOOTSTRAP_URL = 'https://counterparty.io/bootstrap/counterparty-db-{}.latest.tar.gz'.format(check.CONSENSUS_HASH_VERSION_MAINNET)
+            BOOTSTRAP_URL = f'https://counterparty.io/bootstrap/counterparty-db-{check.CONSENSUS_HASH_VERSION_MAINNET}.latest.tar.gz'
         TARBALL_PATH = os.path.join(tempfile.gettempdir(), 'counterpartyd-db.latest.tar.gz')
-        DATABASE_PATH = os.path.join(data_dir, '{}.db'.format(config.APP_NAME))
+        DATABASE_PATH = os.path.join(data_dir, f'{config.APP_NAME}.db')
 
     # Prepare Directory.
     if not os.path.exists(data_dir):
@@ -153,13 +153,13 @@ def bootstrap(testnet=False, overwrite=True, ask_confirmation=False, quiet=False
         else: # total size is unknown
             sys.stderr.write("read %d\n" % (readsofar,))
 
-    print('Downloading database from {}...'.format(BOOTSTRAP_URL))
+    print(f'Downloading database from {BOOTSTRAP_URL}...')
     if BOOTSTRAP_URL.startswith('https://'):
         urllib.request.urlretrieve(BOOTSTRAP_URL, TARBALL_PATH, reporthook if not quiet else None) # nosec B310
     else:
-        raise Exception('Invalid URL: {}'.format(BOOTSTRAP_URL))
+        raise Exception(f'Invalid URL: {BOOTSTRAP_URL}')
 
-    print('Extracting to "%s"...' % data_dir)
+    print(f'Extracting to "{data_dir}"...')
     # TODO: check checksum, filenames, etc.
     with tarfile.open(TARBALL_PATH, 'r:gz') as tar_file:
         tar_file.extractall(path=data_dir) # nosec B202
@@ -200,7 +200,7 @@ def add_config_arguments(arg_parser, config_args, default_config_file, config_fi
             fp.seek(-BOMLEN, os.SEEK_CUR)
             fp.truncate()
 
-    logger.debug('Loading configuration file: `{}`'.format(config_file))
+    logger.debug(f'Loading configuration file: `{config_file}`')
     configfile = configparser.SafeConfigParser(allow_no_value=True, inline_comment_prefixes=('#', ';'))
     with codecs.open(config_file, 'r', encoding='utf8') as fp:
         configfile.readfp(fp)

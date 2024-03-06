@@ -225,7 +225,7 @@ class MockUTXOSet(object):
             unspent_txouts = filter(lambda txout: txout['confirmations'] > 0, unspent_txouts)
 
         if multisig_inputs:
-            raise NotImplementedError("%s" % multisig_inputs)
+            raise NotImplementedError(f"{multisig_inputs}")
 
         if unspent_tx_hash:
             unspent_txouts = filter(lambda txout: txout['txid'] == unspent_tx_hash, unspent_txouts)
