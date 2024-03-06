@@ -155,7 +155,7 @@ def bootstrap(testnet=False, overwrite=True, ask_confirmation=False, quiet=False
 
     print('Downloading database from {}...'.format(BOOTSTRAP_URL))
     if BOOTSTRAP_URL.startswith('https://'):
-        urllib.request.urlretrieve(BOOTSTRAP_URL, TARBALL_PATH, reporthook if not quiet else None)
+        urllib.request.urlretrieve(BOOTSTRAP_URL, TARBALL_PATH, reporthook if not quiet else None) # nosec B310
     else:
         raise Exception('Invalid URL: {}'.format(BOOTSTRAP_URL))
 
