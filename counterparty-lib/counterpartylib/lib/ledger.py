@@ -55,7 +55,8 @@ def get_messages(db, block_index=None, block_index_in=None, message_index_in=Non
     if message_index_in is not None:
         where.append('message_index IN ({})'.format(','.join(['?' for e in range(0, len(message_index_in))])))
         bindings += message_index_in
-    query = f'''SELECT * FROM messages WHERE ({" AND ".join(where)}) ORDER BY message_index ASC'''
+    # no sql injection here
+    query = f'''SELECT * FROM messages WHERE ({" AND ".join(where)}) ORDER BY message_index ASC''' # nosec B608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -235,7 +236,7 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False, return_list
 
 def get_address_balances(db, address):
     cursor = db.cursor()
-    query = f'''
+    query = '''
         SELECT address, asset, quantity, MAX(rowid)
         FROM balances
         WHERE address = ?
@@ -516,7 +517,7 @@ def get_asset_issued(db, address):
 
 def get_asset_balances(db, asset, exclude_zero_balances=True):
     cursor = db.cursor()
-    query = f'''
+    query = '''
         SELECT address, asset, quantity, MAX(rowid)
         FROM balances
         WHERE asset = ?
@@ -528,7 +529,7 @@ def get_asset_balances(db, asset, exclude_zero_balances=True):
             SELECT * FROM (
                 {query}
             ) WHERE quantity > 0
-        '''
+        ''' # nosec B608
     bindings = (asset,)
     cursor.execute(query, bindings)
     return cursor.fetchall()
@@ -577,7 +578,8 @@ def get_issuances(db, asset=None, status=None, locked=None, first=False, last=Fa
     if locked is not None:
         where.append('locked = ?')
         bindings.append(locked)
-    query = f'''SELECT * FROM issuances WHERE ({" AND ".join(where)})'''
+    # no sql injection here
+    query = f'''SELECT * FROM issuances WHERE ({" AND ".join(where)})''' # nosec B608
     if first:
         query += f''' ORDER BY tx_index ASC'''
     elif last:
@@ -671,7 +673,8 @@ def get_burns(db, status=None, source=None):
     if source is not None:
         where.append('source = ?')
         bindings.append(source)
-    query = f'''SELECT * FROM burns WHERE ({" AND ".join(where)})'''
+    # no sql injection here
+    query = f'''SELECT * FROM burns WHERE ({" AND ".join(where)})''' # nosec B608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -702,14 +705,15 @@ def get_transactions(db, tx_hash=None):
     if tx_hash is not None:
         where.append('tx_hash = ?')
         bindings.append(tx_hash)
-    query = f'''SELECT * FROM transactions WHERE ({" AND ".join(where)})'''
+    # no sql injection here
+    query = f'''SELECT * FROM transactions WHERE ({" AND ".join(where)})''' # nosec B608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
 
 def get_transaction_source(db, tx_hash):
     cursor = db.cursor()
-    query = f'''SELECT source FROM transactions WHERE tx_hash = ?'''
+    query = '''SELECT source FROM transactions WHERE tx_hash = ?'''
     bindings = (tx_hash,)
     cursor.execute(query, tuple(bindings))
     return cursor.fetchone()['source']
@@ -722,7 +726,8 @@ def get_addresses(db, address=None):
     if address is not None:
         where.append('address = ?')
         bindings.append(address)
-    query = f'''SELECT * FROM addresses WHERE ({" AND ".join(where)})'''
+    # no sql injection here
+    query = f'''SELECT * FROM addresses WHERE ({" AND ".join(where)})''' # nosec B608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -744,7 +749,7 @@ def insert_update(db, table_name, id_name, id_value, update_data):
         WHERE {id_name} = ?
         ORDER BY rowid DESC
         LIMIT 1
-    '''
+    ''' # nosec B608
     bindings = (id_value,)
     need_update_record = cursor.execute(select_query, bindings).fetchone()
 
@@ -765,7 +770,8 @@ def insert_update(db, table_name, id_name, id_value, update_data):
         del new_record['rowid']
     fields_name = ', '.join(new_record.keys())
     fields_values = ', '.join([f':{key}' for key in new_record.keys()])
-    insert_query = f'''INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})'''
+    # no sql injection here
+    insert_query = f'''INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})''' # nosec B608
     cursor.execute(insert_query, new_record)
 
     cursor.close()
@@ -833,14 +839,14 @@ def select_last_revision(db, table_name, where_data):
             _where, _bindings = _gen_where_and_binding(key, value)
             where_mutable.append(_where)
             bindings += _bindings
-
+    # no sql injection here
     query = f'''SELECT * FROM (
         SELECT *, MAX(rowid)
         FROM {table_name}
         WHERE ({" AND ".join(where_immutable)})
         GROUP BY {", ".join(ID_FIELDS[table_name])}
     ) WHERE ({" AND ".join(where_mutable)})
-    '''
+    ''' # nosec B608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -861,14 +867,14 @@ def get_dispenser_info(db, tx_hash=None, tx_index=None):
     if tx_index is not None:
         where.append('tx_index = ?')
         bindings.append(tx_index)
-
+    # no sql injection here
     query = f'''
         SELECT d.*, a.asset_longname
         FROM dispensers d
         LEFT JOIN assets a ON a.asset_name = d.asset
         WHERE ({" AND ".join(where)})
         ORDER BY d.rowid DESC LIMIT 1
-    '''
+    ''' # nosec B608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -1020,6 +1026,7 @@ def get_dispensers(db, status_in=None, source_in=None, source=None, asset=None, 
         second_where_str = f'WHERE ({second_where_str})'
     order_clause = f'ORDER BY {order_by}' if order_by is not None else 'ORDER BY tx_index'
     group_clause = f'GROUP BY {group_by}' if group_by is not None else 'GROUP BY asset, source'
+    # no sql injection here
     query = f'''
         SELECT *, rowid FROM (
             SELECT *, MAX(rowid) as rowid
@@ -1028,7 +1035,7 @@ def get_dispensers(db, status_in=None, source_in=None, source=None, asset=None, 
             {group_clause}
         ) {second_where_str}
         {order_clause}
-    '''
+    ''' # nosec B608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -1315,6 +1322,7 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
         where_source = f' AND source = :source'
         select_bindings['source'] = source
 
+    # no sql injection here
     select_query = f'''
         SELECT * FROM (
             SELECT *, MAX(rowid) as rowid
@@ -1324,7 +1332,7 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
                 {where_source}
             GROUP BY tx_hash
         ) WHERE give_remaining = 0 OR get_remaining = 0
-    '''
+    ''' # nosec B608
 
     cursor = db.cursor()
     cursor.execute(select_query, select_bindings)
@@ -1387,6 +1395,7 @@ def get_matching_rps(db, possible_moves, wager, source, already_matched_tx_hashe
         already_matched_cond = f'''AND tx_hash NOT IN ({place_holders})'''
         bindings += tuple(already_matched_tx_hashes)
     bindings += ('open',)
+    # no sql injection here
     query = f'''
         SELECT * FROM (
             SELECT *, MAX(rowid) FROM rps 
@@ -1394,7 +1403,7 @@ def get_matching_rps(db, possible_moves, wager, source, already_matched_tx_hashe
             GROUP BY tx_hash
         ) WHERE status = ?
         ORDER BY tx_index LIMIT 1
-    '''
+    ''' # nosec B608
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -1470,7 +1479,8 @@ def get_rpsresolves(db, source=None, status=None, rps_match_id=None):
     if rps_match_id is not None:
         where.append('rps_match_id = ?')
         bindings.append(rps_match_id)
-    query = f'''SELECT * FROM rpsresolves WHERE ({" AND ".join(where)})'''
+    # no sql injection here
+    query = f'''SELECT * FROM rpsresolves WHERE ({" AND ".join(where)})''' # nosec B608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -1941,8 +1951,8 @@ def held (db): #TODO: Rename ?
         ) WHERE status IN (0, 1, 11) GROUP BY asset
         ''',
     ]
-
-    sql = "SELECT asset, SUM(total) AS total FROM (" + " UNION ALL ".join(queries) + ") GROUP BY asset;"
+    # no sql injection here
+    sql = "SELECT asset, SUM(total) AS total FROM (" + " UNION ALL ".join(queries) + ") GROUP BY asset;" # nosec B608
 
     cursor = db.cursor()
     cursor.execute(sql)

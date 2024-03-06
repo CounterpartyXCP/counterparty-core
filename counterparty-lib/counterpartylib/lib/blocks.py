@@ -544,7 +544,8 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
 
 def clean_table_from(cursor, table, block_index):
     logger.info('Cleaning table {} from block_index {}...'.format(table, block_index))
-    cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
+    # internal function, no sql injection here
+    cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,)) # nosec B608
 
 
 def clean_messages_tables(cursor, block_index=0):

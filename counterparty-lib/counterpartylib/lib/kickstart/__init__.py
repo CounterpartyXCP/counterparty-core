@@ -76,9 +76,9 @@ def fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner):
             block_count += 1
             if block['block_index'] == first_block:
                 break
-        # insert blocks by lot
+        # insert blocks by lot. No sql injection here.
         cursor.execute(f'''INSERT INTO kickstart_blocks (block_index, block_hash, block_time, previous_block_hash, difficulty, tx_count)
-                              VALUES {', '.join(bindings_place)}''',
+                              VALUES {', '.join(bindings_place)}''', # nosec B608
                               bindings_lot)
         spinner.text = f"Initialising database: block {bindings_lot[0]} to {bindings_lot[-6]} inserted."
         if block['block_index'] == first_block:
@@ -242,7 +242,7 @@ def parse_block(kickstart_db, cursor, block, block_parser, tx_index):
 
     with kickstart_db: # ensure all the block or nothing
         # insert block
-        cursor.execute(f'''
+        cursor.execute('''
             INSERT INTO blocks 
                 (block_index, block_hash, block_time, previous_block_hash, difficulty)
             VALUES (?, ?, ?, ?, ?)

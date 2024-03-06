@@ -255,7 +255,8 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
 
     # SELECT
     source = VIEW_QUERIES[table] if table in VIEW_QUERIES else table
-    statement = '''SELECT * FROM ({})'''.format(source)
+    # no sql injection here
+    statement = '''SELECT * FROM ({})'''.format(source) # nosec B608
     # WHERE
     bindings = []
     conditions = []
@@ -763,12 +764,18 @@ class APIServer(threading.Thread):
                 raise APIError("block_indexes must be a list of integers.")
             if len(block_indexes) >= 250:
                 raise APIError("can only specify up to 250 indexes at a time.")
+            for block_index in block_indexes:
+                if not isinstance(block_index, int):
+                    raise APIError("block_indexes must be a list of integers.")
 
-            block_indexes_str = ','.join([str(x) for x in block_indexes])
             cursor = self.db.cursor()
 
-            cursor.execute('SELECT * FROM blocks WHERE block_index IN (%s) ORDER BY block_index ASC'
-                % (block_indexes_str,))
+            block_indexes_placeholder = f"({','.join(['?'] * len(block_indexes))})"
+            # no sql injection here
+            cursor.execute(
+                f'SELECT * FROM blocks WHERE block_index IN ({block_indexes_placeholder}) ORDER BY block_index ASC', # nosec B608
+                block_indexes
+            )
             blocks = cursor.fetchall()
 
             messages = collections.deque(ledger.get_messages(self.db, block_index_in=block_indexes))
@@ -846,7 +853,8 @@ class APIServer(threading.Thread):
                 'order_matches', 'btcpays', 'issuances', 'broadcasts', 'bets', 'bet_matches', 'dividends',
                 'burns', 'cancels', 'order_expirations', 'bet_expirations', 'order_match_expirations',
                 'bet_match_expirations', 'messages', 'destructions']:
-                cursor.execute("SELECT COUNT(*) AS count FROM %s" % element)
+                # no sql injection here, element is hardcoded
+                cursor.execute(f"SELECT COUNT(*) AS count FROM {element}") # nosec B608
                 count_list = cursor.fetchall()
                 assert len(count_list) == 1
                 counts[element] = count_list[0]['count']

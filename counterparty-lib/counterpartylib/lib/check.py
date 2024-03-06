@@ -209,6 +209,8 @@ class ConsensusError(Exception):
     pass
 
 def consensus_hash(db, field, previous_consensus_hash, content):
+    assert field in ('ledger_hash', 'txlist_hash', 'messages_hash')
+
     cursor = db.cursor()
     block_index = ledger.CURRENT_BLOCK_INDEX
 
@@ -245,8 +247,8 @@ def consensus_hash(db, field, previous_consensus_hash, content):
             raise ConsensusError('Inconsistent {} for block {} (calculated {}, vs {} in database).'.format(
                 field, block_index, calculated_hash, found_hash))
     else:
-        # Save new hash.
-        cursor.execute('''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field), (calculated_hash, block_index))
+        # Save new hash. No sql injection here.
+        cursor.execute('''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field), (calculated_hash, block_index)) # nosec B608
 
     # Check against checkpoints.
     if config.TESTNET:
