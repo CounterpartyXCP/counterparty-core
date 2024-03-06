@@ -230,8 +230,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
     for tx_hash in txhash_list.difference(noncached_txhashes):
         raw_transactions_cache.refresh(tx_hash)
 
-    _logger.debug("getrawtransaction_batch: txhash_list size: {} / raw_transactions_cache size: {} / # getrawtransaction calls: {}".format(
-        len(txhash_list), len(raw_transactions_cache), len(payload)))
+    _logger.debug(f"getrawtransaction_batch: txhash_list size: {len(txhash_list)} / raw_transactions_cache size: {len(raw_transactions_cache)} / # getrawtransaction calls: {len(payload)}")
 
     # populate cache
     if len(payload) > 0:
@@ -243,8 +242,8 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                 raw_transactions_cache[tx_hash] = tx_hex
             elif skip_missing and 'error' in response and response['error']['code'] == -5:
                 raw_transactions_cache[tx_hash] = None
-                logger.debug('Missing TX with no raw info skipped (txhash: {}): {}'.format(
-                    tx_hash_call_id.get(response.get('id', '??'), '??'), response['error']))
+                missing_tx_hash = tx_hash_call_id.get(response.get('id', '??'), '??')
+                logger.debug(f"Missing TX with no raw info skipped (txhash: {missing_tx_hash}): {response['error']}")
             else:
                 #TODO: this seems to happen for bogus transactions? Maybe handle it more gracefully than just erroring out?
                 raise BackendRPCError(f"{response['error']} (txhash:: {tx_hash_call_id.get(response.get('id', '??'), '??')})")
@@ -259,9 +258,9 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                 result[tx_hash] = raw_transactions_cache[tx_hash]['hex'] if raw_transactions_cache[tx_hash] is not None else None
         except KeyError as e: #shows up most likely due to finickyness with addrindex not always returning results that we need...
             logger.error("Key error in addrindexrs still exists!!!!!")
-            _logger.warning("tx missing in rawtx cache: {} -- txhash_list size: {}, hash: {} / raw_transactions_cache size: {} / # rpc_batch calls: {} / txhash in noncached_txhashes: {} / txhash in txhash_list: {} -- list {}".format(
-                e, len(txhash_list), hashlib.md5(json.dumps(list(txhash_list)).encode(), usedforsecurity=False).hexdigest(), len(raw_transactions_cache), len(payload),
-                tx_hash in noncached_txhashes, tx_hash in txhash_list, list(txhash_list.difference(noncached_txhashes)) ))
+            _hash = hashlib.md5(json.dumps(list(txhash_list)).encode(), usedforsecurity=False).hexdigest()
+            _list = list(txhash_list.difference(noncached_txhashes))
+            _logger.warning(f"tx missing in rawtx cache: {e} -- txhash_list size: {len(txhash_list)}, hash: {_hash} / raw_transactions_cache size: {len(raw_transactions_cache)} / # rpc_batch calls: {len(payload)} / txhash in noncached_txhashes: {tx_hash in noncached_txhashes} / txhash in txhash_list: {tx_hash in txhash_list} -- list {_list}")
             if  _retry < GETRAWTRANSACTION_MAX_RETRIES: #try again
                 time.sleep(0.05 * (_retry + 1)) # Wait a bit, hitting the index non-stop may cause it to just break down... TODO: Better handling
                 r = getrawtransaction_batch([tx_hash], verbose=verbose, skip_missing=skip_missing, _retry=_retry+1)

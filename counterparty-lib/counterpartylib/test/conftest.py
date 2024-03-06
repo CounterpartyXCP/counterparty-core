@@ -70,10 +70,10 @@ def enabled(change_name, block_index=None):
         if change_name not in ledger.PROTOCOL_CHANGES:
             raise KeyError(change_name)
 
-        # print("ALWAYS_LATEST_PROTOCOL_CHANGES {} {} enabled: {}".format(change_name,block_index or ledger.CURRENT_BLOCK_INDEX,True))
+        # print(f"ALWAYS_LATEST_PROTOCOL_CHANGES {change_name} {block_index or ledger.CURRENT_BLOCK_INDEX} enabled: True")
         return True
     else:
-        # print("ALWAYS_LATEST_PROTOCOL_CHANGES {} {} enabled: {}".format(change_name,block_index or ledger.CURRENT_BLOCK_INDEX,_enabled(change_name, block_index)))
+        # print(f"ALWAYS_LATEST_PROTOCOL_CHANGES {change_name} {block_index or ledger.CURRENT_BLOCK_INDEX} enabled: {_enabled(change_name, block_index)}")
         return _enabled(change_name, block_index)
 ledger.enabled = enabled
 

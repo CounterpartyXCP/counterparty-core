@@ -116,7 +116,7 @@ def base58_decode(s):
     for c in s:
         n *= 58
         if c not in b58_digits:
-            raise Base58Error('Not a valid Base58 character: ‘{}’'.format(c))
+            raise Base58Error(f'Not a valid Base58 character: ‘{c}’')
         digit = b58_digits.index(c)
         n += digit
 
@@ -158,7 +158,7 @@ def base58_check_decode_py(s, version):
 
     chk1 = util.dhash(addrbyte + data)[:4]
     if chk0 != chk1:
-        raise Base58ChecksumError('Checksum mismatch: 0x{} ≠ 0x{}'.format(util.hexlify(chk0), util.hexlify(chk1)))
+        raise Base58ChecksumError(f'Checksum mismatch: 0x{util.hexlify(chk0)} ≠ 0x{util.hexlify(chk1)}')
 
     return data
 

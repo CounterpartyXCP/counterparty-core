@@ -226,7 +226,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
         except IndexError:
             previous_consensus_hash = None
         if not previous_consensus_hash:
-            raise ConsensusError('Empty previous {} for block {}. Please launch a `rollback`.'.format(field, block_index))
+            raise ConsensusError(f'Empty previous {field} for block {block_index}. Please launch a `rollback`.')
 
     # Calculate current hash.
     if config.TESTNET:
@@ -236,7 +236,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
     else:
         consensus_hash_version = CONSENSUS_HASH_VERSION_MAINNET
 
-    calculated_hash = util.dhash_string(previous_consensus_hash + '{}{}'.format(consensus_hash_version, ''.join(content)))
+    calculated_hash = util.dhash_string(previous_consensus_hash + f"{consensus_hash_version}{''.join(content)}")
 
     # Verify hash (if already in database) or save hash (if not).
     # NOTE: do not enforce this for messages_hashes, those are more informational (for now at least)
@@ -244,11 +244,10 @@ def consensus_hash(db, field, previous_consensus_hash, content):
     if found_hash and field != 'messages_hash':
         # Check against existing value.
         if calculated_hash != found_hash:
-            raise ConsensusError('Inconsistent {} for block {} (calculated {}, vs {} in database).'.format(
-                field, block_index, calculated_hash, found_hash))
+            raise ConsensusError(f'Inconsistent {field} for block {block_index} (calculated {calculated_hash}, vs {found_hash} in database).')
     else:
         # Save new hash. No sql injection here.
-        cursor.execute('''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field), (calculated_hash, block_index)) # nosec B608
+        cursor.execute(f'''UPDATE blocks SET {field} = ? WHERE block_index = ?''', (calculated_hash, block_index)) # nosec B608
 
     # Check against checkpoints.
     if config.TESTNET:
@@ -259,7 +258,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
         checkpoints = CHECKPOINTS_MAINNET
 
     if field != 'messages_hash' and block_index in checkpoints and checkpoints[block_index][field] != calculated_hash:
-        error_message = 'Incorrect {} hash for block {}.  Calculated {} but expected {}'.format(field, block_index, calculated_hash, checkpoints[block_index][field])
+        error_message = f'Incorrect {field} hash for block {block_index}.  Calculated {calculated_hash} but expected {checkpoints[block_index][field]}'
         raise ConsensusError(error_message)
 
     return calculated_hash, found_hash
@@ -275,8 +274,8 @@ def asset_conservation(db):
         asset_issued = supplies[asset]
         asset_held = held[asset] if asset in held and held[asset] != None else 0
         if asset_issued != asset_held:
-            raise SanityError('{} {} issued ≠ {} {} held'.format(ledger.value_out(db, asset_issued, asset), asset, ledger.value_out(db, asset_held, asset), asset))
-        logger.debug('{} has been conserved ({} {} both issued and held)'.format(asset, ledger.value_out(db, asset_issued, asset), asset))
+            raise SanityError(f'{ledger.value_out(db, asset_issued, asset)} {asset} issued ≠ {ledger.value_out(db, asset_held, asset)} {asset} held')
+        logger.debug(f'{asset} has been conserved ({ledger.value_out(db, asset_issued, asset)} {asset} both issued and held)')
 
 class VersionError(Exception):
     pass
@@ -297,9 +296,10 @@ def check_change(protocol_change, change_name):
                 passed = False
 
     if not passed:
-        explanation = 'Your version of {} is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(
-            config.APP_NAME, config.VERSION_STRING, protocol_change['block_index'], protocol_change['minimum_version_major'], protocol_change['minimum_version_minor'],
-            protocol_change['minimum_version_revision'], change_name)
+        explanation  = f"Your version of {config.APP_NAME} is v{config.VERSION_STRING}, but, "
+        explanation += f"as of block {protocol_change['block_index']}, the minimum version is "
+        explanation += f"v{protocol_change['minimum_version_major']}.{protocol_change['minimum_version_minor']}.{protocol_change['minimum_version_revision']}. "
+        explanation += f"Reason: ‘{change_name}’. Please upgrade to the latest version and restart the server."
         if ledger.CURRENT_BLOCK_INDEX >= protocol_change['block_index']:
             raise VersionUpdateRequiredError(explanation)
         else:
@@ -341,9 +341,9 @@ def database_version(db):
     version_major, version_minor = database.version(db)
     if version_major != config.VERSION_MAJOR:
         # Rollback database if major version has changed.
-        raise DatabaseVersionError('Client major version number mismatch ({} ≠ {}).'.format(version_major, config.VERSION_MAJOR), config.BLOCK_FIRST)
+        raise DatabaseVersionError(f'Client major version number mismatch ({version_major} ≠ {config.VERSION_MAJOR}).', config.BLOCK_FIRST)
     elif version_minor != config.VERSION_MINOR:
         # TODO: Reparse transactions from the vesion block if minor version has changed.
         pass
-        # raise DatabaseVersionError('Client minor version number mismatch ({} ≠ {}).'.format(version_minor, config.VERSION_MINOR), None)
+        # raise DatabaseVersionError(f'Client minor version number mismatch ({version_minor} ≠ {config.VERSION_MINOR}).', None)
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

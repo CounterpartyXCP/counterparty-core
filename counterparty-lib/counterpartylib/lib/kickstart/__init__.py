@@ -146,7 +146,7 @@ def get_last_known_block_hash(bitcoind_dir):
         chain_parser = ChainstateParser(os.path.join(bitcoind_dir, 'chainstate'))
         last_known_hash = chain_parser.get_last_block_hash()
         chain_parser.close()
-        #print('Last known block hash: {}'.format(last_known_hash))
+        #print(f'Last known block hash: {last_known_hash}')
     print(f'{OK_GREEN} {step}')
     return last_known_hash
 

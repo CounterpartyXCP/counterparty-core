@@ -75,7 +75,7 @@ def initialise():
 
 
 def print_coin(coin):
-    return 'amount: {:.8f}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
+    return f"amount: {coin['amount']:.8f}; txid: {coin['txid']}; vout: {coin['vout']}; confirmations: {coin.get('confirmations', '?')}" # simplify and make deterministic
 
 
 def chunks(l, n):
@@ -86,7 +86,7 @@ def chunks(l, n):
 
 
 def make_outkey(output):
-    return '{}{}'.format(output['txid'], output['vout'])
+    return f"{output['txid']}{output['vout']}"
 
 
 def make_outkey_vin_txid(txid, vout):
@@ -166,7 +166,7 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
             dust = config.DEFAULT_REGULAR_DUST_SIZE     
             
         unspent = backend.sort_unspent_txouts(unspent, dust_size=dust)
-        logger.debug('Sorted candidate UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
+        logger.debug(f'Sorted candidate UTXOs: {[print_coin(coin) for coin in unspent]}')
         use_inputs = unspent
 
     # use backend estimated fee_per_kb
@@ -175,7 +175,7 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
         if estimated_fee_per_kb is not None:
             fee_per_kb = max(estimated_fee_per_kb, fee_per_kb)  # never drop below the default fee_per_kb
 
-    logger.debug('Fee/KB {:.8f}'.format(fee_per_kb / config.UNIT))
+    logger.debug(f'Fee/KB {fee_per_kb / config.UNIT:.8f}')
 
     inputs = []
     btc_in = 0
@@ -191,7 +191,7 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
     # pop inputs until we can pay for the fee
     use_inputs_index = 0
     for coin in use_inputs:
-        logger.debug('New input: {}'.format(print_coin(coin)))
+        logger.debug(f'New input: {print_coin(coin)}')
         inputs.append(coin)
         btc_in += round(coin['amount'] * config.UNIT)
 
@@ -208,7 +208,7 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
         # Check if good.
         btc_out = destination_btc_out + data_btc_out
         change_quantity = btc_in - (btc_out + final_fee)
-        logger.debug('Size: {} Fee: {:.8f} Change quantity: {:.8f} BTC'.format(size, final_fee / config.UNIT, change_quantity / config.UNIT))
+        logger.debug(f'Size: {size} Fee: {final_fee / config.UNIT:.8f} Change quantity: {change_quantity / config.UNIT:.8f} BTC')
         
         #If after the sum of all the utxos the change is dust, then it will be added to the miners instead of returning an error
         if (use_inputs_index == len(use_inputs)-1) and (change_quantity > 0) and (change_quantity < regular_dust_size):
@@ -228,7 +228,7 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
         # quantities.
         btc_out = destination_btc_out + data_btc_out
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
-        raise exceptions.BalanceError('Insufficient {} at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(config.BTC, source, total_btc_out / config.UNIT, config.BTC))
+        raise exceptions.BalanceError(f'Insufficient {config.BTC} at address {source}. (Need approximately {total_btc_out / config.UNIT} {config.BTC}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)')
 
     # Lock the source's inputs (UTXOs) chosen for this transaction
     if UTXO_LOCKS is not None and not disable_utxo_locks:
@@ -239,9 +239,10 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
         for input in inputs:
             UTXO_LOCKS[source][make_outkey(input)] = input
 
-        logger.debug("UTXO locks: Potentials ({}): {}, Used: {}, locked UTXOs: {}".format(
-            len(unspent), [make_outkey(coin) for coin in unspent],
-            [make_outkey(input) for input in inputs], list(UTXO_LOCKS[source].keys())))
+        list_unspent = [make_outkey(coin) for coin in unspent]
+        list_used = [make_outkey(input) for input in inputs]
+        list_locked = list(UTXO_LOCKS[source].keys())
+        logger.debug(f"UTXO locks: Potentials ({len(unspent)}): {list_unspent}, Used: {list_used}, locked UTXOs: {list_locked}")
 
     # ensure inputs have scriptPubKey
     #   this is not provided by indexd
@@ -592,7 +593,7 @@ def construct (db, tx_info, encoding='auto',
     #    if desired_destination == '':
     #        desired_destination = desired_source
     #    else:
-    #        desired_destination += '-{}'.format(desired_source)
+    #        desired_destination += f'-{desired_source}'
     # NOTE
     if desired_data == None:
         desired_data = b''
@@ -637,7 +638,7 @@ def construct (db, tx_info, encoding='auto',
             for input in inputs:
                 UTXO_LOCKS[source].pop(make_outkey(input), None)
 
-        raise exceptions.TransactionError('Constructed transaction does not parse correctly: {} ≠ {}'.format(desired, parsed))
+        raise exceptions.TransactionError(f'Constructed transaction does not parse correctly: {desired} ≠ {parsed}')
 
     if extended_tx_info:
         return {

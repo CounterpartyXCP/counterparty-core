@@ -254,6 +254,7 @@ def value_output(quantity, asset, divisible):
         """Round only if necessary."""
         num = round(num, places)
         fmt = '{:.' + str(places) + 'f}'
+        # pylint: disable=C0209
         num = fmt.format(num)
         return num.rstrip('0')+'0' if num.rstrip('0')[-1] == '.' else num.rstrip('0')
 

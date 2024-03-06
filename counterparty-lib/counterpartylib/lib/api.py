@@ -307,7 +307,7 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
         statement += ''' WHERE'''
         all_conditions = []
         if len(conditions) > 0:
-            all_conditions.append(f'''({' {} '.format(filterop.upper()).join(conditions)})''')
+            all_conditions.append(f'''({f' {filterop.upper()} '.join(conditions)})''')
         if len(more_conditions) > 0:
             all_conditions.append(f'''({' AND '.join(more_conditions)})''')
         statement += f''' {' AND '.join(all_conditions)}'''
@@ -1147,8 +1147,7 @@ class APIServer(threading.Thread):
                 try:
                     query_data = compose_transaction(self.db, name=query_type, params=transaction_args, **common_args)
                 except (script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
-                    error_msg = logging.warning("{} -- error composing {} transaction via API: {}".format(
-                        str(error.__class__.__name__), query_type, str(error)))
+                    error_msg = logging.warning(f"{error.__class__.__name__} -- error composing {query_type} transaction via API: {error}")
                     return flask.Response(error_msg, 400, mimetype='application/json')
             else:
                 # Need to de-generate extra_args to pass it through.

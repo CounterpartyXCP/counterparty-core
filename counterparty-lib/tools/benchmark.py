@@ -211,7 +211,7 @@ def prepare_benchmark_db(database_file):
             remove_from_balance_old(bench_db, *movement[1:4])
         print(f"{count}/{movements_count}", end="\r")
         count += 1
-    print('`old_balances` populated in: {:.3f}s'.format(time.time() - populate_start_time)) """
+    print(f'`old_balances` populated in: {time.time() - populate_start_time:.3f}s') """
     
     cursor.execute(query)
     count = 1

@@ -192,9 +192,7 @@ def parse_block(db, block_index, block_time,
     for tx in list(cursor):
         try:
             parse_tx(db, tx)
-            txlist.append('{}{}{}{}{}{}'.format(tx['tx_hash'], tx['source'], tx['destination'],
-                                                tx['btc_amount'], tx['fee'],
-                                                binascii.hexlify(tx['data']).decode('UTF-8')))
+            txlist.append(f"{tx['tx_hash']}{tx['source']}{tx['destination']}{tx['btc_amount']}{tx['fee']}{binascii.hexlify(tx['data']).decode('UTF-8')}")
         except exceptions.ParseTransactionError as e:
             logger.warning(f"ParseTransactionError for tx {tx['tx_hash']}: {e}")
             raise e
@@ -765,9 +763,9 @@ def follow(db):
             # TODO: check.software_version() # This is too much!
 
             # Get and parse transactions in this block (atomically).
-            # logger.debug('Blockchain cache size: {}'.format(len(prefetcher.BLOCKCHAIN_CACHE)))
+            # logger.debug(f'Blockchain cache size: {len(prefetcher.BLOCKCHAIN_CACHE)}')
             if current_index in prefetcher.BLOCKCHAIN_CACHE:
-                # logger.debug('Blockchain cache hit! Block index: {}'.format(current_index))
+                # logger.debug(f'Blockchain cache hit! Block index: {current_index}')
                 block_hash = prefetcher.BLOCKCHAIN_CACHE[current_index]['block_hash']
                 txhash_list = prefetcher.BLOCKCHAIN_CACHE[current_index]['txhash_list']
                 raw_transactions = prefetcher.BLOCKCHAIN_CACHE[current_index]['raw_transactions']
@@ -820,10 +818,10 @@ def follow(db):
                 tx_h = not_supported_sorted.popleft()[1]
                 del not_supported[tx_h]
 
-            logger.info('Block: %s (%ss, hashes: L:%s / TX:%s / M:%s%s)' % (
-                str(block_index), "{:.2f}".format(time.time() - start_time, 3),
-                new_ledger_hash[-5:], new_txlist_hash[-5:], new_messages_hash[-5:],
-                (' [overwrote %s]' % found_messages_hash) if found_messages_hash and found_messages_hash != new_messages_hash else ''))
+            duration = time.time() - start_time
+            overwrote_hash = found_messages_hash if found_messages_hash and found_messages_hash != new_messages_hash else ''
+            overwrote = f'[overwrote {overwrote_hash}]' if overwrote_hash else ''
+            logger.info(f'Block: {block_index} ({duration:.2f}, hashes: L:{new_ledger_hash[-5:]} / TX:{new_txlist_hash[-5:]} / M:{new_messages_hash[-5:]}{overwrote})')
 
             # Increment block index.
             block_count = backend.getblockcount()
@@ -964,10 +962,7 @@ def follow(db):
             elapsed_time = time.time() - start_time
             sleep_time = config.BACKEND_POLL_INTERVAL - elapsed_time if elapsed_time <= config.BACKEND_POLL_INTERVAL else 0
 
-            logger.getChild('mempool').debug('Refresh mempool: %s XCP txs seen, out of %s total entries (took %ss, next refresh in %ss)' % (
-                len(xcp_mempool), len(raw_mempool),
-                "{:.2f}".format(elapsed_time, 3),
-                "{:.2f}".format(sleep_time, 3)))
+            logger.getChild('mempool').debug(f'Refresh mempool: {len(xcp_mempool)} XCP txs seen, out of {len(raw_mempool)} total entries (took {elapsed_time:.2f}, next refresh in {sleep_time:.2f})')
 
             # Wait
             db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
