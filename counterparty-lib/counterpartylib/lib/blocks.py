@@ -65,10 +65,10 @@ TABLES = ['balances', 'credits', 'debits', 'messages'] + \
           'destructions', 'assets', 'addresses', 'sweeps', 'dispensers', 'dispenses',
           'dispenser_refills']
 
+MAINNET_BURNS = {}
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(CURR_DIR + '/../mainnet_burns.csv', 'r') as f:
     mainnet_burns_reader = csv.DictReader(f)
-    MAINNET_BURNS = {}
     for line in mainnet_burns_reader:
         MAINNET_BURNS[line['tx_hash']] = line
 

@@ -28,9 +28,9 @@ def rpc_call(payload):
     """Calls to bitcoin core and returns the response"""
     url = config.BACKEND_URL
     response = None
-    TRIES = 12
+    tries = 12
 
-    for i in range(TRIES):
+    for i in range(tries):
         try:
             response = requests.post(url, data=json.dumps(payload), headers={'content-type': 'application/json'},
                 verify=(not config.BACKEND_SSL_NO_VERIFY), timeout=config.REQUESTS_TIMEOUT)
@@ -38,7 +38,7 @@ def rpc_call(payload):
                 logger.debug('Successfully connected.')
             break
         except (Timeout, ReadTimeout, ConnectionError):
-            logger.debug(f'Could not connect to backend at `{util.clean_url_for_log(url)}`. (Try {i + 1}/{TRIES})')
+            logger.debug(f'Could not connect to backend at `{util.clean_url_for_log(url)}`. (Try {i + 1}/{tries})')
             time.sleep(5)
 
     if response == None:
@@ -178,7 +178,7 @@ def fee_per_kb(conf_target, mode, nblocks=None):
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
-GETRAWTRANSACTION_MAX_RETRIES=2
+GETRAWTRANSACTION_MAX_RE=2
 def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _retry=0):
     _logger = logger.getChild("getrawtransaction_batch")
 

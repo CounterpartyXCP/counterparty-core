@@ -380,14 +380,14 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
     with util_test.ConfigContext(OLD_STYLE_API=True), util_test.MockProtocolChangesContext(enhanced_sends=True, p2sh_encoding=True):
         p2sh_source_multisig_pubkeys_binary = [binascii.unhexlify(p) for p in [DP['pubkey'][ADDR[0]], DP['pubkey'][ADDR[1]], DP['pubkey'][ADDR[2]]]]
         data_drop = b'deadbeef01'
-        scriptSig, redeemScript, outputScript = p2sh_encoding.make_p2sh_encoding_redeemscript(
+        script_sig, redeem_script, output_script = p2sh_encoding.make_p2sh_encoding_redeemscript(
             data_drop,
-            n=0, pubKey=None,
+            n=0, pub_key=None,
             multisig_pubkeys=p2sh_source_multisig_pubkeys_binary,
             multisig_pubkeys_required=2
         )
-        redeemScript = bitcoinlib.core.script.CScript(redeemScript)
-        assert repr(redeemScript) == f"CScript([x('{data_drop.hex()}'), OP_DROP, 2, x('{DP['pubkey'][ADDR[0]]}'), x('{DP['pubkey'][ADDR[1]]}'), x('{DP['pubkey'][ADDR[2]]}'), 3, OP_CHECKMULTISIGVERIFY, 0, OP_DROP, OP_DEPTH, 0, OP_EQUAL])"
+        redeem_script = bitcoinlib.core.script.CScript(redeem_script)
+        assert repr(redeem_script) == f"CScript([x('{data_drop.hex()}'), OP_DROP, 2, x('{DP['pubkey'][ADDR[0]]}'), x('{DP['pubkey'][ADDR[1]]}'), x('{DP['pubkey'][ADDR[2]]}'), 3, OP_CHECKMULTISIGVERIFY, 0, OP_DROP, OP_DEPTH, 0, OP_EQUAL])"
 
         # setup transaction
         fee = 20000
@@ -442,12 +442,12 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
 
 @pytest.mark.usefixtures("cp_server")
 def test_p2sh_script_decoding():
-    scriptHex = "1c8a5dda15fb6f05628a061e67576e926dc71a7fa2f0cceb97452b4d564101a914c088c83aeddd211096df9f5f0df1f3b885ac7fe70188210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad0075740087"
-    scriptSig = bitcoinlib.core.script.CScript(binascii.unhexlify(scriptHex))
+    script_hex = "1c8a5dda15fb6f05628a061e67576e926dc71a7fa2f0cceb97452b4d564101a914c088c83aeddd211096df9f5f0df1f3b885ac7fe70188210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad0075740087"
+    script_sig = bitcoinlib.core.script.CScript(binascii.unhexlify(script_hex))
 
-    print('scriptSig', repr(scriptSig), list(scriptSig), len(list(scriptSig)))
+    print('scriptSig', repr(script_sig), list(script_sig), len(list(script_sig)))
 
-    chunks = list(scriptSig)
+    chunks = list(script_sig)
     if len(chunks) == 3:
         sig = chunks[0]
         datachunk = chunks[1]

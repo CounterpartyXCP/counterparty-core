@@ -19,7 +19,7 @@ from counterpartylib.lib import ledger
 from counterpartylib.lib.backend import addrindexrs
 
 MEMPOOL_CACHE_INITIALIZED = False
-_initialized = False
+INITIALIZED = False
 
 PRETX_CACHE = {}
 
@@ -38,25 +38,25 @@ def sortkeypicker(keynames):
        return composite
     return getit
 
-def BACKEND():
+def backend():
     mdl = sys.modules[f'counterpartylib.lib.backend.{config.BACKEND_NAME}']
-    global _initialized
-    if not _initialized:
+    global INITIALIZED
+    if not INITIALIZED:
         mdl.init()
-        _initialized = True
+        INITIALIZED = True
     return mdl
 
 def stop():
-    BACKEND().stop()
+    backend().stop()
 
 def getblockcount():
-    return BACKEND().getblockcount()
+    return backend().getblockcount()
 
 def getblockhash(blockcount):
-    return BACKEND().getblockhash(blockcount)
+    return backend().getblockhash(blockcount)
 
 def getblock(block_hash):
-    block_hex = BACKEND().getblock(block_hash)
+    block_hex = backend().getblock(block_hash)
     return CBlock.deserialize(util.unhexlify(block_hex))
 
 def cache_pretx(txid, rawtx):
@@ -73,22 +73,22 @@ def getrawtransaction(tx_hash, verbose=False, skip_missing=False, block_index=No
         return PRETX_CACHE[tx_hash]
 
     # There's a separate LRU cache on the backend here, fwiw.
-    return BACKEND().getrawtransaction(tx_hash, verbose=verbose, skip_missing=skip_missing)
+    return backend().getrawtransaction(tx_hash, verbose=verbose, skip_missing=skip_missing)
 
 def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
-    return BACKEND().getrawtransaction_batch(txhash_list, verbose=verbose, skip_missing=skip_missing)
+    return backend().getrawtransaction_batch(txhash_list, verbose=verbose, skip_missing=skip_missing)
 
 def sendrawtransaction(tx_hex):
-    return BACKEND().sendrawtransaction(tx_hex)
+    return backend().sendrawtransaction(tx_hex)
 
 def getrawmempool():
-    return BACKEND().getrawmempool()
+    return backend().getrawmempool()
 
 def getindexblocksbehind():
-    return BACKEND().getindexblocksbehind()
+    return backend().getindexblocksbehind()
 
 def extract_addresses(txhash_list):
-    return BACKEND().extract_addresses(txhash_list)
+    return backend().extract_addresses(txhash_list)
 
 def ensure_script_pub_key_for_inputs(coins):
     txhash_set = set()
@@ -97,7 +97,7 @@ def ensure_script_pub_key_for_inputs(coins):
             txhash_set.add(coin['txid'])
 
     if len(txhash_set) > 0:
-        txs = BACKEND().getrawtransaction_batch(list(txhash_set), verbose=True, skip_missing=False)
+        txs = backend().getrawtransaction_batch(list(txhash_set), verbose=True, skip_missing=False)
         for coin in coins:
             if 'scriptPubKey' not in coin:
                 # get the scriptPubKey
@@ -116,7 +116,7 @@ def fee_per_kb(conf_target, mode, nblocks=None):
     :return: fee_per_kb in satoshis, or None when unable to determine
     """
 
-    return BACKEND().fee_per_kb(conf_target, mode, nblocks=nblocks)
+    return backend().fee_per_kb(conf_target, mode, nblocks=nblocks)
 
 
 def deserialize(tx_hex):
@@ -189,7 +189,7 @@ def get_unspent_txouts(source, unconfirmed=False, unspent_tx_hash=None):
     @return: A list of dicts, with each entry in the dict having the following keys:
     """
 
-    unspent = BACKEND().get_unspent_txouts(source)
+    unspent = backend().get_unspent_txouts(source)
 
     # filter by unspent_tx_hash
     if unspent_tx_hash is not None:
@@ -209,10 +209,10 @@ def get_unspent_txouts(source, unconfirmed=False, unspent_tx_hash=None):
     return unspent
 
 def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
-    return BACKEND().search_raw_transactions(address, unconfirmed, only_tx_hashes)
+    return backend().search_raw_transactions(address, unconfirmed, only_tx_hashes)
 
 def get_oldest_tx(address):
-    return BACKEND().get_oldest_tx(address)
+    return backend().get_oldest_tx(address)
 
 class UnknownPubKeyError(Exception):
     pass
@@ -274,7 +274,7 @@ def init_mempool_cache():
 
     #with this function, don't try to load in more than BACKEND_RAW_TRANSACTIONS_CACHE_SIZE entries
     num_tx = min(len(mempool_txhash_list), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)
-    mempool_tx = BACKEND().getrawtransaction_batch(mempool_txhash_list[:num_tx], skip_missing=True, verbose=True)
+    mempool_tx = backend().getrawtransaction_batch(mempool_txhash_list[:num_tx], skip_missing=True, verbose=True)
 
     vin_txhash_list = []
     max_remaining_num_tx = config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE - num_tx
@@ -283,7 +283,7 @@ def init_mempool_cache():
             tx = mempool_tx[txid]
             if not(tx is None):
                 vin_txhash_list += [vin['txid'] for vin in tx['vin']]
-        BACKEND().getrawtransaction_batch(vin_txhash_list[:max_remaining_num_tx], skip_missing=True, verbose=True)
+        backend().getrawtransaction_batch(vin_txhash_list[:max_remaining_num_tx], skip_missing=True, verbose=True)
 
     MEMPOOL_CACHE_INITIALIZED = True
     logger.info(f'Mempool cache initialized: {time.time() - start:.2f}s for {num_tx + min(max_remaining_num_tx, len(vin_txhash_list)):,} transactions')

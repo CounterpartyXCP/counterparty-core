@@ -477,10 +477,10 @@ def parse (db, tx, message, message_type_id):
 
             ##This is for backwards compatibility with assets names longer than 12 characters
             if asset.startswith('A'):
-                namedAsset = ledger.get_asset_name(db, asset_id, tx['block_index'])
+                named_asset = ledger.get_asset_name(db, asset_id, tx['block_index'])
 
-                if (namedAsset != 0):
-                    asset = namedAsset
+                if (named_asset != 0):
+                    asset = named_asset
 
             if description == None:
                 try:

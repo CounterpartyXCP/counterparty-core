@@ -21,7 +21,7 @@ from counterpartylib.lib import ledger
 from counterpartylib.lib import opcodes
 from counterpartylib.lib.opcodes import *
 
-b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+B58_DIGITS = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 class InputError (Exception):
     pass
@@ -75,7 +75,7 @@ def base58_encode(binary):
     res = []
     while n > 0:
         n, r = divmod(n, 58)
-        res.append(b58_digits[r])
+        res.append(B58_DIGITS[r])
     res = ''.join(res[::-1])
 
     return res
@@ -98,7 +98,7 @@ def base58_check_encode_py(original, version):
         else:
             break
 
-    address = b58_digits[0] * pad + res
+    address = B58_DIGITS[0] * pad + res
 
     if original != util.hexlify(base58_check_decode(address, version)):
         raise AddressError('encoded address does not decode properly')
@@ -115,9 +115,9 @@ def base58_decode(s):
     n = 0
     for c in s:
         n *= 58
-        if c not in b58_digits:
+        if c not in B58_DIGITS:
             raise Base58Error(f'Not a valid Base58 character: ‘{c}’')
-        digit = b58_digits.index(c)
+        digit = B58_DIGITS.index(c)
         n += digit
 
     # Convert the integer to bytes
@@ -129,7 +129,7 @@ def base58_decode(s):
     # Add padding back.
     pad = 0
     for c in s[:-1]:
-        if c == b58_digits[0]:
+        if c == B58_DIGITS[0]:
             pad += 1
         else:
             break

@@ -94,8 +94,8 @@ def set_up(logger, verbose=False, logfile=None, console_logfilter=None, quiet=Tr
         else:
             fileh = logging.handlers.RotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
         fileh.setLevel(logging.DEBUG)
-        LOGFORMAT = '%(asctime)s [%(levelname)s] %(message)s'
-        formatter = logging.Formatter(LOGFORMAT, '%Y-%m-%d-T%H:%M:%S%z')
+        log_format = '%(asctime)s [%(levelname)s] %(message)s'
+        formatter = logging.Formatter(log_format, '%Y-%m-%d-T%H:%M:%S%z')
         fileh.setFormatter(formatter)
         logger.addHandler(fileh)
 
@@ -119,10 +119,10 @@ def set_up(logger, verbose=False, logfile=None, console_logfilter=None, quiet=Tr
     console = logging.StreamHandler()
     console.setLevel(log_level)
 
-    # only add [%(name)s] to LOGFORMAT if we're using console_logfilter
-    LOGFORMAT = '%(log_color)s[%(asctime)s][%(levelname)s]' + ('' if console_logfilter is None else '[%(name)s]') + ' %(message)s%(reset)s'
-    LOGCOLORS = {'WARNING': 'yellow', 'ERROR': 'red', 'CRITICAL': 'red'}
-    formatter = ColoredFormatter(LOGFORMAT, "%Y-%m-%d %H:%M:%S", log_colors=LOGCOLORS)
+    # only add [%(name)s] to log_format if we're using console_logfilter
+    log_format = '%(log_color)s[%(asctime)s][%(levelname)s]' + ('' if console_logfilter is None else '[%(name)s]') + ' %(message)s%(reset)s'
+    log_colors = {'WARNING': 'yellow', 'ERROR': 'red', 'CRITICAL': 'red'}
+    formatter = ColoredFormatter(log_format, "%Y-%m-%d %H:%M:%S", log_colors=log_colors)
     console.setFormatter(formatter)
     logger.addHandler(console)
 

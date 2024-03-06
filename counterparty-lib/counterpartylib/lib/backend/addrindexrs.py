@@ -26,7 +26,7 @@ BACKOFF_START = 1
 BACKOFF_MAX = 8
 BACKOFF_FACTOR = 2
 
-Indexer_Thread = None
+INDEXER_THREAD = None
 raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)  # used in getrawtransaction_batch()
 
 class BackendRPCError(Exception):
@@ -39,9 +39,9 @@ def rpc_call(payload):
     """Calls to bitcoin core and returns the response"""
     url = config.BACKEND_URL
     response = None
-    TRIES = 12
+    tries = 12
 
-    for i in range(TRIES):
+    for i in range(tries):
         try:
             response = requests.post(url, data=json.dumps(payload), headers={'content-type': 'application/json'},
                 verify=(not config.BACKEND_SSL_NO_VERIFY), timeout=config.REQUESTS_TIMEOUT)
@@ -63,7 +63,7 @@ def rpc_call(payload):
                 break
 
         except (Timeout, ReadTimeout, ConnectionError):
-            logger.debug(f'Could not connect to backend at `{util.clean_url_for_log(url)}`. (Try {i + 1}/{TRIES})')
+            logger.debug(f'Could not connect to backend at `{util.clean_url_for_log(url)}`. (Try {i + 1}/{tries})')
             time.sleep(5)
 
     # Handle json decode errors
@@ -191,7 +191,7 @@ def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
 GETRAWTRANSACTION_MAX_RETRIES=2
-monotonic_call_id = 0
+MONOTONIC_CALL_ID = 0
 def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _retry=0):
     _logger = logger.getChild("getrawtransaction_batch")
 
@@ -213,9 +213,9 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
     for tx_hash in txhash_list:
         if tx_hash not in raw_transactions_cache:
             #call_id = binascii.hexlify(os.urandom(5)).decode('utf8') # Don't drain urandom
-            global monotonic_call_id
-            monotonic_call_id = monotonic_call_id + 1
-            call_id = f"{monotonic_call_id}"
+            global MONOTONIC_CALL_ID
+            MONOTONIC_CALL_ID = MONOTONIC_CALL_ID + 1
+            call_id = f"{MONOTONIC_CALL_ID}"
             payload.append({
                 "method": 'getrawtransaction',
                 "params": [tx_hash, 1],
@@ -276,7 +276,7 @@ class AddrIndexRsThread (threading.Thread):
         self.host = host
         self.port = port
         self.sock = None
-        self.lastId = 0
+        self.last_id = 0
         self.message_to_send = None
         self.message_result = None
         self.is_killed = False
@@ -286,7 +286,7 @@ class AddrIndexRsThread (threading.Thread):
         self.send({"kill": True})
 
     def connect(self):
-        self.lastId = 0
+        self.last_id = 0
         while True:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.settimeout(SOCKET_TIMEOUT)
@@ -368,8 +368,8 @@ class AddrIndexRsThread (threading.Thread):
     def send(self, msg):
         self.locker.acquire()
         if not("kill" in msg):
-            msg["id"] = self.lastId
-            self.lastId += 1
+            msg["id"] = self.last_id
+            self.last_id += 1
             self.message_to_send = (json.dumps(msg) + "\n").encode('utf8')
             self.locker.notify()
             self.locker.wait()
@@ -380,7 +380,7 @@ class AddrIndexRsThread (threading.Thread):
 
 def indexer_check_version():
     logger.debug('Checking version of address indexer.')
-    addrindexrs_version = Indexer_Thread.send({
+    addrindexrs_version = INDEXER_THREAD.send({
         "method": "server.version",
         "params": []
     })
@@ -394,7 +394,7 @@ def indexer_check_version():
 
     if parse_version(addrindexrs_version_needed) > parse_version(addrindexrs_version_label):
         logger.info("Wrong addrindexrs version: "+addrindexrs_version_needed+" is needed but "+addrindexrs_version_label+" was found")
-        Indexer_Thread.stop()
+        INDEXER_THREAD.stop()
         sys.exit(config.EXITCODE_UPDATE_REQUIRED)
     else:
         logger.debug(f'Version check of address indexer passed ({addrindexrs_version_label} > {addrindexrs_version_needed}).')
@@ -441,7 +441,7 @@ def unpack_vout(outpoint, tx, block_count):
 
 def get_unspent_txouts(source):
     block_count = getblockcount()
-    result = Indexer_Thread.send({
+    result = INDEXER_THREAD.send({
         "method": "blockchain.scripthash.get_utxos",
         "params": [_address_to_hash(source)]
     })
@@ -504,7 +504,7 @@ def get_unspent_txouts(source):
 # }
 def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
     hsh = _address_to_hash(address)
-    txs = Indexer_Thread.send({
+    txs = INDEXER_THREAD.send({
         "method": "blockchain.scripthash.get_history",
         "params": [hsh]
     })["result"]
@@ -521,7 +521,7 @@ def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
 
 def get_oldest_tx_legacy(address):
     hsh = _address_to_hash(address)
-    call_result = Indexer_Thread.send({
+    call_result = INDEXER_THREAD.send({
         "method": "blockchain.scripthash.get_oldest_tx",
         "params": [hsh]
     })
@@ -538,16 +538,16 @@ def getindexblocksbehind():
     return 0
 
 def init():
-    global Indexer_Thread
-    Indexer_Thread = AddrIndexRsThread(config.INDEXD_CONNECT, config.INDEXD_PORT)
-    Indexer_Thread.daemon = True
-    Indexer_Thread.start()
+    global INDEXER_THREAD
+    INDEXER_THREAD = AddrIndexRsThread(config.INDEXD_CONNECT, config.INDEXD_PORT)
+    INDEXER_THREAD.daemon = True
+    INDEXER_THREAD.start()
     logger.info('Connecting to address indexer.')
     indexer_check_version()
 
 def stop():
-    if 'Indexer_Thread' in globals():
-        Indexer_Thread.stop()
+    if 'INDEXER_THREAD' in globals():
+        INDEXER_THREAD.stop()
 
 
 # Basic class to communicate with addrindexrs.

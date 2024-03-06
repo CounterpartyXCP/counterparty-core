@@ -23,14 +23,14 @@ class WalletError(Exception):
 class LockedWalletError(WalletError):
     pass
 
-def WALLET():
+def wallet():
     return sys.modules[f'counterpartycli.wallet.{config.WALLET_NAME}']
 
 def get_wallet_addresses():
-    return WALLET().get_wallet_addresses()
+    return wallet().get_wallet_addresses()
 
 def get_btc_balances():
-    for address, btc_balance in WALLET().get_btc_balances():
+    for address, btc_balance in wallet().get_btc_balances():
     	yield [address, btc_balance]
 
 def pycoin_sign_raw_transaction(tx_hex, private_key_wif):
@@ -57,38 +57,38 @@ def pycoin_sign_raw_transaction(tx_hex, private_key_wif):
 
 def sign_raw_transaction(tx_hex, private_key_wif=None):
     if private_key_wif is None:
-        if WALLET().is_locked():
+        if wallet().is_locked():
             raise LockedWalletError('Wallet is locked.')
-        return WALLET().sign_raw_transaction(tx_hex)
+        return wallet().sign_raw_transaction(tx_hex)
     else:
         return pycoin_sign_raw_transaction(tx_hex, private_key_wif)
 
 def get_pubkey(address):
-    return WALLET().get_pubkey(address)
+    return wallet().get_pubkey(address)
 
 def is_valid(address):
-    return WALLET().is_valid(address)
+    return wallet().is_valid(address)
 
 def is_mine(address):
-    return WALLET().is_mine(address)
+    return wallet().is_mine(address)
 
 def get_btc_balance(address):
-    return WALLET().get_btc_balance(address)
+    return wallet().get_btc_balance(address)
 
 def list_unspent():
-    return WALLET().list_unspent()
+    return wallet().list_unspent()
 
 def send_raw_transaction(tx_hex):
-	return WALLET().send_raw_transaction(tx_hex)
+	return wallet().send_raw_transaction(tx_hex)
 
 def is_locked():
-    return WALLET().is_locked()
+    return wallet().is_locked()
 
 def unlock(passphrase):
-    return WALLET().unlock(passphrase)
+    return wallet().unlock(passphrase)
 
 def wallet_last_block():
-    return WALLET().wallet_last_block()
+    return wallet().wallet_last_block()
 
 def wallet():
     wallet = {

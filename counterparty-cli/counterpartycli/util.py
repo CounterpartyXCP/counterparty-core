@@ -121,23 +121,23 @@ def bootstrap(testnet=False, overwrite=True, ask_confirmation=False, quiet=False
     # Set Constants.
     if testnet:
         if check.CONSENSUS_HASH_VERSION_TESTNET < 7:
-            BOOTSTRAP_URL = 'https://counterparty.io/bootstrap/counterparty-db-testnet.latest.tar.gz'
+            bootstrap_url = 'https://counterparty.io/bootstrap/counterparty-db-testnet.latest.tar.gz'
         else:
-            BOOTSTRAP_URL = f'https://counterparty.io/bootstrap/counterparty-db-testnet-{check.CONSENSUS_HASH_VERSION_TESTNET}.latest.tar.gz'
-        TARBALL_PATH = os.path.join(tempfile.gettempdir(), 'counterpartyd-testnet-db.latest.tar.gz')
-        DATABASE_PATH = os.path.join(data_dir, f'{config.APP_NAME}.testnet.db')
+            bootstrap_url = f'https://counterparty.io/bootstrap/counterparty-db-testnet-{check.CONSENSUS_HASH_VERSION_TESTNET}.latest.tar.gz'
+        tarball_path = os.path.join(tempfile.gettempdir(), 'counterpartyd-testnet-db.latest.tar.gz')
+        database_path = os.path.join(data_dir, f'{config.APP_NAME}.testnet.db')
     else:
         if check.CONSENSUS_HASH_VERSION_MAINNET < 3:
-            BOOTSTRAP_URL = 'https://counterparty.io/bootstrap/counterparty-db.latest.tar.gz'
+            bootstrap_url = 'https://counterparty.io/bootstrap/counterparty-db.latest.tar.gz'
         else:
-            BOOTSTRAP_URL = f'https://counterparty.io/bootstrap/counterparty-db-{check.CONSENSUS_HASH_VERSION_MAINNET}.latest.tar.gz'
-        TARBALL_PATH = os.path.join(tempfile.gettempdir(), 'counterpartyd-db.latest.tar.gz')
-        DATABASE_PATH = os.path.join(data_dir, f'{config.APP_NAME}.db')
+            bootstrap_url = f'https://counterparty.io/bootstrap/counterparty-db-{check.CONSENSUS_HASH_VERSION_MAINNET}.latest.tar.gz'
+        tarball_path = os.path.join(tempfile.gettempdir(), 'counterpartyd-db.latest.tar.gz')
+        database_path = os.path.join(data_dir, f'{config.APP_NAME}.db')
 
     # Prepare Directory.
     if not os.path.exists(data_dir):
         os.makedirs(data_dir, mode=0o755)
-    if not overwrite and os.path.exists(DATABASE_PATH):
+    if not overwrite and os.path.exists(database_path):
         return
 
     # Define Progress Bar.
@@ -152,23 +152,23 @@ def bootstrap(testnet=False, overwrite=True, ask_confirmation=False, quiet=False
         else: # total size is unknown
             sys.stderr.write(f"read {readsofar}\n")
 
-    print(f'Downloading database from {BOOTSTRAP_URL}...')
-    if BOOTSTRAP_URL.startswith('https://'):
-        urllib.request.urlretrieve(BOOTSTRAP_URL, TARBALL_PATH, reporthook if not quiet else None) # nosec B310
+    print(f'Downloading database from {bootstrap_url}...')
+    if bootstrap_url.startswith('https://'):
+        urllib.request.urlretrieve(bootstrap_url, tarball_path, reporthook if not quiet else None) # nosec B310
     else:
-        raise Exception(f'Invalid URL: {BOOTSTRAP_URL}')
+        raise Exception(f'Invalid URL: {bootstrap_url}')
 
     print(f'Extracting to "{data_dir}"...')
     # TODO: check checksum, filenames, etc.
-    with tarfile.open(TARBALL_PATH, 'r:gz') as tar_file:
+    with tarfile.open(tarball_path, 'r:gz') as tar_file:
         tar_file.extractall(path=data_dir) # nosec B202
 
-    assert os.path.exists(DATABASE_PATH)
+    assert os.path.exists(database_path)
     # user and group have "rw" access
-    os.chmod(DATABASE_PATH, 0o660) # nosec B103
+    os.chmod(database_path, 0o660) # nosec B103
 
     print('Cleaning up...')
-    os.remove(TARBALL_PATH)
+    os.remove(tarball_path)
     os.remove(os.path.join(data_dir, 'checksums.txt'))
 
 # Set default values of command line arguments with config file
@@ -183,20 +183,20 @@ def add_config_arguments(arg_parser, config_args, default_config_file, config_fi
         config_file = os.path.join(config_dir, default_config_file)
 
     # clean BOM
-    BUFSIZE = 4096
-    BOMLEN = len(codecs.BOM_UTF8)
+    bufsize = 4096
+    bomlen = len(codecs.BOM_UTF8)
     with codecs.open(config_file, 'r+b') as fp:
-        chunk = fp.read(BUFSIZE)
+        chunk = fp.read(bufsize)
         if chunk.startswith(codecs.BOM_UTF8):
             i = 0
-            chunk = chunk[BOMLEN:]
+            chunk = chunk[bomlen:]
             while chunk:
                 fp.seek(i)
                 fp.write(chunk)
                 i += len(chunk)
-                fp.seek(BOMLEN, os.SEEK_CUR)
-                chunk = fp.read(BUFSIZE)
-            fp.seek(-BOMLEN, os.SEEK_CUR)
+                fp.seek(bomlen, os.SEEK_CUR)
+                chunk = fp.read(bufsize)
+            fp.seek(-bomlen, os.SEEK_CUR)
             fp.truncate()
 
     logger.debug(f'Loading configuration file: `{config_file}`')

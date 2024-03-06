@@ -126,8 +126,8 @@ API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make
 API_MAX_LOG_COUNT = 10
 JSON_RPC_ERROR_API_COMPOSE = -32001 #code to use for error composing transaction result
 
-current_api_status_code = None #is updated by the APIStatusPoller
-current_api_status_response_json = None #is updated by the APIStatusPoller
+CURRENT_API_STATUS_CODE = None #is updated by the APIStatusPoller
+CURRENT_API_STATUS_RESPONSE_JSON = None #is updated by the APIStatusPoller
 
 class APIError(Exception):
     pass
@@ -531,7 +531,7 @@ class APIStatusPoller(threading.Thread):
 
     def run(self):
         logger.debug('Starting API Status Poller.')
-        global current_api_status_code, current_api_status_response_json
+        global CURRENT_API_STATUS_CODE, CURRENT_API_STATUS_RESPONSE_JSON
         db = database.get_connection(read_only=True, integrity_check=False)
 
         while self.stop_event.is_set() != True:
@@ -552,11 +552,11 @@ class APIStatusPoller(threading.Thread):
                 exception_text = str(e)
                 logger.debug("API Status Poller: %s", exception_text)
                 jsonrpc_response = jsonrpc.exceptions.JSONRPCServerError(message=exception_name, data=exception_text)
-                current_api_status_code = code
-                current_api_status_response_json = jsonrpc_response.json.encode()
+                CURRENT_API_STATUS_CODE = code
+                CURRENT_API_STATUS_RESPONSE_JSON = jsonrpc_response.json.encode()
             else:
-                current_api_status_code = None
-                current_api_status_response_json = None
+                CURRENT_API_STATUS_CODE = None
+                CURRENT_API_STATUS_RESPONSE_JSON = None
             time.sleep(config.BACKEND_POLL_INTERVAL)
 
 class APIServer(threading.Thread):
@@ -689,7 +689,7 @@ class APIServer(threading.Thread):
 
             if not isinstance(assets, list):
                 raise APIError("assets must be a list of asset names, even if it just contains one entry")
-            assetsInfo = []
+            assets_info = []
             for asset in assets:
                 asset = ledger.resolve_subasset_longname(self.db, asset)
 
@@ -700,7 +700,7 @@ class APIServer(threading.Thread):
                     else:
                         supply = ledger.xcp_supply(self.db)
 
-                    assetsInfo.append({
+                    assets_info.append({
                         'asset': asset,
                         'asset_longname': None,
                         'owner': None,
@@ -723,7 +723,7 @@ class APIServer(threading.Thread):
                 locked = False
                 for e in issuances:
                     if e['locked']: locked = True
-                assetsInfo.append({
+                assets_info.append({
                     'asset': asset,
                     'asset_longname': last_issuance['asset_longname'],
                     'owner': last_issuance['issuer'],
@@ -732,7 +732,7 @@ class APIServer(threading.Thread):
                     'supply': ledger.asset_supply(self.db, asset),
                     'description': last_issuance['description'],
                     'issuer': last_issuance['issuer']})
-            return assetsInfo
+            return assets_info
 
         @dispatcher.add_method
         def get_block_info(block_index):
@@ -797,10 +797,10 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_running_info():
-            latestBlockIndex = backend.getblockcount()
+            latest_block_index = backend.getblockcount()
 
             try:
-                check_database_state(self.db, latestBlockIndex)
+                check_database_state(self.db, latest_block_index)
             except DatabaseError:
                 caught_up = False
             else:
@@ -823,7 +823,7 @@ class APIServer(threading.Thread):
             try:
                 indexd_blocks_behind = backend.getindexblocksbehind()
             except:
-                indexd_blocks_behind = latestBlockIndex if latestBlockIndex > 0 else 999999
+                indexd_blocks_behind = latest_block_index if latest_block_index > 0 else 999999
             indexd_caught_up = indexd_blocks_behind <= 1
 
             server_ready = caught_up and indexd_caught_up
@@ -831,7 +831,7 @@ class APIServer(threading.Thread):
             return {
                 'server_ready': server_ready,
                 'db_caught_up': caught_up,
-                'bitcoin_block_count': latestBlockIndex,
+                'bitcoin_block_count': latest_block_index,
                 'last_block': last_block,
                 'indexd_caught_up': indexd_caught_up,
                 'indexd_blocks_behind': indexd_blocks_behind,
@@ -1013,8 +1013,8 @@ class APIServer(threading.Thread):
         def handle_healthz():
             msg, code = 'Healthy', 200
             try:
-                latestBlockIndex = backend.getblockcount()
-                check_database_state(self.db, latestBlockIndex)
+                latest_block_index = backend.getblockcount()
+                check_database_state(self.db, latest_block_index)
             except DatabaseError:
                 msg, code = 'Unhealthy', 503
             return flask.Response(msg, code, mimetype='text/plain')
@@ -1077,8 +1077,8 @@ class APIServer(threading.Thread):
                 return flask.Response(obj_error.json.encode(), 400, mimetype='application/json')
 
             # Return an error if the API Status Poller checks fail.
-            if not config.FORCE and current_api_status_code:
-                return flask.Response(current_api_status_response_json, 503, mimetype='application/json')
+            if not config.FORCE and CURRENT_API_STATUS_CODE:
+                return flask.Response(CURRENT_API_STATUS_RESPONSE_JSON, 503, mimetype='application/json')
 
             # Answer request normally.
             # NOTE: `UnboundLocalError: local variable 'output' referenced before assignment` means the method doesn’t return anything.

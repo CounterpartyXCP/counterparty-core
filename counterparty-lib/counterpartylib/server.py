@@ -484,7 +484,7 @@ def connect_to_addrindexrs():
     step = 'Connecting to `addrindexrs`...'
     with Halo(text=step, spinner=SPINNER_STYLE):
         ledger.CURRENT_BLOCK_INDEX = 0
-        backend.BACKEND()
+        backend.backend()
         check_addrindexrs = {}
         while check_addrindexrs == {}:
             check_address = "tb1qurdetpdk8zg2thzx3g77qkgr7a89cp2m429t9c" if config.TESTNET else "1GsjsKKT4nH4GPmDnaxaZEDWgoBpmexwMA"

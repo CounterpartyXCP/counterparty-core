@@ -48,7 +48,7 @@ def fix_win32_unicode():
     try:
         # <http://msdn.microsoft.com/en-us/library/ms683231(VS.85).aspx>
         # HANDLE WINAPI GetStdHandle(DWORD nStdHandle);
-        # returns INVALID_HANDLE_VALUE, NULL, or a valid handle
+        # returns invalid_handle_value, NULL, or a valid handle
         #
         # <http://msdn.microsoft.com/en-us/library/aa364960(VS.85).aspx>
         # DWORD WINAPI GetFileType(DWORD hFile);
@@ -56,20 +56,20 @@ def fix_win32_unicode():
         # <http://msdn.microsoft.com/en-us/library/ms683167(VS.85).aspx>
         # BOOL WINAPI GetConsoleMode(HANDLE hConsole, LPDWORD lpMode);
 
-        GetStdHandle = WINFUNCTYPE(HANDLE, DWORD)(("GetStdHandle", windll.kernel32))
-        STD_OUTPUT_HANDLE = DWORD(-11)
-        STD_ERROR_HANDLE = DWORD(-12)
-        GetFileType = WINFUNCTYPE(DWORD, DWORD)(("GetFileType", windll.kernel32))
-        FILE_TYPE_CHAR = 0x0002
-        FILE_TYPE_REMOTE = 0x8000
-        GetConsoleMode = WINFUNCTYPE(BOOL, HANDLE, POINTER(DWORD))(("GetConsoleMode", windll.kernel32))
-        INVALID_HANDLE_VALUE = DWORD(-1).value
+        get_std_handle = WINFUNCTYPE(HANDLE, DWORD)(("GetStdHandle", windll.kernel32))
+        std_output_handle = DWORD(-11)
+        std_error_handle = DWORD(-12)
+        get_file_type = WINFUNCTYPE(DWORD, DWORD)(("GetFileType", windll.kernel32))
+        file_type_char = 0x0002
+        file_type_remote = 0x8000
+        get_console_mode = WINFUNCTYPE(BOOL, HANDLE, POINTER(DWORD))(("GetConsoleMode", windll.kernel32))
+        invalid_handle_value = DWORD(-1).value
 
         def not_a_console(handle):
-            if handle == INVALID_HANDLE_VALUE or handle is None:
+            if handle == invalid_handle_value or handle is None:
                 return True
-            return ((GetFileType(handle) & ~FILE_TYPE_REMOTE) != FILE_TYPE_CHAR
-                    or GetConsoleMode(handle, byref(DWORD())) == 0)
+            return ((get_file_type(handle) & ~file_type_remote) != file_type_char
+                    or get_console_mode(handle, byref(DWORD())) == 0)
 
         old_stdout_fileno = None
         old_stderr_fileno = None
@@ -78,30 +78,30 @@ def fix_win32_unicode():
         if hasattr(sys.stderr, 'fileno'):
             old_stderr_fileno = sys.stderr.fileno()
 
-        STDOUT_FILENO = 1
-        STDERR_FILENO = 2
-        real_stdout = (old_stdout_fileno == STDOUT_FILENO)
-        real_stderr = (old_stderr_fileno == STDERR_FILENO)
+        stdout_fileno = 1
+        stderr_fileno = 2
+        real_stdout = (old_stdout_fileno == stdout_fileno)
+        real_stderr = (old_stderr_fileno == stderr_fileno)
 
         if real_stdout:
-            hStdout = GetStdHandle(STD_OUTPUT_HANDLE)
-            if not_a_console(hStdout):
+            h_std_out = get_std_handle(std_output_handle)
+            if not_a_console(h_std_out):
                 real_stdout = False
 
         if real_stderr:
-            hStderr = GetStdHandle(STD_ERROR_HANDLE)
-            if not_a_console(hStderr):
+            h_std_err = get_std_handle(std_error_handle)
+            if not_a_console(h_std_err):
                 real_stderr = False
 
         if real_stdout or real_stderr:
             # BOOL WINAPI WriteConsoleW(HANDLE hOutput, LPWSTR lpBuffer, DWORD nChars,
             #                           LPDWORD lpCharsWritten, LPVOID lpReserved);
 
-            WriteConsoleW = WINFUNCTYPE(BOOL, HANDLE, LPWSTR, DWORD, POINTER(DWORD), LPVOID)(("WriteConsoleW", windll.kernel32))
+            write_console_w = WINFUNCTYPE(BOOL, HANDLE, LPWSTR, DWORD, POINTER(DWORD), LPVOID)(("WriteConsoleW", windll.kernel32))
 
             class UnicodeOutput:
-                def __init__(self, hConsole, stream, fileno, name):
-                    self._hConsole = hConsole
+                def __init__(self, h_console, stream, fileno, name):
+                    self._h_console = h_console
                     self._stream = stream
                     self._fileno = fileno
                     self.closed = False
@@ -123,7 +123,7 @@ def fix_win32_unicode():
                     return self._fileno
 
                 def flush(self):
-                    if self._hConsole is None:
+                    if self._h_console is None:
                         try:
                             self._stream.flush()
                         except Exception as e:
@@ -132,7 +132,7 @@ def fix_win32_unicode():
 
                 def write(self, text):
                     try:
-                        if self._hConsole is None:
+                        if self._h_console is None:
                             if isinstance(text, str):
                                 text = text.encode('utf-8')
                             self._stream.write(text)
@@ -145,9 +145,9 @@ def fix_win32_unicode():
                                 # There is a shorter-than-documented limitation on the
                                 # length of the string passed to WriteConsoleW (see
                                 # <http://tahoe-lafs.org/trac/tahoe-lafs/ticket/1232>.
-                                retval = WriteConsoleW(self._hConsole, text, min(remaining, 10000), byref(n), None)
+                                retval = write_console_w(self._h_console, text, min(remaining, 10000), byref(n), None)
                                 if retval == 0 or n.value == 0:
-                                    raise IOError(f"WriteConsoleW returned {retval!r}, n.value = {n.value!r}")
+                                    raise IOError(f"write_console_w returned {retval!r}, n.value = {n.value!r}")
                                 remaining -= n.value
                                 if not remaining:
                                     break
@@ -165,12 +165,12 @@ def fix_win32_unicode():
                         raise
 
             if real_stdout:
-                sys.stdout = UnicodeOutput(hStdout, None, STDOUT_FILENO, '<Unicode console stdout>')
+                sys.stdout = UnicodeOutput(h_std_out, None, stdout_fileno, '<Unicode console stdout>')
             else:
                 sys.stdout = UnicodeOutput(None, sys.stdout, old_stdout_fileno, '<Unicode redirected stdout>')
 
             if real_stderr:
-                sys.stderr = UnicodeOutput(hStderr, None, STDERR_FILENO, '<Unicode console stderr>')
+                sys.stderr = UnicodeOutput(h_std_err, None, stderr_fileno, '<Unicode console stderr>')
             else:
                 sys.stderr = UnicodeOutput(None, sys.stderr, old_stderr_fileno, '<Unicode redirected stderr>')
     except Exception as e:
@@ -180,11 +180,11 @@ def fix_win32_unicode():
     # While we're at it, let's unmangle the command-line arguments:
 
     # This works around <http://bugs.python.org/issue2128>.
-    GetCommandLineW = WINFUNCTYPE(LPWSTR)(("GetCommandLineW", windll.kernel32))
-    CommandLineToArgvW = WINFUNCTYPE(POINTER(LPWSTR), LPCWSTR, POINTER(c_int))(("CommandLineToArgvW", windll.shell32))
+    get_command_line_w = WINFUNCTYPE(LPWSTR)(("GetCommandLineW", windll.kernel32))
+    command_line_to_argv_w = WINFUNCTYPE(POINTER(LPWSTR), LPCWSTR, POINTER(c_int))(("CommandLineToArgvW", windll.shell32))
 
     argc = c_int(0)
-    argv_unicode = CommandLineToArgvW(GetCommandLineW(), byref(argc))
+    argv_unicode = command_line_to_argv_w(get_command_line_w(), byref(argc))
 
     argv = [argv_unicode[i].encode('utf-8').decode('utf-8') for i in range(0, argc.value)]
 

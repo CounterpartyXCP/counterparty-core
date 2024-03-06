@@ -82,7 +82,7 @@ def flat(z):
     return [x for x in z]
 
 
-def py34TupleAppend(first_elem, t):
+def py34_tuple_append(first_elem, t):
     # Had to do it this way to support python 3.4, if we start
     # using the 3.5 runtime this can be replaced by:
     #  (first_elem, *t)

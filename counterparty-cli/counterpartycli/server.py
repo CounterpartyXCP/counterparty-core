@@ -57,6 +57,9 @@ CONFIG_ARGS = [
     [('--checkdb',), {'action': 'store_true', 'default': False, 'help': 'check the database for integrity (default: false)'}]
 ]
 
+COMMANDS_WITH_DB = ['reparse', 'rollback', 'start', 'vacuum', 'checkdb']
+COMMANDS_WITH_CONFIG = ['debug_config', 'kickstart']
+
 class VersionError(Exception):
     pass
 def main():
@@ -127,8 +130,6 @@ def main():
                 raise e
 
     # Configuration
-    COMMANDS_WITH_DB = ['reparse', 'rollback', 'start', 'vacuum', 'checkdb']
-    COMMANDS_WITH_CONFIG = ['debug_config', 'kickstart']
     if args.action in COMMANDS_WITH_DB or args.action in COMMANDS_WITH_CONFIG:
         init_args = dict(database_file=args.database_file,
                                 log_file=args.log_file, api_log_file=args.api_log_file,

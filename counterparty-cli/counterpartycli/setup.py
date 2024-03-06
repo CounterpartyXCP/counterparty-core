@@ -42,7 +42,7 @@ def generate_config_file(filename, config_args, known_config={}, overwrite=False
         if 'default' in arg[1] or value == '':
             key = f'# {key}'
 
-        config_lines.append(f'{key} = {value}\t\t\t\t# {arg[1]['help']}')
+        config_lines.append(f"{key} = {value}\t\t\t\t# {arg[1]['help']}")
 
     with open(filename, 'w', encoding='utf8') as config_file:
         config_file.writelines("\n".join(config_lines))

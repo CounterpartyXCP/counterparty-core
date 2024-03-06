@@ -14,14 +14,14 @@ logger = logging.getLogger(__name__)
 from bitstring import ReadError
 from counterpartylib.lib import (config, util, exceptions, util, message_type, ledger)
 
-from .mpma_util.internals import (_decode_mpmaSendDecode, _encode_mpmaSend)
+from .mpma_util.internals import (_decode_mpma_send_decode, _encode_mpma_send)
 
 ID = 3 # 0x03 is this specific message type
 
 ## expected functions for message version
 def unpack(db, message, block_index):
     try:
-        unpacked = _decode_mpmaSendDecode(message, block_index)
+        unpacked = _decode_mpma_send_decode(message, block_index)
     except (struct.error) as e:
         raise exceptions.UnpackError('could not unpack')
     except (exceptions.AssetNameError, exceptions.AssetIDError) as e:
@@ -55,9 +55,9 @@ def validate (db, source, asset_dest_quant_list, block_index):
         destination = t[1]
         quantity = t[2]
 
-        sendMemo = None
+        send_memo = None
         if len(t) > 3:
-            sendMemo = t[3]
+            send_memo = t[3]
 
         if asset == config.BTC: problems.append(f'cannot send {config.BTC} to {destination}')
 
@@ -82,7 +82,7 @@ def validate (db, source, asset_dest_quant_list, block_index):
             results = ledger.get_addresses(db, address=destination) if destination else None
             if results:
                 result = results[0]
-                if result and result['options'] & config.ADDRESS_OPTION_REQUIRE_MEMO and (sendMemo is None):
+                if result and result['options'] & config.ADDRESS_OPTION_REQUIRE_MEMO and (send_memo is None):
                     problems.append(f'destination {destination} requires memo')
 
     cursor.close()
@@ -113,7 +113,7 @@ def compose (db, source, asset_dest_quant_list, memo, memo_is_hex):
     if problems: raise exceptions.ComposeError(problems)
 
     data = message_type.pack(ID)
-    data += _encode_mpmaSend(db, asset_dest_quant_list, block_index, memo=memo, memo_is_hex=memo_is_hex)
+    data += _encode_mpma_send(db, asset_dest_quant_list, block_index, memo=memo, memo_is_hex=memo_is_hex)
 
     return (source, [], data)
 
@@ -155,7 +155,7 @@ def parse (db, tx, message):
                 break
 
             if status == 'valid':
-                plain_sends += map(lambda t: util.py34TupleAppend(asset_id, t), credits)
+                plain_sends += map(lambda t: util.py34_tuple_append(asset_id, t), credits)
                 all_credits += map(lambda t: {"asset": asset_id, "destination": t[0], "quantity": t[1]}, credits)
                 all_debits.append({"asset": asset_id, "quantity": total_sent})
 
