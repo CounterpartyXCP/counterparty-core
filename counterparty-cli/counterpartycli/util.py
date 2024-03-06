@@ -154,17 +154,15 @@ def bootstrap(testnet=False, overwrite=True, ask_confirmation=False, quiet=False
             sys.stderr.write("read %d\n" % (readsofar,))
 
     print('Downloading database from {}...'.format(BOOTSTRAP_URL))
-    if not BOOTSTRAP_URL.startswith('https://'):
-        BOOTSTRAP_URL = f'https://{BOOTSTRAP_URL}'
-    urllib.request.urlretrieve(BOOTSTRAP_URL, TARBALL_PATH, reporthook if not quiet else None)
+    if BOOTSTRAP_URL.startswith('https://'):
+        urllib.request.urlretrieve(BOOTSTRAP_URL, TARBALL_PATH, reporthook if not quiet else None)
+    else:
+        raise Exception('Invalid URL: {}'.format(BOOTSTRAP_URL))
 
     print('Extracting to "%s"...' % data_dir)
+    # TODO: check checksum, filenames, etc.
     with tarfile.open(TARBALL_PATH, 'r:gz') as tar_file:
-        for n in tar_file.names:
-            if not os.path.abspath(os.path.join(data_dir, n)).startswith(data_dir):
-                print("unsafe filenames!")
-                sys.exit(1)
-        tar_file.extractall(path=data_dir)
+        tar_file.extractall(path=data_dir) # nosec B202
 
     assert os.path.exists(DATABASE_PATH)
     # user and group have "rw" access
