@@ -105,7 +105,7 @@ def make_outkey_vin(txhex, vout):
 
     tx = bitcoinlib.core.CTransaction.deserialize(txbin)
     outkey = [(vin.prevout.hash, vin.prevout.n) for vin in tx.vin]
-    outkey = hashlib.sha256(("%s%s" % (outkey, vout)).encode('ascii')).digest()
+    outkey = hashlib.sha256((f"{outkey}{vout}").encode('ascii')).digest()
 
     return outkey
 

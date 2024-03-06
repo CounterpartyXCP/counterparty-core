@@ -145,13 +145,12 @@ def bootstrap(testnet=False, overwrite=True, ask_confirmation=False, quiet=False
         readsofar = blocknum * blocksize
         if totalsize > 0:
             percent = readsofar * 1e2 / totalsize
-            s = "\r%5.1f%% %*d / %d" % (
-                percent, len(str(totalsize)), readsofar, totalsize)
+            s = f"\r{percent:5.1f} {readsofar} / {totalsize}"
             sys.stderr.write(s)
             if readsofar >= totalsize: # near the end
                 sys.stderr.write("\n")
         else: # total size is unknown
-            sys.stderr.write("read %d\n" % (readsofar,))
+            sys.stderr.write(f"read {readsofar}\n")
 
     print(f'Downloading database from {BOOTSTRAP_URL}...')
     if BOOTSTRAP_URL.startswith('https://'):
