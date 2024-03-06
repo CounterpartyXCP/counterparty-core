@@ -54,7 +54,7 @@ def api(method, params):
         "id": 0,
     }
 
-    response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
+    response = requests.post(config.RPC, data=json.dumps(payload), headers=headers, timeout=10)
     if response == None:
         raise RPCError('Cannot communicate with {} server.'.format(config.XCP_NAME))
     elif response.status_code != 200:

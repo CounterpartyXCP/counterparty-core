@@ -309,7 +309,7 @@ def software_version():
     logger.debug('Checking Counterparty version.')
 
     try:
-        response = requests.get(config.PROTOCOL_CHANGES_URL, headers={'cache-control': 'no-cache'})
+        response = requests.get(config.PROTOCOL_CHANGES_URL, headers={'cache-control': 'no-cache'}, timeout=10)
         versions = json.loads(response.text)
     except (requests.exceptions.ConnectionError, ConnectionRefusedError, ValueError) as e:
         logger.warning('Unable to check version! ' + str(sys.exc_info()[1]))
