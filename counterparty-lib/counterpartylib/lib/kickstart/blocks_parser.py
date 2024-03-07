@@ -1,7 +1,8 @@
 import os, logging, binascii
 from multiprocessing import Process, JoinableQueue, shared_memory
 from collections import OrderedDict
-import pickle
+# Used to pickle and unpickle blocks from shared_memory
+import pickle # nosec B403
 import signal
 import time
 
@@ -59,7 +60,7 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
                 logger.debug('Queue is full, waiting for blocks to be parsed.')
                 queue.join()
             block = parser.read_raw_block(
-                db_block[0], 
+                db_block[0],
                 use_txid=ledger.enabled("correct_segwit_txids", block_index=db_block[1])
             )
 
@@ -69,7 +70,7 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
                     block['transactions'][i]['parsed_vouts'] = gettxinfo.parse_transaction_vouts(block['transactions'][i])
                 except DecodeError:
                     block['transactions'][i]['parsed_vouts'] = "DecodeError"
-        
+
             serialized_block = pickle.dumps(block, protocol=pickle.HIGHEST_PROTOCOL)
             block_length = len(serialized_block)
             name = db_block[0][-8:]
@@ -123,21 +124,18 @@ class BlockchainParser():
             self.txindex_leveldb = None
             self.fetch_process = None
 
-
     def next_block(self, timeout=None):
         block_hash = self.queue.get(timeout=timeout)
         if block_hash is None:
             return None
         self.shm = shared_memory.SharedMemory(name=block_hash)
-        block = pickle.loads(self.shm.buf[:self.shm.size])
+        block = pickle.loads(self.shm.buf[:self.shm.size]) # nosec B301
         self.shm.close()
         self.shm.unlink()
         return block
 
-
     def block_parsed(self):
         self.queue.task_done()
-
 
     def read_tx_in(self, vds):
         tx_in = {}
@@ -151,14 +149,12 @@ class BlockchainParser():
             tx_in['coinbase'] = True
         return tx_in
 
-
     def read_tx_out(self, vds):
         tx_out = {}
         tx_out['nValue'] = vds.read_int64()
         script = vds.read_bytes(vds.read_compact_size())
         tx_out['scriptPubKey'] = script
         return tx_out
-
 
     def read_transaction(self, vds, use_txid=True):
         transaction = {}
@@ -207,19 +203,17 @@ class BlockchainParser():
 
         return transaction
 
-
     def put_in_cache(self, transaction):
         # save transaction to cache
         self.tx_cache[transaction['tx_hash']] = transaction
         if len(self.tx_cache) > TX_CACHE_MAX_SIZE:
             self.tx_cache.popitem(last=False)
 
-
     def read_block_header(self, vds):
         block_header = {}
         block_header['magic_bytes'] = vds.read_int32()
         #if block_header['magic_bytes'] != 118034699:
-         #   raise Exception('Not a block')
+        #   raise Exception('Not a block')
         block_header['block_size'] = vds.read_int32()
         header_start = vds.read_cursor
         block_header['version'] = vds.read_int32()
@@ -234,7 +228,6 @@ class BlockchainParser():
         #block_header['__header__'] = b2h(header)
         return block_header
 
-
     def read_block(self, vds, only_header=False, use_txid=True):
         block = self.read_block_header(vds)
         if only_header:
@@ -245,13 +238,12 @@ class BlockchainParser():
             block['transactions'].append(self.read_transaction(vds, use_txid=use_txid))
         return block
 
-
     def prepare_data_stream(self, file_num, pos_in_file):
         if self.data_stream is None or file_num != self.file_num:
             self.file_num = file_num
             if self.current_block_file:
                 self.current_block_file.close()
-            data_file_path = os.path.join(self.blocks_dir, 'blk%05d.dat' % (self.file_num,))
+            data_file_path = os.path.join(self.blocks_dir, f'blk{self.file_num:05d}.dat')
             self.current_block_file = open(data_file_path, "rb")
             self.data_stream = BCDataStream()
             self.data_stream.map_file(self.current_block_file, pos_in_file)
@@ -287,7 +279,7 @@ class BlockchainParser():
 
         tx_key = bytes('t', 'utf-8') + binascii.unhexlify(inverse_hash(tx_hash))
         tx_data = self.txindex_leveldb.get(tx_key)
- 
+
         ds = BCDataStream()
         ds.write(tx_data)
 
@@ -295,13 +287,12 @@ class BlockchainParser():
         block_pos_in_file = ds.read_var_int()
         tx_pos_in_block = ds.read_var_int()
         tx_pos_in_file = block_pos_in_file + 80 + tx_pos_in_block
-        
+
         self.prepare_data_stream(file_num, tx_pos_in_file)
 
         transaction = self.read_transaction(self.data_stream, use_txid=use_txid)
 
         return transaction
-
 
     def deserialize_tx(self, tx_hex, use_txid=None):
         ds = BCDataStream()
@@ -312,7 +303,6 @@ class BlockchainParser():
             ds,
             use_txid=use_txid
         )
-
 
     def close(self):
         if self.current_block_file:

@@ -86,13 +86,13 @@ def get_pubkeyhash(scriptpubkey, block_index):
         if len(asm) > 0:
 
             if asm[0] == OP_DUP:
-                if len(asm) != 5 or asm[1] != OP_HASH160 or asm[3] != OP_EQUALVERIFY or asm[4] != OP_CHECKSIG:            
+                if len(asm) != 5 or asm[1] != OP_HASH160 or asm[3] != OP_EQUALVERIFY or asm[4] != OP_CHECKSIG:
                     return None, None
                 else:
                     return asm[2], config.ADDRESSVERSION
 
             elif (asm[0] == OP_HASH160) and ledger.enabled('p2sh_dispensers_support'):
-                if len(asm) != 3 or asm[-1] != 'OP_EQUAL':          
+                if len(asm) != 3 or asm[-1] != 'OP_EQUAL':
                     return None, None
                 else:
                     return asm[1], config.P2SH_ADDRESSVERSION
@@ -104,8 +104,8 @@ def get_pubkeyhash(scriptpubkey, block_index):
 
 
 def is_witness_v0_keyhash(scriptpubkey):
-        """Returns true if this is a scriptpubkey for V0 P2WPKH. """
-        return len(scriptpubkey) == 22 and scriptpubkey[0:2] == b'\x00\x14'
+    """Returns true if this is a scriptpubkey for V0 P2WPKH. """
+    return len(scriptpubkey) == 22 and scriptpubkey[0:2] == b'\x00\x14'
 
 
 def get_address(scriptpubkey, block_index):
@@ -129,7 +129,7 @@ def get_transaction_sources(decoded_tx, block_parser=None):
     outputs_value = 0
 
     for vin in decoded_tx["vin"][:]:                   # Loop through inputs.
-        scriptPubKey = None
+        script_pubkey = None
         if block_parser:
             vin_ctx = block_parser.read_raw_transaction(ib2h(vin["hash"]))
         else:
@@ -139,9 +139,9 @@ def get_transaction_sources(decoded_tx, block_parser=None):
 
         vout = vin_ctx["vout"][vin["n"]]
         outputs_value += vout["nValue"]
-        scriptPubKey = vout["scriptPubKey"]
+        script_pubkey = vout["scriptPubKey"]
 
-        asm = script.script_to_asm(scriptPubKey)
+        asm = script.script_to_asm(script_pubkey)
 
         if asm[-1] == OP_CHECKSIG:
             new_source, new_data = decode_checksig(asm, decoded_tx)
@@ -157,7 +157,7 @@ def get_transaction_sources(decoded_tx, block_parser=None):
                 raise DecodeError('data in source')
         elif ledger.enabled('segwit_support') and asm[0] == b'':
             # Segwit output
-            new_source = script.script_to_address(scriptPubKey)
+            new_source = script.script_to_address(script_pubkey)
             new_data = None
         else:
             raise DecodeError('unrecognised source type')
@@ -189,7 +189,7 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit, block_parser=No
             prevout_is_segwit = len(vin_ctx['vtxinwit']) > 0
         else:
             prevout_is_segwit = p2sh_is_segwit
-        
+
         vout = vin_ctx["vout"][vin["n"]]
         outputs_value += vout["nValue"]
 
@@ -441,7 +441,7 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
             raise DecodeError('coinbase transaction')
 
          # Get the full transaction data for this input transaction.
-        scriptPubKey = None
+        script_pubkey = None
         if block_parser:
             vin_ctx = block_parser.read_raw_transaction(ib2h(vin["hash"]))
         else:
@@ -451,9 +451,9 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
 
         vout = vin_ctx["vout"][vin["n"]]
         fee += vout["nValue"]
-        scriptPubKey = vout["scriptPubKey"]
+        script_pubkey = vout["scriptPubKey"]
 
-        address = get_address(scriptPubKey, block_index)
+        address = get_address(script_pubkey, block_index)
         if not address:
             raise DecodeError('invalid scriptpubkey')
         else:

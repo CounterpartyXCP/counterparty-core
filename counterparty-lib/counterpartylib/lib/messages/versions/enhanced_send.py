@@ -21,7 +21,7 @@ def unpack(db, message, block_index):
         if memo_bytes_length > MAX_MEMO_LENGTH:
             raise exceptions.UnpackError('memo too long')
 
-        struct_format = FORMAT + ('{}s'.format(memo_bytes_length))
+        struct_format = FORMAT + f'{memo_bytes_length}s'
         asset_id, quantity, short_address_bytes, memo_bytes = struct.unpack(struct_format, message)
         if len(memo_bytes) == 0:
             memo_bytes = None
@@ -32,18 +32,18 @@ def unpack(db, message, block_index):
         # asset id to name
         asset = ledger.generate_asset_name(asset_id, block_index)
         if asset == config.BTC:
-            raise exceptions.AssetNameError('{} not allowed'.format(config.BTC))
+            raise exceptions.AssetNameError(f'{config.BTC} not allowed')
 
     except (struct.error) as e:
-        logger.warning("enhanced send unpack error: {}".format(e))
+        logger.warning(f"enhanced send unpack error: {e}")
         raise exceptions.UnpackError('could not unpack')
 
     except (exceptions.AssetNameError, exceptions.AssetIDError) as e:
-        logger.warning("enhanced send invalid asset id: {}".format(e))
+        logger.warning(f"enhanced send invalid asset id: {e}")
         raise exceptions.UnpackError('asset id invalid')
 
     unpacked = {
-      'asset': asset,
+        'asset': asset,
       'quantity': quantity,
       'address': full_address,
       'memo': memo_bytes,
@@ -53,7 +53,7 @@ def unpack(db, message, block_index):
 def validate (db, source, destination, asset, quantity, memo_bytes, block_index):
     problems = []
 
-    if asset == config.BTC: problems.append('cannot send {}'.format(config.BTC))
+    if asset == config.BTC: problems.append(f'cannot send {config.BTC}')
 
     if not isinstance(quantity, int):
         problems.append('quantity must be in satoshis')
@@ -75,7 +75,7 @@ def validate (db, source, destination, asset, quantity, memo_bytes, block_index)
 
     # check memo
     if memo_bytes is not None and len(memo_bytes) > MAX_MEMO_LENGTH:
-      problems.append('memo is too long')
+        problems.append('memo is too long')
 
     if ledger.enabled('options_require_memo'):
         cursor = db.cursor()
@@ -117,7 +117,7 @@ def compose (db, source, destination, asset, quantity, memo, memo_is_hex):
         memo_bytes = bytes.fromhex(memo)
     else:
         memo = memo.encode('utf-8')
-        memo_bytes = struct.pack(">{}s".format(len(memo)), memo)
+        memo_bytes = struct.pack(f">{len(memo)}s", memo)
 
     block_index = ledger.CURRENT_BLOCK_INDEX
 
@@ -148,7 +148,7 @@ def parse (db, tx, message):
 
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         asset, quantity, destination, memo_bytes = None, None, None, None
-        status = 'invalid: could not unpack ({})'.format(e)
+        status = f'invalid: could not unpack ({e})'
     except:
         asset, quantity, destination, memo_bytes = None, None, None, None
         status = 'invalid: could not unpack'
@@ -176,10 +176,9 @@ def parse (db, tx, message):
     # log invalid transactions
     if status != 'valid':
         if quantity is None:
-            logger.warning("Invalid send from %s with status %s. (%s)" % (tx['source'], status, tx['tx_hash']))
+            logger.warning(f"Invalid send from {tx['source']} with status {status}. ({tx['tx_hash']})")
         else:
-            logger.warning("Invalid send of %s %s from %s to %s. status is %s. (%s)" % (quantity, asset, tx['source'], destination, status, tx['tx_hash']))
-
+            logger.warning(f"Invalid send of {quantity} {asset} from {tx['source']} to {destination}. status is {status}. ({tx['tx_hash']})")
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
@@ -197,9 +196,8 @@ def parse (db, tx, message):
         sql = 'insert into sends (tx_index, tx_hash, block_index, source, destination, asset, quantity, status, memo) values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :quantity, :status, :memo)'
         cursor.execute(sql, bindings)
     else:
-        logger.warning("Not storing [send] tx [%s]: %s" % (tx['tx_hash'], status))
-        logger.debug("Bindings: %s" % (json.dumps(bindings), ))
-
+        logger.warning(f"Not storing [send] tx [{tx['tx_hash']}]: {status}")
+        logger.debug(f"Bindings: {json.dumps(bindings)}")
 
     cursor.close()
 

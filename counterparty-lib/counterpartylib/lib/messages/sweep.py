@@ -73,17 +73,17 @@ def validate (db, source, destination, flags, memo, block_index):
         issuances_count = ledger.get_issuances_count(db, source)
 
         total_fee = int(balances_count * antispamfee * 2 + issuances_count * antispamfee * 4)
-        
+
         if result < total_fee:
-            problems.append('insufficient XCP balance for sweep. Need %s XCP for antispam fee' % total_fee)
+            problems.append(f'insufficient XCP balance for sweep. Need {total_fee} XCP for antispam fee')
     else:
         if result < ANTISPAM_FEE:
-            problems.append('insufficient XCP balance for sweep. Need %s XCP for antispam fee' % ANTISPAM_FEE_DECIMAL)
+            problems.append(f'insufficient XCP balance for sweep. Need {ANTISPAM_FEE_DECIMAL} XCP for antispam fee')
 
     cursor.close()
 
     if flags > FLAGS_ALL:
-        problems.append('invalid flags %i' % flags)
+        problems.append(f'invalid flags {flags}')
     elif not(flags & (FLAG_BALANCES | FLAG_OWNERSHIP)):
         problems.append('must specify which kind of transfer in flags')
 
@@ -100,7 +100,7 @@ def compose (db, source, destination, flags, memo):
         memo = bytes.fromhex(memo)
     else:
         memo = memo.encode('utf-8')
-        memo = struct.pack(">{}s".format(len(memo)), memo)
+        memo = struct.pack(f">{len(memo)}s", memo)
 
     block_index = ledger.CURRENT_BLOCK_INDEX
     problems, total_fee = validate(db, source, destination, flags, memo, block_index)
@@ -123,7 +123,7 @@ def unpack(db, message, block_index):
         if memo_bytes_length > MAX_MEMO_LENGTH:
             raise exceptions.UnpackError('memo too long')
 
-        struct_format = FORMAT + ('{}s'.format(memo_bytes_length))
+        struct_format = FORMAT + f'{memo_bytes_length}s'
         short_address_bytes, flags, memo_bytes = struct.unpack(struct_format, message)
         if len(memo_bytes) == 0:
             memo_bytes = None
@@ -133,11 +133,11 @@ def unpack(db, message, block_index):
         # unpack address
         full_address = address.unpack(short_address_bytes)
     except (struct.error) as e:
-        logger.warning("sweep send unpack error: {}".format(e))
+        logger.warning(f"sweep send unpack error: {e}")
         raise exceptions.UnpackError('could not unpack')
 
     unpacked = {
-      'destination': full_address,
+        'destination': full_address,
       'flags': flags,
       'memo': memo_bytes,
     }
@@ -157,7 +157,7 @@ def parse (db, tx, message):
         status = 'valid'
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         destination, flags, memo_bytes = None, None, None
-        status = 'invalid: could not unpack ({})'.format(e)
+        status = f'invalid: could not unpack ({e})'
     except BalanceError:
         destination, flags, memo_bytes = None, None, None
         status = 'invalid: insufficient balance for antispam fee for sweep'
@@ -172,7 +172,7 @@ def parse (db, tx, message):
     if status == 'valid':
         try:
             antispamfee = ledger.get_value_by_block_index("sweep_antispam_fee", tx['block_index'])*config.UNIT
-            
+
             if antispamfee > 0:
                 ledger.debit(db, tx['source'], 'XCP', total_fee, tx['tx_index'], action='sweep fee', event=tx['tx_hash'])
             else:

@@ -1,3 +1,0 @@
-[bandit]
-exclude = counterparty-lib/counterpartylib/test/
-skips = B101

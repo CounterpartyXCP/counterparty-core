@@ -40,13 +40,14 @@ def generate_config_file(filename, config_args, known_config={}, overwrite=False
             value = format(value, '.8f')
 
         if 'default' in arg[1] or value == '':
-            key = '# {}'.format(key)
+            key = f'# {key}'
 
-        config_lines.append('{} = {}\t\t\t\t# {}'.format(key, value, arg[1]['help']))
+        config_lines.append(f"{key} = {value}\t\t\t\t# {arg[1]['help']}")
 
     with open(filename, 'w', encoding='utf8') as config_file:
         config_file.writelines("\n".join(config_lines))
-    os.chmod(filename, 0o660)
+    # user and group have "rw" access
+    os.chmod(filename, 0o660) # nosec B103
 
 def extract_old_config():
     old_config = {}
@@ -169,9 +170,9 @@ def before_py2exe_build(win_dist_dir):
         shutil.rmtree(win_dist_dir)
     # py2exe don't manages entry_points
     for exe_name in ['client', 'server']:
-        shutil.copy('counterpartycli/__init__.py', 'counterparty-{}.py'.format(exe_name))
-        with open('counterparty-{}.py'.format(exe_name), 'a') as fp:
-            fp.write('{}_main()'.format(exe_name))
+        shutil.copy(f'counterpartycli/__init__.py', 'counterparty-{exe_name}.py')
+        with open(f'counterparty-{exe_name}.py', 'a') as fp:
+            fp.write(f'{exe_name}_main()')
     # Hack
     src = 'C:\\Python34\\Lib\\site-packages\\flask_httpauth.py'
     dst = 'C:\\Python34\\Lib\\site-packages\\flask\\ext\\httpauth.py'
@@ -180,7 +181,7 @@ def before_py2exe_build(win_dist_dir):
 def after_py2exe_build(win_dist_dir):
     # clean temporaries scripts
     for exe_name in ['client', 'server']:
-        os.remove('counterparty-{}.py'.format(exe_name))
+        os.remove(f'counterparty-{exe_name}.py')
     # py2exe copies only pyc files in site-packages.zip
     # modules with no pyc files must be copied in 'dist/library/'
     import counterpartylib, certifi
@@ -198,16 +199,16 @@ def after_py2exe_build(win_dist_dir):
         shutil.copy(dll_path, win_dist_dir)
 
     # compress distribution folder
-    zip_path = '{}.zip'.format(win_dist_dir)
+    zip_path = f'{win_dist_dir}.zip'
     zip_folder(win_dist_dir, zip_path)
 
-    # Open,close, read file and calculate MD5 on its contents 
+    # Open,close, read file and calculate MD5 on its contents
     with open(zip_path, 'rb') as zip_file:
-        data = zip_file.read()    
-        md5 = hashlib.md5(data).hexdigest()
+        data = zip_file.read()
+        md5 = hashlib.md5(data, usedforsecurity=False).hexdigest()
 
     # include MD5 in the zip name
-    new_zip_path = '{}-{}.zip'.format(win_dist_dir, md5)
+    new_zip_path = f'{win_dist_dir}-{md5}.zip'
     os.rename(zip_path, new_zip_path)
 
     # clean build folder

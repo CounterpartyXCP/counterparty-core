@@ -44,29 +44,29 @@ class MessageArgs:
         self.__dict__.update(dict_args)
 
 def input_pubkey(address):
-    input_message = 'Public keys (hexadecimal) or Private key (Wallet Import Format) for `{}`: '.format(address)
+    input_message = f'Public keys (hexadecimal) or Private key (Wallet Import Format) for `{address}`: '
     return input(input_message)
 
 def get_pubkey_monosig(pubkeyhash, pubkey_resolver=input_pubkey):
     if wallet.is_valid(pubkeyhash):
 
         # If in wallet, get from wallet.
-        logging.debug('Looking for public key for `{}` in wallet.'.format(pubkeyhash))
+        logging.debug(f'Looking for public key for `{pubkeyhash}` in wallet.')
         if wallet.is_mine(pubkeyhash):
             pubkey = wallet.get_pubkey(pubkeyhash)
             if pubkey:
                 return pubkey
-        logging.debug('Public key for `{}` not found in wallet.'.format(pubkeyhash))
+        logging.debug(f'Public key for `{pubkeyhash}` not found in wallet.')
 
         # If in blockchain (and not in wallet), get from blockchain.
-        logging.debug('Looking for public key for `{}` in blockchain.'.format(pubkeyhash))
+        logging.debug(f'Looking for public key for `{pubkeyhash}` in blockchain.')
         try:
             pubkey = util.api('search_pubkey', {'pubkeyhash': pubkeyhash, 'provided_pubkeys': None})
         except util.RPCError as e:
             pubkey = None
         if pubkey:
             return pubkey
-        logging.debug('Public key for `{}` not found in blockchain.'.format(pubkeyhash))
+        logging.debug(f'Public key for `{pubkeyhash}` not found in blockchain.')
 
         # If not in wallet and not in blockchain, get from user.
         answer = pubkey_resolver(pubkeyhash)
@@ -159,12 +159,12 @@ def prepare_args(args, action):
             args.fee_required = 0
             fee_fraction_provided = util.value_in(fee_fraction_provided, 'fraction')
             args.fee_provided = round(D(fee_fraction_provided) * D(give_quantity) * D(config.UNIT))
-            print('Fee provided: {} {}'.format(util.value_out(args.fee_provided, config.BTC), config.BTC))
+            print(f'Fee provided: {util.value_out(args.fee_provided, config.BTC)} {config.BTC}')
         elif args.get_asset == config.BTC:
             args.fee_provided = 0
             fee_fraction_required = util.value_in(args.fee_fraction_required, 'fraction')
             args.fee_required = round(D(fee_fraction_required) * D(get_quantity) * D(config.UNIT))
-            print('Fee required: {} {}'.format(util.value_out(args.fee_required, config.BTC), config.BTC))
+            print(f'Fee required: {util.value_out(args.fee_required, config.BTC)} {config.BTC}')
         else:
             args.fee_required = 0
             args.fee_provided = 0
@@ -219,8 +219,8 @@ def prepare_args(args, action):
         args.wager = util.value_in(args.wager, 'XCP')
         random, move_random_hash = generate_move_random_hash(args.move)
         setattr(args, 'move_random_hash', move_random_hash)
-        print('random: {}'.format(random))
-        print('move_random_hash: {}'.format(move_random_hash))
+        print(f'random: {random}')
+        print(f'move_random_hash: {move_random_hash}')
 
     return args
 
@@ -262,7 +262,7 @@ def check_transaction(method, params, tx_hex):
         necessary_fee = ceil(((len(tx_hex) / 2) / 1024)) * fee_per_kb # TODO
 
     if fee > necessary_fee:
-        raise exceptions.TransactionError('Incorrect fee ({} > {})'.format(fee, necessary_fee))
+        raise exceptions.TransactionError(f'Incorrect fee ({fee} > {necessary_fee})')
 
 def compose_transaction(args, message_name, param_names):
     args = prepare_args(args, message_name)
@@ -279,7 +279,7 @@ def compose_transaction(args, message_name, param_names):
                 pubkeys += get_pubkeys(address)
     params['pubkey'] = pubkeys
 
-    method = 'create_{}'.format(message_name)
+    method = f'create_{message_name}'
     unsigned_tx_hex = util.api(method, params)
 
     # check_transaction(method, params, unsigned_tx_hex)

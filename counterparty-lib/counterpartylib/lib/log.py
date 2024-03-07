@@ -94,15 +94,15 @@ def set_up(logger, verbose=False, logfile=None, console_logfilter=None, quiet=Tr
         else:
             fileh = logging.handlers.RotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
         fileh.setLevel(logging.DEBUG)
-        LOGFORMAT = '%(asctime)s [%(levelname)s] %(message)s'
-        formatter = logging.Formatter(LOGFORMAT, '%Y-%m-%d-T%H:%M:%S%z')
+        log_format = '%(asctime)s [%(levelname)s] %(message)s'
+        formatter = logging.Formatter(log_format, '%Y-%m-%d-T%H:%M:%S%z')
         fileh.setFormatter(formatter)
         logger.addHandler(fileh)
 
     if LOGGING_SETUP:
         if logfile and not LOGGING_TOFILE_SETUP:
-             set_up_file_logging()
-             LOGGING_TOFILE_SETUP = True
+            set_up_file_logging()
+            LOGGING_TOFILE_SETUP = True
         logger.getChild('log.set_up').debug('logging already setup')
         return
     LOGGING_SETUP = True
@@ -119,10 +119,10 @@ def set_up(logger, verbose=False, logfile=None, console_logfilter=None, quiet=Tr
     console = logging.StreamHandler()
     console.setLevel(log_level)
 
-    # only add [%(name)s] to LOGFORMAT if we're using console_logfilter
-    LOGFORMAT = '%(log_color)s[%(asctime)s][%(levelname)s]' + ('' if console_logfilter is None else '[%(name)s]') + ' %(message)s%(reset)s'
-    LOGCOLORS = {'WARNING': 'yellow', 'ERROR': 'red', 'CRITICAL': 'red'}
-    formatter = ColoredFormatter(LOGFORMAT, "%Y-%m-%d %H:%M:%S", log_colors=LOGCOLORS)
+    # only add [%(name)s] to log_format if we're using console_logfilter
+    log_format = '%(log_color)s[%(asctime)s][%(levelname)s]' + ('' if console_logfilter is None else '[%(name)s]') + ' %(message)s%(reset)s'
+    log_colors = {'WARNING': 'yellow', 'ERROR': 'red', 'CRITICAL': 'red'}
+    formatter = ColoredFormatter(log_format, "%Y-%m-%d %H:%M:%S", log_colors=log_colors)
     console.setFormatter(formatter)
     logger.addHandler(console)
 
@@ -228,69 +228,70 @@ def log (db, command, category, bindings):
 
     if command == 'update':
         if category == 'order':
-            logger.debug('Database: set status of order {} to {}.'.format(bindings['tx_hash'], bindings['status']))
+            logger.debug(f"Database: set status of order {bindings['tx_hash']} to {bindings['status']}.")
         elif category == 'bet':
-            logger.debug('Database: set status of bet {} to {}.'.format(bindings['tx_hash'], bindings['status']))
+            logger.debug(f"Database: set status of bet {bindings['tx_hash']} to {bindings['status']}.")
         elif category == 'order_matches':
-            logger.debug('Database: set status of order_match {} to {}.'.format(bindings['order_match_id'], bindings['status']))
+            logger.debug(f"Database: set status of order_match {bindings['order_match_id']} to {bindings['status']}.")
         elif category == 'bet_matches':
-            logger.debug('Database: set status of bet_match {} to {}.'.format(bindings['bet_match_id'], bindings['status']))
+            logger.debug(f"Database: set status of bet_match {bindings['bet_match_id']} to {bindings['status']}.")
         elif category == 'dispensers':
             escrow_quantity = ''
             divisible = ledger.get_asset_info(db, bindings['asset'])['divisible']
-            
+
             if "escrow_quantity" in bindings:
                 if divisible:
-                    escrow_quantity = "{:.8f}".format(bindings["escrow_quantity"]/config.UNIT)
-                else:                
+                    quantity = bindings["escrow_quantity"]/config.UNIT
+                    escrow_quantity = f"{quantity:.8f}"
+                else:
                     escrow_quantity = bindings["escrow_quantity"]
-            
+
             if ("action" in bindings) and bindings["action"] == 'refill dispenser':
-                logger.info("Dispenser: {} refilled a dispenser with {} {}".format(bindings["source"],escrow_quantity,bindings["asset"]))
+                logger.info(f"Dispenser: {bindings['source']} refilled a dispenser with {escrow_quantity} {bindings['asset']}")
             elif "prev_status" in bindings: #There was a dispense
                 if bindings["prev_status"] == 0:
                     if bindings["status"] == 10:
                         if bindings["closing_reason"] == "no_more_to_give" or bindings["closing_reason"] == "depleted":
-                            logger.info("Dispenser: {} closed dispenser for {} (dispenser empty)".format(bindings["source"],bindings["asset"]))
+                            logger.info(f"Dispenser: {bindings['source']} closed dispenser for {bindings['asset']} (dispenser empty)")
                         elif bindings["closing_reason"] == "max_dispenses_reached":
-                            logger.info("Dispenser: {} closed dispenser for {} (dispenser reached max dispenses limit)".format(bindings["source"],bindings["asset"]))
-                        
+                            logger.info(f"Dispenser: {bindings['source']} closed dispenser for {bindings['asset']} (dispenser reached max dispenses limit)")
+
             elif bindings["status"] == 10 or bindings["status"] == 11: #Address closed the dispenser
-            
+
                 if bindings["status"] == 10:
                     operator_string = "operator closed"
-                else:    
+                else:
                     operator_string = "operator marked the dispenser to close it"
-            
+
                 if ledger.enabled("dispenser_origin_permission_extended", bindings['block_index']) and ("origin" in bindings) and bindings['source'] != bindings['origin']:
                     if bindings["status"] == 10:
                         operator_string = "closed by origin"
-                    else:    
+                    else:
                         operator_string = "marked to close by origin"
-            
-                logger.info("Dispenser: {} closed dispenser for {} ({})".format(bindings["source"],bindings["asset"],operator_string))
+
+                logger.info(f"Dispenser: {bindings['source']} closed dispenser for {bindings['asset']} ({operator_string})")
         # TODO: elif category == 'balances':
-            # logger.debug('Database: set balance of {} in {} to {}.'.format(bindings['address'], bindings['asset'], output(bindings['quantity'], bindings['asset']).split(' ')[0]))
+            # logger.debug(f"Database: set balance of {bindings['address']} in {bindings['asset']} to {output(bindings['quantity']}."")
 
     elif command == 'insert':
 
         if category == 'credits':
-            logger.debug('Credit: {} to {} #{}# <{}>'.format(output(bindings['quantity'], bindings['asset']), bindings['address'], bindings['action'], bindings['event']))
+            logger.debug(f"Credit: {output(bindings['quantity'], bindings['asset'])} to {bindings['address']} #{bindings['action']}# <{bindings['event']}>")
 
         elif category == 'debits':
-            logger.debug('Debit: {} from {} #{}# <{}>'.format(output(bindings['quantity'], bindings['asset']), bindings['address'], bindings['action'], bindings['event']))
+            logger.debug(f"Debit: {output(bindings['quantity'], bindings['asset'])} from {bindings['address']} #{bindings['action']}# <{bindings['event']}>")
 
         elif category == 'sends':
-            logger.info('Send: {} from {} to {} ({}) [{}]'.format(output(bindings['quantity'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash'], bindings['status']))
+            logger.info(f"Send: {output(bindings['quantity'], bindings['asset'])} from {bindings['source']} to {bindings['destination']} ({bindings['tx_hash']}) [{bindings['status']}]")
 
         elif category == 'orders':
-            logger.info('Order: {} ordered {} for {} in {} blocks, with a provided fee of {:.8f} {} and a required fee of {:.8f} {} ({}) [{}]'.format(bindings['source'], output(bindings['give_quantity'], bindings['give_asset']), output(bindings['get_quantity'], bindings['get_asset']), bindings['expiration'], bindings['fee_provided'] / config.UNIT, config.BTC, bindings['fee_required'] / config.UNIT, config.BTC, bindings['tx_hash'], bindings['status']))
+            logger.info(f"Order: {bindings['source']} ordered {output(bindings['give_quantity'], bindings['give_asset'])} for {output(bindings['get_quantity'], bindings['get_asset'])} in {bindings['expiration']} blocks, with a provided fee of {bindings['fee_provided'] / config.UNIT:.8f} {config.BTC} and a required fee of {bindings['fee_required'] / config.UNIT:.8f} {config.BTC} ({bindings['tx_hash']}) [{bindings['status']}]")
 
         elif category == 'order_matches':
-            logger.info('Order Match: {} for {} ({}) [{}]'.format(output(bindings['forward_quantity'], bindings['forward_asset']), output(bindings['backward_quantity'], bindings['backward_asset']), bindings['id'], bindings['status']))
+            logger.info(f"Order Match: {output(bindings['forward_quantity'], bindings['forward_asset'])} for {output(bindings['backward_quantity'], bindings['backward_asset'])} ({bindings['id']}) [{bindings['status']}]")
 
         elif category == 'btcpays':
-            logger.info('{} Payment: {} paid {} to {} for order match {} ({}) [{}]'.format(config.BTC, bindings['source'], output(bindings['btc_amount'], config.BTC), bindings['destination'], bindings['order_match_id'], bindings['tx_hash'], bindings['status']))
+            logger.info(f"{config.BTC} Payment: {bindings['source']} paid {output(bindings['btc_amount'], config.BTC)} to {bindings['destination']} for order match {bindings['order_match_id']} ({bindings['tx_hash']}) [{bindings['status']}]")
 
         elif category == 'issuances':
             if (ledger.get_asset_issuances_quantity(db, bindings["asset"]) == 0) or (bindings['quantity'] > 0): #This is the first issuance or the creation of more supply, so we have to log the creation of the token
@@ -304,53 +305,53 @@ def log (db, command, category, bindings):
                     quantity = ledger.value_out(db, bindings['quantity'], None, divisible=bindings['divisible'])
                 except Exception as e:
                     quantity = '?'
-            
+
                 if 'asset_longname' in bindings and bindings['asset_longname'] is not None:
-                    logger.info('Subasset Issuance: {} created {} of {} subasset {} as numeric asset {} ({}) [{}]'.format(bindings['source'], quantity, divisibility, bindings['asset_longname'], bindings['asset'], bindings['tx_hash'], bindings['status']))
+                    logger.info(f"Subasset Issuance: {bindings['source']} created {quantity} of {divisibility} subasset {bindings['asset_longname']} as numeric asset {bindings['asset']} ({bindings['tx_hash']}) [{bindings['status']}]")
                 else:
-                    logger.info('Issuance: {} created {} of {} asset {} ({}) [{}]'.format(bindings['source'], quantity, divisibility, bindings['asset'], bindings['tx_hash'], bindings['status']))
-            
+                    logger.info(f"Issuance: {bindings['source']} created {quantity} of {divisibility} asset {bindings['asset']} ({bindings['tx_hash']}) [{bindings['status']}]")
+
             if bindings['locked']:
                 lock_issuance = get_lock_issuance(db, bindings["asset"])
-                
+
                 if (lock_issuance == None) or (lock_issuance['tx_hash'] == bindings['tx_hash']):
-                    logger.info('Issuance: {} locked asset {} ({}) [{}]'.format(bindings['source'], bindings['asset'], bindings['tx_hash'], bindings['status']))
-            
+                    logger.info(f"Issuance: {bindings['source']} locked asset {bindings['asset']} ({bindings['tx_hash']}) [{bindings['status']}]")
+
             if bindings['transfer']:
-                logger.info('Issuance: {} transfered asset {} to {} ({}) [{}]'.format(bindings['source'], bindings['asset'], bindings['issuer'], bindings['tx_hash'], bindings['status']))
-            
+                logger.info(f"Issuance: {bindings['source']} transfered asset {bindings['asset']} to {bindings['issuer']} ({bindings['tx_hash']}) [{bindings['status']}]")
+
         elif category == 'broadcasts':
             if bindings['locked']:
-                logger.info('Broadcast: {} locked his feed ({}) [{}]'.format(bindings['source'], bindings['tx_hash'], bindings['status']))
+                logger.info(f"Broadcast: {bindings['source']} locked his feed ({bindings['tx_hash']}) [{bindings['status']}]")
             else:
-                logger.info('Broadcast: ' + bindings['source'] + ' at ' + isodt(bindings['timestamp']) + ' with a fee of {}%'.format(output(D(bindings['fee_fraction_int'] / 1e8), 'fraction')) + ' (' + bindings['tx_hash'] + ')' + ' [{}]'.format(bindings['status']))
+                logger.info(f"Broadcast: {bindings['source']} at {isodt(bindings['timestamp'])} with a fee of {output(D(bindings['fee_fraction_int'] / 1e8), 'fraction')}% ({bindings['tx_hash']}) [{bindings['status']}]")
 
         elif category == 'bets':
-            logger.info('Bet: {} against {}, by {}, on {}'.format(output(bindings['wager_quantity'], config.XCP), output(bindings['counterwager_quantity'], config.XCP), bindings['source'], bindings['feed_address']))
+            logger.info(f"Bet: {output(bindings['wager_quantity'], config.XCP)} against {output(bindings['counterwager_quantity'], config.XCP)}, by {bindings['source']}, on {bindings['feed_address']}")
 
         elif category == 'bet_matches':
             placeholder = ''
             if bindings['target_value'] >= 0:    # Only non‐negative values are valid.
                 placeholder = ' that ' + str(output(bindings['target_value'], 'value'))
             if bindings['leverage']:
-                placeholder += ', leveraged {}x'.format(output(bindings['leverage'] / 5040, 'leverage'))
-            logger.info('Bet Match: {} for {} against {} for {} on {} at {}{} ({}) [{}]'.format(util.BET_TYPE_NAME[bindings['tx0_bet_type']], output(bindings['forward_quantity'], config.XCP), util.BET_TYPE_NAME[bindings['tx1_bet_type']], output(bindings['backward_quantity'], config.XCP), bindings['feed_address'], isodt(bindings['deadline']), placeholder, bindings['id'], bindings['status']))
+                placeholder += f", leveraged {output(bindings['leverage'] / 5040, 'leverage')}x"
+            logger.info(f"Bet Match: {util.BET_TYPE_NAME[bindings['tx0_bet_type']]} for {output(bindings['forward_quantity'], config.XCP)} against {util.BET_TYPE_NAME[bindings['tx1_bet_type']]} for {output(bindings['backward_quantity'], config.XCP)} on {bindings['feed_address']} at {isodt(bindings['deadline'])}{placeholder} ({bindings['id']}) [{bindings['status']}]")
 
         elif category == 'dividends':
-            logger.info('Dividend: {} paid {} per unit of {} ({}) [{}]'.format(bindings['source'], output(bindings['quantity_per_unit'], bindings['dividend_asset']), bindings['asset'], bindings['tx_hash'], bindings['status']))
+            logger.info(f"Dividend: {bindings['source']} paid {output(bindings['quantity_per_unit'], bindings['dividend_asset'])} per unit of {bindings['asset']} ({bindings['tx_hash']}) [{bindings['status']}]")
 
         elif category == 'burns':
-            logger.info('Burn: {} burned {} for {} ({}) [{}]'.format(bindings['source'], output(bindings['burned'], config.BTC), output(bindings['earned'], config.XCP), bindings['tx_hash'], bindings['status']))
+            logger.info(f"Burn: {bindings['source']} burned {output(bindings['burned'], config.BTC)} for {output(bindings['earned'], config.XCP)} ({bindings['tx_hash']}) [{bindings['status']}]")
 
         elif category == 'cancels':
-            logger.info('Cancel: {} ({}) [{}]'.format(bindings['offer_hash'], bindings['tx_hash'], bindings['status']))
+            logger.info(f"Cancel: {bindings['offer_hash']} ({bindings['tx_hash']}) [{bindings['status']}]")
 
         elif category == 'rps':
-            log_message = 'RPS: {} opens game with {} possible moves and a wager of {}'.format(bindings['source'], bindings['possible_moves'], output(bindings['wager'], 'XCP'))
+            log_message = f"RPS: {bindings['source']} opens game with {bindings['possible_moves']} possible moves and a wager of {output(bindings['wager'], 'XCP')}"
             logger.info(log_message)
 
         elif category == 'rps_matches':
-            log_message = 'RPS Match: {} is playing a {}-moves game with {} with a wager of {} ({}) [{}]'.format(bindings['tx0_address'], bindings['possible_moves'], bindings['tx1_address'], output(bindings['wager'], 'XCP'), bindings['id'], bindings['status'])
+            log_message = f"RPS Match: {bindings['tx0_address']} is playing a {bindings['possible_moves']}-moves game with {bindings['tx1_address']} with a wager of {output(bindings['wager'], 'XCP')} ({bindings['id']}) [{bindings['status']}]"
             logger.info(log_message)
 
         elif category == 'rpsresolves':
@@ -359,22 +360,22 @@ def log (db, command, category, bindings):
                 rps_matches = ledger.get_rps_match(db, id=bindings['rps_match_id'])
                 assert len(rps_matches) == 1
                 rps_match = rps_matches[0]
-                log_message = 'RPS Resolved: {} is playing {} on a {}-moves game with {} with a wager of {} ({}) [{}]'.format(rps_match['tx0_address'], bindings['move'], rps_match['possible_moves'], rps_match['tx1_address'], output(rps_match['wager'], 'XCP'), rps_match['id'], rps_match['status'])
+                log_message = f"RPS Resolved: {rps_match['tx0_address']} is playing {bindings['move']} on a {rps_match['possible_moves']}-moves game with {rps_match['tx1_address']} with a wager of {output(rps_match['wager'], 'XCP')} ({rps_match['id']}) [{rps_match['status']}]"
             else:
-                log_message = 'RPS Resolved: {} [{}]'.format(bindings['tx_hash'], bindings['status'])
+                log_message = f"RPS Resolved: {bindings['tx_hash']} [{bindings['status']}]"
             logger.info(log_message)
 
         elif category == 'order_expirations':
-            logger.info('Expired order: {}'.format(bindings['order_hash']))
+            logger.info(f"Expired order: {bindings['order_hash']}")
 
         elif category == 'order_match_expirations':
-            logger.info('Expired Order Match awaiting payment: {}'.format(bindings['order_match_id']))
+            logger.info(f"Expired Order Match awaiting payment: {bindings['order_match_id']}")
 
         elif category == 'bet_expirations':
-            logger.info('Expired bet: {}'.format(bindings['bet_hash']))
+            logger.info(f"Expired bet: {bindings['bet_hash']}")
 
         elif category == 'bet_match_expirations':
-            logger.info('Expired Bet Match: {}'.format(bindings['bet_match_id']))
+            logger.info(f"Expired Bet Match: {bindings['bet_match_id']}")
 
         elif category == 'bet_match_resolutions':
             # DUPE
@@ -383,18 +384,18 @@ def log (db, command, category, bindings):
 
             if bindings['bet_match_type_id'] == cfd_type_id:
                 if bindings['settled']:
-                    logger.info('Bet Match Settled: {} credited to the bull, {} credited to the bear, and {} credited to the feed address ({})'.format(output(bindings['bull_credit'], config.XCP), output(bindings['bear_credit'], config.XCP), output(bindings['fee'], config.XCP), bindings['bet_match_id']))
+                    logger.info(f"Bet Match Settled: {output(bindings['bull_credit'], config.XCP)} credited to the bull, {output(bindings['bear_credit'], config.XCP)} credited to the bear, and {output(bindings['fee'], config.XCP)} credited to the feed address ({bindings['bet_match_id']})")
                 else:
-                    logger.info('Bet Match Force‐Liquidated: {} credited to the bull, {} credited to the bear, and {} credited to the feed address ({})'.format(output(bindings['bull_credit'], config.XCP), output(bindings['bear_credit'], config.XCP), output(bindings['fee'], config.XCP), bindings['bet_match_id']))
+                    logger.info(f"Bet Match Force‐Liquidated: {output(bindings['bull_credit'], config.XCP)} credited to the bull, {output(bindings['bear_credit'], config.XCP)} credited to the bear, and {output(bindings['fee'], config.XCP)} credited to the feed address ({bindings['bet_match_id']})")
 
             elif bindings['bet_match_type_id'] == equal_type_id:
-                logger.info('Bet Match Settled: {} won the pot of {}; {} credited to the feed address ({})'.format(bindings['winner'], output(bindings['escrow_less_fee'], config.XCP), output(bindings['fee'], config.XCP), bindings['bet_match_id']))
+                logger.info(f"Bet Match Settled: {bindings['winner']} won the pot of {output(bindings['escrow_less_fee'], config.XCP)}; {output(bindings['fee'], config.XCP)} credited to the feed address ({bindings['bet_match_id']})")
 
         elif category == 'rps_expirations':
-            logger.info('Expired RPS: {}'.format(bindings['rps_hash']))
+            logger.info(f"Expired RPS: {bindings['rps_hash']}")
 
         elif category == 'rps_match_expirations':
-            logger.info('Expired RPS Match: {}'.format(bindings['rps_match_id']))
+            logger.info(f"Expired RPS Match: {bindings['rps_match_id']}")
 
         elif category == 'destructions':
 
@@ -402,11 +403,11 @@ def log (db, command, category, bindings):
                 asset_info = ledger.get_asset_info(db, bindings['asset'])
                 quantity = bindings['quantity']
                 if asset_info['divisible']:
-                    quantity = "{:.8f}".format(quantity/config.UNIT)
+                    quantity = f"{quantity/config.UNIT:.8f}"
             except IndexError as e:
                 quantity = '?'
 
-            logger.info('Destruction: {} destroyed {} {} with tag ‘{}’({}) [{}]'.format(bindings['source'], quantity, bindings['asset'], bindings['tag'], bindings['tx_hash'], bindings['status']))
+            logger.info(f"Destruction: {bindings['source']} destroyed {quantity} {bindings['asset']} with tag ‘{bindings['tag']}’({bindings['tx_hash']}) [{bindings['status']}]")
 
         elif category == 'dispensers':
             each_price = bindings['satoshirate']
@@ -414,53 +415,53 @@ def log (db, command, category, bindings):
             dispenser_label = 'dispenser'
             escrow_quantity = bindings['escrow_quantity']
             give_quantity = bindings['give_quantity']
-            
+
             if (bindings['oracle_address'] != None) and ledger.enabled('oracle_dispensers'):
-                each_price = "{:.2f}".format(each_price/100.0)
+                each_price = f"{each_price/100.0:.2f}"
                 oracle_last_price, oracle_fee, currency, oracle_last_updated = ledger.get_oracle_last_price(db, bindings['oracle_address'], bindings['block_index'])
-                dispenser_label = 'oracle dispenser using {}'.format(bindings['oracle_address'])
+                dispenser_label = f"oracle dispenser using {bindings['oracle_address']}"
             else:
-                each_price = "{:.8f}".format(each_price/config.UNIT) 
-            
+                each_price = f"{each_price/config.UNIT:.8f}"
+
             divisible = ledger.get_asset_info(db, bindings['asset'])['divisible']
-            
+
             if divisible:
-                escrow_quantity = "{:.8f}".format(escrow_quantity/config.UNIT) 
-                give_quantity = "{:.8f}".format(give_quantity/config.UNIT) 
-            
+                escrow_quantity = f"{escrow_quantity/config.UNIT:.8f}"
+                give_quantity = f"{give_quantity/config.UNIT:.8f}"
+
             if bindings['status'] == 0:
-                logger.info('Dispenser: {} opened a {} for asset {} with {} balance, giving {} {} for each {} {}'.format(bindings['source'], dispenser_label, bindings['asset'], escrow_quantity, give_quantity, bindings['asset'], each_price, currency))
+                logger.info(f"Dispenser: {bindings['source']} opened a {dispenser_label} for asset {bindings['asset']} with {escrow_quantity} balance, giving {give_quantity} {bindings['asset']} for each {each_price} {currency}")
             elif bindings['status'] == 1:
-                logger.info('Dispenser: {} (empty address) opened a {} for asset {} with {} balance, giving {} {} for each {} {}'.format(bindings['source'], dispenser_label, bindings['asset'], escrow_quantity, give_quantity, bindings['asset'], each_price, currency))
+                logger.info(f"Dispenser: {bindings['source']} (empty address) opened a {dispenser_label} for asset {bindings['asset']} with {escrow_quantity} balance, giving {give_quantity} {bindings['asset']} for each {each_price} {currency}")
             elif bindings['status'] == 10:
-                logger.info('Dispenser: {} closed a {} for asset {}'.format(bindings['source'], dispenser_label, bindings['asset']))
+                logger.info(f"Dispenser: {bindings['source']} closed a {dispenser_label} for asset {bindings['asset']}")
 
         elif category == 'dispenses':
             dispensers = ledger.get_dispenser(db, tx_hash=bindings['dispenser_tx_hash'])
             dispenser = dispensers[0]
-        
+
             if (dispenser["oracle_address"] != None) and ledger.enabled('oracle_dispensers'):
                 tx_btc_amount = get_tx_info(db, bindings['tx_hash'])/config.UNIT
                 oracle_last_price, oracle_fee, oracle_fiat_label, oracle_last_price_updated = ledger.get_oracle_last_price(db, dispenser["oracle_address"], bindings['block_index'])
                 fiatpaid = round(tx_btc_amount*oracle_last_price,2)
-                
-                logger.info('Dispense: {} from {} to {} for {:.8f} {} ({} {}) ({})'.format(output(bindings['dispense_quantity'], bindings['asset']), bindings['source'], bindings['destination'], tx_btc_amount, config.BTC, fiatpaid, oracle_fiat_label, bindings['tx_hash']))
+
+                logger.info(f"Dispense: {output(bindings['dispense_quantity'], bindings['asset'])} from {bindings['source']} to {bindings['destination']} for {tx_btc_amount:.8f} {config.BTC} ({fiatpaid} {oracle_fiat_label}) ({bindings['tx_hash']})")
             else:
-                logger.info('Dispense: {} from {} to {} ({})'.format(output(bindings['dispense_quantity'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash']))
+                logger.info(f"Dispense: {output(bindings['dispense_quantity'], bindings['asset'])} from {bindings['source']} to {bindings['destination']} ({bindings['tx_hash']})")
 
     cursor.close()
 
 def get_lock_issuance(db, asset):
     issuances = ledger.get_issuances(db, status='valid', asset=asset, locked=True, first=True)
-    
+
     if len(issuances) > 0:
         return issuances[0]
-    
+
     return None
 
 
 def get_tx_info(db, tx_hash):
     transactions = ledger.get_transactions(db, tx_hash=tx_hash)
     transaction = transactions[0]
-    
+
     return transaction["btc_amount"]

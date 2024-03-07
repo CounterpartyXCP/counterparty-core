@@ -76,7 +76,7 @@ def exectracer(cursor, sql, bindings):
             if isinstance(bindings, dict) and 'memo' in bindings: del bindings['memo']
 
         sorted_bindings = sorted(bindings.items()) if isinstance(bindings, dict) else [bindings,]
-        BLOCK_MESSAGES.append('{}{}{}'.format(command, category, sorted_bindings))
+        BLOCK_MESSAGES.append(f'{command}{category}{sorted_bindings}')
 
     return True
 
@@ -85,7 +85,7 @@ class DatabaseIntegrityError(exceptions.DatabaseError):
     pass
 def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
     """Connects to the SQLite database, returning a db `Connection` object"""
-    logger.debug('Creating connection to `{}`.'.format(config.DATABASE))
+    logger.debug(f'Creating connection to `{config.DATABASE}`.')
 
     if read_only:
         db = apsw.Connection(config.DATABASE, flags=apsw.SQLITE_OPEN_READONLY)
@@ -101,7 +101,7 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
         rows = list(cursor.execute('''PRAGMA foreign_key_check'''))
         if rows:
             for row in rows:
-                logger.debug('Foreign Key Error: {}'.format(row))
+                logger.debug(f'Foreign Key Error: {row}')
             raise exceptions.DatabaseError('Foreign key check failed.')
 
         logger.info('Foreign key check completed.')
@@ -149,7 +149,7 @@ def version(db):
         version_minor = user_version
         version_major = config.VERSION_MAJOR
         user_version = (config.VERSION_MAJOR * 1000) + version_minor
-        cursor.execute('PRAGMA user_version = {}'.format(user_version))
+        cursor.execute(f'PRAGMA user_version = {user_version}')
     else:
         version_minor = user_version % 1000
         version_major = user_version // 1000
@@ -159,7 +159,7 @@ def version(db):
 def update_version(db):
     cursor = db.cursor()
     user_version = (config.VERSION_MAJOR * 1000) + config.VERSION_MINOR
-    cursor.execute('PRAGMA user_version = {}'.format(user_version)) # Syntax?!
+    cursor.execute(f'PRAGMA user_version = {user_version}') # Syntax?!
     logger.info('Database version number updated.')
 
 
@@ -202,9 +202,9 @@ def drop_indexes(cursor, indexes):
     for index_name in [indexes]:
         cursor.execute(f'''DROP INDEX IF EXISTS {index_name}''')
 
-
+# called by contracts, no sql injection
 def copy_old_table(cursor, table_name, new_create_query):
     cursor.execute(f'''ALTER TABLE {table_name} RENAME TO old_{table_name}''')
     cursor.execute(new_create_query)
-    cursor.execute(f'''INSERT INTO {table_name} SELECT * FROM old_{table_name}''')
+    cursor.execute(f'''INSERT INTO {table_name} SELECT * FROM old_{table_name}''') # nosec B608
     cursor.execute(f'''DROP TABLE old_{table_name}''')

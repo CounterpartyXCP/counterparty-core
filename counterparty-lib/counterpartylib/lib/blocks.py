@@ -65,10 +65,10 @@ TABLES = ['balances', 'credits', 'debits', 'messages'] + \
           'destructions', 'assets', 'addresses', 'sweeps', 'dispensers', 'dispenses',
           'dispenser_refills']
 
+MAINNET_BURNS = {}
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(CURR_DIR + '/../mainnet_burns.csv', 'r') as f:
     mainnet_burns_reader = csv.DictReader(f)
-    MAINNET_BURNS = {}
     for line in mainnet_burns_reader:
         MAINNET_BURNS[line['tx_hash']] = line
 
@@ -146,7 +146,7 @@ def parse_tx(db, tx):
                                            WHERE tx_hash=$tx_hash''',
                                         {'supported': False, 'tx_hash': tx['tx_hash']})
                 if tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
-                    logger.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
+                    logger.info(f"Unsupported transaction: hash {tx['tx_hash']}; data {tx['data']}")
                 cursor.close()
                 return False
 
@@ -156,7 +156,7 @@ def parse_tx(db, tx):
 
             return True
     except Exception as e:
-        raise exceptions.ParseTransactionError("%s" % e)
+        raise exceptions.ParseTransactionError(f"{e}")
     finally:
         cursor.close()
 
@@ -192,11 +192,9 @@ def parse_block(db, block_index, block_time,
     for tx in list(cursor):
         try:
             parse_tx(db, tx)
-            txlist.append('{}{}{}{}{}{}'.format(tx['tx_hash'], tx['source'], tx['destination'],
-                                                tx['btc_amount'], tx['fee'],
-                                                binascii.hexlify(tx['data']).decode('UTF-8')))
+            txlist.append(f"{tx['tx_hash']}{tx['source']}{tx['destination']}{tx['btc_amount']}{tx['fee']}{binascii.hexlify(tx['data']).decode('UTF-8')}")
         except exceptions.ParseTransactionError as e:
-            logger.warning('ParseTransactionError for tx %s: %s' % (tx['tx_hash'], e))
+            logger.warning(f"ParseTransactionError for tx {tx['tx_hash']}: {e}")
             raise e
             #pass
 
@@ -253,7 +251,7 @@ def initialise(db):
         cursor.execute('''ALTER TABLE blocks ADD COLUMN previous_block_hash TEXT''')
     if 'difficulty' not in block_columns:
         cursor.execute('''ALTER TABLE blocks ADD COLUMN difficulty TEXT''')
-    
+
     database.create_indexes(cursor, 'blocks', [
         ['block_index'],
         ['block_index', 'block_hash'],
@@ -264,7 +262,7 @@ def initialise(db):
     blocks = list(cursor)
     if len(blocks):
         if blocks[0]['block_index'] != config.BLOCK_FIRST:
-            raise exceptions.DatabaseError('First block in database is not block {}.'.format(config.BLOCK_FIRST))
+            raise exceptions.DatabaseError(f'First block in database is not block {config.BLOCK_FIRST}.')
 
     # Transactions
     cursor.execute('''CREATE TABLE IF NOT EXISTS transactions(
@@ -294,7 +292,6 @@ def initialise(db):
     cursor.execute('''DELETE FROM blocks WHERE block_index < ?''', (config.BLOCK_FIRST,))
     cursor.execute('''DELETE FROM transactions WHERE block_index < ?''', (config.BLOCK_FIRST,))
 
-
     # (Valid) debits
     cursor.execute('''CREATE TABLE IF NOT EXISTS debits(
                       block_index INTEGER,
@@ -309,7 +306,7 @@ def initialise(db):
     debits_columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(debits)''')]
     if 'tx_index' not in debits_columns:
         cursor.execute('''ALTER TABLE debits ADD COLUMN tx_index INTEGER''')
-    
+
     database.create_indexes(cursor, 'debits', [
         ['address'],
         ['asset'],
@@ -329,7 +326,7 @@ def initialise(db):
     credits_columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(credits)''')]
     if 'tx_index' not in credits_columns:
         cursor.execute('''ALTER TABLE credits ADD COLUMN tx_index INTEGER''')
-    
+
     database.create_indexes(cursor, 'credits', [
         ['address'],
         ['asset'],
@@ -348,7 +345,7 @@ def initialise(db):
         cursor.execute('''ALTER TABLE balances ADD COLUMN block_index INTEGER''')
     if 'tx_index' not in balances_columns:
         cursor.execute('''ALTER TABLE balances ADD COLUMN tx_index INTEGER''')
-    
+
     database.create_indexes(cursor, 'balances', [
         ['address', 'asset'],
         ['address'],
@@ -422,7 +419,7 @@ def initialise(db):
                       bindings TEXT,
                       timestamp INTEGER)
                   ''')
-                      # TODO: FOREIGN KEY (block_index) REFERENCES blocks(block_index) DEFERRABLE INITIALLY DEFERRED)
+    # TODO: FOREIGN KEY (block_index) REFERENCES blocks(block_index) DEFERRABLE INITIALLY DEFERRED)
     database.create_indexes(cursor, 'messages', [
         ['block_index'],
         ['block_index', 'message_index'],
@@ -430,7 +427,7 @@ def initialise(db):
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS transaction_outputs(
                         tx_index,
-                        tx_hash TEXT, 
+                        tx_hash TEXT,
                         block_index INTEGER,
                         out_index INTEGER,
                         destination TEXT,
@@ -493,7 +490,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
         assert block_index == ledger.CURRENT_BLOCK_INDEX
 
     if source and (data or destination == config.UNSPENDABLE or dispensers_outs):
-        logger.debug('Saving transaction: {}'.format(tx_hash))
+        logger.debug(f'Saving transaction: {tx_hash}')
         cursor.execute('''INSERT INTO transactions(
                             tx_index,
                             tx_hash,
@@ -543,8 +540,9 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
 
 
 def clean_table_from(cursor, table, block_index):
-    logger.info('Cleaning table {} from block_index {}...'.format(table, block_index))
-    cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
+    logger.info(f'Cleaning table {table} from block_index {block_index}...')
+    # internal function, no sql injection here
+    cursor.execute(f'''DELETE FROM {table} WHERE block_index > ?''', (block_index,)) # nosec B608
 
 
 def clean_messages_tables(cursor, block_index=0):
@@ -572,9 +570,9 @@ def rollback(db, block_index=0):
         clean_messages_tables(cursor, block_index=block_index)
         clean_transactions_tables(cursor, block_index=block_index)
         cursor.close()
-        logger.info('Database rolled back to block_index {}'.format(block_index))
+        logger.info(f'Database rolled back to block_index {block_index}')
     print(f'{OK_GREEN} {step}')
-    print('Rollback done in {:.2f}s'.format(time.time() - start_time))
+    print(f'Rollback done in {time.time() - start_time:.2f}s')
 
 
 def generate_progression_message(block, start_time_block_parse, start_time_all_blocks_parse, block_parsed_count, block_count, tx_index=None):
@@ -621,7 +619,7 @@ def reparse(db, block_index=0):
             )
             spinner.text = message
     print(f'{OK_GREEN} {message}')
-    print('All blocks reparsed in {:.2f}s'.format(time.time() - start_time_all_blocks_parse))
+    print(f'All blocks reparsed in {time.time() - start_time_all_blocks_parse:.2f}s')
 
 
 def last_db_index(db):
@@ -649,7 +647,6 @@ def get_next_tx_index(db):
         tx_index = 0
     cursor.close()
     return tx_index
-
 
 
 class MempoolError(Exception):
@@ -725,7 +722,7 @@ def follow(db):
                 if current_index == config.BLOCK_FIRST:
                     break
 
-                logger.debug('Checking that block {} is not an orphan.'.format(current_index))
+                logger.debug(f'Checking that block {current_index} is not an orphan.')
                 # Backend parent hash.
                 current_hash = backend.getblockhash(current_index)
                 current_cblock = backend.getblock(current_hash)
@@ -750,7 +747,7 @@ def follow(db):
             # Rollback for reorganisation.
             if requires_rollback:
                 # Record reorganisation.
-                logger.warning('Blockchain reorganisation at block {}.'.format(current_index))
+                logger.warning(f'Blockchain reorganisation at block {current_index}.')
                 log.message(db, block_index, 'reorg', None, {'block_index': current_index})
 
                 # Rollback the DB.
@@ -764,9 +761,9 @@ def follow(db):
             # TODO: check.software_version() # This is too much!
 
             # Get and parse transactions in this block (atomically).
-            # logger.debug('Blockchain cache size: {}'.format(len(prefetcher.BLOCKCHAIN_CACHE)))
+            # logger.debug(f'Blockchain cache size: {len(prefetcher.BLOCKCHAIN_CACHE)}')
             if current_index in prefetcher.BLOCKCHAIN_CACHE:
-                # logger.debug('Blockchain cache hit! Block index: {}'.format(current_index))
+                # logger.debug(f'Blockchain cache hit! Block index: {current_index}')
                 block_hash = prefetcher.BLOCKCHAIN_CACHE[current_index]['block_hash']
                 txhash_list = prefetcher.BLOCKCHAIN_CACHE[current_index]['txhash_list']
                 raw_transactions = prefetcher.BLOCKCHAIN_CACHE[current_index]['raw_transactions']
@@ -776,7 +773,7 @@ def follow(db):
                 del prefetcher.BLOCKCHAIN_CACHE[current_index]
             else:
                 if block_index < block_count - 100:
-                    logger.warning('Blockchain cache miss :/ Block index: {}'.format(current_index))
+                    logger.warning(f'Blockchain cache miss :/ Block index: {current_index}')
                 block_hash = backend.getblockhash(current_index)
                 block = backend.getblock(block_hash)
                 previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
@@ -819,10 +816,10 @@ def follow(db):
                 tx_h = not_supported_sorted.popleft()[1]
                 del not_supported[tx_h]
 
-            logger.info('Block: %s (%ss, hashes: L:%s / TX:%s / M:%s%s)' % (
-                str(block_index), "{:.2f}".format(time.time() - start_time, 3),
-                new_ledger_hash[-5:], new_txlist_hash[-5:], new_messages_hash[-5:],
-                (' [overwrote %s]' % found_messages_hash) if found_messages_hash and found_messages_hash != new_messages_hash else ''))
+            duration = time.time() - start_time
+            overwrote_hash = found_messages_hash if found_messages_hash and found_messages_hash != new_messages_hash else ''
+            overwrote = f'[overwrote {overwrote_hash}]' if overwrote_hash else ''
+            logger.info(f'Block: {block_index} ({duration:.2f}, hashes: L:{new_ledger_hash[-5:]} / TX:{new_txlist_hash[-5:]} / M:{new_messages_hash[-5:]}{overwrote})')
 
             # Increment block index.
             block_count = backend.getblockcount()
@@ -879,15 +876,15 @@ def follow(db):
 
             parsed_txs_count = 0
             for tx_hash in parse_txs:
-                
+
                 # Get block count everytime we parse some mempool_txs. If there is a new block, we just interrupt this process
                 if parsed_txs_count % 100 == 0:
                     if len(parse_txs) > 1000:
-                        logger.info("Mempool parsed txs count:{} from {}".format(parsed_txs_count, len(parse_txs)))
-                    
+                        logger.info(f"Mempool parsed txs count:{parsed_txs_count} from {len(parse_txs)}")
+
                     try:
                         block_count = backend.getblockcount()
-                        
+
                         if block_index <= block_count:
                             logger.info("Mempool parsing interrupted, there are blocks to parse")
                             break #Interrupt the process if there is a new block to parse
@@ -895,7 +892,7 @@ def follow(db):
                         # Keep parsing what we have, anyway if there is a temporary problem with the server,
                         # normal parse won't work
                         pass
-            
+
                 try:
                     with db:
                         # List the fake block.
@@ -910,8 +907,8 @@ def follow(db):
 
                         tx_hex = raw_transactions[tx_hash]
                         if tx_hex is None:
-                          logger.debug('tx_hash %s not found in backend.  Not adding to mempool.', (tx_hash, ))
-                          raise MempoolError
+                            logger.debug('tx_hash %s not found in backend.  Not adding to mempool.', (tx_hash, ))
+                            raise MempoolError
                         mempool_tx_index = list_tx(db, None, block_index, curr_time, tx_hash, tx_index=mempool_tx_index, tx_hex=tx_hex)
 
                         # Parse transaction.
@@ -940,11 +937,11 @@ def follow(db):
                         # Rollback.
                         raise MempoolError
                 except exceptions.ParseTransactionError as e:
-                    logger.warning('ParseTransactionError for tx %s: %s' % (tx_hash, e))
+                    logger.warning(f'ParseTransactionError for tx {tx_hash}: {e}')
                 except MempoolError:
                     pass
-                    
-                parsed_txs_count = parsed_txs_count + 1 
+
+                parsed_txs_count = parsed_txs_count + 1
 
             if parsed_txs_count < len(parse_txs):
                 continue #if parse didn't finish is an interruption
@@ -963,10 +960,7 @@ def follow(db):
             elapsed_time = time.time() - start_time
             sleep_time = config.BACKEND_POLL_INTERVAL - elapsed_time if elapsed_time <= config.BACKEND_POLL_INTERVAL else 0
 
-            logger.getChild('mempool').debug('Refresh mempool: %s XCP txs seen, out of %s total entries (took %ss, next refresh in %ss)' % (
-                len(xcp_mempool), len(raw_mempool),
-                "{:.2f}".format(elapsed_time, 3),
-                "{:.2f}".format(sleep_time, 3)))
+            logger.getChild('mempool').debug(f'Refresh mempool: {len(xcp_mempool)} XCP txs seen, out of {len(raw_mempool)} total entries (took {elapsed_time:.2f}, next refresh in {sleep_time:.2f})')
 
             # Wait
             db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)

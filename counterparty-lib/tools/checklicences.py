@@ -93,5 +93,6 @@ def check_licenses():
                     not_allowed_packages[license_name].append(package)
     generate_sarif(not_allowed_packages)
 
+
 if __name__ == '__main__':
     check_licenses()
