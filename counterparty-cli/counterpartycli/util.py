@@ -121,19 +121,13 @@ def bootstrap(testnet=False, overwrite=True, ask_confirmation=False, quiet=False
 
     # Set Constants.
     if testnet:
-        if check.CONSENSUS_HASH_VERSION_TESTNET < 7:
-            bootstrap_url = 'https://counterparty.io/bootstrap/counterparty-db-testnet.latest.tar.gz'
-        else:
-            bootstrap_url = f'https://counterparty.io/bootstrap/counterparty-db-testnet-{check.CONSENSUS_HASH_VERSION_TESTNET}.latest.tar.gz'
-        tarball_path = os.path.join(tempfile.gettempdir(), 'counterpartyd-testnet-db.latest.tar.gz')
-        database_path = os.path.join(data_dir, f'{config.APP_NAME}.testnet.db')
+        bootstrap_url = 'https://bootstrap.counterparty.io/counterparty-testnet.latest.tar.gz'
+        tarball_path = os.path.join(tempfile.gettempdir(), 'counterparty-testnet.latest.tar.gz')
+        database_path = os.path.join(data_dir, '{}.testnet.db'.format(config.APP_NAME))
     else:
-        if check.CONSENSUS_HASH_VERSION_MAINNET < 3:
-            bootstrap_url = 'https://counterparty.io/bootstrap/counterparty-db.latest.tar.gz'
-        else:
-            bootstrap_url = f'https://counterparty.io/bootstrap/counterparty-db-{check.CONSENSUS_HASH_VERSION_MAINNET}.latest.tar.gz'
-        tarball_path = os.path.join(tempfile.gettempdir(), 'counterpartyd-db.latest.tar.gz')
-        database_path = os.path.join(data_dir, f'{config.APP_NAME}.db')
+        bootstrap_url = 'https://bootstrap.counterparty.io/counterparty.latest.tar.gz'
+        tarball_path = os.path.join(tempfile.gettempdir(), 'counterparty.latest.tar.gz')
+        database_path = os.path.join(data_dir, '{}.db'.format(config.APP_NAME))
 
     # Prepare Directory.
     if not os.path.exists(data_dir):
