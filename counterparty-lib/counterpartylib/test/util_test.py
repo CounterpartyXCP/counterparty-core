@@ -294,11 +294,11 @@ def prefill_rawtransactions_db(db):
     cursor.execute('DROP TABLE IF EXISTS raw_transactions')
     cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT, confirmations INT)')
     with open(CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
-            wallet_unspent = json.load(listunspent_test_file)
-            for output in wallet_unspent:
-                txid = output['txid']
-                tx = BlockchainParser().deserialize_tx(output['txhex'], True)
-                cursor.execute('INSERT INTO raw_transactions VALUES (?, ?, ?)', (txid, output['txhex'], output['confirmations']))
+        wallet_unspent = json.load(listunspent_test_file)
+        for output in wallet_unspent:
+            txid = output['txid']
+            tx = BlockchainParser().deserialize_tx(output['txhex'], True)
+            cursor.execute('INSERT INTO raw_transactions VALUES (?, ?, ?)', (txid, output['txhex'], output['confirmations']))
     cursor.close()
 
 
@@ -378,12 +378,12 @@ def mock_bitcoind_verbose_tx_output(tx, txid, confirmations):
 
     for idx, vout in enumerate(ctx.vout):
         if list(vout.scriptPubKey)[-1] == bitcoinlib.core.script.OP_CHECKMULTISIG:
-           pubkeys = list(vout.scriptPubKey)[1:-2]
-           addresses = []
-           for pubkey in pubkeys:
-               addr = str(bitcoinlib.wallet.P2PKHBitcoinAddress.from_pubkey(pubkey))
+            pubkeys = list(vout.scriptPubKey)[1:-2]
+            addresses = []
+            for pubkey in pubkeys:
+                addr = str(bitcoinlib.wallet.P2PKHBitcoinAddress.from_pubkey(pubkey))
 
-               addresses.append(addr)
+                addresses.append(addr)
         else:
             try:
                 addresses = [str(bitcoinlib.wallet.CBitcoinAddress.from_scriptPubKey(vout.scriptPubKey))]

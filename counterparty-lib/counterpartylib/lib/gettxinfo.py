@@ -104,8 +104,8 @@ def get_pubkeyhash(scriptpubkey, block_index):
 
 
 def is_witness_v0_keyhash(scriptpubkey):
-        """Returns true if this is a scriptpubkey for V0 P2WPKH. """
-        return len(scriptpubkey) == 22 and scriptpubkey[0:2] == b'\x00\x14'
+    """Returns true if this is a scriptpubkey for V0 P2WPKH. """
+    return len(scriptpubkey) == 22 and scriptpubkey[0:2] == b'\x00\x14'
 
 
 def get_address(scriptpubkey, block_index):

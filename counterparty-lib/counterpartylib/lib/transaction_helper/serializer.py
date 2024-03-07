@@ -47,7 +47,7 @@ OP_EQUAL = b'\x87'
 D = decimal.Decimal
 UTXO_LOCKS = None
 UTXO_LOCKS_PER_ADDRESS_MAXSIZE = 5000  # set higher than the max number of UTXOs we should expect to
-                                       # manage in an aging cache for any one source address, at any one period
+# manage in an aging cache for any one source address, at any one period
 
 def var_int (i):
     if i < 0xfd:

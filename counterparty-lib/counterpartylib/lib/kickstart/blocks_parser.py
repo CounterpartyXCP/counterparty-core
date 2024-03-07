@@ -220,7 +220,7 @@ class BlockchainParser():
         block_header = {}
         block_header['magic_bytes'] = vds.read_int32()
         #if block_header['magic_bytes'] != 118034699:
-         #   raise Exception('Not a block')
+        #   raise Exception('Not a block')
         block_header['block_size'] = vds.read_int32()
         header_start = vds.read_cursor
         block_header['version'] = vds.read_int32()

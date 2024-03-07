@@ -23,7 +23,7 @@ from counterparty_rs import utils
 def test_pycoin_rs():
 
     vector = [
-       ("4264cfd7eb65f8cbbdba98bd9815d5461fad8d7e", config.P2SH_ADDRESSVERSION_TESTNET, "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy"),
+        ("4264cfd7eb65f8cbbdba98bd9815d5461fad8d7e", config.P2SH_ADDRESSVERSION_TESTNET, "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy"),
        ("641327ad1b3abc18cb6f1650a225f49a47764c22", config.ADDRESSVERSION_TESTNET, "mpe6p9ah9a6yoK57Xd2GEn8D9EonbLLkWJ"),
        ("415354746bc11e9ef91efa85da59f0ad1df61a9d", config.ADDRESSVERSION_MAINNET, "16xQkLFxYZcGtzyGbHD7tmnaeHavD21Kw5"),
        ("edf98b439f45eb4e3239122488cab2773296499d", config.P2SH_ADDRESSVERSION_MAINNET, "3PPK1dRAerbVZRfkh9BhA1Zxq9HrG4rRwN"),

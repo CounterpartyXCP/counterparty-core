@@ -76,7 +76,7 @@ def initialise(db):
     # If sweep_hotfix activated, Create issuances copy, copy old data, drop old table, rename new table, recreate indexes
     #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS` nor can drop UNIQUE constraints
     if 'msg_index' not in columns:
-            cursor.execute('''CREATE TABLE IF NOT EXISTS new_issuances(
+        cursor.execute('''CREATE TABLE IF NOT EXISTS new_issuances(
                               tx_index INTEGER,
                               tx_hash TEXT,
                               msg_index INTEGER DEFAULT 0,
@@ -100,14 +100,14 @@ def initialise(db):
                               FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                               UNIQUE (tx_hash, msg_index))
                            ''')
-            cursor.execute('''INSERT INTO new_issuances(tx_index, tx_hash, msg_index,
+        cursor.execute('''INSERT INTO new_issuances(tx_index, tx_hash, msg_index,
                 block_index, asset, quantity, divisible, source, issuer, transfer, callable,
                 call_date, call_price, description, fee_paid, locked, status, asset_longname, reset)
                 SELECT tx_index, tx_hash, 0, block_index, asset, quantity, divisible, source,
                 issuer, transfer, callable, call_date, call_price, description, fee_paid,
                 locked, status, asset_longname, reset FROM issuances''', {})
-            cursor.execute('DROP TABLE issuances')
-            cursor.execute('ALTER TABLE new_issuances RENAME TO issuances')
+        cursor.execute('DROP TABLE issuances')
+        cursor.execute('ALTER TABLE new_issuances RENAME TO issuances')
 
     database.create_indexes(cursor, 'issuances', [
         ['block_index'],
@@ -544,7 +544,7 @@ def parse (db, tx, message, message_type_id):
                         'tag': "reset",
                         'status': "valid",
                         'reset': True,
-                       }
+                        }
                     sql = 'insert into destructions values(:tx_index, :tx_hash, :block_index, :source, :asset, :quantity, :tag, :status)'
                     issuance_parse_cursor.execute(sql, bindings)
 

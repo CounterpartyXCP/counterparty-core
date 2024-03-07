@@ -118,23 +118,23 @@ def decode_data_redeem_script(redeem_script, p2sh_is_segwit=False):
         redeem_script[38] == bitcoinlib.core.script.OP_DEPTH and \
         redeem_script[39] == bitcoinlib.core.script.OP_0 and \
         redeem_script[40] == bitcoinlib.core.script.OP_EQUAL:
-            # - OP_DROP [push] [33-byte pubkey] OP_CHECKSIGVERIFY [n] OP_DROP OP_DEPTH 0 OP_EQUAL
-            pubkey = redeem_script[2:35]
-            if p2sh_is_segwit:
-                source = script.pubkey_to_p2whash(pubkey)
-            else:
-                source = script.pubkey_to_pubkeyhash(pubkey)
-            redeem_script_is_valid = True
+        # - OP_DROP [push] [33-byte pubkey] OP_CHECKSIGVERIFY [n] OP_DROP OP_DEPTH 0 OP_EQUAL
+        pubkey = redeem_script[2:35]
+        if p2sh_is_segwit:
+            source = script.pubkey_to_p2whash(pubkey)
+        else:
+            source = script.pubkey_to_pubkeyhash(pubkey)
+        redeem_script_is_valid = True
     elif script_len > 41 and \
         redeem_script[0] == bitcoinlib.core.script.OP_DROP and \
         redeem_script[script_len-4] == bitcoinlib.core.script.OP_DROP and \
         redeem_script[script_len-3] == bitcoinlib.core.script.OP_DEPTH and \
         redeem_script[script_len-2] == bitcoinlib.core.script.OP_0 and \
         redeem_script[script_len-1] == bitcoinlib.core.script.OP_EQUAL:
-            # - OP_DROP {arbitrary multisig script} [n] OP_DROP OP_DEPTH 0 OP_EQUAL
-            pubkey = None
-            source = None
-            redeem_script_is_valid = True
+        # - OP_DROP {arbitrary multisig script} [n] OP_DROP OP_DEPTH 0 OP_EQUAL
+        pubkey = None
+        source = None
+        redeem_script_is_valid = True
     else:
         pubkey = None
         source = None

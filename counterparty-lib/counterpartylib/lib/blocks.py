@@ -420,7 +420,7 @@ def initialise(db):
                       bindings TEXT,
                       timestamp INTEGER)
                   ''')
-                      # TODO: FOREIGN KEY (block_index) REFERENCES blocks(block_index) DEFERRABLE INITIALLY DEFERRED)
+    # TODO: FOREIGN KEY (block_index) REFERENCES blocks(block_index) DEFERRABLE INITIALLY DEFERRED)
     database.create_indexes(cursor, 'messages', [
         ['block_index'],
         ['block_index', 'message_index'],
@@ -909,8 +909,8 @@ def follow(db):
 
                         tx_hex = raw_transactions[tx_hash]
                         if tx_hex is None:
-                          logger.debug('tx_hash %s not found in backend.  Not adding to mempool.', (tx_hash, ))
-                          raise MempoolError
+                            logger.debug('tx_hash %s not found in backend.  Not adding to mempool.', (tx_hash, ))
+                            raise MempoolError
                         mempool_tx_index = list_tx(db, None, block_index, curr_time, tx_hash, tx_index=mempool_tx_index, tx_hex=tx_hex)
 
                         # Parse transaction.

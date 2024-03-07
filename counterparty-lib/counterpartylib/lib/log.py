@@ -101,8 +101,8 @@ def set_up(logger, verbose=False, logfile=None, console_logfilter=None, quiet=Tr
 
     if LOGGING_SETUP:
         if logfile and not LOGGING_TOFILE_SETUP:
-             set_up_file_logging()
-             LOGGING_TOFILE_SETUP = True
+            set_up_file_logging()
+            LOGGING_TOFILE_SETUP = True
         logger.getChild('log.set_up').debug('logging already setup')
         return
     LOGGING_SETUP = True

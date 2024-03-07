@@ -230,7 +230,7 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
                                                                                     origin=source)
 
                     if not (ledger.enabled("dispenser_origin_permission_extended", block_index) and dispensers_from_same_origin_count > 0):
-                    #It means that the same origin has not opened other dispensers in this address
+                        #It means that the same origin has not opened other dispensers in this address
                         existing_balances = ledger.get_balances_count(db, query_address)
 
                         if existing_balances[0]['cnt'] > 0:

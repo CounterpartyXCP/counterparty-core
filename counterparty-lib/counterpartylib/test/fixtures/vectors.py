@@ -3067,7 +3067,7 @@ UNITTEST_VECTOR = {
             'records': [
                 {'not': True,  # NOT
                  'table': 'orders', 'values': {
-                    'tx_hash': '0ec7da68a67e165693afd6c97566f8f509d302bceec8d1be0100335718a40fe5'
+                     'tx_hash': '0ec7da68a67e165693afd6c97566f8f509d302bceec8d1be0100335718a40fe5'
                 }},
             ]
         }],
@@ -4764,7 +4764,7 @@ UNITTEST_VECTOR = {
         'unpack': [{
             'in': (binascii.unhexlify('000000000004fadf' + '000000174876e800' + '006474849fc9ac0f5bd6b49fe144d14db7d32e2445'), DP['default_block_index']),
             'out': ({
-              'asset': 'SOUP',
+                'asset': 'SOUP',
               'quantity': 100000000000,
               'address': '1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j',
               'memo': None,
@@ -4772,7 +4772,7 @@ UNITTEST_VECTOR = {
         }, {
             'in': (binascii.unhexlify('0000000000000001' + '000000000000007b' + '00647484b055e2101927e50aba74957ba134d501d7' + '0deadbeef123'), DP['default_block_index']),
             'out': ({
-              'asset': 'XCP',
+                'asset': 'XCP',
               'quantity': 123,
               'address': '1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU',
               'memo': binascii.unhexlify('0deadbeef123'),

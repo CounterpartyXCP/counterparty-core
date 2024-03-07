@@ -59,7 +59,7 @@ def rpc(url, method, params=None, ssl_verify=False, tries=1):
         rpc_session = requests.Session()
         rpc_sessions[url] = rpc_session
     else:
-    	rpc_session = rpc_sessions[url]
+       	rpc_session = rpc_sessions[url]
 
     response = None
     for i in range(tries):

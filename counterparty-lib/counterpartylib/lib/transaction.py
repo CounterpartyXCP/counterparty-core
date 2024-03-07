@@ -288,18 +288,18 @@ def select_any_coin_from_source(source, allow_unconfirmed_inputs=True, disable_u
 
 
 def return_result(tx_hexes, old_style_api):
-        tx_hexes = list(filter(None, tx_hexes))  # filter out None
+    tx_hexes = list(filter(None, tx_hexes))  # filter out None
 
-        if old_style_api:
-            if len(tx_hexes) != 1:
-                raise Exception("Can't do 2 TXs with old_style_api")
+    if old_style_api:
+        if len(tx_hexes) != 1:
+            raise Exception("Can't do 2 TXs with old_style_api")
 
+        return tx_hexes[0]
+    else:
+        if len(tx_hexes) == 1:
             return tx_hexes[0]
         else:
-            if len(tx_hexes) == 1:
-                return tx_hexes[0]
-            else:
-                return tx_hexes
+            return tx_hexes
 
 def construct (db, tx_info, encoding='auto',
                fee_per_kb=config.DEFAULT_FEE_PER_KB,
@@ -374,8 +374,8 @@ def construct (db, tx_info, encoding='auto',
     '''Destinations'''
 
     # Destination outputs.
-        # Replace multi‐sig addresses with multi‐sig pubkeys. Check that the
-        # destination output isn’t a dust output. Set null values to dust size.
+    # Replace multi‐sig addresses with multi‐sig pubkeys. Check that the
+    # destination output isn’t a dust output. Set null values to dust size.
     destination_outputs_new = []
     if encoding != 'p2sh':
         for (address, value) in destination_outputs:

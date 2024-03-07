@@ -156,7 +156,7 @@ def main():
                                 utxo_locks_max_addresses=args.utxo_locks_max_addresses,
                                 utxo_locks_max_age=args.utxo_locks_max_age,
                                 checkdb=(args.action == 'checkdb') or (args.checkdb))
-                                #,broadcast_tx_mainnet=args.broadcast_tx_mainnet)
+        #,broadcast_tx_mainnet=args.broadcast_tx_mainnet)
 
     if args.action in COMMANDS_WITH_DB:
         db = init_with_catch(server.initialise, init_args)

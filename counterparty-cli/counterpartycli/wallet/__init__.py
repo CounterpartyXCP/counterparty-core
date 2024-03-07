@@ -31,7 +31,7 @@ def get_wallet_addresses():
 
 def get_btc_balances():
     for address, btc_balance in wallet().get_btc_balances():
-    	yield [address, btc_balance]
+        yield [address, btc_balance]
 
 def pycoin_sign_raw_transaction(tx_hex, private_key_wif):
     for char in private_key_wif:

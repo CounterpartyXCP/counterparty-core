@@ -465,8 +465,8 @@ def compose_transaction(db, name, params,
         fee_per_kb = config.DEFAULT_FEE_PER_KB
 
     if 'extended_tx_info' in params:
-      extended_tx_info = params['extended_tx_info']
-      del params['extended_tx_info']
+        extended_tx_info = params['extended_tx_info']
+        del params['extended_tx_info']
 
     if 'old_style_api' in params:
         old_style_api = params['old_style_api']

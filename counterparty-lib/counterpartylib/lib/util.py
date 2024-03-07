@@ -95,7 +95,7 @@ def py34_tuple_append(first_elem, t):
 def accumulate(l):
     it = itertools.groupby(l, itemgetter(0))
     for key, subiter in it:
-       yield key, sum(item[1] for item in subiter)
+        yield key, sum(item[1] for item in subiter)
 
 
 def date_passed(date):

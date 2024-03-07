@@ -43,7 +43,7 @@ def unpack(db, message, block_index):
         raise exceptions.UnpackError('asset id invalid')
 
     unpacked = {
-      'asset': asset,
+        'asset': asset,
       'quantity': quantity,
       'address': full_address,
       'memo': memo_bytes,
@@ -75,7 +75,7 @@ def validate (db, source, destination, asset, quantity, memo_bytes, block_index)
 
     # check memo
     if memo_bytes is not None and len(memo_bytes) > MAX_MEMO_LENGTH:
-      problems.append('memo is too long')
+        problems.append('memo is too long')
 
     if ledger.enabled('options_require_memo'):
         cursor = db.cursor()

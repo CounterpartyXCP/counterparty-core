@@ -137,7 +137,7 @@ def unpack(db, message, block_index):
         raise exceptions.UnpackError('could not unpack')
 
     unpacked = {
-      'destination': full_address,
+        'destination': full_address,
       'flags': flags,
       'memo': memo_bytes,
     }
