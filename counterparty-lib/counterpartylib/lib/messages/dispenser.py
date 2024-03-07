@@ -299,23 +299,8 @@ def calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, orac
     
     return oracle_fee_btc
 
-# Reproduce unknown fixed bug: close dispenser calls from another address not recognized
-DECODE_ERROR = {
-    "7ab00290e8df838485e14d5a1bcf120787068a7f096edb75f7ba566333949f34": True,
-    "5ad5ae0e721f6c2bf54ed27fb78d026d2a41ca36b2fd91df4ae3aefd5f8ad9a2": True,
-    "820d9e3a8733a79556bdee98b124adcd844d6a40d61e9502a6f87fca2ed29bd5": True,
-    "c5a10ff52202b74971ea78a0e300c1038c82aedfec9c7f744dcf507bc07b27b0": True,
-    "6b265de0e37c4f2c0503f5b465b806fcc58e74901663f61819da9c5258729093": True,
-    "971a45311e539bcf2cc4d61a75ef7c05130f78cc928535b23e87ceadf6dc1b04": True,
-    "85e17c81f80d040f98077bcb49882654d1f222cf4bdeba4cf81aaf70213431ce": True,
-    # testnet
-    "e0226ba71237e028e46ad4d7c5fbdd595b4c83d1eb53543dd53cf9d342671b7c": True,
-}
 
 def parse (db, tx, message):
-    if DECODE_ERROR.get(tx['tx_hash']):
-        return
-
     cursor = db.cursor()
 
     # Unpack message.
@@ -616,7 +601,7 @@ def close_pending(db, block_index):
     block_delay = ledger.get_value_by_block_index("dispenser_close_delay", block_index)
 
     if block_delay > 0:
-        pending_dispensers = ledger.get_pending_dispensers(db, status=STATUS_CLOSING, delay=block_delay, block_index=block_index)
+        pending_dispensers = ledger.get_pending_dispensers(db, delay=block_delay, block_index=block_index)
 
         for dispenser in pending_dispensers:
             # use tx_index=0 for block actions

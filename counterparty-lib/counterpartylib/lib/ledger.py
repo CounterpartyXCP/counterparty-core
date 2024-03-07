@@ -907,24 +907,30 @@ def get_pending_dispensers_old(db, status, delay, block_index):
     return cursor.fetchall()
 
 
-def get_pending_dispensers(db, status, delay, block_index):
+def get_pending_dispensers(db, delay, block_index):
+    status_closed = 10
+    status_closing = 11
+
     cursor = db.cursor()
+    # we assume here that the status_closed and status_closing are the last statuses
+    # and that dispenser with status_closing can be closed before the delay if it's empty
     query = '''
         SELECT d.*, t.source AS tx_source, t.block_index AS tx_block_index, MAX(d.rowid) AS rowid
         FROM dispensers AS d
         LEFT JOIN transactions t ON t.tx_hash = d.last_status_tx_hash
         WHERE :block_index = t.block_index + :delay
-        AND status = :status
+        AND status IN (:status_closed, :status_closing)
         GROUP BY d.source, d.asset
         ORDER BY tx_index
     '''
     bindings = {
-        'status': status,
+        'status_closed': status_closed,
+        'status_closing': status_closing,
         'delay': delay,
         'block_index': block_index
     }
     cursor.execute(query, bindings)
-    return cursor.fetchall()
+    return [dispenser for dispenser in cursor.fetchall() if dispenser['status'] == status_closing]
 
 
 def get_dispensers_count(db, source, status, origin):
