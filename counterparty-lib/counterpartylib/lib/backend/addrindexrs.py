@@ -190,6 +190,7 @@ def fee_per_kb(conf_target, mode, nblocks=None):
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
+
 GETRAWTRANSACTION_MAX_RETRIES=2
 MONOTONIC_CALL_ID = 0
 def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _retry=0):
@@ -562,12 +563,10 @@ class AddrindexrsSocket:
         self.next_message_id = 0
         self.connect()
 
-
     def connect(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(SOCKET_TIMEOUT)
         self.sock.connect((config.INDEXD_CONNECT, config.INDEXD_PORT))
-
 
     def _send(self, query, timeout=SOCKET_TIMEOUT):
         query["id"] = self.next_message_id
@@ -601,7 +600,6 @@ class AddrindexrsSocket:
             if duration > timeout:
                 return {}
 
-
     def send(self, query, timeout=SOCKET_TIMEOUT, retry=0):
         try:
             return self._send(query, timeout=timeout)
@@ -611,7 +609,6 @@ class AddrindexrsSocket:
             self.sock.close()
             self.connect()
             return self.send(query, timeout=timeout, retry=retry + 1)
-
 
     def get_oldest_tx(self, address, timeout=SOCKET_TIMEOUT):
         hsh = _address_to_hash(address)

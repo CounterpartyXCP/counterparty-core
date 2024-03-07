@@ -178,6 +178,7 @@ def fee_per_kb(conf_target, mode, nblocks=None):
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
+
 GETRAWTRANSACTION_MAX_RE=2
 def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _retry=0):
     _logger = logger.getChild("getrawtransaction_batch")
@@ -265,7 +266,6 @@ def search_raw_transactions(address, unconfirmed=True):
     # filter for confirmed transactions only
     confirmed_transactions = list(filter(lambda t: 'confirmations' in t and t['confirmations'] > 0, all_transactions))
     return confirmed_transactions
-
 
 
 def getindexblocksbehind():

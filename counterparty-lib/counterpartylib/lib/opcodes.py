@@ -2,6 +2,7 @@
 def to_bytes(i):
     return i.to_bytes(1, 'big')
 
+
 OP_0 = to_bytes(0x00)
 OP_FALSE = OP_0
 OP_PUSHDATA1 = to_bytes(0x4c)

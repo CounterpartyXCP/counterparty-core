@@ -123,7 +123,6 @@ def compare_ledger(database_file_1, database_file_2):
     compare_strings(ledger_1, ledger_2)
 
 
-
 database_file_1 = sys.argv[1]
 database_file_2 = sys.argv[2]
 
@@ -131,4 +130,3 @@ LAST_BLOCK = 2500000
 #compare_ledger(database_file_1, database_file_2)
 check_hashes(database_file_1, database_file_2, "txlist_hash")
 #get_checkpoints(database_file_1)
-

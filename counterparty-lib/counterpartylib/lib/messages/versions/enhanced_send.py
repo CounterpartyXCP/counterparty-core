@@ -180,7 +180,6 @@ def parse (db, tx, message):
         else:
             logger.warning(f"Invalid send of {quantity} {asset} from {tx['source']} to {destination}. status is {status}. ({tx['tx_hash']})")
 
-
     # Add parsed transaction to message-type–specific table.
     bindings = {
         'tx_index': tx['tx_index'],
@@ -199,7 +198,6 @@ def parse (db, tx, message):
     else:
         logger.warning(f"Not storing [send] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")
-
 
     cursor.close()
 

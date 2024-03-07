@@ -175,5 +175,4 @@ def parse (db, tx, message):
         logger.warning(f"Not storing [btcpay] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")
 
-
     cursor.close()

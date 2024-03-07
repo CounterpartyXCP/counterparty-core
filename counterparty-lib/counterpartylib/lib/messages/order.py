@@ -304,7 +304,6 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
             match(db, ledger.get_transactions(db, tx_hash=tx0_order['tx_hash'])[0], block_index)
             match(db, ledger.get_transactions(db, tx_hash=tx1_order['tx_hash'])[0], block_index)
 
-
     if status == 'expired':
         # Record order match expiration.
         cursor = db.cursor()

@@ -345,7 +345,6 @@ def serialise(encoding, inputs, destination_outputs, data_output=None, change_ou
     return s
 
 
-
 def serialise_p2sh_pretx(inputs, source, source_value, data_output, change_output=None, pubkey=None, multisig_pubkeys=None, multisig_pubkeys_required=None):
     assert data_output  # we don't do this unless there's data
 

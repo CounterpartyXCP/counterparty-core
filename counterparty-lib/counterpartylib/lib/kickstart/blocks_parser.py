@@ -124,7 +124,6 @@ class BlockchainParser():
             self.txindex_leveldb = None
             self.fetch_process = None
 
-
     def next_block(self, timeout=None):
         block_hash = self.queue.get(timeout=timeout)
         if block_hash is None:
@@ -135,10 +134,8 @@ class BlockchainParser():
         self.shm.unlink()
         return block
 
-
     def block_parsed(self):
         self.queue.task_done()
-
 
     def read_tx_in(self, vds):
         tx_in = {}
@@ -152,14 +149,12 @@ class BlockchainParser():
             tx_in['coinbase'] = True
         return tx_in
 
-
     def read_tx_out(self, vds):
         tx_out = {}
         tx_out['nValue'] = vds.read_int64()
         script = vds.read_bytes(vds.read_compact_size())
         tx_out['scriptPubKey'] = script
         return tx_out
-
 
     def read_transaction(self, vds, use_txid=True):
         transaction = {}
@@ -208,13 +203,11 @@ class BlockchainParser():
 
         return transaction
 
-
     def put_in_cache(self, transaction):
         # save transaction to cache
         self.tx_cache[transaction['tx_hash']] = transaction
         if len(self.tx_cache) > TX_CACHE_MAX_SIZE:
             self.tx_cache.popitem(last=False)
-
 
     def read_block_header(self, vds):
         block_header = {}
@@ -235,7 +228,6 @@ class BlockchainParser():
         #block_header['__header__'] = b2h(header)
         return block_header
 
-
     def read_block(self, vds, only_header=False, use_txid=True):
         block = self.read_block_header(vds)
         if only_header:
@@ -245,7 +237,6 @@ class BlockchainParser():
         for i in range(block['transaction_count']):
             block['transactions'].append(self.read_transaction(vds, use_txid=use_txid))
         return block
-
 
     def prepare_data_stream(self, file_num, pos_in_file):
         if self.data_stream is None or file_num != self.file_num:
@@ -303,7 +294,6 @@ class BlockchainParser():
 
         return transaction
 
-
     def deserialize_tx(self, tx_hex, use_txid=None):
         ds = BCDataStream()
         ds.map_hex(tx_hex)
@@ -313,7 +303,6 @@ class BlockchainParser():
             ds,
             use_txid=use_txid
         )
-
 
     def close(self):
         if self.current_block_file:

@@ -176,7 +176,6 @@ def fix_win32_unicode():
     except Exception as e:
         _complain(f"exception {e!r} while fixing up sys.stdout and sys.stderr")
 
-
     # While we're at it, let's unmangle the command-line arguments:
 
     # This works around <http://bugs.python.org/issue2128>.

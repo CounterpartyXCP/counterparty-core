@@ -119,7 +119,6 @@ def parse (db, tx, message):
         except exceptions.BalanceError:
             status = 'invalid: insufficient funds'
 
-
     # For SQLite3
     if quantity:
         quantity = min(quantity, config.MAX_INT)
@@ -149,7 +148,6 @@ def parse (db, tx, message):
     else:
         logger.warning(f"Not storing [send] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")
-
 
     cursor.close()
 

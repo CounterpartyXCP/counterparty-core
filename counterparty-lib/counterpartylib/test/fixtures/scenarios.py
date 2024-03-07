@@ -145,6 +145,7 @@ def generate_standard_scenario(address1, address2, order_matches):
         ['create_next_block', 101]
     ]
 
+
 standard_scenarios_params = {
     'simplesig': {
         'address1': ADDR[0],

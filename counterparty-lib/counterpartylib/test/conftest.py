@@ -75,6 +75,8 @@ def enabled(change_name, block_index=None):
     else:
         # print(f"ALWAYS_LATEST_PROTOCOL_CHANGES {change_name} {block_index or ledger.CURRENT_BLOCK_INDEX} enabled: {_enabled(change_name, block_index)}")
         return _enabled(change_name, block_index)
+
+
 ledger.enabled = enabled
 
 # This is true if ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK is set
@@ -98,6 +100,8 @@ def generate_random_asset ():
         return _generate_random_asset()
     else:
         return 'A' + str(RANDOM_ASSET_INT)
+
+
 util.generate_random_asset = generate_random_asset
 
 DISABLE_ARC4_MOCKING = False

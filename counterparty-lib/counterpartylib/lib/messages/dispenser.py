@@ -299,6 +299,7 @@ def calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, orac
 
     return oracle_fee_btc
 
+
 # Reproduce unknown fixed bug: close dispenser calls from another address not recognized
 DECODE_ERROR = {
     "7ab00290e8df838485e14d5a1bcf120787068a7f096edb75f7ba566333949f34": True,
@@ -354,7 +355,6 @@ def parse (db, tx, message):
                         if oracle_fee >= config.DEFAULT_REGULAR_DUST_SIZE:
                             if tx["destination"] != oracle_address or tx["btc_amount"] < oracle_fee:
                                 status = 'invalid: insufficient or non-existent oracle fee'
-
 
                     if status == 'valid':
                         # Create the new dispenser

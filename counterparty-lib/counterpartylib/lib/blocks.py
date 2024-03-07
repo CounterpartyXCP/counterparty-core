@@ -292,7 +292,6 @@ def initialise(db):
     cursor.execute('''DELETE FROM blocks WHERE block_index < ?''', (config.BLOCK_FIRST,))
     cursor.execute('''DELETE FROM transactions WHERE block_index < ?''', (config.BLOCK_FIRST,))
 
-
     # (Valid) debits
     cursor.execute('''CREATE TABLE IF NOT EXISTS debits(
                       block_index INTEGER,
@@ -648,7 +647,6 @@ def get_next_tx_index(db):
         tx_index = 0
     cursor.close()
     return tx_index
-
 
 
 class MempoolError(Exception):

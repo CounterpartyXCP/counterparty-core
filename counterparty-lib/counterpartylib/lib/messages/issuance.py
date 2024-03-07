@@ -221,8 +221,6 @@ def validate (db, source, destination, asset, quantity, divisible, lock, reset, 
         if asset[0] != 'A':
             problems.append('a subasset must be a numeric asset')
 
-
-
     # Check for existence of fee funds.
     if quantity or (block_index >= 315000 or config.TESTNET or config.REGTEST):   # Protocol change.
         if not reissuance or (block_index < 310000 and not config.TESTNET and not config.REGTEST):  # Pay fee only upon first issuance. (Protocol change.)

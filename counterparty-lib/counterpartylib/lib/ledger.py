@@ -2014,4 +2014,3 @@ def get_value_by_block_index(change_name, block_index=None):
             max_block_index = key
 
     return PROTOCOL_CHANGES[change_name][index_name][max_block_index]["value"]
-

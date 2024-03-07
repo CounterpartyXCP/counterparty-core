@@ -332,6 +332,7 @@ def sizeof(v):
 
 class DictCache:
     """Threadsafe FIFO dict cache"""
+
     def __init__(self, size=100):
         if int(size) < 1 :
             raise AttributeError('size < 1 or not a number')

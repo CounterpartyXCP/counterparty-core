@@ -65,7 +65,6 @@ def validate(address, allow_p2sh=True):
                 raise e
 
 
-
 def base58_encode(binary):
     """Encode the address in base58."""
     # Convert big‐endian bytes to integer

@@ -38,6 +38,7 @@ class JsonDecimalEncoder(json.JSONEncoder):
             return str(o)
         return super(JsonDecimalEncoder, self).default(o)
 
+
 json_dump = lambda x: json.dumps(x, sort_keys=True, indent=4, cls=JsonDecimalEncoder)
 json_print = lambda x: print(json_dump(x))
 

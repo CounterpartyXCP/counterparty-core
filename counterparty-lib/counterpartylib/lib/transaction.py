@@ -187,7 +187,6 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
     if encoding == 'multisig' and data_array and ledger.enabled('bytespersigop'):
         desired_input_count = len(data_array) * 2
 
-
     # pop inputs until we can pay for the fee
     use_inputs_index = 0
     for coin in use_inputs:
@@ -400,7 +399,6 @@ def construct (db, tx_info, encoding='auto',
     destination_outputs = destination_outputs_new
     destination_btc_out = sum([value for address, value in destination_outputs])
 
-
     '''Data'''
 
     if data:
@@ -580,7 +578,6 @@ def construct (db, tx_info, encoding='auto',
                                 data_output, change_output,
                                 dust_return_pubkey=dust_return_pubkey)
         unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')
-
 
     '''Sanity Check'''
 

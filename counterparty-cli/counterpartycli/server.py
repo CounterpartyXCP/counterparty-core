@@ -102,8 +102,6 @@ def main():
 
     parser_checkdb = subparsers.add_parser('checkdb', help='do an integrity check on the database')
 
-
-
     args = parser.parse_args()
 
     log.set_up(log.ROOT_LOGGER, verbose=args.verbose, quiet=args.quiet, console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None))

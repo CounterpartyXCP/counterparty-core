@@ -323,7 +323,6 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
         if offset:
             statement += f''' OFFSET {offset}'''
 
-
     query_result = db_query(db, statement, tuple(bindings))
 
     if table == 'balances':
@@ -521,6 +520,7 @@ def init_api_access_log(app):
 
 class APIStatusPoller(threading.Thread):
     """Perform regular checks on the state of the backend and the database."""
+
     def __init__(self):
         self.last_database_check = 0
         threading.Thread.__init__(self)
@@ -561,6 +561,7 @@ class APIStatusPoller(threading.Thread):
 
 class APIServer(threading.Thread):
     """Handle JSON-RPC API calls."""
+
     def __init__(self, db=None):
         self.db = db
         self.is_ready = False
@@ -605,7 +606,6 @@ class APIServer(threading.Thread):
             if bindings == None:
                 bindings = []
             return db_query(self.db, query, tuple(bindings))
-
 
         ######################
         #WRITE/ACTION API
@@ -910,7 +910,6 @@ class APIServer(threading.Thread):
                     reverse = True
                 return sorted(results, key=lambda x: x[order_key], reverse=reverse)
 
-
         @dispatcher.add_method
         def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
             return backend.getrawtransaction(tx_hash, verbose=verbose, skip_missing=skip_missing)
@@ -1000,8 +999,6 @@ class APIServer(threading.Thread):
                 }
 
             return {}
-
-
 
         def _set_cors_headers(response):
             if not config.RPC_NO_ALLOW_CORS:

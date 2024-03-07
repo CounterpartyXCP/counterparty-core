@@ -263,7 +263,6 @@ def main():
                 tx_hash = wallet.send_raw_transaction(signed_tx_hex)
                 logger.info(f'Hash of transaction (broadcasted): {tx_hash}')
 
-
     # VIEWING
     elif args.action in ['balances', 'asset', 'wallet', 'pending', 'getinfo', 'getrows', 'get_tx_info']:
         view = console.get_view(args.action, args)

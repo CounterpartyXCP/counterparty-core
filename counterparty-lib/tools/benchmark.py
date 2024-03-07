@@ -252,6 +252,7 @@ def execute_query(cursor, description, query, bindings=None):
     print()
     return res
 
+
 BALANCES_VIEW_QUERY = """
     SELECT address, asset, quantity, MAX(rowid)
     FROM new_balances
@@ -282,7 +283,6 @@ def benchmark_new_balances(old_balance_db):
     """
     old_most_assets = execute_query(old_cursor, description, query)
 
-
     description = "Get 100 addresses with most assets from `new_balances`..."
     query = f"""
     SELECT address, count(asset) as cnt
@@ -293,7 +293,6 @@ def benchmark_new_balances(old_balance_db):
     """
     new_most_assets = execute_query(new_cursor, description, query)
 
-
     description = "Get balances for 100 addresses with most assets from `old_balances`..."
     queries = []
     for asset in old_most_assets:
@@ -303,7 +302,6 @@ def benchmark_new_balances(old_balance_db):
             WHERE address = '{asset[0]}'
         """)
     execute_query(old_cursor, description, queries)
-
 
     description = "Get balances for 100 addresses with most assets from `new_balances`..."
     queries = []
@@ -324,4 +322,3 @@ BENCHMARK_DB="/home/tower/benchmark.db"
 #prepare_benchmark_db("/home/tower/counterparty.testnet.bootstrap.db")
 #prepare_benchmark_db("/home/tower/counterparty.db")
 benchmark_new_balances("/home/tower/counterparty.db")
-

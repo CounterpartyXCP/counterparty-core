@@ -54,6 +54,8 @@ def sigterm_handler(_signo, _stack_frame):
     logger.info('Shutting down.')
     logging.shutdown()
     sys.exit(0)
+
+
 signal.signal(signal.SIGTERM, sigterm_handler)
 signal.signal(signal.SIGINT, sigterm_handler)
 
@@ -273,7 +275,6 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
         config.BACKEND_URL = 'https://' + config.BACKEND_URL
     else:
         config.BACKEND_URL = 'http://' + config.BACKEND_URL
-
 
     # Indexd RPC host
     if indexd_connect:

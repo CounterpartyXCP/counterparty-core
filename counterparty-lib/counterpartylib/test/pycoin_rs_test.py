@@ -109,7 +109,6 @@ def test_get_asm():
     python_duration = time.time() - start_time
     print(f"python duration for {iteration} iterations: ", python_duration)
 
-
     asm = script_to_asm(b'Q!\x03\\\xa5\x1e\xa1u\xf1\x08\xa1\xc65\x88h=\xc4\xc4:qF\xc4g\x99\xf8d\xa3\x00&<\x08\x13\xf5\xfe5!\x020\x9a\x14\xa1\xa3\x02\x02\xf2\xe7oF\xac\xdb)\x17u#q\xcaB\xb9t`\xf7\x92\x8a\xde\x8e\xcb\x02\xea\x17!\x03\x19\xf6\xe0{\x0b\x8duaV9K\x9d\xcf;\x01\x1f\xe9\xac\x19\xf2p\x0b\xd6\xb6\x9aj\x17\x83\xdb\xb8\xb9wS\xae')
     assert asm == [
             1,
@@ -138,7 +137,6 @@ def script_to_address():
     def decode_p2w(script_pubkey):
         bech32 = bitcoinlib.bech32.CBech32Data.from_bytes(0, script_pubkey[2:22])
         return str(bech32), None
-
 
     script_pubkey = b'\x00\x14u\x1ev\xe8\x19\x91\x96\xd4T\x94\x1cE\xd1\xb3\xa3#\xf1C;\xd6'
     bech32 = utils.script_to_address(script_pubkey, 'testnet')

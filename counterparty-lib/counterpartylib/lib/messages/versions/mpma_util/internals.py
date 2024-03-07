@@ -193,7 +193,6 @@ def _decode_decode_send_list(stream, nbits, lut, block_index):
         else:
             send_list.append((addr, amount))
 
-
     return asset, send_list
 
 def _decode_decode_sends(stream, nbits, lut, block_index):
