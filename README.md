@@ -1,4 +1,4 @@
-[![Build Status Circle](https://circleci.com/gh/CounterpartyXCP/counterparty-lib.svg?&style=shield)](https://circleci.com/gh/CounterpartyXCP/counterparty-lib)
+[![Build Status Circle](https://circleci.com/gh/CounterpartyXCP/counterparty-core.svg?&style=shield)](https://circleci.com/gh/CounterpartyXCP/counterparty-core)
 
 
 # Description

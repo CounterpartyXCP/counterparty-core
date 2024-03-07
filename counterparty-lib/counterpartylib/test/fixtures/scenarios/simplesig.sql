@@ -195,7 +195,7 @@ BEGIN TRANSACTION;
 DROP TABLE IF EXISTS transaction_outputs;
 CREATE TABLE transaction_outputs(
                         tx_index,
-                        tx_hash TEXT, 
+                        tx_hash TEXT,
                         block_index INTEGER,
                         out_index INTEGER,
                         destination TEXT,
@@ -1578,7 +1578,7 @@ CREATE TABLE dispenser_refills(
                                         dispense_quantity INTEGER,
                                         dispenser_tx_hash TEXT,
                                         PRIMARY KEY (tx_index, tx_hash, source, destination),
-                                        FOREIGN KEY (tx_index, tx_hash, block_index) 
+                                        FOREIGN KEY (tx_index, tx_hash, block_index)
                                             REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  dispenser_refills
 CREATE TRIGGER block_update_dispenser_refills

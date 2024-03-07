@@ -26,7 +26,7 @@ BACKOFF_START = 1
 BACKOFF_MAX = 8
 BACKOFF_FACTOR = 2
 
-Indexer_Thread = None
+INDEXER_THREAD = None
 raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)  # used in getrawtransaction_batch()
 
 class BackendRPCError(Exception):
@@ -39,9 +39,9 @@ def rpc_call(payload):
     """Calls to bitcoin core and returns the response"""
     url = config.BACKEND_URL
     response = None
-    TRIES = 12
+    tries = 12
 
-    for i in range(TRIES):
+    for i in range(tries):
         try:
             response = requests.post(url, data=json.dumps(payload), headers={'content-type': 'application/json'},
                 verify=(not config.BACKEND_SSL_NO_VERIFY), timeout=config.REQUESTS_TIMEOUT)
@@ -53,9 +53,9 @@ def rpc_call(payload):
                     network = 'regtest'
                 else:
                     network = 'mainnet'
-                raise BackendRPCError('Cannot communicate with backend at `{}`. (server is set to run on {}, is backend?)'.format(util.clean_url_for_log(url), network))
+                raise BackendRPCError(f'Cannot communicate with backend at `{util.clean_url_for_log(url)}`. (server is set to run on {network}, is backend?)')
             elif response.status_code in (401,):
-                raise BackendRPCError('Authorization error connecting to {}: {} {}'.format(util.clean_url_for_log(url), response.status_code, response.reason))
+                raise BackendRPCError(f'Authorization error connecting to {util.clean_url_for_log(url)}: {response.status_code} {response.reason}')
             elif response.status_code not in (200, 500):
                 raise BackendRPCError(str(response.status_code) + ' ' + response.reason)
 
@@ -63,14 +63,14 @@ def rpc_call(payload):
                 break
 
         except (Timeout, ReadTimeout, ConnectionError):
-            logger.debug('Could not connect to backend at `{}`. (Try {}/{})'.format(util.clean_url_for_log(url), i+1, TRIES))
+            logger.debug(f'Could not connect to backend at `{util.clean_url_for_log(url)}`. (Try {i + 1}/{tries})')
             time.sleep(5)
 
     # Handle json decode errors
     try:
         response_json = response.json()
     except json.decoder.JSONDecodeError as e:
-        raise BackendRPCError('Received invalid JSON from backend with a response of {}'.format(str(response.status_code) + ' ' + response.reason))
+        raise BackendRPCError(f"Received invalid JSON from backend with a response of {str(response.status_code) + ' ' + response.reason}")
 
     # Batch query returns a list
     if isinstance(response_json, list):
@@ -78,7 +78,7 @@ def rpc_call(payload):
     if 'error' not in response_json.keys() or response_json['error'] == None:
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
-        raise BackendRPCError('{} Is `txindex` enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
+        raise BackendRPCError(f"{response_json['error']} Is `txindex` enabled in {config.BTC_NAME} Core?")
     elif response_json['error']['code'] in [-28, -8, -2]:
         # “Verifying blocks...” or “Block height out of range” or “The network does not appear to fully agree!“
         logger.debug('Backend not ready. Sleeping for ten seconds.')
@@ -87,7 +87,7 @@ def rpc_call(payload):
         time.sleep(10)
         return rpc_call(payload)
     else:
-        raise BackendRPCError('Error connecting to {}: {}'.format(util.clean_url_for_log(url), response_json['error']))
+        raise BackendRPCError(f"Error connecting to {util.clean_url_for_log(url)}: {response_json['error']}")
 
 def rpc(method, params):
     payload = {
@@ -114,7 +114,7 @@ def rpc_batch(request_list):
     return list(responses)
 
 def extract_addresses(txhash_list):
-    logger.debug('extract_addresses, txs: %d' % (len(txhash_list), ))
+    logger.debug(f'extract_addresses, txs: {len(txhash_list)}')
     tx_hashes_tx = getrawtransaction_batch(txhash_list, verbose=True)
 
     return extract_addresses_from_txlist(tx_hashes_tx, getrawtransaction_batch)
@@ -124,7 +124,7 @@ def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
     helper for extract_addresses, seperated so we can pass in a mocked _getrawtransaction_batch for test purposes
     """
 
-    logger.debug('extract_addresses_from_txlist, txs: %d' % (len(tx_hashes_tx.keys()), ))
+    logger.debug(f'extract_addresses_from_txlist, txs: {len(tx_hashes_tx.keys())}')
     tx_hashes_addresses = {}
     tx_inputs_hashes = set()  # use set to avoid duplicates
 
@@ -136,7 +136,7 @@ def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
 
         tx_inputs_hashes.update([vin['txid'] for vin in tx['vin']])
 
-    logger.debug('extract_addresses, input TXs: %d' % (len(tx_inputs_hashes), ))
+    logger.debug(f'extract_addresses, input TXs: {len(tx_inputs_hashes)}')
 
     # chunk txs to avoid huge memory spikes
     for tx_inputs_hashes_chunk in util.chunkify(list(tx_inputs_hashes), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE):
@@ -165,7 +165,7 @@ def getblock(block_hash):
 
 @functools.lru_cache
 def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
-    logger.debug('Cache miss on transaction {}!'.format(tx_hash))
+    logger.debug(f'Cache miss on transaction {tx_hash}!')
     return getrawtransaction_batch([tx_hash], verbose=verbose, skip_missing=skip_missing)[tx_hash]
 
 def getrawmempool():
@@ -190,8 +190,9 @@ def fee_per_kb(conf_target, mode, nblocks=None):
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
+
 GETRAWTRANSACTION_MAX_RETRIES=2
-monotonic_call_id = 0
+MONOTONIC_CALL_ID = 0
 def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _retry=0):
     _logger = logger.getChild("getrawtransaction_batch")
 
@@ -213,9 +214,9 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
     for tx_hash in txhash_list:
         if tx_hash not in raw_transactions_cache:
             #call_id = binascii.hexlify(os.urandom(5)).decode('utf8') # Don't drain urandom
-            global monotonic_call_id
-            monotonic_call_id = monotonic_call_id + 1
-            call_id = "{}".format(monotonic_call_id)
+            global MONOTONIC_CALL_ID
+            MONOTONIC_CALL_ID = MONOTONIC_CALL_ID + 1
+            call_id = f"{MONOTONIC_CALL_ID}"
             payload.append({
                 "method": 'getrawtransaction',
                 "params": [tx_hash, 1],
@@ -230,8 +231,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
     for tx_hash in txhash_list.difference(noncached_txhashes):
         raw_transactions_cache.refresh(tx_hash)
 
-    _logger.debug("getrawtransaction_batch: txhash_list size: {} / raw_transactions_cache size: {} / # getrawtransaction calls: {}".format(
-        len(txhash_list), len(raw_transactions_cache), len(payload)))
+    _logger.debug(f"getrawtransaction_batch: txhash_list size: {len(txhash_list)} / raw_transactions_cache size: {len(raw_transactions_cache)} / # getrawtransaction calls: {len(payload)}")
 
     # populate cache
     if len(payload) > 0:
@@ -243,11 +243,11 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                 raw_transactions_cache[tx_hash] = tx_hex
             elif skip_missing and 'error' in response and response['error']['code'] == -5:
                 raw_transactions_cache[tx_hash] = None
-                logger.debug('Missing TX with no raw info skipped (txhash: {}): {}'.format(
-                    tx_hash_call_id.get(response.get('id', '??'), '??'), response['error']))
+                missing_tx_hash = tx_hash_call_id.get(response.get('id', '??'), '??')
+                logger.debug(f"Missing TX with no raw info skipped (txhash: {missing_tx_hash}): {response['error']}")
             else:
                 #TODO: this seems to happen for bogus transactions? Maybe handle it more gracefully than just erroring out?
-                raise BackendRPCError('{} (txhash:: {})'.format(response['error'], tx_hash_call_id.get(response.get('id', '??'), '??')))
+                raise BackendRPCError(f"{response['error']} (txhash:: {tx_hash_call_id.get(response.get('id', '??'), '??')})")
 
     # get transactions from cache
     result = {}
@@ -259,9 +259,9 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                 result[tx_hash] = raw_transactions_cache[tx_hash]['hex'] if raw_transactions_cache[tx_hash] is not None else None
         except KeyError as e: #shows up most likely due to finickyness with addrindex not always returning results that we need...
             logger.error("Key error in addrindexrs still exists!!!!!")
-            _logger.warning("tx missing in rawtx cache: {} -- txhash_list size: {}, hash: {} / raw_transactions_cache size: {} / # rpc_batch calls: {} / txhash in noncached_txhashes: {} / txhash in txhash_list: {} -- list {}".format(
-                e, len(txhash_list), hashlib.md5(json.dumps(list(txhash_list)).encode()).hexdigest(), len(raw_transactions_cache), len(payload),
-                tx_hash in noncached_txhashes, tx_hash in txhash_list, list(txhash_list.difference(noncached_txhashes)) ))
+            _hash = hashlib.md5(json.dumps(list(txhash_list)).encode(), usedforsecurity=False).hexdigest()
+            _list = list(txhash_list.difference(noncached_txhashes))
+            _logger.warning(f"tx missing in rawtx cache: {e} -- txhash_list size: {len(txhash_list)}, hash: {_hash} / raw_transactions_cache size: {len(raw_transactions_cache)} / # rpc_batch calls: {len(payload)} / txhash in noncached_txhashes: {tx_hash in noncached_txhashes} / txhash in txhash_list: {tx_hash in txhash_list} -- list {_list}")
             if  _retry < GETRAWTRANSACTION_MAX_RETRIES: #try again
                 time.sleep(0.05 * (_retry + 1)) # Wait a bit, hitting the index non-stop may cause it to just break down... TODO: Better handling
                 r = getrawtransaction_batch([tx_hash], verbose=verbose, skip_missing=skip_missing, _retry=_retry+1)
@@ -277,7 +277,7 @@ class AddrIndexRsThread (threading.Thread):
         self.host = host
         self.port = port
         self.sock = None
-        self.lastId = 0
+        self.last_id = 0
         self.message_to_send = None
         self.message_result = None
         self.is_killed = False
@@ -287,12 +287,12 @@ class AddrIndexRsThread (threading.Thread):
         self.send({"kill": True})
 
     def connect(self):
-        self.lastId = 0
+        self.last_id = 0
         while True:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.settimeout(SOCKET_TIMEOUT)
             try:
-                logger.debug('Opening socket to address indexer at `{}:{}`'.format(self.host, self.port))
+                logger.debug(f'Opening socket to address indexer at `{self.host}:{self.port}`')
                 self.sock.connect((self.host, self.port))
             except Exception as e:
                 logger.exception('Unknown error when attempting to connect to address indexer.')
@@ -313,12 +313,12 @@ class AddrIndexRsThread (threading.Thread):
                 has_sent = False
                 while not has_sent:
                     try:
-                        logger.debug('Sending message to address indexer: {}'.format(self.message_to_send))
+                        logger.debug(f'Sending message to address indexer: {self.message_to_send}')
                         self.sock.send(self.message_to_send)
                         has_sent = True
                         backoff = BACKOFF_START
                     except Exception as e:
-                        logger.exception('Unknown error sending message to address indexer: {}'.format(self.message_to_send))
+                        logger.exception(f'Unknown error sending message to address indexer: {self.message_to_send}')
                         sys.exit(1)
 
                 # Receive message over socket.
@@ -332,7 +332,7 @@ class AddrIndexRsThread (threading.Thread):
                             chunk = self.sock.recv(READ_BUF_SIZE)
                             if chunk:
                                 data = data + chunk
-                                try: 
+                                try:
                                     self.message_result = json.loads(data.decode('utf-8'))
                                 except json.decoder.JSONDecodeError as e:
                                     # Incomplete message
@@ -344,12 +344,12 @@ class AddrIndexRsThread (threading.Thread):
                                     backoff = BACKOFF_START
                                     break
                             else:
-                                logger.debug('Empty response from address indexer. Trying again in {:d} seconds.'.format(backoff))
+                                logger.debug(f'Empty response from address indexer. Trying again in {backoff:d} seconds.')
                                 time.sleep(backoff)
                                 backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
 
                     except (socket.timeout, socket.error, ConnectionResetError) as e:
-                        logger.debug('Error in connection to address indexer: {}. Trying again in {:d} seconds.'.format(e, backoff))
+                        logger.debug(f'Error in connection to address indexer: {e}. Trying again in {backoff:d} seconds.')
                         has_sent = False    # TODO: Retry send?!
                         time.sleep(backoff)
                         backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
@@ -369,8 +369,8 @@ class AddrIndexRsThread (threading.Thread):
     def send(self, msg):
         self.locker.acquire()
         if not("kill" in msg):
-            msg["id"] = self.lastId
-            self.lastId += 1
+            msg["id"] = self.last_id
+            self.last_id += 1
             self.message_to_send = (json.dumps(msg) + "\n").encode('utf8')
             self.locker.notify()
             self.locker.wait()
@@ -381,7 +381,7 @@ class AddrIndexRsThread (threading.Thread):
 
 def indexer_check_version():
     logger.debug('Checking version of address indexer.')
-    addrindexrs_version = Indexer_Thread.send({
+    addrindexrs_version = INDEXER_THREAD.send({
         "method": "server.version",
         "params": []
     })
@@ -389,16 +389,16 @@ def indexer_check_version():
     try:
         addrindexrs_version_label = addrindexrs_version["result"][0][12:] #12 is the length of "addrindexrs "
     except TypeError as e:
-        logger.exception('Error when checking address indexer version: {}'.format(addrindexrs_version))
+        logger.exception(f'Error when checking address indexer version: {addrindexrs_version}')
         sys.exit(1)
     addrindexrs_version_needed = ledger.get_value_by_block_index("addrindexrs_required_version")
 
     if parse_version(addrindexrs_version_needed) > parse_version(addrindexrs_version_label):
         logger.info("Wrong addrindexrs version: "+addrindexrs_version_needed+" is needed but "+addrindexrs_version_label+" was found")
-        Indexer_Thread.stop()
+        INDEXER_THREAD.stop()
         sys.exit(config.EXITCODE_UPDATE_REQUIRED)
     else:
-        logger.debug('Version check of address indexer passed ({} > {}).'.format(addrindexrs_version_label, addrindexrs_version_needed))
+        logger.debug(f'Version check of address indexer passed ({addrindexrs_version_label} > {addrindexrs_version_needed}).')
 
 def _script_pubkey_to_hash(spk):
     return hashlib.sha256(spk).digest()[::-1].hex()
@@ -442,7 +442,7 @@ def unpack_vout(outpoint, tx, block_count):
 
 def get_unspent_txouts(source):
     block_count = getblockcount()
-    result = Indexer_Thread.send({
+    result = INDEXER_THREAD.send({
         "method": "blockchain.scripthash.get_utxos",
         "params": [_address_to_hash(source)]
     })
@@ -505,14 +505,14 @@ def get_unspent_txouts(source):
 # }
 def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
     hsh = _address_to_hash(address)
-    txs = Indexer_Thread.send({
+    txs = INDEXER_THREAD.send({
         "method": "blockchain.scripthash.get_history",
         "params": [hsh]
     })["result"]
 
     if only_tx_hashes:
         return txs
-    else:   
+    else:
         batch = getrawtransaction_batch([x["tx_hash"] for x in txs], verbose=True)
 
         if not(unconfirmed):
@@ -522,11 +522,11 @@ def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
 
 def get_oldest_tx_legacy(address):
     hsh = _address_to_hash(address)
-    call_result = Indexer_Thread.send({
+    call_result = INDEXER_THREAD.send({
         "method": "blockchain.scripthash.get_oldest_tx",
         "params": [hsh]
     })
-    
+
     if call_result is not None and not ("error" in call_result):
         txs = call_result["result"]
         return txs
@@ -539,16 +539,16 @@ def getindexblocksbehind():
     return 0
 
 def init():
-    global Indexer_Thread
-    Indexer_Thread = AddrIndexRsThread(config.INDEXD_CONNECT, config.INDEXD_PORT)
-    Indexer_Thread.daemon = True
-    Indexer_Thread.start()
+    global INDEXER_THREAD
+    INDEXER_THREAD = AddrIndexRsThread(config.INDEXD_CONNECT, config.INDEXD_PORT)
+    INDEXER_THREAD.daemon = True
+    INDEXER_THREAD.start()
     logger.info('Connecting to address indexer.')
     indexer_check_version()
 
 def stop():
-    if 'Indexer_Thread' in globals():
-        Indexer_Thread.stop()
+    if 'INDEXER_THREAD' in globals():
+        INDEXER_THREAD.stop()
 
 
 # Basic class to communicate with addrindexrs.
@@ -563,12 +563,10 @@ class AddrindexrsSocket:
         self.next_message_id = 0
         self.connect()
 
-
     def connect(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(SOCKET_TIMEOUT)
         self.sock.connect((config.INDEXD_CONNECT, config.INDEXD_PORT))
-
 
     def _send(self, query, timeout=SOCKET_TIMEOUT):
         query["id"] = self.next_message_id
@@ -602,7 +600,6 @@ class AddrindexrsSocket:
             if duration > timeout:
                 return {}
 
-
     def send(self, query, timeout=SOCKET_TIMEOUT, retry=0):
         try:
             return self._send(query, timeout=timeout)
@@ -612,7 +609,6 @@ class AddrindexrsSocket:
             self.sock.close()
             self.connect()
             return self.send(query, timeout=timeout, retry=retry + 1)
-
 
     def get_oldest_tx(self, address, timeout=SOCKET_TIMEOUT):
         hsh = _address_to_hash(address)

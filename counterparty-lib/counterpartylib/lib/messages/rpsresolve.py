@@ -72,7 +72,7 @@ def validate (db, source, move, random, rps_match_id):
     if move<1:
         problems.append('move must be greater than 0')
     elif move > rps_match['possible_moves']:
-        problems.append('move must be lower than {}'.format(rps_match['possible_moves']))
+        problems.append(f"move must be lower than {rps_match['possible_moves']}")
 
     if source not in [rps_match['tx0_address'], rps_match['tx1_address']]:
         problems.append('invalid source address')
@@ -87,7 +87,7 @@ def validate (db, source, move, random, rps_match_id):
 
     move_random_hash = util.dhash(random_bytes + int(move).to_bytes(2, byteorder='big'))
     move_random_hash = binascii.hexlify(move_random_hash).decode('utf-8')
-    if rps_match['tx{}_move_random_hash'.format(txn)] != move_random_hash:
+    if rps_match[f'tx{txn}_move_random_hash'] != move_random_hash:
         problems.append('invalid move or random value')
         return txn, rps_match, problems
 
@@ -112,7 +112,7 @@ def compose (db, source, move, random, rps_match_id):
     # Warn if down to the wire.
     time_left = rps_match['match_expire_index'] - ledger.CURRENT_BLOCK_INDEX
     if time_left < 4:
-        logger.warning('Only {} blocks until that rps match expires. The conclusion might not make into the blockchain in time.'.format(time_left))
+        logger.warning(f'Only {time_left} blocks until that rps match expires. The conclusion might not make into the blockchain in time.')
 
     tx0_hash_bytes = binascii.unhexlify(bytes(tx0_hash, 'utf-8'))
     tx1_hash_bytes = binascii.unhexlify(bytes(tx1_hash, 'utf-8'))
@@ -164,7 +164,7 @@ def parse (db, tx, message):
 
         if rps_match_status == 'concluded':
             counter_txn = 0 if txn == 1 else 1
-            counter_source = rps_match['tx{}_address'.format(counter_txn)]
+            counter_source = rps_match[f'tx{counter_txn}_address']
             counter_games = ledger.get_rpsresolves(db, source=counter_source, status='valid', rps_match_id=rps_match_id)
             assert len(counter_games) == 1
             counter_game = counter_games[0]
@@ -174,9 +174,9 @@ def parse (db, tx, message):
             if winner == 0:
                 rps_match_status = 'concluded: tie'
             elif winner == counter_game['tx_index']:
-                rps_match_status = 'concluded: {} player wins'.format('first' if counter_txn == 0 else 'second')
+                rps_match_status = f"concluded: {'first' if counter_txn == 0 else 'second'} player wins"
             else:
-                rps_match_status = 'concluded: {} player wins'.format('first' if txn == 0 else 'second')
+                rps_match_status = f"concluded: {'first' if txn == 0 else 'second'} player wins"
 
         rps.update_rps_match_status(db, rps_match, rps_match_status, tx['block_index'], tx['tx_index'])
 

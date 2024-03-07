@@ -17,7 +17,7 @@ def get_view(view_name, args):
     elif view_name == 'get_tx_info':
         return util.api('get_tx_info', {'tx_hex': args.tx_hex})
     elif view_name == 'getrows':
-        method = 'get_{}'.format(args.table)
+        method = f'get_{args.table}'
         if args.filter:
             filters = [tuple(f) for f in args.filter]
         else:
@@ -82,7 +82,7 @@ def print_asset(asset):
     print(os.linesep.join(lines))
 
 def print_wallet(wallet):
-    lines = [] 
+    lines = []
     for address in wallet['addresses']:
         table = PrettyTable(['Asset', 'Balance'])
         for asset in wallet['addresses'][address]:

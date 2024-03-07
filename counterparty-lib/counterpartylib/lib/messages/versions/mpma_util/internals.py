@@ -15,26 +15,26 @@ from counterpartylib.lib import (config, util, exceptions, util, ledger, address
 
 ## encoding functions
 
-def _encode_constructBaseLUT(snds):
+def _encode_construct_base_lut(snds):
     # t is a tuple of the form (asset, addr, amnt [, memo, is_hex])
     return sorted(list(set([t[1] for t in snds]))) # Sorted to make list determinist
 
-def _encode_constructBaseAssets(sends):
+def _encode_construct_base_assets(sends):
     # t is a tuple of the form (asset, addr, amnt [, memo, is_hex])
     return sorted(list(set([t[0] for t in sends]))) # Sorted to make list determinist
 
-def _encode_constructLUT(sends):
-    baseLUT = _encode_constructBaseLUT(sends)
+def _encode_construct_lut(sends):
+    base_lut = _encode_construct_base_lut(sends)
 
-    # What's this? It calculates the minimal number of bits needed to represent an item index inside the baseLUT
-    lutNbits = math.ceil(math.log2(len(baseLUT)))
+    # What's this? It calculates the minimal number of bits needed to represent an item index inside the base_lut
+    lut_nbits = math.ceil(math.log2(len(base_lut)))
 
     return {
-        "nbits": lutNbits,
-        "addrs": baseLUT
+        "nbits": lut_nbits,
+        "addrs": base_lut
     }
 
-def _encode_compressLUT(lut):
+def _encode_compress_lut(lut):
     return b''.join([struct.pack('>H', len(lut['addrs']))] +
         [
             address.pack(addr)
@@ -52,16 +52,16 @@ def _encode_memo(memo=None, is_hex=False):
             # signal a 1 bit for hex encoded memos
             barr.append('0b1')
             if type(memo) is str: # append the string as hex-string
-                barr.append('uint:6=%i' % (len(memo) >> 1))
-                memo = '0x%s' % memo
+                barr.append(f'uint:6={len(memo) >> 1}')
+                memo = f'0x{memo}'
             else:
-                barr.append('uint:6=%i' % len(memo))
+                barr.append(f'uint:6={len(memo)}')
 
             barr.append(memo)
         else:
             # signal a 0 bit for a string encoded memo
             barr.append('0b0')
-            barr.append('uint:6=%i' % len(memo))
+            barr.append(f'uint:6={len(memo)}')
             barr.append(BitArray(memo.encode('utf-8')))
 
         return barr
@@ -77,7 +77,7 @@ def _safe_tuple_index(t, i):
     else:
         return t[i]
 
-def _encode_constructSendList(send_asset, lut, sends):
+def _encode_construct_send_list(send_asset, lut, sends):
     # t is a tuple of the form (asset, addr, amnt, memo, is_hex)
     # if there's no memo specified, memo and is_hex are None
     return [
@@ -86,101 +86,102 @@ def _encode_constructSendList(send_asset, lut, sends):
         if t[0] == send_asset
     ]
 
-def _solve_asset(db, assetName, block_index):
-    asset = ledger.resolve_subasset_longname(db, assetName)
+def _solve_asset(db, asset_name, block_index):
+    asset = ledger.resolve_subasset_longname(db, asset_name)
     return ledger.get_asset_id(db, asset, block_index)
 
-def _encode_compressSendList(db, nbits, send, block_index):
+def _encode_compress_send_list(db, nbits, send, block_index):
     r = BitArray()
-    r.append('uintbe:64=%i' % _solve_asset(db, send['assetName'], block_index))
-    r.append('uint:%i=%i' % (nbits, len(send['sendList'])-1))
-    for sendItem in send['sendList']:
-        idx = sendItem[0]
-        amnt = sendItem[1]
-        r.append('uint:%i=%i' % (nbits, idx))
-        r.append('uintbe:64=%i' % amnt)
+    r.append(f"uintbe:64={_solve_asset(db, send['assetName'], block_index)}")
+    r.append(f"uint:{nbits}={len(send['sendList'])-1}")
+
+    for send_item in send['sendList']:
+        idx = send_item[0]
+        amnt = send_item[1]
+        r.append(f'uint:{nbits}={idx}')
+        r.append(f'uintbe:64={amnt}')
 
         try:
-            memoStr = _encode_memo(memo=sendItem[2], is_hex=sendItem[3])
+            memo_str = _encode_memo(memo=send_item[2], is_hex=send_item[3])
         except:
-            memoStr = BitArray('0b0')
+            memo_str = BitArray('0b0')
 
-        r.append(memoStr)
+        r.append(memo_str)
     return r
 
-def _encode_constructSends(sends):
-    lut = _encode_constructLUT(sends)
-    assets = _encode_constructBaseAssets(sends)
+def _encode_construct_sends(sends):
+    lut = _encode_construct_lut(sends)
+    assets = _encode_construct_base_assets(sends)
 
-    sendLists = [
+    send_lists = [
         {
             "assetName": asset,
-            "sendList": _encode_constructSendList(asset, lut, sends)
+            "sendList": _encode_construct_send_list(asset, lut, sends)
         }
         for asset in assets
     ]
 
     return {
         "lut": lut,
-        "sendLists": sendLists
+        "sendLists": send_lists
     }
 
-def _encode_compressSends(db, mpmaSend, block_index, memo=None, memo_is_hex=False):
-    compressedLUT = _encode_compressLUT(mpmaSend['lut'])
+def _encode_compress_sends(db, mpma_send, block_index, memo=None, memo_is_hex=False):
+    compressed_lut = _encode_compress_lut(mpma_send['lut'])
     memo_arr = _encode_memo(memo, memo_is_hex).bin
 
     isends = '0b' + memo_arr + ''.join([
-        ''.join(['1', _encode_compressSendList(db, mpmaSend['lut']['nbits'], sendList, block_index).bin])
-        for sendList in mpmaSend['sendLists']
+        ''.join(['1', _encode_compress_send_list(db, mpma_send['lut']['nbits'], send_list, block_index).bin])
+        for send_list in mpma_send['sendLists']
     ])
     bstr = ''.join([isends, '0'])
     pad = '0' * ((8 - (len(bstr) - 2)) % 8) # That -2 is because the prefix 0b is there
     barr = BitArray(bstr + pad)
     return b''.join([
-        compressedLUT,
+        compressed_lut,
         barr.bytes
     ])
 
-def _encode_mpmaSend(db, sends, block_index, memo=None, memo_is_hex=False):
-    mpma = _encode_constructSends(sends)
-    send = _encode_compressSends(db, mpma, block_index, memo=memo, memo_is_hex=memo_is_hex)
+def _encode_mpma_send(db, sends, block_index, memo=None, memo_is_hex=False):
+    mpma = _encode_construct_sends(sends)
+    send = _encode_compress_sends(db, mpma, block_index, memo=memo, memo_is_hex=memo_is_hex)
 
     return send
 
 ## decoding functions
 
-def _decode_decodeLUT(data):
-    (numAddresses,) = struct.unpack('>H', data[0:2])
-    if numAddresses == 0:
+def _decode_decode_lut(data):
+    (num_addresses,) = struct.unpack('>H', data[0:2])
+    if num_addresses == 0:
         raise exceptions.DecodeError('address list can\'t be empty')
     p = 2
-    addressList = []
-    bytesPerAddress = 21
+    address_list = []
+    bytes_per_address = 21
 
-    for i in range(0, numAddresses):
-        addr_raw = data[p:p+bytesPerAddress]
+    for i in range(0, num_addresses):
+        addr_raw = data[p:p+bytes_per_address]
 
-        addressList.append(address.unpack(addr_raw))
-        p += bytesPerAddress
+        address_list.append(address.unpack(addr_raw))
+        p += bytes_per_address
 
-    lutNbits = math.ceil(math.log2(numAddresses))
+    lut_nbits = math.ceil(math.log2(num_addresses))
 
-    return addressList, lutNbits, data[p:]
+    return address_list, lut_nbits, data[p:]
 
-def _decode_decodeSendList(stream, nbits, lut, block_index):
+def _decode_decode_send_list(stream, nbits, lut, block_index):
     asset_id = stream.read('uintbe:64')
 
     if nbits > 0:
-        numRecipients = stream.read('uint:%i' % nbits)
-        rangeLimit = numRecipients + 1
+        num_recipients = stream.read(f'uint:{nbits}')
+        range_limit = num_recipients + 1
     else:
-        numRecipients = 1
-        rangeLimit = numRecipients
-    sendList = []
+        num_recipients = 1
+        range_limit = num_recipients
+    send_list = []
     asset = ledger.generate_asset_name(asset_id, block_index)
-    for i in range(0, rangeLimit):
+    for i in range(0, range_limit):
         if nbits > 0:
-            idx = stream.read('uint:%i' % nbits)
+            idx = stream.read(f'uint:{nbits}')
         else:
             idx = 0
         addr = lut[idx]
@@ -188,20 +189,19 @@ def _decode_decodeSendList(stream, nbits, lut, block_index):
 
         memo, is_hex = _decode_memo(stream)
         if memo is not None:
-            sendList.append((addr, amount, memo, is_hex))
+            send_list.append((addr, amount, memo, is_hex))
         else:
-            sendList.append((addr, amount))
+            send_list.append((addr, amount))
 
+    return asset, send_list
 
-    return asset, sendList
-
-def _decode_decodeSends(stream, nbits, lut, block_index):
+def _decode_decode_sends(stream, nbits, lut, block_index):
     #stream = ConstBitStream(data)
     sends = {}
 
     while stream.read('bool'):
-        asset, sendList = _decode_decodeSendList(stream, nbits, lut, block_index)
-        sends[asset] = sendList
+        asset, send_list = _decode_decode_send_list(stream, nbits, lut, block_index)
+        sends[asset] = send_list
 
     return sends
 
@@ -209,7 +209,7 @@ def _decode_memo(stream):
     if stream.read('bool'):
         is_hex = stream.read('bool')
         mlen = stream.read('uint:6')
-        data = stream.read('bytes:%i' % mlen)
+        data = stream.read(f'bytes:{mlen}')
 
         if not(is_hex):
             # is an utf8 string
@@ -219,16 +219,16 @@ def _decode_memo(stream):
     else:
         return None, None
 
-def _decode_mpmaSendDecode(data, block_index):
-    lut, nbits, remain = _decode_decodeLUT(data)
+def _decode_mpma_send_decode(data, block_index):
+    lut, nbits, remain = _decode_decode_lut(data)
     stream = ConstBitStream(remain)
     memo, is_hex = _decode_memo(stream)
-    sends = _decode_decodeSends(stream, nbits, lut, block_index)
+    sends = _decode_decode_sends(stream, nbits, lut, block_index)
     if memo is not None:
         for asset in sends:
-            sendList = sends[asset]
-            for idx, send in enumerate(sendList):
+            send_list = sends[asset]
+            for idx, send in enumerate(send_list):
                 if len(send) == 2:
-                    sendList[idx] = (send[0], send[1], memo, is_hex)
+                    send_list[idx] = (send[0], send[1], memo, is_hex)
 
     return sends

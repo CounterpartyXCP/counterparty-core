@@ -121,7 +121,7 @@ def compose (db, source, destination, asset, quantity, memo=None, memo_is_hex=Fa
                     # 3. Send one memo (either bytes or string) and True/False in memo_is_hex. This will be interpreted as a message wide memo.
                     if (len(destination) > config.MPMA_LIMIT):
                         raise exceptions.ComposeError('mpma sends have a maximum of '+str(config.MPMA_LIMIT)+' sends')
-                    
+
                     if isinstance(memo, list) and isinstance(memo_is_hex, list):
                         # (1) implemented here
                         if len(memo) != len(memo_is_hex):

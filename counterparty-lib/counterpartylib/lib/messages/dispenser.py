@@ -62,7 +62,7 @@ def initialise(db):
         cursor.execute('ALTER TABLE dispensers ADD COLUMN oracle_address TEXT')
     if 'last_status_tx_hash' not in columns:
         #this column will be used to know when a dispenser was marked to close
-        cursor.execute('ALTER TABLE dispensers ADD COLUMN last_status_tx_hash TEXT') 
+        cursor.execute('ALTER TABLE dispensers ADD COLUMN last_status_tx_hash TEXT')
     if "origin" not in columns:
         cursor.execute('ALTER TABLE dispensers ADD COLUMN origin TEXT')
         cursor.execute("UPDATE dispensers AS d SET origin = (SELECT t.source FROM transactions t WHERE d.tx_hash = t.tx_hash)")
@@ -128,7 +128,7 @@ def initialise(db):
                                         dispense_quantity INTEGER,
                                         dispenser_tx_hash TEXT,
                                         PRIMARY KEY (tx_index, tx_hash, source, destination),
-                                        FOREIGN KEY (tx_index, tx_hash, block_index) 
+                                        FOREIGN KEY (tx_index, tx_hash, block_index)
                                             REFERENCES transactions(tx_index, tx_hash, block_index))
                                         '''
     # create tables
@@ -141,21 +141,21 @@ def initialise(db):
     # fill dispenser_refills table
     dispenser_refills_is_empty = cursor.execute("SELECT * FROM dispenser_refills LIMIT 1").fetchone() is None
     if dispenser_refills_is_empty:
-        cursor.execute('''INSERT INTO dispenser_refills 
+        cursor.execute('''INSERT INTO dispenser_refills
                           SELECT t.tx_index, deb.event, deb.block_index, deb.address,
-                                 dis.source, deb.asset, deb.quantity, dis.tx_hash 
-                          FROM debits deb 
-                          LEFT JOIN transactions t ON t.tx_hash = deb.event 
-                          LEFT JOIN dispensers dis ON 
-                              dis.source = deb.address 
-                              AND dis.asset = deb.asset 
+                                 dis.source, deb.asset, deb.quantity, dis.tx_hash
+                          FROM debits deb
+                          LEFT JOIN transactions t ON t.tx_hash = deb.event
+                          LEFT JOIN dispensers dis ON
+                              dis.source = deb.address
+                              AND dis.asset = deb.asset
                               AND dis.tx_index = (
                                   SELECT max(dis2.tx_index)
-                                  FROM dispensers dis2 
-                                  WHERE dis2.source = deb.address 
+                                  FROM dispensers dis2
+                                  WHERE dis2.source = deb.address
                                   AND dis2.asset = deb.asset
                                   AND dis2.block_index <= deb.block_index
-                              ) 
+                              )
                           WHERE deb.action = 'refill dispenser' AND dis.source IS NOT NULL''')
 
 
@@ -165,7 +165,7 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
     asset_id = None
 
     if asset == config.BTC:
-        problems.append('cannot dispense %s' % config.BTC)
+        problems.append(f'cannot dispense {config.BTC}')
         return None, problems
 
     # resolve subassets
@@ -179,15 +179,15 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
         if escrow_quantity < give_quantity:
             problems.append('escrow_quantity must be greater or equal than give_quantity')
     elif not(status == STATUS_CLOSED):
-        problems.append('invalid status %i' % status)
+        problems.append(f'invalid status {status}')
 
     cursor = db.cursor()
     available = ledger.get_balance(db, source, asset, return_list=True)
 
     if len(available) == 0:
-        problems.append('address doesn\'t has the asset %s' % asset)
+        problems.append(f'address doesn\'t has the asset {asset}')
     elif len(available) >= 1 and available[0]['quantity'] < escrow_quantity:
-        problems.append('address doesn\'t has enough balance of %s (%i < %i)' % (asset, available[0]['quantity'], escrow_quantity))
+        problems.append(f"address doesn\'t has enough balance of {asset} ({available[0]['quantity']} < {escrow_quantity})")
     else:
         if status == STATUS_OPEN_EMPTY_ADDRESS and not(open_address):
             open_address = source
@@ -204,22 +204,22 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
             if status == STATUS_OPEN or status == STATUS_OPEN_EMPTY_ADDRESS:
                 if len(open_dispensers) > 0:
                     max_refills = ledger.get_value_by_block_index("max_refills", block_index)
-                    refilling_count = 0                
+                    refilling_count = 0
                     if max_refills > 0:
                         refilling_count = ledger.get_refilling_count(db, dispenser_tx_hash=open_dispensers[0]["tx_hash"])
-            
+
                     #It's a valid refill
                     if open_dispensers[0]['satoshirate'] == mainchainrate and open_dispensers[0]['give_quantity'] == give_quantity:
                         if (max_refills > 0) and (refilling_count >= max_refills):
                             problems.append('the dispenser reached its maximum refilling')
                     else:
                         if open_dispensers[0]['satoshirate'] != mainchainrate:
-                            problems.append('address has a dispenser already opened for asset %s with a different mainchainrate' % asset)
+                            problems.append(f'address has a dispenser already opened for asset {asset} with a different mainchainrate')
                         if open_dispensers[0]['give_quantity'] != give_quantity:
-                            problems.append('address has a dispenser already opened for asset %s with a different give_quantity' % asset)
-            elif status == STATUS_CLOSED:               
+                            problems.append(f'address has a dispenser already opened for asset {asset} with a different give_quantity')
+            elif status == STATUS_CLOSED:
                 if len(open_dispensers) == 0:
-                    problems.append('address doesnt has an open dispenser for asset %s' % asset)
+                    problems.append(f'address doesnt has an open dispenser for asset {asset}')
 
             if status == STATUS_OPEN_EMPTY_ADDRESS:
                 #If an address is trying to refill a dispenser in a different address and it's the creator
@@ -228,14 +228,14 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
                                                                                     source=query_address,
                                                                                     status=STATUS_CLOSED,
                                                                                     origin=source)
-                    
+
                     if not (ledger.enabled("dispenser_origin_permission_extended", block_index) and dispensers_from_same_origin_count > 0):
-                    #It means that the same origin has not opened other dispensers in this address
+                        #It means that the same origin has not opened other dispensers in this address
                         existing_balances = ledger.get_balances_count(db, query_address)
 
                         if existing_balances[0]['cnt'] > 0:
                             problems.append('cannot open on another address if it has any balance history')
-                        
+
                         if ledger.enabled("dispenser_origin_permission_extended", block_index):
                             address_oldest_transaction = backend.get_oldest_tx(query_address)
                             if ("block_index" in address_oldest_transaction) and (address_oldest_transaction["block_index"] > 0) and (block_index > address_oldest_transaction["block_index"]):
@@ -244,7 +244,7 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
             if len(problems) == 0:
                 asset_id = ledger.generate_asset_id(asset, block_index)
                 if asset_id == 0:
-                    problems.append('cannot dispense %s' % asset) # How can we test this on a test vector?
+                    problems.append(f'cannot dispense {asset}') # How can we test this on a test vector?
         else:
             problems.append('address has already a dispenser about to close, no action can be taken until it closes')
 
@@ -252,10 +252,10 @@ def validate (db, source, asset, give_quantity, escrow_quantity, mainchainrate, 
 
     if oracle_address is not None and ledger.enabled('oracle_dispensers', block_index):
         last_price, last_fee, last_label, last_updated = ledger.get_oracle_last_price(db, oracle_address, block_index)
-        
+
         if last_price is None:
-            problems.append('The oracle address %s has not broadcasted any price yet' % oracle_address)
-    
+            problems.append(f'The oracle address {oracle_address} has not broadcasted any price yet')
+
     if give_quantity > config.MAX_INT or escrow_quantity > config.MAX_INT or mainchainrate > config.MAX_INT:
         problems.append('integer overflow')
 
@@ -276,28 +276,29 @@ def compose (db, source, asset, give_quantity, escrow_quantity, mainchainrate, s
         data += address.pack(open_address)
     if oracle_address is not None and ledger.enabled('oracle_dispensers'):
         oracle_fee = calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, oracle_address, ledger.CURRENT_BLOCK_INDEX)
-        
+
         if oracle_fee >= config.DEFAULT_REGULAR_DUST_SIZE:
             destination.append((oracle_address,oracle_fee))
-        data += address.pack(oracle_address)        
-        
+        data += address.pack(oracle_address)
+
     return (source, destination, data)
 
 
 def calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, oracle_address, block_index):
     last_price, last_fee, last_fiat_label, last_updated = ledger.get_oracle_last_price(db, oracle_address, block_index)
     last_fee_multiplier = (last_fee / config.UNIT)
-        
+
     #Format mainchainrate to ######.##
-    oracle_mainchainrate = util.satoshirate_to_fiat(mainchainrate)       
+    oracle_mainchainrate = util.satoshirate_to_fiat(mainchainrate)
     oracle_mainchainrate_btc = oracle_mainchainrate/last_price
-        
+
     #Calculate the total amount earned for dispenser and the fee
     remaining = int(floor(escrow_quantity / give_quantity))
     total_quantity_btc = oracle_mainchainrate_btc * remaining
     oracle_fee_btc = int(total_quantity_btc * last_fee_multiplier *config.UNIT)
-    
+
     return oracle_fee_btc
+
 
 # Reproduce unknown fixed bug: close dispenser calls from another address not recognized
 DECODE_ERROR = {
@@ -343,19 +344,18 @@ def parse (db, tx, message):
 
         if problems:
             status = 'invalid: ' + '; '.join(problems)
-        else:   
+        else:
             if dispenser_status == STATUS_OPEN or dispenser_status == STATUS_OPEN_EMPTY_ADDRESS:
                 existing = ledger.get_dispensers(db, source=action_address, asset=asset, status=STATUS_OPEN)
 
                 if len(existing) == 0:
                     if (oracle_address != None) and ledger.enabled('oracle_dispensers', tx['block_index']):
-                        oracle_fee = calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, oracle_address, tx['block_index']) 
-                           
-                        if oracle_fee >= config.DEFAULT_REGULAR_DUST_SIZE:   
+                        oracle_fee = calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, oracle_address, tx['block_index'])
+
+                        if oracle_fee >= config.DEFAULT_REGULAR_DUST_SIZE:
                             if tx["destination"] != oracle_address or tx["btc_amount"] < oracle_fee:
                                 status = 'invalid: insufficient or non-existent oracle fee'
-                        
-                    
+
                     if status == 'valid':
                         # Create the new dispenser
                         try:
@@ -395,27 +395,27 @@ def parse (db, tx, message):
                             'oracle_address': oracle_address,
                             'origin': tx['source']
                         }
-                        
+
                         if ledger.enabled("dispenser_origin_permission_extended"):
                             bindings["origin"] = tx["source"]
-                        
+
                         sql = '''insert into dispensers (tx_index, tx_hash, block_index, source, asset, give_quantity, escrow_quantity, satoshirate, status, give_remaining, oracle_address, origin, last_status_tx_hash)
                             values(:tx_index, :tx_hash, :block_index, :source, :asset, :give_quantity, :escrow_quantity, :satoshirate, :status, :give_remaining, :oracle_address, :origin, NULL)'''
                         cursor.execute(sql, bindings)
                 elif len(existing) == 1 and existing[0]['satoshirate'] == mainchainrate and existing[0]['give_quantity'] == give_quantity:
                     if tx["source"]==action_address or (ledger.enabled("dispenser_origin_permission_extended", tx['block_index']) and tx["source"] == existing[0]["origin"]):
                         if (oracle_address != None) and ledger.enabled('oracle_dispensers', tx['block_index']):
-                            oracle_fee = calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, oracle_address, tx['block_index']) 
-                               
-                            if oracle_fee >= config.DEFAULT_REGULAR_DUST_SIZE:   
+                            oracle_fee = calculate_oracle_fee(db, escrow_quantity, give_quantity, mainchainrate, oracle_address, tx['block_index'])
+
+                            if oracle_fee >= config.DEFAULT_REGULAR_DUST_SIZE:
                                 if tx["destination"] != oracle_address or tx["btc_amount"] < oracle_fee:
                                     status = 'invalid: insufficient or non-existent oracle fee'
-                        
+
                         if status == 'valid':
                             # Refill the dispenser by the given amount
                             try:
                                 ledger.debit(db, tx['source'], asset, escrow_quantity, tx['tx_index'], action='refill dispenser', event=tx['tx_hash'])
-                                
+
                                 set_data = {
                                     'give_remaining': existing[0]['give_remaining'] + escrow_quantity,
                                     'dispense_count': 0 # reset the dispense count on refill
@@ -433,15 +433,15 @@ def parse (db, tx, message):
                                     'dispenser_quantity': escrow_quantity,
                                     'dispenser_tx_hash': dispenser_tx_hash
                                 }
-                                sql = '''INSERT INTO dispenser_refills 
+                                sql = '''INSERT INTO dispenser_refills
                                          VALUES (
-                                            :tx_index, 
-                                            :tx_hash, 
-                                            :block_index, 
-                                            :source, 
-                                            :destination, 
-                                            :asset, 
-                                            :dispenser_quantity, 
+                                            :tx_index,
+                                            :tx_hash,
+                                            :block_index,
+                                            :source,
+                                            :destination,
+                                            :asset,
+                                            :dispenser_quantity,
                                             :dispenser_tx_hash
                                          )'''
                                 cursor.execute(sql, bindings_refill)
@@ -487,7 +487,7 @@ def parse (db, tx, message):
                 status = 'invalid: status must be one of OPEN or CLOSE'
 
     if status != 'valid':
-        logger.warning("Not storing [dispenser] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.warning(f"Not storing [dispenser] tx [{tx['tx_hash']}]: {status}")
 
     cursor.close()
 
@@ -573,10 +573,10 @@ def dispense(db, tx):
                         if max_dispenser_limit_hit:
                             credit_action = 'Closed: Max dispenses reached'
                             dispenser['closing_reason'] = "max_dispenses_reached"
-                        else:   
+                        else:
                             credit_action = 'dispenser close'
                             dispenser['closing_reason'] = "no_more_to_give"
-                        
+
                         # return the remaining to the owner
                         ledger.credit(db, dispenser['source'], dispenser['asset'], give_remaining, tx['tx_index'], action=credit_action, event=next_out['tx_hash'])
                     else:
