@@ -120,17 +120,11 @@ def bootstrap(testnet=False, overwrite=True, ask_confirmation=False, quiet=False
 
     # Set Constants.
     if testnet:
-        if check.CONSENSUS_HASH_VERSION_TESTNET < 7:
-            BOOTSTRAP_URL = 'https://counterparty.io/bootstrap/counterparty-db-testnet.latest.tar.gz'
-        else:
-            BOOTSTRAP_URL = 'https://counterparty.io/bootstrap/counterparty-db-testnet-{}.latest.tar.gz'.format(check.CONSENSUS_HASH_VERSION_TESTNET)
+        BOOTSTRAP_URL = 'https://bootstrap.counterparty.io/counterparty-db-testnet.latest.tar.gz'
         TARBALL_PATH = os.path.join(tempfile.gettempdir(), 'counterpartyd-testnet-db.latest.tar.gz')
         DATABASE_PATH = os.path.join(data_dir, '{}.testnet.db'.format(config.APP_NAME))
     else:
-        if check.CONSENSUS_HASH_VERSION_MAINNET < 3:
-            BOOTSTRAP_URL = 'https://counterparty.io/bootstrap/counterparty-db.latest.tar.gz'
-        else:
-            BOOTSTRAP_URL = 'https://counterparty.io/bootstrap/counterparty-db-{}.latest.tar.gz'.format(check.CONSENSUS_HASH_VERSION_MAINNET)
+        BOOTSTRAP_URL = 'https://bootstrap.counterparty.io/counterparty-db.latest.tar.gz'
         TARBALL_PATH = os.path.join(tempfile.gettempdir(), 'counterpartyd-db.latest.tar.gz')
         DATABASE_PATH = os.path.join(data_dir, '{}.db'.format(config.APP_NAME))
 
