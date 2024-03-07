@@ -14,14 +14,14 @@ logger = logging.getLogger(__name__)
 from bitstring import ReadError
 from counterpartylib.lib import (config, util, exceptions, util, message_type, ledger)
 
-from .mpma_util.internals import (_decode_mpmaSendDecode, _encode_mpmaSend)
+from .mpma_util.internals import (_decode_mpma_send_decode, _encode_mpma_send)
 
 ID = 3 # 0x03 is this specific message type
 
 ## expected functions for message version
 def unpack(db, message, block_index):
     try:
-        unpacked = _decode_mpmaSendDecode(message, block_index)
+        unpacked = _decode_mpma_send_decode(message, block_index)
     except (struct.error) as e:
         raise exceptions.UnpackError('could not unpack')
     except (exceptions.AssetNameError, exceptions.AssetIDError) as e:
@@ -55,35 +55,35 @@ def validate (db, source, asset_dest_quant_list, block_index):
         destination = t[1]
         quantity = t[2]
 
-        sendMemo = None
+        send_memo = None
         if len(t) > 3:
-            sendMemo = t[3]
+            send_memo = t[3]
 
-        if asset == config.BTC: problems.append('cannot send {} to {}'.format(config.BTC, destination))
+        if asset == config.BTC: problems.append(f'cannot send {config.BTC} to {destination}')
 
         if not isinstance(quantity, int):
-            problems.append('quantities must be an int (in satoshis) for {} to {}'.format(asset, destination))
+            problems.append(f'quantities must be an int (in satoshis) for {asset} to {destination}')
 
         if quantity < 0:
-            problems.append('negative quantity for {} to {}'.format(asset, destination))
+            problems.append(f'negative quantity for {asset} to {destination}')
 
         if quantity == 0:
-            problems.append('zero quantity for {} to {}'.format(asset, destination))
+            problems.append(f'zero quantity for {asset} to {destination}')
 
         # For SQLite3
         if quantity > config.MAX_INT:
-            problems.append('integer overflow for {} to {}'.format(asset, destination))
+            problems.append(f'integer overflow for {asset} to {destination}')
 
         # destination is always required
         if not destination:
-            problems.append('destination is required for {}'.format(asset))
+            problems.append(f'destination is required for {asset}')
 
         if ledger.enabled('options_require_memo'):
             results = ledger.get_addresses(db, address=destination) if destination else None
             if results:
                 result = results[0]
-                if result and result['options'] & config.ADDRESS_OPTION_REQUIRE_MEMO and (sendMemo is None):
-                    problems.append('destination {} requires memo'.format(destination))
+                if result and result['options'] & config.ADDRESS_OPTION_REQUIRE_MEMO and (send_memo is None):
+                    problems.append(f'destination {destination} requires memo')
 
     cursor.close()
 
@@ -99,11 +99,11 @@ def compose (db, source, asset_dest_quant_list, memo, memo_is_hex):
             asset = ledger.resolve_subasset_longname(db, asset)
 
         if not isinstance(quantity, int):
-            raise exceptions.ComposeError('quantities must be an int (in satoshis) for {}'.format(asset))
+            raise exceptions.ComposeError(f'quantities must be an int (in satoshis) for {asset}')
 
         balance = ledger.get_balance(db, source, asset)
         if balance < quantity:
-            raise exceptions.ComposeError('insufficient funds for {}'.format(asset))
+            raise exceptions.ComposeError(f'insufficient funds for {asset}')
 
     block_index = ledger.CURRENT_BLOCK_INDEX
 
@@ -113,7 +113,7 @@ def compose (db, source, asset_dest_quant_list, memo, memo_is_hex):
     if problems: raise exceptions.ComposeError(problems)
 
     data = message_type.pack(ID)
-    data += _encode_mpmaSend(db, asset_dest_quant_list, block_index, memo=memo, memo_is_hex=memo_is_hex)
+    data += _encode_mpma_send(db, asset_dest_quant_list, block_index, memo=memo, memo_is_hex=memo_is_hex)
 
     return (source, [], data)
 
@@ -126,7 +126,7 @@ def parse (db, tx, message):
     except (exceptions.AssetNameError, exceptions.AssetIDError) as e:
         status = 'invalid: invalid asset name/id'
     except (Exception) as e:
-        status = 'invalid: couldn\'t unpack; %s' % e
+        status = f'invalid: couldn\'t unpack; {e}'
 
     cursor = db.cursor()
 
@@ -138,12 +138,12 @@ def parse (db, tx, message):
             try:
                 asset = ledger.get_asset_name(db, asset_id, tx['block_index'])
             except (exceptions.AssetNameError) as e:
-                status = 'invalid: asset %s invalid at block index %i' % (asset_id, tx['block_index'])
+                status = f"invalid: asset {asset_id} invalid at block index {tx['block_index']}"
                 break
 
             balance = ledger.get_balance(db, tx['source'], asset_id)
             if not balance:
-                status = 'invalid: insufficient funds for asset %s, address %s has no balance' % (asset_id, tx['source'])
+                status = f"invalid: insufficient funds for asset {asset_id}, address {tx['source']} has no balance"
                 break
 
             credits = unpacked[asset_id]
@@ -151,11 +151,11 @@ def parse (db, tx, message):
             total_sent = reduce(lambda p, t: p + t[1], credits, 0)
 
             if balance < total_sent:
-                status = 'invalid: insufficient funds for asset %s, needs %i' % (asset_id, total_sent)
+                status = f'invalid: insufficient funds for asset {asset_id}, needs {total_sent}'
                 break
 
             if status == 'valid':
-                plain_sends += map(lambda t: util.py34TupleAppend(asset_id, t), credits)
+                plain_sends += map(lambda t: util.py34_tuple_append(asset_id, t), credits)
                 all_credits += map(lambda t: {"asset": asset_id, "destination": t[0], "quantity": t[1]}, credits)
                 all_debits.append({"asset": asset_id, "quantity": total_sent})
 
@@ -196,7 +196,7 @@ def parse (db, tx, message):
             cursor.execute(sql, bindings)
 
     if status != 'valid':
-        logger.warning("Not storing [mpma] tx [%s]: %s" % (tx['tx_hash'], status))
+        logger.warning(f"Not storing [mpma] tx [{tx['tx_hash']}]: {status}")
 
     cursor.close()
 

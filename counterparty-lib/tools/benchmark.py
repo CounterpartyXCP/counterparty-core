@@ -137,7 +137,7 @@ def copy_memory_db_to_disk(local_base, memory_db):
     with db.backup("main", memory_db, "main") as backup:
         while not backup.done:
             backup.step(100)
-    print('Database copy duration: {:.3f}s'.format(time.time() - start_time_copy_db))
+    print(f'Database copy duration: {time.time() - start_time_copy_db:.3f}s')
 
 
 def prepare_benchmark_db(database_file):
@@ -176,7 +176,7 @@ def prepare_benchmark_db(database_file):
     bench_cursor.execute('''CREATE INDEX IF NOT EXISTS
                       asset_idx ON new_balances (asset)
                    ''')
-    
+
     bench_cursor.execute('''CREATE TABLE IF NOT EXISTS old_balances(
                       address TEXT,
                       asset TEXT,
@@ -199,7 +199,7 @@ def prepare_benchmark_db(database_file):
                 SELECT 'debits' as table_name, address, asset, quantity, block_index FROM debits)
             ORDER BY block_index
             """
-    
+
     """ cursor.execute(query)
     count = 1
     populate_start_time = time.time()
@@ -211,8 +211,8 @@ def prepare_benchmark_db(database_file):
             remove_from_balance_old(bench_db, *movement[1:4])
         print(f"{count}/{movements_count}", end="\r")
         count += 1
-    print('`old_balances` populated in: {:.3f}s'.format(time.time() - populate_start_time)) """
-    
+    print(f'`old_balances` populated in: {time.time() - populate_start_time:.3f}s') """
+
     cursor.execute(query)
     count = 1
     populate_start_time = time.time()
@@ -224,8 +224,8 @@ def prepare_benchmark_db(database_file):
             remove_from_balance_new(bench_db, *movement[1:], 0)
         print(f"{count}/{movements_count}", end="\r")
         count += 1
-    print('`new_balances` populated in: {:.3f}s'.format(time.time() - populate_start_time))
-    
+    print(f'`new_balances` populated in: {time.time() - populate_start_time:.3f}s')
+
     copy_memory_db_to_disk(BENCHMARK_DB, bench_db)
     print()
 
@@ -245,12 +245,13 @@ def execute_query(cursor, description, query, bindings=None):
     if isinstance(query, list):
         for q in query:
             res = cursor.execute(q, bindings).fetchall()
-        print('Average duration: {:.5f}s'.format((time.time() - start_time) / len(query)))
+        print(f'Average duration: {(time.time() - start_time) / len(query):.5f}s')
     else:
         res = cursor.execute(query, bindings).fetchall()
-        print('Duration: {:.5f}s'.format(time.time() - start_time))
+        print(f'Duration: {time.time() - start_time:.5f}s')
     print()
     return res
+
 
 BALANCES_VIEW_QUERY = """
     SELECT address, asset, quantity, MAX(rowid)
@@ -259,7 +260,7 @@ BALANCES_VIEW_QUERY = """
 """
 
 def benchmark_new_balances(old_balance_db):
-    
+
     old_db = apsw.Connection(old_balance_db, flags=apsw.SQLITE_OPEN_READONLY)
     old_cursor = old_db.cursor()
 
@@ -282,7 +283,6 @@ def benchmark_new_balances(old_balance_db):
     """
     old_most_assets = execute_query(old_cursor, description, query)
 
-
     description = "Get 100 addresses with most assets from `new_balances`..."
     query = f"""
     SELECT address, count(asset) as cnt
@@ -293,7 +293,6 @@ def benchmark_new_balances(old_balance_db):
     """
     new_most_assets = execute_query(new_cursor, description, query)
 
-
     description = "Get balances for 100 addresses with most assets from `old_balances`..."
     queries = []
     for asset in old_most_assets:
@@ -303,7 +302,6 @@ def benchmark_new_balances(old_balance_db):
             WHERE address = '{asset[0]}'
         """)
     execute_query(old_cursor, description, queries)
-
 
     description = "Get balances for 100 addresses with most assets from `new_balances`..."
     queries = []
@@ -324,4 +322,3 @@ BENCHMARK_DB="/home/tower/benchmark.db"
 #prepare_benchmark_db("/home/tower/counterparty.testnet.bootstrap.db")
 #prepare_benchmark_db("/home/tower/counterparty.db")
 benchmark_new_balances("/home/tower/counterparty.db")
-

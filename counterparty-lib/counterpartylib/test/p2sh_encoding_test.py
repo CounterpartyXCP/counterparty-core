@@ -122,7 +122,7 @@ def test_p2sh_encoding(server_db):
         # store transaction
         pretxid, _ = util_test.insert_raw_transaction(pretxhex, server_db)
 
-        logger.debug('pretxid %s' % (pretxid))
+        logger.debug(f'pretxid {pretxid}')
 
         # check that when we do another, unrelated, send that it won't use our UTXO
         result = api.compose_transaction(
@@ -270,7 +270,7 @@ def test_p2sh_encoding_long_data(server_db):
 
         # store transaction
         pretxid, _ = util_test.insert_raw_transaction(pretxhex, server_db)
-        logger.debug('pretxid %s' % (pretxid))
+        logger.debug(f'pretxid {pretxid}')
 
         # now compose the data transaction
         result = api.compose_transaction(
@@ -380,14 +380,14 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
     with util_test.ConfigContext(OLD_STYLE_API=True), util_test.MockProtocolChangesContext(enhanced_sends=True, p2sh_encoding=True):
         p2sh_source_multisig_pubkeys_binary = [binascii.unhexlify(p) for p in [DP['pubkey'][ADDR[0]], DP['pubkey'][ADDR[1]], DP['pubkey'][ADDR[2]]]]
         data_drop = b'deadbeef01'
-        scriptSig, redeemScript, outputScript = p2sh_encoding.make_p2sh_encoding_redeemscript(
+        script_sig, redeem_script, output_script = p2sh_encoding.make_p2sh_encoding_redeemscript(
             data_drop,
-            n=0, pubKey=None,
+            n=0, pub_key=None,
             multisig_pubkeys=p2sh_source_multisig_pubkeys_binary,
             multisig_pubkeys_required=2
         )
-        redeemScript = bitcoinlib.core.script.CScript(redeemScript)
-        assert repr(redeemScript) == "CScript([x('{}'), OP_DROP, 2, x('{}'), x('{}'), x('{}'), 3, OP_CHECKMULTISIGVERIFY, 0, OP_DROP, OP_DEPTH, 0, OP_EQUAL])".format(data_drop.hex(), DP['pubkey'][ADDR[0]], DP['pubkey'][ADDR[1]], DP['pubkey'][ADDR[2]])
+        redeem_script = bitcoinlib.core.script.CScript(redeem_script)
+        assert repr(redeem_script) == f"CScript([x('{data_drop.hex()}'), OP_DROP, 2, x('{DP['pubkey'][ADDR[0]]}'), x('{DP['pubkey'][ADDR[1]]}'), x('{DP['pubkey'][ADDR[2]]}'), 3, OP_CHECKMULTISIGVERIFY, 0, OP_DROP, OP_DEPTH, 0, OP_EQUAL])"
 
         # setup transaction
         fee = 20000
@@ -409,7 +409,7 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
 
         # store transaction
         pretxid, _ = util_test.insert_raw_transaction(pretxhex, server_db)
-        logger.debug('pretxid %s' % (pretxid))
+        logger.debug(f'pretxid {pretxid}')
 
         # now compose the data transaction
         result = api.compose_transaction(
@@ -442,12 +442,12 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
 
 @pytest.mark.usefixtures("cp_server")
 def test_p2sh_script_decoding():
-    scriptHex = "1c8a5dda15fb6f05628a061e67576e926dc71a7fa2f0cceb97452b4d564101a914c088c83aeddd211096df9f5f0df1f3b885ac7fe70188210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad0075740087"
-    scriptSig = bitcoinlib.core.script.CScript(binascii.unhexlify(scriptHex))
+    script_hex = "1c8a5dda15fb6f05628a061e67576e926dc71a7fa2f0cceb97452b4d564101a914c088c83aeddd211096df9f5f0df1f3b885ac7fe70188210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad0075740087"
+    script_sig = bitcoinlib.core.script.CScript(binascii.unhexlify(script_hex))
 
-    print('scriptSig', repr(scriptSig), list(scriptSig), len(list(scriptSig)))
+    print('scriptSig', repr(script_sig), list(script_sig), len(list(script_sig)))
 
-    chunks = list(scriptSig)
+    chunks = list(script_sig)
     if len(chunks) == 3:
         sig = chunks[0]
         datachunk = chunks[1]
@@ -497,18 +497,17 @@ def test_benchmark_outkey_vin():
     tt = time.time()
     ttn1 = ((tt - t) / m)
 
-    print(tt - t, "%f" % ttn1)
+    print(tt - t, f"{ttn1:f}")
 
     t = time.time()
     for n in range(m):
         tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify("0100000002eff195acdf2bbd215daa8aca24eb667b563a731d34a9ab75c8d8df5df08be29b000000006c493046022100ec6fa8316a4f5cfd69816e31011022acce0933bd3b01248caa8b49e60de1b98a022100987ba974b2a4f9976a8d61d94009cb7f7986a827dc5730e999de1fb748d2046c01210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ffffffffeff195acdf2bbd215daa8aca24eb667b563a731d34a9ab75c8d8df5df08be29b010000006a47304402201f8fb2d62df22592cb8d37c68ab26563dbb8e270f7f8409ac0f6d7b24ddb5c940220314e5c767fd12b20116528c028eab2bfbad30eb963bd849993410049cf14a83d01210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ffffffff02145fea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000346a32544553540000000a00000000000000010000000005f5e1000000000000000000000000000bebc2000032000000000000271000000000"))
         outkey = [(vin.prevout.hash, vin.prevout.n) for vin in tx.vin]
 
-
     tt = time.time()
     ttn2 = ((tt - t) / m)
 
-    print(tt - t, "%f" % ttn2)
+    print(tt - t, f"{ttn2:f}")
 
     t = time.time()
     for n in range(m):
@@ -516,11 +515,10 @@ def test_benchmark_outkey_vin():
         outkey = [(vin.prevout.hash, vin.prevout.n) for vin in tx.vin]
         outkey = hashlib.sha256(str(outkey).encode('ascii')).digest()
 
-
     tt = time.time()
     ttn3 = ((tt - t) / m)
 
-    print(tt - t, "%f" % ttn3)
+    print(tt - t, f"{ttn3:f}")
 
     # not sure what to do here since the speed depends on the machine ...
     assert ttn1 < 0.0001

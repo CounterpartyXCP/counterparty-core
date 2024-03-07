@@ -117,7 +117,7 @@ def restore_database(database_filename, dump_filename):
 
 def remove_database_files(database_filename):
     """Delete temporary db dumps."""
-    for path in [database_filename, '{}-shm'.format(database_filename), '{}-wal'.format(database_filename)]:
+    for path in [database_filename, f'{database_filename}-shm', f'{database_filename}-wal']:
         if os.path.isfile(path):
             os.remove(path)
 
@@ -248,9 +248,9 @@ def dummy_tx_hash(raw_transaction):
 
     # check we haven't created this before (if we do 2 exactly the sends for example)
     if tx_id in UNIQUE_DUMMY_TX_HASH:
-        logger.warning('BUMP TXID %s' % tx_id)
+        logger.warning(f'BUMP TXID {tx_id}')
         UNIQUE_DUMMY_TX_HASH[tx_id] += 1
-        tx_id = hashlib.sha256('{}{}'.format(tx_id, UNIQUE_DUMMY_TX_HASH[tx_id]).encode('utf-8')).hexdigest()
+        tx_id = hashlib.sha256(f'{tx_id}{UNIQUE_DUMMY_TX_HASH[tx_id]}'.encode('utf-8')).hexdigest()
     else:
         UNIQUE_DUMMY_TX_HASH[tx_id] = 0
 
@@ -265,7 +265,7 @@ def insert_transaction(transaction, db):
     cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty)
                       VALUES (?,?,?,?,?,?,?)''', block)
     keys = ",".join(transaction.keys())
-    cursor.execute('''INSERT INTO transactions ({}) VALUES (?,?,?,?,?,?,?,?,?,?,?)'''.format(keys), tuple(transaction.values()))
+    cursor.execute(f'''INSERT INTO transactions ({keys}) VALUES (?,?,?,?,?,?,?,?,?,?,?)''', tuple(transaction.values()))
     # `dispenser.dispense()` needs some vouts. Let's say one vout per transaction.
     cursor.execute('''INSERT INTO transaction_outputs(
                                 tx_index,
@@ -294,11 +294,11 @@ def prefill_rawtransactions_db(db):
     cursor.execute('DROP TABLE IF EXISTS raw_transactions')
     cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT, confirmations INT)')
     with open(CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
-            wallet_unspent = json.load(listunspent_test_file)
-            for output in wallet_unspent:
-                txid = output['txid']
-                tx = BlockchainParser().deserialize_tx(output['txhex'], True)
-                cursor.execute('INSERT INTO raw_transactions VALUES (?, ?, ?)', (txid, output['txhex'], output['confirmations']))
+        wallet_unspent = json.load(listunspent_test_file)
+        for output in wallet_unspent:
+            txid = output['txid']
+            tx = BlockchainParser().deserialize_tx(output['txhex'], True)
+            cursor.execute('INSERT INTO raw_transactions VALUES (?, ?, ?)', (txid, output['txhex'], output['confirmations']))
     cursor.close()
 
 
@@ -378,12 +378,12 @@ def mock_bitcoind_verbose_tx_output(tx, txid, confirmations):
 
     for idx, vout in enumerate(ctx.vout):
         if list(vout.scriptPubKey)[-1] == bitcoinlib.core.script.OP_CHECKMULTISIG:
-           pubkeys = list(vout.scriptPubKey)[1:-2]
-           addresses = []
-           for pubkey in pubkeys:
-               addr = str(bitcoinlib.wallet.P2PKHBitcoinAddress.from_pubkey(pubkey))
+            pubkeys = list(vout.scriptPubKey)[1:-2]
+            addresses = []
+            for pubkey in pubkeys:
+                addr = str(bitcoinlib.wallet.P2PKHBitcoinAddress.from_pubkey(pubkey))
 
-               addresses.append(addr)
+                addresses.append(addr)
         else:
             try:
                 addresses = [str(bitcoinlib.wallet.CBitcoinAddress.from_scriptPubKey(vout.scriptPubKey))]
@@ -496,7 +496,7 @@ def run_scenario(scenario):
         if tx[0] != 'create_next_block':
             mock_protocol_changes = tx[3] if len(tx) == 4 else {}
             with MockProtocolChangesContext(**(mock_protocol_changes or {})):
-                module = sys.modules['counterpartylib.lib.messages.{}'.format(tx[0])]
+                module = sys.modules[f'counterpartylib.lib.messages.{tx[0]}']
                 compose = getattr(module, 'compose')
                 unsigned_tx_hex = transaction.construct(db=db, tx_info=compose(db, *tx[1]), regular_dust_size=5430, **tx[2])
                 raw_transactions.append({tx[0]: unsigned_tx_hex})
@@ -551,17 +551,17 @@ def check_record(record, server_db, pytest_config):
 
     if record['table'] == 'pragma':
         field = record['field']
-        sql = '''PRAGMA {}'''.format(field)
+        sql = f'''PRAGMA {field}'''
         value = cursor.execute(sql).fetchall()[0][field]
         assert value == record['value']
     else:
-        sql = '''SELECT COUNT(*) AS c FROM {} '''.format(record['table'])
+        sql = f'''SELECT COUNT(*) AS c FROM {record['table']} '''
         sql += '''WHERE '''
         bindings = []
         conditions = []
         for field in record['values']:
             if record['values'][field] is not None:
-                conditions.append('''{} = ?'''.format(field))
+                conditions.append(f'''{field} = ?''')
                 bindings.append(record['values'][field])
         sql += " AND ".join(conditions)
 
@@ -572,9 +572,8 @@ def check_record(record, server_db, pytest_config):
             if pytest_config.getoption('verbose') >= 2:
                 print("expected values: ")
                 pprint.PrettyPrinter(indent=4).pprint(record['values'])
-                print("SELECT * FROM {} WHERE block_index = {}: ".format(record['table'], record['values']['block_index']))
-                #pprint.PrettyPrinter(indent=4).pprint(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
-                pprint.PrettyPrinter(indent=4).pprint(list(cursor.execute('''SELECT * FROM {}'''.format(record['table']))))
+                print(f"SELECT * FROM {record['table']} WHERE block_index = {record['values']['block_index']}: ")
+                pprint.PrettyPrinter(indent=4).pprint(list(cursor.execute(f'''SELECT * FROM {record['table']}''')))
 
             raise AssertionError("check_record \n" +
                                  "table=" + record['table'] + " \n" +
@@ -622,9 +621,9 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
     """Check actual and expected outputs of a particular function."""
 
     try:
-        tested_module = sys.modules['counterpartylib.lib.{}'.format(tx_name)]
+        tested_module = sys.modules[f'counterpartylib.lib.{tx_name}']
     except KeyError:    # TODO: hack
-        tested_module = sys.modules['counterpartylib.lib.messages.{}'.format(tx_name)]
+        tested_module = sys.modules[f'counterpartylib.lib.messages.{tx_name}']
     tested_method = getattr(tested_module, method)
 
     with MockProtocolChangesContext(**(mock_protocol_changes or {})):
@@ -662,7 +661,7 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, moc
                 if pytest_config.getoption('verbose') >= 2:
                     msg = "expected outputs don't match test_outputs:\nexpected_outputs=\n" + pprint.pformat(outputs) + "\ntest_outputs=\n" + pprint.pformat(test_outputs)
                 else:
-                    msg = "expected outputs don't match test_outputs: expected_outputs=%s test_outputs=%s" % (outputs, test_outputs)
+                    msg = f"expected outputs don't match test_outputs: expected_outputs={outputs} test_outputs={test_outputs}"
                 raise Exception(msg)
         if records is not None:
             for record in records:
@@ -757,14 +756,14 @@ def reparse(testnet=True, checkpoint_count=10):
 
     # connect to the on-disk DB
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
-    prod_db_path = os.path.join(data_dir, '{}{}.db'.format(config.APP_NAME, '.testnet' if testnet else ''))
-    assert os.path.exists(prod_db_path), "database path {} does not exist".format(prod_db_path)
+    prod_db_path = os.path.join(data_dir, f"{config.APP_NAME}{'.testnet' if testnet else ''}.db")
+    assert os.path.exists(prod_db_path), f"database path {prod_db_path} does not exist"
     prod_db = apsw.Connection(prod_db_path, flags=apsw.SQLITE_OPEN_READONLY)
     prod_db.setrowtrace(database.rowtracer)
 
     # Copy DB from file on disk (should be a DB file with at least all the checkpoints)
     #  in-memory DB shouldn't have been written to yet up until this point
-    logger.info("Copying database from {} to memory...".format(prod_db_path))
+    logger.info(f"Copying database from {prod_db_path} to memory...")
     with memory_db.backup("main", prod_db, "main") as backup:
         while not backup.done:
             backup.step(100)

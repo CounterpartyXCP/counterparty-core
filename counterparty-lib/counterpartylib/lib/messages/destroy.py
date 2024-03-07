@@ -93,7 +93,7 @@ def validate (db, source, destination, asset, quantity):
         raise ValidateError('destination exists')
 
     if asset == config.BTC:
-        raise ValidateError('cannot destroy {}'.format(config.BTC))
+        raise ValidateError(f'cannot destroy {config.BTC}')
 
     if type(quantity) != int:
         raise ValidateError('quantity not integer')
@@ -149,8 +149,8 @@ def parse (db, tx, message):
         cursor = db.cursor()
         cursor.execute(sql, bindings)
     else:
-        logger.warning("Not storing [destroy] tx [%s]: %s" % (tx['tx_hash'], status))
-        logger.debug("Bindings: %s" % (json.dumps(bindings), ))
+        logger.warning(f"Not storing [destroy] tx [{tx['tx_hash']}]: {status}")
+        logger.debug(f"Bindings: {json.dumps(bindings)}")
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

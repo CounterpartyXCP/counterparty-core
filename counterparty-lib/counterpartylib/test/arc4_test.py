@@ -21,7 +21,7 @@ def test_arc4_mocked():
      so when we use `'01' * 32` as seed it should still return the same result as `'00' * 32` or as ``
     """
     text = bytes("testing", 'utf-8')
-    
+
     # '00' * 32 encrypt
     k = arc4.init_arc4('00' * 32)
     assert k.encrypt(text) == b'\xaa}\xfa5\xcaY:'
@@ -33,11 +33,11 @@ def test_arc4_mocked():
     # b'\x00' * 32 encrypt
     k = arc4.init_arc4(b'\x00' * 32)
     assert k.encrypt(text) == b'\xaa}\xfa5\xcaY:'
-    
+
     # b'\x00' * 32 decrypt
     k = arc4.init_arc4(b'\x00' * 32)
     assert k.decrypt(b'\xaa}\xfa5\xcaY:') == text
-    
+
     # '' * 32 encrypt
     k = arc4.init_arc4('' * 32)
     assert k.encrypt(text) == b'\xaa}\xfa5\xcaY:'
@@ -49,11 +49,11 @@ def test_arc4_mocked():
     # b'' * 32 encrypt
     k = arc4.init_arc4(b'' * 32)
     assert k.encrypt(text) == b'\xaa}\xfa5\xcaY:'
-    
+
     # b'' * 32 decrypt
     k = arc4.init_arc4(b'' * 32)
     assert k.decrypt(b'\xaa}\xfa5\xcaY:') == text
-    
+
     # '01' * 32 encrypt
     k = arc4.init_arc4('01' * 32)
     assert k.encrypt(text) == b'\xaa}\xfa5\xcaY:'
@@ -65,7 +65,7 @@ def test_arc4_mocked():
     # b'\x01' * 32 encrypt
     k = arc4.init_arc4(b'\x01' * 32)
     assert k.encrypt(text) == b'\xaa}\xfa5\xcaY:'
-    
+
     # b'\x01' * 32 decrypt
     k = arc4.init_arc4(b'\x01' * 32)
     assert k.decrypt(b'\xaa}\xfa5\xcaY:') == text

@@ -10,7 +10,8 @@ import binascii
 import bitcoin as bitcoinlib
 from bitcoin.core.key import CPubKey
 from bitcoin.bech32 import CBech32Data
-from Crypto.Hash import RIPEMD160
+# We are using PyCryptodome not PyCrypto
+from Crypto.Hash import RIPEMD160 # nosec B413
 from counterparty_rs import b58, utils
 
 from counterpartylib.lib import util
@@ -20,7 +21,7 @@ from counterpartylib.lib import ledger
 from counterpartylib.lib import opcodes
 from counterpartylib.lib.opcodes import *
 
-b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+B58_DIGITS = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 class InputError (Exception):
     pass
@@ -64,7 +65,6 @@ def validate(address, allow_p2sh=True):
                 raise e
 
 
-
 def base58_encode(binary):
     """Encode the address in base58."""
     # Convert big‐endian bytes to integer
@@ -74,7 +74,7 @@ def base58_encode(binary):
     res = []
     while n > 0:
         n, r = divmod(n, 58)
-        res.append(b58_digits[r])
+        res.append(B58_DIGITS[r])
     res = ''.join(res[::-1])
 
     return res
@@ -97,7 +97,7 @@ def base58_check_encode_py(original, version):
         else:
             break
 
-    address = b58_digits[0] * pad + res
+    address = B58_DIGITS[0] * pad + res
 
     if original != util.hexlify(base58_check_decode(address, version)):
         raise AddressError('encoded address does not decode properly')
@@ -114,13 +114,13 @@ def base58_decode(s):
     n = 0
     for c in s:
         n *= 58
-        if c not in b58_digits:
-            raise Base58Error('Not a valid Base58 character: ‘{}’'.format(c))
-        digit = b58_digits.index(c)
+        if c not in B58_DIGITS:
+            raise Base58Error(f'Not a valid Base58 character: ‘{c}’')
+        digit = B58_DIGITS.index(c)
         n += digit
 
     # Convert the integer to bytes
-    h = '%x' % n
+    h = f'{n:x}'
     if len(h) % 2:
         h = '0' + h
     res = binascii.unhexlify(h.encode('utf8'))
@@ -128,7 +128,7 @@ def base58_decode(s):
     # Add padding back.
     pad = 0
     for c in s[:-1]:
-        if c == b58_digits[0]:
+        if c == B58_DIGITS[0]:
             pad += 1
         else:
             break
@@ -157,7 +157,7 @@ def base58_check_decode_py(s, version):
 
     chk1 = util.dhash(addrbyte + data)[:4]
     if chk0 != chk1:
-        raise Base58ChecksumError('Checksum mismatch: 0x{} ≠ 0x{}'.format(util.hexlify(chk0), util.hexlify(chk1)))
+        raise Base58ChecksumError(f'Checksum mismatch: 0x{util.hexlify(chk0)} ≠ 0x{util.hexlify(chk1)}')
 
     return data
 
@@ -421,10 +421,10 @@ def get_checksig(asm):
         op_dup, op_hash160, pubkeyhash, op_equalverify, op_checksig = asm
     except ValueError:
         raise exceptions.DecodeError('invalid OP_CHECKSIG') from None
-    
+
     if (op_dup, op_hash160, op_equalverify, op_checksig) == (OP_DUP, OP_HASH160, OP_EQUALVERIFY, OP_CHECKSIG) and type(pubkeyhash) == bytes:
         return pubkeyhash
-    
+
     raise exceptions.DecodeError('invalid OP_CHECKSIG')
 
 
@@ -492,7 +492,7 @@ def wif_to_tuple_of_secret_exponent_compressed(wif, allowable_wif_prefixes=None)
     and uncompressed Bitcoin address."""
     actual_prefix, secret_exponent, is_compressed = wif_to_tuple_of_prefix_secret_exponent_compressed(wif)
     if allowable_wif_prefixes and actual_prefix not in allowable_wif_prefixes:
-        raise EncodingError("unexpected first byte of WIF %s" % wif)
+        raise EncodingError(f"unexpected first byte of WIF {wif}")
     return secret_exponent, is_compressed
 
 

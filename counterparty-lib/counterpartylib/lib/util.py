@@ -54,9 +54,9 @@ def api(method, params):
         "id": 0,
     }
 
-    response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
+    response = requests.post(config.RPC, data=json.dumps(payload), headers=headers, timeout=10)
     if response == None:
-        raise RPCError('Cannot communicate with {} server.'.format(config.XCP_NAME))
+        raise RPCError(f'Cannot communicate with {config.XCP_NAME} server.')
     elif response.status_code != 200:
         if response.status_code == 500:
             raise RPCError('Malformed API call.')
@@ -70,7 +70,7 @@ def api(method, params):
         except KeyError:
             raise RPCError(response_json)
     else:
-        raise RPCError('{} ({})'.format(response_json['error']['message'], response_json['error']['code']))
+        raise RPCError(f"{response_json['error']['message']} ({response_json['error']['code']})")
 
 
 def chunkify(l, n):
@@ -82,7 +82,7 @@ def flat(z):
     return [x for x in z]
 
 
-def py34TupleAppend(first_elem, t):
+def py34_tuple_append(first_elem, t):
     # Had to do it this way to support python 3.4, if we start
     # using the 3.5 runtime this can be replaced by:
     #  (first_elem, *t)
@@ -95,7 +95,7 @@ def py34TupleAppend(first_elem, t):
 def accumulate(l):
     it = itertools.groupby(l, itemgetter(0))
     for key, subiter in it:
-       yield key, sum(item[1] for item in subiter)
+        yield key, sum(item[1] for item in subiter)
 
 
 def date_passed(date):
@@ -156,9 +156,9 @@ def validate_subasset_longname(subasset_longname, subasset_child=None):
 # throws exceptions for invalid subasset names
 def validate_subasset_parent_name(asset_name):
     if asset_name == config.BTC:
-        raise exceptions.AssetNameError('parent asset cannot be {}'.format(config.BTC))
+        raise exceptions.AssetNameError(f'parent asset cannot be {config.BTC}')
     if asset_name == config.XCP:
-        raise exceptions.AssetNameError('parent asset cannot be {}'.format(config.XCP))
+        raise exceptions.AssetNameError(f'parent asset cannot be {config.XCP}')
     if len(asset_name) < 4:
         raise exceptions.AssetNameError('parent asset name too short')
     if len(asset_name) >= 13:
@@ -194,7 +194,8 @@ def expand_subasset_longname(raw_bytes):
 
 
 def generate_random_asset ():
-    return 'A' + str(random.randint(26**12 + 1, 2**64 - 1))
+    # Standard pseudo-random generators are suitable for our purpose.
+    return 'A' + str(random.randint(26**12 + 1, 2**64 - 1)) # nosec B311
 
 
 def parse_options_from_string(string):
@@ -253,6 +254,7 @@ def value_output(quantity, asset, divisible):
         """Round only if necessary."""
         num = round(num, places)
         fmt = '{:.' + str(places) + 'f}'
+        # pylint: disable=C0209
         num = fmt.format(num)
         return num.rstrip('0')+'0' if num.rstrip('0')[-1] == '.' else num.rstrip('0')
 
@@ -281,10 +283,10 @@ def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
     try:
         r = requests.get(url, timeout=fetch_timeout)
     except Exception as e:
-        raise GetURLError("Got get_url request error: %s" % e)
+        raise GetURLError(f"Got get_url request error: {e}")
     else:
         if r.status_code != 200 and abort_on_error:
-            raise GetURLError("Bad status code returned: '%s'. result body: '%s'." % (r.status_code, r.text))
+            raise GetURLError(f"Bad status code returned: '{r.status_code}'. result body: '{r.text}'.")
         result = json.loads(r.text) if is_json else r.text
     return result
 
@@ -330,6 +332,7 @@ def sizeof(v):
 
 class DictCache:
     """Threadsafe FIFO dict cache"""
+
     def __init__(self, size=100):
         if int(size) < 1 :
             raise AttributeError('size < 1 or not a number')

@@ -126,8 +126,8 @@ API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make
 API_MAX_LOG_COUNT = 10
 JSON_RPC_ERROR_API_COMPOSE = -32001 #code to use for error composing transaction result
 
-current_api_status_code = None #is updated by the APIStatusPoller
-current_api_status_response_json = None #is updated by the APIStatusPoller
+CURRENT_API_STATUS_CODE = None #is updated by the APIStatusPoller
+CURRENT_API_STATUS_RESPONSE_JSON = None #is updated by the APIStatusPoller
 
 class APIError(Exception):
     pass
@@ -136,27 +136,27 @@ class APIError(Exception):
 class BackendError(Exception):
     pass
 def check_backend_state():
-    """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)
+    f"""Checks blocktime of last block to see if {config.BTC_NAME} Core is running behind."""
     block_count = backend.getblockcount()
     block_hash = backend.getblockhash(block_count)
     cblock = backend.getblock(block_hash)
     time_behind = time.time() - cblock.nTime   # TODO: Block times are not very reliable.
     if time_behind > 60 * 60 * 2:   # Two hours.
-        raise BackendError('Bitcoind is running about {} hours behind.'.format(round(time_behind / 3600)))
+        raise BackendError(f'Bitcoind is running about {round(time_behind / 3600)} hours behind.')
 
     # check backend index
     blocks_behind = backend.getindexblocksbehind()
     if blocks_behind > 5:
-        raise BackendError('Indexd is running {} blocks behind.'.format(blocks_behind))
+        raise BackendError(f'Indexd is running {blocks_behind} blocks behind.')
 
     logger.debug('Backend state check passed.')
 
 class DatabaseError(Exception):
     pass
 def check_database_state(db, blockcount):
-    """Checks {} database to see if is caught up with backend.""".format(config.XCP_NAME)
+    f"""Checks {config.XCP_NAME} database to see if is caught up with backend."""
     if ledger.CURRENT_BLOCK_INDEX + 1 < blockcount:
-        raise DatabaseError('{} database is behind backend.'.format(config.XCP_NAME))
+        raise DatabaseError(f'{config.XCP_NAME} database is behind backend.')
     logger.debug('Database state check passed.')
     return
 
@@ -171,7 +171,7 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
     for word in forbidden_words:
         #This will find if the forbidden word is in the statement as a whole word. For example, "transactions" will be allowed because the "s" at the end
         if re.search(r"\b"+word+"\b", statement.lower()):
-            raise APIError("Forbidden word in query: '{}'.".format(word))
+            raise APIError(f"Forbidden word in query: '{word}'.")
 
     if hasattr(callback, '__call__'):
         cursor.execute(statement, bindings)
@@ -193,7 +193,7 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
     def value_to_marker(value):
         # if value is an array place holder is (?,?,?,..)
         if isinstance(value, list):
-            return '''({})'''.format(','.join(['?' for e in range(0, len(value))]))
+            return f'''({','.join(['?' for e in range(0, len(value))])})'''
         else:
             return '''?'''
 
@@ -207,7 +207,7 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
     if not isinstance(limit, int):
         raise APIError('Invalid limit')
     elif config.API_LIMIT_ROWS != 0 and limit > config.API_LIMIT_ROWS:
-        raise APIError('Limit should be lower or equal to %i' % config.API_LIMIT_ROWS)
+        raise APIError(f'Limit should be lower or equal to {config.API_LIMIT_ROWS}')
     elif config.API_LIMIT_ROWS != 0 and limit == 0:
         raise APIError('Limit should be greater than 0')
     if not isinstance(offset, int):
@@ -239,13 +239,13 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
     for filter_ in filters:
         for field in ['field', 'op', 'value']: #should have all fields
             if field not in filter_:
-                raise APIError("A specified filter is missing the '%s' field" % field)
+                raise APIError(f"A specified filter is missing the '{field}' field")
         if not isinstance(filter_['value'], (str, int, float, list)):
-            raise APIError("Invalid value for the field '%s'" % filter_['field'])
+            raise APIError(f"Invalid value for the field '{filter_['field']}'")
         if isinstance(filter_['value'], list) and filter_['op'].upper() not in ['IN', 'NOT IN']:
-            raise APIError("Invalid value for the field '%s'" % filter_['field'])
+            raise APIError(f"Invalid value for the field '{filter_['field']}'")
         if filter_['op'].upper() not in ['=', '==', '!=', '>', '<', '>=', '<=', 'IN', 'LIKE', 'NOT IN', 'NOT LIKE']:
-            raise APIError("Invalid operator for the field '%s'" % filter_['field'])
+            raise APIError(f"Invalid operator for the field '{filter_['field']}'")
         if 'case_sensitive' in filter_ and not isinstance(filter_['case_sensitive'], bool):
             raise APIError("case_sensitive must be a boolean")
 
@@ -255,17 +255,18 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
 
     # SELECT
     source = VIEW_QUERIES[table] if table in VIEW_QUERIES else table
-    statement = '''SELECT * FROM ({})'''.format(source)
+    # no sql injection here
+    statement = f'''SELECT * FROM ({source})''' # nosec B608
     # WHERE
     bindings = []
     conditions = []
     for filter_ in filters:
         case_sensitive = False if 'case_sensitive' not in filter_ else filter_['case_sensitive']
         if filter_['op'] == 'LIKE' and case_sensitive == False:
-            filter_['field'] = '''UPPER({})'''.format(filter_['field'])
+            filter_['field'] = f'''UPPER({filter_['field']})'''
             filter_['value'] = filter_['value'].upper()
         marker = value_to_marker(filter_['value'])
-        conditions.append('''{} {} {}'''.format(filter_['field'], filter_['op'], marker))
+        conditions.append(f'''{filter_['field']} {filter_['op']} {marker}''')
         if isinstance(filter_['value'], list):
             bindings += filter_['value']
         else:
@@ -289,7 +290,7 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
 
     # status
     if isinstance(status, list) and len(status) > 0:
-        more_conditions.append('''status IN {}'''.format(value_to_marker(status)))
+        more_conditions.append(f'''status IN {value_to_marker(status)}''')
         bindings += status
     elif isinstance(status, str) and status != '':
         more_conditions.append('''status == ?''')
@@ -306,35 +307,34 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
         statement += ''' WHERE'''
         all_conditions = []
         if len(conditions) > 0:
-            all_conditions.append('''({})'''.format(''' {} '''.format(filterop.upper()).join(conditions)))
+            all_conditions.append(f'''({f' {filterop.upper()} '.join(conditions)})''')
         if len(more_conditions) > 0:
-            all_conditions.append('''({})'''.format(''' AND '''.join(more_conditions)))
-        statement += ''' {}'''.format(''' AND '''.join(all_conditions))
+            all_conditions.append(f'''({' AND '.join(more_conditions)})''')
+        statement += f''' {' AND '.join(all_conditions)}'''
 
     # ORDER BY
     if order_by != None:
-        statement += ''' ORDER BY {}'''.format(order_by)
+        statement += f''' ORDER BY {order_by}'''
         if order_dir != None:
-            statement += ''' {}'''.format(order_dir.upper())
+            statement += f''' {order_dir.upper()}'''
     # LIMIT
     if limit and limit > 0:
-        statement += ''' LIMIT {}'''.format(limit)
+        statement += f''' LIMIT {limit}'''
         if offset:
-            statement += ''' OFFSET {}'''.format(offset)
-
+            statement += f''' OFFSET {offset}'''
 
     query_result = db_query(db, statement, tuple(bindings))
-    
+
     if table == 'balances':
         return adjust_get_balances_results(query_result, db)
 
     if table == 'destructions':
         return adjust_get_destructions_results(query_result)
-        
+
     if table == 'sends':
         # for sends, handle the memo field properly
         return adjust_get_sends_results(query_result)
-    
+
     if table == 'transactions':
         # for transactions, handle the data field properly
         return adjust_get_transactions_results(query_result)
@@ -388,7 +388,7 @@ def adjust_get_sends_results(query_result):
             else:
                 if type(send_row['memo']) == str:
                     send_row['memo'] = bytes(send_row['memo'], 'utf-8')
-                    
+
                 send_row['memo_hex'] = binascii.hexlify(send_row['memo']).decode('utf8')
                 send_row['memo'] = send_row['memo'].decode('utf-8')
         except UnicodeDecodeError:
@@ -449,9 +449,9 @@ def compose_transaction(db, name, params,
     # Check validity of collected pubkeys.
     for pubkey in provided_pubkeys:
         if not script.is_fully_valid(binascii.unhexlify(pubkey)):
-            raise script.AddressError('invalid public key: {}'.format(pubkey))
+            raise script.AddressError(f'invalid public key: {pubkey}')
 
-    compose_method = sys.modules['counterpartylib.lib.messages.{}'.format(name)].compose
+    compose_method = sys.modules[f'counterpartylib.lib.messages.{name}'].compose
     compose_params = inspect.getfullargspec(compose_method)[0]
     missing_params = [p for p in compose_params if p not in params and p != 'db']
     for param in missing_params:
@@ -464,8 +464,8 @@ def compose_transaction(db, name, params,
         fee_per_kb = config.DEFAULT_FEE_PER_KB
 
     if 'extended_tx_info' in params:
-      extended_tx_info = params['extended_tx_info']
-      del params['extended_tx_info']
+        extended_tx_info = params['extended_tx_info']
+        del params['extended_tx_info']
 
     if 'old_style_api' in params:
         old_style_api = params['old_style_api']
@@ -520,6 +520,7 @@ def init_api_access_log(app):
 
 class APIStatusPoller(threading.Thread):
     """Perform regular checks on the state of the backend and the database."""
+
     def __init__(self):
         self.last_database_check = 0
         threading.Thread.__init__(self)
@@ -530,7 +531,7 @@ class APIStatusPoller(threading.Thread):
 
     def run(self):
         logger.debug('Starting API Status Poller.')
-        global current_api_status_code, current_api_status_response_json
+        global CURRENT_API_STATUS_CODE, CURRENT_API_STATUS_RESPONSE_JSON
         db = database.get_connection(read_only=True, integrity_check=False)
 
         while self.stop_event.is_set() != True:
@@ -551,15 +552,16 @@ class APIStatusPoller(threading.Thread):
                 exception_text = str(e)
                 logger.debug("API Status Poller: %s", exception_text)
                 jsonrpc_response = jsonrpc.exceptions.JSONRPCServerError(message=exception_name, data=exception_text)
-                current_api_status_code = code
-                current_api_status_response_json = jsonrpc_response.json.encode()
+                CURRENT_API_STATUS_CODE = code
+                CURRENT_API_STATUS_RESPONSE_JSON = jsonrpc_response.json.encode()
             else:
-                current_api_status_code = None
-                current_api_status_response_json = None
+                CURRENT_API_STATUS_CODE = None
+                CURRENT_API_STATUS_RESPONSE_JSON = None
             time.sleep(config.BACKEND_POLL_INTERVAL)
 
 class APIServer(threading.Thread):
     """Handle JSON-RPC API calls."""
+
     def __init__(self, db=None):
         self.db = db
         self.is_ready = False
@@ -596,7 +598,7 @@ class APIServer(threading.Thread):
 
         for table in API_TABLES:
             new_method = generate_get_method(table)
-            new_method.__name__ = 'get_{}'.format(table)
+            new_method.__name__ = f'get_{table}'
             dispatcher.add_method(new_method)
 
         @dispatcher.add_method
@@ -604,7 +606,6 @@ class APIServer(threading.Thread):
             if bindings == None:
                 bindings = []
             return db_query(self.db, query, tuple(bindings))
-
 
         ######################
         #WRITE/ACTION API
@@ -631,7 +632,7 @@ class APIServer(threading.Thread):
                     return compose_transaction(self.db, name=tx, params=transaction_args, **common_args)
                 except (TypeError, script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
                     # TypeError happens when unexpected keyword arguments are passed in
-                    error_msg = "Error composing {} transaction via API: {}".format(tx, str(error))
+                    error_msg = f"Error composing {tx} transaction via API: {str(error)}"
                     logging.warning(error_msg)
                     logging.warning(traceback.format_exc())
                     raise JSONRPCDispatchException(code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg)
@@ -640,7 +641,7 @@ class APIServer(threading.Thread):
 
         for tx in API_TRANSACTIONS:
             create_method = generate_create_method(tx)
-            create_method.__name__ = 'create_{}'.format(tx)
+            create_method.__name__ = f'create_{tx}'
             dispatcher.add_method(create_method)
 
         @dispatcher.add_method
@@ -685,10 +686,10 @@ class APIServer(threading.Thread):
         def get_asset_info(assets=None, asset=None):
             if asset is not None:
                 assets = [asset]
-            
+
             if not isinstance(assets, list):
                 raise APIError("assets must be a list of asset names, even if it just contains one entry")
-            assetsInfo = []
+            assets_info = []
             for asset in assets:
                 asset = ledger.resolve_subasset_longname(self.db, asset)
 
@@ -699,7 +700,7 @@ class APIServer(threading.Thread):
                     else:
                         supply = ledger.xcp_supply(self.db)
 
-                    assetsInfo.append({
+                    assets_info.append({
                         'asset': asset,
                         'asset_longname': None,
                         'owner': None,
@@ -722,7 +723,7 @@ class APIServer(threading.Thread):
                 locked = False
                 for e in issuances:
                     if e['locked']: locked = True
-                assetsInfo.append({
+                assets_info.append({
                     'asset': asset,
                     'asset_longname': last_issuance['asset_longname'],
                     'owner': last_issuance['issuer'],
@@ -731,7 +732,7 @@ class APIServer(threading.Thread):
                     'supply': ledger.asset_supply(self.db, asset),
                     'description': last_issuance['description'],
                     'issuer': last_issuance['issuer']})
-            return assetsInfo
+            return assets_info
 
         @dispatcher.add_method
         def get_block_info(block_index):
@@ -763,12 +764,18 @@ class APIServer(threading.Thread):
                 raise APIError("block_indexes must be a list of integers.")
             if len(block_indexes) >= 250:
                 raise APIError("can only specify up to 250 indexes at a time.")
+            for block_index in block_indexes:
+                if not isinstance(block_index, int):
+                    raise APIError("block_indexes must be a list of integers.")
 
-            block_indexes_str = ','.join([str(x) for x in block_indexes])
             cursor = self.db.cursor()
 
-            cursor.execute('SELECT * FROM blocks WHERE block_index IN (%s) ORDER BY block_index ASC'
-                % (block_indexes_str,))
+            block_indexes_placeholder = f"({','.join(['?'] * len(block_indexes))})"
+            # no sql injection here
+            cursor.execute(
+                f'SELECT * FROM blocks WHERE block_index IN ({block_indexes_placeholder}) ORDER BY block_index ASC', # nosec B608
+                block_indexes
+            )
             blocks = cursor.fetchall()
 
             messages = collections.deque(ledger.get_messages(self.db, block_index_in=block_indexes))
@@ -790,10 +797,10 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_running_info():
-            latestBlockIndex = backend.getblockcount()
+            latest_block_index = backend.getblockcount()
 
             try:
-                check_database_state(self.db, latestBlockIndex)
+                check_database_state(self.db, latest_block_index)
             except DatabaseError:
                 caught_up = False
             else:
@@ -816,7 +823,7 @@ class APIServer(threading.Thread):
             try:
                 indexd_blocks_behind = backend.getindexblocksbehind()
             except:
-                indexd_blocks_behind = latestBlockIndex if latestBlockIndex > 0 else 999999
+                indexd_blocks_behind = latest_block_index if latest_block_index > 0 else 999999
             indexd_caught_up = indexd_blocks_behind <= 1
 
             server_ready = caught_up and indexd_caught_up
@@ -824,7 +831,7 @@ class APIServer(threading.Thread):
             return {
                 'server_ready': server_ready,
                 'db_caught_up': caught_up,
-                'bitcoin_block_count': latestBlockIndex,
+                'bitcoin_block_count': latest_block_index,
                 'last_block': last_block,
                 'indexd_caught_up': indexd_caught_up,
                 'indexd_blocks_behind': indexd_blocks_behind,
@@ -846,7 +853,8 @@ class APIServer(threading.Thread):
                 'order_matches', 'btcpays', 'issuances', 'broadcasts', 'bets', 'bet_matches', 'dividends',
                 'burns', 'cancels', 'order_expirations', 'bet_expirations', 'order_match_expirations',
                 'bet_match_expirations', 'messages', 'destructions']:
-                cursor.execute("SELECT COUNT(*) AS count FROM %s" % element)
+                # no sql injection here, element is hardcoded
+                cursor.execute(f"SELECT COUNT(*) AS count FROM {element}") # nosec B608
                 count_list = cursor.fetchall()
                 assert len(count_list) == 1
                 counts[element] = count_list[0]['count']
@@ -902,7 +910,6 @@ class APIServer(threading.Thread):
                     reverse = True
                 return sorted(results, key=lambda x: x[order_key], reverse=reverse)
 
-
         @dispatcher.add_method
         def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
             return backend.getrawtransaction(tx_hash, verbose=verbose, skip_missing=skip_missing)
@@ -944,16 +951,16 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_dispenser_info(tx_hash=None, tx_index=None):
             cursor = self.db.cursor()
-            
+
             if tx_hash is None and tx_index is None:
                 raise APIError("You must provided a tx hash or a tx index")
-            
+
             dispensers = []
             if tx_hash is not None:
                 dispensers = get_dispenser_info(self.db, tx_hash=tx_hash)
             else:
                 dispensers = get_dispenser_info(self.db, tx_index=tx_index)
-            
+
             if len(dispensers) == 1:
                 dispenser = dispensers[0]
                 oracle_price = ""
@@ -961,16 +968,16 @@ class APIServer(threading.Thread):
                 fiat_price = ""
                 oracle_price_last_updated = ""
                 oracle_fiat_label = ""
-                
+
                 if dispenser["oracle_address"] != None:
                     fiat_price = util.satoshirate_to_fiat(dispenser["satoshirate"])
                     oracle_price, oracle_fee, oracle_fiat_label, oracle_price_last_updated = ledger.get_oracle_last_price(self.db, dispenser["oracle_address"], ledger.CURRENT_BLOCK_INDEX)
-                    
+
                     if (oracle_price > 0):
                         satoshi_price = math.ceil((fiat_price/oracle_price) * config.UNIT)
                     else:
                         raise APIError("Last oracle price is zero")
-                
+
                 return {
                     "tx_index": dispenser["tx_index"],
                     "tx_hash": dispenser["tx_hash"],
@@ -990,10 +997,8 @@ class APIServer(threading.Thread):
                     "oracle_price_last_updated": oracle_price_last_updated,
                     "asset_longname": dispenser["asset_longname"]
                 }
-            
-            return {}
 
-        
+            return {}
 
         def _set_cors_headers(response):
             if not config.RPC_NO_ALLOW_CORS:
@@ -1005,8 +1010,8 @@ class APIServer(threading.Thread):
         def handle_healthz():
             msg, code = 'Healthy', 200
             try:
-                latestBlockIndex = backend.getblockcount()
-                check_database_state(self.db, latestBlockIndex)
+                latest_block_index = backend.getblockcount()
+                check_database_state(self.db, latest_block_index)
             except DatabaseError:
                 msg, code = 'Unhealthy', 503
             return flask.Response(msg, code, mimetype='text/plain')
@@ -1069,8 +1074,8 @@ class APIServer(threading.Thread):
                 return flask.Response(obj_error.json.encode(), 400, mimetype='application/json')
 
             # Return an error if the API Status Poller checks fail.
-            if not config.FORCE and current_api_status_code:
-                return flask.Response(current_api_status_response_json, 503, mimetype='application/json')
+            if not config.FORCE and CURRENT_API_STATUS_CODE:
+                return flask.Response(CURRENT_API_STATUS_RESPONSE_JSON, 503, mimetype='application/json')
 
             # Answer request normally.
             # NOTE: `UnboundLocalError: local variable 'output' referenced before assignment` means the method doesn’t return anything.
@@ -1090,7 +1095,7 @@ class APIServer(threading.Thread):
             elif url_action == 'get':
                 compose = False
             else:
-                error = 'Invalid action "%s".' % url_action
+                error = f'Invalid action "{url_action}".'
                 return flask.Response(error, 400, mimetype='application/json')
 
             # Get all arguments passed via URL.
@@ -1103,7 +1108,7 @@ class APIServer(threading.Thread):
             # Check if message type or table name are valid.
             if (compose and query_type not in API_TRANSACTIONS) or \
                (not compose and query_type not in API_TABLES):
-                error = 'No such query type in supported queries: "%s".' % query_type
+                error = f'No such query type in supported queries: "{query_type}".'
                 return flask.Response(error, 400, mimetype='application/json')
 
             # Parse the additional arguments.
@@ -1139,8 +1144,7 @@ class APIServer(threading.Thread):
                 try:
                     query_data = compose_transaction(self.db, name=query_type, params=transaction_args, **common_args)
                 except (script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
-                    error_msg = logging.warning("{} -- error composing {} transaction via API: {}".format(
-                        str(error.__class__.__name__), query_type, str(error)))
+                    error_msg = logging.warning(f"{error.__class__.__name__} -- error composing {query_type} transaction via API: {error}")
                     return flask.Response(error_msg, 400, mimetype='application/json')
             else:
                 # Need to de-generate extra_args to pass it through.
@@ -1165,7 +1169,7 @@ class APIServer(threading.Thread):
                 # Hence we end up with multiple query_type roots. To combat this we put it in a separate item dict.
                 response_data = serialize_to_xml({query_type: {'item': query_data}})
             else:
-                error = 'Invalid file format: "%s".' % file_format
+                error = f'Invalid file format: "{file_format}".'
                 return flask.Response(error, 400, mimetype='application/json')
 
             response = flask.Response(response_data, 200, mimetype=file_format)

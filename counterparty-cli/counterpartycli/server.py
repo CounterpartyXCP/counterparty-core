@@ -20,9 +20,9 @@ APP_NAME = 'counterparty-server'
 CONFIG_ARGS = [
     [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'default': False, 'help': 'sets log level to DEBUG or INFO if --quiet is set'}],
     [('--quiet',), {'dest': 'quiet', 'action': 'store_true', 'default': True, 'help': 'sets log level to ERROR or INFO if --verbose is set'}],
-    [('--testnet',), {'action': 'store_true', 'default': False, 'help': 'use {} testnet addresses and block numbers'.format(config.BTC_NAME)}],
-    [('--testcoin',), {'action': 'store_true', 'default': False, 'help': 'use the test {} network on every blockchain'.format(config.XCP_NAME)}],
-    [('--regtest',), {'action': 'store_true', 'default': False, 'help': 'use {} regtest addresses and block numbers'.format(config.BTC_NAME)}],
+    [('--testnet',), {'action': 'store_true', 'default': False, 'help': f'use {config.BTC_NAME} testnet addresses and block numbers'}],
+    [('--testcoin',), {'action': 'store_true', 'default': False, 'help': f'use the test {config.XCP_NAME} network on every blockchain'}],
+    [('--regtest',), {'action': 'store_true', 'default': False, 'help': f'use {config.BTC_NAME} regtest addresses and block numbers'}],
     [('--customnet',), {'default': '', 'help': 'use a custom network (specify as UNSPENDABLE_ADDRESS|ADDRESSVERSION|P2SH_ADDRESSVERSION with version bytes in HH hex format)'}],
     [('--api-limit-rows',), {'type': int, 'default': 1000, 'help': 'limit api calls to the set results (defaults to 1000). Setting to 0 removes the limit.'}],
     [('--backend-name',), {'default': 'addrindex', 'help': 'the backend name to connect to'}],
@@ -40,11 +40,11 @@ CONFIG_ARGS = [
     [('--indexd-port',), {'type': int, 'help': 'the indexd server port to connect to'}],
 
     [('--rpc-host',), {'default': 'localhost', 'help': 'the IP of the interface to bind to for providing JSON-RPC API access (0.0.0.0 for all interfaces)'}],
-    [('--rpc-port',), {'type': int, 'help': 'port on which to provide the {} JSON-RPC API'.format(config.APP_NAME)}],
-    [('--rpc-user',), {'default': 'rpc', 'help': 'required username to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.APP_NAME)}],
-    [('--rpc-password',), {'help': 'required password (for rpc-user) to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.APP_NAME)}],
+    [('--rpc-port',), {'type': int, 'help': f'port on which to provide the {config.APP_NAME} JSON-RPC API'}],
+    [('--rpc-user',), {'default': 'rpc', 'help': f'required username to use the {config.APP_NAME} JSON-RPC API (via HTTP basic auth)'}],
+    [('--rpc-password',), {'help':f'required password (for rpc-user) to use the {config.APP_NAME} JSON-RPC API (via HTTP basic auth)'}],
     [('--rpc-no-allow-cors',), {'action': 'store_true', 'default': False, 'help': 'allow ajax cross domain request'}],
-    [('--rpc-batch-size',), {'type': int, 'default': config.DEFAULT_RPC_BATCH_SIZE, 'help': 'number of RPC queries by batch (default: {})'.format(config.DEFAULT_RPC_BATCH_SIZE)}],
+    [('--rpc-batch-size',), {'type': int, 'default': config.DEFAULT_RPC_BATCH_SIZE, 'help': f'number of RPC queries by batch (default: {config.DEFAULT_RPC_BATCH_SIZE})'}],
     [('--requests-timeout',), {'type': int, 'default': config.DEFAULT_REQUESTS_TIMEOUT, 'help': 'timeout value (in seconds) used for all HTTP requests (default: 5)'}],
 
     [('--force',), {'action': 'store_true', 'default': False, 'help': 'skip backend check, version check, process lock (NOT FOR USE ON PRODUCTION SYSTEMS)'}],
@@ -56,6 +56,9 @@ CONFIG_ARGS = [
     [('--utxo-locks-max-age',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_AGE, 'help': 'how long to keep a lock on a UTXO being tracked'}],
     [('--checkdb',), {'action': 'store_true', 'default': False, 'help': 'check the database for integrity (default: false)'}]
 ]
+
+COMMANDS_WITH_DB = ['reparse', 'rollback', 'start', 'vacuum', 'checkdb']
+COMMANDS_WITH_CONFIG = ['debug_config', 'kickstart']
 
 class VersionError(Exception):
     pass
@@ -69,9 +72,9 @@ def main():
     generate_config_files()
 
     # Parse command-line arguments.
-    parser = argparse.ArgumentParser(prog=APP_NAME, description='Server for the {} protocol'.format(config.XCP_NAME), add_help=False)
+    parser = argparse.ArgumentParser(prog=APP_NAME, description=f'Server for the {config.XCP_NAME} protocol', add_help=False)
     parser.add_argument('-h', '--help', dest='help', action='store_true', help='show this help message and exit')
-    parser.add_argument('-V', '--version', action='version', version="{} v{}; {} v{}".format(APP_NAME, APP_VERSION, 'counterparty-lib', config.VERSION_STRING))
+    parser.add_argument('-V', '--version', action='version', version=f"{APP_NAME} v{APP_VERSION}; counterparty-lib v{config.VERSION_STRING}")
     parser.add_argument('--config-file', help='the path to the configuration file')
 
     add_config_arguments(parser, CONFIG_ARGS, 'server.conf')
@@ -99,13 +102,11 @@ def main():
 
     parser_checkdb = subparsers.add_parser('checkdb', help='do an integrity check on the database')
 
-    
-
     args = parser.parse_args()
 
     log.set_up(log.ROOT_LOGGER, verbose=args.verbose, quiet=args.quiet, console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None))
 
-    logger.info('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
+    logger.info(f'Running v{APP_VERSION} of {APP_NAME}.')
 
     # Help message
     if args.help:
@@ -127,8 +128,6 @@ def main():
                 raise e
 
     # Configuration
-    COMMANDS_WITH_DB = ['reparse', 'rollback', 'start', 'vacuum', 'checkdb']
-    COMMANDS_WITH_CONFIG = ['debug_config', 'kickstart']
     if args.action in COMMANDS_WITH_DB or args.action in COMMANDS_WITH_CONFIG:
         init_args = dict(database_file=args.database_file,
                                 log_file=args.log_file, api_log_file=args.api_log_file,
@@ -155,7 +154,7 @@ def main():
                                 utxo_locks_max_addresses=args.utxo_locks_max_addresses,
                                 utxo_locks_max_age=args.utxo_locks_max_age,
                                 checkdb=(args.action == 'checkdb') or (args.checkdb))
-                                #,broadcast_tx_mainnet=args.broadcast_tx_mainnet)
+        #,broadcast_tx_mainnet=args.broadcast_tx_mainnet)
 
     if args.action in COMMANDS_WITH_DB:
         db = init_with_catch(server.initialise, init_args)
@@ -172,7 +171,7 @@ def main():
 
     elif args.action == 'kickstart':
         server.kickstart(
-            bitcoind_dir=args.bitcoind_dir, 
+            bitcoind_dir=args.bitcoind_dir,
             force=args.force,
             max_queue_size=args.max_queue_size,
             debug_block=args.debug_block)
@@ -188,7 +187,7 @@ def main():
 
     elif args.action == 'checkdb':
         print("Database integrity check done!")
-    
+
     else:
         parser.print_help()
 
