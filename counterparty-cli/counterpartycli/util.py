@@ -165,7 +165,6 @@ def bootstrap(testnet=False, overwrite=True, ask_confirmation=False, quiet=False
 
     print('Cleaning up...')
     os.remove(TARBALL_PATH)
-    os.remove(os.path.join(data_dir, 'checksums.txt'))
 
 # Set default values of command line arguments with config file
 def add_config_arguments(arg_parser, config_args, default_config_file, config_file_arg_name='config_file'):
