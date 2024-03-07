@@ -168,6 +168,15 @@ def intialize_kickstart_db(bitcoind_dir, last_known_hash, resuming, new_database
             if not new_database:
                 first_block = cursor.execute('SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1').fetchone()['block_index']
             fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner)
+        else:
+            # check if kickstart_blocks is complete
+            last_block = cursor.execute('SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1').fetchone()
+            if last_block is not None:
+                last_block_index = last_block['block_index']
+                first_kickstart_block = cursor.execute('SELECT block_index FROM kickstart_blocks ORDER BY block_index LIMIT 1').fetchone()['block_index']
+                if last_block_index < first_kickstart_block:
+                    cursor.execute('DELETE FROM kickstart_blocks')
+                    fetch_blocks(cursor, bitcoind_dir, last_known_hash, last_block_index + 1, spinner)
         # get last block index
         spinner.text = step
         block_count, tx_index, last_parsed_block = prepare_db_for_resume(cursor)
