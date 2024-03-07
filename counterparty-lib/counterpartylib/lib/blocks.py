@@ -17,7 +17,7 @@ import platform
 import csv
 import copy
 import http
-import shutil
+from datetime import timedelta
 
 import apsw
 
@@ -587,7 +587,10 @@ def generate_progression_message(block, start_time_block_parse, start_time_all_b
     txs_indexed = " - "
     if tx_index is not None:
         txs_indexed = f" - tx_index: {tx_index} - "
-    duration = f"{cumulated_duration:.3f}s/{expected_duration:.3f}s ({remaining_duration:.3f}s)"
+    cumulated_duration = timedelta(seconds=int(cumulated_duration))
+    expected_duration = timedelta(seconds=int(expected_duration))
+    remaining_duration = timedelta(seconds=int(remaining_duration))
+    duration = f"{cumulated_duration}/{expected_duration} ({remaining_duration})"
     return f"{current_block} [{blocks_parsed}{txs_indexed}{duration}]"
 
 
