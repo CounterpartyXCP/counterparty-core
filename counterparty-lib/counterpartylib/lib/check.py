@@ -265,8 +265,9 @@ def consensus_hash(db, field, previous_consensus_hash, content):
 class SanityError(Exception):
     pass
 
+
 def asset_conservation(db):
-    logger.debug('Checking for conservation of assets.')
+    logger.info('Checking for conservation of assets.')
     supplies = ledger.supplies(db)
     held = ledger.held(db)
     for asset in supplies.keys():
@@ -275,6 +276,8 @@ def asset_conservation(db):
         if asset_issued != asset_held:
             raise SanityError('{} {} issued ≠ {} {} held'.format(ledger.value_out(db, asset_issued, asset), asset, ledger.value_out(db, asset_held, asset), asset))
         logger.debug('{} has been conserved ({} {} both issued and held)'.format(asset, ledger.value_out(db, asset_issued, asset), asset))
+    logger.info('All assets have been conserved.')
+
 
 class VersionError(Exception):
     pass

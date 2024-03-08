@@ -3,7 +3,7 @@ Initialise database.
 
 Sieve blockchain for Counterparty transactions, and add them to the database.
 """
-
+from datetime import timedelta
 import os
 import time
 import binascii
@@ -17,7 +17,7 @@ import platform
 import csv
 import copy
 import http
-from datetime import timedelta
+
 
 import apsw
 

@@ -6,9 +6,6 @@ import pprint
 import sys
 import apsw
 import time
-import dateutil.parser
-import calendar
-import traceback
 import binascii
 import socket
 import signal
@@ -25,7 +22,7 @@ from counterpartylib.lib import log
 logger = logging.getLogger(__name__)
 log.set_logger(logger)  # set root logger
 
-from counterpartylib.lib import api, config, util, ledger, blocks, backend, database, transaction
+from counterpartylib.lib import api, config, util, ledger, blocks, backend, database, transaction, check
 from counterpartylib.lib import kickstart as kickstarter
 D = decimal.Decimal
 
@@ -468,7 +465,7 @@ def initialise_db():
 
     # Database
     logger.info('Connecting to database (SQLite %s).' % apsw.apswversion())
-    db = database.get_connection(read_only=False,foreign_keys=config.CHECKDB,integrity_check=config.CHECKDB)
+    db = database.get_connection(read_only=False, foreign_keys=config.CHECKDB, integrity_check=config.CHECKDB)
 
     ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
 
@@ -533,6 +530,11 @@ def kickstart(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
 
 def vacuum(db):
     database.vacuum(db)
+
+
+def check_database(db):
+    ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
+    check.asset_conservation(db)
 
 
 def debug_config():
