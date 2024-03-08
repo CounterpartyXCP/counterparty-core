@@ -138,12 +138,17 @@ def main():
     else:
         server.initialise_config(**init_args)
 
+    # set up logging
     log.set_up(log.ROOT_LOGGER, verbose=config.VERBOSE, quiet=config.QUIET, logfile=config.LOG)
     logger.info(f'Running v{APP_VERSION} of {APP_NAME}.')
+
+    # print some info
     if config.LOG:
         cprint(f'Writing log to file: `{config.LOG}`', 'light_grey')
-
+    if args.action == 'start' and config.API_LOG:
+        cprint(f'Writing API accesses log to file: `{config.API_LOG}`', 'light_grey')
     cprint(f"{'-' * 30} {args.action} {'-' * 30}\n", 'green')
+
     # Help message
     if args.help:
         parser.print_help()

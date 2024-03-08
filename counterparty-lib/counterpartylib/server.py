@@ -480,22 +480,24 @@ def connect_to_addrindexrs():
 
 
 def start_all(db):
-
     # Backend.
-    connect_to_backend()
+    step = 'Connecting to backend...'
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        connect_to_backend()
+    print(f'{OK_GREEN} {step}')
 
-    # API Status Poller.
-    api_status_poller = api.APIStatusPoller()
-    api_status_poller.daemon = True
-    api_status_poller.start()
+    step = 'Starting API Server...'
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        # API Status Poller.
+        api_status_poller = api.APIStatusPoller()
+        api_status_poller.daemon = True
+        api_status_poller.start()
 
-    # API Server.
-    api_server = api.APIServer()
-    api_server.daemon = True
-    api_server.start()
-
-    if config.API_LOG:
-        cprint(f'Writing API accesses log to file: `{config.API_LOG}`', 'light_grey')
+        # API Server.
+        api_server = api.APIServer()
+        api_server.daemon = True
+        api_server.start()
+    print(f'{OK_GREEN} {step}')
 
     # Server
     blocks.follow(db)
