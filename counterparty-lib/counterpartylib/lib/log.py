@@ -85,7 +85,7 @@ def set_up(logger, verbose=False, logfile=None, console_logfilter=None, quiet=Tr
     global LOGGING_SETUP
     global LOGGING_TOFILE_SETUP
 
-    def set_up_file_logging():
+    def set_up_file_logging(log_level):
         assert logfile
         max_log_size = 20 * 1024 * 1024 # 20 MB
         if os.name == 'nt':
@@ -93,7 +93,7 @@ def set_up(logger, verbose=False, logfile=None, console_logfilter=None, quiet=Tr
             fileh = util_windows.SanitizedRotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
         else:
             fileh = logging.handlers.RotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
-        fileh.setLevel(logging.DEBUG)
+        fileh.setLevel(log_level)
         log_format = '%(asctime)s [%(levelname)s] %(message)s'
         formatter = logging.Formatter(log_format, '%Y-%m-%d-T%H:%M:%S%z')
         fileh.setFormatter(formatter)
@@ -112,26 +112,9 @@ def set_up(logger, verbose=False, logfile=None, console_logfilter=None, quiet=Tr
         log_level = logging.INFO
     elif verbose:
         log_level = logging.DEBUG
-
-    logger.setLevel(log_level)
-
-    # Console Logging
-    console = logging.StreamHandler()
-    console.setLevel(log_level)
-
-    # only add [%(name)s] to log_format if we're using console_logfilter
-    log_format = '%(log_color)s[%(asctime)s][%(levelname)s]' + ('' if console_logfilter is None else '[%(name)s]') + ' %(message)s%(reset)s'
-    log_colors = {'WARNING': 'yellow', 'ERROR': 'red', 'CRITICAL': 'red'}
-    formatter = ColoredFormatter(log_format, "%Y-%m-%d %H:%M:%S", log_colors=log_colors)
-    console.setFormatter(formatter)
-    logger.addHandler(console)
-
-    if console_logfilter:
-        console.addFilter(ModuleLoggingFilter(console_logfilter))
-
     # File Logging
     if logfile:
-        set_up_file_logging()
+        set_up_file_logging(log_level)
         LOGGING_TOFILE_SETUP = True
 
     # Quieten noisy libraries.
