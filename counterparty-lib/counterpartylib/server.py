@@ -87,7 +87,7 @@ def initialise(*args, **kwargs):
     return initialise_db()
 
 
-def initialise_config(database_file=None, log_file=None, api_log_file=None,
+def initialise_config(database_file=None, log_file=None, api_log_file=None, no_log_files=False,
                 testnet=False, testcoin=False, regtest=False,
                 api_limit_rows=1000,
                 backend_name=None, backend_connect=None, backend_port=None,
@@ -170,7 +170,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
         os.makedirs(log_dir, mode=0o755)
 
     # Log
-    if log_file is False:  # no file logging
+    if no_log_files:
         config.LOG = None
     elif not log_file:  # default location
         filename = f'server{network}.log'
@@ -185,7 +185,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     if config.LOG:
         logger.debug(f'Writing server log to file: `{config.LOG}`')
 
-    if api_log_file is False:  # no file logging
+    if no_log_files:  # no file logging
         config.API_LOG = None
     elif not api_log_file:  # default location
         filename = f'server{network}.access.log'

@@ -18,8 +18,8 @@ from counterpartycli import APP_VERSION
 APP_NAME = 'counterparty-server'
 
 CONFIG_ARGS = [
-    [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'default': False, 'help': 'sets log level to DEBUG or INFO if --quiet is set'}],
-    [('--quiet',), {'dest': 'quiet', 'action': 'store_true', 'default': True, 'help': 'sets log level to ERROR or INFO if --verbose is set'}],
+    [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'default': False, 'help': 'sets log level to DEBUG'}],
+    [('--quiet',), {'dest': 'quiet', 'action': 'store_true', 'default': False, 'help': 'sets log level to ERROR'}],
     [('--testnet',), {'action': 'store_true', 'default': False, 'help': f'use {config.BTC_NAME} testnet addresses and block numbers'}],
     [('--testcoin',), {'action': 'store_true', 'default': False, 'help': f'use the test {config.XCP_NAME} network on every blockchain'}],
     [('--regtest',), {'action': 'store_true', 'default': False, 'help': f'use {config.BTC_NAME} regtest addresses and block numbers'}],
@@ -49,8 +49,9 @@ CONFIG_ARGS = [
 
     [('--force',), {'action': 'store_true', 'default': False, 'help': 'skip backend check, version check, process lock (NOT FOR USE ON PRODUCTION SYSTEMS)'}],
     [('--database-file',), {'default': None, 'help': 'the path to the SQLite3 database file'}],
-    [('--log-file',), {'nargs': '?', 'const': None, 'default': False, 'help': 'log to the specified file (specify option without filename to use the default location)'}],
-    [('--api-log-file',), {'nargs': '?', 'const': None, 'default': False, 'help': 'log API requests to the specified file (specify option without filename to use the default location)'}],
+    [('--log-file',), {'nargs': '?', 'const': None, 'default': False, 'help': 'log to the specified file'}],
+    [('--api-log-file',), {'nargs': '?', 'const': None, 'default': False, 'help': 'log API requests to the specified file'}],
+    [('--no-log-files',), {'action': 'store_true', 'default': False, 'help': 'Don\'t write log files'}],
 
     [('--utxo-locks-max-addresses',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES, 'help': 'max number of addresses for which to track UTXO locks'}],
     [('--utxo-locks-max-age',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_AGE, 'help': 'how long to keep a lock on a UTXO being tracked'}],
@@ -94,13 +95,11 @@ def main():
     parser_kickstart = subparsers.add_parser('kickstart', help='rapidly build database by reading from Bitcoin Core blockchain')
     parser_kickstart.add_argument('--bitcoind-dir', help='Bitcoin Core data directory')
     parser_kickstart.add_argument('--max-queue-size', type=int, help='Size of the multiprocessing.Queue for parsing blocks')
-    parser_kickstart.add_argument('--debug-block', type=int, help='Run kickstart for a single block; Don\'t use memory database for fast starting and shutdown.')
+    parser_kickstart.add_argument('--debug-block', type=int, help='Rollback and run kickstart for a single block;')
 
-    parser_bootstrap = subparsers.add_parser('bootstrap', help='bootstrap database with hosted snapshot')
-    parser_bootstrap.add_argument('-q', '--quiet', dest='quiet', action='store_true', help='suppress progress bar')
-    #parser_bootstrap.add_argument('--branch', help='use a different branch for bootstrap db pulling')
+    subparsers.add_parser('bootstrap', help='bootstrap database with hosted snapshot')
 
-    parser_checkdb = subparsers.add_parser('checkdb', help='do an integrity check on the database')
+    subparsers.add_parser('checkdb', help='do an integrity check on the database')
 
     args = parser.parse_args()
 
@@ -130,7 +129,7 @@ def main():
     # Configuration
     if args.action in COMMANDS_WITH_DB or args.action in COMMANDS_WITH_CONFIG:
         init_args = dict(database_file=args.database_file,
-                                log_file=args.log_file, api_log_file=args.api_log_file,
+                                log_file=args.log_file, api_log_file=args.api_log_file, no_log_files=args.no_log_files,
                                 testnet=args.testnet, testcoin=args.testcoin, regtest=args.regtest,
                                 customnet=args.customnet,
                                 api_limit_rows=args.api_limit_rows,
