@@ -134,7 +134,7 @@ def intergrity_check(db):
         try:
             cursor.execute('''PRAGMA integrity_check''')
             rows = cursor.fetchall()
-            if not (len(rows) == 1 and rows[0][0] == 'ok'):
+            if not (len(rows) == 1 and rows[0]['integrity_check'] == 'ok'):
                 raise exceptions.DatabaseError('Integrity check failed.')
             integral = True
             break
