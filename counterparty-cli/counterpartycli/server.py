@@ -186,8 +186,7 @@ def main():
         server.vacuum(db)
 
     elif args.action == 'checkdb':
-        print("Database integrity check done!")
-
+        server.check_database(db)
     else:
         parser.print_help()
 

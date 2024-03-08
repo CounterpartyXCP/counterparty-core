@@ -1511,7 +1511,7 @@ def update_rps_status(db, tx_hash, status):
 #     SUPPLIES      #
 #####################
 
-# Ugly way to get hilder but we want to preserve the order with the old query
+# Ugly way to get holders but we want to preserve the order with the old query
 # to not break checkpoints
 def _get_holders(cursor, id_fields, hold_fields_1, hold_fields_2=None, exclude_empty_holders=False, table=None):
     save_records = {}
@@ -1882,7 +1882,15 @@ def held (db): #TODO: Rename ?
         SELECT asset, SUM(quantity) AS total FROM (
             SELECT address, asset, quantity, (address || asset) AS aa, MAX(rowid)
             FROM balances
+            WHERE address IS NOT NULL
             GROUP BY aa
+        ) GROUP BY asset
+        ''',
+        '''
+        SELECT asset, SUM(quantity) AS total FROM (
+            SELECT NULL, asset, quantity
+            FROM balances
+            WHERE address IS NULL
         ) GROUP BY asset
         ''',
         '''
