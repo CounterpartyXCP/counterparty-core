@@ -98,7 +98,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
                 rpc_host=None, rpc_port=None,
                 rpc_user=None, rpc_password=None,
                 rpc_no_allow_cors=False,
-                force=False, verbose=False, quiet=False, console_logfilter=None,
+                force=False, verbose=False, quiet=False,
                 requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
                 rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
                 check_asset_conservation=config.DEFAULT_CHECK_ASSET_CONSERVATION,
@@ -181,9 +181,8 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
     # Set up logging.
     config.VERBOSE = verbose
     config.QUIET = quiet
-    log.set_up(log.ROOT_LOGGER, verbose=verbose, quiet=quiet, logfile=config.LOG, console_logfilter=console_logfilter)
     if config.LOG:
-        logger.debug(f'Writing server log to file: `{config.LOG}`')
+        print(f'Writing server log to file: `{config.LOG}`')
 
     if no_log_files:  # no file logging
         config.API_LOG = None
@@ -193,7 +192,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
     else:  # user-specified location
         config.API_LOG = api_log_file
     if config.API_LOG:
-        logger.debug(f'Writing API accesses log to file: `{config.API_LOG}`')
+        print(f'Writing API accesses log to file: `{config.API_LOG}`')
 
     # Log unhandled errors.
     def handle_exception(exc_type, exc_value, exc_traceback):

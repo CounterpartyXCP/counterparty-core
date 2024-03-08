@@ -59,7 +59,6 @@ CONFIG_ARGS = [
 ]
 
 COMMANDS_WITH_DB = ['reparse', 'rollback', 'start', 'vacuum', 'checkdb']
-COMMANDS_WITH_CONFIG = ['debug_config', 'kickstart']
 
 class VersionError(Exception):
     pass
@@ -103,8 +102,39 @@ def main():
 
     args = parser.parse_args()
 
-    log.set_up(log.ROOT_LOGGER, verbose=args.verbose, quiet=args.quiet, console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None))
+    # Configuration
+    init_args = dict(database_file=args.database_file,
+                    log_file=args.log_file, api_log_file=args.api_log_file, no_log_files=args.no_log_files,
+                    testnet=args.testnet, testcoin=args.testcoin, regtest=args.regtest,
+                    customnet=args.customnet,
+                    api_limit_rows=args.api_limit_rows,
+                    backend_name=args.backend_name,
+                    backend_connect=args.backend_connect,
+                    backend_port=args.backend_port,
+                    backend_user=args.backend_user,
+                    backend_password=args.backend_password,
+                    backend_ssl=args.backend_ssl,
+                    backend_ssl_no_verify=args.backend_ssl_no_verify,
+                    backend_poll_interval=args.backend_poll_interval,
+                    indexd_connect=args.indexd_connect, indexd_port=args.indexd_port,
+                    rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user,
+                    rpc_password=args.rpc_password, rpc_no_allow_cors=args.rpc_no_allow_cors,
+                    requests_timeout=args.requests_timeout,
+                    rpc_batch_size=args.rpc_batch_size,
+                    check_asset_conservation=not args.no_check_asset_conservation,
+                    force=args.force, verbose=args.verbose, quiet=args.quiet,
+                    p2sh_dust_return_pubkey=args.p2sh_dust_return_pubkey,
+                    utxo_locks_max_addresses=args.utxo_locks_max_addresses,
+                    utxo_locks_max_age=args.utxo_locks_max_age,
+                    checkdb=(args.action == 'checkdb') or (args.checkdb))
 
+    if args.action in COMMANDS_WITH_DB:
+        # server.initialise_config() is called in server.initialise()
+        db = server.initialise(**init_args)
+    else:
+        server.initialise_config(**init_args)
+
+    log.set_up(log.ROOT_LOGGER, verbose=config.VERBOSE, quiet=config.QUIET, logfile=config.LOG)
     logger.info(f'Running v{APP_VERSION} of {APP_NAME}.')
 
     # Help message
@@ -116,50 +146,6 @@ def main():
     if args.action == 'bootstrap':
         bootstrap(testnet=args.testnet, quiet=args.quiet)
         sys.exit()
-
-    def init_with_catch(fn, init_args):
-        try:
-            return fn(**init_args)
-        except TypeError as e:
-            if 'unexpected keyword argument' in str(e):
-                raise VersionError('Unsupported Server Parameter. CLI/Library Version Incompatibility.')
-            else:
-                raise e
-
-    # Configuration
-    if args.action in COMMANDS_WITH_DB or args.action in COMMANDS_WITH_CONFIG:
-        init_args = dict(database_file=args.database_file,
-                                log_file=args.log_file, api_log_file=args.api_log_file, no_log_files=args.no_log_files,
-                                testnet=args.testnet, testcoin=args.testcoin, regtest=args.regtest,
-                                customnet=args.customnet,
-                                api_limit_rows=args.api_limit_rows,
-                                backend_name=args.backend_name,
-                                backend_connect=args.backend_connect,
-                                backend_port=args.backend_port,
-                                backend_user=args.backend_user,
-                                backend_password=args.backend_password,
-                                backend_ssl=args.backend_ssl,
-                                backend_ssl_no_verify=args.backend_ssl_no_verify,
-                                backend_poll_interval=args.backend_poll_interval,
-                                indexd_connect=args.indexd_connect, indexd_port=args.indexd_port,
-                                rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user,
-                                rpc_password=args.rpc_password, rpc_no_allow_cors=args.rpc_no_allow_cors,
-                                requests_timeout=args.requests_timeout,
-                                rpc_batch_size=args.rpc_batch_size,
-                                check_asset_conservation=not args.no_check_asset_conservation,
-                                force=args.force, verbose=args.verbose, quiet=args.quiet,
-                                console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None),
-                                p2sh_dust_return_pubkey=args.p2sh_dust_return_pubkey,
-                                utxo_locks_max_addresses=args.utxo_locks_max_addresses,
-                                utxo_locks_max_age=args.utxo_locks_max_age,
-                                checkdb=(args.action == 'checkdb') or (args.checkdb))
-        #,broadcast_tx_mainnet=args.broadcast_tx_mainnet)
-
-    if args.action in COMMANDS_WITH_DB:
-        db = init_with_catch(server.initialise, init_args)
-
-    elif args.action in COMMANDS_WITH_CONFIG:
-        init_with_catch(server.initialise_config, init_args)
 
     # PARSING
     if args.action == 'reparse':

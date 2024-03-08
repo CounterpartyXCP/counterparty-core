@@ -79,14 +79,19 @@ def set_logger(logger):
         ROOT_LOGGER = logger
 
 
-LOGGING_SETUP = False
-LOGGING_TOFILE_SETUP = False
-def set_up(logger, verbose=False, logfile=None, console_logfilter=None, quiet=True):
-    global LOGGING_SETUP
-    global LOGGING_TOFILE_SETUP
 
-    def set_up_file_logging(log_level):
-        assert logfile
+def set_up(logger, verbose=False, quiet=True, logfile=None):
+
+    log_level = logging.ERROR
+    if verbose == quiet:
+        log_level = logging.INFO
+    elif verbose:
+        log_level = logging.DEBUG
+
+    logger.setLevel(log_level)
+
+    # File Logging
+    if logfile:
         max_log_size = 20 * 1024 * 1024 # 20 MB
         if os.name == 'nt':
             from counterpartylib.lib import util_windows
@@ -98,24 +103,6 @@ def set_up(logger, verbose=False, logfile=None, console_logfilter=None, quiet=Tr
         formatter = logging.Formatter(log_format, '%Y-%m-%d-T%H:%M:%S%z')
         fileh.setFormatter(formatter)
         logger.addHandler(fileh)
-
-    if LOGGING_SETUP:
-        if logfile and not LOGGING_TOFILE_SETUP:
-            set_up_file_logging()
-            LOGGING_TOFILE_SETUP = True
-        logger.getChild('log.set_up').debug('logging already setup')
-        return
-    LOGGING_SETUP = True
-
-    log_level = logging.ERROR
-    if verbose == quiet:
-        log_level = logging.INFO
-    elif verbose:
-        log_level = logging.DEBUG
-    # File Logging
-    if logfile:
-        set_up_file_logging(log_level)
-        LOGGING_TOFILE_SETUP = True
 
     # Quieten noisy libraries.
     requests_log = logging.getLogger("requests")
