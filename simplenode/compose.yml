@@ -39,7 +39,6 @@ services:
       - "--indexer-rpc-host=0.0.0.0"
       - "--daemon-rpc-host=0.0.0.0"
       - "--cookie=rpc:rpc"
-      - "--txid-limit=15000"
       - "--daemon-dir=/bitcoin/.bitcoin"
       - "-vvv"
       - "--db-dir=/data/addrindexrs/db"
