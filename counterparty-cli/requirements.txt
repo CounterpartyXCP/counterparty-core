@@ -4,4 +4,5 @@ prettytable==3.9.0
 colorlog==6.8.0
 python-dateutil==2.8.2
 requests==2.31.0
+termcolor==2.4.0
 counterparty-lib

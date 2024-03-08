@@ -13,10 +13,11 @@ import appdirs
 import platform
 import bitcoin as bitcoinlib
 import logging
+import traceback
 from urllib.parse import quote_plus as urlencode
 
 from halo import Halo
-from termcolor import colored
+from termcolor import colored, cprint
 
 from counterpartylib.lib import log
 logger = logging.getLogger(__name__)
@@ -181,8 +182,6 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
     # Set up logging.
     config.VERBOSE = verbose
     config.QUIET = quiet
-    if config.LOG:
-        print(f'Writing server log to file: `{config.LOG}`')
 
     if no_log_files:  # no file logging
         config.API_LOG = None
@@ -191,13 +190,6 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
         config.API_LOG = os.path.join(log_dir, filename)
     else:  # user-specified location
         config.API_LOG = api_log_file
-    if config.API_LOG:
-        print(f'Writing API accesses log to file: `{config.API_LOG}`')
-
-    # Log unhandled errors.
-    def handle_exception(exc_type, exc_value, exc_traceback):
-        logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
-    sys.excepthook = handle_exception
 
     config.API_LIMIT_ROWS = api_limit_rows
 
@@ -251,7 +243,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
 
     # Backend Core RPC SSL Verify
     if backend_ssl_verify is not None:
-        logger.warning('The server parameter `backend_ssl_verify` is deprecated. Use `backend_ssl_no_verify` instead.')
+        cprint('The server parameter `backend_ssl_verify` is deprecated. Use `backend_ssl_no_verify` instead.', 'yellow')
         config.BACKEND_SSL_NO_VERIFY = not backend_ssl_verify
     else:
         if backend_ssl_no_verify:
@@ -347,7 +339,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
 
     # RPC CORS
     if rpc_allow_cors is not None:
-        logger.warning('The server parameter `rpc_allow_cors` is deprecated. Use `rpc_no_allow_cors` instead.')
+        cprint('The server parameter `rpc_allow_cors` is deprecated. Use `rpc_no_allow_cors` instead.', 'yellow')
         config.RPC_NO_ALLOW_CORS = not rpc_allow_cors
     else:
         if rpc_no_allow_cors:
@@ -457,7 +449,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
 
 def initialise_db():
     if config.FORCE:
-        logger.warning('THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.')
+        cprint('THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.', 'yellow')
 
     # Lock
     if not config.FORCE:
@@ -466,7 +458,6 @@ def initialise_db():
     # Database
     logger.info(f'Connecting to database (SQLite {apsw.apswversion()}).')
     db = database.get_connection(read_only=False, foreign_keys=config.CHECKDB, integrity_check=config.CHECKDB)
-
 
     ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
 
@@ -508,6 +499,9 @@ def start_all(db):
     api_server.daemon = True
     api_server.start()
 
+    if config.API_LOG:
+        cprint(f'Writing API accesses log to file: `{config.API_LOG}`', 'light_grey')
+
     # Server
     blocks.follow(db)
 
@@ -538,13 +532,11 @@ def check_database(db):
     check.asset_conservation(db)
 
 
-def debug_config():
+def show_config():
     output = vars(config)
     for k in list(output.keys()):
-        if k[:2] == "__" and k[-2:] == "__":
-            del output[k]
-
-    pprint.pprint(output)
+        if k.isupper():
+            print(f"{k}: {output[k]}")
 
 
 def generate_move_random_hash(move):

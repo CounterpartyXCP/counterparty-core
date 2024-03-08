@@ -6,6 +6,8 @@ import argparse
 import logging
 logger = logging.getLogger()
 
+from termcolor import cprint
+
 from counterpartylib.lib import log
 log.set_logger(logger)
 
@@ -63,6 +65,8 @@ COMMANDS_WITH_DB = ['reparse', 'rollback', 'start', 'vacuum', 'checkdb']
 class VersionError(Exception):
     pass
 def main():
+    cprint(f'Running v{config.__version__} of {config.FULL_APP_NAME}.', 'magenta')
+
     if os.name == 'nt':
         from counterpartylib.lib import util_windows
         #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
@@ -98,7 +102,9 @@ def main():
 
     subparsers.add_parser('bootstrap', help='bootstrap database with hosted snapshot')
 
-    subparsers.add_parser('checkdb', help='do an integrity check on the database')
+    subparsers.add_parser('check-db', help='do an integrity check on the database')
+
+    subparsers.add_parser('show-config', help='Show counterparty-server configuration')
 
     args = parser.parse_args()
 
@@ -136,19 +142,20 @@ def main():
 
     log.set_up(log.ROOT_LOGGER, verbose=config.VERBOSE, quiet=config.QUIET, logfile=config.LOG)
     logger.info(f'Running v{APP_VERSION} of {APP_NAME}.')
+    if config.LOG:
+        cprint(f'Writing log to file: `{config.LOG}`', 'light_grey')
 
+    cprint(f"{'-' * 30} {args.action} {'-' * 30}\n", 'light_grey')
     # Help message
     if args.help:
         parser.print_help()
-        sys.exit()
 
     # Bootstrapping
-    if args.action == 'bootstrap':
+    elif args.action == 'bootstrap':
         bootstrap(testnet=args.testnet, quiet=args.quiet)
-        sys.exit()
 
     # PARSING
-    if args.action == 'reparse':
+    elif args.action == 'reparse':
         server.reparse(db, block_index=args.block_index)
 
     elif args.action == 'rollback':
@@ -164,13 +171,13 @@ def main():
     elif args.action == 'start':
         server.start_all(db)
 
-    elif args.action == 'debug_config':
-        server.debug_config()
+    elif args.action == 'show-config':
+        server.show_config()
 
     elif args.action == 'vacuum':
         server.vacuum(db)
 
-    elif args.action == 'checkdb':
+    elif args.action == 'check-db':
         server.check_database(db)
     else:
         parser.print_help()

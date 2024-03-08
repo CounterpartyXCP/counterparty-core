@@ -41,6 +41,7 @@ XCP = 'XCP'
 BTC_NAME = 'Bitcoin'
 XCP_NAME = 'Counterparty'
 APP_NAME = XCP_NAME.lower()
+FULL_APP_NAME = 'Counterparty Core'
 
 DEFAULT_RPC_PORT_REGTEST = 24000
 DEFAULT_RPC_PORT_TESTNET = 14000

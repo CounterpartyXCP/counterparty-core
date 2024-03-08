@@ -3,13 +3,14 @@ logger = logging.getLogger(__name__)
 import decimal
 D = decimal.Decimal
 import binascii
-import collections
-import json
+import sys
 import time
 from datetime import datetime
 from dateutil.tz import tzlocal
 import os
-from colorlog import ColoredFormatter
+import traceback
+
+from termcolor import cprint
 
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
@@ -103,6 +104,13 @@ def set_up(logger, verbose=False, quiet=True, logfile=None):
         formatter = logging.Formatter(log_format, '%Y-%m-%d-T%H:%M:%S%z')
         fileh.setFormatter(formatter)
         logger.addHandler(fileh)
+
+    # Log unhandled errors.
+    def handle_exception(exc_type, exc_value, exc_traceback):
+        logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
+        cprint("Unhandled Exception", "red", attrs=["bold"])
+        traceback.print_exception(exc_type, exc_value, exc_traceback, file=sys.stderr)
+    sys.excepthook = handle_exception
 
     # Quieten noisy libraries.
     requests_log = logging.getLogger("requests")
