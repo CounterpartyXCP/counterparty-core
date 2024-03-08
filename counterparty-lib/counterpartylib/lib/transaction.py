@@ -75,7 +75,7 @@ def initialise():
 
 
 def print_coin(coin):
-    return 'amount: {:.8f}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
+    return f"amount: {coin['amount']:.8f}; txid: {coin['txid']}; vout: {coin['vout']}; confirmations: {coin.get('confirmations', '?')}" # simplify and make deterministic
 
 
 def chunks(l, n):
@@ -86,7 +86,7 @@ def chunks(l, n):
 
 
 def make_outkey(output):
-    return '{}{}'.format(output['txid'], output['vout'])
+    return f"{output['txid']}{output['vout']}"
 
 
 def make_outkey_vin_txid(txid, vout):
@@ -105,7 +105,7 @@ def make_outkey_vin(txhex, vout):
 
     tx = bitcoinlib.core.CTransaction.deserialize(txbin)
     outkey = [(vin.prevout.hash, vin.prevout.n) for vin in tx.vin]
-    outkey = hashlib.sha256(("%s%s" % (outkey, vout)).encode('ascii')).digest()
+    outkey = hashlib.sha256((f"{outkey}{vout}").encode('ascii')).digest()
 
     return outkey
 
@@ -163,10 +163,10 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
         if encoding == 'multisig':
             dust = config.DEFAULT_MULTISIG_DUST_SIZE
         else:
-            dust = config.DEFAULT_REGULAR_DUST_SIZE     
-            
+            dust = config.DEFAULT_REGULAR_DUST_SIZE
+
         unspent = backend.sort_unspent_txouts(unspent, dust_size=dust)
-        logger.debug('Sorted candidate UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
+        logger.debug(f'Sorted candidate UTXOs: {[print_coin(coin) for coin in unspent]}')
         use_inputs = unspent
 
     # use backend estimated fee_per_kb
@@ -175,7 +175,7 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
         if estimated_fee_per_kb is not None:
             fee_per_kb = max(estimated_fee_per_kb, fee_per_kb)  # never drop below the default fee_per_kb
 
-    logger.debug('Fee/KB {:.8f}'.format(fee_per_kb / config.UNIT))
+    logger.debug(f'Fee/KB {fee_per_kb / config.UNIT:.8f}')
 
     inputs = []
     btc_in = 0
@@ -187,11 +187,10 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
     if encoding == 'multisig' and data_array and ledger.enabled('bytespersigop'):
         desired_input_count = len(data_array) * 2
 
-
     # pop inputs until we can pay for the fee
     use_inputs_index = 0
     for coin in use_inputs:
-        logger.debug('New input: {}'.format(print_coin(coin)))
+        logger.debug(f'New input: {print_coin(coin)}')
         inputs.append(coin)
         btc_in += round(coin['amount'] * config.UNIT)
 
@@ -203,32 +202,32 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
         else:
             necessary_fee = int(size / 1000 * fee_per_kb)
             final_fee = max(fee_provided, necessary_fee)
-            logger.getChild('p2shdebug').debug('final_fee inputs: %d size: %d final_fee %s' % (len(inputs), size, final_fee))
+            logger.getChild('p2shdebug').debug(f'final_fee inputs: {len(inputs)} size: {size} final_fee {final_fee}')
 
         # Check if good.
         btc_out = destination_btc_out + data_btc_out
         change_quantity = btc_in - (btc_out + final_fee)
-        logger.debug('Size: {} Fee: {:.8f} Change quantity: {:.8f} BTC'.format(size, final_fee / config.UNIT, change_quantity / config.UNIT))
-        
+        logger.debug(f'Size: {size} Fee: {final_fee / config.UNIT:.8f} Change quantity: {change_quantity / config.UNIT:.8f} BTC')
+
         #If after the sum of all the utxos the change is dust, then it will be added to the miners instead of returning an error
         if (use_inputs_index == len(use_inputs)-1) and (change_quantity > 0) and (change_quantity < regular_dust_size):
             sufficient_funds = True
             final_fee = final_fee + change_quantity
             change_quantity = 0
-        # If change is necessary, must not be a dust output.            
+        # If change is necessary, must not be a dust output.
         elif change_quantity == 0 or change_quantity >= regular_dust_size:
             sufficient_funds = True
             if len(inputs) >= desired_input_count:
                 break
-                
-        use_inputs_index = use_inputs_index + 1     
+
+        use_inputs_index = use_inputs_index + 1
 
     if not sufficient_funds:
         # Approximate needed change, fee by with most recently calculated
         # quantities.
         btc_out = destination_btc_out + data_btc_out
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
-        raise exceptions.BalanceError('Insufficient {} at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(config.BTC, source, total_btc_out / config.UNIT, config.BTC))
+        raise exceptions.BalanceError(f'Insufficient {config.BTC} at address {source}. (Need approximately {total_btc_out / config.UNIT} {config.BTC}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)')
 
     # Lock the source's inputs (UTXOs) chosen for this transaction
     if UTXO_LOCKS is not None and not disable_utxo_locks:
@@ -239,9 +238,10 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
         for input in inputs:
             UTXO_LOCKS[source][make_outkey(input)] = input
 
-        logger.debug("UTXO locks: Potentials ({}): {}, Used: {}, locked UTXOs: {}".format(
-            len(unspent), [make_outkey(coin) for coin in unspent],
-            [make_outkey(input) for input in inputs], list(UTXO_LOCKS[source].keys())))
+        list_unspent = [make_outkey(coin) for coin in unspent]
+        list_used = [make_outkey(input) for input in inputs]
+        list_locked = list(UTXO_LOCKS[source].keys())
+        logger.debug(f"UTXO locks: Potentials ({len(unspent)}): {list_unspent}, Used: {list_used}, locked UTXOs: {list_locked}")
 
     # ensure inputs have scriptPubKey
     #   this is not provided by indexd
@@ -287,18 +287,18 @@ def select_any_coin_from_source(source, allow_unconfirmed_inputs=True, disable_u
 
 
 def return_result(tx_hexes, old_style_api):
-        tx_hexes = list(filter(None, tx_hexes))  # filter out None
+    tx_hexes = list(filter(None, tx_hexes))  # filter out None
 
-        if old_style_api:
-            if len(tx_hexes) != 1:
-                raise Exception("Can't do 2 TXs with old_style_api")
+    if old_style_api:
+        if len(tx_hexes) != 1:
+            raise Exception("Can't do 2 TXs with old_style_api")
 
+        return tx_hexes[0]
+    else:
+        if len(tx_hexes) == 1:
             return tx_hexes[0]
         else:
-            if len(tx_hexes) == 1:
-                return tx_hexes[0]
-            else:
-                return tx_hexes
+            return tx_hexes
 
 def construct (db, tx_info, encoding='auto',
                fee_per_kb=config.DEFAULT_FEE_PER_KB,
@@ -373,8 +373,8 @@ def construct (db, tx_info, encoding='auto',
     '''Destinations'''
 
     # Destination outputs.
-        # Replace multi‐sig addresses with multi‐sig pubkeys. Check that the
-        # destination output isn’t a dust output. Set null values to dust size.
+    # Replace multi‐sig addresses with multi‐sig pubkeys. Check that the
+    # destination output isn’t a dust output. Set null values to dust size.
     destination_outputs_new = []
     if encoding != 'p2sh':
         for (address, value) in destination_outputs:
@@ -398,7 +398,6 @@ def construct (db, tx_info, encoding='auto',
 
     destination_outputs = destination_outputs_new
     destination_btc_out = sum([value for address, value in destination_outputs])
-
 
     '''Data'''
 
@@ -457,7 +456,7 @@ def construct (db, tx_info, encoding='auto',
         dust_return_pubkey = None
 
     data_btc_out = data_value * len(data_array)
-    logger.getChild('p2shdebug').debug('data_btc_out=%s (data_value=%d len(data_array)=%d)' % (data_btc_out, data_value, len(data_array)))
+    logger.getChild('p2shdebug').debug(f'data_btc_out={data_btc_out} (data_value={data_value} len(data_array)={len(data_array)})')
 
     '''Inputs'''
     btc_in = 0
@@ -541,7 +540,7 @@ def construct (db, tx_info, encoding='auto',
             txid_ba = bytearray(ptx.GetTxid())
             txid_ba.reverse()
             pretx_txid = bytes(txid_ba) # gonna leave the malleability problem to upstream
-            logger.getChild('p2shdebug').debug('pretx_txid %s' % pretx_txid)
+            logger.getChild('p2shdebug').debug(f'pretx_txid {pretx_txid}')
             print('pretx txid:', binascii.hexlify(pretx_txid))
 
         if unsigned_pretx:
@@ -570,7 +569,7 @@ def construct (db, tx_info, encoding='auto',
             unsigned_tx_hex = unsigned_datatx_hex
         else:
             # we're just gonna return the pretx, it doesn't require any of the further checks
-            logger.warning('old_style_api = %s' % old_style_api)
+            logger.warning(f'old_style_api = {old_style_api}')
             return return_result([unsigned_pretx_hex], old_style_api=old_style_api)
 
     else:
@@ -579,7 +578,6 @@ def construct (db, tx_info, encoding='auto',
                                 data_output, change_output,
                                 dust_return_pubkey=dust_return_pubkey)
         unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')
-
 
     '''Sanity Check'''
 
@@ -592,7 +590,7 @@ def construct (db, tx_info, encoding='auto',
     #    if desired_destination == '':
     #        desired_destination = desired_source
     #    else:
-    #        desired_destination += '-{}'.format(desired_source)
+    #        desired_destination += f'-{desired_source}'
     # NOTE
     if desired_data == None:
         desired_data = b''
@@ -637,7 +635,7 @@ def construct (db, tx_info, encoding='auto',
             for input in inputs:
                 UTXO_LOCKS[source].pop(make_outkey(input), None)
 
-        raise exceptions.TransactionError('Constructed transaction does not parse correctly: {} ≠ {}'.format(desired, parsed))
+        raise exceptions.TransactionError(f'Constructed transaction does not parse correctly: {desired} ≠ {parsed}')
 
     if extended_tx_info:
         return {

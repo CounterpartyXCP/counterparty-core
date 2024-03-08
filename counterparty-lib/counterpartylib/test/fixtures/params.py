@@ -38,21 +38,21 @@ ADDR = [a[0] for a in DEFAULT_PARAMS['addresses']]
 SHORT_ADDR_BYTES = ['6f' + a[1] for a in DEFAULT_PARAMS['addresses']]
 DP = DEFAULT_PARAMS
 MULTISIGADDR = [
-    '1_{}_{}_2'.format(ADDR[0], ADDR[1]),
-    '1_{}_{}_2'.format(ADDR[2], ADDR[1]),
-    '1_{}_{}_2'.format(ADDR[0], ADDR[2]),
+    f'1_{ADDR[0]}_{ADDR[1]}_2',
+    f'1_{ADDR[2]}_{ADDR[1]}_2',
+    f'1_{ADDR[0]}_{ADDR[2]}_2',
 
-    '2_{}_{}_2'.format(ADDR[0], ADDR[1]),
-    '2_{}_{}_2'.format(ADDR[2], ADDR[1]),
+    f'2_{ADDR[0]}_{ADDR[1]}_2',
+    f'2_{ADDR[2]}_{ADDR[1]}_2',
 
-    '1_{}_{}_{}_3'.format(ADDR[0], ADDR[2], ADDR[1]),
-    '1_{}_{}_{}_3'.format(ADDR[0], ADDR[2], ADDR[3]),
+    f'1_{ADDR[0]}_{ADDR[2]}_{ADDR[1]}_3',
+    f'1_{ADDR[0]}_{ADDR[2]}_{ADDR[3]}_3',
 
-    '2_{}_{}_{}_3'.format(ADDR[0], ADDR[2], ADDR[1]),
-    '2_{}_{}_{}_3'.format(ADDR[0], ADDR[2], ADDR[3]),
+    f'2_{ADDR[0]}_{ADDR[2]}_{ADDR[1]}_3',
+    f'2_{ADDR[0]}_{ADDR[2]}_{ADDR[3]}_3',
 
-    '3_{}_{}_{}_3'.format(ADDR[0], ADDR[2], ADDR[1]),
-    '3_{}_{}_{}_3'.format(ADDR[0], ADDR[2], ADDR[3])
+    f'3_{ADDR[0]}_{ADDR[2]}_{ADDR[1]}_3',
+    f'3_{ADDR[0]}_{ADDR[2]}_{ADDR[3]}_3'
 ]
 
 P2SH_ADDR = [

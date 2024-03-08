@@ -276,7 +276,7 @@ def parse(db, tx, message):
                 wager = balance
 
         problems = validate(db, tx['source'], possible_moves, wager, move_random_hash, expiration, tx['block_index'])
-        if problems: status = 'invalid: {}'.format(', '.join(problems))
+        if problems: status = f"invalid: {', '.join(problems)}"
 
     # Debit quantity wagered. (Escrow.)
     if status == 'open':

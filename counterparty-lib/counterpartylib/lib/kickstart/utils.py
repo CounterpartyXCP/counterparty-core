@@ -11,7 +11,7 @@ def b2h(b):
 def random_hex(length):
     return binascii.b2a_hex(os.urandom(length))
 
-def double_hash(b): 
+def double_hash(b):
     return hashlib.sha256(hashlib.sha256(b).digest()).digest()
 
 def inverse_hash(hashstring):

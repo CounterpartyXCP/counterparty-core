@@ -34,7 +34,7 @@ def test_mock_protocol_changes(cp_server):
         assert ledger.enabled('multisig_addresses') == False
 
         with util_test.MockProtocolChangesContext(multisig_addresses=None):
-                assert ledger.enabled('multisig_addresses') == None
+            assert ledger.enabled('multisig_addresses') == None
 
         assert ledger.enabled('multisig_addresses') == False
 

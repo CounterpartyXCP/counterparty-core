@@ -12,7 +12,6 @@ FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql'
 FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
 
 
-
 @pytest.mark.usefixtures("server_db")
 def test_search_raw_transactions_output():
     txs = backend.search_raw_transactions(ADDR[0], unconfirmed=True)

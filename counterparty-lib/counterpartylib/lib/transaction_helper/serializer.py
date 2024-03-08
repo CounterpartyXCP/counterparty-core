@@ -47,7 +47,7 @@ OP_EQUAL = b'\x87'
 D = decimal.Decimal
 UTXO_LOCKS = None
 UTXO_LOCKS_PER_ADDRESS_MAXSIZE = 5000  # set higher than the max number of UTXOs we should expect to
-                                       # manage in an aging cache for any one source address, at any one period
+# manage in an aging cache for any one source address, at any one period
 
 def var_int (i):
     if i < 0xfd:
@@ -345,7 +345,6 @@ def serialise(encoding, inputs, destination_outputs, data_output=None, change_ou
     return s
 
 
-
 def serialise_p2sh_pretx(inputs, source, source_value, data_output, change_output=None, pubkey=None, multisig_pubkeys=None, multisig_pubkeys_required=None):
     assert data_output  # we don't do this unless there's data
 
@@ -380,15 +379,15 @@ def serialise_p2sh_pretx(inputs, source, source_value, data_output, change_outpu
         data_chunk = config.PREFIX + data_chunk  # prefix the data_chunk
 
         # get the scripts
-        scriptSig, redeemScript, outputScript = p2sh_encoding.make_p2sh_encoding_redeemscript(data_chunk, n, pubkey, multisig_pubkeys, multisig_pubkeys_required)
+        script_sig, redeem_script, output_script = p2sh_encoding.make_p2sh_encoding_redeemscript(data_chunk, n, pubkey, multisig_pubkeys, multisig_pubkeys_required)
 
         #if data_value is an array, then every output fee is specified in it
         if type(data_value) == list:
             s += data_value[n].to_bytes(8, byteorder='little')  # Value
         else:
             s += data_value.to_bytes(8, byteorder='little')  # Value
-        s += var_int(int(len(outputScript)))             # Script length
-        s += outputScript                                # Script
+        s += var_int(int(len(output_script)))             # Script length
+        s += output_script                                # Script
 
     # Change output.
     if change_output:
@@ -437,8 +436,8 @@ def serialise_p2sh_datatx(txid, source, source_input, destination_outputs, data_
         data_chunk = config.PREFIX + data_chunk  # prefix the data_chunk
 
         # get the scripts
-        scriptSig, redeemScript, outputScript = p2sh_encoding.make_p2sh_encoding_redeemscript(data_chunk, n, pubkey, multisig_pubkeys, multisig_pubkeys_required)
-        #substituteScript = scriptSig + outputScript
+        script_sig, redeem_script, output_script = p2sh_encoding.make_p2sh_encoding_redeemscript(data_chunk, n, pubkey, multisig_pubkeys, multisig_pubkeys_required)
+        #substituteScript = script_sig + output_script
 
         s += txhash                                              # TxOutHash
         s += (n).to_bytes(4, byteorder='little')                 # TxOutIndex (assumes 0-based)
@@ -446,9 +445,9 @@ def serialise_p2sh_datatx(txid, source, source_input, destination_outputs, data_
         #s += var_int(len(substituteScript))                      # Script length
         #s += substituteScript                                    # Script
 
-        s += var_int(len(scriptSig))# + len(outputScript))                      # Script length
-        s += scriptSig                                    # Script
-        #s += outputScript                                    # Script
+        s += var_int(len(script_sig))# + len(output_script))                      # Script length
+        s += script_sig                                    # Script
+        #s += output_script                                    # Script
 
         s += b'\xff' * 4                                         # Sequence
 

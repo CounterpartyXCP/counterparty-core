@@ -9,7 +9,7 @@ def pack(message_type_id, block_index=None):
     # pack message ID into 1 byte if not zero
     if ledger.enabled('short_tx_type_id', block_index) and message_type_id > 0 and message_type_id < 256:
         return struct.pack(config.SHORT_TXTYPE_FORMAT, message_type_id)
-        
+
     # pack into 4 bytes
     return struct.pack(config.TXTYPE_FORMAT, message_type_id)
 

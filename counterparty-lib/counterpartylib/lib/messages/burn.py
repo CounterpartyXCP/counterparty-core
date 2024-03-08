@@ -10,7 +10,7 @@ from fractions import Fraction
 
 from counterpartylib.lib import (config, exceptions, database, ledger)
 
-"""Burn {} to earn {} during a special period of time.""".format(config.BTC, config.XCP)
+f"""Burn {config.BTC} to earn {config.XCP} during a special period of time."""
 
 ID = 60
 
@@ -72,12 +72,12 @@ def compose (db, source, quantity, overburn=False):
     already_burned = sum([burn['burned'] for burn in burns])
 
     if quantity > (1 * config.UNIT - already_burned) and not overburn:
-        raise exceptions.ComposeError('1 {} may be burned per address'.format(config.BTC))
+        raise exceptions.ComposeError(f'1 {config.BTC} may be burned per address')
 
     cursor.close()
     return (source, [(destination, quantity)], None)
 
-def parse (db, tx, MAINNET_BURNS, message=None):
+def parse (db, tx, mainnet_burns, message=None):
     burn_parse_cursor = db.cursor()
 
     if config.TESTNET or config.REGTEST:
@@ -97,8 +97,8 @@ def parse (db, tx, MAINNET_BURNS, message=None):
             # Calculate quantity of XCP earned. (Maximum 1 BTC in total, ever.)
             burns = ledger.get_burns(db, status='valid', source=tx['source'])
             already_burned = sum([burn['burned'] for burn in burns])
-            ONE = 1 * config.UNIT
-            max_burn = ONE - already_burned
+            one = 1 * config.UNIT
+            max_burn = one - already_burned
             if sent > max_burn: burned = max_burn   # Exceeded maximum burn; earn what you can.
             else: burned = sent
 
@@ -122,7 +122,7 @@ def parse (db, tx, MAINNET_BURNS, message=None):
         # Mainnet burns are hard‐coded.
 
         try:
-            line = MAINNET_BURNS[tx['tx_hash']]
+            line = mainnet_burns[tx['tx_hash']]
         except KeyError:
             return
 
@@ -151,8 +151,8 @@ def parse (db, tx, MAINNET_BURNS, message=None):
         sql = 'insert into burns values(:tx_index, :tx_hash, :block_index, :source, :burned, :earned, :status)'
         burn_parse_cursor.execute(sql, bindings)
     else:
-        logger.warning("Not storing [burn] tx [%s]: %s" % (tx['tx_hash'], status))
-        logger.debug("Bindings: %s" % (json.dumps(bindings), ))
+        logger.warning(f"Not storing [burn] tx [{tx['tx_hash']}]: {status}")
+        logger.debug(f"Bindings: {json.dumps(bindings)}")
 
     burn_parse_cursor.close()
 

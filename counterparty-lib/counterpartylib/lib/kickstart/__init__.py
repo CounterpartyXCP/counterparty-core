@@ -49,7 +49,7 @@ def fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner):
                       PRIMARY KEY (block_index, block_hash))
                    ''')
     cursor.execute('''DELETE FROM kickstart_blocks''')
-    
+
     start_time_blocks_indexing = time.time()
     # save blocks from last to first
     current_hash = last_known_hash
@@ -76,15 +76,15 @@ def fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner):
             block_count += 1
             if block['block_index'] == first_block:
                 break
-        # insert blocks by lot
+        # insert blocks by lot. No sql injection here.
         cursor.execute(f'''INSERT INTO kickstart_blocks (block_index, block_hash, block_time, previous_block_hash, difficulty, tx_count)
-                              VALUES {', '.join(bindings_place)}''',
+                              VALUES {', '.join(bindings_place)}''', # nosec B608
                               bindings_lot)
         spinner.text = f"Initialising database: block {bindings_lot[0]} to {bindings_lot[-6]} inserted."
         if block['block_index'] == first_block:
             break
     block_parser.close()
-    spinner.text = 'Blocks indexed in: {:.3f}s'.format(time.time() - start_time_blocks_indexing)
+    spinner.text = f'Blocks indexed in: {time.time() - start_time_blocks_indexing:.3f}s'
     return block_count
 
 
@@ -134,7 +134,7 @@ def get_bitcoind_dir(bitcoind_dir=None):
         else:
             bitcoind_dir = os.path.expanduser('~/.bitcoin')
     if not os.path.isdir(bitcoind_dir):
-        raise Exception('Bitcoin Core data directory not found at {}. Use --bitcoind-dir parameter.'.format(bitcoind_dir))
+        raise Exception(f'Bitcoin Core data directory not found at {bitcoind_dir}. Use --bitcoind-dir parameter.')
     if config.TESTNET:
         bitcoind_dir = os.path.join(bitcoind_dir, 'testnet3')
     return bitcoind_dir
@@ -146,7 +146,7 @@ def get_last_known_block_hash(bitcoind_dir):
         chain_parser = ChainstateParser(os.path.join(bitcoind_dir, 'chainstate'))
         last_known_hash = chain_parser.get_last_block_hash()
         chain_parser.close()
-        #print('Last known block hash: {}'.format(last_known_hash))
+        #print(f'Last known block hash: {last_known_hash}')
     print(f'{OK_GREEN} {step}')
     return last_known_hash
 
@@ -251,8 +251,8 @@ def parse_block(kickstart_db, cursor, block, block_parser, tx_index):
 
     with kickstart_db: # ensure all the block or nothing
         # insert block
-        cursor.execute(f'''
-            INSERT INTO blocks 
+        cursor.execute('''
+            INSERT INTO blocks
                 (block_index, block_hash, block_time, previous_block_hash, difficulty)
             VALUES (?, ?, ?, ?, ?)
         ''', (
@@ -392,5 +392,5 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
         # cleaning up
         cleanup(kickstart_db, block_parser)
         # end message
-        print("Last parsed block: {}".format(last_parsed_block))
-        print('Kickstart done in: {:.3f}s'.format(time.time() - start_time_total))
+        print(f"Last parsed block: {last_parsed_block}")
+        print(f'Kickstart done in: {time.time() - start_time_total:.3f}s')

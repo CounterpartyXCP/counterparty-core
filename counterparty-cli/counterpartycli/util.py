@@ -38,6 +38,7 @@ class JsonDecimalEncoder(json.JSONEncoder):
             return str(o)
         return super(JsonDecimalEncoder, self).default(o)
 
+
 json_dump = lambda x: json.dumps(x, sort_keys=True, indent=4, cls=JsonDecimalEncoder)
 json_print = lambda x: print(json_dump(x))
 
@@ -59,7 +60,7 @@ def rpc(url, method, params=None, ssl_verify=False, tries=1):
         rpc_session = requests.Session()
         rpc_sessions[url] = rpc_session
     else:
-    	rpc_session = rpc_sessions[url]
+       	rpc_session = rpc_sessions[url]
 
     response = None
     for i in range(tries):
@@ -73,11 +74,11 @@ def rpc(url, method, params=None, ssl_verify=False, tries=1):
         except requests.exceptions.Timeout as e:
             raise e
         except requests.exceptions.ConnectionError:
-            logger.debug('Could not connect to {}. (Try {}/{})'.format(url, i+1, tries))
+            logger.debug(f'Could not connect to {url}. (Try {i+1}/{tries})')
             time.sleep(5)
 
     if response == None:
-        raise RPCError('Cannot communicate with {}.'.format(url))
+        raise RPCError(f'Cannot communicate with {url}.')
     elif response.status_code not in (200, 500):
         raise RPCError(str(response.status_code) + ' ' + response.reason + ' ' + response.text)
 
@@ -86,7 +87,7 @@ def rpc(url, method, params=None, ssl_verify=False, tries=1):
     if 'error' not in response_json.keys() or response_json['error'] == None:
         return response_json['result']
     else:
-        raise RPCError('{}'.format(response_json['error']))
+        raise RPCError(f"{response_json['error']}")
 
 def api(method, params=None):
     return rpc(config.COUNTERPARTY_RPC, method, params=params, ssl_verify=config.COUNTERPARTY_RPC_SSL_VERIFY)
@@ -102,7 +103,7 @@ def is_divisible(asset):
         bindings = ['valid', asset]
         issuances = api('sql', {'query': sql, 'bindings': bindings})
 
-        if not issuances: raise AssetError('No such asset: {}'.format(asset))
+        if not issuances: raise AssetError(f'No such asset: {asset}')
         return issuances[0]['divisible']
 
 def value_in(quantity, asset, divisible=None):
@@ -120,24 +121,18 @@ def bootstrap(testnet=False, overwrite=True, ask_confirmation=False, quiet=False
 
     # Set Constants.
     if testnet:
-        if check.CONSENSUS_HASH_VERSION_TESTNET < 7:
-            BOOTSTRAP_URL = 'https://counterparty.io/bootstrap/counterparty-db-testnet.latest.tar.gz'
-        else:
-            BOOTSTRAP_URL = 'https://counterparty.io/bootstrap/counterparty-db-testnet-{}.latest.tar.gz'.format(check.CONSENSUS_HASH_VERSION_TESTNET)
-        TARBALL_PATH = os.path.join(tempfile.gettempdir(), 'counterpartyd-testnet-db.latest.tar.gz')
-        DATABASE_PATH = os.path.join(data_dir, '{}.testnet.db'.format(config.APP_NAME))
+        bootstrap_url = 'https://bootstrap.counterparty.io/counterparty-testnet.latest.tar.gz'
+        tarball_path = os.path.join(tempfile.gettempdir(), 'counterparty-testnet.latest.tar.gz')
+        database_path = os.path.join(data_dir, '{}.testnet.db'.format(config.APP_NAME))
     else:
-        if check.CONSENSUS_HASH_VERSION_MAINNET < 3:
-            BOOTSTRAP_URL = 'https://counterparty.io/bootstrap/counterparty-db.latest.tar.gz'
-        else:
-            BOOTSTRAP_URL = 'https://counterparty.io/bootstrap/counterparty-db-{}.latest.tar.gz'.format(check.CONSENSUS_HASH_VERSION_MAINNET)
-        TARBALL_PATH = os.path.join(tempfile.gettempdir(), 'counterpartyd-db.latest.tar.gz')
-        DATABASE_PATH = os.path.join(data_dir, '{}.db'.format(config.APP_NAME))
+        bootstrap_url = 'https://bootstrap.counterparty.io/counterparty.latest.tar.gz'
+        tarball_path = os.path.join(tempfile.gettempdir(), 'counterparty.latest.tar.gz')
+        database_path = os.path.join(data_dir, '{}.db'.format(config.APP_NAME))
 
     # Prepare Directory.
     if not os.path.exists(data_dir):
         os.makedirs(data_dir, mode=0o755)
-    if not overwrite and os.path.exists(DATABASE_PATH):
+    if not overwrite and os.path.exists(database_path):
         return
 
     # Define Progress Bar.
@@ -145,26 +140,30 @@ def bootstrap(testnet=False, overwrite=True, ask_confirmation=False, quiet=False
         readsofar = blocknum * blocksize
         if totalsize > 0:
             percent = readsofar * 1e2 / totalsize
-            s = "\r%5.1f%% %*d / %d" % (
-                percent, len(str(totalsize)), readsofar, totalsize)
+            s = f"\r{percent:5.1f} {readsofar} / {totalsize}"
             sys.stderr.write(s)
             if readsofar >= totalsize: # near the end
                 sys.stderr.write("\n")
         else: # total size is unknown
-            sys.stderr.write("read %d\n" % (readsofar,))
+            sys.stderr.write(f"read {readsofar}\n")
 
-    print('Downloading database from {}...'.format(BOOTSTRAP_URL))
-    urllib.request.urlretrieve(BOOTSTRAP_URL, TARBALL_PATH, reporthook if not quiet else None)
+    print(f'Downloading database from {bootstrap_url}...')
+    if bootstrap_url.startswith('https://'):
+        urllib.request.urlretrieve(bootstrap_url, tarball_path, reporthook if not quiet else None) # nosec B310
+    else:
+        raise Exception(f'Invalid URL: {bootstrap_url}')
 
-    print('Extracting to "%s"...' % data_dir)
-    with tarfile.open(TARBALL_PATH, 'r:gz') as tar_file:
-        tar_file.extractall(path=data_dir)
+    print(f'Extracting to "{data_dir}"...')
+    # TODO: check checksum, filenames, etc.
+    with tarfile.open(tarball_path, 'r:gz') as tar_file:
+        tar_file.extractall(path=data_dir) # nosec B202
 
-    assert os.path.exists(DATABASE_PATH)
-    os.chmod(DATABASE_PATH, 0o660)
+    assert os.path.exists(database_path)
+    # user and group have "rw" access
+    os.chmod(database_path, 0o660) # nosec B103
 
     print('Cleaning up...')
-    os.remove(TARBALL_PATH)
+    os.remove(tarball_path)
 
 # Set default values of command line arguments with config file
 def add_config_arguments(arg_parser, config_args, default_config_file, config_file_arg_name='config_file'):
@@ -178,23 +177,23 @@ def add_config_arguments(arg_parser, config_args, default_config_file, config_fi
         config_file = os.path.join(config_dir, default_config_file)
 
     # clean BOM
-    BUFSIZE = 4096
-    BOMLEN = len(codecs.BOM_UTF8)
+    bufsize = 4096
+    bomlen = len(codecs.BOM_UTF8)
     with codecs.open(config_file, 'r+b') as fp:
-        chunk = fp.read(BUFSIZE)
+        chunk = fp.read(bufsize)
         if chunk.startswith(codecs.BOM_UTF8):
             i = 0
-            chunk = chunk[BOMLEN:]
+            chunk = chunk[bomlen:]
             while chunk:
                 fp.seek(i)
                 fp.write(chunk)
                 i += len(chunk)
-                fp.seek(BOMLEN, os.SEEK_CUR)
-                chunk = fp.read(BUFSIZE)
-            fp.seek(-BOMLEN, os.SEEK_CUR)
+                fp.seek(bomlen, os.SEEK_CUR)
+                chunk = fp.read(bufsize)
+            fp.seek(-bomlen, os.SEEK_CUR)
             fp.truncate()
 
-    logger.debug('Loading configuration file: `{}`'.format(config_file))
+    logger.debug(f'Loading configuration file: `{config_file}`')
     configfile = configparser.SafeConfigParser(allow_no_value=True, inline_comment_prefixes=('#', ';'))
     with codecs.open(config_file, 'r', encoding='utf8') as fp:
         configfile.readfp(fp)

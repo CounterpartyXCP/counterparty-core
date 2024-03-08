@@ -53,7 +53,7 @@ def validate (db, source, order_match_id, block_index):
     order_match = None
     order_matches = ledger.get_order_match(db, id=order_match_id)
     if len(order_matches) == 0:
-        problems.append('no such order match %s' % order_match_id)
+        problems.append(f'no such order match {order_match_id}')
         return None, None, None, None, order_match, problems
     elif len(order_matches) > 1:
         assert False
@@ -100,9 +100,9 @@ def compose (db, source, order_match_id):
     # Warn if down to the wire.
     time_left = order_match['match_expire_index'] - ledger.CURRENT_BLOCK_INDEX
     if time_left < 4:
-        logger.warning('Only {} blocks until that order match expires. The payment might not make into the blockchain in time.'.format(time_left))
+        logger.warning(f'Only {time_left} blocks until that order match expires. The payment might not make into the blockchain in time.')
     if 10 - time_left < 4:
-        logger.warning('Order match has only {} confirmation(s).'.format(10 - time_left))
+        logger.warning(f'Order match has only {10 - time_left} confirmation(s).')
 
     tx0_hash_bytes, tx1_hash_bytes = binascii.unhexlify(bytes(tx0_hash, 'utf-8')), binascii.unhexlify(bytes(tx1_hash, 'utf-8'))
     data = message_type.pack(ID)
@@ -172,8 +172,7 @@ def parse (db, tx, message):
         sql = 'insert into btcpays values(:tx_index, :tx_hash, :block_index, :source, :destination, :btc_amount, :order_match_id, :status)'
         cursor.execute(sql, bindings)
     else:
-        logger.warning("Not storing [btcpay] tx [%s]: %s" % (tx['tx_hash'], status))
-        logger.debug("Bindings: %s" % (json.dumps(bindings), ))
-
+        logger.warning(f"Not storing [btcpay] tx [{tx['tx_hash']}]: {status}")
+        logger.debug(f"Bindings: {json.dumps(bindings)}")
 
     cursor.close()
