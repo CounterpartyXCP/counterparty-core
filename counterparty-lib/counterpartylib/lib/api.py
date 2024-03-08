@@ -532,7 +532,7 @@ class APIStatusPoller(threading.Thread):
     def run(self):
         logger.debug('Starting API Status Poller.')
         global CURRENT_API_STATUS_CODE, CURRENT_API_STATUS_RESPONSE_JSON
-        db = database.get_connection(read_only=True, integrity_check=False)
+        db = database.get_connection(read_only=True)
 
         while self.stop_event.is_set() != True:
             try:
@@ -574,7 +574,7 @@ class APIServer(threading.Thread):
 
     def run(self):
         logger.info('Starting API Server.')
-        self.db = self.db or database.get_connection(read_only=True, integrity_check=False)
+        self.db = self.db or database.get_connection(read_only=True)
         app = flask.Flask(__name__)
         auth = HTTPBasicAuth()
 

@@ -81,9 +81,7 @@ def exectracer(cursor, sql, bindings):
     return True
 
 
-class DatabaseIntegrityError(exceptions.DatabaseError):
-    pass
-def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
+def get_connection(read_only=True):
     """Connects to the SQLite database, returning a db `Connection` object"""
     logger.debug(f'Creating connection to `{config.DATABASE}`.')
 
@@ -93,52 +91,59 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
         db = apsw.Connection(config.DATABASE)
     cursor = db.cursor()
 
-    # For integrity, security.
-    if foreign_keys and not read_only:
-        logger.info('Checking database foreign keys...')
-        cursor.execute('''PRAGMA foreign_keys = ON''')
-        cursor.execute('''PRAGMA defer_foreign_keys = ON''')
-        rows = list(cursor.execute('''PRAGMA foreign_key_check'''))
-        if rows:
-            for row in rows:
-                logger.debug(f'Foreign Key Error: {row}')
-            raise exceptions.DatabaseError('Foreign key check failed.')
-
-        logger.info('Foreign key check completed.')
-
     # Make case sensitive the `LIKE` operator.
     # For insensitive queries use 'UPPER(fieldname) LIKE value.upper()''
-    cursor.execute('''PRAGMA case_sensitive_like = ON''')
-
-    if integrity_check:
-        logger.info('Checking database integrity...')
-        integral = False
-
-        # Try up to 10 times.
-        for i in range(10): # DUPE
-            try:
-                cursor.execute('''PRAGMA integrity_check''')
-                rows = cursor.fetchall()
-                if not (len(rows) == 1 and rows[0][0] == 'ok'):
-                    raise exceptions.DatabaseError('Integrity check failed.')
-                integral = True
-                break
-            except DatabaseIntegrityError:
-                time.sleep(1)
-                continue
-        if not integral:
-            raise exceptions.DatabaseError('Could not perform integrity check.')
-        logger.info('Integrity check completed.')
-
+    cursor.execute('PRAGMA case_sensitive_like = ON')
     cursor.execute('PRAGMA auto_vacuum = 1')
     cursor.execute('PRAGMA synchronous = normal')
     cursor.execute('PRAGMA journal_size_limit = 6144000')
+    cursor.execute('PRAGMA foreign_keys = ON')
+    cursor.execute('PRAGMA defer_foreign_keys = ON')
 
     db.setrowtrace(rowtracer)
     db.setexectrace(exectracer)
 
     cursor.close()
     return db
+
+class DatabaseIntegrityError(exceptions.DatabaseError):
+    pass
+
+
+def check_foreign_keys(db):
+    cursor = db.cursor()
+
+    logger.info('Checking database foreign keys...')
+
+    rows = list(cursor.execute('''PRAGMA foreign_key_check'''))
+    if rows:
+        for row in rows:
+            logger.debug(f'Foreign Key Error: {row}')
+        raise exceptions.DatabaseError('Foreign key check failed.')
+    logger.info('Foreign key check completed.')
+
+
+def intergrity_check(db):
+    cursor = db.cursor()
+
+    logger.info('Checking database integrity...')
+    integral = False
+
+    # Try up to 10 times.
+    for i in range(10): # DUPE
+        try:
+            cursor.execute('''PRAGMA integrity_check''')
+            rows = cursor.fetchall()
+            if not (len(rows) == 1 and rows[0][0] == 'ok'):
+                raise exceptions.DatabaseError('Integrity check failed.')
+            integral = True
+            break
+        except DatabaseIntegrityError:
+            time.sleep(1)
+            continue
+    if not integral:
+        raise exceptions.DatabaseError('Could not perform integrity check.')
+    logger.info('Integrity check completed.')
 
 
 def version(db):

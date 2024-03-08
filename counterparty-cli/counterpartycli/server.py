@@ -57,10 +57,9 @@ CONFIG_ARGS = [
 
     [('--utxo-locks-max-addresses',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES, 'help': 'max number of addresses for which to track UTXO locks'}],
     [('--utxo-locks-max-age',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_AGE, 'help': 'how long to keep a lock on a UTXO being tracked'}],
-    [('--checkdb',), {'action': 'store_true', 'default': False, 'help': 'check the database for integrity (default: false)'}]
 ]
 
-COMMANDS_WITH_DB = ['reparse', 'rollback', 'start', 'vacuum', 'checkdb']
+COMMANDS_WITH_DB = ['reparse', 'rollback', 'start', 'vacuum', 'check-db']
 
 class VersionError(Exception):
     pass
@@ -131,8 +130,7 @@ def main():
                     force=args.force, verbose=args.verbose, quiet=args.quiet,
                     p2sh_dust_return_pubkey=args.p2sh_dust_return_pubkey,
                     utxo_locks_max_addresses=args.utxo_locks_max_addresses,
-                    utxo_locks_max_age=args.utxo_locks_max_age,
-                    checkdb=(args.action == 'checkdb') or (args.checkdb))
+                    utxo_locks_max_age=args.utxo_locks_max_age)
 
     if args.action in COMMANDS_WITH_DB:
         # server.initialise_config() is called in server.initialise()
@@ -145,7 +143,7 @@ def main():
     if config.LOG:
         cprint(f'Writing log to file: `{config.LOG}`', 'light_grey')
 
-    cprint(f"{'-' * 30} {args.action} {'-' * 30}\n", 'light_grey')
+    cprint(f"{'-' * 30} {args.action} {'-' * 30}\n", 'green')
     # Help message
     if args.help:
         parser.print_help()

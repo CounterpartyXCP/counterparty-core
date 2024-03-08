@@ -143,7 +143,7 @@ def rawtransactions_db(request):
 @pytest.fixture(scope='function')
 def server_db(request, cp_server, api_server):
     """Enable database access for unit test vectors."""
-    db = database.get_connection(read_only=False, integrity_check=False)
+    db = database.get_connection(read_only=False)
     api_server.db = db  # inject into api_server
     cursor = db.cursor()
     cursor.execute('''BEGIN''')

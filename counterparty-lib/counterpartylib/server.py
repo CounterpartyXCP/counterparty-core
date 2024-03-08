@@ -107,7 +107,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
                 utxo_locks_max_addresses=config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES,
                 utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE,
                 estimate_fee_per_kb=None,
-                customnet=None, checkdb=False):
+                customnet=None):
 
     # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -159,11 +159,6 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
     else:
         filename = f'{config.APP_NAME}{network}.db'
         config.DATABASE = os.path.join(data_dir, filename)
-
-    if checkdb:
-        config.CHECKDB = True
-    else:
-        config.CHECKDB = False
 
     # Log directory
     log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
@@ -457,7 +452,7 @@ def initialise_db():
 
     # Database
     logger.info(f'Connecting to database (SQLite {apsw.apswversion()}).')
-    db = database.get_connection(read_only=False, foreign_keys=config.CHECKDB, integrity_check=config.CHECKDB)
+    db = database.get_connection(read_only=False)
 
     ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
 
@@ -524,12 +519,31 @@ def kickstart(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
 
 
 def vacuum(db):
-    database.vacuum(db)
+    step = 'Vacuuming database...'
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        database.vacuum(db)
+    print(f'{OK_GREEN} {step}')
 
 
 def check_database(db):
     ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
-    check.asset_conservation(db)
+
+    step = 'Checking asset conservation...'
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        check.asset_conservation(db)
+    print(f'{OK_GREEN} {step}')
+
+    step = 'Checking database foreign keys....'
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        check.asset_conservation(db)
+    print(f'{OK_GREEN} {step}')
+
+    step = 'Checking database integrity...'
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        database.intergrity_check(db)
+    print(f'{OK_GREEN} {step}')
+
+    cprint('Database checks complete.', 'green')
 
 
 def show_config():
