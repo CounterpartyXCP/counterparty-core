@@ -61,7 +61,6 @@ git clone https://github.com/CounterpartyXCP/addrindexrs.git
 cd addrindexrs
 # Set the necessary environment variables
 export ADDRINDEXRS_JSONRPC_IMPORT=1
-export ADDRINDEXRS_TXID_LIMIT=15000
 export ADDRINDEXRS_COOKIE=rpc:rpc
 cargo build --release
 ulimit -n 8192
