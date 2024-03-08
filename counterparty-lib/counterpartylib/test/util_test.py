@@ -68,7 +68,6 @@ def init_database(sqlfile, dbfile, options=None):
         database_file=dbfile,
         testnet=True,
         verbose=True,
-        console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None),
         **kwargs)
 
     restore_database(config.DATABASE, sqlfile)

@@ -1,8 +1,4 @@
 Creating connection to `:memory:`.
-Checking database foreign keys...
-Foreign key check completed.
-Checking database integrity...
-Integrity check completed.
 data_btc_out=0 (data_value=0 len(data_array)=0)
 Sorted candidate UTXOs: ['amount: 3.00000000; txid: f4011d923cf1819a8949f430b008b67a179e19772c73dcf55199f69fc54ef8a7; vout: 0; confirmations: 7']
 Fee/KB 0.00025000

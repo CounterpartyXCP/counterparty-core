@@ -297,7 +297,7 @@ class MockUTXOSet(object):
 @pytest.fixture(scope='module', autouse=True)
 def setup_logging():
     print("")  # for --verbose output this makes sure the logs start on a newline
-    log.set_up(log.ROOT_LOGGER, verbose=True, console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None))
+    log.set_up(log.ROOT_LOGGER, verbose=True)
 
 
 @pytest.fixture(scope='function', autouse=True)
