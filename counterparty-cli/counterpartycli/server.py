@@ -161,7 +161,7 @@ def main():
 
     # Bootstrapping
     elif args.action == 'bootstrap':
-        bootstrap(testnet=args.testnet, quiet=args.quiet)
+        bootstrap(testnet=args.testnet)
 
     # PARSING
     elif args.action == 'reparse':

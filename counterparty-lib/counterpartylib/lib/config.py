@@ -140,6 +140,8 @@ API_LIMIT_ROWS = 1000
 MPMA_LIMIT = 1000
 
 PROTOCOL_CHANGES_URL = "https://counterparty.io/protocol_changes.json"
+BOOTSTRAP_URL_MAINNET = "https://bootstrap.counterparty.io/counterparty.latest.tar.gz"
+BOOTSTRAP_URL_TESTNET = "https://bootstrap.counterparty.io/counterparty-testnet.latest.tar.gz"
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
