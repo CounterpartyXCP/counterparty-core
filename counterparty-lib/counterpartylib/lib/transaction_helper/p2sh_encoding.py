@@ -54,9 +54,9 @@ def calculate_outputs(destination_outputs, data_array, fee_per_kb, exact_fee=Non
 
     data_output = (data_array, data_value)
 
-    logger.getChild('p2shdebug').debug(f'datatx size: {datatx_size} fee: {datatx_necessary_fee}')
-    logger.getChild('p2shdebug').debug(f'pretx output size: {pretx_output_size}')
-    logger.getChild('p2shdebug').debug(f'size_for_fee: {size_for_fee}')
+    logger.debug(f'datatx size: {datatx_size} fee: {datatx_necessary_fee}')
+    logger.debug(f'pretx output size: {pretx_output_size}')
+    logger.debug(f'size_for_fee: {size_for_fee}')
 
     return size_for_fee, datatx_necessary_fee, data_value, data_btc_out
 
@@ -198,7 +198,7 @@ def decode_data_redeem_script(redeem_script, p2sh_is_segwit=False):
     return pubkey, source, redeem_script_is_valid, found_data
 
 def make_p2sh_encoding_redeemscript(datachunk, n, pub_key=None, multisig_pubkeys=None, multisig_pubkeys_required=None):
-    _logger = logger.getChild('p2sh_encoding')
+    _logger = logger
     assert len(datachunk) <= bitcoinlib.core.script.MAX_SCRIPT_ELEMENT_SIZE
 
     data_drop_script = [datachunk, bitcoinlib.core.script.OP_DROP] # just drop the data chunk

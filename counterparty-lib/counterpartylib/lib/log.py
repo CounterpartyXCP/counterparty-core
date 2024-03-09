@@ -4,10 +4,10 @@ import binascii
 import sys
 import time
 from datetime import datetime
-from dateutil.tz import tzlocal
 import os
 import traceback
 
+from dateutil.tz import tzlocal
 from termcolor import cprint
 from colorlog import ColoredFormatter
 

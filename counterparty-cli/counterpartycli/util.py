@@ -173,7 +173,7 @@ def bootstrap(testnet=False, overwrite=True):
     # user and group have "rw" access
     os.chmod(database_path, 0o660) # nosec B103
 
-    step = f'Cleaning up...'
+    step = 'Cleaning up...'
     with Halo(text=step, spinner=SPINNER_STYLE):
         os.remove(tarball_path)
     print(f"{OK_GREEN} {step}")
