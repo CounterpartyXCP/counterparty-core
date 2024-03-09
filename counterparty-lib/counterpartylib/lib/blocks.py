@@ -11,7 +11,6 @@ import struct
 import decimal
 D = decimal.Decimal
 import logging
-logger = logging.getLogger(__name__)
 import collections
 import platform
 import csv
@@ -52,7 +51,10 @@ from .kickstart.utils import ib2h
 from .exceptions import DecodeError, BTCOnlyError
 
 from counterpartylib.lib import prefetcher
-NUM_PREFETCHER_THREADS = 10
+
+logger = logging.getLogger(config.LOGGER_NAME)
+
+NUM_PREFETCHER_THREADS = 3
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['balances', 'credits', 'debits', 'messages'] + \
@@ -699,9 +701,6 @@ def follow(db):
     # processing of the new blocks a bit.
     while True:
         start_time = time.time()
-        mempool_spinner_message = f"Monitoring the mempool while waiting for the next block..."
-        mempool_spinner = Halo(text=mempool_spinner_message, spinner=SPINNER_STYLE)
-
 
         # Get block count.
         # If the backend is unreachable and `config.FORCE` is set, just sleep
@@ -721,9 +720,9 @@ def follow(db):
 
         # Get new blocks.
         if block_index <= block_count:
-            mempool_spinner.stop()
-            block_spinner = Halo(text=f"Parsing block {block_index}...", spinner=SPINNER_STYLE)
-            block_spinner.start()
+            #mempool_spinner.stop()
+            #block_spinner = Halo(text=f"Parsing block {block_index}...", spinner=SPINNER_STYLE)
+            #block_spinner.start()
 
             # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
             current_index = block_index
@@ -831,15 +830,11 @@ def follow(db):
             overwrote = f'[overwrote {overwrote_hash}]' if overwrote_hash else ''
             logger.info(f'Block: {block_index} ({duration:.2f}, hashes: L:{new_ledger_hash[-5:]} / TX:{new_txlist_hash[-5:]} / M:{new_messages_hash[-5:]}{overwrote})')
 
-            block_spinner.stop()
-            print(f"{OK_GREEN} Block {block_index} parsed in {duration:.2f}. Ledger Hash: {new_ledger_hash}")
             # Increment block index.
             block_count = backend.getblockcount()
             block_index += 1
 
         else:
-            mempool_spinner.start()
-
             # TODO: add zeromq support here to await TXs and Blocks instead of constantly polling
             # Get old mempool.
             old_mempool = list(cursor.execute('''SELECT * FROM mempool'''))

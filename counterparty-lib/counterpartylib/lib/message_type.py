@@ -1,9 +1,10 @@
 import logging
-logger = logging.getLogger(__name__)
 import struct
 
 from counterpartylib.lib import config
 from counterpartylib.lib import ledger
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 def pack(message_type_id, block_index=None):
     # pack message ID into 1 byte if not zero

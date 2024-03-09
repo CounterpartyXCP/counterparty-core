@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 
 import struct
+import logging
 
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import config
@@ -9,6 +10,8 @@ from counterpartylib.lib import ledger
 from counterpartylib.lib import message_type
 from counterpartylib.lib import address
 from counterpartylib.lib.exceptions import *
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 FORMAT = '>21sB'
 LENGTH = 22

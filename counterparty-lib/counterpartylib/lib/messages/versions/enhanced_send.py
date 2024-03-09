@@ -3,9 +3,10 @@
 import struct
 import json
 import logging
-logger = logging.getLogger(__name__)
 
 from counterpartylib.lib import (config, util, exceptions, util, message_type, address, ledger)
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 FORMAT = '>QQ21s'
 LENGTH = 8 + 8 + 21

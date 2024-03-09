@@ -16,7 +16,6 @@ import requests
 import collections
 import logging
 import traceback
-logger = logging.getLogger(__name__)
 from logging import handlers as logging_handlers
 D = decimal.Decimal
 import binascii
@@ -59,6 +58,8 @@ from counterpartylib.lib.messages import rps
 from counterpartylib.lib.messages import rpsresolve
 from counterpartylib.lib.messages import sweep
 from counterpartylib.lib.messages import dispenser
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 API_TABLES = ['assets', 'balances', 'credits', 'debits', 'bets', 'bet_matches',
               'broadcasts', 'btcpays', 'burns', 'cancels', 'destructions',
@@ -509,14 +510,17 @@ def init_api_access_log(app):
 
     # Disable console logging...
     for l in loggers:
-        l.setLevel(logging.INFO)
+        l.setLevel(logging.CRITICAL)
         l.propagate = False
 
     # Log to file, if configured...
     if config.API_LOG:
         handler = logging_handlers.RotatingFileHandler(config.API_LOG, 'a', API_MAX_LOG_SIZE, API_MAX_LOG_COUNT)
         for l in loggers:
+            handler.setLevel(logging.DEBUG)
             l.addHandler(handler)
+    
+    flask.cli.show_server_banner = lambda *args: None
 
 class APIStatusPoller(threading.Thread):
     """Perform regular checks on the state of the backend and the database."""

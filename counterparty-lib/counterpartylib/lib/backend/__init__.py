@@ -1,6 +1,5 @@
 import binascii
 import logging
-logger = logging.getLogger(__name__)
 import sys
 import time
 from decimal import Decimal as D
@@ -17,6 +16,8 @@ from counterpartylib.lib import prefetcher
 from counterpartylib.lib import ledger
 
 from counterpartylib.lib.backend import addrindexrs
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 MEMPOOL_CACHE_INITIALIZED = False
 INITIALIZED = False

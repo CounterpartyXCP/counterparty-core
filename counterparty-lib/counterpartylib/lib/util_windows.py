@@ -2,11 +2,14 @@ import sys
 import copy
 import logging
 import logging.handlers
-logger = logging.getLogger(__name__)
 import unicodedata
 import codecs
 from ctypes import WINFUNCTYPE, windll, POINTER, byref, c_int
 from ctypes.wintypes import BOOL, HANDLE, DWORD, LPWSTR, LPCWSTR, LPVOID
+
+from counterpartylib.lib import config
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 class SanitizedRotatingFileHandler(logging.handlers.RotatingFileHandler):
     def emit(self, record):

@@ -2,7 +2,6 @@ import apsw
 import apsw.bestpractice
 apsw.bestpractice.apply(apsw.bestpractice.recommended)  # includes WAL mode
 import logging
-logger = logging.getLogger(__name__)
 import time
 import collections
 import copy
@@ -11,6 +10,8 @@ from counterpartylib.lib import config
 from counterpartylib.lib import ledger
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import log
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 BLOCK_MESSAGES = []
 

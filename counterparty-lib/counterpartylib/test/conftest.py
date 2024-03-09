@@ -16,11 +16,8 @@ import binascii
 import logging
 from Crypto.Cipher import ARC4
 
-logger = logging.getLogger()
-
 from counterpartylib.lib import log, ledger
 from counterpartylib import server
-log.set_logger(logger)
 
 from counterpartylib.test import util_test
 from counterpartylib.test.fixtures.vectors import UNITTEST_VECTOR
@@ -29,6 +26,7 @@ from counterpartylib.test.fixtures.scenarios import INTEGRATION_SCENARIOS
 
 from counterpartylib.lib import config, util, database, api, script, arc4
 
+logger = logging.getLogger(config.LOGGER_NAME)
 
 # used to increment RPC port between test modules to avoid conflicts
 TEST_RPC_PORT = 9999
@@ -297,7 +295,7 @@ class MockUTXOSet(object):
 @pytest.fixture(scope='module', autouse=True)
 def setup_logging():
     print("")  # for --verbose output this makes sure the logs start on a newline
-    log.set_up(log.ROOT_LOGGER, verbose=True)
+    log.set_up(verbose=True)
 
 
 @pytest.fixture(scope='function', autouse=True)

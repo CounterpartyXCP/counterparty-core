@@ -5,9 +5,10 @@
 import struct
 import json
 import logging
-logger = logging.getLogger(__name__)
 
 from ... import (config, exceptions, util, message_type, ledger)
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 FORMAT = '>QQ'
 LENGTH = 8 + 8

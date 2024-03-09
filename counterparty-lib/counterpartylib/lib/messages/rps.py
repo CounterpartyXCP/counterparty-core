@@ -22,7 +22,7 @@ rps_match_id: matching id
 import struct
 import decimal
 D = decimal.Decimal
-import time
+import logging
 import binascii
 import string
 
@@ -33,6 +33,8 @@ from counterpartylib.lib import log
 from counterpartylib.lib import message_type
 from counterpartylib.lib import ledger
 from counterpartylib.lib import database
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 # possible_moves wager move_random_hash expiration
 FORMAT = '>HQ32sI'

@@ -22,13 +22,13 @@ import shutil
 import codecs
 import tempfile
 
-logger = logging.getLogger(__name__)
-
 D = decimal.Decimal
 
 from counterpartylib import server
 from counterpartylib.lib import config, check
 from counterpartylib.lib.util import value_input, value_output
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 rpc_sessions = {}
 

@@ -217,7 +217,7 @@ def main():
     args = parser.parse_args()
 
     # Logging
-    log.set_up(logger, verbose=args.verbose)
+    log.set_up(verbose=args.verbose)
     logger.propagate = False
 
     logger.info(f'Running v{APP_VERSION} of {APP_NAME}.')

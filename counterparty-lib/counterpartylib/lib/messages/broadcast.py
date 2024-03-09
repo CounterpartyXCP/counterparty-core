@@ -27,7 +27,6 @@ D = decimal.Decimal
 from fractions import Fraction
 import json
 import logging
-logger = logging.getLogger(__name__)
 
 from bitcoin.core import VarIntSerializer
 
@@ -40,6 +39,8 @@ from counterpartylib.lib import ledger
 from counterpartylib.lib import database
 
 from . import (bet)
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 FORMAT = '>IdI'
 LENGTH = 4 + 8 + 4

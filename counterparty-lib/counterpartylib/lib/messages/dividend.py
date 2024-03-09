@@ -6,9 +6,10 @@ import struct
 import decimal
 D = decimal.Decimal
 import logging
-logger = logging.getLogger(__name__)
 
 from counterpartylib.lib import (config, exceptions, database, message_type, ledger)
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 FORMAT_1 = '>QQ'
 LENGTH_1 = 8 + 8

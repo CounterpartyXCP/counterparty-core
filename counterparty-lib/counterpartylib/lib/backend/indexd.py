@@ -1,5 +1,4 @@
 import logging
-logger = logging.getLogger(__name__)
 import sys
 import os
 import json
@@ -13,6 +12,8 @@ import binascii
 import hashlib
 
 from counterpartylib.lib import config, util
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)  # used in getrawtransaction_batch()
 

@@ -8,10 +8,11 @@ import struct
 import decimal
 import json
 import logging
-logger = logging.getLogger(__name__)
-D = decimal.Decimal
 
 from counterpartylib.lib import (config, util, exceptions, util, message_type, ledger, database)
+
+logger = logging.getLogger(config.LOGGER_NAME)
+D = decimal.Decimal
 
 FORMAT_1 = '>QQ?'
 LENGTH_1 = 8 + 8 + 1

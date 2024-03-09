@@ -1,7 +1,6 @@
 import json
 import requests
 import logging
-logger = logging.getLogger(__name__)
 import warnings
 import time
 import sys
@@ -11,6 +10,8 @@ from counterpartylib.lib import util
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import ledger
 from counterpartylib.lib import database
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 CONSENSUS_HASH_SEED = 'We can only see a short distance ahead, but we can see plenty there that needs to be done.'
 

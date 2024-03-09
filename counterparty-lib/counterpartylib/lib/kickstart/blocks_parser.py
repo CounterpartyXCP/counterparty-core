@@ -1,4 +1,5 @@
 import os, logging, binascii
+import multiprocessing
 from multiprocessing import Process, JoinableQueue, shared_memory
 from collections import OrderedDict
 # Used to pickle and unpickle blocks from shared_memory
@@ -13,7 +14,7 @@ from .utils import b2h, double_hash, ib2h, inverse_hash, decode_value, remove_sh
 from counterpartylib.lib import ledger, config, gettxinfo
 from counterpartylib.lib.exceptions import DecodeError
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(config.LOGGER_NAME)
 
 import multiprocessing
 multiprocessing.set_start_method("spawn", force=True)

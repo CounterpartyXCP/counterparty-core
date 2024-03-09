@@ -7,7 +7,7 @@ import bitcoin as bitcoinlib
 
 from counterpartylib.lib import backend, ledger, config
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(config.LOGGER_NAME)
 
 BLOCK_COUNT_CHECK_FREQ = 100
 BLOCKCHAIN_CACHE = {}

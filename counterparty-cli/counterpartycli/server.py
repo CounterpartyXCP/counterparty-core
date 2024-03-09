@@ -4,18 +4,19 @@ import os
 import sys
 import argparse
 import logging
-logger = logging.getLogger()
+
 
 from termcolor import cprint
 
 from counterpartylib.lib import log
-log.set_logger(logger)
-
 from counterpartylib import server
 from counterpartylib.lib import config
 from counterpartycli.util import add_config_arguments, bootstrap
 from counterpartycli.setup import generate_config_files
 from counterpartycli import APP_VERSION
+
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 APP_NAME = 'counterparty-server'
 
@@ -139,7 +140,7 @@ def main():
         server.initialise_config(**init_args)
 
     # set up logging
-    log.set_up(log.ROOT_LOGGER, verbose=config.VERBOSE, quiet=config.QUIET, logfile=config.LOG)
+    log.set_up(verbose=config.VERBOSE, quiet=config.QUIET, logfile=config.LOG)
     logger.info(f'Running v{APP_VERSION} of {APP_NAME}.')
 
     # print some info

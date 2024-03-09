@@ -14,7 +14,7 @@ from counterpartylib.lib.messages import dispenser
 from counterpartylib.lib.opcodes import *
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def arc4_decrypt(cyphertext, decoded_tx):

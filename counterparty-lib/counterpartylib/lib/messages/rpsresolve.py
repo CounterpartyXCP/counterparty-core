@@ -3,11 +3,12 @@
 import binascii
 import struct
 import logging
-logger = logging.getLogger(__name__)
 import string
 
-from counterpartylib.lib import (database, exceptions, util, message_type, ledger)
+from counterpartylib.lib import (database, exceptions, util, message_type, ledger, config)
 from . import rps
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 # move random rps_match_id
 FORMAT = '>H16s32s32s'

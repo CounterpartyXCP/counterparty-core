@@ -5,7 +5,6 @@ import json
 import pprint
 import struct
 import logging
-logger = logging.getLogger(__name__)
 
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
@@ -14,6 +13,8 @@ from counterpartylib.lib import log
 from counterpartylib.lib import message_type
 from counterpartylib.lib import ledger
 from counterpartylib.lib import database
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 FORMAT = '>32s32s'
 LENGTH = 32 + 32

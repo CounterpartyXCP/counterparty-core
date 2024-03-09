@@ -20,11 +20,10 @@ from halo import Halo
 from termcolor import colored, cprint
 
 from counterpartylib.lib import log
-logger = logging.getLogger(__name__)
-log.set_logger(logger)  # set root logger
-
 from counterpartylib.lib import api, config, util, ledger, blocks, backend, database, transaction, check
 from counterpartylib.lib import kickstart as kickstarter
+
+logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
 
 OK_GREEN = colored("[OK]", "green")
@@ -481,23 +480,17 @@ def connect_to_addrindexrs():
 
 def start_all(db):
     # Backend.
-    step = 'Connecting to backend...'
-    with Halo(text=step, spinner=SPINNER_STYLE):
-        connect_to_backend()
-    print(f'{OK_GREEN} {step}')
+    connect_to_backend()
 
-    step = 'Starting API Server...'
-    with Halo(text=step, spinner=SPINNER_STYLE):
-        # API Status Poller.
-        api_status_poller = api.APIStatusPoller()
-        api_status_poller.daemon = True
-        api_status_poller.start()
+    # API Status Poller.
+    api_status_poller = api.APIStatusPoller()
+    api_status_poller.daemon = True
+    api_status_poller.start()
 
-        # API Server.
-        api_server = api.APIServer()
-        api_server.daemon = True
-        api_server.start()
-    print(f'{OK_GREEN} {step}')
+    # API Server.
+    api_server = api.APIServer()
+    api_server.daemon = True
+    api_server.start()
 
     # Server
     blocks.follow(db)

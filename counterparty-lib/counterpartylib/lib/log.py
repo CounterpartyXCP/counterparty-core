@@ -1,7 +1,5 @@
 import logging
-logger = logging.getLogger(__name__)
 import decimal
-D = decimal.Decimal
 import binascii
 import sys
 import time
@@ -16,6 +14,9 @@ from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 from counterpartylib.lib import ledger
+
+logger = logging.getLogger(config.LOGGER_NAME)
+D = decimal.Decimal
 
 class ModuleLoggingFilter(logging.Filter):
     """
@@ -73,15 +74,15 @@ class ModuleLoggingFilter(logging.Filter):
         return record.name[nlen] == "."
 
 
-ROOT_LOGGER = None
-def set_logger(logger):
-    global ROOT_LOGGER
-    if ROOT_LOGGER is None:
-        ROOT_LOGGER = logger
+def set_up(verbose=False, quiet=True, logfile=None):
 
+    loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
+    for logger in loggers:
+        logger.handlers.clear()
+        logger.setLevel(logging.CRITICAL)
+        logger.propagate = False
 
-
-def set_up(logger, verbose=False, quiet=True, logfile=None):
+    logger = logging.getLogger(config.LOGGER_NAME)
 
     log_level = logging.ERROR
     if verbose == quiet:
@@ -112,17 +113,6 @@ def set_up(logger, verbose=False, quiet=True, logfile=None):
         traceback.print_exception(exc_type, exc_value, exc_traceback, file=sys.stderr)
     sys.excepthook = handle_exception
 
-    # Quieten noisy libraries.
-    requests_log = logging.getLogger("requests")
-    requests_log.setLevel(log_level)
-    requests_log.propagate = False
-    urllib3_log = logging.getLogger('urllib3')
-    urllib3_log.setLevel(log_level)
-    urllib3_log.propagate = False
-
-    # Disable InsecureRequestWarning
-    import requests
-    requests.packages.urllib3.disable_warnings()
 
 # we are using a function here for testing purposes
 def curr_time():

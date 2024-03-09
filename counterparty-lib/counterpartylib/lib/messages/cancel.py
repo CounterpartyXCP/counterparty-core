@@ -8,10 +8,11 @@ import binascii
 import struct
 import json
 import logging
-logger = logging.getLogger(__name__)
 
-from counterpartylib.lib import (database, exceptions, ledger, message_type)
+from counterpartylib.lib import (database, exceptions, ledger, message_type, config)
 from . import (order, bet, rps)
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 FORMAT = '>32s'
 LENGTH = 32

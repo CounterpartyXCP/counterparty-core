@@ -8,14 +8,14 @@ import struct
 import logging
 import traceback # not needed if not printing exceptions on p2sh decoding
 
-logger = logging.getLogger(__name__)
-
 import bitcoin as bitcoinlib
 from bitcoin.core.script import CScript
 
 from counterpartylib.lib import config
 from counterpartylib.lib import script
 from counterpartylib.lib import exceptions
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 def maximum_data_chunk_size(pubkeylength):
     if pubkeylength >= 0:

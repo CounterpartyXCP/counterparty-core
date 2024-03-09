@@ -5,7 +5,6 @@
 import struct
 import json
 import logging
-logger = logging.getLogger(__name__)
 
 from counterpartylib.lib import database
 from counterpartylib.lib import config
@@ -14,6 +13,8 @@ from counterpartylib.lib import message_type
 from counterpartylib.lib import ledger
 from counterpartylib.lib.script import AddressError
 from counterpartylib.lib.exceptions import *
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 FORMAT = '>QQ'
 LENGTH = 8 + 8
