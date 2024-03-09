@@ -140,7 +140,12 @@ def main():
         server.initialise_config(**init_args)
 
     # set up logging
-    log.set_up(verbose=config.VERBOSE, quiet=config.QUIET, logfile=config.LOG)
+    log.set_up(
+        verbose=config.VERBOSE,
+        quiet=config.QUIET,
+        log_file=config.LOG,
+        log_in_console=args.action == 'start'
+    )
     logger.info(f'Running v{APP_VERSION} of {APP_NAME}.')
 
     # print some info

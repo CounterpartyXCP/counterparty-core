@@ -9,6 +9,7 @@ import os
 import traceback
 
 from termcolor import cprint
+from colorlog import ColoredFormatter
 
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
@@ -74,7 +75,7 @@ class ModuleLoggingFilter(logging.Filter):
         return record.name[nlen] == "."
 
 
-def set_up(verbose=False, quiet=True, logfile=None):
+def set_up(verbose=False, quiet=True, log_file=None, log_in_console=False):
 
     loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
     for logger in loggers:
@@ -93,18 +94,27 @@ def set_up(verbose=False, quiet=True, logfile=None):
     logger.setLevel(log_level)
 
     # File Logging
-    if logfile:
+    if log_file:
         max_log_size = 20 * 1024 * 1024 # 20 MB
         if os.name == 'nt':
             from counterpartylib.lib import util_windows
             fileh = util_windows.SanitizedRotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
         else:
-            fileh = logging.handlers.RotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
+            fileh = logging.handlers.RotatingFileHandler(log_file, maxBytes=max_log_size, backupCount=5)
         fileh.setLevel(log_level)
         log_format = '%(asctime)s [%(levelname)s] %(message)s'
         formatter = logging.Formatter(log_format, '%Y-%m-%d-T%H:%M:%S%z')
         fileh.setFormatter(formatter)
         logger.addHandler(fileh)
+
+    if log_in_console:
+        console = logging.StreamHandler()
+        console.setLevel(log_level)
+        log_format = '%(log_color)s[%(asctime)s][%(levelname)s] %(message)s%(reset)s'
+        log_colors = {'WARNING': 'yellow', 'ERROR': 'red', 'CRITICAL': 'red'}
+        formatter = ColoredFormatter(log_format, "%Y-%m-%d %H:%M:%S", log_colors=log_colors)
+        console.setFormatter(formatter)
+        logger.addHandler(console)
 
     # Log unhandled errors.
     def handle_exception(exc_type, exc_value, exc_traceback):
