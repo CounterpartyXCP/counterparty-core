@@ -81,12 +81,20 @@ Download and install the latest [AddrIndexRS](https://github.com/CounterpartyXCP
 ```bash
 git clone https://github.com/CounterpartyXCP/addrindexrs.git
 cd addrindexrs
-# Set the necessary environment variables
-export ADDRINDEXRS_JSONRPC_IMPORT=1
-export ADDRINDEXRS_COOKIE=rpc:rpc
-cargo build --release
+cargo install --path=.
+```
+
+Start `addrindexrs` with:
+
+```bash
+addrindexrs --cookie=rpc:rpc
+```
+
+For remote full node or low memory system you can use JSONRPC instead of directly importing blk*.dat files with the flag `-- --jsonrpc-import`.
+You can also limit the resources available for `addrindexrs` with:
+
+```bash
 ulimit -n 8192
-cargo run --release -- -vvv
 ```
 
 ### Install Python >= 3.10 and Maturin
