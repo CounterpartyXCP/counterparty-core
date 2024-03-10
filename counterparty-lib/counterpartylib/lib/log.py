@@ -1,20 +1,23 @@
 import logging
-logger = logging.getLogger(__name__)
 import decimal
-D = decimal.Decimal
 import binascii
-import collections
-import json
+import sys
 import time
 from datetime import datetime
-from dateutil.tz import tzlocal
 import os
+import traceback
+
+from dateutil.tz import tzlocal
+from termcolor import cprint
 from colorlog import ColoredFormatter
 
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 from counterpartylib.lib import ledger
+
+logger = logging.getLogger(config.LOGGER_NAME)
+D = decimal.Decimal
 
 class ModuleLoggingFilter(logging.Filter):
     """
@@ -72,79 +75,54 @@ class ModuleLoggingFilter(logging.Filter):
         return record.name[nlen] == "."
 
 
-ROOT_LOGGER = None
-def set_logger(logger):
-    global ROOT_LOGGER
-    if ROOT_LOGGER is None:
-        ROOT_LOGGER = logger
+def set_up(verbose=False, quiet=True, log_file=None, log_in_console=False):
 
+    loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
+    for logger in loggers:
+        logger.handlers.clear()
+        logger.setLevel(logging.CRITICAL)
+        logger.propagate = False
 
-LOGGING_SETUP = False
-LOGGING_TOFILE_SETUP = False
-def set_up(logger, verbose=False, logfile=None, console_logfilter=None, quiet=True):
-    global LOGGING_SETUP
-    global LOGGING_TOFILE_SETUP
+    logger = logging.getLogger(config.LOGGER_NAME)
 
-    def set_up_file_logging():
-        assert logfile
+    log_level = logging.ERROR
+    if verbose == quiet:
+        log_level = logging.INFO
+    elif verbose:
+        log_level = logging.DEBUG
+
+    logger.setLevel(log_level)
+
+    # File Logging
+    if log_file:
         max_log_size = 20 * 1024 * 1024 # 20 MB
         if os.name == 'nt':
             from counterpartylib.lib import util_windows
             fileh = util_windows.SanitizedRotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
         else:
-            fileh = logging.handlers.RotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
-        fileh.setLevel(logging.DEBUG)
+            fileh = logging.handlers.RotatingFileHandler(log_file, maxBytes=max_log_size, backupCount=5)
+        fileh.setLevel(log_level)
         log_format = '%(asctime)s [%(levelname)s] %(message)s'
         formatter = logging.Formatter(log_format, '%Y-%m-%d-T%H:%M:%S%z')
         fileh.setFormatter(formatter)
         logger.addHandler(fileh)
 
-    if LOGGING_SETUP:
-        if logfile and not LOGGING_TOFILE_SETUP:
-            set_up_file_logging()
-            LOGGING_TOFILE_SETUP = True
-        logger.getChild('log.set_up').debug('logging already setup')
-        return
-    LOGGING_SETUP = True
+    if log_in_console:
+        console = logging.StreamHandler()
+        console.setLevel(log_level)
+        log_format = '%(log_color)s[%(asctime)s][%(levelname)s] %(message)s%(reset)s'
+        log_colors = {'WARNING': 'yellow', 'ERROR': 'red', 'CRITICAL': 'red'}
+        formatter = ColoredFormatter(log_format, "%Y-%m-%d %H:%M:%S", log_colors=log_colors)
+        console.setFormatter(formatter)
+        logger.addHandler(console)
 
-    if verbose and not quiet:
-        log_level = logging.DEBUG
-    elif verbose and quiet:
-        log_level = logging.INFO
-    else:
-        log_level = logging.ERROR
-    logger.setLevel(log_level)
+    # Log unhandled errors.
+    def handle_exception(exc_type, exc_value, exc_traceback):
+        logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
+        cprint("Unhandled Exception", "red", attrs=["bold"])
+        traceback.print_exception(exc_type, exc_value, exc_traceback, file=sys.stderr)
+    sys.excepthook = handle_exception
 
-    # Console Logging
-    console = logging.StreamHandler()
-    console.setLevel(log_level)
-
-    # only add [%(name)s] to log_format if we're using console_logfilter
-    log_format = '%(log_color)s[%(asctime)s][%(levelname)s]' + ('' if console_logfilter is None else '[%(name)s]') + ' %(message)s%(reset)s'
-    log_colors = {'WARNING': 'yellow', 'ERROR': 'red', 'CRITICAL': 'red'}
-    formatter = ColoredFormatter(log_format, "%Y-%m-%d %H:%M:%S", log_colors=log_colors)
-    console.setFormatter(formatter)
-    logger.addHandler(console)
-
-    if console_logfilter:
-        console.addFilter(ModuleLoggingFilter(console_logfilter))
-
-    # File Logging
-    if logfile:
-        set_up_file_logging()
-        LOGGING_TOFILE_SETUP = True
-
-    # Quieten noisy libraries.
-    requests_log = logging.getLogger("requests")
-    requests_log.setLevel(log_level)
-    requests_log.propagate = False
-    urllib3_log = logging.getLogger('urllib3')
-    urllib3_log.setLevel(log_level)
-    urllib3_log.propagate = False
-
-    # Disable InsecureRequestWarning
-    import requests
-    requests.packages.urllib3.disable_warnings()
 
 # we are using a function here for testing purposes
 def curr_time():

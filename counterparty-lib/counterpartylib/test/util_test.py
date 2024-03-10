@@ -23,7 +23,6 @@ import pprint
 import pycoin
 from pycoin.coins.bitcoin import Tx
 import bitcoin as bitcoinlib
-logger = logging.getLogger(__name__)
 
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
@@ -36,6 +35,7 @@ from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP
 from counterpartylib.test.fixtures.scenarios import UNITTEST_FIXTURE, INTEGRATION_SCENARIOS, standard_scenarios_params
 
+logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
 
 # Set test environment
@@ -68,7 +68,6 @@ def init_database(sqlfile, dbfile, options=None):
         database_file=dbfile,
         testnet=True,
         verbose=True,
-        console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None),
         **kwargs)
 
     restore_database(config.DATABASE, sqlfile)
@@ -475,7 +474,7 @@ def run_scenario(scenario):
     checkpoints = dict(check.CHECKPOINTS_TESTNET)
     check.CHECKPOINTS_TESTNET = {}
 
-    logger = logging.getLogger()
+    logger = logging.getLogger(config.LOGGER_NAME)
     logger.setLevel(logging.DEBUG)
     logger_buff = io.StringIO()
     handler = logging.StreamHandler(logger_buff)

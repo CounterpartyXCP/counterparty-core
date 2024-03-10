@@ -19,7 +19,7 @@ import requests
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import config
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(config.LOGGER_NAME)
 
 D = decimal.Decimal
 B26_DIGITS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'

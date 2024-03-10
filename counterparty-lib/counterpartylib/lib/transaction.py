@@ -13,7 +13,6 @@ import re
 import time
 import decimal
 import logging
-logger = logging.getLogger(__name__)
 import requests
 import bitcoin as bitcoinlib
 from bitcoin.core.script import CScript
@@ -34,6 +33,8 @@ from counterpartylib.lib import ledger
 from counterpartylib.lib import gettxinfo
 from counterpartylib.lib.transaction_helper import serializer, p2sh_encoding
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 # Constants
 OP_RETURN = b'\x6a'
@@ -202,7 +203,7 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
         else:
             necessary_fee = int(size / 1000 * fee_per_kb)
             final_fee = max(fee_provided, necessary_fee)
-            logger.getChild('p2shdebug').debug(f'final_fee inputs: {len(inputs)} size: {size} final_fee {final_fee}')
+            logger.debug(f'final_fee inputs: {len(inputs)} size: {size} final_fee {final_fee}')
 
         # Check if good.
         btc_out = destination_btc_out + data_btc_out
@@ -456,7 +457,7 @@ def construct (db, tx_info, encoding='auto',
         dust_return_pubkey = None
 
     data_btc_out = data_value * len(data_array)
-    logger.getChild('p2shdebug').debug(f'data_btc_out={data_btc_out} (data_value={data_value} len(data_array)={len(data_array)})')
+    logger.debug(f'data_btc_out={data_btc_out} (data_value={data_value} len(data_array)={len(data_array)})')
 
     '''Inputs'''
     btc_in = 0
@@ -540,7 +541,7 @@ def construct (db, tx_info, encoding='auto',
             txid_ba = bytearray(ptx.GetTxid())
             txid_ba.reverse()
             pretx_txid = bytes(txid_ba) # gonna leave the malleability problem to upstream
-            logger.getChild('p2shdebug').debug(f'pretx_txid {pretx_txid}')
+            logger.debug(f'pretx_txid {pretx_txid}')
             print('pretx txid:', binascii.hexlify(pretx_txid))
 
         if unsigned_pretx:
@@ -622,7 +623,7 @@ def construct (db, tx_info, encoding='auto',
                 'btc_fee': final_fee,
                 'tx_hex': unsigned_tx_hex,
             }
-        logger.getChild('p2shdebug').debug('BTC-ONLY')
+        logger.debug('BTC-ONLY')
         return return_result([unsigned_pretx_hex, unsigned_tx_hex], old_style_api=old_style_api)
     desired_source = script.make_canonical(desired_source)
 

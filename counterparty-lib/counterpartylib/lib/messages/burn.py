@@ -3,12 +3,13 @@ import json
 import struct
 import decimal
 import logging
-logger = logging.getLogger(__name__)
 
 D = decimal.Decimal
 from fractions import Fraction
 
 from counterpartylib.lib import (config, exceptions, database, ledger)
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 f"""Burn {config.BTC} to earn {config.XCP} during a special period of time."""
 

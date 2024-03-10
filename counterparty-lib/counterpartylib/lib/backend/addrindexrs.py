@@ -1,5 +1,4 @@
 import logging
-logger = logging.getLogger(__name__)
 import sys
 import os
 import json
@@ -18,6 +17,8 @@ import bitcoin.wallet
 from pkg_resources import parse_version
 
 from counterpartylib.lib import config, util, ledger
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 READ_BUF_SIZE = 65536
 SOCKET_TIMEOUT = 5.0

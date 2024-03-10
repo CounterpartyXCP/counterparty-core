@@ -13,7 +13,6 @@ import re
 import time
 import decimal
 import logging
-logger = logging.getLogger(__name__)
 import requests
 import bitcoin as bitcoinlib
 from bitcoin.core import Hash160
@@ -29,6 +28,8 @@ from counterpartylib.lib import backend
 from counterpartylib.lib import arc4
 from counterpartylib.lib.transaction_helper import p2sh_encoding
 from bitcoin.bech32 import CBech32Data
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 # Constants
 OP_RETURN = b'\x6a'

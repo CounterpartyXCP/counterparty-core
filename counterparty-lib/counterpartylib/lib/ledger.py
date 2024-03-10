@@ -8,7 +8,7 @@ from counterpartylib.lib import exceptions
 from counterpartylib.lib import config
 from counterpartylib.lib import util
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(config.LOGGER_NAME)
 
 CURRENT_BLOCK_INDEX = None
 BLOCK_LEDGER = []

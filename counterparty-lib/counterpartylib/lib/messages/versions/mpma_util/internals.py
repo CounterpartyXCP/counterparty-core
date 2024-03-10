@@ -9,9 +9,9 @@ from itertools import groupby
 
 from bitstring import BitArray, BitStream, ConstBitStream, ReadError
 
-logger = logging.getLogger(__name__)
-
 from counterpartylib.lib import (config, util, exceptions, util, ledger, address)
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 ## encoding functions
 

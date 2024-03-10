@@ -16,9 +16,7 @@ import struct
 import decimal
 import json
 D = decimal.Decimal
-import time
 import logging
-logger = logging.getLogger(__name__)
 
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
@@ -27,6 +25,8 @@ from counterpartylib.lib import log
 from counterpartylib.lib import message_type
 from counterpartylib.lib import ledger
 from counterpartylib.lib import database
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 FORMAT = '>HIQQdII'
 LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4

@@ -22,13 +22,18 @@ import shutil
 import codecs
 import tempfile
 
-logger = logging.getLogger(__name__)
-
-D = decimal.Decimal
+from halo import Halo
+from termcolor import colored, cprint
 
 from counterpartylib import server
 from counterpartylib.lib import config, check
 from counterpartylib.lib.util import value_input, value_output
+
+logger = logging.getLogger(config.LOGGER_NAME)
+D = decimal.Decimal
+
+OK_GREEN = colored("[OK]", "green")
+SPINNER_STYLE = "bouncingBar"
 
 rpc_sessions = {}
 
@@ -116,18 +121,19 @@ def value_out(quantity, asset, divisible=None):
         divisible = is_divisible(asset)
     return value_output(quantity, asset, divisible)
 
-def bootstrap(testnet=False, overwrite=True, ask_confirmation=False, quiet=False):
+
+def bootstrap(testnet=False, overwrite=True):
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
 
     # Set Constants.
+    bootstrap_url = config.BOOTSTRAP_URL_TESTNET if testnet else config.BOOTSTRAP_URL_MAINNET
+    tar_filename = os.path.basename(bootstrap_url)
+    tarball_path = os.path.join(tempfile.gettempdir(), tar_filename)
+    database_path = os.path.join(data_dir, tar_filename)
+    database_path = os.path.join(data_dir, config.APP_NAME)
     if testnet:
-        bootstrap_url = 'https://bootstrap.counterparty.io/counterparty-testnet.latest.tar.gz'
-        tarball_path = os.path.join(tempfile.gettempdir(), 'counterparty-testnet.latest.tar.gz')
-        database_path = os.path.join(data_dir, '{}.testnet.db'.format(config.APP_NAME))
-    else:
-        bootstrap_url = 'https://bootstrap.counterparty.io/counterparty.latest.tar.gz'
-        tarball_path = os.path.join(tempfile.gettempdir(), 'counterparty.latest.tar.gz')
-        database_path = os.path.join(data_dir, '{}.db'.format(config.APP_NAME))
+        database_path += '.testnet'
+    database_path += '.db'
 
     # Prepare Directory.
     if not os.path.exists(data_dir):
@@ -136,34 +142,44 @@ def bootstrap(testnet=False, overwrite=True, ask_confirmation=False, quiet=False
         return
 
     # Define Progress Bar.
-    def reporthook(blocknum, blocksize, totalsize):
+    step = f'Downloading database from {bootstrap_url}...'
+    spinner = Halo(text=step, spinner=SPINNER_STYLE)
+
+    def bootstrap_progress(blocknum, blocksize, totalsize):
         readsofar = blocknum * blocksize
         if totalsize > 0:
             percent = readsofar * 1e2 / totalsize
-            s = f"\r{percent:5.1f} {readsofar} / {totalsize}"
-            sys.stderr.write(s)
-            if readsofar >= totalsize: # near the end
-                sys.stderr.write("\n")
-        else: # total size is unknown
-            sys.stderr.write(f"read {readsofar}\n")
+            message = f"Downloading database: {percent:5.1f}% {readsofar} / {totalsize}"
+            spinner.text = message
 
-    print(f'Downloading database from {bootstrap_url}...')
-    if bootstrap_url.startswith('https://'):
-        urllib.request.urlretrieve(bootstrap_url, tarball_path, reporthook if not quiet else None) # nosec B310
-    else:
-        raise Exception(f'Invalid URL: {bootstrap_url}')
+    # Downloading
+    spinner.start()
+    urllib.request.urlretrieve(
+        bootstrap_url,
+        tarball_path,
+        bootstrap_progress
+    ) # nosec B310
+    spinner.stop()
+    print(f"{OK_GREEN} {step}")
 
-    print(f'Extracting to "{data_dir}"...')
     # TODO: check checksum, filenames, etc.
-    with tarfile.open(tarball_path, 'r:gz') as tar_file:
-        tar_file.extractall(path=data_dir) # nosec B202
+    step = f'Extracting database to {data_dir}...'
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        with tarfile.open(tarball_path, 'r:gz') as tar_file:
+            tar_file.extractall(path=data_dir) # nosec B202
+    print(f"{OK_GREEN} {step}")
 
     assert os.path.exists(database_path)
     # user and group have "rw" access
     os.chmod(database_path, 0o660) # nosec B103
 
-    print('Cleaning up...')
-    os.remove(tarball_path)
+    step = 'Cleaning up...'
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        os.remove(tarball_path)
+    print(f"{OK_GREEN} {step}")
+
+    cprint(f"Database has been successfully bootstrapped to {database_path}.", "green")
+
 
 # Set default values of command line arguments with config file
 def add_config_arguments(arg_parser, config_args, default_config_file, config_file_arg_name='config_file'):

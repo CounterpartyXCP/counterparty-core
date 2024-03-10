@@ -123,10 +123,21 @@ def compare_ledger(database_file_1, database_file_2):
     compare_strings(ledger_1, ledger_2)
 
 
+def get_last_block(database_file_1, database_file_2):
+    db1 = apsw.Connection(database_file_1, flags=apsw.SQLITE_OPEN_READONLY)
+    cursor1 = db1.cursor()
+
+    db2 = apsw.Connection(database_file_2, flags=apsw.SQLITE_OPEN_READONLY)
+    cursor2 = db2.cursor()
+
+    print(f"Last block {database_file_1}:", cursor1.execute("SELECT MAX(block_index) FROM blocks").fetchone())
+    print(f"Last block {database_file_2}:", cursor2.execute("SELECT MAX(block_index) FROM blocks").fetchone())
+
 database_file_1 = sys.argv[1]
 database_file_2 = sys.argv[2]
 
-LAST_BLOCK = 2500000
+LAST_BLOCK = 290000
 #compare_ledger(database_file_1, database_file_2)
 check_hashes(database_file_1, database_file_2, "txlist_hash")
 #get_checkpoints(database_file_1)
+#get_last_block(database_file_1, database_file_2)

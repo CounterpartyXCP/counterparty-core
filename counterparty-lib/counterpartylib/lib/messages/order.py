@@ -5,9 +5,7 @@
 import json
 import struct
 import decimal
-D = decimal.Decimal
 import logging
-logger = logging.getLogger(__name__)
 
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
@@ -16,6 +14,9 @@ from counterpartylib.lib import ledger
 from counterpartylib.lib import log
 from counterpartylib.lib import message_type
 from counterpartylib.lib import database
+
+logger = logging.getLogger(config.LOGGER_NAME)
+D = decimal.Decimal
 
 FORMAT = '>QQQQHQ'
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8

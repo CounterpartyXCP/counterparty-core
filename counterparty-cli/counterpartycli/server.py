@@ -4,22 +4,25 @@ import os
 import sys
 import argparse
 import logging
-logger = logging.getLogger()
+
+
+from termcolor import cprint
 
 from counterpartylib.lib import log
-log.set_logger(logger)
-
 from counterpartylib import server
 from counterpartylib.lib import config
 from counterpartycli.util import add_config_arguments, bootstrap
 from counterpartycli.setup import generate_config_files
 from counterpartycli import APP_VERSION
 
+
+logger = logging.getLogger(config.LOGGER_NAME)
+
 APP_NAME = 'counterparty-server'
 
 CONFIG_ARGS = [
-    [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'default': False, 'help': 'sets log level to DEBUG or INFO if --quiet is set'}],
-    [('--quiet',), {'dest': 'quiet', 'action': 'store_true', 'default': True, 'help': 'sets log level to ERROR or INFO if --verbose is set'}],
+    [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'default': False, 'help': 'sets log level to DEBUG'}],
+    [('--quiet',), {'dest': 'quiet', 'action': 'store_true', 'default': False, 'help': 'sets log level to ERROR'}],
     [('--testnet',), {'action': 'store_true', 'default': False, 'help': f'use {config.BTC_NAME} testnet addresses and block numbers'}],
     [('--testcoin',), {'action': 'store_true', 'default': False, 'help': f'use the test {config.XCP_NAME} network on every blockchain'}],
     [('--regtest',), {'action': 'store_true', 'default': False, 'help': f'use {config.BTC_NAME} regtest addresses and block numbers'}],
@@ -49,20 +52,21 @@ CONFIG_ARGS = [
 
     [('--force',), {'action': 'store_true', 'default': False, 'help': 'skip backend check, version check, process lock (NOT FOR USE ON PRODUCTION SYSTEMS)'}],
     [('--database-file',), {'default': None, 'help': 'the path to the SQLite3 database file'}],
-    [('--log-file',), {'nargs': '?', 'const': None, 'default': False, 'help': 'log to the specified file (specify option without filename to use the default location)'}],
-    [('--api-log-file',), {'nargs': '?', 'const': None, 'default': False, 'help': 'log API requests to the specified file (specify option without filename to use the default location)'}],
+    [('--log-file',), {'nargs': '?', 'const': None, 'default': False, 'help': 'log to the specified file'}],
+    [('--api-log-file',), {'nargs': '?', 'const': None, 'default': False, 'help': 'log API requests to the specified file'}],
+    [('--no-log-files',), {'action': 'store_true', 'default': False, 'help': 'Don\'t write log files'}],
 
     [('--utxo-locks-max-addresses',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES, 'help': 'max number of addresses for which to track UTXO locks'}],
     [('--utxo-locks-max-age',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_AGE, 'help': 'how long to keep a lock on a UTXO being tracked'}],
-    [('--checkdb',), {'action': 'store_true', 'default': False, 'help': 'check the database for integrity (default: false)'}]
 ]
 
-COMMANDS_WITH_DB = ['reparse', 'rollback', 'start', 'vacuum', 'checkdb']
-COMMANDS_WITH_CONFIG = ['debug_config', 'kickstart']
+COMMANDS_WITH_DB = ['reparse', 'rollback', 'start', 'vacuum', 'check-db']
 
 class VersionError(Exception):
     pass
 def main():
+    cprint(f'Running v{config.__version__} of {config.FULL_APP_NAME}.', 'magenta')
+
     if os.name == 'nt':
         from counterpartylib.lib import util_windows
         #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
@@ -94,76 +98,73 @@ def main():
     parser_kickstart = subparsers.add_parser('kickstart', help='rapidly build database by reading from Bitcoin Core blockchain')
     parser_kickstart.add_argument('--bitcoind-dir', help='Bitcoin Core data directory')
     parser_kickstart.add_argument('--max-queue-size', type=int, help='Size of the multiprocessing.Queue for parsing blocks')
-    parser_kickstart.add_argument('--debug-block', type=int, help='Run kickstart for a single block; Don\'t use memory database for fast starting and shutdown.')
+    parser_kickstart.add_argument('--debug-block', type=int, help='Rollback and run kickstart for a single block;')
 
-    parser_bootstrap = subparsers.add_parser('bootstrap', help='bootstrap database with hosted snapshot')
-    parser_bootstrap.add_argument('-q', '--quiet', dest='quiet', action='store_true', help='suppress progress bar')
-    #parser_bootstrap.add_argument('--branch', help='use a different branch for bootstrap db pulling')
+    subparsers.add_parser('bootstrap', help='bootstrap database with hosted snapshot')
 
-    parser_checkdb = subparsers.add_parser('checkdb', help='do an integrity check on the database')
+    subparsers.add_parser('check-db', help='do an integrity check on the database')
+
+    subparsers.add_parser('show-config', help='Show counterparty-server configuration')
 
     args = parser.parse_args()
 
-    log.set_up(log.ROOT_LOGGER, verbose=args.verbose, quiet=args.quiet, console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None))
+    # Configuration
+    init_args = dict(database_file=args.database_file,
+                    log_file=args.log_file, api_log_file=args.api_log_file, no_log_files=args.no_log_files,
+                    testnet=args.testnet, testcoin=args.testcoin, regtest=args.regtest,
+                    customnet=args.customnet,
+                    api_limit_rows=args.api_limit_rows,
+                    backend_name=args.backend_name,
+                    backend_connect=args.backend_connect,
+                    backend_port=args.backend_port,
+                    backend_user=args.backend_user,
+                    backend_password=args.backend_password,
+                    backend_ssl=args.backend_ssl,
+                    backend_ssl_no_verify=args.backend_ssl_no_verify,
+                    backend_poll_interval=args.backend_poll_interval,
+                    indexd_connect=args.indexd_connect, indexd_port=args.indexd_port,
+                    rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user,
+                    rpc_password=args.rpc_password, rpc_no_allow_cors=args.rpc_no_allow_cors,
+                    requests_timeout=args.requests_timeout,
+                    rpc_batch_size=args.rpc_batch_size,
+                    check_asset_conservation=not args.no_check_asset_conservation,
+                    force=args.force, verbose=args.verbose, quiet=args.quiet,
+                    p2sh_dust_return_pubkey=args.p2sh_dust_return_pubkey,
+                    utxo_locks_max_addresses=args.utxo_locks_max_addresses,
+                    utxo_locks_max_age=args.utxo_locks_max_age)
 
+    if args.action in COMMANDS_WITH_DB:
+        # server.initialise_config() is called in server.initialise()
+        db = server.initialise(**init_args)
+    else:
+        server.initialise_config(**init_args)
+
+    # set up logging
+    log.set_up(
+        verbose=config.VERBOSE,
+        quiet=config.QUIET,
+        log_file=config.LOG,
+        log_in_console=args.action == 'start'
+    )
     logger.info(f'Running v{APP_VERSION} of {APP_NAME}.')
+
+    # print some info
+    if config.LOG:
+        cprint(f'Writing log to file: `{config.LOG}`', 'light_grey')
+    if args.action == 'start' and config.API_LOG:
+        cprint(f'Writing API accesses log to file: `{config.API_LOG}`', 'light_grey')
+    cprint(f"{'-' * 30} {args.action} {'-' * 30}\n", 'green')
 
     # Help message
     if args.help:
         parser.print_help()
-        sys.exit()
 
     # Bootstrapping
-    if args.action == 'bootstrap':
-        bootstrap(testnet=args.testnet, quiet=args.quiet)
-        sys.exit()
-
-    def init_with_catch(fn, init_args):
-        try:
-            return fn(**init_args)
-        except TypeError as e:
-            if 'unexpected keyword argument' in str(e):
-                raise VersionError('Unsupported Server Parameter. CLI/Library Version Incompatibility.')
-            else:
-                raise e
-
-    # Configuration
-    if args.action in COMMANDS_WITH_DB or args.action in COMMANDS_WITH_CONFIG:
-        init_args = dict(database_file=args.database_file,
-                                log_file=args.log_file, api_log_file=args.api_log_file,
-                                testnet=args.testnet, testcoin=args.testcoin, regtest=args.regtest,
-                                customnet=args.customnet,
-                                api_limit_rows=args.api_limit_rows,
-                                backend_name=args.backend_name,
-                                backend_connect=args.backend_connect,
-                                backend_port=args.backend_port,
-                                backend_user=args.backend_user,
-                                backend_password=args.backend_password,
-                                backend_ssl=args.backend_ssl,
-                                backend_ssl_no_verify=args.backend_ssl_no_verify,
-                                backend_poll_interval=args.backend_poll_interval,
-                                indexd_connect=args.indexd_connect, indexd_port=args.indexd_port,
-                                rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user,
-                                rpc_password=args.rpc_password, rpc_no_allow_cors=args.rpc_no_allow_cors,
-                                requests_timeout=args.requests_timeout,
-                                rpc_batch_size=args.rpc_batch_size,
-                                check_asset_conservation=not args.no_check_asset_conservation,
-                                force=args.force, verbose=args.verbose, quiet=args.quiet,
-                                console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None),
-                                p2sh_dust_return_pubkey=args.p2sh_dust_return_pubkey,
-                                utxo_locks_max_addresses=args.utxo_locks_max_addresses,
-                                utxo_locks_max_age=args.utxo_locks_max_age,
-                                checkdb=(args.action == 'checkdb') or (args.checkdb))
-        #,broadcast_tx_mainnet=args.broadcast_tx_mainnet)
-
-    if args.action in COMMANDS_WITH_DB:
-        db = init_with_catch(server.initialise, init_args)
-
-    elif args.action in COMMANDS_WITH_CONFIG:
-        init_with_catch(server.initialise_config, init_args)
+    elif args.action == 'bootstrap':
+        bootstrap(testnet=args.testnet)
 
     # PARSING
-    if args.action == 'reparse':
+    elif args.action == 'reparse':
         server.reparse(db, block_index=args.block_index)
 
     elif args.action == 'rollback':
@@ -179,13 +180,13 @@ def main():
     elif args.action == 'start':
         server.start_all(db)
 
-    elif args.action == 'debug_config':
-        server.debug_config()
+    elif args.action == 'show-config':
+        server.show_config()
 
     elif args.action == 'vacuum':
         server.vacuum(db)
 
-    elif args.action == 'checkdb':
+    elif args.action == 'check-db':
         server.check_database(db)
     else:
         parser.print_help()

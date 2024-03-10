@@ -10,7 +10,6 @@
 import struct
 import logging
 from math import floor
-logger = logging.getLogger(__name__)
 
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
@@ -20,6 +19,8 @@ from counterpartylib.lib import message_type
 from counterpartylib.lib import address
 from counterpartylib.lib import backend
 from counterpartylib.lib import database
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 FORMAT = '>QQQQB'
 LENGTH = 33

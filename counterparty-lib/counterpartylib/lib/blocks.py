@@ -11,7 +11,6 @@ import struct
 import decimal
 D = decimal.Decimal
 import logging
-logger = logging.getLogger(__name__)
 import collections
 import platform
 import csv
@@ -52,7 +51,10 @@ from .kickstart.utils import ib2h
 from .exceptions import DecodeError, BTCOnlyError
 
 from counterpartylib.lib import prefetcher
-NUM_PREFETCHER_THREADS = 10
+
+logger = logging.getLogger(config.LOGGER_NAME)
+
+NUM_PREFETCHER_THREADS = 3
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['balances', 'credits', 'debits', 'messages'] + \
@@ -718,6 +720,10 @@ def follow(db):
 
         # Get new blocks.
         if block_index <= block_count:
+            #mempool_spinner.stop()
+            #block_spinner = Halo(text=f"Parsing block {block_index}...", spinner=SPINNER_STYLE)
+            #block_spinner.start()
+
             # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
             current_index = block_index
             requires_rollback = False

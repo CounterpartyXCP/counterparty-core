@@ -13,17 +13,17 @@ import appdirs
 import platform
 import bitcoin as bitcoinlib
 import logging
+import traceback
 from urllib.parse import quote_plus as urlencode
 
 from halo import Halo
-from termcolor import colored
+from termcolor import colored, cprint
 
 from counterpartylib.lib import log
-logger = logging.getLogger(__name__)
-log.set_logger(logger)  # set root logger
-
 from counterpartylib.lib import api, config, util, ledger, blocks, backend, database, transaction, check
 from counterpartylib.lib import kickstart as kickstarter
+
+logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
 
 OK_GREEN = colored("[OK]", "green")
@@ -87,7 +87,7 @@ def initialise(*args, **kwargs):
     return initialise_db()
 
 
-def initialise_config(database_file=None, log_file=None, api_log_file=None,
+def initialise_config(database_file=None, log_file=None, api_log_file=None, no_log_files=False,
                 testnet=False, testcoin=False, regtest=False,
                 api_limit_rows=1000,
                 backend_name=None, backend_connect=None, backend_port=None,
@@ -98,7 +98,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
                 rpc_host=None, rpc_port=None,
                 rpc_user=None, rpc_password=None,
                 rpc_no_allow_cors=False,
-                force=False, verbose=False, quiet=False, console_logfilter=None,
+                force=False, verbose=False, quiet=False,
                 requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
                 rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
                 check_asset_conservation=config.DEFAULT_CHECK_ASSET_CONSERVATION,
@@ -106,7 +106,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
                 utxo_locks_max_addresses=config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES,
                 utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE,
                 estimate_fee_per_kb=None,
-                customnet=None, checkdb=False):
+                customnet=None):
 
     # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -159,18 +159,13 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
         filename = f'{config.APP_NAME}{network}.db'
         config.DATABASE = os.path.join(data_dir, filename)
 
-    if checkdb:
-        config.CHECKDB = True
-    else:
-        config.CHECKDB = False
-
     # Log directory
     log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
     if not os.path.isdir(log_dir):
         os.makedirs(log_dir, mode=0o755)
 
     # Log
-    if log_file is False:  # no file logging
+    if no_log_files:
         config.LOG = None
     elif not log_file:  # default location
         filename = f'server{network}.log'
@@ -181,24 +176,14 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     # Set up logging.
     config.VERBOSE = verbose
     config.QUIET = quiet
-    log.set_up(log.ROOT_LOGGER, verbose=verbose, quiet=quiet, logfile=config.LOG, console_logfilter=console_logfilter)
-    if config.LOG:
-        logger.debug(f'Writing server log to file: `{config.LOG}`')
 
-    if api_log_file is False:  # no file logging
+    if no_log_files:  # no file logging
         config.API_LOG = None
     elif not api_log_file:  # default location
         filename = f'server{network}.access.log'
         config.API_LOG = os.path.join(log_dir, filename)
     else:  # user-specified location
         config.API_LOG = api_log_file
-    if config.API_LOG:
-        logger.debug(f'Writing API accesses log to file: `{config.API_LOG}`')
-
-    # Log unhandled errors.
-    def handle_exception(exc_type, exc_value, exc_traceback):
-        logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
-    sys.excepthook = handle_exception
 
     config.API_LIMIT_ROWS = api_limit_rows
 
@@ -252,7 +237,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
 
     # Backend Core RPC SSL Verify
     if backend_ssl_verify is not None:
-        logger.warning('The server parameter `backend_ssl_verify` is deprecated. Use `backend_ssl_no_verify` instead.')
+        cprint('The server parameter `backend_ssl_verify` is deprecated. Use `backend_ssl_no_verify` instead.', 'yellow')
         config.BACKEND_SSL_NO_VERIFY = not backend_ssl_verify
     else:
         if backend_ssl_no_verify:
@@ -348,7 +333,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
 
     # RPC CORS
     if rpc_allow_cors is not None:
-        logger.warning('The server parameter `rpc_allow_cors` is deprecated. Use `rpc_no_allow_cors` instead.')
+        cprint('The server parameter `rpc_allow_cors` is deprecated. Use `rpc_no_allow_cors` instead.', 'yellow')
         config.RPC_NO_ALLOW_CORS = not rpc_allow_cors
     else:
         if rpc_no_allow_cors:
@@ -458,7 +443,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
 
 def initialise_db():
     if config.FORCE:
-        logger.warning('THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.')
+        cprint('THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.', 'yellow')
 
     # Lock
     if not config.FORCE:
@@ -466,8 +451,7 @@ def initialise_db():
 
     # Database
     logger.info(f'Connecting to database (SQLite {apsw.apswversion()}).')
-    db = database.get_connection(read_only=False, foreign_keys=config.CHECKDB, integrity_check=config.CHECKDB)
-
+    db = database.get_connection(read_only=False)
 
     ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
 
@@ -495,7 +479,6 @@ def connect_to_addrindexrs():
 
 
 def start_all(db):
-
     # Backend.
     connect_to_backend()
 
@@ -531,21 +514,38 @@ def kickstart(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
 
 
 def vacuum(db):
-    database.vacuum(db)
+    step = 'Vacuuming database...'
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        database.vacuum(db)
+    print(f'{OK_GREEN} {step}')
 
 
 def check_database(db):
     ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
-    check.asset_conservation(db)
+
+    step = 'Checking asset conservation...'
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        check.asset_conservation(db)
+    print(f'{OK_GREEN} {step}')
+
+    step = 'Checking database foreign keys....'
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        check.asset_conservation(db)
+    print(f'{OK_GREEN} {step}')
+
+    step = 'Checking database integrity...'
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        database.intergrity_check(db)
+    print(f'{OK_GREEN} {step}')
+
+    cprint('Database checks complete.', 'green')
 
 
-def debug_config():
+def show_config():
     output = vars(config)
     for k in list(output.keys()):
-        if k[:2] == "__" and k[-2:] == "__":
-            del output[k]
-
-    pprint.pprint(output)
+        if k.isupper():
+            print(f"{k}: {output[k]}")
 
 
 def generate_move_random_hash(move):

@@ -16,11 +16,8 @@ import binascii
 import logging
 from Crypto.Cipher import ARC4
 
-logger = logging.getLogger()
-
 from counterpartylib.lib import log, ledger
 from counterpartylib import server
-log.set_logger(logger)
 
 from counterpartylib.test import util_test
 from counterpartylib.test.fixtures.vectors import UNITTEST_VECTOR
@@ -29,6 +26,7 @@ from counterpartylib.test.fixtures.scenarios import INTEGRATION_SCENARIOS
 
 from counterpartylib.lib import config, util, database, api, script, arc4
 
+logger = logging.getLogger(config.LOGGER_NAME)
 
 # used to increment RPC port between test modules to avoid conflicts
 TEST_RPC_PORT = 9999
@@ -143,7 +141,7 @@ def rawtransactions_db(request):
 @pytest.fixture(scope='function')
 def server_db(request, cp_server, api_server):
     """Enable database access for unit test vectors."""
-    db = database.get_connection(read_only=False, integrity_check=False)
+    db = database.get_connection(read_only=False)
     api_server.db = db  # inject into api_server
     cursor = db.cursor()
     cursor.execute('''BEGIN''')
@@ -297,7 +295,7 @@ class MockUTXOSet(object):
 @pytest.fixture(scope='module', autouse=True)
 def setup_logging():
     print("")  # for --verbose output this makes sure the logs start on a newline
-    log.set_up(log.ROOT_LOGGER, verbose=True, console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None))
+    log.set_up(verbose=True)
 
 
 @pytest.fixture(scope='function', autouse=True)

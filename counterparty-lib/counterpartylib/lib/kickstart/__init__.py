@@ -16,7 +16,7 @@ from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser, Chains
 from counterpartylib.lib.kickstart.utils import remove_shm_from_resource_tracker
 from counterpartylib.lib.backend.addrindexrs import AddrindexrsSocket
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(config.LOGGER_NAME)
 
 OK_GREEN = colored("[OK]", "green")
 SPINNER_STYLE = "bouncingBar"

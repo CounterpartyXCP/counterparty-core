@@ -1,11 +1,12 @@
 import logging
-logger = logging.getLogger(__name__)
 import struct
 
 import bitcoin
 from counterpartylib.lib import config
 from counterpartylib.lib import script
 from counterpartylib.lib import ledger
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 def address_scriptpubkey(address):
     try:

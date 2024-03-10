@@ -9,12 +9,12 @@ from bitcoin.core import key
 from functools import reduce
 from itertools import groupby
 
-logger = logging.getLogger(__name__)
-
 from bitstring import ReadError
 from counterpartylib.lib import (config, util, exceptions, util, message_type, ledger)
 
 from .mpma_util.internals import (_decode_mpma_send_decode, _encode_mpma_send)
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 ID = 3 # 0x03 is this specific message type
 
