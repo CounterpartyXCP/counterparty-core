@@ -471,7 +471,7 @@ def parse (db, tx, message):
                 status = 'invalid: status must be one of OPEN or CLOSE'
 
     if status != 'valid':
-        logger.warning(f"Not storing [dispenser] tx [{tx['tx_hash']}]: {status}")
+        logger.debug(f"Not storing [dispenser] tx [{tx['tx_hash']}]: {status}")
 
     cursor.close()
 
