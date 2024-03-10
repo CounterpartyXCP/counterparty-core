@@ -2,9 +2,7 @@
 
 
 # Description
-`counterparty-lib` is the reference implementation of the [Counterparty Protocol](https://counterparty.io).
-
-**Note:** for the command-line interface to `counterparty-lib`, see [`counterparty-cli`](https://github.com/CounterpartyXCP/counterparty-cli).
+Counterparty Core is the reference implementation of the [Counterparty Protocol](https://counterparty.io).
 
 
 # Getting Started
@@ -26,12 +24,23 @@ For `testnet`, modify the Docker Compose file in `simplenode/` and then run:
 docker-compose -f simplenode/compose.yml -p simplenode-testnet up
 ```
 
-Wait for your node to catch up with the network.
+Then wait for your node to catch up with the network. Note: this process currently takes a long time, beause it does not make use of the `bootstrap` or `kickstart` functionality. (See below.)
 
 
 # Manual Installation
 
-**WARNING** The `master` branch should only be used as a development target. For production, use only the latest tagged release.
+Dependencies:
+
+- Bitcoin Core
+- AddrIndexRS
+- Python >= 3.10
+- Rust
+- Maturin
+- LevelDB
+
+## Install dependencies
+
+### Install Bitcoin Core
 
 Download the latest [Bitcoin Core](https://github.com/bitcoin/bitcoin/releases) and create
 a `bitcoin.conf` file (by default located in `~.bitcoin/`) with the following options:
@@ -46,17 +55,30 @@ prune=0
 mempoolfullrbf=1
 ```
 
-Adding the following lines, and opening up port `8333` to incoming traffic may improve your sync speed:
+Adding the following lines, and opening up port `8333` to incoming traffic, may improve your sync speed:
 
 ```
 listen=1
 dbcache=4000
 ```
 
-Download and install latest `addrindexrs`:
+### Install Rust
+
+The recommended way to install Rust is to use `rustup`:
 
 ```bash
-sudo apt install cargo libclang-dev build-essential
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source "$HOME/.cargo/env"
+```
+
+See https://www.rust-lang.org/tools/install for more information.
+
+
+### Install Addrindexrs
+
+Download and install the latest [AddrIndexRS](https://github.com/CounterpartyXCP/addrindexrs):
+
+```bash
 git clone https://github.com/CounterpartyXCP/addrindexrs.git
 cd addrindexrs
 # Set the necessary environment variables
@@ -67,108 +89,127 @@ ulimit -n 8192
 cargo run --release -- -vvv
 ```
 
-Now, download and install `counterparty-lib`:
+### Install Python >= 3.10 and Maturin
 
-Make sure `~/.local/bin` is in your `$PATH`, as well as `$HOME/.cargo/bin`.
-
-**Note:** Python 3.11 is currently required.
+On Ubuntu 22.04 and similar:
 
 ```bash
-sudo apt install python3-pip
-git clone https://github.com/CounterpartyXCP/counterparty-lib.git
-brew install leveldb                                                # macOS-only
-CFLAGS="-I/opt/homebrew/include -L/opt/homebrew/lib"                # macOS-only
-cargo install maturin
-pip3 install -e .
+apt-get install -y python3 python3-dev python3-pip
+pip3 install maturin
 ```
 
-Followed by `counterparty-cli`:
+On MacOS:
 
 ```bash
-git clone https://github.com/CounterpartyXCP/counterparty-cli.git
-cd counterparty-cli
-pip3 install -e .
+brew install python
+pip3 install maturin
 ```
 
-Then, launch the daemon via:
+See https://brew.sh/ to install Homewrew.
+
+
+### Install LevelDB
+
+On Ubuntu 22.04 and similar:
 
 ```bash
-counterparty-server bootstrap
-counterparty-server start
+apt-get install -y libleveldb-dev
 ```
 
-**WARNING:** The `bootstrap` should not be used for commercial or public-facing nodes.
+On MacOS:
 
-**Note:** You will not be able to run `counterparty-server` until `addrindexrs` has caught up (and its RPC server is running), which in turn requires `bitcoind` have caught up as well.
-
-
-# Basic Usage
-
-## via command-line
-
-(Requires `counterparty-cli` to be installed.)
-
-* The first time you run the server, you may bootstrap the local database with:
-	`counterparty-server bootstrap`
-
-* Start the server with:
-	`counterparty-server start`
-
-* Check the status of the server with:
-	`counterparty-client getinfo`
-
-* For additional command-line arguments and options:
-	`counterparty-server --help`
-	`counterparty-client --help`
-
-## Via Python
-
-Bare usage from Python is also possible, without installing `counterparty-cli`:
-
-```
-$ python3
->>> from counterpartylib import server
->>> db = server.initialise(<options>)
->>> server.start_all(db)
+```bash
+brew install leveldb
 ```
 
-# Configuration and Operation
+## Install Counterparty Core
 
-The paths to the **configuration** files, **log** files and **database** files are printed to the screen when starting the server in ‘verbose’ mode:
-	`counterparty-server --verbose start`
+Download the latest version `counterparty-core`:
 
-By default, the **configuration files** are named `server.conf` and `client.conf` and located in the following directories:
+```bash
+git clone https://github.com/CounterpartyXCP/counterparty-core.git
+```
+
+Install the `counterparty-rs` library:
+
+```bash
+cd counterparty-core/counterparty-rs
+pip3 install .
+```
+
+Install the `counterparty-lib` library:
+
+```bash
+cd counterparty-core/counterparty-lib
+pip3 install .
+```
+
+Install the `counterparty-cli` library:
+
+```bash
+cd counterparty-core/counterparty-cli
+pip3 install .
+```
+
+*Note for MacOS users*
+
+Use this command if you get an error while installing one of the packages:
+
+```bash
+CFLAGS="-I/opt/homebrew/include -L/opt/homebrew/lib"
+```
+
+# Usage
+
+## Configuration
+
+Manual configuration is not necessary for most use cases, but example configuration files may be found in the `docker/` directory.
+
+By default, the **configuration files** are named `server.conf` and `client.conf` and are located in the following directories:
 
 * Linux: `~/.config/counterparty/`
 * Windows: `%APPDATA%\Counterparty\`
 
-Client and Server log files are named `counterparty.client.[testnet.]log` and `counterparty.server.[testnet.]log`, and located in the following directories:
+Client and server log files are named `counterparty.client.[testnet.]log` and `counterparty.server.[testnet.]log` and are located in the following directories:
 
 * Linux: `~/.cache/counterparty/log/`
 * Windows: `%APPDATA%\Local\Counterparty\counterparty\Logs`
 
-Counterparty API activity is logged in `server.[testnet.]api.log` and `client.[testnet.]api.log`.
+Counterparty API activity is logged to `server.[testnet.]api.log` and `client.[testnet.]api.log`.
 
-Counterparty database files are by default named `counterparty.[testnet.]db` and located in the following directories:
+Counterparty database files are by default named `counterparty.[testnet.]db` and are located in the following directories:
 
 * Linux: `~/.local/share/counterparty`
 * Windows: `%APPDATA%\Roaming\Counterparty\counterparty`
 
-## Configuration File Format
+All configurable parameters in the configuration file can also be passed as arguments to the `counterpart-server` command. Use `counterparty-server --help` to see the list of these options.
 
-Manual configuration is not necessary for most use cases, but example configuration files may be found in the (docker/) directory.
+## Quickly Catch Up with the Network
 
-The ``force`` argument can be used either in the server configuration file or passed at runtime to make the server keep running in the case it loses connectivity with the Internet and falls behind the back-end database. This may be useful for *non-production* Counterparty servers that need to maintain RPC service availability even when the backend or counterparty server has no Internet connectivity.
+You will not be able to run `counterparty-server` until `addrindexrs` has caught up (and its RPC server is running), which in turn requires `bitcoind` have caught up as well. The command to start the Counterparty server process is simply `counterparty-server start`. However, simply running this command requires a long time to catch up with the network, and Counterparty must have parsed all published blocks before being operational.
+
+There are two ways to speed up the process of catching up with the network:
+
+1. `counterparty-server bootstrap` downloads a recent snapshot of a Counterparty database from a centralized server maintained by the Counterparty Core development team. Because this method does not involve verifying the history of Counterparty transactions yourself, **the `bootstrap` command should not be used for mission-critical, commercial or public-facing nodes.**
+
+```bash
+counterparty-server bootstrap
+```
+
+1. `counterparty-server kickstart` will perform a complete catchup in around 8 to 24 hours. However, this method requires first stopping Bitcoin Core (while leaving `addrindexrs` running, so that Counterparty Core can read the Bitcoin block files directly from `bitcoind`'s database.
+
+```bash
+counterparty-server kickstart
+```
 
 
-# Developer notes
+## Start the Server
 
-## Versioning
+Once the Counterparty server has caught up with the network, you may start the server simply with `counterparty start`:
 
-* Major version changes require a full (automatic) rebuild of the database.
-* Minor version changes require a(n automatic) database reparse.
-* All protocol changes are retroactive on testnet.
-
+```bash
+counterparty-server start
+```
 
 # Further Reading
 
