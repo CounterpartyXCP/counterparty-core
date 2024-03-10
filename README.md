@@ -97,6 +97,8 @@ You can also limit the resources available for `addrindexrs` with:
 ulimit -n 8192
 ```
 
+Use `addrindexrs -h` for more options.
+
 ### Install Python >= 3.10 and Maturin
 
 On Ubuntu 22.04 and similar:
