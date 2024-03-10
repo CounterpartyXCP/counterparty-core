@@ -1,11 +1,13 @@
 import time
+import binascii
 
 from counterparty_rs import utils
-import bitcoin
+import bitcoin as bitcoinlib
+from bitcoin import bech32 as bech32lib
 
 def decode_p2w(script_pubkey):
     try:
-        bech32 = bitcoin.bech32.CBech32Data.from_bytes(0, script_pubkey[2:22])
+        bech32 = bech32lib.CBech32Data.from_bytes(0, script_pubkey[2:22])
         return str(bech32), None
     except TypeError as e:
         raise Exception('bech32 decoding error')
@@ -65,3 +67,13 @@ def test_decode_p2w():
 
     bech32 = utils.script_to_address(script_pubkey, 'mainnet')
     assert bech32 == "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4"
+
+    assert decode_p2w(script_pubkey)[0] == utils.script_to_address(script_pubkey, 'mainnet')
+
+    script_pubkey = binascii.unhexlify("0020dcbc2340bd1f6cc3ab0a3887020647ec471a279e3c889fb4414df30e3dd59f96")
+    assert decode_p2w(script_pubkey) == ("bc1qmj7zxs9arakv82c28zrsypj8a3r35fu7pure55", None)
+    assert decode_p2w(script_pubkey)[0] == utils.script_to_address(script_pubkey, 'mainnet')
+
+    script_pubkey = binascii.unhexlify("0020dfe1739dc0711f64ced999a2306691ff98fff038b2f40aec2b5ae917610ea0ac")
+    assert decode_p2w(script_pubkey) == ("bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupc6q5xx6", None)
+    assert decode_p2w(script_pubkey)[0] == utils.script_to_address(script_pubkey, 'mainnet')

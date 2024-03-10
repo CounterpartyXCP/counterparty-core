@@ -2,7 +2,9 @@ use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use pyo3::wrap_pyfunction;
 use bitcoin::{Address, Network};
+use bitcoin::util::address::{Payload, WitnessVersion};
 use bitcoin::blockdata::script::{Script, Instruction};
+use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::opcodes::all::*;
 use std::panic;
 
@@ -31,15 +33,33 @@ fn script_to_address(script_pubkey: Vec<u8>, network: &str) -> PyResult<String> 
         "regtest" => Network::Regtest,
         _ => return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid network value")),
     };
+    if script.is_witness_program() {
+        // This block below is necessary to reproduce a prior truncation bug in the python codebase.
+        let version = match WitnessVersion::try_from(opcodes::All::from(script[0])) {
+            Ok(vers) => vers,
+            Err(_) => return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid version value")),
+        };
 
-    // Attempt to derive an address from the script and network
-    let address = match Address::from_script(&script, network_enum) {
-        Ok(addr) => addr.to_string(),
-        Err(_) => return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to derive address")),
-    };
-
-    // Return the address as a String
-    Ok(address)
+        let address = Address {
+            payload: Payload::WitnessProgram {
+                version: version,
+                program: script[2..22].to_vec(),
+            },
+            network: network_enum,
+        };
+        Ok(address.to_string())
+    } else {
+        /*
+         * the code below is correct, but not sure about the invocation path
+         * and untested bug compatibility
+         */
+        let _address = match Address::from_script(&script, network_enum) {
+            Ok(addr) => addr,
+            Err(_) => return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to derive address")),
+        };
+        panic!("we thought this shouldn't happen!");
+        //Ok(address.to_string())
+    }
 }
 
 
