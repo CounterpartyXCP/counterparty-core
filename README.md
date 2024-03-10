@@ -90,7 +90,7 @@ Start `addrindexrs` with:
 addrindexrs --cookie=rpc:rpc
 ```
 
-For remote full node or low memory system you can use JSONRPC instead of directly importing blk*.dat files with the flag `-- --jsonrpc-import`.
+For remote full node or low memory system you can use JSONRPC instead of directly importing blk*.dat files with the flag `--jsonrpc-import`.
 You can also limit the resources available for `addrindexrs` with:
 
 ```bash
