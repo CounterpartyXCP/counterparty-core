@@ -88,7 +88,7 @@ cargo install --path=.
 Start `addrindexrs` with:
 
 ```bash
-addrindexrs --cookie=rpc:rpc
+addrindexrs --cookie=rpc:rpc -vvv
 ```
 
 When working with a remote full node or low-memory system, you can tell `addrindexrs` to use JSON-RPC to communicate with `bitcoind` using the flag `--jsonrpc-import`.
