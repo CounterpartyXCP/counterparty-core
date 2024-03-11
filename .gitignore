@@ -16,7 +16,7 @@ profile.txt
 *.pyc
 
 # Setuptools distribution folder.
-/dist/
+dist/
 
 # Setuptools build folder.
 /build/
