@@ -108,6 +108,11 @@ def main():
 
     args = parser.parse_args()
 
+    # Help message
+    if args.help:
+        parser.print_help()
+        exit(0)
+
     # Configuration
     init_args = dict(database_file=args.database_file,
                     log_file=args.log_file, api_log_file=args.api_log_file, no_log_files=args.no_log_files,
@@ -155,12 +160,8 @@ def main():
         cprint(f'Writing API accesses log to file: `{config.API_LOG}`', 'light_grey')
     cprint(f"{'-' * 30} {args.action} {'-' * 30}\n", 'green')
 
-    # Help message
-    if args.help:
-        parser.print_help()
-
     # Bootstrapping
-    elif args.action == 'bootstrap':
+    if args.action == 'bootstrap':
         bootstrap(testnet=args.testnet)
 
     # PARSING
