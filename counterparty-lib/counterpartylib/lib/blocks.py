@@ -542,7 +542,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
 
 
 def clean_table_from(cursor, table, block_index):
-    logger.info(f'Cleaning table {table} from block_index {block_index}...')
+    logger.info(f'Rolling table `{table}` back to block {block_index}...')
     # internal function, no sql injection here
     cursor.execute(f'''DELETE FROM {table} WHERE block_index > ?''', (block_index,)) # nosec B608
 
@@ -566,7 +566,7 @@ def clean_transactions_tables(cursor, block_index=0):
 def rollback(db, block_index=0):
     # clean all tables
     start_time = time.time()
-    step = f"Cleaning database from block {block_index}..."
+    step = f"Rolling database back to block {block_index}..."
     with Halo(text=step, spinner=SPINNER_STYLE):
         cursor = db.cursor()
         clean_messages_tables(cursor, block_index=block_index)
@@ -599,7 +599,7 @@ def reparse(db, block_index=0):
 
     cursor = db.cursor()
     # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
-    step = f"Cleaning database from block {block_index}..."
+    step = f"Rolling database back to block {block_index}..."
     with Halo(text=step, spinner=SPINNER_STYLE):
         clean_messages_tables(cursor, block_index=block_index)
     print(f'{OK_GREEN} {step}')
