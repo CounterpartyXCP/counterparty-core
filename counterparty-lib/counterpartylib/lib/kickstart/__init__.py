@@ -235,7 +235,7 @@ def backup_if_needed(new_database, resuming):
             print(colored(f"Version lower than v10.0.0 detected. Kickstart must be done from the first block.", "yellow"))
             print(colored(f"Old database will me moved to {config.DATABASE}.old and a new database will be created from scratch.", "yellow"))
             if input(colored('Continue? (y/N): ', 'magenta')) != 'y':
-                return
+                exit()
             # move old database
             backup_db(move=True)
             return True
