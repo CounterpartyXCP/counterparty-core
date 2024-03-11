@@ -461,7 +461,7 @@ def parse (db, tx, message):
         sql = 'insert into orders values(:tx_index, :tx_hash, :block_index, :source, :give_asset, :give_quantity, :give_remaining, :get_asset, :get_quantity, :get_remaining, :expiration, :expire_index, :fee_required, :fee_required_remaining, :fee_provided, :fee_provided_remaining, :status)'
         order_parse_cursor.execute(sql, bindings)
     else:
-        logger.warning(f"Not storing [order] tx [{tx['tx_hash']}]: {status}")
+        logger.debug(f"Not storing [order] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")
 
     # Match.
