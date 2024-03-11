@@ -211,7 +211,7 @@ def parse (db, tx, message):
         sql = 'insert into broadcasts values(:tx_index, :tx_hash, :block_index, :source, :timestamp, :value, :fee_fraction_int, :text, :locked, :status)'
         cursor.execute(sql, bindings)
     else:
-        logger.warning(f"Not storing [broadcast] tx [{tx['tx_hash']}]: {status}")
+        logger.debug(f"Not storing [broadcast] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")
 
     # stop processing if broadcast is invalid for any reason

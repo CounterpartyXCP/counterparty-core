@@ -282,6 +282,7 @@ class AddrIndexRsThread (threading.Thread):
         self.message_to_send = None
         self.message_result = None
         self.is_killed = False
+        self.backoff = BACKOFF_START
 
     def stop(self):
         logger.warn('Killing address indexer connection thread.')
@@ -295,6 +296,11 @@ class AddrIndexRsThread (threading.Thread):
             try:
                 logger.debug(f'Opening socket to address indexer at `{self.host}:{self.port}`')
                 self.sock.connect((self.host, self.port))
+                self.backoff = BACKOFF_START
+            except ConnectionRefusedError as e:
+                logger.debug(f'Connection refused by addrindexrs. Trying again in {self.backoff:d} seconds.')
+                time.sleep(self.backoff)
+                self.backoff = min(self.backoff * BACKOFF_FACTOR, BACKOFF_MAX)
             except Exception as e:
                 logger.exception('Unknown error when attempting to connect to address indexer.')
                 sys.exit(1)
@@ -305,7 +311,6 @@ class AddrIndexRsThread (threading.Thread):
         self.locker = threading.Condition()
         self.locker.acquire()
         self.connect()
-        backoff = BACKOFF_START
         while self.locker.wait():
             if self.message_to_send and not self.is_killed:
                 self.message_result = None
@@ -317,7 +322,7 @@ class AddrIndexRsThread (threading.Thread):
                         logger.debug(f'Sending message to address indexer: {self.message_to_send}')
                         self.sock.send(self.message_to_send)
                         has_sent = True
-                        backoff = BACKOFF_START
+                        self.backoff = BACKOFF_START
                     except Exception as e:
                         logger.exception(f'Unknown error sending message to address indexer: {self.message_to_send}')
                         sys.exit(1)
@@ -342,18 +347,18 @@ class AddrIndexRsThread (threading.Thread):
                                     # Complete message
                                     self.message_to_send = None
                                     parsed = True
-                                    backoff = BACKOFF_START
+                                    self.backoff = BACKOFF_START
                                     break
                             else:
-                                logger.debug(f'Empty response from address indexer. Trying again in {backoff:d} seconds.')
-                                time.sleep(backoff)
-                                backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
+                                logger.debug(f'Empty response from address indexer. Trying again in {self.backoff:d} seconds.')
+                                time.sleep(self.backoff)
+                                self.backoff = min(self.backoff * BACKOFF_FACTOR, BACKOFF_MAX)
 
                     except (socket.timeout, socket.error, ConnectionResetError) as e:
-                        logger.debug(f'Error in connection to address indexer: {e}. Trying again in {backoff:d} seconds.')
+                        logger.debug(f'Error in connection to address indexer: {e}. Trying again in {self.backoff:d} seconds.')
                         has_sent = False    # TODO: Retry send?!
-                        time.sleep(backoff)
-                        backoff = min(backoff * BACKOFF_FACTOR, BACKOFF_MAX)
+                        time.sleep(self.backoff)
+                        self.backoff = min(self.backoff * BACKOFF_FACTOR, BACKOFF_MAX)
                     except Exception as e:
                         logger.exception('Unknown error when connecting to address indexer.')
                         self.locker.notify()

@@ -640,7 +640,7 @@ def parse (db, tx, message, message_type_id):
             sql='insert into issuances values(:tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :reset)'
             issuance_parse_cursor.execute(sql, bindings)
         else:
-            logger.warning(f"Not storing [issuance] tx [{tx['tx_hash']}]: {status}")
+            logger.debug(f"Not storing [issuance] tx [{tx['tx_hash']}]: {status}")
             logger.debug(f"Bindings: {json.dumps(bindings)}")
 
         # Credit.
