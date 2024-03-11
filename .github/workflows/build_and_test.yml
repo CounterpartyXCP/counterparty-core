@@ -42,7 +42,7 @@ jobs:
 
       - name: Install pytest and build module
         run: |
-          pip install pytest
+          pip install pytest hatch
           python -m pip install --upgrade build
 
       # Build counterparty packages
@@ -54,11 +54,11 @@ jobs:
 
       - name: Build counterparty-lib
         run: |
-          cd counterparty-lib && python -m build --out ../dist
+          cd counterparty-lib && hatch build ../dist
 
       - name: Build counterparty-cli
         run: |
-          cd counterparty-cli && python -m build --out ../dist
+          cd counterparty-cli && hatch build ../dist
 
       # Install counterparty packages
 
@@ -106,7 +106,7 @@ jobs:
 
       - name: Install pytest and build module
         run: |
-          pip3.10 install pytest
+          pip3.10 install pytest hatch
           python3.10 -m pip install --upgrade build
 
       # Build counterparty packages
@@ -118,11 +118,11 @@ jobs:
 
       - name: Build counterparty-lib
         run: |
-          cd counterparty-lib && python3.10 -m build --out ../dist
+          cd counterparty-lib && hatch build ../dist
 
       - name: Build counterparty-cli
         run: |
-          cd counterparty-cli && python3.10 -m build --out ../dist
+          cd counterparty-cli && hatch build ../dist
 
       # Install counterparty packages
 
@@ -172,7 +172,7 @@ jobs:
 
       - name: Install pytest and build module
         run: |
-          pip install pytest
+          pip install pytest hatch
           python -m pip install --upgrade build
 
       # Build counterparty packages
@@ -184,11 +184,11 @@ jobs:
 
       - name: Build counterparty-lib
         run: |
-          cd counterparty-lib && python -m build --out ../dist
+          cd counterparty-lib && hatch build ../dist
 
       - name: Build counterparty-cli
         run: |
-          cd counterparty-cli && python -m build --out ../dist
+          cd counterparty-cli && hatch build ../dist
 
       # Install counterparty packages
 
