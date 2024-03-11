@@ -9,9 +9,9 @@ from counterpartylib.lib import backend, ledger, config
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-BLOCK_COUNT_CHECK_FREQ = 100
+
 BLOCKCHAIN_CACHE = {}
-BLOCKCHAIN_CACHE_MAX_SIZE = 10000
+BLOCKCHAIN_CACHE_MAX_SIZE = 100
 PREFETCHER_THREADS = []
 NEXT_BLOCK_TO_PREFETCH = queue.Queue()
 

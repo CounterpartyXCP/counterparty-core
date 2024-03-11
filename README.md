@@ -53,6 +53,7 @@ addresstype=legacy
 txindex=1
 prune=0
 mempoolfullrbf=1
+rpcworkqueue=100
 ```
 
 Adding the following lines, and opening up port `8333` to incoming traffic, may improve your sync speed:
