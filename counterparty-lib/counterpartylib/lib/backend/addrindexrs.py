@@ -298,7 +298,7 @@ class AddrIndexRsThread (threading.Thread):
                 self.sock.connect((self.host, self.port))
                 self.backoff = BACKOFF_START
             except ConnectionRefusedError as e:
-                logger.warning('Connection refused. Retrying...')
+                logger.debug(f'Connection refused by addrindexrs. Trying again in {self.backoff:d} seconds.')
                 time.sleep(self.backoff)
                 self.backoff = min(self.backoff * BACKOFF_FACTOR, BACKOFF_MAX)
             except Exception as e:
