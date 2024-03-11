@@ -7,12 +7,13 @@ UNIT = 100000000        # The same across assets.
 
 
 # Semantic Version
-__version__ = "9.61.1" # for hatch
+__version__ = "10.0.0-alpha" # for hatch
 VERSION_STRING = __version__
-version = VERSION_STRING.split('.')
+version = VERSION_STRING.split('-')[0].split('.')
 VERSION_MAJOR = int(version[0])
 VERSION_MINOR = int(version[1])
 VERSION_REVISION = int(version[2])
+VERSION_PRE_RELEASE = '-'.join(VERSION_STRING.split('-')[1:])
 
 
 # Counterparty protocol
