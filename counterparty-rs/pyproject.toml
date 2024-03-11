@@ -4,7 +4,8 @@ build-backend = "maturin"
 
 [project]
 name = "counterparty-rs"
-repository = "https://github.com/CounterpartyXCP/counterparty-lib"
+dynamic = ["version"]
+repository = "https://github.com/CounterpartyXCP/counterparty-core"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 classifiers = [
@@ -20,3 +21,5 @@ dependencies = [
 [tool.maturin]
 strip = true
 
+[tool.hatch.version]
+path = "../counterparty-lib/counterpartylib/lib/config.py"

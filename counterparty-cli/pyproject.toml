@@ -41,10 +41,10 @@ counterparty-client = "counterpartycli:client_main"
 counterparty-server = "counterpartycli:server_main"
 
 [project.urls]
-"Latest release" = "https://github.com/CounterpartyXCP/counterparty-cli/releases/latest"
+"Latest release" = "https://github.com/CounterpartyXCP/counterparty-core/releases/latest"
 "Documentation" = "https://docs.counterparty.io/"
 "Source code" = "https://github.com/CounterpartyXCP/"
 "Home Page" = "https://counterparty.io/"
 
 [tool.hatch.version]
-path = "counterpartycli/__init__.py"
+path = "../counterparty-lib/counterpartylib/lib/config.py"

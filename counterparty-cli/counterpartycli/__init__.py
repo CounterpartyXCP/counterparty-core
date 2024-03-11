@@ -1,7 +1,9 @@
 import os, sys
 
-__version__ = '1.1.5' # for hatch
-APP_VERSION = __version__
+from counterpartylib.lib import config
+
+
+APP_VERSION = config.VERSION_STRING
 
 
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser('__file__'))))

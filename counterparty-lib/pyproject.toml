@@ -34,7 +34,7 @@ allow-direct-references = true
 files = ["requirements.txt"]
 
 [project.urls]
-"Latest release" = "https://github.com/CounterpartyXCP/counterparty-lib/releases/latest"
+"Latest release" = "https://github.com/CounterpartyXCP/counterparty-core/releases/latest"
 "Documentation" = "https://docs.counterparty.io/"
 "Source code" = "https://github.com/CounterpartyXCP/"
 "Home Page" = "https://counterparty.io/"
