@@ -178,7 +178,6 @@ def parse (db, tx, message):
     except AssertionError:
         timestamp, value, fee_fraction_int, text = 0, None, 0, None
         status = "invalid: could not unpack text"
-
     if status == 'valid':
         # For SQLite3
         timestamp = min(timestamp, config.MAX_INT)
