@@ -582,7 +582,7 @@ class AddrindexrsSocket:
         while True:
             try:
                 data = self.sock.recv(READ_BUF_SIZE)
-            except TimeoutError:
+            except (TimeoutError, ConnectionResetError) as e:
                 return {}
             if data:
                 try:
