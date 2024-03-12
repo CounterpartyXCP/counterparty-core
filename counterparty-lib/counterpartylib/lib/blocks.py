@@ -573,8 +573,7 @@ def rebuild_database(db):
 
 
 def rollback(db, block_index=0):
-    if block_index < config.BLOCK_FIRST:
-        block_index = config.BLOCK_FIRST
+    block_index = max(block_index, config.BLOCK_FIRST)
     # clean all tables
     start_time = time.time()
     step = f"Rolling database back to block {block_index}..."
