@@ -692,8 +692,11 @@ def follow(db):
             logger.info(str(e))
             # no need to rollback a new database
             if block_index != config.BLOCK_FIRST:
-                rollback(db, block_index=e.rollback_block_index)
-                block_index = e.rollback_block_index
+                if e.required_action == "rollback":
+                    rollback(db, block_index=e.from_block_index)
+                    block_index = e.from_block_index
+                elif e.required_action == "reparse":
+                    reparse(db, block_index=e.from_block_index)
             database.update_version(db)
 
     logger.info('Resuming parsing.')
