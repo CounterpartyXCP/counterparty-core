@@ -567,7 +567,7 @@ def rebuild_database(db):
     cursor = db.cursor()
     cursor.execute('''PRAGMA foreign_keys=OFF''')
     for table in TABLES + ['transaction_outputs', 'transactions', 'blocks']:
-        cursor.execute('DROP TABLE ?', (table,))
+        cursor.execute(f'DROP TABLE {table}') # nosec B608
     cursor.execute('''PRAGMA foreign_keys=ON''')
     initialise(db)
 
