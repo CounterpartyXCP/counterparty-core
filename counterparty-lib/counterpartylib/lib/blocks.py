@@ -573,6 +573,7 @@ def rollback(db, block_index=0):
         clean_transactions_tables(cursor, block_index=block_index)
         cursor.close()
         logger.info(f'Database rolled back to block_index {block_index}')
+    ledger.CURRENT_BLOCK_INDEX = block_index
     print(f'{OK_GREEN} {step}')
     print(f'Rollback done in {time.time() - start_time:.2f}s')
 
