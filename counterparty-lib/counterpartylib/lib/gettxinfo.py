@@ -267,11 +267,8 @@ def parse_transaction_vouts(decoded_tx):
             new_destination, new_data = decode_checksig(asm, decoded_tx)
             potential_dispensers[-1] = (new_destination, output_value)
         elif asm[-1] == OP_CHECKMULTISIG:
-            try:
-                new_destination, new_data = decode_checkmultisig(asm, decoded_tx)
-                potential_dispensers[-1] = (new_destination, output_value)
-            except:
-                raise DecodeError('unrecognised output type')
+            new_destination, new_data = decode_checkmultisig(asm, decoded_tx)
+            potential_dispensers[-1] = (new_destination, output_value)
         elif ledger.enabled('p2sh_addresses') and asm[0] == OP_HASH160 and asm[-1] == OP_EQUAL and len(asm) == 3:
             new_destination, new_data = decode_scripthash(asm)
             if ledger.enabled('p2sh_dispensers_support'):
