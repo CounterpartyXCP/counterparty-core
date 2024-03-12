@@ -80,6 +80,9 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
                 shm = shared_memory.SharedMemory(name, create=True, size=block_length)
             except FileExistsError:
                 shm = shared_memory.SharedMemory(name)
+                shm.close()
+                shm.unlink()
+                shm = shared_memory.SharedMemory(name, create=True, size=block_length)
             shm.buf[:block_length] = serialized_block
             queue.put(shm.name)
             shm.close()
