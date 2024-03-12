@@ -11,7 +11,8 @@ import bitcoin as bitcoinlib
 from bitcoin.core.key import CPubKey
 from bitcoin.bech32 import CBech32Data
 # We are using PyCryptodome not PyCrypto
-from Crypto.Hash import RIPEMD160 # nosec B413
+#from Crypto.Hash import RIPEMD160
+from ripemd import ripemd160 as RIPEMD160 # nosec B413
 from counterparty_rs import b58, utils
 
 from counterpartylib.lib import util

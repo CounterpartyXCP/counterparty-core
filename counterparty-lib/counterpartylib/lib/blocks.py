@@ -544,7 +544,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
 def clean_table_from(cursor, table, block_index):
     logger.info(f'Rolling table `{table}` back to block {block_index}...')
     # internal function, no sql injection here
-    cursor.execute(f'''DELETE FROM {table} WHERE block_index > ?''', (block_index,)) # nosec B608
+    cursor.execute(f'''DELETE FROM {table} WHERE block_index >= ?''', (block_index,)) # nosec B608
 
 
 def clean_messages_tables(cursor, block_index=0):
@@ -563,16 +563,30 @@ def clean_transactions_tables(cursor, block_index=0):
     cursor.execute('''PRAGMA foreign_keys=ON''')
 
 
+def rebuild_database(db):
+    cursor = db.cursor()
+    cursor.execute('''PRAGMA foreign_keys=OFF''')
+    for table in TABLES + ['transaction_outputs', 'transactions', 'blocks']:
+        cursor.execute(f'DROP TABLE {table}') # nosec B608
+    cursor.execute('''PRAGMA foreign_keys=ON''')
+    initialise(db)
+
+
 def rollback(db, block_index=0):
+    block_index = max(block_index, config.BLOCK_FIRST)
     # clean all tables
     start_time = time.time()
     step = f"Rolling database back to block {block_index}..."
     with Halo(text=step, spinner=SPINNER_STYLE):
-        cursor = db.cursor()
-        clean_messages_tables(cursor, block_index=block_index)
-        clean_transactions_tables(cursor, block_index=block_index)
-        cursor.close()
+        if block_index == config.BLOCK_FIRST:
+            rebuild_database(db)
+        else:
+            cursor = db.cursor()
+            clean_messages_tables(cursor, block_index=block_index)
+            clean_transactions_tables(cursor, block_index=block_index)
+            cursor.close()
         logger.info(f'Database rolled back to block_index {block_index}')
+    ledger.CURRENT_BLOCK_INDEX = block_index
     print(f'{OK_GREEN} {step}')
     print(f'Rollback done in {time.time() - start_time:.2f}s')
 
@@ -976,5 +990,3 @@ def follow(db):
             time.sleep(sleep_time)
 
     cursor.close()
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

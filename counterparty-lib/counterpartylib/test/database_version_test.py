@@ -24,5 +24,6 @@ def test_check_database_version():
     config.VERSION_MAJOR += 1
     with pytest.raises(check.DatabaseVersionError) as exception:
         check.database_version(db)
-    assert exception.value.rollback_block_index == config.BLOCK_FIRST
+    assert exception.value.from_block_index == config.BLOCK_FIRST
+    assert exception.value.required_action == "rollback"
     config.VERSION_MAJOR -= 1

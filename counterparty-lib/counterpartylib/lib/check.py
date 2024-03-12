@@ -333,9 +333,10 @@ def software_version():
 
 
 class DatabaseVersionError(Exception):
-    def __init__(self, message, rollback_block_index):
+    def __init__(self, message, required_action, from_block_index):
         super(DatabaseVersionError, self).__init__(message)
-        self.rollback_block_index = rollback_block_index
+        self.required_action = required_action
+        self.from_block_index = from_block_index
 
 def database_version(db):
     if config.FORCE:
@@ -345,9 +346,14 @@ def database_version(db):
     version_major, version_minor = database.version(db)
     if version_major != config.VERSION_MAJOR:
         # Rollback database if major version has changed.
-        raise DatabaseVersionError(f'Client major version number mismatch ({version_major} ≠ {config.VERSION_MAJOR}).', config.BLOCK_FIRST)
+        raise DatabaseVersionError(
+            message=f'Client major version number mismatch ({version_major} ≠ {config.VERSION_MAJOR}).',
+            required_action='rollback',
+            from_block_index=config.BLOCK_FIRST
+        )
     elif version_minor != config.VERSION_MINOR:
-        # TODO: Reparse transactions from the vesion block if minor version has changed.
-        pass
-        # raise DatabaseVersionError(f'Client minor version number mismatch ({version_minor} ≠ {config.VERSION_MINOR}).', None)
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
+        # Reparse transactions from the vesion block if minor version has changed.
+        raise DatabaseVersionError(
+            message=f'Client minor version number mismatch ({version_minor} ≠ {config.VERSION_MINOR}).',
+            required_action='reparse',
+            from_block_index=config.BLOCK_FIRST)
