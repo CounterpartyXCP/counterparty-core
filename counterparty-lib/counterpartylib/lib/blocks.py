@@ -990,5 +990,3 @@ def follow(db):
             time.sleep(sleep_time)
 
     cursor.close()
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

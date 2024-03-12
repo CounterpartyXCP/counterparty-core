@@ -66,11 +66,12 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
             )
 
             ledger.CURRENT_BLOCK_INDEX = db_block[1]
-            for i, transaction in enumerate(block['transactions']):
-                try:
-                    block['transactions'][i]['parsed_vouts'] = gettxinfo.parse_transaction_vouts(block['transactions'][i])
-                except DecodeError:
-                    block['transactions'][i]['parsed_vouts'] = "DecodeError"
+            if ledger.enabled('multisig_addresses', block_index=db_block[1]):
+                for i, transaction in enumerate(block['transactions']):
+                    try:
+                        block['transactions'][i]['parsed_vouts'] = gettxinfo.parse_transaction_vouts(block['transactions'][i])
+                    except DecodeError:
+                        block['transactions'][i]['parsed_vouts'] = "DecodeError"
 
             serialized_block = pickle.dumps(block, protocol=pickle.HIGHEST_PROTOCOL)
             block_length = len(serialized_block)
