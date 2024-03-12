@@ -118,7 +118,7 @@ def prepare_db_for_resume(cursor):
         tx_index = last_transaction['tx_index'] + 1
     # clean tables from last parsed block
     for table in blocks.TABLES + ['transaction_outputs', 'transactions', 'blocks']:
-        blocks.clean_table_from(cursor, table, last_parsed_block)
+        blocks.clean_table_from(cursor, table, last_parsed_block + 1)
 
     block_count = last_block_index - last_parsed_block
 
@@ -160,7 +160,7 @@ def intialize_kickstart_db(bitcoind_dir, last_known_hash, resuming, new_database
         cursor = kickstart_db.cursor()
 
         if debug_block is not None:
-            blocks.rollback(kickstart_db, int(debug_block) - 1)
+            blocks.rollback(kickstart_db, int(debug_block))
 
         # create `kickstart_blocks` table if necessary
         if not resuming:
