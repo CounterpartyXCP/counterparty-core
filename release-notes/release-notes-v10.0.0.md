@@ -1,11 +1,11 @@
 # Release Notes - Counterparty Core v10.0.0 (2024-03-??)
 
-Counterparty Core v10.0.0 is a very large release comprising many different improvements across large portions of the codebase. “Counterparty Core” is also the new name for the codebase and repository that is the result of a merge between `counterparty-lib`, `counterparty-cli` and a new Rust library, `counterparty-rs`.
-
-This release does not include any protocol changes, so there is no deadline for upgrading. However it is **strongly recommended** that all users upgrade as soon as possible, in particular to avoid consensus problems due to non-determinism in previous versions. The Counterparty Core API is also unchanged for this release.
+Counterparty Core v10.0.0 is a very large release comprising many improvements across different portions of the codebase. “Counterparty Core” is also the new name for the codebase and repository that is the result of a merge between `counterparty-lib`, `counterparty-cli` and a new Rust library, `counterparty-rs`.
 
 # Upgrade Procedure
-Because this release includes numerous changes to the database schema, a full database rebuild is required and the major version number has been bumped from 9 to 10. Follow the updated installation instructions in the [../README.md](README) to download and install the latest version of Counterparty Core, run `counterparty-server kickstart`, then start the server with `counterparty-server start`. The rebuild should happen automatically, and it should take between 8 and 24 hours hours to complete.
+This release does not include any protocol changes, so there is no deadline for upgrading. However it is **strongly recommended** that all users upgrade as soon as possible, in particular to avoid consensus problems due to non-determinism in previous versions. The Counterparty Core API is also unchanged for this release.
+
+Because this release includes numerous changes to the database schema, a full database rebuild is required and the major version number has been bumped from 9 to 10. Follow the updated installation instructions in the [README](../README.md) to download and install the latest version of Counterparty Core, run `counterparty-server kickstart`, then start the server with `counterparty-server start`. The rebuild should happen automatically, and it should take between 8 and 24 hours hours to complete.
 
 **IMPORTANT** Be certain that your instance of AddrIndexRs is running with the configuration parameter `TX_LIMIT=100` (the default value). This parameter may be set in an environment variable, in the CLI, or with a config file, and the value that AddrIndexRs is using will be visible on startup when the service is run with the option `-vvv`. This is a *consensus-critical* parameter, and if it is set incorrectly, your Counterparty node will not run.
 
@@ -14,13 +14,13 @@ Because this release includes numerous changes to the database schema, a full da
 
 ## Codebase
 * Upgrade from Python 3.7 to Python >= 3.10
-* Officially support Ubuntu 22.04 and macOS
+* Support Ubuntu 22.04 and macOS officially
 * Upgrade packaging system: replace `setup.py` with `pyproject.toml` and use Hatchling as a build system
 * Upgrade all pip dependencies to the latest available version
-* Rename `counterparty-lib` repository to `counterparty-core`. **NOTE:** the normal redirect for GitHub URLs cannot be implemented
+* Rename `counterparty-lib` repository to `counterparty-core`. **NOTE:** The normal redirect for GitHub URLs cannot be implemented.
 * Merge the `counterparty-cli` repository into the `counterparty-core` repository
 * Add Rust library, `counterparty-rs`, for performance-critical code
-* Synchronized versions of `counterparty-rs`, `counterparty-lib` and `counterparty-cli`
+* Synchronize versions of `counterparty-rs`, `counterparty-lib` and `counterparty-cli`
 * Update URL for hosting bootstrap files to <https://bootstrap.counterparty.io/counterparty-*>
 * Update URL for hosting notifications for protocol changes to <https://counterparty.io/protocol_changes.json>
 
