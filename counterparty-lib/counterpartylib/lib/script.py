@@ -318,101 +318,11 @@ def script_to_asm(scriptpubkey):
         raise exceptions.DecodeError('invalid script')
 
 
-# f'{block_index}-{script_to_address(scriptpubkey)}': f'{decode_p2w(scriptpubkey)}'
-BAD_ADDRESSES = {
-    # tesnet
-    '2431884-tb1qudy5g780rm5yxnp9c7atvq6uas957qk2pxc84d26uv84w4c3jd8qay4mhj': 'tb1qudy5g780rm5yxnp9c7atvq6uas957qk2jrekv4',
-    '2434482-tb1qu9ns8lzf2lylqk04yv6ax5rrywkm8kl543u3xxh75n0pta3pue4qhuh94m': 'tb1qu9ns8lzf2lylqk04yv6ax5rrywkm8kl5u606fz',
-    # mainnet
-    '675550-bc1qmj7zxs9arakv82c28zrsypj8a3r35fu78jyfldzpfhesu0w4n7tqw23az4': 'bc1qmj7zxs9arakv82c28zrsypj8a3r35fu7pure55',
-    '706207-bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupckt6q4mpttt53wcgw5zkqyw35cd': 'bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupc6q5xx6',
-    '709410-bc1qcv6gpxjvmv03ss7renvpdfmltfmjrnsdwy2gdjr8xjmdltcnr4vsth4ze7': 'bc1qcv6gpxjvmv03ss7renvpdfmltfmjrnsdy30wl7',
-    '711342-bc1qmfk84cztyfffqdsstthngv6t58xj6tntuc3yr3nmmx4fn7ax696q2jh3y7': 'bc1qmfk84cztyfffqdsstthngv6t58xj6tnt8uf8hc',
-    '711417-bc1q08udlxcvdjmrenecx26lnlt6kp67lsnxttaarn3j6zj2hld07fgsn4avkh': 'bc1q08udlxcvdjmrenecx26lnlt6kp67lsnxzd2ag8',
-    '713108-bc1qnewecfxr65eplygyw2xsng2uuvsgh6wpk6p33gsnx3rwq4jl3n9qyesnlw': 'bc1qnewecfxr65eplygyw2xsng2uuvsgh6wpkgyjsz',
-    '717322-bc1ql3gt2uk4pyr67s8hn40y3qlrvwn5r7nftx85nks3skv0sjuq39rqxdjf2g': 'bc1ql3gt2uk4pyr67s8hn40y3qlrvwn5r7nfp0c57p',
-    '718552-bc1qwzj0jxl65ze5a9hqrmnr8ygycgsvctratf7d0rd5tqrj4swq8zws4eg8u3': 'bc1qwzj0jxl65ze5a9hqrmnr8ygycgsvctra2krt2y',
-    '718926-bc1qtjfmsnaa3zte7avxgpc5tp3n8dvksa7qqv2ftvmjmuf6vlgva0vsjw8xmf': 'bc1qtjfmsnaa3zte7avxgpc5tp3n8dvksa7qzjxegv',
-    '719361-bc1qh6awyk7mljfh8m6dt4c9grsaq3u9khytt0ktgl3npusnzt02ke5qknu3da': 'bc1qh6awyk7mljfh8m6dt4c9grsaq3u9khytq5xv6q',
-    '719804-bc1qf8fhznt8lnnrc24zjskxrghvvfngjpgfe8ssp5t9ppfmzm0a7yzqelly03': 'bc1qf8fhznt8lnnrc24zjskxrghvvfngjpgffu9z48',
-    '720270-bc1qaxjsnmkem70y4kh089fr9cll0aecqv4afmujlw4j5k9d7n82hc3qdngalk': 'bc1qaxjsnmkem70y4kh089fr9cll0aecqv4aechlaj',
-    '721335-bc1q7lxr8c9r8fx7a3e79r3ycp0uycchl5jugvy6pnfp8j6rg56avh6qz8wx42': 'bc1q7lxr8c9r8fx7a3e79r3ycp0uycchl5juljxq6a',
-    '722422-bc1qwzj0jxl65ze5a9hqrmnr8ygycgsvctratf7d0rd5tqrj4swq8zws4eg8u3': 'bc1qwzj0jxl65ze5a9hqrmnr8ygycgsvctra2krt2y',
-    '722741-bc1qry2hcfl067vaqdq3khry6engj0gpmweepevp75qd8efcwl8j0wsqvzzce9': 'bc1qry2hcfl067vaqdq3khry6engj0gpmwee58dzer',
-    '723213-bc1qfx8s3d7vj2m82hcdqpc4yeafng9ydqrqcgmz3dtdwetm95ua3ups7adl56': 'bc1qfx8s3d7vj2m82hcdqpc4yeafng9ydqrqyzq4st',
-    '724942-bc1qvketfkv0c6sv4x023ae4aprly7xvqcuad2dmqpdflf0t7rd0ewwsq55z46': 'bc1qvketfkv0c6sv4x023ae4aprly7xvqcua2nhqqr',
-    '724954-bc1q9wu266dexw0upuvme627uyhj9c4agtxr5gvdkm7f6w5dpahnlwfqfexmdy': 'bc1q9wu266dexw0upuvme627uyhj9c4agtxrvplk6n',
-    '725761-bc1qtsafn3yp7ldnk0n8xhl8qajc3ex3vdlehn67x6422g9ffkpn5jqquv268u': 'bc1qtsafn3yp7ldnk0n8xhl8qajc3ex3vdlehgz8r6',
-    '725906-bc1qwzj0jxl65ze5a9hqrmnr8ygycgsvctratf7d0rd5tqrj4swq8zws4eg8u3': 'bc1qwzj0jxl65ze5a9hqrmnr8ygycgsvctra2krt2y',
-    '727175-bc1qwe27pg5khnlavdess22xv476ur3v6ftzc8yrk8cwudtfc23hptssgwvl6c': 'bc1qwe27pg5khnlavdess22xv476ur3v6ftzha7ay8',
-    '730719-bc1q7vlsdw4ya0m0h87jpf3u8x3fzeqp787nllt0ehmgqyz5s7ejknxqplrwx2': 'bc1q7vlsdw4ya0m0h87jpf3u8x3fzeqp787nxp7zrz',
-    '730884-bc1qq3rljq7rej7z80eqkm0xpmag0wdvcrvk2qpaj46msp369fp2cegs86q8xr': 'bc1qq3rljq7rej7z80eqkm0xpmag0wdvcrvkwaqfll',
-    '732351-bc1qmp4aq6zvm2nzny75yqyrptdtp4f3nur8ypt395c0msdylm0tp8asgj6j97': 'bc1qmp4aq6zvm2nzny75yqyrptdtp4f3nur86nhkmx',
-    '732701-bc1qlkacwq8nhylu58p4xquaczq83edtdukpwg8wnnulk5sq7zzc3sjscfhsc9': 'bc1qlkacwq8nhylu58p4xquaczq83edtdukp5ug39a',
-    '732705-bc1qelquv8hf7km6dg77t2ft8kln873509wtcd38jmvv3y47kkdgh5hqu3feay': 'bc1qelquv8hf7km6dg77t2ft8kln873509wtqefdqz',
-    '734920-bc1ql9wn97d2xhpkpvvxldhg82kr6eplsv434fkd80n6vg29kpdqsw6ses9ea8': 'bc1ql9wn97d2xhpkpvvxldhg82kr6eplsv43j0h62q',
-    '738151-bc1qcd52n69ps78tjumlky5dxm7g6e5aer48lkyjyqja9mwtadsk5q2qjtrsc9': 'bc1qcd52n69ps78tjumlky5dxm7g6e5aer48p05xzn',
-    '738151-bc1q9lcmgf3t89txr3ncmehp2l6h94ppsvc839pcldgdtcd33yfextssnd4efk': 'bc1q9lcmgf3t89txr3ncmehp2l6h94ppsvc87a6hn9',
-    '740527-bc1qjgchsxj0ra0x4frvfw45y3nwhwpxgrtljtnwwulcvuh3wpzy3xkst0e2xt': 'bc1qjgchsxj0ra0x4frvfw45y3nwhwpxgrtlqvh54n',
-    '746425-bc1qwfgdjyy95aay2686fn74h6a4nu9eev6np7q4fn204dkj3274frlqrskvx0': 'bc1qwfgdjyy95aay2686fn74h6a4nu9eev6np0mzee',
-    '747656-bc1qz707axlr7wtvy6k7lesde52jecpeeqe2qahg8vkdc47469g588nqpmsq0u': 'bc1qz707axlr7wtvy6k7lesde52jecpeeqe2lmrehl',
-    '752024-bc1q08fy7sv8p59ly4mrfuccd6kwwqsaq04mmjwfxvt9ls4vm2l2s8lsrls7ws': 'bc1q08fy7sv8p59ly4mrfuccd6kwwqsaq04mspyrv0',
-    '754305-bc1q0hjfmnqafqpcdrcur27uyh9zpchtnh8ezsnnn57qyjm0h7lx0ydqlqm7xe': 'bc1q0hjfmnqafqpcdrcur27uyh9zpchtnh8e4enp8z',
-    '757284-bc1qt32naa7a5l7perdt65wwfac4xa69z302yc7jayvn8s6wm2xdsc6qurxkr5': 'bc1qt32naa7a5l7perdt65wwfac4xa69z302d4crh6',
-    '759190-bc1qn8y38x955443r0a2kl8typ3sxevpdlklhcmdm9htgkct9h37c72s6m85fy': 'bc1qn8y38x955443r0a2kl8typ3sxevpdlklg062r9',
-    '761547-bc1qgv2n6nf2fku66qmdugs6ful3tk2h3vcj9d52h5k0sxruqxdeqfpqh5emyx': 'bc1qgv2n6nf2fku66qmdugs6ful3tk2h3vcj48683v',
-    '762694-bc1qary3ng3wtlqvglqx3vdkqlw0d7j92qvcapdzekrsg8g9p3hve5us9w2snm': 'bc1qary3ng3wtlqvglqx3vdkqlw0d7j92qvcmhzate',
-    '768271-bc1q226aruacmq4jl7slqhgfhajz2xlxk2ektdm5cdy0dudyf2prlcrsvk3xgv': 'bc1q226aruacmq4jl7slqhgfhajz2xlxk2ekvy2ncg',
-    '773926-bc1qj0tw3recrlm4fag5v7f033rhmlmudc9h5eqnm3s5u47e8zedx42qxp5shd': 'bc1qj0tw3recrlm4fag5v7f033rhmlmudc9hrxddyp',
-    '774617-bc1qfygdhvh64zyjqe4ll2nvnhq7tyq4krujlzs5l32th4jmgyr0xtnqs4yhrt': 'bc1qfygdhvh64zyjqe4ll2nvnhq7tyq4krujxr2lft',
-    '774984-bc1qscx4zsnhgv0lc0mqsmqv6lmtv6qdnvvqsxe5vmjpt37qny42rlzqy4fg6p': 'bc1qscx4zsnhgv0lc0mqsmqv6lmtv6qdnvvqhl4l9g',
-    '777117-bc1qp78hjqgh47kpq5gq65vxty4js4sc6evga8gs8ekf4d7zjpapcxfq5zt6z6': 'bc1qp78hjqgh47kpq5gq65vxty4js4sc6evgmwftju',
-    '777497-bc1q69sspds2zus36wg5a93guwefx85a8cqhwhhks7mlq009f8jhqlfquuqwcf': 'bc1q69sspds2zus36wg5a93guwefx85a8cqhdhqdzt',
-    '778297-bc1qwfgdjyy95aay2686fn74h6a4nu9eev6np7q4fn204dkj3274frlqrskvx0': 'bc1qwfgdjyy95aay2686fn74h6a4nu9eev6np0mzee',
-    '779659-bc1q86p9t3058zsehdnwvafm8w55yz0meww38w30y70y3y36p4w369ysxad2cz': 'bc1q86p9t3058zsehdnwvafm8w55yz0meww3xfu2g5',
-    '780711-bc1qk7elr482ng27p0gfjhx643wu72fkgjzj8sh9588fkgxy3jp6dd5qmjvrl3': 'bc1qk7elr482ng27p0gfjhx643wu72fkgjzja6epe2',
-    '781325-bc1qf8g554f43ce3677s4vdt8pj98mq60g6s7sw02eptyk8y327dtc3sxzy7vt': 'bc1qf8g554f43ce3677s4vdt8pj98mq60g6s96prq7',
-    '788609-bc1qwfgdjyy95aay2686fn74h6a4nu9eev6np7q4fn204dkj3274frlqrskvx0': 'bc1qwfgdjyy95aay2686fn74h6a4nu9eev6np0mzee',
-    '794139-bc1qp653euwemkejn6qcs7gmf8q7283c7xvck4gm59jvr0nd9ljryhqq7pnknm': 'bc1qp653euwemkejn6qcs7gmf8q7283c7xvcx2rx7d',
-    '797636-bc1qcjyrrk6ll4zly8em0m6w9r4awha2ctrk26x09y47t5rjtfzrp0csw5xvfz': 'bc1qcjyrrk6ll4zly8em0m6w9r4awha2ctrk8nkev4',
-    '801339-bc1q0uvuy894mmm44aaphk92j8f2l2tjdel39jnwut6lmyfyecpcsh4q62aqwq': 'bc1q0uvuy894mmm44aaphk92j8f2l2tjdel34vhfff',
-    '801560-bc1qm00nan6e87c9af33gm4a2ujc0qvjj5lqj7lfu7sw7yfrr5mm8epqejmuqj': 'bc1qm00nan6e87c9af33gm4a2ujc0qvjj5lq9vjkve',
-    '801574-bc1qfvkmkxyxhcvqk0s7vckatp60mxht9gwq2z660pmj2pgrj0dgqp2s782qlm': 'bc1qfvkmkxyxhcvqk0s7vckatp60mxht9gwq86hhx2',
-    '802911-bc1q7mdlmz382xzrx5z0mcu3862uczqezql0uusru4na6rtrkjg0z55qkgpzm9': 'bc1q7mdlmz382xzrx5z0mcu3862uczqezql02ef2rd',
-    '804444-bc1qp2g69mfm4m6whdufxq9mslp5cu6khny4l0v4pp3qgn6k705gkvzs7sf3n9': 'bc1qp2g69mfm4m6whdufxq9mslp5cu6khny473d57u',
-    '805083-bc1qp4ds9qqkhutk3up0jr679gtdlr4z5emp2yu7am9ljae07lm8n2wq4sc8gu': 'bc1qp4ds9qqkhutk3up0jr679gtdlr4z5empmymk09',
-    '805371-bc1qx6slrx7nyy0hn20ejn2s0xdjr43xrjzjqrzac8h46v3pqjlhuz0qksurnz': 'bc1qx6slrx7nyy0hn20ejn2s0xdjr43xrjzjq3qs6l',
-    '805691-bc1qjrp0hkghkj20x8a53dulvwstda0lfs22357wp8j57dfck2dy5q6skqx3ed': 'bc1qjrp0hkghkj20x8a53dulvwstda0lfs22a3dv85',
-    '806505-bc1qrv9uz6e3zlak8tuaj44swgtwt0g8zt68z5ujrt5vmmjad5jmvmpqp5dh09': 'bc1qrv9uz6e3zlak8tuaj44swgtwt0g8zt68sxnc5u',
-    '807030-bc1qwfgdjyy95aay2686fn74h6a4nu9eev6np7q4fn204dkj3274frlqrskvx0': 'bc1qwfgdjyy95aay2686fn74h6a4nu9eev6np0mzee',
-    '808462-bc1q6jn5ymkta9n5gtqedl7ttu8fkvqvnfy30gkjv2u02h86xgu8qzqsvg44jx': 'bc1q6jn5ymkta9n5gtqedl7ttu8fkvqvnfy373zvqx',
-    '809814-bc1qknv5w4y5lup0m3dzla5249lkd0uupr6hr0xjpv9rq68y5fdfug4q4r722s': 'bc1qknv5w4y5lup0m3dzla5249lkd0uupr6h5nqfcd',
-    '810256-bc1q6j98pk2xkmu95mtgj5vk3gt37zr3jkqng5sau5na47d8xrknrkzqpe8rv4': 'bc1q6j98pk2xkmu95mtgj5vk3gt37zr3jkqnr43at6',
-    '810670-bc1q46jrn9s6rz7syjr93kujp7hmewaadsl5ddrv0gd40qzcnqt7ynpsua4y37': 'bc1q46jrn9s6rz7syjr93kujp7hmewaadsl5rlxv7f',
-    '811542-bc1q6mh8jk0xa04lfh27fwcm03585n0lcygkht4g3srf2cpa4cjmlruq75fa0a': 'bc1q6mh8jk0xa04lfh27fwcm03585n0lcygkelwtps',
-    '811847-bc1qahn8wtngd4mdnthjknp7vlhzuqe7mahkrqscgg9q8ngw6n82hwfsk33k5e': 'bc1qahn8wtngd4mdnthjknp7vlhzuqe7mahk9nwyr3',
-    '813766-bc1q96a40aftulh8fhkq30gqllp5y70uz02hyshuus2tgvswq26f72jq329spz': 'bc1q96a40aftulh8fhkq30gqllp5y70uz02h2lms00',
-    '813991-bc1q9p3x7hma6p8gckq9dg8qpp8e5cs955tzfeyhhvk5m3utte9etujs2ra046': 'bc1q9p3x7hma6p8gckq9dg8qpp8e5cs955tz6fzz9u',
-    '814379-bc1qlmjaracv3dkxqpf75jnhpev8uptexmr8ctl8a0nrptgftqlfw5lqtdkdc5': 'bc1qlmjaracv3dkxqpf75jnhpev8uptexmr8hlsjqa',
-    '814436-bc1qvhvwd5a4pfm2p856t9xwws2p4jcs0s49uwen0m8akaawvq8x5hnq9n7t05': 'bc1qvhvwd5a4pfm2p856t9xwws2p4jcs0s49vq0236',
-    '814513-bc1qduennc6trafx8ne6khgzrwvw8tn96h0jw3u89puxgge6gedkttzq08fnd0': 'bc1qduennc6trafx8ne6khgzrwvw8tn96h0jtr92e6',
-    '815732-bc1qnl03w2lgs82fgrjwe7fkuqwlsk7275t89k0tml9rr02nzqlet7hq6c4r24': 'bc1qnl03w2lgs82fgrjwe7fkuqwlsk7275t8kdwvw3',
-    '815966-bc1qvrjuk7t779q607v8m36yy0j7rscnvl4mxenn0klfvjy5ph93mflssd7qrc': 'bc1qvrjuk7t779q607v8m36yy0j7rscnvl4m5k37jq',
-    '820818-bc1qpx40lk8luqqpqjjxf9rqqqgpqyqysqzgqqq0lkcqgvqpqzcvpcxqlnp0ns': 'bc1qpx40lk8luqqpqjjxf9rqqqgpqyqysqzg3hra0j',
-}
-
-
 def script_to_address(scriptpubkey):
     try:
         network = 'mainnet' if config.TESTNET == False else 'testnet'
         script = bytes(scriptpubkey, 'utf-8') if type(scriptpubkey) == str else bytes(scriptpubkey)
-
-        address = utils.script_to_address(script, network)
-
-        # reproduce bug with the old decode_p2w() function
-        address = BAD_ADDRESSES.get(f"{ledger.CURRENT_BLOCK_INDEX}-{address}", address)
-
-        return address
+        return utils.script_to_address(script, network)
     except BaseException as e:
         raise exceptions.DecodeError('scriptpubkey decoding error')
 
