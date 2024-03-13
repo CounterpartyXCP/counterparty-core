@@ -9,7 +9,7 @@ This is a hotfix release for three critical bugs, each of which causes the netwo
 
 # Credits
 * Juan Alemán
-* Javier
+* Javier Varona
 * Dan Anderson
 * Curtis Lacy
 * Ouziel Slama
