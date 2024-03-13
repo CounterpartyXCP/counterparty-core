@@ -1,65 +1,68 @@
 ## Counterparty Core Versions ##
 
 * v10.0.0-alpha (2024-03-1?)
-    * Upgrade from Python 3.7 to Python >= 3.10.
-    * Upgrade packaging system. Replace `setup.py` by `pyproject.toml` using Hatchling as build system.
-    * Upgrade all PIP dependencies to the latest version.
-    * Fix test suite.
-    * Add checkpoints `mainnet` up to 825000 and `tesnet` up to 2540000.
-    * Remove several generic `except`.
-    * Activate WAL mode and all `apsw.best_pratices()`.
-    * DRY and refactor database indexes creation. Fix duplicates index names.
-    * Fix software version checking (`check.software_version()`)
-    * Fix database version checking (`check.database_version()`)
-    * Rename `counterparty-lib` repository to `counterparty-core`.
-    * Move `counterparty-cli` repository inside `counterparty-core` repository.
-    * DRY and isolate all SQL queries in `ledger.py` (except first insertion still inside contracts).
-    * DRY and refactor `get_tx_info*` functions:
-        * isolate transaction parsing inside `gettxinfo.py` module,
-        * clean and remove useless code block,
-        * split into several smaller functions: `parse_transaction_vouts()`, `get_transaction_sources()`, ...,
-        * isolate dispensers logic in `get_dispensers_outputs()` and `get_dispensers_tx_info()`
-    * Rewrite README. Installation guide for Ubuntu 22.04 and MacOS.
-    * Rewrite and simplify Dockerfile
-    * Add `simplenode`: Docker compose file to build a minimal node (Bitcoin Core, AddrindexRS and Counterparty Core)
-    * Add Github Workflows. On each push:
-        * Build and install PIP packages then run test suite.
-        * Run code scanners:
-            * Pylint
-            * Bandit
-            * CodeQL
-            * License Scanner
-    * Append Only Database:
-        * Add `block_index` field in `balances` table
-        * Remove all UPDATE queries: instead, use the `ledger.insert_update` function which adds a new row with a new `block_index`.
-        * Update all SELECT queries: for a given object identifier we select the line with the `MAX(rowid)`.
-        * Remove completetly `undolog`.
-        * Refactor `rollback` and `reparse`: just delete rows using `block_index` field.
-    * Kickstart:
-        * DRY and refactor
-        * Add segwit transaction support
-        * Use two processes (using shared memory and queue for communication):
-            * the first to read blocks from blk*.dat files, deserialize transasctions and parse vouts
-            * the second to parse transactions
-    * Pre-fetching with multi-threads. Use of threads to prefetch blocks when using `start` command.
-    * Add `counterparty-rs` package: Rust and pyo3-based speed-ups for the most resource-intensive functions:
-        * b58_encode() and b58_decode()
-        * script_to_asm()
-        * script_to_address()
-        * inverse_hash()
-    * Always log to a file, unless explicitly disabled with `--no-log-files`.
-    * Fix and clean `log.set_up()` function.
-    * New CLI UI:
-        * No logs in console except for `start` command
-        * Fancy spinners for all other functions
-    * Rename `checkdb` command to `check-db`. Fix database integrity check and include assert conservation check.
-    * Rename `debugonfig` to `show-config`. Clean output.
-    * Same version for `counterparty-rs`, `counterparty-lib` and `counterparty-cli`.
-    * AddrindexRS:
-        * Update crates versions.
-        * Split addr options into host and port
-        * Pretty print config
-        * Clean Docker file
+    * Bugfixes
+        * Fix test suite.
+        * Fix software version checking (`check.software_version()`)
+        * Fix database version checking (`check.database_version()`)
+        * DRY and refactor database indexes creation. Fix duplicates index names.
+        * Remove several generic `except`.
+        * Add checkpoints `mainnet` up to 825000 and `tesnet` up to 2540000.
+        * Fix and clean `log.set_up()` function.
+    * Cleaning and refactoring
+        * Upgrade from Python 3.7 to Python >= 3.10.
+        * Upgrade packaging system. Replace `setup.py` by `pyproject.toml` using Hatchling as build system.
+        * Upgrade all PIP dependencies to the latest version.
+        * Activate WAL mode and all `apsw.best_pratices()`.
+        * Rename `counterparty-lib` repository to `counterparty-core`.
+        * Move `counterparty-cli` repository inside `counterparty-core` repository.
+        * DRY and isolate all SQL queries in `ledger.py` (except first insertion still inside contracts).
+        * DRY and refactor `get_tx_info*` functions:
+            * isolate transaction parsing inside `gettxinfo.py` module,
+            * clean and remove useless code block,
+            * split into several smaller functions: `parse_transaction_vouts()`, `get_transaction_sources()`, ...,
+            * isolate dispensers logic in `get_dispensers_outputs()` and `get_dispensers_tx_info()`
+        * Rewrite README. Installation guide for Ubuntu 22.04 and MacOS.
+        * Rewrite and simplify Dockerfile
+        * Add `simplenode`: Docker compose file to build a minimal node (Bitcoin Core, AddrindexRS and Counterparty Core)
+        * Add Github Workflows. On each push:
+            * Build and install PIP packages then run test suite.
+            * Run code scanners:
+                * Pylint
+                * Bandit
+                * CodeQL
+                * License Scanner
+        * Always log to a file, unless explicitly disabled with `--no-log-files`.
+        * Same version for `counterparty-rs`, `counterparty-lib` and `counterparty-cli`.
+        * AddrindexRS:
+            * Update crates versions.
+            * Split addr options into host and port
+            * Pretty print config
+            * Clean Docker file
+    * New features and optimizations
+        * Append-Only Database:
+            * Add `block_index` field in `balances` table
+            * Remove all UPDATE queries: instead, use the `ledger.insert_update` function which adds a new row with a new `block_index`.
+            * Update all SELECT queries: for a given object identifier we select the line with the `MAX(rowid)`.
+            * Remove completly `undolog`.
+            * Refactor `rollback` and `reparse`: just delete rows using `block_index` field.
+        * Kickstart:
+            * DRY and refactor
+            * Add segwit transaction support
+            * Use two processes (using shared memory and queue for communication):
+                * the first to read blocks from blk*.dat files, deserialize transasctions and parse vouts
+                * the second to parse transactions
+        * Pre-fetching with multi-threads. Use of threads to prefetch blocks when using `start` command.
+        * Add `counterparty-rs` package: Rust and pyo3-based speed-ups for the most resource-intensive functions:
+            * b58_encode() and b58_decode()
+            * script_to_asm()
+            * script_to_address()
+            * inverse_hash()
+        * New CLI UI:
+            * No logs in console except for `start` command
+            * Fancy spinners for all other functions
+        * Rename `checkdb` command to `check-db`. Fix database integrity check and include assert conservation check.
+        * Rename `debugonfig` to `show-config`. Clean output.
 
 ## Old `counterparty-lib` Repository Versions ##
 
