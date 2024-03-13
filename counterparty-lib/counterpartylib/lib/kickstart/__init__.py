@@ -226,11 +226,11 @@ def backup_db(move=False):
         # Delete SQLite Write-Ahead-Log
         wal_path = config.DATABASE + '-wal'
         shm_path = config.DATABASE + '-shm'
-        try: 
+        try:
             os.remove(wal_path)
         except OSError:
             pass
-        try: 
+        try:
             os.remove(shm_path)
         except OSError:
             pass

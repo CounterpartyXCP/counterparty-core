@@ -137,11 +137,11 @@ def bootstrap(testnet=False, overwrite=True):
     # Delete SQLite Write-Ahead-Log
     wal_path = database_path + "-wal"
     shm_path = database_path + "-shm"
-    try: 
+    try:
         os.remove(wal_path)
     except OSError:
         pass
-    try: 
+    try:
         os.remove(shm_path)
     except OSError:
         pass
