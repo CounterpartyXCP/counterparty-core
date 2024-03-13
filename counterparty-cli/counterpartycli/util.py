@@ -129,11 +129,12 @@ def bootstrap(testnet=False, overwrite=True):
     bootstrap_url = config.BOOTSTRAP_URL_TESTNET if testnet else config.BOOTSTRAP_URL_MAINNET
     tar_filename = os.path.basename(bootstrap_url)
     tarball_path = os.path.join(tempfile.gettempdir(), tar_filename)
-    database_path = os.path.join(data_dir, tar_filename)
     database_path = os.path.join(data_dir, config.APP_NAME)
     if testnet:
         database_path += '.testnet'
     database_path += '.db'
+    wal_path = os.path.join(database_path, "-wal")
+    shm_path = os.path.join(database_path, "-shm")
 
     # Prepare Directory.
     if not os.path.exists(data_dir):
@@ -176,6 +177,8 @@ def bootstrap(testnet=False, overwrite=True):
     step = 'Cleaning up...'
     with Halo(text=step, spinner=SPINNER_STYLE):
         os.remove(tarball_path)
+        os.remove(wal_path)
+        os.remove(shm_path)
     print(f"{OK_GREEN} {step}")
 
     cprint(f"Database has been successfully bootstrapped to {database_path}.", "green")
