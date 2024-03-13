@@ -3,14 +3,14 @@
 This is a hotfix release for three critical bugs, each of which causes the network suddenly to halt when triggered.
 
 # Bugfixes
-    * Fix integer overflow in dispensers
-    * Invalidate broadcast with malformed text
-    * Fix logging for destructions with invalid asset
+* Fix integer overflow in dispensers
+* Invalidate broadcast with malformed text
+* Fix logging for destructions with invalid asset
 
 # Credits
-    * Juan Alemán
-    * Javier
-    * Dan Anderson
-    * Curtis Lacy
-    * Ouziel Slama
-    * Adam Krellenstein
+* Juan Alemán
+* Javier
+* Dan Anderson
+* Curtis Lacy
+* Ouziel Slama
+* Adam Krellenstein
