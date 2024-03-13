@@ -129,11 +129,22 @@ def bootstrap(testnet=False, overwrite=True):
     bootstrap_url = config.BOOTSTRAP_URL_TESTNET if testnet else config.BOOTSTRAP_URL_MAINNET
     tar_filename = os.path.basename(bootstrap_url)
     tarball_path = os.path.join(tempfile.gettempdir(), tar_filename)
-    database_path = os.path.join(data_dir, tar_filename)
     database_path = os.path.join(data_dir, config.APP_NAME)
     if testnet:
         database_path += '.testnet'
     database_path += '.db'
+
+    # Delete SQLite Write-Ahead-Log
+    wal_path = database_path + "-wal"
+    shm_path = database_path + "-shm"
+    try:
+        os.remove(wal_path)
+    except OSError:
+        pass
+    try:
+        os.remove(shm_path)
+    except OSError:
+        pass
 
     # Prepare Directory.
     if not os.path.exists(data_dir):
