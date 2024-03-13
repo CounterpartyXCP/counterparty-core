@@ -55,6 +55,11 @@
     * Rename `checkdb` command to `check-db`. Fix database integrity check and include assert conservation check.
     * Rename `debugonfig` to `show-config`. Clean output.
     * Same version for `counterparty-rs`, `counterparty-lib` and `counterparty-cli`.
+    * AddrindexRS:
+        * Update crates versions.
+        * Split addr options into host and port
+        * Pretty print config
+        * Clean Docker file
 
 ## Old `counterparty-lib` Repository Versions ##
 
