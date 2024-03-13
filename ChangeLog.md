@@ -3,9 +3,9 @@
 * v10.0.0-alpha (2024-03-1?)
     * Bugfixes
         * Fix test suite.
-        * Fix software version checking (`check.software_version()`)
-        * Fix database version checking (`check.database_version()`)
-        * DRY and refactor database indexes creation. Fix duplicates index names.
+        * Fix crash in software version checking caused by a format change of `protocol_changes.json` not taken into account in the function `check.software_version()`.
+        * Fix database version checking which systematically launched a full reparse instead of launching a rollback for major version changes and a reparse for minor version changes (`check.database_version()`).
+        * Fix indexes: most indexes did not exist because they had the same name for all tables.
         * Remove several generic `except`.
         * Add checkpoints `mainnet` up to 825000 and `tesnet` up to 2540000.
         * Fix and clean `log.set_up()` function.
@@ -34,6 +34,7 @@
                 * License Scanner
         * Always log to a file, unless explicitly disabled with `--no-log-files`.
         * Same version for `counterparty-rs`, `counterparty-lib` and `counterparty-cli`.
+        * DRY and refactor database indexes creation. 
         * AddrindexRS:
             * Update crates versions.
             * Split addr options into host and port
