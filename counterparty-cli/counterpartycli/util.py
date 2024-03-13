@@ -133,8 +133,18 @@ def bootstrap(testnet=False, overwrite=True):
     if testnet:
         database_path += '.testnet'
     database_path += '.db'
-    wal_path = os.path.join(database_path, "-wal")
-    shm_path = os.path.join(database_path, "-shm")
+
+    # Delete SQLite Write-Ahead-Log
+    wal_path = database_path + "-wal"
+    shm_path = database_path + "-shm"
+    try: 
+        os.remove(wal_path)
+    except OSError:
+        pass
+    try: 
+        os.remove(shm_path)
+    except OSError:
+        pass
 
     # Prepare Directory.
     if not os.path.exists(data_dir):
@@ -177,8 +187,6 @@ def bootstrap(testnet=False, overwrite=True):
     step = 'Cleaning up...'
     with Halo(text=step, spinner=SPINNER_STYLE):
         os.remove(tarball_path)
-        os.remove(wal_path)
-        os.remove(shm_path)
     print(f"{OK_GREEN} {step}")
 
     cprint(f"Database has been successfully bootstrapped to {database_path}.", "green")

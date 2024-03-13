@@ -222,6 +222,19 @@ def backup_db(move=False):
             os.rename(config.DATABASE, config.DATABASE + '.old')
         else:
             shutil.copy(config.DATABASE, config.DATABASE + '.old')
+
+        # Delete SQLite Write-Ahead-Log
+        wal_path = config.DATABASE + '-wal'
+        shm_path = os.remove(config.DATABASE + '-shm'
+        try: 
+            os.remove(wal_path)
+        except OSError:
+            pass
+        try: 
+            os.remove(shm_path)
+        except OSError:
+            pass
+
     print(f'{OK_GREEN} {step}')
 
 
