@@ -403,8 +403,8 @@ def indexer_check_version():
         #logger.error(message)
         INDEXER_THREAD.stop()
         raise exceptions.InvalidVersion(message)
-    else:
-        logger.debug(f'Version check of address indexer passed ({config.ADDRINDEXRS_VERSION} == {addrindexrs_version_label}).')
+
+    logger.debug(f'Version check of address indexer passed ({config.ADDRINDEXRS_VERSION} == {addrindexrs_version_label}).')
 
 def _script_pubkey_to_hash(spk):
     return hashlib.sha256(spk).digest()[::-1].hex()
