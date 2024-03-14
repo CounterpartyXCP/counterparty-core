@@ -16,7 +16,7 @@ import functools
 import bitcoin.wallet
 from pkg_resources import parse_version
 
-from counterpartylib.lib import config, util, ledger
+from counterpartylib.lib import config, util, ledger, exceptions
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -397,14 +397,14 @@ def indexer_check_version():
     except TypeError as e:
         logger.exception(f'Error when checking address indexer version: {addrindexrs_version}')
         sys.exit(1)
-    addrindexrs_version_needed = ledger.get_value_by_block_index("addrindexrs_required_version")
 
-    if parse_version(addrindexrs_version_needed) > parse_version(addrindexrs_version_label):
-        logger.info("Wrong addrindexrs version: "+addrindexrs_version_needed+" is needed but "+addrindexrs_version_label+" was found")
+    if addrindexrs_version_label != config.ADDRINDEXRS_VERSION:
+        message = f"Wrong addrindexrs version: {config.ADDRINDEXRS_VERSION} is needed but {addrindexrs_version_label} was found"
+        #logger.error(message)
         INDEXER_THREAD.stop()
-        sys.exit(config.EXITCODE_UPDATE_REQUIRED)
+        raise exceptions.InvalidVersion(message)
     else:
-        logger.debug(f'Version check of address indexer passed ({addrindexrs_version_label} > {addrindexrs_version_needed}).')
+        logger.debug(f'Version check of address indexer passed ({config.ADDRINDEXRS_VERSION} == {addrindexrs_version_label}).')
 
 def _script_pubkey_to_hash(spk):
     return hashlib.sha256(spk).digest()[::-1].hex()

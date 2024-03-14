@@ -459,25 +459,6 @@
       "block_index": 819300,
       "testnet_block_index": 2505725
   },
-  "addrindexrs_required_version": {
-    "minimum_version_major": 0,
-    "mainnet":{
-      "0":{
-        "value":"0.4.0"
-      },
-      "819300":{
-        "value":"0.4.1"
-      }   
-    },
-    "testnet":{
-      "0":{
-        "value":"0.4.0"
-      },    
-      "2505725":{
-        "value":"0.4.1"
-      }
-    }
-  },
   "max_dispenses_limit": {
     "minimum_version_major": 0,
     "mainnet":{
