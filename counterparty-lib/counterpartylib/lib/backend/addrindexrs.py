@@ -616,19 +616,19 @@ class AddrindexrsSocket:
             self.connect()
             return self.send(query, timeout=timeout, retry=retry + 1)
 
-    def get_oldest_tx(self, address, timeout=SOCKET_TIMEOUT):
+    def get_oldest_tx(self, address, timeout=SOCKET_TIMEOUT, block_index=None):
         hsh = _address_to_hash(address)
         query = {
             "method": "blockchain.scripthash.get_oldest_tx",
-            "params": [hsh]
+            "params": [hsh, block_index or ledger.CURRENT_BLOCK_INDEX]
         }
         return self.send(query, timeout=timeout)
 
 
 ADDRINDEXRS_CLIENT = None
 
-def get_oldest_tx(address):
+def get_oldest_tx(address, block_index=None):
     global ADDRINDEXRS_CLIENT
     if ADDRINDEXRS_CLIENT is None:
         ADDRINDEXRS_CLIENT = AddrindexrsSocket()
-    return ADDRINDEXRS_CLIENT.get_oldest_tx(address)
+    return ADDRINDEXRS_CLIENT.get_oldest_tx(address, block_index=block_index)
