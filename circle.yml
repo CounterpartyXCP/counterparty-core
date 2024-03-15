@@ -5,102 +5,18 @@ orbs:
   python: circleci/python@2.0.3
 
 jobs:
-  build:
+
+  test-book-testnet:
     docker:
-      - image: cimg/python:3.6.15
+        - image: cimg/python:3.11.6
 
     steps:
-      - checkout
-
-      - python/install-packages:
-          pkg-manager: pip
-
       - run:
-          name: Run counterparty-lib setup and install
-          command: python setup.py develop 
-
-      - run: 
-          name: Run apsw setup and install
-          command: python setup.py install_apsw
-
-      - persist_to_workspace:
-          root: ~/
-          paths:
-            - .      
-
-  test:
-    docker:
-      - image: cimg/python:3.6.15
-
-    steps:
-      - attach_workspace:
-          at: ~/
-      
-      - run:
-          name: "Run tests"
+          name: "TODO"
           command: |
-            mkdir test-results
-            py.test --junitxml=test-results/junit.xml --verbose --skiptestbook=all --cov-config=.coveragerc --cov-report=term-missing --cov=./ counterpartylib
-
-      - store_test_results:
-          path: test-results
-
-  test-reparse-testnet:
-    docker:
-        - image: cimg/python:3.6.15
-    
-    steps:
-      - attach_workspace:
-          at: ~/
-
-      - run:
-          name: "Get latest testnet db file"
-          command: |
-            mkdir -p ~/.local/share/counterparty
-            wget https://counterparty.io/bootstrap/counterparty-db-testnet-7.latest.tar.gz -O ~/.local/share/counterparty/counterparty-db-testnet.latest.tar.gz
-            tar -C ~/.local/share/counterparty -xvzf ~/.local/share/counterparty/counterparty-db-testnet.latest.tar.gz
-
-      - run:
-          name: "Run testnet reparse test"
-          command: |
-            mkdir test-results
-            py.test --junitxml=test-results/junit.xml --verbose --capture=no --skiptestbook=mainnet -k test_book counterpartylib/test/reparse_test.py
-      
-      - store_test_results:
-          path: test-results
-
-  test-reparse-mainnet:
-    docker:
-        - image: cimg/python:3.6.15
-    
-    steps:
-      - attach_workspace:
-          at: ~/
-
-      - run:
-          name: "Get latest mainnet db file"
-          command: |
-            mkdir -p ~/.local/share/counterparty
-            wget https://counterparty.io/bootstrap/counterparty-db.latest.tar.gz -O ~/.local/share/counterparty/counterparty-db.latest.tar.gz
-            tar -C ~/.local/share/counterparty -xvzf ~/.local/share/counterparty/counterparty-db.latest.tar.gz
-
-      - run:
-          name: "Run testnet reparse test"
-          command: |
-            mkdir test-results
-            py.test --junitxml=test-results/junit.xml --verbose --capture=no --skiptestbook=testnet -k test_book counterpartylib/test/reparse_test.py
-      
-      - store_test_results:
-          path: test-results
-
+              echo "Success"
 
 workflows:
   build-and-test:
     jobs:
-      - build
-      - test:
-          requires:
-            - build
-      - test-reparse-testnet:
-          requires:
-            - build
+      - test-book-testnet

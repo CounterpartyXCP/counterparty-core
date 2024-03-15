@@ -1,0 +1,77 @@
+version: '3' 
+
+services:
+  bitcoind:
+    image: kylemanna/bitcoind
+    ports: 
+      - "8332:8332"                           # mainnet
+      # - "18332:18332"                       # testnet
+    command: 
+      - "-chain=main"                         # mainnet
+      # - "-chain=test"                       # testnet
+      - "-rpcallowip=0.0.0.0/0"
+      - "-rpcbind=0.0.0.0"
+      - "-rpcuser=rpc"
+      - "-rpcpassword=rpc"
+      - "-listen=1"
+      - "-server=1"
+      - "-printtoconsole=1"
+      - "-addresstype=legacy"
+      - "-txindex=1"
+      - "-prune=0"
+      - "-dbcache=4000"
+      - "-mempoolfullrbf=1"
+    volumes:
+      - data:/bitcoin
+
+  addrindexrs:
+    image: counterparty/addrindexrs
+    links:
+      - bitcoind
+    volumes:
+      - data:/data
+    ports:
+      - "8432:8432"                           # mainnet
+      # - "18432:18432"                       # testnet
+    command:
+      - "--network=bitcoin"                   # mainnet
+      # - "--network=testnet"                 # testnet
+      - "--indexer-rpc-host=0.0.0.0"
+      - "--daemon-rpc-host=0.0.0.0"
+      - "--cookie=rpc:rpc"
+      - "--daemon-dir=/bitcoin/.bitcoin"
+      - "-vvv"
+      - "--db-dir=/data/addrindexrs/db"
+    environment:
+      - ADDRINDEXRS_JSONRPC_IMPORT=true
+
+  counterparty-core:
+    image: counterparty/counterparty
+    links:
+      - bitcoind
+      - addrindexrs
+    volumes:
+      - data:/data
+    ports:
+      - "4000:4000"                           # mainnet
+      # - "14000:14000"                       # testnet
+    entrypoint: "counterparty-server"         # TODO: `start` has to come after the flags.
+    command:
+      # "--testnet"                           # testnet
+      - "--backend-connect=bitcoind"
+      - "--backend-user=rpc"
+      - "--backend-password=rpc"
+      - "--indexd-connect=addrindexrs"
+      - "--rpc-user=rpc"
+      - "--rpc-password=rpc"
+      - "--rpc-host=0.0.0.0"
+      - "--log-file=1"
+      - "--api-log-file=1"
+      - "start"
+    environment:
+      - "XDG_DATA_HOME=/data/"
+      - "XDG_LOG_HOME=/data/"
+
+volumes:
+  data:                                       # mainnet
+  # data-testnet:                             # testnet

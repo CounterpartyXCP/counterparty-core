@@ -1,0 +1,242 @@
+#! /usr/bin/python3
+
+import sys
+import os
+import threading
+import decimal
+import time
+import json
+import re
+import requests
+import collections
+import logging
+import binascii
+from datetime import datetime
+from dateutil.tz import tzlocal
+import argparse
+import configparser
+import appdirs
+import tarfile
+import urllib.request
+import shutil
+import codecs
+import tempfile
+
+from halo import Halo
+from termcolor import colored, cprint
+
+from counterpartylib import server
+from counterpartylib.lib import config, check
+from counterpartylib.lib.util import value_input, value_output
+
+logger = logging.getLogger(config.LOGGER_NAME)
+D = decimal.Decimal
+
+OK_GREEN = colored("[OK]", "green")
+SPINNER_STYLE = "bouncingBar"
+
+rpc_sessions = {}
+
+class JsonDecimalEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o,  D):
+            return str(o)
+        return super(JsonDecimalEncoder, self).default(o)
+
+
+json_dump = lambda x: json.dumps(x, sort_keys=True, indent=4, cls=JsonDecimalEncoder)
+json_print = lambda x: print(json_dump(x))
+
+class RPCError(Exception):
+    pass
+class AssetError(Exception):
+    pass
+
+def rpc(url, method, params=None, ssl_verify=False, tries=1):
+    headers = {'content-type': 'application/json'}
+    payload = {
+        "method": method,
+        "params": params,
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+
+    if url not in rpc_sessions:
+        rpc_session = requests.Session()
+        rpc_sessions[url] = rpc_session
+    else:
+       	rpc_session = rpc_sessions[url]
+
+    response = None
+    for i in range(tries):
+        try:
+            response = rpc_session.post(url, data=json.dumps(payload), headers=headers, verify=ssl_verify, timeout=config.REQUESTS_TIMEOUT)
+            if i > 0:
+                logger.debug('Successfully connected.')
+            break
+        except requests.exceptions.SSLError as e:
+            raise e
+        except requests.exceptions.Timeout as e:
+            raise e
+        except requests.exceptions.ConnectionError:
+            logger.debug(f'Could not connect to {url}. (Try {i+1}/{tries})')
+            time.sleep(5)
+
+    if response == None:
+        raise RPCError(f'Cannot communicate with {url}.')
+    elif response.status_code not in (200, 500):
+        raise RPCError(str(response.status_code) + ' ' + response.reason + ' ' + response.text)
+
+    # Return result, with error handling.
+    response_json = response.json()
+    if 'error' not in response_json.keys() or response_json['error'] == None:
+        return response_json['result']
+    else:
+        raise RPCError(f"{response_json['error']}")
+
+def api(method, params=None):
+    return rpc(config.COUNTERPARTY_RPC, method, params=params, ssl_verify=config.COUNTERPARTY_RPC_SSL_VERIFY)
+
+def wallet_api(method, params=None):
+    return rpc(config.WALLET_URL, method, params=params, ssl_verify=config.WALLET_SSL_VERIFY)
+
+def is_divisible(asset):
+    if asset in (config.BTC, config.XCP, 'leverage', 'value', 'fraction', 'price', 'odds'):
+        return True
+    else:
+        sql = '''SELECT * FROM issuances WHERE (status = ? AND asset = ?)'''
+        bindings = ['valid', asset]
+        issuances = api('sql', {'query': sql, 'bindings': bindings})
+
+        if not issuances: raise AssetError(f'No such asset: {asset}')
+        return issuances[0]['divisible']
+
+def value_in(quantity, asset, divisible=None):
+    if divisible is None:
+        divisible = is_divisible(asset)
+    return value_input(quantity, asset, divisible)
+
+def value_out(quantity, asset, divisible=None):
+    if divisible is None:
+        divisible = is_divisible(asset)
+    return value_output(quantity, asset, divisible)
+
+
+def bootstrap(testnet=False, overwrite=True):
+    data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+
+    # Set Constants.
+    bootstrap_url = config.BOOTSTRAP_URL_TESTNET if testnet else config.BOOTSTRAP_URL_MAINNET
+    tar_filename = os.path.basename(bootstrap_url)
+    tarball_path = os.path.join(tempfile.gettempdir(), tar_filename)
+    database_path = os.path.join(data_dir, config.APP_NAME)
+    if testnet:
+        database_path += '.testnet'
+    database_path += '.db'
+
+    # Delete SQLite Write-Ahead-Log
+    wal_path = database_path + "-wal"
+    shm_path = database_path + "-shm"
+    try:
+        os.remove(wal_path)
+    except OSError:
+        pass
+    try:
+        os.remove(shm_path)
+    except OSError:
+        pass
+
+    # Prepare Directory.
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir, mode=0o755)
+    if not overwrite and os.path.exists(database_path):
+        return
+
+    # Define Progress Bar.
+    step = f'Downloading database from {bootstrap_url}...'
+    spinner = Halo(text=step, spinner=SPINNER_STYLE)
+
+    def bootstrap_progress(blocknum, blocksize, totalsize):
+        readsofar = blocknum * blocksize
+        if totalsize > 0:
+            percent = readsofar * 1e2 / totalsize
+            message = f"Downloading database: {percent:5.1f}% {readsofar} / {totalsize}"
+            spinner.text = message
+
+    # Downloading
+    spinner.start()
+    urllib.request.urlretrieve(
+        bootstrap_url,
+        tarball_path,
+        bootstrap_progress
+    ) # nosec B310
+    spinner.stop()
+    print(f"{OK_GREEN} {step}")
+
+    # TODO: check checksum, filenames, etc.
+    step = f'Extracting database to {data_dir}...'
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        with tarfile.open(tarball_path, 'r:gz') as tar_file:
+            tar_file.extractall(path=data_dir) # nosec B202
+    print(f"{OK_GREEN} {step}")
+
+    assert os.path.exists(database_path)
+    # user and group have "rw" access
+    os.chmod(database_path, 0o660) # nosec B103
+
+    step = 'Cleaning up...'
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        os.remove(tarball_path)
+    print(f"{OK_GREEN} {step}")
+
+    cprint(f"Database has been successfully bootstrapped to {database_path}.", "green")
+
+
+# Set default values of command line arguments with config file
+def add_config_arguments(arg_parser, config_args, default_config_file, config_file_arg_name='config_file'):
+    cmd_args = arg_parser.parse_known_args()[0]
+
+    config_file = getattr(cmd_args, config_file_arg_name, None)
+    if not config_file:
+        config_dir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+        if not os.path.isdir(config_dir):
+            os.makedirs(config_dir, mode=0o755)
+        config_file = os.path.join(config_dir, default_config_file)
+
+    # clean BOM
+    bufsize = 4096
+    bomlen = len(codecs.BOM_UTF8)
+    with codecs.open(config_file, 'r+b') as fp:
+        chunk = fp.read(bufsize)
+        if chunk.startswith(codecs.BOM_UTF8):
+            i = 0
+            chunk = chunk[bomlen:]
+            while chunk:
+                fp.seek(i)
+                fp.write(chunk)
+                i += len(chunk)
+                fp.seek(bomlen, os.SEEK_CUR)
+                chunk = fp.read(bufsize)
+            fp.seek(-bomlen, os.SEEK_CUR)
+            fp.truncate()
+
+    logger.debug(f'Loading configuration file: `{config_file}`')
+    configfile = configparser.SafeConfigParser(allow_no_value=True, inline_comment_prefixes=('#', ';'))
+    with codecs.open(config_file, 'r', encoding='utf8') as fp:
+        configfile.readfp(fp)
+
+    if not 'Default' in configfile:
+        configfile['Default'] = {}
+
+    # Initialize default values with the config file.
+    for arg in config_args:
+        key = arg[0][-1].replace('--', '')
+        if 'action' in arg[1] and arg[1]['action'] == 'store_true' and key in configfile['Default']:
+            arg[1]['default'] = configfile['Default'].getboolean(key)
+        elif key in configfile['Default'] and configfile['Default'][key]:
+            arg[1]['default'] = configfile['Default'][key]
+        elif key in configfile['Default'] and arg[1].get('nargs', '') == '?' and 'const' in arg[1]:
+            arg[1]['default'] = arg[1]['const']  # bit of a hack
+        arg_parser.add_argument(*arg[0], **arg[1])
+
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

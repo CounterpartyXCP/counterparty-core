@@ -1,183 +1,226 @@
-[![Build Status Travis](https://travis-ci.org/CounterpartyXCP/counterparty-lib.svg?branch=develop)](https://travis-ci.org/CounterpartyXCP/counterparty-lib)
-[![Build Status Circle](https://circleci.com/gh/CounterpartyXCP/counterparty-lib.svg?&style=shield)](https://circleci.com/gh/CounterpartyXCP/counterparty-lib)
-[![Coverage Status](https://coveralls.io/repos/CounterpartyXCP/counterparty-lib/badge.png?branch=develop)](https://coveralls.io/r/CounterpartyXCP/counterparty-lib?branch=develop)
-[![Latest Version](https://pypip.in/version/counterparty-lib/badge.svg)](https://pypi.python.org/pypi/counterparty-lib/)
-[![License](https://pypip.in/license/counterparty-lib/badge.svg)](https://pypi.python.org/pypi/counterparty-lib/)
-[![Docker Pulls](https://img.shields.io/docker/pulls/counterparty/counterparty-server.svg?maxAge=2592000)](https://hub.docker.com/r/counterparty/counterparty-server/)
+[![Build Status Circle](https://circleci.com/gh/CounterpartyXCP/counterparty-core.svg?&style=shield)](https://circleci.com/gh/CounterpartyXCP/counterparty-core)
 
 
 # Description
-`counterparty-lib` is the reference implementation of the [Counterparty Protocol](https://counterparty.io).
-
-**Note:** for the command-line interface to `counterparty-lib`, see [`counterparty-cli`](https://github.com/CounterpartyXCP/counterparty-cli).
+Counterparty Core is the reference implementation of the [Counterparty Protocol](https://counterparty.io).
 
 
-# Installation
+# Getting Started
 
-**WARNING** Master branch should only be used for testing. For production releases uses tagged releases.
+The simplest way to get your Counterparty node up and running is to use Docker Compose.
 
-For a simple Docker-based install of the Counterparty software stack, see [this guide](http://counterparty.io/docs/federated_node/).
+```
+sudo apt install docker-compose
+```
+
+Then, for `mainnet`, run:
+
+```bash
+docker-compose -f simplenode/compose.yml up
+```
+
+For `testnet`, modify the Docker Compose file in `simplenode/` and then run:
+```bash
+docker-compose -f simplenode/compose.yml -p simplenode-testnet up
+```
+
+Then wait for your node to catch up with the network. Note: this process currently takes a long time, beause it does not make use of the `bootstrap` or `kickstart` functionality. (See below.)
 
 
-# Manual installation
+# Manual Installation
+
+Dependencies:
+
+- Bitcoin Core
+- AddrIndexRS
+- Python >= 3.10
+- Rust
+- Maturin
+- LevelDB
+
+## Install dependencies
+
+### Install Bitcoin Core
 
 Download the latest [Bitcoin Core](https://github.com/bitcoin/bitcoin/releases) and create
-a `bitcoin.conf` file with the following options:
+a `bitcoin.conf` file (by default located in `~.bitcoin/`) with the following options:
 
 ```
-rpcuser=bitcoinrpc
+rpcuser=rpc
 rpcpassword=rpc
 server=1
-txindex=1
-rpctimeout=300
-zmqpubhashblock=tcp://127.0.0.1:28832
-zmqpubhashtx=tcp://127.0.0.1:28832
 addresstype=legacy
-```
-**Note:** you can and should replace the RPC credentials. Remember to use the changed RPC credentials throughout this document.
-
-Download and install latest addrindexrs:
-```
-$ git clone https://github.com/CounterpartyXCP/addrindexrs.git
-$ cd addrindexrs
-$ cargo check
- -- Setup the appropiate environment variables --
-  - ADDRINDEXRS_JSONRPC_IMPORT=1
-  - ADDRINDEXRS_TXID_LIMIT=15000
-  - ADDRINDEXRS_COOKIE=user:password
-  - ADDRINDEXRS_INDEXER_RPC_ADDR=0.0.0.0:8432
-  - ADDRINDEXRS_DAEMON_RPC_ADDR=bitcoin:8332
- --
-$ cargo build --release
-$ cargo run --release
+txindex=1
+prune=0
+mempoolfullrbf=1
+rpcworkqueue=100
 ```
 
-You could run the indexd daemon with a process manager like `forever` or `pm2` (recommended).
-
-Then, download and install `counterparty-lib`:
+Adding the following lines, and opening up port `8333` to incoming traffic, may improve your sync speed:
 
 ```
-$ git clone https://github.com/CounterpartyXCP/counterparty-lib.git
-$ cd counterparty-lib
-$ sudo pip3 install --upgrade -r requirements.txt
-$ sudo python3 setup.py install
+listen=1
+dbcache=4000
 ```
 
-Followed by `counterparty-cli`:
+### Install Rust
 
-```
-$ git clone https://github.com/CounterpartyXCP/counterparty-cli.git
-$ cd counterparty-cli
-$ sudo pip3 install --upgrade -r requirements.txt
-$ sudo python3 setup.py install
-```
+The recommended way to install Rust is to use `rustup`:
 
-Note on **sudo**: both counterparty-lib and counterparty-server can be installed by non-sudoers. Please refer to external documentation for instructions on using pip without root access and other information related to custom install locations.
-
-
-Then, launch the daemon via:
-
-```
-$ counterparty-server bootstrap
-$ counterparty-server --backend-password=rpc start
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source "$HOME/.cargo/env"
 ```
 
-# Basic Usage
+See https://www.rust-lang.org/tools/install for more information.
 
-## Via command-line
 
-(Requires `counterparty-cli` to be installed.)
+### Install Addrindexrs
 
-* The first time you run the server, you may bootstrap the local database with:
-	`$ counterparty-server bootstrap`
+Download and install the latest [AddrIndexRS](https://github.com/CounterpartyXCP/addrindexrs):
 
-* Start the server with:
-	`$ counterparty-server start`
-
-* Check the status of the server with:
-	`$ counterparty-client getinfo`
-
-* For additional command-line arguments and options:
-	`$ counterparty-server --help`
-	`$ counterparty-client --help`
-
-## Via Python
-
-Bare usage from Python is also possible, without installing `counterparty-cli`:
-
-```
-$ python3
->>> from counterpartylib import server
->>> db = server.initialise(<options>)
->>> server.start_all(db)
+```bash
+git clone https://github.com/CounterpartyXCP/addrindexrs.git
+cd addrindexrs
+cargo install --path=.
 ```
 
-# Configuration and Operation
+Start `addrindexrs` with:
 
-The paths to the **configuration** files, **log** files and **database** files are printed to the screen when starting the server in ‘verbose’ mode:
-	`$ counterparty-server --verbose start`
+```bash
+addrindexrs --cookie=rpc:rpc -vvv
+```
 
-By default, the **configuration files** are named `server.conf` and `client.conf` and located in the following directories:
+When working with a remote full node or low-memory system, you can tell `addrindexrs` to use JSON-RPC to communicate with `bitcoind` using the flag `--jsonrpc-import`.
+You can also limit the resources available for `addrindexrs` with:
+
+```bash
+ulimit -n 8192
+```
+
+Use `addrindexrs -h` for more options.
+
+### Install Python >= 3.10 and Maturin
+
+On Ubuntu 22.04 and similar:
+
+```bash
+apt-get install -y python3 python3-dev python3-pip
+pip3 install maturin
+```
+
+On MacOS:
+
+```bash
+brew install python
+pip3 install maturin
+```
+
+See https://brew.sh/ to install Homewrew.
+
+
+### Install LevelDB
+
+On Ubuntu 22.04 and similar:
+
+```bash
+apt-get install -y libleveldb-dev
+```
+
+On MacOS:
+
+```bash
+brew install leveldb
+```
+
+## Install Counterparty Core
+
+Download the latest version `counterparty-core`:
+
+```bash
+git clone https://github.com/CounterpartyXCP/counterparty-core.git
+```
+
+Install the `counterparty-rs` library:
+
+```bash
+cd counterparty-core/counterparty-rs
+pip3 install .
+```
+
+Install the `counterparty-lib` library:
+
+```bash
+cd counterparty-core/counterparty-lib
+pip3 install .
+```
+
+Install the `counterparty-cli` library:
+
+```bash
+cd counterparty-core/counterparty-cli
+pip3 install .
+```
+
+*Note for MacOS users*
+
+Use this command if you get an error while installing one of the packages:
+
+```bash
+CFLAGS="-I/opt/homebrew/include -L/opt/homebrew/lib"
+```
+
+# Usage
+
+## Configuration
+
+Manual configuration is not necessary for most use cases, but example configuration files may be found in the `docker/` directory.
+
+By default, the **configuration files** are named `server.conf` and `client.conf` and are located in the following directories:
 
 * Linux: `~/.config/counterparty/`
 * Windows: `%APPDATA%\Counterparty\`
 
-Client and Server log files are named `counterparty.client.[testnet.]log` and `counterparty.server.[testnet.]log`, and located in the following directories:
+Client and server log files are named `counterparty.client.[testnet.]log` and `counterparty.server.[testnet.]log` and are located in the following directories:
 
 * Linux: `~/.cache/counterparty/log/`
 * Windows: `%APPDATA%\Local\Counterparty\counterparty\Logs`
 
-Counterparty API activity is logged in `server.[testnet.]api.log` and `client.[testnet.]api.log`.
+Counterparty API activity is logged to `server.[testnet.]api.log` and `client.[testnet.]api.log`.
 
-Counterparty database files are by default named `counterparty.[testnet.]db` and located in the following directories:
+Counterparty database files are by default named `counterparty.[testnet.]db` and are located in the following directories:
 
 * Linux: `~/.local/share/counterparty`
 * Windows: `%APPDATA%\Roaming\Counterparty\counterparty`
 
-## Configuration File Format
+All configurable parameters in the configuration file can also be passed as arguments to the `counterpart-server` command. Use `counterparty-server --help` to see the list of these options.
 
-Manual configuration is not necessary for most use cases. "back-end" and "wallet" are used to access Bitcoin server RPC.
+## Quickly Catch Up with the Network
 
-A `counterparty-server` configuration file looks like this:
+You will not be able to run `counterparty-server` until `addrindexrs` has caught up (and its RPC server is running), which in turn requires `bitcoind` have caught up as well. The command to start the Counterparty server process is simply `counterparty-server start`. However, simply running this command requires a long time to catch up with the network, and Counterparty must have parsed all published blocks before being operational.
 
-	[Default]
-	backend-name = indexd
-	backend-user = <user>
-	backend-password = <password>
-	indexd-connect = localhost
-	indexd-port = 8432
-	rpc-host = 0.0.0.0
-	rpc-user = <rpcuser>
-	rpc-password = <rpcpassword>
+There are two ways to speed up the process of catching up with the network:
 
-The ``force`` argument can be used either in the server configuration file or passed at runtime to make the server keep running in the case it loses connectivity with the Internet and falls behind the back-end database. This may be useful for *non-production* Counterparty servers that need to maintain RPC service availability even when the backend or counterparty server has no Internet connectivity.
+1. `counterparty-server bootstrap` downloads a recent snapshot of a Counterparty database from a centralized server maintained by the Counterparty Core development team. Because this method does not involve verifying the history of Counterparty transactions yourself, **the `bootstrap` command should not be used for mission-critical, commercial or public-facing nodes.**
 
-A `counterparty-client` configuration file looks like this:
+```bash
+counterparty-server bootstrap
+```
 
-	[Default]
-	wallet-name = bitcoincore
-	wallet-connect = localhost
-	wallet-user = <user>
-	wallet-password = <password>
-	counterparty-rpc-connect = localhost
-	counterparty-rpc-user = <rpcuser>
-	counterparty-rpc-password = <password>
+1. `counterparty-server kickstart` will perform a complete catchup in around 8 to 24 hours. However, this method requires first stopping Bitcoin Core (while leaving `addrindexrs` running, so that Counterparty Core can read the Bitcoin block files directly from `bitcoind`'s database.
+
+```bash
+counterparty-server kickstart
+```
 
 
-# Developer notes
+## Start the Server
 
-## Versioning
+Once the Counterparty server has caught up with the network, you may start the server simply with `counterparty start`:
 
-* Major version changes require a full (automatic) rebuild of the database.
-* Minor version changes require a(n automatic) database reparse.
-* All protocol changes are retroactive on testnet.
-
-## Continuous integration
- - TravisCI is setup to run all tests with 1 command and generate a coverage report and let `python-coveralls` parse and upload it.
-   It does runs with `--skiptestbook=all` so it will not do the reparsing of the bootstrap files.
- - CircleCI is setup to split the tests as much as possible to make it easier to read the error reports.
-   It also runs the `integration_test.test_book` tests, which reparse the bootstrap files.
-
+```bash
+counterparty-server start
+```
 
 # Further Reading
 
