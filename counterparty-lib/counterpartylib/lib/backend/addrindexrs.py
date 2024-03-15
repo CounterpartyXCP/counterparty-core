@@ -40,10 +40,11 @@ def rpc_call(payload):
     """Calls to bitcoin core and returns the response"""
     url = config.BACKEND_URL
     response = None
-    tries = 12
 
-    for i in range(tries):
+    tries = 0
+    while True:
         try:
+            tries += 1
             response = requests.post(url, data=json.dumps(payload), headers={'content-type': 'application/json'},
                 verify=(not config.BACKEND_SSL_NO_VERIFY), timeout=config.REQUESTS_TIMEOUT)
 
@@ -62,9 +63,11 @@ def rpc_call(payload):
 
             else:
                 break
-
+        except KeyboardInterrupt:
+            logger.warning('Interrupted by user')
+            exit(0)
         except (Timeout, ReadTimeout, ConnectionError):
-            logger.debug(f'Could not connect to backend at `{util.clean_url_for_log(url)}`. (Try {i + 1}/{tries})')
+            logger.debug(f'Could not connect to backend at `{util.clean_url_for_log(url)}`. (Try {tries})')
             time.sleep(5)
 
     # Handle json decode errors
