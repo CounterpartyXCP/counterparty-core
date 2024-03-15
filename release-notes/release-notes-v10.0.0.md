@@ -38,6 +38,7 @@ Because this release includes numerous changes to the database schema, a full da
 
 ## Stability and Correctness
 * Fix multiple sources of non-determinism caused by generic exception handling
+* Fix source of non-determinism in AddrIndexRs caused by `txid_limit` and `get_oldest_tx`
 * Fix consensus break due to missing support for segwit transactions in `kickstart` logic
 * Fix crash in software version checking caused by a format change of `protocol_changes.json`
 
