@@ -471,7 +471,7 @@ def connect_to_addrindexrs():
         check_addrindexrs = {}
         while check_addrindexrs == {}:
             check_address = "tb1qurdetpdk8zg2thzx3g77qkgr7a89cp2m429t9c" if config.TESTNET else "1GsjsKKT4nH4GPmDnaxaZEDWgoBpmexwMA"
-            check_addrindexrs = backend.get_oldest_tx(check_address)
+            check_addrindexrs = backend.get_oldest_tx(check_address, 999999)
             if check_addrindexrs == {}:
                 logger.info('`addrindexrs` is not ready. Waiting one second.')
                 time.sleep(1)

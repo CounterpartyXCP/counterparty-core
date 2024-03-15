@@ -16,7 +16,7 @@ import functools
 import bitcoin.wallet
 from pkg_resources import parse_version
 
-from counterpartylib.lib import config, util, ledger
+from counterpartylib.lib import config, util, ledger, exceptions
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -397,14 +397,14 @@ def indexer_check_version():
     except TypeError as e:
         logger.exception(f'Error when checking address indexer version: {addrindexrs_version}')
         sys.exit(1)
-    addrindexrs_version_needed = ledger.get_value_by_block_index("addrindexrs_required_version")
 
-    if parse_version(addrindexrs_version_needed) > parse_version(addrindexrs_version_label):
-        logger.info("Wrong addrindexrs version: "+addrindexrs_version_needed+" is needed but "+addrindexrs_version_label+" was found")
+    if addrindexrs_version_label != config.ADDRINDEXRS_VERSION:
+        message = f"Wrong addrindexrs version: {config.ADDRINDEXRS_VERSION} is needed but {addrindexrs_version_label} was found"
+        #logger.error(message)
         INDEXER_THREAD.stop()
-        sys.exit(config.EXITCODE_UPDATE_REQUIRED)
-    else:
-        logger.debug(f'Version check of address indexer passed ({addrindexrs_version_label} > {addrindexrs_version_needed}).')
+        raise exceptions.InvalidVersion(message)
+
+    logger.debug(f'Version check of address indexer passed ({config.ADDRINDEXRS_VERSION} == {addrindexrs_version_label}).')
 
 def _script_pubkey_to_hash(spk):
     return hashlib.sha256(spk).digest()[::-1].hex()
@@ -616,19 +616,29 @@ class AddrindexrsSocket:
             self.connect()
             return self.send(query, timeout=timeout, retry=retry + 1)
 
-    def get_oldest_tx(self, address, timeout=SOCKET_TIMEOUT):
+    def get_oldest_tx(self, address, timeout=SOCKET_TIMEOUT, block_index=None):
         hsh = _address_to_hash(address)
         query = {
             "method": "blockchain.scripthash.get_oldest_tx",
-            "params": [hsh]
+            "params": [hsh, block_index or ledger.CURRENT_BLOCK_INDEX]
         }
         return self.send(query, timeout=timeout)
 
 
+# We hardcoded certain addresses to reproduce an `addrindexrs` bug.
+# In comments the real result that `addrindexrs` should have returned.
+GET_OLDEST_TX_HARDCODED = {
+    "825096-bc1q66u8n4q0ld3furqugr0xzakpedrc00wv8fagmf": {} # {'block_index': 820886, 'tx_hash': 'e5d130a583983e5d9a9a9175703300f7597eadb6b54fe775055110907b4079ed'}
+}
 ADDRINDEXRS_CLIENT = None
 
-def get_oldest_tx(address):
+def get_oldest_tx(address, block_index=None):
+    current_block_index = block_index or ledger.CURRENT_BLOCK_INDEX
+    hardcoded_key = f"{current_block_index}-{address}"
+    if hardcoded_key in GET_OLDEST_TX_HARDCODED:
+        return GET_OLDEST_TX_HARDCODED[hardcoded_key]
+
     global ADDRINDEXRS_CLIENT
     if ADDRINDEXRS_CLIENT is None:
         ADDRINDEXRS_CLIENT = AddrindexrsSocket()
-    return ADDRINDEXRS_CLIENT.get_oldest_tx(address)
+    return ADDRINDEXRS_CLIENT.get_oldest_tx(address, block_index=current_block_index)
