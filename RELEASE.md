@@ -1,7 +1,7 @@
 # Codebase
 - [ ] Update `VERSION_` variables in `lib/config.py`
 - [ ] Update `protocol_changes.json` (as necessary)
-- [ ] Update Counterparty packages version in `requirement.txt` files
+- [ ] Update Counterparty package versions in the `requirements.txt` files
 - [ ] Review all open pull requests
 - [ ] Write release notes
 - [ ] Create pull request against `master`
