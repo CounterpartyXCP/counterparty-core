@@ -625,10 +625,20 @@ class AddrindexrsSocket:
         return self.send(query, timeout=timeout)
 
 
+# We hardcoded certain addresses to reproduce an `addrindexrs` bug.
+# In comments the real result that `addrindexrs` should have returned.
+GET_OLDEST_TX_HARDCODED = {
+    "825096-bc1q66u8n4q0ld3furqugr0xzakpedrc00wv8fagmf": {} # {'block_index': 820886, 'tx_hash': 'e5d130a583983e5d9a9a9175703300f7597eadb6b54fe775055110907b4079ed'}
+}
 ADDRINDEXRS_CLIENT = None
 
 def get_oldest_tx(address, block_index=None):
+    current_block_index = block_index or ledger.CURRENT_BLOCK_INDEX
+    hardcoded_key = f"{current_block_index}-{address}"
+    if hardcoded_key in GET_OLDEST_TX_HARDCODED:
+        return GET_OLDEST_TX_HARDCODED[hardcoded_key]
+
     global ADDRINDEXRS_CLIENT
     if ADDRINDEXRS_CLIENT is None:
         ADDRINDEXRS_CLIENT = AddrindexrsSocket()
-    return ADDRINDEXRS_CLIENT.get_oldest_tx(address, block_index=block_index)
+    return ADDRINDEXRS_CLIENT.get_oldest_tx(address, block_index=current_block_index)
