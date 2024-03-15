@@ -1,8 +1,5 @@
-## Library Versions ##
-* v9.61.2 (2024-02-28)
-    * Fix integer overflow in dispensers.
-    * Invalidate broadcast with malformed text.
-    * Fix Logging for Destructions with Invalid Asset.
+# ChangeLog for `counterparty-lib` Pre-v9.61.2
+
 * v9.60.0 (2022-08-29)
     * Removed `callable`,`call_date`, and `call_price` from issuances
     * Added support for CIP24 (Oracled Dispensers)
@@ -396,6 +393,7 @@
     * initial release
 
 ## Other Protocol Changes ##
+
 * issuances fees regression: 285306
 * double credits on order match expirations: retroactive
 * arbitrary spend with multi‐sig input: retroactive

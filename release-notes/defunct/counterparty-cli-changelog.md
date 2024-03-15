@@ -1,4 +1,5 @@
-## Command Line Interface Versions ##
+# ChangeLog for `counterparty-cli` Pre-v9.61.2
+
 * master (unreleased)
 	* Added indexd arguments
 	* removed backend-name argument
