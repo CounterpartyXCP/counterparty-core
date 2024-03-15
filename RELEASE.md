@@ -12,6 +12,7 @@
 - [ ] Upload (signed) package to PyPi
 	* `sudo python3 setup.py sdist build`
 	* `sudo python3 setup.py sdist upload -r pypi`
+- [ ] Publish bootstrap files
 - [ ] Publish Docker images
 - [ ] Update documentation
 
