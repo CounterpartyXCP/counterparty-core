@@ -738,9 +738,6 @@ def follow(db):
 
         # Get new blocks.
         if block_index <= block_count:
-            #mempool_spinner.stop()
-            #block_spinner = Halo(text=f"Parsing block {block_index}...", spinner=SPINNER_STYLE)
-            #block_spinner.start()
 
             # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
             current_index = block_index
@@ -783,9 +780,11 @@ def follow(db):
                 tx_index = get_next_tx_index(db)
                 continue
 
-            # Check version. (Don’t add any blocks to the database while
+            # Check version every 144 blocks (around 24H). 
+            # (Don’t add more blocks to the database while
             # running an out‐of‐date client!)
-            # TODO: check.software_version() # This is too much!
+            if block_index % 144 == 0:
+                check.software_version()
 
             # Get and parse transactions in this block (atomically).
             # logger.debug(f'Blockchain cache size: {len(prefetcher.BLOCKCHAIN_CACHE)}')
