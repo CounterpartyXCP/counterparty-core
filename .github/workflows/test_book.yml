@@ -33,7 +33,7 @@ jobs:
         cd counterparty-cli && pip install -e . && cd ..
     - name: Bootstrap testnet database
       run: |
-        counterparty-server --backend-password=rpc --testnet bootstrap
+        counterparty-server --testnet bootstrap
     - name: Run tests
       run: |
         cd counterparty-lib

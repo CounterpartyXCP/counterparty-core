@@ -32,7 +32,7 @@ CONFIG_ARGS = [
     [('--backend-connect',), {'default': 'localhost', 'help': 'the hostname or IP of the backend server'}],
     [('--backend-port',), {'type': int, 'help': 'the backend port to connect to'}],
     [('--backend-user',), {'default': 'bitcoinrpc', 'help': 'the username used to communicate with backend'}],
-    [('--backend-password',), {'help': 'the password used to communicate with backend'}],
+    [('--backend-password',), {'default': 'rpc', 'help': 'the password used to communicate with backend'}],
     [('--backend-ssl',), {'action': 'store_true', 'default': False, 'help': 'use SSL to connect to backend (default: false)'}],
     [('--backend-ssl-no-verify',), {'action': 'store_true', 'default': False, 'help': 'verify SSL certificate of backend; disallow use of self‐signed certificates (default: true)'}],
     [('--backend-poll-interval',), {'type': float, 'default': 0.5, 'help': 'poll interval, in seconds (default: 0.5)'}],
