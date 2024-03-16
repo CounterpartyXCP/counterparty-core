@@ -7,7 +7,6 @@ from counterpartylib.test import util_test
 
 
 def test_book(skip):
-    print("Skip: ", skip)
     if skip:
         pytest.skip("Skipping test book")
     else:
