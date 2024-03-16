@@ -742,12 +742,26 @@ class MockProtocolChangesContext(object):
         for k in self._before_empty:
             del self.mock_protocol_changes[k]
 
-def reparse(testnet=True, checkpoint_count=10):
+
+def connect_to_addrindexrs_mock():
+    return True
+
+def get_oldest_tx_mock(address, block_index=None):
+    if address == "mrHFGUKSiNMeErqByjX97qPKfumdZxe6mC" and block_index==99999999999:
+        return {"block_index": 2576100, "tx_hash": "d6751cc77da77d9270e16046a19954bfaffc005269f0c6a9248e680be6d1f468"}
+    return {}
+
+def reparse(testnet=True, checkpoint_count=5):
     """
     Reparse all transaction from the database.
      - Create a new in-memory DB, copy the DB that is on-disk
      - Reparse DB, automatically compares consensus hashes to the original ones from the on-disk DB
     """
+
+    # mock the backend
+    server.connect_to_addrindexrs = connect_to_addrindexrs_mock
+    backend.get_oldest_tx = get_oldest_tx_mock
+
     # create a new in-memory DB
     options = dict(COUNTERPARTYD_OPTIONS)
     server.initialise(database_file=':memory:', testnet=testnet, **options)
@@ -775,6 +789,7 @@ def reparse(testnet=True, checkpoint_count=10):
 
     # we start one block after the checkpoint before the first one we want to check
     block_index = sorted(list(CHECKPOINTS.keys()))[-checkpoint_count - 1]
+    print(f"Checking from block {block_index}")
 
     # Initialise missing tables
     blocks.initialise(memory_db)
