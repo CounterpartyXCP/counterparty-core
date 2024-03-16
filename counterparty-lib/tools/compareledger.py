@@ -109,7 +109,7 @@ def check_hashes(database_file_1, database_file_2, hash_name="ledger_hash"):
 
 
 def get_checkpoints(database_file):
-    checkpoints = [1600000, 1700000, 1800000, 1900000, 2000000, 2200000, 2400000, 2500000, 2540000]
+    checkpoints = [2580000]
     db = apsw.Connection(database_file_1, flags=apsw.SQLITE_OPEN_READONLY)
     cursor = db.cursor()
     for checkpoint in checkpoints:
@@ -138,6 +138,6 @@ database_file_2 = sys.argv[2]
 
 LAST_BLOCK = 290000
 #compare_ledger(database_file_1, database_file_2)
-check_hashes(database_file_1, database_file_2, "txlist_hash")
-#get_checkpoints(database_file_1)
+#check_hashes(database_file_1, database_file_2, "txlist_hash")
+get_checkpoints(database_file_1)
 #get_last_block(database_file_1, database_file_2)
