@@ -68,6 +68,7 @@ services:
       - "--log-file=1"
       - "--api-log-file=1"
       - "start"
+      - "--catch-up=bootstrap"
     environment:
       - "XDG_DATA_HOME=/data/"
       - "XDG_LOG_HOME=/data/"

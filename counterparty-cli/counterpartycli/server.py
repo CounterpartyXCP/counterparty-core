@@ -11,7 +11,7 @@ from termcolor import cprint
 from counterpartylib.lib import log
 from counterpartylib import server
 from counterpartylib.lib import config
-from counterpartycli.util import add_config_arguments, bootstrap
+from counterpartycli.util import add_config_arguments
 from counterpartycli.setup import generate_config_files
 from counterpartycli import APP_VERSION
 
@@ -60,7 +60,6 @@ CONFIG_ARGS = [
     [('--utxo-locks-max-age',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_AGE, 'help': 'how long to keep a lock on a UTXO being tracked'}],
 ]
 
-COMMANDS_WITH_DB = ['reparse', 'rollback', 'start', 'vacuum', 'check-db']
 
 class VersionError(Exception):
     pass
@@ -86,6 +85,7 @@ def main():
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
     parser_server = subparsers.add_parser('start', help='run the server')
+    parser_server.add_argument('--catch-up', choices=['normal', 'bootstrap'], default='normal', help='Catch up mode (default: normal)')
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database')
     parser_reparse.add_argument('block_index', type=int, help='the index of the last known good block')
@@ -138,11 +138,7 @@ def main():
                     utxo_locks_max_addresses=args.utxo_locks_max_addresses,
                     utxo_locks_max_age=args.utxo_locks_max_age)
 
-    if args.action in COMMANDS_WITH_DB:
-        # server.initialise_config() is called in server.initialise()
-        db = server.initialise(**init_args)
-    else:
-        server.initialise_config(**init_args)
+    server.initialise_config(**init_args)
 
     # set up logging
     log.set_up(
@@ -162,14 +158,14 @@ def main():
 
     # Bootstrapping
     if args.action == 'bootstrap':
-        bootstrap(testnet=args.testnet)
+        server.bootstrap()
 
     # PARSING
     elif args.action == 'reparse':
-        server.reparse(db, block_index=args.block_index)
+        server.reparse(block_index=args.block_index)
 
     elif args.action == 'rollback':
-        server.rollback(db, block_index=args.block_index)
+        server.rollback(block_index=args.block_index)
 
     elif args.action == 'kickstart':
         server.kickstart(
@@ -179,16 +175,16 @@ def main():
             debug_block=args.debug_block)
 
     elif args.action == 'start':
-        server.start_all(db)
+        server.start_all(catch_up=args.catch_up)
 
     elif args.action == 'show-config':
         server.show_config()
 
     elif args.action == 'vacuum':
-        server.vacuum(db)
+        server.vacuum()
 
     elif args.action == 'check-db':
-        server.check_database(db)
+        server.check_database()
     else:
         parser.print_help()
 

@@ -2,7 +2,7 @@
 
 import os
 import decimal
-import pprint
+import tempfile
 import sys
 import apsw
 import time
@@ -13,7 +13,8 @@ import appdirs
 import platform
 import bitcoin as bitcoinlib
 import logging
-import traceback
+import urllib
+import tarfile
 from urllib.parse import quote_plus as urlencode
 
 from halo import Halo
@@ -478,9 +479,14 @@ def connect_to_addrindexrs():
     print(f'{OK_GREEN} {step}')
 
 
-def start_all(db):
+def start_all(catch_up='normal'):
     # Backend.
     connect_to_backend()
+
+    if not os.path.exists(config.DATABASE) and catch_up == 'bootstrap':
+        bootstrap()
+
+    db = initialise_db()
 
     # API Status Poller.
     api_status_poller = api.APIStatusPoller()
@@ -496,11 +502,13 @@ def start_all(db):
     blocks.follow(db)
 
 
-def reparse(db, block_index):
+def reparse(block_index):
+    db = initialise_db()
     blocks.reparse(db, block_index=block_index)
 
 
-def rollback(db, block_index=None):
+def rollback(block_index=None):
+    db = initialise_db()
     blocks.rollback(db, block_index=block_index)
 
 
@@ -513,15 +521,16 @@ def kickstart(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     )
 
 
-def vacuum(db):
+def vacuum():
+    db = initialise_db()
     step = 'Vacuuming database...'
     with Halo(text=step, spinner=SPINNER_STYLE):
         database.vacuum(db)
     print(f'{OK_GREEN} {step}')
 
 
-def check_database(db):
-    ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
+def check_database():
+    db = initialise_db()
 
     step = 'Checking asset conservation...'
     with Halo(text=step, spinner=SPINNER_STYLE):
@@ -564,4 +573,66 @@ def configure_rpc(rpc_password=None):
         config.RPC = 'http://' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
 
 
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
+def bootstrap():
+    data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+
+    # Set Constants.
+    bootstrap_url = config.BOOTSTRAP_URL_TESTNET if config.TESTNET else config.BOOTSTRAP_URL_MAINNET
+    tar_filename = os.path.basename(bootstrap_url)
+    tarball_path = os.path.join(tempfile.gettempdir(), tar_filename)
+    database_path = os.path.join(data_dir, config.APP_NAME)
+    if config.TESTNET:
+        database_path += '.testnet'
+    database_path += '.db'
+
+    # Prepare Directory.
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir, mode=0o755)
+    if os.path.exists(database_path):
+        os.remove(database_path)
+    # Delete SQLite Write-Ahead-Log
+    wal_path = database_path + "-wal"
+    shm_path = database_path + "-shm"
+    if os.path.exists(wal_path):
+        os.remove(wal_path)
+    if os.path.exists(shm_path):
+        os.remove(shm_path)
+
+    # Define Progress Bar.
+    step = f'Downloading database from {bootstrap_url}...'
+    spinner = Halo(text=step, spinner=SPINNER_STYLE)
+
+    def bootstrap_progress(blocknum, blocksize, totalsize):
+        readsofar = blocknum * blocksize
+        if totalsize > 0:
+            percent = readsofar * 1e2 / totalsize
+            message = f"Downloading database: {percent:5.1f}% {readsofar} / {totalsize}"
+            spinner.text = message
+
+    # Downloading
+    spinner.start()
+    urllib.request.urlretrieve(
+        bootstrap_url,
+        tarball_path,
+        bootstrap_progress
+    ) # nosec B310
+    spinner.stop()
+    print(f"{OK_GREEN} {step}")
+
+    # TODO: check checksum, filenames, etc.
+    step = f'Extracting database to {data_dir}...'
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        with tarfile.open(tarball_path, 'r:gz') as tar_file:
+            tar_file.extractall(path=data_dir) # nosec B202
+    print(f"{OK_GREEN} {step}")
+
+    assert os.path.exists(database_path)
+    # user and group have "rw" access
+    os.chmod(database_path, 0o660) # nosec B103
+
+    step = 'Cleaning up...'
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        os.remove(tarball_path)
+    print(f"{OK_GREEN} {step}")
+
+    cprint(f"Database has been successfully bootstrapped to {database_path}.", "green")
