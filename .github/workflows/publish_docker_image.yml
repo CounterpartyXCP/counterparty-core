@@ -1,0 +1,28 @@
+name: Publish Docker Image
+
+on:
+  release:
+    types: [published]
+
+env:
+  DOCKER_REPO: counterparty/counterparty
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install Docker
+      run: |
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sudo sh get-docker.sh
+    - name: Build, tag, login and push image
+      run: |
+        export VERSION=v$(cat counterparty-lib/counterpartylib/lib/config.py | grep '__version__ =' | awk -F '"' '{print $2}')
+        docker build -t $DOCKER_REPO:$VERSION .
+        docker tag $DOCKER_REPO:$VERSION $DOCKER_REPO:latest
+        docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
+        docker push $DOCKER_REPO:$VERSION
+        docker push $DOCKER_REPO:latest
