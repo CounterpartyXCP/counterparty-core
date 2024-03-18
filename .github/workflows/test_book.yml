@@ -2,7 +2,7 @@ name: Testnet Test Book
 
 on:
   push:
-    branches: ["testbook"]
+    branches: "**"
 
 jobs:
   build:
