@@ -483,6 +483,11 @@ def start_all(catch_up='normal'):
     # Backend.
     connect_to_backend()
 
+    if not os.path.exists(config.DATABASE) and catch_up == 'bootstrap':
+        bootstrap()
+
+    db = initialise_db()
+
     # API Status Poller.
     api_status_poller = api.APIStatusPoller()
     api_status_poller.daemon = True
@@ -492,11 +497,6 @@ def start_all(catch_up='normal'):
     api_server = api.APIServer()
     api_server.daemon = True
     api_server.start()
-
-    if not os.path.exists(config.DATABASE) and catch_up == 'bootstrap':
-        bootstrap()
-
-    db = initialise_db()
 
     # Server
     blocks.follow(db)
