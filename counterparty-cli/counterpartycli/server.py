@@ -1,11 +1,8 @@
 #! /usr/bin/env python3
 
 import os
-import sys
 import argparse
-import optparse
 import logging
-
 
 from termcolor import cprint
 

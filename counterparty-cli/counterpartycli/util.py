@@ -1,26 +1,13 @@
-#! /usr/bin/python3
-
-import sys
 import os
-import threading
 import decimal
 import time
 import json
-import re
 import requests
-import collections
 import logging
-import binascii
-from datetime import datetime
-from dateutil.tz import tzlocal
 import argparse
 import configparser
 import appdirs
-import tarfile
-import urllib.request
-import shutil
 import codecs
-import tempfile
 
 from halo import Halo
 from termcolor import colored, cprint
