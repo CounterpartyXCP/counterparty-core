@@ -90,7 +90,7 @@ def main():
     config_file_path = getattr(cmd_args, 'config_file', None)
     configfile = read_config_file('server.conf', config_file_path)
 
-    add_config_arguments(parser, CONFIG_ARGS, configfile)
+    add_config_arguments(parser, CONFIG_ARGS, configfile, add_default=True)
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 

@@ -157,13 +157,16 @@ def read_config_file(default_config_file, config_file_path=None):
     return configfile
 
 
-def add_config_arguments(parser, args, configfile):
+def add_config_arguments(parser, args, configfile, add_default=False):
     for arg in args:
-        key = arg[0][-1].replace('--', '')
-        if 'action' in arg[1] and arg[1]['action'] == 'store_true' and key in configfile['Default']:
-            arg[1]['default'] = configfile['Default'].getboolean(key)
-        elif key in configfile['Default'] and configfile['Default'][key]:
-            arg[1]['default'] = configfile['Default'][key]
-        elif key in configfile['Default'] and arg[1].get('nargs', '') == '?' and 'const' in arg[1]:
-            arg[1]['default'] = arg[1]['const']  # bit of a hack
+        if add_default:
+            key = arg[0][-1].replace('--', '')
+            if 'action' in arg[1] and arg[1]['action'] == 'store_true' and key in configfile['Default']:
+                arg[1]['default'] = configfile['Default'].getboolean(key)
+            elif key in configfile['Default'] and configfile['Default'][key]:
+                arg[1]['default'] = configfile['Default'][key]
+            elif key in configfile['Default'] and arg[1].get('nargs', '') == '?' and 'const' in arg[1]:
+                arg[1]['default'] = arg[1]['const']  # bit of a hack
+        else:
+            arg[1]['default'] = argparse.SUPPRESS
         parser.add_argument(*arg[0], **arg[1])
