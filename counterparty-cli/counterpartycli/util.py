@@ -122,21 +122,17 @@ def value_out(quantity, asset, divisible=None):
     return value_output(quantity, asset, divisible)
 
 
-# Set default values of command line arguments with config file
-def add_config_arguments(arg_parser, config_args, default_config_file, config_file_arg_name='config_file'):
-    cmd_args = arg_parser.parse_known_args()[0]
-
-    config_file = getattr(cmd_args, config_file_arg_name, None)
-    if not config_file:
+def read_config_file(default_config_file, config_file_path=None):
+    if not config_file_path:
         config_dir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir, mode=0o755)
-        config_file = os.path.join(config_dir, default_config_file)
+        config_file_path = os.path.join(config_dir, default_config_file)
 
     # clean BOM
     bufsize = 4096
     bomlen = len(codecs.BOM_UTF8)
-    with codecs.open(config_file, 'r+b') as fp:
+    with codecs.open(config_file_path, 'r+b') as fp:
         chunk = fp.read(bufsize)
         if chunk.startswith(codecs.BOM_UTF8):
             i = 0
@@ -150,16 +146,19 @@ def add_config_arguments(arg_parser, config_args, default_config_file, config_fi
             fp.seek(-bomlen, os.SEEK_CUR)
             fp.truncate()
 
-    logger.debug(f'Loading configuration file: `{config_file}`')
+    logger.debug(f'Loading configuration file: `{config_file_path}`')
     configfile = configparser.SafeConfigParser(allow_no_value=True, inline_comment_prefixes=('#', ';'))
-    with codecs.open(config_file, 'r', encoding='utf8') as fp:
+    with codecs.open(config_file_path, 'r', encoding='utf8') as fp:
         configfile.readfp(fp)
 
     if not 'Default' in configfile:
         configfile['Default'] = {}
+    
+    return configfile
 
-    # Initialize default values with the config file.
-    for arg in config_args:
+
+def add_config_arguments(parser, args, configfile):
+    for arg in args:
         key = arg[0][-1].replace('--', '')
         if 'action' in arg[1] and arg[1]['action'] == 'store_true' and key in configfile['Default']:
             arg[1]['default'] = configfile['Default'].getboolean(key)
@@ -167,6 +166,4 @@ def add_config_arguments(arg_parser, config_args, default_config_file, config_fi
             arg[1]['default'] = configfile['Default'][key]
         elif key in configfile['Default'] and arg[1].get('nargs', '') == '?' and 'const' in arg[1]:
             arg[1]['default'] = arg[1]['const']  # bit of a hack
-        arg_parser.add_argument(*arg[0], **arg[1])
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
+        parser.add_argument(*arg[0], **arg[1])

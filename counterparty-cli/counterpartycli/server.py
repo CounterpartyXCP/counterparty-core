@@ -3,6 +3,7 @@
 import os
 import sys
 import argparse
+import optparse
 import logging
 
 
@@ -11,7 +12,7 @@ from termcolor import cprint
 from counterpartylib.lib import log
 from counterpartylib import server
 from counterpartylib.lib import config
-from counterpartycli.util import add_config_arguments
+from counterpartycli.util import add_config_arguments, read_config_file
 from counterpartycli.setup import generate_config_files
 from counterpartycli import APP_VERSION
 
@@ -75,36 +76,54 @@ def main():
     generate_config_files()
 
     # Parse command-line arguments.
-    parser = argparse.ArgumentParser(prog=APP_NAME, description=f'Server for the {config.XCP_NAME} protocol', add_help=False)
+    parser = argparse.ArgumentParser(
+        prog=APP_NAME,
+        description=f'Server for the {config.XCP_NAME} protocol',
+        add_help=False,
+        exit_on_error=False
+    )
     parser.add_argument('-h', '--help', dest='help', action='store_true', help='show this help message and exit')
     parser.add_argument('-V', '--version', action='version', version=f"{APP_NAME} v{APP_VERSION}; counterparty-lib v{config.VERSION_STRING}")
     parser.add_argument('--config-file', help='the path to the configuration file')
 
-    add_config_arguments(parser, CONFIG_ARGS, 'server.conf')
+    cmd_args = parser.parse_known_args()[0]
+    config_file_path = getattr(cmd_args, 'config_file', None)
+    configfile = read_config_file('server.conf', config_file_path)
+
+    add_config_arguments(parser, CONFIG_ARGS, configfile)
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
     parser_server = subparsers.add_parser('start', help='run the server')
+    parser_server.add_argument('--config-file', help='the path to the configuration file')
     parser_server.add_argument('--catch-up', choices=['normal', 'bootstrap'], default='normal', help='Catch up mode (default: normal)')
+    add_config_arguments(parser_server, CONFIG_ARGS, configfile)
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database')
     parser_reparse.add_argument('block_index', type=int, help='the index of the last known good block')
+    add_config_arguments(parser_reparse, CONFIG_ARGS, configfile)
 
     parser_vacuum = subparsers.add_parser('vacuum', help='VACUUM the database (to improve performance)')
+    add_config_arguments(parser_vacuum, CONFIG_ARGS, configfile)
 
     parser_rollback = subparsers.add_parser('rollback', help='rollback database')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
+    add_config_arguments(parser_rollback, CONFIG_ARGS, configfile)
 
     parser_kickstart = subparsers.add_parser('kickstart', help='rapidly build database by reading from Bitcoin Core blockchain')
     parser_kickstart.add_argument('--bitcoind-dir', help='Bitcoin Core data directory')
     parser_kickstart.add_argument('--max-queue-size', type=int, help='Size of the multiprocessing.Queue for parsing blocks')
     parser_kickstart.add_argument('--debug-block', type=int, help='Rollback and run kickstart for a single block;')
+    add_config_arguments(parser_kickstart, CONFIG_ARGS, configfile)
 
-    subparsers.add_parser('bootstrap', help='bootstrap database with hosted snapshot')
+    parser_bootstrap = subparsers.add_parser('bootstrap', help='bootstrap database with hosted snapshot')
+    add_config_arguments(parser_bootstrap, CONFIG_ARGS, configfile)
 
-    subparsers.add_parser('check-db', help='do an integrity check on the database')
+    parser_checkdb = subparsers.add_parser('check-db', help='do an integrity check on the database')
+    add_config_arguments(parser_checkdb, CONFIG_ARGS, configfile)
 
-    subparsers.add_parser('show-config', help='Show counterparty-server configuration')
+    parser_show_config = subparsers.add_parser('show-config', help='Show counterparty-server configuration')
+    add_config_arguments(parser_show_config, CONFIG_ARGS, configfile)
 
     args = parser.parse_args()
 
