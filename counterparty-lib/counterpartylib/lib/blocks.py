@@ -673,6 +673,7 @@ class MempoolError(Exception):
 def follow(db):
     # Check software version.
     check.software_version()
+    last_software_check = time.time()
 
     # Initialise.
     initialise(db)
@@ -780,10 +781,11 @@ def follow(db):
                 tx_index = get_next_tx_index(db)
                 continue
 
-            # Check version every 144 blocks (around 24H).
+            # Check version every 24H.
             # (Don’t add more blocks to the database while
             # running an out‐of‐date client!)
-            if block_index % 144 == 0:
+            if time.time() - last_software_check > 86400:
+                last_software_check = time.time()
                 check.software_version()
 
             # Get and parse transactions in this block (atomically).
