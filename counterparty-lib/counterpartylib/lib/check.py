@@ -364,7 +364,16 @@ def database_version(db):
         )
     elif version_minor != config.VERSION_MINOR:
         # Reparse transactions from the vesion block if minor version has changed.
+        message = f'Client minor version number mismatch ({version_minor} ≠ {config.VERSION_MINOR}).'
+        if config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN is not None:
+            min_version_minor, min_version_block_index = config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN
+            if version_minor < min_version_minor:
+                raise DatabaseVersionError(
+                    message=message,
+                    required_action='reparse',
+                    from_block_index=min_version_block_index
+                )
         raise DatabaseVersionError(
-            message=f'Client minor version number mismatch ({version_minor} ≠ {config.VERSION_MINOR}).',
-            required_action='reparse',
-            from_block_index=config.BLOCK_FIRST)
+            message=message,
+            required_action=None
+        )

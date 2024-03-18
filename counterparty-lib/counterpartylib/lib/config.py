@@ -17,6 +17,12 @@ VERSION_PRE_RELEASE = '-'.join(VERSION_STRING.split('-')[1:])
 
 ADDRINDEXRS_VERSION = "0.4.3"
 
+# When updating to a new verion, we are making a rollback if major version changes.
+# If minor version changes and if needed, we are making a reparse from a given block.
+# Fo example:
+# NEED_REPARSE_IF_MINOR_IS_LESS_THAN = (1, 800000)
+# means that we need to reparse from block 800000 if database minor version is less than 1
+NEED_REPARSE_IF_MINOR_IS_LESS_THAN = None
 
 # Counterparty protocol
 TXTYPE_FORMAT = '>I'
