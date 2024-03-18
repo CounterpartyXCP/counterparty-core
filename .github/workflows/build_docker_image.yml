@@ -1,0 +1,21 @@
+name: Build Docker Image
+
+on:
+  push:
+    branches: "**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install Docker
+      run: |
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sudo sh get-docker.sh
+    - name: Build image
+      run: |
+        docker build -t counterparty .
+    - name: Test image
+      run: |
+        docker run --rm counterparty counterparty-server -h
