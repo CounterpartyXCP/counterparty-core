@@ -11,7 +11,7 @@ services:
       # - "-chain=test"                       # testnet
       - "-rpcallowip=0.0.0.0/0"
       - "-rpcbind=0.0.0.0"
-      - "-rpcuser=rpc"
+      - "-rpcuser=bitcoinrpc"
       - "-rpcpassword=rpc"
       - "-listen=1"
       - "-server=1"
@@ -38,7 +38,7 @@ services:
       # - "--network=testnet"                 # testnet
       - "--indexer-rpc-host=0.0.0.0"
       - "--daemon-rpc-host=0.0.0.0"
-      - "--cookie=rpc:rpc"
+      - "--cookie=bitcoinrpc:rpc"
       - "--daemon-dir=/bitcoin/.bitcoin"
       - "-vvv"
       - "--db-dir=/data/addrindexrs/db"
@@ -55,19 +55,12 @@ services:
     ports:
       - "4000:4000"                           # mainnet
       # - "14000:14000"                       # testnet
-    entrypoint: "counterparty-server"         # TODO: `start` has to come after the flags.
     command:
       # "--testnet"                           # testnet
       - "--backend-connect=bitcoind"
-      - "--backend-user=rpc"
-      - "--backend-password=rpc"
       - "--indexd-connect=addrindexrs"
-      - "--rpc-user=rpc"
-      - "--rpc-password=rpc"
       - "--rpc-host=0.0.0.0"
-      - "--log-file=1"
-      - "--api-log-file=1"
-      - "start"
+      - "--rpc-password=rpc"                  # optional
       - "--catch-up=bootstrap"
     environment:
       - "XDG_DATA_HOME=/data/"
