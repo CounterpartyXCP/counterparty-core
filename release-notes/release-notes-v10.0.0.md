@@ -32,7 +32,9 @@ Because this release includes numerous changes to the database schema, a full da
     * Bandit
     * CodeQL
     * License Scanner
-* Add checkpoints for `mainnet` up to block 825,000 and for `testnet` up to block 2,540,000
+    * Build and publish Docker image
+    * Enable `testnet` test book
+* Add checkpoints for `mainnet` up to block 834,500 and for `testnet` up to block 2,580,000
 * Rewrite README
 
 
@@ -60,6 +62,7 @@ Because this release includes numerous changes to the database schema, a full da
 * Always log to a file, unless `--no-log-files` is set
 * Fix and refactor `log.set_up()`
 * Improve thread shutdown logic
+* Accept config args before and after the command
 
 
 ## Refactoring and Performance Optimizations
@@ -88,7 +91,8 @@ Because this release includes numerous changes to the database schema, a full da
     * Isolate transaction parsing inside `gettxinfo.py` module
     * Heavily refactor code; eliminate unused code blocks
     * Isolate dispenser logic in `get_dispensers_outputs()` and `get_dispensers_tx_info()`
-
+* Activate check software version every 24H
+* Add the possibility to reparse from a given block on minor version change
 
 # Credits
 * Ouziel Slama
