@@ -88,10 +88,49 @@ def initialise(*args, **kwargs):
     return initialise_db()
 
 
-def initialise_config(database_file=None, log_file=None, api_log_file=None, no_log_files=False,
+def initialise_log_config(
+        verbose=False, quiet=False, log_file=None, api_log_file=None, no_log_files=False,
+        testnet=False, testcoin=False, regtest=False
+    ):
+    # Log directory
+    log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
+    if not os.path.isdir(log_dir):
+        os.makedirs(log_dir, mode=0o755)
+
+    # Set up logging.
+    config.VERBOSE = verbose
+    config.QUIET = quiet
+
+    network = ''
+    if testnet:
+        network += '.testnet'
+    if regtest:
+        network += '.regtest'
+    if testcoin:
+        network += '.testcoin'
+
+    # Log
+    if no_log_files:
+        config.LOG = None
+    elif not log_file:  # default location
+        filename = f'server{network}.log'
+        config.LOG = os.path.join(log_dir, filename)
+    else:  # user-specified location
+        config.LOG = log_file
+
+    if no_log_files:  # no file logging
+        config.API_LOG = None
+    elif not api_log_file:  # default location
+        filename = f'server{network}.access.log'
+        config.API_LOG = os.path.join(log_dir, filename)
+    else:  # user-specified location
+        config.API_LOG = api_log_file
+
+
+def initialise_config(database_file=None,
                 testnet=False, testcoin=False, regtest=False,
                 api_limit_rows=1000,
-                backend_name=None, backend_connect=None, backend_port=None,
+                backend_connect=None, backend_port=None,
                 backend_user=None, backend_password=None,
                 indexd_connect=None, indexd_port=None,
                 backend_ssl=False, backend_ssl_no_verify=False,
@@ -99,7 +138,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
                 rpc_host=None, rpc_port=None,
                 rpc_user=None, rpc_password=None,
                 rpc_no_allow_cors=False,
-                force=False, verbose=False, quiet=False,
+                force=False,
                 requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
                 rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
                 check_asset_conservation=config.DEFAULT_CHECK_ASSET_CONSERVATION,
@@ -108,6 +147,12 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
                 utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE,
                 estimate_fee_per_kb=None,
                 customnet=None):
+
+    # log config alreasdy initialized
+    logger.debug('VERBOSE: %s', config.VERBOSE)
+    logger.debug('QUIET: %s', config.QUIET)
+    logger.debug('LOG: %s', config.LOG)
+    logger.debug('API_LOG: %s', config.API_LOG)
 
     # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -164,39 +209,6 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
         config.DATABASE = os.path.join(data_dir, filename)
 
     logger.debug('DATABASE: %s', config.DATABASE)
-
-    # Log directory
-    log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
-    if not os.path.isdir(log_dir):
-        os.makedirs(log_dir, mode=0o755)
-
-    # Set up logging.
-    config.VERBOSE = verbose
-    config.QUIET = quiet
-
-    logger.debug('VERBOSE: %s', config.VERBOSE)
-    logger.debug('QUIET: %s', config.QUIET)
-
-    # Log
-    if no_log_files:
-        config.LOG = None
-    elif not log_file:  # default location
-        filename = f'server{network}.log'
-        config.LOG = os.path.join(log_dir, filename)
-    else:  # user-specified location
-        config.LOG = log_file
-    
-    logger.debug('LOG: %s', config.LOG)
-
-    if no_log_files:  # no file logging
-        config.API_LOG = None
-    elif not api_log_file:  # default location
-        filename = f'server{network}.access.log'
-        config.API_LOG = os.path.join(log_dir, filename)
-    else:  # user-specified location
-        config.API_LOG = api_log_file
-
-    logger.debug('API_LOG: %s', config.API_LOG)
 
     config.API_LIMIT_ROWS = api_limit_rows
 

@@ -161,11 +161,9 @@ def main():
 
     # Configuration
     init_args = dict(database_file=args.database_file,
-                    log_file=args.log_file, api_log_file=args.api_log_file, no_log_files=args.no_log_files,
                     testnet=args.testnet, testcoin=args.testcoin, regtest=args.regtest,
                     customnet=args.customnet,
                     api_limit_rows=args.api_limit_rows,
-                    backend_name=args.backend_name,
                     backend_connect=args.backend_connect,
                     backend_port=args.backend_port,
                     backend_user=args.backend_user,
@@ -179,12 +177,16 @@ def main():
                     requests_timeout=args.requests_timeout,
                     rpc_batch_size=args.rpc_batch_size,
                     check_asset_conservation=not args.no_check_asset_conservation,
-                    force=args.force, verbose=args.verbose, quiet=args.quiet,
+                    force=args.force,
                     p2sh_dust_return_pubkey=args.p2sh_dust_return_pubkey,
                     utxo_locks_max_addresses=args.utxo_locks_max_addresses,
                     utxo_locks_max_age=args.utxo_locks_max_age)
 
-    server.initialise_config(**init_args)
+    server.initialise_log_config(
+        verbose=args.verbose, quiet=args.quiet,
+        log_file=args.log_file, api_log_file=args.api_log_file, no_log_files=args.no_log_files,
+        testnet=args.testnet, testcoin=args.testcoin, regtest=args.regtest,
+    )
 
     # set up logging
     log.set_up(
@@ -193,6 +195,8 @@ def main():
         log_file=config.LOG,
         log_in_console=args.action == 'start'
     )
+
+    server.initialise_config(**init_args)
 
     logger.info(f'Running v{APP_VERSION} of {APP_NAME}.')
 
