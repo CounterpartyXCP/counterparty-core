@@ -31,3 +31,6 @@ RUN pip3 install .
 # install counterparty-cli
 WORKDIR /counterparty-cli
 RUN pip3 install .
+
+ENTRYPOINT [ "counterparty-server", "start" ]
+CMD [ "-h" ]

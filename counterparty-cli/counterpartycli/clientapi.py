@@ -119,7 +119,7 @@ def initialize(testnet=False, testcoin=False, regtest=True, customnet="",
         raise ConfigurationError("Please specific a valid port number wallet-port configuration parameter")
 
     # BTC Wallet user
-    config.WALLET_USER = wallet_user or 'bitcoinrpc'
+    config.WALLET_USER = wallet_user or 'rpc'
 
     # BTC Wallet password
     if wallet_password:
