@@ -37,7 +37,7 @@ services:
       - "--network=bitcoin"                   # mainnet
       # - "--network=testnet"                 # testnet
       - "--indexer-rpc-host=0.0.0.0"
-      - "--daemon-rpc-host=0.0.0.0"
+      - "--daemon-rpc-host=bitcoind"
       - "--cookie=rpc:rpc"
       - "--daemon-dir=/bitcoin/.bitcoin"
       - "-vvv"
