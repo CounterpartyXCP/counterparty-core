@@ -523,7 +523,7 @@ def start_all(catch_up='normal'):
     connect_to_backend()
 
     if not os.path.exists(config.DATABASE) and catch_up == 'bootstrap':
-        bootstrap()
+        bootstrap(no_confirm=True)
 
     db = initialise_db()
 
@@ -615,7 +615,19 @@ def configure_rpc(rpc_password=None):
     logger.debug('RPC: %s', cleaned_rpc_url)
 
 
-def bootstrap():
+def bootstrap(no_confirm=False):
+    warning_message = '''WARNING: `counterparty-server bootstrap` downloads a recent snapshot of a Counterparty database
+from a centralized server maintained by the Counterparty Core development team.
+Because this method does not involve verifying the history of Counterparty transactions yourself,
+the `bootstrap` command should not be used for mission-critical, commercial or public-facing nodes.
+        '''
+    cprint(warning_message, 'yellow')
+
+    if not no_confirm:
+        confirmation_message = colored('Continue? (y/N): ', "magenta")
+        if input(confirmation_message).lower() != 'y':
+            exit()
+
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
 
     # Set Constants.
