@@ -3,6 +3,7 @@
 import os
 import argparse
 import logging
+from urllib.parse import quote_plus as urlencode
 
 from termcolor import cprint
 
@@ -58,19 +59,50 @@ CONFIG_ARGS = [
     [('--utxo-locks-max-age',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_AGE, 'help': 'how long to keep a lock on a UTXO being tracked'}],
 ]
 
+def welcome_message(action, server_configfile):
+    cprint(f'Running v{config.__version__} of {config.FULL_APP_NAME}.', 'magenta')
+
+    # print some info
+    cprint(f"Configuration file: {server_configfile}", 'light_grey')
+    cprint(f"Counterparty database: {config.DATABASE}", 'light_grey')
+    if config.LOG:
+        cprint(f'Writing log to file: `{config.LOG}`', 'light_grey')
+    else:
+        cprint('Warning: log disabled', 'yellow')
+    if config.API_LOG:
+        cprint(f'Writing API accesses log to file: `{config.API_LOG}`', 'light_grey')
+    else:
+        cprint('Warning: API log disabled', 'yellow')
+
+    if config.VERBOSE:
+        if config.TESTNET:
+            cprint('NETWORK: Testnet', 'light_grey')
+        elif config.REGTEST:
+            cprint('NETWORK: Regtest', 'light_grey')
+        else:
+            cprint('NETWORK: Mainnet', 'light_grey')
+
+        pass_str = f":{urlencode(config.BACKEND_PASSWORD)}@"
+        cleaned_backend_url = config.BACKEND_URL.replace(pass_str, ":*****@")
+        cprint(f'BACKEND_URL: {cleaned_backend_url}', 'light_grey')
+        cprint(f'INDEXD_URL: {config.INDEXD_URL}', 'light_grey')
+        pass_str = f":{urlencode(config.RPC_PASSWORD)}@"
+        cleaned_rpc_url = config.RPC.replace(pass_str, ":*****@")
+        cprint(f'RPC: {cleaned_rpc_url}', 'light_grey')
+
+    cprint(f"{'-' * 30} {action} {'-' * 30}\n", 'green')
+
 
 class VersionError(Exception):
     pass
 def main():
-    cprint(f'Running v{config.__version__} of {config.FULL_APP_NAME}.', 'magenta')
-
     if os.name == 'nt':
         from counterpartylib.lib import util_windows
         #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
         util_windows.fix_win32_unicode()
 
     # Post installation tasks
-    generate_config_files()
+    server_configfile = generate_config_files()
 
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(
@@ -119,7 +151,7 @@ def main():
     parser_checkdb = subparsers.add_parser('check-db', help='do an integrity check on the database')
     add_config_arguments(parser_checkdb, CONFIG_ARGS, configfile)
 
-    parser_show_config = subparsers.add_parser('show-config', help='Show counterparty-server configuration')
+    parser_show_config = subparsers.add_parser('show-params', help='Show counterparty-server configuration')
     add_config_arguments(parser_show_config, CONFIG_ARGS, configfile)
 
     args = parser.parse_args()
@@ -131,11 +163,9 @@ def main():
 
     # Configuration
     init_args = dict(database_file=args.database_file,
-                    log_file=args.log_file, api_log_file=args.api_log_file, no_log_files=args.no_log_files,
                     testnet=args.testnet, testcoin=args.testcoin, regtest=args.regtest,
                     customnet=args.customnet,
                     api_limit_rows=args.api_limit_rows,
-                    backend_name=args.backend_name,
                     backend_connect=args.backend_connect,
                     backend_port=args.backend_port,
                     backend_user=args.backend_user,
@@ -149,12 +179,16 @@ def main():
                     requests_timeout=args.requests_timeout,
                     rpc_batch_size=args.rpc_batch_size,
                     check_asset_conservation=not args.no_check_asset_conservation,
-                    force=args.force, verbose=args.verbose, quiet=args.quiet,
+                    force=args.force,
                     p2sh_dust_return_pubkey=args.p2sh_dust_return_pubkey,
                     utxo_locks_max_addresses=args.utxo_locks_max_addresses,
                     utxo_locks_max_age=args.utxo_locks_max_age)
 
-    server.initialise_config(**init_args)
+    server.initialise_log_config(
+        verbose=args.verbose, quiet=args.quiet,
+        log_file=args.log_file, api_log_file=args.api_log_file, no_log_files=args.no_log_files,
+        testnet=args.testnet, testcoin=args.testcoin, regtest=args.regtest,
+    )
 
     # set up logging
     log.set_up(
@@ -163,14 +197,12 @@ def main():
         log_file=config.LOG,
         log_in_console=args.action == 'start'
     )
+
+    server.initialise_config(**init_args)
+
     logger.info(f'Running v{APP_VERSION} of {APP_NAME}.')
 
-    # print some info
-    if config.LOG:
-        cprint(f'Writing log to file: `{config.LOG}`', 'light_grey')
-    if args.action == 'start' and config.API_LOG:
-        cprint(f'Writing API accesses log to file: `{config.API_LOG}`', 'light_grey')
-    cprint(f"{'-' * 30} {args.action} {'-' * 30}\n", 'green')
+    welcome_message(args.action, server_configfile)
 
     # Bootstrapping
     if args.action == 'bootstrap':
@@ -193,8 +225,8 @@ def main():
     elif args.action == 'start':
         server.start_all(catch_up=args.catch_up)
 
-    elif args.action == 'show-config':
-        server.show_config()
+    elif args.action == 'show-params':
+        server.show_params()
 
     elif args.action == 'vacuum':
         server.vacuum()

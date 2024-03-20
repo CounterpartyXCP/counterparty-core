@@ -84,14 +84,63 @@ def get_lock():
 
 
 def initialise(*args, **kwargs):
+    initialise_log_config(
+        verbose=kwargs.pop('verbose', False),
+        quiet=kwargs.pop('quiet', False),
+        log_file=kwargs.pop('log_file', None),
+        api_log_file=kwargs.pop('api_log_file', None),
+        no_log_files=kwargs.pop('no_log_files', False),
+        testnet=kwargs.get('testnet', False),
+        testcoin=kwargs.get('testcoin', False),
+        regtest=kwargs.get('regtest', False),
+    )
     initialise_config(*args, **kwargs)
     return initialise_db()
 
 
-def initialise_config(database_file=None, log_file=None, api_log_file=None, no_log_files=False,
+def initialise_log_config(
+        verbose=False, quiet=False, log_file=None, api_log_file=None, no_log_files=False,
+        testnet=False, testcoin=False, regtest=False
+    ):
+    # Log directory
+    log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
+    if not os.path.isdir(log_dir):
+        os.makedirs(log_dir, mode=0o755)
+
+    # Set up logging.
+    config.VERBOSE = verbose
+    config.QUIET = quiet
+
+    network = ''
+    if testnet:
+        network += '.testnet'
+    if regtest:
+        network += '.regtest'
+    if testcoin:
+        network += '.testcoin'
+
+    # Log
+    if no_log_files:
+        config.LOG = None
+    elif not log_file:  # default location
+        filename = f'server{network}.log'
+        config.LOG = os.path.join(log_dir, filename)
+    else:  # user-specified location
+        config.LOG = log_file
+
+    if no_log_files:  # no file logging
+        config.API_LOG = None
+    elif not api_log_file:  # default location
+        filename = f'server{network}.access.log'
+        config.API_LOG = os.path.join(log_dir, filename)
+    else:  # user-specified location
+        config.API_LOG = api_log_file
+
+
+def initialise_config(database_file=None,
                 testnet=False, testcoin=False, regtest=False,
                 api_limit_rows=1000,
-                backend_name=None, backend_connect=None, backend_port=None,
+                backend_connect=None, backend_port=None,
                 backend_user=None, backend_password=None,
                 indexd_connect=None, indexd_port=None,
                 backend_ssl=False, backend_ssl_no_verify=False,
@@ -99,7 +148,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
                 rpc_host=None, rpc_port=None,
                 rpc_user=None, rpc_password=None,
                 rpc_no_allow_cors=False,
-                force=False, verbose=False, quiet=False,
+                force=False,
                 requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
                 rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
                 check_asset_conservation=config.DEFAULT_CHECK_ASSET_CONSERVATION,
@@ -108,6 +157,12 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
                 utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE,
                 estimate_fee_per_kb=None,
                 customnet=None):
+
+    # log config alreasdy initialized
+    logger.debug('VERBOSE: %s', config.VERBOSE)
+    logger.debug('QUIET: %s', config.QUIET)
+    logger.debug('LOG: %s', config.LOG)
+    logger.debug('API_LOG: %s', config.API_LOG)
 
     # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -140,10 +195,13 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
 
     if config.TESTNET:
         bitcoinlib.SelectParams('testnet')
+        logger.debug('NETWORK: testnet')
     elif config.REGTEST:
         bitcoinlib.SelectParams('regtest')
+        logger.debug('NETWORK: regtest')
     else:
         bitcoinlib.SelectParams('mainnet')
+        logger.debug('NETWORK: mainnet')
 
     network = ''
     if config.TESTNET:
@@ -160,31 +218,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
         filename = f'{config.APP_NAME}{network}.db'
         config.DATABASE = os.path.join(data_dir, filename)
 
-    # Log directory
-    log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
-    if not os.path.isdir(log_dir):
-        os.makedirs(log_dir, mode=0o755)
-
-    # Log
-    if no_log_files:
-        config.LOG = None
-    elif not log_file:  # default location
-        filename = f'server{network}.log'
-        config.LOG = os.path.join(log_dir, filename)
-    else:  # user-specified location
-        config.LOG = log_file
-
-    # Set up logging.
-    config.VERBOSE = verbose
-    config.QUIET = quiet
-
-    if no_log_files:  # no file logging
-        config.API_LOG = None
-    elif not api_log_file:  # default location
-        filename = f'server{network}.access.log'
-        config.API_LOG = os.path.join(log_dir, filename)
-    else:  # user-specified location
-        config.API_LOG = api_log_file
+    logger.debug('DATABASE: %s', config.DATABASE)
 
     config.API_LIMIT_ROWS = api_limit_rows
 
@@ -258,6 +292,9 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
         config.BACKEND_URL = 'https://' + config.BACKEND_URL
     else:
         config.BACKEND_URL = 'http://' + config.BACKEND_URL
+    
+    cleaned_backend_url = config.BACKEND_URL.replace(f':{config.BACKEND_PASSWORD}@', ':*****@')
+    logger.debug('BACKEND_URL: %s', cleaned_backend_url)
 
     # Indexd RPC host
     if indexd_connect:
@@ -285,6 +322,8 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
 
     # Construct Indexd URL.
     config.INDEXD_URL = 'http://' + config.INDEXD_CONNECT + ':' + str(config.INDEXD_PORT)
+
+    logger.debug('INDEXD_URL: %s', config.INDEXD_URL)
 
     ##############
     # THINGS WE SERVE
@@ -550,7 +589,7 @@ def check_database():
     cprint('Database checks complete.', 'green')
 
 
-def show_config():
+def show_params():
     output = vars(config)
     for k in list(output.keys()):
         if k.isupper():
@@ -571,6 +610,9 @@ def configure_rpc(rpc_password=None):
         config.RPC = 'http://' + urlencode(config.RPC_USER) + ':' + urlencode(config.RPC_PASSWORD) + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
     else:
         config.RPC = 'http://' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
+
+    cleaned_rpc_url = config.RPC.replace(f':{urlencode(config.RPC_PASSWORD)}@', ':*****@')
+    logger.debug('RPC: %s', cleaned_rpc_url)
 
 
 def bootstrap():
