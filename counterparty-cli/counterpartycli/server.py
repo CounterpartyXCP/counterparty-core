@@ -50,6 +50,7 @@ CONFIG_ARGS = [
     [('--requests-timeout',), {'type': int, 'default': config.DEFAULT_REQUESTS_TIMEOUT, 'help': 'timeout value (in seconds) used for all HTTP requests (default: 5)'}],
 
     [('--force',), {'action': 'store_true', 'default': False, 'help': 'skip backend check, version check, process lock (NOT FOR USE ON PRODUCTION SYSTEMS)'}],
+    [('--no-confirm',), {'action': 'store_true', 'default': False, 'help': 'don\'t ask for confirmation'}],
     [('--database-file',), {'default': None, 'help': 'the path to the SQLite3 database file'}],
     [('--log-file',), {'nargs': '?', 'const': None, 'default': False, 'help': 'log to the specified file'}],
     [('--api-log-file',), {'nargs': '?', 'const': None, 'default': False, 'help': 'log API requests to the specified file'}],
@@ -206,7 +207,7 @@ def main():
 
     # Bootstrapping
     if args.action == 'bootstrap':
-        server.bootstrap()
+        server.bootstrap(no_confirm=args.no_confirm)
 
     # PARSING
     elif args.action == 'reparse':
