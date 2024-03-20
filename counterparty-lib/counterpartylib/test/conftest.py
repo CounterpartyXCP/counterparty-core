@@ -116,7 +116,7 @@ def pytest_generate_tests(metafunc):
                 args.append((scenario_name, INTEGRATION_SCENARIOS[scenario_name][1], INTEGRATION_SCENARIOS[scenario_name][0], metafunc.config))
         metafunc.parametrize('scenario_name, base_scenario_name, transactions, pytest_config', args)
     elif metafunc.function.__name__ == 'test_book':
-        metafunc.parametrize('book', [(metafunc.config.getoption("testbook"),)])
+        metafunc.parametrize('skip', [not metafunc.config.getoption("testbook")])
 
 
 def pytest_addoption(parser):
@@ -126,7 +126,7 @@ def pytest_addoption(parser):
     parser.addoption("--gentxhex", action='store_true', default=False, help="Generate and print unsigned hex for *.compose() tests")
     parser.addoption("--savescenarios", action='store_true', default=False, help="Generate sql dump and log in .new files")
     parser.addoption("--alternative", action='store_true', default=False)
-    parser.addoption("--testbook", default='no', help="Include test book (use with one of the following values: `testnet` or `mainnet`)")
+    parser.addoption("--testbook", action='store_true', default=False, help="Include testnet test book")
 
 
 @pytest.fixture(scope="function")

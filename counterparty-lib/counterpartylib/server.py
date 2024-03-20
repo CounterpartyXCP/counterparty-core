@@ -2,7 +2,7 @@
 
 import os
 import decimal
-import pprint
+import tempfile
 import sys
 import apsw
 import time
@@ -13,7 +13,8 @@ import appdirs
 import platform
 import bitcoin as bitcoinlib
 import logging
-import traceback
+import urllib
+import tarfile
 from urllib.parse import quote_plus as urlencode
 
 from halo import Halo
@@ -83,14 +84,63 @@ def get_lock():
 
 
 def initialise(*args, **kwargs):
+    initialise_log_config(
+        verbose=kwargs.pop('verbose', False),
+        quiet=kwargs.pop('quiet', False),
+        log_file=kwargs.pop('log_file', None),
+        api_log_file=kwargs.pop('api_log_file', None),
+        no_log_files=kwargs.pop('no_log_files', False),
+        testnet=kwargs.get('testnet', False),
+        testcoin=kwargs.get('testcoin', False),
+        regtest=kwargs.get('regtest', False),
+    )
     initialise_config(*args, **kwargs)
     return initialise_db()
 
 
-def initialise_config(database_file=None, log_file=None, api_log_file=None, no_log_files=False,
+def initialise_log_config(
+        verbose=False, quiet=False, log_file=None, api_log_file=None, no_log_files=False,
+        testnet=False, testcoin=False, regtest=False
+    ):
+    # Log directory
+    log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
+    if not os.path.isdir(log_dir):
+        os.makedirs(log_dir, mode=0o755)
+
+    # Set up logging.
+    config.VERBOSE = verbose
+    config.QUIET = quiet
+
+    network = ''
+    if testnet:
+        network += '.testnet'
+    if regtest:
+        network += '.regtest'
+    if testcoin:
+        network += '.testcoin'
+
+    # Log
+    if no_log_files:
+        config.LOG = None
+    elif not log_file:  # default location
+        filename = f'server{network}.log'
+        config.LOG = os.path.join(log_dir, filename)
+    else:  # user-specified location
+        config.LOG = log_file
+
+    if no_log_files:  # no file logging
+        config.API_LOG = None
+    elif not api_log_file:  # default location
+        filename = f'server{network}.access.log'
+        config.API_LOG = os.path.join(log_dir, filename)
+    else:  # user-specified location
+        config.API_LOG = api_log_file
+
+
+def initialise_config(database_file=None,
                 testnet=False, testcoin=False, regtest=False,
                 api_limit_rows=1000,
-                backend_name=None, backend_connect=None, backend_port=None,
+                backend_connect=None, backend_port=None,
                 backend_user=None, backend_password=None,
                 indexd_connect=None, indexd_port=None,
                 backend_ssl=False, backend_ssl_no_verify=False,
@@ -98,7 +148,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
                 rpc_host=None, rpc_port=None,
                 rpc_user=None, rpc_password=None,
                 rpc_no_allow_cors=False,
-                force=False, verbose=False, quiet=False,
+                force=False,
                 requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
                 rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
                 check_asset_conservation=config.DEFAULT_CHECK_ASSET_CONSERVATION,
@@ -107,6 +157,12 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
                 utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE,
                 estimate_fee_per_kb=None,
                 customnet=None):
+
+    # log config alreasdy initialized
+    logger.debug('VERBOSE: %s', config.VERBOSE)
+    logger.debug('QUIET: %s', config.QUIET)
+    logger.debug('LOG: %s', config.LOG)
+    logger.debug('API_LOG: %s', config.API_LOG)
 
     # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -139,10 +195,13 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
 
     if config.TESTNET:
         bitcoinlib.SelectParams('testnet')
+        logger.debug('NETWORK: testnet')
     elif config.REGTEST:
         bitcoinlib.SelectParams('regtest')
+        logger.debug('NETWORK: regtest')
     else:
         bitcoinlib.SelectParams('mainnet')
+        logger.debug('NETWORK: mainnet')
 
     network = ''
     if config.TESTNET:
@@ -159,31 +218,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
         filename = f'{config.APP_NAME}{network}.db'
         config.DATABASE = os.path.join(data_dir, filename)
 
-    # Log directory
-    log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
-    if not os.path.isdir(log_dir):
-        os.makedirs(log_dir, mode=0o755)
-
-    # Log
-    if no_log_files:
-        config.LOG = None
-    elif not log_file:  # default location
-        filename = f'server{network}.log'
-        config.LOG = os.path.join(log_dir, filename)
-    else:  # user-specified location
-        config.LOG = log_file
-
-    # Set up logging.
-    config.VERBOSE = verbose
-    config.QUIET = quiet
-
-    if no_log_files:  # no file logging
-        config.API_LOG = None
-    elif not api_log_file:  # default location
-        filename = f'server{network}.access.log'
-        config.API_LOG = os.path.join(log_dir, filename)
-    else:  # user-specified location
-        config.API_LOG = api_log_file
+    logger.debug('DATABASE: %s', config.DATABASE)
 
     config.API_LIMIT_ROWS = api_limit_rows
 
@@ -257,6 +292,9 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
         config.BACKEND_URL = 'https://' + config.BACKEND_URL
     else:
         config.BACKEND_URL = 'http://' + config.BACKEND_URL
+    
+    cleaned_backend_url = config.BACKEND_URL.replace(f':{config.BACKEND_PASSWORD}@', ':*****@')
+    logger.debug('BACKEND_URL: %s', cleaned_backend_url)
 
     # Indexd RPC host
     if indexd_connect:
@@ -284,6 +322,8 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
 
     # Construct Indexd URL.
     config.INDEXD_URL = 'http://' + config.INDEXD_CONNECT + ':' + str(config.INDEXD_PORT)
+
+    logger.debug('INDEXD_URL: %s', config.INDEXD_URL)
 
     ##############
     # THINGS WE SERVE
@@ -478,9 +518,14 @@ def connect_to_addrindexrs():
     print(f'{OK_GREEN} {step}')
 
 
-def start_all(db):
+def start_all(catch_up='normal'):
     # Backend.
     connect_to_backend()
+
+    if not os.path.exists(config.DATABASE) and catch_up == 'bootstrap':
+        bootstrap(no_confirm=True)
+
+    db = initialise_db()
 
     # API Status Poller.
     api_status_poller = api.APIStatusPoller()
@@ -496,11 +541,13 @@ def start_all(db):
     blocks.follow(db)
 
 
-def reparse(db, block_index):
+def reparse(block_index):
+    db = initialise_db()
     blocks.reparse(db, block_index=block_index)
 
 
-def rollback(db, block_index=None):
+def rollback(block_index=None):
+    db = initialise_db()
     blocks.rollback(db, block_index=block_index)
 
 
@@ -513,15 +560,16 @@ def kickstart(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     )
 
 
-def vacuum(db):
+def vacuum():
+    db = initialise_db()
     step = 'Vacuuming database...'
     with Halo(text=step, spinner=SPINNER_STYLE):
         database.vacuum(db)
     print(f'{OK_GREEN} {step}')
 
 
-def check_database(db):
-    ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
+def check_database():
+    db = initialise_db()
 
     step = 'Checking asset conservation...'
     with Halo(text=step, spinner=SPINNER_STYLE):
@@ -541,7 +589,7 @@ def check_database(db):
     cprint('Database checks complete.', 'green')
 
 
-def show_config():
+def show_params():
     output = vars(config)
     for k in list(output.keys()):
         if k.isupper():
@@ -563,5 +611,82 @@ def configure_rpc(rpc_password=None):
     else:
         config.RPC = 'http://' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
 
+    cleaned_rpc_url = config.RPC.replace(f':{urlencode(config.RPC_PASSWORD)}@', ':*****@')
+    logger.debug('RPC: %s', cleaned_rpc_url)
 
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
+
+def bootstrap(no_confirm=False):
+    warning_message = '''WARNING: `counterparty-server bootstrap` downloads a recent snapshot of a Counterparty database
+from a centralized server maintained by the Counterparty Core development team.
+Because this method does not involve verifying the history of Counterparty transactions yourself,
+the `bootstrap` command should not be used for mission-critical, commercial or public-facing nodes.
+        '''
+    cprint(warning_message, 'yellow')
+
+    if not no_confirm:
+        confirmation_message = colored('Continue? (y/N): ', "magenta")
+        if input(confirmation_message).lower() != 'y':
+            exit()
+
+    data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+
+    # Set Constants.
+    bootstrap_url = config.BOOTSTRAP_URL_TESTNET if config.TESTNET else config.BOOTSTRAP_URL_MAINNET
+    tar_filename = os.path.basename(bootstrap_url)
+    tarball_path = os.path.join(tempfile.gettempdir(), tar_filename)
+    database_path = os.path.join(data_dir, config.APP_NAME)
+    if config.TESTNET:
+        database_path += '.testnet'
+    database_path += '.db'
+
+    # Prepare Directory.
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir, mode=0o755)
+    if os.path.exists(database_path):
+        os.remove(database_path)
+    # Delete SQLite Write-Ahead-Log
+    wal_path = database_path + "-wal"
+    shm_path = database_path + "-shm"
+    if os.path.exists(wal_path):
+        os.remove(wal_path)
+    if os.path.exists(shm_path):
+        os.remove(shm_path)
+
+    # Define Progress Bar.
+    step = f'Downloading database from {bootstrap_url}...'
+    spinner = Halo(text=step, spinner=SPINNER_STYLE)
+
+    def bootstrap_progress(blocknum, blocksize, totalsize):
+        readsofar = blocknum * blocksize
+        if totalsize > 0:
+            percent = readsofar * 1e2 / totalsize
+            message = f"Downloading database: {percent:5.1f}% {readsofar} / {totalsize}"
+            spinner.text = message
+
+    # Downloading
+    spinner.start()
+    urllib.request.urlretrieve(
+        bootstrap_url,
+        tarball_path,
+        bootstrap_progress
+    ) # nosec B310
+    spinner.stop()
+    print(f"{OK_GREEN} {step}")
+
+    # TODO: check checksum, filenames, etc.
+    step = f'Extracting database to {data_dir}...'
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        with tarfile.open(tarball_path, 'r:gz') as tar_file:
+            tar_file.extractall(path=data_dir) # nosec B202
+    print(f"{OK_GREEN} {step}")
+
+    assert os.path.exists(database_path)
+    # user and group have "rw" access
+    os.chmod(database_path, 0o660) # nosec B103
+
+    step = 'Cleaning up...'
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        os.remove(tarball_path)
+    print(f"{OK_GREEN} {step}")
+
+    cprint(f"Database has been successfully bootstrapped to {database_path}.", "green")

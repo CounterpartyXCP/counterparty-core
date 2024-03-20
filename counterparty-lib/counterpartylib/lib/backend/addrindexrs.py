@@ -639,9 +639,11 @@ def get_oldest_tx(address, block_index=None):
     current_block_index = block_index or ledger.CURRENT_BLOCK_INDEX
     hardcoded_key = f"{current_block_index}-{address}"
     if hardcoded_key in GET_OLDEST_TX_HARDCODED:
-        return GET_OLDEST_TX_HARDCODED[hardcoded_key]
+        result = GET_OLDEST_TX_HARDCODED[hardcoded_key]
+    else:
+        global ADDRINDEXRS_CLIENT
+        if ADDRINDEXRS_CLIENT is None:
+            ADDRINDEXRS_CLIENT = AddrindexrsSocket()
+        result = ADDRINDEXRS_CLIENT.get_oldest_tx(address, block_index=current_block_index)
 
-    global ADDRINDEXRS_CLIENT
-    if ADDRINDEXRS_CLIENT is None:
-        ADDRINDEXRS_CLIENT = AddrindexrsSocket()
-    return ADDRINDEXRS_CLIENT.get_oldest_tx(address, block_index=current_block_index)
+    return result

@@ -5,9 +5,9 @@ Counterparty Core v10.0.0 is a very large release comprising many improvements a
 # Upgrade Procedure
 This release does not include any protocol changes, so there is no deadline for upgrading. However it is **strongly recommended** that all users upgrade as soon as possible, in particular to avoid consensus problems due to non-determinism in previous versions. The Counterparty Core API is also unchanged for this release.
 
-Because this release includes numerous changes to the database schema, a full database rebuild is required and the major version number has been bumped from 9 to 10. Follow the updated installation instructions in the [README](../README.md) to download and install the latest version of Counterparty Core, run `counterparty-server kickstart` (while `bitcoind` is not running), then start the server with `counterparty-server start`. The rebuild should happen automatically, and it should take between 8 and 24 hours hours to complete.
+Because this release includes numerous changes to the database schema, a full database rebuild is required and the major version number has been bumped from 9 to 10. Follow the updated installation instructions in the [README](/README.md) to download and install the latest version of Counterparty Core, run `counterparty-server kickstart` (while `bitcoind` is not running), then start the server with `counterparty-server start`. The rebuild should happen automatically, and it should take between 8 and 24 hours hours to complete.
 
-**IMPORTANT** Be certain that your are running the latest version of AddrIndexRs (v0.4.3).
+**IMPORTANT** Be certain that you are running the latest version of AddrIndexRs (v0.4.4).
 
 
 # ChangeLog
@@ -32,7 +32,9 @@ Because this release includes numerous changes to the database schema, a full da
     * Bandit
     * CodeQL
     * License Scanner
-* Add checkpoints for `mainnet` up to block 825,000 and for `testnet` up to block 2,540,000
+    * Build and publish Docker image
+    * Enable `testnet` test book
+* Add checkpoints for `mainnet` up to block 834,500 and for `testnet` up to block 2,580,000
 * Rewrite README
 
 
@@ -60,6 +62,7 @@ Because this release includes numerous changes to the database schema, a full da
 * Always log to a file, unless `--no-log-files` is set
 * Fix and refactor `log.set_up()`
 * Improve thread shutdown logic
+* Accept config args before and after the command
 
 
 ## Refactoring and Performance Optimizations
@@ -88,9 +91,11 @@ Because this release includes numerous changes to the database schema, a full da
     * Isolate transaction parsing inside `gettxinfo.py` module
     * Heavily refactor code; eliminate unused code blocks
     * Isolate dispenser logic in `get_dispensers_outputs()` and `get_dispensers_tx_info()`
-
+* Activate check software version every 24H
+* Add the possibility to reparse from a given block on minor version change
+* Add Warning with Confirmation Dialogue to bootstrap Command and `--no-confirm` flag
 
 # Credits
 * Ouziel Slama
 * Adam Krellenstein
-* Warren Puffet
+* Warren Puffett
