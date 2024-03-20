@@ -3,6 +3,7 @@
 import os
 import argparse
 import logging
+from urllib.parse import quote_plus as urlencode
 
 from termcolor import cprint
 
@@ -58,19 +59,48 @@ CONFIG_ARGS = [
     [('--utxo-locks-max-age',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_AGE, 'help': 'how long to keep a lock on a UTXO being tracked'}],
 ]
 
+def welcome_message(action, server_configfile):
+    cprint(f'Running v{config.__version__} of {config.FULL_APP_NAME}.', 'magenta')
+
+    # print some info
+    cprint(f"Configuration file: {server_configfile}", 'light_grey')
+    cprint(f"Counterparty database: {config.DATABASE}", 'light_grey')
+    if config.LOG:
+        cprint(f'Writing log to file: `{config.LOG}`', 'light_grey')
+    else:
+        cprint('Warning: log disabled', 'yellow')
+    if config.API_LOG:
+        cprint(f'Writing API accesses log to file: `{config.API_LOG}`', 'light_grey')
+    else:
+        cprint('Warning: API log disabled', 'yellow')
+
+    if config.VERBOSE:
+        if config.TESTNET:
+            cprint('NETWORK: Testnet', 'light_grey')
+        elif config.REGTEST:
+            cprint('NETWORK: Regtest', 'light_grey')
+        else:
+            cprint('NETWORK: Mainnet', 'light_grey')
+
+        pass_str = f":{urlencode(config.BACKEND_PASSWORD)}@"
+        cprint(f'BACKEND_URL: {config.BACKEND_URL.replace(pass_str, ":*****@")}', 'light_grey')
+        cprint(f'INDEXD_URL: {config.INDEXD_URL}', 'light_grey')
+        pass_str = f":{urlencode(config.RPC_PASSWORD)}@"
+        cprint(f'RPC: {config.RPC.replace(pass_str, ":*****@")}', 'light_grey')
+
+    cprint(f"{'-' * 30} {action} {'-' * 30}\n", 'green')
+
 
 class VersionError(Exception):
     pass
 def main():
-    cprint(f'Running v{config.__version__} of {config.FULL_APP_NAME}.', 'magenta')
-
     if os.name == 'nt':
         from counterpartylib.lib import util_windows
         #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
         util_windows.fix_win32_unicode()
 
     # Post installation tasks
-    generate_config_files()
+    server_configfile = generate_config_files()
 
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(
@@ -163,14 +193,10 @@ def main():
         log_file=config.LOG,
         log_in_console=args.action == 'start'
     )
+
     logger.info(f'Running v{APP_VERSION} of {APP_NAME}.')
 
-    # print some info
-    if config.LOG:
-        cprint(f'Writing log to file: `{config.LOG}`', 'light_grey')
-    if args.action == 'start' and config.API_LOG:
-        cprint(f'Writing API accesses log to file: `{config.API_LOG}`', 'light_grey')
-    cprint(f"{'-' * 30} {args.action} {'-' * 30}\n", 'green')
+    welcome_message(args.action, server_configfile)
 
     # Bootstrapping
     if args.action == 'bootstrap':

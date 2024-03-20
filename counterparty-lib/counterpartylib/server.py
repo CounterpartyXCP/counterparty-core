@@ -140,10 +140,13 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
 
     if config.TESTNET:
         bitcoinlib.SelectParams('testnet')
+        logger.debug('NETWORK: testnet')
     elif config.REGTEST:
         bitcoinlib.SelectParams('regtest')
+        logger.debug('NETWORK: regtest')
     else:
         bitcoinlib.SelectParams('mainnet')
+        logger.debug('NETWORK: mainnet')
 
     network = ''
     if config.TESTNET:
@@ -160,10 +163,19 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
         filename = f'{config.APP_NAME}{network}.db'
         config.DATABASE = os.path.join(data_dir, filename)
 
+    logger.debug('DATABASE: %s', config.DATABASE)
+
     # Log directory
     log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
     if not os.path.isdir(log_dir):
         os.makedirs(log_dir, mode=0o755)
+
+    # Set up logging.
+    config.VERBOSE = verbose
+    config.QUIET = quiet
+
+    logger.debug('VERBOSE: %s', config.VERBOSE)
+    logger.debug('QUIET: %s', config.QUIET)
 
     # Log
     if no_log_files:
@@ -173,10 +185,8 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
         config.LOG = os.path.join(log_dir, filename)
     else:  # user-specified location
         config.LOG = log_file
-
-    # Set up logging.
-    config.VERBOSE = verbose
-    config.QUIET = quiet
+    
+    logger.debug('LOG: %s', config.LOG)
 
     if no_log_files:  # no file logging
         config.API_LOG = None
@@ -185,6 +195,8 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
         config.API_LOG = os.path.join(log_dir, filename)
     else:  # user-specified location
         config.API_LOG = api_log_file
+
+    logger.debug('API_LOG: %s', config.API_LOG)
 
     config.API_LIMIT_ROWS = api_limit_rows
 
@@ -258,6 +270,8 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
         config.BACKEND_URL = 'https://' + config.BACKEND_URL
     else:
         config.BACKEND_URL = 'http://' + config.BACKEND_URL
+    
+    logger.debug('BACKEND_URL: %s', config.BACKEND_URL.replace(f':{config.BACKEND_PASSWORD}@', ':*****@'))
 
     # Indexd RPC host
     if indexd_connect:
@@ -285,6 +299,8 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None, no_l
 
     # Construct Indexd URL.
     config.INDEXD_URL = 'http://' + config.INDEXD_CONNECT + ':' + str(config.INDEXD_PORT)
+
+    logger.debug('INDEXD_URL: %s', config.INDEXD_URL)
 
     ##############
     # THINGS WE SERVE
@@ -571,6 +587,8 @@ def configure_rpc(rpc_password=None):
         config.RPC = 'http://' + urlencode(config.RPC_USER) + ':' + urlencode(config.RPC_PASSWORD) + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
     else:
         config.RPC = 'http://' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
+
+    logger.debug('RPC: %s', config.RPC.replace(f':{urlencode(config.RPC_PASSWORD)}@', ':*****@'))
 
 
 def bootstrap():

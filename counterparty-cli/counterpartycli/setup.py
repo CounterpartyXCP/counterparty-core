@@ -156,6 +156,7 @@ def generate_config_files():
         if not os.path.exists(client_configfile):
             client_known_config = server_to_client_config(server_known_config)
             generate_config_file(client_configfile, CLIENT_CONFIG_ARGS, client_known_config)
+    return server_configfile
 
 def zip_folder(folder_path, zip_path):
     zip_file = zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED)
