@@ -151,7 +151,7 @@ def main():
     parser_checkdb = subparsers.add_parser('check-db', help='do an integrity check on the database')
     add_config_arguments(parser_checkdb, CONFIG_ARGS, configfile)
 
-    parser_show_config = subparsers.add_parser('show-config', help='Show counterparty-server configuration')
+    parser_show_config = subparsers.add_parser('show-params', help='Show counterparty-server configuration')
     add_config_arguments(parser_show_config, CONFIG_ARGS, configfile)
 
     args = parser.parse_args()
@@ -225,8 +225,8 @@ def main():
     elif args.action == 'start':
         server.start_all(catch_up=args.catch_up)
 
-    elif args.action == 'show-config':
-        server.show_config()
+    elif args.action == 'show-params':
+        server.show_params()
 
     elif args.action == 'vacuum':
         server.vacuum()

@@ -589,7 +589,7 @@ def check_database():
     cprint('Database checks complete.', 'green')
 
 
-def show_config():
+def show_params():
     output = vars(config)
     for k in list(output.keys()):
         if k.isupper():
