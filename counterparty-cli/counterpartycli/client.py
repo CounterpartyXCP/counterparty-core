@@ -37,7 +37,7 @@ CONFIG_ARGS = [
     [('--wallet-name',), {'default': 'bitcoincore', 'help': 'the wallet name to connect to'}],
     [('--wallet-connect',), {'default': 'localhost', 'help': 'the hostname or IP of the wallet server'}],
     [('--wallet-port',), {'type': int, 'help': 'the wallet port to connect to'}],
-    [('--wallet-user',), {'default': 'bitcoinrpc', 'help': 'the username used to communicate with wallet'}],
+    [('--wallet-user',), {'default': 'rpc', 'help': 'the username used to communicate with wallet'}],
     [('--wallet-password',), {'help': 'the password used to communicate with wallet'}],
     [('--wallet-ssl',), {'action': 'store_true', 'default': False, 'help': 'use SSL to connect to wallet (default: false)'}],
     [('--wallet-ssl-verify',), {'action': 'store_true', 'default': False, 'help': 'verify SSL certificate of wallet; disallow use of self‐signed certificates (default: false)'}],

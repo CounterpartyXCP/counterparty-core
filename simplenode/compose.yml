@@ -11,7 +11,7 @@ services:
       # - "-chain=test"                       # testnet
       - "-rpcallowip=0.0.0.0/0"
       - "-rpcbind=0.0.0.0"
-      - "-rpcuser=bitcoinrpc"
+      - "-rpcuser=rpc"
       - "-rpcpassword=rpc"
       - "-listen=1"
       - "-server=1"
@@ -38,7 +38,7 @@ services:
       # - "--network=testnet"                 # testnet
       - "--indexer-rpc-host=0.0.0.0"
       - "--daemon-rpc-host=0.0.0.0"
-      - "--cookie=bitcoinrpc:rpc"
+      - "--cookie=rpc:rpc"
       - "--daemon-dir=/bitcoin/.bitcoin"
       - "-vvv"
       - "--db-dir=/data/addrindexrs/db"
@@ -60,7 +60,6 @@ services:
       - "--backend-connect=bitcoind"
       - "--indexd-connect=addrindexrs"
       - "--rpc-host=0.0.0.0"
-      - "--rpc-password=rpc"                  # optional
       - "--catch-up=bootstrap"
     environment:
       - "XDG_DATA_HOME=/data/"
