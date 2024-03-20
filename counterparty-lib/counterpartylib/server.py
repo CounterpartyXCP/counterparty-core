@@ -84,6 +84,16 @@ def get_lock():
 
 
 def initialise(*args, **kwargs):
+    initialise_log_config(
+        verbose=kwargs.pop('verbose', False),
+        quiet=kwargs.pop('quiet', False),
+        log_file=kwargs.pop('log_file', None),
+        api_log_file=kwargs.pop('api_log_file', None),
+        no_log_files=kwargs.pop('no_log_files', False),
+        testnet=kwargs.get('testnet', False),
+        testcoin=kwargs.get('testcoin', False),
+        regtest=kwargs.get('regtest', False),
+    )
     initialise_config(*args, **kwargs)
     return initialise_db()
 
