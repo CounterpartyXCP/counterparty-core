@@ -283,7 +283,8 @@ def initialise_config(database_file=None,
     else:
         config.BACKEND_URL = 'http://' + config.BACKEND_URL
     
-    logger.debug('BACKEND_URL: %s', config.BACKEND_URL.replace(f':{config.BACKEND_PASSWORD}@', ':*****@'))
+    cleaned_backend_url = config.BACKEND_URL.replace(f':{config.BACKEND_PASSWORD}@', ':*****@')
+    logger.debug('BACKEND_URL: %s', cleaned_backend_url)
 
     # Indexd RPC host
     if indexd_connect:
@@ -600,7 +601,8 @@ def configure_rpc(rpc_password=None):
     else:
         config.RPC = 'http://' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
 
-    logger.debug('RPC: %s', config.RPC.replace(f':{urlencode(config.RPC_PASSWORD)}@', ':*****@'))
+    cleaned_rpc_url = config.RPC.replace(f':{urlencode(config.RPC_PASSWORD)}@', ':*****@')
+    logger.debug('RPC: %s', cleaned_rpc_url)
 
 
 def bootstrap():

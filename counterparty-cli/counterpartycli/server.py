@@ -83,10 +83,12 @@ def welcome_message(action, server_configfile):
             cprint('NETWORK: Mainnet', 'light_grey')
 
         pass_str = f":{urlencode(config.BACKEND_PASSWORD)}@"
-        cprint(f'BACKEND_URL: {config.BACKEND_URL.replace(pass_str, ":*****@")}', 'light_grey')
+        cleaned_backend_url = config.BACKEND_URL.replace(pass_str, ":*****@")
+        cprint(f'BACKEND_URL: {cleaned_backend_url}', 'light_grey')
         cprint(f'INDEXD_URL: {config.INDEXD_URL}', 'light_grey')
         pass_str = f":{urlencode(config.RPC_PASSWORD)}@"
-        cprint(f'RPC: {config.RPC.replace(pass_str, ":*****@")}', 'light_grey')
+        cleaned_rpc_url = config.RPC.replace(pass_str, ":*****@")
+        cprint(f'RPC: {cleaned_rpc_url}', 'light_grey')
 
     cprint(f"{'-' * 30} {action} {'-' * 30}\n", 'green')
 
