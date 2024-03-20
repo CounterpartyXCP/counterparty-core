@@ -93,6 +93,7 @@ Because this release includes numerous changes to the database schema, a full da
     * Isolate dispenser logic in `get_dispensers_outputs()` and `get_dispensers_tx_info()`
 * Activate check software version every 24H
 * Add the possibility to reparse from a given block on minor version change
+* Add Warning with Confirmation Dialogue to bootstrap Command and `--no-confirm` flag
 
 # Credits
 * Ouziel Slama
