@@ -29,6 +29,8 @@ Then wait for your node to catch up with the network. Note: this process current
 
 # Manual Installation
 
+Counterparty Core can be installed on most platforms but, for now, manual installation is being tested and is only officially supported on Ubuntu 22.04 and MacOS.
+
 Dependencies:
 
 - Bitcoin Core
