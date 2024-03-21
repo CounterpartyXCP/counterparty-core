@@ -16,15 +16,17 @@ sudo apt install docker-compose
 Then, for `mainnet`, run:
 
 ```bash
-docker-compose -f docker/compose.yml up
+docker-compose pull
+docker-compose -f docker/compose.yml -p counterparty up
 ```
 
 For `testnet`, modify the Docker Compose file in `docker/` and then run:
 ```bash
+docker-compose pull
 docker-compose -f docker/compose.yml -p counterparty-testnet up
 ```
 
-Then wait for your node to catch up with the network. Note: this process currently takes a long time, beause it does not make use of the `bootstrap` or `kickstart` functionality. (See below.)
+NOTE: By default, this Docker Compose script makes use of the `bootstrap` functionality, because Docker makes it hard to use `kickstart`. (See below)
 
 
 # Manual Installation
