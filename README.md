@@ -16,12 +16,12 @@ sudo apt install docker-compose
 Then, for `mainnet`, run:
 
 ```bash
-docker-compose -f simplenode/compose.yml up
+docker-compose -f docker/compose.yml up
 ```
 
-For `testnet`, modify the Docker Compose file in `simplenode/` and then run:
+For `testnet`, modify the Docker Compose file in `docker/` and then run:
 ```bash
-docker-compose -f simplenode/compose.yml -p simplenode-testnet up
+docker-compose -f docker/compose.yml -p counterparty-testnet up
 ```
 
 Then wait for your node to catch up with the network. Note: this process currently takes a long time, beause it does not make use of the `bootstrap` or `kickstart` functionality. (See below.)
