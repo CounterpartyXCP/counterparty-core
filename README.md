@@ -13,12 +13,26 @@ The simplest way to get your Counterparty node up and running is to use Docker C
 sudo apt install docker-compose
 ```
 
-Then run:
+Then run node services in background with:
 
 ```bash
 git clone git@github.com:CounterpartyXCP/counterparty-core.git
 cd counterparty-core
-docker-compose up
+docker-compose up -d
+```
+
+**To run a node you must have at least 1.5Gb free.** By default all data is stored in the `~/counterparty-core-data` folder. You can modify this folder with the environment variable `$COUNTERPARTY_CORE_DATA`. For example:
+
+```bash
+COUNTERPARTY_CORE_DATA=/var/data docker-compose up -d
+```
+
+Use `docker-compose logs` to view output from services. For example:
+
+```bash
+docker-compose logs --tail=10 -f bitcoind
+docker-compose logs --tail=10 -f addrindexrs
+docker-compose logs --tail=10 -f counterparty-core
 ```
 
 NOTES:
