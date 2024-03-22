@@ -2,7 +2,7 @@ version: '3'
 
 services:
   bitcoind:
-    image: kylemanna/bitcoind:47f4596c3534
+    image: kylemanna/bitcoind:latest
     ports: 
       - "8332:8332"                           # mainnet
       # - "18332:18332"                       # testnet
