@@ -22,14 +22,15 @@ services:
       - "-dbcache=4000"
       - "-mempoolfullrbf=1"
     volumes:
-      - data:/bitcoin
+      - ${COUNTERPARTY_CORE_DATA:-${HOME}/counterparty-core-data/bitcoin}:/bitcoin/.bitcoin
 
   addrindexrs:
     image: counterparty/addrindexrs:v0.4.5
     links:
       - bitcoind
     volumes:
-      - data:/data
+      - ${COUNTERPARTY_CORE_DATA:-${HOME}/counterparty-core-data/bitcoin}:/root/.bitcoin
+      - ${COUNTERPARTY_CORE_DATA:-${HOME}/counterparty-core-data/addrindexrs}:/data
     ports:
       - "8432:8432"                           # mainnet
       # - "18432:18432"                       # testnet
@@ -39,11 +40,8 @@ services:
       - "--indexer-rpc-host=0.0.0.0"
       - "--daemon-rpc-host=bitcoind"
       - "--cookie=rpc:rpc"
-      - "--daemon-dir=/bitcoin/.bitcoin"
       - "-vvv"
-      - "--db-dir=/data/addrindexrs/db"
-    environment:
-      - ADDRINDEXRS_JSONRPC_IMPORT=true
+      - "--db-dir=/data/"
 
   counterparty-core:
     image: counterparty/counterparty:v10.0.0-beta.1
@@ -51,7 +49,8 @@ services:
       - bitcoind
       - addrindexrs
     volumes:
-      - data:/data
+      - ${COUNTERPARTY_CORE_DATA:-${HOME}/counterparty-core-data/bitcoin}:/root/.bitcoin
+      - ${COUNTERPARTY_CORE_DATA:-${HOME}/counterparty-core-data/counterparty}:/data
     ports:
       - "4000:4000"                           # mainnet
       # - "14000:14000"                       # testnet
@@ -63,8 +62,4 @@ services:
       - "--catch-up=bootstrap"
     environment:
       - "XDG_DATA_HOME=/data/"
-      - "XDG_LOG_HOME=/data/"
-
-volumes:
-  data:                                       # mainnet
-  # data-testnet:                             # testnet
+      - "XDG_LOG_HOME=/log/"
