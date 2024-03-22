@@ -94,6 +94,13 @@ Because this release includes numerous changes to the database schema, a full da
 * Activate check software version every 24H
 * Add the possibility to reparse from a given block on minor version change
 * Add warning with confirmation dialogue to bootstrap command, and `--no-confirm` flag
+* Add REST endpoint optimized for tables impacted by the migration to log-structured database:
+    * GET /addresses/<address>/balances
+    * GET /assets/<asset>/
+    * GET /assets/<asset>/balances
+    * GET /assets/<asset>/orders
+    * GET /orders/<tx_hash>
+    * GET /orders/<tx_hash>/matches
 
 # Credits
 * Ouziel Slama
