@@ -607,9 +607,10 @@ def configure_rpc(rpc_password=None):
     # Server API RPC password
     if rpc_password:
         config.RPC_PASSWORD = rpc_password
-        config.RPC = 'http://' + urlencode(config.RPC_USER) + ':' + urlencode(config.RPC_PASSWORD) + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
+        config.API_ROOT = 'http://' + urlencode(config.RPC_USER) + ':' + urlencode(config.RPC_PASSWORD) + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
     else:
-        config.RPC = 'http://' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
+        config.API_ROOT = 'http://' + config.RPC_HOST + ':' + str(config.RPC_PORT)
+    config.RPC = config.API_ROOT + config.RPC_WEBROOT
 
     cleaned_rpc_url = config.RPC.replace(f':{urlencode(config.RPC_PASSWORD)}@', ':*****@')
     logger.debug('RPC: %s', cleaned_rpc_url)
