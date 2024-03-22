@@ -13,20 +13,17 @@ The simplest way to get your Counterparty node up and running is to use Docker C
 sudo apt install docker-compose
 ```
 
-Then, for `mainnet`, run:
+Then run:
 
 ```bash
-docker-compose pull
-docker-compose -f docker/compose.yml -p counterparty up
+git clone git@github.com:CounterpartyXCP/counterparty-core.git
+cd counterparty-core
+docker-compose up
 ```
 
-For `testnet`, modify the Docker Compose file in `docker/` and then run:
-```bash
-docker-compose pull
-docker-compose -f docker/compose.yml -p counterparty-testnet up
-```
-
-NOTE: By default, this Docker Compose script makes use of the `bootstrap` functionality, because Docker makes it hard to use `kickstart`. (See below)
+NOTES:
+- For `testnet` you need to modify the Docker Compose `compose.yml` 
+- By default, this Docker Compose script makes use of the `bootstrap` functionality, because Docker makes it hard to use `kickstart`. (See below)
 
 
 # Manual Installation
