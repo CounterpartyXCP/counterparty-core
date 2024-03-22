@@ -9,7 +9,7 @@ from counterpartylib.test import util_test
 from counterpartylib.test.util_test import CURR_DIR
 from counterpartylib.test.fixtures.params import DP, ADDR
 
-from counterpartylib.lib import util, ledger, blocks, config
+from counterpartylib.lib import util, ledger, blocks, api
 
 FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql'
 FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
@@ -167,3 +167,123 @@ def test_update_lock(server_db):
                 UPDATE {table} SET block_index = :block_index
             ''', {'block_index': 0})
         assert str(excinfo.value) == "ConstraintError: UPDATES NOT ALLOWED"
+
+import json
+
+@pytest.mark.usefixtures("api_server")
+def test_updated_tables_endpoints():
+    for table in api.API_TABLES:
+        if table in ['mempool']:
+            continue
+        result = util.api('get_' + table, {})
+        assert isinstance(result, list)
+        if table == 'orders':
+            assert result[0] == {
+                "tx_index": 11,
+                "tx_hash": "1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a",
+                "block_index": 310010,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "give_asset": "XCP",
+                "give_quantity": 100000000,
+                "give_remaining": 100000000,
+                "get_asset": "BTC",
+                "get_quantity": 1000000,
+                "get_remaining": 1000000,
+                "expiration": 2000,
+                "expire_index": 312010,
+                "fee_required": 900000,
+                "fee_required_remaining": 900000,
+                "fee_provided": 6800,
+                "fee_provided_remaining": 6800,
+                "status": "open",
+                "MAX(rowid)": 3
+            }
+        elif table == 'order_matches':
+            assert result[0] == {
+                "id": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498_1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81",
+                "tx0_index": 492,
+                "tx0_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
+                "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "tx1_index": 493,
+                "tx1_hash": "1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81",
+                "tx1_address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                "forward_asset": "XCP",
+                "forward_quantity": 100000000,
+                "backward_asset": "BTC",
+                "backward_quantity": 800000,
+                "tx0_block_index": 310491,
+                "tx1_block_index": 310492,
+                "block_index": 310492,
+                "tx0_expiration": 2000,
+                "tx1_expiration": 2000,
+                "match_expire_index": 310512,
+                "fee_paid": 7200,
+                "status": "pending",
+                "MAX(rowid)": 1
+            }
+        elif table == 'bets':
+            assert result[0] == {
+                "tx_index": 20,
+                "tx_hash": "2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1",
+                "block_index": 310020,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "bet_type": 1,
+                "deadline": 1388000001,
+                "wager_quantity": 9,
+                "wager_remaining": 0,
+                "counterwager_quantity": 9,
+                "counterwager_remaining": 0,
+                "target_value": 0.0,
+                "leverage": 5040,
+                "expiration": 100,
+                "expire_index": 310119,
+                "fee_fraction_int": 5000000,
+                "status": "filled",
+                "MAX(rowid)": 3
+            }
+        elif table == 'bet_matches':
+            assert result[0] == {
+                "id": "2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93",
+                "tx0_index": 20,
+                "tx0_hash": "2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1",
+                "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "tx1_index": 21,
+                "tx1_hash": "5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93",
+                "tx1_address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                "tx0_bet_type": 1,
+                "tx1_bet_type": 0,
+                "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "initial_value": 1,
+                "deadline": 1388000001,
+                "target_value": 0.0,
+                "leverage": 5040,
+                "forward_quantity": 9,
+                "backward_quantity": 9,
+                "tx0_block_index": 310019,
+                "tx1_block_index": 310020,
+                "block_index": 310019,
+                "tx0_expiration": 100,
+                "tx1_expiration": 100,
+                "match_expire_index": 310119,
+                "fee_fraction_int": 5000000,
+                "status": "pending"
+            }
+        elif table == 'dispensers':
+            assert result[0] == {
+                "tx_index": 108,
+                "tx_hash": "9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec",
+                "block_index": 310107,
+                "source": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
+                "asset": "XCP",
+                "give_quantity": 100,
+                "escrow_quantity": 100,
+                "satoshirate": 100,
+                "status": 0,
+                "give_remaining": 100,
+                "oracle_address": None,
+                "last_status_tx_hash": None,
+                "origin": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
+                "dispense_count": 0,
+                "MAX(rowid)": 1
+            }
