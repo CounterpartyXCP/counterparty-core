@@ -2,7 +2,7 @@ version: '3'
 
 services:
   bitcoind:
-    image: kylemanna/bitcoind
+    image: kylemanna/bitcoind:47f4596c3534
     ports: 
       - "8332:8332"                           # mainnet
       # - "18332:18332"                       # testnet
@@ -25,7 +25,7 @@ services:
       - data:/bitcoin
 
   addrindexrs:
-    image: counterparty/addrindexrs
+    image: counterparty/addrindexrs:0.4.4
     links:
       - bitcoind
     volumes:
@@ -46,7 +46,7 @@ services:
       - ADDRINDEXRS_JSONRPC_IMPORT=true
 
   counterparty-core:
-    image: counterparty/counterparty
+    image: counterparty/counterparty:10.0.0-beta.1
     links:
       - bitcoind
       - addrindexrs
