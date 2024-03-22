@@ -1310,6 +1310,36 @@ def get_matching_orders(db, tx_hash, give_asset, get_asset):
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
+def get_orders_by_asset(db, asset, status='open'):
+    cursor = db.cursor()
+    query = '''
+        SELECT * FROM (
+            SELECT *, MAX(rowid)
+            FROM orders
+            WHERE (give_asset = ? OR get_asset = ?)
+            GROUP BY tx_hash
+        ) WHERE status = ?
+    '''
+    bindings = (asset, asset, status)
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_order_matches_by_order(db, tx_hash, status='pending'):
+    cursor = db.cursor()
+    query = '''
+        SELECT * FROM (
+            SELECT *, MAX(rowid)
+            FROM order_matches
+            WHERE (tx0_hash = ? OR tx1_hash = ?)
+            GROUP BY id
+        ) WHERE status = ?
+    '''
+    bindings = (tx_hash, tx_hash, status)
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
 ### UPDATES ###
 
 def update_order(db, tx_hash, update_data):
