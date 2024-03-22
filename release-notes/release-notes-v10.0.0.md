@@ -47,7 +47,7 @@ Because this release includes numerous changes to the database schema, a full da
 
 ## Deployment
 * Rewrite Dockerfile and publish new official Docker images
-* Implement `simplenode` Docker Compose file, an alternative to Federated Node
+* Create Docker Compose file as an alternative to Federated Node
 * Change default `bitcoind` user from `bitcoinrpc` to `rpc`
 * Changed default port for communication with AddrIndexRs to `8432` (and `81432` for `testnet`)
 
