@@ -2,6 +2,7 @@
 - [ ] Update `VERSION_` variables in `lib/config.py`
 - [ ] Update `protocol_changes.json` (as necessary)
 - [ ] Update Counterparty package versions in the `requirements.txt` files
+- [ ] Update Counterparty docker images versions in the `compose.yml` files
 - [ ] Review all open pull requests
 - [ ] Write release notes
 - [ ] Create pull request against `master`
