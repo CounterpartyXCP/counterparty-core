@@ -415,6 +415,26 @@ def test_new_get_balances_by_asset():
 
 
 @pytest.mark.usefixtures("api_server")
+def test_new_get_balances_vs_old():
+    asset = 'XCP'
+    url = f"{config.API_ROOT}/assets/{asset}/balances"
+    new_balances = requests.get(url).json()
+    old_balance = util.api("get_balances", {
+        "filters": [
+            {'field': 'asset', 'op': '==', 'value': asset},
+            {'field': 'quantity', 'op': '!=', 'value': 0},
+        ],
+    })
+    new_balances = sorted(new_balances, key=lambda x: (x['address'], x['asset'], x['quantity']))
+    old_balance = sorted(old_balance, key=lambda x: (x['address'], x['asset'], x['quantity']))
+    assert len(new_balances) == len(old_balance)
+    for new_balance, old_balance in zip(new_balances, old_balance):
+        assert new_balance['address'] == old_balance['address']
+        assert new_balance['asset'] == old_balance['asset']
+        assert new_balance['quantity'] == old_balance['quantity']
+
+
+@pytest.mark.usefixtures("api_server")
 def test_new_get_asset_info():
     asset = 'NODIVISIBLE'
     url = f"{config.API_ROOT}/assets/{asset}"
