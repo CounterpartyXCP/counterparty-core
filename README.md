@@ -23,7 +23,7 @@ docker-compose up
 
 NOTES:
 - For `testnet` you need to modify the Docker Compose file `compose.yml` 
-- By default, this Docker Compose script makes use of the `bootstrap` functionality, because Docker makes it hard to use `kickstart`. (See below)
+- By default, this Docker Compose script makes use of the `bootstrap` functionality, because Docker makes it hard to use `kickstart`. (See below.)
 
 
 # Manual Installation
