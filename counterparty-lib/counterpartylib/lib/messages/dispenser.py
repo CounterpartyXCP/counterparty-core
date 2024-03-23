@@ -413,7 +413,7 @@ def parse (db, tx, message):
                                     'source': tx['source'],
                                     'destination': action_address,
                                     'asset': asset,
-                                    'dispenser_quantity': escrow_quantity,
+                                    'dispense_quantity': escrow_quantity,
                                     'dispenser_tx_hash': dispenser_tx_hash
                                 }
                                 ledger.insert_record(db, 'dispenser_refills', bindings_refill)
