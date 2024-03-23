@@ -533,3 +533,14 @@ def test_new_get_order_matches():
         "status": "pending",
         "MAX(rowid)": 1
     }
+
+
+@pytest.mark.usefixtures("server_db")
+def test_messages_table(server_db):
+    cursor = server_db.cursor()
+    cursor.execute('SELECT * FROM messages ORDER BY block_index')
+    result = cursor.fetchall()
+    for row in result:
+        bindings = json.loads(row['bindings'])
+        assert isinstance(bindings, dict)
+
