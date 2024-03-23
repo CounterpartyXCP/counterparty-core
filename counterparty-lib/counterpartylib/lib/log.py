@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 import os
 import traceback
+import json
 
 from dateutil.tz import tzlocal
 from termcolor import cprint
@@ -157,15 +158,15 @@ def message(db, block_index, command, category, bindings, tx_hash=None):
             pass
 
     # Handle binary data.
-    items = []
-    for item in sorted(bindings):
-        if type(item) == bytes:
-            items.append(binascii.hexlify(item).decode('ascii'))
+    items = {}
+    for key, value in bindings.items():
+        if type(value) == bytes:
+            items[key] = binascii.hexlify(value).decode('ascii')
         else:
-            items.append(item)
+            items[key] = value
 
     current_time = curr_time()
-    bindings_string = str(items)
+    bindings_string = json.dumps(items)
     cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings, :timestamp)',
                    (message_index, block_index, command, category, bindings_string, current_time))
 

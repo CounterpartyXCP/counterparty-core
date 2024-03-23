@@ -4188,7 +4188,7 @@ UNITTEST_VECTOR = {
                      'block_index': 310498,
                      'command': 'insert',
                      'category': 'issuances',
-                     'bindings': "['asset', 'asset_longname', 'block_index', 'call_date', 'call_price', 'callable', 'description', 'divisible', 'fee_paid', 'issuer', 'locked', 'quantity', 'reset', 'source', 'status', 'transfer', 'tx_hash', 'tx_index']",
+                     'bindings': '{"tx_index": 499, "tx_hash": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf", "block_index": 310498, "asset": "A95428956661682277", "quantity": 100000000, "divisible": true, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "transfer": false, "callable": false, "call_date": 0, "call_price": 0.0, "description": "Child of parent", "fee_paid": 25000000, "locked": false, "reset": false, "status": "valid", "asset_longname": "PARENT.already.issued"}',
                      'timestamp': 0}
         }],
         'get_asset_id': [{
