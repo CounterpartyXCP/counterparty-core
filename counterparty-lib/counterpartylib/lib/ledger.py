@@ -194,13 +194,13 @@ def credit (db, address, asset, quantity, tx_index, action=None, event=None):
         'address': address,
         'asset': asset,
         'quantity': quantity,
-        'action': action,
+        'calling_function': action,
         'event': event,
         'tx_index': tx_index,
     }
     query = '''
         INSERT INTO credits
-        VALUES (:block_index, :address, :asset, :quantity, :action, :event, :tx_index)
+        VALUES (:block_index, :address, :asset, :quantity, :calling_function, :event, :tx_index)
     '''
     credit_cursor.execute(query, bindings)
     credit_cursor.close()
