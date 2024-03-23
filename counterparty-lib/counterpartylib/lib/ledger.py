@@ -134,12 +134,7 @@ def debit (db, address, asset, quantity, tx_index, action=None, event=None):
         'event': event,
         'tx_index': tx_index,
     }
-    query = '''
-        INSERT INTO debits
-        VALUES (:block_index, :address, :asset, :quantity, :action, :event, :tx_index)
-    '''
-    debit_cursor.execute(query, bindings)
-    debit_cursor.close()
+    insert_record(db, 'debits', bindings)
 
     BLOCK_LEDGER.append(f'{block_index}{address}{asset}{quantity}')
 
@@ -198,12 +193,7 @@ def credit (db, address, asset, quantity, tx_index, action=None, event=None):
         'event': event,
         'tx_index': tx_index,
     }
-    query = '''
-        INSERT INTO credits
-        VALUES (:block_index, :address, :asset, :quantity, :calling_function, :event, :tx_index)
-    '''
-    credit_cursor.execute(query, bindings)
-    credit_cursor.close()
+    insert_record(db, 'credits', bindings)
 
     BLOCK_LEDGER.append(f'{block_index}{address}{asset}{quantity}')
 
