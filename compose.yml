@@ -23,7 +23,7 @@ services:
       - "-mempoolfullrbf=1"
     volumes:
       - type: bind
-        source: ${COUNTERPARTY_CORE_DATA-~/counterparty-core-data}/
+        source: ${COUNTERPARTY_DOCKER_DATA-~/counterparty-docker-data}/
         target: /bitcoin/.bitcoin
 
   addrindexrs:
@@ -32,10 +32,10 @@ services:
       - bitcoind
     volumes:
       - type: bind
-        source: ${COUNTERPARTY_CORE_DATA:-~/counterparty-core-data}/
+        source: ${COUNTERPARTY_DOCKER_DATA:-~/counterparty-docker-data}/
         target: /root/.bitcoin
       - type: bind
-        source: ${COUNTERPARTY_CORE_DATA:-~/counterparty-core-data}/
+        source: ${COUNTERPARTY_DOCKER_DATA:-~/counterparty-docker-data}/
         target: /data
     ports:
       - "8432:8432"                           # mainnet
@@ -56,10 +56,10 @@ services:
       - addrindexrs
     volumes:
       - type: bind
-        source: ${COUNTERPARTY_CORE_DATA:-~/counterparty-core-data}/
+        source: ${COUNTERPARTY_DOCKER_DATA:-~/counterparty-docker-data}/
         target: /root/.bitcoin
       - type: bind
-        source: ${COUNTERPARTY_CORE_DATA:-~/counterparty-core-data}/
+        source: ${COUNTERPARTY_DOCKER_DATA:-~/counterparty-docker-data}/
         target: /data
     ports:
       - "4000:4000"                           # mainnet

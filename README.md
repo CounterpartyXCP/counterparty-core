@@ -21,10 +21,10 @@ cd counterparty-core
 docker-compose up -d
 ```
 
-**To run a node you must have at least 1.5Gb free.** By default all data is stored in the `~/counterparty-core-data` folder. You can modify this folder with the environment variable `$COUNTERPARTY_CORE_DATA`. For example:
+**To run a node you must have at least 1.5Tb free.** By default all data is stored in the `~/counterparty-docker-data` folder. You can modify this folder with the environment variable `$COUNTERPARTY_DOCKER_DATA`. For example:
 
 ```bash
-COUNTERPARTY_CORE_DATA=/var/data docker-compose up -d
+COUNTERPARTY_DOCKER_DATA=/var/data docker-compose up -d
 ```
 
 Use `docker-compose logs` to view output from services. For example:
