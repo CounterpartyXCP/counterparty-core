@@ -160,7 +160,7 @@ def message(db, block_index, command, category, bindings, tx_hash=None):
     # Handle binary data.
     items = {}
     for key, value in bindings.items():
-        if type(value) == bytes:
+        if isinstance(value, bytes):
             items[key] = binascii.hexlify(value).decode('ascii')
         else:
             items[key] = value
