@@ -542,7 +542,6 @@ def parse (db, tx, message, message_type_id):
                         'quantity': owner_balance,
                         'tag': "reset",
                         'status': "valid",
-                        'reset': True,
                         }
                     ledger.insert_record(db, 'destructions', bindings)
 
