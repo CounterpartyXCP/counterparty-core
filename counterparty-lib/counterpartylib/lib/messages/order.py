@@ -201,8 +201,7 @@ def cancel_order (db, order, status, block_index, tx_index):
             'source': order['source'],
             'block_index': block_index
         }
-        sql='insert into order_expirations values(:order_hash, :source, :block_index)'
-        cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'order_expirations', bindings)
 
     cursor.close()
 
@@ -314,9 +313,7 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
             'tx1_address': order_match['tx1_address'],
             'block_index': block_index
         }
-        sql='insert into order_match_expirations values(:order_match_id, :tx0_address, :tx1_address, :block_index)'
-        cursor.execute(sql, bindings)
-        cursor.close()
+        ledger.insert_record(db, 'order_match_expirations', bindings)
 
 
 def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, block_index):
@@ -458,8 +455,7 @@ def parse (db, tx, message):
         'status': status,
     }
     if "integer overflow" not in status:
-        sql = 'insert into orders values(:tx_index, :tx_hash, :block_index, :source, :give_asset, :give_quantity, :give_remaining, :get_asset, :get_quantity, :get_remaining, :expiration, :expire_index, :fee_required, :fee_required_remaining, :fee_provided, :fee_provided_remaining, :status)'
-        order_parse_cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'orders', bindings)
     else:
         logger.debug(f"Not storing [order] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")
@@ -712,8 +708,7 @@ def match (db, tx, block_index = None):
                 'fee_paid': fee,
                 'status': status,
             }
-            sql='insert into order_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :forward_asset, :forward_quantity, :backward_asset, :backward_quantity, :tx0_block_index, :tx1_block_index, :block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_paid, :status)'
-            cursor.execute(sql, bindings)
+            ledger.insert_record(db, 'order_matches', bindings)
 
             if tx1_status == 'filled':
                 break

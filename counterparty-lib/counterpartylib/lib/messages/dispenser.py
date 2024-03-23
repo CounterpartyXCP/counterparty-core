@@ -384,9 +384,7 @@ def parse (db, tx, message):
                         if ledger.enabled("dispenser_origin_permission_extended"):
                             bindings["origin"] = tx["source"]
 
-                        sql = '''insert into dispensers (tx_index, tx_hash, block_index, source, asset, give_quantity, escrow_quantity, satoshirate, status, give_remaining, oracle_address, origin, last_status_tx_hash)
-                            values(:tx_index, :tx_hash, :block_index, :source, :asset, :give_quantity, :escrow_quantity, :satoshirate, :status, :give_remaining, :oracle_address, :origin, NULL)'''
-                        cursor.execute(sql, bindings)
+                        ledger.insert_record(db, 'dispensers', bindings)
                 elif len(existing) == 1 and existing[0]['satoshirate'] == mainchainrate and existing[0]['give_quantity'] == give_quantity:
                     if tx["source"]==action_address or (ledger.enabled("dispenser_origin_permission_extended", tx['block_index']) and tx["source"] == existing[0]["origin"]):
                         if (oracle_address != None) and ledger.enabled('oracle_dispensers', tx['block_index']):
@@ -418,18 +416,7 @@ def parse (db, tx, message):
                                     'dispenser_quantity': escrow_quantity,
                                     'dispenser_tx_hash': dispenser_tx_hash
                                 }
-                                sql = '''INSERT INTO dispenser_refills
-                                         VALUES (
-                                            :tx_index,
-                                            :tx_hash,
-                                            :block_index,
-                                            :source,
-                                            :destination,
-                                            :asset,
-                                            :dispenser_quantity,
-                                            :dispenser_tx_hash
-                                         )'''
-                                cursor.execute(sql, bindings_refill)
+                                ledger.insert_record(db, 'dispenser_refills', bindings_refill)
                             except (ledger.DebitError):
                                 status = 'insufficient funds'
                     else:
@@ -589,9 +576,7 @@ def dispense(db, tx):
                     'dispense_quantity': actually_given,
                     'dispenser_tx_hash': dispenser['tx_hash']
                 }
-                sql = 'INSERT INTO dispenses(tx_index, dispense_index, tx_hash, block_index, source, destination, asset, dispense_quantity, dispenser_tx_hash) \
-                        VALUES(:tx_index, :dispense_index, :tx_hash, :block_index, :source, :destination, :asset, :dispense_quantity, :dispenser_tx_hash);'
-                cursor.execute(sql, bindings)
+                ledger.insert_record(db, 'dispenses', bindings)
                 dispense_index += 1
 
     cursor.close()

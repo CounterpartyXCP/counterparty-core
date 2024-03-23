@@ -821,9 +821,9 @@ CREATE TABLE bet_match_resolutions(
                                             escrow_less_fee INTEGER,
                                             fee INTEGER,
                                             FOREIGN KEY (block_index) REFERENCES blocks(block_index));
-INSERT INTO bet_match_resolutions VALUES('74062934f0a97c41851735fef2a7df4d9ad9945424f09a54281e145a5e32492f_6a5f30666a5f24b6e0e6f31cf06b22ee74d3e692a550297450bdf1d36b1cc167',1,310018,'0',0,59137500,NULL,NULL,3112500);
-INSERT INTO bet_match_resolutions VALUES('2066b9a6b8913412384a0401ef57bfc604e7c5a2c141e23111a8ccc6881b0fb3_65db3ab58b65891a947ab9bdba4723e907678bf3b48397add62802dcc65d1d8e',1,310019,'1',159300000,315700000,NULL,NULL,25000000);
-INSERT INTO bet_match_resolutions VALUES('94b11df6b519372bfbcf0ec5f3e6465a63e323c7cd7cff83a8abd78596d4bce4_a7daff1ca2874f6b18a8f1a1e70db27f58c6b39a9f106c353223fbccde57098e',5,310020,NULL,NULL,NULL,'NotEqual',1330000000,70000000);
+INSERT INTO bet_match_resolutions VALUES('74062934f0a97c41851735fef2a7df4d9ad9945424f09a54281e145a5e32492f_6a5f30666a5f24b6e0e6f31cf06b22ee74d3e692a550297450bdf1d36b1cc167',1,310018,NULL,0,0,59137500,NULL,3112500);
+INSERT INTO bet_match_resolutions VALUES('2066b9a6b8913412384a0401ef57bfc604e7c5a2c141e23111a8ccc6881b0fb3_65db3ab58b65891a947ab9bdba4723e907678bf3b48397add62802dcc65d1d8e',1,310019,NULL,1,159300000,315700000,NULL,25000000);
+INSERT INTO bet_match_resolutions VALUES('94b11df6b519372bfbcf0ec5f3e6465a63e323c7cd7cff83a8abd78596d4bce4_a7daff1ca2874f6b18a8f1a1e70db27f58c6b39a9f106c353223fbccde57098e',5,310020,'NotEqual',NULL,NULL,NULL,1330000000,70000000);
 -- Triggers and indices on  bet_match_resolutions
 CREATE TRIGGER block_update_bet_match_resolutions
                            BEFORE UPDATE ON bet_match_resolutions BEGIN

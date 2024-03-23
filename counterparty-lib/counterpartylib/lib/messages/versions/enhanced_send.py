@@ -194,8 +194,7 @@ def parse (db, tx, message):
         'memo': memo_bytes,
     }
     if "integer overflow" not in status and "quantity must be in satoshis" not in status:
-        sql = 'insert into sends (tx_index, tx_hash, block_index, source, destination, asset, quantity, status, memo) values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :quantity, :status, :memo)'
-        cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'sends', bindings)
     else:
         logger.debug(f"Not storing [send] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")

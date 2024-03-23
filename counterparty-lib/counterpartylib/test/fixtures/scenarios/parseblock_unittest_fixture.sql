@@ -1313,7 +1313,7 @@ CREATE TABLE bet_match_resolutions(
                                             escrow_less_fee INTEGER,
                                             fee INTEGER,
                                             FOREIGN KEY (block_index) REFERENCES blocks(block_index));
-INSERT INTO bet_match_resolutions VALUES('2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93',1,310102,'1',9,9,NULL,NULL,0);
+INSERT INTO bet_match_resolutions VALUES('2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93',1,310102,NULL,1,9,9,NULL,0);
 -- Triggers and indices on  bet_match_resolutions
 CREATE TRIGGER block_update_bet_match_resolutions
                            BEFORE UPDATE ON bet_match_resolutions BEGIN

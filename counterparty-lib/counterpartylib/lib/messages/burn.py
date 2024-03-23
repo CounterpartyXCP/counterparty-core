@@ -149,8 +149,7 @@ def parse (db, tx, mainnet_burns, message=None):
         'status': status,
     }
     if "integer overflow" not in status:
-        sql = 'insert into burns values(:tx_index, :tx_hash, :block_index, :source, :burned, :earned, :status)'
-        burn_parse_cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'burns', bindings)
     else:
         logger.debug(f"Not storing [burn] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")

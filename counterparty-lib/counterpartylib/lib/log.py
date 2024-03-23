@@ -255,7 +255,7 @@ def log (db, command, category, bindings):
     elif command == 'insert':
 
         if category == 'credits':
-            logger.debug(f"Credit: {output(bindings['quantity'], bindings['asset'])} to {bindings['address']} #{bindings['action']}# <{bindings['event']}>")
+            logger.debug(f"Credit: {output(bindings['quantity'], bindings['asset'])} to {bindings['address']} #{bindings['calling_function']}# <{bindings['event']}>")
 
         elif category == 'debits':
             logger.debug(f"Debit: {output(bindings['quantity'], bindings['asset'])} from {bindings['address']} #{bindings['action']}# <{bindings['event']}>")

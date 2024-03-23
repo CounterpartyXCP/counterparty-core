@@ -192,8 +192,7 @@ def parse (db, tx, message):
                 'msg_index': i
             }
 
-            sql = 'insert into sends (tx_index, tx_hash, block_index, source, destination, asset, quantity, status, memo, msg_index) values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :quantity, :status, :memo, :msg_index)'
-            cursor.execute(sql, bindings)
+            ledger.insert_record(db, 'sends', bindings)
 
     if status != 'valid':
         logger.debug(f"Not storing [mpma] tx [{tx['tx_hash']}]: {status}")

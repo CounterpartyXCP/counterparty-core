@@ -736,10 +736,20 @@ def get_addresses(db, address=None):
 #       UTIL FUNCTIONS        #
 ###############################
 
+
+def insert_record(db, table_name, record):
+    cursor = db.cursor()
+    fields_name = ', '.join(record.keys())
+    fields_values = ', '.join([f':{key}' for key in record.keys()])
+    # no sql injection here
+    query = f'''INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})''' # nosec B608
+    cursor.execute(query, record)
+    cursor.close()
+
+
 # This function allows you to update a record using an INSERT.
 # The `block_index` and `rowid` fields allow you to
 # order updates and retrieve the row with the current data.
-
 def insert_update(db, table_name, id_name, id_value, update_data):
     cursor = db.cursor()
     # select records to update

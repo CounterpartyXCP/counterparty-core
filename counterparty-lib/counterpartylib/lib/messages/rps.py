@@ -297,8 +297,7 @@ def parse(db, tx, message):
         'expire_index': tx['block_index'] + expiration,
         'status': status,
     }
-    sql = '''INSERT INTO rps VALUES (:tx_index, :tx_hash, :block_index, :source, :possible_moves, :wager, :move_random_hash, :expiration, :expire_index, :status)'''
-    rps_parse_cursor.execute(sql, bindings)
+    ledger.insert_record(db, 'rps', bindings)
 
     # Match.
     if status == 'open':
@@ -368,11 +367,7 @@ def match (db, tx, block_index):
             'match_expire_index': block_index + 20,
             'status': 'pending'
         }
-        sql = '''INSERT INTO rps_matches VALUES (:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address,
-                                                 :tx0_move_random_hash, :tx1_move_random_hash, :wager, :possible_moves,
-                                                 :tx0_block_index, :tx1_block_index, :block_index, :tx0_expiration, :tx1_expiration,
-                                                 :match_expire_index, :status)'''
-        cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'rps_matches', bindings)
 
     cursor.close()
 
@@ -392,8 +387,7 @@ def expire (db, block_index):
             'source': rps['source'],
             'block_index': block_index
         }
-        sql = '''INSERT INTO rps_expirations VALUES (:rps_index, :rps_hash, :source, :block_index)'''
-        cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'rps_expirations', bindings)
 
     # Expire rps matches
     for rps_match in ledger.get_rps_matches_to_expire(db, block_index):
@@ -414,8 +408,7 @@ def expire (db, block_index):
             'tx1_address': rps_match['tx1_address'],
             'block_index': block_index
         }
-        sql = '''INSERT INTO rps_match_expirations VALUES (:rps_match_id, :tx0_address, :tx1_address, :block_index)'''
-        cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'rps_match_expirations', bindings)
 
         # Rematch not expired and not resolved RPS
         if new_rps_match_status == 'expired':

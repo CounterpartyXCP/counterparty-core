@@ -378,8 +378,7 @@ def parse (db, tx, message):
         'status': status,
     }
     if "integer overflow" not in status:
-        sql = 'insert into bets values(:tx_index, :tx_hash, :block_index, :source, :feed_address, :bet_type, :deadline, :wager_quantity, :wager_remaining, :counterwager_quantity, :counterwager_remaining, :target_value, :leverage, :expiration, :expire_index, :fee_fraction_int, :status)'
-        bet_parse_cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'bets', bindings)
     else:
         logger.warning(f"Not storing [bet] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")
@@ -548,8 +547,7 @@ def match (db, tx):
                 'fee_fraction_int': tx1['fee_fraction_int'],
                 'status': 'pending',
             }
-            sql='insert into bet_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :tx0_bet_type, :tx1_bet_type, :feed_address, :initial_value, :deadline, :target_value, :leverage, :forward_quantity, :backward_quantity, :tx0_block_index, :tx1_block_index, :block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_fraction_int, :status)'
-            cursor.execute(sql, bindings)
+            ledger.insert_record(db, 'bet_matches', bindings)
 
     cursor.close()
 
@@ -569,8 +567,7 @@ def expire (db, block_index, block_time):
             'source': bet['source'],
             'block_index': block_index
         }
-        sql='insert into bet_expirations values(:bet_index, :bet_hash, :source, :block_index)'
-        cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'bet_expirations', bindings)
 
     # Expire bet matches whose deadline is more than two weeks before the current block time.
     for bet_match in ledger.get_bet_matches_to_expire(db, block_time):
@@ -584,7 +581,6 @@ def expire (db, block_index, block_time):
             'tx1_address': bet_match['tx1_address'],
             'block_index': block_index
         }
-        sql='insert into bet_match_expirations values(:bet_match_id, :tx0_address, :tx1_address, :block_index)'
-        cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'bet_match_expirations', bindings)
 
     cursor.close()

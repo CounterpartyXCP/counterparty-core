@@ -170,8 +170,7 @@ def parse (db, tx, message):
         'status': status,
     }
     if "integer overflow" not in status:
-        sql = 'insert into btcpays values(:tx_index, :tx_hash, :block_index, :source, :destination, :btc_amount, :order_match_id, :status)'
-        cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'btcpays', bindings)
     else:
         logger.debug(f"Not storing [btcpay] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")
