@@ -194,7 +194,7 @@ def debit (db, address, asset, quantity, tx_index, action=None, event=None):
         'event': event,
         'tx_index': tx_index,
     }
-    insert_record(db, 'debits', bindings)
+    insert_record(db, 'debits', bindings, 'DEBIT')
 
     BLOCK_LEDGER.append(f'{block_index}{address}{asset}{quantity}')
 
@@ -253,7 +253,7 @@ def credit (db, address, asset, quantity, tx_index, action=None, event=None):
         'event': event,
         'tx_index': tx_index,
     }
-    insert_record(db, 'credits', bindings)
+    insert_record(db, 'credits', bindings, 'CREDIT')
 
     BLOCK_LEDGER.append(f'{block_index}{address}{asset}{quantity}')
 

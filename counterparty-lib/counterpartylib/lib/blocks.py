@@ -759,7 +759,7 @@ def follow(db):
             if requires_rollback:
                 # Record reorganisation.
                 logger.warning(f'Blockchain reorganisation at block {current_index}.')
-                ledger.add_to_journal(db, block_index, 'reorg', 'blocks', 'BLOCKCHAIN_REORGANISATION' {'block_index': current_index})
+                ledger.add_to_journal(db, block_index, 'reorg', 'blocks', 'BLOCKCHAIN_REORGANISATION', {'block_index': current_index})
 
                 # Rollback the DB.
                 rollback(db, block_index=current_index - 1)
