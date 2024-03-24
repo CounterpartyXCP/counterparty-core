@@ -9,6 +9,7 @@ from decimal import Decimal as D
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import config
 from counterpartylib.lib import util
+from counterpartylib.lib import log
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -112,13 +113,7 @@ def add_to_journal(db, block_index, command, category, event, bindings):
 
     BLOCK_JOURNAL.append(f'{command}{category}{bindings_string}')
 
-    log_message = {
-        'event': event,
-        'command': command,
-        'category': category,
-        'bindings': items
-    }
-    logger.info(json.dumps(log_message, sort_keys=True))
+    log.log_event(event, items)
 
 
 ###########################

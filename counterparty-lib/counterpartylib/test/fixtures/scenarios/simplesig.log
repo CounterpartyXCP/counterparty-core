@@ -1,54 +1,54 @@
 Creating connection to `:memory:`.
-{"bindings": {"block_hash": "8b3bef249cb3b0fa23a4936c1249b6bd41daeadc848c8d2e409ea1cbc10adfe7", "block_index": 309999, "block_time": 309999000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
+New block inserted 309999
 data_btc_out=0 (data_value=0 len(data_array)=0)
 Sorted candidate UTXOs: ['amount: 1.99909140; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 75']
 Fee/KB 0.00025000
 New input: amount: 1.99909140; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 75
 final_fee inputs: 1 size: 225 final_fee 5625
 Size: 225 Fee: 0.00005625 Change quantity: 1.37903515 BTC
-{"bindings": {"block_hash": "505d8d82c4ced7daddef7ed0b05ba12ecc664176887b938ef56c6af276f3b30c", "block_index": 310000, "block_time": 310000000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "505d8d82c4ced7daddef7ed0b05ba12ecc664176887b938ef56c6af276f3b30c", "block_index": 310000, "block_time": 310000000, "btc_amount": 62000000, "data": "", "destination": "mvCounterpartyXXXXXXXXXXXXXXW24Hef", "fee": 5625, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "6dc5b0a33d4d4297e0f5cc2d23ae307951d32aab2d86b7fa147b385219f3a597", "tx_index": 1}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310000, "calling_function": "burn", "event": "6dc5b0a33d4d4297e0f5cc2d23ae307951d32aab2d86b7fa147b385219f3a597", "quantity": 93000000000, "tx_index": 1}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"block_index": 310000, "burned": 62000000, "earned": 93000000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "6dc5b0a33d4d4297e0f5cc2d23ae307951d32aab2d86b7fa147b385219f3a597", "tx_index": 1}, "category": "burns", "command": "insert", "event": "BURN"}
+New block inserted 310000
+New transaction inserted 6dc5b0a33d4d4297e0f5cc2d23ae307951d32aab2d86b7fa147b385219f3a597
+Credit 93000000000 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Burned 62000000 BTC for 93000000000 XCP
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 1.37903515; txid: 6dc5b0a33d4d4297e0f5cc2d23ae307951d32aab2d86b7fa147b385219f3a597; vout: 1; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.37903515; txid: 6dc5b0a33d4d4297e0f5cc2d23ae307951d32aab2d86b7fa147b385219f3a597; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 1.37889435 BTC
-{"bindings": {"block_hash": "3c9f6a9c6cac46a9273bd3db39ad775acd5bc546378ec2fb0587e06e112cc78e", "block_index": 310001, "block_time": 310001000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "3c9f6a9c6cac46a9273bd3db39ad775acd5bc546378ec2fb0587e06e112cc78e", "block_index": 310001, "block_time": 310001000, "btc_amount": 5430, "data": "0000000000000000000000010000000002faf080", "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "fee": 7650, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "3b273ba342ed8bd4ccd2ae28d3df7754768a6c65ec1cee4a6e84b4b4bdec8d8c", "tx_index": 2}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"action": "send", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310001, "event": "3b273ba342ed8bd4ccd2ae28d3df7754768a6c65ec1cee4a6e84b4b4bdec8d8c", "quantity": 50000000, "tx_index": 2}, "category": "debits", "command": "insert", "event": "DEBIT"}
-{"bindings": {"address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "asset": "XCP", "block_index": 310001, "calling_function": "send", "event": "3b273ba342ed8bd4ccd2ae28d3df7754768a6c65ec1cee4a6e84b4b4bdec8d8c", "quantity": 50000000, "tx_index": 2}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"asset": "XCP", "block_index": 310001, "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "quantity": 50000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "3b273ba342ed8bd4ccd2ae28d3df7754768a6c65ec1cee4a6e84b4b4bdec8d8c", "tx_index": 2}, "category": "sends", "command": "insert", "event": "SEND"}
+New block inserted 310001
+New transaction inserted 3b273ba342ed8bd4ccd2ae28d3df7754768a6c65ec1cee4a6e84b4b4bdec8d8c
+Debit 50000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Credit 50000000 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
+Send 50000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 1.37889435; txid: 3b273ba342ed8bd4ccd2ae28d3df7754768a6c65ec1cee4a6e84b4b4bdec8d8c; vout: 2; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.37889435; txid: 3b273ba342ed8bd4ccd2ae28d3df7754768a6c65ec1cee4a6e84b4b4bdec8d8c; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 1000000
 Size: 272 Fee: 0.01000000 Change quantity: 1.36888435 BTC
-{"bindings": {"block_hash": "fbb60f1144e1f7d4dc036a4a158a10ea6dea2ba6283a723342a49b8eb5cc9964", "block_index": 310002, "block_time": 310002000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "fbb60f1144e1f7d4dc036a4a158a10ea6dea2ba6283a723342a49b8eb5cc9964", "block_index": 310002, "block_time": 310002000, "btc_amount": 0, "data": "0000000a00000000000000000000000002faf08000000000000000010000000005f5e100000a0000000000000000", "destination": "", "fee": 1000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59", "tx_index": 3}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"block_index": 310002, "expiration": 10, "expire_index": 310012, "fee_provided": 1000000, "fee_provided_remaining": 1000000, "fee_required": 0, "fee_required_remaining": 0, "get_asset": "XCP", "get_quantity": 100000000, "get_remaining": 100000000, "give_asset": "BTC", "give_quantity": 50000000, "give_remaining": 50000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "tx_hash": "6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59", "tx_index": 3}, "category": "orders", "command": "insert", "event": "OPEN_ORDER"}
+New block inserted 310002
+New transaction inserted 6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59
+Order opened for 50000000 BTC at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 1.36888435; txid: 6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59; vout: 1; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.36888435; txid: 6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.36880635 BTC
-{"bindings": {"block_hash": "d50825dcb32bcf6f69994d616eba18de7718d3d859497e80751b2cb67e333e8a", "block_index": 310003, "block_time": 310003000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "d50825dcb32bcf6f69994d616eba18de7718d3d859497e80751b2cb67e333e8a", "block_index": 310003, "block_time": 310003000, "btc_amount": 0, "data": "0000000a00000000000000010000000006422c4000000000000000000000000002faf080000a00000000000dbba0", "destination": "", "fee": 6800, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c", "tx_index": 4}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"action": "open order", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310003, "event": "36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c", "quantity": 105000000, "tx_index": 4}, "category": "debits", "command": "insert", "event": "DEBIT"}
-{"bindings": {"block_index": 310003, "expiration": 10, "expire_index": 310013, "fee_provided": 6800, "fee_provided_remaining": 6800, "fee_required": 900000, "fee_required_remaining": 900000, "get_asset": "BTC", "get_quantity": 50000000, "get_remaining": 50000000, "give_asset": "XCP", "give_quantity": 105000000, "give_remaining": 105000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "tx_hash": "36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c", "tx_index": 4}, "category": "orders", "command": "insert", "event": "OPEN_ORDER"}
+New block inserted 310003
+New transaction inserted 36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c
+Debit 105000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Order opened for 105000000 XCP at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Considering: 6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59
 Tx0 Price: 2.0; Tx1 Inverse Price: 2.1
 Potential forward quantities: 50000000, 52500000
 Forward Quantity: 50000000
 Backward Quantity: 100000000
 Tx0 fee provided remaining: 0.01; required fee: 0.00857142
-{"bindings": {"fee_provided_remaining": 142858, "fee_required_remaining": 0, "get_remaining": 0, "give_remaining": 0, "status": "open", "tx_hash": "6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59"}, "category": "orders", "command": "update", "event": "ORDER_UPDATE"}
-{"bindings": {"fee_provided_remaining": 6800, "fee_required_remaining": 42858, "get_remaining": 0, "give_remaining": 5000000, "status": "open", "tx_hash": "36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c"}, "category": "orders", "command": "update", "event": "ORDER_UPDATE"}
-{"bindings": {"backward_asset": "XCP", "backward_quantity": 100000000, "block_index": 310003, "fee_paid": 857142, "forward_asset": "BTC", "forward_quantity": 50000000, "id": "6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c", "match_expire_index": 310023, "status": "pending", "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx0_block_index": 310002, "tx0_expiration": 10, "tx0_hash": "6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59", "tx0_index": 3, "tx1_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx1_block_index": 310003, "tx1_expiration": 10, "tx1_hash": "36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c", "tx1_index": 4}, "category": "order_matches", "command": "insert", "event": "ORDER_MATCH"}
+Updated order 6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59. New status: open
+Updated order 36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c. New status: open
+Order match 6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c for 50000000 BTC against 100000000 XCP
 Order match has only -10 confirmation(s).
 data_btc_out=2000 (data_value=1000 len(data_array)=2)
 Sorted candidate UTXOs: ['amount: 1.36880635; txid: 36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c; vout: 1; confirmations: 1']
@@ -56,57 +56,54 @@ Fee/KB 0.00025000
 New input: amount: 1.36880635; txid: 36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 387 final_fee 9675
 Size: 387 Fee: 0.00009675 Change quantity: 0.86868960 BTC
-{"bindings": {"block_hash": "60cdc0ac0e3121ceaa2c3885f21f5789f49992ffef6e6ff99f7da80e36744615", "block_index": 310004, "block_time": 310004000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "60cdc0ac0e3121ceaa2c3885f21f5789f49992ffef6e6ff99f7da80e36744615", "block_index": 310004, "block_time": 310004000, "btc_amount": 50000000, "data": "0000000b6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c5936d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c", "destination": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "fee": 9675, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099", "tx_index": 5}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310004, "calling_function": "btcpay", "event": "843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099", "quantity": 100000000, "tx_index": 5}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"id": "6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c", "status": "completed"}, "category": "order_matches", "command": "update", "event": "ORDER_MATCH_UPDATE"}
-{"bindings": {"block_index": 310004, "btc_amount": 50000000, "destination": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "order_match_id": "6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c", "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099", "tx_index": 5}, "category": "btcpays", "command": "insert", "event": "BTC_PAY"}
+New block inserted 310004
+New transaction inserted 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099
+Credit 100000000 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+BTC payment for order match 6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86868960; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 3; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 0.86868960; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 3; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.86861160 BTC
-{"bindings": {"block_hash": "8005c2926b7ecc50376642bc661a49108b6dc62636463a5c492b123e2184cd9a", "block_index": 310005, "block_time": 310005000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "8005c2926b7ecc50376642bc661a49108b6dc62636463a5c492b123e2184cd9a", "block_index": 310005, "block_time": 310005000, "btc_amount": 0, "data": "000000140000000000004767000000003b9aca000100000000000000000000", "destination": "", "fee": 6800, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "5d951d44d034cb6fd5dc5c98cd877c63f55c1ae108d335b6b6d991d072856adf", "tx_index": 6}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"action": "issuance fee", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310005, "event": "5d951d44d034cb6fd5dc5c98cd877c63f55c1ae108d335b6b6d991d072856adf", "quantity": 50000000, "tx_index": 6}, "category": "debits", "command": "insert", "event": "DEBIT"}
-{"bindings": {"asset_id": "18279", "asset_longname": null, "asset_name": "BBBB", "block_index": 310005}, "category": "assets", "command": "insert", "event": "ASSET_CREATION"}
-{"bindings": {"asset": "BBBB", "asset_longname": null, "block_index": 310005, "call_date": 0, "call_price": 0.0, "callable": false, "description": "", "divisible": true, "fee_paid": 50000000, "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "locked": false, "quantity": 1000000000, "reset": false, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "transfer": false, "tx_hash": "5d951d44d034cb6fd5dc5c98cd877c63f55c1ae108d335b6b6d991d072856adf", "tx_index": 6}, "category": "issuances", "command": "insert", "event": "ASSET_ISSUANCE"}
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBB", "block_index": 310005, "calling_function": "issuance", "event": "5d951d44d034cb6fd5dc5c98cd877c63f55c1ae108d335b6b6d991d072856adf", "quantity": 1000000000, "tx_index": 6}, "category": "credits", "command": "insert", "event": "CREDIT"}
+New block inserted 310005
+New transaction inserted 5d951d44d034cb6fd5dc5c98cd877c63f55c1ae108d335b6b6d991d072856adf
+Debit 50000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Asset BBBB issued
+Credit 1000000000 BBBB to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86861160; txid: 5d951d44d034cb6fd5dc5c98cd877c63f55c1ae108d335b6b6d991d072856adf; vout: 1; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 2']
 Fee/KB 0.00025000
 New input: amount: 0.86861160; txid: 5d951d44d034cb6fd5dc5c98cd877c63f55c1ae108d335b6b6d991d072856adf; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.86853360 BTC
-{"bindings": {"block_hash": "bdad69d1669eace68b9f246de113161099d4f83322e2acf402c42defef3af2bb", "block_index": 310006, "block_time": 310006000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "bdad69d1669eace68b9f246de113161099d4f83322e2acf402c42defef3af2bb", "block_index": 310006, "block_time": 310006000, "btc_amount": 0, "data": "00000014000000000000476800000000000186a00000000000000000000006666f6f626172", "destination": "", "fee": 6800, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "2b44f590422a3ab5b70fb1265a2e4f4d3b0bcb3de3f296dc7280924870ec8c59", "tx_index": 7}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"action": "issuance fee", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310006, "event": "2b44f590422a3ab5b70fb1265a2e4f4d3b0bcb3de3f296dc7280924870ec8c59", "quantity": 50000000, "tx_index": 7}, "category": "debits", "command": "insert", "event": "DEBIT"}
-{"bindings": {"asset_id": "18280", "asset_longname": null, "asset_name": "BBBC", "block_index": 310006}, "category": "assets", "command": "insert", "event": "ASSET_CREATION"}
-{"bindings": {"asset": "BBBC", "asset_longname": null, "block_index": 310006, "call_date": 0, "call_price": 0.0, "callable": false, "description": "foobar", "divisible": false, "fee_paid": 50000000, "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "locked": false, "quantity": 100000, "reset": false, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "transfer": false, "tx_hash": "2b44f590422a3ab5b70fb1265a2e4f4d3b0bcb3de3f296dc7280924870ec8c59", "tx_index": 7}, "category": "issuances", "command": "insert", "event": "ASSET_ISSUANCE"}
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBC", "block_index": 310006, "calling_function": "issuance", "event": "2b44f590422a3ab5b70fb1265a2e4f4d3b0bcb3de3f296dc7280924870ec8c59", "quantity": 100000, "tx_index": 7}, "category": "credits", "command": "insert", "event": "CREDIT"}
+New block inserted 310006
+New transaction inserted 2b44f590422a3ab5b70fb1265a2e4f4d3b0bcb3de3f296dc7280924870ec8c59
+Debit 50000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Asset BBBC issued
+Credit 100000 BBBC to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86853360; txid: 2b44f590422a3ab5b70fb1265a2e4f4d3b0bcb3de3f296dc7280924870ec8c59; vout: 1; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 3']
 Fee/KB 0.00025000
 New input: amount: 0.86853360; txid: 2b44f590422a3ab5b70fb1265a2e4f4d3b0bcb3de3f296dc7280924870ec8c59; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 0.86839280 BTC
-{"bindings": {"block_hash": "10a642b96d60091d08234d17dfdecf3025eca41e4fc8e3bbe71a91c5a457cb4b", "block_index": 310007, "block_time": 310007000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "10a642b96d60091d08234d17dfdecf3025eca41e4fc8e3bbe71a91c5a457cb4b", "block_index": 310007, "block_time": 310007000, "btc_amount": 5430, "data": "00000000000000000000476700000000003d0900", "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "fee": 7650, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "5836fb23c2bb94eeb4b71cb8e3c622c6d943b3e4ed3aebee42d240445e615db8", "tx_index": 8}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"action": "send", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBB", "block_index": 310007, "event": "5836fb23c2bb94eeb4b71cb8e3c622c6d943b3e4ed3aebee42d240445e615db8", "quantity": 4000000, "tx_index": 8}, "category": "debits", "command": "insert", "event": "DEBIT"}
-{"bindings": {"address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "asset": "BBBB", "block_index": 310007, "calling_function": "send", "event": "5836fb23c2bb94eeb4b71cb8e3c622c6d943b3e4ed3aebee42d240445e615db8", "quantity": 4000000, "tx_index": 8}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"asset": "BBBB", "block_index": 310007, "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "quantity": 4000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "5836fb23c2bb94eeb4b71cb8e3c622c6d943b3e4ed3aebee42d240445e615db8", "tx_index": 8}, "category": "sends", "command": "insert", "event": "SEND"}
+New block inserted 310007
+New transaction inserted 5836fb23c2bb94eeb4b71cb8e3c622c6d943b3e4ed3aebee42d240445e615db8
+Debit 4000000 BBBB from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Credit 4000000 BBBB to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
+Send 4000000 BBBB from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86839280; txid: 5836fb23c2bb94eeb4b71cb8e3c622c6d943b3e4ed3aebee42d240445e615db8; vout: 2; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 4']
 Fee/KB 0.00025000
 New input: amount: 0.86839280; txid: 5836fb23c2bb94eeb4b71cb8e3c622c6d943b3e4ed3aebee42d240445e615db8; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 0.86825200 BTC
-{"bindings": {"block_hash": "47d0e3acbdc6916aeae95e987f9cfa16209b3df1e67bb38143b3422b32322c33", "block_index": 310008, "block_time": 310008000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "47d0e3acbdc6916aeae95e987f9cfa16209b3df1e67bb38143b3422b32322c33", "block_index": 310008, "block_time": 310008000, "btc_amount": 5430, "data": "000000000000000000004768000000000000020e", "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "fee": 7650, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "843e6f7712b7847099502bda8a4bd7127c17a2799290b91ef1584a6bfe069412", "tx_index": 9}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"action": "send", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBC", "block_index": 310008, "event": "843e6f7712b7847099502bda8a4bd7127c17a2799290b91ef1584a6bfe069412", "quantity": 526, "tx_index": 9}, "category": "debits", "command": "insert", "event": "DEBIT"}
-{"bindings": {"address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "asset": "BBBC", "block_index": 310008, "calling_function": "send", "event": "843e6f7712b7847099502bda8a4bd7127c17a2799290b91ef1584a6bfe069412", "quantity": 526, "tx_index": 9}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"asset": "BBBC", "block_index": 310008, "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "quantity": 526, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "843e6f7712b7847099502bda8a4bd7127c17a2799290b91ef1584a6bfe069412", "tx_index": 9}, "category": "sends", "command": "insert", "event": "SEND"}
+New block inserted 310008
+New transaction inserted 843e6f7712b7847099502bda8a4bd7127c17a2799290b91ef1584a6bfe069412
+Debit 526 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Credit 526 BBBC to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
+Send 526 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
 Total quantity to be distributed in dividends: 0.00000024 XCP
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86825200; txid: 843e6f7712b7847099502bda8a4bd7127c17a2799290b91ef1584a6bfe069412; vout: 2; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 5']
@@ -114,12 +111,12 @@ Fee/KB 0.00025000
 New input: amount: 0.86825200; txid: 843e6f7712b7847099502bda8a4bd7127c17a2799290b91ef1584a6bfe069412; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.86817400 BTC
-{"bindings": {"block_hash": "4d474992b141620bf3753863db7ee5e8af26cadfbba27725911f44fa657bc1c0", "block_index": 310009, "block_time": 310009000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "4d474992b141620bf3753863db7ee5e8af26cadfbba27725911f44fa657bc1c0", "block_index": 310009, "block_time": 310009000, "btc_amount": 0, "data": "00000032000000000000025800000000000047670000000000000001", "destination": "", "fee": 6800, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "42ae2fd7f3a18f84334bc37aa88283e79d6bff0b234dbf97e788695957d75518", "tx_index": 10}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"action": "dividend", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310009, "event": "42ae2fd7f3a18f84334bc37aa88283e79d6bff0b234dbf97e788695957d75518", "quantity": 24, "tx_index": 10}, "category": "debits", "command": "insert", "event": "DEBIT"}
-{"bindings": {"action": "dividend fee", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310009, "event": "42ae2fd7f3a18f84334bc37aa88283e79d6bff0b234dbf97e788695957d75518", "quantity": 20000, "tx_index": 10}, "category": "debits", "command": "insert", "event": "DEBIT"}
-{"bindings": {"address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "asset": "XCP", "block_index": 310009, "calling_function": "dividend", "event": "42ae2fd7f3a18f84334bc37aa88283e79d6bff0b234dbf97e788695957d75518", "quantity": 24, "tx_index": 10}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"asset": "BBBB", "block_index": 310009, "dividend_asset": "XCP", "fee_paid": 20000, "quantity_per_unit": 600, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "42ae2fd7f3a18f84334bc37aa88283e79d6bff0b234dbf97e788695957d75518", "tx_index": 10}, "category": "dividends", "command": "insert", "event": "ASSET_DIVIDEND"}
+New block inserted 310009
+New transaction inserted 42ae2fd7f3a18f84334bc37aa88283e79d6bff0b234dbf97e788695957d75518
+Debit 24 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Debit 20000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Credit 24 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
+Dividend of 600 XCP per unit of BBBB
 Total quantity to be distributed in dividends: 0.004208 XCP
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86817400; txid: 42ae2fd7f3a18f84334bc37aa88283e79d6bff0b234dbf97e788695957d75518; vout: 1; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 6']
@@ -127,75 +124,73 @@ Fee/KB 0.00025000
 New input: amount: 0.86817400; txid: 42ae2fd7f3a18f84334bc37aa88283e79d6bff0b234dbf97e788695957d75518; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.86809600 BTC
-{"bindings": {"block_hash": "a58162dff81a32e6a29b075be759dbb9fa9b8b65303e69c78fb4d7b0acc37042", "block_index": 310010, "block_time": 310010000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "a58162dff81a32e6a29b075be759dbb9fa9b8b65303e69c78fb4d7b0acc37042", "block_index": 310010, "block_time": 310010000, "btc_amount": 0, "data": "00000032000000000000032000000000000047680000000000000001", "destination": "", "fee": 6800, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "201123e1ddbc4dab954fed0043a29fca770a9bd4268714354bb7991f01133c10", "tx_index": 11}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"action": "dividend", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310010, "event": "201123e1ddbc4dab954fed0043a29fca770a9bd4268714354bb7991f01133c10", "quantity": 420800, "tx_index": 11}, "category": "debits", "command": "insert", "event": "DEBIT"}
-{"bindings": {"action": "dividend fee", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310010, "event": "201123e1ddbc4dab954fed0043a29fca770a9bd4268714354bb7991f01133c10", "quantity": 20000, "tx_index": 11}, "category": "debits", "command": "insert", "event": "DEBIT"}
-{"bindings": {"address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "asset": "XCP", "block_index": 310010, "calling_function": "dividend", "event": "201123e1ddbc4dab954fed0043a29fca770a9bd4268714354bb7991f01133c10", "quantity": 420800, "tx_index": 11}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"asset": "BBBC", "block_index": 310010, "dividend_asset": "XCP", "fee_paid": 20000, "quantity_per_unit": 800, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "201123e1ddbc4dab954fed0043a29fca770a9bd4268714354bb7991f01133c10", "tx_index": 11}, "category": "dividends", "command": "insert", "event": "ASSET_DIVIDEND"}
+New block inserted 310010
+New transaction inserted 201123e1ddbc4dab954fed0043a29fca770a9bd4268714354bb7991f01133c10
+Debit 420800 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Debit 20000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Credit 420800 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
+Dividend of 800 XCP per unit of BBBC
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86809600; txid: 201123e1ddbc4dab954fed0043a29fca770a9bd4268714354bb7991f01133c10; vout: 1; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 7']
 Fee/KB 0.00025000
 New input: amount: 0.86809600; txid: 201123e1ddbc4dab954fed0043a29fca770a9bd4268714354bb7991f01133c10; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.86801800 BTC
-{"bindings": {"block_hash": "8042cc2ef293fd73d050f283fbd075c79dd4c49fdcca054dc0714fc3a50dc1bb", "block_index": 310011, "block_time": 310011000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "8042cc2ef293fd73d050f283fbd075c79dd4c49fdcca054dc0714fc3a50dc1bb", "block_index": 310011, "block_time": 310011000, "btc_amount": 0, "data": "0000001e52bb3300405900000000000005f5e0ff09556e69742054657374", "destination": "", "fee": 6800, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "1afa4fa28e1ef63b2b67c288e078cfeb109a2b236558ab5544eedc7f171e0a84", "tx_index": 12}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"block_index": 310011, "fee_fraction_int": 99999999, "locked": false, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "text": "Unit Test", "timestamp": 1388000000, "tx_hash": "1afa4fa28e1ef63b2b67c288e078cfeb109a2b236558ab5544eedc7f171e0a84", "tx_index": 12, "value": 100.0}, "category": "broadcasts", "command": "insert", "event": "BROADCAST"}
+New block inserted 310011
+New transaction inserted 1afa4fa28e1ef63b2b67c288e078cfeb109a2b236558ab5544eedc7f171e0a84
+Broadcast 1afa4fa28e1ef63b2b67c288e078cfeb109a2b236558ab5544eedc7f171e0a84: Unit Test
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86801800; txid: 1afa4fa28e1ef63b2b67c288e078cfeb109a2b236558ab5544eedc7f171e0a84; vout: 1; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 8']
 Fee/KB 0.00025000
 New input: amount: 0.86801800; txid: 1afa4fa28e1ef63b2b67c288e078cfeb109a2b236558ab5544eedc7f171e0a84; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 0.86787720 BTC
-{"bindings": {"block_hash": "cdba329019d93a67b31b79d05f76ce1b7791d430ea0d6c1c2168fe78d2f67677", "block_index": 310012, "block_time": 310012000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "cdba329019d93a67b31b79d05f76ce1b7791d430ea0d6c1c2168fe78d2f67677", "block_index": 310012, "block_time": 310012000, "btc_amount": 5430, "data": "00000028000052bb33640000000002faf08000000000017d7840000000000000000000003b100000000a", "destination": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "fee": 7650, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81", "tx_index": 13}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"action": "bet", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310012, "event": "7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81", "quantity": 50000000, "tx_index": 13}, "category": "debits", "command": "insert", "event": "DEBIT"}
-{"bindings": {"bet_type": 0, "block_index": 310012, "counterwager_quantity": 25000000, "counterwager_remaining": 25000000, "deadline": 1388000100, "expiration": 10, "expire_index": 310022, "fee_fraction_int": 99999999.0, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "leverage": 15120, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "target_value": 0.0, "tx_hash": "7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81", "tx_index": 13, "wager_quantity": 50000000, "wager_remaining": 50000000}, "category": "bets", "command": "insert", "event": "OPEN_BET"}
+New block inserted 310012
+New transaction inserted 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81
+Debit 50000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Opened bet 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86787720; txid: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81; vout: 2; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 9', 'amount: 0.00005430; txid: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81; vout: 0; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 0.86787720; txid: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 0.86773640 BTC
-{"bindings": {"block_hash": "0425e5e832e4286757dc0228cd505b8d572081007218abd3a0983a3bcd502a61", "block_index": 310013, "block_time": 310013000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "0425e5e832e4286757dc0228cd505b8d572081007218abd3a0983a3bcd502a61", "block_index": 310013, "block_time": 310013000, "btc_amount": 5430, "data": "00000028000152bb336400000000017d78400000000002793d60000000000000000000003b100000000a", "destination": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "fee": 7650, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42", "tx_index": 14}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"status": "expired", "tx_hash": "6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59"}, "category": "orders", "command": "update", "event": "ORDER_UPDATE"}
-{"bindings": {"block_index": 310013, "order_hash": "6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59", "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc"}, "category": "order_expirations", "command": "insert", "event": "ORDER_EXPIRATION"}
-{"bindings": {"action": "bet", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310013, "event": "e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42", "quantity": 25000000, "tx_index": 14}, "category": "debits", "command": "insert", "event": "DEBIT"}
-{"bindings": {"bet_type": 1, "block_index": 310013, "counterwager_quantity": 41500000, "counterwager_remaining": 41500000, "deadline": 1388000100, "expiration": 10, "expire_index": 310023, "fee_fraction_int": 99999999.0, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "leverage": 15120, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "target_value": 0.0, "tx_hash": "e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42", "tx_index": 14, "wager_quantity": 25000000, "wager_remaining": 25000000}, "category": "bets", "command": "insert", "event": "OPEN_BET"}
+New block inserted 310013
+New transaction inserted e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42
+Updated order 6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59. New status: expired
+Debit 25000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Opened bet e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42
 Considering: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81
 Tx0 Inverse Odds: 0.5; Tx1 Odds: 0.6024096385542169
 Potential forward quantities: 50000000, 41500000
 Forward Quantity: 41500000
 Backward Quantity: 20750000
-{"bindings": {"counterwager_remaining": 4250000, "status": "open", "tx_hash": "7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81", "wager_remaining": 8500000}, "category": "bets", "command": "update", "event": "BET_UPDATE"}
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310013, "calling_function": "filled", "event": "e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42", "quantity": 4250000, "tx_index": 14}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"counterwager_remaining": 0, "status": "filled", "tx_hash": "e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42", "wager_remaining": 4250000}, "category": "bets", "command": "update", "event": "BET_UPDATE"}
-{"bindings": {"backward_quantity": 20750000, "block_index": 310012, "deadline": 1388000100, "fee_fraction_int": 99999999, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "forward_quantity": 41500000, "id": "7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81_e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42", "initial_value": 100.0, "leverage": 15120, "match_expire_index": 310022, "status": "pending", "target_value": 0.0, "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx0_bet_type": 0, "tx0_block_index": 310012, "tx0_expiration": 10, "tx0_hash": "7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81", "tx0_index": 13, "tx1_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx1_bet_type": 1, "tx1_block_index": 310013, "tx1_expiration": 10, "tx1_hash": "e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42", "tx1_index": 14}, "category": "bet_matches", "command": "insert", "event": "BET_MATCH"}
+Updated bet 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81. New status: open
+Credit 4250000 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Updated bet e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42. New status: filled
+Bet match 13 for 41500000 XCP against 20750000 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86773640; txid: e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42; vout: 2; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 10', 'amount: 0.00005430; txid: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81; vout: 0; confirmations: 2', 'amount: 0.00005430; txid: e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42; vout: 0; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 0.86773640; txid: e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 0.86759560 BTC
-{"bindings": {"block_hash": "85b28d413ebda2968ed82ae53643677338650151b997ed1e4656158005b9f65f", "block_index": 310014, "block_time": 310014000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "85b28d413ebda2968ed82ae53643677338650151b997ed1e4656158005b9f65f", "block_index": 310014, "block_time": 310014000, "btc_amount": 5430, "data": "00000028000052bb33640000000008f0d1800000000014dc93800000000000000000000013b00000000a", "destination": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "fee": 7650, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a", "tx_index": 15}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"status": "expired", "tx_hash": "36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c"}, "category": "orders", "command": "update", "event": "ORDER_UPDATE"}
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310014, "calling_function": "cancel order", "event": "36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c", "quantity": 5000000, "tx_index": 0}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"block_index": 310014, "order_hash": "36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c", "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc"}, "category": "order_expirations", "command": "insert", "event": "ORDER_EXPIRATION"}
-{"bindings": {"action": "bet", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310014, "event": "3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a", "quantity": 150000000, "tx_index": 15}, "category": "debits", "command": "insert", "event": "DEBIT"}
-{"bindings": {"bet_type": 0, "block_index": 310014, "counterwager_quantity": 350000000, "counterwager_remaining": 350000000, "deadline": 1388000100, "expiration": 10, "expire_index": 310024, "fee_fraction_int": 99999999.0, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "leverage": 5040, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "target_value": 0.0, "tx_hash": "3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a", "tx_index": 15, "wager_quantity": 150000000, "wager_remaining": 150000000}, "category": "bets", "command": "insert", "event": "OPEN_BET"}
+New block inserted 310014
+New transaction inserted 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a
+Updated order 36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c. New status: expired
+Credit 5000000 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Debit 150000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Opened bet 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86759560; txid: 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a; vout: 2; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 11', 'amount: 0.00005430; txid: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81; vout: 0; confirmations: 3', 'amount: 0.00005430; txid: e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42; vout: 0; confirmations: 2', 'amount: 0.00005430; txid: 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a; vout: 0; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 0.86759560; txid: 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 0.86745480 BTC
-{"bindings": {"block_hash": "4cf77d688f18f0c68c077db882f62e49f31859dfa6144372457cd73b29223922", "block_index": 310015, "block_time": 310015000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "4cf77d688f18f0c68c077db882f62e49f31859dfa6144372457cd73b29223922", "block_index": 310015, "block_time": 310015000, "btc_amount": 5430, "data": "00000028000152bb33640000000014dc93800000000008f0d1800000000000000000000013b00000000a", "destination": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "fee": 7650, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8", "tx_index": 16}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"action": "bet", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310015, "event": "a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8", "quantity": 350000000, "tx_index": 16}, "category": "debits", "command": "insert", "event": "DEBIT"}
-{"bindings": {"bet_type": 1, "block_index": 310015, "counterwager_quantity": 150000000, "counterwager_remaining": 150000000, "deadline": 1388000100, "expiration": 10, "expire_index": 310025, "fee_fraction_int": 99999999.0, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "leverage": 5040, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "target_value": 0.0, "tx_hash": "a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8", "tx_index": 16, "wager_quantity": 350000000, "wager_remaining": 350000000}, "category": "bets", "command": "insert", "event": "OPEN_BET"}
+New block inserted 310015
+New transaction inserted a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8
+Debit 350000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Opened bet a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8
 Considering: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81
 Skipping: leverages disagree.
 Considering: 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a
@@ -203,91 +198,88 @@ Tx0 Inverse Odds: 2.3333333333333335; Tx1 Odds: 2.3333333333333335
 Potential forward quantities: 150000000, 150000000
 Forward Quantity: 150000000
 Backward Quantity: 350000000
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310015, "calling_function": "filled", "event": "a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8", "quantity": 0, "tx_index": 16}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"counterwager_remaining": 0, "status": "filled", "tx_hash": "3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a", "wager_remaining": 0}, "category": "bets", "command": "update", "event": "BET_UPDATE"}
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310015, "calling_function": "filled", "event": "a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8", "quantity": 0, "tx_index": 16}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"counterwager_remaining": 0, "status": "filled", "tx_hash": "a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8", "wager_remaining": 0}, "category": "bets", "command": "update", "event": "BET_UPDATE"}
-{"bindings": {"backward_quantity": 350000000, "block_index": 310014, "deadline": 1388000100, "fee_fraction_int": 99999999, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "forward_quantity": 150000000, "id": "3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a_a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8", "initial_value": 100.0, "leverage": 5040, "match_expire_index": 310024, "status": "pending", "target_value": 0.0, "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx0_bet_type": 0, "tx0_block_index": 310014, "tx0_expiration": 10, "tx0_hash": "3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a", "tx0_index": 15, "tx1_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx1_bet_type": 1, "tx1_block_index": 310015, "tx1_expiration": 10, "tx1_hash": "a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8", "tx1_index": 16}, "category": "bet_matches", "command": "insert", "event": "BET_MATCH"}
+Credit 0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Updated bet 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a. New status: filled
+Credit 0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Updated bet a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8. New status: filled
+Bet match 15 for 150000000 XCP against 350000000 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86745480; txid: a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8; vout: 2; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 12', 'amount: 0.00005430; txid: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81; vout: 0; confirmations: 4', 'amount: 0.00005430; txid: e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42; vout: 0; confirmations: 3', 'amount: 0.00005430; txid: 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a; vout: 0; confirmations: 2', 'amount: 0.00005430; txid: a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8; vout: 0; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 0.86745480; txid: a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 0.86731400 BTC
-{"bindings": {"block_hash": "99dc7d2627efb4e5e618a53b9898b4ca39c70e98fe9bf39f68a6c980f5b64ef9", "block_index": 310016, "block_time": 310016000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "99dc7d2627efb4e5e618a53b9898b4ca39c70e98fe9bf39f68a6c980f5b64ef9", "block_index": 310016, "block_time": 310016000, "btc_amount": 5430, "data": "00000028000252bb33c8000000002cb417800000000026be36803ff0000000000000000013b00000000a", "destination": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "fee": 7650, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5", "tx_index": 17}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"action": "bet", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310016, "event": "194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5", "quantity": 750000000, "tx_index": 17}, "category": "debits", "command": "insert", "event": "DEBIT"}
-{"bindings": {"bet_type": 2, "block_index": 310016, "counterwager_quantity": 650000000, "counterwager_remaining": 650000000, "deadline": 1388000200, "expiration": 10, "expire_index": 310026, "fee_fraction_int": 99999999.0, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "leverage": 5040, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "target_value": 1.0, "tx_hash": "194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5", "tx_index": 17, "wager_quantity": 750000000, "wager_remaining": 750000000}, "category": "bets", "command": "insert", "event": "OPEN_BET"}
+New block inserted 310016
+New transaction inserted 194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5
+Debit 750000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Opened bet 194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86731400; txid: 194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5; vout: 2; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 13', 'amount: 0.00005430; txid: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81; vout: 0; confirmations: 5', 'amount: 0.00005430; txid: e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42; vout: 0; confirmations: 4', 'amount: 0.00005430; txid: 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a; vout: 0; confirmations: 3', 'amount: 0.00005430; txid: a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8; vout: 0; confirmations: 2', 'amount: 0.00005430; txid: 194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5; vout: 0; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 0.86731400; txid: 194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 0.86717320 BTC
-{"bindings": {"block_hash": "8a4fedfbf734b91a5c5761a7bcb3908ea57169777a7018148c51ff611970e4a3", "block_index": 310017, "block_time": 310017000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "8a4fedfbf734b91a5c5761a7bcb3908ea57169777a7018148c51ff611970e4a3", "block_index": 310017, "block_time": 310017000, "btc_amount": 5430, "data": "00000028000352bb33c80000000026be3680000000002cb417803ff0000000000000000013b00000000a", "destination": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "fee": 7650, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207", "tx_index": 18}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"action": "bet", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310017, "event": "72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207", "quantity": 650000000, "tx_index": 18}, "category": "debits", "command": "insert", "event": "DEBIT"}
-{"bindings": {"bet_type": 3, "block_index": 310017, "counterwager_quantity": 750000000, "counterwager_remaining": 750000000, "deadline": 1388000200, "expiration": 10, "expire_index": 310027, "fee_fraction_int": 99999999.0, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "leverage": 5040, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "target_value": 1.0, "tx_hash": "72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207", "tx_index": 18, "wager_quantity": 650000000, "wager_remaining": 650000000}, "category": "bets", "command": "insert", "event": "OPEN_BET"}
+New block inserted 310017
+New transaction inserted 72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207
+Debit 650000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Opened bet 72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207
 Considering: 194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5
 Tx0 Inverse Odds: 0.8666666666666667; Tx1 Odds: 0.8666666666666667
 Potential forward quantities: 750000000, 750000000
 Forward Quantity: 750000000
 Backward Quantity: 650000000
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310017, "calling_function": "filled", "event": "72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207", "quantity": 0, "tx_index": 18}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"counterwager_remaining": 0, "status": "filled", "tx_hash": "194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5", "wager_remaining": 0}, "category": "bets", "command": "update", "event": "BET_UPDATE"}
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310017, "calling_function": "filled", "event": "72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207", "quantity": 0, "tx_index": 18}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"counterwager_remaining": 0, "status": "filled", "tx_hash": "72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207", "wager_remaining": 0}, "category": "bets", "command": "update", "event": "BET_UPDATE"}
-{"bindings": {"backward_quantity": 650000000, "block_index": 310016, "deadline": 1388000200, "fee_fraction_int": 99999999, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "forward_quantity": 750000000, "id": "194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5_72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207", "initial_value": 100.0, "leverage": 5040, "match_expire_index": 310026, "status": "pending", "target_value": 1.0, "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx0_bet_type": 2, "tx0_block_index": 310016, "tx0_expiration": 10, "tx0_hash": "194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5", "tx0_index": 17, "tx1_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx1_bet_type": 3, "tx1_block_index": 310017, "tx1_expiration": 10, "tx1_hash": "72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207", "tx1_index": 18}, "category": "bet_matches", "command": "insert", "event": "BET_MATCH"}
+Credit 0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Updated bet 194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5. New status: filled
+Credit 0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Updated bet 72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207. New status: filled
+Bet match 17 for 750000000 XCP against 650000000 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86717320; txid: 72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207; vout: 2; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 14', 'amount: 0.00005430; txid: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81; vout: 0; confirmations: 6', 'amount: 0.00005430; txid: e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42; vout: 0; confirmations: 5', 'amount: 0.00005430; txid: 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a; vout: 0; confirmations: 4', 'amount: 0.00005430; txid: a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8; vout: 0; confirmations: 3', 'amount: 0.00005430; txid: 194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5; vout: 0; confirmations: 2', 'amount: 0.00005430; txid: 72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207; vout: 0; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 0.86717320; txid: 72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.86709520 BTC
-{"bindings": {"block_hash": "35c06f9e3de39e4e56ceb1d1a22008f52361c50dd0d251c0acbe2e3c2dba8ed3", "block_index": 310018, "block_time": 310018000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "35c06f9e3de39e4e56ceb1d1a22008f52361c50dd0d251c0acbe2e3c2dba8ed3", "block_index": 310018, "block_time": 310018000, "btc_amount": 0, "data": "0000001e52bb33324058f7256ffc115e004c4b4009556e69742054657374", "destination": "", "fee": 6800, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "065de641fd87c0b3ef893130ef4a3dca7643b7a35f6d18c721f34a7a36a5992f", "tx_index": 19}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"block_index": 310018, "fee_fraction_int": 5000000, "locked": false, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "text": "Unit Test", "timestamp": 1388000050, "tx_hash": "065de641fd87c0b3ef893130ef4a3dca7643b7a35f6d18c721f34a7a36a5992f", "tx_index": 19, "value": 99.86166}, "category": "broadcasts", "command": "insert", "event": "BROADCAST"}
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310018, "calling_function": "bet settled: liquidated for bear", "event": "065de641fd87c0b3ef893130ef4a3dca7643b7a35f6d18c721f34a7a36a5992f", "quantity": 59137500, "tx_index": 19}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310018, "calling_function": "feed fee", "event": "065de641fd87c0b3ef893130ef4a3dca7643b7a35f6d18c721f34a7a36a5992f", "quantity": 3112500, "tx_index": 19}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"bear_credit": 59137500, "bet_match_id": "7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81_e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42", "bet_match_type_id": 1, "block_index": 310018, "bull_credit": 0, "escrow_less_fee": null, "fee": 3112500, "settled": false, "winner": null}, "category": "bet_match_resolutions", "command": "insert", "event": "BET_MATCH_RESOLUTON"}
-{"bindings": {"id": "7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81_e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42", "status": "settled: liquidated for bear"}, "category": "bet_matches", "command": "update", "event": "BET_MATCH_UPDATE"}
+New block inserted 310018
+New transaction inserted 065de641fd87c0b3ef893130ef4a3dca7643b7a35f6d18c721f34a7a36a5992f
+Broadcast 065de641fd87c0b3ef893130ef4a3dca7643b7a35f6d18c721f34a7a36a5992f: Unit Test
+Credit 59137500 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Credit 3112500 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Bet match 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81_e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42 resolved
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86709520; txid: 065de641fd87c0b3ef893130ef4a3dca7643b7a35f6d18c721f34a7a36a5992f; vout: 1; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 15', 'amount: 0.00005430; txid: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81; vout: 0; confirmations: 7', 'amount: 0.00005430; txid: e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42; vout: 0; confirmations: 6', 'amount: 0.00005430; txid: 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a; vout: 0; confirmations: 5', 'amount: 0.00005430; txid: a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8; vout: 0; confirmations: 4', 'amount: 0.00005430; txid: 194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5; vout: 0; confirmations: 3', 'amount: 0.00005430; txid: 72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207; vout: 0; confirmations: 2']
 Fee/KB 0.00025000
 New input: amount: 0.86709520; txid: 065de641fd87c0b3ef893130ef4a3dca7643b7a35f6d18c721f34a7a36a5992f; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.86701720 BTC
-{"bindings": {"block_hash": "114affa0c4f34b1ebf8e2778c9477641f60b5b9e8a69052158041d4c41893294", "block_index": 310019, "block_time": 310019000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "114affa0c4f34b1ebf8e2778c9477641f60b5b9e8a69052158041d4c41893294", "block_index": 310019, "block_time": 310019000, "btc_amount": 0, "data": "0000001e52bb3365405915f3b645a1cb004c4b4009556e69742054657374", "destination": "", "fee": 6800, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "7cc015005c559686a8e10294015ca1773c0bcd9f4d7d9768deb4bb94cdd4a69e", "tx_index": 20}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"block_index": 310019, "fee_fraction_int": 5000000, "locked": false, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "text": "Unit Test", "timestamp": 1388000101, "tx_hash": "7cc015005c559686a8e10294015ca1773c0bcd9f4d7d9768deb4bb94cdd4a69e", "tx_index": 20, "value": 100.343}, "category": "broadcasts", "command": "insert", "event": "BROADCAST"}
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310019, "calling_function": "bet settled", "event": "7cc015005c559686a8e10294015ca1773c0bcd9f4d7d9768deb4bb94cdd4a69e", "quantity": 159300000, "tx_index": 20}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310019, "calling_function": "bet settled", "event": "7cc015005c559686a8e10294015ca1773c0bcd9f4d7d9768deb4bb94cdd4a69e", "quantity": 315700000, "tx_index": 20}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310019, "calling_function": "feed fee", "event": "7cc015005c559686a8e10294015ca1773c0bcd9f4d7d9768deb4bb94cdd4a69e", "quantity": 25000000, "tx_index": 20}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"bear_credit": 315700000, "bet_match_id": "3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a_a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8", "bet_match_type_id": 1, "block_index": 310019, "bull_credit": 159300000, "escrow_less_fee": null, "fee": 25000000, "settled": true, "winner": null}, "category": "bet_match_resolutions", "command": "insert", "event": "BET_MATCH_RESOLUTON"}
-{"bindings": {"id": "3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a_a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8", "status": "settled"}, "category": "bet_matches", "command": "update", "event": "BET_MATCH_UPDATE"}
+New block inserted 310019
+New transaction inserted 7cc015005c559686a8e10294015ca1773c0bcd9f4d7d9768deb4bb94cdd4a69e
+Broadcast 7cc015005c559686a8e10294015ca1773c0bcd9f4d7d9768deb4bb94cdd4a69e: Unit Test
+Credit 159300000 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Credit 315700000 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Credit 25000000 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Bet match 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a_a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8 resolved
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86701720; txid: 7cc015005c559686a8e10294015ca1773c0bcd9f4d7d9768deb4bb94cdd4a69e; vout: 1; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 16', 'amount: 0.00005430; txid: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81; vout: 0; confirmations: 8', 'amount: 0.00005430; txid: e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42; vout: 0; confirmations: 7', 'amount: 0.00005430; txid: 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a; vout: 0; confirmations: 6', 'amount: 0.00005430; txid: a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8; vout: 0; confirmations: 5', 'amount: 0.00005430; txid: 194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5; vout: 0; confirmations: 4', 'amount: 0.00005430; txid: 72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207; vout: 0; confirmations: 3']
 Fee/KB 0.00025000
 New input: amount: 0.86701720; txid: 7cc015005c559686a8e10294015ca1773c0bcd9f4d7d9768deb4bb94cdd4a69e; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.86693920 BTC
-{"bindings": {"block_hash": "d93c79920e4a42164af74ecb5c6b903ff6055cdc007376c74dfa692c8d85ebc9", "block_index": 310020, "block_time": 310020000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "d93c79920e4a42164af74ecb5c6b903ff6055cdc007376c74dfa692c8d85ebc9", "block_index": 310020, "block_time": 310020000, "btc_amount": 0, "data": "0000001e52bb33c94000000000000000004c4b4009556e69742054657374", "destination": "", "fee": 6800, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "0899b8bccef3403252fd7d37ec550eea3350845dca098368b84bf4c3c48d3fc9", "tx_index": 21}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"block_index": 310020, "fee_fraction_int": 5000000, "locked": false, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "text": "Unit Test", "timestamp": 1388000201, "tx_hash": "0899b8bccef3403252fd7d37ec550eea3350845dca098368b84bf4c3c48d3fc9", "tx_index": 21, "value": 2.0}, "category": "broadcasts", "command": "insert", "event": "BROADCAST"}
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310020, "calling_function": "bet settled: for notequal", "event": "0899b8bccef3403252fd7d37ec550eea3350845dca098368b84bf4c3c48d3fc9", "quantity": 1330000000, "tx_index": 21}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310020, "calling_function": "feed fee", "event": "0899b8bccef3403252fd7d37ec550eea3350845dca098368b84bf4c3c48d3fc9", "quantity": 70000000, "tx_index": 21}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"bear_credit": null, "bet_match_id": "194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5_72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207", "bet_match_type_id": 5, "block_index": 310020, "bull_credit": null, "escrow_less_fee": 1330000000, "fee": 70000000, "settled": null, "winner": "NotEqual"}, "category": "bet_match_resolutions", "command": "insert", "event": "BET_MATCH_RESOLUTON"}
-{"bindings": {"id": "194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5_72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207", "status": "settled: for notequal"}, "category": "bet_matches", "command": "update", "event": "BET_MATCH_UPDATE"}
+New block inserted 310020
+New transaction inserted 0899b8bccef3403252fd7d37ec550eea3350845dca098368b84bf4c3c48d3fc9
+Broadcast 0899b8bccef3403252fd7d37ec550eea3350845dca098368b84bf4c3c48d3fc9: Unit Test
+Credit 1330000000 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Credit 70000000 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Bet match 194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5_72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207 resolved
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86693920; txid: 0899b8bccef3403252fd7d37ec550eea3350845dca098368b84bf4c3c48d3fc9; vout: 1; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 17', 'amount: 0.00005430; txid: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81; vout: 0; confirmations: 9', 'amount: 0.00005430; txid: e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42; vout: 0; confirmations: 8', 'amount: 0.00005430; txid: 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a; vout: 0; confirmations: 7', 'amount: 0.00005430; txid: a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8; vout: 0; confirmations: 6', 'amount: 0.00005430; txid: 194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5; vout: 0; confirmations: 5', 'amount: 0.00005430; txid: 72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207; vout: 0; confirmations: 4']
 Fee/KB 0.00025000
 New input: amount: 0.86693920; txid: 0899b8bccef3403252fd7d37ec550eea3350845dca098368b84bf4c3c48d3fc9; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.86686120 BTC
-{"bindings": {"block_hash": "7c2460bb32c5749c856486393239bf7a0ac789587ac71f32e7237910da8097f2", "block_index": 310021, "block_time": 310021000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "7c2460bb32c5749c856486393239bf7a0ac789587ac71f32e7237910da8097f2", "block_index": 310021, "block_time": 310021000, "btc_amount": 0, "data": "0000000a00000000000047670000000002faf08000000000000000010000000002faf080000a0000000000000000", "destination": "", "fee": 6800, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a", "tx_index": 22}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"action": "open order", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBB", "block_index": 310021, "event": "eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a", "quantity": 50000000, "tx_index": 22}, "category": "debits", "command": "insert", "event": "DEBIT"}
-{"bindings": {"block_index": 310021, "expiration": 10, "expire_index": 310031, "fee_provided": 6800, "fee_provided_remaining": 6800, "fee_required": 0, "fee_required_remaining": 0, "get_asset": "XCP", "get_quantity": 50000000, "get_remaining": 50000000, "give_asset": "BBBB", "give_quantity": 50000000, "give_remaining": 50000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "tx_hash": "eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a", "tx_index": 22}, "category": "orders", "command": "insert", "event": "OPEN_ORDER"}
+New block inserted 310021
+New transaction inserted eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a
+Debit 50000000 BBBB from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Order opened for 50000000 BBBB at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 data_btc_out=0 (data_value=0 len(data_array)=0)
 Sorted candidate UTXOs: ['amount: 0.86686120; txid: eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a; vout: 1; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 18', 'amount: 0.00005430; txid: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81; vout: 0; confirmations: 10', 'amount: 0.00005430; txid: e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42; vout: 0; confirmations: 9', 'amount: 0.00005430; txid: 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a; vout: 0; confirmations: 8', 'amount: 0.00005430; txid: a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8; vout: 0; confirmations: 7', 'amount: 0.00005430; txid: 194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5; vout: 0; confirmations: 6', 'amount: 0.00005430; txid: 72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207; vout: 0; confirmations: 5']
 Fee/KB 0.00025000
@@ -297,105 +289,103 @@ Size: 225 Fee: 0.00005625 Change quantity: -0.13319505 BTC
 New input: amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 18
 final_fee inputs: 2 size: 406 final_fee 10150
 Size: 406 Fee: 0.00010150 Change quantity: 0.36675970 BTC
-{"bindings": {"block_hash": "44435f9a99a0aa12a9bfabdc4cb8119f6ea6a6e1350d2d65445fb66a456db5fc", "block_index": 310022, "block_time": 310022000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "44435f9a99a0aa12a9bfabdc4cb8119f6ea6a6e1350d2d65445fb66a456db5fc", "block_index": 310022, "block_time": 310022000, "btc_amount": 100000000, "data": "", "destination": "mvCounterpartyXXXXXXXXXXXXXXW24Hef", "fee": 10150, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "c3f73d02e630cb2824f044e6d91f47b1ce351feff0339ea7b85652d24d8ff6bc", "tx_index": 23}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310022, "calling_function": "burn", "event": "c3f73d02e630cb2824f044e6d91f47b1ce351feff0339ea7b85652d24d8ff6bc", "quantity": 56999887262, "tx_index": 23}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"block_index": 310022, "burned": 38000000, "earned": 56999887262, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "c3f73d02e630cb2824f044e6d91f47b1ce351feff0339ea7b85652d24d8ff6bc", "tx_index": 23}, "category": "burns", "command": "insert", "event": "BURN"}
+New block inserted 310022
+New transaction inserted c3f73d02e630cb2824f044e6d91f47b1ce351feff0339ea7b85652d24d8ff6bc
+Credit 56999887262 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Burned 38000000 BTC for 56999887262 XCP
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.36675970; txid: c3f73d02e630cb2824f044e6d91f47b1ce351feff0339ea7b85652d24d8ff6bc; vout: 1; confirmations: 1', 'amount: 0.00005430; txid: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81; vout: 0; confirmations: 11', 'amount: 0.00005430; txid: e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42; vout: 0; confirmations: 10', 'amount: 0.00005430; txid: 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a; vout: 0; confirmations: 9', 'amount: 0.00005430; txid: a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8; vout: 0; confirmations: 8', 'amount: 0.00005430; txid: 194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5; vout: 0; confirmations: 7', 'amount: 0.00005430; txid: 72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207; vout: 0; confirmations: 6']
 Fee/KB 0.00025000
 New input: amount: 0.36675970; txid: c3f73d02e630cb2824f044e6d91f47b1ce351feff0339ea7b85652d24d8ff6bc; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 0.36661890 BTC
-{"bindings": {"block_hash": "d8cf5bec1bbcab8ca4f495352afde3b6572b7e1d61b3976872ebb8e9d30ccb08", "block_index": 310023, "block_time": 310023000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "d8cf5bec1bbcab8ca4f495352afde3b6572b7e1d61b3976872ebb8e9d30ccb08", "block_index": 310023, "block_time": 310023000, "btc_amount": 5430, "data": "0000000000000000000047680000000000002710", "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "fee": 7650, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "supported": true, "tx_hash": "58b89d056b539d2cf9ddac4518ccca6744495127e0ce893eb71da2599cbf85ab", "tx_index": 24}, "category": "transactions", "command": "insert", "event": "NEW_TRANSACTION"}
-{"bindings": {"status": "expired", "tx_hash": "7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81"}, "category": "bets", "command": "update", "event": "BET_UPDATE"}
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310023, "calling_function": "recredit wager remaining", "event": "7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81", "quantity": 8500000, "tx_index": 0}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"bet_hash": "7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81", "bet_index": 13, "block_index": 310023, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc"}, "category": "bet_expirations", "command": "insert", "event": "BET_EXPIRATION"}
-{"bindings": {"action": "send", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBC", "block_index": 310023, "event": "58b89d056b539d2cf9ddac4518ccca6744495127e0ce893eb71da2599cbf85ab", "quantity": 10000, "tx_index": 24}, "category": "debits", "command": "insert", "event": "DEBIT"}
-{"bindings": {"address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "asset": "BBBC", "block_index": 310023, "calling_function": "send", "event": "58b89d056b539d2cf9ddac4518ccca6744495127e0ce893eb71da2599cbf85ab", "quantity": 10000, "tx_index": 24}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"asset": "BBBC", "block_index": 310023, "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "quantity": 10000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "58b89d056b539d2cf9ddac4518ccca6744495127e0ce893eb71da2599cbf85ab", "tx_index": 24}, "category": "sends", "command": "insert", "event": "SEND"}
-{"bindings": {"block_hash": "b03042b4e18a222b4c8d1e9e1970d93e6e2a2d41686d227ff8ecf0a839223dc5", "block_index": 310024, "block_time": 310024000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "a872e560766832cc3b4f7f222228cb6db882ce3c54f6459f62c71d5cd6e90666", "block_index": 310025, "block_time": 310025000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "6c96350f6f2f05810f19a689de235eff975338587194a36a70dfd0fcd490941a", "block_index": 310026, "block_time": 310026000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "d7acfac66df393c4482a14c189742c0571b89442eb7f817b34415a560445699e", "block_index": 310027, "block_time": 310027000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "02409fcf8fa06dafcb7f11e38593181d9c42cc9d5e2ddc304d098f990bd9530b", "block_index": 310028, "block_time": 310028000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "3c739fa8b40c118d5547ea356ee8d10ee2898871907643ec02e5db9d00f03cc6", "block_index": 310029, "block_time": 310029000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "d5071cddedf89765ee0fd58f209c1c7d669ba8ea66200a57587da8b189b9e4f5", "block_index": 310030, "block_time": 310030000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "0b02b10f41380fff27c543ea8891ecb845bf7a003ac5c87e15932aff3bfcf689", "block_index": 310031, "block_time": 310031000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "66346be81e6ba04544f2ae643b76c2b7b1383f038fc2636e02e49dc7ec144074", "block_index": 310032, "block_time": 310032000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"status": "expired", "tx_hash": "eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a"}, "category": "orders", "command": "update", "event": "ORDER_UPDATE"}
-{"bindings": {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBB", "block_index": 310032, "calling_function": "cancel order", "event": "eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a", "quantity": 50000000, "tx_index": 0}, "category": "credits", "command": "insert", "event": "CREDIT"}
-{"bindings": {"block_index": 310032, "order_hash": "eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a", "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc"}, "category": "order_expirations", "command": "insert", "event": "ORDER_EXPIRATION"}
-{"bindings": {"block_hash": "999c65df9661f73e8c01f1da1afda09ac16788b72834f0ff5ea3d1464afb4707", "block_index": 310033, "block_time": 310033000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "f552edd2e0a648230f3668e72ddf0ddfb1e8ac0f4c190f91b89c1a8c2e357208", "block_index": 310034, "block_time": 310034000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "a13cbb016f3044207a46967a4ba1c87dab411f78c55c1179f2336653c2726ae2", "block_index": 310035, "block_time": 310035000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "158648a98f1e1bd1875584ce8449eb15a4e91a99a923bbb24c4210135cef0c76", "block_index": 310036, "block_time": 310036000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "563acfd6d991ce256d5655de2e9429975c8dceeb221e76d5ec6e9e24a2c27c07", "block_index": 310037, "block_time": 310037000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "b44b4cad12431c32df27940e18d51f63897c7472b70950d18454edfd640490b2", "block_index": 310038, "block_time": 310038000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "5fa1ae9c5e8a599247458987b006ad3a57f686df1f7cc240bf119e911b56c347", "block_index": 310039, "block_time": 310039000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "7200ded406675453eadddfbb2d14c2a4526c7dc2b5de14bd48b29243df5e1aa3", "block_index": 310040, "block_time": 310040000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "5db592ff9ba5fac1e030cf22d6c13b70d330ba397f415340086ee7357143b359", "block_index": 310041, "block_time": 310041000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "826fd4701ef2824e9559b069517cd3cb990aff6a4690830f78fc845ab77fa3e4", "block_index": 310042, "block_time": 310042000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "2254a12ada208f1dd57bc17547ecaf3c44720323c47bc7d4b1262477cb7f3c51", "block_index": 310043, "block_time": 310043000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "3346d24118d8af0b3c6bcc42f8b85792e7a2e7036ebf6e4c25f4f6723c78e46b", "block_index": 310044, "block_time": 310044000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "7bba0ab243839e91ad1a45a762bf074011f8a9883074d68203c6d1b46fffde98", "block_index": 310045, "block_time": 310045000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "47db6788c38f2d6d712764979e41346b55e78cbb4969e0ef5c4336faf18993a6", "block_index": 310046, "block_time": 310046000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "a9ccabcc2a098a7d25e4ab8bda7c4e66807eefa42e29890dcd88149a10de7075", "block_index": 310047, "block_time": 310047000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "610bf3935a85b05a98556c55493c6de45bed4d7b3b6c8553a984718765796309", "block_index": 310048, "block_time": 310048000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "4ad2761923ad49ad2b283b640f1832522a2a5d6964486b21591b71df6b33be3c", "block_index": 310049, "block_time": 310049000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "8cfeb60a14a4cec6e9be13d699694d49007d82a31065a17890383e262071e348", "block_index": 310050, "block_time": 310050000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "b53c90385dd808306601350920c6af4beb717518493fd23b5c730eea078f33e6", "block_index": 310051, "block_time": 310051000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "0acdacf4e4b6fca756479cb055191b367b1fa433aa558956f5f08fa5b7b394e2", "block_index": 310052, "block_time": 310052000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "68348f01b6dc49b2cb30fe92ac43e527aa90d859093d3bf7cd695c64d2ef744f", "block_index": 310053, "block_time": 310053000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "a8b5f253df293037e49b998675620d5477445c51d5ec66596e023282bb9cd305", "block_index": 310054, "block_time": 310054000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "4b069152e2dc82e96ed8a3c3547c162e8c3aceeb2a4ac07972f8321a535b9356", "block_index": 310055, "block_time": 310055000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "7603eaed418971b745256742f9d2ba70b2c2b2f69f61de6cc70e61ce0336f9d3", "block_index": 310056, "block_time": 310056000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "4a5fdc84f2d66ecb6ee3e3646aad20751ce8694e64e348d3c8aab09d33a3e411", "block_index": 310057, "block_time": 310057000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "a6eef3089896f0cae0bfe9423392e45c48f4efe4310b14d8cfbdb1fea613635f", "block_index": 310058, "block_time": 310058000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "ab505de874c43f97c90be1c26a769e6c5cb140405c993b4a6cc7afc795f156a9", "block_index": 310059, "block_time": 310059000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "974ad5fbef621e0a38eab811608dc9afaf10c8ecc85fed913075ba1a145e889b", "block_index": 310060, "block_time": 310060000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "35d267d21ad386e7b7632292af1c422b0310dde7ca49a82f9577525a29c138cf", "block_index": 310061, "block_time": 310061000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "b31a0054145319ef9de8c1cb19df5bcf4dc8a1ece20053aa494e5d3a00a2852f", "block_index": 310062, "block_time": 310062000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "0cbcbcd5b7f2dc288e3a34eab3d4212463a5a56e886804fb4f9f1cf929eadebe", "block_index": 310063, "block_time": 310063000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "e2db8065a195e85cde9ddb868a17d39893a60fb2b1255aa5f0c88729de7cbf30", "block_index": 310064, "block_time": 310064000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "8a7bc7a77c831ac4fd11b8a9d22d1b6a0661b07cef05c2e600c7fb683b861d2a", "block_index": 310065, "block_time": 310065000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "b6959be51eb084747d301f7ccaf9e75f2292c9404633b1532e3692659939430d", "block_index": 310066, "block_time": 310066000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "8b08eae98d7193c9c01863fac6effb9162bda010daeacf9e0347112f233b8577", "block_index": 310067, "block_time": 310067000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "9280e7297ef6313341bc81787a36acfc9af58f83a415afff5e3154f126cf52b5", "block_index": 310068, "block_time": 310068000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "486351f0655bf594ffaab1980cff17353b640b63e9c27239109addece189a6f7", "block_index": 310069, "block_time": 310069000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "8739e99f4dee8bebf1332f37f49a125348b40b93b74fe35579dd52bfba4fa7e5", "block_index": 310070, "block_time": 310070000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "7a099aa1bba0ead577f1e44f35263a1f115ed6a868c98d4dd71609072ae7f80b", "block_index": 310071, "block_time": 310071000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "7b17ecedc07552551b8129e068ae67cb176ca766ea3f6df74b597a94e3a7fc8a", "block_index": 310072, "block_time": 310072000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "ee0fe3cc9b3a48a2746b6090b63b442b97ea6055d48edcf4b2288396764c6943", "block_index": 310073, "block_time": 310073000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "ceab38dfde01f711a187601731ad575d67cfe0b7dbc61dcd4f15baaef72089fb", "block_index": 310074, "block_time": 310074000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "ef547198c6e36d829f117cfd7077ccde45158e3c545152225fa24dba7a26847b", "block_index": 310075, "block_time": 310075000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "3b0499c2e8e8f0252c7288d4ecf66efc426ca37aad3524424d14c8bc6f8b0d92", "block_index": 310076, "block_time": 310076000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "d2adeefa9024ab3ff2822bc36acf19b6c647cea118cf15b86c6bc00c3322e7dd", "block_index": 310077, "block_time": 310077000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "f6c17115ef0efe489c562bcda4615892b4d4b39db0c9791fe193d4922bd82cd6", "block_index": 310078, "block_time": 310078000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "f2fbd2074d804e631db44cb0fb2e1db3fdc367e439c21ffc40d73104c4d7069c", "block_index": 310079, "block_time": 310079000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "42943b914d9c367000a78b78a544cc4b84b1df838aadde33fe730964a89a3a6c", "block_index": 310080, "block_time": 310080000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "6554f9d307976249e7b7e260e08046b3b55d318f8b6af627fed5be3063f123c4", "block_index": 310081, "block_time": 310081000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "4f1ef91b1dcd575f8ac2e66a67715500cbca154bd6f3b8148bb7015a6aa6c644", "block_index": 310082, "block_time": 310082000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "9b1f6fd6ff9b0dc4e37603cfb0625f49067c775b99e12492afd85392d3c8d850", "block_index": 310083, "block_time": 310083000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "1e0972523e80306441b9f4157f171716199f1428db2e818a7f7817ccdc8859e3", "block_index": 310084, "block_time": 310084000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "c5b6e9581831e3bc5848cd7630c499bca26d9ece5156d36579bdb72d54817e34", "block_index": 310085, "block_time": 310085000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "080c1dc55a4ecf4824cf9840602498cfc35b5f84099f50b71b45cb63834c7a78", "block_index": 310086, "block_time": 310086000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "4ec8cb1c38b22904e8087a034a6406b896eff4dd28e7620601c6bddf82e2738c", "block_index": 310087, "block_time": 310087000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "e945c815c433cbddd0bf8e66c5c23b51072483492acda98f5c2c201020a8c5b3", "block_index": 310088, "block_time": 310088000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "0382437f895ef3e7e38bf025fd4f606fd44d4bbd6aea71dbdc4ed11a7cd46f33", "block_index": 310089, "block_time": 310089000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "b756db71dc037b5a4582de354a3347371267d31ebda453e152f0a13bb2fae969", "block_index": 310090, "block_time": 310090000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "734a9aa485f36399d5efb74f3b9c47f8b5f6fd68c9967f134b14cfe7e2d7583c", "block_index": 310091, "block_time": 310091000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "56386beb65f9228740d4ad43a1c575645f6daf59e0dd9f22551c59215b5e8c3d", "block_index": 310092, "block_time": 310092000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "a74a2425f2f4be24bb5f715173e6756649e1cbf1b064aeb1ef60e0b94b418ddc", "block_index": 310093, "block_time": 310093000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "2a8f976f20c4e89ff01071915ac96ee35192d54df3a246bf61fd4a0cccfb5b23", "block_index": 310094, "block_time": 310094000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "bed0fa40c9981223fb40b3be8124ca619edc9dd34d0c907369477ea92e5d2cd2", "block_index": 310095, "block_time": 310095000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "306aeec3db435fabffdf88c2f26ee83caa4c2426375a33daa2be041dbd27ea2f", "block_index": 310096, "block_time": 310096000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "13e8e16e67c7cdcc80d477491e554b43744f90e8e1a9728439a11fab42cefadf", "block_index": 310097, "block_time": 310097000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "ca5bca4b5ec4fa6183e05176abe921cff884c4e20910fab55b603cef48dc3bca", "block_index": 310098, "block_time": 310098000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "3c4c2279cd7de0add5ec469648a845875495a7d54ebfb5b012dcc5a197b7992a", "block_index": 310099, "block_time": 310099000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "96925c05b3c7c80c716f5bef68d161c71d044252c766ca0e3f17f255764242cb", "block_index": 310100, "block_time": 310100000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
-{"bindings": {"block_hash": "369472409995ca1a2ebecbad6bf9dab38c378ab1e67e1bdf13d4ce1346731cd6", "block_index": 310101, "block_time": 310101000, "difficulty": null, "ledger_hash": null, "previous_block_hash": null, "txlist_hash": null}, "category": "blocks", "command": "insert", "event": "NEW_BLOCK"}
+New block inserted 310023
+New transaction inserted 58b89d056b539d2cf9ddac4518ccca6744495127e0ce893eb71da2599cbf85ab
+Updated bet 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81. New status: expired
+Credit 8500000 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Debit 10000 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Credit 10000 BBBC to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
+Send 10000 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
+New block inserted 310024
+New block inserted 310025
+New block inserted 310026
+New block inserted 310027
+New block inserted 310028
+New block inserted 310029
+New block inserted 310030
+New block inserted 310031
+New block inserted 310032
+Updated order eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a. New status: expired
+Credit 50000000 BBBB to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+New block inserted 310033
+New block inserted 310034
+New block inserted 310035
+New block inserted 310036
+New block inserted 310037
+New block inserted 310038
+New block inserted 310039
+New block inserted 310040
+New block inserted 310041
+New block inserted 310042
+New block inserted 310043
+New block inserted 310044
+New block inserted 310045
+New block inserted 310046
+New block inserted 310047
+New block inserted 310048
+New block inserted 310049
+New block inserted 310050
+New block inserted 310051
+New block inserted 310052
+New block inserted 310053
+New block inserted 310054
+New block inserted 310055
+New block inserted 310056
+New block inserted 310057
+New block inserted 310058
+New block inserted 310059
+New block inserted 310060
+New block inserted 310061
+New block inserted 310062
+New block inserted 310063
+New block inserted 310064
+New block inserted 310065
+New block inserted 310066
+New block inserted 310067
+New block inserted 310068
+New block inserted 310069
+New block inserted 310070
+New block inserted 310071
+New block inserted 310072
+New block inserted 310073
+New block inserted 310074
+New block inserted 310075
+New block inserted 310076
+New block inserted 310077
+New block inserted 310078
+New block inserted 310079
+New block inserted 310080
+New block inserted 310081
+New block inserted 310082
+New block inserted 310083
+New block inserted 310084
+New block inserted 310085
+New block inserted 310086
+New block inserted 310087
+New block inserted 310088
+New block inserted 310089
+New block inserted 310090
+New block inserted 310091
+New block inserted 310092
+New block inserted 310093
+New block inserted 310094
+New block inserted 310095
+New block inserted 310096
+New block inserted 310097
+New block inserted 310098
+New block inserted 310099
+New block inserted 310100
+New block inserted 310101
 Checking for conservation of assets.
 XCP has been conserved (1498.99847262 XCP both issued and held)
 BBBB has been conserved (10.0 BBBB both issued and held)
