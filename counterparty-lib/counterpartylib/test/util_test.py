@@ -123,14 +123,19 @@ def remove_database_files(database_filename):
 
 def insert_block(db, block_index, parse_block=True):
     """Add blocks to the blockchain."""
-    cursor = db.cursor()
     block_hash = util.dhash_string(chr(block_index))
     block_time = block_index * 1000
-    block = (block_index, block_hash, block_time, None, None, None, None)
-    cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty)
-                      VALUES (?,?,?,?,?,?,?)''', block)
+    bindings = {
+        'block_index': block_index,
+        'block_hash': block_hash,
+        'block_time': block_time,
+        'ledger_hash': None,
+        'txlist_hash': None,
+        'previous_block_hash': None,
+        'difficulty': None
+    }
+    ledger.insert_record(db, 'blocks', bindings)
     ledger.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
-    cursor.close()
 
     if parse_block:
         blocks.parse_block(db, block_index, block_time)
@@ -174,8 +179,21 @@ def insert_raw_transaction(raw_transaction, db):
             BlockchainParser().deserialize_tx(raw_transaction, True),
             block_index
         )
-        transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
-        cursor.execute('''INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?)''', transaction)
+        bindings = {
+            'tx_index': tx_index,
+            'tx_hash': tx_hash,
+            'block_index': block_index,
+            'block_hash': block_hash,
+            'block_time': block_time,
+            'source': source,
+            'destination': destination,
+            'btc_amount': btc_amount,
+            'fee': fee,
+            'data': data,
+            'supported': True
+        }
+        ledger.insert_record(db, 'transactions', bindings)
+
         tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
     except exceptions.BTCOnlyError:
         pass
@@ -259,27 +277,29 @@ def dummy_tx_hash(raw_transaction):
 def insert_transaction(transaction, db):
     """Add a transaction to the database."""
 
-    cursor = db.cursor()
-    block = (transaction['block_index'], transaction['block_hash'], transaction['block_time'], None, None, None, None)
-    cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty)
-                      VALUES (?,?,?,?,?,?,?)''', block)
-    keys = ",".join(transaction.keys())
-    cursor.execute(f'''INSERT INTO transactions ({keys}) VALUES (?,?,?,?,?,?,?,?,?,?,?)''', tuple(transaction.values()))
+    block_bindings = {
+        'block_index': transaction['block_index'],
+        'block_hash': transaction['block_hash'],
+        'block_time': transaction['block_time'],
+        'ledger_hash': None,
+        'txlist_hash': None,
+        'previous_block_hash': None,
+        'difficulty': None
+    }
+    ledger.insert_record(db, 'blocks', block_bindings)
+    ledger.insert_record(db, 'transactions', transaction)
+
     # `dispenser.dispense()` needs some vouts. Let's say one vout per transaction.
-    cursor.execute('''INSERT INTO transaction_outputs(
-                                tx_index,
-                                tx_hash,
-                                block_index,
-                                out_index,
-                                destination,
-                                btc_amount) VALUES (?,?,?,?,?,?)''',
-                                (transaction['tx_index'],
-                                 transaction['tx_hash'],
-                                 transaction['block_index'],
-                                 0,
-                                 transaction["destination"],
-                                 transaction["btc_amount"]))
-    cursor.close()
+    transaction_outputs_bindings = {
+        'tx_index': transaction['tx_index'],
+        'tx_hash': transaction['tx_hash'],
+        'block_index': transaction['block_index'],
+        'out_index': 0,
+        'destination': transaction["destination"],
+        'btc_amount': transaction["btc_amount"]
+    }
+    ledger.insert_record(db, 'transaction_outputs', transaction_outputs_bindings)
+
     ledger.CURRENT_BLOCK_INDEX = transaction['block_index']
 
 

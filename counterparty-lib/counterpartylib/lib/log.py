@@ -125,56 +125,11 @@ def set_up(verbose=False, quiet=True, log_file=None, log_in_console=False):
     sys.excepthook = handle_exception
 
 
-# we are using a function here for testing purposes
-def curr_time():
-    return int(time.time())
-
 def isodt (epoch_time):
     try:
         return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
     except OSError:
         return '<datetime>'
-
-def message(db, block_index, command, category, bindings, tx_hash=None):
-    if command == '\n':
-        return
-
-    cursor = db.cursor()
-
-    # Get last message index.
-    try:
-        message = ledger.last_message(db)
-        message_index = message['message_index'] + 1
-    except exceptions.DatabaseError:
-        message_index = 0
-
-    # Not to be misleading…
-    if block_index == config.MEMPOOL_BLOCK_INDEX:
-        try:
-            del bindings['status']
-            del bindings['block_index']
-            del bindings['tx_index']
-        except KeyError:
-            pass
-
-    # Handle binary data.
-    items = {}
-    for key, value in bindings.items():
-        if isinstance(value, bytes):
-            items[key] = binascii.hexlify(value).decode('ascii')
-        else:
-            items[key] = value
-
-    current_time = curr_time()
-    bindings_string = json.dumps(items)
-    cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings, :timestamp)',
-                   (message_index, block_index, command, category, bindings_string, current_time))
-
-    # Log only real transactions.
-    if block_index != config.MEMPOOL_BLOCK_INDEX:
-        log(db, command, category, bindings)
-
-    cursor.close()
 
 
 def log (db, command, category, bindings):

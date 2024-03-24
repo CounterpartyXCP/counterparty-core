@@ -162,25 +162,13 @@ def initialise (db):
 
 
 def cancel_rps (db, rps, status, block_index, tx_index):
-    cursor = db.cursor()
-
     # Update status of rps.
     ledger.update_rps_status(db, rps['tx_hash'], status)
-
-    message_data = {
-        'status': status,
-        'tx_hash': rps['tx_hash']
-    }
-    log.message(db, block_index, 'update', 'rps', message_data)
-
+    # Refund quantity wagered.
     ledger.credit(db, rps['source'], 'XCP', rps['wager'], tx_index, action='recredit wager', event=rps['tx_hash'])
-
-    cursor.close()
 
 
 def update_rps_match_status (db, rps_match, status, block_index, tx_index):
-    cursor = db.cursor()
-
     if status in ['expired', 'concluded: tie']:
         # Recredit tx0 address.
         ledger.credit(db, rps_match['tx0_address'], 'XCP',
@@ -196,13 +184,6 @@ def update_rps_match_status (db, rps_match, status, block_index, tx_index):
 
     # Update status of rps match.
     ledger.update_rps_match_status(db, rps_match['id'], status)
-    # Log
-    log.message(db, block_index, 'update', 'rps_matches', {
-        'status': status,
-        'rps_match_id': rps_match['id']
-    })
-
-    cursor.close()
 
 
 def validate (db, source, possible_moves, wager, move_random_hash, expiration, block_index):
@@ -340,12 +321,6 @@ def match (db, tx, block_index):
         # update status
         for txn in [tx0, tx1]:
             ledger.update_rps_status(db, txn['tx_hash'], 'matched')
-
-            message_data = {
-                'status': 'matched',
-                'tx_index': txn['tx_index']
-            }
-            log.message(db, block_index, 'update', 'rps', message_data)
 
         bindings = {
             'id': util.make_id(tx0['tx_hash'], tx1['tx_hash']),

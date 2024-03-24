@@ -2,6 +2,8 @@ import logging
 import fractions
 import json
 import os
+import time
+import binascii
 from decimal import Decimal as D
 
 from counterpartylib.lib import exceptions
@@ -12,6 +14,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 CURRENT_BLOCK_INDEX = None
 BLOCK_LEDGER = []
+BLOCK_MESSAGES = []
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(CURR_DIR + '/../protocol_changes.json') as f:
@@ -59,6 +62,55 @@ def get_messages(db, block_index=None, block_index_in=None, message_index_in=Non
     query = f'''SELECT * FROM messages WHERE ({" AND ".join(where)}) ORDER BY message_index ASC''' # nosec B608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
+
+
+# we are using a function here for testing purposes
+def curr_time():
+    return int(time.time())
+
+
+def add_to_journal(db, block_index, command, category, bindings):
+    cursor = db.cursor()
+
+    # Get last message index.
+    try:
+        message = last_message(db)
+        message_index = message['message_index'] + 1
+    except exceptions.DatabaseError:
+        message_index = 0
+
+    # Not to be misleading…
+    if block_index == config.MEMPOOL_BLOCK_INDEX:
+        try:
+            del bindings['status']
+            del bindings['block_index']
+            del bindings['tx_index']
+        except KeyError:
+            pass
+
+    # Handle binary data.
+    items = {}
+    for key, value in bindings.items():
+        if isinstance(value, bytes):
+            items[key] = binascii.hexlify(value).decode('ascii')
+        else:
+            items[key] = value
+
+    current_time = curr_time()
+    bindings_string = json.dumps(items, sort_keys=True, separators=(',', ':'))
+    message_bindings = {
+        'message_index': message_index,
+        'block_index': block_index,
+        'command': command,
+        'category': category,
+        'bindings': bindings_string,
+        'timestamp': current_time
+    }
+    query = '''INSERT INTO messages VALUES (:message_index, :block_index, :command, :category, :bindings, :timestamp)'''
+    cursor.execute(query, message_bindings)
+    cursor.close()
+
+    BLOCK_MESSAGES.append(f'{command}{category}{bindings_string}')
 
 
 ###########################
@@ -735,6 +787,7 @@ def insert_record(db, table_name, record):
     query = f'''INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})''' # nosec B608
     cursor.execute(query, record)
     cursor.close()
+    add_to_journal(db, record['block_index'], "insert", table_name, record)
 
 
 # This function allows you to update a record using an INSERT.
@@ -773,8 +826,8 @@ def insert_update(db, table_name, id_name, id_value, update_data):
     # no sql injection here
     insert_query = f'''INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})''' # nosec B608
     cursor.execute(insert_query, new_record)
-
     cursor.close()
+    add_to_journal(db, CURRENT_BLOCK_INDEX, "update", table_name, update_data | {id_name: id_value})
 
 
 MUTABLE_FIELDS = {

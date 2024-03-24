@@ -173,7 +173,7 @@ def parse_block(db, block_index, block_time,
     """
 
     ledger.BLOCK_LEDGER = []
-    database.BLOCK_MESSAGES = []
+    ledger.BLOCK_MESSAGES = []
 
     assert block_index == ledger.CURRENT_BLOCK_INDEX
 
@@ -205,7 +205,7 @@ def parse_block(db, block_index, block_time,
     # Calculate consensus hashes.
     new_txlist_hash, found_txlist_hash = check.consensus_hash(db, 'txlist_hash', previous_txlist_hash, txlist)
     new_ledger_hash, found_ledger_hash = check.consensus_hash(db, 'ledger_hash', previous_ledger_hash, ledger.BLOCK_LEDGER)
-    new_messages_hash, found_messages_hash = check.consensus_hash(db, 'messages_hash', previous_messages_hash, database.BLOCK_MESSAGES)
+    new_messages_hash, found_messages_hash = check.consensus_hash(db, 'messages_hash', previous_messages_hash, ledger.BLOCK_MESSAGES)
 
     return new_ledger_hash, new_txlist_hash, new_messages_hash, found_messages_hash
 
@@ -493,44 +493,30 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
 
     if source and (data or destination == config.UNSPENDABLE or dispensers_outs):
         logger.debug(f'Saving transaction: {tx_hash}')
-        cursor.execute('''INSERT INTO transactions(
-                            tx_index,
-                            tx_hash,
-                            block_index,
-                            block_hash,
-                            block_time,
-                            source,
-                            destination,
-                            btc_amount,
-                            fee,
-                            data) VALUES(?,?,?,?,?,?,?,?,?,?)''',
-                            (tx_index,
-                             tx_hash,
-                             block_index,
-                             block_hash,
-                             block_time,
-                             source,
-                             destination,
-                             btc_amount,
-                             fee,
-                             data)
-                      )
+        transaction_bindings = {
+            'tx_index': tx_index,
+            'tx_hash': tx_hash,
+            'block_index': block_index,
+            'block_hash': block_hash,
+            'block_time': block_time,
+            'source': source,
+            'destination': destination,
+            'btc_amount': btc_amount,
+            'fee': fee,
+            'data': data,
+        }
+        ledger.insert_record(db, 'transactions', transaction_bindings)
 
         for next_out in dispensers_outs:
-            cursor.execute('''INSERT INTO transaction_outputs(
-                                tx_index,
-                                tx_hash,
-                                block_index,
-                                out_index,
-                                destination,
-                                btc_amount) VALUES (?,?,?,?,?,?)''',
-                                (tx_index,
-                                 tx_hash,
-                                 block_index,
-                                 next_out["out_index"],
-                                 next_out["destination"],
-                                 next_out["btc_amount"])
-                          )
+            transaction_outputs_bindings = {
+                'tx_index': tx_index,
+                'tx_hash': tx_hash,
+                'block_index': block_index,
+                'out_index': next_out["out_index"],
+                'destination': next_out["destination"],
+                'btc_amount': next_out["btc_amount"]
+            }
+            ledger.insert_record(db, 'transaction_outputs', transaction_outputs_bindings)
 
         cursor.close()
 
@@ -773,7 +759,7 @@ def follow(db):
             if requires_rollback:
                 # Record reorganisation.
                 logger.warning(f'Blockchain reorganisation at block {current_index}.')
-                log.message(db, block_index, 'reorg', None, {'block_index': current_index})
+                ledger.add_to_journal(db, block_index, 'reorg', 'blocks', {'block_index': current_index})
 
                 # Rollback the DB.
                 rollback(db, block_index=current_index - 1)
@@ -813,18 +799,14 @@ def follow(db):
                 ledger.CURRENT_BLOCK_INDEX = block_index
 
                 # List the block.
-                cursor.execute('''INSERT INTO blocks(
-                                    block_index,
-                                    block_hash,
-                                    block_time,
-                                    previous_block_hash,
-                                    difficulty) VALUES(?,?,?,?,?)''',
-                                    (block_index,
-                                    block_hash,
-                                    block_time,
-                                    previous_block_hash,
-                                    block_difficulty)
-                              )
+                block_bindings = {
+                    'block_index': block_index,
+                    'block_hash': block_hash,
+                    'block_time': block_time,
+                    'previous_block_hash': previous_block_hash,
+                    'difficulty': block_difficulty
+                }
+                ledger.insert_record(db, 'blocks', block_bindings)
 
                 # List the transactions in the block.
                 for tx_hash in txhash_list:

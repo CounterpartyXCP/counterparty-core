@@ -189,8 +189,6 @@ def cancel_order (db, order, status, block_index, tx_index):
     }
     ledger.update_order(db, order['tx_hash'], set_data)
 
-    log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': order['tx_hash']})
-
     if order['give_asset'] != config.BTC:    # Can’t credit BTC.
         ledger.credit(db, order['source'], order['give_asset'], order['give_remaining'], tx_index, action='cancel order', event=order['tx_hash'])
 
@@ -216,11 +214,6 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
 
     # Update status of order match.
     ledger.update_order_match_status(db, order_match['id'], status)
-
-    log.message(db, block_index, 'update', 'order_matches', {
-        'status': status,
-        'order_match_id': order_match['id']
-    })
 
     # If tx0 is dead, credit address directly; if not, replenish give remaining, get remaining, and fee required remaining.
     orders = ledger.get_order(db, tx_hash=order_match['tx0_hash'])
@@ -252,8 +245,6 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
         }
         ledger.update_order(db, order_match['tx0_hash'], set_data)
 
-        log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': order_match['tx0_hash']})
-
     # If tx1 is dead, credit address directly; if not, replenish give remaining, get remaining, and fee required remaining.
     orders = ledger.get_order(db, tx_hash=order_match['tx1_hash'])
     assert len(orders) == 1
@@ -282,8 +273,6 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
             'fee_required_remaining': tx1_fee_required_remaining,
         }
         ledger.update_order(db, order_match['tx1_hash'], set_data)
-
-        log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': order_match['tx1_hash']})
 
     if block_index < 286500:    # Protocol change.
         # Sanity check: one of the two must have expired.
@@ -660,7 +649,6 @@ def match (db, tx, block_index = None):
             }
             ledger.update_order(db, tx0['tx_hash'], set_data)
 
-            log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': tx0['tx_hash']})
             # tx1
             if tx1_give_remaining <= 0 or (tx1_get_remaining <= 0 and (block_index >= 292000 or config.TESTNET or config.REGTEST)):    # Protocol change
                 if tx1['give_asset'] != config.BTC and tx1['get_asset'] != config.BTC:
@@ -675,8 +663,6 @@ def match (db, tx, block_index = None):
                 'status': tx1_status,
             }
             ledger.update_order(db, tx1['tx_hash'], set_data)
-
-            log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': tx1['tx_hash']})
 
             # Calculate when the match will expire.
             if block_index >= 308000 or config.TESTNET or config.REGTEST:      # Protocol change.

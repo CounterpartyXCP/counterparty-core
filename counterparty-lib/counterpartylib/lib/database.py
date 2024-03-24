@@ -13,7 +13,6 @@ from counterpartylib.lib import log
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-BLOCK_MESSAGES = []
 
 def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style"""
@@ -21,65 +20,6 @@ def rowtracer(cursor, sql):
     for index, (name, type_) in enumerate(cursor.getdescription()):
         dictionary[name] = sql[index]
     return dictionary
-
-
-def exectracer(cursor, sql, bindings):
-    # This means that all changes to database must use a very simple syntax.
-    # TODO: Need sanity checks here.
-    sql = sql.lower()
-
-    # Parse SQL.
-    array = sql.split('(')[0].split(' ')
-    command = array[0]
-    if 'insert' in sql:
-        category = array[2]
-    elif 'update' in sql:
-        category = array[1]
-    else:
-        #CREATE TABLE, etc
-        return True
-
-    db = cursor.getconnection()
-    dictionary = {'command': command, 'category': category, 'bindings': bindings}
-
-    skip_tables = [
-        'blocks', 'transactions', 'transaction_outputs',
-        'balances', 'messages', 'mempool', 'assets',
-        'new_sends', 'new_issuances' # interim table for CIP10 activation
-    ]
-    skip_tables_block_messages = copy.copy(skip_tables)
-    if command == 'update':
-        # List message manually.
-        skip_tables += ['orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'dispensers']
-
-    # Record alteration in database.
-    if category not in skip_tables:
-        if bindings is not None:
-            if isinstance(bindings, dict):
-                log.message(db, bindings['block_index'], command, category, bindings)
-            # tx_index < 0 => kickstart
-            elif bindings[0] < 0 and sql.startswith('insert into transaction values (tx_index, tx_hash, block_index, '):
-                log.message(db, bindings[2], command, category, bindings[2])
-            else:
-                #raise exceptions.DatabaseError('Unknown bindings type.')
-                pass # just pass until we remove this function
-
-    # Record alteration in computation of message feed hash for the block
-    if category not in skip_tables_block_messages:
-        # don't include asset_longname as part of the messages hash
-        #   until subassets are enabled
-        if category == 'issuances' and not ledger.enabled('subassets'):
-            if isinstance(bindings, dict) and 'asset_longname' in bindings: del bindings['asset_longname']
-
-        # don't include memo as part of the messages hash
-        #   until enhanced_sends are enabled
-        if category == 'sends' and not ledger.enabled('enhanced_sends'):
-            if isinstance(bindings, dict) and 'memo' in bindings: del bindings['memo']
-
-        sorted_bindings = sorted(bindings.items()) if isinstance(bindings, dict) else [bindings,]
-        BLOCK_MESSAGES.append(f'{command}{category}{sorted_bindings}')
-
-    return True
 
 
 def get_connection(read_only=True):
@@ -102,7 +42,6 @@ def get_connection(read_only=True):
     cursor.execute('PRAGMA defer_foreign_keys = ON')
 
     db.setrowtrace(rowtracer)
-    db.setexectrace(exectracer)
 
     cursor.close()
     return db

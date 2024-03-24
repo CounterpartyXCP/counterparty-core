@@ -187,21 +187,15 @@ def initialise (db):
 
 
 def cancel_bet (db, bet, status, block_index, tx_index):
-    cursor = db.cursor()
-
     # Update status of bet.
     set_data = {'status': status}
     ledger.update_bet(db, bet['tx_hash'], set_data)
-    log.message(db, block_index, 'update', 'bets', set_data | {'tx_hash': bet['tx_hash']})
-
+    # Refund wager.
     ledger.credit(db, bet['source'], config.XCP, bet['wager_remaining'], tx_index, action='recredit wager remaining', event=bet['tx_hash'])
 
 
 def cancel_bet_match (db, bet_match, status, block_index, tx_index):
     # Does not re‐open, re‐fill, etc. constituent bets.
-
-    cursor = db.cursor()
-
     # Recredit tx0 address.
     ledger.credit(db, bet_match['tx0_address'], config.XCP,
                 bet_match['forward_quantity'], tx_index, action='recredit forward quantity', event=bet_match['id'])
@@ -209,13 +203,8 @@ def cancel_bet_match (db, bet_match, status, block_index, tx_index):
     # Recredit tx1 address.
     ledger.credit(db, bet_match['tx1_address'], config.XCP,
                 bet_match['backward_quantity'], tx_index, action='recredit backward quantity', event=bet_match['id'])
-
     # Update status of bet match.
     ledger.update_bet_match_status(db, bet_match['id'], status)
-
-    log.message(db, block_index, 'update', 'bet_matches', {'status': status, 'bet_match_id': bet_match['id']})
-
-    cursor.close()
 
 
 def get_fee_fraction (db, feed_address):
@@ -499,8 +488,6 @@ def match (db, tx):
             }
             ledger.update_bet(db, tx0['tx_hash'], set_data)
 
-            log.message(db, tx['block_index'], 'update', 'bets', set_data | {'tx_hash': tx0['tx_hash']})
-
             if tx1['block_index'] >= 292000 or config.TESTNET or config.REGTEST:  # Protocol change
                 if tx1_wager_remaining <= 0 or tx1_counterwager_remaining <= 0:
                     # Fill order, and recredit give_remaining.
@@ -513,8 +500,6 @@ def match (db, tx):
                 'status': tx1_status
             }
             ledger.update_bet(db,tx1['tx_hash'], set_data)
-
-            log.message(db, tx['block_index'], 'update', 'bets', set_data | {'tx_hash': tx1['tx_hash']})
 
             # Get last value of feed.
             broadcasts = ledger.get_broadcasts_by_source(db, feed_address, 'valid')
