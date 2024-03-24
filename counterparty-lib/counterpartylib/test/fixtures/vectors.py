@@ -4189,7 +4189,8 @@ UNITTEST_VECTOR = {
                     'command': 'insert',
                     'category': 'blocks',
                     'bindings': '{"block_hash":"54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b","block_index":310500,"block_time":310500000,"difficulty":null,"ledger_hash":null,"previous_block_hash":null,"txlist_hash":null}',
-                    'timestamp': 0}
+                    'timestamp': 0,
+                    'event': 'NEW_BLOCK'}
         }],
         'get_asset_id': [{
             'in': ('XCP', DP['default_block_index']),

@@ -105,9 +105,10 @@ def add_to_journal(db, block_index, command, category, event, bindings):
         'command': command,
         'category': category,
         'bindings': bindings_string,
-        'timestamp': current_time
+        'timestamp': current_time,
+        'event': event,
     }
-    query = '''INSERT INTO messages VALUES (:message_index, :block_index, :command, :category, :bindings, :timestamp)'''
+    query = '''INSERT INTO messages VALUES (:message_index, :block_index, :command, :category, :bindings, :timestamp, :event)'''
     cursor.execute(query, message_bindings)
     cursor.close()
 

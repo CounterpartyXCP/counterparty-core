@@ -419,12 +419,18 @@ def initialise(db):
                       command TEXT,
                       category TEXT,
                       bindings TEXT,
-                      timestamp INTEGER)
+                      timestamp INTEGER,
+                      event TEXT)
                   ''')
+    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(messages)''')]
+    if 'event' not in columns:
+        cursor.execute('''ALTER TABLE messages ADD COLUMN event TEXT''')
+
     # TODO: FOREIGN KEY (block_index) REFERENCES blocks(block_index) DEFERRABLE INITIALLY DEFERRED)
     database.create_indexes(cursor, 'messages', [
         ['block_index'],
         ['block_index', 'message_index'],
+        ['event'],
     ])
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS transaction_outputs(
