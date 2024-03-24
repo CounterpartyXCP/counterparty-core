@@ -69,7 +69,7 @@ def curr_time():
     return int(time.time())
 
 
-def add_to_journal(db, block_index, command, category, bindings):
+def add_to_journal(db, block_index, command, category, event, bindings):
     cursor = db.cursor()
 
     # Get last message index.
@@ -113,6 +113,7 @@ def add_to_journal(db, block_index, command, category, bindings):
     BLOCK_JOURNAL.append(f'{command}{category}{bindings_string}')
 
     log_message = {
+        'event': event,
         'command': command,
         'category': category,
         'bindings': items
@@ -786,7 +787,7 @@ def get_addresses(db, address=None):
 ###############################
 
 
-def insert_record(db, table_name, record):
+def insert_record(db, table_name, record, event):
     cursor = db.cursor()
     fields_name = ', '.join(record.keys())
     fields_values = ', '.join([f':{key}' for key in record.keys()])
@@ -794,13 +795,14 @@ def insert_record(db, table_name, record):
     query = f'''INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})''' # nosec B608
     cursor.execute(query, record)
     cursor.close()
-    add_to_journal(db, record['block_index'], "insert", table_name, record)
+    # Add event to journal
+    add_to_journal(db, record['block_index'], "insert", table_name, event, record)
 
 
 # This function allows you to update a record using an INSERT.
 # The `block_index` and `rowid` fields allow you to
 # order updates and retrieve the row with the current data.
-def insert_update(db, table_name, id_name, id_value, update_data):
+def insert_update(db, table_name, id_name, id_value, update_data, event):
     cursor = db.cursor()
     # select records to update
     select_query = f'''
@@ -834,7 +836,8 @@ def insert_update(db, table_name, id_name, id_value, update_data):
     insert_query = f'''INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})''' # nosec B608
     cursor.execute(insert_query, new_record)
     cursor.close()
-    add_to_journal(db, CURRENT_BLOCK_INDEX, "update", table_name, update_data | {id_name: id_value})
+    # Add event to journal
+    add_to_journal(db, CURRENT_BLOCK_INDEX, "update", table_name, event, update_data | {id_name: id_value})
 
 
 MUTABLE_FIELDS = {
@@ -1109,7 +1112,7 @@ def get_dispensers(db, status_in=None, source_in=None, source=None, asset=None, 
 ### UPDATES ###
 
 def update_dispenser(db, rowid, update_data):
-    insert_update(db, 'dispensers', 'rowid', rowid, update_data)
+    insert_update(db, 'dispensers', 'rowid', rowid, update_data, 'DISPENSER_UPDATE')
 
 
 #####################
@@ -1220,14 +1223,14 @@ def get_open_bet_by_feed(db, feed_address):
 ### UPDATES ###
 
 def update_bet(db, tx_hash, update_data):
-    insert_update(db, 'bets', 'tx_hash', tx_hash, update_data)
+    insert_update(db, 'bets', 'tx_hash', tx_hash, update_data, 'BET_UPDATE')
 
 
 def update_bet_match_status(db, id, status):
     update_data = {
         'status': status
     }
-    insert_update(db, 'bet_matches', 'id', id, update_data)
+    insert_update(db, 'bet_matches', 'id', id, update_data, 'BET_MATCH_UPDATE')
 
 
 #####################
@@ -1403,7 +1406,7 @@ def get_order_matches_by_order(db, tx_hash, status='pending'):
 ### UPDATES ###
 
 def update_order(db, tx_hash, update_data):
-    insert_update(db, 'orders', 'tx_hash', tx_hash, update_data)
+    insert_update(db, 'orders', 'tx_hash', tx_hash, update_data, 'ORDER_UPDATE')
 
 
 def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
@@ -1436,14 +1439,14 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
         update_data = {
             'status': 'filled'
         }
-        insert_update(db, 'orders', 'rowid', order['rowid'], update_data)
+        insert_update(db, 'orders', 'rowid', order['rowid'], update_data, 'ORDER_FILLED')
 
 
 def update_order_match_status(db, id, status):
     update_data = {
         'status': status
     }
-    insert_update(db, 'order_matches', 'id', id, update_data)
+    insert_update(db, 'order_matches', 'id', id, update_data, 'ORDER_MATCH_UPDATE')
 
 
 #####################
@@ -1587,14 +1590,14 @@ def update_rps_match_status(db, id, status):
     update_data = {
         'status': status
     }
-    insert_update(db, 'rps_matches', 'id', id, update_data)
+    insert_update(db, 'rps_matches', 'id', id, update_data, 'RPS_MATCH_UPDATE')
 
 
 def update_rps_status(db, tx_hash, status):
     update_data = {
         'status': status
     }
-    insert_update(db, 'rps', 'tx_hash', tx_hash, update_data)
+    insert_update(db, 'rps', 'tx_hash', tx_hash, update_data, 'RPS_UPDATE')
 
 
 #####################

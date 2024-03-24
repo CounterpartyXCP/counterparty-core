@@ -144,7 +144,7 @@ def parse (db, tx, message):
         'status': status,
     }
     if "integer overflow" not in status and "quantity must be in satoshis" not in status:
-        ledger.insert_record(db, 'sends', bindings)
+        ledger.insert_record(db, 'sends', bindings, 'SEND')
     else:
         logger.debug(f"Not storing [send] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")

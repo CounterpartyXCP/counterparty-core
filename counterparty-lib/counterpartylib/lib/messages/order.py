@@ -199,7 +199,7 @@ def cancel_order (db, order, status, block_index, tx_index):
             'source': order['source'],
             'block_index': block_index
         }
-        ledger.insert_record(db, 'order_expirations', bindings)
+        ledger.insert_record(db, 'order_expirations', bindings, 'ORDER_EXPIRATION')
 
     cursor.close()
 
@@ -302,7 +302,7 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
             'tx1_address': order_match['tx1_address'],
             'block_index': block_index
         }
-        ledger.insert_record(db, 'order_match_expirations', bindings)
+        ledger.insert_record(db, 'order_match_expirations', bindings, 'ORDER_MATCH_EXPIRATION')
 
 
 def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, block_index):
@@ -444,7 +444,7 @@ def parse (db, tx, message):
         'status': status,
     }
     if "integer overflow" not in status:
-        ledger.insert_record(db, 'orders', bindings)
+        ledger.insert_record(db, 'orders', bindings, 'OPEN_ORDER')
     else:
         logger.debug(f"Not storing [order] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")
@@ -694,7 +694,7 @@ def match (db, tx, block_index = None):
                 'fee_paid': fee,
                 'status': status,
             }
-            ledger.insert_record(db, 'order_matches', bindings)
+            ledger.insert_record(db, 'order_matches', bindings, 'ORDER_MATCH')
 
             if tx1_status == 'filled':
                 break

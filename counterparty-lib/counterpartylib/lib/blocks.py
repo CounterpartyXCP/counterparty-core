@@ -505,7 +505,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
             'fee': fee,
             'data': data,
         }
-        ledger.insert_record(db, 'transactions', transaction_bindings)
+        ledger.insert_record(db, 'transactions', transaction_bindings, 'NEW_TRANSACTION')
 
         for next_out in dispensers_outs:
             transaction_outputs_bindings = {
@@ -516,7 +516,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
                 'destination': next_out["destination"],
                 'btc_amount': next_out["btc_amount"]
             }
-            ledger.insert_record(db, 'transaction_outputs', transaction_outputs_bindings)
+            ledger.insert_record(db, 'transaction_outputs', transaction_outputs_bindings, 'NEW_TRANSACTION_OUTPUT')
 
         cursor.close()
 
@@ -759,7 +759,7 @@ def follow(db):
             if requires_rollback:
                 # Record reorganisation.
                 logger.warning(f'Blockchain reorganisation at block {current_index}.')
-                ledger.add_to_journal(db, block_index, 'reorg', 'blocks', {'block_index': current_index})
+                ledger.add_to_journal(db, block_index, 'reorg', 'blocks', 'BLOCKCHAIN_REORGANISATION' {'block_index': current_index})
 
                 # Rollback the DB.
                 rollback(db, block_index=current_index - 1)
@@ -806,7 +806,7 @@ def follow(db):
                     'previous_block_hash': previous_block_hash,
                     'difficulty': block_difficulty
                 }
-                ledger.insert_record(db, 'blocks', block_bindings)
+                ledger.insert_record(db, 'blocks', block_bindings, 'NEW_BLOCK')
 
                 # List the transactions in the block.
                 for tx_hash in txhash_list:

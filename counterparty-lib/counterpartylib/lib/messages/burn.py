@@ -149,7 +149,7 @@ def parse (db, tx, mainnet_burns, message=None):
         'status': status,
     }
     if "integer overflow" not in status:
-        ledger.insert_record(db, 'burns', bindings)
+        ledger.insert_record(db, 'burns', bindings, 'BURN')
     else:
         logger.debug(f"Not storing [burn] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")

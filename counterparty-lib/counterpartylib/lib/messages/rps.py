@@ -278,7 +278,7 @@ def parse(db, tx, message):
         'expire_index': tx['block_index'] + expiration,
         'status': status,
     }
-    ledger.insert_record(db, 'rps', bindings)
+    ledger.insert_record(db, 'rps', bindings, 'OPEN_RPS')
 
     # Match.
     if status == 'open':
@@ -342,7 +342,7 @@ def match (db, tx, block_index):
             'match_expire_index': block_index + 20,
             'status': 'pending'
         }
-        ledger.insert_record(db, 'rps_matches', bindings)
+        ledger.insert_record(db, 'rps_matches', bindings, 'RPS_MATCH')
 
     cursor.close()
 
@@ -362,7 +362,7 @@ def expire (db, block_index):
             'source': rps['source'],
             'block_index': block_index
         }
-        ledger.insert_record(db, 'rps_expirations', bindings)
+        ledger.insert_record(db, 'rps_expirations', bindings, 'RPS_EXPIRATION')
 
     # Expire rps matches
     for rps_match in ledger.get_rps_matches_to_expire(db, block_index):
@@ -383,7 +383,7 @@ def expire (db, block_index):
             'tx1_address': rps_match['tx1_address'],
             'block_index': block_index
         }
-        ledger.insert_record(db, 'rps_match_expirations', bindings)
+        ledger.insert_record(db, 'rps_match_expirations', bindings, 'RPS_MATCH_EXPIRATION')
 
         # Rematch not expired and not resolved RPS
         if new_rps_match_status == 'expired':

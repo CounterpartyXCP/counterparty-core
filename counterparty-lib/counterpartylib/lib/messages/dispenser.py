@@ -384,7 +384,7 @@ def parse (db, tx, message):
                         if ledger.enabled("dispenser_origin_permission_extended"):
                             bindings["origin"] = tx["source"]
 
-                        ledger.insert_record(db, 'dispensers', bindings)
+                        ledger.insert_record(db, 'dispensers', bindings, 'OPEN_DISPENSER')
                 elif len(existing) == 1 and existing[0]['satoshirate'] == mainchainrate and existing[0]['give_quantity'] == give_quantity:
                     if tx["source"]==action_address or (ledger.enabled("dispenser_origin_permission_extended", tx['block_index']) and tx["source"] == existing[0]["origin"]):
                         if (oracle_address != None) and ledger.enabled('oracle_dispensers', tx['block_index']):
@@ -416,7 +416,7 @@ def parse (db, tx, message):
                                     'dispense_quantity': escrow_quantity,
                                     'dispenser_tx_hash': dispenser_tx_hash
                                 }
-                                ledger.insert_record(db, 'dispenser_refills', bindings_refill)
+                                ledger.insert_record(db, 'dispenser_refills', bindings_refill, 'REFILL_DISPENSER')
                             except (ledger.DebitError):
                                 status = 'insufficient funds'
                     else:
@@ -576,7 +576,7 @@ def dispense(db, tx):
                     'dispense_quantity': actually_given,
                     'dispenser_tx_hash': dispenser['tx_hash']
                 }
-                ledger.insert_record(db, 'dispenses', bindings)
+                ledger.insert_record(db, 'dispenses', bindings, 'DISPENSE')
                 dispense_index += 1
 
     cursor.close()

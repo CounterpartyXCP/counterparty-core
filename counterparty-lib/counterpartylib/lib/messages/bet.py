@@ -367,7 +367,7 @@ def parse (db, tx, message):
         'status': status,
     }
     if "integer overflow" not in status:
-        ledger.insert_record(db, 'bets', bindings)
+        ledger.insert_record(db, 'bets', bindings, 'OPEN_BET')
     else:
         logger.warning(f"Not storing [bet] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")
@@ -532,7 +532,7 @@ def match (db, tx):
                 'fee_fraction_int': tx1['fee_fraction_int'],
                 'status': 'pending',
             }
-            ledger.insert_record(db, 'bet_matches', bindings)
+            ledger.insert_record(db, 'bet_matches', bindings, 'BET_MATCH')
 
     cursor.close()
 
@@ -552,7 +552,7 @@ def expire (db, block_index, block_time):
             'source': bet['source'],
             'block_index': block_index
         }
-        ledger.insert_record(db, 'bet_expirations', bindings)
+        ledger.insert_record(db, 'bet_expirations', bindings, 'BET_EXPIRATION')
 
     # Expire bet matches whose deadline is more than two weeks before the current block time.
     for bet_match in ledger.get_bet_matches_to_expire(db, block_time):
@@ -566,6 +566,6 @@ def expire (db, block_index, block_time):
             'tx1_address': bet_match['tx1_address'],
             'block_index': block_index
         }
-        ledger.insert_record(db, 'bet_match_expirations', bindings)
+        ledger.insert_record(db, 'bet_match_expirations', bindings, 'BET_MATCH_EXPIRATION')
 
     cursor.close()

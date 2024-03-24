@@ -543,7 +543,7 @@ def parse (db, tx, message, message_type_id):
                         'tag': "reset",
                         'status': "valid",
                         }
-                    ledger.insert_record(db, 'destructions', bindings)
+                    ledger.insert_record(db, 'destructions', bindings, 'ASSET_DESTRUCTION')
 
                 bindings= {
                     'tx_index': tx['tx_index'],
@@ -566,7 +566,7 @@ def parse (db, tx, message, message_type_id):
                     'asset_longname': reissued_asset_longname,
                 }
 
-                ledger.insert_record(db, 'issuances', bindings)
+                ledger.insert_record(db, 'issuances', bindings, 'RESET_ISSUANCE')
 
                 # Credit.
                 if quantity:
@@ -603,7 +603,7 @@ def parse (db, tx, message, message_type_id):
                     'block_index': tx['block_index'],
                     'asset_longname': subasset_longname,
                 }
-                ledger.insert_record(db, 'assets', bindings)
+                ledger.insert_record(db, 'assets', bindings, 'ASSET_CREATION')
 
         if status == 'valid' and reissuance:
             # when reissuing, add the asset_longname to the issuances table for API lookups
@@ -633,7 +633,7 @@ def parse (db, tx, message, message_type_id):
             'asset_longname': asset_longname,
         }
         if "integer overflow" not in status:
-            ledger.insert_record(db, 'issuances', bindings)
+            ledger.insert_record(db, 'issuances', bindings, 'ASSET_ISSUANCE')
         else:
             logger.debug(f"Not storing [issuance] tx [{tx['tx_hash']}]: {status}")
             logger.debug(f"Bindings: {json.dumps(bindings)}")

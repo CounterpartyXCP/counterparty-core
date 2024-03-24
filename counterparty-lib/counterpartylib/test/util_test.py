@@ -134,7 +134,7 @@ def insert_block(db, block_index, parse_block=True):
         'previous_block_hash': None,
         'difficulty': None
     }
-    ledger.insert_record(db, 'blocks', bindings)
+    ledger.insert_record(db, 'blocks', bindings, 'NEW_BLOCK')
     ledger.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
 
     if parse_block:
@@ -192,7 +192,7 @@ def insert_raw_transaction(raw_transaction, db):
             'data': data,
             'supported': True
         }
-        ledger.insert_record(db, 'transactions', bindings)
+        ledger.insert_record(db, 'transactions', bindings, 'NEW_TRANSACTION')
 
         tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
     except exceptions.BTCOnlyError:
@@ -286,8 +286,8 @@ def insert_transaction(transaction, db):
         'previous_block_hash': None,
         'difficulty': None
     }
-    ledger.insert_record(db, 'blocks', block_bindings)
-    ledger.insert_record(db, 'transactions', transaction)
+    ledger.insert_record(db, 'blocks', block_bindings, 'NEW_BLOCK')
+    ledger.insert_record(db, 'transactions', transaction, 'NEW_TRANSACTION')
 
     # `dispenser.dispense()` needs some vouts. Let's say one vout per transaction.
     transaction_outputs_bindings = {
@@ -298,7 +298,7 @@ def insert_transaction(transaction, db):
         'destination': transaction["destination"],
         'btc_amount': transaction["btc_amount"]
     }
-    ledger.insert_record(db, 'transaction_outputs', transaction_outputs_bindings)
+    ledger.insert_record(db, 'transaction_outputs', transaction_outputs_bindings, 'NEW_TRANSACTION_OUTPUT')
 
     ledger.CURRENT_BLOCK_INDEX = transaction['block_index']
 

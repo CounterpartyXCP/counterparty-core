@@ -232,7 +232,7 @@ def parse (db, tx, message):
     }
 
     if "integer overflow" not in status:
-        ledger.insert_record(db, 'dividends', bindings)
+        ledger.insert_record(db, 'dividends', bindings, 'ASSET_DIVIDEND')
     else:
         logger.debug(f"Not storing [dividend] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")

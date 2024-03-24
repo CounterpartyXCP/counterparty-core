@@ -225,7 +225,7 @@ def parse (db, tx, message):
                             'asset_longname': last_issuance['asset_longname'],
                             'reset': False
                         }
-                        ledger.insert_record(db, 'issuances', bindings)
+                        ledger.insert_record(db, 'issuances', bindings, 'ASSET_TRANSFER')
                         sweep_pos += 1
 
         bindings = {
@@ -239,6 +239,6 @@ def parse (db, tx, message):
             'memo': memo_bytes,
             'fee_paid': total_fee if antispamfee > 0 else fee_paid
         }
-        ledger.insert_record(db, 'sweeps', bindings)
+        ledger.insert_record(db, 'sweeps', bindings, 'SWEEP')
 
     cursor.close()

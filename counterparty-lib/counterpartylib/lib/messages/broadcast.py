@@ -208,7 +208,7 @@ def parse (db, tx, message):
         'status': status,
     }
     if "integer overflow" not in status:
-        ledger.insert_record(db, 'broadcasts', bindings)
+        ledger.insert_record(db, 'broadcasts', bindings, 'BROADCAST')
     else:
         logger.debug(f"Not storing [broadcast] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")
@@ -328,7 +328,7 @@ def parse (db, tx, message):
                     'escrow_less_fee': None,
                     'fee': fee
                 }
-                ledger.insert_record(db, 'bet_match_resolutions', bindings)
+                ledger.insert_record(db, 'bet_match_resolutions', bindings, 'BET_MATCH_RESOLUTON')
 
             # Settle (if not liquidated).
             elif timestamp >= bet_match['deadline']:
@@ -352,7 +352,7 @@ def parse (db, tx, message):
                     'escrow_less_fee': None,
                     'fee': fee
                 }
-                ledger.insert_record(db, 'bet_match_resolutions', bindings)
+                ledger.insert_record(db, 'bet_match_resolutions', bindings, 'BET_MATCH_RESOLUTON')
 
         # Equal[/NotEqual] bet.
         elif bet_match_type_id == equal_type_id and timestamp >= bet_match['deadline']:
@@ -390,7 +390,7 @@ def parse (db, tx, message):
                 'escrow_less_fee': escrow_less_fee,
                 'fee': fee
             }
-            ledger.insert_record(db, 'bet_match_resolutions', bindings)
+            ledger.insert_record(db, 'bet_match_resolutions', bindings, 'BET_MATCH_RESOLUTON')
 
         # Update the bet match’s status.
         if bet_match_status:

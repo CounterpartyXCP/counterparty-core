@@ -122,7 +122,7 @@ def parse (db, tx, message):
         'status': status,
     }
     if "integer overflow" not in status:
-        ledger.insert_record(db, 'cancels', bindings)
+        ledger.insert_record(db, 'cancels', bindings, f'CANCEL_{offer_type.upper()}')
     else:
         logger.debug(f"Not storing [cancel] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")
