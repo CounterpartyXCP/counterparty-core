@@ -173,7 +173,7 @@ def parse_block(db, block_index, block_time,
     """
 
     ledger.BLOCK_LEDGER = []
-    ledger.BLOCK_MESSAGES = []
+    ledger.BLOCK_JOURNAL = []
 
     assert block_index == ledger.CURRENT_BLOCK_INDEX
 
@@ -205,7 +205,7 @@ def parse_block(db, block_index, block_time,
     # Calculate consensus hashes.
     new_txlist_hash, found_txlist_hash = check.consensus_hash(db, 'txlist_hash', previous_txlist_hash, txlist)
     new_ledger_hash, found_ledger_hash = check.consensus_hash(db, 'ledger_hash', previous_ledger_hash, ledger.BLOCK_LEDGER)
-    new_messages_hash, found_messages_hash = check.consensus_hash(db, 'messages_hash', previous_messages_hash, ledger.BLOCK_MESSAGES)
+    new_messages_hash, found_messages_hash = check.consensus_hash(db, 'messages_hash', previous_messages_hash, ledger.BLOCK_JOURNAL)
 
     return new_ledger_hash, new_txlist_hash, new_messages_hash, found_messages_hash
 

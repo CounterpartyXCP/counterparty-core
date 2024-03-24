@@ -14,7 +14,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 CURRENT_BLOCK_INDEX = None
 BLOCK_LEDGER = []
-BLOCK_MESSAGES = []
+BLOCK_JOURNAL = []
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(CURR_DIR + '/../protocol_changes.json') as f:
@@ -110,7 +110,7 @@ def add_to_journal(db, block_index, command, category, bindings):
     cursor.execute(query, message_bindings)
     cursor.close()
 
-    BLOCK_MESSAGES.append(f'{command}{category}{bindings_string}')
+    BLOCK_JOURNAL.append(f'{command}{category}{bindings_string}')
 
 
 ###########################
