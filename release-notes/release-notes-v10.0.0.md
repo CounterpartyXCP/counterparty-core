@@ -71,8 +71,9 @@ Because this release includes numerous changes to the database schema, a full da
 * Fix database version checking which launched a rebuilds instead of rollbacks / reparses
 * Add numerous missing database indexes
 * Fix collisions between existing database indexes
-* DRY and refactor database index creation. 
-* DRY and isolate all SQL queries in `ledger.py` (except first insertion still inside contracts)
+* DRY and refactor database index creation
+* DRY and isolate all SQL queries in `ledger.py`
+* Heavily refactor of `log.messages` and `log.log`. The content of the `messages` table has most likely changed a little for certain events but remains essentially identical and compatible with old versions.
 * Fix database integrity check and re-include assert conservation check
 * Migrate to log-structured database for simpler and faster rollback and reparse
     * Add `block_index` field to the `balances` table
