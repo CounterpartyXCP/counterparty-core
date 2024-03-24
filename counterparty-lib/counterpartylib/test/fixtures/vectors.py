@@ -4184,11 +4184,11 @@ UNITTEST_VECTOR = {
         }],
         'last_message': [{
             'in': (),
-            'out': {'message_index': 134,
-                    'block_index': 310498,
+            'out': {'message_index': 691,
+                    'block_index': 310500,
                     'command': 'insert',
-                    'category': 'credits',
-                    'bindings': '{"block_index": 310498, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "A95428956661682277", "quantity": 100000000, "calling_function": "issuance", "event": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf", "tx_index": 499}',
+                    'category': 'blocks',
+                    'bindings': '{"block_hash":"54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b","block_index":310500,"block_time":310500000,"difficulty":null,"ledger_hash":null,"previous_block_hash":null,"txlist_hash":null}',
                     'timestamp': 0}
         }],
         'get_asset_id': [{
