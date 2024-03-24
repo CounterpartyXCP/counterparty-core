@@ -112,6 +112,13 @@ def add_to_journal(db, block_index, command, category, bindings):
 
     BLOCK_JOURNAL.append(f'{command}{category}{bindings_string}')
 
+    log_message = {
+        'command': command,
+        'category': category,
+        'bindings': items
+    }
+    logger.info(json.dumps(log_message, sort_keys=True))
+
 
 ###########################
 #         BALANCES        #
