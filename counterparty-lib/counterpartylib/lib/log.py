@@ -121,5 +121,7 @@ EVENTS = {
 }
 
 def log_event(event_name, bindings):
-    if event_name in EVENTS:
+    if config.JSON_LOG:
+        logger.info({'event': event_name, 'bindings': bindings})
+    elif event_name in EVENTS:
         logger.info(EVENTS[event_name], bindings)

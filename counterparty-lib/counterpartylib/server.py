@@ -100,7 +100,7 @@ def initialise(*args, **kwargs):
 
 def initialise_log_config(
         verbose=False, quiet=False, log_file=None, api_log_file=None, no_log_files=False,
-        testnet=False, testcoin=False, regtest=False
+        testnet=False, testcoin=False, regtest=False, json_log=False
     ):
     # Log directory
     log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
@@ -135,6 +135,8 @@ def initialise_log_config(
         config.API_LOG = os.path.join(log_dir, filename)
     else:  # user-specified location
         config.API_LOG = api_log_file
+
+    config.JSON_LOG = json_log
 
 
 def initialise_config(database_file=None,
