@@ -25,7 +25,7 @@ services:
       - data:/bitcoin
 
   addrindexrs:
-    image: counterparty/addrindexrs:v0.4.4
+    image: counterparty/addrindexrs:v0.4.5
     links:
       - bitcoind
     volumes:
