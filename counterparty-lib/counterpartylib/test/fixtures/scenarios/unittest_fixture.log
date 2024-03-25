@@ -19,6 +19,7 @@ Size: 272 Fee: 0.00006800 Change quantity: 1.37895715 BTC
 New block inserted 310001
 New transaction inserted 1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1
 Debit 50000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Asset DIVISIBLE created
 Asset DIVISIBLE issued
 Credit 100000000000 DIVISIBLE to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
@@ -30,6 +31,7 @@ Size: 272 Fee: 0.00006800 Change quantity: 1.37887915 BTC
 New block inserted 310002
 New transaction inserted 7b1bf5144346279271b1ff78664f118224fe27fd8679d6c1519345f9c6c54584
 Debit 50000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Asset NODIVISIBLE created
 Asset NODIVISIBLE issued
 Credit 1000 NODIVISIBLE to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
@@ -41,6 +43,7 @@ Size: 272 Fee: 0.00006800 Change quantity: 1.37880115 BTC
 New block inserted 310003
 New transaction inserted c26f3a0c4e57e41919ff27aae95a9a9d4d65d34c6da6f1893884a17c8d407140
 Debit 50000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Asset CALLABLE created
 Asset CALLABLE issued
 Credit 1000 CALLABLE to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
@@ -52,6 +55,7 @@ Size: 272 Fee: 0.00006800 Change quantity: 1.37872315 BTC
 New block inserted 310004
 New transaction inserted 90b5734be98b0f2a0bd4b6a269c8db3368e2e387bb890ade239951d05423b4da
 Debit 50000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Asset LOCKED created
 Asset LOCKED issued
 Credit 1000 LOCKED to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
@@ -182,6 +186,7 @@ Size: 272 Fee: 0.00006800 Change quantity: 1.36761125 BTC
 New block inserted 310016
 New transaction inserted bd4e9cbbe69c2db893cd32182a2d315c89c45ba4e31aa5775d1fe42d841cea39
 Debit 50000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Asset MAXI created
 Asset MAXI issued
 Credit 9223372036854775807 MAXI to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
@@ -335,6 +340,7 @@ Credit 9 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
 Credit 9 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit 0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Bet match 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93 resolved
+Updated bet match 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93. New status: settled
 data_btc_out=0 (data_value=0 len(data_array)=0)
 Sorted candidate UTXOs: ['amount: 1.07824570; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 247']
 Fee/KB 0.00025000
@@ -404,6 +410,7 @@ Size: 272 Fee: 0.00006800 Change quantity: 0.68986575 BTC
 New block inserted 310109
 New transaction inserted e8baf787b9e4636a3cad0ffeb62992ad7abb160dc6506af0546f566dc178de7e
 Debit 50000000 XCP from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy
+Asset PAYTOSCRIPT created
 Asset PAYTOSCRIPT issued
 Credit 1000 PAYTOSCRIPT to 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
@@ -445,6 +452,7 @@ Size: 272 Fee: 0.00006800 Change quantity: 0.45811145 BTC
 New block inserted 310113
 New transaction inserted 34bce6f409758b3d6fd13282a99b277ef1fdf44a1025d2901075cac0249dbc63
 Debit 50000000 XCP from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42
+Asset LOCKEDPREV created
 Asset LOCKEDPREV issued
 Credit 1000 LOCKEDPREV to mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
@@ -964,6 +972,7 @@ Size: 272 Fee: 0.00006800 Change quantity: 1.31406375 BTC
 New block inserted 310494
 New transaction inserted 321bed395482e034f2ce0a4dbf28d1f800592a658e26ea91ae9c5b0928204503
 Debit 50000000 XCP from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH
+Asset DIVIDEND created
 Asset DIVIDEND issued
 Credit 100 DIVIDEND to mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
@@ -997,6 +1006,7 @@ Size: 252 Fee: 0.00006300 Change quantity: 1.36696890 BTC
 New block inserted 310497
 New transaction inserted 076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f
 Debit 50000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Asset PARENT created
 Asset PARENT issued
 Credit 100000000 PARENT to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 data_btc_out=0 (data_value=0 len(data_array)=1)
@@ -1008,6 +1018,7 @@ Size: 262 Fee: 0.00006550 Change quantity: 1.36690340 BTC
 New block inserted 310498
 New transaction inserted 0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf
 Debit 25000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Asset A95428956661682277 created
 Asset A95428956661682277 issued
 Credit 100000000 A95428956661682277 to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 New block inserted 310499
