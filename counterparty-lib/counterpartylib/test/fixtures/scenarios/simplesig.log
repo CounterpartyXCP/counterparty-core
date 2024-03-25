@@ -59,6 +59,7 @@ Size: 387 Fee: 0.00009675 Change quantity: 0.86868960 BTC
 New block inserted 310004
 New transaction inserted 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099
 Credit 100000000 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Order match 6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c updated. New status: completed
 BTC payment for order match 6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86868960; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 3; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 1']
@@ -69,6 +70,7 @@ Size: 272 Fee: 0.00006800 Change quantity: 0.86861160 BTC
 New block inserted 310005
 New transaction inserted 5d951d44d034cb6fd5dc5c98cd877c63f55c1ae108d335b6b6d991d072856adf
 Debit 50000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Asset BBBB created
 Asset BBBB issued
 Credit 1000000000 BBBB to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
@@ -80,6 +82,7 @@ Size: 272 Fee: 0.00006800 Change quantity: 0.86853360 BTC
 New block inserted 310006
 New transaction inserted 2b44f590422a3ab5b70fb1265a2e4f4d3b0bcb3de3f296dc7280924870ec8c59
 Debit 50000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Asset BBBC created
 Asset BBBC issued
 Credit 100000 BBBC to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
@@ -158,6 +161,7 @@ Size: 306 Fee: 0.00007650 Change quantity: 0.86773640 BTC
 New block inserted 310013
 New transaction inserted e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42
 Updated order 6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59. New status: expired
+Order 6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59 expired
 Debit 25000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Opened bet e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42
 Considering: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81
@@ -179,6 +183,7 @@ New block inserted 310014
 New transaction inserted 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a
 Updated order 36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c. New status: expired
 Credit 5000000 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Order 36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c expired
 Debit 150000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Opened bet 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
@@ -245,6 +250,7 @@ Broadcast 065de641fd87c0b3ef893130ef4a3dca7643b7a35f6d18c721f34a7a36a5992f: Unit
 Credit 59137500 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit 3112500 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Bet match 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81_e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42 resolved
+Updated bet match 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81_e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42. New status: settled: liquidated for bear
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86709520; txid: 065de641fd87c0b3ef893130ef4a3dca7643b7a35f6d18c721f34a7a36a5992f; vout: 1; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 15', 'amount: 0.00005430; txid: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81; vout: 0; confirmations: 7', 'amount: 0.00005430; txid: e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42; vout: 0; confirmations: 6', 'amount: 0.00005430; txid: 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a; vout: 0; confirmations: 5', 'amount: 0.00005430; txid: a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8; vout: 0; confirmations: 4', 'amount: 0.00005430; txid: 194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5; vout: 0; confirmations: 3', 'amount: 0.00005430; txid: 72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207; vout: 0; confirmations: 2']
 Fee/KB 0.00025000
@@ -258,6 +264,7 @@ Credit 159300000 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit 315700000 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit 25000000 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Bet match 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a_a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8 resolved
+Updated bet match 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a_a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8. New status: settled
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86701720; txid: 7cc015005c559686a8e10294015ca1773c0bcd9f4d7d9768deb4bb94cdd4a69e; vout: 1; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 16', 'amount: 0.00005430; txid: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81; vout: 0; confirmations: 8', 'amount: 0.00005430; txid: e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42; vout: 0; confirmations: 7', 'amount: 0.00005430; txid: 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a; vout: 0; confirmations: 6', 'amount: 0.00005430; txid: a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8; vout: 0; confirmations: 5', 'amount: 0.00005430; txid: 194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5; vout: 0; confirmations: 4', 'amount: 0.00005430; txid: 72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207; vout: 0; confirmations: 3']
 Fee/KB 0.00025000
@@ -270,6 +277,7 @@ Broadcast 0899b8bccef3403252fd7d37ec550eea3350845dca098368b84bf4c3c48d3fc9: Unit
 Credit 1330000000 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit 70000000 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Bet match 194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5_72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207 resolved
+Updated bet match 194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5_72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207. New status: settled: for notequal
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Sorted candidate UTXOs: ['amount: 0.86693920; txid: 0899b8bccef3403252fd7d37ec550eea3350845dca098368b84bf4c3c48d3fc9; vout: 1; confirmations: 1', 'amount: 0.50000000; txid: 843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099; vout: 0; confirmations: 17', 'amount: 0.00005430; txid: 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81; vout: 0; confirmations: 9', 'amount: 0.00005430; txid: e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42; vout: 0; confirmations: 8', 'amount: 0.00005430; txid: 3d3ae119aa3891770b7ae1e1ce34062b7a850593f39a96b6df19d69960d4a76a; vout: 0; confirmations: 7', 'amount: 0.00005430; txid: a73843f1c9197674ba45e3aa92ed0671062c8acd8955e6b1e4d10dd149f40bc8; vout: 0; confirmations: 6', 'amount: 0.00005430; txid: 194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5; vout: 0; confirmations: 5', 'amount: 0.00005430; txid: 72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207; vout: 0; confirmations: 4']
 Fee/KB 0.00025000
@@ -303,6 +311,7 @@ New block inserted 310023
 New transaction inserted 58b89d056b539d2cf9ddac4518ccca6744495127e0ce893eb71da2599cbf85ab
 Updated bet 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81. New status: expired
 Credit 8500000 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Bet 7025ded3ba412d1285be69c8aaa02773b8f4e2504310832c99a9b171b7e07e81 expired
 Debit 10000 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit 10000 BBBC to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
 Send 10000 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
@@ -317,6 +326,7 @@ New block inserted 310031
 New block inserted 310032
 Updated order eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a. New status: expired
 Credit 50000000 BBBB to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Order eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a expired
 New block inserted 310033
 New block inserted 310034
 New block inserted 310035
