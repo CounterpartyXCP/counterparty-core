@@ -162,25 +162,13 @@ def initialise (db):
 
 
 def cancel_rps (db, rps, status, block_index, tx_index):
-    cursor = db.cursor()
-
     # Update status of rps.
     ledger.update_rps_status(db, rps['tx_hash'], status)
-
-    message_data = {
-        'status': status,
-        'tx_hash': rps['tx_hash']
-    }
-    log.message(db, block_index, 'update', 'rps', message_data)
-
+    # Refund quantity wagered.
     ledger.credit(db, rps['source'], 'XCP', rps['wager'], tx_index, action='recredit wager', event=rps['tx_hash'])
-
-    cursor.close()
 
 
 def update_rps_match_status (db, rps_match, status, block_index, tx_index):
-    cursor = db.cursor()
-
     if status in ['expired', 'concluded: tie']:
         # Recredit tx0 address.
         ledger.credit(db, rps_match['tx0_address'], 'XCP',
@@ -196,13 +184,6 @@ def update_rps_match_status (db, rps_match, status, block_index, tx_index):
 
     # Update status of rps match.
     ledger.update_rps_match_status(db, rps_match['id'], status)
-    # Log
-    log.message(db, block_index, 'update', 'rps_matches', {
-        'status': status,
-        'rps_match_id': rps_match['id']
-    })
-
-    cursor.close()
 
 
 def validate (db, source, possible_moves, wager, move_random_hash, expiration, block_index):
@@ -297,8 +278,7 @@ def parse(db, tx, message):
         'expire_index': tx['block_index'] + expiration,
         'status': status,
     }
-    sql = '''INSERT INTO rps VALUES (:tx_index, :tx_hash, :block_index, :source, :possible_moves, :wager, :move_random_hash, :expiration, :expire_index, :status)'''
-    rps_parse_cursor.execute(sql, bindings)
+    ledger.insert_record(db, 'rps', bindings, 'OPEN_RPS')
 
     # Match.
     if status == 'open':
@@ -342,12 +322,6 @@ def match (db, tx, block_index):
         for txn in [tx0, tx1]:
             ledger.update_rps_status(db, txn['tx_hash'], 'matched')
 
-            message_data = {
-                'status': 'matched',
-                'tx_index': txn['tx_index']
-            }
-            log.message(db, block_index, 'update', 'rps', message_data)
-
         bindings = {
             'id': util.make_id(tx0['tx_hash'], tx1['tx_hash']),
             'tx0_index': tx0['tx_index'],
@@ -368,11 +342,7 @@ def match (db, tx, block_index):
             'match_expire_index': block_index + 20,
             'status': 'pending'
         }
-        sql = '''INSERT INTO rps_matches VALUES (:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address,
-                                                 :tx0_move_random_hash, :tx1_move_random_hash, :wager, :possible_moves,
-                                                 :tx0_block_index, :tx1_block_index, :block_index, :tx0_expiration, :tx1_expiration,
-                                                 :match_expire_index, :status)'''
-        cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'rps_matches', bindings, 'RPS_MATCH')
 
     cursor.close()
 
@@ -392,8 +362,7 @@ def expire (db, block_index):
             'source': rps['source'],
             'block_index': block_index
         }
-        sql = '''INSERT INTO rps_expirations VALUES (:rps_index, :rps_hash, :source, :block_index)'''
-        cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'rps_expirations', bindings, 'RPS_EXPIRATION')
 
     # Expire rps matches
     for rps_match in ledger.get_rps_matches_to_expire(db, block_index):
@@ -414,8 +383,7 @@ def expire (db, block_index):
             'tx1_address': rps_match['tx1_address'],
             'block_index': block_index
         }
-        sql = '''INSERT INTO rps_match_expirations VALUES (:rps_match_id, :tx0_address, :tx1_address, :block_index)'''
-        cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'rps_match_expirations', bindings, 'RPS_MATCH_EXPIRATION')
 
         # Rematch not expired and not resolved RPS
         if new_rps_match_status == 'expired':

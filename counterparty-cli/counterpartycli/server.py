@@ -55,6 +55,7 @@ CONFIG_ARGS = [
     [('--log-file',), {'nargs': '?', 'const': None, 'default': False, 'help': 'log to the specified file'}],
     [('--api-log-file',), {'nargs': '?', 'const': None, 'default': False, 'help': 'log API requests to the specified file'}],
     [('--no-log-files',), {'action': 'store_true', 'default': False, 'help': 'Don\'t write log files'}],
+    [('--json-log',), {'action': 'store_true', 'default': False, 'help': 'Log events in JSON format'}],
 
     [('--utxo-locks-max-addresses',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES, 'help': 'max number of addresses for which to track UTXO locks'}],
     [('--utxo-locks-max-age',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_AGE, 'help': 'how long to keep a lock on a UTXO being tracked'}],
@@ -189,6 +190,7 @@ def main():
         verbose=args.verbose, quiet=args.quiet,
         log_file=args.log_file, api_log_file=args.api_log_file, no_log_files=args.no_log_files,
         testnet=args.testnet, testcoin=args.testcoin, regtest=args.regtest,
+        json_log=args.json_log
     )
 
     # set up logging

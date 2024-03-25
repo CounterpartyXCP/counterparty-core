@@ -2,16 +2,20 @@ import logging
 import fractions
 import json
 import os
+import time
+import binascii
 from decimal import Decimal as D
 
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import config
 from counterpartylib.lib import util
+from counterpartylib.lib import log
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 CURRENT_BLOCK_INDEX = None
 BLOCK_LEDGER = []
+BLOCK_JOURNAL = []
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(CURR_DIR + '/../protocol_changes.json') as f:
@@ -59,6 +63,58 @@ def get_messages(db, block_index=None, block_index_in=None, message_index_in=Non
     query = f'''SELECT * FROM messages WHERE ({" AND ".join(where)}) ORDER BY message_index ASC''' # nosec B608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
+
+
+# we are using a function here for testing purposes
+def curr_time():
+    return int(time.time())
+
+
+def add_to_journal(db, block_index, command, category, event, bindings):
+    cursor = db.cursor()
+
+    # Get last message index.
+    try:
+        message = last_message(db)
+        message_index = message['message_index'] + 1
+    except exceptions.DatabaseError:
+        message_index = 0
+
+    # Not to be misleading…
+    if block_index == config.MEMPOOL_BLOCK_INDEX:
+        try:
+            del bindings['status']
+            del bindings['block_index']
+            del bindings['tx_index']
+        except KeyError:
+            pass
+
+    # Handle binary data.
+    items = {}
+    for key, value in bindings.items():
+        if isinstance(value, bytes):
+            items[key] = binascii.hexlify(value).decode('ascii')
+        else:
+            items[key] = value
+
+    current_time = curr_time()
+    bindings_string = json.dumps(items, sort_keys=True, separators=(',', ':'))
+    message_bindings = {
+        'message_index': message_index,
+        'block_index': block_index,
+        'command': command,
+        'category': category,
+        'bindings': bindings_string,
+        'timestamp': current_time,
+        'event': event,
+    }
+    query = '''INSERT INTO messages VALUES (:message_index, :block_index, :command, :category, :bindings, :timestamp, :event)'''
+    cursor.execute(query, message_bindings)
+    cursor.close()
+
+    BLOCK_JOURNAL.append(f'{command}{category}{bindings_string}')
+
+    log.log_event(event, items)
 
 
 ###########################
@@ -134,12 +190,7 @@ def debit (db, address, asset, quantity, tx_index, action=None, event=None):
         'event': event,
         'tx_index': tx_index,
     }
-    query = '''
-        INSERT INTO debits
-        VALUES (:block_index, :address, :asset, :quantity, :action, :event, :tx_index)
-    '''
-    debit_cursor.execute(query, bindings)
-    debit_cursor.close()
+    insert_record(db, 'debits', bindings, 'DEBIT')
 
     BLOCK_LEDGER.append(f'{block_index}{address}{asset}{quantity}')
 
@@ -194,16 +245,11 @@ def credit (db, address, asset, quantity, tx_index, action=None, event=None):
         'address': address,
         'asset': asset,
         'quantity': quantity,
-        'action': action,
+        'calling_function': action,
         'event': event,
         'tx_index': tx_index,
     }
-    query = '''
-        INSERT INTO credits
-        VALUES (:block_index, :address, :asset, :quantity, :action, :event, :tx_index)
-    '''
-    credit_cursor.execute(query, bindings)
-    credit_cursor.close()
+    insert_record(db, 'credits', bindings, 'CREDIT')
 
     BLOCK_LEDGER.append(f'{block_index}{address}{asset}{quantity}')
 
@@ -736,11 +782,23 @@ def get_addresses(db, address=None):
 #       UTIL FUNCTIONS        #
 ###############################
 
+
+def insert_record(db, table_name, record, event):
+    cursor = db.cursor()
+    fields_name = ', '.join(record.keys())
+    fields_values = ', '.join([f':{key}' for key in record.keys()])
+    # no sql injection here
+    query = f'''INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})''' # nosec B608
+    cursor.execute(query, record)
+    cursor.close()
+    # Add event to journal
+    add_to_journal(db, record['block_index'], "insert", table_name, event, record)
+
+
 # This function allows you to update a record using an INSERT.
 # The `block_index` and `rowid` fields allow you to
 # order updates and retrieve the row with the current data.
-
-def insert_update(db, table_name, id_name, id_value, update_data):
+def insert_update(db, table_name, id_name, id_value, update_data, event):
     cursor = db.cursor()
     # select records to update
     select_query = f'''
@@ -773,8 +831,9 @@ def insert_update(db, table_name, id_name, id_value, update_data):
     # no sql injection here
     insert_query = f'''INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})''' # nosec B608
     cursor.execute(insert_query, new_record)
-
     cursor.close()
+    # Add event to journal
+    add_to_journal(db, CURRENT_BLOCK_INDEX, "update", table_name, event, update_data | {id_name: id_value})
 
 
 MUTABLE_FIELDS = {
@@ -1049,7 +1108,7 @@ def get_dispensers(db, status_in=None, source_in=None, source=None, asset=None, 
 ### UPDATES ###
 
 def update_dispenser(db, rowid, update_data):
-    insert_update(db, 'dispensers', 'rowid', rowid, update_data)
+    insert_update(db, 'dispensers', 'rowid', rowid, update_data, 'DISPENSER_UPDATE')
 
 
 #####################
@@ -1160,14 +1219,14 @@ def get_open_bet_by_feed(db, feed_address):
 ### UPDATES ###
 
 def update_bet(db, tx_hash, update_data):
-    insert_update(db, 'bets', 'tx_hash', tx_hash, update_data)
+    insert_update(db, 'bets', 'tx_hash', tx_hash, update_data, 'BET_UPDATE')
 
 
 def update_bet_match_status(db, id, status):
     update_data = {
         'status': status
     }
-    insert_update(db, 'bet_matches', 'id', id, update_data)
+    insert_update(db, 'bet_matches', 'id', id, update_data, 'BET_MATCH_UPDATE')
 
 
 #####################
@@ -1343,7 +1402,7 @@ def get_order_matches_by_order(db, tx_hash, status='pending'):
 ### UPDATES ###
 
 def update_order(db, tx_hash, update_data):
-    insert_update(db, 'orders', 'tx_hash', tx_hash, update_data)
+    insert_update(db, 'orders', 'tx_hash', tx_hash, update_data, 'ORDER_UPDATE')
 
 
 def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
@@ -1376,14 +1435,14 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
         update_data = {
             'status': 'filled'
         }
-        insert_update(db, 'orders', 'rowid', order['rowid'], update_data)
+        insert_update(db, 'orders', 'rowid', order['rowid'], update_data, 'ORDER_FILLED')
 
 
 def update_order_match_status(db, id, status):
     update_data = {
         'status': status
     }
-    insert_update(db, 'order_matches', 'id', id, update_data)
+    insert_update(db, 'order_matches', 'id', id, update_data, 'ORDER_MATCH_UPDATE')
 
 
 #####################
@@ -1527,14 +1586,14 @@ def update_rps_match_status(db, id, status):
     update_data = {
         'status': status
     }
-    insert_update(db, 'rps_matches', 'id', id, update_data)
+    insert_update(db, 'rps_matches', 'id', id, update_data, 'RPS_MATCH_UPDATE')
 
 
 def update_rps_status(db, tx_hash, status):
     update_data = {
         'status': status
     }
-    insert_update(db, 'rps', 'tx_hash', tx_hash, update_data)
+    insert_update(db, 'rps', 'tx_hash', tx_hash, update_data, 'RPS_UPDATE')
 
 
 #####################

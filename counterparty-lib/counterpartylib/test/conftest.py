@@ -381,7 +381,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     monkeypatch.setattr('counterpartylib.lib.transaction.arc4.init_arc4', init_arc4)
     monkeypatch.setattr('counterpartylib.lib.backend.get_unspent_txouts', get_unspent_txouts)
     monkeypatch.setattr('counterpartylib.lib.log.isodt', isodt)
-    monkeypatch.setattr('counterpartylib.lib.log.curr_time', curr_time)
+    monkeypatch.setattr('counterpartylib.lib.ledger.curr_time', curr_time)
     monkeypatch.setattr('counterpartylib.lib.util.date_passed', date_passed)
     monkeypatch.setattr('counterpartylib.lib.api.init_api_access_log', init_api_access_log)
     if hasattr(config, 'PREFIX'):

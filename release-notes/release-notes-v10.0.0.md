@@ -63,6 +63,7 @@ Because this release includes numerous changes to the database schema, a full da
 * Fix and refactor `log.set_up()`
 * Improve thread shutdown logic
 * Accept config args before and after the command
+* New flag `--json-log`, which replaces the human-readable logs in the console with the streaming content of the `messages` table in JSON format
 
 
 ## Refactoring and Performance Optimizations
@@ -71,8 +72,10 @@ Because this release includes numerous changes to the database schema, a full da
 * Fix database version checking which launched a rebuilds instead of rollbacks / reparses
 * Add numerous missing database indexes
 * Fix collisions between existing database indexes
-* DRY and refactor database index creation. 
-* DRY and isolate all SQL queries in `ledger.py` (except first insertion still inside contracts)
+* DRY and refactor database index creation
+* DRY and isolate all SQL queries in `ledger.py`
+* Heavily refactor of `log.messages` and `log.log`.
+* Add additional fields and rows in the `messages` table (the messages hash will change)
 * Fix database integrity check and re-include assert conservation check
 * Migrate to log-structured database for simpler and faster rollback and reparse
     * Add `block_index` field to the `balances` table
