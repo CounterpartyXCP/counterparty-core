@@ -80,7 +80,7 @@ EVENTS = {
     'OPEN_BET': 'Opened bet %(tx_hash)s',
     'BET_MATCH': 'Bet match %(tx0_index)s for %(forward_quantity)s XCP against %(backward_quantity)s XCP on %(feed_address)s',
     'BET_EXPIRATION': 'Bet %(bet_hash)s expired',
-    'BET_MATCH_EXPIRATION': 'Bet match %(bet_hash)s expired',
+    'BET_MATCH_EXPIRATION': 'Bet match %(bet_match_id)s expired',
     'BROADCAST': 'Broadcast %(tx_hash)s: %(text)s',
     'BET_MATCH_RESOLUTON': 'Bet match %(bet_match_id)s resolved',
     'BTC_PAY': 'BTC payment for order match %(order_match_id)s',
