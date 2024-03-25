@@ -102,7 +102,7 @@ EVENTS = {
     'ORDER_MATCH': 'Order match %(id)s for %(forward_quantity)s %(forward_asset)s against %(backward_quantity)s %(backward_asset)s',
     'OPEN_RPS': 'Player %(source)s opened RPS game with %(possible_moves)s possible moves and a wager of %(wager)s XCP',
     'RPS_MATCH': 'RPS match %(id)s for %(tx0_address)s against %(tx1_address)s with a wager of %(wager)s XCP',
-    'RPS_EXPIRATION': 'RPS %(tx_hash)s expired',
+    'RPS_EXPIRATION': 'RPS %(rps_hash)s expired',
     'RPS_MATCH_EXPIRATION': 'RPS match %(rps_match_id)s expired',
     'RPS_RESOLVE': 'RPS %(tx_hash)s resolved',
     'ASSET_TRANSFER': 'Asset %(asset)s transferred to %(issuer)s',
