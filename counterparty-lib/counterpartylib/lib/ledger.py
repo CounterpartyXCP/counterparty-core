@@ -798,7 +798,7 @@ def insert_record(db, table_name, record, event):
 # This function allows you to update a record using an INSERT.
 # The `block_index` and `rowid` fields allow you to
 # order updates and retrieve the row with the current data.
-def insert_update(db, table_name, id_name, id_value, update_data, event):
+def insert_update(db, table_name, id_name, id_value, update_data, event, event_info={}):
     cursor = db.cursor()
     # select records to update
     select_query = f'''
@@ -833,7 +833,8 @@ def insert_update(db, table_name, id_name, id_value, update_data, event):
     cursor.execute(insert_query, new_record)
     cursor.close()
     # Add event to journal
-    add_to_journal(db, CURRENT_BLOCK_INDEX, "update", table_name, event, update_data | {id_name: id_value})
+    event_paylod = update_data | {id_name: id_value} | event_info
+    add_to_journal(db, CURRENT_BLOCK_INDEX, "update", table_name, event, update_data | event_paylod)
 
 
 MUTABLE_FIELDS = {
@@ -1435,7 +1436,7 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
         update_data = {
             'status': 'filled'
         }
-        insert_update(db, 'orders', 'rowid', order['rowid'], update_data, 'ORDER_FILLED')
+        insert_update(db, 'orders', 'rowid', order['rowid'], update_data, 'ORDER_FILLED', {'tx_hash': order['tx_hash']})
 
 
 def update_order_match_status(db, id, status):
