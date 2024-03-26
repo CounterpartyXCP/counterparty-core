@@ -140,7 +140,7 @@ def initialise_log_config(
 
 
 def initialise_config(database_file=None,
-                testnet=False, testcoin=False, regtest=False,
+                testnet=False, testcoin=False, regtest=False, chain="main",
                 api_limit_rows=1000,
                 backend_connect=None, backend_port=None,
                 backend_user=None, backend_password=None,
@@ -172,7 +172,7 @@ def initialise_config(database_file=None,
         os.makedirs(data_dir, mode=0o755)
 
     # testnet
-    if testnet:
+    if chain == "test" or testnet:
         config.TESTNET = testnet
     else:
         config.TESTNET = False
@@ -184,7 +184,7 @@ def initialise_config(database_file=None,
         config.TESTCOIN = False
 
     # regtest
-    if regtest:
+    if chain == "regtest" or regtest:
         config.REGTEST = regtest
     else:
         config.REGTEST = False

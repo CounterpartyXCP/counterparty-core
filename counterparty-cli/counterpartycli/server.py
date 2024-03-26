@@ -26,6 +26,7 @@ CONFIG_ARGS = [
     [('--testcoin',), {'action': 'store_true', 'default': False, 'help': f'use the test {config.XCP_NAME} network on every blockchain'}],
     [('--regtest',), {'action': 'store_true', 'default': False, 'help': f'use {config.BTC_NAME} regtest addresses and block numbers'}],
     [('--customnet',), {'default': '', 'help': 'use a custom network (specify as UNSPENDABLE_ADDRESS|ADDRESSVERSION|P2SH_ADDRESSVERSION with version bytes in HH hex format)'}],
+    [('--chain',), {'default': 'main', 'choices': ['main', 'test', 'regtest'], 'help': 'blockchain network'}],
     [('--api-limit-rows',), {'type': int, 'default': 1000, 'help': 'limit api calls to the set results (defaults to 1000). Setting to 0 removes the limit.'}],
     [('--backend-name',), {'default': 'addrindex', 'help': 'the backend name to connect to'}],
     [('--backend-connect',), {'default': 'localhost', 'help': 'the hostname or IP of the backend server'}],
@@ -166,7 +167,7 @@ def main():
     # Configuration
     init_args = dict(database_file=args.database_file,
                     testnet=args.testnet, testcoin=args.testcoin, regtest=args.regtest,
-                    customnet=args.customnet,
+                    customnet=args.customnet, chain=args.chain,
                     api_limit_rows=args.api_limit_rows,
                     backend_connect=args.backend_connect,
                     backend_port=args.backend_port,

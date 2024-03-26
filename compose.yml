@@ -5,10 +5,9 @@ services:
     image: kylemanna/bitcoind:latest
     ports: 
       - "8332:8332"                           # mainnet
-      # - "18332:18332"                       # testnet
+      - "18332:18332"                         # testnet
     command: 
-      - "-chain=main"                         # mainnet
-      # - "-chain=test"                       # testnet
+      - "-chain=${NETWORK:-main}"             # export NETWORK=test for testnet
       - "-rpcallowip=0.0.0.0/0"
       - "-rpcbind=0.0.0.0"
       - "-rpcuser=rpc"
@@ -39,10 +38,9 @@ services:
         target: /data
     ports:
       - "8432:8432"                           # mainnet
-      # - "18432:18432"                       # testnet
+      - "18432:18432"                         # testnet
     command:
-      - "--network=bitcoin"                   # mainnet
-      # - "--network=testnet"                 # testnet
+      - "--network=${ADDR_NETWORK:-bitcoin}"  # export ADDR_NETWORK=testnet for testnet
       - "--indexer-rpc-host=0.0.0.0"
       - "--daemon-rpc-host=bitcoind"
       - "--cookie=rpc:rpc"
@@ -63,9 +61,9 @@ services:
         target: /data
     ports:
       - "4000:4000"                           # mainnet
-      # - "14000:14000"                       # testnet
+      - "14000:14000"                         # testnet
     command:
-      # "--testnet"                           # testnet
+      - "--chain=${NETWORK:-main}"            # export NETWORK=test for testnet
       - "--backend-connect=bitcoind"
       - "--indexd-connect=addrindexrs"
       - "--rpc-host=0.0.0.0"
