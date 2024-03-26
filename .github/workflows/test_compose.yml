@@ -1,0 +1,22 @@
+name: Test Docker Compose
+
+on:
+  push:
+    branches: ['compose']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: alinz/ssh-scp-action@master
+      with:
+        key: ${{ secrets.TEST_SERVER_KEY }}
+        host: 146.148.88.229 # temporary
+        user: ouziel # temporary
+        ssh_before: |
+          rm -f test_compose.sh
+        scp: |
+          .github/workflows/test_compose.sh ouziel@146.148.88.229:~/test_compose.sh
+        ssh_after: |
+          sh test_compose.sh
