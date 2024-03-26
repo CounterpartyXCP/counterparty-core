@@ -36,7 +36,6 @@ CONFIG_ARGS = [
     [('--backend-ssl',), {'action': 'store_true', 'default': False, 'help': 'use SSL to connect to backend (default: false)'}],
     [('--backend-ssl-no-verify',), {'action': 'store_true', 'default': False, 'help': 'verify SSL certificate of backend; disallow use of self‐signed certificates (default: true)'}],
     [('--backend-poll-interval',), {'type': float, 'default': 0.5, 'help': 'poll interval, in seconds (default: 0.5)'}],
-    [('--backend-healthz-check',), {'default': 'heavy', 'help': 'set the health check type for the backend (default: heavy: options: heavy, light)'}],
     [('--no-check-asset-conservation',), {'action': 'store_true', 'default': False, 'help': 'Skip asset conservation checking (default: false)'}],
     [('--p2sh-dust-return-pubkey',), {'help': 'pubkey to receive dust when multisig encoding is used for P2SH source (default: none)'}],
 
@@ -177,7 +176,6 @@ def main():
                     backend_ssl=args.backend_ssl,
                     backend_ssl_no_verify=args.backend_ssl_no_verify,
                     backend_poll_interval=args.backend_poll_interval,
-                    backend_healthz_check=args.backend_healthz_check,
                     indexd_connect=args.indexd_connect, indexd_port=args.indexd_port,
                     rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user,
                     rpc_password=args.rpc_password, rpc_no_allow_cors=args.rpc_no_allow_cors,
