@@ -403,7 +403,7 @@ def parse (db, tx, message):
                                     'give_remaining': existing[0]['give_remaining'] + escrow_quantity,
                                     'dispense_count': 0 # reset the dispense count on refill
                                 }
-                                ledger.update_dispenser(db, existing[0]['rowid'], set_data, {'source': tx['source'], 'asset': asset})
+                                ledger.update_dispenser(db, existing[0]['rowid'], set_data, {'source': tx['source'], 'asset': asset, 'status': STATUS_OPEN})
 
                                 dispenser_tx_hash = ledger.get_dispensers(db, source=action_address, asset=asset, status=STATUS_OPEN)[0]["tx_hash"]
                                 bindings_refill = {
