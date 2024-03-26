@@ -114,7 +114,7 @@ EVENTS = {
     'BET_UPDATE': 'Updated bet %(tx_hash)s. New status: %(status)s',
     'BET_MATCH_UPDATE': 'Updated bet match %(id)s. New status: %(status)s',
     'ORDER_UPDATE': 'Updated order %(tx_hash)s. New status: %(status)s',
-    'ORDER_FILLED': 'Order %(tx_hash)s filled',
+    'ORDER_FILLED': 'Order filled',
     'ORDER_MATCH_UPDATE': 'Order match %(id)s updated. New status: %(status)s',
     'RPS_MATCH_UPDATE': 'Updated RPS match %(id)s. New status: %(status)s',
     'RPS_UPDATE': 'RPS %(tx_hash)s updated. New status: %(status)s',
