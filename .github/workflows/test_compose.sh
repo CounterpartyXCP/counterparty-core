@@ -9,6 +9,8 @@ GIT_BRANCH="$1"
 VERSION=v$(cat compose.yml | grep 'image: counterparty/counterparty:' | awk -F ":" '{print $3}')
 
 # pull the latest code
+git clean -d -x -f
+git checkout .
 git pull -f origin $GIT_BRANCH:$GIT_BRANCH
 git checkout $GIT_BRANCH
 
@@ -25,7 +27,7 @@ docker rmi counterparty/counterparty:$VERSION || true
 docker build -t counterparty/counterparty:$VERSION .
 
 # remove the counterparty-core data
-rm -rf ~/counterparty-docker-data/counterparty/*
+sudo rm -rf ~/counterparty-docker-data/counterparty/*
 
 # re-start containers
 NETWORK=test ADDR_NETWORK=testnet docker compose up -d
