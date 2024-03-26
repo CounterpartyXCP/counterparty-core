@@ -163,6 +163,7 @@ def check_database_state(db, blockcount):
     return
 
 
+
 # TODO: ALL queries EVERYWHERE should be done with these methods
 def db_query(db, statement, bindings=(), callback=None, **callback_args):
     """Allow direct access to the database in a parametrized manner."""
@@ -1042,13 +1043,36 @@ class APIServer(threading.Thread):
 
         @app.route('/healthz', methods=['GET'])
         def handle_healthz():
-            msg, code = 'Healthy', 200
-            try:
-                latest_block_index = backend.getblockcount()
-                check_database_state(self.db, latest_block_index)
-            except DatabaseError:
-                msg, code = 'Unhealthy', 503
-            return flask.Response(msg, code, mimetype='text/plain')
+            msg, code = "Healthy", 200
+
+            def healthz_probe():
+                if config.BACKEND_HEALTHZ_CHECK == "heavy":
+                    logger.debug("Performing heavy healthz check.")
+                    compose_transaction(
+                        self.db,
+                        name="send",
+                        params={
+                            "source": config.UNSPENDABLE,
+                            "destination": config.UNSPENDABLE,
+                            "asset": config.XCP,
+                            "quantity": 100000000,
+                        },
+                        allow_unconfirmed_inputs=True,
+                        fee=1000,
+                    )
+                else:
+                    logger.debug("Performing light healthz check.")
+                    latest_block_index = backend.getblockcount()
+                    check_database_state(self.db, latest_block_index)
+
+            thread = threading.Thread(target=healthz_probe)
+            thread.start()
+            thread.join(config.HEALTHZ_TIMEOUT)
+
+            if thread.is_alive():
+                msg, code = "Unhealthy", 503
+
+            return flask.Response(msg, code, mimetype='application/json')
 
         @app.route('/', defaults={'args_path': ''}, methods=['GET', 'POST', 'OPTIONS'])
         @app.route('/<path:args_path>',  methods=['GET', 'POST', 'OPTIONS'])

@@ -147,6 +147,7 @@ def initialise_config(database_file=None,
                 indexd_connect=None, indexd_port=None,
                 backend_ssl=False, backend_ssl_no_verify=False,
                 backend_poll_interval=None,
+                backend_healthz_check=None,
                 rpc_host=None, rpc_port=None,
                 rpc_user=None, rpc_password=None,
                 rpc_no_allow_cors=False,
@@ -287,6 +288,11 @@ def initialise_config(database_file=None,
         config.BACKEND_POLL_INTERVAL = backend_poll_interval
     else:
         config.BACKEND_POLL_INTERVAL = 0.5
+
+    if backend_healthz_check in [ 'light', 'heavy' ]:
+        config.BACKEND_HEALTHZ_CHECK = backend_healthz_check
+    else:
+        config.BACKEND_HEALTHZ_CHECK = "heavy"
 
     # Construct backend URL.
     config.BACKEND_URL = config.BACKEND_USER + ':' + config.BACKEND_PASSWORD + '@' + config.BACKEND_CONNECT + ':' + str(config.BACKEND_PORT)
