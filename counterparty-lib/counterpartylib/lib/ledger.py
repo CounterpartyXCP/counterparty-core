@@ -1108,8 +1108,8 @@ def get_dispensers(db, status_in=None, source_in=None, source=None, asset=None, 
 
 ### UPDATES ###
 
-def update_dispenser(db, rowid, update_data):
-    insert_update(db, 'dispensers', 'rowid', rowid, update_data, 'DISPENSER_UPDATE')
+def update_dispenser(db, rowid, update_data, dispenser_info):
+    insert_update(db, 'dispensers', 'rowid', rowid, update_data, 'DISPENSER_UPDATE', dispenser_info)
 
 
 #####################
