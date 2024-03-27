@@ -1046,7 +1046,8 @@ class APIServer(threading.Thread):
             msg, code = "Healthy", 200
 
             type_ = request.args.get('type', 'heavy')
-            def healthz_probe():
+
+            try:
                 if type_ == "light":
                     logger.debug("Performing light healthz check.")
                     latest_block_index = backend.getblockcount()
@@ -1065,12 +1066,7 @@ class APIServer(threading.Thread):
                         allow_unconfirmed_inputs=True,
                         fee=1000,
                     )
-
-            thread = threading.Thread(target=healthz_probe)
-            thread.start()
-            thread.join(config.HEALTHZ_TIMEOUT)
-
-            if thread.is_alive():
+            except Exception as e:
                 msg, code = "Unhealthy", 503
 
             return flask.Response(msg, code, mimetype='application/json')
