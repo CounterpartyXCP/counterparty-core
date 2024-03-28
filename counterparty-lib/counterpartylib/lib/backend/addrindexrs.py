@@ -11,7 +11,7 @@ import collections
 import hashlib
 import functools
 import requests
-from requests.exceptions import Timeout, ReadTimeout, ConnectionError
+from requests.exceptions import Timeout, ReadTimeout
 import bitcoin.wallet
 
 from counterpartylib.lib import config, util, ledger, exceptions
@@ -371,7 +371,7 @@ class SocketManager():
 
     def recover_connection(self):
         if self.socket:
-            logger.debug(f"{self.name} -- Recoving connection")
+            logger.debug(f"{self.name} -- Recovering connection")
             self.socket.close()
             self.connect()
 
