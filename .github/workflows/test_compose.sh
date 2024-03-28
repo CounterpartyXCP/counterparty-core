@@ -8,6 +8,9 @@ cd counterparty-core
 GIT_BRANCH="$1"
 VERSION=v$(cat compose.yml | grep 'image: counterparty/counterparty:' | awk -F ":" '{print $3}')
 
+git config user.email "docker-compose-test@counterparty.io"
+git config user.name "docker-compose-test"
+
 # pull the latest code
 git clean -d -x -f
 git checkout .
