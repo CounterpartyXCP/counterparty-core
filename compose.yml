@@ -26,7 +26,7 @@ services:
         target: /bitcoin/.bitcoin
 
   addrindexrs:
-    image: counterparty/addrindexrs:v0.4.5
+    image: counterparty/addrindexrs:v0.4.6
     links:
       - bitcoind
     volumes:
@@ -40,7 +40,7 @@ services:
       - "8432:8432"                           # mainnet
       - "18432:18432"                         # testnet
     command:
-      - "--network=${ADDR_NETWORK:-bitcoin}"  # export ADDR_NETWORK=testnet for testnet
+      - "--network=${NETWORK:-main}"          # export NETWORK=test for testnet
       - "--indexer-rpc-host=0.0.0.0"
       - "--daemon-rpc-host=bitcoind"
       - "--cookie=rpc:rpc"

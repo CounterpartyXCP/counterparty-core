@@ -35,8 +35,13 @@ docker-compose logs --tail=10 -f addrindexrs
 docker-compose logs --tail=10 -f counterparty-core
 ```
 
+You can use the environment variable `NETWORK` to run a `testnet` node:
+
+```
+NETWORK=test docker-compose up -d
+```
+
 NOTES:
-- For `testnet` you need to modify the Docker Compose file `compose.yml` 
 - By default, this Docker Compose script makes use of the `bootstrap` functionality, because Docker makes it hard to use `kickstart`. (See below.)
 
 
