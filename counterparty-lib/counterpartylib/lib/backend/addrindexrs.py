@@ -597,7 +597,7 @@ class AddrindexrsSocket:
             try:
                 data = self.sock.recv(READ_BUF_SIZE)
             except (TimeoutError, ConnectionResetError) as e:
-                raise AddrindexrsSocketError("Timeout or connection reset. Please retry.")
+                raise AddrindexrsSocketError("Timeout or connection reset. Please retry.") from e
             if data:
                 response = json.loads(data.decode('utf-8')) # assume valid JSON
                 if "id" not in response:
