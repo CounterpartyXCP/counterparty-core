@@ -39,16 +39,16 @@ def sortkeypicker(keynames):
         return composite
     return getit
 
-def backend():
+def backend(init=True):
     mdl = sys.modules[f'counterpartylib.lib.backend.{config.BACKEND_NAME}']
     global INITIALIZED
-    if not INITIALIZED:
+    if not INITIALIZED and init:
         mdl.init()
         INITIALIZED = True
     return mdl
 
 def stop():
-    backend().stop()
+    backend(init=False).stop()
 
 def getblockcount():
     return backend().getblockcount()

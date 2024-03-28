@@ -398,7 +398,9 @@ class AddrIndexRsClient():
         self.socket_manager.close()
         self.req_queue.join()
         self.res_queue.join()
-        self.thread.join()
+        if self.is_running:
+            self.thread.join()
+        self.is_running = False
 
     def send(self, msg):
         logger.debug(f"AddrIndexRsClient -- sending message: {msg}")
