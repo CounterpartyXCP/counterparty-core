@@ -564,8 +564,14 @@ def stop():
 # No locking thread.
 # Assume only one instance of this class is used at a time and not concurrently.
 # This class does not handle most of the errors, it's up to the caller to do so.
-# This class does not check ID in the response.
-# This class assumes response are always not longer than READ_BUF_SIZE (65536 bytes).
+# This class assumes responses are always not longer than READ_BUF_SIZE (65536 bytes).
+# This class assumes responses are always valid JSON.
+
+ADDRINDEXRS_CLIENT_TIMEOUT = 20.0
+
+class AddrindexrsSocketError(Exception):
+    pass
+
 class AddrindexrsSocket:
 
     def __init__(self):
@@ -574,10 +580,10 @@ class AddrindexrsSocket:
 
     def connect(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.settimeout(SOCKET_TIMEOUT)
+        self.sock.settimeout(ADDRINDEXRS_CLIENT_TIMEOUT)
         self.sock.connect((config.INDEXD_CONNECT, config.INDEXD_PORT))
 
-    def _send(self, query, timeout=SOCKET_TIMEOUT):
+    def _send(self, query, timeout=ADDRINDEXRS_CLIENT_TIMEOUT):
         query["id"] = self.next_message_id
 
         message = (json.dumps(query) + "\n").encode('utf8')
@@ -591,25 +597,26 @@ class AddrindexrsSocket:
             try:
                 data = self.sock.recv(READ_BUF_SIZE)
             except (TimeoutError, ConnectionResetError) as e:
-                return {}
+                raise AddrindexrsSocketError("Timeout or connection reset. Please retry.")
             if data:
-                try:
-                    response = json.loads(data.decode('utf-8'))
-                except json.decoder.JSONDecodeError:
-                    return {}
-                if not response:
-                    return {}
+                response = json.loads(data.decode('utf-8')) # assume valid JSON
+                if "id" not in response:
+                    raise AddrindexrsSocketError("No ID in response")
+                if response["id"] != query["id"]:
+                    raise AddrindexrsSocketError("ID mismatch in response")
                 if "error" in response:
-                    return {}
+                    if response["error"] == 'no txs for address':
+                        return {}
+                    raise AddrindexrsSocketError(response["error"])
                 if "result" not in response:
-                    return {}
+                    raise AddrindexrsSocketError("No error and no result in response")
                 return response["result"]
 
             duration = time.time() - start_time
             if duration > timeout:
-                return {}
+                raise AddrindexrsSocketError("Timeout. Please retry.")
 
-    def send(self, query, timeout=SOCKET_TIMEOUT, retry=0):
+    def send(self, query, timeout=ADDRINDEXRS_CLIENT_TIMEOUT, retry=0):
         try:
             return self._send(query, timeout=timeout)
         except BrokenPipeError:
@@ -619,7 +626,7 @@ class AddrindexrsSocket:
             self.connect()
             return self.send(query, timeout=timeout, retry=retry + 1)
 
-    def get_oldest_tx(self, address, timeout=SOCKET_TIMEOUT, block_index=None):
+    def get_oldest_tx(self, address, timeout=ADDRINDEXRS_CLIENT_TIMEOUT, block_index=None):
         hsh = _address_to_hash(address)
         query = {
             "method": "blockchain.scripthash.get_oldest_tx",
