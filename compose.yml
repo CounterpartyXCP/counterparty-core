@@ -4,10 +4,10 @@ services:
   bitcoind:
     image: kylemanna/bitcoind:latest
     ports: 
-      - "8332:8332"                           # mainnet
-      - "18332:18332"                         # testnet
+      - "8332:8332"                                        # mainnet
+      - "18332:18332"                                      # testnet
     command: 
-      - "-chain=${NETWORK:-main}"             # export NETWORK=test for testnet
+      - "-chain=${COUNTERPARTY_NETWORK:-main}"             # export COUNTERPARTY_NETWORK=test for testnet
       - "-rpcallowip=0.0.0.0/0"
       - "-rpcbind=0.0.0.0"
       - "-rpcuser=rpc"
@@ -37,15 +37,17 @@ services:
         source: ${COUNTERPARTY_DOCKER_DATA:-~/counterparty-docker-data}/
         target: /data
     ports:
-      - "8432:8432"                           # mainnet
-      - "18432:18432"                         # testnet
+      - "8432:8432"                                        # mainnet
+      - "18432:18432"                                      # testnet
     command:
-      - "--network=${NETWORK:-main}"          # export NETWORK=test for testnet
+      - "--network=${COUNTERPARTY_NETWORK:-main}"          # export COUNTERPARTY_NETWORK=test for testnet
       - "--indexer-rpc-host=0.0.0.0"
       - "--daemon-rpc-host=bitcoind"
       - "--cookie=rpc:rpc"
       - "-vvv"
       - "--db-dir=/data/"
+    environment:
+      - ADDRINDEXRS_JSONRPC_IMPORT=${ADDRINDEXRS_JSONRPC_IMPORT:-false}
 
   counterparty-core:
     image: counterparty/counterparty:v10.0.0-beta.1
@@ -60,10 +62,10 @@ services:
         source: ${COUNTERPARTY_DOCKER_DATA:-~/counterparty-docker-data}/
         target: /data
     ports:
-      - "4000:4000"                           # mainnet
-      - "14000:14000"                         # testnet
+      - "4000:4000"                                        # mainnet
+      - "14000:14000"                                      # testnet
     command:
-      - "--chain=${NETWORK:-main}"            # export NETWORK=test for testnet
+      - "--chain=${COUNTERPARTY_NETWORK:-main}"            # export COUNTERPARTY_NETWORK=test for testnet
       - "--backend-connect=bitcoind"
       - "--indexd-connect=addrindexrs"
       - "--rpc-host=0.0.0.0"

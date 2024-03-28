@@ -18,6 +18,7 @@ Then run node services in background with:
 ```bash
 git clone git@github.com:CounterpartyXCP/counterparty-core.git
 cd counterparty-core
+mkdir ~/counterparty-docker-data
 docker-compose up -d
 ```
 
@@ -35,14 +36,15 @@ docker-compose logs --tail=10 -f addrindexrs
 docker-compose logs --tail=10 -f counterparty-core
 ```
 
-You can use the environment variable `NETWORK` to run a `testnet` node:
+You can use the environment variable `COUNTERPARTY_NETWORK` to run a `testnet` node:
 
 ```
-NETWORK=test docker-compose up -d
+COUNTERPARTY_NETWORK=test docker-compose up -d
 ```
 
 NOTES:
 - By default, this Docker Compose script makes use of the `bootstrap` functionality, because Docker makes it hard to use `kickstart`. (See below.)
+- When working with a low-memory system, you can tell `addrindexrs` to use JSON-RPC to communicate with `bitcoind` using the environment variable `ADDRINDEXRS_JSONRPC_IMPORT`: `ADDRINDEXRS_JSONRPC_IMPORT=true docker-compose up -d`
 
 
 # Manual Installation
