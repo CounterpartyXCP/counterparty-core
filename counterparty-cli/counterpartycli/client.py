@@ -14,7 +14,7 @@ from counterpartylib.lib import config, script
 from counterpartylib.lib.util import make_id, BET_TYPE_NAME
 from counterpartylib.lib.log import isodt
 from counterpartylib.lib.exceptions import TransactionError
-from counterpartycli.util import add_config_arguments
+from counterpartycli.util import add_config_arguments, read_config_file
 from counterpartycli.setup import generate_config_files
 from counterpartycli import APP_VERSION, util, messages, wallet, console, clientapi
 
@@ -70,7 +70,11 @@ def main():
     parser.add_argument('-V', '--version', action='version', version=f"{APP_NAME} v{APP_VERSION}; counterparty-lib v{config.VERSION_STRING}")
     parser.add_argument('--config-file', help='the location of the configuration file')
 
-    add_config_arguments(parser, CONFIG_ARGS, 'client.conf')
+    cmd_args = parser.parse_known_args()[0]
+    config_file_path = getattr(cmd_args, 'config_file', None)
+    configfile = read_config_file('client.conf', config_file_path)
+
+    add_config_arguments(parser, CONFIG_ARGS, configfile, add_default=True)
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
