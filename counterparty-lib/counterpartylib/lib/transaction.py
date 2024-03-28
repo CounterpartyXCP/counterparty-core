@@ -167,7 +167,7 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
             dust = config.DEFAULT_REGULAR_DUST_SIZE
 
         unspent = backend.sort_unspent_txouts(unspent, dust_size=dust)
-        logger.debug(f'Sorted candidate UTXOs: {[print_coin(coin) for coin in unspent]}')
+        # logger.debug(f'Sorted candidate UTXOs: {[print_coin(coin) for coin in unspent]}')
         use_inputs = unspent
 
     # use backend estimated fee_per_kb
@@ -246,7 +246,7 @@ def construct_coin_selection(encoding, data_array, source, allow_unconfirmed_inp
         list_unspent = [make_outkey(coin) for coin in unspent]
         list_used = [make_outkey(input) for input in inputs]
         list_locked = list(UTXO_LOCKS[source].keys())
-        logger.debug(f"UTXO locks: Potentials ({len(unspent)}): {list_unspent}, Used: {list_used}, locked UTXOs: {list_locked}")
+        # logger.debug(f"UTXO locks: Potentials ({len(unspent)}): {list_unspent}, Used: {list_used}, locked UTXOs: {list_locked}")
 
     # ensure inputs have scriptPubKey
     #   this is not provided by indexd

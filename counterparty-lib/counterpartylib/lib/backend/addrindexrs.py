@@ -174,7 +174,7 @@ def getblock(block_hash):
 
 @functools.lru_cache
 def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
-    logger.debug(f'Cache miss on transaction {tx_hash}!')
+    # logger.debug(f'Cache miss on transaction {tx_hash}!')
     return getrawtransaction_batch([tx_hash], verbose=verbose, skip_missing=skip_missing)[tx_hash]
 
 def getrawmempool():
@@ -354,7 +354,7 @@ class SocketManager():
 
                 try:
                     json_ = json.loads(response.decode('utf-8'))
-                    logger.debug(f"socket: received message from `{self.name}`: {json_}")
+                    logger.debug(f"socket: received message from `{self.name}`: {json_['id']}")
                     return json_
                 except json.JSONDecodeError:
                     logger.debug(("socket: json decode error -- continuing", ))
@@ -371,6 +371,7 @@ class SocketManager():
             try:
                 logger.debug("socket: Closing socket")
                 self.socket.close()
+                logger.debug("socket: after Closing socket")
             except Exception as e:
                 logger.exception(f"socket: Error closing socket `{self.name}`.")
                 logger.exception(e)
@@ -407,30 +408,58 @@ class AddrIndexRsClient():
     def stop(self):
         self.is_running = False
         self.socket_manager.close()
+        print("req", list(self.req_queue.queue))
+        print("res", list(self.res_queue.queue))
+        # self.req_queue.put(None)
+        self.req_queue.join()
+        self.res_queue.join()
+
+    
+
+        print("before thread join")
+
         self.thread.join()
-        # self.req_queue.put({"kill": True})
+        print("after thread join")
+
     
     def send(self, msg):
 
+        logger.debug("client: befoer req_queue.put")
+
         self.req_queue.put(msg)
-        logger.debug("client: blocking on res_queue")
-        return self.res_queue.get(timeout=10.0)
+
+        logger.debug("client: befoer req_queue.get")
+
+        res = self.res_queue.get()
+
+        logger.debug("client: after req_queue.get")
+        self.res_queue.task_done()
+
+        return res
 
     def _start(self):
         while self.is_running:
             try: 
-                msg = self.req_queue.get()
+                logger.debug("client thread: waiting for req message")
+                # if there is no messager after 1 sec, it will raise queue.Empty
+                msg = self.req_queue.get(timeout=1)
                 serialized_msg = self._serialize_msg(msg, self.msg_id )
                 self.msg_id += 1
                 if not self.socket_manager.send(serialized_msg):
-                    logger.debug("client: send failed")
+                    logger.debug("client thread: send failed")
                     self.res_queue.put({" error": "Failed to send message to addrindexrs."} )
                     continue
+
+                self.req_queue.task_done()
+
                 res = self.socket_manager.recv()
+
                 if res:
                   self.res_queue.put(res)
+                  logger.debug(f"client thread: received response: {res['id']}")
                 else:
                   self.res_queue.put({ "error": "Empty response from addrindexrs."})
+                  logger.debug(f"client thread: received empty response from addrindexrs.")
             except queue.Empty:
                 continue
             except Exception as e:
@@ -440,127 +469,6 @@ class AddrIndexRsClient():
         msg["id"] = id_
         return (json.dumps(msg) + "\n").encode('utf8')
 
-
-
-
-
-
-
-
-
-
-
-# class AddrIndexRsThread (threading.Thread):
-#     def __init__(self, host, port):
-#         threading.Thread.__init__(self)
-#         self.host = host
-#         self.port = port
-#         self.sock = None
-#         self.last_id = 0
-#         self.message_to_send = None
-#         self.message_result = None
-#         self.is_killed = False
-#         self.backoff = BACKOFF_START
-#
-#     def stop(self):
-#         logger.warn('Killing address indexer connection thread.')
-#         self.send({"kill": True})
-#
-#     def connect(self):
-#         self.last_id = 0
-#         while True:
-#             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#             self.sock.settimeout(SOCKET_TIMEOUT)
-#             try:
-#                 logger.debug(f'Opening socket to address indexer at `{self.host}:{self.port}`')
-#                 self.sock.connect((self.host, self.port))
-#                 self.backoff = BACKOFF_START
-#             except ConnectionRefusedError as e:
-#                 logger.debug(f'Connection refused by addrindexrs. Trying again in {self.backoff:d} seconds.')
-#                 time.sleep(self.backoff)
-#                 self.backoff = min(self.backoff * BACKOFF_FACTOR, BACKOFF_MAX)
-#             except Exception as e:
-#                 logger.exception('Unknown error when attempting to connect to address indexer.')
-#                 sys.exit(1)
-#             else:
-#                 break
-#
-#     def run(self):
-#         self.locker = threading.Condition()
-#         self.locker.acquire()
-#         self.connect()
-#         while self.locker.wait():
-#             if self.message_to_send and not self.is_killed:
-#                 self.message_result = None
-#
-#                 # Send message over socket.
-#                 has_sent = False
-#                 while not has_sent:
-#                     try:
-#                         logger.debug(f'Sending message to address indexer: {self.message_to_send}')
-#                         self.sock.send(self.message_to_send)
-#                         has_sent = True
-#                         self.backoff = BACKOFF_START
-#                     except Exception as e:
-#                         logger.exception(f'Unknown error sending message to address indexer: {self.message_to_send}')
-#                         sys.exit(1)
-#
-#                 # Receive message over socket.
-#                 parsed = False
-#                 while has_sent and not parsed:
-#                     try:
-#                         # Keep reading data until we have a complete message
-#                         data = b""
-#                         while True:
-#                             chunk = self.sock.recv(READ_BUF_SIZE)
-#                             if chunk:
-#                                 data = data + chunk
-#                                 try:
-#                                     self.message_result = json.loads(data.decode('utf-8'))
-#                                 except json.decoder.JSONDecodeError as e:
-#                                     # Incomplete message
-#                                     pass
-#                                 else:
-#                                     # Complete message
-#                                     self.message_to_send = None
-#                                     parsed = True
-#                                     self.backoff = BACKOFF_START
-#                                     break
-#                             else:
-#                                 logger.debug(f'Empty response from address indexer. Trying again in {self.backoff:d} seconds.')
-#                                 time.sleep(self.backoff)
-#                                 self.backoff = min(self.backoff * BACKOFF_FACTOR, BACKOFF_MAX)
-#
-#                     except (socket.timeout, socket.error, ConnectionResetError) as e:
-#                         logger.debug(f'Error in connection to address indexer: {e}. Trying again in {self.backoff:d} seconds.')
-#                         has_sent = False    # TODO: Retry send?!
-#                         time.sleep(self.backoff)
-#                         self.backoff = min(self.backoff * BACKOFF_FACTOR, BACKOFF_MAX)
-#                     except Exception as e:
-#                         logger.exception('Unknown error when connecting to address indexer.')
-#                         self.locker.notify()
-#                         sys.exit(1) # TODO
-#                     finally:
-#                         self.locker.notify()
-#
-#             else:
-#                 self.locker.notify()
-#
-#         self.sock.close()
-#         logger.debug('Closed socket to address indexer.')
-#
-#     def send(self, msg):
-#         self.locker.acquire()
-#         if not("kill" in msg):
-#             msg["id"] = self.last_id
-#             self.last_id += 1
-#             self.message_to_send = (json.dumps(msg) + "\n").encode('utf8')
-#             self.locker.notify()
-#             self.locker.wait()
-#         else:
-#             self.is_killed = True
-#         self.locker.release()
-#         return self.message_result
 
 def indexer_check_version():
     logger.debug('Checking version of address indexer.')
@@ -822,10 +730,10 @@ def get_oldest_tx(address, block_index=None):
     if hardcoded_key in GET_OLDEST_TX_HARDCODED:
         result = GET_OLDEST_TX_HARDCODED[hardcoded_key]
     else:
-        global ADDRINDEXRS_CLIENT
-        if ADDRINDEXRS_CLIENT is None:
-            ADDRINDEXRS_CLIENT = AddrindexrsSocket()
-        result = ADDRINDEXRS_CLIENT.get_oldest_tx(address, block_index=current_block_index)
+        result = INDEXER_THREAD.send({
+            "method": "blockchain.scripthash.get_oldest_tx",
+            "params": [_address_to_hash(address), current_block_index]
+        })
 
     return result
 
