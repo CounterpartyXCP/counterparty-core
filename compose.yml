@@ -70,7 +70,7 @@ services:
       - "--indexd-connect=addrindexrs"
       - "--rpc-host=0.0.0.0"
       - "--catch-up=bootstrap"
-      - "--verbose"
+      #- "--verbose"
     environment:
       - "XDG_DATA_HOME=/data/"
       - "XDG_LOG_HOME=/data/"

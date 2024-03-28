@@ -2,7 +2,7 @@ name: Test Docker Compose
 
 on:
   push:
-    branches: ['disbale-compose']
+    branches: ['compose']
 
 jobs:
   build:
@@ -12,11 +12,11 @@ jobs:
     - uses: alinz/ssh-scp-action@master
       with:
         key: ${{ secrets.TEST_SERVER_KEY }}
-        host: 34.67.65.156 # temporary
+        host: 34.133.213.103 # temporary
         user: ouziel # temporary
         ssh_before: |
           rm -f test_compose.sh
         scp: |
-          .github/workflows/test_compose.sh ouziel@34.67.65.156:~/test_compose.sh
+          .github/workflows/test_compose.sh ouziel@34.133.213.103:~/test_compose.sh
         ssh_after: |
           sh test_compose.sh
