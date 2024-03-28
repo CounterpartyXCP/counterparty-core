@@ -9,6 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - name: Get branch names.
+      id: branch-names
+      uses: tj-actions/branch-names@v8
     - uses: alinz/ssh-scp-action@master
       with:
         key: ${{ secrets.TEST_SERVER_KEY }}
@@ -19,4 +22,4 @@ jobs:
         scp: |
           .github/workflows/test_compose.sh ouziel@34.133.213.103:~/test_compose.sh
         ssh_after: |
-          sh test_compose.sh
+          sh test_compose.sh ${{ steps.branch-names.outputs.current_branch }}
