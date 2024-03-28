@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set +e
+set -e
 set -x
 
 if [ -f "./DOCKER_COMPOSE_TEST_LOCK" ]; then
