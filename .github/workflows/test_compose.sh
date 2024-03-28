@@ -3,18 +3,16 @@
 set +e
 set -x
 
-cd counterparty-core
+
 
 GIT_BRANCH="$1"
 VERSION=v$(cat compose.yml | grep 'image: counterparty/counterparty:' | awk -F ":" '{print $3}')
 
-git config user.email "docker-compose-test@counterparty.io"
-git config user.name "docker-compose-test"
 
 # pull the latest code
-git clean -d -x -f
-git checkout .
-git pull -f origin $GIT_BRANCH:$GIT_BRANCH
+rm -rf counterparty-core
+git clone --branch "$GIT_BRANCH" https://github.com/CounterpartyXCP/counterparty-core.git
+cd counterparty-core
 git checkout $GIT_BRANCH
 
 # stop the running containers
