@@ -50,42 +50,47 @@ def fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner):
                    ''')
     cursor.execute('''DELETE FROM kickstart_blocks''')
 
-    start_time_blocks_indexing = time.time()
-    # save blocks from last to first
-    current_hash = last_known_hash
-    lot_size = 100
-    block_count = 0
-    while True:
-        bindings_lot = ()
-        bindings_place = []
-        # gather some blocks
-        while len(bindings_lot) <= lot_size * 4:
-            # read block from bitcoind files
-            block = block_parser.read_raw_block(current_hash, only_header=True)
-            # prepare bindings
-            bindings_lot += (
-                block['block_index'],
-                block['block_hash'],
-                block['block_time'],
-                block['hash_prev'],
-                block['bits'],
-                block['tx_count']
-            )
-            bindings_place.append('(?,?,?,?,?,?)')
-            current_hash = block['hash_prev']
-            block_count += 1
+    try:
+        start_time_blocks_indexing = time.time()
+        # save blocks from last to first
+        current_hash = last_known_hash
+        lot_size = 100
+        block_count = 0
+        while True:
+            bindings_lot = ()
+            bindings_place = []
+            # gather some blocks
+            while len(bindings_lot) <= lot_size * 4:
+                # read block from bitcoind files
+                block = block_parser.read_raw_block(current_hash, only_header=True)
+                # prepare bindings
+                bindings_lot += (
+                    block['block_index'],
+                    block['block_hash'],
+                    block['block_time'],
+                    block['hash_prev'],
+                    block['bits'],
+                    block['tx_count']
+                )
+                bindings_place.append('(?,?,?,?,?,?)')
+                current_hash = block['hash_prev']
+                block_count += 1
+                if block['block_index'] == first_block:
+                    break
+            # insert blocks by lot. No sql injection here.
+            cursor.execute(f'''INSERT INTO kickstart_blocks (block_index, block_hash, block_time, previous_block_hash, difficulty, tx_count)
+                                VALUES {', '.join(bindings_place)}''', # nosec B608
+                                bindings_lot)
+            spinner.text = f"Initialising database: block {bindings_lot[0]} to {bindings_lot[-6]} inserted."
             if block['block_index'] == first_block:
                 break
-        # insert blocks by lot. No sql injection here.
-        cursor.execute(f'''INSERT INTO kickstart_blocks (block_index, block_hash, block_time, previous_block_hash, difficulty, tx_count)
-                              VALUES {', '.join(bindings_place)}''', # nosec B608
-                              bindings_lot)
-        spinner.text = f"Initialising database: block {bindings_lot[0]} to {bindings_lot[-6]} inserted."
-        if block['block_index'] == first_block:
-            break
-    block_parser.close()
-    spinner.text = f'Blocks indexed in: {time.time() - start_time_blocks_indexing:.3f}s'
-    return block_count
+        block_parser.close()
+        spinner.text = f'Blocks indexed in: {time.time() - start_time_blocks_indexing:.3f}s'
+        return block_count
+    except KeyboardInterrupt:
+        print(colored('Keyboard interrupt. Cleanin up, please wait...', 'yellow'))
+        block_parser.close()
+        cursor.execute('''DROP TABLE kickstart_blocks''')
 
 
 def clean_kicstart_blocks(db):
