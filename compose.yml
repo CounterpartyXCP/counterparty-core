@@ -65,7 +65,7 @@ services:
       - "4000:4000"                                        # mainnet
       - "14000:14000"                                      # testnet
     command:
-      - "--chain=${COUNTERPARTY_NETWORK:-main}"            # export COUNTERPARTY_NETWORK=test for testnet
+      - "--${COUNTERPARTY_NETWORK:-main}net"               # export COUNTERPARTY_NETWORK=test for testnet
       - "--backend-connect=bitcoind"
       - "--indexd-connect=addrindexrs"
       - "--rpc-host=0.0.0.0"
