@@ -192,7 +192,7 @@ def parse (db, tx, message):
                 'msg_index': i
             }
 
-            ledger.insert_record(db, 'sends', bindings, 'NPMA_SEND')
+            ledger.insert_record(db, 'sends', bindings, 'MPMA_SEND')
 
     if status != 'valid':
         logger.debug(f"Not storing [mpma] tx [{tx['tx_hash']}]: {status}")
