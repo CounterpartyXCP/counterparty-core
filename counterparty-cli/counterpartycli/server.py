@@ -104,7 +104,7 @@ def main():
         util_windows.fix_win32_unicode()
 
     # Post installation tasks
-    server_configfile = generate_config_files()
+    server_configfile, _ = generate_config_files()
 
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(
