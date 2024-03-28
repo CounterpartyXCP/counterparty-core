@@ -1066,7 +1066,7 @@ class APIServer(threading.Thread):
                         allow_unconfirmed_inputs=True,
                         fee=1000,
                     )
-            except Exception as e:
+            except Exception:
                 msg, code = "Unhealthy", 503
 
             return flask.Response(msg, code, mimetype='application/json')

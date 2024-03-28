@@ -1,22 +1,18 @@
 from typing import Dict, Optional
 import logging
 import sys
-import os
 import json
-import requests
-from requests.exceptions import Timeout, ReadTimeout, ConnectionError
+import queue
 import time
 import threading
-import queue
 import socket
 import concurrent.futures
 import collections
-import binascii
 import hashlib
-import signal
 import functools
+import requests
+from requests.exceptions import Timeout, ReadTimeout, ConnectionError
 import bitcoin.wallet
-from pkg_resources import parse_version
 
 from counterpartylib.lib import config, util, ledger, exceptions
 
@@ -291,21 +287,21 @@ class SocketManager():
         self.max_retries = 10
 
 
-    def connect(self): 
+    def connect(self):
         while True:
             try:
-                logger.debug(f'{self.name} -- Opening socket to address indexer at `{self.host}:{self.port}`')
+                logger.debug(f'{self.name} -- Opening socket at `{self.host}:{self.port}`')
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.socket.settimeout(SOCKET_TIMEOUT)
                 self.socket.connect((self.host, self.port))
                 self.backoff = BACKOFF_START
                 break
             except ConnectionRefusedError as e:
-                logger.debug(f'{self.name} -- Connection refused. Trying again in {self.backoff:d} seconds.')
+                logger.debug(f'{self.name} -- Connection refused. Retry in {self.backoff:d}s')
                 time.sleep(self.backoff)
                 self.backoff = min(self.backoff * BACKOFF_FACTOR, BACKOFF_MAX)
             except Exception as e:
-                logger.exception(f"{self.name} -- Unhandled exception when connecting at `{self.host}:{self.port}` {e}")
+                logger.exception(f"{self.name} -- connecting to `{self.host}:{self.port}`: {e}")
                 sys.exit(1)
 
     def send(self, msg) -> bool:
@@ -322,7 +318,7 @@ class SocketManager():
                 logger.exception(f"{self.name} -- send exception:  {e}")
                 self.recover_connection()
                 if attempt < self.max_retries:
-                    logger.debug(f'{self.name} -- retrying send in {self.backoff * attempt} seconds.')
+                    logger.debug(f'{self.name} -- retrying send in {self.backoff * attempt}s')
                     time.sleep(min(self.backoff * attempt, BACKOFF_MAX))
 
         logger.debug(f"{self.name} -- Failed to send message after {self.max_retries} attempts.")
@@ -333,7 +329,7 @@ class SocketManager():
 
         if not self.socket:
             logger.debug(f"{self.name} -- `rcv` called without a socket.")
-            return 
+            return
 
         response = b""
         while True:
@@ -354,7 +350,8 @@ class SocketManager():
                     continue
 
             except Exception as e:
-                logger.exception(f"{self.name} -- Error receiving message: {e} -- attempting to recover connection.")
+                logger.exception(f"{self.name} -- Error receiving message: {e}")
+                logger.debug(f"{self.name} -- recovering connection")
                 self.recover_connection()
                 return None
 
@@ -378,9 +375,7 @@ class SocketManager():
             self.socket.close()
             self.connect()
 
-
-class AddrIndexRsClient(): 
-
+class AddrIndexRsClient():
     def __init__(self, host, port):
         self.host = host
         self.port = port
@@ -405,11 +400,10 @@ class AddrIndexRsClient():
         self.res_queue.join()
         self.thread.join()
 
-    
     def send(self, msg):
         logger.debug(f"AddrIndexRsClient -- sending message: {msg}")
         self.req_queue.put(msg)
-        logger.debug(f"AddrIndexRsClient -- waiting for response")
+        logger.debug("AddrIndexRsClient -- waiting for response")
         res = self.res_queue.get()
         self.res_queue.task_done()
         logger.debug(f"AddrIndexRsClient -- received response: {res}")
@@ -419,30 +413,30 @@ class AddrIndexRsClient():
 
     def _start(self):
         while self.is_running:
-            try: 
+            try:
 
-                logger.debug(f"AddrIndexRsClient.thread -- waiting for message")
+                logger.debug("AddrIndexRsClient.thread -- waiting for message")
                 # if there is no messager after 1 sec, it will raise queue.Empty
                 msg = self.req_queue.get(timeout=1)
                 serialized_msg = self._serialize_msg(msg, self.msg_id )
                 self.msg_id += 1
                 if not self.socket_manager.send(serialized_msg):
-                    logger.debug(f"AddrIndexRsClient.thread -- send failed")
+                    logger.debug("AddrIndexRsClient.thread -- send failed")
                     self.res_queue.put(None)
                     continue
                 self.req_queue.task_done()
 
                 res = self.socket_manager.recv()
                 if res:
-                  logger.debug(f"AddrIndexRsClient.thread -- received response: {res}")
-                  self.res_queue.put(res)
+                    logger.debug(f"AddrIndexRsClient.thread -- received response: {res}")
+                    self.res_queue.put(res)
                 else:
-                  logger.debug(f"AddrIndexRsClient.thread -- received empty response from addrindexrs.")
-                  self.res_queue.put(None)
+                    logger.debug("AddrIndexRsClient.thread -- received empty response")
+                    self.res_queue.put(None)
             except queue.Empty:
                 continue
             except Exception as e:
-                logger.exception("AddrIndexRsClient.thread -- exception {e}")
+                logger.exception(f"AddrIndexRsClient.thread -- exception {e}")
 
     def _serialize_msg(self, msg, id_):
         msg["id"] = id_
@@ -457,7 +451,8 @@ def indexer_check_version():
     })
 
     try:
-        addrindexrs_version_label = addrindexrs_version["result"][0][12:] #12 is the length of "addrindexrs "
+        #12 is the length of "addrindexrs "
+        addrindexrs_version_label = addrindexrs_version["result"][0][12:]
     except TypeError as e:
         logger.exception(f'Error when checking address indexer version: {addrindexrs_version}')
         sys.exit(1)
