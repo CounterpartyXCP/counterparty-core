@@ -3,6 +3,8 @@ version: '3'
 services:
   bitcoind:
     image: kylemanna/bitcoind:latest
+    volumes:
+      - data:/bitcoin/.bitcoin
     ports: 
       - "8332:8332"                                        # mainnet
       - "18332:18332"                                      # testnet
@@ -20,22 +22,15 @@ services:
       - "-prune=0"
       - "-dbcache=4000"
       - "-mempoolfullrbf=1"
-    volumes:
-      - type: bind
-        source: ${COUNTERPARTY_DOCKER_DATA-~/counterparty-docker-data}/
-        target: /bitcoin/.bitcoin
+
 
   addrindexrs:
     image: counterparty/addrindexrs:v0.4.6
     links:
       - bitcoind
     volumes:
-      - type: bind
-        source: ${COUNTERPARTY_DOCKER_DATA:-~/counterparty-docker-data}/
-        target: /root/.bitcoin
-      - type: bind
-        source: ${COUNTERPARTY_DOCKER_DATA:-~/counterparty-docker-data}/
-        target: /data
+      - data:/root/.bitcoin
+      - data:/data
     ports:
       - "8432:8432"                                        # mainnet
       - "18432:18432"                                      # testnet
@@ -55,12 +50,8 @@ services:
       - bitcoind
       - addrindexrs
     volumes:
-      - type: bind
-        source: ${COUNTERPARTY_DOCKER_DATA:-~/counterparty-docker-data}/
-        target: /root/.bitcoin
-      - type: bind
-        source: ${COUNTERPARTY_DOCKER_DATA:-~/counterparty-docker-data}/
-        target: /data
+      - data:/root/.bitcoin
+      - data:/data
     ports:
       - "4000:4000"                                        # mainnet
       - "14000:14000"                                      # testnet
@@ -74,3 +65,12 @@ services:
     environment:
       - "XDG_DATA_HOME=/data/"
       - "XDG_LOG_HOME=/data/"
+
+
+volumes: 
+  data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${COUNTERPARTY_DOCKER_DATA:-~/counterparty-docker-data}/
