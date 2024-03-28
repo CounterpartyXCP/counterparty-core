@@ -14,7 +14,6 @@ from counterpartylib import server
 from counterpartylib.lib import config, blocks, ledger, backend, database, log
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser, ChainstateParser
 from counterpartylib.lib.kickstart.utils import remove_shm_from_resource_tracker
-from counterpartylib.lib.backend.addrindexrs import AddrindexrsSocket
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
