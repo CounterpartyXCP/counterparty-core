@@ -976,7 +976,7 @@ def follow(db):
             elapsed_time = time.time() - start_time
             sleep_time = config.BACKEND_POLL_INTERVAL - elapsed_time if elapsed_time <= config.BACKEND_POLL_INTERVAL else 0
 
-            # logger.getChild('mempool').debug(f'Refresh mempool: {len(xcp_mempool)} XCP txs seen, out of {len(raw_mempool)} total entries (took {elapsed_time:.2f}, next refresh in {sleep_time:.2f})')
+            logger.getChild('mempool').debug(f'Refresh mempool: {len(xcp_mempool)} XCP txs seen, out of {len(raw_mempool)} total entries (took {elapsed_time:.2f}, next refresh in {sleep_time:.2f})')
 
             # Wait
             db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
