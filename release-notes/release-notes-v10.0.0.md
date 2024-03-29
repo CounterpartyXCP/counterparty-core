@@ -7,7 +7,7 @@ This release does not include any protocol changes, so there is no deadline for 
 
 Because this release includes numerous changes to the database schema, a full database rebuild is required and the major version number has been bumped from 9 to 10. Follow the updated installation instructions in the [README](/README.md) to download and install the latest version of Counterparty Core, run `counterparty-server kickstart` (while `bitcoind` is not running), then start the server with `counterparty-server start`. The rebuild should happen automatically, and it should take between 8 and 24 hours hours to complete.
 
-**IMPORTANT** Be certain that you are running the latest version of AddrIndexRs (v0.4.5).
+**IMPORTANT** Be certain that you are running the latest version of AddrIndexRs (v0.4.6).
 
 
 # ChangeLog
