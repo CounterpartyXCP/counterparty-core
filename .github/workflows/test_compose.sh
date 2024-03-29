@@ -40,10 +40,16 @@ while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Ready for queries'
     sleep 1
 done
 
-curl -X POST http://127.0.0.1:14000/api/ \
-     --user rpc:rpc \
-     -H 'Content-Type: application/json; charset=UTF-8'\
-     -H 'Accept: application/json, text/javascript' \
-     --data-binary '{ "jsonrpc": "2.0", "id": 0, "method": "get_running_info" }'
-
 rm -f ../DOCKER_COMPOSE_TEST_LOCK
+
+server_response=$(curl -X POST http://127.0.0.1:14000/api/ \
+                        --user rpc:rpc \
+                        -H 'Content-Type: application/json; charset=UTF-8'\
+                        -H 'Accept: application/json, text/javascript' \
+                        --data-binary '{ "jsonrpc": "2.0", "id": 0, "method": "get_running_info" }' \
+                        --write-out '%{http_code}' --silent --output /dev/null)
+
+if [ "$server_response" -ne 200 ]; then
+    echo "Failed to get_running_info"
+    exit 1
+fi
