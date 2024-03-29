@@ -58,13 +58,13 @@ services:
       - "4000:4000"                                        # mainnet
       - "14000:14000"                                      # testnet
     command:
+      - start
       - "--${COUNTERPARTY_NETWORK:-main}net"               # export COUNTERPARTY_NETWORK=test for testnet
       - "--backend-connect=bitcoind"
       - "--indexd-connect=addrindexrs"
       - "--rpc-host=0.0.0.0"
       - "--catch-up=bootstrap"
       #- "--verbose"
-      - start
     environment:
       - "XDG_DATA_HOME=/data/"
       - "XDG_LOG_HOME=/data/"
