@@ -328,6 +328,7 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     # check addrindexrs
     server.connect_to_addrindexrs()
 
+
     # determine bitoincore data directory
     bitcoind_dir = get_bitcoind_dir(bitcoind_dir)
 

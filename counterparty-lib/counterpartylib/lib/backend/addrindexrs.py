@@ -34,8 +34,9 @@ class BackendRPCError(Exception):
 class AddrIndexRsRPCError(Exception):
     pass
 
-class AddrIndexRsEmptyResponseError(Exception):
+class AddrIndexRsClientError(Exception):
     pass
+
 
 def rpc_call(payload):
     """Calls to bitcoin core and returns the response"""
@@ -364,13 +365,12 @@ class SocketManager():
         try:
             logger.debug(f"{self.name} -- Closing socket")
             self.socket.close()
-            logger.debug(f"{self.name} -- Close socket success")
-        except Exception as e:
-            logger.exception(f"{self.name} -- Close socket failure -- {e}")
-
-
-    def recover_connection(self):
-        if self.socket:
+            logger.debug(f"{self.name} -- Close socket success") 
+        except Exception as e: 
+            logger.exception(f"{self.name} -- Close socket failure -- {e}") 
+            
+    def recover_connection(self): 
+        if self.socket: 
             logger.debug(f"{self.name} -- Recovering connection")
             self.socket.close()
             self.connect()
@@ -403,14 +403,34 @@ class AddrIndexRsClient():
         self.is_running = False
 
     def send(self, msg):
+
+        msg_id = self.msg_id
         logger.debug(f"AddrIndexRsClient -- sending message: {msg}")
-        self.req_queue.put(msg)
+        serialized_msg = self._serialize_msg(msg, msg_id )
+        self.msg_id += 1
+        self.req_queue.put(serialized_msg)
         logger.debug("AddrIndexRsClient -- waiting for response")
         res = self.res_queue.get()
         self.res_queue.task_done()
         logger.debug(f"AddrIndexRsClient -- received response: {res}")
+
+        logger.info(f"AddrIndexRsClient -- received response for {msg_id}: {res['id']}")
+
         if res is None:
-            raise AddrIndexRsEmptyResponseError("Empty response from addrindexrs.")
+            raise AddrIndexRsClientError("AddrIndexRsClient -- Empty reply from socket")
+        if "id" not in res:
+            raise AddrIndexRsClientError("AddrIndexRsClient -- Invalid response id.")
+        if res["id"] != msg_id:
+            raise AddrIndexRsClientError("AddrIndexRsClient -- Invalid response id.")
+        if "error" in res:
+            if res["error"] == "no txs for address":
+                res = {}
+        if "result" not in res:
+            raise AddrIndexRsClientError("AddrIndexRsClient -- No error and no result in response.")
+
+
+
+
         return res
 
     def _start(self):
@@ -420,9 +440,7 @@ class AddrIndexRsClient():
                 logger.debug("AddrIndexRsClient.thread -- waiting for message")
                 # if there is no messager after 1 sec, it will raise queue.Empty
                 msg = self.req_queue.get(timeout=1)
-                serialized_msg = self._serialize_msg(msg, self.msg_id )
-                self.msg_id += 1
-                if not self.socket_manager.send(serialized_msg):
+                if not self.socket_manager.send(msg):
                     logger.debug("AddrIndexRsClient.thread -- send failed")
                     self.res_queue.put(None)
                     continue
@@ -633,6 +651,6 @@ def get_oldest_tx(address, block_index=None):
             "params": [_address_to_hash(address), current_block_index]
         })
 
-    return result
+    return result["result"]
 
 
