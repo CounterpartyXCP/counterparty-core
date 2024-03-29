@@ -15,11 +15,11 @@ jobs:
     - uses: alinz/ssh-scp-action@master
       with:
         key: ${{ secrets.TEST_SERVER_KEY }}
-        host: 34.133.213.103 # temporary
-        user: ouziel # temporary
+        host: ${{ secrets.TEST_SERVER_IP }}
+        user: ${{ secrets.TEST_SERVER_USER }}
         ssh_before: |
           rm -f test_compose.sh
         scp: |
-          .github/workflows/test_compose.sh ouziel@34.133.213.103:~/test_compose.sh
+          .github/workflows/test_compose.sh ${{ secrets.TEST_SERVER_USER }}@${{ secrets.TEST_SERVER_IP }}:~/test_compose.sh
         ssh_after: |
           sh test_compose.sh ${{ steps.branch-names.outputs.current_branch }}
