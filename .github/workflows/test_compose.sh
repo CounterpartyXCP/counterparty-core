@@ -16,7 +16,7 @@ rm -rf counterparty-core
 git clone --branch "$GIT_BRANCH" https://github.com/CounterpartyXCP/counterparty-core.git
 cd counterparty-core
 
-VERSION=$(cat compose.yml | grep 'image: counterparty/counterparty:' | awk -F ":" '{print $3}')
+VERSION=$(cat docker-compose.yml | grep 'image: counterparty/counterparty:' | awk -F ":" '{print $3}')
 
 # stop the running containers
 docker compose stop
