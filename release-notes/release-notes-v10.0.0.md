@@ -110,3 +110,4 @@ Because this release includes numerous changes to the database schema, a full da
 * Ouziel Slama
 * Adam Krellenstein
 * Warren Puffett
+* Matt Marcello
