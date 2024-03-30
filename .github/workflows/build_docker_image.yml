@@ -18,4 +18,4 @@ jobs:
         docker build -t counterparty .
     - name: Test image
       run: |
-        docker run --rm counterparty
+        docker run --rm counterparty -h
