@@ -34,6 +34,7 @@ Because this release includes numerous changes to the database schema, a full da
     * License Scanner
     * Build and publish Docker image
     * Enable `testnet` test book
+    * Test `compose.yml` in Google Compute Engine VM
 * Add checkpoints for `mainnet` up to block 834,500 and for `testnet` up to block 2,580,000
 * Rewrite README
 
@@ -109,3 +110,4 @@ Because this release includes numerous changes to the database schema, a full da
 * Ouziel Slama
 * Adam Krellenstein
 * Warren Puffett
+* Matt Marcello
