@@ -24,6 +24,7 @@ import math
 import struct
 import apsw
 import flask
+from flask import request
 from flask_httpauth import HTTPBasicAuth
 import jsonrpc
 from jsonrpc import dispatcher
@@ -1009,6 +1010,35 @@ class APIServer(threading.Thread):
                 response.headers['Access-Control-Allow-Origin'] = '*'
                 response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
                 response.headers['Access-Control-Allow-Headers'] = 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization'
+
+        ##### REST ROUTES #####
+
+        @app.route('/addresses/<address>/balances', methods=['GET'])
+        def handle_address_balances(address):
+            return ledger.get_address_balances(self.db, address)
+
+        @app.route('/assets/<asset>/balances', methods=['GET'])
+        def handle_asset_balances(asset):
+            return ledger.get_asset_balances(self.db, asset)
+
+        @app.route('/assets/<asset>/', methods=['GET'])
+        def handle_asset_info(asset):
+            return get_asset_info(asset=asset)
+
+        @app.route('/assets/<asset>/orders', methods=['GET'])
+        def handle_asset_orders(asset):
+            status = request.args.get('status', 'open')
+            return ledger.get_orders_by_asset(self.db, asset, status)
+
+        @app.route('/orders/<tx_hash>', methods=['GET'])
+        def handle_order_info(tx_hash):
+            return ledger.get_order(self.db, tx_hash)
+
+        @app.route('/orders/<tx_hash>/matches', methods=['GET'])
+        def handle_order_matches(tx_hash):
+            status = request.args.get('status', 'pending')
+            return ledger.get_order_matches_by_order(self.db, tx_hash, status)
+
 
         @app.route('/healthz', methods=['GET'])
         def handle_healthz():

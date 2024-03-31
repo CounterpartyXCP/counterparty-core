@@ -143,11 +143,6 @@ def parse (db, tx, message):
             # Update order match.
             ledger.update_order_match_status(db, order_match_id, 'completed')
 
-            log.message(db, tx['block_index'], 'update', 'order_matches', {
-                'status': 'completed',
-                'order_match_id': order_match_id
-            })
-
             # Update give and get order status as filled if order_match is completed
             if ledger.enabled('btc_order_filled'):
                 order_matches = ledger.get_pending_order_matches(db, tx0_hash, tx1_hash)
@@ -170,8 +165,7 @@ def parse (db, tx, message):
         'status': status,
     }
     if "integer overflow" not in status:
-        sql = 'insert into btcpays values(:tx_index, :tx_hash, :block_index, :source, :destination, :btc_amount, :order_match_id, :status)'
-        cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'btcpays', bindings, 'BTC_PAY')
     else:
         logger.debug(f"Not storing [btcpay] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")

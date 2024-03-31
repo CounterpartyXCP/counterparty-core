@@ -7,7 +7,7 @@ This release does not include any protocol changes, so there is no deadline for 
 
 Because this release includes numerous changes to the database schema, a full database rebuild is required and the major version number has been bumped from 9 to 10. Follow the updated installation instructions in the [README](/README.md) to download and install the latest version of Counterparty Core, run `counterparty-server kickstart` (while `bitcoind` is not running), then start the server with `counterparty-server start`. The rebuild should happen automatically, and it should take between 8 and 24 hours hours to complete.
 
-**IMPORTANT** Be certain that you are running the latest version of AddrIndexRs (v0.4.4).
+**IMPORTANT** Be certain that you are running the latest version of AddrIndexRs (v0.4.6).
 
 
 # ChangeLog
@@ -34,6 +34,7 @@ Because this release includes numerous changes to the database schema, a full da
     * License Scanner
     * Build and publish Docker image
     * Enable `testnet` test book
+    * Test `docker-compose.yml` in Google Compute Engine VM
 * Add checkpoints for `mainnet` up to block 834,500 and for `testnet` up to block 2,580,000
 * Rewrite README
 
@@ -47,7 +48,7 @@ Because this release includes numerous changes to the database schema, a full da
 
 ## Deployment
 * Rewrite Dockerfile and publish new official Docker images
-* Implement `simplenode` Docker Compose file, an alternative to Federated Node
+* Create Docker Compose file as an alternative to Federated Node
 * Change default `bitcoind` user from `bitcoinrpc` to `rpc`
 * Changed default port for communication with AddrIndexRs to `8432` (and `81432` for `testnet`)
 
@@ -63,6 +64,7 @@ Because this release includes numerous changes to the database schema, a full da
 * Fix and refactor `log.set_up()`
 * Improve thread shutdown logic
 * Accept config args before and after the command
+* New flag `--json-log`, which replaces the human-readable logs in the console with the streaming content of the `messages` table in JSON format
 
 
 ## Refactoring and Performance Optimizations
@@ -71,8 +73,10 @@ Because this release includes numerous changes to the database schema, a full da
 * Fix database version checking which launched a rebuilds instead of rollbacks / reparses
 * Add numerous missing database indexes
 * Fix collisions between existing database indexes
-* DRY and refactor database index creation. 
-* DRY and isolate all SQL queries in `ledger.py` (except first insertion still inside contracts)
+* DRY and refactor database index creation
+* DRY and isolate all SQL queries in `ledger.py`
+* Heavily refactor of `log.messages` and `log.log`.
+* Add additional fields and rows in the `messages` table (the messages hash will change)
 * Fix database integrity check and re-include assert conservation check
 * Migrate to log-structured database for simpler and faster rollback and reparse
     * Add `block_index` field to the `balances` table
@@ -93,9 +97,17 @@ Because this release includes numerous changes to the database schema, a full da
     * Isolate dispenser logic in `get_dispensers_outputs()` and `get_dispensers_tx_info()`
 * Activate check software version every 24H
 * Add the possibility to reparse from a given block on minor version change
-* Add Warning with Confirmation Dialogue to bootstrap Command and `--no-confirm` flag
+* Add warning with confirmation dialogue to bootstrap command, and `--no-confirm` flag
+* Add REST endpoints optimized for tables that were altered during the migration to a log-structured database:
+    * `GET /addresses/<address>/balances`
+    * `GET /assets/<asset>/`
+    * `GET /assets/<asset>/balances`
+    * `GET /assets/<asset>/orders`
+    * `GET /orders/<tx_hash>`
+    * `GET /orders/<tx_hash>/matches`
 
 # Credits
 * Ouziel Slama
 * Adam Krellenstein
 * Warren Puffett
+* Matt Marcello

@@ -181,8 +181,7 @@ def parse (db, tx, message):
 
         rps.update_rps_match_status(db, rps_match, rps_match_status, tx['block_index'], tx['tx_index'])
 
-    sql = '''INSERT INTO rpsresolves VALUES (:tx_index, :tx_hash, :block_index, :source, :move, :random, :rps_match_id, :status)'''
-    cursor.execute(sql, rpsresolves_bindings)
+    ledger.insert_record(db, 'rpsresolves', rpsresolves_bindings, 'RPS_RESOLVE')
 
     cursor.close()
 

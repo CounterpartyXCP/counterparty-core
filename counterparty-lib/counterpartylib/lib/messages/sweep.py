@@ -225,8 +225,7 @@ def parse (db, tx, message):
                             'asset_longname': last_issuance['asset_longname'],
                             'reset': False
                         }
-                        sql='insert into issuances values(:tx_index, :tx_hash, :msg_index, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :reset)'
-                        cursor.execute(sql, bindings)
+                        ledger.insert_record(db, 'issuances', bindings, 'ASSET_TRANSFER')
                         sweep_pos += 1
 
         bindings = {
@@ -240,7 +239,6 @@ def parse (db, tx, message):
             'memo': memo_bytes,
             'fee_paid': total_fee if antispamfee > 0 else fee_paid
         }
-        sql = 'insert into sweeps values(:tx_index, :tx_hash, :block_index, :source, :destination, :flags, :status, :memo, :fee_paid)'
-        cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'sweeps', bindings, 'SWEEP')
 
     cursor.close()

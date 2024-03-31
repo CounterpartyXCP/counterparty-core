@@ -100,7 +100,7 @@ def initialise(*args, **kwargs):
 
 def initialise_log_config(
         verbose=False, quiet=False, log_file=None, api_log_file=None, no_log_files=False,
-        testnet=False, testcoin=False, regtest=False
+        testnet=False, testcoin=False, regtest=False, json_log=False
     ):
     # Log directory
     log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
@@ -135,6 +135,8 @@ def initialise_log_config(
         config.API_LOG = os.path.join(log_dir, filename)
     else:  # user-specified location
         config.API_LOG = api_log_file
+
+    config.JSON_LOG = json_log
 
 
 def initialise_config(database_file=None,
@@ -607,9 +609,10 @@ def configure_rpc(rpc_password=None):
     # Server API RPC password
     if rpc_password:
         config.RPC_PASSWORD = rpc_password
-        config.RPC = 'http://' + urlencode(config.RPC_USER) + ':' + urlencode(config.RPC_PASSWORD) + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
+        config.API_ROOT = 'http://' + urlencode(config.RPC_USER) + ':' + urlencode(config.RPC_PASSWORD) + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
     else:
-        config.RPC = 'http://' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
+        config.API_ROOT = 'http://' + config.RPC_HOST + ':' + str(config.RPC_PORT)
+    config.RPC = config.API_ROOT + config.RPC_WEBROOT
 
     cleaned_rpc_url = config.RPC.replace(f':{urlencode(config.RPC_PASSWORD)}@', ':*****@')
     logger.debug('RPC: %s', cleaned_rpc_url)

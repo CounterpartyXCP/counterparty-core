@@ -542,10 +542,8 @@ def parse (db, tx, message, message_type_id):
                         'quantity': owner_balance,
                         'tag': "reset",
                         'status': "valid",
-                        'reset': True,
                         }
-                    sql = 'insert into destructions values(:tx_index, :tx_hash, :block_index, :source, :asset, :quantity, :tag, :status)'
-                    issuance_parse_cursor.execute(sql, bindings)
+                    ledger.insert_record(db, 'destructions', bindings, 'ASSET_DESTRUCTION')
 
                 bindings= {
                     'tx_index': tx['tx_index'],
@@ -568,8 +566,7 @@ def parse (db, tx, message, message_type_id):
                     'asset_longname': reissued_asset_longname,
                 }
 
-                sql='insert into issuances values(:tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :reset)'
-                issuance_parse_cursor.execute(sql, bindings)
+                ledger.insert_record(db, 'issuances', bindings, 'RESET_ISSUANCE')
 
                 # Credit.
                 if quantity:
@@ -606,8 +603,7 @@ def parse (db, tx, message, message_type_id):
                     'block_index': tx['block_index'],
                     'asset_longname': subasset_longname,
                 }
-                sql='insert into assets values(:asset_id, :asset_name, :block_index, :asset_longname)'
-                issuance_parse_cursor.execute(sql, bindings)
+                ledger.insert_record(db, 'assets', bindings, 'ASSET_CREATION')
 
         if status == 'valid' and reissuance:
             # when reissuing, add the asset_longname to the issuances table for API lookups
@@ -637,8 +633,7 @@ def parse (db, tx, message, message_type_id):
             'asset_longname': asset_longname,
         }
         if "integer overflow" not in status:
-            sql='insert into issuances values(:tx_index, :tx_hash, 0, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status, :asset_longname, :reset)'
-            issuance_parse_cursor.execute(sql, bindings)
+            ledger.insert_record(db, 'issuances', bindings, 'ASSET_ISSUANCE')
         else:
             logger.debug(f"Not storing [issuance] tx [{tx['tx_hash']}]: {status}")
             logger.debug(f"Bindings: {json.dumps(bindings)}")

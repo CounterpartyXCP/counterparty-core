@@ -146,9 +146,7 @@ def parse (db, tx, message):
                 'status': status,
                }
     if "integer overflow" not in status:
-        sql = 'insert into destructions values(:tx_index, :tx_hash, :block_index, :source, :asset, :quantity, :tag, :status)'
-        cursor = db.cursor()
-        cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'destructions', bindings, 'ASSET_DESTRUCTION')
     else:
         logger.debug(f"Not storing [destroy] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")

@@ -384,9 +384,7 @@ def parse (db, tx, message):
                         if ledger.enabled("dispenser_origin_permission_extended"):
                             bindings["origin"] = tx["source"]
 
-                        sql = '''insert into dispensers (tx_index, tx_hash, block_index, source, asset, give_quantity, escrow_quantity, satoshirate, status, give_remaining, oracle_address, origin, last_status_tx_hash)
-                            values(:tx_index, :tx_hash, :block_index, :source, :asset, :give_quantity, :escrow_quantity, :satoshirate, :status, :give_remaining, :oracle_address, :origin, NULL)'''
-                        cursor.execute(sql, bindings)
+                        ledger.insert_record(db, 'dispensers', bindings, 'OPEN_DISPENSER')
                 elif len(existing) == 1 and existing[0]['satoshirate'] == mainchainrate and existing[0]['give_quantity'] == give_quantity:
                     if tx["source"]==action_address or (ledger.enabled("dispenser_origin_permission_extended", tx['block_index']) and tx["source"] == existing[0]["origin"]):
                         if (oracle_address != None) and ledger.enabled('oracle_dispensers', tx['block_index']):
@@ -405,7 +403,7 @@ def parse (db, tx, message):
                                     'give_remaining': existing[0]['give_remaining'] + escrow_quantity,
                                     'dispense_count': 0 # reset the dispense count on refill
                                 }
-                                ledger.update_dispenser(db, existing[0]['rowid'], set_data)
+                                ledger.update_dispenser(db, existing[0]['rowid'], set_data, {'source': tx['source'], 'asset': asset, 'status': STATUS_OPEN})
 
                                 dispenser_tx_hash = ledger.get_dispensers(db, source=action_address, asset=asset, status=STATUS_OPEN)[0]["tx_hash"]
                                 bindings_refill = {
@@ -415,21 +413,10 @@ def parse (db, tx, message):
                                     'source': tx['source'],
                                     'destination': action_address,
                                     'asset': asset,
-                                    'dispenser_quantity': escrow_quantity,
+                                    'dispense_quantity': escrow_quantity,
                                     'dispenser_tx_hash': dispenser_tx_hash
                                 }
-                                sql = '''INSERT INTO dispenser_refills
-                                         VALUES (
-                                            :tx_index,
-                                            :tx_hash,
-                                            :block_index,
-                                            :source,
-                                            :destination,
-                                            :asset,
-                                            :dispenser_quantity,
-                                            :dispenser_tx_hash
-                                         )'''
-                                cursor.execute(sql, bindings_refill)
+                                ledger.insert_record(db, 'dispenser_refills', bindings_refill, 'REFILL_DISPENSER')
                             except (ledger.DebitError):
                                 status = 'insufficient funds'
                     else:
@@ -465,7 +452,7 @@ def parse (db, tx, message):
                             'status': STATUS_CLOSING,
                             'last_status_tx_hash': tx['tx_hash']
                         }
-                    ledger.update_dispenser(db, existing[0]['rowid'], set_data)
+                    ledger.update_dispenser(db, existing[0]['rowid'], set_data, {'source': tx['source'], 'asset': asset})
                 else:
                     status = 'dispenser inexistent'
             else:
@@ -576,7 +563,7 @@ def dispense(db, tx):
                     'status': dispenser['status'],
                     'dispense_count': dispenser['dispense_count'] + 1
                 }
-                ledger.update_dispenser(db, dispenser['rowid'], set_data)
+                ledger.update_dispenser(db, dispenser['rowid'], set_data, {'source': dispenser['source'], 'asset': dispenser['asset']})
 
                 bindings = {
                     'tx_index': next_out['tx_index'],
@@ -589,9 +576,7 @@ def dispense(db, tx):
                     'dispense_quantity': actually_given,
                     'dispenser_tx_hash': dispenser['tx_hash']
                 }
-                sql = 'INSERT INTO dispenses(tx_index, dispense_index, tx_hash, block_index, source, destination, asset, dispense_quantity, dispenser_tx_hash) \
-                        VALUES(:tx_index, :dispense_index, :tx_hash, :block_index, :source, :destination, :asset, :dispense_quantity, :dispenser_tx_hash);'
-                cursor.execute(sql, bindings)
+                ledger.insert_record(db, 'dispenses', bindings, 'DISPENSE')
                 dispense_index += 1
 
     cursor.close()
@@ -611,4 +596,4 @@ def close_pending(db, block_index):
                 'give_remaining': 0,
                 'status': STATUS_CLOSED,
             }
-            ledger.update_dispenser(db, dispenser['rowid'], set_data) # use tx_index=0 for block actions
+            ledger.update_dispenser(db, dispenser['rowid'], set_data, {'source': dispenser['source'], 'asset': dispenser['asset']}) # use tx_index=0 for block actions

@@ -22,6 +22,7 @@ APP_NAME = 'counterparty-server'
 CONFIG_ARGS = [
     [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'default': False, 'help': 'sets log level to DEBUG'}],
     [('--quiet',), {'dest': 'quiet', 'action': 'store_true', 'default': False, 'help': 'sets log level to ERROR'}],
+    [('--mainnet',), {'action': 'store_true', 'default': True, 'help': f'use {config.BTC_NAME} mainet addresses and block numbers'}],
     [('--testnet',), {'action': 'store_true', 'default': False, 'help': f'use {config.BTC_NAME} testnet addresses and block numbers'}],
     [('--testcoin',), {'action': 'store_true', 'default': False, 'help': f'use the test {config.XCP_NAME} network on every blockchain'}],
     [('--regtest',), {'action': 'store_true', 'default': False, 'help': f'use {config.BTC_NAME} regtest addresses and block numbers'}],
@@ -55,6 +56,7 @@ CONFIG_ARGS = [
     [('--log-file',), {'nargs': '?', 'const': None, 'default': False, 'help': 'log to the specified file'}],
     [('--api-log-file',), {'nargs': '?', 'const': None, 'default': False, 'help': 'log API requests to the specified file'}],
     [('--no-log-files',), {'action': 'store_true', 'default': False, 'help': 'Don\'t write log files'}],
+    [('--json-log',), {'action': 'store_true', 'default': False, 'help': 'Log events in JSON format'}],
 
     [('--utxo-locks-max-addresses',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES, 'help': 'max number of addresses for which to track UTXO locks'}],
     [('--utxo-locks-max-age',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_AGE, 'help': 'how long to keep a lock on a UTXO being tracked'}],
@@ -103,7 +105,7 @@ def main():
         util_windows.fix_win32_unicode()
 
     # Post installation tasks
-    server_configfile = generate_config_files()
+    server_configfile, _ = generate_config_files()
 
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(
@@ -189,6 +191,7 @@ def main():
         verbose=args.verbose, quiet=args.quiet,
         log_file=args.log_file, api_log_file=args.api_log_file, no_log_files=args.no_log_files,
         testnet=args.testnet, testcoin=args.testcoin, regtest=args.regtest,
+        json_log=args.json_log
     )
 
     # set up logging

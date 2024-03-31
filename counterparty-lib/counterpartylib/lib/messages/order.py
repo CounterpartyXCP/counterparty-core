@@ -189,8 +189,6 @@ def cancel_order (db, order, status, block_index, tx_index):
     }
     ledger.update_order(db, order['tx_hash'], set_data)
 
-    log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': order['tx_hash']})
-
     if order['give_asset'] != config.BTC:    # Can’t credit BTC.
         ledger.credit(db, order['source'], order['give_asset'], order['give_remaining'], tx_index, action='cancel order', event=order['tx_hash'])
 
@@ -201,8 +199,7 @@ def cancel_order (db, order, status, block_index, tx_index):
             'source': order['source'],
             'block_index': block_index
         }
-        sql='insert into order_expirations values(:order_hash, :source, :block_index)'
-        cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'order_expirations', bindings, 'ORDER_EXPIRATION')
 
     cursor.close()
 
@@ -217,11 +214,6 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
 
     # Update status of order match.
     ledger.update_order_match_status(db, order_match['id'], status)
-
-    log.message(db, block_index, 'update', 'order_matches', {
-        'status': status,
-        'order_match_id': order_match['id']
-    })
 
     # If tx0 is dead, credit address directly; if not, replenish give remaining, get remaining, and fee required remaining.
     orders = ledger.get_order(db, tx_hash=order_match['tx0_hash'])
@@ -253,8 +245,6 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
         }
         ledger.update_order(db, order_match['tx0_hash'], set_data)
 
-        log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': order_match['tx0_hash']})
-
     # If tx1 is dead, credit address directly; if not, replenish give remaining, get remaining, and fee required remaining.
     orders = ledger.get_order(db, tx_hash=order_match['tx1_hash'])
     assert len(orders) == 1
@@ -284,8 +274,6 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
         }
         ledger.update_order(db, order_match['tx1_hash'], set_data)
 
-        log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': order_match['tx1_hash']})
-
     if block_index < 286500:    # Protocol change.
         # Sanity check: one of the two must have expired.
         tx0_order_time_left = tx0_order['expire_index'] - block_index
@@ -314,9 +302,7 @@ def cancel_order_match (db, order_match, status, block_index, tx_index):
             'tx1_address': order_match['tx1_address'],
             'block_index': block_index
         }
-        sql='insert into order_match_expirations values(:order_match_id, :tx0_address, :tx1_address, :block_index)'
-        cursor.execute(sql, bindings)
-        cursor.close()
+        ledger.insert_record(db, 'order_match_expirations', bindings, 'ORDER_MATCH_EXPIRATION')
 
 
 def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, block_index):
@@ -458,8 +444,7 @@ def parse (db, tx, message):
         'status': status,
     }
     if "integer overflow" not in status:
-        sql = 'insert into orders values(:tx_index, :tx_hash, :block_index, :source, :give_asset, :give_quantity, :give_remaining, :get_asset, :get_quantity, :get_remaining, :expiration, :expire_index, :fee_required, :fee_required_remaining, :fee_provided, :fee_provided_remaining, :status)'
-        order_parse_cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'orders', bindings, 'OPEN_ORDER')
     else:
         logger.debug(f"Not storing [order] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")
@@ -664,7 +649,6 @@ def match (db, tx, block_index = None):
             }
             ledger.update_order(db, tx0['tx_hash'], set_data)
 
-            log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': tx0['tx_hash']})
             # tx1
             if tx1_give_remaining <= 0 or (tx1_get_remaining <= 0 and (block_index >= 292000 or config.TESTNET or config.REGTEST)):    # Protocol change
                 if tx1['give_asset'] != config.BTC and tx1['get_asset'] != config.BTC:
@@ -679,8 +663,6 @@ def match (db, tx, block_index = None):
                 'status': tx1_status,
             }
             ledger.update_order(db, tx1['tx_hash'], set_data)
-
-            log.message(db, block_index, 'update', 'orders', set_data | {'tx_hash': tx1['tx_hash']})
 
             # Calculate when the match will expire.
             if block_index >= 308000 or config.TESTNET or config.REGTEST:      # Protocol change.
@@ -712,8 +694,7 @@ def match (db, tx, block_index = None):
                 'fee_paid': fee,
                 'status': status,
             }
-            sql='insert into order_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :forward_asset, :forward_quantity, :backward_asset, :backward_quantity, :tx0_block_index, :tx1_block_index, :block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_paid, :status)'
-            cursor.execute(sql, bindings)
+            ledger.insert_record(db, 'order_matches', bindings, 'ORDER_MATCH')
 
             if tx1_status == 'filled':
                 break

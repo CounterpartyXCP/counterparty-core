@@ -208,8 +208,7 @@ def parse (db, tx, message):
         'status': status,
     }
     if "integer overflow" not in status:
-        sql = 'insert into broadcasts values(:tx_index, :tx_hash, :block_index, :source, :timestamp, :value, :fee_fraction_int, :text, :locked, :status)'
-        cursor.execute(sql, bindings)
+        ledger.insert_record(db, 'broadcasts', bindings, 'BROADCAST')
     else:
         logger.debug(f"Not storing [broadcast] tx [{tx['tx_hash']}]: {status}")
         logger.debug(f"Bindings: {json.dumps(bindings)}")
@@ -329,8 +328,7 @@ def parse (db, tx, message):
                     'escrow_less_fee': None,
                     'fee': fee
                 }
-                sql='insert into bet_match_resolutions values(:bet_match_id, :bet_match_type_id, :block_index, :settled, :bull_credit, :bear_credit, :winner, :escrow_less_fee, :fee)'
-                cursor.execute(sql, bindings)
+                ledger.insert_record(db, 'bet_match_resolutions', bindings, 'BET_MATCH_RESOLUTON')
 
             # Settle (if not liquidated).
             elif timestamp >= bet_match['deadline']:
@@ -354,8 +352,7 @@ def parse (db, tx, message):
                     'escrow_less_fee': None,
                     'fee': fee
                 }
-                sql='insert into bet_match_resolutions values(:bet_match_id, :bet_match_type_id, :block_index, :settled, :bull_credit, :bear_credit, :winner, :escrow_less_fee, :fee)'
-                cursor.execute(sql, bindings)
+                ledger.insert_record(db, 'bet_match_resolutions', bindings, 'BET_MATCH_RESOLUTON')
 
         # Equal[/NotEqual] bet.
         elif bet_match_type_id == equal_type_id and timestamp >= bet_match['deadline']:
@@ -393,18 +390,12 @@ def parse (db, tx, message):
                 'escrow_less_fee': escrow_less_fee,
                 'fee': fee
             }
-            sql='insert into bet_match_resolutions values(:bet_match_id, :bet_match_type_id, :block_index, :settled, :bull_credit, :bear_credit, :winner, :escrow_less_fee, :fee)'
-            cursor.execute(sql, bindings)
+            ledger.insert_record(db, 'bet_match_resolutions', bindings, 'BET_MATCH_RESOLUTON')
 
         # Update the bet match’s status.
         if bet_match_status:
             bet_match_id = util.make_id(bet_match['tx0_hash'], bet_match['tx1_hash'])
             ledger.update_bet_match_status(db, bet_match_id, bet_match_status)
-
-            log.message(db, tx['block_index'], 'update', 'bet_matches', {
-                'status': bet_match_status,
-                'bet_match_id': bet_match_id
-            })
 
         broadcast_bet_match_cursor.close()
 
