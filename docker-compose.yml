@@ -76,4 +76,4 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: ${COUNTERPARTY_DOCKER_DATA:-~/counterparty-docker-data}/
+      device: ${COUNTERPARTY_DOCKER_DATA:-${XDG_DATA_HOME:-~/.local/share}}/counterparty-docker-data

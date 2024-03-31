@@ -22,7 +22,8 @@ VERSION=$(cat docker-compose.yml | grep 'image: counterparty/counterparty:' | aw
 docker compose stop
 
 # remove counterparty-core container
-docker rm counterparty-core-counterparty-core-1
+#docker rm counterparty-core-counterparty-core-1
+docker container prune -f
 
 # remove counterparty-core image
 docker rmi counterparty/counterparty:$VERSION || true
@@ -31,7 +32,7 @@ docker rmi counterparty/counterparty:$VERSION || true
 docker build -t counterparty/counterparty:$VERSION .
 
 # remove the counterparty-core data
-sudo rm -rf ~/counterparty-docker-data/counterparty/*
+sudo rm -rf ~/.local/share/counterparty-docker-data/counterparty/*
 
 # re-start containers
 COUNTERPARTY_NETWORK=test docker compose up -d

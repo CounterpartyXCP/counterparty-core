@@ -2,7 +2,8 @@ name: Test Docker Compose
 
 on:
   push:
-    branches: ['develop']
+    #branches: ['develop']
+    branches: ['compose']
 
 jobs:
   build:
