@@ -1,4 +1,4 @@
-name: Build, Install then Test
+name: PyTest
 
 on:
   push:
