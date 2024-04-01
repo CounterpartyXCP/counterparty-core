@@ -87,10 +87,11 @@ def fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner):
         block_parser.close()
         spinner.text = f'Blocks indexed in: {time.time() - start_time_blocks_indexing:.3f}s'
         return block_count
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as e:
         print(colored('Keyboard interrupt. Cleanin up, please wait...', 'yellow'))
         block_parser.close()
         cursor.execute('''DROP TABLE kickstart_blocks''')
+        raise e
 
 
 def clean_kicstart_blocks(db):
@@ -171,7 +172,9 @@ def intialize_kickstart_db(bitcoind_dir, last_known_hash, resuming, new_database
         if not resuming:
             first_block = config.BLOCK_FIRST
             if not new_database:
-                first_block = cursor.execute('SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1').fetchone()['block_index']
+                first_block_info = cursor.execute('SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1').fetchone()
+                if first_block_info is not None:
+                    first_block = first_block_info['block_index']
             fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner)
         else:
             # check if kickstart_blocks is complete
