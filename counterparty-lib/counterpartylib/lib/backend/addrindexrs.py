@@ -279,188 +279,184 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
 
 
 class SocketManager():
-    def __init__(self, host, port, name):
+    def __init__(self, host, port, timeout=SOCKET_TIMEOUT):
         self.host = host
         self.port = port
+        self.timeout = timeout
         self.socket = None
-        self.name = name
-        self.backoff = BACKOFF_START
-        self.max_retries = 10
-
+        self.connected = False
 
     def connect(self):
-        while True:
+        try:
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket.settimeout(self.timeout)
+            self.socket.connect((self.host, self.port))
+            self.connected = True
+            logger.debug(f'`{self.host}:{self.port}` -- connected')
+        except socket.timeout as e:
+            logger.exception(f'`{self.host}:{self.port}` -- socket.connect timeout')
+            raise e
+        except Exception as e:
+            logger.exception(f'`{self.host}:{self.port}` -- unknown exception: {e}')
+            raise e
+
+    def disconnect(self):
+        if self.connected:
             try:
-                logger.debug(f'{self.name} -- Opening socket at `{self.host}:{self.port}`')
-                self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.socket.settimeout(SOCKET_TIMEOUT)
-                self.socket.connect((self.host, self.port))
-                self.backoff = BACKOFF_START
-                break
-            except ConnectionRefusedError as e:
-                logger.debug(f'{self.name} -- Connection refused. Retry in {self.backoff:d}s')
-                time.sleep(self.backoff)
-                self.backoff = min(self.backoff * BACKOFF_FACTOR, BACKOFF_MAX)
+                self.socket.close()
+                self.connected = False
+                logger.debug(f'`{self.host}:{self.port}` -- disconnected')
             except Exception as e:
-                logger.exception(f"{self.name} -- connecting to `{self.host}:{self.port}`: {e}")
-                sys.exit(1)
+                logger.exception(f'`{self.host}:{self.port}` -- unknown exception: {e}')
+                raise  e
 
-    def send(self, msg) -> bool:
-        if not self.socket:
-            logger.debug(f"{self.name} -- `send` called without a socket.")
-            return False
+    def send(self, message):
+        if not self.connected:
+            self.connect()
 
-        for attempt in range(1, self.max_retries + 1):
-            try:
-                logger.debug(f"{self.name} -- send msg: {msg}")
-                self.socket.send(msg)
-                return True
-            except Exception as e:
-                logger.exception(f"{self.name} -- send exception:  {e}")
-                self.recover_connection()
-                if attempt < self.max_retries:
-                    logger.debug(f'{self.name} -- retrying send in {self.backoff * attempt}s')
-                    time.sleep(min(self.backoff * attempt, BACKOFF_MAX))
+        try:
+            self.socket.sendall(message)
+            logger.debug(f'`{self.host}:{self.port}` -- sent message {message}')
+        except socket.timeout as e:
 
-        logger.debug(f"{self.name} -- Failed to send message after {self.max_retries} attempts.")
-        return False
+            logger.exception(f'`{self.host}:{self.port}` -- socket.send timeout')
+            self.connected = False
+            raise e
+        except Exception as e:
+            logger.exception(f'`{self.host}:{self.port}` -- unknown exception: {e}')
+            self.connected = False
+            raise e
 
-
-    def recv(self, buffer_size=READ_BUF_SIZE) -> Optional[Dict]:
-
-        if not self.socket:
-            logger.debug(f"{self.name} -- `rcv` called without a socket.")
-            return
+    def recv(self, buffer_size=READ_BUF_SIZE):
+        if not self.connected:
+            self.connect()
 
         response = b""
         while True:
             try:
-                logger.debug("{self.name} -- waiting for chunk")
                 chunk = self.socket.recv(buffer_size)
                 if not chunk:
-                    raise Exception(f"{self.name} -- Empty response from `{self.name}`")
+                    raise Exception("empty chunk")
                 response += chunk
-                logger.debug(f"{self.name} -- chunk received: {chunk}, response: {response}")
-
+                logger.debug(f"`{self.host}:{self.port}` -- chunk received: {chunk}, response: {response}")
                 try:
                     json_ = json.loads(response.decode('utf-8'))
-                    logger.debug(f"{self.name} -- received message: {json_}")
+                    logger.debug(f"`{self.host}:{self.port}` -- received message: {json_}")
                     return json_
                 except json.JSONDecodeError:
-                    logger.debug(f"{self.name} -- json decode error -- continuing")
+                    logger.debug(f"`{self.host}:{self.port}` -- JSONDecodeError -- continuing")
                     continue
-
+            except socket.timeout as e:
+                logger.exception(f"`{self.host}:{self.port}` -- Timeout receiving message: {e}")
+                self.connected = False
+                raise e
             except Exception as e:
                 logger.exception(f"{self.name} -- Error receiving message: {e}")
-                logger.debug(f"{self.name} -- recovering connection")
-                self.recover_connection()
-                return None
+                self.connected = False
+                raise e
 
-    def close(self):
-
-        if not self.socket:
-            logger.debug(f"{self.name} -- `close` called without a socket.")
-            return
-
-        try:
-            logger.debug(f"{self.name} -- Closing socket")
-            self.socket.close()
-            logger.debug(f"{self.name} -- Close socket success") 
-        except Exception as e: 
-            logger.exception(f"{self.name} -- Close socket failure -- {e}") 
-            
-    def recover_connection(self): 
-        if self.socket: 
-            logger.debug(f"{self.name} -- Recovering connection")
-            self.socket.close()
-            self.connect()
 
 class AddrIndexRsClient():
-    def __init__(self, host, port):
+    def __init__(self, host, port, timeout=SOCKET_TIMEOUT, max_retries=3, backoff_start=BACKOFF_START, backoff_max=BACKOFF_MAX, backoff_factor=BACKOFF_FACTOR):
         self.host = host
         self.port = port
-        self.socket_manager = SocketManager(host, port, "addrindexrs_socket_manager")
-        self.thread = threading.Thread(target=self._start, name="addrindexrs_connect_thread")
+        self.socket_manager = SocketManager(host, port, timeout)
+        self.thread = threading.Thread(target=self._run, name="AddrIndexRsClient")
         self.req_queue = queue.Queue()
         self.res_queue = queue.Queue()
         self.is_running = False
+
+        self.retries = 0
+        self.max_retries = max_retries
+
+        self.backoff = backoff_start
+        self.backoff_max = backoff_max
+        self.backoff_factor = backoff_factor
+
         self.msg_id = 0
 
     def start(self):
+        if self.is_running:
+            return
+
         logger.debug("AddrIndexRsClient -- starting...")
-        self.is_running = True
-        self.socket_manager.connect()
-        self.thread.start()
+        while True:
+            try :
+                self.socket_manager.connect()
+                self.is_running = True
+                self.thread.start()
+                break;
+            except Exception as e:
+                self.is_running = False
+                if self.retries < self.max_retries:
+                    time.sleep(self.backoff)
+                    self.backoiff = min(self.backoff * self.backoff_factor, self.backoff_max)
+                else:
+                    logger.exception(f"AddrIndexRsClient -- failed to start: {e}")
+                    raise e
+
 
     def stop(self):
-        logger.debug("AddrIndexRsClient -- stopping...")
+        if not self.is_running:
+            return
+
         self.is_running = False
-        self.socket_manager.close()
-        self.req_queue.join()
-        self.res_queue.join()
-        if self.is_running:
+        try:
+            self.socket_manager.disconnect()
+            self.req_queue.join()
+            self.res_queue.join()
             self.thread.join()
-        self.is_running = False
+        except Exception as e:
+            logger.exception(f"AddrIndexRsClient -- error while stopping: {e}")
+
 
     def send(self, msg):
+        msg["id"] = self.msg_id = self.msg_id + 1
+        serialized_msg = (json.dumps(msg) + "\n").encode('utf8')
 
-        msg_id = self.msg_id
-        logger.debug(f"AddrIndexRsClient -- sending message: {msg}")
-        serialized_msg = self._serialize_msg(msg, msg_id )
-        self.msg_id += 1
         self.req_queue.put(serialized_msg)
-        logger.debug("AddrIndexRsClient -- waiting for response")
+
         res = self.res_queue.get()
+
         self.res_queue.task_done()
-        logger.debug(f"AddrIndexRsClient -- received response: {res}")
 
-        logger.info(f"AddrIndexRsClient -- received response for {msg_id}: {res['id']}")
-
-        if res is None:
-            raise AddrIndexRsClientError("AddrIndexRsClient -- Empty reply from socket")
-        if "id" not in res:
-            raise AddrIndexRsClientError("AddrIndexRsClient -- Invalid response id.")
-        if res["id"] != msg_id:
-            raise AddrIndexRsClientError("AddrIndexRsClient -- Invalid response id.")
         if "error" in res:
             if res["error"] == "no txs for address":
-                res = {}
+                return {}
+            else:
+                raise AddrIndexRsClientError(f"AddrIndexRsClient -- Error in response: {res['error']}")
+
+        if "id" not in res:
+            raise AddrIndexRsClientError("AddrIndexRsClient -- No response id.")
+
+        if res["id"] != msg["id"]:
+            raise AddrIndexRsClientError("AddrIndexRsClient -- Invalid response id. Expected: {msg['id']}, received: {res['id']}")
+
         if "result" not in res:
-            raise AddrIndexRsClientError("AddrIndexRsClient -- No error and no result in response.")
-
-
-
+            raise AddrIndexRsClientError("AddrIndexRsClient -- No error and no result in responses.")
 
         return res
 
-    def _start(self):
+    def _run(self):
         while self.is_running:
             try:
-
                 logger.debug("AddrIndexRsClient.thread -- waiting for message")
                 # if there is no messager after 1 sec, it will raise queue.Empty
                 msg = self.req_queue.get(timeout=1)
-                if not self.socket_manager.send(msg):
-                    logger.debug("AddrIndexRsClient.thread -- send failed")
-                    self.res_queue.put(None)
-                    continue
+                self.socket_manager.send(msg)
                 self.req_queue.task_done()
 
+                # wait for response
                 res = self.socket_manager.recv()
-                if res:
-                    logger.debug(f"AddrIndexRsClient.thread -- received response: {res}")
-                    self.res_queue.put(res)
-                else:
-                    logger.debug("AddrIndexRsClient.thread -- received empty response")
-                    self.res_queue.put(None)
+                logger.debug(f"AddrIndexRsClient.thread -- received response: {res}")
+                self.res_queue.put(res)
+
             except queue.Empty:
                 continue
             except Exception as e:
                 logger.exception(f"AddrIndexRsClient.thread -- exception {e}")
+                self.res_queue.put({ "error": str(e) })
 
-    def _serialize_msg(self, msg, id_):
-        msg["id"] = id_
-        return (json.dumps(msg) + "\n").encode('utf8')
 
 
 def indexer_check_version():
@@ -651,6 +647,8 @@ def get_oldest_tx(address, block_index=None):
             "params": [_address_to_hash(address), current_block_index]
         })
 
-    return result["result"]
+    logger.debug(f'get_oldest_tx: {address} -> {result}')
+
+    return result
 
 
