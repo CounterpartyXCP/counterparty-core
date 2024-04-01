@@ -9,7 +9,7 @@ def get_view(view_name, args):
     elif view_name == 'asset':
         return wallet.asset(args.asset)
     elif view_name == 'wallet':
-        return wallet.wallet()
+        return wallet.get_wallet()
     elif view_name == 'pending':
         return wallet.pending()
     elif view_name == 'getinfo':
