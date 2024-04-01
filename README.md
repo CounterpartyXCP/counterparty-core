@@ -7,7 +7,6 @@
 ![Docker Compose](https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/test_compose.yml/badge.svg)
 
 
-
 Counterparty Core is the reference implementation of the [Counterparty Protocol](https://counterparty.io).
 
 
