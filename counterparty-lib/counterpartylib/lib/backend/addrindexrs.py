@@ -296,6 +296,9 @@ class SocketManager():
         except socket.timeout as e:
             logger.exception(f'`{self.host}:{self.port}` -- socket.connect timeout')
             raise e
+        except ConnectionRefusedError as e:
+            logger.exception(f'`{self.host}:{self.port}` -- connection refused')
+            raise e
         except Exception as e:
             logger.exception(f'`{self.host}:{self.port}` -- unknown exception: {e}')
             raise e
@@ -318,7 +321,6 @@ class SocketManager():
             self.socket.sendall(message)
             logger.debug(f'`{self.host}:{self.port}` -- sent message {message}')
         except socket.timeout as e:
-
             logger.exception(f'`{self.host}:{self.port}` -- socket.send timeout')
             self.connected = False
             raise e
@@ -327,7 +329,7 @@ class SocketManager():
             self.connected = False
             raise e
 
-    def recv(self, buffer_size=READ_BUF_SIZE):
+    def recv(self, parse=lambda a: json.loads(a.decode('utf8')),  buffer_size=READ_BUF_SIZE):
         if not self.connected:
             self.connect()
 
@@ -336,13 +338,14 @@ class SocketManager():
             try:
                 chunk = self.socket.recv(buffer_size)
                 if not chunk:
-                    raise Exception("empty chunk")
+                    raise Exception("Socket disconnected")
                 response += chunk
                 logger.debug(f"`{self.host}:{self.port}` -- chunk received: {chunk}, response: {response}")
                 try:
                     json_ = json.loads(response.decode('utf-8'))
-                    logger.debug(f"`{self.host}:{self.port}` -- received message: {json_}")
-                    return json_
+                    res = parse(response)
+                    logger.debug(f"`{self.host}:{self.port}` -- received message: { res}")
+                    return res
                 except json.JSONDecodeError:
                     logger.debug(f"`{self.host}:{self.port}` -- JSONDecodeError -- continuing")
                     continue
@@ -351,13 +354,13 @@ class SocketManager():
                 self.connected = False
                 raise e
             except Exception as e:
-                logger.exception(f"{self.name} -- Error receiving message: {e}")
+                logger.exception(f"`{self.host}:{self.port}`  -- Error receiving message: {e}")
                 self.connected = False
                 raise e
 
 
 class AddrIndexRsClient():
-    def __init__(self, host, port, timeout=SOCKET_TIMEOUT, max_retries=3, backoff_start=BACKOFF_START, backoff_max=BACKOFF_MAX, backoff_factor=BACKOFF_FACTOR):
+    def __init__(self, host, port, timeout=SOCKET_TIMEOUT, max_retries=10, backoff_start=BACKOFF_START, backoff_max=BACKOFF_MAX, backoff_factor=BACKOFF_FACTOR):
         self.host = host
         self.port = port
         self.socket_manager = SocketManager(host, port, timeout)
@@ -389,8 +392,10 @@ class AddrIndexRsClient():
             except Exception as e:
                 self.is_running = False
                 if self.retries < self.max_retries:
+                    self.retries += 1
+                    logger.info(f"AddrIndexRsClient -- failed to start: {e}, retrying in {self.backoff} seconds. Retries: {self.retries}/{self.max_retries}")
                     time.sleep(self.backoff)
-                    self.backoiff = min(self.backoff * self.backoff_factor, self.backoff_max)
+                    self.backoff = min(self.backoff * self.backoff_factor, self.backoff_max)
                 else:
                     logger.exception(f"AddrIndexRsClient -- failed to start: {e}")
                     raise e
@@ -456,6 +461,8 @@ class AddrIndexRsClient():
             except Exception as e:
                 logger.exception(f"AddrIndexRsClient.thread -- exception {e}")
                 self.res_queue.put({ "error": str(e) })
+
+
 
 
 
@@ -630,11 +637,87 @@ def stop():
     if 'INDEXER_THREAD' in globals():
         INDEXER_THREAD.stop()
 
+# Basic class to communicate with addrindexrs.
+# No locking thread.
+# Assume only one instance of this class is used at a time and not concurrently.
+# This class does not handle most of the errors, it's up to the caller to do so.
+# This class assumes responses are always not longer than READ_BUF_SIZE (65536 bytes).
+# This class assumes responses are always valid JSON.
+
+
+ADDRINDEXRS_CLIENT_TIMEOUT = 20.0
+
+class AddrindexrsSocketError(Exception):
+    pass
+
+class AddrindexrsSocket:
+
+    def __init__(self):
+        self.next_message_id = 0
+        self.connect()
+
+    def connect(self):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.settimeout(ADDRINDEXRS_CLIENT_TIMEOUT)
+        self.sock.connect((config.INDEXD_CONNECT, config.INDEXD_PORT))
+
+    def _send(self, query, timeout=ADDRINDEXRS_CLIENT_TIMEOUT):
+        query["id"] = self.next_message_id
+
+        message = (json.dumps(query) + "\n").encode('utf8')
+
+        self.sock.send(message)
+
+        self.next_message_id += 1
+
+        start_time = time.time()
+        while True:
+            try:
+                data = self.sock.recv(READ_BUF_SIZE)
+            except (TimeoutError, ConnectionResetError) as e:
+                raise AddrindexrsSocketError("Timeout or connection reset. Please retry.") from e
+            if data:
+                response = json.loads(data.decode('utf-8')) # assume valid JSON
+                if "id" not in response:
+                    raise AddrindexrsSocketError("No ID in response")
+                if response["id"] != query["id"]:
+                    raise AddrindexrsSocketError("ID mismatch in response")
+                if "error" in response:
+                    if response["error"] == 'no txs for address':
+                        return {}
+                    raise AddrindexrsSocketError(response["error"])
+                if "result" not in response:
+                    raise AddrindexrsSocketError("No error and no result in response")
+                return response["result"]
+
+            duration = time.time() - start_time
+            if duration > timeout:
+                raise AddrindexrsSocketError("Timeout. Please retry.")
+
+    def send(self, query, timeout=ADDRINDEXRS_CLIENT_TIMEOUT, retry=0):
+        try:
+            return self._send(query, timeout=timeout)
+        except BrokenPipeError:
+            if retry > 3:
+                raise Exception("Too many retries, please check addrindexrs")
+            self.sock.close()
+            self.connect()
+            return self.send(query, timeout=timeout, retry=retry + 1)
+
+    def get_oldest_tx(self, address, timeout=ADDRINDEXRS_CLIENT_TIMEOUT, block_index=None):
+        hsh = _address_to_hash(address)
+        query = {
+            "method": "blockchain.scripthash.get_oldest_tx",
+            "params": [hsh, block_index or ledger.CURRENT_BLOCK_INDEX]
+        }
+        return self.send(query, timeout=timeout)
+
 # We hardcoded certain addresses to reproduce an `addrindexrs` bug.
 # In comments the real result that `addrindexrs` should have returned.
 GET_OLDEST_TX_HARDCODED = {
     "825096-bc1q66u8n4q0ld3furqugr0xzakpedrc00wv8fagmf": {} # {'block_index': 820886, 'tx_hash': 'e5d130a583983e5d9a9a9175703300f7597eadb6b54fe775055110907b4079ed'}
 }
+ADDRINDEXRS_CLIENT = None
 
 def get_oldest_tx(address, block_index=None):
     current_block_index = block_index or ledger.CURRENT_BLOCK_INDEX
@@ -642,13 +725,10 @@ def get_oldest_tx(address, block_index=None):
     if hardcoded_key in GET_OLDEST_TX_HARDCODED:
         result = GET_OLDEST_TX_HARDCODED[hardcoded_key]
     else:
-        result = INDEXER_THREAD.send({
-            "method": "blockchain.scripthash.get_oldest_tx",
-            "params": [_address_to_hash(address), current_block_index]
-        })
+        global ADDRINDEXRS_CLIENT
+        if ADDRINDEXRS_CLIENT is None:
+            ADDRINDEXRS_CLIENT = AddrindexrsSocket()
+        result = ADDRINDEXRS_CLIENT.get_oldest_tx(address, block_index=current_block_index)
 
-    logger.debug(f'get_oldest_tx: {address} -> {result}')
 
     return result
-
-
