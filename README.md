@@ -217,6 +217,11 @@ Counterparty database files are by default named `counterparty.[testnet.]db` and
 
 All configurable parameters in the configuration file can also be passed as arguments to the `counterpart-server` command. Use `counterparty-server --help` to see the list of these options.
 
+## Counterparty CLI
+
+* NOTE: The `counterparty-client` CLI is currently non-functional and unsupported.
+
+
 ## Quickly Catch Up with the Network
 
 You will not be able to run `counterparty-server` until `addrindexrs` has caught up (and its RPC server is running), which in turn requires `bitcoind` have caught up as well. The command to start the Counterparty server process is simply `counterparty-server start`. However, simply running this command requires a long time to catch up with the network, and Counterparty must have parsed all published blocks before being operational.
