@@ -90,7 +90,7 @@ def unlock(passphrase):
 def wallet_last_block():
     return wallet().wallet_last_block()
 
-def wallet():
+def get_wallet():
     wallet = {
         'addresses': {},
         'assets': {}
