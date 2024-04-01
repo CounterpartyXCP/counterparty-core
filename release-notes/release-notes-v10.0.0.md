@@ -56,7 +56,7 @@ Because this release includes numerous changes to the database schema, a full da
 ## Command-Line Interface
 * Disable console logs except for with `counterparty-server start`
 * Show fancy spinners for all discrete operations
-* Rename `checkdb` command to `check-db` and refactor it (now runs inregrity check only once, foreign keys check and asset conservation check)
+* Rename `checkdb` command to `check-db` and refactor
 * Rename `debugconfig` to `show-config`; clean up output
 * Don't log values for transactions except with `--verbose` (for performance)
 * Move noisy log messages to `DEBUG`
