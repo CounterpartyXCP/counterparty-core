@@ -36,10 +36,10 @@ docker-compose logs --tail=10 -f addrindexrs
 docker-compose logs --tail=10 -f counterparty-core
 ```
 
-You can use the environment variable `COUNTERPARTY_NETWORK` to run a `testnet` node:
+You can use the environment variable `BITCOIN_CHAIN` to run a `testnet` node:
 
 ```
-COUNTERPARTY_NETWORK=test docker-compose up -d
+BITCOIN_CHAIN=test docker-compose up -d
 ```
 
 NOTES:
