@@ -55,11 +55,13 @@ def check_foreign_keys(db):
 
     logger.info('Checking database foreign keys...')
 
-    rows = list(cursor.execute('''PRAGMA foreign_key_check'''))
+    cursor.execute('PRAGMA foreign_key_check')
+    rows = cursor.fetchall()
     if rows:
         for row in rows:
             logger.debug(f'Foreign Key Error: {row}')
         raise exceptions.DatabaseError('Foreign key check failed.')
+
     logger.info('Foreign key check completed.')
 
 
@@ -67,22 +69,14 @@ def intergrity_check(db):
     cursor = db.cursor()
 
     logger.info('Checking database integrity...')
-    integral = False
 
-    # Try up to 10 times.
-    for i in range(10): # DUPE
-        try:
-            cursor.execute('''PRAGMA integrity_check''')
-            rows = cursor.fetchall()
-            if not (len(rows) == 1 and rows[0]['integrity_check'] == 'ok'):
-                raise exceptions.DatabaseError('Integrity check failed.')
-            integral = True
-            break
-        except DatabaseIntegrityError:
-            time.sleep(1)
-            continue
-    if not integral:
-        raise exceptions.DatabaseError('Could not perform integrity check.')
+    cursor.execute('PRAGMA integrity_check')
+    rows = cursor.fetchall()
+    if not (len(rows) == 1 and rows[0]['integrity_check'] == 'ok'):
+        for row in rows:
+            logger.debug(f'Integrity Error: {row}')
+        raise exceptions.DatabaseError('Integrity check failed.')
+
     logger.info('Integrity check completed.')
 
 
