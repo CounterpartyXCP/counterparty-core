@@ -105,6 +105,7 @@ Because this release includes numerous changes to the database schema, a full da
     * `GET /assets/<asset>/orders`
     * `GET /orders/<tx_hash>`
     * `GET /orders/<tx_hash>/matches`
+* Adjust the error message for when a user has an insufficient BTC balance but the `unconfirmed` flag has already been passed
 
 # Credits
 * Ouziel Slama
