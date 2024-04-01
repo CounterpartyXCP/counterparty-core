@@ -573,22 +573,27 @@ def vacuum():
 def check_database():
     db = initialise_db()
 
+    start_all_time = time.time()
+
+    start_time = time.time()
     step = 'Checking asset conservation...'
     with Halo(text=step, spinner=SPINNER_STYLE):
         check.asset_conservation(db)
-    print(f'{OK_GREEN} {step}')
+    print(f'{OK_GREEN} {step} (in {time.time() - start_time:.2f}s)')
 
+    start_time = time.time()
     step = 'Checking database foreign keys....'
     with Halo(text=step, spinner=SPINNER_STYLE):
-        check.asset_conservation(db)
-    print(f'{OK_GREEN} {step}')
+        database.check_foreign_keys(db)
+    print(f'{OK_GREEN} {step} (in {time.time() - start_time:.2f}s)')
 
+    start_time = time.time()
     step = 'Checking database integrity...'
     with Halo(text=step, spinner=SPINNER_STYLE):
         database.intergrity_check(db)
-    print(f'{OK_GREEN} {step}')
+    print(f'{OK_GREEN} {step} (in {time.time() - start_time:.2f}s)')
 
-    cprint('Database checks complete.', 'green')
+    cprint(f'Database checks complete in {time.time() - start_all_time:.2f}s.', 'green')
 
 
 def show_params():
