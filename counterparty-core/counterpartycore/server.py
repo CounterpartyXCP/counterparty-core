@@ -12,7 +12,7 @@ from counterpartylib.lib import log, config, setup
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-APP_NAME = 'counterparty-core'
+APP_NAME = 'counterparty-server'
 APP_VERSION = config.VERSION_STRING
 
 CONFIG_ARGS = [

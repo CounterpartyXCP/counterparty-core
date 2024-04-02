@@ -32,5 +32,5 @@ RUN pip3 install .
 WORKDIR /counterparty-core
 RUN pip3 install .
 
-ENTRYPOINT [ "counterparty-core"]
+ENTRYPOINT [ "counterparty-server"]
 CMD [ "start" ]

@@ -55,7 +55,6 @@ Because this release includes numerous changes to the database schema, a full da
 
 
 ## Command-Line Interface
-* Rename `counterpary-server` to `counterparty-core`
 * Rename `counterpary-client` to `counterparty-wallet`
 * Disable console logs except for with `counterparty-core start`
 * Show fancy spinners for all discrete operations
