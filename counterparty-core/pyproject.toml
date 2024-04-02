@@ -3,10 +3,10 @@ requires = ["hatchling==1.14.0", "hatch-requirements-txt==0.4.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "counterparty-lib"
+name = "counterparty-core"
 requires-python = ">= 3.10"
 dynamic = ["version", "dependencies"]
-description = "Counterparty Protocol Reference Implementation"
+description = "Counterparty Protocol Command-Line Interface"
 readme = "../README.md"
 license = "MIT"
 authors = [
@@ -27,11 +27,17 @@ classifiers = [
     "Topic :: System :: Distributed Computing"
 ]
 
-[tool.hatch.metadata]
-allow-direct-references = true
-
 [tool.hatch.metadata.hooks.requirements_txt]
 files = ["requirements.txt"]
+
+[tool.hatch.envs.default]
+pre-install-commands = [
+  "pip install -e ../counterparty-rs",
+  "pip install -e ../counterparty-lib",
+]
+
+[project.scripts]
+counterparty-core = "counterpartycore:server.main"
 
 [project.urls]
 "Latest release" = "https://github.com/CounterpartyXCP/counterparty-core/releases/latest"
@@ -40,35 +46,4 @@ files = ["requirements.txt"]
 "Home Page" = "https://counterparty.io/"
 
 [tool.hatch.version]
-path = "counterpartylib/lib/config.py"
-
-[tool.hatch.build.targets.wheel]
-include = ["counterpartylib"]
-
-[tool.hatch.envs.default]
-pre-install-commands = [
-  "pip install -e ../counterparty-rs",
-]
-
-[tool.license_scanner]
-allowed-licences = [
-    'Apache license',
-    'Apache license 2.0',
-    'BSD 2-clause license',
-    'BSD 3-clause license',
-    'BSD license',
-    'GNU general public license v2 (gplv2)',
-    'GNU lesser general public license',
-    'GNU lesser general public license v2 (lgplv2)',
-    'GNU lesser general public license v3 (lgplv3)',
-    'ISC license (iscl)', 'MIT license',
-    'Mozilla public license 2.0 (mpl 2.0)',
-    'Python software foundation license',
-    'The Unlicense (Unlicense)',
-    'Public domain',
-    'Creative Commons Zero, CC-0',
-]
-allowed-packages = [
-    'counterparty-core', 'counterparty-lib', 'counterparty-rs',
-    'maturin', 'apsw', 
-]
+path = "../counterparty-lib/counterpartylib/lib/config.py"

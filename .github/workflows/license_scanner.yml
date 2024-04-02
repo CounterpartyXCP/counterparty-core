@@ -30,7 +30,7 @@ jobs:
         pip install license_scanner maturin sh
         cd counterparty-rs && pip install -e . && cd ..
         cd counterparty-lib && pip install -e . && cd ..
-        cd counterparty-cli && pip install -e . && cd ..
+        cd counterparty-core && pip install -e . && cd ..
         pip install evdev
     - name: Analysing dependencies with licence_scanner
       run: |
