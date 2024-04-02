@@ -5,7 +5,7 @@ Counterparty Core v10.0.0 is a very large release comprising many improvements a
 # Upgrade Procedure
 This release does not include any protocol changes, so there is no deadline for upgrading. However it is **strongly recommended** that all users upgrade as soon as possible, in particular to avoid consensus problems due to non-determinism in previous versions. The Counterparty Core API is also unchanged for this release.
 
-Because this release includes numerous changes to the database schema, a full database rebuild is required and the major version number has been bumped from 9 to 10. Follow the updated installation instructions in the [README](/README.md) to download and install the latest version of Counterparty Core, run `counterparty-server kickstart` (while `bitcoind` is not running), then start the server with `counterparty-server start`. The rebuild should happen automatically, and it should take between 8 and 24 hours hours to complete.
+Because this release includes numerous changes to the database schema, a full database rebuild is required and the major version number has been bumped from 9 to 10. Follow the updated installation instructions in the [README](/README.md) to download and install the latest version of Counterparty Core, run `counterparty-core kickstart` (while `bitcoind` is not running), then start the server with `counterparty-core start`. The rebuild should happen automatically, and it should take between 8 and 24 hours hours to complete.
 
 **IMPORTANT** Be certain that you are running the latest version of AddrIndexRs (v0.4.6).
 
@@ -19,8 +19,9 @@ Because this release includes numerous changes to the database schema, a full da
 * Upgrade all pip dependencies to the latest available version
 * Rename `counterparty-lib` repository to `counterparty-core`. **NOTE:** The normal redirect for GitHub URLs cannot be implemented.
 * Merge the `counterparty-cli` repository into the `counterparty-core` repository
+* Split out `counterparty-cli` package into `counterparty-core` and `counterparty-wallet` packages
 * Add Rust library, `counterparty-rs`, for performance-critical code
-* Synchronize versions of `counterparty-rs`, `counterparty-lib` and `counterparty-cli`
+* Synchronize versions of `counterparty-rs`, `counterparty-lib`, `counterparty-core` and `counterparty-wallet`
 * Update URL for hosting bootstrap files to <https://bootstrap.counterparty.io/counterparty-*>
 * Update URL for hosting notifications for protocol changes to <https://counterparty.io/protocol_changes.json>
 
@@ -54,7 +55,9 @@ Because this release includes numerous changes to the database schema, a full da
 
 
 ## Command-Line Interface
-* Disable console logs except for with `counterparty-server start`
+* Rename `counterpary-server` to `counterparty-core`
+* Rename `counterpary-client` to `counterparty-wallet`
+* Disable console logs except for with `counterparty-core start`
 * Show fancy spinners for all discrete operations
 * Rename `checkdb` command to `check-db` and refactor
 * Rename `debugconfig` to `show-config`; clean up output
