@@ -152,6 +152,5 @@ PROTOCOL_CHANGES_URL = "https://counterparty.io/protocol_changes.json"
 BOOTSTRAP_URL_MAINNET = "https://bootstrap.counterparty.io/counterparty.latest.tar.gz"
 BOOTSTRAP_URL_TESTNET = "https://bootstrap.counterparty.io/counterparty-testnet.latest.tar.gz"
 
-HEALTHZ_TIMEOUT = 20
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
