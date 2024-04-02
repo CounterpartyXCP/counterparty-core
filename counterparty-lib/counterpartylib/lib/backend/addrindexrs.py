@@ -377,6 +377,8 @@ class AddrIndexRsClient():
         self.backoff_factor = backoff_factor
 
         self.msg_id = 0
+        self.msg_id_lock = threading.Lock()
+        
 
     def start(self):
         if self.is_running:
@@ -416,7 +418,11 @@ class AddrIndexRsClient():
 
 
     def send(self, msg):
-        msg["id"] = self.msg_id = self.msg_id + 1
+         
+        with self.msg_id_lock:
+            msg['id'] = self.msg_id
+            self.msg_id += 1
+
         serialized_msg = (json.dumps(msg) + "\n").encode('utf8')
 
         self.req_queue.put(serialized_msg)
