@@ -342,7 +342,6 @@ class SocketManager():
                 response += chunk
                 logger.debug(f"`{self.host}:{self.port}` -- chunk received: {chunk}, response: {response}")
                 try:
-                    json_ = json.loads(response.decode('utf-8'))
                     res = parse(response)
                     logger.debug(f"`{self.host}:{self.port}` -- received message: { res}")
                     return res
