@@ -6,6 +6,7 @@ import appdirs
 import codecs
 import configparser, platform
 import logging
+from decimal import Decimal as D
 
 from counterpartylib.lib import config
 
