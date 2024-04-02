@@ -1,4 +1,3 @@
-from typing import Dict, Optional
 import logging
 import sys
 import json
@@ -377,7 +376,6 @@ class AddrIndexRsClient():
 
         self.msg_id = 0
         self.msg_id_lock = threading.Lock()
-        
 
     def start(self):
         if self.is_running:
@@ -385,11 +383,11 @@ class AddrIndexRsClient():
 
         logger.debug("AddrIndexRsClient -- starting...")
         while True:
-            try :
+            try:
                 self.socket_manager.connect()
                 self.is_running = True
                 self.thread.start()
-                break;
+                break
             except Exception as e:
                 self.is_running = False
                 if self.retries < self.max_retries:
@@ -417,7 +415,6 @@ class AddrIndexRsClient():
 
 
     def send(self, msg):
-         
         with self.msg_id_lock:
             msg['id'] = self.msg_id
             self.msg_id += 1
@@ -433,8 +430,7 @@ class AddrIndexRsClient():
         if "error" in res:
             if res["error"] == "no txs for address":
                 return {}
-            else:
-                raise AddrIndexRsClientError(f"AddrIndexRsClient -- Error in response: {res['error']}")
+            raise AddrIndexRsClientError(f"AddrIndexRsClient -- Error in response: {res['error']}")
 
         if "id" not in res:
             raise AddrIndexRsClientError("AddrIndexRsClient -- No response id.")

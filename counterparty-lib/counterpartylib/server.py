@@ -511,10 +511,7 @@ def initialise_db():
         logger.info("PRAGMA optimize done.")
         # NOTE: it's not necessary to explicitly close the connection with db.close()
 
-
-    
     SIGTERM_CALLBACKS.append(shutdown_handler)
-
 
     return db
 
