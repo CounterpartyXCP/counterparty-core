@@ -4,10 +4,10 @@ import binascii
 from urllib.parse import quote_plus as urlencode
 
 from counterpartylib.lib import config, script
-from counterpartycli import util
-from counterpartycli import wallet
-from counterpartycli import messages
-from counterpartycli.messages import get_pubkeys
+from counterpartywallet import util
+from counterpartywallet import wallet
+from counterpartywallet import messages
+from counterpartywallet.messages import get_pubkeys
 
 logger = logging.getLogger()
 

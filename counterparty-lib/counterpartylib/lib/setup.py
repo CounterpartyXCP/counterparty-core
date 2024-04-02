@@ -2,11 +2,12 @@
 import os
 import argparse
 import configparser
-import appdirs
 import codecs
-import configparser, platform
+import platform
 import logging
 from decimal import Decimal as D
+
+import appdirs
 
 from counterpartylib.lib import config
 

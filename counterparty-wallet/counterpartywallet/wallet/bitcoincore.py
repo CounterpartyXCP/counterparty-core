@@ -1,13 +1,7 @@
-import binascii
 import logging
 logger = logging.getLogger(__name__)
-import sys
-import json
-import time
-import requests
 
-from counterpartylib.lib import config
-from counterpartycli.util import wallet_api as rpc
+from counterpartywallet.util import wallet_api as rpc
 
 def get_wallet_addresses():
     addresses = []
