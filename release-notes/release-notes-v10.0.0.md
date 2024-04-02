@@ -19,7 +19,6 @@ Because this release includes numerous changes to the database schema, a full da
 * Upgrade all pip dependencies to the latest available version
 * Rename `counterparty-lib` repository to `counterparty-core`. **NOTE:** The normal redirect for GitHub URLs cannot be implemented.
 * Merge the `counterparty-cli` repository into the `counterparty-core` repository
-* Split out `counterparty-cli` package into `counterparty-core` and `counterparty-wallet` packages
 * Add Rust library, `counterparty-rs`, for performance-critical code
 * Synchronize versions of `counterparty-rs`, `counterparty-lib`, `counterparty-core` and `counterparty-wallet`
 * Update URL for hosting bootstrap files to <https://bootstrap.counterparty.io/counterparty-*>
@@ -55,7 +54,6 @@ Because this release includes numerous changes to the database schema, a full da
 
 
 ## Command-Line Interface
-* Rename `counterpary-client` to `counterparty-wallet`
 * Disable console logs except for with `counterparty-core start`
 * Show fancy spinners for all discrete operations
 * Rename `checkdb` command to `check-db` and refactor
