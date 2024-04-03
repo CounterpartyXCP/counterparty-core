@@ -206,7 +206,7 @@ def is_bech32(address):
     try:
         b32data = CBech32Data(address)
         return True
-    except:
+    except:  # noqa: E722
         return False
 
 
@@ -327,7 +327,7 @@ def get_asm(scriptpubkey):
 
 def script_to_asm(scriptpubkey):
     try:
-        script = bytes(scriptpubkey, "utf-8") if type(scriptpubkey) == str else bytes(scriptpubkey)
+        script = bytes(scriptpubkey, "utf-8") if type(scriptpubkey) == str else bytes(scriptpubkey)  # noqa: E721
         asm = utils.script_to_asm(script)
         if asm[-1] == OP_CHECKMULTISIG:
             asm[-2] = int.from_bytes(asm[-2], "big")
@@ -339,8 +339,8 @@ def script_to_asm(scriptpubkey):
 
 def script_to_address(scriptpubkey):
     try:
-        network = "mainnet" if config.TESTNET == False else "testnet"
-        script = bytes(scriptpubkey, "utf-8") if type(scriptpubkey) == str else bytes(scriptpubkey)
+        network = "mainnet" if config.TESTNET == False else "testnet"  # noqa: E712
+        script = bytes(scriptpubkey, "utf-8") if type(scriptpubkey) == str else bytes(scriptpubkey)  # noqa: E721
         return utils.script_to_address(script, network)
     except BaseException as e:
         raise exceptions.DecodeError("scriptpubkey decoding error")
@@ -357,7 +357,7 @@ def get_checksig(asm):
         OP_HASH160,
         OP_EQUALVERIFY,
         OP_CHECKSIG,
-    ) and type(pubkeyhash) == bytes:
+    ) and type(pubkeyhash) == bytes:  # noqa: E721
         return pubkeyhash
 
     raise exceptions.DecodeError("invalid OP_CHECKSIG")
@@ -367,12 +367,12 @@ def get_checkmultisig(asm):
     # N‐of‐2
     if len(asm) == 5 and asm[3] == 2 and asm[4] == OP_CHECKMULTISIG:
         pubkeys, signatures_required = asm[1:3], asm[0]
-        if all([type(pubkey) == bytes for pubkey in pubkeys]):
+        if all([type(pubkey) == bytes for pubkey in pubkeys]):  # noqa: E721
             return pubkeys, signatures_required
     # N‐of‐3
     if len(asm) == 6 and asm[4] == 3 and asm[5] == OP_CHECKMULTISIG:
         pubkeys, signatures_required = asm[1:4], asm[0]
-        if all([type(pubkey) == bytes for pubkey in pubkeys]):
+        if all([type(pubkey) == bytes for pubkey in pubkeys]):  # noqa: E721
             return pubkeys, signatures_required
     raise exceptions.DecodeError("invalid OP_CHECKMULTISIG")
 
@@ -405,11 +405,11 @@ def scriptpubkey_to_address(scriptpubkey):
 
 
 # TODO: Use `python-bitcointools` instead. (Get rid of `pycoin` dependency.)
-from pycoin.ecdsa.secp256k1 import secp256k1_generator as generator_secp256k1
-from pycoin.encoding.b58 import a2b_hashed_base58
-from pycoin.encoding.bytes32 import from_bytes_32
-from pycoin.encoding.exceptions import EncodingError
-from pycoin.encoding.sec import public_pair_to_sec
+from pycoin.ecdsa.secp256k1 import secp256k1_generator as generator_secp256k1  # noqa: E402
+from pycoin.encoding.b58 import a2b_hashed_base58  # noqa: E402
+from pycoin.encoding.bytes32 import from_bytes_32  # noqa: E402
+from pycoin.encoding.exceptions import EncodingError  # noqa: E402
+from pycoin.encoding.sec import public_pair_to_sec  # noqa: E402
 
 
 def wif_to_tuple_of_prefix_secret_exponent_compressed(wif):

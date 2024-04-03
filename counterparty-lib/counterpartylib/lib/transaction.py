@@ -81,7 +81,7 @@ def print_coin(coin):
     return f"amount: {coin['amount']:.8f}; txid: {coin['txid']}; vout: {coin['vout']}; confirmations: {coin.get('confirmations', '?')}"  # simplify and make deterministic
 
 
-def chunks(l, n):
+def chunks(l, n):  # noqa: E741
     """Yield successive n‐sized chunks from l."""
     for i in range(0, len(l), n):
         yield l[i : i + n]
@@ -444,7 +444,7 @@ def construct(
                 dust_size = multisig_dust_size
             else:
                 dust_size = regular_dust_size
-            if value == None:
+            if value == None:  # noqa: E711
                 value = dust_size
             elif value < dust_size:
                 raise exceptions.TransactionError("Destination output is dust.")
@@ -694,7 +694,7 @@ def construct(
     #    else:
     #        desired_destination += f'-{desired_source}'
     # NOTE
-    if desired_data == None:
+    if desired_data == None:  # noqa: E711
         desired_data = b""
 
     # Parsed transaction info.

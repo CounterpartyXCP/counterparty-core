@@ -171,7 +171,7 @@ def make_fully_valid(pubkey_start):
     the ECDSA curve). Find the correct bytes by guessing randomly until the check
     passes. (In parsing, these two bytes are ignored.)
     """
-    assert type(pubkey_start) == bytes
+    assert type(pubkey_start) == bytes  # noqa: E721
     assert len(pubkey_start) == 31  # One sign byte and one nonce byte required (for 33 bytes).
 
     random_bytes = hashlib.sha256(
@@ -400,7 +400,7 @@ def serialise_p2sh_pretx(
         )
 
         # if data_value is an array, then every output fee is specified in it
-        if type(data_value) == list:
+        if type(data_value) == list:  # noqa: E721
             s += data_value[n].to_bytes(8, byteorder="little")  # Value
         else:
             s += data_value.to_bytes(8, byteorder="little")  # Value

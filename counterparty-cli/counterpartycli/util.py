@@ -31,8 +31,8 @@ class JsonDecimalEncoder(json.JSONEncoder):
         return super(JsonDecimalEncoder, self).default(o)
 
 
-json_dump = lambda x: json.dumps(x, sort_keys=True, indent=4, cls=JsonDecimalEncoder)
-json_print = lambda x: print(json_dump(x))
+json_dump = lambda x: json.dumps(x, sort_keys=True, indent=4, cls=JsonDecimalEncoder)  # noqa: E731
+json_print = lambda x: print(json_dump(x))  # noqa: E731
 
 
 class RPCError(Exception):
@@ -79,14 +79,14 @@ def rpc(url, method, params=None, ssl_verify=False, tries=1):
             logger.debug(f"Could not connect to {url}. (Try {i+1}/{tries})")
             time.sleep(5)
 
-    if response == None:
+    if response == None:  # noqa: E711
         raise RPCError(f"Cannot communicate with {url}.")
     elif response.status_code not in (200, 500):
         raise RPCError(str(response.status_code) + " " + response.reason + " " + response.text)
 
     # Return result, with error handling.
     response_json = response.json()
-    if "error" not in response_json.keys() or response_json["error"] == None:
+    if "error" not in response_json.keys() or response_json["error"] == None:  # noqa: E711
         return response_json["result"]
     else:
         raise RPCError(f"{response_json['error']}")

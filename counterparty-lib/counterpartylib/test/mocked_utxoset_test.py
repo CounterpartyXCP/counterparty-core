@@ -38,9 +38,9 @@ def test_search_raw_transactions_output():
     assert tx["size"] == 224
     assert tx["version"] == 1
     assert tx["locktime"] == 0
-    assert tx["time"] == None  # not mocked yet
-    assert tx["blocktime"] == None  # not mocked yet
-    assert tx["blockhash"] == None  # not mocked yet
+    assert tx["time"] == None  # not mocked yet  # noqa: E711
+    assert tx["blocktime"] == None  # not mocked yet  # noqa: E711
+    assert tx["blockhash"] == None  # not mocked yet  # noqa: E711
 
     # vin
     assert tx["vin"] == []  # not mocked yet

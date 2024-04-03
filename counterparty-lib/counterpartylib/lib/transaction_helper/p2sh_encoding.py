@@ -174,7 +174,7 @@ def decode_data_redeem_script(redeem_script, p2sh_is_segwit=False):
                     pos += 1
                     valid_sig = False
                     opcode = redeem_script[pos]
-                    if type(opcode) != type(""):
+                    if type(opcode) != type(""):  # noqa: E721
                         if (
                             opcode >= bitcoinlib.core.script.OP_2
                             and opcode <= bitcoinlib.core.script.OP_15

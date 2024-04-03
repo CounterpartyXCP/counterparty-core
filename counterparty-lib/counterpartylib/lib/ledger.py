@@ -161,7 +161,7 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     """Debit given address by quantity of asset."""
     block_index = CURRENT_BLOCK_INDEX
 
-    if type(quantity) != int:
+    if type(quantity) != int:  # noqa: E721
         raise DebitError("Quantity must be an integer.")
     if quantity < 0:
         raise DebitError("Negative quantity.")
@@ -226,7 +226,7 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
     """Credit given address by quantity of asset."""
     block_index = CURRENT_BLOCK_INDEX
 
-    if type(quantity) != int:
+    if type(quantity) != int:  # noqa: E721
         raise CreditError("Quantity must be an integer.")
     if quantity < 0:
         raise CreditError("Negative quantity.")
@@ -492,13 +492,13 @@ def is_divisible(db, asset):
 
 
 def value_out(db, quantity, asset, divisible=None):
-    if asset not in ["leverage", "value", "fraction", "price", "odds"] and divisible == None:
+    if asset not in ["leverage", "value", "fraction", "price", "odds"] and divisible == None:  # noqa: E711
         divisible = is_divisible(db, asset)
     return util.value_output(quantity, asset, divisible)
 
 
 def value_in(db, quantity, asset, divisible=None):
-    if asset not in ["leverage", "value", "fraction", "price", "odds"] and divisible == None:
+    if asset not in ["leverage", "value", "fraction", "price", "odds"] and divisible == None:  # noqa: E711
         divisible = is_divisible(db, asset)
     return util.value_input(quantity, asset, divisible)
 
@@ -1642,7 +1642,7 @@ def _get_holders(
     holders = []
     for holder in save_records.values():
         if holder[hold_fields_1["address_quantity"]] > 0 or (
-            exclude_empty_holders == False and holder[hold_fields_1["address_quantity"]] == 0
+            exclude_empty_holders == False and holder[hold_fields_1["address_quantity"]] == 0  # noqa: E712
         ):
             holders.append(
                 {
@@ -1656,7 +1656,7 @@ def _get_holders(
             )
         if hold_fields_2 is not None:
             if holder[hold_fields_2["address_quantity"]] > 0 or (
-                exclude_empty_holders == False and holder[hold_fields_2["address_quantity"]] == 0
+                exclude_empty_holders == False and holder[hold_fields_2["address_quantity"]] == 0  # noqa: E712
             ):
                 holders.append(
                     {

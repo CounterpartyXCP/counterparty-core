@@ -222,7 +222,7 @@ def initialise_config(
     else:
         config.REGTEST = False
 
-    if customnet != None and len(customnet) > 0:
+    if customnet != None and len(customnet) > 0:  # noqa: E711
         config.CUSTOMNET = True
         config.REGTEST = True  # Custom nets are regtests with different parameters
     else:
@@ -284,7 +284,7 @@ def initialise_config(
         config.BACKEND_PORT = int(config.BACKEND_PORT)
         if not (int(config.BACKEND_PORT) > 1 and int(config.BACKEND_PORT) < 65535):
             raise ConfigurationError("invalid backend API port number")
-    except:
+    except:  # noqa: E722
         raise ConfigurationError(
             "Please specific a valid port number backend-port configuration parameter"
         )
@@ -369,7 +369,7 @@ def initialise_config(
         config.INDEXD_PORT = int(config.INDEXD_PORT)
         if not (int(config.INDEXD_PORT) > 1 and int(config.INDEXD_PORT) < 65535):
             raise ConfigurationError("invalid Indexd API port number")
-    except:
+    except:  # noqa: E722
         raise ConfigurationError(
             "Please specific a valid port number indexd-port configuration parameter"
         )
@@ -414,7 +414,7 @@ def initialise_config(
         config.RPC_PORT = int(config.RPC_PORT)
         if not (int(config.RPC_PORT) > 1 and int(config.RPC_PORT) < 65535):
             raise ConfigurationError("invalid server API port number")
-    except:
+    except:  # noqa: E722
         raise ConfigurationError(
             "Please specific a valid port number rpc-port configuration parameter"
         )

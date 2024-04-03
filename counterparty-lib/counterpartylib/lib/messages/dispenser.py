@@ -463,7 +463,7 @@ def parse(db, tx, message):
                 )
 
                 if len(existing) == 0:
-                    if (oracle_address != None) and ledger.enabled(
+                    if (oracle_address != None) and ledger.enabled(  # noqa: E711
                         "oracle_dispensers", tx["block_index"]
                     ):
                         oracle_fee = calculate_oracle_fee(
@@ -566,7 +566,7 @@ def parse(db, tx, message):
                         ledger.enabled("dispenser_origin_permission_extended", tx["block_index"])
                         and tx["source"] == existing[0]["origin"]
                     ):
-                        if (oracle_address != None) and ledger.enabled(
+                        if (oracle_address != None) and ledger.enabled(  # noqa: E711
                             "oracle_dispensers", tx["block_index"]
                         ):
                             oracle_fee = calculate_oracle_fee(
@@ -694,7 +694,7 @@ def is_dispensable(db, address, amount):
     dispensers = ledger.get_dispensers(db, source=address, status_in=[0, 11])
 
     for next_dispenser in dispensers:
-        if next_dispenser["oracle_address"] != None:
+        if next_dispenser["oracle_address"] != None:  # noqa: E711
             last_price, last_fee, last_fiat_label, last_updated = ledger.get_oracle_last_price(
                 db, next_dispenser["oracle_address"], ledger.CURRENT_BLOCK_INDEX
             )
@@ -738,7 +738,7 @@ def dispense(db, tx):
             give_quantity = dispenser["give_quantity"]
 
             if satoshirate > 0 and give_quantity > 0:
-                if (dispenser["oracle_address"] != None) and ledger.enabled(
+                if (dispenser["oracle_address"] != None) and ledger.enabled(  # noqa: E711
                     "oracle_dispensers", next_out["block_index"]
                 ):
                     last_price, last_fee, last_fiat_label, last_updated = (

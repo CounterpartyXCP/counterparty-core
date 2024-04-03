@@ -2,14 +2,14 @@ import binascii
 import logging
 
 logger = logging.getLogger(__name__)
-import json
-import sys
-import time
+import json  # noqa: E402
+import sys  # noqa: E402
+import time  # noqa: E402
 
-import requests
-from counterpartylib.lib import config
+import requests  # noqa: E402
+from counterpartylib.lib import config  # noqa: E402
 
-from counterpartycli.util import wallet_api as rpc
+from counterpartycli.util import wallet_api as rpc  # noqa: E402
 
 
 def get_wallet_addresses():

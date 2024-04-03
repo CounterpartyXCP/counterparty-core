@@ -2,12 +2,12 @@ import apsw
 import apsw.bestpractice
 
 apsw.bestpractice.apply(apsw.bestpractice.recommended)  # includes WAL mode
-import collections
-import copy
-import logging
-import time
+import collections  # noqa: E402
+import copy  # noqa: E402
+import logging  # noqa: E402
+import time  # noqa: E402
 
-from counterpartylib.lib import config, exceptions, ledger, log
+from counterpartylib.lib import config, exceptions, ledger, log  # noqa: E402
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

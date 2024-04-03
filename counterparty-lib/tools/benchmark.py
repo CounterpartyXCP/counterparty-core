@@ -62,7 +62,7 @@ def add_to_balance_old(db, address, asset, quantity):
         assert False
     else:
         old_balance = balances[0][0]
-        assert type(old_balance) == int
+        assert type(old_balance) == int  # noqa: E721
         balance = round(old_balance + quantity)
         balance = min(balance, MAX_INT)
 

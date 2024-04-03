@@ -422,7 +422,7 @@ def compose(db, source, transfer_destination, asset, quantity, divisible, lock, 
         else:
             data = message_type.pack(ID)
 
-        if description == None and ledger.enabled("issuance_description_special_null"):
+        if description == None and ledger.enabled("issuance_description_special_null"):  # noqa: E711
             # a special message is created to be catched by the parse function
             curr_format = (
                 asset_format + f"{len(DESCRIPTION_MARK_BYTE) + len(DESCRIPTION_NULL_ACTION)}s"
@@ -500,7 +500,7 @@ def compose(db, source, transfer_destination, asset, quantity, divisible, lock, 
         else:
             data = message_type.pack(SUBASSET_ID)
 
-        if description == None and ledger.enabled("issuance_description_special_null"):
+        if description == None and ledger.enabled("issuance_description_special_null"):  # noqa: E711
             # a special message is created to be catched by the parse function
             curr_format = (
                 subasset_format
@@ -697,7 +697,7 @@ def parse(db, tx, message, message_type_id):
                 if named_asset != 0:
                     asset = named_asset
 
-            if description == None:
+            if description == None:  # noqa: E711
                 try:
                     description = ledger.get_asset_description(db, asset)
                 except exceptions.AssetError:

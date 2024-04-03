@@ -99,8 +99,8 @@ SUBASSET_REVERSE = {
 BET_TYPE_NAME = {0: "BullCFD", 1: "BearCFD", 2: "Equal", 3: "NotEqual"}
 BET_TYPE_ID = {"BullCFD": 0, "BearCFD": 1, "Equal": 2, "NotEqual": 3}
 
-json_dump = lambda x: json.dumps(x, sort_keys=True, indent=4)
-json_print = lambda x: print(json_dump(x))
+json_dump = lambda x: json.dumps(x, sort_keys=True, indent=4)  # noqa: E731
+json_print = lambda x: print(json_dump(x))  # noqa: E731
 
 
 class RPCError(Exception):
@@ -120,7 +120,7 @@ def api(method, params):
     }
 
     response = requests.post(config.RPC, data=json.dumps(payload), headers=headers, timeout=10)
-    if response == None:
+    if response == None:  # noqa: E711
         raise RPCError(f"Cannot communicate with {config.XCP_NAME} server.")
     elif response.status_code != 200:
         if response.status_code == 500:
@@ -129,7 +129,7 @@ def api(method, params):
             raise RPCError(str(response.status_code) + " " + response.reason)
 
     response_json = response.json()
-    if "error" not in response_json.keys() or response_json["error"] == None:
+    if "error" not in response_json.keys() or response_json["error"] == None:  # noqa: E711
         try:
             return response_json["result"]
         except KeyError:
@@ -138,7 +138,7 @@ def api(method, params):
         raise RPCError(f"{response_json['error']['message']} ({response_json['error']['code']})")
 
 
-def chunkify(l, n):
+def chunkify(l, n):  # noqa: E741
     n = max(1, n)
     return [l[i : i + n] for i in range(0, len(l), n)]
 
@@ -152,12 +152,12 @@ def py34_tuple_append(first_elem, t):
     # using the 3.5 runtime this can be replaced by:
     #  (first_elem, *t)
 
-    l = list(t)
+    l = list(t)  # noqa: E741
     l.insert(0, first_elem)
     return tuple(l)
 
 
-def accumulate(l):
+def accumulate(l):  # noqa: E741
     it = itertools.groupby(l, itemgetter(0))
     for key, subiter in it:
         yield key, sum(item[1] for item in subiter)
@@ -269,7 +269,7 @@ def parse_options_from_string(string):
     if len(string_list) == 2:
         try:
             options = int(string_list.pop())
-        except:
+        except:  # noqa: E722
             raise exceptions.OptionsError("options not an integer")
         return options
     else:

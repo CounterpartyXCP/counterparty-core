@@ -51,7 +51,7 @@ def _encode_memo(memo=None, is_hex=False):
         if is_hex:
             # signal a 1 bit for hex encoded memos
             barr.append("0b1")
-            if type(memo) is str:  # append the string as hex-string
+            if type(memo) is str:  # append the string as hex-string  # noqa: E721
                 barr.append(f"uint:6={len(memo) >> 1}")
                 memo = f"0x{memo}"
             else:
@@ -107,7 +107,7 @@ def _encode_compress_send_list(db, nbits, send, block_index):
 
         try:
             memo_str = _encode_memo(memo=send_item[2], is_hex=send_item[3])
-        except:
+        except:  # noqa: E722
             memo_str = BitArray("0b0")
 
         r.append(memo_str)

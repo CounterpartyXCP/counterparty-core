@@ -25,15 +25,15 @@ import decimal
 import struct
 
 D = decimal.Decimal
-import json
-import logging
-from fractions import Fraction
+import json  # noqa: E402
+import logging  # noqa: E402
+from fractions import Fraction  # noqa: E402
 
-from bitcoin.core import VarIntSerializer
+from bitcoin.core import VarIntSerializer  # noqa: E402
 
-from counterpartylib.lib import config, database, exceptions, ledger, log, message_type, util
+from counterpartylib.lib import config, database, exceptions, ledger, log, message_type, util  # noqa: E402
 
-from . import bet
+from . import bet  # noqa: E402
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

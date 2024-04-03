@@ -246,7 +246,7 @@ class UnknownPubKeyError(Exception):
 def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
     # Search provided pubkeys.
     if provided_pubkeys:
-        if type(provided_pubkeys) != list:
+        if type(provided_pubkeys) != list:  # noqa: E721
             provided_pubkeys = [provided_pubkeys]
         for pubkey in provided_pubkeys:
             if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):

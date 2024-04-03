@@ -19,9 +19,9 @@ from counterpartylib.test.util_test import CURR_DIR
 
 logger = logging.getLogger(__name__)
 
-from counterpartylib.lib import api, backend, config, exceptions, gettxinfo, ledger, script, util
-from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
-from counterpartylib.lib.transaction_helper import p2sh_encoding, serializer
+from counterpartylib.lib import api, backend, config, exceptions, gettxinfo, ledger, script, util  # noqa: E402
+from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
+from counterpartylib.lib.transaction_helper import p2sh_encoding, serializer  # noqa: E402
 
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"
 FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"

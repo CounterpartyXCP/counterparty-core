@@ -27,7 +27,7 @@ from .utils import (
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-import multiprocessing
+import multiprocessing  # noqa: E402
 
 multiprocessing.set_start_method("spawn", force=True)
 
@@ -37,7 +37,7 @@ TX_CACHE_MAX_SIZE = 15000
 def open_leveldb(db_dir):
     try:
         import plyvel
-    except:
+    except:  # noqa: E722
         raise Exception("Please install the plyvel package via pip3.")
 
     try:

@@ -100,7 +100,7 @@ def validate(db, source, destination, asset, quantity):
     if asset == config.BTC:
         raise ValidateError(f"cannot destroy {config.BTC}")
 
-    if type(quantity) != int:
+    if type(quantity) != int:  # noqa: E721
         raise ValidateError("quantity not integer")
 
     if quantity > config.MAX_INT:

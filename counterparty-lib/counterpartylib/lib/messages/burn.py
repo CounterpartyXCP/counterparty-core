@@ -5,9 +5,9 @@ import logging
 import struct
 
 D = decimal.Decimal
-from fractions import Fraction
+from fractions import Fraction  # noqa: E402
 
-from counterpartylib.lib import config, database, exceptions, ledger
+from counterpartylib.lib import config, database, exceptions, ledger  # noqa: E402
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -111,7 +111,7 @@ def parse(db, tx, mainnet_burns, message=None):
             if problems:
                 status = "invalid: " + "; ".join(problems)
 
-            if tx["btc_amount"] != None:
+            if tx["btc_amount"] != None:  # noqa: E711
                 sent = tx["btc_amount"]
             else:
                 sent = 0

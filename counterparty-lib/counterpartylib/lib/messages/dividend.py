@@ -7,9 +7,9 @@ import json
 import struct
 
 D = decimal.Decimal
-import logging
+import logging  # noqa: E402
 
-from counterpartylib.lib import config, database, exceptions, ledger, message_type
+from counterpartylib.lib import config, database, exceptions, ledger, message_type  # noqa: E402
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

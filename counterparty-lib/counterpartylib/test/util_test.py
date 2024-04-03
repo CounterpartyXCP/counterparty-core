@@ -29,8 +29,8 @@ CURR_DIR = os.path.dirname(
 )
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, "..")))
 
-from counterpartylib import server
-from counterpartylib.lib import (
+from counterpartylib import server  # noqa: E402
+from counterpartylib.lib import (  # noqa: E402
     backend,
     blocks,
     check,
@@ -42,10 +42,10 @@ from counterpartylib.lib import (
     transaction,
     util,
 )
-from counterpartylib.lib.backend.indexd import extract_addresses, extract_addresses_from_txlist
-from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
-from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP
-from counterpartylib.test.fixtures.scenarios import (
+from counterpartylib.lib.backend.indexd import extract_addresses, extract_addresses_from_txlist  # noqa: E402
+from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
+from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: E402
+from counterpartylib.test.fixtures.scenarios import (  # noqa: E402
     INTEGRATION_SCENARIOS,
     UNITTEST_FIXTURE,
     standard_scenarios_params,

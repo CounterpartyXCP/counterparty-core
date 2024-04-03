@@ -4,19 +4,19 @@ import logging
 import os
 
 logger = logging.getLogger(__name__)
-import json
-import sys
-import time
-from decimal import Decimal as D
+import json  # noqa: E402
+import sys  # noqa: E402
+import time  # noqa: E402
+from decimal import Decimal as D  # noqa: E402
 
-from counterpartylib.lib import config, exceptions, script, util
-from pycoin.coins.bitcoin.Tx import Tx
-from pycoin.ecdsa.secp256k1 import secp256k1_generator as generator_secp256k1
-from pycoin.encoding.sec import public_pair_to_hash160_sec
-from pycoin.satoshi.flags import SIGHASH_ALL
+from counterpartylib.lib import config, exceptions, script, util  # noqa: E402
+from pycoin.coins.bitcoin.Tx import Tx  # noqa: E402
+from pycoin.ecdsa.secp256k1 import secp256k1_generator as generator_secp256k1  # noqa: E402
+from pycoin.encoding.sec import public_pair_to_hash160_sec  # noqa: E402
+from pycoin.satoshi.flags import SIGHASH_ALL  # noqa: E402
 
-from counterpartycli.util import api, value_out
-from counterpartycli.wallet import bitcoincore, btcwallet
+from counterpartycli.util import api, value_out  # noqa: E402
+from counterpartycli.wallet import bitcoincore, btcwallet  # noqa: E402
 
 
 class WalletError(Exception):

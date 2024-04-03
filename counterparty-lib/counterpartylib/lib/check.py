@@ -877,7 +877,7 @@ def asset_conservation(db):
     held = ledger.held(db)
     for asset in supplies.keys():
         asset_issued = supplies[asset]
-        asset_held = held[asset] if asset in held and held[asset] != None else 0
+        asset_held = held[asset] if asset in held and held[asset] != None else 0  # noqa: E711
         if asset_issued != asset_held:
             raise SanityError(
                 "{} {} issued ≠ {} {} held".format(

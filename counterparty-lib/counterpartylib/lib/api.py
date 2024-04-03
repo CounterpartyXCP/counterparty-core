@@ -20,21 +20,21 @@ from logging import handlers as logging_handlers
 import requests
 
 D = decimal.Decimal
-import binascii
-import inspect
-import math
-import struct
+import binascii  # noqa: E402
+import inspect  # noqa: E402
+import math  # noqa: E402
+import struct  # noqa: E402
 
-import apsw
-import flask
-import jsonrpc
-from flask import request
-from flask_httpauth import HTTPBasicAuth
-from jsonrpc import dispatcher
-from jsonrpc.exceptions import JSONRPCDispatchException
-from xmltodict import unparse as serialize_to_xml
+import apsw  # noqa: E402
+import flask  # noqa: E402
+import jsonrpc  # noqa: E402
+from flask import request  # noqa: E402
+from flask_httpauth import HTTPBasicAuth  # noqa: E402
+from jsonrpc import dispatcher  # noqa: E402
+from jsonrpc.exceptions import JSONRPCDispatchException  # noqa: E402
+from xmltodict import unparse as serialize_to_xml  # noqa: E402
 
-from counterpartylib.lib import (
+from counterpartylib.lib import (  # noqa: E402
     backend,
     blocks,
     config,
@@ -47,8 +47,8 @@ from counterpartylib.lib import (
     transaction,
     util,
 )
-from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
-from counterpartylib.lib.messages import (
+from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
+from counterpartylib.lib.messages import (  # noqa: E402
     bet,
     broadcast,
     btcpay,
@@ -64,7 +64,7 @@ from counterpartylib.lib.messages import (
     send,
     sweep,
 )
-from counterpartylib.lib.messages.versions import enhanced_send
+from counterpartylib.lib.messages.versions import enhanced_send  # noqa: E402
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -272,7 +272,7 @@ def get_rows(
 ):
     """SELECT * FROM wrapper. Filters results based on a filter data structure (as used by the API)."""
 
-    if filters == None:
+    if filters == None:  # noqa: E711
         filters = []
 
     def value_to_marker(value):
@@ -316,7 +316,7 @@ def get_rows(
             if len(filter_) == 4:
                 new_filter["case_sensitive"] = filter_[3]
             new_filters.append(new_filter)
-        elif type(filter_) == dict:
+        elif type(filter_) == dict:  # noqa: E721
             new_filters.append(filter_)
         else:
             raise APIError("Unknown filter type")
@@ -361,7 +361,7 @@ def get_rows(
     conditions = []
     for filter_ in filters:
         case_sensitive = False if "case_sensitive" not in filter_ else filter_["case_sensitive"]
-        if filter_["op"] == "LIKE" and case_sensitive == False:
+        if filter_["op"] == "LIKE" and case_sensitive == False:  # noqa: E712
             filter_["field"] = f"""UPPER({filter_['field']})"""
             filter_["value"] = filter_["value"].upper()
         marker = value_to_marker(filter_["value"])
@@ -373,17 +373,17 @@ def get_rows(
     # AND filters
     more_conditions = []
     if table not in ["balances", "order_matches", "bet_matches"]:
-        if start_block != None:
+        if start_block != None:  # noqa: E711
             more_conditions.append("""block_index >= ?""")
             bindings.append(start_block)
-        if end_block != None:
+        if end_block != None:  # noqa: E711
             more_conditions.append("""block_index <= ?""")
             bindings.append(end_block)
     elif table in ["order_matches", "bet_matches"]:
-        if start_block != None:
+        if start_block != None:  # noqa: E711
             more_conditions.append("""tx0_block_index >= ?""")
             bindings.append(start_block)
-        if end_block != None:
+        if end_block != None:  # noqa: E711
             more_conditions.append("""tx1_block_index <= ?""")
             bindings.append(end_block)
 
@@ -412,9 +412,9 @@ def get_rows(
         statement += f""" {' AND '.join(all_conditions)}"""
 
     # ORDER BY
-    if order_by != None:
+    if order_by != None:  # noqa: E711
         statement += f""" ORDER BY {order_by}"""
-        if order_dir != None:
+        if order_dir != None:  # noqa: E711
             statement += f""" {order_dir.upper()}"""
     # LIMIT
     if limit and limit > 0:
@@ -458,7 +458,7 @@ def adjust_get_balances_results(query_result, db):
 def adjust_get_destructions_results(query_result):
     filtered_results = []
     for destruction_row in list(query_result):
-        if type(destruction_row["tag"]) == bytes:
+        if type(destruction_row["tag"]) == bytes:  # noqa: E721
             destruction_row["tag"] = destruction_row["tag"].decode("utf-8", "ignore")
 
         filtered_results.append(destruction_row)
@@ -489,7 +489,7 @@ def adjust_get_sends_results(query_result):
                 send_row["memo_hex"] = None
                 send_row["memo"] = None
             else:
-                if type(send_row["memo"]) == str:
+                if type(send_row["memo"]) == str:  # noqa: E721
                     send_row["memo"] = bytes(send_row["memo"], "utf-8")
 
                 send_row["memo_hex"] = binascii.hexlify(send_row["memo"]).decode("utf8")
@@ -539,11 +539,11 @@ def compose_transaction(
     """Create and return a transaction."""
 
     # Get provided pubkeys.
-    if type(pubkey) == str:
+    if type(pubkey) == str:  # noqa: E721
         provided_pubkeys = [pubkey]
-    elif type(pubkey) == list:
+    elif type(pubkey) == list:  # noqa: E721
         provided_pubkeys = pubkey
-    elif pubkey == None:
+    elif pubkey == None:  # noqa: E711
         provided_pubkeys = []
     else:
         assert False
@@ -637,7 +637,7 @@ def init_api_access_log(app):
     loggers = (logging.getLogger("werkzeug"), app.logger)
 
     # Disable console logging...
-    for l in loggers:
+    for l in loggers:  # noqa: E741
         l.setLevel(logging.CRITICAL)
         l.propagate = False
 
@@ -646,7 +646,7 @@ def init_api_access_log(app):
         handler = logging_handlers.RotatingFileHandler(
             config.API_LOG, "a", API_MAX_LOG_SIZE, API_MAX_LOG_COUNT
         )
-        for l in loggers:
+        for l in loggers:  # noqa: E741
             handler.setLevel(logging.DEBUG)
             l.addHandler(handler)
 
@@ -669,7 +669,7 @@ class APIStatusPoller(threading.Thread):
         global CURRENT_API_STATUS_CODE, CURRENT_API_STATUS_RESPONSE_JSON
         db = database.get_connection(read_only=True)
 
-        while self.stop_event.is_set() != True:
+        while self.stop_event.is_set() != True:  # noqa: E712
             try:
                 # Check that backend is running, communicable, and caught up with the blockchain.
                 # Check that the database has caught up with bitcoind.
@@ -744,7 +744,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def sql(query, bindings=None):
-            if bindings == None:
+            if bindings == None:  # noqa: E711
                 bindings = []
             return db_query(self.db, query, tuple(bindings))
 
@@ -977,17 +977,17 @@ class APIServer(threading.Thread):
                 assert len(blocks) == 1
                 last_block = blocks[0]
                 cursor.close()
-            except:
+            except:  # noqa: E722
                 last_block = None
 
             try:
                 last_message = ledger.last_message(self.db)
-            except:
+            except:  # noqa: E722
                 last_message = None
 
             try:
                 indexd_blocks_behind = backend.getindexblocksbehind()
-            except:
+            except:  # noqa: E722
                 indexd_blocks_behind = latest_block_index if latest_block_index > 0 else 999999
             indexd_caught_up = indexd_blocks_behind <= 1
 
@@ -1161,7 +1161,7 @@ class APIServer(threading.Thread):
                 oracle_price_last_updated = ""
                 oracle_fiat_label = ""
 
-                if dispenser["oracle_address"] != None:
+                if dispenser["oracle_address"] != None:  # noqa: E711
                     fiat_price = util.satoshirate_to_fiat(dispenser["satoshirate"])
                     oracle_price, oracle_fee, oracle_fiat_label, oracle_price_last_updated = (
                         ledger.get_oracle_last_price(
@@ -1298,7 +1298,7 @@ class APIServer(threading.Thread):
                     and request_data["method"]
                 )
                 # params may be omitted
-            except:
+            except:  # noqa: E722
                 obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(
                     data="Invalid JSON-RPC 2.0 request format"
                 )

@@ -11,14 +11,14 @@ from counterpartylib.lib import log
 
 logger = logging.getLogger(__name__)
 
-from counterpartylib.lib import config, script
-from counterpartylib.lib.exceptions import TransactionError
-from counterpartylib.lib.log import isodt
-from counterpartylib.lib.util import BET_TYPE_NAME, make_id
+from counterpartylib.lib import config, script  # noqa: E402
+from counterpartylib.lib.exceptions import TransactionError  # noqa: E402
+from counterpartylib.lib.log import isodt  # noqa: E402
+from counterpartylib.lib.util import BET_TYPE_NAME, make_id  # noqa: E402
 
-from counterpartycli import APP_VERSION, clientapi, console, messages, util, wallet
-from counterpartycli.setup import generate_config_files
-from counterpartycli.util import add_config_arguments, read_config_file
+from counterpartycli import APP_VERSION, clientapi, console, messages, util, wallet  # noqa: E402
+from counterpartycli.setup import generate_config_files  # noqa: E402
+from counterpartycli.util import add_config_arguments, read_config_file  # noqa: E402
 
 APP_NAME = "counterparty-client"
 

@@ -12,21 +12,21 @@ import time
 from datetime import timedelta
 
 D = decimal.Decimal
-import collections
-import copy
-import csv
-import http
-import logging
-import platform
+import collections  # noqa: E402
+import copy  # noqa: E402
+import csv  # noqa: E402
+import http  # noqa: E402
+import logging  # noqa: E402
+import platform  # noqa: E402
 
-import apsw
-import bitcoin as bitcoinlib
-from bitcoin.core.script import CScriptInvalidError
-from halo import Halo
-from termcolor import colored
+import apsw  # noqa: E402
+import bitcoin as bitcoinlib  # noqa: E402
+from bitcoin.core.script import CScriptInvalidError  # noqa: E402
+from halo import Halo  # noqa: E402
+from termcolor import colored  # noqa: E402
 
-from counterpartylib import server
-from counterpartylib.lib import (
+from counterpartylib import server  # noqa: E402
+from counterpartylib.lib import (  # noqa: E402
     arc4,
     backend,
     check,
@@ -40,13 +40,13 @@ from counterpartylib.lib import (
     script,
     util,
 )
-from counterpartylib.lib.gettxinfo import get_tx_info
-from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
-from counterpartylib.lib.transaction_helper import p2sh_encoding
+from counterpartylib.lib.gettxinfo import get_tx_info  # noqa: E402
+from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
+from counterpartylib.lib.transaction_helper import p2sh_encoding  # noqa: E402
 
-from .exceptions import BTCOnlyError, DecodeError
-from .kickstart.utils import ib2h
-from .messages import (
+from .exceptions import BTCOnlyError, DecodeError  # noqa: E402
+from .kickstart.utils import ib2h  # noqa: E402
+from .messages import (  # noqa: E402
     bet,
     broadcast,
     btcpay,
@@ -62,7 +62,7 @@ from .messages import (
     send,
     sweep,
 )
-from .messages.versions import enhanced_send, mpma
+from .messages.versions import enhanced_send, mpma  # noqa: E402
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -595,7 +595,7 @@ def list_tx(
     decoded_tx=None,
     block_parser=None,
 ):
-    assert type(tx_hash) == str
+    assert type(tx_hash) == str  # noqa: E721
     cursor = db.cursor()
 
     # Edge case: confirmed tx_hash also in mempool
@@ -617,7 +617,7 @@ def list_tx(
     )
 
     # For mempool
-    if block_hash == None:
+    if block_hash == None:  # noqa: E711
         block_hash = config.MEMPOOL_BLOCK_HASH
         block_index = config.MEMPOOL_BLOCK_INDEX
     else:
@@ -906,8 +906,8 @@ def follow(db):
                 db_parent = blocks[0]["block_hash"]
 
                 # Compare.
-                assert type(db_parent) == str
-                assert type(backend_parent) == str
+                assert type(db_parent) == str  # noqa: E721
+                assert type(backend_parent) == str  # noqa: E721
                 if db_parent == backend_parent:
                     break
                 else:

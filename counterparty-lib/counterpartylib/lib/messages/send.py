@@ -196,11 +196,11 @@ def compose(
                     )
             else:
                 raise exceptions.ComposeError("mpma sends are not enabled")
-        elif use_enhanced_send is None or use_enhanced_send == True:
+        elif use_enhanced_send is None or use_enhanced_send == True:  # noqa: E712
             return enhanced_send.compose(
                 db, source, destination, asset, quantity, memo, memo_is_hex
             )
-    elif memo is not None or use_enhanced_send == True:
+    elif memo is not None or use_enhanced_send == True:  # noqa: E712
         raise exceptions.ComposeError("enhanced sends are not enabled")
 
     return send1.compose(db, source, destination, asset, quantity)

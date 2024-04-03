@@ -80,7 +80,7 @@ def initialize(
             int(config.COUNTERPARTY_RPC_PORT) > 1 and int(config.COUNTERPARTY_RPC_PORT) < 65535
         ):
             raise ConfigurationError("invalid RPC port number")
-    except:
+    except:  # noqa: E722
         raise Exception(
             "Please specific a valid port number counterparty-rpc-port configuration parameter"
         )
@@ -142,7 +142,7 @@ def initialize(
         config.WALLET_PORT = int(config.WALLET_PORT)
         if not (int(config.WALLET_PORT) > 1 and int(config.WALLET_PORT) < 65535):
             raise ConfigurationError("invalid wallet API port number")
-    except:
+    except:  # noqa: E722
         raise ConfigurationError(
             "Please specific a valid port number wallet-port configuration parameter"
         )

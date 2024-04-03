@@ -25,7 +25,7 @@ def arc4_decrypt(cyphertext, decoded_tx):
 def get_opreturn(asm):
     if len(asm) == 2 and asm[0] == OP_RETURN:
         pubkeyhash = asm[1]
-        if type(pubkeyhash) == bytes:
+        if type(pubkeyhash) == bytes:  # noqa: E721
             return pubkeyhash
     raise DecodeError("invalid OP_RETURN")
 
@@ -310,7 +310,7 @@ def parse_transaction_vouts(decoded_tx):
             raise DecodeError("unrecognised output type")
         assert not (new_destination and new_data)
         assert (
-            new_destination != None or new_data != None
+            new_destination != None or new_data != None  # noqa: E711
         )  # `decode_*()` should never return `None, None`.
 
         if ledger.enabled("null_data_check"):
@@ -423,14 +423,14 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
         # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
         asm = script.script_to_asm(vout["scriptPubKey"])
         if len(asm) == 2 and asm[0] == OP_RETURN:  # OP_RETURN
-            if type(asm[1]) != bytes:
+            if type(asm[1]) != bytes:  # noqa: E721
                 continue
             data_chunk = asm[1]
             data += data_chunk
         elif (
             len(asm) == 5 and asm[0] == 1 and asm[3] == 2 and asm[4] == OP_CHECKMULTISIG
         ):  # Multi-sig
-            if type(asm[2]) != bytes:
+            if type(asm[2]) != bytes:  # noqa: E721
                 continue
             data_pubkey = asm[2]
             data_chunk_length = data_pubkey[0]  # No ord() necessary.

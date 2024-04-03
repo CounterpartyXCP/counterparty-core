@@ -281,7 +281,7 @@ class MockUTXOSet(object):
             lambda txout: (txout["txid"], txout["vout"]) not in self.spent_utxos, txouts
         )
 
-        if unconfirmed == False:
+        if unconfirmed == False:  # noqa: E712
             unspent_txouts = filter(lambda txout: txout["confirmations"] > 0, unspent_txouts)
 
         if multisig_inputs:

@@ -53,7 +53,7 @@ def rpc_call(payload):
             )
             time.sleep(5)
 
-    if response == None:
+    if response == None:  # noqa: E711
         if config.TESTNET:
             network = "testnet"
         elif config.REGTEST:
@@ -81,7 +81,7 @@ def rpc_call(payload):
     # Batch query returns a list
     if isinstance(response_json, list):
         return response_json
-    if "error" not in response_json.keys() or response_json["error"] == None:
+    if "error" not in response_json.keys() or response_json["error"] == None:  # noqa: E711
         return response_json["result"]
     elif response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
         raise BackendRPCError(
@@ -353,7 +353,7 @@ def indexd_rpc_call(path):
     except (Timeout, ReadTimeout, ConnectionError):
         logger.debug(f"Could not connect to backend at `{util.clean_url_for_log(url)}`.")
 
-    if response == None:
+    if response == None:  # noqa: E711
         if config.TESTNET:
             network = "testnet"
         elif config.REGTEST:
@@ -377,7 +377,7 @@ def indexd_rpc_call(path):
     if (
         isinstance(response_json, (list, tuple))
         or "error" not in response_json.keys()
-        or response_json["error"] == None
+        or response_json["error"] == None  # noqa: E711
     ):
         return response_json
     else:

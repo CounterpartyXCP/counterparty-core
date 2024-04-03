@@ -31,14 +31,14 @@ def test_config_context(cp_server):
 
 
 def test_mock_protocol_changes(cp_server):
-    assert ledger.enabled("multisig_addresses") == True
+    assert ledger.enabled("multisig_addresses") == True  # noqa: E712
 
     with util_test.MockProtocolChangesContext(multisig_addresses=False):
-        assert ledger.enabled("multisig_addresses") == False
+        assert ledger.enabled("multisig_addresses") == False  # noqa: E712
 
         with util_test.MockProtocolChangesContext(multisig_addresses=None):
-            assert ledger.enabled("multisig_addresses") == None
+            assert ledger.enabled("multisig_addresses") == None  # noqa: E711
 
-        assert ledger.enabled("multisig_addresses") == False
+        assert ledger.enabled("multisig_addresses") == False  # noqa: E712
 
-    assert ledger.enabled("multisig_addresses") == True
+    assert ledger.enabled("multisig_addresses") == True  # noqa: E712
