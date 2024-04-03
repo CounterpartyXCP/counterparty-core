@@ -1,14 +1,17 @@
 import pprint
 import tempfile
+
 import pytest
+
+from counterpartylib.lib import backend, util
+
+# this is require near the top to do setup of the test suite
 from counterpartylib.test import (
     conftest,
-)  # this is require near the top to do setup of the test suite
-from counterpartylib.test import util_test
+    util_test,
+)
+from counterpartylib.test.fixtures.params import ADDR, DP
 from counterpartylib.test.util_test import CURR_DIR
-from counterpartylib.test.fixtures.params import DP, ADDR
-
-from counterpartylib.lib import util, backend
 
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"
 FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"

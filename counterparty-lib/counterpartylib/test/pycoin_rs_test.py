@@ -1,24 +1,22 @@
-import time
 import binascii
+import time
 
-import pytest
 import bitcoin as bitcoinlib
+import pytest
 from bitcoin.core.script import CScript
+from counterparty_rs import utils
 
 from counterpartylib.lib import config
+from counterpartylib.lib.opcodes import *
 from counterpartylib.lib.script import (
-    base58_check_encode,
     base58_check_decode,
     base58_check_decode_py,
+    base58_check_encode,
     base58_check_encode_py,
     get_asm,
-    script_to_asm,
     get_checksig,
+    script_to_asm,
 )
-
-from counterpartylib.lib.opcodes import *
-
-from counterparty_rs import utils
 
 
 def test_pycoin_rs():

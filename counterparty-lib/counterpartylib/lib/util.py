@@ -1,23 +1,22 @@
-import time
+import binascii
+import collections
 import decimal
-import sys
+import fractions
+import hashlib
+import itertools
 import json
 import logging
-from operator import itemgetter
-import fractions
-import binascii
-import re
-import hashlib
 import os
-import collections
-import threading
 import random
-import itertools
+import re
+import sys
+import threading
+import time
+from operator import itemgetter
 
 import requests
 
-from counterpartylib.lib import exceptions
-from counterpartylib.lib import config
+from counterpartylib.lib import config, exceptions
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

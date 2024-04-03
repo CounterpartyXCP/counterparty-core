@@ -2,11 +2,11 @@
 
 """Create and parse 'send'-type messages."""
 
-import struct
 import json
 import logging
+import struct
 
-from ... import config, exceptions, util, message_type, ledger
+from ... import config, exceptions, ledger, message_type, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

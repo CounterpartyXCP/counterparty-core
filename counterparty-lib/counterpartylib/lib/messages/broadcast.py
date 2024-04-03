@@ -21,23 +21,17 @@ because it is stored as a four‐byte integer, it may not be greater than about
 42.
 """
 
-import struct
 import decimal
+import struct
 
 D = decimal.Decimal
-from fractions import Fraction
 import json
 import logging
+from fractions import Fraction
 
 from bitcoin.core import VarIntSerializer
 
-from counterpartylib.lib import exceptions
-from counterpartylib.lib import config
-from counterpartylib.lib import util
-from counterpartylib.lib import log
-from counterpartylib.lib import message_type
-from counterpartylib.lib import ledger
-from counterpartylib.lib import database
+from counterpartylib.lib import config, database, exceptions, ledger, log, message_type, util
 
 from . import bet
 

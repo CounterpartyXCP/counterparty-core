@@ -1,22 +1,22 @@
-import os
-import getpass
 import binascii
+import getpass
 import logging
+import os
 
 logger = logging.getLogger(__name__)
-import sys
 import json
+import sys
 import time
 from decimal import Decimal as D
 
+from counterpartylib.lib import config, exceptions, script, util
 from pycoin.coins.bitcoin.Tx import Tx
-from pycoin.satoshi.flags import SIGHASH_ALL
-from pycoin.encoding.sec import public_pair_to_hash160_sec
 from pycoin.ecdsa.secp256k1 import secp256k1_generator as generator_secp256k1
+from pycoin.encoding.sec import public_pair_to_hash160_sec
+from pycoin.satoshi.flags import SIGHASH_ALL
 
-from counterpartycli.wallet import bitcoincore, btcwallet
-from counterpartylib.lib import config, util, exceptions, script
 from counterpartycli.util import api, value_out
+from counterpartycli.wallet import bitcoincore, btcwallet
 
 
 class WalletError(Exception):

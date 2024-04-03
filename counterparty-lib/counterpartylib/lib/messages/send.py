@@ -1,13 +1,7 @@
 #! /usr/bin/python3
 
-from counterpartylib.lib.messages.versions import send1
-from counterpartylib.lib.messages.versions import enhanced_send
-from counterpartylib.lib.messages.versions import mpma
-from counterpartylib.lib import util
-from counterpartylib.lib import exceptions
-from counterpartylib.lib import config
-from counterpartylib.lib import ledger
-from counterpartylib.lib import database
+from counterpartylib.lib import config, database, exceptions, ledger, util
+from counterpartylib.lib.messages.versions import enhanced_send, mpma, send1
 
 ID = send1.ID
 

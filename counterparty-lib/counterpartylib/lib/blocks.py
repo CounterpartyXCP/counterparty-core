@@ -4,70 +4,65 @@ Initialise database.
 Sieve blockchain for Counterparty transactions, and add them to the database.
 """
 
-from datetime import timedelta
-import os
-import time
 import binascii
-import struct
 import decimal
+import os
+import struct
+import time
+from datetime import timedelta
 
 D = decimal.Decimal
-import logging
 import collections
-import platform
-import csv
 import copy
+import csv
 import http
-
+import logging
+import platform
 
 import apsw
-
 import bitcoin as bitcoinlib
 from bitcoin.core.script import CScriptInvalidError
-
 from halo import Halo
 from termcolor import colored
 
 from counterpartylib import server
-from counterpartylib.lib import config
-from counterpartylib.lib import exceptions
-from counterpartylib.lib import util
-from counterpartylib.lib import check
-from counterpartylib.lib import script
-from counterpartylib.lib import backend
-from counterpartylib.lib import log
-from counterpartylib.lib import database
-from counterpartylib.lib import message_type
-from counterpartylib.lib import arc4
-from counterpartylib.lib import ledger
-from counterpartylib import server
-from counterpartylib.lib.transaction_helper import p2sh_encoding
+from counterpartylib.lib import (
+    arc4,
+    backend,
+    check,
+    config,
+    database,
+    exceptions,
+    ledger,
+    log,
+    message_type,
+    prefetcher,
+    script,
+    util,
+)
 from counterpartylib.lib.gettxinfo import get_tx_info
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
+from counterpartylib.lib.transaction_helper import p2sh_encoding
 
+from .exceptions import BTCOnlyError, DecodeError
+from .kickstart.utils import ib2h
 from .messages import (
-    send,
-    order,
-    btcpay,
-    issuance,
-    broadcast,
     bet,
-    dividend,
+    broadcast,
+    btcpay,
     burn,
     cancel,
+    destroy,
+    dispenser,
+    dividend,
+    issuance,
+    order,
     rps,
     rpsresolve,
-    destroy,
+    send,
     sweep,
-    dispenser,
 )
 from .messages.versions import enhanced_send, mpma
-
-from .kickstart.utils import ib2h
-
-from .exceptions import DecodeError, BTCOnlyError
-
-from counterpartylib.lib import prefetcher
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

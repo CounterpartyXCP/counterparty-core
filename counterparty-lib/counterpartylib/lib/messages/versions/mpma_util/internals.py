@@ -1,15 +1,15 @@
-import struct
+import binascii
 import json
 import logging
-import binascii
 import math
-from bitcoin.core import key
+import struct
 from functools import reduce
 from itertools import groupby
 
+from bitcoin.core import key
 from bitstring import BitArray, BitStream, ConstBitStream, ReadError
 
-from counterpartylib.lib import config, util, exceptions, util, ledger, address
+from counterpartylib.lib import address, config, exceptions, ledger, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

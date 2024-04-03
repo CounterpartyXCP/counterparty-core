@@ -5,12 +5,13 @@ offer_hash is the hash of either a bet or an order.
 """
 
 import binascii
-import struct
 import json
 import logging
+import struct
 
-from counterpartylib.lib import database, exceptions, ledger, message_type, config
-from . import order, bet, rps
+from counterpartylib.lib import config, database, exceptions, ledger, message_type
+
+from . import bet, order, rps
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

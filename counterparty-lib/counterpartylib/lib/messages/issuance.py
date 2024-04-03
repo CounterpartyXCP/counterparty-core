@@ -4,12 +4,12 @@
 Allow simultaneous lock and transfer.
 """
 
-import struct
 import decimal
 import json
 import logging
+import struct
 
-from counterpartylib.lib import config, util, exceptions, util, message_type, ledger, database
+from counterpartylib.lib import config, database, exceptions, ledger, message_type, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal

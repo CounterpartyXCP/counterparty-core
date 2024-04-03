@@ -1,11 +1,12 @@
 #! /usr/bin/python3
 
 import binascii
-import struct
 import logging
 import string
+import struct
 
-from counterpartylib.lib import database, exceptions, util, message_type, ledger, config
+from counterpartylib.lib import config, database, exceptions, ledger, message_type, util
+
 from . import rps
 
 logger = logging.getLogger(config.LOGGER_NAME)

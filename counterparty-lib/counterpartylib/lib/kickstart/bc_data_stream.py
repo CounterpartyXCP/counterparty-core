@@ -1,9 +1,10 @@
 #
 # Workalike python implementation of Bitcoin's CDataStream class.
 #
-import struct
 import mmap
+import struct
 from io import BytesIO
+
 from .exceptions import SerializationError
 
 

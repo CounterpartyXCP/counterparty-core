@@ -1,10 +1,10 @@
 #! /usr/bin/python3
 
-import struct
 import json
 import logging
+import struct
 
-from counterpartylib.lib import config, util, exceptions, util, message_type, address, ledger
+from counterpartylib.lib import address, config, exceptions, ledger, message_type, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

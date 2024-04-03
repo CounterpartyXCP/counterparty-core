@@ -8,13 +8,7 @@ import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
 from bitcoin.core import CBlock
 
-from counterpartylib.lib import util
-from counterpartylib.lib import script
-from counterpartylib.lib import config
-from counterpartylib.lib import exceptions
-from counterpartylib.lib import prefetcher
-from counterpartylib.lib import ledger
-
+from counterpartylib.lib import config, exceptions, ledger, prefetcher, script, util
 from counterpartylib.lib.backend import addrindexrs
 
 logger = logging.getLogger(config.LOGGER_NAME)

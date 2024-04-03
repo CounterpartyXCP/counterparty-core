@@ -2,12 +2,13 @@ import binascii
 import logging
 
 logger = logging.getLogger(__name__)
-import sys
 import json
+import sys
 import time
-import requests
 
+import requests
 from counterpartylib.lib import config
+
 from counterpartycli.util import wallet_api as rpc
 
 

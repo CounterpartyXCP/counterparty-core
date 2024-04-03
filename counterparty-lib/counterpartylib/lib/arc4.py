@@ -1,4 +1,5 @@
 import binascii
+
 from arc4 import ARC4
 
 

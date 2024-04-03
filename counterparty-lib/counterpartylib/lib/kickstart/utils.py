@@ -1,4 +1,9 @@
-import binascii, os, math, json, hashlib, decimal
+import binascii
+import decimal
+import hashlib
+import json
+import math
+import os
 from multiprocessing import resource_tracker
 
 from counterparty_rs import utils as pycoin_rs_utils

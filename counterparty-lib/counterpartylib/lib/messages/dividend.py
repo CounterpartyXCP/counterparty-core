@@ -2,14 +2,14 @@
 
 """Pay out dividends."""
 
+import decimal
 import json
 import struct
-import decimal
 
 D = decimal.Decimal
 import logging
 
-from counterpartylib.lib import config, exceptions, database, message_type, ledger
+from counterpartylib.lib import config, database, exceptions, ledger, message_type
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

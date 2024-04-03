@@ -2,29 +2,27 @@
 Test suite configuration
 """
 
+import binascii
 import json
-import apsw
-import time
+import logging
 import os
+import pprint
+import time
 from datetime import datetime
-import pytest
+
+import apsw
 import bitcoin as bitcoinlib
 import pycoin
-from pycoin.coins.bitcoin import Tx
-import pprint
-import binascii
-import logging
+import pytest
 from Crypto.Cipher import ARC4
+from pycoin.coins.bitcoin import Tx
 
-from counterpartylib.lib import log, ledger
 from counterpartylib import server
-
+from counterpartylib.lib import api, arc4, config, database, ledger, log, script, util
 from counterpartylib.test import util_test
-from counterpartylib.test.fixtures.vectors import UNITTEST_VECTOR
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS
 from counterpartylib.test.fixtures.scenarios import INTEGRATION_SCENARIOS
-
-from counterpartylib.lib import config, util, database, api, script, arc4
+from counterpartylib.test.fixtures.vectors import UNITTEST_VECTOR
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

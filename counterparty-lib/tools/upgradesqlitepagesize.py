@@ -3,7 +3,7 @@
 import os
 import shutil
 import sys
-from subprocess import Popen, PIPE
+from subprocess import PIPE, Popen
 
 PAGE_SIZE = 4096
 

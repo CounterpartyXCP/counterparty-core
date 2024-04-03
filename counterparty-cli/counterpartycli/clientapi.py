@@ -1,12 +1,11 @@
-import sys
-import logging
 import binascii
+import logging
+import sys
 from urllib.parse import quote_plus as urlencode
 
 from counterpartylib.lib import config, script
-from counterpartycli import util
-from counterpartycli import wallet
-from counterpartycli import messages
+
+from counterpartycli import messages, util, wallet
 from counterpartycli.messages import get_pubkeys
 
 logger = logging.getLogger()

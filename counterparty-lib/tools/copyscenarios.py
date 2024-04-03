@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 
-import sys
-import os
 import glob
+import os
+import sys
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 SCENARIOS_DIR = os.path.join(CURRENT_DIR, "..", "counterpartylib/test/fixtures/scenarios")

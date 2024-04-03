@@ -2,17 +2,13 @@
 
 """Destroy a quantity of an asset."""
 
-import struct
 import json
 import logging
+import struct
 
-from counterpartylib.lib import database
-from counterpartylib.lib import config
-from counterpartylib.lib import script
-from counterpartylib.lib import message_type
-from counterpartylib.lib import ledger
-from counterpartylib.lib.script import AddressError
+from counterpartylib.lib import config, database, ledger, message_type, script
 from counterpartylib.lib.exceptions import *
+from counterpartylib.lib.script import AddressError
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

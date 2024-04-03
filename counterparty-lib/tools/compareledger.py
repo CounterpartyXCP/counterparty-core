@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-import sys
 import difflib
+import sys
 
 import apsw
 

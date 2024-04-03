@@ -1,11 +1,11 @@
-import sys
+import codecs
 import copy
 import logging
 import logging.handlers
+import sys
 import unicodedata
-import codecs
-from ctypes import WINFUNCTYPE, windll, POINTER, byref, c_int
-from ctypes.wintypes import BOOL, HANDLE, DWORD, LPWSTR, LPCWSTR, LPVOID
+from ctypes import POINTER, WINFUNCTYPE, byref, c_int, windll
+from ctypes.wintypes import BOOL, DWORD, HANDLE, LPCWSTR, LPVOID, LPWSTR
 
 from counterpartylib.lib import config
 

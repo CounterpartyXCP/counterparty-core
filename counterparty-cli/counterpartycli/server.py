@@ -1,19 +1,17 @@
 #! /usr/bin/env python3
 
-import os
 import argparse
 import logging
+import os
 from urllib.parse import quote_plus as urlencode
 
+from counterpartylib import server
+from counterpartylib.lib import config, log
 from termcolor import cprint
 
-from counterpartylib.lib import log
-from counterpartylib import server
-from counterpartylib.lib import config
-from counterpartycli.util import add_config_arguments, read_config_file
-from counterpartycli.setup import generate_config_files
 from counterpartycli import APP_VERSION
-
+from counterpartycli.setup import generate_config_files
+from counterpartycli.util import add_config_arguments, read_config_file
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

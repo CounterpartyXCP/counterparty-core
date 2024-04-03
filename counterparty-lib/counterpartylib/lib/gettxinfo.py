@@ -5,14 +5,13 @@ import struct
 import bitcoin as bitcoinlib
 from bitcoin.core.script import CScriptInvalidError
 
-from counterpartylib.lib import ledger, script, config, backend, arc4
-from counterpartylib.lib.exceptions import DecodeError, BTCOnlyError
-from counterpartylib.lib.kickstart.utils import ib2h
+from counterpartylib.lib import arc4, backend, config, ledger, script
+from counterpartylib.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
-from counterpartylib.lib.transaction_helper import p2sh_encoding
+from counterpartylib.lib.kickstart.utils import ib2h
 from counterpartylib.lib.messages import dispenser
 from counterpartylib.lib.opcodes import *
-
+from counterpartylib.lib.transaction_helper import p2sh_encoding
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

@@ -1,11 +1,11 @@
 #!/usr/bin/python3
 
-import sys
+import binascii
 import os
+import pprint
 import re
 import shutil
-import pprint
-import binascii
+import sys
 
 COMMIT = "8906a8188ba841599f66627157e29a270ca838cf"
 UNITTEST_FIXTURE_SQL = "counterpartylib/test/fixtures/scenarios/unittest_fixture.sql"

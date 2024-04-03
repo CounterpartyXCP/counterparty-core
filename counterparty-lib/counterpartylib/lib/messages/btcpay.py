@@ -2,17 +2,11 @@
 
 import binascii
 import json
+import logging
 import pprint
 import struct
-import logging
 
-from counterpartylib.lib import config
-from counterpartylib.lib import exceptions
-from counterpartylib.lib import util
-from counterpartylib.lib import log
-from counterpartylib.lib import message_type
-from counterpartylib.lib import ledger
-from counterpartylib.lib import database
+from counterpartylib.lib import config, database, exceptions, ledger, log, message_type, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

@@ -2,10 +2,11 @@
 
 import pytest
 
+# this is require near the top to do setup of the test suite
 from counterpartylib.test import (
     conftest,
-)  # this is require near the top to do setup of the test suite
-from counterpartylib.test import util_test
+    util_test,
+)
 
 
 def test_book(skip):

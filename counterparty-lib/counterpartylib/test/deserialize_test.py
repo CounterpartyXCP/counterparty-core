@@ -1,6 +1,7 @@
-from counterpartylib.lib.kickstart import blocks_parser, utils
-from counterpartylib.lib import backend
 import time
+
+from counterpartylib.lib import backend
+from counterpartylib.lib.kickstart import blocks_parser, utils
 
 
 def test_deserialize():

@@ -1,14 +1,18 @@
 #!/usr/bin/env python
 
-import os, sys
-import shutil
+import configparser
 import ctypes.util
-import configparser, platform
-import urllib.request
-import tarfile, zipfile
-import appdirs
 import hashlib
+import os
+import platform
+import shutil
+import sys
+import tarfile
+import urllib.request
+import zipfile
 from decimal import Decimal as D
+
+import appdirs
 
 
 # generate commented config file from arguments list (client.CONFIG_ARGS and server.CONFIG_ARGS) and known values
@@ -150,9 +154,10 @@ def server_to_client_config(server_config):
 
 
 def generate_config_files():
-    from counterpartycli.server import CONFIG_ARGS as SERVER_CONFIG_ARGS
-    from counterpartycli.client import CONFIG_ARGS as CLIENT_CONFIG_ARGS
     from counterpartylib.lib import config, util
+
+    from counterpartycli.client import CONFIG_ARGS as CLIENT_CONFIG_ARGS
+    from counterpartycli.server import CONFIG_ARGS as SERVER_CONFIG_ARGS
 
     configdir = appdirs.user_config_dir(
         appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
@@ -201,7 +206,8 @@ def after_py2exe_build(win_dist_dir):
         os.remove(f"counterparty-{exe_name}.py")
     # py2exe copies only pyc files in site-packages.zip
     # modules with no pyc files must be copied in 'dist/library/'
-    import counterpartylib, certifi
+    import certifi
+    import counterpartylib
 
     additionals_modules = [counterpartylib, certifi]
     for module in additionals_modules:

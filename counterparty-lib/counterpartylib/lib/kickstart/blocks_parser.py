@@ -1,26 +1,29 @@
-import os, logging, binascii
+import binascii
+import logging
 import multiprocessing
-from multiprocessing import Process, JoinableQueue, shared_memory
-from collections import OrderedDict
+import os
 
 # Used to pickle and unpickle blocks from shared_memory
 import pickle  # nosec B403
 import signal
 import time
+from collections import OrderedDict
+from multiprocessing import JoinableQueue, Process, shared_memory
 
 import apsw
+
+from counterpartylib.lib import config, gettxinfo, ledger
+from counterpartylib.lib.exceptions import DecodeError
 
 from .bc_data_stream import BCDataStream
 from .utils import (
     b2h,
+    decode_value,
     double_hash,
     ib2h,
     inverse_hash,
-    decode_value,
     remove_shm_from_resource_tracker,
 )
-from counterpartylib.lib import ledger, config, gettxinfo
-from counterpartylib.lib.exceptions import DecodeError
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

@@ -4,30 +4,26 @@ Construct and serialize the Bitcoin transactions that are Counterparty transacti
 This module contains no consensus‐critical code.
 """
 
-import os
-import sys
 import binascii
-import json
-import hashlib
-import re
-import time
 import decimal
+import hashlib
+import json
 import logging
-import requests
+import os
+import re
+import sys
+import time
+
 import bitcoin as bitcoinlib
+import cachetools
+import requests
+from bitcoin.bech32 import CBech32Data
 from bitcoin.core import Hash160
 from bitcoin.core.script import CScript
 from bitcoin.wallet import P2PKHBitcoinAddress, P2SHBitcoinAddress
-import cachetools
 
-from counterpartylib.lib import config
-from counterpartylib.lib import exceptions
-from counterpartylib.lib import util
-from counterpartylib.lib import script
-from counterpartylib.lib import backend
-from counterpartylib.lib import arc4
+from counterpartylib.lib import arc4, backend, config, exceptions, script, util
 from counterpartylib.lib.transaction_helper import p2sh_encoding
-from bitcoin.bech32 import CBech32Data
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

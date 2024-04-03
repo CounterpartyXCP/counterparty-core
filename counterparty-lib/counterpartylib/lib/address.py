@@ -2,9 +2,8 @@ import logging
 import struct
 
 import bitcoin
-from counterpartylib.lib import config
-from counterpartylib.lib import script
-from counterpartylib.lib import ledger
+
+from counterpartylib.lib import config, ledger, script
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

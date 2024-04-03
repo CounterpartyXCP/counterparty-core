@@ -1,9 +1,9 @@
 import logging
 import os
-import time
 import platform
-import signal
 import shutil
+import signal
+import time
 from queue import Empty
 
 import apsw
@@ -11,10 +11,10 @@ from halo import Halo
 from termcolor import colored
 
 from counterpartylib import server
-from counterpartylib.lib import config, blocks, ledger, backend, database, log
+from counterpartylib.lib import backend, blocks, config, database, ledger, log
+from counterpartylib.lib.backend.addrindexrs import AddrindexrsSocket
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser, ChainstateParser
 from counterpartylib.lib.kickstart.utils import remove_shm_from_resource_tracker
-from counterpartylib.lib.backend.addrindexrs import AddrindexrsSocket
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

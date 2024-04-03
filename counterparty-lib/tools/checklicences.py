@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
-import os
-import tomllib
 import json
+import os
+
+import tomllib
 
 # pylint: disable=no-name-in-module
 from sh import license_scanner

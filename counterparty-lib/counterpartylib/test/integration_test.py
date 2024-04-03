@@ -1,10 +1,11 @@
 #! /usr/bin/python3
 import pytest
 
+# this is require near the top to do setup of the test suite
 from counterpartylib.test import (
     conftest,
-)  # this is require near the top to do setup of the test suite
-from counterpartylib.test import util_test
+    util_test,
+)
 
 
 def test_scenario(scenario_name, base_scenario_name, transactions, pytest_config):

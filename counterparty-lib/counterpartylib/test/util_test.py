@@ -2,27 +2,27 @@
 This module contains a variety of utility functions used in the test suite.
 """
 
-import os
-import sys
-import hashlib
-import time
-import decimal
-import logging
-import locale
-import re
-import io
-import difflib
-import json
-import tempfile
-import pprint
-import apsw
-import pytest
 import binascii
-import appdirs
+import decimal
+import difflib
+import hashlib
+import io
+import json
+import locale
+import logging
+import os
 import pprint
-import pycoin
-from pycoin.coins.bitcoin import Tx
+import re
+import sys
+import tempfile
+import time
+
+import appdirs
+import apsw
 import bitcoin as bitcoinlib
+import pycoin
+import pytest
+from pycoin.coins.bitcoin import Tx
 
 CURR_DIR = os.path.dirname(
     os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__)))
@@ -31,24 +31,23 @@ sys.path.append(os.path.normpath(os.path.join(CURR_DIR, "..")))
 
 from counterpartylib import server
 from counterpartylib.lib import (
-    config,
-    util,
+    backend,
     blocks,
     check,
-    backend,
+    config,
     database,
-    transaction,
     exceptions,
-    ledger,
     gettxinfo,
+    ledger,
+    transaction,
+    util,
 )
 from counterpartylib.lib.backend.indexd import extract_addresses, extract_addresses_from_txlist
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
-
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP
 from counterpartylib.test.fixtures.scenarios import (
-    UNITTEST_FIXTURE,
     INTEGRATION_SCENARIOS,
+    UNITTEST_FIXTURE,
     standard_scenarios_params,
 )
 

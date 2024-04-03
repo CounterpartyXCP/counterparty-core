@@ -2,15 +2,12 @@ import apsw
 import apsw.bestpractice
 
 apsw.bestpractice.apply(apsw.bestpractice.recommended)  # includes WAL mode
-import logging
-import time
 import collections
 import copy
+import logging
+import time
 
-from counterpartylib.lib import config
-from counterpartylib.lib import ledger
-from counterpartylib.lib import exceptions
-from counterpartylib.lib import log
+from counterpartylib.lib import config, exceptions, ledger, log
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

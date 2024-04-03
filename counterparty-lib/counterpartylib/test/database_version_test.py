@@ -1,14 +1,17 @@
 #! /usr/bin/python3
 import tempfile
+
 import pytest
 
+from counterpartylib import server
+from counterpartylib.lib import check, config, database
+
+# this is require near the top to do setup of the test suite
 from counterpartylib.test import (
     conftest,
-)  # this is require near the top to do setup of the test suite
-from counterpartylib.test import util_test
+    util_test,
+)
 from counterpartylib.test.util_test import CURR_DIR
-from counterpartylib import server
-from counterpartylib.lib import config, check, database
 
 
 def test_check_database_version():

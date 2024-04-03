@@ -1,9 +1,9 @@
-import time
 import binascii
+import time
 
-from counterparty_rs import utils
 import bitcoin as bitcoinlib
 from bitcoin import bech32 as bech32lib
+from counterparty_rs import utils
 
 
 def decode_p2w(script_pubkey):

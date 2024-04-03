@@ -5,61 +5,66 @@ The database connections are read‐only, so SQL injection attacks can’t be a
 problem.
 """
 
-import sys
-import os
-import threading
-import decimal
-import time
-import json
-import re
-import requests
 import collections
+import decimal
+import json
 import logging
+import os
+import re
+import sys
+import threading
+import time
 import traceback
 from logging import handlers as logging_handlers
 
+import requests
+
 D = decimal.Decimal
 import binascii
+import inspect
 import math
-
 import struct
+
 import apsw
 import flask
+import jsonrpc
 from flask import request
 from flask_httpauth import HTTPBasicAuth
-import jsonrpc
 from jsonrpc import dispatcher
 from jsonrpc.exceptions import JSONRPCDispatchException
-import inspect
 from xmltodict import unparse as serialize_to_xml
 
-from counterpartylib.lib import config
-from counterpartylib.lib import exceptions
-from counterpartylib.lib import util
-from counterpartylib.lib import ledger
-from counterpartylib.lib import backend
-from counterpartylib.lib import database
-from counterpartylib.lib import transaction
-from counterpartylib.lib import blocks
-from counterpartylib.lib import script
-from counterpartylib.lib import message_type
-from counterpartylib.lib import gettxinfo
+from counterpartylib.lib import (
+    backend,
+    blocks,
+    config,
+    database,
+    exceptions,
+    gettxinfo,
+    ledger,
+    message_type,
+    script,
+    transaction,
+    util,
+)
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
-from counterpartylib.lib.messages import send
+from counterpartylib.lib.messages import (
+    bet,
+    broadcast,
+    btcpay,
+    burn,
+    cancel,
+    destroy,
+    dispenser,
+    dividend,
+    issuance,
+    order,
+    rps,
+    rpsresolve,
+    send,
+    sweep,
+)
 from counterpartylib.lib.messages.versions import enhanced_send
-from counterpartylib.lib.messages import order
-from counterpartylib.lib.messages import btcpay
-from counterpartylib.lib.messages import issuance
-from counterpartylib.lib.messages import broadcast
-from counterpartylib.lib.messages import bet
-from counterpartylib.lib.messages import dividend
-from counterpartylib.lib.messages import burn
-from counterpartylib.lib.messages import destroy
-from counterpartylib.lib.messages import cancel
-from counterpartylib.lib.messages import rps
-from counterpartylib.lib.messages import rpsresolve
-from counterpartylib.lib.messages import sweep
-from counterpartylib.lib.messages import dispenser
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

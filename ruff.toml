@@ -6,19 +6,13 @@ line-length = 100
 
 [lint]
 select = [
-    # pycodestyle
-    # "E4",
+    # "E4", # pycode style
     # "E7",
     # "E9",
-    # # Pyflakes
-    # "F",
-    # # # pyupgrade
-    # # "UP",
-    # "B",  # flake8-bugbear
+    # "F", # pyflakes
     # "S",  # flake8-bandit
-    # # # flake8-simplify
-    # # "SIM",
-    # "I", # isort
+    # "B",  # flake8-bugbear
+    "I", # isort
     # "PLC",  # pylint conventions
     # "PLE", # pylint error
     # "PLE", # pylint refactor

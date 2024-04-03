@@ -27,8 +27,8 @@ Here's a list of unit tests that will fail and need to be updated:
 - util.get_balance
 """
 
-from .params import ADDR, MULTISIGADDR, P2SH_ADDR, P2WPKH_ADDR, DEFAULT_PARAMS as DP
-
+from .params import ADDR, MULTISIGADDR, P2SH_ADDR, P2WPKH_ADDR
+from .params import DEFAULT_PARAMS as DP
 
 UNITTEST_FIXTURE = [
     ["burn", (ADDR[0], DP["burn_quantity"]), {"encoding": "multisig"}],  # 310000

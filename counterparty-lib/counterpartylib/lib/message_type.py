@@ -1,8 +1,7 @@
 import logging
 import struct
 
-from counterpartylib.lib import config
-from counterpartylib.lib import ledger
+from counterpartylib.lib import config, ledger
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

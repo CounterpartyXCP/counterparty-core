@@ -1,15 +1,12 @@
-import logging
+import binascii
 import fractions
 import json
+import logging
 import os
 import time
-import binascii
 from decimal import Decimal as D
 
-from counterpartylib.lib import exceptions
-from counterpartylib.lib import config
-from counterpartylib.lib import util
-from counterpartylib.lib import log
+from counterpartylib.lib import config, exceptions, log, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

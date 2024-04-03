@@ -1,11 +1,11 @@
-import time
-import threading
-import queue
 import logging
+import queue
+import threading
+import time
 
 import bitcoin as bitcoinlib
 
-from counterpartylib.lib import backend, ledger, config
+from counterpartylib.lib import backend, config, ledger
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

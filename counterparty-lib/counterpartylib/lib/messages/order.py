@@ -2,18 +2,12 @@
 
 # Filled orders may not be re‐opened, so only orders not involving BTC (and so
 # which cannot have expired order matches) may be filled.
-import json
-import struct
 import decimal
+import json
 import logging
+import struct
 
-from counterpartylib.lib import config
-from counterpartylib.lib import exceptions
-from counterpartylib.lib import util
-from counterpartylib.lib import ledger
-from counterpartylib.lib import log
-from counterpartylib.lib import message_type
-from counterpartylib.lib import database
+from counterpartylib.lib import config, database, exceptions, ledger, log, message_type, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal

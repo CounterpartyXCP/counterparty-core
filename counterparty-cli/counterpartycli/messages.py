@@ -1,19 +1,18 @@
-import logging
-from decimal import Decimal as D
 import binascii
-from math import ceil
-import time
 import calendar
-import dateutil.parser
-
-from counterpartylib.lib import script, config, blocks, exceptions, api, transaction
-from counterpartylib.lib.util import make_id, BET_TYPE_NAME, BET_TYPE_ID, dhash
-from counterpartylib.lib.ledger import generate_asset_name
-from counterpartylib.lib.kickstart.utils import ib2h
-from counterpartycli import util
-from counterpartycli import wallet
+import logging
+import time
+from decimal import Decimal as D
+from math import ceil
 
 import bitcoin as bitcoinlib
+import dateutil.parser
+from counterpartylib.lib import api, blocks, config, exceptions, script, transaction
+from counterpartylib.lib.kickstart.utils import ib2h
+from counterpartylib.lib.ledger import generate_asset_name
+from counterpartylib.lib.util import BET_TYPE_ID, BET_TYPE_NAME, dhash, make_id
+
+from counterpartycli import util, wallet
 
 MESSAGE_PARAMS = {
     "send": [

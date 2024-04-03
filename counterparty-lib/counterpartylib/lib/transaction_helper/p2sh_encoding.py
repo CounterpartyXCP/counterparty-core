@@ -3,17 +3,15 @@ This module contains p2sh data encoding functions
 """
 
 import binascii
+import logging
 import math
 import struct
-import logging
 import traceback  # not needed if not printing exceptions on p2sh decoding
 
 import bitcoin as bitcoinlib
 from bitcoin.core.script import CScript
 
-from counterpartylib.lib import config
-from counterpartylib.lib import script
-from counterpartylib.lib import exceptions
+from counterpartylib.lib import config, exceptions, script
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

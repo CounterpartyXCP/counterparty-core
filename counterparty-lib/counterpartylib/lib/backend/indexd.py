@@ -1,15 +1,16 @@
-import logging
-import sys
-import os
-import json
-import requests
-from requests.exceptions import Timeout, ReadTimeout, ConnectionError
-import time
-import threading
-import concurrent.futures
-import collections
 import binascii
+import collections
+import concurrent.futures
 import hashlib
+import json
+import logging
+import os
+import sys
+import threading
+import time
+
+import requests
+from requests.exceptions import ConnectionError, ReadTimeout, Timeout
 
 from counterpartylib.lib import config, util
 

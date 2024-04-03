@@ -1,36 +1,36 @@
 #! /usr/bin/env python3
 
-import os
-import decimal
-import tempfile
-import sys
-import apsw
-import time
 import binascii
-import socket
-import signal
-import appdirs
-import platform
-import bitcoin as bitcoinlib
+import decimal
 import logging
-import urllib
+import os
+import platform
+import signal
+import socket
+import sys
 import tarfile
+import tempfile
+import time
+import urllib
 from urllib.parse import quote_plus as urlencode
 
+import appdirs
+import apsw
+import bitcoin as bitcoinlib
 from halo import Halo
 from termcolor import colored, cprint
 
-from counterpartylib.lib import log
 from counterpartylib.lib import (
     api,
-    config,
-    util,
-    ledger,
-    blocks,
     backend,
-    database,
-    transaction,
+    blocks,
     check,
+    config,
+    database,
+    ledger,
+    log,
+    transaction,
+    util,
 )
 from counterpartylib.lib import kickstart as kickstarter
 

@@ -1,12 +1,11 @@
 #!/usr/bin/python3
 
 
+import difflib
 import os
 import time
-import difflib
 
 import apsw
-
 
 MAX_INT = 2**63 - 1
 

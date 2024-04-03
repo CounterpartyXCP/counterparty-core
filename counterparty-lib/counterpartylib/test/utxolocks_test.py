@@ -1,18 +1,19 @@
 #! /usr/bin/python3
-import pytest
 import binascii
-from io import BytesIO
-import bitcoin
 import tempfile
+from io import BytesIO
 
-from counterpartylib.test import (
-    conftest,
-)  # this is require near the top to do setup of the test suite
-from counterpartylib.test.util_test import CURR_DIR
+import bitcoin
+import pytest
 
 from counterpartylib.lib import transaction
 from counterpartylib.lib.messages import send
+from counterpartylib.test import (
+    conftest,
+)
 
+# this is require near the top to do setup of the test suite
+from counterpartylib.test.util_test import CURR_DIR
 
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/parseblock_unittest_fixture.sql"
 FIXTURE_DB = tempfile.gettempdir() + "/fixtures.parseblock_unittest_fixture.db"

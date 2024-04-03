@@ -1,10 +1,10 @@
 #! /usr/bin/env python3
 
+import argparse
+import getpass
+import logging
 import os
 import sys
-import argparse
-import logging
-import getpass
 from decimal import Decimal as D
 
 from counterpartylib.lib import log
@@ -12,12 +12,13 @@ from counterpartylib.lib import log
 logger = logging.getLogger(__name__)
 
 from counterpartylib.lib import config, script
-from counterpartylib.lib.util import make_id, BET_TYPE_NAME
-from counterpartylib.lib.log import isodt
 from counterpartylib.lib.exceptions import TransactionError
-from counterpartycli.util import add_config_arguments, read_config_file
+from counterpartylib.lib.log import isodt
+from counterpartylib.lib.util import BET_TYPE_NAME, make_id
+
+from counterpartycli import APP_VERSION, clientapi, console, messages, util, wallet
 from counterpartycli.setup import generate_config_files
-from counterpartycli import APP_VERSION, util, messages, wallet, console, clientapi
+from counterpartycli.util import add_config_arguments, read_config_file
 
 APP_NAME = "counterparty-client"
 

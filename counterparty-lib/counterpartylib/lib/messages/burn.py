@@ -1,13 +1,13 @@
 #! /usr/bin/python3
-import json
-import struct
 import decimal
+import json
 import logging
+import struct
 
 D = decimal.Decimal
 from fractions import Fraction
 
-from counterpartylib.lib import config, exceptions, database, ledger
+from counterpartylib.lib import config, database, exceptions, ledger
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

@@ -1,33 +1,27 @@
+import binascii
+import hashlib
+import logging
+import math
 import pprint
 import tempfile
-import binascii
 import time
-import hashlib
-import pytest
-import math
+
 import bitcoin as bitcoinlib
+import pytest
+
+# this is require near the top to do setup of the test suite
 from counterpartylib.test import (
     conftest,
-)  # this is require near the top to do setup of the test suite
-from counterpartylib.test import util_test
+    util_test,
+)
+from counterpartylib.test.fixtures.params import ADDR, DP, P2SH_ADDR
 from counterpartylib.test.util_test import CURR_DIR
-from counterpartylib.test.fixtures.params import DP, ADDR, P2SH_ADDR
-
-import logging
 
 logger = logging.getLogger(__name__)
 
-from counterpartylib.lib import script
-from counterpartylib.lib import util
-from counterpartylib.lib import config
-from counterpartylib.lib import api
-from counterpartylib.lib import backend
-from counterpartylib.lib import ledger
-from counterpartylib.lib import gettxinfo
-from counterpartylib.lib import exceptions
-from counterpartylib.lib.transaction_helper import serializer
-from counterpartylib.lib.transaction_helper import p2sh_encoding
+from counterpartylib.lib import api, backend, config, exceptions, gettxinfo, ledger, script, util
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
+from counterpartylib.lib.transaction_helper import p2sh_encoding, serializer
 
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"
 FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"

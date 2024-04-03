@@ -1,15 +1,12 @@
 import json
-import requests
 import logging
-import warnings
-import time
 import sys
+import time
+import warnings
 
-from counterpartylib.lib import config
-from counterpartylib.lib import util
-from counterpartylib.lib import exceptions
-from counterpartylib.lib import ledger
-from counterpartylib.lib import database
+import requests
+
+from counterpartylib.lib import config, database, exceptions, ledger, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

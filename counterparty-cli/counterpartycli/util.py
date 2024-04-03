@@ -1,20 +1,19 @@
-import os
-import decimal
-import time
-import json
-import requests
-import logging
 import argparse
-import configparser
-import appdirs
 import codecs
+import configparser
+import decimal
+import json
+import logging
+import os
+import time
 
+import appdirs
+import requests
+from counterpartylib import server
+from counterpartylib.lib import check, config
+from counterpartylib.lib.util import value_input, value_output
 from halo import Halo
 from termcolor import colored, cprint
-
-from counterpartylib import server
-from counterpartylib.lib import config, check
-from counterpartylib.lib.util import value_input, value_output
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal

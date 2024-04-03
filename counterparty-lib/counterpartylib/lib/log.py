@@ -1,13 +1,13 @@
-import logging
 import decimal
-import sys
-from datetime import datetime
+import logging
 import os
+import sys
 import traceback
+from datetime import datetime
 
+from colorlog import ColoredFormatter
 from dateutil.tz import tzlocal
 from termcolor import cprint
-from colorlog import ColoredFormatter
 
 from counterpartylib.lib import config
 

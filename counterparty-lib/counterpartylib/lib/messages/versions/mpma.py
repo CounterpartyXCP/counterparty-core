@@ -1,16 +1,17 @@
 #! /usr/bin/python3
 
-import struct
+import binascii
 import json
 import logging
-import binascii
 import math
-from bitcoin.core import key
+import struct
 from functools import reduce
 from itertools import groupby
 
+from bitcoin.core import key
 from bitstring import ReadError
-from counterpartylib.lib import config, util, exceptions, util, message_type, ledger
+
+from counterpartylib.lib import config, exceptions, ledger, message_type, util
 
 from .mpma_util.internals import _decode_mpma_send_decode, _encode_mpma_send
 

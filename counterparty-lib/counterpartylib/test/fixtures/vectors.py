@@ -10,28 +10,27 @@ The function supports three types of output checks:
 
 import binascii
 import json
+from fractions import Fraction
 
 import bitcoin as bitcoinlib
 
+from counterpartylib.lib import address, config, exceptions, script
+from counterpartylib.lib.api import APIError
+from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
+from counterpartylib.lib.ledger import CreditError, DebitError
+from counterpartylib.lib.messages import issuance
+from counterpartylib.lib.util import QuantityError, RPCError
+
 from .params import (
     ADDR,
-    SHORT_ADDR_BYTES,
+    MULTISIGADDR,
     P2SH_ADDR,
     P2WPKH_ADDR,
-    MULTISIGADDR,
+    SHORT_ADDR_BYTES,
+)
+from .params import (
     DEFAULT_PARAMS as DP,
 )
-
-from counterpartylib.lib import config
-from counterpartylib.lib import exceptions
-from counterpartylib.lib import script
-from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
-from counterpartylib.lib.messages import issuance
-from counterpartylib.lib.api import APIError
-from counterpartylib.lib.util import QuantityError, RPCError
-from counterpartylib.lib.ledger import DebitError, CreditError
-from fractions import Fraction
-from counterpartylib.lib import address
 
 UNITTEST_VECTOR = {
     "bet": {
