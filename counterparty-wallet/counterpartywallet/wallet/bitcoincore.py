@@ -2,7 +2,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from counterpartywallet.util import wallet_api as rpc
+from counterpartywallet.util import wallet_api as rpc  # noqa: E402
 
 
 def get_wallet_addresses():

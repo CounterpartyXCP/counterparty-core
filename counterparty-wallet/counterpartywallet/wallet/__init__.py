@@ -1,4 +1,4 @@
-import logging
+import logging  # noqa: F401
 import sys  # noqa: E402
 from decimal import Decimal as D
 
