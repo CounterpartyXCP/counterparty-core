@@ -41,7 +41,7 @@ def to_literal_byte_string(h):
 old_txid_map = {}
 new_txid_map = {}
 
-with os.popen(diffcmd) as diff:
+with os.popen(diffcmd) as diff:  # noqa: S605
     lines = diff.readlines()
 
     for line in lines:

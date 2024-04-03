@@ -377,7 +377,7 @@ def save_rawtransaction(db, txid, tx_hex, confirmations=0):
         cursor.execute(
             """INSERT INTO raw_transactions VALUES (?, ?, ?)""", (txid, tx_hex, confirmations)
         )
-    except Exception as e:  # TODO  # noqa: F841
+    except Exception as e:  # TODO  # noqa: F841, S110
         pass
     cursor.close()
 
@@ -666,7 +666,7 @@ def check_record(record, server_db, pytest_config):
         value = cursor.execute(sql).fetchall()[0][field]
         assert value == record["value"]
     else:
-        sql = f"""SELECT COUNT(*) AS c FROM {record['table']} """
+        sql = f"""SELECT COUNT(*) AS c FROM {record['table']} """  # noqa: S608
         sql += """WHERE """
         bindings = []
         conditions = []
@@ -684,10 +684,10 @@ def check_record(record, server_db, pytest_config):
                 print("expected values: ")
                 pprint.PrettyPrinter(indent=4).pprint(record["values"])
                 print(
-                    f"SELECT * FROM {record['table']} WHERE block_index = {record['values']['block_index']}: "
+                    f"SELECT * FROM {record['table']} WHERE block_index = {record['values']['block_index']}: "  # noqa: S608
                 )
                 pprint.PrettyPrinter(indent=4).pprint(
-                    list(cursor.execute(f"""SELECT * FROM {record['table']}"""))
+                    list(cursor.execute(f"""SELECT * FROM {record['table']}"""))  # noqa: S608
                 )
 
             raise AssertionError(

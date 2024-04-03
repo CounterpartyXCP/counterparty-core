@@ -27,7 +27,7 @@ except FileExistsError:
     os.mkdir(tmpdir)
 
 print("creating .sql dump of DB...")
-pdump = Popen(["sqlite3", dbfile], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+pdump = Popen(["sqlite3", dbfile], stdin=PIPE, stdout=PIPE, stderr=PIPE)  # noqa: S603, S607
 output = pdump.communicate(
     bytes(
         f"""
@@ -45,7 +45,7 @@ print(output)
 assert pdump.wait() == 0
 
 print("preparing new DB...")
-ppre = Popen(["sqlite3", tmpfile], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+ppre = Popen(["sqlite3", tmpfile], stdin=PIPE, stdout=PIPE, stderr=PIPE)  # noqa: S603, S607
 output = ppre.communicate(
     bytes(
         f"""
@@ -61,12 +61,12 @@ assert ppre.wait() == 0
 
 print("loading .sql dump into DB...")
 fsqlfile = os.open(sqlfile, os.O_RDONLY)
-pload = Popen(["sqlite3", tmpfile], stdin=fsqlfile, stdout=PIPE, stderr=PIPE)
+pload = Popen(["sqlite3", tmpfile], stdin=fsqlfile, stdout=PIPE, stderr=PIPE)  # noqa: S603, S607
 print(pload.communicate())
 assert pload.wait() == 0
 
 print("finalizing new DB...")
-ppost = Popen(["sqlite3", tmpfile], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+ppost = Popen(["sqlite3", tmpfile], stdin=PIPE, stdout=PIPE, stderr=PIPE)  # noqa: S603, S607
 output = ppost.communicate(
     bytes(
         """

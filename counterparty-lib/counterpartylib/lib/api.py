@@ -355,7 +355,7 @@ def get_rows(
     # SELECT
     source = VIEW_QUERIES[table] if table in VIEW_QUERIES else table
     # no sql injection here
-    statement = f"""SELECT * FROM ({source})"""  # nosec B608
+    statement = f"""SELECT * FROM ({source})"""  # nosec B608  # noqa: S608
     # WHERE
     bindings = []
     conditions = []
@@ -933,7 +933,7 @@ class APIServer(threading.Thread):
             block_indexes_placeholder = f"({','.join(['?'] * len(block_indexes))})"
             # no sql injection here
             cursor.execute(
-                f"SELECT * FROM blocks WHERE block_index IN ({block_indexes_placeholder}) ORDER BY block_index ASC",  # nosec B608
+                f"SELECT * FROM blocks WHERE block_index IN ({block_indexes_placeholder}) ORDER BY block_index ASC",  # nosec B608  # noqa: S608
                 block_indexes,
             )
             blocks = cursor.fetchall()  # noqa: F811
@@ -1039,7 +1039,7 @@ class APIServer(threading.Thread):
                 "destructions",
             ]:
                 # no sql injection here, element is hardcoded
-                cursor.execute(f"SELECT COUNT(*) AS count FROM {element}")  # nosec B608
+                cursor.execute(f"SELECT COUNT(*) AS count FROM {element}")  # nosec B608  # noqa: S608
                 count_list = cursor.fetchall()
                 assert len(count_list) == 1
                 counts[element] = count_list[0]["count"]

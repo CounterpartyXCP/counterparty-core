@@ -10,7 +10,7 @@ select = [
     "E7",
     "E9",
     "F", # pyflakes
-    # "S",  # flake8-bandit
+    "S",  # flake8-bandit
     # "B",  # flake8-bugbear
     "I", # isort
     # "PLC",  # pylint conventions
@@ -19,5 +19,6 @@ select = [
     # "PLW" # pylint warning
 ]
 ignore = [
-  "E501" # line too long
+  "E501", # line too long
+  "S101", # bandit: use of assert
 ]

@@ -298,7 +298,7 @@ def benchmark_new_balances(old_balance_db):
     GROUP BY address
     ORDER BY cnt DESC
     LIMIT 100
-    """
+    """  # noqa: S608
     new_most_assets = execute_query(new_cursor, description, query)
 
     description = "Get balances for 100 addresses with most assets from `old_balances`..."
@@ -308,7 +308,7 @@ def benchmark_new_balances(old_balance_db):
             SELECT asset, quantity
             FROM balances
             WHERE address = '{asset[0]}'
-        """)
+        """)  # noqa: S608
     execute_query(old_cursor, description, queries)
 
     description = "Get balances for 100 addresses with most assets from `new_balances`..."
@@ -321,7 +321,7 @@ def benchmark_new_balances(old_balance_db):
                 WHERE address = '{asset[0]}'
                 GROUP BY address, asset
             )
-        """)
+        """)  # noqa: S608
     execute_query(new_cursor, description, queries)
 
 

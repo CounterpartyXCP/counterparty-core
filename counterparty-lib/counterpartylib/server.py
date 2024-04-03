@@ -747,7 +747,7 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
 
     # Downloading
     spinner.start()
-    urllib.request.urlretrieve(bootstrap_url, tarball_path, bootstrap_progress)  # nosec B310
+    urllib.request.urlretrieve(bootstrap_url, tarball_path, bootstrap_progress)  # nosec B310  # noqa: S310
     spinner.stop()
     print(f"{OK_GREEN} {step}")
 
@@ -755,7 +755,7 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
     step = f"Extracting database to {data_dir}..."
     with Halo(text=step, spinner=SPINNER_STYLE):
         with tarfile.open(tarball_path, "r:gz") as tar_file:
-            tar_file.extractall(path=data_dir)  # nosec B202
+            tar_file.extractall(path=data_dir)  # nosec B202  # noqa: S202
     print(f"{OK_GREEN} {step}")
 
     assert os.path.exists(database_path)

@@ -844,7 +844,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
     else:
         # Save new hash. No sql injection here.
         cursor.execute(
-            f"""UPDATE blocks SET {field} = ? WHERE block_index = ?""",
+            f"""UPDATE blocks SET {field} = ? WHERE block_index = ?""",  # noqa: S608
             (calculated_hash, block_index),
         )  # nosec B608
 

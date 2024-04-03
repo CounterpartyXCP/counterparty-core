@@ -203,14 +203,14 @@ def test_update_lock(server_db):
     cursor = server_db.cursor()
     for table in blocks.TABLES:
         # don't test empty tables
-        rows_count = cursor.execute(f"SELECT COUNT(*) AS cnt FROM {table}").fetchone()
+        rows_count = cursor.execute(f"SELECT COUNT(*) AS cnt FROM {table}").fetchone()  # noqa: S608
         if rows_count is None or rows_count["cnt"] == 0:
             continue
         with pytest.raises(ConstraintError) as excinfo:
             cursor.execute(
                 f"""
                 UPDATE {table} SET block_index = :block_index
-            """,
+            """,  # noqa: S608
                 {"block_index": 0},
             )
         assert str(excinfo.value) == "ConstraintError: UPDATES NOT ALLOWED"
@@ -339,7 +339,7 @@ def test_updated_tables_endpoints():
 def test_new_get_balances_by_address():
     alice = ADDR[0]
     url = f"{config.API_ROOT}/addresses/{alice}/balances"
-    result = requests.get(url)
+    result = requests.get(url)  # noqa: S113
     assert result.json() == [
         {
             "MAX(rowid)": 68,
@@ -396,7 +396,7 @@ def test_new_get_balances_by_address():
 def test_new_get_balances_by_asset():
     asset = "XCP"
     url = f"{config.API_ROOT}/assets/{asset}/balances"
-    result = requests.get(url)
+    result = requests.get(url)  # noqa: S113
     assert result.json() == [
         {
             "MAX(rowid)": 19,
@@ -465,7 +465,7 @@ def test_new_get_balances_by_asset():
 def test_new_get_balances_vs_old():
     asset = "XCP"
     url = f"{config.API_ROOT}/assets/{asset}/balances"
-    new_balances = requests.get(url).json()
+    new_balances = requests.get(url).json()  # noqa: S113
     old_balance = util.api(
         "get_balances",
         {
@@ -488,7 +488,7 @@ def test_new_get_balances_vs_old():
 def test_new_get_asset_info():
     asset = "NODIVISIBLE"
     url = f"{config.API_ROOT}/assets/{asset}"
-    result = requests.get(url)
+    result = requests.get(url)  # noqa: S113
     assert result.json() == [
         {
             "asset": "NODIVISIBLE",
@@ -507,7 +507,7 @@ def test_new_get_asset_info():
 def test_new_get_asset_orders():
     asset = "XCP"
     url = f"{config.API_ROOT}/assets/{asset}/orders"
-    result = requests.get(url).json()
+    result = requests.get(url).json()  # noqa: S113
     assert len(result) == 6
     assert result[0] == {
         "tx_index": 11,
@@ -535,7 +535,7 @@ def test_new_get_asset_orders():
 def test_new_get_order_info():
     tx_hash = "1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a"
     url = f"{config.API_ROOT}/orders/{tx_hash}"
-    result = requests.get(url).json()
+    result = requests.get(url).json()  # noqa: S113
     assert result[0] == {
         "tx_index": 11,
         "tx_hash": "1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a",
@@ -561,7 +561,7 @@ def test_new_get_order_info():
 def test_new_get_order_matches():
     tx_hash = "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
     url = f"{config.API_ROOT}/orders/{tx_hash}/matches"
-    result = requests.get(url).json()
+    result = requests.get(url).json()  # noqa: S113
     assert result[0] == {
         "id": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498_1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81",
         "tx0_index": 492,

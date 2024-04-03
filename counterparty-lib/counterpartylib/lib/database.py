@@ -145,5 +145,5 @@ def drop_indexes(cursor, indexes):
 def copy_old_table(cursor, table_name, new_create_query):
     cursor.execute(f"""ALTER TABLE {table_name} RENAME TO old_{table_name}""")
     cursor.execute(new_create_query)
-    cursor.execute(f"""INSERT INTO {table_name} SELECT * FROM old_{table_name}""")  # nosec B608
+    cursor.execute(f"""INSERT INTO {table_name} SELECT * FROM old_{table_name}""")  # nosec B608  # noqa: S608
     cursor.execute(f"""DROP TABLE old_{table_name}""")

@@ -59,7 +59,7 @@ def get_messages(db, block_index=None, block_index_in=None, message_index_in=Non
         )
         bindings += message_index_in
     # no sql injection here
-    query = f"""SELECT * FROM messages WHERE ({" AND ".join(where)}) ORDER BY message_index ASC"""  # nosec B608
+    query = f"""SELECT * FROM messages WHERE ({" AND ".join(where)}) ORDER BY message_index ASC"""  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -588,7 +588,7 @@ def get_asset_balances(db, asset, exclude_zero_balances=True):
             SELECT * FROM (
                 {query}
             ) WHERE quantity > 0
-        """  # nosec B608
+        """  # nosec B608  # noqa: S608
     bindings = (asset,)
     cursor.execute(query, bindings)
     return cursor.fetchall()
@@ -638,7 +638,7 @@ def get_issuances(db, asset=None, status=None, locked=None, first=False, last=Fa
         where.append("locked = ?")
         bindings.append(locked)
     # no sql injection here
-    query = f"""SELECT * FROM issuances WHERE ({" AND ".join(where)})"""  # nosec B608
+    query = f"""SELECT * FROM issuances WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
     if first:
         query += f""" ORDER BY tx_index ASC"""  # noqa: F541
     elif last:
@@ -734,7 +734,7 @@ def get_burns(db, status=None, source=None):
         where.append("source = ?")
         bindings.append(source)
     # no sql injection here
-    query = f"""SELECT * FROM burns WHERE ({" AND ".join(where)})"""  # nosec B608
+    query = f"""SELECT * FROM burns WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -766,7 +766,7 @@ def get_transactions(db, tx_hash=None):
         where.append("tx_hash = ?")
         bindings.append(tx_hash)
     # no sql injection here
-    query = f"""SELECT * FROM transactions WHERE ({" AND ".join(where)})"""  # nosec B608
+    query = f"""SELECT * FROM transactions WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -787,7 +787,7 @@ def get_addresses(db, address=None):
         where.append("address = ?")
         bindings.append(address)
     # no sql injection here
-    query = f"""SELECT * FROM addresses WHERE ({" AND ".join(where)})"""  # nosec B608
+    query = f"""SELECT * FROM addresses WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -802,7 +802,7 @@ def insert_record(db, table_name, record, event):
     fields_name = ", ".join(record.keys())
     fields_values = ", ".join([f":{key}" for key in record.keys()])
     # no sql injection here
-    query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608
+    query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608  # noqa: S608
     cursor.execute(query, record)
     cursor.close()
     # Add event to journal
@@ -821,7 +821,7 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
         WHERE {id_name} = ?
         ORDER BY rowid DESC
         LIMIT 1
-    """  # nosec B608
+    """  # nosec B608  # noqa: S608
     bindings = (id_value,)
     need_update_record = cursor.execute(select_query, bindings).fetchone()
 
@@ -843,7 +843,7 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     fields_name = ", ".join(new_record.keys())
     fields_values = ", ".join([f":{key}" for key in new_record.keys()])
     # no sql injection here
-    insert_query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608
+    insert_query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608  # noqa: S608
     cursor.execute(insert_query, new_record)
     cursor.close()
     # Add event to journal
@@ -927,7 +927,7 @@ def select_last_revision(db, table_name, where_data):
         WHERE ({" AND ".join(where_immutable)})
         GROUP BY {", ".join(ID_FIELDS[table_name])}
     ) WHERE ({" AND ".join(where_mutable)})
-    """  # nosec B608
+    """  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -956,7 +956,7 @@ def get_dispenser_info(db, tx_hash=None, tx_index=None):
         LEFT JOIN assets a ON a.asset_name = d.asset
         WHERE ({" AND ".join(where)})
         ORDER BY d.rowid DESC LIMIT 1
-    """  # nosec B608
+    """  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -1125,7 +1125,7 @@ def get_dispensers(
             {group_clause}
         ) {second_where_str}
         {order_clause}
-    """  # nosec B608
+    """  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -1449,7 +1449,7 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
                 {where_source}
             GROUP BY tx_hash
         ) WHERE give_remaining = 0 OR get_remaining = 0
-    """  # nosec B608
+    """  # nosec B608  # noqa: S608
 
     cursor = db.cursor()
     cursor.execute(select_query, select_bindings)
@@ -1525,7 +1525,7 @@ def get_matching_rps(db, possible_moves, wager, source, already_matched_tx_hashe
             GROUP BY tx_hash
         ) WHERE status = ?
         ORDER BY tx_index LIMIT 1
-    """  # nosec B608
+    """  # nosec B608  # noqa: S608
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -1602,7 +1602,7 @@ def get_rpsresolves(db, source=None, status=None, rps_match_id=None):
         where.append("rps_match_id = ?")
         bindings.append(rps_match_id)
     # no sql injection here
-    query = f"""SELECT * FROM rpsresolves WHERE ({" AND ".join(where)})"""  # nosec B608
+    query = f"""SELECT * FROM rpsresolves WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -2092,7 +2092,7 @@ def held(db):  # TODO: Rename ?
     ]
     # no sql injection here
     sql = (
-        "SELECT asset, SUM(total) AS total FROM ("
+        "SELECT asset, SUM(total) AS total FROM ("  # noqa: S608
         + " UNION ALL ".join(queries)
         + ") GROUP BY asset;"
     )  # nosec B608

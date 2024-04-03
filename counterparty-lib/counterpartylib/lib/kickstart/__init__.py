@@ -80,7 +80,7 @@ def fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner):
             # insert blocks by lot. No sql injection here.
             cursor.execute(
                 f"""INSERT INTO kickstart_blocks (block_index, block_hash, block_time, previous_block_hash, difficulty, tx_count)
-                                VALUES {', '.join(bindings_place)}""",  # nosec B608
+                                VALUES {', '.join(bindings_place)}""",  # nosec B608  # noqa: S608
                 bindings_lot,
             )
             spinner.text = (

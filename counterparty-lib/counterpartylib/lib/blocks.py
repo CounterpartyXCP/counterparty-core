@@ -664,7 +664,7 @@ def list_tx(
 def clean_table_from(cursor, table, block_index):
     logger.info(f"Rolling table `{table}` back to block {block_index}...")
     # internal function, no sql injection here
-    cursor.execute(f"""DELETE FROM {table} WHERE block_index >= ?""", (block_index,))  # nosec B608
+    cursor.execute(f"""DELETE FROM {table} WHERE block_index >= ?""", (block_index,))  # nosec B608  # noqa: S608
 
 
 def clean_messages_tables(cursor, block_index=0):

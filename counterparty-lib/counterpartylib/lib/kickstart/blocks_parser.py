@@ -150,7 +150,7 @@ class BlockchainParser:
         if block_hash is None:
             return None
         self.shm = shared_memory.SharedMemory(name=block_hash)
-        block = pickle.loads(self.shm.buf[: self.shm.size])  # nosec B301
+        block = pickle.loads(self.shm.buf[: self.shm.size])  # nosec B301  # noqa: S301
         self.shm.close()
         self.shm.unlink()
         return block
