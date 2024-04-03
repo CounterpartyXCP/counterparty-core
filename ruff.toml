@@ -1,8 +1,4 @@
-
-
-
 line-length = 100
-
 
 [lint]
 select = [
