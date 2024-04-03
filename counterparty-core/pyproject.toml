@@ -37,7 +37,7 @@ pre-install-commands = [
 ]
 
 [project.scripts]
-counterparty-core = "counterpartycore:server.main"
+counterparty-server = "counterpartycore:server.main"
 
 [project.urls]
 "Latest release" = "https://github.com/CounterpartyXCP/counterparty-core/releases/latest"
