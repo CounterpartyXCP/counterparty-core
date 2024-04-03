@@ -19,7 +19,15 @@ import struct
 D = decimal.Decimal
 import logging  # noqa: E402
 
-from counterpartylib.lib import config, database, exceptions, ledger, log, message_type, util  # noqa: E402
+from counterpartylib.lib import (  # noqa: E402
+    config,
+    database,
+    exceptions,
+    ledger,
+    log,
+    message_type,
+    util,
+)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

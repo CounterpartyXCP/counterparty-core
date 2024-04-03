@@ -31,7 +31,15 @@ from fractions import Fraction  # noqa: E402
 
 from bitcoin.core import VarIntSerializer  # noqa: E402
 
-from counterpartylib.lib import config, database, exceptions, ledger, log, message_type, util  # noqa: E402
+from counterpartylib.lib import (  # noqa: E402
+    config,
+    database,
+    exceptions,
+    ledger,
+    log,
+    message_type,
+    util,
+)
 
 from . import bet  # noqa: E402
 

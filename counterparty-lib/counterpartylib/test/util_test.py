@@ -42,7 +42,10 @@ from counterpartylib.lib import (  # noqa: E402
     transaction,
     util,
 )
-from counterpartylib.lib.backend.indexd import extract_addresses, extract_addresses_from_txlist  # noqa: E402
+from counterpartylib.lib.backend.indexd import (  # noqa: E402
+    extract_addresses,
+    extract_addresses_from_txlist,
+)
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: E402
 from counterpartylib.test.fixtures.scenarios import (  # noqa: E402
