@@ -1,25 +1,14 @@
-import argparse
-import codecs
-import configparser
 import decimal
-import json
-import logging
-import os
 import time
-
-import appdirs
+import json
 import requests
-from counterpartylib import server  # noqa: F401
-from counterpartylib.lib import check, config  # noqa: F401
+import logging
+
+from counterpartylib.lib import config
 from counterpartylib.lib.util import value_input, value_output
-from halo import Halo  # noqa: F401
-from termcolor import colored, cprint  # noqa: F401
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
-
-OK_GREEN = colored("[OK]", "green")
-SPINNER_STYLE = "bouncingBar"
 
 rpc_sessions = {}
 
@@ -128,65 +117,3 @@ def value_out(quantity, asset, divisible=None):
     if divisible is None:
         divisible = is_divisible(asset)
     return value_output(quantity, asset, divisible)
-
-
-def read_config_file(default_config_file, config_file_path=None):
-    if not config_file_path:
-        config_dir = appdirs.user_config_dir(
-            appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
-        )
-        if not os.path.isdir(config_dir):
-            os.makedirs(config_dir, mode=0o755)
-        config_file_path = os.path.join(config_dir, default_config_file)
-
-    # clean BOM
-    bufsize = 4096
-    bomlen = len(codecs.BOM_UTF8)
-    with codecs.open(config_file_path, "r+b") as fp:
-        chunk = fp.read(bufsize)
-        if chunk.startswith(codecs.BOM_UTF8):
-            i = 0
-            chunk = chunk[bomlen:]
-            while chunk:
-                fp.seek(i)
-                fp.write(chunk)
-                i += len(chunk)
-                fp.seek(bomlen, os.SEEK_CUR)
-                chunk = fp.read(bufsize)
-            fp.seek(-bomlen, os.SEEK_CUR)
-            fp.truncate()
-
-    logger.debug(f"Loading configuration file: `{config_file_path}`")
-    configfile = configparser.SafeConfigParser(
-        allow_no_value=True, inline_comment_prefixes=("#", ";")
-    )
-    with codecs.open(config_file_path, "r", encoding="utf8") as fp:
-        configfile.readfp(fp)
-
-    if "Default" not in configfile:
-        configfile["Default"] = {}
-
-    return configfile
-
-
-def add_config_arguments(parser, args, configfile, add_default=False):
-    for arg in args:
-        if add_default:
-            key = arg[0][-1].replace("--", "")
-            if (
-                "action" in arg[1]
-                and arg[1]["action"] == "store_true"
-                and key in configfile["Default"]
-            ):
-                arg[1]["default"] = configfile["Default"].getboolean(key)
-            elif key in configfile["Default"] and configfile["Default"][key]:
-                arg[1]["default"] = configfile["Default"][key]
-            elif (
-                key in configfile["Default"]
-                and arg[1].get("nargs", "") == "?"
-                and "const" in arg[1]
-            ):
-                arg[1]["default"] = arg[1]["const"]  # bit of a hack
-        else:
-            arg[1]["default"] = argparse.SUPPRESS
-        parser.add_argument(*arg[0], **arg[1])

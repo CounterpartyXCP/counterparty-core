@@ -3,7 +3,7 @@ requires = ["hatchling==1.14.0", "hatch-requirements-txt==0.4.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "counterparty-cli"
+name = "counterparty-wallet"
 requires-python = ">= 3.10"
 dynamic = ["version", "dependencies"]
 description = "Counterparty Protocol Command-Line Interface"
@@ -37,8 +37,7 @@ pre-install-commands = [
 ]
 
 [project.scripts]
-counterparty-client = "counterpartycli:client_main"
-counterparty-server = "counterpartycli:server_main"
+counterparty-wallet = "counterpartywallet:client.main"
 
 [project.urls]
 "Latest release" = "https://github.com/CounterpartyXCP/counterparty-core/releases/latest"

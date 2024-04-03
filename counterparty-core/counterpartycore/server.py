@@ -9,13 +9,14 @@ from counterpartylib import server
 from counterpartylib.lib import config, log
 from termcolor import cprint
 
-from counterpartycli import APP_VERSION
-from counterpartycli.setup import generate_config_files
-from counterpartycli.util import add_config_arguments, read_config_file
+from counterpartylib import server
+from counterpartylib.lib import log, config, setup
+
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-APP_NAME = "counterparty-server"
+APP_NAME = 'counterparty-server'
+APP_VERSION = config.VERSION_STRING
 
 CONFIG_ARGS = [
     [
@@ -273,14 +274,8 @@ class VersionError(Exception):
 
 
 def main():
-    if os.name == "nt":
-        from counterpartylib.lib import util_windows
-
-        # patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
-        util_windows.fix_win32_unicode()
-
     # Post installation tasks
-    server_configfile, _ = generate_config_files()
+    server_configfile = setup.generate_server_config_file(CONFIG_ARGS)
 
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(
@@ -301,66 +296,43 @@ def main():
     parser.add_argument("--config-file", help="the path to the configuration file")
 
     cmd_args = parser.parse_known_args()[0]
-    config_file_path = getattr(cmd_args, "config_file", None)
-    configfile = read_config_file("server.conf", config_file_path)
+    config_file_path = getattr(cmd_args, 'config_file', None)
+    configfile = setup.read_config_file('server.conf', config_file_path)
 
-    add_config_arguments(parser, CONFIG_ARGS, configfile, add_default=True)
+    setup.add_config_arguments(parser, CONFIG_ARGS, configfile, add_default=True)
 
     subparsers = parser.add_subparsers(dest="action", help="the action to be taken")
 
-    parser_server = subparsers.add_parser("start", help="run the server")
-    parser_server.add_argument("--config-file", help="the path to the configuration file")
-    parser_server.add_argument(
-        "--catch-up",
-        choices=["normal", "bootstrap"],
-        default="normal",
-        help="Catch up mode (default: normal)",
-    )
-    add_config_arguments(parser_server, CONFIG_ARGS, configfile)
+    parser_server = subparsers.add_parser('start', help='run the server')
+    parser_server.add_argument('--config-file', help='the path to the configuration file')
+    parser_server.add_argument('--catch-up', choices=['normal', 'bootstrap'], default='normal', help='Catch up mode (default: normal)')
+    setup.add_config_arguments(parser_server, CONFIG_ARGS, configfile)
 
-    parser_reparse = subparsers.add_parser(
-        "reparse", help="reparse all transactions in the database"
-    )
-    parser_reparse.add_argument(
-        "block_index", type=int, help="the index of the last known good block"
-    )
-    add_config_arguments(parser_reparse, CONFIG_ARGS, configfile)
+    parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database')
+    parser_reparse.add_argument('block_index', type=int, help='the index of the last known good block')
+    setup.add_config_arguments(parser_reparse, CONFIG_ARGS, configfile)
 
-    parser_vacuum = subparsers.add_parser(
-        "vacuum", help="VACUUM the database (to improve performance)"
-    )
-    add_config_arguments(parser_vacuum, CONFIG_ARGS, configfile)
+    parser_vacuum = subparsers.add_parser('vacuum', help='VACUUM the database (to improve performance)')
+    setup.add_config_arguments(parser_vacuum, CONFIG_ARGS, configfile)
 
-    parser_rollback = subparsers.add_parser("rollback", help="rollback database")
-    parser_rollback.add_argument(
-        "block_index", type=int, help="the index of the last known good block"
-    )
-    add_config_arguments(parser_rollback, CONFIG_ARGS, configfile)
+    parser_rollback = subparsers.add_parser('rollback', help='rollback database')
+    parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
+    setup.add_config_arguments(parser_rollback, CONFIG_ARGS, configfile)
 
-    parser_kickstart = subparsers.add_parser(
-        "kickstart", help="rapidly build database by reading from Bitcoin Core blockchain"
-    )
-    parser_kickstart.add_argument("--bitcoind-dir", help="Bitcoin Core data directory")
-    parser_kickstart.add_argument(
-        "--max-queue-size", type=int, help="Size of the multiprocessing.Queue for parsing blocks"
-    )
-    parser_kickstart.add_argument(
-        "--debug-block", type=int, help="Rollback and run kickstart for a single block;"
-    )
-    add_config_arguments(parser_kickstart, CONFIG_ARGS, configfile)
+    parser_kickstart = subparsers.add_parser('kickstart', help='rapidly build database by reading from Bitcoin Core blockchain')
+    parser_kickstart.add_argument('--bitcoind-dir', help='Bitcoin Core data directory')
+    parser_kickstart.add_argument('--max-queue-size', type=int, help='Size of the multiprocessing.Queue for parsing blocks')
+    parser_kickstart.add_argument('--debug-block', type=int, help='Rollback and run kickstart for a single block;')
+    setup.add_config_arguments(parser_kickstart, CONFIG_ARGS, configfile)
 
-    parser_bootstrap = subparsers.add_parser(
-        "bootstrap", help="bootstrap database with hosted snapshot"
-    )
-    add_config_arguments(parser_bootstrap, CONFIG_ARGS, configfile)
+    parser_bootstrap = subparsers.add_parser('bootstrap', help='bootstrap database with hosted snapshot')
+    setup.add_config_arguments(parser_bootstrap, CONFIG_ARGS, configfile)
 
-    parser_checkdb = subparsers.add_parser("check-db", help="do an integrity check on the database")
-    add_config_arguments(parser_checkdb, CONFIG_ARGS, configfile)
+    parser_checkdb = subparsers.add_parser('check-db', help='do an integrity check on the database')
+    setup.add_config_arguments(parser_checkdb, CONFIG_ARGS, configfile)
 
-    parser_show_config = subparsers.add_parser(
-        "show-params", help="Show counterparty-server configuration"
-    )
-    add_config_arguments(parser_show_config, CONFIG_ARGS, configfile)
+    parser_show_config = subparsers.add_parser('show-params', help='Show counterparty-server configuration')
+    setup.add_config_arguments(parser_show_config, CONFIG_ARGS, configfile)
 
     args = parser.parse_args()
 
