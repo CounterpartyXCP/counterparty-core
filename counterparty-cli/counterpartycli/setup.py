@@ -16,7 +16,7 @@ import appdirs
 
 
 # generate commented config file from arguments list (client.CONFIG_ARGS and server.CONFIG_ARGS) and known values
-def generate_config_file(filename, config_args, known_config={}, overwrite=False):
+def generate_config_file(filename, config_args, known_config={}, overwrite=False):  # noqa: B006
     if not overwrite and os.path.exists(filename):
         return
 
@@ -179,7 +179,7 @@ def generate_config_files():
 
 def zip_folder(folder_path, zip_path):
     zip_file = zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED)
-    for root, dirs, files in os.walk(folder_path):
+    for root, dirs, files in os.walk(folder_path):  # noqa: B007
         for a_file in files:
             zip_file.write(os.path.join(root, a_file))
     zip_file.close()

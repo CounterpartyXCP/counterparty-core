@@ -186,7 +186,7 @@ def sort_unspent_txouts(unspent, unconfirmed=False, dust_size=config.DEFAULT_REG
 
 
 def get_btc_supply(normalize=False):
-    f"""returns the total supply of {config.BTC} (based on what Bitcoin Core says the current block height is)"""
+    f"""returns the total supply of {config.BTC} (based on what Bitcoin Core says the current block height is)"""  # noqa: B021
     block_count = getblockcount()
     blocks_remaining = block_count
     total_supply = 0

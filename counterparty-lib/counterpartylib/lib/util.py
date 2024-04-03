@@ -133,7 +133,7 @@ def api(method, params):
         try:
             return response_json["result"]
         except KeyError:
-            raise RPCError(response_json)
+            raise RPCError(response_json)  # noqa: B904
     else:
         raise RPCError(f"{response_json['error']['message']} ({response_json['error']['code']})")
 
@@ -270,7 +270,7 @@ def parse_options_from_string(string):
         try:
             options = int(string_list.pop())
         except:  # noqa: E722
-            raise exceptions.OptionsError("options not an integer")
+            raise exceptions.OptionsError("options not an integer")  # noqa: B904
         return options
     else:
         return False
@@ -352,7 +352,7 @@ def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
     try:
         r = requests.get(url, timeout=fetch_timeout)
     except Exception as e:
-        raise GetURLError(f"Got get_url request error: {e}")
+        raise GetURLError(f"Got get_url request error: {e}")  # noqa: B904
     else:
         if r.status_code != 200 and abort_on_error:
             raise GetURLError(

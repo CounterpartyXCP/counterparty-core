@@ -2,18 +2,19 @@ line-length = 100
 
 [lint]
 select = [
-    "E4", # pycode style
+    "E4",   # pycode style
     "E7",
     "E9",
-    "F",  # pyflakes
-    "S",  # flake8-bandit
-    "I",  # isort
+    "F",    # pyflakes
+    "S",    # flake8-bandit
+    "I",    # isort
     "PLC",  # pylint conventions
-    "PLE", # pylint error
-    "PLE", # pylint refactor
-    "PLW" # pylint warning
+    "PLE",  # pylint error
+    "PLE",  # pylint refactor
+    "PLW",  # pylint warning
+    "B"     # bugbear
 ]
 ignore = [
-  "E501", # line too long
-  "S101", # bandit: use of assert
+  "E501",   # line too long
+  "S101",   # bandit: use of assert
 ]

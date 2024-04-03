@@ -243,7 +243,7 @@ def serialise(
     n += len(destination_outputs)
     if data_output:
         data_array, value = data_output
-        for data_chunk in data_array:
+        for data_chunk in data_array:  # noqa: B007
             n += 1
     else:
         data_array = []

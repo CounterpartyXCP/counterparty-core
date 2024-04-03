@@ -132,7 +132,7 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
     try:
         dust_return_pubkey = binascii.unhexlify(dust_return_pubkey_hex)
     except binascii.Error:
-        raise script.InputError("Invalid private key.")
+        raise script.InputError("Invalid private key.")  # noqa: B904
 
     return dust_return_pubkey
 

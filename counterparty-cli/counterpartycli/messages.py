@@ -131,7 +131,7 @@ def get_pubkey_monosig(pubkeyhash, pubkey_resolver=input_pubkey):
             try:
                 pubkey = script.private_key_to_public_key(private_key)
             except script.AltcoinSupportError:
-                raise InputError("invalid private key")
+                raise InputError("invalid private key")  # noqa: B904
         if pubkeyhash != script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, "utf-8"))):
             raise InputError("provided public or private key does not match the source address")
 
@@ -270,7 +270,7 @@ def prepare_args(args, action):
 
         args.wager = util.value_in(args.wager, "XCP")
         random, move_random_hash = generate_move_random_hash(args.move)
-        setattr(args, "move_random_hash", move_random_hash)
+        args.move_random_hash = move_random_hash
         print(f"random: {random}")
         print(f"move_random_hash: {move_random_hash}")
 

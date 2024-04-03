@@ -38,13 +38,13 @@ def open_leveldb(db_dir):
     try:
         import plyvel
     except:  # noqa: E722
-        raise Exception("Please install the plyvel package via pip3.")
+        raise Exception("Please install the plyvel package via pip3.")  # noqa: B904
 
     try:
         return plyvel.DB(db_dir, create_if_missing=False, compression=None)
     except plyvel._plyvel.IOError as e:
         logger.info(str(e))
-        raise Exception("Ensure that bitcoind is stopped.")
+        raise Exception("Ensure that bitcoind is stopped.")  # noqa: B904
 
 
 def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config):
@@ -81,7 +81,7 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
             )
 
             ledger.CURRENT_BLOCK_INDEX = db_block[1]
-            for i, transaction in enumerate(block["transactions"]):
+            for i, transaction in enumerate(block["transactions"]):  # noqa: B007
                 try:
                     block["transactions"][i]["parsed_vouts"] = gettxinfo.parse_transaction_vouts(
                         block["transactions"][i]
@@ -194,21 +194,21 @@ class BlockchainParser:
 
         transaction["coinbase"] = False
         transaction["vin"] = []
-        for i in range(vds.read_compact_size()):
+        for i in range(vds.read_compact_size()):  # noqa: B007
             vin = self.read_tx_in(vds)
             transaction["vin"].append(vin)
             transaction["coinbase"] = transaction["coinbase"] or vin["coinbase"]
 
         transaction["vout"] = []
-        for i in range(vds.read_compact_size()):
+        for i in range(vds.read_compact_size()):  # noqa: B007
             transaction["vout"].append(self.read_tx_out(vds))
 
         transaction["vtxinwit"] = []
         if transaction["segwit"]:
             offset_before_tx_witnesses = vds.read_cursor - start_pos
-            for vin in transaction["vin"]:
+            for vin in transaction["vin"]:  # noqa: B007
                 witnesses_count = vds.read_compact_size()
-                for i in range(witnesses_count):
+                for i in range(witnesses_count):  # noqa: B007
                     witness_length = vds.read_compact_size()
                     witness = vds.read_bytes(witness_length)
                     transaction["vtxinwit"].append(witness)
@@ -258,7 +258,7 @@ class BlockchainParser:
             return block
         block["transaction_count"] = vds.read_compact_size()
         block["transactions"] = []
-        for i in range(block["transaction_count"]):
+        for i in range(block["transaction_count"]):  # noqa: B007
             block["transactions"].append(self.read_transaction(vds, use_txid=use_txid))
         return block
 

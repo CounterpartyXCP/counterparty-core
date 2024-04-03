@@ -171,7 +171,7 @@ def _decode_decode_lut(data):
     address_list = []
     bytes_per_address = 21
 
-    for i in range(0, num_addresses):
+    for i in range(0, num_addresses):  # noqa: B007
         addr_raw = data[p : p + bytes_per_address]
 
         address_list.append(address.unpack(addr_raw))
@@ -193,7 +193,7 @@ def _decode_decode_send_list(stream, nbits, lut, block_index):
         range_limit = num_recipients
     send_list = []
     asset = ledger.generate_asset_name(asset_id, block_index)
-    for i in range(0, range_limit):
+    for i in range(0, range_limit):  # noqa: B007
         if nbits > 0:
             idx = stream.read(f"uint:{nbits}")
         else:

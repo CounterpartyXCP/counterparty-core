@@ -75,10 +75,10 @@ def unpack(db, message):
         asset = ledger.get_asset_name(db, asset_id, ledger.CURRENT_BLOCK_INDEX)
 
     except struct.error:
-        raise UnpackError("could not unpack")  # noqa: F405
+        raise UnpackError("could not unpack")  # noqa: B904, F405
 
     except AssetIDError:  # noqa: F405
-        raise UnpackError("asset id invalid")  # noqa: F405
+        raise UnpackError("asset id invalid")  # noqa: B904, F405
 
     return asset, quantity, tag
 
@@ -87,12 +87,12 @@ def validate(db, source, destination, asset, quantity):
     try:
         ledger.get_asset_id(db, asset, ledger.CURRENT_BLOCK_INDEX)
     except AssetError:  # noqa: F405
-        raise ValidateError("asset invalid")  # noqa: F405
+        raise ValidateError("asset invalid")  # noqa: B904, F405
 
     try:
         script.validate(source)
     except AddressError:
-        raise ValidateError("source address invalid")  # noqa: F405
+        raise ValidateError("source address invalid")  # noqa: B904, F405
 
     if destination:
         raise ValidateError("destination exists")  # noqa: F405

@@ -68,7 +68,7 @@ def validate(db, source, move, random, rps_match_id):
         problems.append("no such rps match")
         return None, rps_match, problems
     elif len(rps_matches) > 1:
-        assert False
+        assert False  # noqa: B011
 
     rps_match = rps_matches[0]
 

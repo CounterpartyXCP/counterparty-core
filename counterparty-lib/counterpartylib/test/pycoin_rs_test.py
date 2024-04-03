@@ -56,7 +56,7 @@ def test_pycoin_rs():
     iteration = 10
 
     start_time = time.time()
-    for i in range(iteration):
+    for i in range(iteration):  # noqa: B007
         for decoded, version, encoded in vector:
             base58_check_encode(decoded, version)
             base58_check_decode(encoded, version)
@@ -64,7 +64,7 @@ def test_pycoin_rs():
     print("rust duration for 400K encodes and 400K decodes: ", rust_duration)
 
     start_time = time.time()
-    for i in range(iteration):
+    for i in range(iteration):  # noqa: B007
         for decoded, version, encoded in vector:
             base58_check_encode_py(decoded, version)
             base58_check_decode_py(encoded, version)
@@ -118,13 +118,13 @@ def test_get_asm():
     print()
 
     start_time = time.time()
-    for i in range(iteration):
+    for i in range(iteration):  # noqa: B007
         with_rust()
     rust_duration = time.time() - start_time
     print(f"rust duration for {iteration} iterations: ", rust_duration)
 
     start_time = time.time()
-    for i in range(iteration):
+    for i in range(iteration):  # noqa: B007
         with_python()
     python_duration = time.time() - start_time
     print(f"python duration for {iteration} iterations: ", python_duration)
@@ -172,14 +172,14 @@ def script_to_address():
     print()
 
     start_time = time.time()
-    for i in range(iterations):
+    for i in range(iterations):  # noqa: B007
         bech32 = decode_p2w(script_pubkey)
         assert bech32 == ("tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx", None)
     python_duration = time.time() - start_time
     print(f"{iterations} decode_p2w with python: {python_duration}s")
 
     start_time = time.time()
-    for i in range(iterations):
+    for i in range(iterations):  # noqa: B007
         bech32 = utils.script_to_address(script_pubkey, "testnet")
         assert bech32 == "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx"
     rust_duration = time.time() - start_time

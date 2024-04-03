@@ -68,7 +68,7 @@ def is_locked():
         else:
             return True  # Wallet is locked
     else:
-        False
+        False  # noqa: B018
 
 
 def unlock(passphrase):

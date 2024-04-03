@@ -236,8 +236,8 @@ def api_server(request, cp_server):
 
 @pytest.fixture(scope="module")
 def cp_server(request):
-    dbfile = getattr(request.module, "FIXTURE_DB")
-    sqlfile = getattr(request.module, "FIXTURE_SQL_FILE")
+    dbfile = request.module.FIXTURE_DB
+    sqlfile = request.module.FIXTURE_SQL_FILE
     options = getattr(request.module, "FIXTURE_OPTIONS", {})
 
     db = util_test.init_database(sqlfile, dbfile, options)  # noqa: F841

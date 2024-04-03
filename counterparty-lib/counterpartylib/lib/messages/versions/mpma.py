@@ -25,11 +25,11 @@ def unpack(db, message, block_index):
     try:
         unpacked = _decode_mpma_send_decode(message, block_index)
     except struct.error as e:  # noqa: F841
-        raise exceptions.UnpackError("could not unpack")
+        raise exceptions.UnpackError("could not unpack")  # noqa: B904
     except (exceptions.AssetNameError, exceptions.AssetIDError) as e:  # noqa: F841
-        raise exceptions.UnpackError("invalid asset in mpma send")
+        raise exceptions.UnpackError("invalid asset in mpma send")  # noqa: B904
     except ReadError as e:  # noqa: F841
-        raise exceptions.UnpackError("truncated data")
+        raise exceptions.UnpackError("truncated data")  # noqa: B904
 
     return unpacked
 

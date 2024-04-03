@@ -38,11 +38,11 @@ def unpack(db, message, block_index):
 
     except struct.error as e:
         logger.warning(f"enhanced send unpack error: {e}")
-        raise exceptions.UnpackError("could not unpack")
+        raise exceptions.UnpackError("could not unpack")  # noqa: B904
 
     except (exceptions.AssetNameError, exceptions.AssetIDError) as e:
         logger.warning(f"enhanced send invalid asset id: {e}")
-        raise exceptions.UnpackError("asset id invalid")
+        raise exceptions.UnpackError("asset id invalid")  # noqa: B904
 
     unpacked = {
         "asset": asset,

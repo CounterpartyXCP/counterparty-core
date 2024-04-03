@@ -478,7 +478,7 @@ def test_new_get_balances_vs_old():
     new_balances = sorted(new_balances, key=lambda x: (x["address"], x["asset"], x["quantity"]))
     old_balance = sorted(old_balance, key=lambda x: (x["address"], x["asset"], x["quantity"]))
     assert len(new_balances) == len(old_balance)
-    for new_balance, old_balance in zip(new_balances, old_balance):
+    for new_balance, old_balance in zip(new_balances, old_balance):  # noqa: B020
         assert new_balance["address"] == old_balance["address"]
         assert new_balance["asset"] == old_balance["asset"]
         assert new_balance["quantity"] == old_balance["quantity"]

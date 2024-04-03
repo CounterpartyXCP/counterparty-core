@@ -125,7 +125,7 @@ def parse(db, tx, message):
             rps.cancel_rps(db, offer, "cancelled", tx["block_index"], tx["tx_index"])
         # If neither order or bet, mark as invalid.
         else:
-            assert False
+            assert False  # noqa: B011
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

@@ -22,10 +22,10 @@ def unpack(db, message, block_index):
         asset = ledger.get_asset_name(db, asset_id, block_index)
 
     except struct.error:
-        raise exceptions.UnpackError("could not unpack")
+        raise exceptions.UnpackError("could not unpack")  # noqa: B904
 
     except exceptions.AssetNameError:
-        raise exceptions.UnpackError("asset id invalid")
+        raise exceptions.UnpackError("asset id invalid")  # noqa: B904
 
     unpacked = {"asset": asset, "quantity": quantity}
     return unpacked

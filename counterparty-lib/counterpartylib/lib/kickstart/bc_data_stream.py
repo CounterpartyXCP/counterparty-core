@@ -52,7 +52,7 @@ class BCDataStream(object):
         try:
             length = self.read_compact_size()
         except IndexError:
-            raise SerializationError("attempt to read past end of buffer")
+            raise SerializationError("attempt to read past end of buffer")  # noqa: B904
 
         return self.read_bytes(length)
 
@@ -67,7 +67,7 @@ class BCDataStream(object):
             self.read_cursor += length
             return result
         except IndexError:
-            raise SerializationError("attempt to read past end of buffer")
+            raise SerializationError("attempt to read past end of buffer")  # noqa: B904
 
     def read_boolean(self):
         return self.read_bytes(1)[0] != chr(0)

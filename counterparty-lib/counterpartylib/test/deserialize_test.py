@@ -74,7 +74,7 @@ def test_deserialize():
     iterations = 25
 
     start_time = time.time()
-    for i in range(iterations):
+    for i in range(iterations):  # noqa: B007
         for hex in transactions_hex:
             parser.deserialize_tx(hex)
     end_time = time.time()
@@ -83,7 +83,7 @@ def test_deserialize():
     )
 
     start_time = time.time()
-    for i in range(iterations):
+    for i in range(iterations):  # noqa: B007
         for hex in transactions_hex:
             backend.deserialize(hex)
     end_time = time.time()

@@ -81,7 +81,7 @@ def initialize(
         ):
             raise ConfigurationError("invalid RPC port number")
     except:  # noqa: E722
-        raise Exception(
+        raise Exception(  # noqa: B904
             "Please specific a valid port number counterparty-rpc-port configuration parameter"
         )
 
@@ -143,7 +143,7 @@ def initialize(
         if not (int(config.WALLET_PORT) > 1 and int(config.WALLET_PORT) < 65535):
             raise ConfigurationError("invalid wallet API port number")
     except:  # noqa: E722
-        raise ConfigurationError(
+        raise ConfigurationError(  # noqa: B904
             "Please specific a valid port number wallet-port configuration parameter"
         )
 
@@ -218,7 +218,7 @@ def initialize(
             config.BURN_END = config.BURN_END_REGTEST
             config.UNSPENDABLE = custom_args[0]
         else:
-            raise "Custom net parameter needs to be like UNSPENDABLE_ADDRESS|ADDRESSVERSION|P2SH_ADDRESSVERSION (version bytes in HH format)"
+            raise "Custom net parameter needs to be like UNSPENDABLE_ADDRESS|ADDRESSVERSION|P2SH_ADDRESSVERSION (version bytes in HH format)"  # noqa: B016
     elif config.REGTEST:
         config.MAGIC_BYTES = config.MAGIC_BYTES_REGTEST
         if config.TESTCOIN:

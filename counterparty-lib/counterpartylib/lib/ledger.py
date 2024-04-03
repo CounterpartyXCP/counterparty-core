@@ -348,7 +348,7 @@ def generate_asset_id(asset_name, block_index):
             try:
                 asset_id = int(asset_name[1:])
             except ValueError:
-                raise exceptions.AssetNameError("non‐numeric asset name starts with ‘A’")
+                raise exceptions.AssetNameError("non‐numeric asset name starts with ‘A’")  # noqa: B904
 
             # Number must be in range.
             if not (26**12 + 1 <= asset_id <= 2**64 - 1):
@@ -812,7 +812,7 @@ def insert_record(db, table_name, record, event):
 # This function allows you to update a record using an INSERT.
 # The `block_index` and `rowid` fields allow you to
 # order updates and retrieve the row with the current data.
-def insert_update(db, table_name, id_name, id_value, update_data, event, event_info={}):
+def insert_update(db, table_name, id_name, id_value, update_data, event, event_info={}):  # noqa: B006
     cursor = db.cursor()
     # select records to update
     select_query = f"""
@@ -2141,7 +2141,7 @@ def get_value_by_block_index(change_name, block_index=None):
     max_block_index = -1
 
     if config.REGTEST:
-        for key, value in PROTOCOL_CHANGES[change_name]["testnet"]:
+        for key, value in PROTOCOL_CHANGES[change_name]["testnet"]:  # noqa: B007
             if int(key) > int(max_block_index):
                 max_block_index = key
         return PROTOCOL_CHANGES[change_name]["testnet"][max_block_index]["value"]

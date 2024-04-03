@@ -51,7 +51,7 @@ def sigterm_handler(_signo, _stack_frame):
     elif _signo == 2:
         signal_name = "SIGINT"
     else:
-        assert False
+        assert False  # noqa: B011
     logger.info(f"Received {signal_name}.")
 
     if "api_server" in globals():
@@ -92,7 +92,7 @@ def get_lock():
     try:
         lock_socket.bind(socket_address)
     except socket.error:
-        raise LockingError(error)
+        raise LockingError(error)  # noqa: B904
     logger.debug("Lock acquired.")
 
 
@@ -285,7 +285,7 @@ def initialise_config(
         if not (int(config.BACKEND_PORT) > 1 and int(config.BACKEND_PORT) < 65535):
             raise ConfigurationError("invalid backend API port number")
     except:  # noqa: E722
-        raise ConfigurationError(
+        raise ConfigurationError(  # noqa: B904
             "Please specific a valid port number backend-port configuration parameter"
         )
 
@@ -370,7 +370,7 @@ def initialise_config(
         if not (int(config.INDEXD_PORT) > 1 and int(config.INDEXD_PORT) < 65535):
             raise ConfigurationError("invalid Indexd API port number")
     except:  # noqa: E722
-        raise ConfigurationError(
+        raise ConfigurationError(  # noqa: B904
             "Please specific a valid port number indexd-port configuration parameter"
         )
 
@@ -415,7 +415,7 @@ def initialise_config(
         if not (int(config.RPC_PORT) > 1 and int(config.RPC_PORT) < 65535):
             raise ConfigurationError("invalid server API port number")
     except:  # noqa: E722
-        raise ConfigurationError(
+        raise ConfigurationError(  # noqa: B904
             "Please specific a valid port number rpc-port configuration parameter"
         )
 
@@ -489,7 +489,7 @@ def initialise_config(
             config.UNSPENDABLE = custom_args[0]
             config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
         else:
-            raise "Custom net parameter needs to be like UNSPENDABLE_ADDRESS|ADDRESSVERSION|P2SH_ADDRESSVERSION (version bytes in HH format)"
+            raise "Custom net parameter needs to be like UNSPENDABLE_ADDRESS|ADDRESSVERSION|P2SH_ADDRESSVERSION (version bytes in HH format)"  # noqa: B016
     elif config.REGTEST:
         config.MAGIC_BYTES = config.MAGIC_BYTES_REGTEST
         if config.TESTCOIN:

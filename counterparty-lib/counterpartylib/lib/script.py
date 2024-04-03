@@ -177,7 +177,7 @@ def base58_check_decode(s, version):
     try:
         decoded = b58.b58_decode(s)
     except BaseException:  # TODO: update pycoin_rs to raise a specific exception
-        raise Base58Error("invalid base58 string")
+        raise Base58Error("invalid base58 string")  # noqa: B904
 
     if decoded[0] != ord(version):
         raise VersionByteError("incorrect version byte")
@@ -223,7 +223,7 @@ def make_canonical(address):
         try:
             [base58_check_decode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]
         except Base58Error:
-            raise MultiSigAddressError(
+            raise MultiSigAddressError(  # noqa: B904
                 "Multi‐signature address must use PubKeyHashes, not public keys."
             )
         return construct_array(signatures_required, pubkeyhashes, signatures_possible)
@@ -239,7 +239,7 @@ def test_array(signatures_required, pubs, signatures_possible):
             int(signatures_possible),
         )
     except (ValueError, TypeError):
-        raise MultiSigAddressError("Signature values not integers.")
+        raise MultiSigAddressError("Signature values not integers.")  # noqa: B904
     if signatures_required < 1 or signatures_required > 3:
         raise MultiSigAddressError("Invalid signatures_required.")
     if signatures_possible < 2 or signatures_possible > 3:
@@ -319,7 +319,7 @@ def get_asm(scriptpubkey):
                 # TODO: `data = element` (?)
                 asm.append(op)
     except bitcoinlib.core.script.CScriptTruncatedPushDataError:
-        raise exceptions.PushDataDecodeError("invalid pushdata due to truncation")
+        raise exceptions.PushDataDecodeError("invalid pushdata due to truncation")  # noqa: B904
     if not asm:
         raise exceptions.DecodeError("empty output")
     return asm
@@ -334,7 +334,7 @@ def script_to_asm(scriptpubkey):
             asm[0] = int.from_bytes(asm[0], "big")
         return asm
     except BaseException as e:  # noqa: F841
-        raise exceptions.DecodeError("invalid script")
+        raise exceptions.DecodeError("invalid script")  # noqa: B904
 
 
 def script_to_address(scriptpubkey):
@@ -343,7 +343,7 @@ def script_to_address(scriptpubkey):
         script = bytes(scriptpubkey, "utf-8") if type(scriptpubkey) == str else bytes(scriptpubkey)  # noqa: E721
         return utils.script_to_address(script, network)
     except BaseException as e:  # noqa: F841
-        raise exceptions.DecodeError("scriptpubkey decoding error")
+        raise exceptions.DecodeError("scriptpubkey decoding error")  # noqa: B904
 
 
 def get_checksig(asm):
@@ -458,7 +458,7 @@ def private_key_to_public_key(private_key_wif):
             private_key_wif, allowable_wif_prefixes=allowable_wif_prefixes
         )
     except EncodingError:
-        raise AltcoinSupportError("pycoin: unsupported WIF prefix")
+        raise AltcoinSupportError("pycoin: unsupported WIF prefix")  # noqa: B904
     public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
     public_key = public_pair_to_sec(public_pair, compressed=compressed)
     public_key_hex = binascii.hexlify(public_key).decode("utf-8")

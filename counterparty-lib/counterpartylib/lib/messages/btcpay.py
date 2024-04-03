@@ -67,7 +67,7 @@ def validate(db, source, order_match_id, block_index):
         problems.append(f"no such order match {order_match_id}")
         return None, None, None, None, order_match, problems
     elif len(order_matches) > 1:
-        assert False
+        assert False  # noqa: B011
     else:
         order_match = order_matches[0]
 
@@ -101,7 +101,7 @@ def validate(db, source, order_match_id, block_index):
         escrowed_asset = order_match["backward_asset"]
         escrowed_quantity = order_match["backward_quantity"]
     else:
-        assert False
+        assert False  # noqa: B011
 
     return destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems
 

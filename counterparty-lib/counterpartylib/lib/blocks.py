@@ -215,7 +215,7 @@ def parse_tx(db, tx):
 
             return True
     except Exception as e:
-        raise exceptions.ParseTransactionError(f"{e}")
+        raise exceptions.ParseTransactionError(f"{e}")  # noqa: B904
     finally:
         cursor.close()
 

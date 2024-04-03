@@ -145,7 +145,7 @@ def unpack(db, message, block_index):
         full_address = address.unpack(short_address_bytes)
     except struct.error as e:
         logger.warning(f"sweep send unpack error: {e}")
-        raise exceptions.UnpackError("could not unpack")
+        raise exceptions.UnpackError("could not unpack")  # noqa: B904
 
     unpacked = {
         "destination": full_address,

@@ -289,7 +289,7 @@ def parse_transaction_vouts(decoded_tx):
                 new_destination, new_data = decode_checkmultisig(asm, decoded_tx)
                 potential_dispensers[-1] = (new_destination, output_value)
             except script.MultiSigAddressError:
-                raise DecodeError("invalid OP_CHECKMULTISIG")
+                raise DecodeError("invalid OP_CHECKMULTISIG")  # noqa: B904
         elif (
             ledger.enabled("p2sh_addresses")
             and asm[0] == OP_HASH160  # noqa: F405

@@ -205,7 +205,7 @@ class BackendError(Exception):
 
 
 def check_backend_state():
-    f"""Checks blocktime of last block to see if {config.BTC_NAME} Core is running behind."""
+    f"""Checks blocktime of last block to see if {config.BTC_NAME} Core is running behind."""  # noqa: B021
     block_count = backend.getblockcount()
     block_hash = backend.getblockhash(block_count)
     cblock = backend.getblock(block_hash)
@@ -226,7 +226,7 @@ class DatabaseError(Exception):
 
 
 def check_database_state(db, blockcount):
-    f"""Checks {config.XCP_NAME} database to see if is caught up with backend."""
+    f"""Checks {config.XCP_NAME} database to see if is caught up with backend."""  # noqa: B021
     if ledger.CURRENT_BLOCK_INDEX + 1 < blockcount:
         raise DatabaseError(f"{config.XCP_NAME} database is behind backend.")
     logger.debug("Database state check passed.")
@@ -245,7 +245,7 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
         if re.search(r"\b" + word + "\b", statement.lower()):
             raise APIError(f"Forbidden word in query: '{word}'.")
 
-    if hasattr(callback, "__call__"):
+    if callable(callback):
         cursor.execute(statement, bindings)
         for row in cursor:
             callback(row, **callback_args)
@@ -477,7 +477,7 @@ def adjust_get_sends_memo_filters(filters):
             try:
                 filter_["value"] = bytes.fromhex(filter_["value"])
             except ValueError as e:  # noqa: F841
-                raise APIError("Invalid memo_hex value")
+                raise APIError("Invalid memo_hex value")  # noqa: B904
 
 
 def adjust_get_sends_results(query_result):
@@ -546,7 +546,7 @@ def compose_transaction(
     elif pubkey == None:  # noqa: E711
         provided_pubkeys = []
     else:
-        assert False
+        assert False  # noqa: B011
 
     # Get additional pubkeys from `source` and `destination` params.
     # Convert `source` and `destination` to pubkeyhash form.
@@ -733,7 +733,7 @@ class APIServer(threading.Thread):
                 try:
                     return get_rows(self.db, table=table, **kwargs)
                 except TypeError as e:  # TODO: generalise for all API methods
-                    raise APIError(str(e))
+                    raise APIError(str(e))  # noqa: B904
 
             return get_method
 
@@ -783,7 +783,7 @@ class APIServer(threading.Thread):
                     error_msg = f"Error composing {tx} transaction via API: {str(error)}"
                     logging.warning(error_msg)
                     logging.warning(traceback.format_exc())
-                    raise JSONRPCDispatchException(
+                    raise JSONRPCDispatchException(  # noqa: B904
                         code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg
                     )
 
@@ -905,7 +905,7 @@ class APIServer(threading.Thread):
             elif len(blocks) == 0:
                 raise exceptions.DatabaseError("No blocks found.")
             else:
-                assert False
+                assert False  # noqa: B011
             cursor.close()
             return block
 

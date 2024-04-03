@@ -925,7 +925,7 @@ def check_change(protocol_change, change_name):
         if ledger.CURRENT_BLOCK_INDEX >= protocol_change["block_index"]:
             raise VersionUpdateRequiredError(explanation)
         else:
-            warnings.warn(explanation)
+            warnings.warn(explanation)  # noqa: B028
 
 
 def software_version():

@@ -597,7 +597,7 @@ def run_scenario(scenario):
             mock_protocol_changes = tx[3] if len(tx) == 4 else {}
             with MockProtocolChangesContext(**(mock_protocol_changes or {})):
                 module = sys.modules[f"counterpartylib.lib.messages.{tx[0]}"]
-                compose = getattr(module, "compose")
+                compose = module.compose
                 unsigned_tx_hex = transaction.construct(
                     db=db, tx_info=compose(db, *tx[1]), regular_dust_size=5430, **tx[2]
                 )
@@ -703,7 +703,7 @@ def check_record(record, server_db, pytest_config):
             )
 
 
-def vector_to_args(vector, functions=[], pytest_config=None):
+def vector_to_args(vector, functions=[], pytest_config=None):  # noqa: B006
     """Translate from UNITTEST_VECTOR style to function arguments."""
     args = []
     for tx_name in sorted(vector.keys()):
@@ -848,7 +848,7 @@ def check_outputs(
                     )
                 else:
                     msg = f"expected outputs don't match test_outputs: expected_outputs={outputs} test_outputs={test_outputs}"
-                raise Exception(msg)
+                raise Exception(msg)  # noqa: B904
         if records is not None:
             for record in records:
                 check_record(record, server_db, pytest_config)

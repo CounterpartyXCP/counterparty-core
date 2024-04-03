@@ -15,7 +15,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style"""
     dictionary = {}
-    for index, (name, type_) in enumerate(cursor.getdescription()):
+    for index, (name, type_) in enumerate(cursor.getdescription()):  # noqa: B007
         dictionary[name] = sql[index]
     return dictionary
 

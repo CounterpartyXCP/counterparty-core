@@ -11,7 +11,7 @@ def decode_p2w(script_pubkey):
         bech32 = bech32lib.CBech32Data.from_bytes(0, script_pubkey[2:22])
         return str(bech32), None
     except TypeError as e:  # noqa: F841
-        raise Exception("bech32 decoding error")
+        raise Exception("bech32 decoding error")  # noqa: B904
 
 
 def inverse_hash_py(hashstring):
@@ -28,13 +28,13 @@ def test_inverse_hash():
     iterations = 10
 
     start_time = time.time()
-    for i in range(iterations):
+    for i in range(iterations):  # noqa: B007
         inverse_hash_py(h)
     python_duration = time.time() - start_time
     print(f"{iterations} inverse hash with python: {python_duration}s")
 
     start_time = time.time()
-    for i in range(iterations):
+    for i in range(iterations):  # noqa: B007
         utils.inverse_hash(h)
     rust_duration = time.time() - start_time
     print(f"{iterations} inverse hash with rust: {rust_duration}s")

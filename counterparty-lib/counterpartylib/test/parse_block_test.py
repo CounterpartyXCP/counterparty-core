@@ -32,4 +32,4 @@ def test_parse_block(server_db):
             + "\ntest_outputs=\n"
             + pprint.pformat(test_outputs)
         )
-        raise AssertionError(msg)
+        raise AssertionError(msg)  # noqa: B904

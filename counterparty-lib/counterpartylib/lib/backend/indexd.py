@@ -74,7 +74,7 @@ def rpc_call(payload):
     try:
         response_json = response.json()
     except json.decoder.JSONDecodeError as e:  # noqa: F841
-        raise BackendRPCError(
+        raise BackendRPCError(  # noqa: B904
             f"Received invalid JSON from backend with a response of {str(response.status_code) + ' ' + response.reason}"
         )
 

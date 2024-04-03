@@ -59,7 +59,7 @@ def add_to_balance_old(db, address, asset, quantity):
         sql = "insert into old_balances values(:address, :asset, :quantity)"
         balance_cursor.execute(sql, bindings)
     elif len(balances) > 1:
-        assert False
+        assert False  # noqa: B011
     else:
         old_balance = balances[0][0]
         assert type(old_balance) == int  # noqa: E721
