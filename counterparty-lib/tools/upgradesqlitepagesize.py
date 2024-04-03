@@ -28,24 +28,34 @@ except FileExistsError:
 
 print("creating .sql dump of DB...")
 pdump = Popen(["sqlite3", dbfile], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-output = pdump.communicate(bytes(f"""
+output = pdump.communicate(
+    bytes(
+        f"""
 .headers ON
 .mode csv
 .output {sqlfile}
 .dump
 .output stdout
 .exit
-""", "utf-8"))
+""",
+        "utf-8",
+    )
+)
 print(output)
 assert pdump.wait() == 0
 
 print("preparing new DB...")
 ppre = Popen(["sqlite3", tmpfile], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-output = ppre.communicate(bytes(f"""
+output = ppre.communicate(
+    bytes(
+        f"""
 PRAGMA journal_mode = OFF;
 PRAGMA synchronous = OFF;
 PRAGMA page_size={PAGE_SIZE};
-""", "utf-8"))
+""",
+        "utf-8",
+    )
+)
 print(output)
 assert ppre.wait() == 0
 
@@ -57,10 +67,15 @@ assert pload.wait() == 0
 
 print("finalizing new DB...")
 ppost = Popen(["sqlite3", tmpfile], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-output = ppost.communicate(bytes("""
+output = ppost.communicate(
+    bytes(
+        """
 PRAGMA journal_mode = ON;
 PRAGMA synchronous = NORMAL;
-""", "utf-8"))
+""",
+        "utf-8",
+    )
+)
 print(output)
 assert ppost.wait() == 0
 

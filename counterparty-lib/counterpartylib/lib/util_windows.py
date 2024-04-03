@@ -11,6 +11,7 @@ from counterpartylib.lib import config
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
+
 class SanitizedRotatingFileHandler(logging.handlers.RotatingFileHandler):
     def emit(self, record):
         # If the message doesn't need to be rendered we take a shortcut.
@@ -18,13 +19,14 @@ class SanitizedRotatingFileHandler(logging.handlers.RotatingFileHandler):
             return
         # Make sure the message is a string.
         message = record.msg
-        #Sanitize and clean up the message
-        message = unicodedata.normalize('NFKD', message).encode('ascii', 'ignore').decode()
+        # Sanitize and clean up the message
+        message = unicodedata.normalize("NFKD", message).encode("ascii", "ignore").decode()
         # Copy the original record so we don't break other handlers.
         record = copy.copy(record)
         record.msg = message
         # Use the built-in stream handler to handle output.
         logging.handlers.RotatingFileHandler.emit(self, record)
+
 
 def fix_win32_unicode():
     """Thanks to http://stackoverflow.com/a/3259271 ! (converted to python3)"""
@@ -41,7 +43,7 @@ def fix_win32_unicode():
         print(message if isinstance(message, str) else repr(message), file=original_stderr)
 
     # Work around <http://bugs.python.org/issue6058>.
-    codecs.register(lambda name: codecs.lookup('utf-8') if name == 'cp65001' else None)
+    codecs.register(lambda name: codecs.lookup("utf-8") if name == "cp65001" else None)
 
     # Make Unicode console output work independently of the current code page.
     # This also fixes <http://bugs.python.org/issue1602>.
@@ -65,26 +67,29 @@ def fix_win32_unicode():
         get_file_type = WINFUNCTYPE(DWORD, DWORD)(("GetFileType", windll.kernel32))
         file_type_char = 0x0002
         file_type_remote = 0x8000
-        get_console_mode = WINFUNCTYPE(BOOL, HANDLE, POINTER(DWORD))(("GetConsoleMode", windll.kernel32))
+        get_console_mode = WINFUNCTYPE(BOOL, HANDLE, POINTER(DWORD))(
+            ("GetConsoleMode", windll.kernel32)
+        )
         invalid_handle_value = DWORD(-1).value
 
         def not_a_console(handle):
             if handle == invalid_handle_value or handle is None:
                 return True
-            return ((get_file_type(handle) & ~file_type_remote) != file_type_char
-                    or get_console_mode(handle, byref(DWORD())) == 0)
+            return (
+                get_file_type(handle) & ~file_type_remote
+            ) != file_type_char or get_console_mode(handle, byref(DWORD())) == 0
 
         old_stdout_fileno = None
         old_stderr_fileno = None
-        if hasattr(sys.stdout, 'fileno'):
+        if hasattr(sys.stdout, "fileno"):
             old_stdout_fileno = sys.stdout.fileno()
-        if hasattr(sys.stderr, 'fileno'):
+        if hasattr(sys.stderr, "fileno"):
             old_stderr_fileno = sys.stderr.fileno()
 
         stdout_fileno = 1
         stderr_fileno = 2
-        real_stdout = (old_stdout_fileno == stdout_fileno)
-        real_stderr = (old_stderr_fileno == stderr_fileno)
+        real_stdout = old_stdout_fileno == stdout_fileno
+        real_stderr = old_stderr_fileno == stderr_fileno
 
         if real_stdout:
             h_std_out = get_std_handle(std_output_handle)
@@ -100,7 +105,9 @@ def fix_win32_unicode():
             # BOOL WINAPI WriteConsoleW(HANDLE hOutput, LPWSTR lpBuffer, DWORD nChars,
             #                           LPDWORD lpCharsWritten, LPVOID lpReserved);
 
-            write_console_w = WINFUNCTYPE(BOOL, HANDLE, LPWSTR, DWORD, POINTER(DWORD), LPVOID)(("WriteConsoleW", windll.kernel32))
+            write_console_w = WINFUNCTYPE(BOOL, HANDLE, LPWSTR, DWORD, POINTER(DWORD), LPVOID)(
+                ("WriteConsoleW", windll.kernel32)
+            )
 
             class UnicodeOutput:
                 def __init__(self, h_console, stream, fileno, name):
@@ -109,10 +116,10 @@ def fix_win32_unicode():
                     self._fileno = fileno
                     self.closed = False
                     self.softspace = False
-                    self.mode = 'w'
-                    self.encoding = 'utf-8'
+                    self.mode = "w"
+                    self.encoding = "utf-8"
                     self.name = name
-                    self.errors = ''
+                    self.errors = ""
                     self.flush()
 
                 def isatty(self):
@@ -137,24 +144,28 @@ def fix_win32_unicode():
                     try:
                         if self._h_console is None:
                             if isinstance(text, str):
-                                text = text.encode('utf-8')
+                                text = text.encode("utf-8")
                             self._stream.write(text)
                         else:
                             if not isinstance(text, str):
-                                text = str(text).decode('utf-8')
+                                text = str(text).decode("utf-8")
                             remaining = len(text)
                             while remaining:
                                 n = DWORD(0)
                                 # There is a shorter-than-documented limitation on the
                                 # length of the string passed to WriteConsoleW (see
                                 # <http://tahoe-lafs.org/trac/tahoe-lafs/ticket/1232>.
-                                retval = write_console_w(self._h_console, text, min(remaining, 10000), byref(n), None)
+                                retval = write_console_w(
+                                    self._h_console, text, min(remaining, 10000), byref(n), None
+                                )
                                 if retval == 0 or n.value == 0:
-                                    raise IOError(f"write_console_w returned {retval!r}, n.value = {n.value!r}")
+                                    raise IOError(
+                                        f"write_console_w returned {retval!r}, n.value = {n.value!r}"
+                                    )
                                 remaining -= n.value
                                 if not remaining:
                                     break
-                                text = text[n.value:]
+                                text = text[n.value :]
                     except Exception as e:
                         _complain(f"{self.name}.write: {e!r}")
                         raise
@@ -168,14 +179,22 @@ def fix_win32_unicode():
                         raise
 
             if real_stdout:
-                sys.stdout = UnicodeOutput(h_std_out, None, stdout_fileno, '<Unicode console stdout>')
+                sys.stdout = UnicodeOutput(
+                    h_std_out, None, stdout_fileno, "<Unicode console stdout>"
+                )
             else:
-                sys.stdout = UnicodeOutput(None, sys.stdout, old_stdout_fileno, '<Unicode redirected stdout>')
+                sys.stdout = UnicodeOutput(
+                    None, sys.stdout, old_stdout_fileno, "<Unicode redirected stdout>"
+                )
 
             if real_stderr:
-                sys.stderr = UnicodeOutput(h_std_err, None, stderr_fileno, '<Unicode console stderr>')
+                sys.stderr = UnicodeOutput(
+                    h_std_err, None, stderr_fileno, "<Unicode console stderr>"
+                )
             else:
-                sys.stderr = UnicodeOutput(None, sys.stderr, old_stderr_fileno, '<Unicode redirected stderr>')
+                sys.stderr = UnicodeOutput(
+                    None, sys.stderr, old_stderr_fileno, "<Unicode redirected stderr>"
+                )
     except Exception as e:
         _complain(f"exception {e!r} while fixing up sys.stdout and sys.stderr")
 
@@ -183,14 +202,16 @@ def fix_win32_unicode():
 
     # This works around <http://bugs.python.org/issue2128>.
     get_command_line_w = WINFUNCTYPE(LPWSTR)(("GetCommandLineW", windll.kernel32))
-    command_line_to_argv_w = WINFUNCTYPE(POINTER(LPWSTR), LPCWSTR, POINTER(c_int))(("CommandLineToArgvW", windll.shell32))
+    command_line_to_argv_w = WINFUNCTYPE(POINTER(LPWSTR), LPCWSTR, POINTER(c_int))(
+        ("CommandLineToArgvW", windll.shell32)
+    )
 
     argc = c_int(0)
     argv_unicode = command_line_to_argv_w(get_command_line_w(), byref(argc))
 
-    argv = [argv_unicode[i].encode('utf-8').decode('utf-8') for i in range(0, argc.value)]
+    argv = [argv_unicode[i].encode("utf-8").decode("utf-8") for i in range(0, argc.value)]
 
-    if not hasattr(sys, 'frozen'):
+    if not hasattr(sys, "frozen"):
         # If this is an executable produced by py2exe or bbfreeze, then it will
         # have been invoked directly. Otherwise, unicode_argv[0] is the Python
         # interpreter, so skip that.
@@ -202,12 +223,12 @@ def fix_win32_unicode():
             if not arg.startswith("-") or arg == "-":
                 break
             argv = argv[1:]
-            if arg == '-m':
+            if arg == "-m":
                 # sys.argv[0] should really be the absolute path of the module source,
                 # but never mind
                 break
-            if arg == '-c':
-                argv[0] = '-c'
+            if arg == "-c":
+                argv[0] = "-c"
                 break
 
     # if you like:

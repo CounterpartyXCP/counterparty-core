@@ -1,0 +1,29 @@
+
+
+
+line-length = 100
+
+
+[lint]
+select = [
+    # pycodestyle
+    # "E4",
+    # "E7",
+    # "E9",
+    # # Pyflakes
+    # "F",
+    # # # pyupgrade
+    # # "UP",
+    # "B",  # flake8-bugbear
+    # "S",  # flake8-bandit
+    # # # flake8-simplify
+    # # "SIM",
+    # "I", # isort
+    # "PLC",  # pylint conventions
+    # "PLE", # pylint error
+    # "PLE", # pylint refactor
+    # "PLW" # pylint warning
+]
+ignore = [
+  "E501" # line too long
+]
