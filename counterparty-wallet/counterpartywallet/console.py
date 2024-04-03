@@ -2,7 +2,7 @@ import os
 
 from prettytable import PrettyTable
 
-from counterpartycli import util, wallet
+from counterpartywallet import util, wallet
 
 
 # TODO: inelegant

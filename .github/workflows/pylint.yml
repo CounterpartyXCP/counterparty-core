@@ -31,7 +31,7 @@ jobs:
         pip install pylint-sarif-unofficial
         cd counterparty-rs && pip install -e . && cd ..
         cd counterparty-lib && pip install -e . && cd ..
-        cd counterparty-cli && pip install -e . && cd ..
+        cd counterparty-core && pip install -e . && cd ..
         pip install evdev
     - name: Analysing the code with pylint
       run: |

@@ -7,12 +7,11 @@ from math import ceil
 
 import bitcoin as bitcoinlib
 import dateutil.parser
-from counterpartylib.lib import api, blocks, config, exceptions, script, transaction  # noqa: F401
+from counterpartylib.lib import config, exceptions, script, transaction
 from counterpartylib.lib.kickstart.utils import ib2h
-from counterpartylib.lib.ledger import generate_asset_name  # noqa: F401
-from counterpartylib.lib.util import BET_TYPE_ID, BET_TYPE_NAME, dhash, make_id  # noqa: F401
+from counterpartylib.lib.util import BET_TYPE_ID, dhash
 
-from counterpartycli import util, wallet
+from counterpartywallet import util, wallet
 
 MESSAGE_PARAMS = {
     "send": [

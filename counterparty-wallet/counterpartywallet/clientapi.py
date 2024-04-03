@@ -5,8 +5,8 @@ from urllib.parse import quote_plus as urlencode
 
 from counterpartylib.lib import config, script
 
-from counterpartycli import messages, util, wallet
-from counterpartycli.messages import get_pubkeys
+from counterpartywallet import messages, util, wallet
+from counterpartywallet.messages import get_pubkeys
 
 logger = logging.getLogger()
 
