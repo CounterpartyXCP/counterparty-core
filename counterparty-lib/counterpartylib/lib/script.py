@@ -4,45 +4,37 @@ None of the functions/objects in this module need be passed `db`.
 Naming convention: a `pub` is either a pubkey or a pubkeyhash
 """
 
-import binascii
 import hashlib
+import binascii
 
 import bitcoin as bitcoinlib
-from bitcoin.bech32 import CBech32Data
 from bitcoin.core.key import CPubKey
+from bitcoin.bech32 import CBech32Data
+# We are using PyCryptodome not PyCrypto
+#from Crypto.Hash import RIPEMD160
+from ripemd import ripemd160 as RIPEMD160 # nosec B413
 from counterparty_rs import b58, utils
 
-# We are using PyCryptodome not PyCrypto
-# from Crypto.Hash import RIPEMD160
-from ripemd import ripemd160 as RIPEMD160  # nosec B413
+from counterpartylib.lib import util
+from counterpartylib.lib import config
+from counterpartylib.lib import exceptions
+from counterpartylib.lib import ledger
+from counterpartylib.lib import opcodes
+from counterpartylib.lib.opcodes import *
 
-from counterpartylib.lib import config, exceptions, ledger, opcodes, util
-from counterpartylib.lib.opcodes import *  # noqa: F403
+B58_DIGITS = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
-B58_DIGITS = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-
-
-class InputError(Exception):
+class InputError (Exception):
     pass
-
-
 class AddressError(Exception):
     pass
-
-
 class MultiSigAddressError(AddressError):
     pass
-
-
-class VersionByteError(AddressError):
+class VersionByteError (AddressError):
     pass
-
-
-class Base58Error(AddressError):
+class Base58Error (AddressError):
     pass
-
-
-class Base58ChecksumError(Base58Error):
+class Base58ChecksumError (Base58Error):
     pass
 
 
@@ -60,7 +52,7 @@ def validate(address, allow_p2sh=True):
     # Check validity by attempting to decode.
     for pubkeyhash in pubkeyhashes:
         try:
-            if ledger.enabled("segwit_support"):
+            if ledger.enabled('segwit_support'):
                 if not is_bech32(pubkeyhash):
                     base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
             else:
@@ -70,28 +62,28 @@ def validate(address, allow_p2sh=True):
                 raise e
             base58_check_decode(pubkeyhash, config.P2SH_ADDRESSVERSION)
         except Base58Error as e:
-            if not ledger.enabled("segwit_support") or not is_bech32(pubkeyhash):
+            if not ledger.enabled('segwit_support') or not is_bech32(pubkeyhash):
                 raise e
 
 
 def base58_encode(binary):
     """Encode the address in base58."""
     # Convert big‐endian bytes to integer
-    n = int("0x0" + util.hexlify(binary), 16)
+    n = int('0x0' + util.hexlify(binary), 16)
 
     # Divide that integer into base58
     res = []
     while n > 0:
         n, r = divmod(n, 58)
         res.append(B58_DIGITS[r])
-    res = "".join(res[::-1])
+    res = ''.join(res[::-1])
 
     return res
 
 
 def base58_check_encode_py(original, version):
     """Check if base58 encoding is valid."""
-    b = binascii.unhexlify(bytes(original, "utf-8"))
+    b = binascii.unhexlify(bytes(original, 'utf-8'))
     d = version + b
 
     binary = d + util.dhash(d)[:4]
@@ -109,7 +101,7 @@ def base58_check_encode_py(original, version):
     address = B58_DIGITS[0] * pad + res
 
     if original != util.hexlify(base58_check_decode(address, version)):
-        raise AddressError("encoded address does not decode properly")
+        raise AddressError('encoded address does not decode properly')
 
     return address
 
@@ -124,15 +116,15 @@ def base58_decode(s):
     for c in s:
         n *= 58
         if c not in B58_DIGITS:
-            raise Base58Error(f"Not a valid Base58 character: ‘{c}’")
+            raise Base58Error(f'Not a valid Base58 character: ‘{c}’')
         digit = B58_DIGITS.index(c)
         n += digit
 
     # Convert the integer to bytes
-    h = f"{n:x}"
+    h = f'{n:x}'
     if len(h) % 2:
-        h = "0" + h
-    res = binascii.unhexlify(h.encode("utf8"))
+        h = '0' + h
+    res = binascii.unhexlify(h.encode('utf8'))
 
     # Add padding back.
     pad = 0
@@ -141,7 +133,7 @@ def base58_decode(s):
             pad += 1
         else:
             break
-    k = b"\x00" * pad + res
+    k = b'\x00' * pad + res
 
     return k
 
@@ -162,13 +154,11 @@ def base58_check_decode_py(s, version):
     addrbyte, data, chk0 = base58_check_decode_parts(s)
 
     if addrbyte != version:
-        raise VersionByteError("incorrect version byte")
+        raise VersionByteError('incorrect version byte')
 
     chk1 = util.dhash(addrbyte + data)[:4]
     if chk0 != chk1:
-        raise Base58ChecksumError(
-            f"Checksum mismatch: 0x{util.hexlify(chk0)} ≠ 0x{util.hexlify(chk1)}"
-        )
+        raise Base58ChecksumError(f'Checksum mismatch: 0x{util.hexlify(chk0)} ≠ 0x{util.hexlify(chk1)}')
 
     return data
 
@@ -176,18 +166,18 @@ def base58_check_decode_py(s, version):
 def base58_check_decode(s, version):
     try:
         decoded = b58.b58_decode(s)
-    except BaseException:  # TODO: update pycoin_rs to raise a specific exception
-        raise Base58Error("invalid base58 string")  # noqa: B904
+    except BaseException: # TODO: update pycoin_rs to raise a specific exception
+        raise Base58Error('invalid base58 string')
 
     if decoded[0] != ord(version):
-        raise VersionByteError("incorrect version byte")
+        raise VersionByteError('incorrect version byte')
 
     return decoded[1:]
 
 
 def is_multisig(address):
     """Check if the address is multi‐signature."""
-    array = address.split("_")
+    array = address.split('_')
     return len(array) > 1
 
 
@@ -204,9 +194,9 @@ def is_p2sh(address):
 
 def is_bech32(address):
     try:
-        b32data = CBech32Data(address)  # noqa: F841
+        b32data = CBech32Data(address)
         return True
-    except:  # noqa: E722
+    except:
         return False
 
 
@@ -223,9 +213,7 @@ def make_canonical(address):
         try:
             [base58_check_decode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]
         except Base58Error:
-            raise MultiSigAddressError(  # noqa: B904
-                "Multi‐signature address must use PubKeyHashes, not public keys."
-            )
+            raise MultiSigAddressError('Multi‐signature address must use PubKeyHashes, not public keys.')
         return construct_array(signatures_required, pubkeyhashes, signatures_possible)
     else:
         return address
@@ -234,34 +222,31 @@ def make_canonical(address):
 def test_array(signatures_required, pubs, signatures_possible):
     """Check if multi‐signature data is valid."""
     try:
-        signatures_required, signatures_possible = (
-            int(signatures_required),
-            int(signatures_possible),
-        )
+        signatures_required, signatures_possible = int(signatures_required), int(signatures_possible)
     except (ValueError, TypeError):
-        raise MultiSigAddressError("Signature values not integers.")  # noqa: B904
+        raise MultiSigAddressError('Signature values not integers.')
     if signatures_required < 1 or signatures_required > 3:
-        raise MultiSigAddressError("Invalid signatures_required.")
+        raise MultiSigAddressError('Invalid signatures_required.')
     if signatures_possible < 2 or signatures_possible > 3:
-        raise MultiSigAddressError("Invalid signatures_possible.")
+        raise MultiSigAddressError('Invalid signatures_possible.')
     for pubkey in pubs:
-        if "_" in pubkey:
-            raise MultiSigAddressError("Invalid characters in pubkeys/pubkeyhashes.")
+        if '_' in pubkey:
+            raise MultiSigAddressError('Invalid characters in pubkeys/pubkeyhashes.')
     if signatures_possible != len(pubs):
-        raise InputError("Incorrect number of pubkeys/pubkeyhashes in multi‐signature address.")
+        raise InputError('Incorrect number of pubkeys/pubkeyhashes in multi‐signature address.')
 
 
 def construct_array(signatures_required, pubs, signatures_possible):
     """Create a multi‐signature address."""
     test_array(signatures_required, pubs, signatures_possible)
-    address = "_".join([str(signatures_required)] + sorted(pubs) + [str(signatures_possible)])
+    address = '_'.join([str(signatures_required)] + sorted(pubs) + [str(signatures_possible)])
     return address
 
 
 def extract_array(address):
     """Extract data from multi‐signature address."""
     assert is_multisig(address)
-    array = address.split("_")
+    array = address.split('_')
     signatures_required, pubs, signatures_possible = array[0], sorted(array[1:-1]), array[-1]
     test_array(signatures_required, pubs, signatures_possible)
     return int(signatures_required), pubs, int(signatures_possible)
@@ -271,9 +256,7 @@ def pubkeyhash_array(address):
     """Return PubKeyHashes from an address."""
     signatures_required, pubs, signatures_possible = extract_array(address)
     if not all([is_pubkeyhash(pub) for pub in pubs]):
-        raise MultiSigAddressError(
-            "Invalid PubKeyHashes. Multi‐signature address must use PubKeyHashes, not public keys."
-        )
+        raise MultiSigAddressError('Invalid PubKeyHashes. Multi‐signature address must use PubKeyHashes, not public keys.')
     pubkeyhashes = pubs
     return pubkeyhashes
 
@@ -288,9 +271,7 @@ def hash160(x):
 def pubkey_to_pubkeyhash(pubkey):
     """Convert public key to PubKeyHash."""
     pubkeyhash = hash160(pubkey)
-    pubkey = base58_check_encode(
-        binascii.hexlify(pubkeyhash).decode("utf-8"), config.ADDRESSVERSION
-    )
+    pubkey = base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION)
     return pubkey
 
 
@@ -319,97 +300,88 @@ def get_asm(scriptpubkey):
                 # TODO: `data = element` (?)
                 asm.append(op)
     except bitcoinlib.core.script.CScriptTruncatedPushDataError:
-        raise exceptions.PushDataDecodeError("invalid pushdata due to truncation")  # noqa: B904
+        raise exceptions.PushDataDecodeError('invalid pushdata due to truncation')
     if not asm:
-        raise exceptions.DecodeError("empty output")
+        raise exceptions.DecodeError('empty output')
     return asm
 
 
 def script_to_asm(scriptpubkey):
     try:
-        script = bytes(scriptpubkey, "utf-8") if type(scriptpubkey) == str else bytes(scriptpubkey)  # noqa: E721
+        script = bytes(scriptpubkey, 'utf-8') if type(scriptpubkey) == str else bytes(scriptpubkey)
         asm = utils.script_to_asm(script)
-        if asm[-1] == OP_CHECKMULTISIG:  # noqa: F405
-            asm[-2] = int.from_bytes(asm[-2], "big")
-            asm[0] = int.from_bytes(asm[0], "big")
+        if asm[-1] == OP_CHECKMULTISIG:
+            asm[-2] = int.from_bytes(asm[-2], 'big')
+            asm[0] = int.from_bytes(asm[0], 'big')
         return asm
-    except BaseException as e:  # noqa: F841
-        raise exceptions.DecodeError("invalid script")  # noqa: B904
+    except BaseException as e:
+        raise exceptions.DecodeError('invalid script')
 
 
 def script_to_address(scriptpubkey):
     try:
-        network = "mainnet" if config.TESTNET == False else "testnet"  # noqa: E712
-        script = bytes(scriptpubkey, "utf-8") if type(scriptpubkey) == str else bytes(scriptpubkey)  # noqa: E721
+        network = 'mainnet' if config.TESTNET == False else 'testnet'
+        script = bytes(scriptpubkey, 'utf-8') if type(scriptpubkey) == str else bytes(scriptpubkey)
         return utils.script_to_address(script, network)
-    except BaseException as e:  # noqa: F841
-        raise exceptions.DecodeError("scriptpubkey decoding error")  # noqa: B904
+    except BaseException as e:
+        raise exceptions.DecodeError('scriptpubkey decoding error')
 
 
 def get_checksig(asm):
     try:
         op_dup, op_hash160, pubkeyhash, op_equalverify, op_checksig = asm
     except ValueError:
-        raise exceptions.DecodeError("invalid OP_CHECKSIG") from None
+        raise exceptions.DecodeError('invalid OP_CHECKSIG') from None
 
-    if (op_dup, op_hash160, op_equalverify, op_checksig) == (
-        OP_DUP,  # noqa: F405
-        OP_HASH160,  # noqa: F405
-        OP_EQUALVERIFY,  # noqa: F405
-        OP_CHECKSIG,  # noqa: F405
-    ) and type(pubkeyhash) == bytes:  # noqa: E721
+    if (op_dup, op_hash160, op_equalverify, op_checksig) == (OP_DUP, OP_HASH160, OP_EQUALVERIFY, OP_CHECKSIG) and type(pubkeyhash) == bytes:
         return pubkeyhash
 
-    raise exceptions.DecodeError("invalid OP_CHECKSIG")
+    raise exceptions.DecodeError('invalid OP_CHECKSIG')
 
 
 def get_checkmultisig(asm):
     # N‐of‐2
-    if len(asm) == 5 and asm[3] == 2 and asm[4] == OP_CHECKMULTISIG:  # noqa: F405
+    if len(asm) == 5 and asm[3] == 2 and asm[4] == OP_CHECKMULTISIG:
         pubkeys, signatures_required = asm[1:3], asm[0]
-        if all([type(pubkey) == bytes for pubkey in pubkeys]):  # noqa: E721
+        if all([type(pubkey) == bytes for pubkey in pubkeys]):
             return pubkeys, signatures_required
     # N‐of‐3
-    if len(asm) == 6 and asm[4] == 3 and asm[5] == OP_CHECKMULTISIG:  # noqa: F405
+    if len(asm) == 6 and asm[4] == 3 and asm[5] == OP_CHECKMULTISIG:
         pubkeys, signatures_required = asm[1:4], asm[0]
-        if all([type(pubkey) == bytes for pubkey in pubkeys]):  # noqa: E721
+        if all([type(pubkey) == bytes for pubkey in pubkeys]):
             return pubkeys, signatures_required
-    raise exceptions.DecodeError("invalid OP_CHECKMULTISIG")
+    raise exceptions.DecodeError('invalid OP_CHECKMULTISIG')
 
 
 # TODO: Not used ?
 def scriptpubkey_to_address(scriptpubkey):
     asm = script_to_asm(scriptpubkey)
 
-    if asm[-1] == OP_CHECKSIG:  # noqa: F405
+    if asm[-1] == OP_CHECKSIG:
         try:
             checksig = get_checksig(asm)
         except exceptions.DecodeError:  # coinbase
             return None
 
-        return base58_check_encode(
-            binascii.hexlify(checksig).decode("utf-8"), config.ADDRESSVERSION
-        )
+        return base58_check_encode(binascii.hexlify(checksig).decode('utf-8'), config.ADDRESSVERSION)
 
-    elif asm[-1] == OP_CHECKMULTISIG:  # noqa: F405
+    elif asm[-1] == OP_CHECKMULTISIG:
         pubkeys, signatures_required = get_checkmultisig(asm)
         pubkeyhashes = [pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
         return construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes))
 
-    elif len(asm) == 3 and asm[0] == OP_HASH160 and asm[2] == OP_EQUAL:  # noqa: F405
-        return base58_check_encode(
-            binascii.hexlify(asm[1]).decode("utf-8"), config.P2SH_ADDRESSVERSION
-        )
+    elif len(asm) == 3 and asm[0] == OP_HASH160 and asm[2] == OP_EQUAL:
+        return base58_check_encode(binascii.hexlify(asm[1]).decode('utf-8'), config.P2SH_ADDRESSVERSION)
 
     return None
 
 
 # TODO: Use `python-bitcointools` instead. (Get rid of `pycoin` dependency.)
-from pycoin.ecdsa.secp256k1 import secp256k1_generator as generator_secp256k1  # noqa: E402
-from pycoin.encoding.b58 import a2b_hashed_base58  # noqa: E402
-from pycoin.encoding.bytes32 import from_bytes_32  # noqa: E402
-from pycoin.encoding.exceptions import EncodingError  # noqa: E402
-from pycoin.encoding.sec import public_pair_to_sec  # noqa: E402
+from pycoin.encoding.sec import public_pair_to_sec
+from pycoin.encoding.exceptions import EncodingError
+from pycoin.encoding.bytes32 import from_bytes_32
+from pycoin.encoding.b58 import a2b_hashed_base58
+from pycoin.ecdsa.secp256k1 import secp256k1_generator as generator_secp256k1
 
 
 def wif_to_tuple_of_prefix_secret_exponent_compressed(wif):
@@ -429,22 +401,17 @@ def wif_to_tuple_of_secret_exponent_compressed(wif, allowable_wif_prefixes=None)
 
     Not that it matters, since we can use the secret exponent to generate both the compressed
     and uncompressed Bitcoin address."""
-    actual_prefix, secret_exponent, is_compressed = (
-        wif_to_tuple_of_prefix_secret_exponent_compressed(wif)
-    )
+    actual_prefix, secret_exponent, is_compressed = wif_to_tuple_of_prefix_secret_exponent_compressed(wif)
     if allowable_wif_prefixes and actual_prefix not in allowable_wif_prefixes:
         raise EncodingError(f"unexpected first byte of WIF {wif}")
     return secret_exponent, is_compressed
 
 
 def public_pair_for_secret_exponent(generator, secret_exponent):
-    return (generator * secret_exponent).pair()
+    return (generator*secret_exponent).pair()
 
 
-class AltcoinSupportError(Exception):
-    pass
-
-
+class AltcoinSupportError (Exception): pass
 def private_key_to_public_key(private_key_wif):
     """Convert private key to public key."""
     if config.TESTNET:
@@ -455,18 +422,17 @@ def private_key_to_public_key(private_key_wif):
         allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_MAINNET]
     try:
         secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(
-            private_key_wif, allowable_wif_prefixes=allowable_wif_prefixes
-        )
+                private_key_wif, allowable_wif_prefixes=allowable_wif_prefixes)
     except EncodingError:
-        raise AltcoinSupportError("pycoin: unsupported WIF prefix")  # noqa: B904
+        raise AltcoinSupportError('pycoin: unsupported WIF prefix')
     public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
     public_key = public_pair_to_sec(public_pair, compressed=compressed)
-    public_key_hex = binascii.hexlify(public_key).decode("utf-8")
+    public_key_hex = binascii.hexlify(public_key).decode('utf-8')
     return public_key_hex
 
 
 def is_pubkeyhash(monosig_address):
-    """Check if PubKeyHash is valid P2PKH address."""
+    """Check if PubKeyHash is valid P2PKH address. """
     assert not is_multisig(monosig_address)
     try:
         base58_check_decode(monosig_address, config.ADDRESSVERSION)
@@ -484,18 +450,18 @@ def make_pubkeyhash(address):
             if is_pubkeyhash(pub):
                 pubkeyhash = pub
             else:
-                pubkeyhash = pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pub, "utf-8")))
+                pubkeyhash = pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pub, 'utf-8')))
             pubkeyhashes.append(pubkeyhash)
         pubkeyhash_address = construct_array(signatures_required, pubkeyhashes, signatures_possible)
     else:
-        if ledger.enabled("segwit_support") and is_bech32(address):
-            pubkeyhash_address = address  # Some bech32 addresses are valid base58 data
+        if ledger.enabled('segwit_support') and is_bech32(address):
+            pubkeyhash_address = address # Some bech32 addresses are valid base58 data
         elif is_pubkeyhash(address):
             pubkeyhash_address = address
         elif is_p2sh(address):
             pubkeyhash_address = address
         else:
-            pubkeyhash_address = pubkey_to_pubkeyhash(binascii.unhexlify(bytes(address, "utf-8")))
+            pubkeyhash_address = pubkey_to_pubkeyhash(binascii.unhexlify(bytes(address, 'utf-8')))
     return pubkeyhash_address
 
 
@@ -509,7 +475,7 @@ def extract_pubkeys(pub):
                 pubkeys.append(pub)
     elif is_p2sh(pub):
         pass
-    elif ledger.enabled("segwit_support") and is_bech32(pub):
+    elif ledger.enabled('segwit_support') and is_bech32(pub):
         pass
     else:
         if not is_pubkeyhash(pub):

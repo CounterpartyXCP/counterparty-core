@@ -1,10 +1,9 @@
 #
 # Workalike python implementation of Bitcoin's CDataStream class.
 #
-import mmap
 import struct
-from io import BytesIO  # noqa: F401
-
+import mmap
+from io import BytesIO
 from .exceptions import SerializationError
 
 
@@ -52,7 +51,7 @@ class BCDataStream(object):
         try:
             length = self.read_compact_size()
         except IndexError:
-            raise SerializationError("attempt to read past end of buffer")  # noqa: B904
+            raise SerializationError("attempt to read past end of buffer")
 
         return self.read_bytes(length)
 
@@ -63,63 +62,37 @@ class BCDataStream(object):
 
     def read_bytes(self, length):
         try:
-            result = self.input[self.read_cursor : self.read_cursor + length]
+            result = self.input[self.read_cursor:self.read_cursor+length]
             self.read_cursor += length
             return result
         except IndexError:
-            raise SerializationError("attempt to read past end of buffer")  # noqa: B904
+            raise SerializationError("attempt to read past end of buffer")
 
-    def read_boolean(self):
-        return self.read_bytes(1)[0] != chr(0)
+    def read_boolean(self): return self.read_bytes(1)[0] != chr(0)
+    def read_int16(self): return self._read_num('<h')
+    def read_uint16(self): return self._read_num('<H')
+    def read_int32(self): return self._read_num('<i')
+    def read_uint32(self): return self._read_num('<I')
+    def read_int64(self): return self._read_num('<q')
+    def read_uint64(self): return self._read_num('<Q')
 
-    def read_int16(self):
-        return self._read_num("<h")
-
-    def read_uint16(self):
-        return self._read_num("<H")
-
-    def read_int32(self):
-        return self._read_num("<i")
-
-    def read_uint32(self):
-        return self._read_num("<I")
-
-    def read_int64(self):
-        return self._read_num("<q")
-
-    def read_uint64(self):
-        return self._read_num("<Q")
-
-    def write_boolean(self, val):
-        return self.write(chr(1) if val else chr(0))
-
-    def write_int16(self, val):
-        return self._write_num("<h", val)
-
-    def write_uint16(self, val):
-        return self._write_num("<H", val)
-
-    def write_int32(self, val):
-        return self._write_num("<i", val)
-
-    def write_uint32(self, val):
-        return self._write_num("<I", val)
-
-    def write_int64(self, val):
-        return self._write_num("<q", val)
-
-    def write_uint64(self, val):
-        return self._write_num("<Q", val)
+    def write_boolean(self, val): return self.write(chr(1) if val else chr(0))
+    def write_int16(self, val): return self._write_num('<h', val)
+    def write_uint16(self, val): return self._write_num('<H', val)
+    def write_int32(self, val): return self._write_num('<i', val)
+    def write_uint32(self, val): return self._write_num('<I', val)
+    def write_int64(self, val): return self._write_num('<q', val)
+    def write_uint64(self, val): return self._write_num('<Q', val)
 
     def read_compact_size(self):
         size = self.input[self.read_cursor]
         self.read_cursor += 1
         if size == 253:
-            return self._read_num("<H")
+            return self._read_num('<H')
         elif size == 254:
-            return self._read_num("<I")
+            return  self._read_num('<I')
         elif size == 255:
-            return self._read_num("<Q")
+            return self._read_num('<Q')
         return size
 
     def write_compact_size(self, size):
@@ -128,14 +101,14 @@ class BCDataStream(object):
         elif size < 253:
             self.write(chr(size))
         elif size < 2**16:
-            self.write("\xfd")
-            self._write_num("<H", size)
+            self.write('\xfd')
+            self._write_num('<H', size)
         elif size < 2**32:
-            self.write("\xfe")
-            self._write_num("<I", size)
+            self.write('\xfe')
+            self._write_num('<I', size)
         elif size < 2**64:
-            self.write("\xff")
-            self._write_num("<Q", size)
+            self.write('\xff')
+            self._write_num('<Q', size)
 
     def _read_num(self, format):
         (i,) = struct.unpack_from(format, self.input, self.read_cursor)

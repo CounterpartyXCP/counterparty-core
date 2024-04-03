@@ -2,11 +2,8 @@
 
 import pytest
 
-# this is require near the top to do setup of the test suite
-from counterpartylib.test import (
-    conftest,  # noqa: F401
-    util_test,
-)
+from counterpartylib.test import conftest  # this is require near the top to do setup of the test suite
+from counterpartylib.test import util_test
 
 
 def test_book(skip):

@@ -1,8 +1,6 @@
-import time
-
-from counterpartylib.lib import backend
 from counterpartylib.lib.kickstart import blocks_parser, utils
-
+from counterpartylib.lib import backend
+import time
 
 def test_deserialize():
     hex = "0100000001db3acf37743ac015808f7911a88761530c801819b3b907340aa65dfb6d98ce24030000006a473044022002961f4800cb157f8c0913084db0ee148fa3e1130e0b5e40c3a46a6d4f83ceaf02202c3dd8e631bf24f4c0c5341b3e1382a27f8436d75f3e0a095915995b0bf7dc8e01210395c223fbf96e49e5b9e06a236ca7ef95b10bf18c074bd91a5942fc40360d0b68fdffffff040000000000000000536a4c5058325bd61325dc633fadf05bec9157c23106759cee40954d39d9dbffc17ec5851a2d1feb5d271da422e0e24c7ae8ad29d2eeabf7f9ca3de306bd2bc98e2a39e47731aa000caf400053000c1283000149c8000000000000001976a91462bef4110f98fdcb4aac3c1869dbed9bce8702ed88acc80000000000000017a9144317f779c0a2ccf8f6bc3d440bd9e536a5bff75287fa3e5100000000001976a914bf2646b8ba8b4a143220528bde9c306dac44a01c88ac00000000"
@@ -10,40 +8,39 @@ def test_deserialize():
     decoded_tx = parser.deserialize_tx(hex)
 
     assert decoded_tx == {
-        "version": 1,
-        "segwit": False,
-        "coinbase": False,
-        "vin": [
+        'version': 1,
+        'segwit': False,
+        'coinbase': False,
+        'vin': [
             {
-                "hash": b"\xdb:\xcf7t:\xc0\x15\x80\x8fy\x11\xa8\x87aS\x0c\x80\x18\x19\xb3\xb9\x074\n\xa6]\xfbm\x98\xce$",
-                "n": 3,
-                "scriptSig": b"G0D\x02 \x02\x96\x1fH\x00\xcb\x15\x7f\x8c\t\x13\x08M\xb0\xee\x14\x8f\xa3\xe1\x13\x0e\x0b^@\xc3\xa4jmO\x83\xce\xaf\x02 ,=\xd8\xe61\xbf$\xf4\xc0\xc54\x1b>\x13\x82\xa2\x7f\x846\xd7_>\n\tY\x15\x99[\x0b\xf7\xdc\x8e\x01!\x03\x95\xc2#\xfb\xf9nI\xe5\xb9\xe0j#l\xa7\xef\x95\xb1\x0b\xf1\x8c\x07K\xd9\x1aYB\xfc@6\r\x0bh",
-                "nSequence": 4294967293,
-                "coinbase": False,
+                'hash': b'\xdb:\xcf7t:\xc0\x15\x80\x8fy\x11\xa8\x87aS\x0c\x80\x18\x19\xb3\xb9\x074\n\xa6]\xfbm\x98\xce$',
+                'n': 3,
+                'scriptSig': b'G0D\x02 \x02\x96\x1fH\x00\xcb\x15\x7f\x8c\t\x13\x08M\xb0\xee\x14\x8f\xa3\xe1\x13\x0e\x0b^@\xc3\xa4jmO\x83\xce\xaf\x02 ,=\xd8\xe61\xbf$\xf4\xc0\xc54\x1b>\x13\x82\xa2\x7f\x846\xd7_>\n\tY\x15\x99[\x0b\xf7\xdc\x8e\x01!\x03\x95\xc2#\xfb\xf9nI\xe5\xb9\xe0j#l\xa7\xef\x95\xb1\x0b\xf1\x8c\x07K\xd9\x1aYB\xfc@6\r\x0bh',
+                'nSequence': 4294967293,
+                'coinbase': False
             }
         ],
-        "vout": [
+        'vout': [
             {
-                "nValue": 0,
-                "scriptPubKey": b"jLPX2[\xd6\x13%\xdcc?\xad\xf0[\xec\x91W\xc21\x06u\x9c\xee@\x95M9\xd9\xdb\xff\xc1~\xc5\x85\x1a-\x1f\xeb]'\x1d\xa4\"\xe0\xe2Lz\xe8\xad)\xd2\xee\xab\xf7\xf9\xca=\xe3\x06\xbd+\xc9\x8e*9\xe4w1\xaa\x00\x0c\xaf@\x00S\x00\x0c\x12\x83\x00\x01I",
+                'nValue': 0,
+                'scriptPubKey': b'jLPX2[\xd6\x13%\xdcc?\xad\xf0[\xec\x91W\xc21\x06u\x9c\xee@\x95M9\xd9\xdb\xff\xc1~\xc5\x85\x1a-\x1f\xeb]\'\x1d\xa4"\xe0\xe2Lz\xe8\xad)\xd2\xee\xab\xf7\xf9\xca=\xe3\x06\xbd+\xc9\x8e*9\xe4w1\xaa\x00\x0c\xaf@\x00S\x00\x0c\x12\x83\x00\x01I'
             },
             {
-                "nValue": 200,
-                "scriptPubKey": b"v\xa9\x14b\xbe\xf4\x11\x0f\x98\xfd\xcbJ\xac<\x18i\xdb\xed\x9b\xce\x87\x02\xed\x88\xac",
+                'nValue': 200,
+                'scriptPubKey': b'v\xa9\x14b\xbe\xf4\x11\x0f\x98\xfd\xcbJ\xac<\x18i\xdb\xed\x9b\xce\x87\x02\xed\x88\xac'
             },
             {
-                "nValue": 200,
-                "scriptPubKey": b"\xa9\x14C\x17\xf7y\xc0\xa2\xcc\xf8\xf6\xbc=D\x0b\xd9\xe56\xa5\xbf\xf7R\x87",
+                'nValue': 200,
+                'scriptPubKey': b'\xa9\x14C\x17\xf7y\xc0\xa2\xcc\xf8\xf6\xbc=D\x0b\xd9\xe56\xa5\xbf\xf7R\x87'
             },
             {
-                "nValue": 5324538,
-                "scriptPubKey": b"v\xa9\x14\xbf&F\xb8\xba\x8bJ\x142 R\x8b\xde\x9c0m\xacD\xa0\x1c\x88\xac",
-            },
-        ],
-        "vtxinwit": [],
-        "lock_time": 0,
-        "tx_hash": "54cc399879446c4eaa7774bb764b319a2680709f99704ce60344587f49ff97e8",
-        "__data__": "0100000001db3acf37743ac015808f7911a88761530c801819b3b907340aa65dfb6d98ce24030000006a473044022002961f4800cb157f8c0913084db0ee148fa3e1130e0b5e40c3a46a6d4f83ceaf02202c3dd8e631bf24f4c0c5341b3e1382a27f8436d75f3e0a095915995b0bf7dc8e01210395c223fbf96e49e5b9e06a236ca7ef95b10bf18c074bd91a5942fc40360d0b68fdffffff040000000000000000536a4c5058325bd61325dc633fadf05bec9157c23106759cee40954d39d9dbffc17ec5851a2d1feb5d271da422e0e24c7ae8ad29d2eeabf7f9ca3de306bd2bc98e2a39e47731aa000caf400053000c1283000149c8000000000000001976a91462bef4110f98fdcb4aac3c1869dbed9bce8702ed88acc80000000000000017a9144317f779c0a2ccf8f6bc3d440bd9e536a5bff75287fa3e5100000000001976a914bf2646b8ba8b4a143220528bde9c306dac44a01c88ac00000000",
+                'nValue': 5324538,
+                'scriptPubKey': b'v\xa9\x14\xbf&F\xb8\xba\x8bJ\x142 R\x8b\xde\x9c0m\xacD\xa0\x1c\x88\xac'
+            }],
+        'vtxinwit': [],
+        'lock_time': 0,
+        'tx_hash': '54cc399879446c4eaa7774bb764b319a2680709f99704ce60344587f49ff97e8',
+        '__data__': '0100000001db3acf37743ac015808f7911a88761530c801819b3b907340aa65dfb6d98ce24030000006a473044022002961f4800cb157f8c0913084db0ee148fa3e1130e0b5e40c3a46a6d4f83ceaf02202c3dd8e631bf24f4c0c5341b3e1382a27f8436d75f3e0a095915995b0bf7dc8e01210395c223fbf96e49e5b9e06a236ca7ef95b10bf18c074bd91a5942fc40360d0b68fdffffff040000000000000000536a4c5058325bd61325dc633fadf05bec9157c23106759cee40954d39d9dbffc17ec5851a2d1feb5d271da422e0e24c7ae8ad29d2eeabf7f9ca3de306bd2bc98e2a39e47731aa000caf400053000c1283000149c8000000000000001976a91462bef4110f98fdcb4aac3c1869dbed9bce8702ed88acc80000000000000017a9144317f779c0a2ccf8f6bc3d440bd9e536a5bff75287fa3e5100000000001976a914bf2646b8ba8b4a143220528bde9c306dac44a01c88ac00000000'
     }
 
     transactions_hex = [
@@ -57,36 +54,32 @@ def test_deserialize():
         decoded_tx_parser = parser.deserialize_tx(hex, use_txid=False)
 
         for i, vin in enumerate(decoded_tx_bitcoinlib.vin):
-            assert vin.prevout.hash == decoded_tx_parser["vin"][i]["hash"]
-            assert vin.prevout.n == decoded_tx_parser["vin"][i]["n"]
-            assert vin.scriptSig == decoded_tx_parser["vin"][i]["scriptSig"]
-            assert vin.nSequence == decoded_tx_parser["vin"][i]["nSequence"]
+            assert vin.prevout.hash == decoded_tx_parser['vin'][i]['hash']
+            assert vin.prevout.n == decoded_tx_parser['vin'][i]['n']
+            assert vin.scriptSig == decoded_tx_parser['vin'][i]['scriptSig']
+            assert vin.nSequence == decoded_tx_parser['vin'][i]['nSequence']
 
         for i, vout in enumerate(decoded_tx_bitcoinlib.vout):
-            assert vout.nValue == decoded_tx_parser["vout"][i]["nValue"]
-            assert vout.scriptPubKey == decoded_tx_parser["vout"][i]["scriptPubKey"]
+            assert vout.nValue == decoded_tx_parser['vout'][i]['nValue']
+            assert vout.scriptPubKey == decoded_tx_parser['vout'][i]['scriptPubKey']
 
-        assert decoded_tx_bitcoinlib.has_witness() == (len(decoded_tx_parser["vtxinwit"]) > 0)
-        assert decoded_tx_bitcoinlib.is_coinbase() == decoded_tx_parser["coinbase"]
+        assert decoded_tx_bitcoinlib.has_witness() == (len(decoded_tx_parser['vtxinwit']) > 0)
+        assert decoded_tx_bitcoinlib.is_coinbase() == decoded_tx_parser['coinbase']
 
-        assert utils.ib2h(decoded_tx_bitcoinlib.GetHash()) == decoded_tx_parser["tx_hash"]
+        assert utils.ib2h(decoded_tx_bitcoinlib.GetHash()) == decoded_tx_parser['tx_hash']
 
     iterations = 25
 
     start_time = time.time()
-    for i in range(iterations):  # noqa: B007
+    for i in range(iterations):
         for hex in transactions_hex:
             parser.deserialize_tx(hex)
     end_time = time.time()
-    print(
-        f"Time to deserialize {4 * iterations} transactions with block_parser: {end_time - start_time} seconds"
-    )
+    print(f"Time to deserialize {4 * iterations} transactions with block_parser: {end_time - start_time} seconds")
 
     start_time = time.time()
-    for i in range(iterations):  # noqa: B007
+    for i in range(iterations):
         for hex in transactions_hex:
             backend.deserialize(hex)
     end_time = time.time()
-    print(
-        f"Time to deserialize  {4 * iterations} transactions with bitcoinlib: {end_time - start_time} seconds"
-    )
+    print(f"Time to deserialize  {4 * iterations} transactions with bitcoinlib: {end_time - start_time} seconds")
