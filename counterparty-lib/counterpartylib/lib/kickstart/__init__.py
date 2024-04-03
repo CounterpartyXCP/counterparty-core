@@ -11,8 +11,8 @@ from halo import Halo
 from termcolor import colored
 
 from counterpartylib import server
-from counterpartylib.lib import backend, blocks, config, database, ledger, log
-from counterpartylib.lib.backend.addrindexrs import AddrindexrsSocket
+from counterpartylib.lib import backend, blocks, config, database, ledger, log  # noqa: F401
+from counterpartylib.lib.backend.addrindexrs import AddrindexrsSocket  # noqa: F401
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser, ChainstateParser
 from counterpartylib.lib.kickstart.utils import remove_shm_from_resource_tracker
 
@@ -273,7 +273,7 @@ def backup_if_needed(new_database, resuming):
         if version_major < 10:
             print(
                 colored(
-                    f"Version lower than v10.0.0 detected. Kickstart must be done from the first block.",
+                    f"Version lower than v10.0.0 detected. Kickstart must be done from the first block.",  # noqa: F541
                     "yellow",
                 )
             )

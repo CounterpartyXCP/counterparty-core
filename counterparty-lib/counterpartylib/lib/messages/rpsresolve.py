@@ -143,7 +143,7 @@ def parse(db, tx, message):
         rps_match_id = util.make_id(tx0_hash, tx1_hash)
         random = binascii.hexlify(random).decode("utf-8")
         status = "valid"
-    except (exceptions.UnpackError, struct.error) as e:
+    except (exceptions.UnpackError, struct.error) as e:  # noqa: F841
         move, random, tx0_hash, tx1_hash, rps_match_id = None, None, None, None, None
         status = "invalid: could not unpack"
 

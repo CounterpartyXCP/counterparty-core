@@ -7,10 +7,10 @@ from math import ceil
 
 import bitcoin as bitcoinlib
 import dateutil.parser
-from counterpartylib.lib import api, blocks, config, exceptions, script, transaction
+from counterpartylib.lib import api, blocks, config, exceptions, script, transaction  # noqa: F401
 from counterpartylib.lib.kickstart.utils import ib2h
-from counterpartylib.lib.ledger import generate_asset_name
-from counterpartylib.lib.util import BET_TYPE_ID, BET_TYPE_NAME, dhash, make_id
+from counterpartylib.lib.ledger import generate_asset_name  # noqa: F401
+from counterpartylib.lib.util import BET_TYPE_ID, BET_TYPE_NAME, dhash, make_id  # noqa: F401
 
 from counterpartycli import util, wallet
 
@@ -103,7 +103,7 @@ def get_pubkey_monosig(pubkeyhash, pubkey_resolver=input_pubkey):
         logging.debug(f"Looking for public key for `{pubkeyhash}` in blockchain.")
         try:
             pubkey = util.api("search_pubkey", {"pubkeyhash": pubkeyhash, "provided_pubkeys": None})
-        except util.RPCError as e:
+        except util.RPCError as e:  # noqa: F841
             pubkey = None
         if pubkey:
             return pubkey
@@ -197,7 +197,7 @@ def prepare_args(args, action):
 
     # order
     if action == "order":
-        fee_required, fee_fraction_provided = (
+        fee_required, fee_fraction_provided = (  # noqa: F841
             D(args.fee_fraction_required),
             D(args.fee_fraction_provided),
         )
@@ -262,7 +262,7 @@ def prepare_args(args, action):
 
         def generate_move_random_hash(move):
             move = int(move).to_bytes(2, byteorder="big")
-            random_bin = os.urandom(16)
+            random_bin = os.urandom(16)  # noqa: F821
             move_random_hash_bin = dhash(random_bin + move)
             return binascii.hexlify(random_bin).decode("utf8"), binascii.hexlify(
                 move_random_hash_bin

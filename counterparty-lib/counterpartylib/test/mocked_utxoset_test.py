@@ -7,10 +7,10 @@ from counterpartylib.lib import backend, util
 
 # this is require near the top to do setup of the test suite
 from counterpartylib.test import (
-    conftest,
+    conftest,  # noqa: F401
     util_test,
 )
-from counterpartylib.test.fixtures.params import ADDR, DP
+from counterpartylib.test.fixtures.params import ADDR, DP  # noqa: F401
 from counterpartylib.test.util_test import CURR_DIR
 
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"
@@ -89,7 +89,7 @@ def test_search_raw_transactions_unconfirmed(server_db):
     )
 
     # insert send, this automatically also creates a block
-    tx1 = util_test.insert_raw_transaction(send1hex, server_db)
+    tx1 = util_test.insert_raw_transaction(send1hex, server_db)  # noqa: F841
 
     assert len(backend.search_raw_transactions(ADDR[0], unconfirmed=True)) == 28
     assert len(backend.search_raw_transactions(ADDR[0], unconfirmed=False)) == 28
@@ -101,7 +101,7 @@ def test_search_raw_transactions_unconfirmed(server_db):
     )
 
     # insert send, this automatically also creates a block
-    tx2 = util_test.insert_unconfirmed_raw_transaction(send2hex, server_db)
+    tx2 = util_test.insert_unconfirmed_raw_transaction(send2hex, server_db)  # noqa: F841
 
     assert len(backend.search_raw_transactions(ADDR[0], unconfirmed=True)) == 29
     assert len(backend.search_raw_transactions(ADDR[0], unconfirmed=False)) == 28

@@ -5,8 +5,8 @@ Test suite configuration
 import binascii
 import json
 import logging
-import os
-import pprint
+import os  # noqa: F401
+import pprint  # noqa: F401
 import time
 from datetime import datetime
 
@@ -15,7 +15,7 @@ import bitcoin as bitcoinlib
 import pycoin
 import pytest
 from Crypto.Cipher import ARC4
-from pycoin.coins.bitcoin import Tx
+from pycoin.coins.bitcoin import Tx  # noqa: F401
 
 from counterpartylib import server
 from counterpartylib.lib import api, arc4, config, database, ledger, log, script, util
@@ -240,7 +240,7 @@ def cp_server(request):
     sqlfile = getattr(request.module, "FIXTURE_SQL_FILE")
     options = getattr(request.module, "FIXTURE_OPTIONS", {})
 
-    db = util_test.init_database(sqlfile, dbfile, options)
+    db = util_test.init_database(sqlfile, dbfile, options)  # noqa: F841
 
     # monkeypatch this here because init_mock_functions can run before cp_server
     if hasattr(config, "PREFIX"):

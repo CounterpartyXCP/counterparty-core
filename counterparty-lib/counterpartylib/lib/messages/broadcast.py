@@ -36,7 +36,7 @@ from counterpartylib.lib import (  # noqa: E402
     database,
     exceptions,
     ledger,
-    log,
+    log,  # noqa: F401
     message_type,
     util,
 )
@@ -191,7 +191,7 @@ def parse(db, tx, message):
         except UnicodeDecodeError:
             text = ""
         status = "valid"
-    except struct.error as e:
+    except struct.error as e:  # noqa: F841
         timestamp, value, fee_fraction_int, text = 0, None, 0, None
         status = "invalid: could not unpack"
     except AssertionError:
@@ -310,7 +310,7 @@ def parse(db, tx, message):
             else:
                 bull_address = bet_match["tx1_address"]
                 bear_address = bet_match["tx0_address"]
-                bull_escrow = bet_match["backward_quantity"]
+                bull_escrow = bet_match["backward_quantity"]  # noqa: F841
                 bear_escrow = bet_match["forward_quantity"]
 
             leverage = Fraction(bet_match["leverage"], 5040)

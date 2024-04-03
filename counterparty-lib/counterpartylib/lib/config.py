@@ -1,4 +1,4 @@
-import sys
+import sys  # noqa: F401
 
 """Variables prefixed with `DEFAULT` should be able to be overridden by
 configuration file and command‐line arguments."""

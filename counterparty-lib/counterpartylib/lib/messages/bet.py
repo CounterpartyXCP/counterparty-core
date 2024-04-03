@@ -24,7 +24,7 @@ from counterpartylib.lib import (  # noqa: E402
     database,
     exceptions,
     ledger,
-    log,
+    log,  # noqa: F401
     message_type,
     util,
 )
@@ -429,7 +429,7 @@ def parse(db, tx, message):
             target_value,
             leverage,
             expiration,
-            fee_fraction_int,
+            fee_fraction_int,  # noqa: F841
         ) = 0, 0, 0, 0, 0, 0, 0, 0
         status = "invalid: could not unpack"
 
@@ -608,7 +608,7 @@ def match(db, tx):
                     logger.debug("Skipping: zero backward quantity.")
                     continue
 
-            bet_match_id = util.make_id(tx0["tx_hash"], tx1["tx_hash"])
+            bet_match_id = util.make_id(tx0["tx_hash"], tx1["tx_hash"])  # noqa: F841
 
             # Debit the order.
             # Counterwager remainings may be negative.

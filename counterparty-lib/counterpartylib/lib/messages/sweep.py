@@ -4,7 +4,7 @@ import logging
 import struct
 
 from counterpartylib.lib import address, config, database, exceptions, ledger, message_type
-from counterpartylib.lib.exceptions import *
+from counterpartylib.lib.exceptions import *  # noqa: F403
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -173,7 +173,7 @@ def parse(db, tx, message):
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         destination, flags, memo_bytes = None, None, None
         status = f"invalid: could not unpack ({e})"
-    except BalanceError:
+    except BalanceError:  # noqa: F405
         destination, flags, memo_bytes = None, None, None
         status = "invalid: insufficient balance for antispam fee for sweep"
     except Exception as err:
@@ -214,7 +214,7 @@ def parse(db, tx, message):
                     action="sweep fee",
                     event=tx["tx_hash"],
                 )
-        except BalanceError:
+        except BalanceError:  # noqa: F405
             destination, flags, memo_bytes = None, None, None
             status = "invalid: insufficient balance for antispam fee for sweep"
 

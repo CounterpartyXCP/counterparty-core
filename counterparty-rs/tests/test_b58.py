@@ -1,4 +1,4 @@
-from counterparty_rs import b58
+from counterparty_rs import b58  # noqa: F401
 
 
 # TODO

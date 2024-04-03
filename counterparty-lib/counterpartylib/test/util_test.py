@@ -14,7 +14,7 @@ import os
 import pprint
 import re
 import sys
-import tempfile
+import tempfile  # noqa: F401
 import time
 
 import appdirs
@@ -22,7 +22,7 @@ import apsw
 import bitcoin as bitcoinlib
 import pycoin
 import pytest
-from pycoin.coins.bitcoin import Tx
+from pycoin.coins.bitcoin import Tx  # noqa: F401
 
 CURR_DIR = os.path.dirname(
     os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__)))
@@ -43,14 +43,14 @@ from counterpartylib.lib import (  # noqa: E402
     util,
 )
 from counterpartylib.lib.backend.indexd import (  # noqa: E402
-    extract_addresses,
+    extract_addresses,  # noqa: F401
     extract_addresses_from_txlist,
 )
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: E402
 from counterpartylib.test.fixtures.scenarios import (  # noqa: E402
     INTEGRATION_SCENARIOS,
-    UNITTEST_FIXTURE,
+    UNITTEST_FIXTURE,  # noqa: F401
     standard_scenarios_params,
 )
 
@@ -357,7 +357,7 @@ def prefill_rawtransactions_db(db):
         wallet_unspent = json.load(listunspent_test_file)
         for output in wallet_unspent:
             txid = output["txid"]
-            tx = BlockchainParser().deserialize_tx(output["txhex"], True)
+            tx = BlockchainParser().deserialize_tx(output["txhex"], True)  # noqa: F841
             cursor.execute(
                 "INSERT INTO raw_transactions VALUES (?, ?, ?)",
                 (txid, output["txhex"], output["confirmations"]),
@@ -377,7 +377,7 @@ def save_rawtransaction(db, txid, tx_hex, confirmations=0):
         cursor.execute(
             """INSERT INTO raw_transactions VALUES (?, ?, ?)""", (txid, tx_hex, confirmations)
         )
-    except Exception as e:  # TODO
+    except Exception as e:  # TODO  # noqa: F841
         pass
     cursor.close()
 
@@ -439,7 +439,7 @@ def mock_bitcoind_verbose_tx_output(tx, txid, confirmations):
                 list(vin.scriptSig),
             )
         )
-        rvin = {
+        rvin = {  # noqa: F841
             "txid": bitcoinlib.core.b2lx(vin.prevout.hash),
             "vout": vin.prevout.n,
             "scriptSig": {

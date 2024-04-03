@@ -186,7 +186,7 @@ def validate(
     oracle_address,
 ):
     problems = []
-    order_match = None
+    order_match = None  # noqa: F841
     asset_id = None
 
     if asset == config.BTC:
@@ -431,7 +431,7 @@ def parse(db, tx, message):
             oracle_address = address.unpack(message[read : read + 21])
         asset = ledger.generate_asset_name(assetid, ledger.CURRENT_BLOCK_INDEX)
         status = "valid"
-    except (exceptions.UnpackError, struct.error) as e:
+    except (exceptions.UnpackError, struct.error) as e:  # noqa: F841
         assetid, give_quantity, mainchainrate, asset = None, None, None, None
         status = "invalid: could not unpack"
 
@@ -534,7 +534,7 @@ def parse(db, tx, message):
                                     action="open dispenser",
                                     event=tx["tx_hash"],
                                 )
-                        except ledger.DebitError as e:
+                        except ledger.DebitError as e:  # noqa: F841
                             status = "invalid: insufficient funds"
 
                     if status == "valid":

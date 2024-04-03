@@ -7,7 +7,7 @@ import logging
 import struct
 
 from counterpartylib.lib import config, database, ledger, message_type, script
-from counterpartylib.lib.exceptions import *
+from counterpartylib.lib.exceptions import *  # noqa: F403
 from counterpartylib.lib.script import AddressError
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -75,10 +75,10 @@ def unpack(db, message):
         asset = ledger.get_asset_name(db, asset_id, ledger.CURRENT_BLOCK_INDEX)
 
     except struct.error:
-        raise UnpackError("could not unpack")
+        raise UnpackError("could not unpack")  # noqa: F405
 
-    except AssetIDError:
-        raise UnpackError("asset id invalid")
+    except AssetIDError:  # noqa: F405
+        raise UnpackError("asset id invalid")  # noqa: F405
 
     return asset, quantity, tag
 
@@ -86,31 +86,31 @@ def unpack(db, message):
 def validate(db, source, destination, asset, quantity):
     try:
         ledger.get_asset_id(db, asset, ledger.CURRENT_BLOCK_INDEX)
-    except AssetError:
-        raise ValidateError("asset invalid")
+    except AssetError:  # noqa: F405
+        raise ValidateError("asset invalid")  # noqa: F405
 
     try:
         script.validate(source)
     except AddressError:
-        raise ValidateError("source address invalid")
+        raise ValidateError("source address invalid")  # noqa: F405
 
     if destination:
-        raise ValidateError("destination exists")
+        raise ValidateError("destination exists")  # noqa: F405
 
     if asset == config.BTC:
-        raise ValidateError(f"cannot destroy {config.BTC}")
+        raise ValidateError(f"cannot destroy {config.BTC}")  # noqa: F405
 
     if type(quantity) != int:  # noqa: E721
-        raise ValidateError("quantity not integer")
+        raise ValidateError("quantity not integer")  # noqa: F405
 
     if quantity > config.MAX_INT:
-        raise ValidateError("integer overflow, quantity too large")
+        raise ValidateError("integer overflow, quantity too large")  # noqa: F405
 
     if quantity < 0:
-        raise ValidateError("quantity negative")
+        raise ValidateError("quantity negative")  # noqa: F405
 
     if ledger.get_balance(db, source, asset) < quantity:
-        raise BalanceError("balance insufficient")
+        raise BalanceError("balance insufficient")  # noqa: F405
 
 
 def compose(db, source, asset, quantity, tag):
@@ -133,10 +133,10 @@ def parse(db, tx, message):
         validate(db, tx["source"], tx["destination"], asset, quantity)
         ledger.debit(db, tx["source"], asset, quantity, tx["tx_index"], "destroy", tx["tx_hash"])
 
-    except UnpackError as e:
+    except UnpackError as e:  # noqa: F405
         status = "invalid: " + "".join(e.args)
 
-    except (ValidateError, BalanceError) as e:
+    except (ValidateError, BalanceError) as e:  # noqa: F405
         status = "invalid: " + "".join(e.args)
 
     bindings = {

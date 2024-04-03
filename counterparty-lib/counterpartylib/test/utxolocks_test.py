@@ -4,12 +4,12 @@ import tempfile
 from io import BytesIO
 
 import bitcoin
-import pytest
+import pytest  # noqa: F401
 
 from counterpartylib.lib import transaction
 from counterpartylib.lib.messages import send
 from counterpartylib.test import (
-    conftest,
+    conftest,  # noqa: F401
 )
 
 # this is require near the top to do setup of the test suite

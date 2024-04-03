@@ -35,7 +35,7 @@ class JsonDecimalEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, decimal.Decimal):
             return str(o)
-        return super(DecimalEncoder, self).default(o)
+        return super(DecimalEncoder, self).default(o)  # noqa: F821
 
 
 def decode_value(key, value):

@@ -170,7 +170,7 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     if asset == config.BTC:
         raise DebitError("Cannot debit bitcoins.")
 
-    debit_cursor = db.cursor()
+    debit_cursor = db.cursor()  # noqa: F841
 
     # Contracts can only hold XCP balances.
     if enabled("contracts_only_xcp_balances"):  # Protocol change.
@@ -235,7 +235,7 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
     if asset == config.BTC:
         raise CreditError("Cannot debit bitcoins.")
 
-    credit_cursor = db.cursor()
+    credit_cursor = db.cursor()  # noqa: F841
 
     # Contracts can only hold XCP balances.
     if enabled("contracts_only_xcp_balances"):  # Protocol change.
@@ -452,7 +452,7 @@ def resolve_subasset_longname(db, asset_name):
         subasset_longname = None
         try:
             subasset_parent, subasset_longname = util.parse_subasset_from_asset_name(asset_name)
-        except Exception as e:
+        except Exception as e:  # noqa: F841
             logger.warning(f"Invalid subasset {asset_name}")
             subasset_longname = None
 
@@ -640,9 +640,9 @@ def get_issuances(db, asset=None, status=None, locked=None, first=False, last=Fa
     # no sql injection here
     query = f"""SELECT * FROM issuances WHERE ({" AND ".join(where)})"""  # nosec B608
     if first:
-        query += f""" ORDER BY tx_index ASC"""
+        query += f""" ORDER BY tx_index ASC"""  # noqa: F541
     elif last:
-        query += f""" ORDER BY tx_index DESC"""
+        query += f""" ORDER BY tx_index DESC"""  # noqa: F541
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -1157,7 +1157,7 @@ def get_pending_bet_matches(db, feed_address, order_by=None):
     if order_by is not None:
         query += f""" ORDER BY {order_by}"""
     else:
-        query += f""" ORDER BY rowid"""
+        query += f""" ORDER BY rowid"""  # noqa: F541
     bindings = (feed_address, "pending")
     cursor.execute(query, bindings)
     return cursor.fetchall()
@@ -1436,7 +1436,7 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
 
     where_source = ""
     if source is not None:
-        where_source = f" AND source = :source"
+        where_source = f" AND source = :source"  # noqa: F541
         select_bindings["source"] = source
 
     # no sql injection here

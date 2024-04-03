@@ -9,7 +9,7 @@ import collections
 import decimal
 import json
 import logging
-import os
+import os  # noqa: F401
 import re
 import sys
 import threading
@@ -17,15 +17,15 @@ import time
 import traceback
 from logging import handlers as logging_handlers
 
-import requests
+import requests  # noqa: F401
 
 D = decimal.Decimal
 import binascii  # noqa: E402
 import inspect  # noqa: E402
 import math  # noqa: E402
-import struct  # noqa: E402
+import struct  # noqa: E402, F401
 
-import apsw  # noqa: E402
+import apsw  # noqa: E402, F401
 import flask  # noqa: E402
 import jsonrpc  # noqa: E402
 from flask import request  # noqa: E402
@@ -36,7 +36,7 @@ from xmltodict import unparse as serialize_to_xml  # noqa: E402
 
 from counterpartylib.lib import (  # noqa: E402
     backend,
-    blocks,
+    blocks,  # noqa: F401
     config,
     database,
     exceptions,
@@ -49,20 +49,20 @@ from counterpartylib.lib import (  # noqa: E402
 )
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
 from counterpartylib.lib.messages import (  # noqa: E402
-    bet,
-    broadcast,
-    btcpay,
-    burn,
-    cancel,
-    destroy,
-    dispenser,
-    dividend,
-    issuance,
-    order,
-    rps,
-    rpsresolve,
+    bet,  # noqa: F401
+    broadcast,  # noqa: F401
+    btcpay,  # noqa: F401
+    burn,  # noqa: F401
+    cancel,  # noqa: F401
+    destroy,  # noqa: F401
+    dispenser,  # noqa: F401
+    dividend,  # noqa: F401
+    issuance,  # noqa: F401
+    order,  # noqa: F401
+    rps,  # noqa: F401
+    rpsresolve,  # noqa: F401
     send,
-    sweep,
+    sweep,  # noqa: F401
 )
 from counterpartylib.lib.messages.versions import enhanced_send  # noqa: E402
 
@@ -476,7 +476,7 @@ def adjust_get_sends_memo_filters(filters):
             filter_["field"] = "memo"
             try:
                 filter_["value"] = bytes.fromhex(filter_["value"])
-            except ValueError as e:
+            except ValueError as e:  # noqa: F841
                 raise APIError("Invalid memo_hex value")
 
 
@@ -899,7 +899,7 @@ class APIServer(threading.Thread):
             assert isinstance(block_index, int)
             cursor = self.db.cursor()
             cursor.execute("""SELECT * FROM blocks WHERE block_index = ?""", (block_index,))
-            blocks = list(cursor)
+            blocks = list(cursor)  # noqa: F811
             if len(blocks) == 1:
                 block = blocks[0]
             elif len(blocks) == 0:
@@ -936,7 +936,7 @@ class APIServer(threading.Thread):
                 f"SELECT * FROM blocks WHERE block_index IN ({block_indexes_placeholder}) ORDER BY block_index ASC",  # nosec B608
                 block_indexes,
             )
-            blocks = cursor.fetchall()
+            blocks = cursor.fetchall()  # noqa: F811
 
             messages = collections.deque(ledger.get_messages(self.db, block_index_in=block_indexes))
 
@@ -1142,7 +1142,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_dispenser_info(tx_hash=None, tx_index=None):
-            cursor = self.db.cursor()
+            cursor = self.db.cursor()  # noqa: F841
 
             if tx_hash is None and tx_index is None:
                 raise APIError("You must provided a tx hash or a tx index")
@@ -1413,7 +1413,7 @@ class APIServer(threading.Thread):
                     query_data = get_rows(
                         self.db, table=query_type, filters=data_filter, filterop=operator
                     )
-                except APIError as error:
+                except APIError as error:  # noqa: F841
                     return flask.Response("API Error", 400, mimetype="application/json")
 
             # See which encoding to choose from.

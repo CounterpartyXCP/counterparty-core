@@ -9,11 +9,11 @@ import time
 
 import appdirs
 import requests
-from counterpartylib import server
-from counterpartylib.lib import check, config
+from counterpartylib import server  # noqa: F401
+from counterpartylib.lib import check, config  # noqa: F401
 from counterpartylib.lib.util import value_input, value_output
-from halo import Halo
-from termcolor import colored, cprint
+from halo import Halo  # noqa: F401
+from termcolor import colored, cprint  # noqa: F401
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal

@@ -28,7 +28,7 @@ from counterpartylib.lib import (
     config,
     database,
     ledger,
-    log,
+    log,  # noqa: F401
     transaction,
     util,
 )
@@ -56,8 +56,8 @@ def sigterm_handler(_signo, _stack_frame):
 
     if "api_server" in globals():
         logger.info("Stopping API server.")
-        api_server.stop()
-        api_status_poller.stop()
+        api_server.stop()  # noqa: F821
+        api_status_poller.stop()  # noqa: F821
     logger.info("Stopping backend.")
     backend.stop()
     logger.info("Shutting down.")

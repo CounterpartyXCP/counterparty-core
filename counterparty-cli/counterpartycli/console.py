@@ -110,7 +110,7 @@ def print_wallet(wallet):
 def print_pending(awaiting_btcs):
     table = PrettyTable(["Matched Order ID", "Time Left"])
     for order_match in awaiting_btcs:
-        order_match = format_order_match(order_match)
+        order_match = format_order_match(order_match)  # noqa: F821
         table.add_row(order_match)
     print(table)
 

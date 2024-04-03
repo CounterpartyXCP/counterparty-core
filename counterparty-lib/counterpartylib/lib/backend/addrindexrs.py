@@ -1,12 +1,12 @@
-import binascii
+import binascii  # noqa: F401
 import collections
 import concurrent.futures
 import functools
 import hashlib
 import json
 import logging
-import os
-import signal
+import os  # noqa: F401
+import signal  # noqa: F401
 import socket
 import sys
 import threading
@@ -14,7 +14,7 @@ import time
 
 import bitcoin.wallet
 import requests
-from pkg_resources import parse_version
+from pkg_resources import parse_version  # noqa: F401
 from requests.exceptions import ConnectionError, ReadTimeout, Timeout
 
 from counterpartylib.lib import config, exceptions, ledger, util
@@ -90,7 +90,7 @@ def rpc_call(payload):
     # Handle json decode errors
     try:
         response_json = response.json()
-    except json.decoder.JSONDecodeError as e:
+    except json.decoder.JSONDecodeError as e:  # noqa: F841
         raise BackendRPCError(
             f"Received invalid JSON from backend with a response of {str(response.status_code) + ' ' + response.reason}"
         )
@@ -365,13 +365,13 @@ class AddrIndexRsThread(threading.Thread):
                 logger.debug(f"Opening socket to address indexer at `{self.host}:{self.port}`")
                 self.sock.connect((self.host, self.port))
                 self.backoff = BACKOFF_START
-            except ConnectionRefusedError as e:
+            except ConnectionRefusedError as e:  # noqa: F841
                 logger.debug(
                     f"Connection refused by addrindexrs. Trying again in {self.backoff:d} seconds."
                 )
                 time.sleep(self.backoff)
                 self.backoff = min(self.backoff * BACKOFF_FACTOR, BACKOFF_MAX)
-            except Exception as e:
+            except Exception as e:  # noqa: F841
                 logger.exception("Unknown error when attempting to connect to address indexer.")
                 sys.exit(1)
             else:
@@ -393,7 +393,7 @@ class AddrIndexRsThread(threading.Thread):
                         self.sock.send(self.message_to_send)
                         has_sent = True
                         self.backoff = BACKOFF_START
-                    except Exception as e:
+                    except Exception as e:  # noqa: F841
                         logger.exception(
                             f"Unknown error sending message to address indexer: {self.message_to_send}"
                         )
@@ -411,7 +411,7 @@ class AddrIndexRsThread(threading.Thread):
                                 data = data + chunk
                                 try:
                                     self.message_result = json.loads(data.decode("utf-8"))
-                                except json.decoder.JSONDecodeError as e:
+                                except json.decoder.JSONDecodeError as e:  # noqa: F841
                                     # Incomplete message
                                     pass
                                 else:
@@ -434,7 +434,7 @@ class AddrIndexRsThread(threading.Thread):
                         has_sent = False  # TODO: Retry send?!
                         time.sleep(self.backoff)
                         self.backoff = min(self.backoff * BACKOFF_FACTOR, BACKOFF_MAX)
-                    except Exception as e:
+                    except Exception as e:  # noqa: F841
                         logger.exception("Unknown error when connecting to address indexer.")
                         self.locker.notify()
                         sys.exit(1)  # TODO
@@ -469,7 +469,7 @@ def indexer_check_version():
         addrindexrs_version_label = addrindexrs_version["result"][0][
             12:
         ]  # 12 is the length of "addrindexrs "
-    except TypeError as e:
+    except TypeError as e:  # noqa: F841
         logger.exception(f"Error when checking address indexer version: {addrindexrs_version}")
         sys.exit(1)
 

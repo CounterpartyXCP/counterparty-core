@@ -4,9 +4,9 @@ This module contains p2sh data encoding functions
 
 import binascii
 import logging
-import math
+import math  # noqa: F401
 import struct
-import traceback  # not needed if not printing exceptions on p2sh decoding
+import traceback  # not needed if not printing exceptions on p2sh decoding  # noqa: F401
 
 import bitcoin as bitcoinlib
 from bitcoin.core.script import CScript
@@ -56,7 +56,7 @@ def calculate_outputs(destination_outputs, data_array, fee_per_kb, exact_fee=Non
             data_value[len(data_array) - 1] = data_value[len(data_array) - 1] + remain_fee
             data_btc_out = exact_fee
 
-    data_output = (data_array, data_value)
+    data_output = (data_array, data_value)  # noqa: F841
 
     logger.debug(f"datatx size: {datatx_size} fee: {datatx_necessary_fee}")
     logger.debug(f"pretx output size: {pretx_output_size}")
@@ -100,7 +100,7 @@ def decode_p2sh_input(asm, p2sh_is_segwit=False):
 
 def decode_data_push(arr, pos):
     pushlen = 0
-    data = b""
+    data = b""  # noqa: F841
     opcode = bitcoinlib.core.script.CScriptOp(arr[pos])
     if opcode > 0 and opcode < bitcoinlib.core.script.OP_PUSHDATA1:
         pushlen = arr[pos]
@@ -180,7 +180,7 @@ def decode_data_redeem_script(redeem_script, p2sh_is_segwit=False):
                             and opcode <= bitcoinlib.core.script.OP_15
                         ):
                             # it's multisig
-                            req_sigs = opcode - bitcoinlib.core.script.OP_1 + 1
+                            req_sigs = opcode - bitcoinlib.core.script.OP_1 + 1  # noqa: F841
                             pos += 1
                             pubkey = None
                             num_sigs = 0
@@ -226,7 +226,7 @@ def decode_data_redeem_script(redeem_script, p2sh_is_segwit=False):
                                 and redeem_script[pos + 4 + unique_offfset_length]
                                 == bitcoinlib.core.script.OP_EQUAL
                             )
-        except Exception as e:
+        except Exception as e:  # noqa: F841
             return None, None, False, None
 
     return pubkey, source, redeem_script_is_valid, found_data

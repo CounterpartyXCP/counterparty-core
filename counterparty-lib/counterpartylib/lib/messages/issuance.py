@@ -707,7 +707,7 @@ def parse(db, tx, message, message_type_id):
         except exceptions.AssetIDError:
             asset = None
             status = "invalid: bad asset name"
-    except exceptions.UnpackError as e:
+    except exceptions.UnpackError as e:  # noqa: F841
         asset, quantity, divisible, lock, reset, callable_, call_date, call_price, description = (
             None,
             None,
@@ -730,7 +730,7 @@ def parse(db, tx, message, message_type_id):
             subasset_parent, subasset_longname = util.parse_subasset_from_asset_name(
                 subasset_longname
             )
-        except exceptions.AssetNameError as e:
+        except exceptions.AssetNameError as e:  # noqa: F841
             asset = None
             status = "invalid: bad subasset name"
 

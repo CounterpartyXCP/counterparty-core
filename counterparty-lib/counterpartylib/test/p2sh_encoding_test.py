@@ -1,8 +1,8 @@
 import binascii
 import hashlib
 import logging
-import math
-import pprint
+import math  # noqa: F401
+import pprint  # noqa: F401
 import tempfile
 import time
 
@@ -11,7 +11,7 @@ import pytest
 
 # this is require near the top to do setup of the test suite
 from counterpartylib.test import (
-    conftest,
+    conftest,  # noqa: F401
     util_test,
 )
 from counterpartylib.test.fixtures.params import ADDR, DP, P2SH_ADDR
@@ -27,10 +27,10 @@ from counterpartylib.lib import (  # noqa: E402
     gettxinfo,
     ledger,
     script,
-    util,
+    util,  # noqa: F401
 )
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
-from counterpartylib.lib.transaction_helper import p2sh_encoding, serializer  # noqa: E402
+from counterpartylib.lib.transaction_helper import p2sh_encoding, serializer  # noqa: E402, F401
 
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"
 FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
@@ -38,8 +38,8 @@ FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
 
 @pytest.mark.usefixtures()
 def test_p2sh_encoding_composed(server_db):
-    source = ADDR[0]
-    destination = ADDR[1]
+    source = ADDR[0]  # noqa: F841
+    destination = ADDR[1]  # noqa: F841
 
     with util_test.ConfigContext(
         DISABLE_ARC4_MOCKING=True, OLD_STYLE_API=True
@@ -106,7 +106,7 @@ def test_p2sh_encoding(server_db):
         assert sumvout == (sumvin - fee)
 
         # data P2SH output
-        expected_datatx_length = 435
+        expected_datatx_length = 435  # noqa: F841
         expected_datatx_fee = fee  # excat fee asked
         assert (
             repr(pretx.vout[0].scriptPubKey)
@@ -238,13 +238,13 @@ def test_p2sh_encoding(server_db):
         tx_script_length = int(datatxhex[tx_script_start : tx_script_start + 2], 16) * 2
         tx_script = datatxhex[tx_script_start + 2 : tx_script_start + 2 + tx_script_length]
         signing_pubkey_hash = tx_script[-44:-4]
-        address = script.base58_check_encode(signing_pubkey_hash, config.ADDRESSVERSION)
+        address = script.base58_check_encode(signing_pubkey_hash, config.ADDRESSVERSION)  # noqa: F841
 
 
 @pytest.mark.usefixtures("cp_server")
 def test_p2sh_encoding_long_data(server_db):
     source = ADDR[0]
-    destination = ADDR[1]
+    destination = ADDR[1]  # noqa: F841
 
     with util_test.ConfigContext(OLD_STYLE_API=True), util_test.MockProtocolChangesContext(
         enhanced_sends=True, p2sh_encoding=True
@@ -273,7 +273,7 @@ def test_p2sh_encoding_long_data(server_db):
         pretxhex = result
 
         pretx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(pretxhex))
-        actual_fee = int(len(pretxhex) / 2 * fee_per_kb / 1000)
+        actual_fee = int(len(pretxhex) / 2 * fee_per_kb / 1000)  # noqa: F841
 
         sumvin = sum(
             [
@@ -438,7 +438,7 @@ def test_p2sh_encoding_p2sh_source_not_supported(server_db):
         fee_per_kb = 50000
 
         with pytest.raises(exceptions.TransactionError):
-            result = api.compose_transaction(
+            result = api.compose_transaction(  # noqa: F841
                 server_db,
                 "send",
                 {"source": source, "destination": destination, "asset": "XCP", "quantity": 100},
@@ -523,7 +523,7 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
         assert not isinstance(result, list)
         datatxhex = result
 
-        datatx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(datatxhex))
+        datatx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(datatxhex))  # noqa: F841
 
         # parse the transaction
         parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = (

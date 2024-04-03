@@ -2,15 +2,15 @@ import binascii
 import logging
 import struct
 
-import bitcoin as bitcoinlib
-from bitcoin.core.script import CScriptInvalidError
+import bitcoin as bitcoinlib  # noqa: F401
+from bitcoin.core.script import CScriptInvalidError  # noqa: F401
 
 from counterpartylib.lib import arc4, backend, config, ledger, script
 from counterpartylib.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
 from counterpartylib.lib.kickstart.utils import ib2h
 from counterpartylib.lib.messages import dispenser
-from counterpartylib.lib.opcodes import *
+from counterpartylib.lib.opcodes import *  # noqa: F403
 from counterpartylib.lib.transaction_helper import p2sh_encoding
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -23,7 +23,7 @@ def arc4_decrypt(cyphertext, decoded_tx):
 
 
 def get_opreturn(asm):
-    if len(asm) == 2 and asm[0] == OP_RETURN:
+    if len(asm) == 2 and asm[0] == OP_RETURN:  # noqa: F405
         pubkeyhash = asm[1]
         if type(pubkeyhash) == bytes:  # noqa: E721
             return pubkeyhash
@@ -88,18 +88,18 @@ def get_pubkeyhash(scriptpubkey, block_index):
     asm = script.script_to_asm(scriptpubkey)
     if ledger.enabled("multisig_addresses", block_index=block_index):
         if len(asm) > 0:
-            if asm[0] == OP_DUP:
+            if asm[0] == OP_DUP:  # noqa: F405
                 if (
                     len(asm) != 5
-                    or asm[1] != OP_HASH160
-                    or asm[3] != OP_EQUALVERIFY
-                    or asm[4] != OP_CHECKSIG
+                    or asm[1] != OP_HASH160  # noqa: F405
+                    or asm[3] != OP_EQUALVERIFY  # noqa: F405
+                    or asm[4] != OP_CHECKSIG  # noqa: F405
                 ):
                     return None, None
                 else:
                     return asm[2], config.ADDRESSVERSION
 
-            elif (asm[0] == OP_HASH160) and ledger.enabled("p2sh_dispensers_support"):
+            elif (asm[0] == OP_HASH160) and ledger.enabled("p2sh_dispensers_support"):  # noqa: F405
                 if len(asm) != 3 or asm[-1] != "OP_EQUAL":
                     return None, None
                 else:
@@ -108,10 +108,10 @@ def get_pubkeyhash(scriptpubkey, block_index):
     else:
         if (
             len(asm) != 5
-            or asm[0] != OP_DUP
-            or asm[1] != OP_HASH160
-            or asm[3] != OP_EQUALVERIFY
-            or asm[4] != OP_CHECKSIG
+            or asm[0] != OP_DUP  # noqa: F405
+            or asm[1] != OP_HASH160  # noqa: F405
+            or asm[3] != OP_EQUALVERIFY  # noqa: F405
+            or asm[4] != OP_CHECKSIG  # noqa: F405
         ):
             return None, None
         return asm[2], config.ADDRESSVERSION
@@ -159,15 +159,15 @@ def get_transaction_sources(decoded_tx, block_parser=None):
 
         asm = script.script_to_asm(script_pubkey)
 
-        if asm[-1] == OP_CHECKSIG:
+        if asm[-1] == OP_CHECKSIG:  # noqa: F405
             new_source, new_data = decode_checksig(asm, decoded_tx)
             if new_data or not new_source:
                 raise DecodeError("data in source")
-        elif asm[-1] == OP_CHECKMULTISIG:
+        elif asm[-1] == OP_CHECKMULTISIG:  # noqa: F405
             new_source, new_data = decode_checkmultisig(asm, decoded_tx)
             if new_data or not new_source:
                 raise DecodeError("data in source")
-        elif asm[0] == OP_HASH160 and asm[-1] == OP_EQUAL and len(asm) == 3:
+        elif asm[0] == OP_HASH160 and asm[-1] == OP_EQUAL and len(asm) == 3:  # noqa: F405
             new_source, new_data = decode_scripthash(asm)
             if new_data or not new_source:
                 raise DecodeError("data in source")
@@ -279,12 +279,12 @@ def parse_transaction_vouts(decoded_tx):
 
         # Ignore transactions with invalid script.
         asm = script.script_to_asm(vout["scriptPubKey"])
-        if asm[0] == OP_RETURN:
+        if asm[0] == OP_RETURN:  # noqa: F405
             new_destination, new_data = decode_opreturn(asm, decoded_tx)
-        elif asm[-1] == OP_CHECKSIG:
+        elif asm[-1] == OP_CHECKSIG:  # noqa: F405
             new_destination, new_data = decode_checksig(asm, decoded_tx)
             potential_dispensers[-1] = (new_destination, output_value)
-        elif asm[-1] == OP_CHECKMULTISIG:
+        elif asm[-1] == OP_CHECKMULTISIG:  # noqa: F405
             try:
                 new_destination, new_data = decode_checkmultisig(asm, decoded_tx)
                 potential_dispensers[-1] = (new_destination, output_value)
@@ -292,8 +292,8 @@ def parse_transaction_vouts(decoded_tx):
                 raise DecodeError("invalid OP_CHECKMULTISIG")
         elif (
             ledger.enabled("p2sh_addresses")
-            and asm[0] == OP_HASH160
-            and asm[-1] == OP_EQUAL
+            and asm[0] == OP_HASH160  # noqa: F405
+            and asm[-1] == OP_EQUAL  # noqa: F405
             and len(asm) == 3
         ):
             new_destination, new_data = decode_scripthash(asm)
@@ -422,13 +422,13 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
 
         # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
         asm = script.script_to_asm(vout["scriptPubKey"])
-        if len(asm) == 2 and asm[0] == OP_RETURN:  # OP_RETURN
+        if len(asm) == 2 and asm[0] == OP_RETURN:  # OP_RETURN  # noqa: F405
             if type(asm[1]) != bytes:  # noqa: E721
                 continue
             data_chunk = asm[1]
             data += data_chunk
         elif (
-            len(asm) == 5 and asm[0] == 1 and asm[3] == 2 and asm[4] == OP_CHECKMULTISIG
+            len(asm) == 5 and asm[0] == 1 and asm[3] == 2 and asm[4] == OP_CHECKMULTISIG  # noqa: F405
         ):  # Multi-sig
             if type(asm[2]) != bytes:  # noqa: E721
                 continue
@@ -539,7 +539,7 @@ def get_tx_info(db, decoded_tx, block_index, block_parser=None):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
     try:
         return _get_tx_info(db, decoded_tx, block_index, block_parser)
-    except DecodeError as e:
+    except DecodeError as e:  # noqa: F841
         return b"", None, None, None, None, None
-    except BTCOnlyError as e:
+    except BTCOnlyError as e:  # noqa: F841
         return b"", None, None, None, None, None

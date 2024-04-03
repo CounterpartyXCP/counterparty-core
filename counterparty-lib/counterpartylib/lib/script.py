@@ -17,7 +17,7 @@ from counterparty_rs import b58, utils
 from ripemd import ripemd160 as RIPEMD160  # nosec B413
 
 from counterpartylib.lib import config, exceptions, ledger, opcodes, util
-from counterpartylib.lib.opcodes import *
+from counterpartylib.lib.opcodes import *  # noqa: F403
 
 B58_DIGITS = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
@@ -204,7 +204,7 @@ def is_p2sh(address):
 
 def is_bech32(address):
     try:
-        b32data = CBech32Data(address)
+        b32data = CBech32Data(address)  # noqa: F841
         return True
     except:  # noqa: E722
         return False
@@ -329,11 +329,11 @@ def script_to_asm(scriptpubkey):
     try:
         script = bytes(scriptpubkey, "utf-8") if type(scriptpubkey) == str else bytes(scriptpubkey)  # noqa: E721
         asm = utils.script_to_asm(script)
-        if asm[-1] == OP_CHECKMULTISIG:
+        if asm[-1] == OP_CHECKMULTISIG:  # noqa: F405
             asm[-2] = int.from_bytes(asm[-2], "big")
             asm[0] = int.from_bytes(asm[0], "big")
         return asm
-    except BaseException as e:
+    except BaseException as e:  # noqa: F841
         raise exceptions.DecodeError("invalid script")
 
 
@@ -342,7 +342,7 @@ def script_to_address(scriptpubkey):
         network = "mainnet" if config.TESTNET == False else "testnet"  # noqa: E712
         script = bytes(scriptpubkey, "utf-8") if type(scriptpubkey) == str else bytes(scriptpubkey)  # noqa: E721
         return utils.script_to_address(script, network)
-    except BaseException as e:
+    except BaseException as e:  # noqa: F841
         raise exceptions.DecodeError("scriptpubkey decoding error")
 
 
@@ -353,10 +353,10 @@ def get_checksig(asm):
         raise exceptions.DecodeError("invalid OP_CHECKSIG") from None
 
     if (op_dup, op_hash160, op_equalverify, op_checksig) == (
-        OP_DUP,
-        OP_HASH160,
-        OP_EQUALVERIFY,
-        OP_CHECKSIG,
+        OP_DUP,  # noqa: F405
+        OP_HASH160,  # noqa: F405
+        OP_EQUALVERIFY,  # noqa: F405
+        OP_CHECKSIG,  # noqa: F405
     ) and type(pubkeyhash) == bytes:  # noqa: E721
         return pubkeyhash
 
@@ -365,12 +365,12 @@ def get_checksig(asm):
 
 def get_checkmultisig(asm):
     # N‐of‐2
-    if len(asm) == 5 and asm[3] == 2 and asm[4] == OP_CHECKMULTISIG:
+    if len(asm) == 5 and asm[3] == 2 and asm[4] == OP_CHECKMULTISIG:  # noqa: F405
         pubkeys, signatures_required = asm[1:3], asm[0]
         if all([type(pubkey) == bytes for pubkey in pubkeys]):  # noqa: E721
             return pubkeys, signatures_required
     # N‐of‐3
-    if len(asm) == 6 and asm[4] == 3 and asm[5] == OP_CHECKMULTISIG:
+    if len(asm) == 6 and asm[4] == 3 and asm[5] == OP_CHECKMULTISIG:  # noqa: F405
         pubkeys, signatures_required = asm[1:4], asm[0]
         if all([type(pubkey) == bytes for pubkey in pubkeys]):  # noqa: E721
             return pubkeys, signatures_required
@@ -381,7 +381,7 @@ def get_checkmultisig(asm):
 def scriptpubkey_to_address(scriptpubkey):
     asm = script_to_asm(scriptpubkey)
 
-    if asm[-1] == OP_CHECKSIG:
+    if asm[-1] == OP_CHECKSIG:  # noqa: F405
         try:
             checksig = get_checksig(asm)
         except exceptions.DecodeError:  # coinbase
@@ -391,12 +391,12 @@ def scriptpubkey_to_address(scriptpubkey):
             binascii.hexlify(checksig).decode("utf-8"), config.ADDRESSVERSION
         )
 
-    elif asm[-1] == OP_CHECKMULTISIG:
+    elif asm[-1] == OP_CHECKMULTISIG:  # noqa: F405
         pubkeys, signatures_required = get_checkmultisig(asm)
         pubkeyhashes = [pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
         return construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes))
 
-    elif len(asm) == 3 and asm[0] == OP_HASH160 and asm[2] == OP_EQUAL:
+    elif len(asm) == 3 and asm[0] == OP_HASH160 and asm[2] == OP_EQUAL:  # noqa: F405
         return base58_check_encode(
             binascii.hexlify(asm[1]).decode("utf-8"), config.P2SH_ADDRESSVERSION
         )

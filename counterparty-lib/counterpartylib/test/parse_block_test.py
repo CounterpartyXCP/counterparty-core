@@ -4,7 +4,7 @@ import tempfile
 
 from counterpartylib.lib import blocks
 from counterpartylib.test import (
-    conftest,
+    conftest,  # noqa: F401
 )
 
 # this is require near the top to do setup of the test suite

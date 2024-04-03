@@ -2,7 +2,7 @@
 import decimal
 import json
 import logging
-import struct
+import struct  # noqa: F401
 
 D = decimal.Decimal
 from fractions import Fraction  # noqa: E402

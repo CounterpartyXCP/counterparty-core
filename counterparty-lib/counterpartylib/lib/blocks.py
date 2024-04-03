@@ -13,39 +13,39 @@ from datetime import timedelta
 
 D = decimal.Decimal
 import collections  # noqa: E402
-import copy  # noqa: E402
+import copy  # noqa: E402, F401
 import csv  # noqa: E402
 import http  # noqa: E402
 import logging  # noqa: E402
-import platform  # noqa: E402
+import platform  # noqa: E402, F401
 
 import apsw  # noqa: E402
 import bitcoin as bitcoinlib  # noqa: E402
-from bitcoin.core.script import CScriptInvalidError  # noqa: E402
+from bitcoin.core.script import CScriptInvalidError  # noqa: E402, F401
 from halo import Halo  # noqa: E402
 from termcolor import colored  # noqa: E402
 
 from counterpartylib import server  # noqa: E402
 from counterpartylib.lib import (  # noqa: E402
-    arc4,
+    arc4,  # noqa: F401
     backend,
     check,
     config,
     database,
     exceptions,
     ledger,
-    log,
+    log,  # noqa: F401
     message_type,
     prefetcher,
-    script,
-    util,
+    script,  # noqa: F401
+    util,  # noqa: F401
 )
 from counterpartylib.lib.gettxinfo import get_tx_info  # noqa: E402
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
-from counterpartylib.lib.transaction_helper import p2sh_encoding  # noqa: E402
+from counterpartylib.lib.transaction_helper import p2sh_encoding  # noqa: E402, F401
 
-from .exceptions import BTCOnlyError, DecodeError  # noqa: E402
-from .kickstart.utils import ib2h  # noqa: E402
+from .exceptions import BTCOnlyError, DecodeError  # noqa: E402, F401
+from .kickstart.utils import ib2h  # noqa: E402, F401
 from .messages import (  # noqa: E402
     bet,
     broadcast,
@@ -1081,7 +1081,7 @@ def follow(db):
                         ConnectionRefusedError,
                         http.client.CannotSendRequest,
                         backend.addrindexrs.BackendRPCError,
-                    ) as e:
+                    ) as e:  # noqa: F841
                         # Keep parsing what we have, anyway if there is a temporary problem with the server,
                         # normal parse won't work
                         pass

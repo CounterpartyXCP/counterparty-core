@@ -1,15 +1,15 @@
-import binascii
-import json
+import binascii  # noqa: F401
+import json  # noqa: F401
 import logging
 import math
 import struct
-from functools import reduce
-from itertools import groupby
+from functools import reduce  # noqa: F401
+from itertools import groupby  # noqa: F401
 
-from bitcoin.core import key
-from bitstring import BitArray, BitStream, ConstBitStream, ReadError
+from bitcoin.core import key  # noqa: F401
+from bitstring import BitArray, BitStream, ConstBitStream, ReadError  # noqa: F401
 
-from counterpartylib.lib import address, config, exceptions, ledger, util
+from counterpartylib.lib import address, config, exceptions, ledger, util  # noqa: F401
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

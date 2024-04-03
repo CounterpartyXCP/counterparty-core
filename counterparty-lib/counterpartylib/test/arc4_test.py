@@ -1,17 +1,17 @@
-import pprint
+import pprint  # noqa: F401
 import tempfile
 
 import pytest
 
-from counterpartylib.lib import arc4, transaction, util
+from counterpartylib.lib import arc4, transaction, util  # noqa: F401
 from counterpartylib.lib.messages import send
 
 # this is require near the top to do setup of the test suite
 from counterpartylib.test import (
-    conftest,
+    conftest,  # noqa: F401
     util_test,
 )
-from counterpartylib.test.fixtures.params import ADDR, DP
+from counterpartylib.test.fixtures.params import ADDR, DP  # noqa: F401
 from counterpartylib.test.util_test import CURR_DIR
 
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"

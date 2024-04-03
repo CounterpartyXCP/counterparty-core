@@ -7,7 +7,15 @@ import json
 import logging
 import struct
 
-from counterpartylib.lib import config, database, exceptions, ledger, log, message_type, util
+from counterpartylib.lib import (  # noqa: F401
+    config,
+    database,
+    exceptions,
+    ledger,
+    log,
+    message_type,
+    util,
+)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -344,7 +352,7 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
 
     if status == "expired":
         # Record order match expiration.
-        cursor = db.cursor()
+        cursor = db.cursor()  # noqa: F841
         bindings = {
             "order_match_id": order_match["id"],
             "tx0_address": order_match["tx0_address"],
@@ -475,7 +483,7 @@ def parse(db, tx, message):
         give_asset = ledger.get_asset_name(db, give_id, tx["block_index"])
         get_asset = ledger.get_asset_name(db, get_id, tx["block_index"])
         status = "open"
-    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
+    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:  # noqa: F841
         give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required = (
             0,
             0,

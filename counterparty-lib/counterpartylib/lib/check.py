@@ -1,12 +1,12 @@
 import json
 import logging
 import sys
-import time
+import time  # noqa: F401
 import warnings
 
 import requests
 
-from counterpartylib.lib import config, database, exceptions, ledger, util
+from counterpartylib.lib import config, database, exceptions, ledger, util  # noqa: F401
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -938,7 +938,7 @@ def software_version():
             config.PROTOCOL_CHANGES_URL, headers={"cache-control": "no-cache"}, timeout=10
         )
         versions = json.loads(response.text)
-    except (requests.exceptions.ConnectionError, ConnectionRefusedError, ValueError) as e:
+    except (requests.exceptions.ConnectionError, ConnectionRefusedError, ValueError) as e:  # noqa: F841
         logger.warning("Unable to check version! " + str(sys.exc_info()[1]))
         return
 
@@ -946,7 +946,7 @@ def software_version():
         protocol_change = versions[change_name]
         try:
             check_change(protocol_change, change_name)
-        except VersionUpdateRequiredError as e:
+        except VersionUpdateRequiredError as e:  # noqa: F841
             logger.error("Version Update Required", exc_info=sys.exc_info())
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
 

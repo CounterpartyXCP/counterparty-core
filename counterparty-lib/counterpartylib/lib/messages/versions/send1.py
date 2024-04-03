@@ -111,7 +111,7 @@ def parse(db, tx, message):
         asset_id, quantity = struct.unpack(FORMAT, message)
         asset = ledger.get_asset_name(db, asset_id, tx["block_index"])
         status = "valid"
-    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
+    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:  # noqa: F841
         asset, quantity = None, None
         status = "invalid: could not unpack"
 

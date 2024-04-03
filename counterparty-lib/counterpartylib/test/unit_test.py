@@ -3,7 +3,7 @@ import tempfile
 
 import pytest
 
-from counterpartylib.lib import check, exceptions
+from counterpartylib.lib import check, exceptions  # noqa: F401
 
 # this is require near the top to do setup of the test suite
 from counterpartylib.test import (

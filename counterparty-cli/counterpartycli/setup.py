@@ -6,9 +6,9 @@ import hashlib
 import os
 import platform
 import shutil
-import sys
-import tarfile
-import urllib.request
+import sys  # noqa: F401
+import tarfile  # noqa: F401
+import urllib.request  # noqa: F401
 import zipfile
 from decimal import Decimal as D
 
@@ -154,7 +154,7 @@ def server_to_client_config(server_config):
 
 
 def generate_config_files():
-    from counterpartylib.lib import config, util
+    from counterpartylib.lib import config, util  # noqa: F401
 
     from counterpartycli.client import CONFIG_ARGS as CLIENT_CONFIG_ARGS
     from counterpartycli.server import CONFIG_ARGS as SERVER_CONFIG_ARGS
@@ -191,7 +191,7 @@ def before_py2exe_build(win_dist_dir):
         shutil.rmtree(win_dist_dir)
     # py2exe don't manages entry_points
     for exe_name in ["client", "server"]:
-        shutil.copy(f"counterpartycli/__init__.py", "counterparty-{exe_name}.py")
+        shutil.copy(f"counterpartycli/__init__.py", "counterparty-{exe_name}.py")  # noqa: F541
         with open(f"counterparty-{exe_name}.py", "a") as fp:
             fp.write(f"{exe_name}_main()")
     # Hack
@@ -217,7 +217,7 @@ def after_py2exe_build(win_dist_dir):
     # additionals DLLs
     dlls = ["ssleay32.dll", "libssl32.dll", "libeay32.dll"]
     dlls.append(ctypes.util.find_msvcrt())
-    dlls_path = dlls
+    dlls_path = dlls  # noqa: F841
     for dll in dlls:
         dll_path = ctypes.util.find_library(dll)
         shutil.copy(dll_path, win_dist_dir)
@@ -248,5 +248,5 @@ def bootstrap(overwrite=True, ask_confirmation=False):
         question = "Would you like to bootstrap your local Counterparty database from `https://s3.amazonaws.com/counterparty-bootstrap/`? (y/N): "
         if input(question).lower() != "y":
             return
-    util.bootstrap(testnet=False)
-    util.bootstrap(testnet=True)
+    util.bootstrap(testnet=False)  # noqa: F821
+    util.bootstrap(testnet=True)  # noqa: F821

@@ -1,7 +1,7 @@
 import binascii
 import time
 
-import bitcoin as bitcoinlib
+import bitcoin as bitcoinlib  # noqa: F401
 from bitcoin import bech32 as bech32lib
 from counterparty_rs import utils
 
@@ -10,7 +10,7 @@ def decode_p2w(script_pubkey):
     try:
         bech32 = bech32lib.CBech32Data.from_bytes(0, script_pubkey[2:22])
         return str(bech32), None
-    except TypeError as e:
+    except TypeError as e:  # noqa: F841
         raise Exception("bech32 decoding error")
 
 

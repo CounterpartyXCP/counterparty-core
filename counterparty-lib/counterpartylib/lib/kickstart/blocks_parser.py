@@ -6,7 +6,7 @@ import os
 # Used to pickle and unpickle blocks from shared_memory
 import pickle  # nosec B403
 import signal
-import time
+import time  # noqa: F401
 from collections import OrderedDict
 from multiprocessing import JoinableQueue, Process, shared_memory
 
@@ -27,7 +27,7 @@ from .utils import (
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-import multiprocessing  # noqa: E402
+import multiprocessing  # noqa: E402, F811
 
 multiprocessing.set_start_method("spawn", force=True)
 
@@ -281,14 +281,14 @@ class BlockchainParser:
         ds = BCDataStream()
         ds.write(block_data)
 
-        version = ds.read_var_int()
+        version = ds.read_var_int()  # noqa: F841
         height = ds.read_var_int()
-        status = ds.read_var_int()
+        status = ds.read_var_int()  # noqa: F841
         tx_count = ds.read_var_int()
         file_num = ds.read_var_int()
         block_pos_in_file = ds.read_var_int() - 8
-        block_undo_pos_in_file = ds.read_var_int()
-        block_header = ds.read_bytes(80)
+        block_undo_pos_in_file = ds.read_var_int()  # noqa: F841
+        block_header = ds.read_bytes(80)  # noqa: F841
         self.prepare_data_stream(file_num, block_pos_in_file)
         block = self.read_block(self.data_stream, only_header=only_header, use_txid=use_txid)
         block["block_index"] = height

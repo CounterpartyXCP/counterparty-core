@@ -1,15 +1,15 @@
 #! /usr/bin/python3
-import pprint
+import pprint  # noqa: F401
 import tempfile
 
-from counterpartylib.lib import blocks, config, ledger
+from counterpartylib.lib import blocks, config, ledger  # noqa: F401
 from counterpartylib.test import (
-    conftest,
+    conftest,  # noqa: F401
     util_test,
 )
 
 # this is require near the top to do setup of the test suite
-from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP
+from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: F401
 from counterpartylib.test.util_test import CURR_DIR
 
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/parseblock_unittest_fixture.sql"

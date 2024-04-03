@@ -3,10 +3,18 @@
 import binascii
 import json
 import logging
-import pprint
+import pprint  # noqa: F401
 import struct
 
-from counterpartylib.lib import config, database, exceptions, ledger, log, message_type, util
+from counterpartylib.lib import (  # noqa: F401
+    config,
+    database,
+    exceptions,
+    ledger,
+    log,
+    message_type,
+    util,
+)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -139,7 +147,7 @@ def parse(db, tx, message):
         )
         order_match_id = util.make_id(tx0_hash, tx1_hash)
         status = "valid"
-    except (exceptions.UnpackError, struct.error) as e:
+    except (exceptions.UnpackError, struct.error) as e:  # noqa: F841
         tx0_hash, tx1_hash, order_match_id = None, None, None
         status = "invalid: could not unpack"
 
@@ -148,7 +156,7 @@ def parse(db, tx, message):
             validate(db, tx["source"], order_match_id, tx["block_index"])
         )
         if problems:
-            order_match = None
+            order_match = None  # noqa: F841
             status = "invalid: " + "; ".join(problems)
 
     if status == "valid":

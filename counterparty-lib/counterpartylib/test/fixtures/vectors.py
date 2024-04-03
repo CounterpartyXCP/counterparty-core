@@ -9,12 +9,12 @@ The function supports three types of output checks:
 """
 
 import binascii
-import json
+import json  # noqa: F401
 from fractions import Fraction
 
 import bitcoin as bitcoinlib
 
-from counterpartylib.lib import address, config, exceptions, script
+from counterpartylib.lib import address, config, exceptions, script  # noqa: F401
 from counterpartylib.lib.api import APIError
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
 from counterpartylib.lib.ledger import CreditError, DebitError

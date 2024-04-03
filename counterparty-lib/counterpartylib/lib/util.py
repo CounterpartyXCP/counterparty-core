@@ -1,12 +1,12 @@
 import binascii
 import collections
 import decimal
-import fractions
+import fractions  # noqa: F401
 import hashlib
 import itertools
 import json
 import logging
-import os
+import os  # noqa: F401
 import random
 import re
 import sys

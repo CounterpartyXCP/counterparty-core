@@ -1,14 +1,14 @@
 #! /usr/bin/python3
 
-import binascii
-import json
+import binascii  # noqa: F401
+import json  # noqa: F401
 import logging
-import math
+import math  # noqa: F401
 import struct
 from functools import reduce
 from itertools import groupby
 
-from bitcoin.core import key
+from bitcoin.core import key  # noqa: F401
 from bitstring import ReadError
 
 from counterpartylib.lib import config, exceptions, ledger, message_type, util
@@ -24,11 +24,11 @@ ID = 3  # 0x03 is this specific message type
 def unpack(db, message, block_index):
     try:
         unpacked = _decode_mpma_send_decode(message, block_index)
-    except struct.error as e:
+    except struct.error as e:  # noqa: F841
         raise exceptions.UnpackError("could not unpack")
-    except (exceptions.AssetNameError, exceptions.AssetIDError) as e:
+    except (exceptions.AssetNameError, exceptions.AssetIDError) as e:  # noqa: F841
         raise exceptions.UnpackError("invalid asset in mpma send")
-    except ReadError as e:
+    except ReadError as e:  # noqa: F841
         raise exceptions.UnpackError("truncated data")
 
     return unpacked
@@ -134,9 +134,9 @@ def parse(db, tx, message):
     try:
         unpacked = unpack(db, message, tx["block_index"])
         status = "valid"
-    except struct.error as e:
+    except struct.error as e:  # noqa: F841
         status = "invalid: truncated message"
-    except (exceptions.AssetNameError, exceptions.AssetIDError) as e:
+    except (exceptions.AssetNameError, exceptions.AssetIDError) as e:  # noqa: F841
         status = "invalid: invalid asset name/id"
     except Exception as e:
         status = f"invalid: couldn't unpack; {e}"
@@ -149,8 +149,8 @@ def parse(db, tx, message):
     if status == "valid":
         for asset_id in unpacked:
             try:
-                asset = ledger.get_asset_name(db, asset_id, tx["block_index"])
-            except exceptions.AssetNameError as e:
+                asset = ledger.get_asset_name(db, asset_id, tx["block_index"])  # noqa: F841
+            except exceptions.AssetNameError as e:  # noqa: F841
                 status = f"invalid: asset {asset_id} invalid at block index {tx['block_index']}"
                 break
 

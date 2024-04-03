@@ -8,7 +8,7 @@ from counterpartylib.lib import check, config, database
 
 # this is require near the top to do setup of the test suite
 from counterpartylib.test import (
-    conftest,
+    conftest,  # noqa: F401
     util_test,
 )
 from counterpartylib.test.util_test import CURR_DIR

@@ -8,24 +8,24 @@ import binascii
 import decimal
 import hashlib
 import io
-import json
+import json  # noqa: F401
 import logging
-import math
-import os
-import re
-import sys
-import time
+import math  # noqa: F401
+import os  # noqa: F401
+import re  # noqa: F401
+import sys  # noqa: F401
+import time  # noqa: F401
 
 import bitcoin as bitcoinlib
 import cachetools
-import requests
-from bitcoin.core import CTransaction, b2lx, x
-from bitcoin.core.script import CScript
+import requests  # noqa: F401
+from bitcoin.core import CTransaction, b2lx, x  # noqa: F401
+from bitcoin.core.script import CScript  # noqa: F401
 
 from counterpartylib.lib import (
-    arc4,
+    arc4,  # noqa: F401
     backend,
-    blocks,
+    blocks,  # noqa: F401
     config,
     exceptions,
     gettxinfo,
@@ -540,7 +540,7 @@ def construct(
             data_output_size = data_output_size + len(data)
     else:
         data_output_size = p2pkhsize  # Pay‐to‐PubKeyHash (25 for the data?)
-    outputs_size = (p2pkhsize * len(destination_outputs)) + (len(data_array) * data_output_size)
+    outputs_size = (p2pkhsize * len(destination_outputs)) + (len(data_array) * data_output_size)  # noqa: F841
 
     if encoding == "p2sh":
         # calculate all the p2sh outputs

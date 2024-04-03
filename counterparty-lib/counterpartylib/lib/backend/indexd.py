@@ -5,8 +5,8 @@ import hashlib
 import json
 import logging
 import os
-import sys
-import threading
+import sys  # noqa: F401
+import threading  # noqa: F401
 import time
 
 import requests
@@ -73,7 +73,7 @@ def rpc_call(payload):
     # Handle json decode errors
     try:
         response_json = response.json()
-    except json.decoder.JSONDecodeError as e:
+    except json.decoder.JSONDecodeError as e:  # noqa: F841
         raise BackendRPCError(
             f"Received invalid JSON from backend with a response of {str(response.status_code) + ' ' + response.reason}"
         )
@@ -302,7 +302,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
             _logger.warning(
                 f"tx missing in rawtx cache: {e} -- txhash_list size: {len(txhash_list)}, hash: {_hash} / raw_transactions_cache size: {len(raw_transactions_cache)} / # rpc_batch calls: {len(payload)} / txhash in noncached_txhashes: {tx_hash in noncached_txhashes} / txhash in txhash_list: {tx_hash in txhash_list} -- list {_list}"
             )
-            if _retry < GETRAWTRANSACTION_MAX_RETRIES:  # try again
+            if _retry < GETRAWTRANSACTION_MAX_RETRIES:  # try again  # noqa: F821
                 time.sleep(
                     0.05 * (_retry + 1)
                 )  # Wait a bit, hitting the index non-stop may cause it to just break down... TODO: Better handling

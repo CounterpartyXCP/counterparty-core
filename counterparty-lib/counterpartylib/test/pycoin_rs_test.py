@@ -2,12 +2,12 @@ import binascii
 import time
 
 import bitcoin as bitcoinlib
-import pytest
+import pytest  # noqa: F401
 from bitcoin.core.script import CScript
 from counterparty_rs import utils
 
 from counterpartylib.lib import config
-from counterpartylib.lib.opcodes import *
+from counterpartylib.lib.opcodes import *  # noqa: F403
 from counterpartylib.lib.script import (
     base58_check_decode,
     base58_check_decode_py,
@@ -78,29 +78,29 @@ def test_get_asm():
     def with_rust():
         asm = script_to_asm(b"v\xa9\x14H8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607\x88\xac")
         assert asm == [
-            OP_DUP,
-            OP_HASH160,
+            OP_DUP,  # noqa: F405
+            OP_HASH160,  # noqa: F405
             b"H8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607",
-            OP_EQUALVERIFY,
-            OP_CHECKSIG,
+            OP_EQUALVERIFY,  # noqa: F405
+            OP_CHECKSIG,  # noqa: F405
         ]
 
         asm = script_to_asm(
             b"jLP:\xb4\x08\xa6y\xf1\x08\xa1\x9e5\x88h\x15\xc4\xc4h\xcau\xa0g\x99\xf8d\xa1\xfa\xd6\xbc\x08\x13\xf5\xfe2`\xe4!\xa3\x02\x02\xf2\xe7oF\xac\xdb),e#q\xcaH\xb9t`\xf7\x92\x8a\xde\x8e\xcb\x02\xea\x9f\xad\xc2\x0c\x0bE=\xe6ghr\xc9\xe4\x1f\xad\x80\x1e\x8b"
         )
         assert asm == [
-            OP_RETURN,
+            OP_RETURN,  # noqa: F405
             b":\xb4\x08\xa6y\xf1\x08\xa1\x9e5\x88h\x15\xc4\xc4h\xcau\xa0g\x99\xf8d\xa1\xfa\xd6\xbc\x08\x13\xf5\xfe2`\xe4!\xa3\x02\x02\xf2\xe7oF\xac\xdb),e#q\xcaH\xb9t`\xf7\x92\x8a\xde\x8e\xcb\x02\xea\x9f\xad\xc2\x0c\x0bE=\xe6ghr\xc9\xe4\x1f\xad\x80\x1e\x8b",
         ]
 
     def with_python():
         asm = get_asm(CScript(b"v\xa9\x14H8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607\x88\xac"))
         assert asm == [
-            OP_DUP,
-            OP_HASH160,
+            OP_DUP,  # noqa: F405
+            OP_HASH160,  # noqa: F405
             b"H8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607",
-            OP_EQUALVERIFY,
-            OP_CHECKSIG,
+            OP_EQUALVERIFY,  # noqa: F405
+            OP_CHECKSIG,  # noqa: F405
         ]
 
         asm = get_asm(
@@ -109,7 +109,7 @@ def test_get_asm():
             )
         )
         assert asm == [
-            OP_RETURN,
+            OP_RETURN,  # noqa: F405
             b":\xb4\x08\xa6y\xf1\x08\xa1\x9e5\x88h\x15\xc4\xc4h\xcau\xa0g\x99\xf8d\xa1\xfa\xd6\xbc\x08\x13\xf5\xfe2`\xe4!\xa3\x02\x02\xf2\xe7oF\xac\xdb),e#q\xcaH\xb9t`\xf7\x92\x8a\xde\x8e\xcb\x02\xea\x9f\xad\xc2\x0c\x0bE=\xe6ghr\xc9\xe4\x1f\xad\x80\x1e\x8b",
         ]
 
@@ -138,17 +138,17 @@ def test_get_asm():
         b"\x020\x9a\x14\xa1\xa3\x02\x02\xf2\xe7oF\xac\xdb)\x17u#q\xcaB\xb9t`\xf7\x92\x8a\xde\x8e\xcb\x02\xea\x17",
         b"\x03\x19\xf6\xe0{\x0b\x8duaV9K\x9d\xcf;\x01\x1f\xe9\xac\x19\xf2p\x0b\xd6\xb6\x9aj\x17\x83\xdb\xb8\xb9w",
         3,
-        OP_CHECKMULTISIG,
+        OP_CHECKMULTISIG,  # noqa: F405
     ]
 
     script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
     asm = script_to_asm(binascii.unhexlify(script))
     assert asm == [
-        OP_DUP,
-        OP_HASH160,
+        OP_DUP,  # noqa: F405
+        OP_HASH160,  # noqa: F405
         b"\xa3\xec`\xfbR/\xdfb\xc9\x0e\xec\x19\x81Wx\x13\xd8\xf8\xa5\x8a",
-        OP_EQUALVERIFY,
-        OP_CHECKSIG,
+        OP_EQUALVERIFY,  # noqa: F405
+        OP_CHECKSIG,  # noqa: F405
     ]
     pubkeyhash = get_checksig(asm)
     assert pubkeyhash == b"\xa3\xec`\xfbR/\xdfb\xc9\x0e\xec\x19\x81Wx\x13\xd8\xf8\xa5\x8a"

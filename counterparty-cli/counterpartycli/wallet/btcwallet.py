@@ -1,13 +1,13 @@
-import binascii
+import binascii  # noqa: F401
 import logging
 
 logger = logging.getLogger(__name__)
-import json  # noqa: E402
-import sys  # noqa: E402
-import time  # noqa: E402
+import json  # noqa: E402, F401
+import sys  # noqa: E402, F401
+import time  # noqa: E402, F401
 
-import requests  # noqa: E402
-from counterpartylib.lib import config  # noqa: E402
+import requests  # noqa: E402, F401
+from counterpartylib.lib import config  # noqa: E402, F401
 
 from counterpartycli.util import wallet_api as rpc  # noqa: E402
 

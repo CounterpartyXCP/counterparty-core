@@ -1,9 +1,9 @@
 import logging
-import struct
+import struct  # noqa: F401
 
 import bitcoin
 
-from counterpartylib.lib import config, ledger, script
+from counterpartylib.lib import config, ledger, script  # noqa: F401
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -12,7 +12,7 @@ def address_scriptpubkey(address):
     try:
         bech32 = bitcoin.bech32.CBech32Data(address)
         return b"".join([b"\x00\x14", bech32.to_bytes()])
-    except Exception as e:
+    except Exception as e:  # noqa: F841
         bs58 = bitcoin.base58.decode(address)[1:-4]
         return b"".join([b"\x76\xa9\x14", bs58, b"\x88\xac"])
 
@@ -33,14 +33,14 @@ def pack(address):
             if len(witprog) > 20:
                 raise Exception("p2wsh still not supported for sending")
             return b"".join([witver, witprog])
-        except Exception as ne:
+        except Exception as ne:  # noqa: F841
             try:
                 script.validate(address)  # This will check if the address is valid
                 short_address_bytes = bitcoin.base58.decode(address)[:-4]
                 return short_address_bytes
             except bitcoin.base58.InvalidBase58Error as e:
                 raise e
-            except Exception as e:
+            except Exception as e:  # noqa: F841
                 raise Exception(
                     f"The address {address} is not a valid bitcoin address ({'testnet' if config.TESTNET or config.REGTEST else 'mainnet'})"
                 )

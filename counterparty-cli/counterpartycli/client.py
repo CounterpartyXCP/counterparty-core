@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 from counterpartylib.lib import config, script  # noqa: E402
 from counterpartylib.lib.exceptions import TransactionError  # noqa: E402
-from counterpartylib.lib.log import isodt  # noqa: E402
-from counterpartylib.lib.util import BET_TYPE_NAME, make_id  # noqa: E402
+from counterpartylib.lib.log import isodt  # noqa: E402, F401
+from counterpartylib.lib.util import BET_TYPE_NAME, make_id  # noqa: E402, F401
 
 from counterpartycli import APP_VERSION, clientapi, console, messages, util, wallet  # noqa: E402
 from counterpartycli.setup import generate_config_files  # noqa: E402
@@ -525,12 +525,12 @@ def main():
     )
     parser_asset.add_argument("asset", help="the asset you are interested in")
 
-    parser_wallet = subparsers.add_parser(
+    parser_wallet = subparsers.add_parser(  # noqa: F841
         "wallet",
         help=f"list the addresses in your backend wallet along with their balances in all {config.XCP_NAME} assets",
     )
 
-    parser_pending = subparsers.add_parser(
+    parser_pending = subparsers.add_parser(  # noqa: F841
         "pending", help=f"list pending order matches awaiting {config.BTC}payment from you"
     )
 
@@ -556,7 +556,7 @@ def main():
     parser_getrows.add_argument("--limit", help="number of rows to return", default=100)
     parser_getrows.add_argument("--offset", help="number of rows to skip", default=0)
 
-    parser_getrunninginfo = subparsers.add_parser(
+    parser_getrunninginfo = subparsers.add_parser(  # noqa: F841
         "getinfo", help="get the current state of the server"
     )
 

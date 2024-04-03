@@ -39,7 +39,9 @@ def set_up(verbose=False, quiet=True, log_file=None, log_in_console=False):
             from counterpartylib.lib import util_windows
 
             fileh = util_windows.SanitizedRotatingFileHandler(
-                logfile, maxBytes=max_log_size, backupCount=5
+                log_file,
+                maxBytes=max_log_size,
+                backupCount=5,  # noqa: F821
             )
         else:
             fileh = logging.handlers.RotatingFileHandler(

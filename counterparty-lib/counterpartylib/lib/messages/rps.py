@@ -25,7 +25,15 @@ import logging
 import string
 import struct
 
-from counterpartylib.lib import config, database, exceptions, ledger, log, message_type, util
+from counterpartylib.lib import (  # noqa: F401
+    config,
+    database,
+    exceptions,
+    ledger,
+    log,
+    message_type,
+    util,
+)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -362,7 +370,7 @@ def match(db, tx, block_index):
     tx1 = rps[0]
     possible_moves = tx1["possible_moves"]
     wager = tx1["wager"]
-    tx1_status = "open"
+    tx1_status = "open"  # noqa: F841
 
     # Get rps match
     # dont match twice same RPS
