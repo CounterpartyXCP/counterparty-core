@@ -45,9 +45,6 @@ class ConfigurationError(Exception):
     pass
 
 
-SIGTERM_CALLBACKS = []
-
-
 def sigterm_handler(_signo, _stack_frame):
     if _signo == 15:
         signal_name = "SIGTERM"
@@ -65,8 +62,6 @@ def sigterm_handler(_signo, _stack_frame):
     backend.stop()
     logger.info("Shutting down.")
     logging.shutdown()
-    for callback in SIGTERM_CALLBACKS:
-        callback()
     sys.exit(0)
 
 
@@ -558,16 +553,6 @@ def initialise_db():
     db = database.get_connection(read_only=False)
 
     ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
-
-    def shutdown_handler():
-        """run PRAGMA optimize before sys.exit()"""
-        logger.info("Running PRAGMA optimize...")
-        cursor = db.cursor()
-        cursor.execute("PRAGMA optimize")
-        logger.info("PRAGMA optimize done.")
-        # NOTE: it's not necessary to explicitly close the connection with db.close()
-
-    SIGTERM_CALLBACKS.append(shutdown_handler)
 
     return db
 
