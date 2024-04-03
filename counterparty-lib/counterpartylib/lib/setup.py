@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-import os
 import argparse
-import configparser
 import codecs
-import platform
+import configparser
 import logging
+import os
+import platform
 from decimal import Decimal as D
 
 import appdirs
@@ -13,8 +13,9 @@ from counterpartylib.lib import config
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
+
 # generate commented config file from arguments list (client.CONFIG_ARGS and server.CONFIG_ARGS) and known values
-def generate_config_file(filename, config_args, known_config={}, overwrite=False):
+def generate_config_file(filename, config_args, known_config={}, overwrite=False):  # noqa: B006
     if not overwrite and os.path.exists(filename):
         return
 
@@ -23,50 +24,54 @@ def generate_config_file(filename, config_args, known_config={}, overwrite=False
         os.makedirs(config_dir, mode=0o755)
 
     config_lines = []
-    config_lines.append('[Default]')
-    config_lines.append('')
+    config_lines.append("[Default]")
+    config_lines.append("")
 
     for arg in config_args:
-        key = arg[0][-1].replace('--', '')
+        key = arg[0][-1].replace("--", "")
         value = None
 
         if key in known_config:
             value = known_config[key]
-        elif 'default' in arg[1]:
-            value = arg[1]['default']
+        elif "default" in arg[1]:
+            value = arg[1]["default"]
 
         if value is None:
-            value = ''
+            value = ""
         elif isinstance(value, bool):
-            value = '1' if value else '0'
+            value = "1" if value else "0"
         elif isinstance(value, (float, D)):
-            value = format(value, '.8f')
+            value = format(value, ".8f")
 
-        if 'default' in arg[1] or value == '':
-            key = f'# {key}'
+        if "default" in arg[1] or value == "":
+            key = f"# {key}"
 
         config_lines.append(f"{key} = {value}\t\t\t\t# {arg[1]['help']}")
 
-    with open(filename, 'w', encoding='utf8') as config_file:
+    with open(filename, "w", encoding="utf8") as config_file:
         config_file.writelines("\n".join(config_lines))
     # user and group have "rw" access
-    os.chmod(filename, 0o660) # nosec B103
+    os.chmod(filename, 0o660)  # nosec B103
 
 
 def extract_old_config():
     old_config = {}
 
-    old_appdir = appdirs.user_config_dir(appauthor='Counterparty', appname='counterpartyd', roaming=True)
-    old_configfile = os.path.join(old_appdir, 'counterpartyd.conf')
+    old_appdir = appdirs.user_config_dir(
+        appauthor="Counterparty", appname="counterpartyd", roaming=True
+    )
+    old_configfile = os.path.join(old_appdir, "counterpartyd.conf")
 
     if os.path.exists(old_configfile):
-        configfile = configparser.SafeConfigParser(allow_no_value=True, inline_comment_prefixes=('#', ';'))
+        configfile = configparser.SafeConfigParser(
+            allow_no_value=True, inline_comment_prefixes=("#", ";")
+        )
         configfile.read(old_configfile)
-        if 'Default' in configfile:
-            for key in configfile['Default']:
-                new_key = key.replace('backend-rpc-', 'backend-')
-                new_key = new_key.replace('blockchain-service-name', 'backend-name')
-                new_value = configfile['Default'][key].replace('jmcorgan', 'addrindex')
+        if "Default" in configfile:
+            for key in configfile["Default"]:
+                new_key = key.replace("backend-rpc-", "backend-")
+                new_key = new_key.replace("blockchain-service-name", "backend-name")
+                new_value = configfile["Default"][key].replace("jmcorgan", "addrindex")
                 old_config[new_key] = new_value
 
     return old_config
@@ -76,30 +81,30 @@ def extract_bitcoincore_config():
     bitcoincore_config = {}
 
     # Figure out the path to the bitcoin.conf file
-    if platform.system() == 'Darwin':
-        btc_conf_file = os.path.expanduser('~/Library/Application Support/Bitcoin/')
-    elif platform.system() == 'Windows':
-        btc_conf_file = os.path.join(os.environ['APPDATA'], 'Bitcoin')
+    if platform.system() == "Darwin":
+        btc_conf_file = os.path.expanduser("~/Library/Application Support/Bitcoin/")
+    elif platform.system() == "Windows":
+        btc_conf_file = os.path.join(os.environ["APPDATA"], "Bitcoin")
     else:
-        btc_conf_file = os.path.expanduser('~/.bitcoin')
-    btc_conf_file = os.path.join(btc_conf_file, 'bitcoin.conf')
+        btc_conf_file = os.path.expanduser("~/.bitcoin")
+    btc_conf_file = os.path.join(btc_conf_file, "bitcoin.conf")
 
     # Extract contents of bitcoin.conf to build service_url
     if os.path.exists(btc_conf_file):
         conf = {}
-        with open(btc_conf_file, 'r') as fd:
+        with open(btc_conf_file, "r") as fd:
             # Bitcoin Core accepts empty rpcuser, not specified in btc_conf_file
             for line in fd.readlines():
-                if '#' in line or '=' not in line:
+                if "#" in line or "=" not in line:
                     continue
-                k, v = line.split('=', 1)
+                k, v = line.split("=", 1)
                 conf[k.strip()] = v.strip()
 
             config_keys = {
-                'rpcport': 'backend-port',
-                'rpcuser': 'backend-user',
-                'rpcpassword': 'backend-password',
-                'rpcssl': 'backend-ssl'
+                "rpcport": "backend-port",
+                "rpcuser": "backend-user",
+                "rpcpassword": "backend-password",
+                "rpcssl": "backend-ssl",
             }
 
             for bitcoind_key in config_keys:
@@ -127,16 +132,16 @@ def server_to_client_config(server_config):
     client_config = {}
 
     config_keys = {
-        'backend-connect': 'wallet-connect',
-        'backend-port': 'wallet-port',
-        'backend-user': 'wallet-user',
-        'backend-password': 'wallet-password',
-        'backend-ssl': 'wallet-ssl',
-        'backend-ssl-verify': 'wallet-ssl-verify',
-        'rpc-host': 'counterparty-rpc-connect',
-        'rpc-port': 'counterparty-rpc-port',
-        'rpc-user': 'counterparty-rpc-user',
-        'rpc-password': 'counterparty-rpc-password'
+        "backend-connect": "wallet-connect",
+        "backend-port": "wallet-port",
+        "backend-user": "wallet-user",
+        "backend-password": "wallet-password",
+        "backend-ssl": "wallet-ssl",
+        "backend-ssl-verify": "wallet-ssl-verify",
+        "rpc-host": "counterparty-rpc-connect",
+        "rpc-port": "counterparty-rpc-port",
+        "rpc-user": "counterparty-rpc-user",
+        "rpc-password": "counterparty-rpc-password",
     }
 
     for server_key in config_keys:
@@ -148,9 +153,11 @@ def server_to_client_config(server_config):
 
 
 def generate_client_config_files(client_config_args):
-    configdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+    configdir = appdirs.user_config_dir(
+        appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
+    )
 
-    client_configfile = os.path.join(configdir, 'client.conf')
+    client_configfile = os.path.join(configdir, "client.conf")
     if not os.path.exists(client_configfile):
         server_known_config = get_server_known_config()
         client_known_config = server_to_client_config(server_known_config)
@@ -160,9 +167,11 @@ def generate_client_config_files(client_config_args):
 
 
 def generate_server_config_file(server_config_args):
-    configdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+    configdir = appdirs.user_config_dir(
+        appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
+    )
 
-    server_configfile = os.path.join(configdir, 'server.conf')
+    server_configfile = os.path.join(configdir, "server.conf")
     if not os.path.exists(server_configfile):
         # extract known configuration
         server_known_config = get_server_known_config()
@@ -173,7 +182,9 @@ def generate_server_config_file(server_config_args):
 
 def read_config_file(default_config_file, config_file_path=None):
     if not config_file_path:
-        config_dir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+        config_dir = appdirs.user_config_dir(
+            appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
+        )
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir, mode=0o755)
         config_file_path = os.path.join(config_dir, default_config_file)
@@ -181,7 +192,7 @@ def read_config_file(default_config_file, config_file_path=None):
     # clean BOM
     bufsize = 4096
     bomlen = len(codecs.BOM_UTF8)
-    with codecs.open(config_file_path, 'r+b') as fp:
+    with codecs.open(config_file_path, "r+b") as fp:
         chunk = fp.read(bufsize)
         if chunk.startswith(codecs.BOM_UTF8):
             i = 0
@@ -195,27 +206,37 @@ def read_config_file(default_config_file, config_file_path=None):
             fp.seek(-bomlen, os.SEEK_CUR)
             fp.truncate()
 
-    logger.debug(f'Loading configuration file: `{config_file_path}`')
-    configfile = configparser.SafeConfigParser(allow_no_value=True, inline_comment_prefixes=('#', ';'))
-    with codecs.open(config_file_path, 'r', encoding='utf8') as fp:
+    logger.debug(f"Loading configuration file: `{config_file_path}`")
+    configfile = configparser.SafeConfigParser(
+        allow_no_value=True, inline_comment_prefixes=("#", ";")
+    )
+    with codecs.open(config_file_path, "r", encoding="utf8") as fp:
         configfile.readfp(fp)
 
-    if not 'Default' in configfile:
-        configfile['Default'] = {}
-    
+    if "Default" not in configfile:
+        configfile["Default"] = {}
+
     return configfile
 
 
 def add_config_arguments(parser, args, configfile, add_default=False):
     for arg in args:
         if add_default:
-            key = arg[0][-1].replace('--', '')
-            if 'action' in arg[1] and arg[1]['action'] == 'store_true' and key in configfile['Default']:
-                arg[1]['default'] = configfile['Default'].getboolean(key)
-            elif key in configfile['Default'] and configfile['Default'][key]:
-                arg[1]['default'] = configfile['Default'][key]
-            elif key in configfile['Default'] and arg[1].get('nargs', '') == '?' and 'const' in arg[1]:
-                arg[1]['default'] = arg[1]['const']  # bit of a hack
+            key = arg[0][-1].replace("--", "")
+            if (
+                "action" in arg[1]
+                and arg[1]["action"] == "store_true"
+                and key in configfile["Default"]
+            ):
+                arg[1]["default"] = configfile["Default"].getboolean(key)
+            elif key in configfile["Default"] and configfile["Default"][key]:
+                arg[1]["default"] = configfile["Default"][key]
+            elif (
+                key in configfile["Default"]
+                and arg[1].get("nargs", "") == "?"
+                and "const" in arg[1]
+            ):
+                arg[1]["default"] = arg[1]["const"]  # bit of a hack
         else:
-            arg[1]['default'] = argparse.SUPPRESS
+            arg[1]["default"] = argparse.SUPPRESS
         parser.add_argument(*arg[0], **arg[1])
