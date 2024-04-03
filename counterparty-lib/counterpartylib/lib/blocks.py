@@ -108,6 +108,8 @@ def parse_tx(db, tx):
             # Protocol change.
             rps_enabled = tx['block_index'] >= 308500 or config.TESTNET or config.REGTEST
 
+            supported = True
+
             if message_type_id == send.ID:
                 send.parse(db, tx, message)
             elif message_type_id == enhanced_send.ID and ledger.enabled('enhanced_sends', block_index=tx['block_index']):
@@ -143,6 +145,15 @@ def parse_tx(db, tx):
             elif message_type_id == dispenser.DISPENSE_ID and ledger.enabled('dispensers', block_index=tx['block_index']):
                 dispenser.dispense(db, tx)
             else:
+                supported = False
+
+            ledger.add_to_journal(db, tx['block_index'], 'parse', 'transactions', 'TRANSACTION_PARSED', {
+                'tx_index': tx['tx_index'],
+                'tx_hash': tx['tx_hash'],
+                'supported': supported,
+            })
+
+            if not supported:
                 cursor.execute('''UPDATE transactions \
                                            SET supported=$supported \
                                            WHERE tx_hash=$tx_hash''',
@@ -206,6 +217,13 @@ def parse_block(db, block_index, block_time,
     new_txlist_hash, found_txlist_hash = check.consensus_hash(db, 'txlist_hash', previous_txlist_hash, txlist)
     new_ledger_hash, found_ledger_hash = check.consensus_hash(db, 'ledger_hash', previous_ledger_hash, ledger.BLOCK_LEDGER)
     new_messages_hash, found_messages_hash = check.consensus_hash(db, 'messages_hash', previous_messages_hash, ledger.BLOCK_JOURNAL)
+
+    ledger.add_to_journal(db, block_index, 'parse', 'blocks', 'BLOCK_PARSED', {
+        'block_index': block_index,
+        'ledger_hash': new_ledger_hash,
+        'txlist_hash': new_txlist_hash,
+        'messages_hash': new_messages_hash,
+    })
 
     return new_ledger_hash, new_txlist_hash, new_messages_hash, found_messages_hash
 

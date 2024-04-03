@@ -4184,13 +4184,13 @@ UNITTEST_VECTOR = {
         }],
         'last_message': [{
             'in': (),
-            'out': {'message_index': 691,
+            'out': {'message_index': 1237,
                     'block_index': 310500,
-                    'command': 'insert',
+                    'command': 'parse',
                     'category': 'blocks',
-                    'bindings': '{"block_hash":"54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b","block_index":310500,"block_time":310500000,"difficulty":null,"ledger_hash":null,"previous_block_hash":null,"txlist_hash":null}',
+                    'bindings': '{"block_index":310500,"ledger_hash":"5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d","messages_hash":"1105c545d6787d09afe501ca07bb837666117dacb45854e96d5ca90d6b6a13a5","txlist_hash":"35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1"}',
                     'timestamp': 0,
-                    'event': 'NEW_BLOCK'}
+                    'event': 'BLOCK_PARSED'}
         }],
         'get_asset_id': [{
             'in': ('XCP', DP['default_block_index']),
