@@ -1,9 +1,9 @@
 import decimal
-import time
 import json
-import requests
 import logging
+import time
 
+import requests
 from counterpartylib.lib import config
 from counterpartylib.lib.util import value_input, value_output
 

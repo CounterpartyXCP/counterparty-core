@@ -1,7 +1,9 @@
 import logging
+
 logger = logging.getLogger(__name__)
 
 from counterpartywallet.util import wallet_api as rpc
+
 
 def get_wallet_addresses():
     addresses = []

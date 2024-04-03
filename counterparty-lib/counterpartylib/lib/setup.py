@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-import os
 import argparse
-import configparser
 import codecs
-import platform
+import configparser
 import logging
+import os
+import platform
 from decimal import Decimal as D
 
 import appdirs
@@ -12,6 +12,7 @@ import appdirs
 from counterpartylib.lib import config
 
 logger = logging.getLogger(config.LOGGER_NAME)
+
 
 # generate commented config file from arguments list (client.CONFIG_ARGS and server.CONFIG_ARGS) and known values
 def generate_config_file(filename, config_args, known_config={}, overwrite=False):  # noqa: B006
@@ -51,7 +52,6 @@ def generate_config_file(filename, config_args, known_config={}, overwrite=False
         config_file.writelines("\n".join(config_lines))
     # user and group have "rw" access
     os.chmod(filename, 0o660)  # nosec B103
-
 
 
 def extract_old_config():
@@ -153,9 +153,11 @@ def server_to_client_config(server_config):
 
 
 def generate_client_config_files(client_config_args):
-    configdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+    configdir = appdirs.user_config_dir(
+        appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
+    )
 
-    client_configfile = os.path.join(configdir, 'client.conf')
+    client_configfile = os.path.join(configdir, "client.conf")
     if not os.path.exists(client_configfile):
         server_known_config = get_server_known_config()
         client_known_config = server_to_client_config(server_known_config)
@@ -165,7 +167,9 @@ def generate_client_config_files(client_config_args):
 
 
 def generate_server_config_file(server_config_args):
-    configdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+    configdir = appdirs.user_config_dir(
+        appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
+    )
 
     server_configfile = os.path.join(configdir, "server.conf")
     if not os.path.exists(server_configfile):
@@ -178,7 +182,9 @@ def generate_server_config_file(server_config_args):
 
 def read_config_file(default_config_file, config_file_path=None):
     if not config_file_path:
-        config_dir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+        config_dir = appdirs.user_config_dir(
+            appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
+        )
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir, mode=0o755)
         config_file_path = os.path.join(config_dir, default_config_file)
@@ -186,7 +192,7 @@ def read_config_file(default_config_file, config_file_path=None):
     # clean BOM
     bufsize = 4096
     bomlen = len(codecs.BOM_UTF8)
-    with codecs.open(config_file_path, 'r+b') as fp:
+    with codecs.open(config_file_path, "r+b") as fp:
         chunk = fp.read(bufsize)
         if chunk.startswith(codecs.BOM_UTF8):
             i = 0
@@ -200,27 +206,37 @@ def read_config_file(default_config_file, config_file_path=None):
             fp.seek(-bomlen, os.SEEK_CUR)
             fp.truncate()
 
-    logger.debug(f'Loading configuration file: `{config_file_path}`')
-    configfile = configparser.SafeConfigParser(allow_no_value=True, inline_comment_prefixes=('#', ';'))
-    with codecs.open(config_file_path, 'r', encoding='utf8') as fp:
+    logger.debug(f"Loading configuration file: `{config_file_path}`")
+    configfile = configparser.SafeConfigParser(
+        allow_no_value=True, inline_comment_prefixes=("#", ";")
+    )
+    with codecs.open(config_file_path, "r", encoding="utf8") as fp:
         configfile.readfp(fp)
 
-    if not 'Default' in configfile:
-        configfile['Default'] = {}
-    
+    if "Default" not in configfile:
+        configfile["Default"] = {}
+
     return configfile
 
 
 def add_config_arguments(parser, args, configfile, add_default=False):
     for arg in args:
         if add_default:
-            key = arg[0][-1].replace('--', '')
-            if 'action' in arg[1] and arg[1]['action'] == 'store_true' and key in configfile['Default']:
-                arg[1]['default'] = configfile['Default'].getboolean(key)
-            elif key in configfile['Default'] and configfile['Default'][key]:
-                arg[1]['default'] = configfile['Default'][key]
-            elif key in configfile['Default'] and arg[1].get('nargs', '') == '?' and 'const' in arg[1]:
-                arg[1]['default'] = arg[1]['const']  # bit of a hack
+            key = arg[0][-1].replace("--", "")
+            if (
+                "action" in arg[1]
+                and arg[1]["action"] == "store_true"
+                and key in configfile["Default"]
+            ):
+                arg[1]["default"] = configfile["Default"].getboolean(key)
+            elif key in configfile["Default"] and configfile["Default"][key]:
+                arg[1]["default"] = configfile["Default"][key]
+            elif (
+                key in configfile["Default"]
+                and arg[1].get("nargs", "") == "?"
+                and "const" in arg[1]
+            ):
+                arg[1]["default"] = arg[1]["const"]  # bit of a hack
         else:
-            arg[1]['default'] = argparse.SUPPRESS
+            arg[1]["default"] = argparse.SUPPRESS
         parser.add_argument(*arg[0], **arg[1])

@@ -1,20 +1,18 @@
-import sys
 import argparse
 import getpass
 import logging
+import sys
 from decimal import Decimal as D
 
-from counterpartylib.lib import log
-
-from counterpartylib.lib import config, script, setup
-from counterpartylib.lib.util import BET_TYPE_NAME
+from counterpartylib.lib import config, log, script, setup
 from counterpartylib.lib.exceptions import TransactionError
+from counterpartylib.lib.util import BET_TYPE_NAME
 
-from counterpartywallet import APP_VERSION, util, messages, wallet, console, clientapi
+from counterpartywallet import APP_VERSION, clientapi, console, messages, util, wallet
 
 logger = logging.getLogger(__name__)
 
-APP_NAME = 'counterparty-wallet'
+APP_NAME = "counterparty-wallet"
 
 CONFIG_ARGS = [
     [
@@ -204,8 +202,8 @@ def main():
     parser.add_argument("--config-file", help="the location of the configuration file")
 
     cmd_args = parser.parse_known_args()[0]
-    config_file_path = getattr(cmd_args, 'config_file', None)
-    configfile = setup.read_config_file('client.conf', config_file_path)
+    config_file_path = getattr(cmd_args, "config_file", None)
+    configfile = setup.read_config_file("client.conf", config_file_path)
 
     setup.add_config_arguments(parser, CONFIG_ARGS, configfile, add_default=True)
 

@@ -1,7 +1,9 @@
 import os
 
 from prettytable import PrettyTable
-from counterpartywallet import wallet, util
+
+from counterpartywallet import util, wallet
+
 
 # TODO: inelegant
 def get_view(view_name, args):

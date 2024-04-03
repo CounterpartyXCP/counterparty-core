@@ -2,14 +2,14 @@ import logging
 import sys  # noqa: E402
 from decimal import Decimal as D
 
-from pycoin.coins.bitcoin.Tx import Tx  # noqa: E402
-from pycoin.satoshi.flags import SIGHASH_ALL  # noqa: E402
-from pycoin.encoding.sec import public_pair_to_hash160_sec  # noqa: E402
-from pycoin.ecdsa.secp256k1 import secp256k1_generator as generator_secp256k1  # noqa: E402
-
-
 from counterpartylib.lib import config, exceptions, script, util  # noqa: E402, F401
+from pycoin.coins.bitcoin.Tx import Tx  # noqa: E402
+from pycoin.ecdsa.secp256k1 import secp256k1_generator as generator_secp256k1  # noqa: E402
+from pycoin.encoding.sec import public_pair_to_hash160_sec  # noqa: E402
+from pycoin.satoshi.flags import SIGHASH_ALL  # noqa: E402
+
 from counterpartywallet.util import api, value_out
+
 
 class WalletError(Exception):
     pass
