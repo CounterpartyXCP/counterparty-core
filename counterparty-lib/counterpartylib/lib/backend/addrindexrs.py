@@ -449,7 +449,7 @@ class AddrIndexRsThread(threading.Thread):
 
     def send(self, msg):
         self.locker.acquire()
-        if not ("kill" in msg):
+        if "kill" not in msg:
             msg["id"] = self.last_id
             self.last_id += 1
             self.message_to_send = (json.dumps(msg) + "\n").encode("utf8")
@@ -534,7 +534,7 @@ def get_unspent_txouts(source):
         {"method": "blockchain.scripthash.get_utxos", "params": [_address_to_hash(source)]}
     )
 
-    if not (result is None) and "result" in result:
+    if result is not None and "result" in result:
         result = result["result"]
         result = [unpack_outpoint(x) for x in result]
         # each item on the result array is like
@@ -618,7 +618,7 @@ def get_oldest_tx_legacy(address):
         {"method": "blockchain.scripthash.get_oldest_tx", "params": [hsh]}
     )
 
-    if call_result is not None and not ("error" in call_result):
+    if call_result is not None and "error" not in call_result:
         txs = call_result["result"]
         return txs
 

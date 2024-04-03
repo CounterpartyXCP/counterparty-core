@@ -163,7 +163,7 @@ def read_config_file(default_config_file, config_file_path=None):
     with codecs.open(config_file_path, "r", encoding="utf8") as fp:
         configfile.readfp(fp)
 
-    if not "Default" in configfile:
+    if "Default" not in configfile:
         configfile["Default"] = {}
 
     return configfile

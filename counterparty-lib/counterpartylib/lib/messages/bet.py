@@ -297,13 +297,13 @@ def validate(
     elif broadcasts[-1]["timestamp"] >= deadline:
         problems.append("deadline in that feed’s past")
 
-    if not bet_type in (0, 1, 2, 3):
+    if bet_type not in (0, 1, 2, 3):
         problems.append("unknown bet type")
 
     # Valid leverage level?
     if leverage != 5040 and bet_type in (2, 3):  # Equal, NotEqual
         problems.append("leverage used with Equal or NotEqual")
-    if leverage < 5040 and not bet_type in (
+    if leverage < 5040 and bet_type not in (
         0,
         1,
     ):  # BullCFD, BearCFD (fractional leverage makes sense precisely with CFDs)

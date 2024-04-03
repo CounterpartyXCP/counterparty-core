@@ -446,7 +446,7 @@ def adjust_get_balances_results(query_result, db):
     assets = {}
     for balances_row in list(query_result):
         asset = balances_row["asset"]
-        if not asset in assets:
+        if asset not in assets:
             assets[asset] = ledger.is_divisible(db, asset)
 
         balances_row["divisible"] = assets[asset]
