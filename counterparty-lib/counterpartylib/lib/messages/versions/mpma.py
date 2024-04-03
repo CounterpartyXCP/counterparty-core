@@ -105,7 +105,7 @@ def compose(db, source, asset_dest_quant_list, memo, memo_is_hex):
     for asset, quantity in out_balances:
         if ledger.enabled("mpma_subasset_support"):
             # resolve subassets
-            asset = ledger.resolve_subasset_longname(db, asset)
+            asset = ledger.resolve_subasset_longname(db, asset)  # noqa: PLW2901
 
         if not isinstance(quantity, int):
             raise exceptions.ComposeError(f"quantities must be an int (in satoshis) for {asset}")

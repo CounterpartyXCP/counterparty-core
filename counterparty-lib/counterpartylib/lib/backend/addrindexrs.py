@@ -262,7 +262,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
     for tx_hash in txhash_list:
         if tx_hash not in raw_transactions_cache:
             # call_id = binascii.hexlify(os.urandom(5)).decode('utf8') # Don't drain urandom
-            global MONOTONIC_CALL_ID
+            global MONOTONIC_CALL_ID  # noqa: PLW0603
             MONOTONIC_CALL_ID = MONOTONIC_CALL_ID + 1
             call_id = f"{MONOTONIC_CALL_ID}"
             payload.append(
@@ -632,7 +632,7 @@ def getindexblocksbehind():
 
 
 def init():
-    global INDEXER_THREAD
+    global INDEXER_THREAD  # noqa: PLW0603
     INDEXER_THREAD = AddrIndexRsThread(config.INDEXD_CONNECT, config.INDEXD_PORT)
     INDEXER_THREAD.daemon = True
     INDEXER_THREAD.start()
@@ -735,7 +735,7 @@ def get_oldest_tx(address, block_index=None):
     if hardcoded_key in GET_OLDEST_TX_HARDCODED:
         result = GET_OLDEST_TX_HARDCODED[hardcoded_key]
     else:
-        global ADDRINDEXRS_CLIENT
+        global ADDRINDEXRS_CLIENT  # noqa: PLW0603
         if ADDRINDEXRS_CLIENT is None:
             ADDRINDEXRS_CLIENT = AddrindexrsSocket()
         result = ADDRINDEXRS_CLIENT.get_oldest_tx(address, block_index=current_block_index)

@@ -136,7 +136,7 @@ def get_wallet():
         )
         for balance in balances:
             asset = balance["asset"]
-            balance = D(value_out(balance["quantity"], asset))
+            balance = D(value_out(balance["quantity"], asset))  # noqa: PLW2901
             add_total(address, asset, balance)
 
     return wallet
@@ -251,7 +251,7 @@ def balances(address):
     )
     for balance in balances:
         asset = balance["asset"]
-        balance = D(value_out(balance["quantity"], asset))
+        balance = D(value_out(balance["quantity"], asset))  # noqa: PLW2901
         result[asset] = balance
     return result
 

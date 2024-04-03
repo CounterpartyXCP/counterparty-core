@@ -68,7 +68,7 @@ UTXO_P2SH_ENCODING_LOCKS_CACHE = None
 
 
 def initialise():
-    global UTXO_LOCKS, UTXO_P2SH_ENCODING_LOCKS, UTXO_P2SH_ENCODING_LOCKS_CACHE
+    global UTXO_LOCKS, UTXO_P2SH_ENCODING_LOCKS, UTXO_P2SH_ENCODING_LOCKS_CACHE  # noqa: PLW0603
 
     if config.UTXO_LOCKS_MAX_ADDRESSES > 0:  # initialize if configured
         UTXO_LOCKS = util.DictCache(size=config.UTXO_LOCKS_MAX_ADDRESSES)
@@ -92,7 +92,7 @@ def make_outkey(output):
 
 
 def make_outkey_vin_txid(txid, vout):
-    global UTXO_P2SH_ENCODING_LOCKS_CACHE
+    global UTXO_P2SH_ENCODING_LOCKS_CACHE  # noqa: PLW0602
 
     if (txid, vout) not in UTXO_P2SH_ENCODING_LOCKS_CACHE:
         txhex = backend.getrawtransaction(txid, verbose=False)
@@ -155,7 +155,7 @@ def construct_coin_selection(
     regular_dust_size,
     disable_utxo_locks,
 ):
-    global UTXO_LOCKS, UTXO_P2SH_ENCODING_LOCKS
+    global UTXO_LOCKS, UTXO_P2SH_ENCODING_LOCKS  # noqa: PLW0602
 
     # Array of UTXOs, as retrieved by listunspent function from bitcoind
     if custom_inputs:
@@ -293,7 +293,7 @@ def construct_coin_selection(
 
 def select_any_coin_from_source(source, allow_unconfirmed_inputs=True, disable_utxo_locks=False):
     """Get the first (biggest) input from the source address"""
-    global UTXO_LOCKS
+    global UTXO_LOCKS  # noqa: PLW0602
 
     # Array of UTXOs, as retrieved by listunspent function from bitcoind
     unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs)
@@ -374,7 +374,7 @@ def construct(
     if estimate_fee_per_kb is None:
         estimate_fee_per_kb = config.ESTIMATE_FEE_PER_KB
 
-    global UTXO_LOCKS, UTXO_P2SH_ENCODING_LOCKS
+    global UTXO_LOCKS, UTXO_P2SH_ENCODING_LOCKS  # noqa: PLW0602
 
     # lazy assign from config, because when set as default it's evaluated before it's configured
     if old_style_api is None:
@@ -445,7 +445,7 @@ def construct(
             else:
                 dust_size = regular_dust_size
             if value == None:  # noqa: E711
-                value = dust_size
+                value = dust_size  # noqa: PLW2901
             elif value < dust_size:
                 raise exceptions.TransactionError("Destination output is dust.")
 

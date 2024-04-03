@@ -211,7 +211,7 @@ def api_server(request, cp_server):
     also `server_db` will inject itself into APIServer for each function
     """
 
-    global TEST_RPC_PORT
+    global TEST_RPC_PORT  # noqa: PLW0603
 
     config.RPC_PORT = TEST_RPC_PORT = TEST_RPC_PORT + 1
     server.configure_rpc(config.RPC_PASSWORD)

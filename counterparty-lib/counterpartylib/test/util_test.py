@@ -279,7 +279,7 @@ UNIQUE_DUMMY_TX_HASH = {}
 
 
 def dummy_tx_hash(raw_transaction):
-    global UNIQUE_DUMMY_TX_HASH
+    global UNIQUE_DUMMY_TX_HASH  # noqa: PLW0602
 
     tx = pycoin.coins.bitcoin.Tx.Tx.from_hex(raw_transaction)
 

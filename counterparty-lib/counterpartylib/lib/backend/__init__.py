@@ -39,7 +39,7 @@ def sortkeypicker(keynames):
 
 def backend():
     mdl = sys.modules[f"counterpartylib.lib.backend.{config.BACKEND_NAME}"]
-    global INITIALIZED
+    global INITIALIZED  # noqa: PLW0603
     if not INITIALIZED:
         mdl.init()
         INITIALIZED = True
@@ -291,7 +291,7 @@ def multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys=None):
 
 def init_mempool_cache():
     """prime the mempool cache, so that functioning is faster..."""
-    global MEMPOOL_CACHE_INITIALIZED
+    global MEMPOOL_CACHE_INITIALIZED  # noqa: PLW0603
     logger.debug("Initializing mempool cache...")
     start = time.time()
 

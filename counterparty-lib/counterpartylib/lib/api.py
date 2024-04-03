@@ -666,7 +666,7 @@ class APIStatusPoller(threading.Thread):
 
     def run(self):
         logger.debug("Starting API Status Poller.")
-        global CURRENT_API_STATUS_CODE, CURRENT_API_STATUS_RESPONSE_JSON
+        global CURRENT_API_STATUS_CODE, CURRENT_API_STATUS_RESPONSE_JSON  # noqa: PLW0603
         db = database.get_connection(read_only=True)
 
         while self.stop_event.is_set() != True:  # noqa: E712
@@ -845,7 +845,7 @@ class APIServer(threading.Thread):
                 )
             assets_info = []
             for asset in assets:
-                asset = ledger.resolve_subasset_longname(self.db, asset)
+                asset = ledger.resolve_subasset_longname(self.db, asset)  # noqa: PLW2901
 
                 # BTC and XCP.
                 if asset in [config.BTC, config.XCP]:
@@ -1364,10 +1364,10 @@ class APIServer(threading.Thread):
                 for key, value in extra_args:
                     # Determine value type.
                     try:
-                        value = int(value)
+                        value = int(value)  # noqa: PLW2901
                     except ValueError:
                         try:
-                            value = float(value)
+                            value = float(value)  # noqa: PLW2901
                         except ValueError:
                             pass
                     # Split keys into common and transaction-specific arguments. Discard the privkey.

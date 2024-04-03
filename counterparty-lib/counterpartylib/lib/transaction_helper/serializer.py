@@ -107,7 +107,7 @@ def get_multisig_script(address):
     # Construct script.
     tx_script = op_required  # Required signatures
     for public_key in pubkeys:
-        public_key = binascii.unhexlify(public_key)
+        public_key = binascii.unhexlify(public_key)  # noqa: PLW2901
         tx_script += op_push(len(public_key))  # Push bytes of public key
         tx_script += public_key  # Data chunk (fake) public key
     tx_script += op_total  # Total signatures
@@ -271,7 +271,7 @@ def serialise(
         data_array, value = data_output
         s += value.to_bytes(8, byteorder="little")  # Value
 
-        data_chunk = config.PREFIX + data_chunk
+        data_chunk = config.PREFIX + data_chunk  # noqa: PLW2901
 
         # Initialise encryption key (once per output).
         assert isinstance(inputs[0]["txid"], str)
@@ -284,8 +284,8 @@ def serialise(
             # Get data (fake) public key.
             pad_length = (33 * 2) - 1 - 2 - 2 - len(data_chunk)
             assert pad_length >= 0
-            data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b"\x00")
-            data_chunk = key.encrypt(data_chunk)
+            data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b"\x00")  # noqa: PLW2901
+            data_chunk = key.encrypt(data_chunk)  # noqa: PLW2901
             data_pubkey_1 = make_fully_valid(data_chunk[:31])
             data_pubkey_2 = make_fully_valid(data_chunk[31:])
 
@@ -300,15 +300,15 @@ def serialise(
             tx_script += OP_3  # OP_3
             tx_script += OP_CHECKMULTISIG  # OP_CHECKMULTISIG
         elif encoding == "opreturn":
-            data_chunk = key.encrypt(data_chunk)
+            data_chunk = key.encrypt(data_chunk)  # noqa: PLW2901
             tx_script = OP_RETURN  # OP_RETURN
             tx_script += op_push(len(data_chunk))  # Push bytes of data chunk (NOTE: OP_SMALLDATA?)
             tx_script += data_chunk  # Data
         elif encoding == "pubkeyhash":
             pad_length = 20 - 1 - len(data_chunk)
             assert pad_length >= 0
-            data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b"\x00")
-            data_chunk = key.encrypt(data_chunk)
+            data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b"\x00")  # noqa: PLW2901
+            data_chunk = key.encrypt(data_chunk)  # noqa: PLW2901
             # Construct script.
             tx_script = OP_DUP  # OP_DUP
             tx_script += OP_HASH160  # OP_HASH160
@@ -392,7 +392,7 @@ def serialise_p2sh_pretx(
 
     # P2SH for data encodeded inputs
     for n, data_chunk in enumerate(data_array):
-        data_chunk = config.PREFIX + data_chunk  # prefix the data_chunk
+        data_chunk = config.PREFIX + data_chunk  # prefix the data_chunk  # noqa: PLW2901
 
         # get the scripts
         script_sig, redeem_script, output_script = p2sh_encoding.make_p2sh_encoding_redeemscript(
@@ -460,7 +460,7 @@ def serialise_p2sh_datatx(
 
     # list of inputs
     for n, data_chunk in enumerate(data_array):
-        data_chunk = config.PREFIX + data_chunk  # prefix the data_chunk
+        data_chunk = config.PREFIX + data_chunk  # prefix the data_chunk  # noqa: PLW2901
 
         # get the scripts
         script_sig, redeem_script, output_script = p2sh_encoding.make_p2sh_encoding_redeemscript(
