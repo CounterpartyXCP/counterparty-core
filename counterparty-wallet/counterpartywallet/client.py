@@ -1,6 +1,3 @@
-#! /usr/bin/env python3
-
-import os
 import sys
 import argparse
 import logging
@@ -8,17 +5,16 @@ import getpass
 from decimal import Decimal as D
 
 from counterpartylib.lib import log
+
+from counterpartylib.lib import config, script, setup
+from counterpartylib.lib.util import BET_TYPE_NAME
+from counterpartylib.lib.exceptions import TransactionError
+
+from counterpartywallet import APP_VERSION, util, messages, wallet, console, clientapi
+
 logger = logging.getLogger(__name__)
 
-from counterpartylib.lib import config, script
-from counterpartylib.lib.util import make_id, BET_TYPE_NAME
-from counterpartylib.lib.log import isodt
-from counterpartylib.lib.exceptions import TransactionError
-from counterpartycli.util import add_config_arguments, read_config_file
-from counterpartycli.setup import generate_config_files
-from counterpartycli import APP_VERSION, util, messages, wallet, console, clientapi
-
-APP_NAME = 'counterparty-client'
+APP_NAME = 'counterparty-wallet'
 
 CONFIG_ARGS = [
     [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'help': 'sets log level to DEBUG instead of WARNING'}],
@@ -56,13 +52,8 @@ CONFIG_ARGS = [
 ]
 
 def main():
-    if os.name == 'nt':
-        from counterpartylib.lib import util_windows
-        #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
-        util_windows.fix_win32_unicode()
-
     # Post installation tasks
-    generate_config_files()
+    setup.generate_client_config_files(CONFIG_ARGS)
 
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog=APP_NAME, description='Counterparty CLI for counterparty-server', add_help=False)
@@ -72,9 +63,9 @@ def main():
 
     cmd_args = parser.parse_known_args()[0]
     config_file_path = getattr(cmd_args, 'config_file', None)
-    configfile = read_config_file('client.conf', config_file_path)
+    configfile = setup.read_config_file('client.conf', config_file_path)
 
-    add_config_arguments(parser, CONFIG_ARGS, configfile, add_default=True)
+    setup.add_config_arguments(parser, CONFIG_ARGS, configfile, add_default=True)
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 

@@ -20,7 +20,7 @@ Because this release includes numerous changes to the database schema, a full da
 * Rename `counterparty-lib` repository to `counterparty-core`. **NOTE:** The normal redirect for GitHub URLs cannot be implemented.
 * Merge the `counterparty-cli` repository into the `counterparty-core` repository
 * Add Rust library, `counterparty-rs`, for performance-critical code
-* Synchronize versions of `counterparty-rs`, `counterparty-lib` and `counterparty-cli`
+* Synchronize versions of `counterparty-rs`, `counterparty-lib`, `counterparty-core` and `counterparty-wallet`
 * Update URL for hosting bootstrap files to <https://bootstrap.counterparty.io/counterparty-*>
 * Update URL for hosting notifications for protocol changes to <https://counterparty.io/protocol_changes.json>
 
@@ -54,7 +54,7 @@ Because this release includes numerous changes to the database schema, a full da
 
 
 ## Command-Line Interface
-* Disable console logs except for with `counterparty-server start`
+* Disable console logs except for with `counterparty-core start`
 * Show fancy spinners for all discrete operations
 * Rename `checkdb` command to `check-db` and refactor
 * Rename `debugconfig` to `show-config`; clean up output

@@ -1,14 +1,17 @@
 #!/usr/bin/env python
-
-import os, sys
-import shutil
-import ctypes.util
-import configparser, platform
-import urllib.request
-import tarfile, zipfile
-import appdirs
-import hashlib
+import os
+import argparse
+import configparser
+import codecs
+import platform
+import logging
 from decimal import Decimal as D
+
+import appdirs
+
+from counterpartylib.lib import config
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 # generate commented config file from arguments list (client.CONFIG_ARGS and server.CONFIG_ARGS) and known values
 def generate_config_file(filename, config_args, known_config={}, overwrite=False):
@@ -49,6 +52,7 @@ def generate_config_file(filename, config_args, known_config={}, overwrite=False
     # user and group have "rw" access
     os.chmod(filename, 0o660) # nosec B103
 
+
 def extract_old_config():
     old_config = {}
 
@@ -66,6 +70,7 @@ def extract_old_config():
                 old_config[new_key] = new_value
 
     return old_config
+
 
 def extract_bitcoincore_config():
     bitcoincore_config = {}
@@ -104,6 +109,7 @@ def extract_bitcoincore_config():
 
     return bitcoincore_config
 
+
 def get_server_known_config():
     server_known_config = {}
 
@@ -114,6 +120,7 @@ def get_server_known_config():
     server_known_config.update(old_config)
 
     return server_known_config
+
 
 # generate client config from server config
 def server_to_client_config(server_config):
@@ -139,92 +146,76 @@ def server_to_client_config(server_config):
 
     return client_config
 
-def generate_config_files():
-    from counterpartycli.server import CONFIG_ARGS as SERVER_CONFIG_ARGS
-    from counterpartycli.client import CONFIG_ARGS as CLIENT_CONFIG_ARGS
-    from counterpartylib.lib import config, util
 
+def generate_client_config_files(client_config_args):
+    configdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+
+    client_configfile = os.path.join(configdir, 'client.conf')
+    if not os.path.exists(client_configfile):
+        server_known_config = get_server_known_config()
+        client_known_config = server_to_client_config(server_known_config)
+        generate_config_file(client_configfile, client_config_args, client_known_config)
+
+    return client_configfile
+
+
+def generate_server_config_file(server_config_args):
     configdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
 
     server_configfile = os.path.join(configdir, 'server.conf')
     if not os.path.exists(server_configfile):
         # extract known configuration
         server_known_config = get_server_known_config()
-        generate_config_file(server_configfile, SERVER_CONFIG_ARGS, server_known_config)
+        generate_config_file(server_configfile, server_config_args, server_known_config)
 
-    client_configfile = os.path.join(configdir, 'client.conf')
-    if not os.path.exists(client_configfile):
-        client_known_config = server_to_client_config(server_known_config)
-        generate_config_file(client_configfile, CLIENT_CONFIG_ARGS, client_known_config)
-
-    return server_configfile, client_configfile
-
-def zip_folder(folder_path, zip_path):
-    zip_file = zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED)
-    for root, dirs, files in os.walk(folder_path):
-        for a_file in files:
-            zip_file.write(os.path.join(root, a_file))
-    zip_file.close()
-
-def before_py2exe_build(win_dist_dir):
-    # Clean previous build
-    if os.path.exists(win_dist_dir):
-        shutil.rmtree(win_dist_dir)
-    # py2exe don't manages entry_points
-    for exe_name in ['client', 'server']:
-        shutil.copy(f'counterpartycli/__init__.py', 'counterparty-{exe_name}.py')
-        with open(f'counterparty-{exe_name}.py', 'a') as fp:
-            fp.write(f'{exe_name}_main()')
-    # Hack
-    src = 'C:\\Python34\\Lib\\site-packages\\flask_httpauth.py'
-    dst = 'C:\\Python34\\Lib\\site-packages\\flask\\ext\\httpauth.py'
-    shutil.copy(src, dst)
-
-def after_py2exe_build(win_dist_dir):
-    # clean temporaries scripts
-    for exe_name in ['client', 'server']:
-        os.remove(f'counterparty-{exe_name}.py')
-    # py2exe copies only pyc files in site-packages.zip
-    # modules with no pyc files must be copied in 'dist/library/'
-    import counterpartylib, certifi
-    additionals_modules = [counterpartylib, certifi]
-    for module in additionals_modules:
-        moudle_file = os.path.dirname(module.__file__)
-        dest_file = os.path.join(win_dist_dir, 'library', module.__name__)
-        shutil.copytree(moudle_file, dest_file)
-    # additionals DLLs
-    dlls = ['ssleay32.dll', 'libssl32.dll', 'libeay32.dll']
-    dlls.append(ctypes.util.find_msvcrt())
-    dlls_path = dlls
-    for dll in dlls:
-        dll_path = ctypes.util.find_library(dll)
-        shutil.copy(dll_path, win_dist_dir)
-
-    # compress distribution folder
-    zip_path = f'{win_dist_dir}.zip'
-    zip_folder(win_dist_dir, zip_path)
-
-    # Open,close, read file and calculate MD5 on its contents
-    with open(zip_path, 'rb') as zip_file:
-        data = zip_file.read()
-        md5 = hashlib.md5(data, usedforsecurity=False).hexdigest()
-
-    # include MD5 in the zip name
-    new_zip_path = f'{win_dist_dir}-{md5}.zip'
-    os.rename(zip_path, new_zip_path)
-
-    # clean build folder
-    shutil.rmtree(win_dist_dir)
-
-    # Clean Hack
-    os.remove('C:\\Python34\\Lib\\site-packages\\flask\\ext\\httpauth.py')
+    return server_configfile
 
 
-# Download bootstrap database
-def bootstrap(overwrite=True, ask_confirmation=False):
-    if ask_confirmation:
-        question = 'Would you like to bootstrap your local Counterparty database from `https://s3.amazonaws.com/counterparty-bootstrap/`? (y/N): '
-        if input(question).lower() != 'y':
-            return
-    util.bootstrap(testnet=False)
-    util.bootstrap(testnet=True)
+def read_config_file(default_config_file, config_file_path=None):
+    if not config_file_path:
+        config_dir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+        if not os.path.isdir(config_dir):
+            os.makedirs(config_dir, mode=0o755)
+        config_file_path = os.path.join(config_dir, default_config_file)
+
+    # clean BOM
+    bufsize = 4096
+    bomlen = len(codecs.BOM_UTF8)
+    with codecs.open(config_file_path, 'r+b') as fp:
+        chunk = fp.read(bufsize)
+        if chunk.startswith(codecs.BOM_UTF8):
+            i = 0
+            chunk = chunk[bomlen:]
+            while chunk:
+                fp.seek(i)
+                fp.write(chunk)
+                i += len(chunk)
+                fp.seek(bomlen, os.SEEK_CUR)
+                chunk = fp.read(bufsize)
+            fp.seek(-bomlen, os.SEEK_CUR)
+            fp.truncate()
+
+    logger.debug(f'Loading configuration file: `{config_file_path}`')
+    configfile = configparser.SafeConfigParser(allow_no_value=True, inline_comment_prefixes=('#', ';'))
+    with codecs.open(config_file_path, 'r', encoding='utf8') as fp:
+        configfile.readfp(fp)
+
+    if not 'Default' in configfile:
+        configfile['Default'] = {}
+    
+    return configfile
+
+
+def add_config_arguments(parser, args, configfile, add_default=False):
+    for arg in args:
+        if add_default:
+            key = arg[0][-1].replace('--', '')
+            if 'action' in arg[1] and arg[1]['action'] == 'store_true' and key in configfile['Default']:
+                arg[1]['default'] = configfile['Default'].getboolean(key)
+            elif key in configfile['Default'] and configfile['Default'][key]:
+                arg[1]['default'] = configfile['Default'][key]
+            elif key in configfile['Default'] and arg[1].get('nargs', '') == '?' and 'const' in arg[1]:
+                arg[1]['default'] = arg[1]['const']  # bit of a hack
+        else:
+            arg[1]['default'] = argparse.SUPPRESS
+        parser.add_argument(*arg[0], **arg[1])
