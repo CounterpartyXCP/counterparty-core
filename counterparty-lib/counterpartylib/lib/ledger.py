@@ -1445,7 +1445,8 @@ def update_order_match_status(db, id, status):
     update_data = {
         'status': status
     }
-    insert_update(db, 'order_matches', 'id', id, update_data, 'ORDER_MATCH_UPDATE')
+    # add `order_match_id` for backward compatibility
+    insert_update(db, 'order_matches', 'id', id, update_data, 'ORDER_MATCH_UPDATE', {'order_match_id': id})
 
 
 #####################
