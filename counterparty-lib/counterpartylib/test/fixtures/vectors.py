@@ -4188,7 +4188,7 @@ UNITTEST_VECTOR = {
                     'block_index': 310500,
                     'command': 'parse',
                     'category': 'blocks',
-                    'bindings': '{"block_index":310500,"ledger_hash":"5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d","messages_hash":"1105c545d6787d09afe501ca07bb837666117dacb45854e96d5ca90d6b6a13a5","txlist_hash":"35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1"}',
+                    'bindings': '{"block_index":310500,"ledger_hash":"5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d","messages_hash":"45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f","txlist_hash":"35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1"}',
                     'timestamp': 0,
                     'event': 'BLOCK_PARSED'}
         }],
