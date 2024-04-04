@@ -242,7 +242,6 @@ def test_updated_tables_endpoints():
                 "fee_provided": 6800,
                 "fee_provided_remaining": 6800,
                 "status": "open",
-                "MAX(rowid)": 3,
             }
         elif table == "order_matches":
             assert result[0] == {
@@ -265,7 +264,6 @@ def test_updated_tables_endpoints():
                 "match_expire_index": 310512,
                 "fee_paid": 7200,
                 "status": "pending",
-                "MAX(rowid)": 1,
             }
         elif table == "bets":
             assert result[0] == {
@@ -286,7 +284,6 @@ def test_updated_tables_endpoints():
                 "expire_index": 310119,
                 "fee_fraction_int": 5000000,
                 "status": "filled",
-                "MAX(rowid)": 3,
             }
         elif table == "bet_matches":
             assert result[0] == {
@@ -331,7 +328,6 @@ def test_updated_tables_endpoints():
                 "last_status_tx_hash": None,
                 "origin": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
                 "dispense_count": 0,
-                "MAX(rowid)": 1,
             }
 
 
@@ -342,49 +338,41 @@ def test_new_get_balances_by_address():
     result = requests.get(url)  # noqa: S113
     assert result.json() == [
         {
-            "MAX(rowid)": 68,
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "A95428956661682277",
             "quantity": 100000000,
         },
         {
-            "MAX(rowid)": 7,
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "CALLABLE",
             "quantity": 1000,
         },
         {
-            "MAX(rowid)": 44,
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "DIVISIBLE",
             "quantity": 98800000000,
         },
         {
-            "MAX(rowid)": 9,
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "LOCKED",
             "quantity": 1000,
         },
         {
-            "MAX(rowid)": 27,
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "MAXI",
             "quantity": 9223372036854775807,
         },
         {
-            "MAX(rowid)": 24,
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "NODIVISIBLE",
             "quantity": 985,
         },
         {
-            "MAX(rowid)": 66,
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "PARENT",
             "quantity": 100000000,
         },
         {
-            "MAX(rowid)": 67,
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "XCP",
             "quantity": 91875000000,
@@ -399,61 +387,51 @@ def test_new_get_balances_by_asset():
     result = requests.get(url)  # noqa: S113
     assert result.json() == [
         {
-            "MAX(rowid)": 19,
             "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
             "asset": "XCP",
             "quantity": 300000000,
         },
         {
-            "MAX(rowid)": 46,
             "address": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
             "asset": "XCP",
             "quantity": 46449548498,
         },
         {
-            "MAX(rowid)": 67,
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "XCP",
             "quantity": 91875000000,
         },
         {
-            "MAX(rowid)": 64,
             "address": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj",
             "asset": "XCP",
             "quantity": 92945878046,
         },
         {
-            "MAX(rowid)": 39,
             "address": "mrPk7hTeZWjjSCrMTC2ET4SAUThQt7C4uK",
             "asset": "XCP",
             "quantity": 14999857,
         },
         {
-            "MAX(rowid)": 54,
             "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
             "asset": "XCP",
             "quantity": 99999990,
         },
         {
-            "MAX(rowid)": 40,
             "address": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
             "asset": "XCP",
             "quantity": 92999130360,
         },
         {
-            "MAX(rowid)": 50,
             "address": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
             "asset": "XCP",
             "quantity": 92949122099,
         },
         {
-            "MAX(rowid)": 56,
             "address": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM",
             "asset": "XCP",
             "quantity": 92999138812,
         },
         {
-            "MAX(rowid)": 51,
             "address": "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx",
             "asset": "XCP",
             "quantity": 92999030129,
@@ -527,7 +505,6 @@ def test_new_get_asset_orders():
         "fee_provided": 6800,
         "fee_provided_remaining": 6800,
         "status": "open",
-        "MAX(rowid)": 3,
     }
 
 
@@ -582,7 +559,6 @@ def test_new_get_order_matches():
         "match_expire_index": 310512,
         "fee_paid": 7200,
         "status": "pending",
-        "MAX(rowid)": 1,
     }
 
 
