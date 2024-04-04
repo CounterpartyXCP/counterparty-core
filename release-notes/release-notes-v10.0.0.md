@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v10.0.0 (2024-03-??)
+# Release Notes - Counterparty Core v10.0.0 (2024-04-03)
 
 Counterparty Core v10.0.0 is a very large release comprising many improvements across different portions of the codebase. “Counterparty Core” is also the new name for the codebase and repository that is the result of a merge between `counterparty-lib`, `counterparty-cli` and a new Rust library, `counterparty-rs`.
 
@@ -35,7 +35,7 @@ Because this release includes numerous changes to the database schema, a full da
     * Build and publish Docker image
     * Enable `testnet` test book
     * Test `docker-compose.yml` in Google Compute Engine VM
-* Add checkpoints for `mainnet` up to block 834,500 and for `testnet` up to block 2,580,000
+* Add checkpoints for `mainnet` up to block 837,000 and for `testnet` up to block 2,580,000
 * Rewrite README
 
 
