@@ -557,12 +557,17 @@ def clean_table_from(cursor, table, block_index):
     cursor.execute(f'''DELETE FROM {table} WHERE block_index >= ?''', (block_index,)) # nosec B608
 
 
-def clean_messages_tables(cursor, block_index=0):
+def clean_messages_tables(db, block_index=0):
     # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
-    cursor.execute('''PRAGMA foreign_keys=OFF''')
-    for table in TABLES:
-        clean_table_from(cursor, table, block_index)
-    cursor.execute('''PRAGMA foreign_keys=ON''')
+    block_index = max(block_index, config.BLOCK_FIRST)
+    if block_index == config.BLOCK_FIRST:
+        rebuild_database(db, include_transactions=False)
+    else:
+        cursor = db.cursor()
+        cursor.execute('''PRAGMA foreign_keys=OFF''')
+        for table in TABLES:
+            clean_table_from(cursor, table, block_index)
+        cursor.execute('''PRAGMA foreign_keys=ON''')
 
 
 def clean_transactions_tables(cursor, block_index=0):
@@ -573,10 +578,13 @@ def clean_transactions_tables(cursor, block_index=0):
     cursor.execute('''PRAGMA foreign_keys=ON''')
 
 
-def rebuild_database(db):
+def rebuild_database(db, include_transactions=True):
     cursor = db.cursor()
     cursor.execute('''PRAGMA foreign_keys=OFF''')
-    for table in TABLES + ['transaction_outputs', 'transactions', 'blocks']:
+    tables_to_clean = list(TABLES)
+    if include_transactions:
+        tables_to_clean += ['transaction_outputs', 'transactions', 'blocks']
+    for table in tables_to_clean:
         cursor.execute(f'DROP TABLE {table}') # nosec B608
     cursor.execute('''PRAGMA foreign_keys=ON''')
     initialise(db)
@@ -591,8 +599,8 @@ def rollback(db, block_index=0):
         if block_index == config.BLOCK_FIRST:
             rebuild_database(db)
         else:
+            clean_messages_tables(db, block_index=block_index)
             cursor = db.cursor()
-            clean_messages_tables(cursor, block_index=block_index)
             clean_transactions_tables(cursor, block_index=block_index)
             cursor.close()
         logger.info(f'Database rolled back to block_index {block_index}')
@@ -625,7 +633,7 @@ def reparse(db, block_index=0):
     # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
     step = f"Rolling database back to block {block_index}..."
     with Halo(text=step, spinner=SPINNER_STYLE):
-        clean_messages_tables(cursor, block_index=block_index)
+        clean_messages_tables(db, block_index=block_index)
     print(f'{OK_GREEN} {step}')
 
     # reparse blocks
