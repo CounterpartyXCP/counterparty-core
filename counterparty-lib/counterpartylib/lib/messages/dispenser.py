@@ -378,7 +378,8 @@ def parse (db, tx, message):
                             'status': STATUS_OPEN,
                             'give_remaining': escrow_quantity,
                             'oracle_address': oracle_address,
-                            'origin': tx['source']
+                            'origin': tx['source'],
+                            'dispense_count': 0,
                         }
 
                         if ledger.enabled("dispenser_origin_permission_extended"):
