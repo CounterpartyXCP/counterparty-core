@@ -644,7 +644,7 @@ def reparse(db, block_index=0):
     step = f"Reparsing blocks from block {block_index}..."
     with Halo(text=step, spinner=SPINNER_STYLE) as spinner:
         cursor.execute('''SELECT * FROM blocks WHERE block_index > ? ORDER BY block_index''', (block_index,))
-        for block in cursor:
+        for block in cursor.fetchall():
             start_time_block_parse = time.time()
             ledger.CURRENT_BLOCK_INDEX = block['block_index']
             parse_block(db, block['block_index'], block['block_time'])
