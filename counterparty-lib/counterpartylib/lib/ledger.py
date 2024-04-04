@@ -834,6 +834,8 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     cursor.close()
     # Add event to journal
     event_paylod = update_data | {id_name: id_value} | event_info
+    if 'rowid' in event_paylod:
+        del event_paylod['rowid']
     add_to_journal(db, CURRENT_BLOCK_INDEX, "update", table_name, event, update_data | event_paylod)
 
 
