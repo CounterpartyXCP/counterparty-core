@@ -37,10 +37,10 @@ def sortkeypicker(keynames):
     return getit
 
 
-def backend(intialize=True):
+def backend(initialize=True):
     mdl = sys.modules[f"counterpartylib.lib.backend.{config.BACKEND_NAME}"]
     global INITIALIZED  # noqa: PLW0603
-    if not INITIALIZED and intialize:
+    if not INITIALIZED and initialize:
         mdl.init()
         INITIALIZED = True
     return mdl
