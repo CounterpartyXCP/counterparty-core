@@ -126,6 +126,8 @@ EVENTS = {
     "ORDER_MATCH_UPDATE": "Order match %(id)s updated. New status: %(status)s",
     "RPS_MATCH_UPDATE": "Updated RPS match %(id)s. New status: %(status)s",
     "RPS_UPDATE": "RPS %(tx_hash)s updated. New status: %(status)s",
+    "BLOCK_PARSED": "Block %(block_index)s parsed, ledger hash is %(ledger_hash)s and txlist hash is %(txlist_hash)s",
+    "TRANSACTION_PARSED": "Transaction %(tx_hash)s parsed. Supported: %(supported)s",
 }
 
 

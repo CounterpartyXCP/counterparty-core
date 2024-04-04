@@ -20,7 +20,7 @@ def test_parse_block(server_db):
     outputs = (
         "44cf374045f44caf86c7b7de61de3e712f4ba3c39523ab95bc68149ef8aede18",
         "9c2c0940e0a2a8f4c6dde1cfd69efe8e3b467fac0950b385554044ab1f863bf5",
-        "c591087a582ea282be1bdc5a5f34b07ea3f5a83fbc345b55efa6d2161ac53ce0",
+        "90ee6aa095b1ba5d16e9902c71dcd0c6fd18550569610863b1c1c57632c1a0f7",
         None,
     )
     try:

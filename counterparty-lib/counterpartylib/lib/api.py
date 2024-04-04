@@ -104,42 +104,42 @@ API_TABLES = [
 
 VIEW_QUERIES = {
     "balances": """
-        SELECT *, MAX(rowid)
+        SELECT *, MAX(rowid) AS rowid
         FROM balances
         GROUP BY address, asset
     """,
     "orders": """
-        SELECT *, MAX(rowid)
+        SELECT *, MAX(rowid) AS rowid
         FROM orders
         GROUP BY tx_hash
     """,
     "order_matches": """
-        SELECT *, MAX(rowid)
+        SELECT *, MAX(rowid) AS rowid
         FROM order_matches
         GROUP BY id
     """,
     "bets": """
-        SELECT *, MAX(rowid)
+        SELECT *, MAX(rowid) AS rowid
         FROM bets
         GROUP BY tx_hash
     """,
     "bets_matches": """
-        SELECT *, MAX(rowid)
+        SELECT *, MAX(rowid) AS rowid
         FROM bet_matches
         GROUP BY id
     """,
     "rps": """
-        SELECT *, MAX(rowid)
+        SELECT *, MAX(rowid) AS rowid
         FROM rps
         GROUP BY tx_hash
     """,
     "rps_matches": """
-        SELECT *, MAX(rowid)
+        SELECT *, MAX(rowid) AS rowid
         FROM rps_matches
         GROUP BY id
     """,
     "dispensers": """
-        SELECT *, MAX(rowid)
+        SELECT *, MAX(rowid) AS rowid
         FROM dispensers
         GROUP BY tx_hash
     """,
@@ -438,7 +438,20 @@ def get_rows(
         # for transactions, handle the data field properly
         return adjust_get_transactions_results(query_result)
 
-    return query_result
+    return remove_rowids(query_result)
+
+
+def remove_rowids(query_result):
+    """Remove the rowid field from the query result."""
+    filtered_results = []
+    for row in list(query_result):
+        if "rowid" in row:
+            del row["rowid"]
+        if "MAX(rowid)" in row:
+            del row["MAX(rowid)"]
+        filtered_results.append(row)
+
+    return filtered_results
 
 
 def adjust_get_balances_results(query_result, db):
@@ -1208,29 +1221,29 @@ class APIServer(threading.Thread):
 
         @app.route("/addresses/<address>/balances", methods=["GET"])
         def handle_address_balances(address):
-            return ledger.get_address_balances(self.db, address)
+            return remove_rowids(ledger.get_address_balances(self.db, address))
 
         @app.route("/assets/<asset>/balances", methods=["GET"])
         def handle_asset_balances(asset):
-            return ledger.get_asset_balances(self.db, asset)
+            return remove_rowids(ledger.get_asset_balances(self.db, asset))
 
         @app.route("/assets/<asset>/", methods=["GET"])
         def handle_asset_info(asset):
-            return get_asset_info(asset=asset)
+            return remove_rowids(get_asset_info(asset=asset))
 
         @app.route("/assets/<asset>/orders", methods=["GET"])
         def handle_asset_orders(asset):
             status = request.args.get("status", "open")
-            return ledger.get_orders_by_asset(self.db, asset, status)
+            return remove_rowids(ledger.get_orders_by_asset(self.db, asset, status))
 
         @app.route("/orders/<tx_hash>", methods=["GET"])
         def handle_order_info(tx_hash):
-            return ledger.get_order(self.db, tx_hash)
+            return remove_rowids(ledger.get_order(self.db, tx_hash))
 
         @app.route("/orders/<tx_hash>/matches", methods=["GET"])
         def handle_order_matches(tx_hash):
             status = request.args.get("status", "pending")
-            return ledger.get_order_matches_by_order(self.db, tx_hash, status)
+            return remove_rowids(ledger.get_order_matches_by_order(self.db, tx_hash, status))
 
         @app.route("/healthz", methods=["GET"])
         def handle_healthz():

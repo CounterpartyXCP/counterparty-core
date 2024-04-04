@@ -848,6 +848,8 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     cursor.close()
     # Add event to journal
     event_paylod = update_data | {id_name: id_value} | event_info
+    if "rowid" in event_paylod:
+        del event_paylod["rowid"]
     add_to_journal(db, CURRENT_BLOCK_INDEX, "update", table_name, event, update_data | event_paylod)
 
 
@@ -1468,7 +1470,10 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
 
 def update_order_match_status(db, id, status):
     update_data = {"status": status}
-    insert_update(db, "order_matches", "id", id, update_data, "ORDER_MATCH_UPDATE")
+    # add `order_match_id` for backward compatibility
+    insert_update(
+        db, "order_matches", "id", id, update_data, "ORDER_MATCH_UPDATE", {"order_match_id": id}
+    )
 
 
 #####################
