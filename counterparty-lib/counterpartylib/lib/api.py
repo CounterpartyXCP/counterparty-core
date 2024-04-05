@@ -6,6 +6,7 @@ from multiprocessing import Process
 
 import flask
 from flask import Flask, request
+from flask import g as flask_globals
 from flask_httpauth import HTTPBasicAuth
 
 from counterpartylib import server
@@ -19,11 +20,8 @@ from counterpartylib.lib import (
 multiprocessing.set_start_method("spawn", force=True)
 
 logger = logging.getLogger(config.LOGGER_NAME)
-app = Flask(__name__)
 auth = HTTPBasicAuth()
-db = None
 api_process = None
-
 
 ROUTES = {
     "/blocks": {
@@ -69,7 +67,7 @@ def verify_password(username, password):
 
 def init_api_access_log():
     """Initialize API logger."""
-    werkzeug_loggers = (logging.getLogger("werkzeug"), app.logger)
+    werkzeug_loggers = (logging.getLogger("werkzeug"), flask.current_app.logger)
 
     # Disable console logging...
     for werkzeug_logger in werkzeug_loggers:  # noqa: E741
@@ -114,22 +112,28 @@ def handle_route(**kwargs):
     if "args" in route:
         for arg in route["args"]:
             function_args[arg[0]] = request.args.get(arg[0], arg[1])
-    result = route["function"](db, **function_args)
+    result = route["function"](get_db(), **function_args)
     return remove_rowids(result)
 
 
+def get_db():
+    """Get the database connection."""
+    if not hasattr(flask_globals, "db"):
+        flask_globals.db = database.get_connection(read_only=True)
+    return flask_globals.db
+
+
 def run_api_server(args):
-    global db  # noqa: PLW0603
+    app = Flask(config.APP_NAME)
     # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
-    init_api_access_log()
-    # Connect to the database
-    db = database.get_connection(read_only=True)
-    # Get the last block index
-    ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
-    # Add routes
-    for path in ROUTES.keys():
-        app.add_url_rule(path, view_func=handle_route)
+    with app.app_context():
+        init_api_access_log()
+        # Get the last block index
+        ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(get_db())
+        # Add routes
+        for path in ROUTES.keys():
+            app.add_url_rule(path, view_func=handle_route)
     # Start the API server
     app.run(host=config.RPC_HOST, port=config.RPC_PORT, debug=False)
 

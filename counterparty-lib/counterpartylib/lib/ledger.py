@@ -631,8 +631,6 @@ def get_asset_info(db, asset):
         asset_info["supply"] = xcp_supply(db)
         return asset_info
 
-    print("ASSET NAME", asset_name)
-
     asset_info["supply"] = asset_supply(db, asset_name)
 
     cursor = db.cursor()
@@ -645,8 +643,6 @@ def get_asset_info(db, asset):
     bindings = ("valid", asset)
     cursor.execute(query, bindings)
     issuance = cursor.fetchone()
-
-    print("ASSET issuance", issuance)
 
     asset_info = asset_info | {
         "asset_longname": issuance["asset_longname"],
