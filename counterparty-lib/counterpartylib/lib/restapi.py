@@ -6,6 +6,7 @@ from multiprocessing import Process
 
 import flask
 from flask import Flask, request
+from flask_httpauth import HTTPBasicAuth
 
 from counterpartylib import server
 from counterpartylib.lib import (
@@ -18,8 +19,10 @@ multiprocessing.set_start_method("spawn", force=True)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 app = Flask(__name__)
+auth = HTTPBasicAuth()
 db = None
 api_process = None
+
 
 ROUTES = {
     "/addresses/<address>/balances": {
@@ -43,6 +46,11 @@ ROUTES = {
         "args": [("status", "pending")],
     },
 }
+
+
+@auth.verify_password
+def verify_password(username, password):
+    return username == config.RPC_USER and password == config.RPC_PASSWORD
 
 
 def init_api_access_log():
@@ -78,6 +86,7 @@ def remove_rowids(query_result):
     return filtered_results
 
 
+@auth.login_required
 def handle_route(**kwargs):
     route = ROUTES.get(str(request.url_rule.rule))
     function_args = dict(kwargs)
