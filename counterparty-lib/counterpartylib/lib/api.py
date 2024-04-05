@@ -10,6 +10,7 @@ from flask_httpauth import HTTPBasicAuth
 
 from counterpartylib import server
 from counterpartylib.lib import (
+    blocks,
     config,
     database,
     ledger,
@@ -41,7 +42,7 @@ ROUTES = {
     "/addresses/<address>/balances": {
         "function": ledger.get_address_balances,
     },
-    "/assets/<asset>/": {
+    "/assets/<asset>": {
         "function": ledger.get_asset_info,
     },
     "/assets/<asset>/balances": {
@@ -89,13 +90,20 @@ def init_api_access_log():
 
 def remove_rowids(query_result):
     """Remove the rowid field from the query result."""
-    filtered_results = []
-    for row in list(query_result):
-        if "rowid" in row:
-            del row["rowid"]
-        if "MAX(rowid)" in row:
-            del row["MAX(rowid)"]
-        filtered_results.append(row)
+    if isinstance(query_result, list):
+        filtered_results = []
+        for row in list(query_result):
+            if "rowid" in row:
+                del row["rowid"]
+            if "MAX(rowid)" in row:
+                del row["MAX(rowid)"]
+            filtered_results.append(row)
+        return filtered_results
+    filtered_results = query_result
+    if "rowid" in filtered_results:
+        del filtered_results["rowid"]
+    if "MAX(rowid)" in filtered_results:
+        del filtered_results["MAX(rowid)"]
     return filtered_results
 
 
@@ -117,6 +125,8 @@ def run_api_server(args):
     init_api_access_log()
     # Connect to the database
     db = database.get_connection(read_only=True)
+    # Get the last block index
+    ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
     # Add routes
     for path in ROUTES.keys():
         app.add_url_rule(path, view_func=handle_route)
@@ -127,6 +137,7 @@ def run_api_server(args):
 def start(args):
     api_process = Process(target=run_api_server, args=(vars(args),))
     api_process.start()
+    return api_process
 
 
 def stop():

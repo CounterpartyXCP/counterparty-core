@@ -2,11 +2,10 @@
 Test suite configuration
 """
 
+import argparse
 import binascii
 import json
 import logging
-import os  # noqa: F401
-import pprint  # noqa: F401
 import time
 from datetime import datetime
 
@@ -18,6 +17,7 @@ from Crypto.Cipher import ARC4
 from pycoin.coins.bitcoin import Tx  # noqa: F401
 
 from counterpartylib import server
+from counterpartylib.lib import api as api_v2
 from counterpartylib.lib import arc4, config, database, ledger, log, script, util
 from counterpartylib.lib.v1 import api
 from counterpartylib.test import util_test
@@ -236,11 +236,69 @@ def api_server(request, cp_server):
 
 
 @pytest.fixture(scope="module")
+def api_server_v2(request, cp_server):
+    default_config = {
+        "testnet": False,
+        "testcoin": False,
+        "regtest": False,
+        "api_limit_rows": 1000,
+        "backend_connect": None,
+        "backend_port": None,
+        "backend_user": None,
+        "backend_password": None,
+        "indexd_connect": None,
+        "indexd_port": None,
+        "backend_ssl": False,
+        "backend_ssl_no_verify": False,
+        "backend_poll_interval": None,
+        "rpc_host": None,
+        "rpc_user": None,
+        "rpc_password": None,
+        "rpc_no_allow_cors": False,
+        "force": False,
+        "requests_timeout": config.DEFAULT_REQUESTS_TIMEOUT,
+        "rpc_batch_size": config.DEFAULT_RPC_BATCH_SIZE,
+        "check_asset_conservation": config.DEFAULT_CHECK_ASSET_CONSERVATION,
+        "backend_ssl_verify": None,
+        "rpc_allow_cors": None,
+        "p2sh_dust_return_pubkey": None,
+        "utxo_locks_max_addresses": config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES,
+        "utxo_locks_max_age": config.DEFAULT_UTXO_LOCKS_MAX_AGE,
+        "estimate_fee_per_kb": None,
+        "customnet": None,
+        "verbose": False,
+        "quiet": False,
+        "log_file": None,
+        "api_log_file": None,
+        "no_log_files": False,
+        "json_log": False,
+        "no_check_asset_conservation": True,
+        "action": "",
+    }
+    server_config = (
+        default_config
+        | util_test.COUNTERPARTYD_OPTIONS
+        | {
+            "database_file": request.module.FIXTURE_DB,
+            "rpc_port": TEST_RPC_PORT + 10,
+        }
+    )
+    args = argparse.Namespace(**server_config)
+    api_process = api_v2.start(args)
+    time.sleep(1)
+
+    request.addfinalizer(lambda: api_process.terminate())
+
+    return api_process
+
+
+@pytest.fixture(scope="module")
 def cp_server(request):
     dbfile = request.module.FIXTURE_DB
     sqlfile = request.module.FIXTURE_SQL_FILE
     options = getattr(request.module, "FIXTURE_OPTIONS", {})
 
+    print(f"cp_server: {dbfile} {sqlfile} {options}")
     db = util_test.init_database(sqlfile, dbfile, options)  # noqa: F841
 
     # monkeypatch this here because init_mock_functions can run before cp_server
