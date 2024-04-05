@@ -25,6 +25,19 @@ api_process = None
 
 
 ROUTES = {
+    "/blocks": {
+        "function": ledger.get_blocks,
+        "args": [("last", None), ("limit", 10)],
+    },
+    "/blocks/<int:block_index>": {
+        "function": ledger.get_block,
+    },
+    "/blocks/<int:block_index>/transactions": {
+        "function": ledger.get_transactions_by_block,
+    },
+    "/blocks/<int:block_index>/events": {
+        "function": ledger.get_messages,
+    },
     "/addresses/<address>/balances": {
         "function": ledger.get_address_balances,
     },

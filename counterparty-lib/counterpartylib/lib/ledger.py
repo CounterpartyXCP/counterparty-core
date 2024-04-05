@@ -772,9 +772,44 @@ def get_burns(db, status=None, source=None):
     return cursor.fetchall()
 
 
-###########################
-#       TRANSACTIONS      #
-###########################
+######################################
+#       BLOCKS AND TRANSACTIONS      #
+######################################
+
+
+def get_blocks(db, last=None, limit=10):
+    cursor = db.cursor()
+    bindings = []
+    query = """
+        SELECT * FROM blocks WHERE 
+        ORDER BY block_index DESC
+    """
+    if last is not None:
+        query += "WHERE BLOCK_INDEX <= ?"
+        bindings.append(last)
+    query += "LIMIT ?"
+    bindings.append(limit)
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+
+def get_block(db, block_index):
+    blocks = get_blocks(db, last=block_index, limit=1)
+    if blocks:
+        return blocks[0]
+    return None
+
+
+def get_transactions_by_block(db, block_index):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM transactions
+        WHERE block_index = ?
+        ORDER BY tx_index ASC
+    """
+    bindings = (block_index,)
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
 
 
 def get_vouts(db, tx_hash):
@@ -802,6 +837,13 @@ def get_transactions(db, tx_hash=None):
     query = f"""SELECT * FROM transactions WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
+
+
+def get_transaction(db, tx_hash):
+    transactions = get_transactions(db, tx_hash)
+    if transactions:
+        return transactions[0]
+    return None
 
 
 def get_transaction_source(db, tx_hash):
