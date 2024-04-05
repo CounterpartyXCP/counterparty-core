@@ -7,17 +7,16 @@ import time
 import bitcoin as bitcoinlib
 import pytest
 
-from counterpartylib.lib import (  # noqa: E402
+from counterpartylib.lib import (
     backend,
     config,
     exceptions,
     gettxinfo,
     ledger,
     script,
-    util,  # noqa: F401
 )
-from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
-from counterpartylib.lib.transaction_helper import p2sh_encoding, serializer  # noqa: E402, F401
+from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
+from counterpartylib.lib.transaction_helper import p2sh_encoding
 from counterpartylib.lib.v1 import api
 
 # this is require near the top to do setup of the test suite

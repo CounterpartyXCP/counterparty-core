@@ -228,7 +228,7 @@ CONFIG_ARGS = [
         },
     ],
     [
-        ("--legacy-api",),
+        ("--enable-v1-api",),
         {"action": "store_true", "default": False, "help": "Use legacy API (Deprecated)"},
     ],
 ]

@@ -666,7 +666,7 @@ def start_all(args):
     # initilise_config
     transaction.initialise()
 
-    if args.legacy_api:
+    if args.enable_v1_api:
         # API Status Poller.
         api_status_poller = api_v1.APIStatusPoller()
         api_status_poller.daemon = True
