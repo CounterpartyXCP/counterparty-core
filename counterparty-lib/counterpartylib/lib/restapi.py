@@ -21,6 +21,26 @@ app = Flask(__name__)
 db = None
 api_process = None
 
+ROUTES = {
+    "/addresses/<address>/balances": {
+        "function": ledger.get_address_balances,
+    },
+    "/assets/<asset>/balances": {
+        "function": ledger.get_asset_balances,
+    },
+    "/assets/<asset>/orders": {
+        "function": ledger.get_orders_by_asset,
+        "args": [("status", "open")],
+    },
+    "/orders/<tx_hash>": {
+        "function": ledger.get_order,
+    },
+    "/orders/<tx_hash>/matches": {
+        "function": ledger.get_order_matches_by_order,
+        "args": [("status", "pending")],
+    },
+}
+
 
 def init_api_access_log(app):
     """Initialize API logger."""
@@ -55,36 +75,19 @@ def remove_rowids(query_result):
     return filtered_results
 
 
-@app.route("/addresses/<address>/balances", methods=["GET"])
-def handle_address_balances(address):
-    return remove_rowids(ledger.get_address_balances(db, address))
-
-
-@app.route("/assets/<asset>/balances", methods=["GET"])
-def handle_asset_balances(asset):
-    return remove_rowids(ledger.get_asset_balances(db, asset))
-
-
 # @app.route("/assets/<asset>/", methods=["GET"])
 # def handle_asset_info(asset):
 #    return remove_rowids(get_asset_info(asset=asset))
 
 
-@app.route("/assets/<asset>/orders", methods=["GET"])
-def handle_asset_orders(asset):
-    status = request.args.get("status", "open")
-    return remove_rowids(ledger.get_orders_by_asset(db, asset, status))
-
-
-@app.route("/orders/<tx_hash>", methods=["GET"])
-def handle_order_info(tx_hash):
-    return remove_rowids(ledger.get_order(db, tx_hash))
-
-
-@app.route("/orders/<tx_hash>/matches", methods=["GET"])
-def handle_order_matches(tx_hash):
-    status = request.args.get("status", "pending")
-    return remove_rowids(ledger.get_order_matches_by_order(db, tx_hash, status))
+def handle_route(**kwargs):
+    route = ROUTES.get(str(request.url_rule.rule))
+    function_args = dict(kwargs)
+    if "args" in route:
+        for arg in route["args"]:
+            function_args[arg[0]] = request.args.get(arg[0], arg[1])
+    result = route["function"](db, **function_args)
+    return remove_rowids(result)
 
 
 def run_api_server(args):
@@ -94,9 +97,11 @@ def run_api_server(args):
     init_api_access_log(app)
     # Connect to the database
     db = database.get_connection(read_only=True)
+    # Add routes
+    for path in ROUTES.keys():
+        app.add_url_rule(path, view_func=handle_route)
     # Start the API server
     app.run(host=config.RPC_HOST, port=config.RPC_PORT, debug=False)
-    print(f"REST API started at {config.RPC_HOST}:{config.RPC_PORT}")
 
 
 def start(args):
@@ -107,4 +112,3 @@ def start(args):
 def stop():
     if api_process and api_process.is_alive():
         api_process.terminate()
-    print(f"REST API stopped at {config.RPC_HOST}:{config.RPC_PORT}")
