@@ -803,7 +803,10 @@ def check_outputs(
     try:
         tested_module = sys.modules[f"counterpartylib.lib.{tx_name}"]
     except KeyError:  # TODO: hack
-        tested_module = sys.modules[f"counterpartylib.lib.messages.{tx_name}"]
+        if tx_name == "api":
+            tested_module = sys.modules["counterpartylib.lib.v1.api"]
+        else:
+            tested_module = sys.modules[f"counterpartylib.lib.messages.{tx_name}"]
     tested_method = getattr(tested_module, method)
 
     with MockProtocolChangesContext(**(mock_protocol_changes or {})):

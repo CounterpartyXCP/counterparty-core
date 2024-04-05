@@ -18,7 +18,8 @@ from Crypto.Cipher import ARC4
 from pycoin.coins.bitcoin import Tx  # noqa: F401
 
 from counterpartylib import server
-from counterpartylib.lib import api, arc4, config, database, ledger, log, script, util
+from counterpartylib.lib import arc4, config, database, ledger, log, script, util
+from counterpartylib.lib.v1 import api
 from counterpartylib.test import util_test
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS
 from counterpartylib.test.fixtures.scenarios import INTEGRATION_SCENARIOS

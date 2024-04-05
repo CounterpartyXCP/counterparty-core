@@ -29,11 +29,11 @@ from counterpartylib.lib import (
     database,
     ledger,
     log,
-    restapi,
     transaction,
     util,
 )
 from counterpartylib.lib import kickstart as kickstarter
+from counterpartylib.lib.v1 import api as api_v1
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -58,7 +58,7 @@ def sigterm_handler(_signo, _stack_frame):
         assert False  # noqa: B011
     logger.info(f"Received {signal_name}.")
 
-    restapi.stop()
+    api.stop()
 
     if "api_server" in globals():
         logger.info("Stopping API server.")
@@ -668,17 +668,17 @@ def start_all(args):
 
     if args.legacy_api:
         # API Status Poller.
-        api_status_poller = api.APIStatusPoller()
+        api_status_poller = api_v1.APIStatusPoller()
         api_status_poller.daemon = True
         api_status_poller.start()
 
         # API Server.
-        api_server = api.APIServer()
+        api_server = api_v1.APIServer()
         api_server.daemon = True
         api_server.start()
     else:
         # REST API Server.
-        restapi.start(args)
+        api.start(args)
 
     # Server
 

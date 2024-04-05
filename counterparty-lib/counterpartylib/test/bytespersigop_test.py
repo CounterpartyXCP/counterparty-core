@@ -1,19 +1,14 @@
 import binascii
-import pprint  # noqa: F401
 import tempfile
 
 import bitcoin as bitcoinlib
-import pytest  # noqa: F401
 
-from counterpartylib.lib import api, blocks, exceptions, ledger, transaction, util  # noqa: F401
-from counterpartylib.test import (
-    conftest,  # noqa: F401
-    util_test,
-)
+from counterpartylib.lib import ledger
+from counterpartylib.lib.v1 import api
+from counterpartylib.test import util_test
 from counterpartylib.test.fixtures.params import ADDR
 
 # this is require near the top to do setup of the test suite
-from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: F401
 from counterpartylib.test.util_test import CURR_DIR
 
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"
