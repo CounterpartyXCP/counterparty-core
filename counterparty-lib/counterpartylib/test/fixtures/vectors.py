@@ -9,17 +9,16 @@ The function supports three types of output checks:
 """
 
 import binascii
-import json  # noqa: F401
 from fractions import Fraction
 
 import bitcoin as bitcoinlib
 
-from counterpartylib.lib import address, config, exceptions, script  # noqa: F401
-from counterpartylib.lib.api import APIError
+from counterpartylib.lib import config, exceptions, script
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
 from counterpartylib.lib.ledger import CreditError, DebitError
 from counterpartylib.lib.messages import issuance
 from counterpartylib.lib.util import QuantityError, RPCError
+from counterpartylib.lib.v1.api import APIError
 
 from .params import (
     ADDR,
@@ -7696,7 +7695,7 @@ UNITTEST_VECTOR = {
             },
         ],
     },
-    "api": {
+    "api_v1": {
         "get_rows": [
             {
                 "in": ("balances", None, "AND", None, None, None, None, None, 1000, 0, True),

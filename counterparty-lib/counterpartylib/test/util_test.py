@@ -803,7 +803,7 @@ def check_outputs(
     try:
         tested_module = sys.modules[f"counterpartylib.lib.{tx_name}"]
     except KeyError:  # TODO: hack
-        if tx_name == "api":
+        if tx_name == "api_v1":
             tested_module = sys.modules["counterpartylib.lib.v1.api"]
         else:
             tested_module = sys.modules[f"counterpartylib.lib.messages.{tx_name}"]
