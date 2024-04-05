@@ -626,11 +626,12 @@ def get_asset_info(db, asset):
     if asset_name == config.BTC:
         asset_info["supply"] = backend.get_btc_supply(normalize=False)
         return asset_info
-    elif asset_name == config.XCP:
+
+    if asset_name == config.XCP:
         asset_info["supply"] = xcp_supply(db)
         return asset_info
-    else:
-        asset_info["supply"] = asset_supply(db, asset_name)
+
+    asset_info["supply"] = asset_supply(db, asset_name)
 
     cursor = db.cursor()
     query = """
