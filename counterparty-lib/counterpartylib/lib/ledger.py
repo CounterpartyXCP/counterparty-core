@@ -6,7 +6,7 @@ import os
 import time
 from decimal import Decimal as D
 
-from counterpartylib.lib import config, exceptions, log, util
+from counterpartylib.lib import backend, config, exceptions, log, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -609,18 +609,50 @@ def get_asset_issuances_quantity(db, asset):
 
 
 def get_asset_info(db, asset):
-    if asset == config.BTC or asset == config.XCP:
-        return {"divisible": True}
+    asset_name = resolve_subasset_longname(db, asset)
+
+    # Defaults.
+    asset_info = {
+        "asset": asset_name,
+        "asset_longname": None,
+        "owner": None,
+        "divisible": True,
+        "locked": False,
+        "supply": 0,
+        "description": "",
+        "issuer": None,
+    }
+
+    if asset_name == config.BTC:
+        asset_info["supply"] = backend.get_btc_supply(normalize=False)
+        return asset_info
+    elif asset_name == config.XCP:
+        asset_info["supply"] = xcp_supply(db)
+        return asset_info
+    else:
+        asset_info["supply"] = asset_supply(db, asset_name)
+
     cursor = db.cursor()
     query = """
         SELECT * FROM issuances
         WHERE (status = ? AND asset = ?)
-        ORDER BY tx_index DESC
+        ORDER BY rowid DESC
+        LIMIT 1
     """
     bindings = ("valid", asset)
     cursor.execute(query, bindings)
-    issuances = cursor.fetchall()
-    return issuances[0]
+    issuance = cursor.fetchone()
+
+    asset_info = asset_info | {
+        "asset_longname": issuance["asset_longname"],
+        "owner": issuance["issuer"],
+        "divisible": bool(issuance["divisible"]),
+        "locked": bool(issuance["locked"]),
+        "description": issuance["description"],
+        "issuer": issuance["issuer"],
+    }
+
+    return asset_info
 
 
 def get_issuances(db, asset=None, status=None, locked=None, first=False, last=False):

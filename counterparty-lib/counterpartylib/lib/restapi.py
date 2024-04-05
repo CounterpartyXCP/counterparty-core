@@ -25,6 +25,9 @@ ROUTES = {
     "/addresses/<address>/balances": {
         "function": ledger.get_address_balances,
     },
+    "/assets/<asset>/": {
+        "function": ledger.get_asset_info,
+    },
     "/assets/<asset>/balances": {
         "function": ledger.get_asset_balances,
     },
@@ -42,7 +45,7 @@ ROUTES = {
 }
 
 
-def init_api_access_log(app):
+def init_api_access_log():
     """Initialize API logger."""
     werkzeug_loggers = (logging.getLogger("werkzeug"), app.logger)
 
@@ -75,11 +78,6 @@ def remove_rowids(query_result):
     return filtered_results
 
 
-# @app.route("/assets/<asset>/", methods=["GET"])
-# def handle_asset_info(asset):
-#    return remove_rowids(get_asset_info(asset=asset))
-
-
 def handle_route(**kwargs):
     route = ROUTES.get(str(request.url_rule.rule))
     function_args = dict(kwargs)
@@ -94,7 +92,7 @@ def run_api_server(args):
     global db  # noqa: PLW0603
     # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
-    init_api_access_log(app)
+    init_api_access_log()
     # Connect to the database
     db = database.get_connection(read_only=True)
     # Add routes
