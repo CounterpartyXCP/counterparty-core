@@ -154,5 +154,7 @@ PROTOCOL_CHANGES_URL = "https://counterparty.io/protocol_changes.json"
 BOOTSTRAP_URL_MAINNET = "https://bootstrap.counterparty.io/counterparty.latest.tar.gz"
 BOOTSTRAP_URL_TESTNET = "https://bootstrap.counterparty.io/counterparty-testnet.latest.tar.gz"
 
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
+API_MAX_LOG_SIZE = (
+    10 * 1024 * 1024
+)  # max log size of 20 MB before rotation (make configurable later)
+API_MAX_LOG_COUNT = 10

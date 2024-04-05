@@ -28,7 +28,8 @@ from counterpartylib.lib import (
     config,
     database,
     ledger,
-    log,  # noqa: F401
+    log,
+    restapi,
     transaction,
     util,
 )
@@ -57,10 +58,13 @@ def sigterm_handler(_signo, _stack_frame):
         assert False  # noqa: B011
     logger.info(f"Received {signal_name}.")
 
+    restapi.stop()
+
     if "api_server" in globals():
         logger.info("Stopping API server.")
         api_server.stop()  # noqa: F821
         api_status_poller.stop()  # noqa: F821
+
     logger.info("Stopping backend.")
     backend.stop()
     logger.info("Shutting down.")
@@ -544,6 +548,60 @@ def initialise_config(
     logger.info(f"Running v{config.VERSION_STRING} of counterparty-lib.")
 
 
+def initialise_log_and_config(args):
+    config_args = dict(
+        database_file=args.database_file,
+        testnet=args.testnet,
+        testcoin=args.testcoin,
+        regtest=args.regtest,
+        customnet=args.customnet,
+        api_limit_rows=args.api_limit_rows,
+        backend_connect=args.backend_connect,
+        backend_port=args.backend_port,
+        backend_user=args.backend_user,
+        backend_password=args.backend_password,
+        backend_ssl=args.backend_ssl,
+        backend_ssl_no_verify=args.backend_ssl_no_verify,
+        backend_poll_interval=args.backend_poll_interval,
+        indexd_connect=args.indexd_connect,
+        indexd_port=args.indexd_port,
+        rpc_host=args.rpc_host,
+        rpc_port=args.rpc_port,
+        rpc_user=args.rpc_user,
+        rpc_password=args.rpc_password,
+        rpc_no_allow_cors=args.rpc_no_allow_cors,
+        requests_timeout=args.requests_timeout,
+        rpc_batch_size=args.rpc_batch_size,
+        check_asset_conservation=not args.no_check_asset_conservation,
+        force=args.force,
+        p2sh_dust_return_pubkey=args.p2sh_dust_return_pubkey,
+        utxo_locks_max_addresses=args.utxo_locks_max_addresses,
+        utxo_locks_max_age=args.utxo_locks_max_age,
+    )
+    log_args = dict(
+        verbose=args.verbose,
+        quiet=args.quiet,
+        log_file=args.log_file,
+        api_log_file=args.api_log_file,
+        no_log_files=args.no_log_files,
+        testnet=args.testnet,
+        testcoin=args.testcoin,
+        regtest=args.regtest,
+        json_log=args.json_log,
+    )
+    # initialise log config
+    initialise_log_config(**log_args)
+    # set up logging
+    log.set_up(
+        verbose=config.VERBOSE,
+        quiet=config.QUIET,
+        log_file=config.LOG,
+        log_in_console=args.action == "start",
+    )
+    # initialise other config
+    initialise_config(**config_args)
+
+
 def initialise_db():
     if config.FORCE:
         cprint("THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.", "yellow")
@@ -595,11 +653,11 @@ def connect_to_addrindexrs():
     print(f"{OK_GREEN} {step}")
 
 
-def start_all(catch_up="normal"):
+def start_all(args):
     # Backend.
     connect_to_backend()
 
-    if not os.path.exists(config.DATABASE) and catch_up == "bootstrap":
+    if not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap":
         bootstrap(no_confirm=True)
 
     db = initialise_db()
@@ -608,17 +666,22 @@ def start_all(catch_up="normal"):
     # initilise_config
     transaction.initialise()
 
-    # API Status Poller.
-    api_status_poller = api.APIStatusPoller()
-    api_status_poller.daemon = True
-    api_status_poller.start()
+    if args.legacy_api:
+        # API Status Poller.
+        api_status_poller = api.APIStatusPoller()
+        api_status_poller.daemon = True
+        api_status_poller.start()
 
-    # API Server.
-    api_server = api.APIServer()
-    api_server.daemon = True
-    api_server.start()
+        # API Server.
+        api_server = api.APIServer()
+        api_server.daemon = True
+        api_server.start()
+    else:
+        # REST API Server.
+        restapi.start(args)
 
     # Server
+
     blocks.follow(db)
 
 

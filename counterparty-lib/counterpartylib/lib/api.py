@@ -184,10 +184,7 @@ COMMONS_ARGS = [
     "p2sh_pretx_txid",
 ]
 
-API_MAX_LOG_SIZE = (
-    10 * 1024 * 1024
-)  # max log size of 20 MB before rotation (make configurable later)
-API_MAX_LOG_COUNT = 10
+
 JSON_RPC_ERROR_API_COMPOSE = -32001  # code to use for error composing transaction result
 
 CURRENT_API_STATUS_CODE = None  # is updated by the APIStatusPoller
@@ -652,7 +649,7 @@ def init_api_access_log(app):
     # Log to file, if configured...
     if config.API_LOG:
         handler = logging_handlers.RotatingFileHandler(
-            config.API_LOG, "a", API_MAX_LOG_SIZE, API_MAX_LOG_COUNT
+            config.API_LOG, "a", config.API_MAX_LOG_SIZE, config.API_MAX_LOG_COUNT
         )
         for l in loggers:  # noqa: E741
             handler.setLevel(logging.DEBUG)
@@ -1213,32 +1210,6 @@ class APIServer(threading.Thread):
                 )
 
         ##### REST ROUTES #####
-
-        @app.route("/addresses/<address>/balances", methods=["GET"])
-        def handle_address_balances(address):
-            return remove_rowids(ledger.get_address_balances(self.db, address))
-
-        @app.route("/assets/<asset>/balances", methods=["GET"])
-        def handle_asset_balances(asset):
-            return remove_rowids(ledger.get_asset_balances(self.db, asset))
-
-        @app.route("/assets/<asset>/", methods=["GET"])
-        def handle_asset_info(asset):
-            return remove_rowids(get_asset_info(asset=asset))
-
-        @app.route("/assets/<asset>/orders", methods=["GET"])
-        def handle_asset_orders(asset):
-            status = request.args.get("status", "open")
-            return remove_rowids(ledger.get_orders_by_asset(self.db, asset, status))
-
-        @app.route("/orders/<tx_hash>", methods=["GET"])
-        def handle_order_info(tx_hash):
-            return remove_rowids(ledger.get_order(self.db, tx_hash))
-
-        @app.route("/orders/<tx_hash>/matches", methods=["GET"])
-        def handle_order_matches(tx_hash):
-            status = request.args.get("status", "pending")
-            return remove_rowids(ledger.get_order_matches_by_order(self.db, tx_hash, status))
 
         @app.route("/healthz", methods=["GET"])
         def handle_healthz():
