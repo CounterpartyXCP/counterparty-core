@@ -284,12 +284,13 @@ def api_server_v2(request, cp_server):
         }
     )
     args = argparse.Namespace(**server_config)
-    api_process = api_v2.start(args)
+    api_server = api_v2.APIServer()
+    api_server.start(args)
     time.sleep(1)
 
-    request.addfinalizer(lambda: api_process.terminate())
+    request.addfinalizer(lambda: api_server.stop())
 
-    return api_process
+    return api_server
 
 
 @pytest.fixture(scope="module")

@@ -58,11 +58,10 @@ def sigterm_handler(_signo, _stack_frame):
         assert False  # noqa: B011
     logger.info(f"Received {signal_name}.")
 
-    api.stop()
-
     if "api_server" in globals():
         logger.info("Stopping API server.")
         api_server.stop()  # noqa: F821
+    if "api_status_poller" in globals():
         api_status_poller.stop()  # noqa: F821
 
     logger.info("Stopping backend.")
@@ -678,10 +677,10 @@ def start_all(args):
         api_server.start()
     else:
         # REST API Server.
-        api.start(args)
+        api_server = api.APIServer()
+        api_server.start(args)
 
     # Server
-
     blocks.follow(db)
 
 

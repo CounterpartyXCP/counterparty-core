@@ -21,7 +21,6 @@ multiprocessing.set_start_method("spawn", force=True)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 auth = HTTPBasicAuth()
-api_process = None
 
 ROUTES = {
     "/blocks": {
@@ -58,11 +57,6 @@ ROUTES = {
         "args": [("status", "pending")],
     },
 }
-
-
-@auth.verify_password
-def verify_password(username, password):
-    return username == config.RPC_USER and password == config.RPC_PASSWORD
 
 
 def init_api_access_log():
@@ -105,6 +99,18 @@ def remove_rowids(query_result):
     return filtered_results
 
 
+def get_db():
+    """Get the database connection."""
+    if not hasattr(flask_globals, "db"):
+        flask_globals.db = database.get_connection(read_only=True)
+    return flask_globals.db
+
+
+@auth.verify_password
+def verify_password(username, password):
+    return username == config.RPC_USER and password == config.RPC_PASSWORD
+
+
 @auth.login_required
 def handle_route(**kwargs):
     route = ROUTES.get(str(request.url_rule.rule))
@@ -114,13 +120,6 @@ def handle_route(**kwargs):
             function_args[arg[0]] = request.args.get(arg[0], arg[1])
     result = route["function"](get_db(), **function_args)
     return remove_rowids(result)
-
-
-def get_db():
-    """Get the database connection."""
-    if not hasattr(flask_globals, "db"):
-        flask_globals.db = database.get_connection(read_only=True)
-    return flask_globals.db
 
 
 def run_api_server(args):
@@ -138,12 +137,18 @@ def run_api_server(args):
     app.run(host=config.RPC_HOST, port=config.RPC_PORT, debug=False)
 
 
-def start(args):
-    api_process = Process(target=run_api_server, args=(vars(args),))
-    api_process.start()
-    return api_process
+class APIServer(object):
+    def __init__(self):
+        self.process = None
 
+    def start(self, args):
+        if self.process is not None:
+            raise Exception("API server is already running")
+        self.process = Process(target=run_api_server, args=(vars(args),))
+        self.process.start()
+        return self.process
 
-def stop():
-    if api_process and api_process.is_alive():
-        api_process.terminate()
+    def stop(self):
+        if self.process and self.process.is_alive():
+            self.process.terminate()
+        self.process = None
