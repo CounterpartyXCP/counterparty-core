@@ -12,8 +12,12 @@ from bitcoin.bech32 import CBech32Data
 from bitcoin.core.key import CPubKey
 from counterparty_rs import b58, utils
 
-# We are using PyCryptodome not PyCrypto
-# from Crypto.Hash import RIPEMD160
+# TODO: Use `python-bitcointools` instead. (Get rid of `pycoin` dependency.)
+from pycoin.ecdsa.secp256k1 import secp256k1_generator as generator_secp256k1
+from pycoin.encoding.b58 import a2b_hashed_base58
+from pycoin.encoding.bytes32 import from_bytes_32
+from pycoin.encoding.exceptions import EncodingError
+from pycoin.encoding.sec import public_pair_to_sec
 from ripemd import ripemd160 as RIPEMD160  # nosec B413
 
 from counterpartylib.lib import config, exceptions, ledger, opcodes, util
@@ -402,14 +406,6 @@ def scriptpubkey_to_address(scriptpubkey):
         )
 
     return None
-
-
-# TODO: Use `python-bitcointools` instead. (Get rid of `pycoin` dependency.)
-from pycoin.ecdsa.secp256k1 import secp256k1_generator as generator_secp256k1  # noqa: E402
-from pycoin.encoding.b58 import a2b_hashed_base58  # noqa: E402
-from pycoin.encoding.bytes32 import from_bytes_32  # noqa: E402
-from pycoin.encoding.exceptions import EncodingError  # noqa: E402
-from pycoin.encoding.sec import public_pair_to_sec  # noqa: E402
 
 
 def wif_to_tuple_of_prefix_secret_exponent_compressed(wif):
