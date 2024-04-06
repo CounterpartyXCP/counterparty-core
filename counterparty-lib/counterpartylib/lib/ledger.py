@@ -326,6 +326,36 @@ def get_balances_count(db, address):
     return cursor.fetchall()
 
 
+def get_credits_or_debits(db, table, address=None, asset=None, block_index=None, tx_index=None):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if address is not None:
+        where.append("address = ?")
+        bindings.append(address)
+    if asset is not None:
+        where.append("asset = ?")
+        bindings.append(asset)
+    if block_index is not None:
+        where.append("block_index = ?")
+        bindings.append(block_index)
+    if tx_index is not None:
+        where.append("tx_index = ?")
+        bindings.append(tx_index)
+    # no sql injection here
+    query = f"""SELECT * FROM {table} WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+
+def get_credits(db, address=None, asset=None, block_index=None, tx_index=None):
+    return get_credits_or_debits(db, "credits", address, asset, block_index, tx_index)
+
+
+def get_debits(db, address=None, asset=None, block_index=None, tx_index=None):
+    return get_credits_or_debits(db, "debits", address, asset, block_index, tx_index)
+
+
 #####################
 #     ISSUANCES     #
 #####################
@@ -864,6 +894,40 @@ def get_addresses(db, address=None):
     # no sql injection here
     query = f"""SELECT * FROM addresses WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+
+def get_expirations(db, block_index):
+    cursor = db.cursor()
+    queries = [
+        """
+        SELECT 'order' AS type, order_hash AS object_id FROM order_expirations
+        WHERE block_index = ?
+        """,
+        """
+        SELECT 'order_match' AS type, order_match_id AS object_id FROM order_match_expirations
+        WHERE block_index = ?
+        """,
+        """
+        SELECT 'bet' AS type, bet_hash AS object_id FROM bet_expirations
+        WHERE block_index = ?
+        """,
+        """
+        SELECT 'bet_match' AS type, bet_match_id AS object_id FROM bet_match_expirations
+        WHERE block_index = ?
+        """,
+        """
+        SELECT 'rps' AS type, rps_hash AS object_id FROM rps_expirations
+        WHERE block_index = ?
+        """,
+        """
+        SELECT 'rps_match' AS type, rps_match_id AS object_id FROM rps_match_expirations
+        WHERE block_index = ?
+        """,
+    ]
+    query = " UNION ALL ".join(queries)
+    bindings = (block_index,)
+    cursor.execute(query, bindings)
     return cursor.fetchall()
 
 

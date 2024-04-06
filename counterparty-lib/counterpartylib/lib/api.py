@@ -36,8 +36,26 @@ ROUTES = {
     "/blocks/<int:block_index>/events": {
         "function": ledger.get_messages,
     },
+    "/blocks/<int:block_index>/credits": {
+        "function": ledger.get_credits,
+    },
+    "/blocks/<int:block_index>/debits": {
+        "function": ledger.get_debits,
+    },
+    "/blocks/<int:block_index>/expirations": {
+        "function": ledger.get_expirations,
+    },
+    "/transactions/<tx_hash>": {
+        "function": ledger.get_transaction,
+    },
     "/addresses/<address>/balances": {
         "function": ledger.get_address_balances,
+    },
+    "/addresses/<address>/credits": {
+        "function": ledger.get_credits,
+    },
+    "/addresses/<address>/debits": {
+        "function": ledger.get_debits,
     },
     "/assets/<asset>": {
         "function": ledger.get_asset_info,
@@ -48,6 +66,12 @@ ROUTES = {
     "/assets/<asset>/orders": {
         "function": ledger.get_orders_by_asset,
         "args": [("status", "open")],
+    },
+    "/assets/<asset>/credits": {
+        "function": ledger.get_credits,
+    },
+    "/assets/<asset>/debits": {
+        "function": ledger.get_debits,
     },
     "/orders/<tx_hash>": {
         "function": ledger.get_order,
