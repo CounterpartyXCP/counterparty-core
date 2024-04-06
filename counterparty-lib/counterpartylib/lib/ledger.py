@@ -285,6 +285,14 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False, return_list
     return balances[0]["quantity"]
 
 
+def get_balance_object(db, address, asset):
+    return {
+        "address": address,
+        "asset": asset,
+        "quantity": get_balance(db, address, asset),
+    }
+
+
 def get_address_balances(db, address):
     cursor = db.cursor()
     query = """
@@ -769,14 +777,14 @@ def get_oracle_last_price(db, oracle_address, block_index):
     )
 
 
-def get_broadcasts_by_source(db, source, status):
+def get_broadcasts_by_source(db, address, status="valid", order_by="DESC"):
     cursor = db.cursor()
-    query = """
+    query = f"""
         SELECT * FROM broadcasts
         WHERE (status = ? AND source = ?)
-        ORDER BY tx_index ASC
-    """
-    bindings = (status, source)
+        ORDER BY tx_index {order_by}
+    """  # nosec B608  # noqa: S608
+    bindings = (status, address)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -786,16 +794,16 @@ def get_broadcasts_by_source(db, source, status):
 #####################
 
 
-def get_burns(db, status=None, source=None):
+def get_burns(db, address=None, status="valid"):
     cursor = db.cursor()
     where = []
     bindings = []
     if status is not None:
         where.append("status = ?")
         bindings.append(status)
-    if source is not None:
+    if address is not None:
         where.append("source = ?")
-        bindings.append(source)
+        bindings.append(address)
     # no sql injection here
     query = f"""SELECT * FROM burns WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
@@ -926,6 +934,28 @@ def get_expirations(db, block_index):
         """,
     ]
     query = " UNION ALL ".join(queries)
+    bindings = (block_index,)
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_cancels(db, block_index):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM cancels
+        WHERE block_index = ?
+    """
+    bindings = (block_index,)
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_destructions(db, block_index):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM destructions
+        WHERE block_index = ?
+    """
     bindings = (block_index,)
     cursor.execute(query, bindings)
     return cursor.fetchall()
@@ -1369,7 +1399,7 @@ def get_matching_bets(db, feed_address, bet_type):
     return cursor.fetchall()
 
 
-def get_open_bet_by_feed(db, feed_address):
+def get_bet_by_feed(db, address, status="open"):
     cursor = db.cursor()
     query = """
         SELECT * FROM (
@@ -1380,7 +1410,22 @@ def get_open_bet_by_feed(db, feed_address):
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash
     """
-    bindings = (feed_address, "open")
+    bindings = (address, status)
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_bet_matches_by_bet(db, tx_hash, status="pending"):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM (
+            SELECT *, MAX(rowid)
+            FROM bet_matches
+            WHERE (tx0_hash = ? OR tx1_hash = ?)
+            GROUP BY id
+        ) WHERE status = ?
+    """
+    bindings = (tx_hash, tx_hash, status)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -1561,6 +1606,18 @@ def get_order_matches_by_order(db, tx_hash, status="pending"):
         ) WHERE status = ?
     """
     bindings = (tx_hash, tx_hash, status)
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_btcpays_by_order(db, tx_hash):
+    cursor = db.cursor()
+    query = """
+        SELECT *
+        FROM btc_pays
+        WHERE order_match_id LIKE '%?%'
+    """
+    bindings = (tx_hash,)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 

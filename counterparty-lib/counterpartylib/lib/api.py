@@ -23,6 +23,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 auth = HTTPBasicAuth()
 
 ROUTES = {
+    ### /blocks ###
     "/blocks": {
         "function": ledger.get_blocks,
         "args": [("last", None), ("limit", 10)],
@@ -45,11 +46,22 @@ ROUTES = {
     "/blocks/<int:block_index>/expirations": {
         "function": ledger.get_expirations,
     },
+    "/blocks/<int:block_index>/cancels": {
+        "function": ledger.get_cancels,
+    },
+    "/blocks/<int:block_index>/destructions": {
+        "function": ledger.get_destructions,
+    },
+    ### /transactions ###
     "/transactions/<tx_hash>": {
         "function": ledger.get_transaction,
     },
+    ### /addresses ###
     "/addresses/<address>/balances": {
         "function": ledger.get_address_balances,
+    },
+    "/addresses/<address>/balances/<asset>": {
+        "function": ledger.get_balance_object,
     },
     "/addresses/<address>/credits": {
         "function": ledger.get_credits,
@@ -57,11 +69,25 @@ ROUTES = {
     "/addresses/<address>/debits": {
         "function": ledger.get_debits,
     },
+    "/addresses/<address>/bets": {
+        "function": ledger.get_bet_by_feed,
+        "args": [("status", "open")],
+    },
+    "/addresses/<address>/broadcasts": {
+        "function": ledger.get_broadcasts_by_source,
+    },
+    "/addresses/<address>/burns": {
+        "function": ledger.get_burns,
+    },
+    ### /assets ###
     "/assets/<asset>": {
         "function": ledger.get_asset_info,
     },
     "/assets/<asset>/balances": {
         "function": ledger.get_asset_balances,
+    },
+    "/assets/<asset>/balances/<address>": {
+        "function": ledger.get_balance_object,
     },
     "/assets/<asset>/orders": {
         "function": ledger.get_orders_by_asset,
@@ -73,12 +99,29 @@ ROUTES = {
     "/assets/<asset>/debits": {
         "function": ledger.get_debits,
     },
+    ### /orders ###
     "/orders/<tx_hash>": {
         "function": ledger.get_order,
     },
     "/orders/<tx_hash>/matches": {
         "function": ledger.get_order_matches_by_order,
         "args": [("status", "pending")],
+    },
+    "/orders/<tx_hash>/btcpays": {
+        "function": ledger.get_btcpays_by_order,
+        "args": [("status", "pending")],
+    },
+    ### /bets ###
+    "/bets/<tx_hash>": {
+        "function": ledger.get_bet,
+    },
+    "/bets/<tx_hash>/matches": {
+        "function": ledger.get_bet_matches_by_bet,
+        "args": [("status", "pending")],
+    },
+    ### /burns ###
+    "/burns": {
+        "function": ledger.get_burns,
     },
 }
 

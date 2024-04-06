@@ -111,7 +111,7 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, block_index):
     if not source:
         problems.append("null source address")
     # Check previous broadcast in this feed.
-    broadcasts = ledger.get_broadcasts_by_source(db, source, "valid")
+    broadcasts = ledger.get_broadcasts_by_source(db, source, "valid", order_by="ASC")
     if broadcasts:
         last_broadcast = broadcasts[-1]
         if last_broadcast["locked"]:
@@ -256,7 +256,7 @@ def parse(db, tx, message):
     if value is None or value < 0:
         # Cancel Open Bets?
         if value == -2:
-            for i in ledger.get_open_bet_by_feed(db, tx["source"]):
+            for i in ledger.get_bet_by_feed(db, tx["source"], status="open"):
                 bet.cancel_bet(db, i, "dropped", tx["block_index"], tx["tx_index"])
         # Cancel Pending Bet Matches?
         if value == -3:

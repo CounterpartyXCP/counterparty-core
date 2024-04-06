@@ -254,7 +254,7 @@ def cancel_bet_match(db, bet_match, status, block_index, tx_index):
 
 def get_fee_fraction(db, feed_address):
     """Get fee fraction from last broadcast from the feed_address address."""
-    broadcasts = ledger.get_broadcasts_by_source(db, feed_address, "valid")
+    broadcasts = ledger.get_broadcasts_by_source(db, feed_address, "valid", order_by="ASC")
 
     if broadcasts:
         last_broadcast = broadcasts[-1]
@@ -297,7 +297,7 @@ def validate(
         problems.append("integer overflow")
 
     # Look at feed to be bet on.
-    broadcasts = ledger.get_broadcasts_by_source(db, feed_address, "valid")
+    broadcasts = ledger.get_broadcasts_by_source(db, feed_address, "valid", order_by="ASC")
     if not broadcasts:
         problems.append("feed doesn’t exist")
     elif not broadcasts[-1]["text"]:
@@ -661,7 +661,7 @@ def match(db, tx):
             ledger.update_bet(db, tx1["tx_hash"], set_data)
 
             # Get last value of feed.
-            broadcasts = ledger.get_broadcasts_by_source(db, feed_address, "valid")
+            broadcasts = ledger.get_broadcasts_by_source(db, feed_address, "valid", order_by="ASC")
             initial_value = broadcasts[-1]["value"]
 
             # Record bet fulfillment.
