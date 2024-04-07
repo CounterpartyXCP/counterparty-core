@@ -64,6 +64,43 @@ def get_messages(db, block_index=None, block_index_in=None, message_index_in=Non
     return cursor.fetchall()
 
 
+def get_events(db, block_index=None, event=None, event_index=None, last=None, limit=None):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if block_index is not None:
+        where.append("block_index = ?")
+        bindings.append(block_index)
+    if event is not None:
+        where.append("event = ?")
+        bindings.append(event)
+    if event_index is not None:
+        where.append("message_index = ?")
+        bindings.append(event_index)
+    if last is not None:
+        where.append("message_index <= ?")
+        bindings.append(last)
+    if block_index is None and limit is None:
+        limit = 100
+    if limit is not None:
+        limit = "LIMIT ?"
+        bindings.append(limit)
+    else:
+        limit = ""
+    # no sql injection here
+    query = f"""
+        SELECT message_index AS event_index, event, bindings, block_index, timestamp
+        FROM messages
+        WHERE ({" AND ".join(where)})
+        ORDER BY message_index DESC {limit}
+    """  # nosec B608  # noqa: S608
+    cursor.execute(query, tuple(bindings))
+    events = cursor.fetchall()
+    for i, _ in enumerate(events):
+        events[i]["bindings"] = json.loads(events[i]["bindings"])
+    return events
+
+
 # we are using a function here for testing purposes
 def curr_time():
     return int(time.time())

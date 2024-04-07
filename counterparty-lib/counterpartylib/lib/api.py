@@ -35,7 +35,10 @@ ROUTES = {
         "function": ledger.get_transactions_by_block,
     },
     "/blocks/<int:block_index>/events": {
-        "function": ledger.get_messages,
+        "function": ledger.get_events,
+    },
+    "/blocks/<int:block_index>/events/<event>": {
+        "function": ledger.get_events,
     },
     "/blocks/<int:block_index>/credits": {
         "function": ledger.get_credits,
@@ -191,6 +194,14 @@ ROUTES = {
     },
     "/dispensers/<tx_hash>/dispenses": {
         "function": ledger.get_dispenses,
+    },
+    ### /events ###
+    "/events/<int:event_index>": {
+        "function": ledger.get_events,
+    },
+    "/events/<event>": {
+        "function": ledger.get_events,
+        "args": [("last", None), ("limit", 100)],
     },
 }
 

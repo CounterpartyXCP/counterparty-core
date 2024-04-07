@@ -155,7 +155,6 @@ def test_new_get_asset_info():
     url = f"{API_ROOT}/assets/{asset}"
     result = requests.get(url)  # noqa: S113
 
-    print("RESULT", result)
     assert result.json() == {
         "asset": "NODIVISIBLE",
         "asset_longname": None,
@@ -165,6 +164,7 @@ def test_new_get_asset_info():
         "locked": False,
         "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         "supply": 1000,
+        "holder_count": 3,
     }
 
 
