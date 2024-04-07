@@ -79,7 +79,9 @@ def verify_password(username, password):
 def handle_route(**kwargs):
     route = ROUTES.get(str(request.url_rule.rule))
     function_args = dict(kwargs)
-    if "args" in route:
+    if "pass_all_args" in route and route["pass_all_args"]:
+        function_args = request.args | function_args
+    elif "args" in route:
         for arg in route["args"]:
             function_args[arg[0]] = request.args.get(arg[0], arg[1])
     result = route["function"](get_db(), **function_args)

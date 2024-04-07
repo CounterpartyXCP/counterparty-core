@@ -3,8 +3,7 @@ import tempfile
 
 import bitcoin as bitcoinlib
 
-from counterpartylib.lib import ledger
-from counterpartylib.lib.api import api_v1 as api
+from counterpartylib.lib import ledger, transaction
 from counterpartylib.test import util_test
 from counterpartylib.test.fixtures.params import ADDR
 
@@ -21,7 +20,7 @@ def test_bytespersigop(server_db):
     transaction.initialise()
 
     # ADDR[0], bytespersigop=False, desc 41 bytes, opreturn
-    txhex = api.compose_transaction(
+    txhex = transaction.compose_transaction(
         server_db,
         "issuance",
         {
@@ -41,7 +40,7 @@ def test_bytespersigop(server_db):
     assert "OP_RETURN" in repr(tx.vout[0].scriptPubKey)
 
     # ADDR[0], bytespersigop=False, desc 42 bytes, multisig
-    txhex = api.compose_transaction(
+    txhex = transaction.compose_transaction(
         server_db,
         "issuance",
         {
@@ -66,7 +65,7 @@ def test_bytespersigop(server_db):
         assert ledger.enabled("bytespersigop") == True  # noqa: E712
 
         # ADDR[0], bytespersigop=True, desc 41 bytes, opreturn
-        txhex = api.compose_transaction(
+        txhex = transaction.compose_transaction(
             server_db,
             "issuance",
             {
@@ -86,7 +85,7 @@ def test_bytespersigop(server_db):
         assert "OP_RETURN" in repr(tx.vout[0].scriptPubKey)
 
         # ADDR[1], bytespersigop=True, desc 41 bytes, opreturn encoding
-        txhex = api.compose_transaction(
+        txhex = transaction.compose_transaction(
             server_db,
             "issuance",
             {
@@ -107,7 +106,7 @@ def test_bytespersigop(server_db):
 
         # ADDR[1], bytespersigop=True, desc 20 bytes, FORCED encoding=multisig
         #  will use 2 UTXOs to make the bytes:sigop ratio in our favor
-        txhex = api.compose_transaction(
+        txhex = transaction.compose_transaction(
             server_db,
             "issuance",
             {

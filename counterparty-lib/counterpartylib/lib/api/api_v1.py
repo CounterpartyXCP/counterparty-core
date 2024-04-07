@@ -5,32 +5,22 @@ The database connections are read‐only, so SQL injection attacks can’t be a
 problem.
 """
 
+import binascii
 import collections
 import decimal
 import json
 import logging
-import os  # noqa: F401
+import math
 import re
-import sys
 import threading
 import time
 import traceback
 from logging import handlers as logging_handlers
 
-import requests  # noqa: F401
-
-D = decimal.Decimal
-import binascii  # noqa: E402
-import inspect  # noqa: E402
-import math  # noqa: E402
-import struct  # noqa: E402, F401
-
-import apsw  # noqa: E402, F401
-import flask  # noqa: E402
-import jsonrpc  # noqa: E402
+import flask
+import jsonrpc
 from counterpartylib.lib import (  # noqa: E402
     backend,
-    blocks,  # noqa: F401
     config,
     database,
     exceptions,
@@ -59,11 +49,13 @@ from counterpartylib.lib.messages import (  # noqa: E402
     sweep,  # noqa: F401
 )
 from counterpartylib.lib.messages.versions import enhanced_send  # noqa: E402
-from flask import request  # noqa: E402
-from flask_httpauth import HTTPBasicAuth  # noqa: E402
-from jsonrpc import dispatcher  # noqa: E402
-from jsonrpc.exceptions import JSONRPCDispatchException  # noqa: E402
-from xmltodict import unparse as serialize_to_xml  # noqa: E402
+from flask import request
+from flask_httpauth import HTTPBasicAuth
+from jsonrpc import dispatcher
+from jsonrpc.exceptions import JSONRPCDispatchException
+from xmltodict import unparse as serialize_to_xml
+
+D = decimal.Decimal
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -143,48 +135,6 @@ VIEW_QUERIES = {
         GROUP BY tx_hash
     """,
 }
-
-API_TRANSACTIONS = [
-    "bet",
-    "broadcast",
-    "btcpay",
-    "burn",
-    "cancel",
-    "destroy",
-    "dividend",
-    "issuance",
-    "order",
-    "send",
-    "rps",
-    "rpsresolve",
-    "sweep",
-    "dispenser",
-]
-
-COMMONS_ARGS = [
-    "encoding",
-    "fee_per_kb",
-    "regular_dust_size",
-    "multisig_dust_size",
-    "op_return_value",
-    "pubkey",
-    "allow_unconfirmed_inputs",
-    "fee",
-    "fee_provided",
-    "estimate_fee_per_kb",
-    "estimate_fee_per_kb_nblocks",
-    "estimate_fee_per_kb_conf_target",
-    "estimate_fee_per_kb_mode",
-    "unspent_tx_hash",
-    "custom_inputs",
-    "dust_return_pubkey",
-    "disable_utxo_locks",
-    "extended_tx_info",
-    "p2sh_source_multisig_pubkeys",
-    "p2sh_source_multisig_pubkeys_required",
-    "p2sh_pretx_txid",
-]
-
 
 JSON_RPC_ERROR_API_COMPOSE = -32001  # code to use for error composing transaction result
 
@@ -518,118 +468,6 @@ def adjust_get_transactions_results(query_result):
     return filtered_results
 
 
-def compose_transaction(
-    db,
-    name,
-    params,
-    encoding="auto",
-    fee_per_kb=None,
-    estimate_fee_per_kb=None,
-    estimate_fee_per_kb_conf_target=config.ESTIMATE_FEE_CONF_TARGET,
-    estimate_fee_per_kb_mode=config.ESTIMATE_FEE_MODE,
-    regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
-    multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
-    op_return_value=config.DEFAULT_OP_RETURN_VALUE,
-    pubkey=None,
-    allow_unconfirmed_inputs=False,
-    fee=None,
-    fee_provided=0,
-    unspent_tx_hash=None,
-    custom_inputs=None,
-    dust_return_pubkey=None,
-    disable_utxo_locks=False,
-    extended_tx_info=False,
-    p2sh_source_multisig_pubkeys=None,
-    p2sh_source_multisig_pubkeys_required=None,
-    p2sh_pretx_txid=None,
-    old_style_api=True,
-    segwit=False,
-):
-    """Create and return a transaction."""
-
-    # Get provided pubkeys.
-    if type(pubkey) == str:  # noqa: E721
-        provided_pubkeys = [pubkey]
-    elif type(pubkey) == list:  # noqa: E721
-        provided_pubkeys = pubkey
-    elif pubkey == None:  # noqa: E711
-        provided_pubkeys = []
-    else:
-        assert False  # noqa: B011
-
-    # Get additional pubkeys from `source` and `destination` params.
-    # Convert `source` and `destination` to pubkeyhash form.
-    for address_name in ["source", "destination"]:
-        if address_name in params:
-            address = params[address_name]
-            if isinstance(address, list):
-                # pkhshs = []
-                # for addr in address:
-                #    provided_pubkeys += script.extract_pubkeys(addr)
-                #    pkhshs.append(script.make_pubkeyhash(addr))
-                # params[address_name] = pkhshs
-                pass
-            else:
-                provided_pubkeys += script.extract_pubkeys(address)
-                params[address_name] = script.make_pubkeyhash(address)
-
-    # Check validity of collected pubkeys.
-    for pubkey in provided_pubkeys:
-        if not script.is_fully_valid(binascii.unhexlify(pubkey)):
-            raise script.AddressError(f"invalid public key: {pubkey}")
-
-    compose_method = sys.modules[f"counterpartylib.lib.messages.{name}"].compose
-    compose_params = inspect.getfullargspec(compose_method)[0]
-    missing_params = [p for p in compose_params if p not in params and p != "db"]
-    for param in missing_params:
-        params[param] = None
-
-    # dont override fee_per_kb if specified
-    if fee_per_kb is not None:
-        estimate_fee_per_kb = False
-    else:
-        fee_per_kb = config.DEFAULT_FEE_PER_KB
-
-    if "extended_tx_info" in params:
-        extended_tx_info = params["extended_tx_info"]
-        del params["extended_tx_info"]
-
-    if "old_style_api" in params:
-        old_style_api = params["old_style_api"]
-        del params["old_style_api"]
-
-    if "segwit" in params:
-        segwit = params["segwit"]
-        del params["segwit"]
-
-    tx_info = compose_method(db, **params)
-    return transaction.construct(
-        db,
-        tx_info,
-        encoding=encoding,
-        fee_per_kb=fee_per_kb,
-        estimate_fee_per_kb=estimate_fee_per_kb,
-        estimate_fee_per_kb_conf_target=estimate_fee_per_kb_conf_target,
-        regular_dust_size=regular_dust_size,
-        multisig_dust_size=multisig_dust_size,
-        op_return_value=op_return_value,
-        provided_pubkeys=provided_pubkeys,
-        allow_unconfirmed_inputs=allow_unconfirmed_inputs,
-        exact_fee=fee,
-        fee_provided=fee_provided,
-        unspent_tx_hash=unspent_tx_hash,
-        custom_inputs=custom_inputs,
-        dust_return_pubkey=dust_return_pubkey,
-        disable_utxo_locks=disable_utxo_locks,
-        extended_tx_info=extended_tx_info,
-        p2sh_source_multisig_pubkeys=p2sh_source_multisig_pubkeys,
-        p2sh_source_multisig_pubkeys_required=p2sh_source_multisig_pubkeys_required,
-        p2sh_pretx_txid=p2sh_pretx_txid,
-        old_style_api=old_style_api,
-        segwit=segwit,
-    )
-
-
 def conditional_decorator(decorator, condition):
     """Checks the condition and if True applies specified decorator."""
 
@@ -762,23 +600,12 @@ class APIServer(threading.Thread):
 
         # Generate dynamically create_{transaction} methods
         def generate_create_method(tx):
-            def split_params(**kwargs):
-                transaction_args = {}
-                common_args = {}
-                private_key_wif = None
-                for key in kwargs:
-                    if key in COMMONS_ARGS:
-                        common_args[key] = kwargs[key]
-                    elif key == "privkey":
-                        private_key_wif = kwargs[key]
-                    else:
-                        transaction_args[key] = kwargs[key]
-                return transaction_args, common_args, private_key_wif
-
             def create_method(**kwargs):
                 try:
-                    transaction_args, common_args, private_key_wif = split_params(**kwargs)
-                    return compose_transaction(
+                    transaction_args, common_args, private_key_wif = (
+                        transaction.split_compose_arams(**kwargs)
+                    )
+                    return transaction.compose_transaction(
                         self.db, name=tx, params=transaction_args, **common_args
                     )
                 except (
@@ -798,7 +625,7 @@ class APIServer(threading.Thread):
 
             return create_method
 
-        for tx in API_TRANSACTIONS:
+        for tx in transaction.COMPOSABLE_TRANSACTIONS:
             create_method = generate_create_method(tx)
             create_method.__name__ = f"create_{tx}"
             dispatcher.add_method(create_method)
@@ -1228,7 +1055,7 @@ class APIServer(threading.Thread):
                     check_database_state(self.db, latest_block_index)
                 else:
                     logger.debug("Performing heavy healthz check.")
-                    compose_transaction(
+                    transaction.compose_transaction(
                         self.db,
                         name="send",
                         params={
@@ -1351,7 +1178,7 @@ class APIServer(threading.Thread):
                 error = "No query_type provided."
                 return flask.Response(error, 400, mimetype="application/json")
             # Check if message type or table name are valid.
-            if (compose and query_type not in API_TRANSACTIONS) or (
+            if (compose and query_type not in transaction.COMPOSABLE_TRANSACTIONS) or (
                 not compose and query_type not in API_TABLES
             ):
                 error = f'No such query type in supported queries: "{query_type}".'
@@ -1362,24 +1189,9 @@ class APIServer(threading.Thread):
             query_data = {}
 
             if compose:
-                common_args = {}
-                transaction_args = {}
-                for key, value in extra_args:
-                    # Determine value type.
-                    try:
-                        value = int(value)  # noqa: PLW2901
-                    except ValueError:
-                        try:
-                            value = float(value)  # noqa: PLW2901
-                        except ValueError:
-                            pass
-                    # Split keys into common and transaction-specific arguments. Discard the privkey.
-                    if key in COMMONS_ARGS:
-                        common_args[key] = value
-                    elif key == "privkey":
-                        pass
-                    else:
-                        transaction_args[key] = value
+                transaction_args, common_args, private_key_wif = transaction.split_compose_arams(
+                    **extra_args
+                )
 
                 # Must have some additional transaction arguments.
                 if not len(transaction_args):
@@ -1388,7 +1200,7 @@ class APIServer(threading.Thread):
 
                 # Compose the transaction.
                 try:
-                    query_data = compose_transaction(
+                    query_data = transaction.compose_transaction(
                         self.db, name=query_type, params=transaction_args, **common_args
                     )
                 except (

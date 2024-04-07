@@ -1,4 +1,7 @@
-from counterpartylib.lib import ledger
+from counterpartylib.lib import (
+    ledger,
+    transaction,
+)
 
 ROUTES = {
     ### /blocks ###
@@ -55,6 +58,10 @@ ROUTES = {
         "function": ledger.get_sweeps,
     },
     ### /transactions ###
+    "/transactions/compose/<transaction_name>": {
+        "function": transaction.compose,
+        "pass_all_args": True,
+    },
     "/transactions/<tx_hash>": {
         "function": ledger.get_transaction,
     },

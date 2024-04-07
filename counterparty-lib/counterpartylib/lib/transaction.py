@@ -7,26 +7,27 @@ This module contains no consensus‐critical code.
 import binascii
 import decimal
 import hashlib
+import inspect
 import io
-import json  # noqa: F401
 import logging
+<<<<<<< HEAD
 import math  # noqa: F401
 import os  # noqa: F401
 import re  # noqa: F401
 import sys  # noqa: F401
 import threading
 import time  # noqa: F401
+=======
+import sys
+>>>>>>> 0595b1a1 (Add route to compose transactions)
 
 import bitcoin as bitcoinlib
 import cachetools
-import requests  # noqa: F401
-from bitcoin.core import CTransaction, b2lx, x  # noqa: F401
-from bitcoin.core.script import CScript  # noqa: F401
+from bitcoin.core import CTransaction
 
 from counterpartylib.lib import (
     arc4,  # noqa: F401
     backend,
-    blocks,  # noqa: F401
     config,
     exceptions,
     gettxinfo,
@@ -957,3 +958,67 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
         raise script.InputError("Invalid private key.")  # noqa: B904
 
     return dust_return_pubkey
+
+
+COMPOSE_COMMONS_ARGS = [
+    "encoding",
+    "fee_per_kb",
+    "regular_dust_size",
+    "multisig_dust_size",
+    "op_return_value",
+    "pubkey",
+    "allow_unconfirmed_inputs",
+    "fee",
+    "fee_provided",
+    "estimate_fee_per_kb",
+    "estimate_fee_per_kb_nblocks",
+    "estimate_fee_per_kb_conf_target",
+    "estimate_fee_per_kb_mode",
+    "unspent_tx_hash",
+    "custom_inputs",
+    "dust_return_pubkey",
+    "disable_utxo_locks",
+    "extended_tx_info",
+    "p2sh_source_multisig_pubkeys",
+    "p2sh_source_multisig_pubkeys_required",
+    "p2sh_pretx_txid",
+]
+
+
+def split_compose_arams(**kwargs):
+    transaction_args = {}
+    common_args = {}
+    private_key_wif = None
+    for key in kwargs:
+        if key in COMPOSE_COMMONS_ARGS:
+            common_args[key] = kwargs[key]
+        elif key == "privkey":
+            private_key_wif = kwargs[key]
+        else:
+            transaction_args[key] = kwargs[key]
+    return transaction_args, common_args, private_key_wif
+
+
+COMPOSABLE_TRANSACTIONS = [
+    "bet",
+    "broadcast",
+    "btcpay",
+    "burn",
+    "cancel",
+    "destroy",
+    "dividend",
+    "issuance",
+    "order",
+    "send",
+    "rps",
+    "rpsresolve",
+    "sweep",
+    "dispenser",
+]
+
+
+def compose(db, transaction_name, **kwargs):
+    if transaction_name not in COMPOSABLE_TRANSACTIONS:
+        raise exceptions.TransactionError("Transaction type not composable.")
+    transaction_args, common_args, _ = split_compose_arams(**kwargs)
+    return compose_transaction(db, name=transaction_name, params=transaction_args, **common_args)
