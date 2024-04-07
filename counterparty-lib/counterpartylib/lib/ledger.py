@@ -364,6 +364,45 @@ def get_debits(db, address=None, asset=None, block_index=None, tx_index=None):
     return get_credits_or_debits(db, "debits", address, asset, block_index, tx_index)
 
 
+def get_sends_or_receives(
+    db, source=None, destination=None, asset=None, block_index=None, status="valid"
+):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if source is not None:
+        where.append("source = ?")
+        bindings.append(source)
+    if destination is not None:
+        where.append("destination = ?")
+        bindings.append(destination)
+    if asset is not None:
+        where.append("asset = ?")
+        bindings.append(asset)
+    if block_index is not None:
+        where.append("block_index = ?")
+        bindings.append(block_index)
+    if status is not None:
+        where.append("status = ?")
+        bindings.append(status)
+    # no sql injection here
+    query = f"""SELECT * FROM sends WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+
+def get_sends(db, address=None, asset=None, block_index=None, status="valid"):
+    return get_sends_or_receives(
+        db, source=address, asset=asset, block_index=block_index, status=status
+    )
+
+
+def get_receives(db, address=None, asset=None, block_index=None, status="valid"):
+    return get_sends_or_receives(
+        db, destination=address, asset=asset, block_index=block_index, status=status
+    )
+
+
 #####################
 #     ISSUANCES     #
 #####################
@@ -694,7 +733,9 @@ def get_asset_info(db, asset):
     return asset_info
 
 
-def get_issuances(db, asset=None, status=None, locked=None, first=False, last=False):
+def get_issuances(
+    db, asset=None, status=None, locked=None, block_index=None, first=False, last=False
+):
     cursor = db.cursor()
     cursor = db.cursor()
     where = []
@@ -708,6 +749,9 @@ def get_issuances(db, asset=None, status=None, locked=None, first=False, last=Fa
     if locked is not None:
         where.append("locked = ?")
         bindings.append(locked)
+    if block_index is not None:
+        where.append("block_index = ?")
+        bindings.append(block_index)
     # no sql injection here
     query = f"""SELECT * FROM issuances WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
     if first:
@@ -739,6 +783,17 @@ def get_valid_assets(db):
         ORDER BY asset ASC
     """
     cursor.execute(query)
+    return cursor.fetchall()
+
+
+def get_dividends(db, asset):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM dividends
+        WHERE asset = ? AND status = ?
+    """
+    bindings = (asset, "valid")
+    cursor.execute(query, bindings)
     return cursor.fetchall()
 
 
@@ -1426,6 +1481,18 @@ def get_bet_matches_by_bet(db, tx_hash, status="pending"):
         ) WHERE status = ?
     """
     bindings = (tx_hash, tx_hash, status)
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_resolutions_by_bet(db, tx_hash):
+    cursor = db.cursor()
+    query = """
+        SELECT *
+        FROM bet_match_resolutions
+        WHERE bet_match_id LIKE '%?%'
+    """
+    bindings = (tx_hash,)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 

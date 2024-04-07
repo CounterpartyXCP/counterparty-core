@@ -52,6 +52,12 @@ ROUTES = {
     "/blocks/<int:block_index>/destructions": {
         "function": ledger.get_destructions,
     },
+    "/blocks/<int:block_index>/issuances": {
+        "function": ledger.get_issuances,
+    },
+    "/blocks/<int:block_index>/sends": {
+        "function": ledger.get_sends_or_receives,
+    },
     ### /transactions ###
     "/transactions/<tx_hash>": {
         "function": ledger.get_transaction,
@@ -79,6 +85,18 @@ ROUTES = {
     "/addresses/<address>/burns": {
         "function": ledger.get_burns,
     },
+    "/addresses/<address>/sends": {
+        "function": ledger.get_sends,
+    },
+    "/addresses/<address>/receives": {
+        "function": ledger.get_receives,
+    },
+    "/addresses/<address>/sends/<asset>": {
+        "function": ledger.get_sends,
+    },
+    "/addresses/<address>/receives/<asset>": {
+        "function": ledger.get_receives,
+    },
     ### /assets ###
     "/assets/<asset>": {
         "function": ledger.get_asset_info,
@@ -99,6 +117,15 @@ ROUTES = {
     "/assets/<asset>/debits": {
         "function": ledger.get_debits,
     },
+    "/assets/<asset>/dividends": {
+        "function": ledger.get_dividends,
+    },
+    "/assets/<asset>/issuances": {
+        "function": ledger.get_issuances,
+    },
+    "/assets/<asset>/sends": {
+        "function": ledger.get_sends_or_receives,
+    },
     ### /orders ###
     "/orders/<tx_hash>": {
         "function": ledger.get_order,
@@ -117,6 +144,10 @@ ROUTES = {
     },
     "/bets/<tx_hash>/matches": {
         "function": ledger.get_bet_matches_by_bet,
+        "args": [("status", "pending")],
+    },
+    "/bets/<tx_hash>/resolutions": {
+        "function": ledger.get_resolutions_by_bet,
         "args": [("status", "pending")],
     },
     ### /burns ###
