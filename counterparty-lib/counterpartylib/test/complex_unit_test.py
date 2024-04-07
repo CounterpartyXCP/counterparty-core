@@ -5,7 +5,7 @@ import pytest
 from apsw import ConstraintError
 
 from counterpartylib.lib import blocks, ledger, util
-from counterpartylib.lib.v1 import api
+from counterpartylib.lib.api import api_v1 as api
 
 # this is require near the top to do setup of the test suite
 from counterpartylib.test import (

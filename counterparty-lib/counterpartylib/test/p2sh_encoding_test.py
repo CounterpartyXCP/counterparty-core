@@ -15,9 +15,9 @@ from counterpartylib.lib import (
     ledger,
     script,
 )
+from counterpartylib.lib.api import api_v1 as api
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
 from counterpartylib.lib.transaction_helper import p2sh_encoding
-from counterpartylib.lib.v1 import api
 
 # this is require near the top to do setup of the test suite
 from counterpartylib.test import (

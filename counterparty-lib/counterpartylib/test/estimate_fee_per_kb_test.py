@@ -5,7 +5,7 @@ import tempfile
 import bitcoin as bitcoinlib
 
 from counterpartylib.lib import (backend, transaction)
-from counterpartylib.lib.v1 import api
+from counterpartylib.lib.api import api_v1 as api
 from counterpartylib.test import (
     util_test,
 )

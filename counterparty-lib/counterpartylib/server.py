@@ -21,7 +21,6 @@ from halo import Halo
 from termcolor import colored, cprint
 
 from counterpartylib.lib import (
-    api,
     backend,
     blocks,
     check,
@@ -33,7 +32,8 @@ from counterpartylib.lib import (
     util,
 )
 from counterpartylib.lib import kickstart as kickstarter
-from counterpartylib.lib.v1 import api as api_v1
+from counterpartylib.lib.api import api_server as api_v2
+from counterpartylib.lib.api import api_v1
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -677,7 +677,7 @@ def start_all(args):
         api_server.start()
     else:
         # REST API Server.
-        api_server = api.APIServer()
+        api_server = api_v2.APIServer()
         api_server.start(args)
 
     # Server

@@ -14,11 +14,11 @@ from fractions import Fraction
 import bitcoin as bitcoinlib
 
 from counterpartylib.lib import config, exceptions, script
+from counterpartylib.lib.api.api_v1 import APIError
 from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
 from counterpartylib.lib.ledger import CreditError, DebitError
 from counterpartylib.lib.messages import issuance
 from counterpartylib.lib.util import QuantityError, RPCError
-from counterpartylib.lib.v1.api import APIError
 
 from .params import (
     ADDR,

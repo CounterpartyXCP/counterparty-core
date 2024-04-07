@@ -17,9 +17,9 @@ from Crypto.Cipher import ARC4
 from pycoin.coins.bitcoin import Tx  # noqa: F401
 
 from counterpartylib import server
-from counterpartylib.lib import api as api_v2
 from counterpartylib.lib import arc4, config, database, ledger, log, script, util
-from counterpartylib.lib.v1 import api
+from counterpartylib.lib.api import api_server as api_v2
+from counterpartylib.lib.api import api_v1 as api
 from counterpartylib.test import util_test
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS
 from counterpartylib.test.fixtures.scenarios import INTEGRATION_SCENARIOS
@@ -514,7 +514,9 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     monkeypatch.setattr("counterpartylib.lib.log.isodt", isodt)
     monkeypatch.setattr("counterpartylib.lib.ledger.curr_time", curr_time)
     monkeypatch.setattr("counterpartylib.lib.util.date_passed", date_passed)
-    monkeypatch.setattr("counterpartylib.lib.api.init_api_access_log", init_api_access_log)
+    monkeypatch.setattr(
+        "counterpartylib.lib.api.api_server.init_api_access_log", init_api_access_log
+    )
     if hasattr(config, "PREFIX"):
         monkeypatch.setattr("counterpartylib.lib.config.PREFIX", b"TESTXXXX")
     monkeypatch.setattr("counterpartylib.lib.backend.getrawtransaction", mocked_getrawtransaction)
