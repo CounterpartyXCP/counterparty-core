@@ -101,6 +101,43 @@ def get_events(db, block_index=None, event=None, event_index=None, last=None, li
     return events
 
 
+def get_mempool_events(db, event_name=None):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if event_name is not None:
+        where.append("event = ?")
+        bindings.append(event_name)
+    # no sql injection here
+    query = """
+        SELECT tx_hash, event, bindings, timestamp
+        FROM mempool
+    """
+    if event_name is not None:
+        query += f"""WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
+    query += """ORDER BY timestamp DESC"""
+    cursor.execute(query, tuple(bindings))
+    events = cursor.fetchall()
+    for i, _ in enumerate(events):
+        events[i]["bindings"] = json.loads(events[i]["bindings"])
+    return events
+
+
+def get_events_counts(db, block_index=None):
+    cursor = db.cursor()
+    bindings = []
+    query = """
+        SELECT event, COUNT(*) AS event_count
+        FROM messages
+    """
+    if block_index is not None:
+        query += "WHERE block_index = ?"
+        bindings.append(block_index)
+    query += "GROUP BY event"
+    cursor.execute(query)
+    return cursor.fetchall()
+
+
 # we are using a function here for testing purposes
 def curr_time():
     return int(time.time())

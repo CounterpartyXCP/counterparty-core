@@ -37,8 +37,17 @@ ROUTES = {
     "/blocks/<int:block_index>/events": {
         "function": ledger.get_events,
     },
+    "/blocks/<int:block_index>/events/counts": {
+        "function": ledger.get_events_counts,
+    },
     "/blocks/<int:block_index>/events/<event>": {
         "function": ledger.get_events,
+    },
+    "/blocks/mempool/events": {
+        "function": ledger.get_mempool_events,
+    },
+    "/blocks/mempool/events/<event>": {
+        "function": ledger.get_mempool_events,
     },
     "/blocks/<int:block_index>/credits": {
         "function": ledger.get_credits,
@@ -153,7 +162,7 @@ ROUTES = {
         "function": ledger.get_dispensers,
         "args": [("status", 0)],
     },
-    "/asset/<asset>/dispensers/<address>": {
+    "/assets/<asset>/dispensers/<address>": {
         "function": ledger.get_dispensers,
         "args": [("status", 0)],
     },
@@ -198,6 +207,9 @@ ROUTES = {
     ### /events ###
     "/events/<int:event_index>": {
         "function": ledger.get_events,
+    },
+    "/events/counts": {
+        "function": ledger.get_events_counts,
     },
     "/events/<event>": {
         "function": ledger.get_events,
