@@ -403,6 +403,25 @@ def get_receives(db, address=None, asset=None, block_index=None, status="valid")
     )
 
 
+def get_sweeps(db, address=None, block_index=None, status="valid"):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if address is not None:
+        where.append("source = ?")
+        bindings.append(address)
+    if block_index is not None:
+        where.append("block_index = ?")
+        bindings.append(block_index)
+    if status is not None:
+        where.append("status = ?")
+        bindings.append(status)
+    # no sql injection here
+    query = f"""SELECT * FROM sweeps WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+
 #####################
 #     ISSUANCES     #
 #####################
@@ -706,9 +725,11 @@ def get_asset_info(db, asset):
 
     if asset_name == config.XCP:
         asset_info["supply"] = xcp_supply(db)
+        asset_info["holder_count"] = get_asset_holder_count(db, asset)
         return asset_info
 
     asset_info["supply"] = asset_supply(db, asset_name)
+    asset_info["holder_count"] = get_asset_holder_count(db, asset)
 
     cursor = db.cursor()
     query = """
@@ -1301,7 +1322,7 @@ def get_dispensers(
     db,
     status_in=None,
     source_in=None,
-    source=None,
+    address=None,
     asset=None,
     origin=None,
     status=None,
@@ -1313,9 +1334,9 @@ def get_dispensers(
     bindings = []
     # where for immutable fields
     first_where = []
-    if source is not None:
+    if address is not None:
         first_where.append("source = ?")
-        bindings.append(source)
+        bindings.append(address)
     if source_in is not None:
         first_where.append(f"source IN ({','.join(['?' for e in range(0, len(source_in))])})")
         bindings += source_in
@@ -1352,6 +1373,22 @@ def get_dispensers(
         ) {second_where_str}
         {order_clause}
     """  # nosec B608  # noqa: S608
+    cursor.execute(query, tuple(bindings))
+    return cursor.fetchall()
+
+
+def get_dispenses(db, dispenser_tx_hash=None, block_index=None):
+    cursor = db.cursor()
+    where = []
+    bindings = []
+    if dispenser_tx_hash is not None:
+        where.append("dispenser_tx_hash = ?")
+        bindings.append(dispenser_tx_hash)
+    if block_index is not None:
+        where.append("block_index = ?")
+        bindings.append(block_index)
+    # no sql injection here
+    query = f"""SELECT * FROM dispenses WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -2115,6 +2152,17 @@ def holders(db, asset, exclude_empty_holders=False):
 
     cursor.close()
     return holders
+
+
+def get_asset_holders(db, asset):
+    asset_name = resolve_subasset_longname(db, asset)
+    return holders(db, asset_name, True)
+
+
+def get_asset_holder_count(db, asset):
+    holders = get_asset_holders(db, asset)
+    addresses = [holder["address"] for holder in holders]
+    return len(set(addresses))
 
 
 def xcp_created(db):

@@ -58,6 +58,12 @@ ROUTES = {
     "/blocks/<int:block_index>/sends": {
         "function": ledger.get_sends_or_receives,
     },
+    "/blocks/<int:block_index>/dispenses": {
+        "function": ledger.get_dispenses,
+    },
+    "/blocks/<int:block_index>/sweeps": {
+        "function": ledger.get_sweeps,
+    },
     ### /transactions ###
     "/transactions/<tx_hash>": {
         "function": ledger.get_transaction,
@@ -97,7 +103,21 @@ ROUTES = {
     "/addresses/<address>/receives/<asset>": {
         "function": ledger.get_receives,
     },
+    "/addresses/<address>/dispensers": {
+        "function": ledger.get_dispensers,
+        "args": [("status", 0)],
+    },
+    "/addresses/<address>/dispensers/<asset>": {
+        "function": ledger.get_dispensers,
+        "args": [("status", 0)],
+    },
+    "/addresses/<address>/sweeps": {
+        "function": ledger.get_sweeps,
+    },
     ### /assets ###
+    "/assets": {
+        "function": ledger.get_valid_assets,
+    },
     "/assets/<asset>": {
         "function": ledger.get_asset_info,
     },
@@ -126,6 +146,17 @@ ROUTES = {
     "/assets/<asset>/sends": {
         "function": ledger.get_sends_or_receives,
     },
+    "/assets/<asset>/dispensers": {
+        "function": ledger.get_dispensers,
+        "args": [("status", 0)],
+    },
+    "/asset/<asset>/dispensers/<address>": {
+        "function": ledger.get_dispensers,
+        "args": [("status", 0)],
+    },
+    "/assets/<asset>/holders": {
+        "function": ledger.get_asset_holders,
+    },
     ### /orders ###
     "/orders/<tx_hash>": {
         "function": ledger.get_order,
@@ -153,6 +184,13 @@ ROUTES = {
     ### /burns ###
     "/burns": {
         "function": ledger.get_burns,
+    },
+    ### /dispensers ###
+    "/dispensers/<tx_hash>": {
+        "function": ledger.get_dispenser_info,
+    },
+    "/dispensers/<tx_hash>/dispenses": {
+        "function": ledger.get_dispenses,
     },
 }
 

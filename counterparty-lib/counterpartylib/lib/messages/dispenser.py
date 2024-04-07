@@ -228,12 +228,12 @@ def validate(
             and open_address != source
         ):
             open_dispensers = ledger.get_dispensers(
-                db, status_in=[0, 11], source=open_address, asset=asset, origin=source
+                db, status_in=[0, 11], address=open_address, asset=asset, origin=source
             )
         else:
             query_address = open_address if status == STATUS_OPEN_EMPTY_ADDRESS else source
             open_dispensers = ledger.get_dispensers(
-                db, status_in=[0, 11], source=query_address, asset=asset
+                db, status_in=[0, 11], address=query_address, asset=asset
             )
 
         if len(open_dispensers) == 0 or open_dispensers[0]["status"] != STATUS_CLOSING:
@@ -459,7 +459,7 @@ def parse(db, tx, message):
         else:
             if dispenser_status == STATUS_OPEN or dispenser_status == STATUS_OPEN_EMPTY_ADDRESS:
                 existing = ledger.get_dispensers(
-                    db, source=action_address, asset=asset, status=STATUS_OPEN
+                    db, address=action_address, asset=asset, status=STATUS_OPEN
                 )
 
                 if len(existing) == 0:
@@ -612,7 +612,7 @@ def parse(db, tx, message):
                                 )
 
                                 dispenser_tx_hash = ledger.get_dispensers(
-                                    db, source=action_address, asset=asset, status=STATUS_OPEN
+                                    db, address=action_address, asset=asset, status=STATUS_OPEN
                                 )[0]["tx_hash"]
                                 bindings_refill = {
                                     "tx_index": tx["tx_index"],
@@ -647,14 +647,14 @@ def parse(db, tx, message):
                 if close_from_another_address:
                     existing = ledger.get_dispensers(
                         db,
-                        source=action_address,
+                        address=action_address,
                         asset=asset,
                         status=STATUS_OPEN,
                         origin=tx["source"],
                     )
                 else:
                     existing = ledger.get_dispensers(
-                        db, source=tx["source"], asset=asset, status=STATUS_OPEN
+                        db, address=tx["source"], asset=asset, status=STATUS_OPEN
                     )
                 if len(existing) == 1:
                     if close_delay == 0:
@@ -692,7 +692,7 @@ def is_dispensable(db, address, amount):
     if address is None:
         return False
 
-    dispensers = ledger.get_dispensers(db, source=address, status_in=[0, 11])
+    dispensers = ledger.get_dispensers(db, address=address, status_in=[0, 11])
 
     for next_dispenser in dispensers:
         if next_dispenser["oracle_address"] != None:  # noqa: E711
@@ -731,7 +731,7 @@ def dispense(db, tx):
         dispensers = []
         if next_out["destination"] is not None:
             dispensers = ledger.get_dispensers(
-                db, source=next_out["destination"], status_in=[0, 11], order_by="asset"
+                db, address=next_out["destination"], status_in=[0, 11], order_by="asset"
             )
 
         for dispenser in dispensers:
