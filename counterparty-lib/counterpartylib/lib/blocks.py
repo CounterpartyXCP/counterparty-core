@@ -605,6 +605,9 @@ def initialise(db):
                       bindings TEXT,
                       timestamp INTEGER)
                   """)
+    columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(mempool)""")]
+    if "event" not in columns:
+        cursor.execute("""ALTER TABLE mempool ADD COLUMN event TEXT""")
 
     # Lock UPDATE on all tables
     for table in TABLES:
@@ -1204,7 +1207,7 @@ def follow(db):
                     tx_hash, new_message = message
                     new_message["tx_hash"] = tx_hash
                     cursor.execute(
-                        """INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)""",
+                        """INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp, :event)""",
                         new_message,
                     )
 
