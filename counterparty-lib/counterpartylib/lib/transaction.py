@@ -14,6 +14,7 @@ import math  # noqa: F401
 import os  # noqa: F401
 import re  # noqa: F401
 import sys  # noqa: F401
+import threading
 import time  # noqa: F401
 
 import bitcoin as bitcoinlib
@@ -135,7 +136,53 @@ def construct(
     )
 
 
-# UTXO_LOCKS is None or DictCache per address
+class BaseThreadSafeCache:
+    def __init__(self, *args, **kwargs):
+        # Note: reading is thread safe out of the box
+        self.lock = threading.Lock()
+        self.__cache = self.create_cache(*args, **kwargs)
+
+    def create_cache(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def get(self, key, default=None):
+        return self.__cache.get(key, default)
+
+    def delete(self, key):
+        with self.lock:
+            try:
+                del self.__cache[key]
+            except KeyError:
+                pass
+
+    def set(self, key, value):
+        with self.lock:
+            try:
+                self.__cache[key] = value
+            except KeyError:
+                pass
+
+    def __len__(self):
+        return len(self.__cache)
+
+    def __iter__(self):
+        return iter(self.__cache)
+
+    def __contains__(self, key):
+        return key in self.__cache
+
+
+class ThreadSafeTTLCache(BaseThreadSafeCache):
+    def create_cache(self, *args, **kwargs):
+        return cachetools.TTLCache(*args, **kwargs)
+
+
+# class ThreadSafeDictCache(BaseThreadSafeCache):
+#     def create_cache(self, *args, **kwargs)
+#         return cachetools.DictCache(*args, **kwargs)
+#
+
+
 # set higher than the max number of UTXOs we should expect to
 # manage in an aging cache for any one source address, at any one period
 # UTXO_P2SH_ENCODING_LOCKS is TTLCache for UTXOs that are used for chaining p2sh encoding
