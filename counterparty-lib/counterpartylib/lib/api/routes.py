@@ -1,8 +1,10 @@
 from counterpartylib.lib import (
+    backend,
+    config,
     ledger,
     transaction,
 )
-from counterpartylib.lib.api.util import handle_healthz_route
+from counterpartylib.lib.api import util
 
 ROUTES = {
     ### /blocks ###
@@ -211,7 +213,38 @@ ROUTES = {
     },
     ### /healthz ###
     "/healthz": {
-        "function": handle_healthz_route,
+        "function": util.handle_healthz_route,
         "args": [("check", "heavy")],
+    },
+    ### /backend ###
+    "/backend/addresses/<address>/transactions": {
+        "function": backend.search_raw_transactions,
+        "args": [("unconfirmed", True), ("only_tx_hashes", False)],
+    },
+    "/backend/addresses/<address>/transactions/oldest": {
+        "function": backend.get_oldest_tx,
+    },
+    "/backend/addresses/<address>/utxos": {
+        "function": backend.get_unspent_txouts,
+        "args": [("unconfirmed", True), ("unspent_tx_hash", None)],
+    },
+    "/backend/addresses/<address>/pubkey": {
+        "function": util.pubkeyhash_to_pubkey,
+        "args": [("provided_pubkeys", "")],
+    },
+    "/backend/transactions": {
+        "function": util.getrawtransactions,
+        "args": [("tx_hashes", ""), ("verbose", False), ("skip_missing", False)],
+    },
+    "/backend/transactions/<tx_hash>": {
+        "function": backend.getrawtransaction,
+        "args": [("verbose", False), ("skip_missing", False)],
+    },
+    "/backend/estimatesmartfee": {
+        "function": backend.fee_per_kb,
+        "args": [
+            ("conf_target", config.ESTIMATE_FEE_CONF_TARGET),
+            ("mode", config.ESTIMATE_FEE_MODE),
+        ],
     },
 }

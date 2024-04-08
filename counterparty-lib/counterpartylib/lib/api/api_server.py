@@ -13,6 +13,7 @@ from counterpartylib.lib import (
     ledger,
 )
 from counterpartylib.lib.api.routes import ROUTES
+from counterpartylib.lib.api.util import remove_rowids
 from flask import Flask, request
 from flask import g as flask_globals
 from flask_httpauth import HTTPBasicAuth
@@ -42,25 +43,6 @@ def init_api_access_log():
             werkzeug_logger.addHandler(handler)
 
     flask.cli.show_server_banner = lambda *args: None
-
-
-def remove_rowids(query_result):
-    """Remove the rowid field from the query result."""
-    if isinstance(query_result, list):
-        filtered_results = []
-        for row in list(query_result):
-            if "rowid" in row:
-                del row["rowid"]
-            if "MAX(rowid)" in row:
-                del row["MAX(rowid)"]
-            filtered_results.append(row)
-        return filtered_results
-    filtered_results = query_result
-    if "rowid" in filtered_results:
-        del filtered_results["rowid"]
-    if "MAX(rowid)" in filtered_results:
-        del filtered_results["MAX(rowid)"]
-    return filtered_results
 
 
 def get_db():

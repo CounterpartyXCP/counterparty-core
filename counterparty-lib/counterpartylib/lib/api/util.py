@@ -1,7 +1,7 @@
 import logging
 
 import flask
-from counterparylib.lib import backend, config, exceptions, ledger, transaction
+from counterpartylib.lib import backend, config, exceptions, ledger, transaction
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -44,3 +44,35 @@ def handle_healthz_route(db, check="heavy"):
     if not healthz(db, check):
         msg, code = "Unhealthy", 503
     return flask.Response(msg, code, mimetype="application/json")
+
+
+def remove_rowids(query_result):
+    """Remove the rowid field from the query result."""
+    if isinstance(query_result, list):
+        filtered_results = []
+        for row in list(query_result):
+            if "rowid" in row:
+                del row["rowid"]
+            if "MAX(rowid)" in row:
+                del row["MAX(rowid)"]
+            filtered_results.append(row)
+        return filtered_results
+    filtered_results = query_result
+    if "rowid" in filtered_results:
+        del filtered_results["rowid"]
+    if "MAX(rowid)" in filtered_results:
+        del filtered_results["MAX(rowid)"]
+    return filtered_results
+
+
+def getrawtransactions(tx_hashes, verbose=False, skip_missing=False, _retry=0):
+    txhash_list = tx_hashes.split(",")
+    return backend.getrawtransaction_batch(txhash_list, verbose, skip_missing, _retry)
+
+
+def pubkeyhash_to_pubkey(address, provided_pubkeys=None):
+    if provided_pubkeys:
+        provided_pubkeys_list = provided_pubkeys.split(",")
+    else:
+        provided_pubkeys_list = None
+    return backend.pubkeyhash_to_pubkey(address, provided_pubkeys=provided_pubkeys_list)
