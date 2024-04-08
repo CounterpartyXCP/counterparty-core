@@ -956,12 +956,11 @@ class APIServer(threading.Thread):
 
             # TODO: Enabled only for `send`.
             if message_type_id == send.ID:
-                unpack_method = send.unpack
+                unpacked = send.unpack(self.db, message, ledger.CURRENT_BLOCK_INDEX)
             elif message_type_id == enhanced_send.ID:
-                unpack_method = enhanced_send.unpack
+                unpacked = enhanced_send.unpack(message, ledger.CURRENT_BLOCK_INDEX)
             else:
                 raise APIError("unsupported message type")
-            unpacked = unpack_method(self.db, message, ledger.CURRENT_BLOCK_INDEX)
             return message_type_id, unpacked
 
         @dispatcher.add_method

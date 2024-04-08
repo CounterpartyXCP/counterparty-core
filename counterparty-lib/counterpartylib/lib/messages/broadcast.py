@@ -162,12 +162,9 @@ def compose(db, source, timestamp, value, fee_fraction, text):
     return (source, [], data)
 
 
-def parse(db, tx, message):
-    cursor = db.cursor()
-
-    # Unpack message.
+def unpack(message, block_index, return_dict=False):
     try:
-        if ledger.enabled("broadcast_pack_text", tx["block_index"]):
+        if ledger.enabled("broadcast_pack_text", block_index):
             timestamp, value, fee_fraction_int, rawtext = struct.unpack(
                 FORMAT + f"{len(message) - LENGTH}s", message
             )
@@ -197,6 +194,24 @@ def parse(db, tx, message):
     except AssertionError:
         timestamp, value, fee_fraction_int, text = 0, None, 0, None
         status = "invalid: could not unpack text"
+
+    if return_dict:
+        return {
+            "timestamp": timestamp,
+            "value": value,
+            "fee_fraction_int": fee_fraction_int,
+            "text": text,
+            "status": status,
+        }
+    return timestamp, value, fee_fraction_int, text, status
+
+
+def parse(db, tx, message):
+    cursor = db.cursor()
+
+    # Unpack message.
+    timestamp, value, fee_fraction_int, text, status = unpack(message, tx["block_index"])
+
     if status == "valid":
         # For SQLite3
         timestamp = min(timestamp, config.MAX_INT)

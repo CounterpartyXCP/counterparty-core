@@ -403,9 +403,7 @@ def compose(
     return (source, [(feed_address, None)], data)
 
 
-def parse(db, tx, message):
-    bet_parse_cursor = db.cursor()
-
+def unpack(message, return_dict=False):
     # Unpack message.
     try:
         if len(message) != LENGTH:
@@ -429,9 +427,45 @@ def parse(db, tx, message):
             target_value,
             leverage,
             expiration,
-            fee_fraction_int,  # noqa: F841
-        ) = 0, 0, 0, 0, 0, 0, 0, 0
+        ) = 0, 0, 0, 0, 0, 0, 0
         status = "invalid: could not unpack"
+    if return_dict:
+        return {
+            "bet_type": bet_type,
+            "deadline": deadline,
+            "wager_quantity": wager_quantity,
+            "counterwager_quantity": counterwager_quantity,
+            "target_value": target_value,
+            "leverage": leverage,
+            "expiration": expiration,
+            "status": status,
+        }
+    return (
+        bet_type,
+        deadline,
+        wager_quantity,
+        counterwager_quantity,
+        target_value,
+        leverage,
+        expiration,
+        status,
+    )
+
+
+def parse(db, tx, message):
+    bet_parse_cursor = db.cursor()
+
+    # Unpack message.
+    (
+        bet_type,
+        deadline,
+        wager_quantity,
+        counterwager_quantity,
+        target_value,
+        leverage,
+        expiration,
+        status,
+    ) = unpack(message)
 
     odds, fee_fraction = 0, 0
     feed_address = tx["destination"]

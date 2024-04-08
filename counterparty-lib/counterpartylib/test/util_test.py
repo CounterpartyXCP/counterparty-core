@@ -777,6 +777,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         or tx_name == "backend"
         or tx_name == "message_type"
         or tx_name == "address"
+        or (tx_name == "versions.enhanced_send" and method == "unpack")
     ):
         return tested_method(*inputs)
     else:

@@ -94,10 +94,7 @@ def compose(db, source, offer_hash):
     return (source, [], data)
 
 
-def parse(db, tx, message):
-    cursor = db.cursor()
-
-    # Unpack message.
+def unpack(message, return_dict=False):
     try:
         if len(message) != LENGTH:
             raise exceptions.UnpackError
@@ -107,6 +104,19 @@ def parse(db, tx, message):
     except (exceptions.UnpackError, struct.error) as e:  # noqa: F841
         offer_hash = None
         status = "invalid: could not unpack"
+    if return_dict:
+        return {
+            "offer_hash": offer_hash,
+            "status": status,
+        }
+    return offer_hash, status
+
+
+def parse(db, tx, message):
+    cursor = db.cursor()
+
+    # Unpack message.
+    offer_hash, status = unpack(message)
 
     if status == "valid":
         offer, offer_type, problems = validate(db, tx["source"], offer_hash)

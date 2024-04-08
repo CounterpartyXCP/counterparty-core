@@ -409,12 +409,9 @@ def calculate_oracle_fee(
     return oracle_fee_btc
 
 
-def parse(db, tx, message):
-    cursor = db.cursor()
-
-    # Unpack message.
+def unpack(message, return_dict=False):
     try:
-        action_address = tx["source"]
+        action_address = None
         oracle_address = None
         assetid, give_quantity, escrow_quantity, mainchainrate, dispenser_status = struct.unpack(
             FORMAT, message[0:LENGTH]
@@ -432,8 +429,56 @@ def parse(db, tx, message):
         asset = ledger.generate_asset_name(assetid, ledger.CURRENT_BLOCK_INDEX)
         status = "valid"
     except (exceptions.UnpackError, struct.error) as e:  # noqa: F841
-        assetid, give_quantity, mainchainrate, asset = None, None, None, None
+        (
+            give_quantity,
+            escrow_quantity,
+            mainchainrate,
+            dispenser_status,
+            action_address,
+            oracle_address,
+            asset,
+        ) = None, None, None, None, None, None, None
         status = "invalid: could not unpack"
+
+    if return_dict:
+        return {
+            "asset": asset,
+            "give_quantity": give_quantity,
+            "escrow_quantity": escrow_quantity,
+            "mainchainrate": mainchainrate,
+            "dispenser_status": dispenser_status,
+            "action_address": action_address,
+            "oracle_address": oracle_address,
+            "status": status,
+        }
+    return (
+        asset,
+        give_quantity,
+        escrow_quantity,
+        mainchainrate,
+        dispenser_status,
+        action_address,
+        oracle_address,
+        status,
+    )
+
+
+def parse(db, tx, message):
+    cursor = db.cursor()
+
+    # Unpack message.
+    (
+        asset,
+        give_quantity,
+        escrow_quantity,
+        mainchainrate,
+        dispenser_status,
+        action_address,
+        oracle_address,
+        status,
+    ) = unpack(message)
+    if action_address is None:
+        action_address = tx["source"]
 
     if status == "valid":
         if ledger.enabled("dispenser_parsing_validation", ledger.CURRENT_BLOCK_INDEX):

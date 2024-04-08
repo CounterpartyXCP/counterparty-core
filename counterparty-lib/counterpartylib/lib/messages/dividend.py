@@ -207,23 +207,16 @@ def compose(db, source, quantity_per_unit, asset, dividend_asset):
     return (source, [], data)
 
 
-def parse(db, tx, message):
-    dividend_parse_cursor = db.cursor()
-
-    fee = 0
-
-    # Unpack message.
+def unpack(db, message, block_index, return_dict=False):
     try:
-        if (tx["block_index"] > 288150 or config.TESTNET or config.REGTEST) and len(
-            message
-        ) == LENGTH_2:
+        if (block_index > 288150 or config.TESTNET or config.REGTEST) and len(message) == LENGTH_2:
             quantity_per_unit, asset_id, dividend_asset_id = struct.unpack(FORMAT_2, message)
-            asset = ledger.get_asset_name(db, asset_id, tx["block_index"])
-            dividend_asset = ledger.get_asset_name(db, dividend_asset_id, tx["block_index"])
+            asset = ledger.get_asset_name(db, asset_id, block_index)
+            dividend_asset = ledger.get_asset_name(db, dividend_asset_id, block_index)
             status = "valid"
         elif len(message) == LENGTH_1:
             quantity_per_unit, asset_id = struct.unpack(FORMAT_1, message)
-            asset = ledger.get_asset_name(db, asset_id, tx["block_index"])
+            asset = ledger.get_asset_name(db, asset_id, block_index)
             dividend_asset = config.XCP
             status = "valid"
         else:
@@ -231,6 +224,24 @@ def parse(db, tx, message):
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:  # noqa: F841
         dividend_asset, quantity_per_unit, asset = None, None, None
         status = "invalid: could not unpack"
+
+    if return_dict:
+        return {
+            "asset": asset,
+            "quantity_per_unit": quantity_per_unit,
+            "dividend_asset": dividend_asset,
+            "status": status,
+        }
+    return asset, quantity_per_unit, dividend_asset, status
+
+
+def parse(db, tx, message):
+    dividend_parse_cursor = db.cursor()
+
+    fee = 0
+
+    # Unpack message.
+    asset, quantity_per_unit, dividend_asset, status = unpack(db, message, tx["block_index"])
 
     if dividend_asset == config.BTC:
         status = f"invalid: cannot pay {config.BTC} dividends within protocol"

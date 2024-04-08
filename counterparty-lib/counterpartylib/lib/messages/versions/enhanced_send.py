@@ -14,7 +14,7 @@ MAX_MEMO_LENGTH = 34
 ID = 2  # 0x02
 
 
-def unpack(db, message, block_index):
+def unpack(message, block_index):
     try:
         # account for memo bytes
         memo_bytes_length = len(message) - LENGTH
@@ -150,7 +150,7 @@ def parse(db, tx, message):
 
     # Unpack message.
     try:
-        unpacked = unpack(db, message, tx["block_index"])
+        unpacked = unpack(message, tx["block_index"])
         asset, quantity, destination, memo_bytes = (
             unpacked["asset"],
             unpacked["quantity"],

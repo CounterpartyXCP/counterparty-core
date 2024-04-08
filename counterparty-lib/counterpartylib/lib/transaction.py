@@ -32,6 +32,8 @@ from counterpartylib.lib import (
     exceptions,
     gettxinfo,
     ledger,
+    message_type,
+    messages,
     script,
     util,
 )
@@ -1006,6 +1008,7 @@ COMPOSABLE_TRANSACTIONS = [
     "burn",
     "cancel",
     "destroy",
+    "dispenser",
     "dividend",
     "issuance",
     "order",
@@ -1013,7 +1016,6 @@ COMPOSABLE_TRANSACTIONS = [
     "rps",
     "rpsresolve",
     "sweep",
-    "dispenser",
 ]
 
 
@@ -1035,4 +1037,56 @@ def info(db, rawtransaction, block_index=None):
         "btc_amount": btc_amount,
         "fee": fee,
         "data": util.hexlify(data) if data else "",
+    }
+
+
+def unpack(db, data_hex):
+    data = binascii.unhexlify(data_hex)
+    message_type_id, message = message_type.unpack(data)
+
+    # Unknown message type
+    message_data = {"error": "Unknown message type"}
+    # Bet
+    if message_type_id == messages.bet.ID:
+        message_type = "bet"
+        message_data = messages.bet.unpack(message, return_dict=True)
+    # Broadcast
+    elif message_type_id == messages.broadcast.ID:
+        message_type = "broadcast"
+        message_data = messages.broadcast.unpack(
+            message, ledger.CURRENT_BLOCK_INDEX, return_dict=True
+        )
+    # BTCPay
+    elif message_type_id == messages.btcpay.ID:
+        message_type = "btcpay"
+        message_data = messages.btcpay.unpack(message, return_dict=True)
+    # Cancel
+    elif message_type_id == messages.cancel.ID:
+        message_type = "cancel"
+        message_data = messages.cancel.unpack(message, return_dict=True)
+    # Destroy
+    elif message_type_id == messages.destroy.ID:
+        message_type = "destroy"
+        message_data = messages.destroy.unpack(db, message, return_dict=True)
+    # Dispenser
+    elif message_type_id == messages.dispenser.ID:
+        message_type = "dispenser"
+        message_data = messages.dispenser.unpack(message, return_dict=True)
+    # Dividend
+    elif message_type_id == messages.dividend.ID:
+        message_type = "dividend"
+        message_data = messages.dividend.unpack(db, message, return_dict=True)
+    # Send
+    elif message_type_id == messages.send.ID:
+        message_type = "send"
+        message_data = messages.send.unpack(db, message, ledger.CURRENT_BLOCK_INDEX)
+    # Enhanced send
+    elif message_type_id == messages.versions.enhanced_send.ID:
+        message_type = "enhanced_send"
+        message_data = messages.versions.enhanced_send.unpack(message, ledger.CURRENT_BLOCK_INDEX)
+
+    return {
+        "message_type": message_type,
+        "message_type_id": message_type_id,
+        "message_data": message_data,
     }
