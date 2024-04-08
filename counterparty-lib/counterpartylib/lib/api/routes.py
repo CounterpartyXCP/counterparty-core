@@ -6,6 +6,7 @@ from counterpartylib.lib import (
 )
 from counterpartylib.lib.api import util
 
+# Define the API routes except root (`/`) defined in `api_server.py`
 ROUTES = {
     ### /blocks ###
     "/blocks": {

@@ -57,12 +57,14 @@ def remove_rowids(query_result):
                 del row["MAX(rowid)"]
             filtered_results.append(row)
         return filtered_results
-    filtered_results = query_result
-    if "rowid" in filtered_results:
-        del filtered_results["rowid"]
-    if "MAX(rowid)" in filtered_results:
-        del filtered_results["MAX(rowid)"]
-    return filtered_results
+    if isinstance(query_result, dict):
+        filtered_results = query_result
+        if "rowid" in filtered_results:
+            del filtered_results["rowid"]
+        if "MAX(rowid)" in filtered_results:
+            del filtered_results["MAX(rowid)"]
+        return filtered_results
+    return query_result
 
 
 def getrawtransactions(tx_hashes, verbose=False, skip_missing=False, _retry=0):
@@ -76,3 +78,9 @@ def pubkeyhash_to_pubkey(address, provided_pubkeys=None):
     else:
         provided_pubkeys_list = None
     return backend.pubkeyhash_to_pubkey(address, provided_pubkeys=provided_pubkeys_list)
+
+
+def get_backend_height():
+    block_count = backend.getblockcount()
+    blocks_behind = backend.getindexblocksbehind()
+    return block_count + blocks_behind

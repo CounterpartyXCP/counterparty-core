@@ -3,6 +3,7 @@ import logging
 import multiprocessing
 from logging import handlers as logging_handlers
 from multiprocessing import Process
+from threading import Timer
 
 import flask
 from counterpartylib import server
@@ -13,7 +14,7 @@ from counterpartylib.lib import (
     ledger,
 )
 from counterpartylib.lib.api.routes import ROUTES
-from counterpartylib.lib.api.util import remove_rowids
+from counterpartylib.lib.api.util import get_backend_height, remove_rowids
 from flask import Flask, request
 from flask import g as flask_globals
 from flask_httpauth import HTTPBasicAuth
@@ -22,6 +23,10 @@ multiprocessing.set_start_method("spawn", force=True)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 auth = HTTPBasicAuth()
+
+BACKEND_HEIGHT = 0
+REFRESH_BACKEND_HEIGHT_INTERVAL = 10
+BACKEND_HEIGHT_TIMER = None
 
 
 def init_api_access_log():
@@ -58,6 +63,27 @@ def verify_password(username, password):
 
 
 @auth.login_required
+def api_root():
+    counterparty_height = blocks.last_db_index(get_db())
+    routes = list(ROUTES.keys())
+    network = "mainnet"
+    if config.TESTNET:
+        network = "testnet"
+    elif config.REGTEST:
+        network = "regtest"
+    elif config.TESTCOIN:
+        network = "testcoin"
+    return {
+        "server_ready": counterparty_height >= BACKEND_HEIGHT,
+        "network": network,
+        "version": config.VERSION_STRING,
+        "backend_height": BACKEND_HEIGHT,
+        "counterparty_height": counterparty_height,
+        "routes": routes,
+    }
+
+
+@auth.login_required
 def handle_route(**kwargs):
     route = ROUTES.get(str(request.url_rule.rule))
     function_args = dict(kwargs)
@@ -75,14 +101,32 @@ def run_api_server(args):
     # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
     with app.app_context():
+        # Initialise the API access log
         init_api_access_log()
         # Get the last block index
         ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(get_db())
         # Add routes
+        app.route("/")(api_root)
         for path in ROUTES.keys():
             app.add_url_rule(path, view_func=handle_route)
+        # run the scheduler to refresh the backend height
+        refresh_backend_height()
     # Start the API server
-    app.run(host=config.RPC_HOST, port=config.RPC_PORT, debug=False)
+    try:
+        app.run(host=config.RPC_HOST, port=config.RPC_PORT, debug=False)
+    finally:
+        # ensure timer is cancelled
+        if BACKEND_HEIGHT_TIMER:
+            BACKEND_HEIGHT_TIMER.cancel()
+
+
+def refresh_backend_height():
+    global BACKEND_HEIGHT, BACKEND_HEIGHT_TIMER  # noqa F811
+    BACKEND_HEIGHT = get_backend_height()
+    if BACKEND_HEIGHT_TIMER:
+        BACKEND_HEIGHT_TIMER.cancel()
+    BACKEND_HEIGHT_TIMER = Timer(REFRESH_BACKEND_HEIGHT_INTERVAL, refresh_backend_height)
+    BACKEND_HEIGHT_TIMER.start()
 
 
 class APIServer(object):
