@@ -62,7 +62,6 @@ def verify_password(username, password):
     return username == config.RPC_USER and password == config.RPC_PASSWORD
 
 
-@auth.login_required
 def api_root():
     counterparty_height = blocks.last_db_index(get_db())
     routes = list(ROUTES.keys())
@@ -83,17 +82,38 @@ def api_root():
     }
 
 
+def inject_headers(db, result):
+    response = flask.make_response(flask.jsonify(result))
+    if not config.RPC_NO_ALLOW_CORS:
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = (
+            "DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
+        )
+    counterparty_height = blocks.last_db_index(db)
+    response.headers["X-COUNTERPARTY-HEIGHT"] = counterparty_height
+    response.headers["X-COUNTERPARTY-READY"] = counterparty_height >= BACKEND_HEIGHT
+    response.headers["X-BACKEND-HEIGHT"] = BACKEND_HEIGHT
+    return response
+
+
 @auth.login_required
 def handle_route(**kwargs):
-    route = ROUTES.get(str(request.url_rule.rule))
-    function_args = dict(kwargs)
-    if "pass_all_args" in route and route["pass_all_args"]:
-        function_args = request.args | function_args
-    elif "args" in route:
-        for arg in route["args"]:
-            function_args[arg[0]] = request.args.get(arg[0], arg[1])
-    result = route["function"](get_db(), **function_args)
-    return remove_rowids(result)
+    db = get_db()
+    rule = str(request.url_rule.rule)
+    if rule == "/":
+        result = api_root()
+    else:
+        route = ROUTES.get(rule)
+        function_args = dict(kwargs)
+        if "pass_all_args" in route and route["pass_all_args"]:
+            function_args = request.args | function_args
+        elif "args" in route:
+            for arg in route["args"]:
+                function_args[arg[0]] = request.args.get(arg[0], arg[1])
+        result = route["function"](db, **function_args)
+        result = remove_rowids(result)
+    return inject_headers(db, result)
 
 
 def run_api_server(args):
@@ -106,7 +126,7 @@ def run_api_server(args):
         # Get the last block index
         ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(get_db())
         # Add routes
-        app.route("/")(api_root)
+        app.add_url_rule("/", view_func=handle_route)
         for path in ROUTES.keys():
             app.add_url_rule(path, view_func=handle_route)
         # run the scheduler to refresh the backend height
