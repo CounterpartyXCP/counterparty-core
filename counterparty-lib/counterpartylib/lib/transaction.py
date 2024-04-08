@@ -1022,3 +1022,17 @@ def compose(db, transaction_name, **kwargs):
         raise exceptions.TransactionError("Transaction type not composable.")
     transaction_args, common_args, _ = split_compose_arams(**kwargs)
     return compose_transaction(db, name=transaction_name, params=transaction_args, **common_args)
+
+
+def info(db, rawtransaction, block_index=None):
+    # block_index mandatory for transactions before block 335000
+    source, destination, btc_amount, fee, data, extra = gettxinfo.get_tx_info(
+        db, BlockchainParser().deserialize_tx(rawtransaction), block_index=block_index
+    )
+    return {
+        "source": source,
+        "destination": destination,
+        "btc_amount": btc_amount,
+        "fee": fee,
+        "data": util.hexlify(data) if data else "",
+    }

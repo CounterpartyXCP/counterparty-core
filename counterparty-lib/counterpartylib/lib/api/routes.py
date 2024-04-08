@@ -2,6 +2,7 @@ from counterpartylib.lib import (
     ledger,
     transaction,
 )
+from counterpartylib.lib.api.util import handle_healthz_route
 
 ROUTES = {
     ### /blocks ###
@@ -61,6 +62,10 @@ ROUTES = {
     "/transactions/compose/<transaction_name>": {
         "function": transaction.compose,
         "pass_all_args": True,
+    },
+    "/transactions/info": {
+        "function": transaction.info,
+        "args": [("rawtransaction", None), ("block_index", None)],
     },
     "/transactions/<tx_hash>": {
         "function": ledger.get_transaction,
@@ -203,5 +208,10 @@ ROUTES = {
     "/events/<event>": {
         "function": ledger.get_events,
         "args": [("last", None), ("limit", 100)],
+    },
+    ### /healthz ###
+    "/healthz": {
+        "function": handle_healthz_route,
+        "args": [("check", "heavy")],
     },
 }

@@ -19,7 +19,7 @@ from logging import handlers as logging_handlers
 
 import flask
 import jsonrpc
-from counterpartylib.lib import (  # noqa: E402
+from counterpartylib.lib import (
     backend,
     config,
     database,
@@ -31,8 +31,9 @@ from counterpartylib.lib import (  # noqa: E402
     transaction,
     util,
 )
-from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
-from counterpartylib.lib.messages import (  # noqa: E402
+from counterpartylib.lib.api import util as api_util
+from counterpartylib.lib.kickstart.blocks_parser import BlockchainParser
+from counterpartylib.lib.messages import (
     bet,  # noqa: F401
     broadcast,  # noqa: F401
     btcpay,  # noqa: F401
@@ -169,14 +170,6 @@ def check_backend_state():
 
 class DatabaseError(Exception):
     pass
-
-
-def check_database_state(db, blockcount):
-    f"""Checks {config.XCP_NAME} database to see if is caught up with backend."""  # noqa: B021
-    if ledger.CURRENT_BLOCK_INDEX + 1 < blockcount:
-        raise DatabaseError(f"{config.XCP_NAME} database is behind backend.")
-    logger.debug("Database state check passed.")
-    return
 
 
 # TODO: ALL queries EVERYWHERE should be done with these methods
@@ -529,7 +522,7 @@ class APIStatusPoller(threading.Thread):
                         check_backend_state()
                         code = 12
                         logger.debug("Checking database state.")
-                        check_database_state(db, backend.getblockcount())
+                        api_util.check_database_state(db, backend.getblockcount())
                         self.last_database_check = time.time()
             except (BackendError, DatabaseError) as e:
                 exception_name = e.__class__.__name__
@@ -796,7 +789,7 @@ class APIServer(threading.Thread):
             latest_block_index = backend.getblockcount()
 
             try:
-                check_database_state(self.db, latest_block_index)
+                api_util.check_database_state(self.db, latest_block_index)
             except DatabaseError:
                 caught_up = False
             else:
@@ -1045,31 +1038,9 @@ class APIServer(threading.Thread):
         @app.route("/healthz", methods=["GET"])
         def handle_healthz():
             msg, code = "Healthy", 200
-
-            type_ = request.args.get("type", "heavy")
-
-            try:
-                if type_ == "light":
-                    logger.debug("Performing light healthz check.")
-                    latest_block_index = backend.getblockcount()
-                    check_database_state(self.db, latest_block_index)
-                else:
-                    logger.debug("Performing heavy healthz check.")
-                    transaction.compose_transaction(
-                        self.db,
-                        name="send",
-                        params={
-                            "source": config.UNSPENDABLE,
-                            "destination": config.UNSPENDABLE,
-                            "asset": config.XCP,
-                            "quantity": 100000000,
-                        },
-                        allow_unconfirmed_inputs=True,
-                        fee=1000,
-                    )
-            except Exception:
+            check_type = request.args.get("type", "heavy")
+            if not api_util.healthz(self.db, check_type):
                 msg, code = "Unhealthy", 503
-
             return flask.Response(msg, code, mimetype="application/json")
 
         @app.route("/", defaults={"args_path": ""}, methods=["GET", "POST", "OPTIONS"])
