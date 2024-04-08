@@ -274,6 +274,7 @@ def api_server_v2(request, cp_server):
         "json_log": False,
         "no_check_asset_conservation": True,
         "action": "",
+        "no_refresh_backend_height": True,
     }
     server_config = (
         default_config
@@ -283,6 +284,7 @@ def api_server_v2(request, cp_server):
             "rpc_port": TEST_RPC_PORT + 10,
         }
     )
+
     args = argparse.Namespace(**server_config)
     api_server = api_v2.APIServer()
     api_server.start(args)

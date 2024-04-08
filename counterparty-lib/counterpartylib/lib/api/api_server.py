@@ -110,11 +110,14 @@ def run_api_server(args):
         for path in ROUTES.keys():
             app.add_url_rule(path, view_func=handle_route)
         # run the scheduler to refresh the backend height
-        refresh_backend_height()
-    # Start the API server
+        # `no_refresh_backend_height` used only for testing. TODO: find a way to mock it
+        if "no_refresh_backend_height" not in args or not args["no_refresh_backend_height"]:
+            refresh_backend_height()
     try:
+        # Start the API server
         app.run(host=config.RPC_HOST, port=config.RPC_PORT, debug=False)
     finally:
+        pass
         # ensure timer is cancelled
         if BACKEND_HEIGHT_TIMER:
             BACKEND_HEIGHT_TIMER.cancel()
