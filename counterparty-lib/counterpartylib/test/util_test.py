@@ -592,6 +592,9 @@ def run_scenario(scenario):
     initialise_db(db)
 
     raw_transactions = []
+
+    transaction.initialise(force=True)
+
     for tx in scenario:
         if tx[0] != "create_next_block":
             mock_protocol_changes = tx[3] if len(tx) == 4 else {}

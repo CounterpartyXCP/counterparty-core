@@ -23,6 +23,8 @@ FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
 def test_bytespersigop(server_db):
     assert ledger.enabled("bytespersigop") == False  # noqa: E712
 
+    transaction.initialise()
+
     # ADDR[0], bytespersigop=False, desc 41 bytes, opreturn
     txhex = api.compose_transaction(
         server_db,
