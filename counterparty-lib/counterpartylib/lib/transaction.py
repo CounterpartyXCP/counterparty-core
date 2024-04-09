@@ -1056,69 +1056,69 @@ def unpack(db, datahex, block_index=None):
     message_data = {"error": "Unknown message type"}
     # Bet
     if message_type_id == messages.bet.ID:
-        message_type = "bet"
+        message_type_name = "bet"
         message_data = messages.bet.unpack(message, return_dict=True)
     # Broadcast
     elif message_type_id == messages.broadcast.ID:
-        message_type = "broadcast"
+        message_type_name = "broadcast"
         message_data = messages.broadcast.unpack(message, block_index, return_dict=True)
     # BTCPay
     elif message_type_id == messages.btcpay.ID:
-        message_type = "btcpay"
+        message_type_name = "btcpay"
         message_data = messages.btcpay.unpack(message, return_dict=True)
     # Cancel
     elif message_type_id == messages.cancel.ID:
-        message_type = "cancel"
+        message_type_name = "cancel"
         message_data = messages.cancel.unpack(message, return_dict=True)
     # Destroy
     elif message_type_id == messages.destroy.ID:
-        message_type = "destroy"
+        message_type_name = "destroy"
         message_data = messages.destroy.unpack(db, message, return_dict=True)
     # Dispenser
     elif message_type_id == messages.dispenser.ID:
-        message_type = "dispenser"
+        message_type_name = "dispenser"
         message_data = messages.dispenser.unpack(message, return_dict=True)
     # Dividend
     elif message_type_id == messages.dividend.ID:
-        message_type = "dividend"
-        message_data = messages.dividend.unpack(db, message, return_dict=True)
+        message_type_name = "dividend"
+        message_data = messages.dividend.unpack(db, message, block_index, return_dict=True)
     # Issuance
     elif message_type_id in issuance_ids:
-        message_type = "issuance"
+        message_type_name = "issuance"
         message_data = messages.issuance.unpack(
             db, message, message_type_id, block_index, return_dict=True
         )
     # Order
     elif message_type_id == messages.order.ID:
-        message_type = "order"
+        message_type_name = "order"
         message_data = messages.order.unpack(db, message, block_index, return_dict=True)
     # Send
     elif message_type_id == messages.send.ID:
-        message_type = "send"
+        message_type_name = "send"
         message_data = messages.send.unpack(db, message, block_index)
     # Enhanced send
     elif message_type_id == messages.versions.enhanced_send.ID:
-        message_type = "enhanced_send"
+        message_type_name = "enhanced_send"
         message_data = messages.versions.enhanced_send.unpack(message, block_index)
     # MPMA send
     elif message_type_id == messages.versions.mpma.ID:
-        message_type = "mpma_send"
+        message_type_name = "mpma_send"
         message_data = messages.versions.mpma.unpack(message, block_index)
     # RPS
     elif message_type_id == messages.rps.ID:
-        message_type = "rps"
+        message_type_name = "rps"
         message_data = messages.rps.unpack(message, return_dict=True)
     # RPS Resolve
     elif message_type_id == messages.rpsresolve.ID:
-        message_type = "rpsresolve"
+        message_type_name = "rpsresolve"
         message_data = messages.rpsresolve.unpack(message, return_dict=True)
     # Sweep
     elif message_type_id == messages.sweep.ID:
-        message_type = "sweep"
+        message_type_name = "sweep"
         message_data = messages.sweep.unpack(message)
 
     return {
-        "message_type": message_type,
+        "message_type": message_type_name,
         "message_type_id": message_type_id,
         "message_data": message_data,
     }

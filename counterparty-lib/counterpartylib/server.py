@@ -48,6 +48,8 @@ class ConfigurationError(Exception):
 
 SIGTERM_CALLBACKS = []
 
+global api_server_v1, api_server, api_status_poller  # noqa: PLW0603
+
 
 def sigterm_handler(_signo, _stack_frame):
     if _signo == 15:
@@ -492,10 +494,10 @@ def initialise_config(
         config.API_PORT = int(config.API_PORT)
         if not (int(config.API_PORT) > 1 and int(config.API_PORT) < 65535):
             raise ConfigurationError("invalid server API port number")
-    except:  # noqa: E722
+    except ConfigurationError as e:  # noqa: E722
         raise ConfigurationError(  # noqa: B904
             "Please specific a valid port number api-port configuration parameter"
-        )
+        ) from e
 
     if api_user:
         config.API_USER = api_user
