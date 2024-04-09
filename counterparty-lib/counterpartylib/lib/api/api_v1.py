@@ -54,6 +54,7 @@ from flask import request
 from flask_httpauth import HTTPBasicAuth
 from jsonrpc import dispatcher
 from jsonrpc.exceptions import JSONRPCDispatchException
+from werkzeug.serving import make_server
 from xmltodict import unparse as serialize_to_xml
 
 D = decimal.Decimal
@@ -507,7 +508,6 @@ class APIStatusPoller(threading.Thread):
     def run(self):
         logger.debug("Starting API Status Poller.")
         global CURRENT_API_STATUS_CODE, CURRENT_API_STATUS_RESPONSE_JSON  # noqa: PLW0603
-        db = database.get_connection(read_only=True)
 
         while self.stop_event.is_set() != True:  # noqa: E712
             try:
@@ -522,7 +522,7 @@ class APIStatusPoller(threading.Thread):
                         check_backend_state()
                         code = 12
                         logger.debug("Checking database state.")
-                        api_util.check_last_parsed_block(db, backend.getblockcount())
+                        api_util.check_last_parsed_block(backend.getblockcount())
                         self.last_database_check = time.time()
             except (BackendError, DatabaseError) as e:
                 exception_name = e.__class__.__name__
@@ -546,11 +546,10 @@ class APIServer(threading.Thread):
         self.db = db
         self.is_ready = False
         threading.Thread.__init__(self)
-        self.stop_event = threading.Event()
 
     def stop(self):
+        self.server.shutdown()
         self.join()
-        self.stop_event.set()
 
     def run(self):
         logger.info("Starting API Server.")
@@ -789,7 +788,7 @@ class APIServer(threading.Thread):
             latest_block_index = backend.getblockcount()
 
             try:
-                api_util.check_last_parsed_block(self.db, latest_block_index)
+                api_util.check_last_parsed_block(latest_block_index)
             except DatabaseError:
                 caught_up = False
             else:
@@ -1222,7 +1221,10 @@ class APIServer(threading.Thread):
 
         # Run app server (blocking)
         self.is_ready = True
-        app.run(host=config.RPC_HOST, port=config.RPC_PORT, threaded=True)
+        self.server = make_server(config.RPC_HOST, config.RPC_PORT, app)
+        self.ctx = app.app_context()
+        self.ctx.push()
+        self.server.serve_forever()
 
         self.db.close()
         return

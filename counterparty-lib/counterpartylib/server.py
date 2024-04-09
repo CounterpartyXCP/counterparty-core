@@ -59,14 +59,17 @@ def sigterm_handler(_signo, _stack_frame):
     logger.info(f"Received {signal_name}.")
 
     global_vars = globals()
+    # API v1
     if "api_server_v1" in global_vars:
         logger.info("Stopping API server v1.")
         global_vars["api_server_v1"].stop()
+    if "api_status_poller" in global_vars:
+        logger.info("Stopping API Status Pooler.")
+        global_vars["api_status_poller"].stop()
+    # API v2
     if "api_server" in global_vars:
         logger.info("Stopping API server.")
         global_vars["api_server"].stop()
-    if "api_status_poller" in global_vars:
-        global_vars["api_status_poller"].stop()
 
     logger.info("Stopping backend.")
     backend.stop()
