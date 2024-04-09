@@ -1,0 +1,25 @@
+[build-system]
+requires = ["maturin>=0.14,<0.15"]
+build-backend = "maturin"
+
+[project]
+name = "counterparty-rs"
+dynamic = ["version"]
+repository = "https://github.com/CounterpartyXCP/counterparty-core"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+  "python-bitcoinlib==0.12.2",
+]
+
+
+[tool.maturin]
+strip = true
+
+[tool.hatch.version]
+path = "../counterparty-lib/counterpartylib/lib/config.py"

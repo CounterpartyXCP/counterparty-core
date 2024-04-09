@@ -1,6 +1,7 @@
 env
 venv
 docs/_build/*
+target/
 
 profile.txt
 
@@ -15,7 +16,7 @@ profile.txt
 *.pyc
 
 # Setuptools distribution folder.
-/dist/
+dist/
 
 # Setuptools build folder.
 /build/
@@ -34,5 +35,7 @@ profile.txt
 .python-version
 
 .eggs
-.venv
+.env
+.env.leave
+.venv/
 test-results/

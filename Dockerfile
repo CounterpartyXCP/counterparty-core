@@ -1,30 +1,36 @@
+# docker build -t counterparty .
+# docker run --rm counterparty counterparty-server -h
+
 FROM ubuntu:22.04
 
 RUN apt-get update
-RUN apt install -y python3-pip wget git
+# install dependencies
+RUN apt-get install -y python3 python3-dev python3-pip libleveldb-dev curl
 
-ENV HOME /root
-WORKDIR /root
+# install rust
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
 
-RUN mkdir -p ~/miniconda3 && \
-    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh && \
-    bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
-RUN /root/miniconda3/bin/conda create -n xcp python=3.6
-RUN /root/miniconda3/bin/conda init bash
-ENV PATH /root/miniconda3/envs/xcp/bin:$PATH
+# install maturin
+RUN pip3 install maturin
 
-RUN git clone https://github.com/CounterpartyXCP/counterparty-lib.git
-RUN cd /root/counterparty-lib && \
-    pip3 install --upgrade -r requirements.txt && \
-    python3 setup.py install
+# copy repository
+COPY README.md /README.md
+COPY ./counterparty-rs /counterparty-rs
+COPY ./counterparty-lib /counterparty-lib
+COPY ./counterparty-cli /counterparty-cli
 
-RUN git clone https://github.com/CounterpartyXCP/counterparty-cli.git
-RUN cd /root/counterparty-cli && \
-    pip3 install --upgrade -r requirements.txt && \
-    python3 setup.py install
+# install counterparty-lib
+WORKDIR /counterparty-rs
+RUN pip3 install .
 
-COPY docker/counterparty-server/server.conf /root/.config/counterparty/server.conf
+# install counterparty-lib
+WORKDIR /counterparty-lib
+RUN pip3 install .
 
-EXPOSE 4000
+# install counterparty-cli
+WORKDIR /counterparty-cli
+RUN pip3 install .
 
-ENTRYPOINT counterparty-server start
+ENTRYPOINT [ "counterparty-server"]
+CMD [ "start" ]
