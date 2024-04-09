@@ -130,7 +130,7 @@ def run_api_server(args):
         ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(get_db())
         # Add routes
         app.add_url_rule("/", view_func=handle_route)
-        for path in ROUTES.keys():
+        for path in ROUTES:
             app.add_url_rule(path, view_func=handle_route)
         # run the scheduler to refresh the backend height
         # `no_refresh_backend_height` used only for testing. TODO: find a way to mock it
@@ -141,7 +141,6 @@ def run_api_server(args):
         print("API server started", config.API_HOST, config.API_PORT)
         app.run(host=config.API_HOST, port=config.API_PORT, debug=False)
     finally:
-        pass
         # ensure timer is cancelled
         if BACKEND_HEIGHT_TIMER:
             BACKEND_HEIGHT_TIMER.cancel()

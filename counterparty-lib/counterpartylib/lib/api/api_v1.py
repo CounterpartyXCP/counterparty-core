@@ -522,7 +522,7 @@ class APIStatusPoller(threading.Thread):
                         check_backend_state()
                         code = 12
                         logger.debug("Checking database state.")
-                        api_util.check_database_state(db, backend.getblockcount())
+                        api_util.check_last_parsed_block(db, backend.getblockcount())
                         self.last_database_check = time.time()
             except (BackendError, DatabaseError) as e:
                 exception_name = e.__class__.__name__
@@ -789,7 +789,7 @@ class APIServer(threading.Thread):
             latest_block_index = backend.getblockcount()
 
             try:
-                api_util.check_database_state(self.db, latest_block_index)
+                api_util.check_last_parsed_block(self.db, latest_block_index)
             except DatabaseError:
                 caught_up = False
             else:

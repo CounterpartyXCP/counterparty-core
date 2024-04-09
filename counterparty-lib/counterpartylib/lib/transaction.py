@@ -991,13 +991,13 @@ def split_compose_arams(**kwargs):
     transaction_args = {}
     common_args = {}
     private_key_wif = None
-    for key in kwargs:
+    for key, value in kwargs.items():
         if key in COMPOSE_COMMONS_ARGS:
-            common_args[key] = kwargs[key]
+            common_args[key] = value
         elif key == "privkey":
-            private_key_wif = kwargs[key]
+            private_key_wif = value
         else:
-            transaction_args[key] = kwargs[key]
+            transaction_args[key] = value
     return transaction_args, common_args, private_key_wif
 
 

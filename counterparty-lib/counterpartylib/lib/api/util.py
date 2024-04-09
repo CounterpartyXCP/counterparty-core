@@ -7,11 +7,10 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def check_last_parsed_block(blockcount):
-    f"""Checks {config.XCP_NAME} database to see if is caught up with backend."""  # noqa: B021
+    """Checks database to see if is caught up with backend."""
     if ledger.CURRENT_BLOCK_INDEX + 1 < blockcount:
         raise exceptions.DatabaseError(f"{config.XCP_NAME} database is behind backend.")
     logger.debug("Database state check passed.")
-    return
 
 
 def healthz(db, check_type="heavy"):
