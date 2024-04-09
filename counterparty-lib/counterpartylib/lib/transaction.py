@@ -60,6 +60,8 @@ D = decimal.Decimal
 # when we explcitly build up a dependency tree.
 
 TRANSACTION_SERVICE_SINGLETON = None
+
+
 def initialise(force=False):
     global TRANSACTION_SERVICE_SINGLETON  # noqa: PLW0603
 
@@ -69,7 +71,6 @@ def initialise(force=False):
     utxo_locks = None
     if config.UTXO_LOCKS_MAX_ADDRESSES > 0:
         utxo_locks = util.DictCache(size=config.UTXO_LOCKS_MAX_ADDRESSES)
-
 
     TRANSACTION_SERVICE_SINGLETON = TransactionService(
         backend=backend,
@@ -148,7 +149,6 @@ class BaseThreadSafeCache:
         self.lock = threading.Lock()
         self.__cache = self.create_cache(*args, **kwargs)
 
-
     def create_cache(self, *args, **kwargs):
         raise NotImplementedError
 
@@ -169,18 +169,15 @@ class BaseThreadSafeCache:
     def _get_cache(self):
         return self.__cache
 
-
     def set(self, key, value):
-        with self.lock: 
-            try: 
-                self.__cache[key] = value 
+        with self.lock:
+            try:
+                self.__cache[key] = value
             except KeyError:
                 pass
 
     def keys(self):
         return self.__cache.keys()
-
-    
 
     def __len__(self):
         return len(self.__cache)
@@ -195,12 +192,6 @@ class BaseThreadSafeCache:
 class ThreadSafeTTLCache(BaseThreadSafeCache):
     def create_cache(self, *args, **kwargs):
         return cachetools.TTLCache(*args, **kwargs)
-
-
-# class ThreadSafeDictCache(BaseThreadSafeCache):
-#     def create_cache(self, *args, **kwargs)
-#         return cachetools.DictCache(*args, **kwargs)
-#
 
 
 # set higher than the max number of UTXOs we should expect to
@@ -223,21 +214,20 @@ class TransactionService:
         default_multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
         estimate_fee_mode=config.ESTIMATE_FEE_MODE,
         op_return_max_size=config.OP_RETURN_MAX_SIZE,
-        utxo_p2sh_encoding_locks= ThreadSafeTTLCache(10000, 180),
-        utxo_p2sh_encoding_locks_cache= ThreadSafeTTLCache(1000, 600),
+        utxo_p2sh_encoding_locks=None,
+        utxo_p2sh_encoding_locks_cache=None,
         utxo_locks=None,
-
     ):
         self.logger = logging.getLogger(
             config.LOGGER_NAME
         )  # has to be config.LOGGER_NAME or integration tests fail
         self.backend = backend
 
-
-        self.utxo_p2sh_encoding_locks = utxo_p2sh_encoding_locks
-        self.utxo_p2sh_encoding_locks_cache = utxo_p2sh_encoding_locks_cache
+        self.utxo_p2sh_encoding_locks = utxo_p2sh_encoding_locks or ThreadSafeTTLCache(10000, 180)
+        self.utxo_p2sh_encoding_locks_cache = utxo_p2sh_encoding_locks_cache or ThreadSafeTTLCache(
+            1000, 600
+        )
         self.utxo_locks = utxo_locks
-
 
         self.utxo_locks_max_age = utxo_locks_max_age
         self.utxo_locks_max_addresses = utxo_locks_max_addresses
@@ -476,8 +466,7 @@ class TransactionService:
                     self.utxo_locks_per_address_maxsize, self.utxo_locks_max_age
                 )
 
-            self.utxo_locks[source].set(make_outkey(input),  input)
-
+            self.utxo_locks[source].set(make_outkey(input), input)
 
         return input
 
@@ -780,7 +769,7 @@ class TransactionService:
 
             if unsigned_pretx:
                 # we set a long lock on this, don't want other TXs to spend from it
-                self.utxo_p2sh_encoding_locks.set(make_outkey_vin(unsigned_pretx, 0),  True)
+                self.utxo_p2sh_encoding_locks.set(make_outkey_vin(unsigned_pretx, 0), True)
 
             # only generate the data TX if we have the pretx txId
             if pretx_txid:
