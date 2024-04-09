@@ -60,13 +60,16 @@ D = decimal.Decimal
 # when we explcitly build up a dependency tree.
 
 TRANSACTION_SERVICE_SINGLETON = None
-
-
 def initialise(force=False):
     global TRANSACTION_SERVICE_SINGLETON  # noqa: PLW0603
 
     if not force and TRANSACTION_SERVICE_SINGLETON:
         return TRANSACTION_SERVICE_SINGLETON
+
+    utxo_locks = None
+    if config.UTXO_LOCKS_MAX_ADDRESSES > 0:
+        utxo_locks = util.DictCache(size=config.UTXO_LOCKS_MAX_ADDRESSES)
+
 
     TRANSACTION_SERVICE_SINGLETON = TransactionService(
         backend=backend,
@@ -78,6 +81,9 @@ def initialise(force=False):
         default_multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
         estimate_fee_mode=config.ESTIMATE_FEE_MODE,
         op_return_max_size=config.OP_RETURN_MAX_SIZE,
+        utxo_locks=utxo_locks,
+        utxo_p2sh_encoding_locks=ThreadSafeTTLCache(10000, 180),
+        utxo_p2sh_encoding_locks_cache=ThreadSafeTTLCache(1000, 600),
     )
 
 
@@ -142,11 +148,16 @@ class BaseThreadSafeCache:
         self.lock = threading.Lock()
         self.__cache = self.create_cache(*args, **kwargs)
 
+
     def create_cache(self, *args, **kwargs):
         raise NotImplementedError
 
     def get(self, key, default=None):
         return self.__cache.get(key, default)
+
+    def pop(self, key, default=None):
+        with self.lock:
+            return self.__cache.pop(key, default)
 
     def delete(self, key):
         with self.lock:
@@ -155,12 +166,21 @@ class BaseThreadSafeCache:
             except KeyError:
                 pass
 
+    def _get_cache(self):
+        return self.__cache
+
+
     def set(self, key, value):
-        with self.lock:
-            try:
-                self.__cache[key] = value
+        with self.lock: 
+            try: 
+                self.__cache[key] = value 
             except KeyError:
                 pass
+
+    def keys(self):
+        return self.__cache.keys()
+
+    
 
     def __len__(self):
         return len(self.__cache)
@@ -188,17 +208,6 @@ class ThreadSafeTTLCache(BaseThreadSafeCache):
 # UTXO_P2SH_ENCODING_LOCKS is TTLCache for UTXOs that are used for chaining p2sh encoding
 #  instead of a simple (txid, vout) key we use [(vin.prevout.hash, vin.prevout.n) for vin tx1.vin]
 # we cache the make_outkey_vin to avoid having to fetch raw txs too often
-class TransactionLocks:
-    def __init__(self, utxo_locks_max_addresses):
-        print("lock init called", utxo_locks_max_addresses)
-
-        self.utxo_p2sh_encoding_locks = cachetools.TTLCache(10000, 180)
-        self.utxo_p2sh_encoding_locks_cache = cachetools.TTLCache(1000, 600)
-
-        if utxo_locks_max_addresses > 0:
-            self.utxo_locks = util.DictCache(size=utxo_locks_max_addresses)
-        else:
-            self.utxo_locks = None
 
 
 class TransactionService:
@@ -214,12 +223,22 @@ class TransactionService:
         default_multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
         estimate_fee_mode=config.ESTIMATE_FEE_MODE,
         op_return_max_size=config.OP_RETURN_MAX_SIZE,
+        utxo_p2sh_encoding_locks= ThreadSafeTTLCache(10000, 180),
+        utxo_p2sh_encoding_locks_cache= ThreadSafeTTLCache(1000, 600),
+        utxo_locks=None,
+
     ):
         self.logger = logging.getLogger(
             config.LOGGER_NAME
         )  # has to be config.LOGGER_NAME or integration tests fail
         self.backend = backend
-        self.locks = TransactionLocks(utxo_locks_max_addresses=utxo_locks_max_addresses)
+
+
+        self.utxo_p2sh_encoding_locks = utxo_p2sh_encoding_locks
+        self.utxo_p2sh_encoding_locks_cache = utxo_p2sh_encoding_locks_cache
+        self.utxo_locks = utxo_locks
+
+
         self.utxo_locks_max_age = utxo_locks_max_age
         self.utxo_locks_max_addresses = utxo_locks_max_addresses
         self.utxo_locks_per_address_maxsize = utxo_locks_per_address_maxsize
@@ -258,11 +277,11 @@ class TransactionService:
         return dust_return_pubkey
 
     def make_outkey_vin_txid(self, txid, vout):
-        if (txid, vout) not in self.locks.utxo_p2sh_encoding_locks_cache:
+        if (txid, vout) not in self.utxo_p2sh_encoding_locks_cache:
             txhex = self.backend.getrawtransaction(txid, verbose=False)
-            self.locks.utxo_p2sh_encoding_locks_cache[(txid, vout)] = make_outkey_vin(txhex, vout)
+            self.utxo_p2sh_encoding_locks_cache.set((txid, vout), make_outkey_vin(txhex, vout))
 
-        return self.locks.utxo_p2sh_encoding_locks_cache[(txid, vout)]
+        return self.utxo_p2sh_encoding_locks_cache.get((txid, vout))
 
     def construct_coin_selection(
         self,
@@ -299,9 +318,9 @@ class TransactionService:
                 )
 
             filter_unspents_utxo_locks = []
-            if self.locks.utxo_locks is not None and source in self.locks.utxo_locks:
-                filter_unspents_utxo_locks = self.locks.utxo_locks[source].keys()
-            filter_unspents_p2sh_locks = self.locks.utxo_p2sh_encoding_locks.keys()  # filter out any locked UTXOs to prevent creating transactions that spend the same UTXO when they're created at the same time
+            if self.utxo_locks is not None and source in self.utxo_locks:
+                filter_unspents_utxo_locks = self.utxo_locks[source].keys()
+            filter_unspents_p2sh_locks = self.utxo_p2sh_encoding_locks.keys()  # filter out any locked UTXOs to prevent creating transactions that spend the same UTXO when they're created at the same time
             filtered_unspent = []
             for output in unspent:
                 if (
@@ -398,18 +417,18 @@ class TransactionService:
             raise exceptions.BalanceError(error_message)
 
         # Lock the source's inputs (UTXOs) chosen for this transaction
-        if self.locks.utxo_locks is not None and not disable_utxo_locks:
-            if source not in self.locks.utxo_locks:
-                self.locks.utxo_locks[source] = cachetools.TTLCache(
+        if self.utxo_locks is not None and not disable_utxo_locks:
+            if source not in self.utxo_locks:
+                self.utxo_locks[source] = ThreadSafeTTLCache(
                     self.utxo_locks_per_address_maxsize, self.utxo_locks_max_age
                 )
 
             for input in inputs:
-                self.locks.utxo_locks[source][make_outkey(input)] = input
+                self.utxo_locks[source].set(make_outkey(input), input)
 
             list_unspent = [make_outkey(coin) for coin in unspent]
             list_used = [make_outkey(input) for input in inputs]
-            list_locked = list(self.locks.utxo_locks[source].keys())
+            list_locked = list(self.utxo_locks[source].keys())
             self.logger.debug(
                 f"UTXO locks: Potentials ({len(unspent)}): {list_unspent}, Used: {list_used}, locked UTXOs: {list_locked}"
             )
@@ -429,8 +448,8 @@ class TransactionService:
         unspent = self.backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs)
 
         filter_unspents_utxo_locks = []
-        if self.locks.utxo_locks is not None and source in self.locks.utxo_locks:
-            filter_unspents_utxo_locks = self.locks.utxo_locks[source].keys()
+        if self.utxo_locks is not None and source in self.utxo_locks:
+            filter_unspents_utxo_locks = self.utxo_locks[source].keys()
 
         # filter out any locked UTXOs to prevent creating transactions that spend the same UTXO when they're created at the same time
         filtered_unspent = []
@@ -450,14 +469,15 @@ class TransactionService:
             return None
 
         # Lock the source's inputs (UTXOs) chosen for this transaction
-        if self.locks.utxo_locks is not None and not disable_utxo_locks:
-            if source not in self.locks.utxo_locks:
+        if self.utxo_locks is not None and not disable_utxo_locks:
+            if source not in self.utxo_locks:
                 # TODO: dont ref cache tools directly
-                self.locks.utxo_locks[source] = cachetools.TTLCache(
+                self.utxo_locks[source] = cachetools.TTLCache(
                     self.utxo_locks_per_address_maxsize, self.utxo_locks_max_age
                 )
 
-            self.locks.utxo_locks[source][make_outkey(input)] = input
+            self.utxo_locks[source].set(make_outkey(input),  input)
+
 
         return input
 
@@ -760,7 +780,7 @@ class TransactionService:
 
             if unsigned_pretx:
                 # we set a long lock on this, don't want other TXs to spend from it
-                self.locks.utxo_p2sh_encoding_locks[make_outkey_vin(unsigned_pretx, 0)] = True
+                self.utxo_p2sh_encoding_locks.set(make_outkey_vin(unsigned_pretx, 0),  True)
 
             # only generate the data TX if we have the pretx txId
             if pretx_txid:
@@ -862,9 +882,9 @@ class TransactionService:
         parsed = (parsed_source, parsed_destination, parsed_data)
         if desired != parsed:
             # Unlock (revert) UTXO locks
-            if self.locks.utxo_locks is not None and inputs:
+            if self.utxo_locks is not None and inputs:
                 for input in inputs:
-                    self.locks.utxo_locks[source].pop(make_outkey(input), None)
+                    self.utxo_locks[source].pop(make_outkey(input), None)
 
             raise exceptions.TransactionError(
                 f"Constructed transaction does not parse correctly: {desired} ≠ {parsed}"
