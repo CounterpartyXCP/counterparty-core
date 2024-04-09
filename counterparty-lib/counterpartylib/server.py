@@ -537,7 +537,6 @@ def initialise_config(
     config.CHECK_ASSET_CONSERVATION = check_asset_conservation
     config.UTXO_LOCKS_MAX_ADDRESSES = utxo_locks_max_addresses
     config.UTXO_LOCKS_MAX_AGE = utxo_locks_max_age
-    transaction.initialise()  # initialise UTXO_LOCKS
 
     if estimate_fee_per_kb is not None:
         config.ESTIMATE_FEE_PER_KB = estimate_fee_per_kb
@@ -604,6 +603,10 @@ def start_all(catch_up="normal"):
         bootstrap(no_confirm=True)
 
     db = initialise_db()
+
+    # Reset UTXO_LOCKS.  This previously was done in
+    # initilise_config
+    transaction.initialise()
 
     # API Status Poller.
     api_status_poller = api.APIStatusPoller()

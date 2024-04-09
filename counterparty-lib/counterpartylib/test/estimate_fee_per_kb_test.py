@@ -1,13 +1,11 @@
 #! /usr/bin/python3
 import binascii
-import pprint  # noqa: F401
 import tempfile
 
 import bitcoin as bitcoinlib
 
-from counterpartylib.lib import api, backend, blocks, transaction  # noqa: F401
+from counterpartylib.lib import api, backend, transaction
 from counterpartylib.test import (
-    conftest,  # noqa: F401
     util_test,
 )
 from counterpartylib.test.fixtures.params import ADDR
@@ -41,6 +39,8 @@ def test_estimate_fee_per_kb(fee_per_kb, fee_per_kb_used, server_db, monkeypatch
     )
 
     with util_test.ConfigContext(ESTIMATE_FEE_PER_KB=True):
+        transaction.initialise()
+
         txhex = api.compose_transaction(
             server_db,
             "send",
