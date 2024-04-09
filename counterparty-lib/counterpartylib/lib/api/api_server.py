@@ -82,7 +82,7 @@ def api_root():
     }
 
 
-def inject_headers(db, result):
+def inject_headers(result):
     response = flask.make_response(flask.jsonify(result))
     if not config.RPC_NO_ALLOW_CORS:
         response.headers["Access-Control-Allow-Origin"] = "*"
@@ -90,9 +90,8 @@ def inject_headers(db, result):
         response.headers["Access-Control-Allow-Headers"] = (
             "DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
         )
-    counterparty_height = blocks.last_db_index(db)
-    response.headers["X-COUNTERPARTY-HEIGHT"] = counterparty_height
-    response.headers["X-COUNTERPARTY-READY"] = counterparty_height >= BACKEND_HEIGHT
+    response.headers["X-COUNTERPARTY-HEIGHT"] = ledger.CURRENT_BLOCK_INDEX
+    response.headers["X-COUNTERPARTY-READY"] = ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT
     response.headers["X-BACKEND-HEIGHT"] = BACKEND_HEIGHT
     return response
 
@@ -100,6 +99,8 @@ def inject_headers(db, result):
 @auth.login_required
 def handle_route(**kwargs):
     db = get_db()
+    # update the current block index
+    ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
     rule = str(request.url_rule.rule)
     if rule == "/":
         result = api_root()
@@ -113,7 +114,7 @@ def handle_route(**kwargs):
                 function_args[arg[0]] = request.args.get(arg[0], arg[1])
         result = route["function"](db, **function_args)
         result = remove_rowids(result)
-    return inject_headers(db, result)
+    return inject_headers(result)
 
 
 def run_api_server(args):
