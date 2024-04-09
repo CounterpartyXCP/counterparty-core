@@ -255,6 +255,11 @@ def api_server_v2(request, cp_server):
         "rpc_user": None,
         "rpc_password": None,
         "rpc_no_allow_cors": False,
+        "api_host": "localhost",
+        "api_user": "api",
+        "api_password": "api",
+        "api_no_allow_cors": False,
+        "api_not_ready_http_code": 202,
         "force": False,
         "requests_timeout": config.DEFAULT_REQUESTS_TIMEOUT,
         "rpc_batch_size": config.DEFAULT_RPC_BATCH_SIZE,
@@ -281,7 +286,7 @@ def api_server_v2(request, cp_server):
         | util_test.COUNTERPARTYD_OPTIONS
         | {
             "database_file": request.module.FIXTURE_DB,
-            "rpc_port": TEST_RPC_PORT + 10,
+            "api_port": TEST_RPC_PORT + 10,
         }
     )
 

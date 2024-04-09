@@ -138,6 +138,7 @@ def run_api_server(args):
             refresh_backend_height()
     try:
         # Start the API server
+        print("API server started", config.API_HOST, config.API_PORT)
         app.run(host=config.API_HOST, port=config.API_PORT, debug=False)
     finally:
         pass

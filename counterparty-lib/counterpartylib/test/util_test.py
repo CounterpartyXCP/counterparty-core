@@ -67,6 +67,7 @@ COUNTERPARTYD_OPTIONS = {
     "testcoin": False,
     "rpc_port": 9999,
     "rpc_password": "pass",
+    "api_password": "api",
     "backend_port": 18332,
     "backend_password": "pass",
     "backend_ssl_no_verify": True,

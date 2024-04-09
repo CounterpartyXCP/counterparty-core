@@ -468,7 +468,7 @@ def initialise_config(
         config.API_HOST = "localhost"
 
     if api_port:
-        config.API_PORT = rpc_port
+        config.API_PORT = api_port
     else:
         if config.TESTNET:
             if config.TESTCOIN:
