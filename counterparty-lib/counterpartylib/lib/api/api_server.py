@@ -17,6 +17,7 @@ from counterpartylib.lib.api.routes import ROUTES
 from counterpartylib.lib.api.util import get_backend_height, remove_rowids
 from flask import Flask, request
 from flask import g as flask_globals
+from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
 
 multiprocessing.set_start_method("spawn", force=True)
@@ -86,12 +87,6 @@ def inject_headers(result):
     server_ready = ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT
     http_code = 200 if server_ready else config.API_NOT_READY_HTTP_CODE
     response = flask.make_response(flask.jsonify(result), http_code)
-    if not config.API_NO_ALLOW_CORS:
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = (
-            "DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
-        )
     response.headers["X-COUNTERPARTY-HEIGHT"] = ledger.CURRENT_BLOCK_INDEX
     response.headers["X-COUNTERPARTY-READY"] = ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT
     response.headers["X-BACKEND-HEIGHT"] = BACKEND_HEIGHT
@@ -124,6 +119,8 @@ def run_api_server(args):
     # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
     with app.app_context():
+        if not config.API_NO_ALLOW_CORS:
+            CORS(app)
         # Initialise the API access log
         init_api_access_log()
         # Get the last block index
