@@ -83,8 +83,7 @@ def get_events(db, block_index=None, event=None, event_index=None, last=None, li
     if block_index is None and limit is None:
         limit = 100
     if limit is not None:
-        limit = "LIMIT ?"
-        bindings.append(limit)
+        limit = f"LIMIT {int(limit)}"
     else:
         limit = ""
     # no sql injection here
