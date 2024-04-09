@@ -28,12 +28,6 @@ ROUTES = {
     "/blocks/<int:block_index>/events/<event>": {
         "function": ledger.get_events,
     },
-    "/blocks/mempool/events": {
-        "function": ledger.get_mempool_events,
-    },
-    "/blocks/mempool/events/<event>": {
-        "function": ledger.get_mempool_events,
-    },
     "/blocks/<int:block_index>/credits": {
         "function": ledger.get_credits,
     },
@@ -251,5 +245,12 @@ ROUTES = {
             ("conf_target", config.ESTIMATE_FEE_CONF_TARGET),
             ("mode", config.ESTIMATE_FEE_MODE),
         ],
+    },
+    ### /mempool ###
+    "/mempool/events": {
+        "function": ledger.get_mempool_events,
+    },
+    "/mempool/events/<event>": {
+        "function": ledger.get_mempool_events,
     },
 }
