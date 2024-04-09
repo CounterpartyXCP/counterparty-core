@@ -1047,12 +1047,11 @@ class APIServer(threading.Thread):
         @conditional_decorator(auth.login_required, hasattr(config, "RPC_PASSWORD"))
         def handle_root(args_path):
             """Handle all paths, decide where to forward the query."""
+            request_path = args_path.lower()
             if (
-                args_path == ""
-                or args_path.startswith("api/")
-                or args_path.startswith("API/")
-                or args_path.startswith("rpc/")
-                or args_path.startswith("RPC/")
+                request_path == "old"
+                or request_path.startswith("old/api/")
+                or request_path.startswith("old/rpc/")
             ):
                 if flask.request.method == "POST":
                     # Need to get those here because it might not be available in this aux function.
@@ -1065,7 +1064,7 @@ class APIServer(threading.Thread):
                 else:
                     error = "Invalid method."
                     return flask.Response(error, 405, mimetype="application/json")
-            elif args_path.startswith("rest/") or args_path.startswith("REST/"):
+            elif request_path.startswith("old/rest/"):
                 if flask.request.method == "GET" or flask.request.method == "POST":
                     # Pass the URL path without /REST/ part and Flask request object.
                     rest_path = args_path.split("/", 1)[1]
