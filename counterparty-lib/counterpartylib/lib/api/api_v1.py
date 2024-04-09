@@ -1083,6 +1083,7 @@ class APIServer(threading.Thread):
         def handle_rpc_options():
             response = flask.Response("", 204)
             _set_cors_headers(response)
+            response.headers["X-API-WARN"] = "Deprecated API"
             return response
 
         def handle_rpc_post(request_json):
@@ -1122,6 +1123,7 @@ class APIServer(threading.Thread):
                 jsonrpc_response.json.encode(), 200, mimetype="application/json"
             )
             _set_cors_headers(response)
+            response.headers["X-API-WARN"] = "Deprecated API"
             return response
 
         ######################
