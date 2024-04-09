@@ -259,7 +259,7 @@ def api_server_v2(request, cp_server):
         "api_user": "api",
         "api_password": "api",
         "api_no_allow_cors": False,
-        "api_not_ready_http_code": 202,
+        "api_not_ready_http_code": 503,
         "force": False,
         "requests_timeout": config.DEFAULT_REQUESTS_TIMEOUT,
         "rpc_batch_size": config.DEFAULT_RPC_BATCH_SIZE,

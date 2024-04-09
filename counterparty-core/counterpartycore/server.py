@@ -163,7 +163,7 @@ CONFIG_ARGS = [
     ],
     [
         ("--api-not-ready-http-code",),
-        {"type": int, "default": 202, "help": "http code returned when server is not ready"},
+        {"type": int, "default": 503, "help": "http code returned when server is not ready"},
     ],
     [
         ("--rpc-host",),

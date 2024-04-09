@@ -194,7 +194,7 @@ def initialise_config(
     api_user=None,
     api_password=None,
     api_no_allow_cors=False,
-    api_not_ready_http_code=202,
+    api_not_ready_http_code=503,
     rpc_host=None,
     rpc_port=None,
     rpc_user=None,
