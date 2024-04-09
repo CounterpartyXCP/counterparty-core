@@ -59,7 +59,7 @@ def get_db():
 
 @auth.verify_password
 def verify_password(username, password):
-    return username == config.RPC_USER and password == config.RPC_PASSWORD
+    return username == config.API_USER and password == config.API_PASSWORD
 
 
 def api_root():
@@ -83,8 +83,10 @@ def api_root():
 
 
 def inject_headers(result):
-    response = flask.make_response(flask.jsonify(result))
-    if not config.RPC_NO_ALLOW_CORS:
+    server_ready = ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT
+    http_code = 200 if server_ready else config.API_NOT_READY_HTTP_CODE
+    response = flask.make_response(flask.jsonify(result), http_code)
+    if not config.API_NO_ALLOW_CORS:
         response.headers["Access-Control-Allow-Origin"] = "*"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
         response.headers["Access-Control-Allow-Headers"] = (
@@ -136,7 +138,7 @@ def run_api_server(args):
             refresh_backend_height()
     try:
         # Start the API server
-        app.run(host=config.RPC_HOST, port=config.RPC_PORT, debug=False)
+        app.run(host=config.API_HOST, port=config.API_PORT, debug=False)
     finally:
         pass
         # ensure timer is cancelled

@@ -58,11 +58,15 @@ def sigterm_handler(_signo, _stack_frame):
         assert False  # noqa: B011
     logger.info(f"Received {signal_name}.")
 
-    if "api_server" in globals():
+    global_vars = globals()
+    if "api_server_v1" in global_vars:
+        logger.info("Stopping API server v1.")
+        global_vars["api_server_v1"].stop()
+    if "api_server" in global_vars:
         logger.info("Stopping API server.")
-        api_server.stop()  # noqa: F821
-    if "api_status_poller" in globals():
-        api_status_poller.stop()  # noqa: F821
+        global_vars["api_server"].stop()
+    if "api_status_poller" in global_vars:
+        global_vars["api_status_poller"].stop()
 
     logger.info("Stopping backend.")
     backend.stop()
@@ -182,6 +186,12 @@ def initialise_config(
     backend_ssl=False,
     backend_ssl_no_verify=False,
     backend_poll_interval=None,
+    api_host=None,
+    api_port=None,
+    api_user=None,
+    api_password=None,
+    api_no_allow_cors=False,
+    api_not_ready_http_code=202,
     rpc_host=None,
     rpc_port=None,
     rpc_user=None,
@@ -450,6 +460,57 @@ def initialise_config(
 
     config.RPC_BATCH_SIZE = rpc_batch_size
 
+    # API V2 Settings
+
+    if api_host:
+        config.API_HOST = api_host
+    else:
+        config.API_HOST = "localhost"
+
+    if api_port:
+        config.API_PORT = rpc_port
+    else:
+        if config.TESTNET:
+            if config.TESTCOIN:
+                config.API_PORT = config.DEFAULT_API_PORT_TESTNET + 1
+            else:
+                config.API_PORT = config.DEFAULT_API_PORT_TESTNET
+        elif config.REGTEST:
+            if config.TESTCOIN:
+                config.API_PORT = config.DEFAULT_API_PORT_REGTEST + 1
+            else:
+                config.API_PORT = config.DEFAULT_API_PORT_REGTEST
+        else:
+            if config.TESTCOIN:
+                config.API_PORT = config.DEFAULT_API_PORT + 1
+            else:
+                config.API_PORT = config.DEFAULT_API_PORT
+    try:
+        config.API_PORT = int(config.API_PORT)
+        if not (int(config.API_PORT) > 1 and int(config.API_PORT) < 65535):
+            raise ConfigurationError("invalid server API port number")
+    except:  # noqa: E722
+        raise ConfigurationError(  # noqa: B904
+            "Please specific a valid port number api-port configuration parameter"
+        )
+
+    if api_user:
+        config.API_USER = api_user
+    else:
+        config.API_USER = "api"
+
+    if api_password:
+        config.API_PASSWORD = api_password
+    else:
+        config.API_PASSWORD = "api"  # noqa: S105
+
+    if api_no_allow_cors:
+        config.API_NO_ALLOW_CORS = api_no_allow_cors
+    else:
+        config.API_NO_ALLOW_CORS = False
+
+    config.API_NOT_READY_HTTP_CODE = api_not_ready_http_code
+
     ##############
     # OTHER SETTINGS
 
@@ -564,6 +625,12 @@ def initialise_log_and_config(args):
         "backend_poll_interval": args.backend_poll_interval,
         "indexd_connect": args.indexd_connect,
         "indexd_port": args.indexd_port,
+        "api_host": args.api_host,
+        "api_port": args.api_port,
+        "api_user": args.api_user,
+        "api_password": args.api_password,
+        "api_no_allow_cors": args.api_no_allow_cors,
+        "api_not_ready_http_code": args.api_not_ready_http_code,
         "rpc_host": args.rpc_host,
         "rpc_port": args.rpc_port,
         "rpc_user": args.rpc_user,
@@ -653,6 +720,7 @@ def connect_to_addrindexrs():
 
 
 def start_all(args):
+    global api_server_v1, api_server, api_status_poller  # noqa: PLW0603
     # Backend.
     connect_to_backend()
 
@@ -672,13 +740,13 @@ def start_all(args):
         api_status_poller.start()
 
         # API Server.
-        api_server = api_v1.APIServer()
-        api_server.daemon = True
-        api_server.start()
-    else:
-        # REST API Server.
-        api_server = api_v2.APIServer()
-        api_server.start(args)
+        api_server_v1 = api_v1.APIServer()
+        api_server_v1.daemon = True
+        api_server_v1.start()
+
+    # REST API Server.
+    api_server = api_v2.APIServer()
+    api_server.start(args)
 
     # Server
     blocks.follow(db)

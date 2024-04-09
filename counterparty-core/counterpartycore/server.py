@@ -133,6 +133,39 @@ CONFIG_ARGS = [
     ],
     [("--indexd-port",), {"type": int, "help": "the indexd server port to connect to"}],
     [
+        ("--api-host",),
+        {
+            "default": "localhost",
+            "help": "the IP of the interface to bind to for providing API access (0.0.0.0 for all interfaces)",
+        },
+    ],
+    [
+        ("--api-port",),
+        {"type": int, "help": f"port on which to provide the {config.APP_NAME} API"},
+    ],
+    [
+        ("--api-user",),
+        {
+            "default": "rpc",
+            "help": f"required username to use the {config.APP_NAME} API (via HTTP basic auth)",
+        },
+    ],
+    [
+        ("--api-password",),
+        {
+            "default": "rpc",
+            "help": f"required password (for --api-user) to use the {config.APP_NAME}  API (via HTTP basic auth)",
+        },
+    ],
+    [
+        ("--api-no-allow-cors",),
+        {"action": "store_true", "default": False, "help": "allow ajax cross domain request"},
+    ],
+    [
+        ("--api-not-ready-http-code",),
+        {"type": int, "default": 202, "help": "http code returned when server is not ready"},
+    ],
+    [
         ("--rpc-host",),
         {
             "default": "localhost",
