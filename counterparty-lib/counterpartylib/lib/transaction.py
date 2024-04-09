@@ -1040,9 +1040,17 @@ def info(db, rawtransaction, block_index=None):
     }
 
 
-def unpack(db, data_hex):
-    data = binascii.unhexlify(data_hex)
+def unpack(db, datahex, block_index=None):
+    data = binascii.unhexlify(datahex)
     message_type_id, message = message_type.unpack(data)
+    block_index = block_index or ledger.CURRENT_BLOCK_INDEX
+
+    issuance_ids = [
+        messages.issuance.ID,
+        messages.issuance.LR_ISSUANCE_ID,
+        messages.issuance.SUBASSET_ID,
+        messages.issuance.LR_SUBASSET_ID,
+    ]
 
     # Unknown message type
     message_data = {"error": "Unknown message type"}
@@ -1053,9 +1061,7 @@ def unpack(db, data_hex):
     # Broadcast
     elif message_type_id == messages.broadcast.ID:
         message_type = "broadcast"
-        message_data = messages.broadcast.unpack(
-            message, ledger.CURRENT_BLOCK_INDEX, return_dict=True
-        )
+        message_data = messages.broadcast.unpack(message, block_index, return_dict=True)
     # BTCPay
     elif message_type_id == messages.btcpay.ID:
         message_type = "btcpay"
@@ -1076,14 +1082,40 @@ def unpack(db, data_hex):
     elif message_type_id == messages.dividend.ID:
         message_type = "dividend"
         message_data = messages.dividend.unpack(db, message, return_dict=True)
+    # Issuance
+    elif message_type_id in issuance_ids:
+        message_type = "issuance"
+        message_data = messages.issuance.unpack(
+            db, message, message_type_id, block_index, return_dict=True
+        )
+    # Order
+    elif message_type_id == messages.order.ID:
+        message_type = "order"
+        message_data = messages.order.unpack(db, message, block_index, return_dict=True)
     # Send
     elif message_type_id == messages.send.ID:
         message_type = "send"
-        message_data = messages.send.unpack(db, message, ledger.CURRENT_BLOCK_INDEX)
+        message_data = messages.send.unpack(db, message, block_index)
     # Enhanced send
     elif message_type_id == messages.versions.enhanced_send.ID:
         message_type = "enhanced_send"
-        message_data = messages.versions.enhanced_send.unpack(message, ledger.CURRENT_BLOCK_INDEX)
+        message_data = messages.versions.enhanced_send.unpack(message, block_index)
+    # MPMA send
+    elif message_type_id == messages.versions.mpma.ID:
+        message_type = "mpma_send"
+        message_data = messages.versions.mpma.unpack(message, block_index)
+    # RPS
+    elif message_type_id == messages.rps.ID:
+        message_type = "rps"
+        message_data = messages.rps.unpack(message, return_dict=True)
+    # RPS Resolve
+    elif message_type_id == messages.rpsresolve.ID:
+        message_type = "rpsresolve"
+        message_data = messages.rpsresolve.unpack(message, return_dict=True)
+    # Sweep
+    elif message_type_id == messages.sweep.ID:
+        message_type = "sweep"
+        message_data = messages.sweep.unpack(message)
 
     return {
         "message_type": message_type,

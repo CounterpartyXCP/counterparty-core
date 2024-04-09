@@ -470,18 +470,15 @@ def compose(
     return (source, [], data)
 
 
-def parse(db, tx, message):
-    order_parse_cursor = db.cursor()
-
-    # Unpack message.
+def unpack(db, message, block_index, return_dict=False):
     try:
         if len(message) != LENGTH:
             raise exceptions.UnpackError
         give_id, give_quantity, get_id, get_quantity, expiration, fee_required = struct.unpack(
             FORMAT, message
         )
-        give_asset = ledger.get_asset_name(db, give_id, tx["block_index"])
-        get_asset = ledger.get_asset_name(db, get_id, tx["block_index"])
+        give_asset = ledger.get_asset_name(db, give_id, block_index)
+        get_asset = ledger.get_asset_name(db, get_id, block_index)
         status = "open"
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:  # noqa: F841
         give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required = (
@@ -493,6 +490,27 @@ def parse(db, tx, message):
             0,
         )
         status = "invalid: could not unpack"
+
+    if return_dict:
+        return {
+            "give_asset": give_asset,
+            "give_quantity": give_quantity,
+            "get_asset": get_asset,
+            "get_quantity": get_quantity,
+            "expiration": expiration,
+            "fee_required": fee_required,
+            "status": status,
+        }
+    return give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, status
+
+
+def parse(db, tx, message):
+    order_parse_cursor = db.cursor()
+
+    # Unpack message.
+    (give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, status) = unpack(
+        db, message, tx["block_index"]
+    )
 
     price = 0
     if status == "open":

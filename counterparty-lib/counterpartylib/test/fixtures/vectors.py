@@ -6478,28 +6478,24 @@ UNITTEST_VECTOR = {
             {
                 "in": (
                     b"o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x01",
-                    DP["default_block_index"],
                 ),
                 "out": {"destination": ADDR[5], "flags": 1, "memo": None},
             },
             {
                 "in": (
                     b"o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x02",
-                    DP["default_block_index"],
                 ),
                 "out": {"destination": ADDR[5], "flags": 2, "memo": None},
             },
             {
                 "in": (
                     b"o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x03test",
-                    DP["default_block_index"],
                 ),
                 "out": {"destination": ADDR[5], "flags": 3, "memo": "test"},
             },
             {
                 "in": (
                     b"o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x07\xca\xfe\xba\xbe",
-                    DP["default_block_index"],
                 ),
                 "out": {"destination": ADDR[5], "flags": 7, "memo": b"\xca\xfe\xba\xbe"},
             },

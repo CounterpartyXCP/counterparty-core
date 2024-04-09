@@ -298,9 +298,7 @@ def compose(db, source, possible_moves, wager, move_random_hash, expiration):
     return (source, [], data)
 
 
-def parse(db, tx, message):
-    rps_parse_cursor = db.cursor()
-    # Unpack message.
+def upack(message, return_dict=False):
     try:
         if len(message) != LENGTH:
             raise exceptions.UnpackError
@@ -309,6 +307,22 @@ def parse(db, tx, message):
     except (exceptions.UnpackError, struct.error):
         (possible_moves, wager, move_random_hash, expiration) = 0, 0, "", 0
         status = "invalid: could not unpack"
+
+    if return_dict:
+        return {
+            "possible_moves": possible_moves,
+            "wager": wager,
+            "move_random_hash": binascii.hexlify(move_random_hash).decode("utf8"),
+            "expiration": expiration,
+            "status": status,
+        }
+    return possible_moves, wager, move_random_hash, expiration, status
+
+
+def parse(db, tx, message):
+    rps_parse_cursor = db.cursor()
+    # Unpack message.
+    possible_moves, wager, move_random_hash, expiration, status = upack(message)
 
     if status == "open":
         move_random_hash = binascii.hexlify(move_random_hash).decode("utf8")

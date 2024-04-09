@@ -70,6 +70,10 @@ ROUTES = {
         "function": transaction.info,
         "args": [("rawtransaction", None), ("block_index", None)],
     },
+    "/transactions/unpack": {
+        "function": transaction.unpack,
+        "args": [("datahex", None), ("block_index", None)],
+    },
     "/transactions/<tx_hash>": {
         "function": ledger.get_transaction,
     },

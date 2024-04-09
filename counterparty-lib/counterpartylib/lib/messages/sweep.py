@@ -126,7 +126,7 @@ def compose(db, source, destination, flags, memo):
     return (source, [], data)
 
 
-def unpack(db, message, block_index):
+def unpack(message):
     try:
         memo_bytes_length = len(message) - LENGTH
         if memo_bytes_length < 0:
@@ -162,7 +162,7 @@ def parse(db, tx, message):
 
     # Unpack message.
     try:
-        unpacked = unpack(db, message, tx["block_index"])
+        unpacked = unpack(message)
         destination, flags, memo_bytes = (
             unpacked["destination"],
             unpacked["flags"],
