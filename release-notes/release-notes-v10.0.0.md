@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v10.0.0 (2024-04-03)
+# Release Notes - Counterparty Core v10.0.0 (2024-04-09)
 
 Counterparty Core v10.0.0 is a very large release comprising many improvements across different portions of the codebase. “Counterparty Core” is also the new name for the codebase and repository that is the result of a merge between `counterparty-lib`, `counterparty-cli` and a new Rust library, `counterparty-rs`.
 
