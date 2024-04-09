@@ -409,8 +409,8 @@ def initialise_config(
     else:
         config.RPC_HOST = "localhost"
 
-    # The web root directory for API calls, eg. localhost:14000/rpc/
-    config.RPC_WEBROOT = "/rpc/"
+    # The web root directory for API calls, eg. localhost:14000/old/rpc/
+    config.RPC_WEBROOT = "/old/rpc/"
 
     # Server API RPC port
     if rpc_port:
