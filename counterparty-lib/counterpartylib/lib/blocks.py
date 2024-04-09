@@ -108,6 +108,8 @@ def parse_tx(db, tx):
             # Protocol change.
             rps_enabled = tx['block_index'] >= 308500 or config.TESTNET or config.REGTEST
 
+            supported = True
+
             if message_type_id == send.ID:
                 send.parse(db, tx, message)
             elif message_type_id == enhanced_send.ID and ledger.enabled('enhanced_sends', block_index=tx['block_index']):
@@ -143,6 +145,15 @@ def parse_tx(db, tx):
             elif message_type_id == dispenser.DISPENSE_ID and ledger.enabled('dispensers', block_index=tx['block_index']):
                 dispenser.dispense(db, tx)
             else:
+                supported = False
+
+            ledger.add_to_journal(db, tx['block_index'], 'parse', 'transactions', 'TRANSACTION_PARSED', {
+                'tx_index': tx['tx_index'],
+                'tx_hash': tx['tx_hash'],
+                'supported': supported,
+            })
+
+            if not supported:
                 cursor.execute('''UPDATE transactions \
                                            SET supported=$supported \
                                            WHERE tx_hash=$tx_hash''',
@@ -206,6 +217,13 @@ def parse_block(db, block_index, block_time,
     new_txlist_hash, found_txlist_hash = check.consensus_hash(db, 'txlist_hash', previous_txlist_hash, txlist)
     new_ledger_hash, found_ledger_hash = check.consensus_hash(db, 'ledger_hash', previous_ledger_hash, ledger.BLOCK_LEDGER)
     new_messages_hash, found_messages_hash = check.consensus_hash(db, 'messages_hash', previous_messages_hash, ledger.BLOCK_JOURNAL)
+
+    ledger.add_to_journal(db, block_index, 'parse', 'blocks', 'BLOCK_PARSED', {
+        'block_index': block_index,
+        'ledger_hash': new_ledger_hash,
+        'txlist_hash': new_txlist_hash,
+        'messages_hash': new_messages_hash,
+    })
 
     return new_ledger_hash, new_txlist_hash, new_messages_hash, found_messages_hash
 
@@ -539,12 +557,17 @@ def clean_table_from(cursor, table, block_index):
     cursor.execute(f'''DELETE FROM {table} WHERE block_index >= ?''', (block_index,)) # nosec B608
 
 
-def clean_messages_tables(cursor, block_index=0):
+def clean_messages_tables(db, block_index=0):
     # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
-    cursor.execute('''PRAGMA foreign_keys=OFF''')
-    for table in TABLES:
-        clean_table_from(cursor, table, block_index)
-    cursor.execute('''PRAGMA foreign_keys=ON''')
+    block_index = max(block_index, config.BLOCK_FIRST)
+    if block_index == config.BLOCK_FIRST:
+        rebuild_database(db, include_transactions=False)
+    else:
+        cursor = db.cursor()
+        cursor.execute('''PRAGMA foreign_keys=OFF''')
+        for table in TABLES:
+            clean_table_from(cursor, table, block_index)
+        cursor.execute('''PRAGMA foreign_keys=ON''')
 
 
 def clean_transactions_tables(cursor, block_index=0):
@@ -555,10 +578,13 @@ def clean_transactions_tables(cursor, block_index=0):
     cursor.execute('''PRAGMA foreign_keys=ON''')
 
 
-def rebuild_database(db):
+def rebuild_database(db, include_transactions=True):
     cursor = db.cursor()
     cursor.execute('''PRAGMA foreign_keys=OFF''')
-    for table in TABLES + ['transaction_outputs', 'transactions', 'blocks']:
+    tables_to_clean = list(TABLES)
+    if include_transactions:
+        tables_to_clean += ['transaction_outputs', 'transactions', 'blocks']
+    for table in tables_to_clean:
         cursor.execute(f'DROP TABLE {table}') # nosec B608
     cursor.execute('''PRAGMA foreign_keys=ON''')
     initialise(db)
@@ -573,8 +599,8 @@ def rollback(db, block_index=0):
         if block_index == config.BLOCK_FIRST:
             rebuild_database(db)
         else:
+            clean_messages_tables(db, block_index=block_index)
             cursor = db.cursor()
-            clean_messages_tables(cursor, block_index=block_index)
             clean_transactions_tables(cursor, block_index=block_index)
             cursor.close()
         logger.info(f'Database rolled back to block_index {block_index}')
@@ -607,7 +633,7 @@ def reparse(db, block_index=0):
     # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
     step = f"Rolling database back to block {block_index}..."
     with Halo(text=step, spinner=SPINNER_STYLE):
-        clean_messages_tables(cursor, block_index=block_index)
+        clean_messages_tables(db, block_index=block_index)
     print(f'{OK_GREEN} {step}')
 
     # reparse blocks
@@ -618,7 +644,7 @@ def reparse(db, block_index=0):
     step = f"Reparsing blocks from block {block_index}..."
     with Halo(text=step, spinner=SPINNER_STYLE) as spinner:
         cursor.execute('''SELECT * FROM blocks WHERE block_index > ? ORDER BY block_index''', (block_index,))
-        for block in cursor:
+        for block in cursor.fetchall():
             start_time_block_parse = time.time()
             ledger.CURRENT_BLOCK_INDEX = block['block_index']
             parse_block(db, block['block_index'], block['block_time'])

@@ -1,8 +1,9 @@
-name: Test Docker Compose
+name: Docker Compose
 
 on:
   push:
-    branches: ['develop']
+    branches: ['develop', 'master', 'readme']
+    #branches: ['compose']
 
 jobs:
   build:

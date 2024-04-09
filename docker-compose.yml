@@ -10,7 +10,7 @@ services:
       - "8332:8332"                                        # mainnet
       - "18332:18332"                                      # testnet
     command: 
-      - "-chain=${COUNTERPARTY_NETWORK:-main}"             # export COUNTERPARTY_NETWORK=test for testnet
+      - "-chain=${BITCOIN_CHAIN:-main}"                    # export BITCOIN_CHAIN=test for testnet
       - "-rpcallowip=0.0.0.0/0"
       - "-rpcbind=0.0.0.0"
       - "-rpcuser=rpc"
@@ -36,7 +36,7 @@ services:
       - "8432:8432"                                        # mainnet
       - "18432:18432"                                      # testnet
     command:
-      - "--network=${COUNTERPARTY_NETWORK:-main}"          # export COUNTERPARTY_NETWORK=test for testnet
+      - "--network=${BITCOIN_CHAIN:-main}"                 # export BITCOIN_CHAIN=test for testnet
       - "--indexer-rpc-host=0.0.0.0"
       - "--daemon-rpc-host=bitcoind"
       - "--cookie=rpc:rpc"
@@ -47,7 +47,7 @@ services:
 
 
   counterparty-core:
-    image: counterparty/counterparty:v10.0.0-rc.1
+    image: counterparty/counterparty:v10.0.0
     links:
       - bitcoind
       - addrindexrs
@@ -59,7 +59,7 @@ services:
       - "14000:14000"                                      # testnet
     command:
       - start
-      - "--${COUNTERPARTY_NETWORK:-main}net"               # export COUNTERPARTY_NETWORK=test for testnet
+      - "--${BITCOIN_CHAIN:-main}net"                      # export BITCOIN_CHAIN=test for testnet
       - "--backend-connect=bitcoind"
       - "--indexd-connect=addrindexrs"
       - "--rpc-host=0.0.0.0"
@@ -76,4 +76,4 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: ${COUNTERPARTY_DOCKER_DATA:-~/counterparty-docker-data}/
+      device: ${COUNTERPARTY_DOCKER_DATA:-${XDG_DATA_HOME:-~/.local/share}}/counterparty-docker-data
