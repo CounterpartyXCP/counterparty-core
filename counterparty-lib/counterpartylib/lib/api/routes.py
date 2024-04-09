@@ -213,7 +213,7 @@ ROUTES = {
     ### /healthz ###
     "/healthz": {
         "function": util.handle_healthz_route,
-        "args": [("check", "heavy")],
+        "args": [("check_type", "heavy")],
     },
     ### /backend ###
     "/backend/addresses/<address>/transactions": {
