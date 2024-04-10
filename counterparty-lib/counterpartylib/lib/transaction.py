@@ -10,16 +10,8 @@ import hashlib
 import inspect
 import io
 import logging
-<<<<<<< HEAD
-import math  # noqa: F401
-import os  # noqa: F401
-import re  # noqa: F401
-import sys  # noqa: F401
-import threading
-import time  # noqa: F401
-=======
 import sys
->>>>>>> 0595b1a1 (Add route to compose transactions)
+import threading
 
 import bitcoin as bitcoinlib
 import cachetools
@@ -1017,6 +1009,116 @@ COMPOSABLE_TRANSACTIONS = [
     "rpsresolve",
     "sweep",
 ]
+
+
+def compose_transaction(
+    db,
+    name,
+    params,
+    encoding="auto",
+    fee_per_kb=None,
+    estimate_fee_per_kb=None,
+    regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
+    multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
+    op_return_value=config.DEFAULT_OP_RETURN_VALUE,
+    pubkey=None,
+    allow_unconfirmed_inputs=False,
+    fee=None,
+    fee_provided=0,
+    unspent_tx_hash=None,
+    custom_inputs=None,
+    dust_return_pubkey=None,
+    disable_utxo_locks=False,
+    extended_tx_info=False,
+    p2sh_source_multisig_pubkeys=None,
+    p2sh_source_multisig_pubkeys_required=None,
+    p2sh_pretx_txid=None,
+    old_style_api=True,
+    segwit=False,
+):
+    """Create and return a transaction."""
+
+    # Get provided pubkeys.
+    if isinstance(pubkey, str):
+        provided_pubkeys = [pubkey]
+    elif isinstance(pubkey, list):
+        provided_pubkeys = pubkey
+    elif pubkey is None:
+        provided_pubkeys = []
+    else:
+        raise exceptions.TransactionError("Invalid pubkey.")
+
+    # Get additional pubkeys from `source` and `destination` params.
+    # Convert `source` and `destination` to pubkeyhash form.
+    for address_name in ["source", "destination"]:
+        if address_name in params:
+            address = params[address_name]
+            if isinstance(address, list):
+                # pkhshs = []
+                # for addr in address:
+                #    provided_pubkeys += script.extract_pubkeys(addr)
+                #    pkhshs.append(script.make_pubkeyhash(addr))
+                # params[address_name] = pkhshs
+                pass
+            else:
+                provided_pubkeys += script.extract_pubkeys(address)
+                params[address_name] = script.make_pubkeyhash(address)
+
+    # Check validity of collected pubkeys.
+    for pubkey in provided_pubkeys:
+        if not script.is_fully_valid(binascii.unhexlify(pubkey)):
+            raise script.AddressError(f"invalid public key: {pubkey}")
+
+    compose_method = sys.modules[f"counterpartylib.lib.messages.{name}"].compose
+    compose_params = inspect.getfullargspec(compose_method)[0]
+    missing_params = [p for p in compose_params if p not in params and p != "db"]
+    for param in missing_params:
+        params[param] = None
+
+    # dont override fee_per_kb if specified
+    if fee_per_kb is not None:
+        estimate_fee_per_kb = False
+    else:
+        fee_per_kb = config.DEFAULT_FEE_PER_KB
+
+    if "extended_tx_info" in params:
+        extended_tx_info = params["extended_tx_info"]
+        del params["extended_tx_info"]
+
+    if "old_style_api" in params:
+        old_style_api = params["old_style_api"]
+        del params["old_style_api"]
+
+    if "segwit" in params:
+        segwit = params["segwit"]
+        del params["segwit"]
+
+    tx_info = compose_method(db, **params)
+    initialise(db)
+    return construct(
+        db,
+        tx_info,
+        encoding=encoding,
+        fee_per_kb=fee_per_kb,
+        estimate_fee_per_kb=estimate_fee_per_kb,
+        regular_dust_size=regular_dust_size,
+        multisig_dust_size=multisig_dust_size,
+        op_return_value=op_return_value,
+        provided_pubkeys=provided_pubkeys,
+        allow_unconfirmed_inputs=allow_unconfirmed_inputs,
+        exact_fee=fee,
+        fee_provided=fee_provided,
+        unspent_tx_hash=unspent_tx_hash,
+        custom_inputs=custom_inputs,
+        dust_return_pubkey=dust_return_pubkey,
+        disable_utxo_locks=disable_utxo_locks,
+        extended_tx_info=extended_tx_info,
+        p2sh_source_multisig_pubkeys=p2sh_source_multisig_pubkeys,
+        p2sh_source_multisig_pubkeys_required=p2sh_source_multisig_pubkeys_required,
+        p2sh_pretx_txid=p2sh_pretx_txid,
+        old_style_api=old_style_api,
+        segwit=segwit,
+    )
 
 
 def compose(db, transaction_name, **kwargs):
