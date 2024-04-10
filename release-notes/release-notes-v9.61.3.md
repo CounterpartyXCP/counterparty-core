@@ -3,7 +3,7 @@
 # ChangeLog
 
 ## Stability and Correctness
-* Add missing sanity check in address unpacking for dispenser that causes a complete network crash
+* Add missing sanity check in address unpacking for dispensers that causes a complete network crash
 
 # Credits
 * Adam Krellenstein
