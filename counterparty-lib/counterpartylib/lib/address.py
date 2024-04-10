@@ -5,6 +5,7 @@ import bitcoin
 from counterpartylib.lib import config
 from counterpartylib.lib import script
 from counterpartylib.lib import ledger
+from counterpartylib.lib import exceptions
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -52,6 +53,9 @@ def unpack(short_address_bytes):
     Converts a 21 byte prefix and public key hash into a full base58 bitcoin address
     """
     from .ledger import enabled # Here to account for test mock changes
+
+    if short_address_bytes == b'':
+        raise exceptions.UnpackError
 
     if enabled('segwit_support') and short_address_bytes[0] >= 0x80 and short_address_bytes[0] <= 0x8F:
         # we have a segwit address here
