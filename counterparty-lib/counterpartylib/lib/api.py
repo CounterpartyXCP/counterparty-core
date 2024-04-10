@@ -68,6 +68,23 @@ from counterpartylib.lib.messages.versions import enhanced_send  # noqa: E402
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
+if os.environ.get("SENTRY_DSN"):
+    import sentry_sdk
+
+    environment = os.environ.get("SENTRY_ENVIRONMENT", "development")
+
+    release = os.environ.get("SENTRY_RELEASE", config.__version__)
+
+    logger.info("Sentry DSN found, initializing Sentry")
+
+    sentry_sdk.init(
+        dsn=os.environ["SENTRY_DSN"],
+        environment=environment,
+        release=release,
+        traces_sample_rate=1.0,
+    )
+
+
 API_TABLES = [
     "assets",
     "balances",
