@@ -91,7 +91,7 @@ def init_api_access_log(flask_app):
     flask_app.logger.removeHandler(flask.logging.default_handler)
     flask_app.logger.setLevel(logging.DEBUG)
     werkzeug_logger = logging.getLogger("werkzeug")
-    while werkzeug_logger.hasHandlers():
+    while len(werkzeug_logger.handlers) > 0:
         werkzeug_logger.removeHandler(werkzeug_logger.handlers[0])
 
     # Log to file, if configured...
@@ -99,6 +99,7 @@ def init_api_access_log(flask_app):
         handler = logging_handlers.RotatingFileHandler(
             config.API_LOG, "a", config.API_MAX_LOG_SIZE, config.API_MAX_LOG_COUNT
         )
+        handler.propagate = False
         handler.setLevel(logging.DEBUG)
         flask_app.logger.addHandler(handler)
         werkzeug_logger.addHandler(handler)

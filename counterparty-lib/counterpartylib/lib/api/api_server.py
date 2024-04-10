@@ -1,6 +1,7 @@
 import argparse
 import logging
 import multiprocessing
+import signal
 from multiprocessing import Process
 from threading import Timer
 
@@ -93,6 +94,10 @@ def handle_route(**kwargs):
 
 
 def run_api_server(args):
+    # default signal handlers
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)
+    signal.signal(signal.SIGINT, signal.default_int_handler)
+
     app = Flask(config.APP_NAME)
     # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
