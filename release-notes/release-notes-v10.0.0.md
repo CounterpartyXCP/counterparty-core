@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v10.0.0 (2024-04-03)
+# Release Notes - Counterparty Core v10.0.0 (2024-04-09)
 
 Counterparty Core v10.0.0 is a very large release comprising many improvements across different portions of the codebase. “Counterparty Core” is also the new name for the codebase and repository that is the result of a merge between `counterparty-lib`, `counterparty-cli` and a new Rust library, `counterparty-rs`.
 
@@ -26,7 +26,7 @@ Because this release includes numerous changes to the database schema, a full da
 
 ## Documentation and Testing
 * Fix test suite, with automated builds on supported operating systems
-* Add Github Workflows for building, testing and running automated code scanners:
+* Add GitHub Workflows for building, testing and running automated code scanners:
     * PyLint
     * Bandit
     * CodeQL
@@ -49,7 +49,7 @@ Because this release includes numerous changes to the database schema, a full da
 * Rewrite Dockerfile and publish new official Docker images
 * Create Docker Compose file as an alternative to Federated Node
 * Change default `bitcoind` user from `bitcoinrpc` to `rpc`
-* Changed default port for communication with AddrIndexRs to `8432` (and `81432` for `testnet`)
+* Change default port for communication with AddrIndexRs to `8432` (and `81432` for `testnet`)
 
 
 ## Command-Line Interface
@@ -68,13 +68,13 @@ Because this release includes numerous changes to the database schema, a full da
 
 ## Refactoring and Performance Optimizations
 * Rewrite `kickstart`, splitting work across two Python processes using shared memory and queue for communication
-* Activate write-ahead-log in SQLite and implement `apsw.best_pratices()`, improving performance and fixing crashes from deadlocks
-* Fix database version checking which launched a rebuilds instead of rollbacks / reparses
+* Activate write-ahead-log in SQLite and implement `apsw.best_practices()`, improving performance and fixing crashes from deadlocks
+* Fix database version checking which launches a rebuild instead of a rollback / reparse
 * Add numerous missing database indexes
 * Fix collisions between existing database indexes
 * DRY and refactor database index creation
 * DRY and isolate all SQL queries in `ledger.py`
-* Heavily refactor of `log.messages` and `log.log`.
+* Refactor `log.messages` and `log.log` heavily
 * Add additional fields and rows in the `messages` table (the messages hash will change)
 * Fix database integrity check and re-include assert conservation check
 * Migrate to log-structured database for simpler and faster rollback and reparse
@@ -94,7 +94,7 @@ Because this release includes numerous changes to the database schema, a full da
     * Isolate transaction parsing inside `gettxinfo.py` module
     * Heavily refactor code; eliminate unused code blocks
     * Isolate dispenser logic in `get_dispensers_outputs()` and `get_dispensers_tx_info()`
-* Activate check software version every 24H
+* Change software version check interval to 24 hours
 * Add the possibility to reparse from a given block on minor version change
 * Add warning with confirmation dialogue to bootstrap command, and `--no-confirm` flag
 * Add REST endpoints optimized for tables that were altered during the migration to a log-structured database:
