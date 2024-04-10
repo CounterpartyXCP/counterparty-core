@@ -532,7 +532,7 @@ class APIServer(threading.Thread):
         self.join()
 
     def run(self):
-        logger.info("Starting API Server.")
+        logger.info("Starting API Server v1.")
         self.db = self.db or database.get_connection(read_only=True)
         app = flask.Flask(__name__)
         auth = HTTPBasicAuth()
@@ -1104,6 +1104,9 @@ class APIServer(threading.Thread):
             )
             _set_cors_headers(response)
             response.headers["X-API-WARN"] = "Deprecated API"
+            logger.warning(
+                "API v1 is deprecated and should be removed soon. Please migrate to REST API."
+            )
             return response
 
         ######################
@@ -1198,17 +1201,12 @@ class APIServer(threading.Thread):
             return response
 
         # Init the HTTP Server.
-        api_util.init_api_access_log(app)
-
-        # Run app server (blocking)
         self.is_ready = True
         self.server = make_server(config.RPC_HOST, config.RPC_PORT, app)
+        api_util.init_api_access_log(app)
         self.ctx = app.app_context()
         self.ctx.push()
+        # Run app server (blocking)
         self.server.serve_forever()
 
         self.db.close()
-        return
-
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

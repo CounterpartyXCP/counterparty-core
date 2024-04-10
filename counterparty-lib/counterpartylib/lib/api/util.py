@@ -91,6 +91,8 @@ def init_api_access_log(flask_app):
     flask_app.logger.removeHandler(flask.logging.default_handler)
     flask_app.logger.setLevel(logging.DEBUG)
     werkzeug_logger = logging.getLogger("werkzeug")
+    while werkzeug_logger.hasHandlers():
+        werkzeug_logger.removeHandler(werkzeug_logger.handlers[0])
 
     # Log to file, if configured...
     if config.API_LOG:
