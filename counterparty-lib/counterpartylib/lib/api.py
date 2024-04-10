@@ -938,7 +938,7 @@ class APIServer(threading.Thread):
 
             cursor = self.db.cursor()
 
-            block_indexes_placeholder = f"({','.join(['?'] * len(block_indexes))})"
+            block_indexes_placeholder = f"{','.join(['?'] * len(block_indexes))}"
             # no sql injection here
             cursor.execute(
                 f"SELECT * FROM blocks WHERE block_index IN ({block_indexes_placeholder}) ORDER BY block_index ASC",  # nosec B608  # noqa: S608
