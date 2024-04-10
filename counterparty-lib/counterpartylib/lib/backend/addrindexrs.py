@@ -528,7 +528,7 @@ class AddrIndexRsClient:
     def _run(self):
         while self.is_running:
             try:
-                logger.debug("AddrIndexRsClient.thread -- waiting for message")
+                # logger.debug("AddrIndexRsClient.thread -- waiting for message")
                 # if there is no messager after 1 sec, it will raise queue.Empty
                 msg = self.req_queue.get(timeout=1)
                 self.socket_manager.send(msg)

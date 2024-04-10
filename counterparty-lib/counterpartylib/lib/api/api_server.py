@@ -1,7 +1,6 @@
 import argparse
 import logging
 import multiprocessing
-from logging import handlers as logging_handlers
 from multiprocessing import Process
 from threading import Timer
 
@@ -14,7 +13,7 @@ from counterpartylib.lib import (
     ledger,
 )
 from counterpartylib.lib.api.routes import ROUTES
-from counterpartylib.lib.api.util import get_backend_height, remove_rowids
+from counterpartylib.lib.api.util import get_backend_height, init_api_access_log, remove_rowids
 from flask import Flask, request
 from flask import g as flask_globals
 from flask_cors import CORS
@@ -28,27 +27,6 @@ auth = HTTPBasicAuth()
 BACKEND_HEIGHT = 0
 REFRESH_BACKEND_HEIGHT_INTERVAL = 10
 BACKEND_HEIGHT_TIMER = None
-
-
-def init_api_access_log():
-    """Initialize API logger."""
-    werkzeug_loggers = (logging.getLogger("werkzeug"), flask.current_app.logger)
-
-    # Disable console logging...
-    for werkzeug_logger in werkzeug_loggers:  # noqa: E741
-        werkzeug_logger.setLevel(logging.CRITICAL)
-        werkzeug_logger.propagate = False
-
-    # Log to file, if configured...
-    if config.API_LOG:
-        handler = logging_handlers.RotatingFileHandler(
-            config.API_LOG, "a", config.API_MAX_LOG_SIZE, config.API_MAX_LOG_COUNT
-        )
-        for werkzeug_logger in werkzeug_loggers:  # noqa: E741
-            handler.setLevel(logging.DEBUG)
-            werkzeug_logger.addHandler(handler)
-
-    flask.cli.show_server_banner = lambda *args: None
 
 
 def get_db():
@@ -122,7 +100,7 @@ def run_api_server(args):
         if not config.API_NO_ALLOW_CORS:
             CORS(app)
         # Initialise the API access log
-        init_api_access_log()
+        init_api_access_log(app)
         # Get the last block index
         ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(get_db())
         # Add routes

@@ -15,7 +15,6 @@ import re
 import threading
 import time
 import traceback
-from logging import handlers as logging_handlers
 
 import flask
 import jsonrpc
@@ -471,27 +470,6 @@ def conditional_decorator(decorator, condition):
         return decorator(f)
 
     return gen_decorator
-
-
-def init_api_access_log(app):
-    """Initialize API logger."""
-    loggers = (logging.getLogger("werkzeug"), app.logger)
-
-    # Disable console logging...
-    for l in loggers:  # noqa: E741
-        l.setLevel(logging.CRITICAL)
-        l.propagate = False
-
-    # Log to file, if configured...
-    if config.API_LOG:
-        handler = logging_handlers.RotatingFileHandler(
-            config.API_LOG, "a", config.API_MAX_LOG_SIZE, config.API_MAX_LOG_COUNT
-        )
-        for l in loggers:  # noqa: E741
-            handler.setLevel(logging.DEBUG)
-            l.addHandler(handler)
-
-    flask.cli.show_server_banner = lambda *args: None
 
 
 class APIStatusPoller(threading.Thread):
@@ -1220,7 +1198,7 @@ class APIServer(threading.Thread):
             return response
 
         # Init the HTTP Server.
-        init_api_access_log(app)
+        api_util.init_api_access_log(app)
 
         # Run app server (blocking)
         self.is_ready = True

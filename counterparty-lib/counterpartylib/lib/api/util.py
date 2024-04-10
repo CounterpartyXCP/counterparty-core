@@ -1,4 +1,5 @@
 import logging
+from logging import handlers as logging_handlers
 
 import flask
 from counterpartylib.lib import backend, config, exceptions, ledger, transaction
@@ -83,3 +84,21 @@ def get_backend_height():
     block_count = backend.getblockcount()
     blocks_behind = backend.getindexblocksbehind()
     return block_count + blocks_behind
+
+
+def init_api_access_log(flask_app):
+    """Initialize API logger."""
+    flask_app.logger.removeHandler(flask.logging.default_handler)
+    flask_app.logger.setLevel(logging.DEBUG)
+    werkzeug_logger = logging.getLogger("werkzeug")
+
+    # Log to file, if configured...
+    if config.API_LOG:
+        handler = logging_handlers.RotatingFileHandler(
+            config.API_LOG, "a", config.API_MAX_LOG_SIZE, config.API_MAX_LOG_COUNT
+        )
+        handler.setLevel(logging.DEBUG)
+        flask_app.logger.addHandler(handler)
+        werkzeug_logger.addHandler(handler)
+
+    flask.cli.show_server_banner = lambda *args: None
