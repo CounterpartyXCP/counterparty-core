@@ -24,4 +24,4 @@ plyvel==1.5.1
 arc4==0.4.0
 halo==0.0.31
 termcolor==2.4.0
-counterparty-rs==10.0.0
+counterparty-rs==10.0.1
