@@ -916,6 +916,10 @@ def expire(db, block_index):
 
     # Expire orders and give refunds for the quantity give_remaining (if non-zero; if not BTC).
     orders = ledger.get_orders_to_expire(db, block_index)
+    # Edge case: filled orders, and therefore not expired in the previous block,
+    # re-ropened by order_match expiration in the previous block.
+    # TODO: protocol change: expire order matches then orders.
+    orders += ledger.get_orders_to_expire(db, block_index - 1)
     for order in orders:
         cancel_order(db, order, "expired", block_index, 0)  # tx_index=0 for block action
 
