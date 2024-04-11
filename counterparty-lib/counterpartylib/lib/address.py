@@ -2,7 +2,8 @@ import logging
 import struct  # noqa: F401
 
 import bitcoin
-from counterpartylib.lib import config, ledger, script, exceptions  # noqa: F401
+
+from counterpartylib.lib import config, exceptions, ledger, script  # noqa: F401
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -58,10 +59,14 @@ def unpack(short_address_bytes):
     """
     from .ledger import enabled  # Here to account for test mock changes
 
-    if short_address_bytes == b'':
+    if short_address_bytes == b"":
         raise exceptions.UnpackError
 
-    if enabled('segwit_support') and short_address_bytes[0] >= 0x80 and short_address_bytes[0] <= 0x8F:
+    if (
+        enabled("segwit_support")
+        and short_address_bytes[0] >= 0x80
+        and short_address_bytes[0] <= 0x8F
+    ):
         # we have a segwit address here
         witver = short_address_bytes[0] - 0x80
         witprog = short_address_bytes[1:]
