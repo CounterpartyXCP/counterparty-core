@@ -47,7 +47,7 @@ services:
 
 
   counterparty-core:
-    image: counterparty/counterparty:v10.0.0
+    image: counterparty/counterparty:v10.0.1
     links:
       - bitcoind
       - addrindexrs
