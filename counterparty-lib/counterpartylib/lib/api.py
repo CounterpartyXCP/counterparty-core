@@ -928,13 +928,20 @@ class APIServer(threading.Thread):
               (useful since blocks may appear in the message feed more than once, if a reorg occurred). Note that
               if this parameter is not specified, the messages for the first block will be returned.
             """
+
+            must_be_non_empty_list_int = "block_indexes must be a non-empty list of integers"
+
             if not isinstance(block_indexes, (list, tuple)):
-                raise APIError("block_indexes must be a list of integers.")
+                raise APIError(must_be_non_empty_list_int)
+
+            if len(block_indexes) == 0:
+                raise APIError(must_be_non_empty_list_int)
+
             if len(block_indexes) >= 250:
                 raise APIError("can only specify up to 250 indexes at a time.")
             for block_index in block_indexes:
                 if not isinstance(block_index, int):
-                    raise APIError("block_indexes must be a list of integers.")
+                    raise APIError(must_be_non_empty_list_int)
 
             cursor = self.db.cursor()
 
