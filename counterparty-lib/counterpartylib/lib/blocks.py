@@ -785,15 +785,25 @@ def reparse(db, block_index=0):
         clean_messages_tables(db, block_index=block_index)
     print(f"{OK_GREEN} {step}")
 
+    step = "Clean consensus hashes..."
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        query = """
+            UPDATE blocks 
+            SET ledger_hash=NULL, txlist_hash=NULL, messages_hash=NULL 
+            WHERE block_index >= ?
+        """
+        cursor.execute(query, (block_index,))
+    print(f"{OK_GREEN} {step}")
+
     # reparse blocks
     start_time_all_blocks_parse = time.time()
     block_parsed_count = 0
-    count_query = "SELECT COUNT(*) AS cnt FROM blocks WHERE block_index > ?"
+    count_query = "SELECT COUNT(*) AS cnt FROM blocks WHERE block_index >= ?"
     block_count = cursor.execute(count_query, (block_index,)).fetchone()["cnt"]
     step = f"Reparsing blocks from block {block_index}..."
     with Halo(text=step, spinner=SPINNER_STYLE) as spinner:
         cursor.execute(
-            """SELECT * FROM blocks WHERE block_index > ? ORDER BY block_index""", (block_index,)
+            """SELECT * FROM blocks WHERE block_index >= ? ORDER BY block_index""", (block_index,)
         )
         for block in cursor.fetchall():
             start_time_block_parse = time.time()
