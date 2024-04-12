@@ -56,9 +56,9 @@ jobs:
         run: |
           cd counterparty-lib && hatch build ../dist
 
-      - name: Build counterparty-cli
+      - name: Build counterparty-core
         run: |
-          cd counterparty-cli && hatch build ../dist
+          cd counterparty-core && hatch build ../dist
 
       # Install counterparty packages
 
@@ -120,9 +120,9 @@ jobs:
         run: |
           cd counterparty-lib && hatch build ../dist
 
-      - name: Build counterparty-cli
+      - name: Build counterparty-core
         run: |
-          cd counterparty-cli && hatch build ../dist
+          cd counterparty-core && hatch build ../dist
 
       # Install counterparty packages
 
@@ -186,9 +186,9 @@ jobs:
         run: |
           cd counterparty-lib && hatch build ../dist
 
-      - name: Build counterparty-cli
+      - name: Build counterparty-core
         run: |
-          cd counterparty-cli && hatch build ../dist
+          cd counterparty-core && hatch build ../dist
 
       # Install counterparty packages
 

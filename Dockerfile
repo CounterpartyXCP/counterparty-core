@@ -18,7 +18,7 @@ RUN pip3 install maturin
 COPY README.md /README.md
 COPY ./counterparty-rs /counterparty-rs
 COPY ./counterparty-lib /counterparty-lib
-COPY ./counterparty-cli /counterparty-cli
+COPY ./counterparty-core /counterparty-core
 
 # install counterparty-lib
 WORKDIR /counterparty-rs
@@ -28,8 +28,8 @@ RUN pip3 install .
 WORKDIR /counterparty-lib
 RUN pip3 install .
 
-# install counterparty-cli
-WORKDIR /counterparty-cli
+# install counterparty-core
+WORKDIR /counterparty-core
 RUN pip3 install .
 
 ENTRYPOINT [ "counterparty-server"]
