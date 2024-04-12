@@ -23,7 +23,7 @@ ADDRINDEXRS_VERSION = "0.4.6"
 # NEED_REPARSE_IF_MINOR_IS_LESS_THAN = (1, 800000)
 # means that we need to reparse from block 800000 if database minor version is less than 1
 NEED_REPARSE_IF_MINOR_IS_LESS_THAN = (1, 835500)
-
+NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET = None
 # Counterparty protocol
 TXTYPE_FORMAT = ">I"
 SHORT_TXTYPE_FORMAT = "B"
