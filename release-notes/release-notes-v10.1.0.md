@@ -1,5 +1,7 @@
 # Release Notes - Counterparty Core v10.1.0 (2024-04-??)
 
+Note: This update requires a reparse from block 835500 (if the installed version is lower than v10 you need a full rollback)
+
 # ChangeLog
 
 ## Bugfixes
@@ -12,6 +14,7 @@
 * Implement light / heavy healthz probes
 * Automatic code checking and correction with Ruff
 * Refactor transaction file singleton to class
+* Run `PRAGMA optimize` on shutting down
 
 ## Command-Line Interface
 * Rename `counterpary-client` to `counterparty-wallet`
