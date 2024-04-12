@@ -69,6 +69,6 @@ allowed-licences = [
     'Creative Commons Zero, CC-0',
 ]
 allowed-packages = [
-    'counterparty-cli', 'counterparty-lib', 'counterparty-rs',
+    'counterparty-core', 'counterparty-lib', 'counterparty-rs',
     'maturin', 'apsw', 
 ]

@@ -1,16 +1,19 @@
 #! /usr/bin/python3
-import pprint
+import pprint  # noqa: F401
 import tempfile
-from counterpartylib.test import conftest  # this is require near the top to do setup of the test suite
-from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP
-from counterpartylib.test import util_test
+
+from counterpartylib.lib import blocks, config, ledger  # noqa: F401
+from counterpartylib.test import (
+    conftest,  # noqa: F401
+    util_test,
+)
+
+# this is require near the top to do setup of the test suite
+from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: F401
 from counterpartylib.test.util_test import CURR_DIR
 
-from counterpartylib.lib import (blocks, config, ledger)
-
-
-FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/parseblock_unittest_fixture.sql'
-FIXTURE_DB = tempfile.gettempdir() + '/fixtures.parseblock_unittest_fixture.db'
+FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/parseblock_unittest_fixture.sql"
+FIXTURE_DB = tempfile.gettempdir() + "/fixtures.parseblock_unittest_fixture.db"
 
 
 def test_config_context(cp_server):
@@ -28,14 +31,14 @@ def test_config_context(cp_server):
 
 
 def test_mock_protocol_changes(cp_server):
-    assert ledger.enabled('multisig_addresses') == True
+    assert ledger.enabled("multisig_addresses") == True  # noqa: E712
 
     with util_test.MockProtocolChangesContext(multisig_addresses=False):
-        assert ledger.enabled('multisig_addresses') == False
+        assert ledger.enabled("multisig_addresses") == False  # noqa: E712
 
         with util_test.MockProtocolChangesContext(multisig_addresses=None):
-            assert ledger.enabled('multisig_addresses') == None
+            assert ledger.enabled("multisig_addresses") == None  # noqa: E711
 
-        assert ledger.enabled('multisig_addresses') == False
+        assert ledger.enabled("multisig_addresses") == False  # noqa: E712
 
-    assert ledger.enabled('multisig_addresses') == True
+    assert ledger.enabled("multisig_addresses") == True  # noqa: E712
