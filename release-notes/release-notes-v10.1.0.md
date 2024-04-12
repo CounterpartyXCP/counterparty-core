@@ -1,6 +1,6 @@
 # Release Notes - Counterparty Core v10.1.0 (2024-04-??)
 
-Note: This update requires a reparse from block 835500 (if the installed version is lower than v10 you need a full rollback)
+Note: This update requires a reparse from block 835,500. (If you are upgrading from v9.x.y, then you need a full database rebuild.)
 
 # ChangeLog
 
