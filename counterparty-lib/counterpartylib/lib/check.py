@@ -982,8 +982,13 @@ def database_version(db):
         message = (
             f"Client minor version number mismatch ({version_minor} ≠ {config.VERSION_MINOR})."
         )
-        if config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN is not None:
-            min_version_minor, min_version_block_index = config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN
+        need_reparse_from = (
+            config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET
+            if config.TESTNET
+            else config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN
+        )
+        if need_reparse_from is not None:
+            min_version_minor, min_version_block_index = need_reparse_from
             if version_minor < min_version_minor:
                 raise DatabaseVersionError(
                     message=message,
