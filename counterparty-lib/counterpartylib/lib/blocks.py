@@ -785,7 +785,7 @@ def reparse(db, block_index=0):
         clean_messages_tables(db, block_index=block_index)
     print(f"{OK_GREEN} {step}")
 
-    step = "Clean consensus hashes..."
+    step = "Cleaning consensus hashes..."
     with Halo(text=step, spinner=SPINNER_STYLE):
         query = """
             UPDATE blocks 
