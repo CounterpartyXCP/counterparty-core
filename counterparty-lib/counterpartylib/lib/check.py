@@ -958,7 +958,7 @@ def software_version():
 
 
 class DatabaseVersionError(Exception):
-    def __init__(self, message, required_action, from_block_index):
+    def __init__(self, message, required_action, from_block_index=None):
         super(DatabaseVersionError, self).__init__(message)
         self.required_action = required_action
         self.from_block_index = from_block_index
