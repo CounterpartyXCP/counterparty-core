@@ -277,8 +277,9 @@ def parse_block(
     for tx in list(cursor):
         try:
             parse_tx(db, tx)
+            data = binascii.hexlify(tx["data"]).decode("UTF-8") if tx["data"] else ""
             txlist.append(
-                f"{tx['tx_hash']}{tx['source']}{tx['destination']}{tx['btc_amount']}{tx['fee']}{binascii.hexlify(tx['data']).decode('UTF-8')}"
+                f"{tx['tx_hash']}{tx['source']}{tx['destination']}{tx['btc_amount']}{tx['fee']}{data}"
             )
         except exceptions.ParseTransactionError as e:
             logger.warning(f"ParseTransactionError for tx {tx['tx_hash']}: {e}")

@@ -729,7 +729,7 @@ def init():
 
 
 def stop():
-    if "INDEXER_THREAD" in globals():
+    if "INDEXER_THREAD" in globals() and INDEXER_THREAD is not None:
         INDEXER_THREAD.stop()
 
 
