@@ -784,6 +784,10 @@ CHECKPOINTS_TESTNET = {
         "ledger_hash": "f84878f8e1293cd5365fc66ec7acbc24b4201b79ab3125d7e60e26624f49037a",
         "txlist_hash": "dc1f037beb8a632c5277fa0e6fd52866f0370d1f93de024420a7c31ce956c812",
     },
+    2586067: {
+        "ledger_hash": "104b61a4d22d793674a4c869ebdcc3030dc49794f36d270c4e51126cfd969135",
+        "txlist_hash": "1bfe60296102f50272abc664ee42f4fb70818b7211e36dafa6e6bad6194fc833",
+    },
 }
 
 CONSENSUS_HASH_VERSION_REGTEST = 1
