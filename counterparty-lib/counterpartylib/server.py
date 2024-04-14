@@ -623,8 +623,13 @@ def start_all(catch_up="normal"):
 
 
 def reparse(block_index):
-    db = initialise_db()
-    blocks.reparse(db, block_index=block_index)
+    connect_to_addrindexrs()
+    try:
+        db = initialise_db()
+        blocks.reparse(db, block_index=block_index)
+    finally:
+        backend.stop()
+        db.close()
 
 
 def rollback(block_index=None):
