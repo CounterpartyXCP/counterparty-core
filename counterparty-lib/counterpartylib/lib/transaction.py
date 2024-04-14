@@ -838,11 +838,12 @@ class TransactionService:
                 self.backend.cache_pretx(pretx_txid, unsigned_pretx)
             parsed_source, parsed_destination, x, y, parsed_data, extra = (
                 # TODO: inject
-                gettxinfo._get_tx_info(
+                gettxinfo.get_tx_info_new(
                     db,
                     BlockchainParser().deserialize_tx(unsigned_tx_hex),
                     ledger.CURRENT_BLOCK_INDEX,
                     p2sh_is_segwit=script.is_bech32(desired_source),
+                    composing=True,
                 )
             )
 
