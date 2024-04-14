@@ -417,7 +417,7 @@ class SocketManager:
                     logger.debug(f"`{self.host}:{self.port}` -- JSONDecodeError -- continuing")
                     continue
             except socket.timeout as e:
-                logger.exception(f"`{self.host}:{self.port}` -- Timeout receiving message: {e}")
+                logger.debug(f"`{self.host}:{self.port}` -- Timeout receiving message: {e}")
                 self.connected = False
                 raise e
             except Exception as e:
