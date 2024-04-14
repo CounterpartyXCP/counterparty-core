@@ -25,7 +25,6 @@ from bitcoin.core.script import CScriptInvalidError  # noqa: E402, F401
 from halo import Halo  # noqa: E402
 from termcolor import colored  # noqa: E402
 
-from counterpartylib import server  # noqa: E402
 from counterpartylib.lib import (  # noqa: E402
     arc4,  # noqa: F401
     backend,
@@ -777,8 +776,6 @@ def generate_progression_message(
 
 
 def reparse(db, block_index=0):
-    server.connect_to_addrindexrs()
-
     cursor = db.cursor()
     # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
     step = f"Rolling database back to block {block_index}..."
