@@ -319,12 +319,12 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                     else None
                 )
         except KeyError as e:  # shows up most likely due to finickyness with addrindex not always returning results that we need...
-            logger.error("Key error in addrindexrs still exists!!!!!")
+            logger.debug("Key error in addrindexrs still exists!!!!!")
             _hash = hashlib.md5(
                 json.dumps(list(txhash_list)).encode(), usedforsecurity=False
             ).hexdigest()
             _list = list(txhash_list.difference(noncached_txhashes))
-            _logger.warning(
+            _logger.debug(
                 f"tx missing in rawtx cache: {e} -- txhash_list size: {len(txhash_list)}, hash: {_hash} / raw_transactions_cache size: {len(raw_transactions_cache)} / # rpc_batch calls: {len(payload)} / txhash in noncached_txhashes: {tx_hash in noncached_txhashes} / txhash in txhash_list: {tx_hash in txhash_list} -- list {_list}"
             )
             if _retry < GETRAWTRANSACTION_MAX_RETRIES:  # try again
