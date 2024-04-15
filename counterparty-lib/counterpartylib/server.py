@@ -195,6 +195,7 @@ def initialise_config(
     utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE,
     estimate_fee_per_kb=None,
     customnet=None,
+    no_mempool=False,
 ):
     # log config alreasdy initialized
     logger.debug("VERBOSE: %s", config.VERBOSE)
@@ -540,6 +541,8 @@ def initialise_config(
 
     if estimate_fee_per_kb is not None:
         config.ESTIMATE_FEE_PER_KB = estimate_fee_per_kb
+
+    config.NO_MEMPOOL = no_mempool
 
     logger.info(f"Running v{config.VERSION_STRING} of counterparty-lib.")
 
