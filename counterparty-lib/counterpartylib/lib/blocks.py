@@ -1149,10 +1149,10 @@ def follow(db):
 
                         tx_hex = raw_transactions[tx_hash]
                         if tx_hex is None:
-                            logger.debug(
-                                "tx_hash %s not found in backend.  Not adding to mempool.",
-                                (tx_hash,),
-                            )
+                            # logger.debug(
+                            #     "tx_hash %s not found in backend.  Not adding to mempool.",
+                            #     (tx_hash,),
+                            # )
                             raise MempoolError
                         mempool_tx_index = list_tx(
                             db,
