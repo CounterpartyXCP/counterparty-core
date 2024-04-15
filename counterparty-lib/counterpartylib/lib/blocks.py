@@ -886,6 +886,8 @@ def follow(db):
             database.update_version(db)
 
     logger.info("Resuming parsing.")
+    if config.NO_MEMPOOL:
+        logger.warning("Mempool parsing disabled.")
 
     # If we're far behind, start Prefetcher.
     block_count = backend.getblockcount()  # TODO: Need retry logic
