@@ -23,7 +23,7 @@ from counterpartylib.lib import config, exceptions, ledger, util
 logger = logging.getLogger(config.LOGGER_NAME)
 
 READ_BUF_SIZE = 65536
-SOCKET_TIMEOUT = 20.0
+SOCKET_TIMEOUT = 30.0
 BACKEND_PING_TIME = 30.0
 BACKOFF_START = 1
 BACKOFF_MAX = 8
