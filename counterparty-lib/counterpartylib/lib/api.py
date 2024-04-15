@@ -1251,14 +1251,9 @@ class APIServer(threading.Thread):
         def handle_healthz():
             msg, code = "Healthy", 200
 
-            type_ = request.args.get("type", "heavy")
-
+            type_ = request.args.get("type", "light")
             try:
-                if type_ == "light":
-                    logger.debug("Performing light healthz check.")
-                    latest_block_index = backend.getblockcount()
-                    check_database_state(self.db, latest_block_index)
-                else:
+                if type_ == "heavy":
                     logger.debug("Performing heavy healthz check.")
                     compose_transaction(
                         self.db,
@@ -1272,6 +1267,10 @@ class APIServer(threading.Thread):
                         allow_unconfirmed_inputs=True,
                         fee=1000,
                     )
+                else:
+                    logger.debug("Performing light healthz check.")
+                    latest_block_index = backend.getblockcount()
+                    check_database_state(self.db, latest_block_index)
             except Exception:
                 msg, code = "Unhealthy", 503
 
