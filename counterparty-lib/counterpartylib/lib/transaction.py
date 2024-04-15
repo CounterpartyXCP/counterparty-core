@@ -416,9 +416,9 @@ class TransactionService:
             for input in inputs:
                 self.utxo_locks[source].set(make_outkey(input), input)
 
-            list_unspent = [make_outkey(coin) for coin in unspent]
-            list_used = [make_outkey(input) for input in inputs]
-            list_locked = list(self.utxo_locks[source].keys())
+            # list_unspent = [make_outkey(coin) for coin in unspent]
+            # list_used = [make_outkey(input) for input in inputs]
+            # list_locked = list(self.utxo_locks[source].keys())
             # self.logger.debug(
             #     f"UTXO locks: Potentials ({len(unspent)}): {list_unspent}, Used: {list_used}, locked UTXOs: {list_locked}"
             # )
