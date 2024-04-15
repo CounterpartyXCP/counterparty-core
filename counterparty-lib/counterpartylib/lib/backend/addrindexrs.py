@@ -43,6 +43,10 @@ class AddrIndexRsRPCError(Exception):
     pass
 
 
+class AddrIndexRsClientError(Exception):
+    pass
+
+
 def rpc_call(payload):
     """Calls to bitcoin core and returns the response"""
     url = config.BACKEND_URL
@@ -497,18 +501,18 @@ class AddrIndexRsClient:
         if "error" in res:
             if res["error"] == "no txs for address":
                 return {}
-            raise AddrIndexRsClientError(f"AddrIndexRsClient -- Error in response: {res['error']}")  # noqa: F821
+            raise AddrIndexRsClientError(f"AddrIndexRsClient -- Error in response: {res['error']}")
 
         if "id" not in res:
-            raise AddrIndexRsClientError("AddrIndexRsClient -- No response id.")  # noqa: F821
+            raise AddrIndexRsClientError("AddrIndexRsClient -- No response id.")
 
         if res["id"] != msg["id"]:
-            raise AddrIndexRsClientError(  # noqa: F821
+            raise AddrIndexRsClientError(
                 "AddrIndexRsClient -- Invalid response id. Expected: {msg['id']}, received: {res['id']}"
             )
 
         if "result" not in res:
-            raise AddrIndexRsClientError(  # noqa: F821
+            raise AddrIndexRsClientError(
                 "AddrIndexRsClient -- No error and no result in responses."
             )
 
