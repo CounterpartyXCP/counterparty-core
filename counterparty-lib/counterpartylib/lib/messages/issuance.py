@@ -345,7 +345,17 @@ def validate(
     )
 
 
-def compose(db, source, transfer_destination, asset, quantity, divisible, lock, reset, description):
+def compose(
+    db,
+    source,
+    asset,
+    quantity,
+    transfer_destination=None,
+    divisible=None,
+    lock=None,
+    reset=None,
+    description=None,
+):
     # Callability is deprecated, so for re‐issuances set relevant parameters
     # to old values; for first issuances, make uncallable.
     issuances = ledger.get_issuances(db, asset=asset, status="valid", first=True)

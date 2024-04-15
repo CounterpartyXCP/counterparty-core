@@ -3874,19 +3874,19 @@ UNITTEST_VECTOR = {
         # compose (db, source, transfer_destination, asset, quantity, divisible, lock, reset=None, description=None)
         "compose": [
             {
-                "in": (ADDR[0], None, "ASSET", 1000, True, False, None, ""),
+                "in": (ADDR[0], "ASSET", 1000, None, True, False, None, ""),
                 "error": (exceptions.AssetNameError, "non‐numeric asset name starts with ‘A’"),
             },
             {
-                "in": (ADDR[0], None, "BSSET1", 1000, True, False, None, ""),
+                "in": (ADDR[0], "BSSET1", 1000, None, True, False, None, ""),
                 "error": (exceptions.AssetNameError, "invalid character:"),
             },
             {
-                "in": (ADDR[0], None, "SET", 1000, True, False, None, ""),
+                "in": (ADDR[0], "SET", 1000, None, True, False, None, ""),
                 "error": (exceptions.AssetNameError, "too short"),
             },
             {
-                "in": (ADDR[0], None, "BSSET", 1000, True, False, None, ""),
+                "in": (ADDR[0], "BSSET", 1000, None, True, False, None, ""),
                 "out": (
                     "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     [],
@@ -3894,7 +3894,7 @@ UNITTEST_VECTOR = {
                 ),
             },
             {
-                "in": (ADDR[0], None, "BASSET", 1000, True, False, None, ""),
+                "in": (ADDR[0], "BASSET", 1000, None, True, False, None, ""),
                 "out": (
                     "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     [],
@@ -3902,7 +3902,7 @@ UNITTEST_VECTOR = {
                 ),
             },
             {
-                "in": (P2SH_ADDR[0], None, "BSSET", 1000, True, False, None, ""),
+                "in": (P2SH_ADDR[0], "BSSET", 1000, None, True, False, None, ""),
                 "out": (
                     P2SH_ADDR[0],
                     [],
@@ -3912,9 +3912,9 @@ UNITTEST_VECTOR = {
             {
                 "in": (
                     ADDR[0],
-                    None,
                     "BSSET",
                     1000,
+                    None,
                     True,
                     False,
                     None,
@@ -3927,7 +3927,7 @@ UNITTEST_VECTOR = {
                 ),
             },
             {
-                "in": (ADDR[0], ADDR[1], "DIVISIBLE", 0, True, False, None, ""),
+                "in": (ADDR[0], "DIVISIBLE", 0, ADDR[1], True, False, None, ""),
                 "out": (
                     "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     [("mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", None)],
@@ -3935,7 +3935,7 @@ UNITTEST_VECTOR = {
                 ),
             },
             {
-                "in": (MULTISIGADDR[0], None, "BSSET", 1000, True, False, None, ""),
+                "in": (MULTISIGADDR[0], "BSSET", 1000, None, True, False, None, ""),
                 "out": (
                     "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
                     [],
@@ -3943,7 +3943,7 @@ UNITTEST_VECTOR = {
                 ),
             },
             {
-                "in": (ADDR[0], MULTISIGADDR[0], "DIVISIBLE", 0, True, False, None, ""),
+                "in": (ADDR[0], "DIVISIBLE", 0, MULTISIGADDR[0], True, False, None, ""),
                 "out": (
                     "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     [
@@ -3956,7 +3956,7 @@ UNITTEST_VECTOR = {
                 ),
             },
             {
-                "in": (ADDR[0], None, "MAXIMUM", 2**63 - 1, True, False, None, "Maximum quantity"),
+                "in": (ADDR[0], "MAXIMUM", 2**63 - 1, None, True, False, None, "Maximum quantity"),
                 "out": (
                     "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     [],
@@ -3964,7 +3964,7 @@ UNITTEST_VECTOR = {
                 ),
             },
             {
-                "in": (ADDR[0], None, f"A{2 ** 64 - 1}", 1000, None, False, None, None),
+                "in": (ADDR[0], f"A{2 ** 64 - 1}", 1000, None, None, False, None, None),
                 "out": (
                     "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     [],
@@ -3972,16 +3972,16 @@ UNITTEST_VECTOR = {
                 ),
             },
             {
-                "in": (ADDR[0], None, f"A{2 ** 64}", 1000, True, False, None, ""),
+                "in": (ADDR[0], f"A{2 ** 64}", 1000, None, True, False, None, ""),
                 "error": (exceptions.AssetNameError, "numeric asset name not in range"),
             },
             {
-                "in": (ADDR[0], None, f"A{26 ** 12}", 1000, True, False, None, ""),
+                "in": (ADDR[0], f"A{26 ** 12}", 1000, None, True, False, None, ""),
                 "error": (exceptions.AssetNameError, "numeric asset name not in range"),
             },
             {
                 "comment": "basic child asset",
-                "in": (ADDR[0], None, "PARENT.child1", 100000000, True, False, None, ""),
+                "in": (ADDR[0], "PARENT.child1", 100000000, None, True, False, None, ""),
                 "out": (
                     "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     [],
@@ -3994,7 +3994,7 @@ UNITTEST_VECTOR = {
             },
             {
                 "comment": "basic child asset with description",
-                "in": (ADDR[0], None, "PARENT.child1", 100000000, True, False, None, "hello world"),
+                "in": (ADDR[0], "PARENT.child1", 100000000, None, True, False, None, "hello world"),
                 "out": (
                     "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     [],
@@ -4014,7 +4014,7 @@ UNITTEST_VECTOR = {
                 #     └────────────────── Type ID (4 bytes) - type 21/subasset
             },
             {
-                "in": (ADDR[0], None, "PARENT.a.b.c", 1000, True, False, None, ""),
+                "in": (ADDR[0], "PARENT.a.b.c", 1000, None, True, False, None, ""),
                 "out": (
                     "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     [],
@@ -4026,7 +4026,7 @@ UNITTEST_VECTOR = {
                 # 00000015|01530821671b1001|00000000000003e8|01|0a|014a74856171ca3c559f
             },
             {
-                "in": (ADDR[0], None, "PARENT.a-zA-Z0-9.-_@!", 1000, True, False, None, ""),
+                "in": (ADDR[0], "PARENT.a-zA-Z0-9.-_@!", 1000, None, True, False, None, ""),
                 "out": (
                     "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     [],
@@ -4038,7 +4038,7 @@ UNITTEST_VECTOR = {
             },
             {
                 "comment": "make sure compose catches asset name syntax errors",
-                "in": (ADDR[0], None, "BADASSETx.child1", 1000, True, False, None, ""),
+                "in": (ADDR[0], "BADASSETx.child1", 1000, None, True, False, None, ""),
                 "error": (
                     exceptions.AssetNameError,
                     "parent asset name contains invalid character:",
@@ -4046,12 +4046,12 @@ UNITTEST_VECTOR = {
             },
             {
                 "comment": "make sure compose catches validation errors",
-                "in": (ADDR[1], None, "PARENT.child1", 1000, True, False, None, ""),
+                "in": (ADDR[1], "PARENT.child1", 1000, None, True, False, None, ""),
                 "error": (exceptions.ComposeError, ["parent asset owned by another address"]),
             },
             {
                 "comment": "referencing parent asset by name composes a reissuance",
-                "in": (ADDR[0], None, "PARENT.already.issued", 1000, True, False, None, ""),
+                "in": (ADDR[0], "PARENT.already.issued", 1000, None, True, False, None, ""),
                 "out": (
                     "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     [],
@@ -4061,7 +4061,7 @@ UNITTEST_VECTOR = {
             {
                 "comment": "basic child asset with compact message type id",
                 "mock_protocol_changes": {"short_tx_type_id": True},
-                "in": (ADDR[0], None, "PARENT.child1", 100000000, True, False, None, ""),
+                "in": (ADDR[0], "PARENT.child1", 100000000, None, True, False, None, ""),
                 "out": (
                     "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     [],
@@ -4074,9 +4074,9 @@ UNITTEST_VECTOR = {
             {
                 "in": (
                     ADDR[0],
-                    None,
                     f"A{26 ** 12 + 101}",
                     200000000,
+                    None,
                     True,
                     None,
                     None,
@@ -4091,9 +4091,9 @@ UNITTEST_VECTOR = {
             {
                 "in": (
                     ADDR[0],
-                    ADDR[1],
                     "DIVISIBLEB",
                     0,
+                    ADDR[1],
                     True,
                     False,
                     None,
@@ -4106,7 +4106,7 @@ UNITTEST_VECTOR = {
                 ),
             },
             {
-                "in": (ADDR[0], None, "DIVISIBLEC", 0, True, True, None, "third divisible asset"),
+                "in": (ADDR[0], "DIVISIBLEC", 0, None, True, True, None, "third divisible asset"),
                 "out": (
                     "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     [],
