@@ -1149,10 +1149,10 @@ def follow(db):
 
                         tx_hex = raw_transactions[tx_hash]
                         if tx_hex is None:
-                            logger.debug(
-                                "tx_hash %s not found in backend.  Not adding to mempool.",
-                                (tx_hash,),
-                            )
+                            # logger.debug(
+                            #     "tx_hash %s not found in backend.  Not adding to mempool.",
+                            #     (tx_hash,),
+                            # )
                             raise MempoolError
                         mempool_tx_index = list_tx(
                             db,
@@ -1226,7 +1226,7 @@ def follow(db):
             )
 
             logger.getChild("mempool").debug(
-                f"Refresh mempool: {len(xcp_mempool)} XCP txs seen, out of {len(raw_mempool)} total entries (took {elapsed_time:.2f}, next refresh in {sleep_time:.2f})"
+                f"Mempool refreshed ({len(xcp_mempool)} Counterparty / {len(raw_mempool)} Bitcoin transactions)"
             )
 
             # Wait
