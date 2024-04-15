@@ -147,7 +147,6 @@ def rpc_batch(request_list):
 
 
 def extract_addresses(txhash_list):
-    logger.debug(f"extract_addresses, txs: {len(txhash_list)}")
     tx_hashes_tx = getrawtransaction_batch(txhash_list, verbose=True)
 
     return extract_addresses_from_txlist(tx_hashes_tx, getrawtransaction_batch)
@@ -158,7 +157,6 @@ def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
     helper for extract_addresses, seperated so we can pass in a mocked _getrawtransaction_batch for test purposes
     """
 
-    logger.debug(f"extract_addresses_from_txlist, txs: {len(tx_hashes_tx.keys())}")
     tx_hashes_addresses = {}
     tx_inputs_hashes = set()  # use set to avoid duplicates
 
@@ -169,8 +167,6 @@ def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
                 tx_hashes_addresses[tx_hash].update(tuple(vout["scriptPubKey"]["addresses"]))
 
         tx_inputs_hashes.update([vin["txid"] for vin in tx["vin"]])
-
-    logger.debug(f"extract_addresses, input TXs: {len(tx_inputs_hashes)}")
 
     # chunk txs to avoid huge memory spikes
     for tx_inputs_hashes_chunk in util.chunkify(
@@ -205,7 +201,7 @@ def getblock(block_hash):
 
 @functools.lru_cache
 def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
-    logger.debug(f"Cache miss on transaction {tx_hash}!")
+    # logger.debug(f"Cache miss on transaction {tx_hash}!")
     return getrawtransaction_batch([tx_hash], verbose=verbose, skip_missing=skip_missing)[tx_hash]
 
 
@@ -282,10 +278,6 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
     for tx_hash in txhash_list.difference(noncached_txhashes):
         raw_transactions_cache.refresh(tx_hash)
 
-    _logger.debug(
-        f"getrawtransaction_batch: txhash_list size: {len(txhash_list)} / raw_transactions_cache size: {len(raw_transactions_cache)} / # getrawtransaction calls: {len(payload)}"
-    )
-
     # populate cache
     if len(payload) > 0:
         batch_responses = rpc_batch(payload)
@@ -296,10 +288,10 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                 raw_transactions_cache[tx_hash] = tx_hex
             elif skip_missing and "error" in response and response["error"]["code"] == -5:
                 raw_transactions_cache[tx_hash] = None
-                missing_tx_hash = tx_hash_call_id.get(response.get("id", "??"), "??")
-                logger.debug(
-                    f"Missing TX with no raw info skipped (txhash: {missing_tx_hash}): {response['error']}"
-                )
+                # missing_tx_hash = tx_hash_call_id.get(response.get("id", "??"), "??")
+                # logger.debug(
+                #    f"Missing TX with no raw info skipped (txhash: {missing_tx_hash}): {response['error']}"
+                # )
             else:
                 # TODO: this seems to happen for bogus transactions? Maybe handle it more gracefully than just erroring out?
                 raise BackendRPCError(
@@ -319,14 +311,11 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                     else None
                 )
         except KeyError as e:  # shows up most likely due to finickyness with addrindex not always returning results that we need...
-            logger.error("Key error in addrindexrs still exists!!!!!")
             _hash = hashlib.md5(
                 json.dumps(list(txhash_list)).encode(), usedforsecurity=False
             ).hexdigest()
             _list = list(txhash_list.difference(noncached_txhashes))
-            _logger.warning(
-                f"tx missing in rawtx cache: {e} -- txhash_list size: {len(txhash_list)}, hash: {_hash} / raw_transactions_cache size: {len(raw_transactions_cache)} / # rpc_batch calls: {len(payload)} / txhash in noncached_txhashes: {tx_hash in noncached_txhashes} / txhash in txhash_list: {tx_hash in txhash_list} -- list {_list}"
-            )
+            _logger.exception(f"tx missing in rawtx cache: {e}")
             if _retry < GETRAWTRANSACTION_MAX_RETRIES:  # try again
                 time.sleep(
                     0.05 * (_retry + 1)
@@ -406,15 +395,15 @@ class SocketManager:
                 if not chunk:
                     raise Exception("Socket disconnected")
                 response += chunk
-                logger.debug(
-                    f"`{self.host}:{self.port}` -- chunk received: {chunk}, response: {response}"
-                )
+                # logger.debug(
+                #     f"`{self.host}:{self.port}` -- chunk received: {chunk}, response: {response}"
+                # )
                 try:
                     res = parse(response)
-                    logger.debug(f"`{self.host}:{self.port}` -- received message: { res}")
+                    # logger.debug(f"`{self.host}:{self.port}` -- received message: { res}")
                     return res
                 except json.JSONDecodeError:
-                    logger.debug(f"`{self.host}:{self.port}` -- JSONDecodeError -- continuing")
+                    # logger.debug(f"`{self.host}:{self.port}` -- JSONDecodeError -- continuing")
                     continue
             except socket.timeout as e:
                 logger.exception(f"`{self.host}:{self.port}` -- Timeout receiving message: {e}")
@@ -528,7 +517,7 @@ class AddrIndexRsClient:
     def _run(self):
         while self.is_running:
             try:
-                logger.debug("AddrIndexRsClient.thread -- waiting for message")
+                # logger.debug("AddrIndexRsClient.thread -- waiting for message")
                 # if there is no messager after 1 sec, it will raise queue.Empty
                 msg = self.req_queue.get(timeout=1)
                 self.socket_manager.send(msg)
@@ -536,7 +525,7 @@ class AddrIndexRsClient:
 
                 # wait for response
                 res = self.socket_manager.recv()
-                logger.debug(f"AddrIndexRsClient.thread -- received response: {res}")
+                # logger.debug(f"AddrIndexRsClient.thread -- received response: {res}")
                 self.res_queue.put(res)
 
             except queue.Empty:
