@@ -327,7 +327,7 @@ class TransactionService:
                 dust = self.default_regular_dust_size
 
             unspent = self.backend.sort_unspent_txouts(unspent, dust_size=dust)
-            self.logger.debug(f"Sorted candidate UTXOs: {[print_coin(coin) for coin in unspent]}")
+            # self.logger.debug(f"Sorted candidate UTXOs: {[print_coin(coin) for coin in unspent]}")
             use_inputs = unspent
 
         # use backend estimated fee_per_kb
@@ -419,9 +419,9 @@ class TransactionService:
             list_unspent = [make_outkey(coin) for coin in unspent]
             list_used = [make_outkey(input) for input in inputs]
             list_locked = list(self.utxo_locks[source].keys())
-            self.logger.debug(
-                f"UTXO locks: Potentials ({len(unspent)}): {list_unspent}, Used: {list_used}, locked UTXOs: {list_locked}"
-            )
+            # self.logger.debug(
+            #     f"UTXO locks: Potentials ({len(unspent)}): {list_unspent}, Used: {list_used}, locked UTXOs: {list_locked}"
+            # )
 
         # ensure inputs have scriptPubKey
         #   this is not provided by indexd
@@ -557,6 +557,7 @@ class TransactionService:
         else:
             # no data
             encoding = None
+        self.logger.debug(f"Constructing {encoding} transaction from {source}.")
 
         """Destinations"""
 

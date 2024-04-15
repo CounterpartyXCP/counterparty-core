@@ -334,7 +334,7 @@ def initialise_config(
     if backend_poll_interval:
         config.BACKEND_POLL_INTERVAL = backend_poll_interval
     else:
-        config.BACKEND_POLL_INTERVAL = 0.5
+        config.BACKEND_POLL_INTERVAL = 1.0
 
     # Construct backend URL.
     config.BACKEND_URL = (

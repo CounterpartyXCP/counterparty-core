@@ -227,7 +227,7 @@ def check_database_state(db, blockcount):
     f"""Checks {config.XCP_NAME} database to see if is caught up with backend."""  # noqa: B021
     if ledger.CURRENT_BLOCK_INDEX + 1 < blockcount:
         raise DatabaseError(f"{config.XCP_NAME} database is behind backend.")
-    logger.debug("Database state check passed.")
+    # logger.debug("Database state check passed.")
     return
 
 
