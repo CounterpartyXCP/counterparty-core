@@ -1226,7 +1226,7 @@ def follow(db):
             )
 
             logger.getChild("mempool").debug(
-                f"Mempool refreshed {len(xcp_mempool)} Counterparty / {len(raw_mempool)} Bitcoin transactions"
+                f"Mempool refreshed ({len(xcp_mempool)} Counterparty / {len(raw_mempool)} Bitcoin transactions)"
             )
 
             # Wait
