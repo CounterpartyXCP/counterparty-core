@@ -425,7 +425,6 @@ class AddrIndexRsClient:
         host,
         port,
         timeout=SOCKET_TIMEOUT,
-        max_retries=10,
         backoff_start=BACKOFF_START,
         backoff_max=BACKOFF_MAX,
         backoff_factor=BACKOFF_FACTOR,
@@ -437,9 +436,6 @@ class AddrIndexRsClient:
         self.req_queue = queue.Queue()
         self.res_queue = queue.Queue()
         self.is_running = False
-
-        self.retries = 0
-        self.max_retries = max_retries
 
         self.backoff = backoff_start
         self.backoff_max = backoff_max
@@ -461,16 +457,11 @@ class AddrIndexRsClient:
                 break
             except Exception as e:
                 self.is_running = False
-                if self.retries < self.max_retries:
-                    self.retries += 1
-                    logger.info(
-                        f"AddrIndexRsClient -- failed to start: {e}, retrying in {self.backoff} seconds. Retries: {self.retries}/{self.max_retries}"
-                    )
-                    time.sleep(self.backoff)
-                    self.backoff = min(self.backoff * self.backoff_factor, self.backoff_max)
-                else:
-                    logger.exception(f"AddrIndexRsClient -- failed to start: {e}")
-                    raise e
+                logger.info(
+                    f"AddrIndexRsClient -- failed to start: {e}, retrying in {self.backoff} seconds..."
+                )
+                time.sleep(self.backoff)
+                self.backoff = min(self.backoff * self.backoff_factor, self.backoff_max)
 
     def stop(self):
         if not self.is_running:
