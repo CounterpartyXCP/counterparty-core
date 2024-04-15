@@ -1061,7 +1061,7 @@ def follow(db):
             block_count = backend.getblockcount()
             block_index += 1
 
-        else:
+        elif config.NO_MEMPOOL is False:
             # TODO: add zeromq support here to await TXs and Blocks instead of constantly polling
             # Get old mempool.
             old_mempool = list(cursor.execute("""SELECT * FROM mempool"""))
@@ -1230,5 +1230,8 @@ def follow(db):
             # Wait
             db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
             time.sleep(sleep_time)
-
-    cursor.close()
+        else:
+            # Wait
+            # logger.debug(f"Waiting for new blocks. Block index: {block_index}")
+            db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
+            time.sleep(config.BACKEND_POLL_INTERVAL)
