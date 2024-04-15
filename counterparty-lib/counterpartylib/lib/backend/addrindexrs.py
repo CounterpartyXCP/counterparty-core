@@ -168,7 +168,6 @@ def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
 
         tx_inputs_hashes.update([vin["txid"] for vin in tx["vin"]])
 
-
     # chunk txs to avoid huge memory spikes
     for tx_inputs_hashes_chunk in util.chunkify(
         list(tx_inputs_hashes), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE
@@ -289,10 +288,10 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                 raw_transactions_cache[tx_hash] = tx_hex
             elif skip_missing and "error" in response and response["error"]["code"] == -5:
                 raw_transactions_cache[tx_hash] = None
-                missing_tx_hash = tx_hash_call_id.get(response.get("id", "??"), "??")
+                # missing_tx_hash = tx_hash_call_id.get(response.get("id", "??"), "??")
                 # logger.debug(
                 #    f"Missing TX with no raw info skipped (txhash: {missing_tx_hash}): {response['error']}"
-                #)
+                # )
             else:
                 # TODO: this seems to happen for bogus transactions? Maybe handle it more gracefully than just erroring out?
                 raise BackendRPCError(
@@ -316,9 +315,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                 json.dumps(list(txhash_list)).encode(), usedforsecurity=False
             ).hexdigest()
             _list = list(txhash_list.difference(noncached_txhashes))
-            _logger.exception(
-                f"tx missing in rawtx cache: {e}"
-            )
+            _logger.exception(f"tx missing in rawtx cache: {e}")
             if _retry < GETRAWTRANSACTION_MAX_RETRIES:  # try again
                 time.sleep(
                     0.05 * (_retry + 1)
