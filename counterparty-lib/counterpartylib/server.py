@@ -559,6 +559,12 @@ def initialise_db():
     logger.info(f"Connecting to database (SQLite {apsw.apswversion()}).")
     db = database.get_connection(read_only=False)
 
+    # perform quick integrity check
+
+    logger.info("Running PRAGMA quick_check...")
+    db.execute("PRAGMA quick_check")
+    logger.info("PRAGMA quick_check done.")
+
     ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
 
     def shutdown_handler():
