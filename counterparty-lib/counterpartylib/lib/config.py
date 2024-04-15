@@ -133,8 +133,8 @@ DEFAULT_RPC_BATCH_SIZE = 20  # A 1 MB block can hold about 4200 transactions.
 # Custom exit codes
 EXITCODE_UPDATE_REQUIRED = 5
 
-
-DEFAULT_CHECK_ASSET_CONSERVATION = True
+# TODO: optmize `check.asset_conservation()` then set to True
+DEFAULT_CHECK_ASSET_CONSERVATION = False
 
 BACKEND_RAW_TRANSACTIONS_CACHE_SIZE = 20000
 BACKEND_RPC_BATCH_NUM_WORKERS = 6
