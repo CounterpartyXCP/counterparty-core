@@ -1185,16 +1185,14 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_dispenser_info(tx_hash=None, tx_index=None):
-            cursor = self.db.cursor()  # noqa: F841
-
             if tx_hash is None and tx_index is None:
                 raise APIError("You must provided a tx hash or a tx index")
 
             dispensers = []
             if tx_hash is not None:
-                dispensers = get_dispenser_info(self.db, tx_hash=tx_hash)
+                dispensers = ledger.get_dispenser_info(self.db, tx_hash=tx_hash)
             else:
-                dispensers = get_dispenser_info(self.db, tx_index=tx_index)
+                dispensers = ledger.get_dispenser_info(self.db, tx_index=tx_index)
 
             if len(dispensers) == 1:
                 dispenser = dispensers[0]
