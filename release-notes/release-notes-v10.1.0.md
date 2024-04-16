@@ -21,6 +21,7 @@ pip3 uninstall counterparty-rs counterparty-lib counterparty-cli
 * Reproduce order expiration bug in v9.61.x (fix for #1631)
 * Fix `get_blocks` call when several block indexes are provided (fix for #1629)
 * Fix `create_send` when one of the output is a dispenser (fix for #1119)
+* Fix `get_dispenser_info` RPC call
 
 ## Codebase
 * Split out `counterparty-cli` package into `counterparty-core` and `counterparty-wallet` packages
