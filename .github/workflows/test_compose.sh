@@ -32,7 +32,7 @@ docker rmi counterparty/counterparty:$VERSION || true
 docker build -t counterparty/counterparty:$VERSION .
 
 # remove the counterparty-core data
-sudo rm -rf ~/.local/share/counterparty-docker-data/counterparty/*
+# sudo rm -rf ~/.local/share/counterparty-docker-data/counterparty/*
 
 # re-start containers
 BITCOIN_CHAIN=test docker compose up -d

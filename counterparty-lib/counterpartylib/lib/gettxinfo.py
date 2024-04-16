@@ -337,7 +337,9 @@ def parse_transaction_vouts(decoded_tx):
     return destinations, btc_amount, fee, data, potential_dispensers
 
 
-def get_tx_info_new(db, decoded_tx, block_index, block_parser=None, p2sh_is_segwit=False):
+def get_tx_info_new(
+    db, decoded_tx, block_index, block_parser=None, p2sh_is_segwit=False, composing=False
+):
     """Get multisig transaction info.
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
@@ -376,7 +378,7 @@ def get_tx_info_new(db, decoded_tx, block_index, block_parser=None, p2sh_is_segw
     if not data and destinations != [
         config.UNSPENDABLE,
     ]:
-        if ledger.enabled("dispensers", block_index):
+        if ledger.enabled("dispensers", block_index) and not composing:
             dispensers_outputs = get_dispensers_outputs(db, potential_dispensers)
             if len(dispensers_outputs) == 0:
                 raise BTCOnlyError("no data and not unspendable")

@@ -1,8 +1,8 @@
 Creating connection to `:memory:`.
 New block inserted 309999
 Block 309999 parsed, ledger hash is 63f0fef31d02da85fa779e9a0e1b585b1a6a4e59e14564249e288e074e91c223 and txlist hash is 63f0fef31d02da85fa779e9a0e1b585b1a6a4e59e14564249e288e074e91c223
+Constructing None transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=0 (data_value=0 len(data_array)=0)
-Sorted candidate UTXOs: ['amount: 1.99909140; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 75']
 Fee/KB 0.00025000
 New input: amount: 1.99909140; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 75
 final_fee inputs: 1 size: 225 final_fee 5625
@@ -12,8 +12,8 @@ New transaction inserted 6dc5b0a33d4d4297e0f5cc2d23ae307951d32aab2d86b7fa147b385
 Credit 93000000000 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Burned 62000000 BTC for 93000000000 XCP
 Block 310000 parsed, ledger hash is cf0ea1d313e22ba5f413075b88e07dffc5c00e59f95eeb6d6dec935bd77f5ae4 and txlist hash is f06c23e6040a063ed59693baa0d63492dce64e1debc7455b22f5535c9dfbdc67
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.37903515; txid: 6dc5b0a33d4d4297e0f5cc2d23ae307951d32aab2d86b7fa147b385219f3a597; vout: 1; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.37903515; txid: 6dc5b0a33d4d4297e0f5cc2d23ae307951d32aab2d86b7fa147b385219f3a597; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -26,8 +26,8 @@ Asset DIVISIBLE issued
 Credit 100000000000 DIVISIBLE to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Transaction 1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1 parsed. Supported: True
 Block 310001 parsed, ledger hash is 11461f972c4cd85c87b5abfedb3cee589d09e945570d34564dcde6f4df9d2b57 and txlist hash is ff8358e8c8b2cb9a1765deadb77bdfc6eae05a844831a0a8c8820d416d54446e
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.37895715; txid: 1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1; vout: 1; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.37895715; txid: 1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -40,8 +40,8 @@ Asset NODIVISIBLE issued
 Credit 1000 NODIVISIBLE to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Transaction 7b1bf5144346279271b1ff78664f118224fe27fd8679d6c1519345f9c6c54584 parsed. Supported: True
 Block 310002 parsed, ledger hash is 355d92f841de89a1d97c3b2ea7623959ea4494bb62ea7e67ad359beb68caca8c and txlist hash is b17176b511fdea4cd899cfaf83f2e12193a4c92d1b199f18f590eb4fed90fa25
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.37887915; txid: 7b1bf5144346279271b1ff78664f118224fe27fd8679d6c1519345f9c6c54584; vout: 1; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.37887915; txid: 7b1bf5144346279271b1ff78664f118224fe27fd8679d6c1519345f9c6c54584; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -54,8 +54,8 @@ Asset CALLABLE issued
 Credit 1000 CALLABLE to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Transaction c26f3a0c4e57e41919ff27aae95a9a9d4d65d34c6da6f1893884a17c8d407140 parsed. Supported: True
 Block 310003 parsed, ledger hash is edcd7e344fb5cca16999f025594890b8b54543555e61eb3807406bb4204677f2 and txlist hash is b6dffe5b8c1f483c3c20832d23dddd7b530afe7ac1f3f57f433da59d83b48f06
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.37880115; txid: c26f3a0c4e57e41919ff27aae95a9a9d4d65d34c6da6f1893884a17c8d407140; vout: 1; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.37880115; txid: c26f3a0c4e57e41919ff27aae95a9a9d4d65d34c6da6f1893884a17c8d407140; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -68,8 +68,8 @@ Asset LOCKED issued
 Credit 1000 LOCKED to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Transaction 90b5734be98b0f2a0bd4b6a269c8db3368e2e387bb890ade239951d05423b4da parsed. Supported: True
 Block 310004 parsed, ledger hash is abd71a31bc1f8a072761b23a5bc2976731ebdf305d1d7d33922e93573f308129 and txlist hash is 3da72b0c813432f47a3a70887dfd29350d270e9ebaca9875ed6304c91888e387
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.37872315; txid: 90b5734be98b0f2a0bd4b6a269c8db3368e2e387bb890ade239951d05423b4da; vout: 1; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.37872315; txid: 90b5734be98b0f2a0bd4b6a269c8db3368e2e387bb890ade239951d05423b4da; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -80,8 +80,8 @@ Debit 0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Asset LOCKED issued
 Transaction 344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc parsed. Supported: True
 Block 310005 parsed, ledger hash is 0c3914f9676e506a96e6db793f15200ef33087cd47de4d27628849013a391daa and txlist hash is 2d59f139907859f9108360f7fa4695101a6b5ef0b7dd0e56c2dd41641e58e9af
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.37864515; txid: 344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc; vout: 1; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.37864515; txid: 344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -92,8 +92,8 @@ Debit 100000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Order opened for 100000000 XCP at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Transaction 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8 parsed. Supported: True
 Block 310006 parsed, ledger hash is 57ff5f34a9e418b179db9003414c5f3bdfa7feeb538f24071b23d024a3d05df0 and txlist hash is a4a6fb433e6c49968fded16954502c472b0d21b74c6cce8d08c8c53c00f2781e
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.37856715; txid: 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8; vout: 1; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.37856715; txid: 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
@@ -105,8 +105,8 @@ Credit 100000000 DIVISIBLE to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
 Send 100000000 DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
 Transaction 6e91ae23de2035e3e28c3322712212333592a1f666bcff9dd91aec45d5ea2753 parsed. Supported: True
 Block 310007 parsed, ledger hash is bfed530458339aab02ff75ad76738569dc6997c7a35d4452351678b04e022f68 and txlist hash is ce20264c332892b0a5e0c3e2d4b63d02c901fa2c3f8c5171b2896b50c82ea0af
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.37842635; txid: 6e91ae23de2035e3e28c3322712212333592a1f666bcff9dd91aec45d5ea2753; vout: 2; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.37842635; txid: 6e91ae23de2035e3e28c3322712212333592a1f666bcff9dd91aec45d5ea2753; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
@@ -118,8 +118,8 @@ Credit 100000000 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
 Send 100000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
 Transaction 4fd55abadfdbe77c3bda2431749cca934a29994a179620a62c1b57f28bd62a43 parsed. Supported: True
 Block 310008 parsed, ledger hash is d4feec997754d11a1502e5351ed62fcfbfcafb770e19a37da41d1d88b7b45ed4 and txlist hash is d25c9f48fbbe2010a62cad729d45b658a2caf9a7c9abc65a30e2a7fc47bc83e5
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.37828555; txid: 4fd55abadfdbe77c3bda2431749cca934a29994a179620a62c1b57f28bd62a43; vout: 2; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.37828555; txid: 4fd55abadfdbe77c3bda2431749cca934a29994a179620a62c1b57f28bd62a43; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -131,8 +131,8 @@ Debit 100000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Order opened for 100000000 XCP at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Transaction 21460d5c07284f9be9baf824927d0d4e4eb790e297f3162305841607b672349b parsed. Supported: True
 Block 310009 parsed, ledger hash is 4ab5ff9e71bbc83956557fb5abec98372fa38e5580838fb258b2d831bfc4d9ea and txlist hash is 173e769e0b4fa951ef0267c7e218f3a473d9a5857b0880d654a2181f244c92e2
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.37820755; txid: 21460d5c07284f9be9baf824927d0d4e4eb790e297f3162305841607b672349b; vout: 1; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.37820755; txid: 21460d5c07284f9be9baf824927d0d4e4eb790e297f3162305841607b672349b; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -143,8 +143,8 @@ Debit 100000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Order opened for 100000000 XCP at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Transaction 1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a parsed. Supported: True
 Block 310010 parsed, ledger hash is 1909ef40a24263776cb9e0d52a690048b50728855a0fe4b0e1ba3834a9e401c1 and txlist hash is 7d1ef03dad99c4bdf7a8e5af7209a136c8ac392922dd3afdbcc0446ea1f5f604
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.37812955; txid: 1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a; vout: 1; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.37812955; txid: 1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 1000000
@@ -157,8 +157,8 @@ Tx0 Price: 0.01; Tx1 Inverse Price: 0.00666667
 Skipping: price mismatch.
 Transaction a1768d7db2db3b9732b26df8c04db4b9a8535a1e5cf684a680e81e7c06f394b6 parsed. Supported: True
 Block 310011 parsed, ledger hash is c3d51a5f2df90c089844ba4de7d5541f6051490aa1389e5945a7bb91d49e3589 and txlist hash is 86ebe5be8b9443f411adcd49e7443a34941979c0c6bf40136a3b44193024abfc
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.36811955; txid: a1768d7db2db3b9732b26df8c04db4b9a8535a1e5cf684a680e81e7c06f394b6; vout: 1; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.36811955; txid: a1768d7db2db3b9732b26df8c04db4b9a8535a1e5cf684a680e81e7c06f394b6; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
@@ -170,8 +170,8 @@ Credit 300000000 XCP to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMB
 Send 300000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2
 Transaction 698e97e507da8623cf38ab42701853443c8f7fe0d93b4674aabb42f9800ee9d6 parsed. Supported: True
 Block 310012 parsed, ledger hash is a9dc31556d38b118eeb0bcbb3a374a0ed79adec4eb23e00c80c0599ba97c9a7a and txlist hash is 5a729b250068fe7b175a540b66a30326344514e357023184540ef97bae5e16e7
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.36802305; txid: 698e97e507da8623cf38ab42701853443c8f7fe0d93b4674aabb42f9800ee9d6; vout: 2; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.36802305; txid: 698e97e507da8623cf38ab42701853443c8f7fe0d93b4674aabb42f9800ee9d6; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
@@ -183,8 +183,8 @@ Credit 1000000000 DIVISIBLE to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWEL
 Send 1000000000 DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2
 Transaction 0cfeeb559ed794d067557df0376a6c213b48b174b80cdb2c3c6d365cf538e132 parsed. Supported: True
 Block 310013 parsed, ledger hash is e72be5070d0a5853631d902d334e8b88eddf6e79616373311babc4a0a27dd3d8 and txlist hash is 1294e3d0871b0c2297d9980ed46bfa3563b33b202b426949dadeeba7075b4bc7
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.36792655; txid: 0cfeeb559ed794d067557df0376a6c213b48b174b80cdb2c3c6d365cf538e132; vout: 2; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.36792655; txid: 0cfeeb559ed794d067557df0376a6c213b48b174b80cdb2c3c6d365cf538e132; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
@@ -196,8 +196,8 @@ Credit 5 NODIVISIBLE to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
 Send 5 NODIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
 Transaction 1facb0072f16f6bdca64ea859c82b850f58f0ec7ff410d901679772a4727515a parsed. Supported: True
 Block 310014 parsed, ledger hash is cb0962222af917dbac2a11465c22cd80770c0b3cdb8bdc0870c99a8116745c9e and txlist hash is d5431af170b331497d8967969820632880473d06dae0d06fa7ffc93a0cb90180
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.36778575; txid: 1facb0072f16f6bdca64ea859c82b850f58f0ec7ff410d901679772a4727515a; vout: 2; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.36778575; txid: 1facb0072f16f6bdca64ea859c82b850f58f0ec7ff410d901679772a4727515a; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
@@ -209,8 +209,8 @@ Credit 10 NODIVISIBLE to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyM
 Send 10 NODIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2
 Transaction e3b6667b7baa515048a7fcf2be7818e3e7622371236b78e19b4b08e2d7e7818c parsed. Supported: True
 Block 310015 parsed, ledger hash is 6ff899433f22546c41a15f20b4c66913c747931500fee10d58c4a17b9e2f0c88 and txlist hash is b77c1d69b3ac7348e336cce9948f982efafa1cb56cbdde85fe9f49a73871ba3b
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.36768925; txid: e3b6667b7baa515048a7fcf2be7818e3e7622371236b78e19b4b08e2d7e7818c; vout: 2; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.36768925; txid: e3b6667b7baa515048a7fcf2be7818e3e7622371236b78e19b4b08e2d7e7818c; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -223,8 +223,8 @@ Asset MAXI issued
 Credit 9223372036854775807 MAXI to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Transaction bd4e9cbbe69c2db893cd32182a2d315c89c45ba4e31aa5775d1fe42d841cea39 parsed. Supported: True
 Block 310016 parsed, ledger hash is ec66a06cde401b66917c6d1d4e1ee8893405cfbf0474560d9997d6960c8af710 and txlist hash is 6d3d469ad1b72a67ee50d8a7c6c57069da3a0e2e9d12a23a30bbf4f2ccc64cb6
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.36761125; txid: bd4e9cbbe69c2db893cd32182a2d315c89c45ba4e31aa5775d1fe42d841cea39; vout: 1; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.36761125; txid: bd4e9cbbe69c2db893cd32182a2d315c89c45ba4e31aa5775d1fe42d841cea39; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -234,8 +234,8 @@ New transaction inserted d14388b74b63d93e4477b1fe8426028bb8ab20656703e3ce8deeb23
 Broadcast d14388b74b63d93e4477b1fe8426028bb8ab20656703e3ce8deeb23c2fe0b8af: Unit Test
 Transaction d14388b74b63d93e4477b1fe8426028bb8ab20656703e3ce8deeb23c2fe0b8af parsed. Supported: True
 Block 310017 parsed, ledger hash is b2053109bff06dae1705fc32ab0712f38bf9d206fa3517fbf0a938d1b5f33bad and txlist hash is 223e10a8e23e4435e635f1dda533a0662dff9f0e3fb86b72a22b2c191f731a80
+Constructing multisig transaction from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.93427600; txid: dc4f91c42eb79898b266ee237eed0d501b8b1a843f69aed847ad740e1933f85e; vout: 1; confirmations: 25']
 Fee/KB 0.00025000
 New input: amount: 1.93427600; txid: dc4f91c42eb79898b266ee237eed0d501b8b1a843f69aed847ad740e1933f85e; vout: 1; confirmations: 25
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -245,8 +245,8 @@ New transaction inserted f9e0527c85a9084d7eda91fc30a49993370d029efea031a8ccccdf8
 Broadcast f9e0527c85a9084d7eda91fc30a49993370d029efea031a8ccccdf846146a660: None
 Transaction f9e0527c85a9084d7eda91fc30a49993370d029efea031a8ccccdf846146a660 parsed. Supported: True
 Block 310018 parsed, ledger hash is d7051de4d03fb31bfedf215b407b1edc12789c1f2748abb5a72257ad8f5113ce and txlist hash is 9eb6f4683bebb675467829573cd2f7e3ab613d21398c5aef31ed389a40f3c48d
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.36753325; txid: d14388b74b63d93e4477b1fe8426028bb8ab20656703e3ce8deeb23c2fe0b8af; vout: 1; confirmations: 2']
 Fee/KB 0.00025000
 New input: amount: 1.36753325; txid: d14388b74b63d93e4477b1fe8426028bb8ab20656703e3ce8deeb23c2fe0b8af; vout: 1; confirmations: 2
 final_fee inputs: 1 size: 306 final_fee 7650
@@ -257,8 +257,8 @@ Debit 9 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Opened bet 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1
 Transaction 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1 parsed. Supported: True
 Block 310019 parsed, ledger hash is 35c95a70193ded2f9ee18254a91ce5d4834bb162fc3cca85dd432339257539b8 and txlist hash is 88220e5f48660f8b9e339c3afb65ffbad83d632164f1df8e22af2ee6fc18826e
+Constructing multisig transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.00000000; txid: e43c357b78baf473fd21cbc1481ac450746b60cf1d2702ce3a73a8811811e3eb; vout: 0; confirmations: 23', 'amount: 0.11121663; txid: b9fc3aa355b77ecb63282fc96e63912a253e98bf9cf441fbfbecc3fb277c4985; vout: 0; confirmations: 95', 'amount: 0.00005430; txid: 6e91ae23de2035e3e28c3322712212333592a1f666bcff9dd91aec45d5ea2753; vout: 0; confirmations: 13', 'amount: 0.00005430; txid: 4fd55abadfdbe77c3bda2431749cca934a29994a179620a62c1b57f28bd62a43; vout: 0; confirmations: 12', 'amount: 0.00005430; txid: 1facb0072f16f6bdca64ea859c82b850f58f0ec7ff410d901679772a4727515a; vout: 0; confirmations: 6']
 Fee/KB 0.00025000
 New input: amount: 1.00000000; txid: e43c357b78baf473fd21cbc1481ac450746b60cf1d2702ce3a73a8811811e3eb; vout: 0; confirmations: 23
 final_fee inputs: 1 size: 306 final_fee 7650
@@ -439,8 +439,8 @@ New block inserted 310099
 Block 310099 parsed, ledger hash is 9090b8a4a26ea7dff75658317ce2c6ab828b3b42684922e44debfd1bf8330b8d and txlist hash is c3b0869da7bd7abbda54895e6de81cffd2febe007e1f7085da8cc657512278e6
 New block inserted 310100
 Block 310100 parsed, ledger hash is d48d30db433bcee44d87153fb3db17d37fbe3534f23eb16ac853b3420d86d80e and txlist hash is 793627f8b7de24827faca4a19ce374f39c90b74e278b83a599cb637877bd6388
+Constructing multisig transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 0.99985920; txid: 5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93; vout: 2; confirmations: 81', 'amount: 0.11121663; txid: b9fc3aa355b77ecb63282fc96e63912a253e98bf9cf441fbfbecc3fb277c4985; vout: 0; confirmations: 176', 'amount: 0.00005430; txid: 6e91ae23de2035e3e28c3322712212333592a1f666bcff9dd91aec45d5ea2753; vout: 0; confirmations: 94', 'amount: 0.00005430; txid: 4fd55abadfdbe77c3bda2431749cca934a29994a179620a62c1b57f28bd62a43; vout: 0; confirmations: 93', 'amount: 0.00005430; txid: 1facb0072f16f6bdca64ea859c82b850f58f0ec7ff410d901679772a4727515a; vout: 0; confirmations: 87']
 Fee/KB 0.00025000
 New input: amount: 0.99985920; txid: 5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93; vout: 2; confirmations: 81
 final_fee inputs: 1 size: 306 final_fee 7650
@@ -451,8 +451,8 @@ Debit 10 XCP from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
 Opened bet db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e
 Transaction db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e parsed. Supported: True
 Block 310101 parsed, ledger hash is 53c6f9247cd255c86a69c05c4463ab94f9a3277496c155398c38dc6f7121fe9b and txlist hash is 7388dcdfb1f5a54a0d4a4d3e50d486b24a662cef04f054a582e2d5b0bcf3ca28
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.36739245; txid: 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1; vout: 2; confirmations: 83', 'amount: 0.00005430; txid: 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1; vout: 0; confirmations: 83', 'amount: 0.00005430; txid: 5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93; vout: 0; confirmations: 82', 'amount: 0.00005430; txid: db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e; vout: 0; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.36739245; txid: 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1; vout: 2; confirmations: 83
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -467,8 +467,8 @@ Bet match 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c656
 Updated bet match 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93. New status: settled
 Transaction 16462eac6c795cea6e5985ee063867d8c61ae24373df02048186d28118d25bae parsed. Supported: True
 Block 310102 parsed, ledger hash is b225c48fb4c40b2e0695991251f6d69217df6e00c01613e0a20f6a3e34f50d5b and txlist hash is 7d553f87ef9f2beea74631e2e6ec107522b9f4756f041e2ee40fa3946909b3dd
+Constructing None transaction from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM.
 data_btc_out=0 (data_value=0 len(data_array)=0)
-Sorted candidate UTXOs: ['amount: 1.07824570; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 247']
 Fee/KB 0.00025000
 New input: amount: 1.07824570; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 247
 final_fee inputs: 1 size: 225 final_fee 5625
@@ -478,8 +478,8 @@ New transaction inserted 65d4048700fb8ae03f321be93c6669b8497f506a1f43920f96d994f
 Credit 92999138821 XCP to myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM
 Burned 62000000 BTC for 92999138821 XCP
 Block 310103 parsed, ledger hash is fc2a8ce8efc122e5cbd631998e611dc8707cfe0b8d3f6a531fe5bcc21c17feae and txlist hash is ece7991721b8e94950e2a9f41b9285b34be716340a7621b1c1528f8065e9ac28
+Constructing None transaction from munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b.
 data_btc_out=0 (data_value=0 len(data_array)=0)
-Sorted candidate UTXOs: ['amount: 1.07824570; txid: 1befa135e687812ab8a60678ac17f982daf008cd7094dc95fc65a0b8e4bd955e; vout: 0; confirmations: 248']
 Fee/KB 0.00025000
 New input: amount: 1.07824570; txid: 1befa135e687812ab8a60678ac17f982daf008cd7094dc95fc65a0b8e4bd955e; vout: 0; confirmations: 248
 final_fee inputs: 1 size: 225 final_fee 5625
@@ -489,8 +489,8 @@ New transaction inserted 95332a7e3e2b04f2c10e3027327bfc31b686947fb05381e28903e3f
 Credit 92999130460 XCP to munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b
 Burned 62000000 BTC for 92999130460 XCP
 Block 310104 parsed, ledger hash is b1a7115902d371d13889008320e52473cd5b34591bd657e372c0048df020012e and txlist hash is 66dacde33bddb633552c94d9107669297fe26ccdcf482f9098f1e6c05f3d01e6
+Constructing None transaction from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42.
 data_btc_out=0 (data_value=0 len(data_array)=0)
-Sorted candidate UTXOs: ['amount: 1.07824570; txid: fea12706ef63c7ce57df3e1197b8b33e6a93ef2df07964ff654c14f1b900e17f; vout: 0; confirmations: 249']
 Fee/KB 0.00025000
 New input: amount: 1.07824570; txid: fea12706ef63c7ce57df3e1197b8b33e6a93ef2df07964ff654c14f1b900e17f; vout: 0; confirmations: 249
 final_fee inputs: 1 size: 225 final_fee 5625
@@ -500,8 +500,8 @@ New transaction inserted e062d1ebf4cb71bd22d80c949b956f5286080838a7607ccf87945b2
 Credit 92999122099 XCP to mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42
 Burned 62000000 BTC for 92999122099 XCP
 Block 310105 parsed, ledger hash is b5fcda12415e713fc81278b95515fe86ecc6beb5810e4f80eb9645f09870dab0 and txlist hash is 656d27bdbf841c33dd3c11253159dc5d8a6d7885db3174f4f9c6a8382d6a7209
+Constructing None transaction from mrPk7hTeZWjjSCrMTC2ET4SAUThQt7C4uK.
 data_btc_out=0 (data_value=0 len(data_array)=0)
-Sorted candidate UTXOs: ['amount: 0.05608646; txid: eac206b369d8130892c8be2d52f7bd9e3e0324870262daf3a19264246068ed2b; vout: 0; confirmations: 113']
 Fee/KB 0.00025000
 New input: amount: 0.05608646; txid: eac206b369d8130892c8be2d52f7bd9e3e0324870262daf3a19264246068ed2b; vout: 0; confirmations: 113
 final_fee inputs: 1 size: 225 final_fee 5625
@@ -511,8 +511,8 @@ New transaction inserted bbf0b9f6992755a3e371fb0c0b72f6828831e81c6f7ada6f95ba110
 Credit 14999857 XCP to mrPk7hTeZWjjSCrMTC2ET4SAUThQt7C4uK
 Burned 10000 BTC for 14999857 XCP
 Block 310106 parsed, ledger hash is f3c98c954cf939951d8b24a257bc6b1bc152a6a0bcf6b580ac281c26bbf16499 and txlist hash is 6138a4e92289d72dab6e43906e545dcc3d1475102b7f33195118de74a53fe576
+Constructing opreturn transaction from munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b.
 data_btc_out=0 (data_value=0 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 0.45818945; txid: 95332a7e3e2b04f2c10e3027327bfc31b686947fb05381e28903e3ff569bd4ff; vout: 1; confirmations: 3']
 Fee/KB 0.00025000
 New input: amount: 0.45818945; txid: 95332a7e3e2b04f2c10e3027327bfc31b686947fb05381e28903e3ff569bd4ff; vout: 1; confirmations: 3
 final_fee inputs: 1 size: 246 final_fee 6150
@@ -523,8 +523,8 @@ Debit 100 XCP from munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b
 Opened dispenser for XCP at munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b
 Transaction 9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec parsed. Supported: True
 Block 310107 parsed, ledger hash is a550df26b8dee075bee82fc59c44ce5cbf65fe9df10c60f3f3009faa2791c783 and txlist hash is b30d22c6d7e8bf574e3b3e11d08bcb73c5853ba348e8688a25670a861d3f4e3a
+Constructing None transaction from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy.
 data_btc_out=0 (data_value=0 len(data_array)=0)
-Sorted candidate UTXOs: ['amount: 1.00000000; txid: 20ffe4012d5fc638309b2d087a15fb100d9194132633623bc4c23b4c2caf0150; vout: 0; confirmations: 115']
 Fee/KB 0.00025000
 New input: amount: 1.00000000; txid: 20ffe4012d5fc638309b2d087a15fb100d9194132633623bc4c23b4c2caf0150; vout: 0; confirmations: 115
 final_fee inputs: 1 size: 225 final_fee 5625
@@ -534,8 +534,8 @@ New transaction inserted 93c6d2499a0536c31c77a3db3fc9fc8456fbd0726c45b8f716af16f
 Credit 46499548508 XCP to 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy
 Burned 31000000 BTC for 46499548508 XCP
 Block 310108 parsed, ledger hash is e1d8c345c74760010223a823895471d3ad6a2db5c6a70b13850d5cd977414518 and txlist hash is d03bdcdbb4980ea415ab73c8e91a7fca7099c8c176d6bb4c2fdf72b6873175ae
+Constructing multisig transaction from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 0.68994375; txid: 93c6d2499a0536c31c77a3db3fc9fc8456fbd0726c45b8f716af16f938727a73; vout: 1; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 0.68994375; txid: 93c6d2499a0536c31c77a3db3fc9fc8456fbd0726c45b8f716af16f938727a73; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -548,8 +548,8 @@ Asset PAYTOSCRIPT issued
 Credit 1000 PAYTOSCRIPT to 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy
 Transaction e8baf787b9e4636a3cad0ffeb62992ad7abb160dc6506af0546f566dc178de7e parsed. Supported: True
 Block 310109 parsed, ledger hash is 8fb63d8460a222163d15eab76a61e383ffa251a175c16f209648d6782c304059 and txlist hash is cff81539539169771000a550581dbdf4d4d1fdabecfb9032342269ff5f100b61
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.36731445; txid: 16462eac6c795cea6e5985ee063867d8c61ae24373df02048186d28118d25bae; vout: 1; confirmations: 8', 'amount: 0.00005430; txid: 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1; vout: 0; confirmations: 91', 'amount: 0.00005430; txid: 5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93; vout: 0; confirmations: 90', 'amount: 0.00005430; txid: db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e; vout: 0; confirmations: 9']
 Fee/KB 0.00025000
 New input: amount: 1.36731445; txid: 16462eac6c795cea6e5985ee063867d8c61ae24373df02048186d28118d25bae; vout: 1; confirmations: 8
 final_fee inputs: 1 size: 306 final_fee 7650
@@ -561,8 +561,8 @@ Credit 100000000 DIVISIBLE to 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy
 Send 100000000 DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy
 Transaction f6a0f819e899b407cbfa07b4eff3d58902af3899abfbaa47d5f31d5b398e76e7 parsed. Supported: True
 Block 310110 parsed, ledger hash is 250f7b5c6f00bf06c9cd4de8dea0b8166e2decf093910ea32eabd615b910e7e6 and txlist hash is d6853c803a38efdd5190401e94244333cb4f46752a2868d4a03e6d7d6c8c2bad
+Constructing opreturn transaction from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy.
 data_btc_out=0 (data_value=0 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 0.68986575; txid: e8baf787b9e4636a3cad0ffeb62992ad7abb160dc6506af0546f566dc178de7e; vout: 1; confirmations: 2', 'amount: 0.00005430; txid: f6a0f819e899b407cbfa07b4eff3d58902af3899abfbaa47d5f31d5b398e76e7; vout: 0; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 0.68986575; txid: e8baf787b9e4636a3cad0ffeb62992ad7abb160dc6506af0546f566dc178de7e; vout: 1; confirmations: 2
 final_fee inputs: 1 size: 239 final_fee 5975
@@ -572,8 +572,8 @@ New transaction inserted 510f6feb902159622d83f64eae590a4fec88989869a20caf5804c31
 Broadcast 510f6feb902159622d83f64eae590a4fec88989869a20caf5804c313aa5e0186: Unit Test
 Transaction 510f6feb902159622d83f64eae590a4fec88989869a20caf5804c313aa5e0186 parsed. Supported: True
 Block 310111 parsed, ledger hash is 0c3c3d099bf08803f67c2a77d0d67779674d1063cc72d8794b8fe62a55049d75 and txlist hash is 9cab90baa72446a36a7c176e82eed32ce968f96b0f29067b240a10a71ed95808
+Constructing opreturn transaction from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy.
 data_btc_out=0 (data_value=0 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 0.68980600; txid: 510f6feb902159622d83f64eae590a4fec88989869a20caf5804c313aa5e0186; vout: 1; confirmations: 1', 'amount: 0.00005430; txid: f6a0f819e899b407cbfa07b4eff3d58902af3899abfbaa47d5f31d5b398e76e7; vout: 0; confirmations: 2']
 Fee/KB 0.00025000
 New input: amount: 0.68980600; txid: 510f6feb902159622d83f64eae590a4fec88989869a20caf5804c313aa5e0186; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 285 final_fee 7124
@@ -584,8 +584,8 @@ Debit 10 XCP from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy
 Opened bet d79b590e4ec3e74cbc3eb4d0f956ce7abb0e3af2ccac85ff90ed8acf13f2e048
 Transaction d79b590e4ec3e74cbc3eb4d0f956ce7abb0e3af2ccac85ff90ed8acf13f2e048 parsed. Supported: True
 Block 310112 parsed, ledger hash is 557fdd1240793f8607a2b4c638ce800d5260c2adb294aac95d6c5eab7e98c3a9 and txlist hash is 4fc0df4832258d430e645f1950407e19e72ea27d28b8ae1851333e8e8718086b
+Constructing multisig transaction from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 0.45818945; txid: e062d1ebf4cb71bd22d80c949b956f5286080838a7607ccf87945b2b3abfcafa; vout: 1; confirmations: 8']
 Fee/KB 0.00025000
 New input: amount: 0.45818945; txid: e062d1ebf4cb71bd22d80c949b956f5286080838a7607ccf87945b2b3abfcafa; vout: 1; confirmations: 8
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -598,8 +598,8 @@ Asset LOCKEDPREV issued
 Credit 1000 LOCKEDPREV to mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42
 Transaction 34bce6f409758b3d6fd13282a99b277ef1fdf44a1025d2901075cac0249dbc63 parsed. Supported: True
 Block 310113 parsed, ledger hash is 4ecad4a5c8e9b54101c4a037d6c86a7eb36d3cf0503e60a1bf13c5a4196c5989 and txlist hash is baf1f86b3145fd8dc33aa2fcb2e882cf69ffadee81e8412ed2092c634934709c
+Constructing multisig transaction from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 0.45811145; txid: 34bce6f409758b3d6fd13282a99b277ef1fdf44a1025d2901075cac0249dbc63; vout: 1; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 0.45811145; txid: 34bce6f409758b3d6fd13282a99b277ef1fdf44a1025d2901075cac0249dbc63; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -610,8 +610,8 @@ Debit 0 XCP from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42
 Asset LOCKEDPREV issued
 Transaction 025b810fce7735c5869b90846007e5f604f60c1beda4c1695f1c7fbec3d44bc2 parsed. Supported: True
 Block 310114 parsed, ledger hash is 00380ec3118a5e8f9cab403d10870dd5bc339421297fcb6196a3112d70541ecd and txlist hash is 22e3851c91f780c0152549b24228d0dab3542c2632b633995c0d8dcfd8e26601
+Constructing multisig transaction from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 0.45803345; txid: 025b810fce7735c5869b90846007e5f604f60c1beda4c1695f1c7fbec3d44bc2; vout: 1; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 0.45803345; txid: 025b810fce7735c5869b90846007e5f604f60c1beda4c1695f1c7fbec3d44bc2; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -622,8 +622,8 @@ Debit 0 XCP from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42
 Asset LOCKEDPREV issued
 Transaction 4ab1a24283c1dbfc710be7b215d64e8a4510ee97af019e210049c25773b50beb parsed. Supported: True
 Block 310115 parsed, ledger hash is 0acd3a07c5df54e883ff9871852c961b00771d3f4afccb3b1941d0b1c7b300cc and txlist hash is cf921f50b98df4ec37f2a9803315a798198507adcbfd8fd54e6a9bc539cc8f41
+Constructing None transaction from tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx.
 data_btc_out=0 (data_value=0 len(data_array)=0)
-Sorted candidate UTXOs: ['amount: 1.00000000; txid: 20efe4012d5fc638309b2d087a15fb100d9194132633623bc4c23b4c2caf0150; vout: 0; confirmations: 123']
 Fee/KB 0.00025000
 New input: amount: 1.00000000; txid: 20efe4012d5fc638309b2d087a15fb100d9194132633623bc4c23b4c2caf0150; vout: 0; confirmations: 123
 final_fee inputs: 1 size: 225 final_fee 5625
@@ -1361,8 +1361,8 @@ New block inserted 310479
 Block 310479 parsed, ledger hash is 2e48a89a55b6f368745e1c022683e93c20bdd920011518f18fd936f2190ac5e0 and txlist hash is 81d4ab55e022000a1bb3fbe758e497425c5196951c3e7896d3c641d54b4f2db6
 New block inserted 310480
 Block 310480 parsed, ledger hash is aa54124d86e74bebd14ea481ac2a5a5186236ffe214747f1af11ac370565525c and txlist hash is 8d7e0f8a6f052692155e23eb612c02468830485938e7cb77a91e0c2061611385
+Constructing opreturn transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=0 (data_value=0 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.36717365; txid: f6a0f819e899b407cbfa07b4eff3d58902af3899abfbaa47d5f31d5b398e76e7; vout: 2; confirmations: 371', 'amount: 0.00005430; txid: 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1; vout: 0; confirmations: 462', 'amount: 0.00005430; txid: 5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93; vout: 0; confirmations: 461', 'amount: 0.00005430; txid: db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e; vout: 0; confirmations: 380']
 Fee/KB 0.00025000
 New input: amount: 1.36717365; txid: f6a0f819e899b407cbfa07b4eff3d58902af3899abfbaa47d5f31d5b398e76e7; vout: 2; confirmations: 371
 final_fee inputs: 1 size: 255 final_fee 6375
@@ -1374,8 +1374,8 @@ Credit 100000000 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
 Send (ENHANCED) 100000000 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
 Transaction b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5 parsed. Supported: True
 Block 310481 parsed, ledger hash is fbbe1266bb773e5a3f5b48e82566ff75bc74bfea9424f81f670952565db15c59 and txlist hash is 8bc755d288d8d6525d9161e5d5072631a72e46d2373de37c7851aa10f3479ed5
+Constructing opreturn transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
 data_btc_out=0 (data_value=0 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 0.99971840; txid: db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e; vout: 2; confirmations: 381', 'amount: 0.11121663; txid: b9fc3aa355b77ecb63282fc96e63912a253e98bf9cf441fbfbecc3fb277c4985; vout: 0; confirmations: 557', 'amount: 0.00005430; txid: 6e91ae23de2035e3e28c3322712212333592a1f666bcff9dd91aec45d5ea2753; vout: 0; confirmations: 475', 'amount: 0.00005430; txid: 4fd55abadfdbe77c3bda2431749cca934a29994a179620a62c1b57f28bd62a43; vout: 0; confirmations: 474', 'amount: 0.00005430; txid: 1facb0072f16f6bdca64ea859c82b850f58f0ec7ff410d901679772a4727515a; vout: 0; confirmations: 468']
 Fee/KB 0.00025000
 New input: amount: 0.99971840; txid: db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e; vout: 2; confirmations: 381
 final_fee inputs: 1 size: 254 final_fee 6350
@@ -1393,8 +1393,8 @@ New block inserted 310484
 Block 310484 parsed, ledger hash is 310bc7c61c1325ee3f97e888658fd74e1fe4adccef4924abb6978150fe6f3dad and txlist hash is ec800faf2b61e7b1c2c85157d09b058f59defc14ffbe64d82dffea2a0368ade2
 New block inserted 310485
 Block 310485 parsed, ledger hash is b7f66db9ea5838b65286422d0cac262f6b81bbd5a7397adf7b8d85b21354dbcd and txlist hash is c2c0301119eb8f6e5ee8f72a4f93366a7c2b9f327f087a5aabff7d73892ca74f
+Constructing multisig transaction from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 0.45818945; txid: 65d4048700fb8ae03f321be93c6669b8497f506a1f43920f96d994f43358c35b; vout: 1; confirmations: 383']
 Fee/KB 0.00025000
 New input: amount: 0.45818945; txid: 65d4048700fb8ae03f321be93c6669b8497f506a1f43920f96d994f43358c35b; vout: 1; confirmations: 383
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -1404,8 +1404,8 @@ New transaction inserted 3b95e07a2194174ac020de27e8b2b6ee24d5fc120f118df516ba284
 Broadcast 3b95e07a2194174ac020de27e8b2b6ee24d5fc120f118df516ba28495657cf14: Unit Test
 Transaction 3b95e07a2194174ac020de27e8b2b6ee24d5fc120f118df516ba28495657cf14 parsed. Supported: True
 Block 310486 parsed, ledger hash is 0f829769e4da773089d7b05047a499db5f6d1b17795d4fba912882caee9813e0 and txlist hash is ea66c7d9251a0eb884fef48de05cb58bbcf3a9e08319f01c96f180aeb0de9bab
+Constructing multisig transaction from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 0.45811145; txid: 3b95e07a2194174ac020de27e8b2b6ee24d5fc120f118df516ba28495657cf14; vout: 1; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 0.45811145; txid: 3b95e07a2194174ac020de27e8b2b6ee24d5fc120f118df516ba28495657cf14; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
@@ -1416,8 +1416,8 @@ Debit 9 XCP from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM
 Opened bet 41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef
 Transaction 41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef parsed. Supported: True
 Block 310487 parsed, ledger hash is 4b4d7a79843342e96e5d9d71bbc49690245b3098be75e7b86f273021d526216d and txlist hash is 76fbd411c43f3f67c8bf61138c5672de0cfda2d98f112a6e50b3a5d084d7cc72
+Constructing multisig transaction from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 0.45797065; txid: 41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef; vout: 2; confirmations: 1', 'amount: 0.00005430; txid: 41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef; vout: 0; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 0.45797065; txid: 41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -1427,8 +1427,8 @@ New transaction inserted 870fb08b373705423f31ccd91fdbcabe135ad92d74e709a959dfa2e
 Broadcast 870fb08b373705423f31ccd91fdbcabe135ad92d74e709a959dfa2e12f9a6638: options 0
 Transaction 870fb08b373705423f31ccd91fdbcabe135ad92d74e709a959dfa2e12f9a6638 parsed. Supported: True
 Block 310488 parsed, ledger hash is 2d7e59026ea4c8933e9c7474936931ca49d4af91f9b9985f3c76085fb3a69104 and txlist hash is 78e801f2d1968c860ac2563e9cc912c18cb8e5f95996011e84c289833fbd46da
+Constructing multisig transaction from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 0.45789265; txid: 870fb08b373705423f31ccd91fdbcabe135ad92d74e709a959dfa2e12f9a6638; vout: 1; confirmations: 1', 'amount: 0.00005430; txid: 41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef; vout: 0; confirmations: 2']
 Fee/KB 0.00025000
 New input: amount: 0.45789265; txid: 870fb08b373705423f31ccd91fdbcabe135ad92d74e709a959dfa2e12f9a6638; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -1438,8 +1438,8 @@ New transaction inserted 685d7f99fa76a05201c3239a4e0d9060ea53307b171f6ad7d482a26
 Broadcast 685d7f99fa76a05201c3239a4e0d9060ea53307b171f6ad7d482a26c73e9c0d1: None
 Transaction 685d7f99fa76a05201c3239a4e0d9060ea53307b171f6ad7d482a26c73e9c0d1 parsed. Supported: True
 Block 310489 parsed, ledger hash is 716354a370f344980e98785a444b56b21188bc699e7fbd0c877b6f2fabf35efc and txlist hash is 23d9af03e6aa29fbab29c8e2a5a0419680053bba19594105cc8ef4d3db05d418
+Constructing multisig transaction from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 0.45795545; txid: 4ab1a24283c1dbfc710be7b215d64e8a4510ee97af019e210049c25773b50beb; vout: 1; confirmations: 375']
 Fee/KB 0.00025000
 New input: amount: 0.45795545; txid: 4ab1a24283c1dbfc710be7b215d64e8a4510ee97af019e210049c25773b50beb; vout: 1; confirmations: 375
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -1449,8 +1449,8 @@ New transaction inserted 7c437705c315212315c85c0b8ba09d358679c91be20b54f30929c5a
 Broadcast 7c437705c315212315c85c0b8ba09d358679c91be20b54f30929c5a6052426af: options 1
 Transaction 7c437705c315212315c85c0b8ba09d358679c91be20b54f30929c5a6052426af parsed. Supported: True
 Block 310490 parsed, ledger hash is 906a38f4256f50312891119c99721537992438af85421e317574ce1810e2b909 and txlist hash is 5f934032dce4102cd1d72d3f887526e78baa4a78991bc43cf0a1ebefe08fdec7
+Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.36710990; txid: b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5; vout: 1; confirmations: 10', 'amount: 0.00005430; txid: 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1; vout: 0; confirmations: 472', 'amount: 0.00005430; txid: 5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93; vout: 0; confirmations: 471', 'amount: 0.00005430; txid: db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e; vout: 0; confirmations: 390']
 Fee/KB 0.00025000
 New input: amount: 1.36710990; txid: b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5; vout: 1; confirmations: 10
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -1464,8 +1464,8 @@ Tx0 Price: 149.9999250000375; Tx1 Inverse Price: 125.0
 Skipping: price mismatch.
 Transaction 74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498 parsed. Supported: True
 Block 310491 parsed, ledger hash is 3114d8091cfcaa9944c6fab49d51950535c4ef269877d58c372ed80b2b472ec6 and txlist hash is f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8
+Constructing multisig transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 0.99965490; txid: c8716524f33646b9af94d6f5e52494ff3b34466497094b1db2ab920e4f79bc34; vout: 1; confirmations: 10', 'amount: 0.11121663; txid: b9fc3aa355b77ecb63282fc96e63912a253e98bf9cf441fbfbecc3fb277c4985; vout: 0; confirmations: 567', 'amount: 0.00005430; txid: 6e91ae23de2035e3e28c3322712212333592a1f666bcff9dd91aec45d5ea2753; vout: 0; confirmations: 485', 'amount: 0.00005430; txid: 4fd55abadfdbe77c3bda2431749cca934a29994a179620a62c1b57f28bd62a43; vout: 0; confirmations: 484', 'amount: 0.00005430; txid: 1facb0072f16f6bdca64ea859c82b850f58f0ec7ff410d901679772a4727515a; vout: 0; confirmations: 478']
 Fee/KB 0.00025000
 New input: amount: 0.99965490; txid: c8716524f33646b9af94d6f5e52494ff3b34466497094b1db2ab920e4f79bc34; vout: 1; confirmations: 10
 final_fee inputs: 1 size: 272 final_fee 1000000
@@ -1486,8 +1486,8 @@ Considering: 1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a
 Skipping: negative give quantity remaining
 Transaction 1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81 parsed. Supported: True
 Block 310492 parsed, ledger hash is 98af18583618fdeed545347c013763d068e8294405d265911cc5e1bc420bc740 and txlist hash is daf4d2c1a1ad5206abcf7744bdd06fae99c442fb2607a843dcabb5727d02916e
+Constructing None transaction from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH.
 data_btc_out=0 (data_value=0 len(data_array)=0)
-Sorted candidate UTXOs: ['amount: 1.93419800; txid: f9e0527c85a9084d7eda91fc30a49993370d029efea031a8ccccdf846146a660; vout: 1; confirmations: 475']
 Fee/KB 0.00025000
 New input: amount: 1.93419800; txid: f9e0527c85a9084d7eda91fc30a49993370d029efea031a8ccccdf846146a660; vout: 1; confirmations: 475
 final_fee inputs: 1 size: 225 final_fee 5625
@@ -1497,8 +1497,8 @@ New transaction inserted c0733e1287afb1bb3d2fdacd1db7c74ea84f14362f3a8d1c038e662
 Credit 92995878046 XCP to mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH
 Burned 62000000 BTC for 92995878046 XCP
 Block 310493 parsed, ledger hash is 29119cd30a4733916fbfd0551506eaa16f7bb1bdfbdf8d17ac4e5bb20d1cb09c and txlist hash is 7ec4cfa94544900c8e8732ad51be7cee6452aa1884ea940cd5c98862fb4aaba6
+Constructing multisig transaction from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.31414175; txid: c0733e1287afb1bb3d2fdacd1db7c74ea84f14362f3a8d1c038e662e1d0b1b1a; vout: 1; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.31414175; txid: c0733e1287afb1bb3d2fdacd1db7c74ea84f14362f3a8d1c038e662e1d0b1b1a; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
@@ -1511,8 +1511,8 @@ Asset DIVIDEND issued
 Credit 100 DIVIDEND to mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH
 Transaction 321bed395482e034f2ce0a4dbf28d1f800592a658e26ea91ae9c5b0928204503 parsed. Supported: True
 Block 310494 parsed, ledger hash is 72d71bd72263699ea9f2b097ad141be5bc394f49d8b0b0a6b2ff6a87b0ee3919 and txlist hash is 9350c3ba33d0546d1194c5fa767ced28834b26246aedc56d89b1d48ec4f26014
+Constructing multisig transaction from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.31406375; txid: 321bed395482e034f2ce0a4dbf28d1f800592a658e26ea91ae9c5b0928204503; vout: 1; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.31406375; txid: 321bed395482e034f2ce0a4dbf28d1f800592a658e26ea91ae9c5b0928204503; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
@@ -1524,8 +1524,8 @@ Credit 10 DIVIDEND to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj
 Send 10 DIVIDEND from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj
 Transaction 02156b9a1f643fb48330396274a37620c8abbbe5eddb2f8b53dadd135f5d2e2e parsed. Supported: True
 Block 310495 parsed, ledger hash is 5a7e5a36882466373d576bb5f4ccd1bc72ecaf548b9589baa803a7275a7a24cd and txlist hash is 09e9db121649cacd979fd18bbaa35e519361e727e7e072e2f2f86291160cdb29
+Constructing multisig transaction from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.31392295; txid: 02156b9a1f643fb48330396274a37620c8abbbe5eddb2f8b53dadd135f5d2e2e; vout: 2; confirmations: 1']
 Fee/KB 0.00025000
 New input: amount: 1.31392295; txid: 02156b9a1f643fb48330396274a37620c8abbbe5eddb2f8b53dadd135f5d2e2e; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
@@ -1537,8 +1537,8 @@ Credit 92945878046 XCP to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj
 Send 92945878046 XCP from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj
 Transaction a35ab1736565aceddbd1d71f92fc7f39d1361006aa9099f731e54e762964d5ba parsed. Supported: True
 Block 310496 parsed, ledger hash is 7ac6121c624b634f44695172761830926afe76bb18c4cc9195773f3a26966941 and txlist hash is 9eda85cce745579122ba9c6e24b63cd83f2e5161031a34e6ee9bf08b80823cb4
+Constructing opreturn transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=0 (data_value=0 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.36703190; txid: 74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498; vout: 1; confirmations: 6', 'amount: 0.00005430; txid: 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1; vout: 0; confirmations: 478', 'amount: 0.00005430; txid: 5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93; vout: 0; confirmations: 477', 'amount: 0.00005430; txid: db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e; vout: 0; confirmations: 396']
 Fee/KB 0.00025000
 New input: amount: 1.36703190; txid: 74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498; vout: 1; confirmations: 6
 final_fee inputs: 1 size: 252 final_fee 6300
@@ -1551,8 +1551,8 @@ Asset PARENT issued
 Credit 100000000 PARENT to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Transaction 076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f parsed. Supported: True
 Block 310497 parsed, ledger hash is 28c6e92b2299b9cbbb5953f8b7ff3de0fe962d15642ba27e43faa64e1935e819 and txlist hash is ff8136601b9e0138a999d1f0467af6e8535a2bcdd2b622af7be0178a083b9519
+Constructing opreturn transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=0 (data_value=0 len(data_array)=1)
-Sorted candidate UTXOs: ['amount: 1.36696890; txid: 076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f; vout: 1; confirmations: 1', 'amount: 0.00005430; txid: 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1; vout: 0; confirmations: 479', 'amount: 0.00005430; txid: 5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93; vout: 0; confirmations: 478', 'amount: 0.00005430; txid: db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e; vout: 0; confirmations: 397']
 Fee/KB 0.00025000
 New input: amount: 1.36696890; txid: 076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 262 final_fee 6550

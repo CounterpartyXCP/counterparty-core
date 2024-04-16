@@ -68,6 +68,23 @@ from counterpartylib.lib.messages.versions import enhanced_send  # noqa: E402
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
+if os.environ.get("SENTRY_DSN"):
+    import sentry_sdk
+
+    environment = os.environ.get("SENTRY_ENVIRONMENT", "development")
+
+    release = os.environ.get("SENTRY_RELEASE", config.__version__)
+
+    logger.info("Sentry DSN found, initializing Sentry")
+
+    sentry_sdk.init(
+        dsn=os.environ["SENTRY_DSN"],
+        environment=environment,
+        release=release,
+        traces_sample_rate=1.0,
+    )
+
+
 API_TABLES = [
     "assets",
     "balances",
@@ -227,7 +244,7 @@ def check_database_state(db, blockcount):
     f"""Checks {config.XCP_NAME} database to see if is caught up with backend."""  # noqa: B021
     if ledger.CURRENT_BLOCK_INDEX + 1 < blockcount:
         raise DatabaseError(f"{config.XCP_NAME} database is behind backend.")
-    logger.debug("Database state check passed.")
+    # logger.debug("Database state check passed.")
     return
 
 
@@ -327,7 +344,10 @@ def get_rows(
                 raise APIError(f"A specified filter is missing the '{field}' field")
         if not isinstance(filter_["value"], (str, int, float, list)):
             raise APIError(f"Invalid value for the field '{filter_['field']}'")
-        if isinstance(filter_["value"], list) and filter_["op"].upper() not in ["IN", "NOT IN"]:
+        if isinstance(filter_["value"], list) and filter_["op"].upper() not in [
+            "IN",
+            "NOT IN",
+        ]:
             raise APIError(f"Invalid value for the field '{filter_['field']}'")
         if filter_["op"].upper() not in [
             "=",
@@ -1015,7 +1035,7 @@ class APIServer(threading.Thread):
                 "last_block": last_block,
                 "indexd_caught_up": indexd_caught_up,
                 "indexd_blocks_behind": indexd_blocks_behind,
-                "last_message_index": last_message["message_index"] if last_message else -1,
+                "last_message_index": (last_message["message_index"] if last_message else -1),
                 "api_limit_rows": config.API_LIMIT_ROWS,
                 "running_testnet": config.TESTNET,
                 "running_regtest": config.REGTEST,
@@ -1131,9 +1151,17 @@ class APIServer(threading.Thread):
         def get_tx_info(tx_hex, block_index=None):
             # block_index mandatory for transactions before block 335000
             source, destination, btc_amount, fee, data, extra = gettxinfo.get_tx_info(
-                self.db, BlockchainParser().deserialize_tx(tx_hex), block_index=block_index
+                self.db,
+                BlockchainParser().deserialize_tx(tx_hex),
+                block_index=block_index,
             )
-            return source, destination, btc_amount, fee, util.hexlify(data) if data else ""
+            return (
+                source,
+                destination,
+                btc_amount,
+                fee,
+                util.hexlify(data) if data else "",
+            )
 
         @dispatcher.add_method
         def unpack(data_hex):
@@ -1157,16 +1185,14 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_dispenser_info(tx_hash=None, tx_index=None):
-            cursor = self.db.cursor()  # noqa: F841
-
             if tx_hash is None and tx_index is None:
                 raise APIError("You must provided a tx hash or a tx index")
 
             dispensers = []
             if tx_hash is not None:
-                dispensers = get_dispenser_info(self.db, tx_hash=tx_hash)
+                dispensers = ledger.get_dispenser_info(self.db, tx_hash=tx_hash)
             else:
-                dispensers = get_dispenser_info(self.db, tx_index=tx_index)
+                dispensers = ledger.get_dispenser_info(self.db, tx_index=tx_index)
 
             if len(dispensers) == 1:
                 dispenser = dispensers[0]
@@ -1178,10 +1204,13 @@ class APIServer(threading.Thread):
 
                 if dispenser["oracle_address"] != None:  # noqa: E711
                     fiat_price = util.satoshirate_to_fiat(dispenser["satoshirate"])
-                    oracle_price, oracle_fee, oracle_fiat_label, oracle_price_last_updated = (
-                        ledger.get_oracle_last_price(
-                            self.db, dispenser["oracle_address"], ledger.CURRENT_BLOCK_INDEX
-                        )
+                    (
+                        oracle_price,
+                        oracle_fee,
+                        oracle_fiat_label,
+                        oracle_price_last_updated,
+                    ) = ledger.get_oracle_last_price(
+                        self.db, dispenser["oracle_address"], ledger.CURRENT_BLOCK_INDEX
                     )
 
                     if oracle_price > 0:
@@ -1251,27 +1280,40 @@ class APIServer(threading.Thread):
         def handle_healthz():
             msg, code = "Healthy", 200
 
-            type_ = request.args.get("type", "heavy")
+            type_ = request.args.get("type", "light")
+
+            def light_check():
+                latest_block_index = backend.getblockcount()
+                check_database_state(self.db, latest_block_index)
+
+            def heavy_check():
+                compose_transaction(
+                    self.db,
+                    name="send",
+                    params={
+                        "source": config.UNSPENDABLE,
+                        "destination": config.UNSPENDABLE,
+                        "asset": config.XCP,
+                        "quantity": 100000000,
+                    },
+                    allow_unconfirmed_inputs=True,
+                    fee=1000,
+                )
 
             try:
-                if type_ == "light":
-                    logger.debug("Performing light healthz check.")
-                    latest_block_index = backend.getblockcount()
-                    check_database_state(self.db, latest_block_index)
-                else:
+                if type_ == "heavy":
+                    # Perform a heavy healthz check.
+                    # Do everything in light but also compose a
+                    # send tx
+
                     logger.debug("Performing heavy healthz check.")
-                    compose_transaction(
-                        self.db,
-                        name="send",
-                        params={
-                            "source": config.UNSPENDABLE,
-                            "destination": config.UNSPENDABLE,
-                            "asset": config.XCP,
-                            "quantity": 100000000,
-                        },
-                        allow_unconfirmed_inputs=True,
-                        fee=1000,
-                    )
+
+                    light_check()
+                    heavy_check()
+                else:
+                    logger.debug("Performing light healthz check.")
+                    light_check()
+
             except Exception:
                 msg, code = "Unhealthy", 503
 
@@ -1446,7 +1488,10 @@ class APIServer(threading.Thread):
                 # Run the query.
                 try:
                     query_data = get_rows(
-                        self.db, table=query_type, filters=data_filter, filterop=operator
+                        self.db,
+                        table=query_type,
+                        filters=data_filter,
+                        filterop=operator,
                     )
                 except APIError as error:  # noqa: F841
                     return flask.Response("API Error", 400, mimetype="application/json")

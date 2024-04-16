@@ -25,7 +25,6 @@ from bitcoin.core.script import CScriptInvalidError  # noqa: E402, F401
 from halo import Halo  # noqa: E402
 from termcolor import colored  # noqa: E402
 
-from counterpartylib import server  # noqa: E402
 from counterpartylib.lib import (  # noqa: E402
     arc4,  # noqa: F401
     backend,
@@ -777,8 +776,6 @@ def generate_progression_message(
 
 
 def reparse(db, block_index=0):
-    server.connect_to_addrindexrs()
-
     cursor = db.cursor()
     # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
     step = f"Rolling database back to block {block_index}..."
@@ -889,6 +886,8 @@ def follow(db):
             database.update_version(db)
 
     logger.info("Resuming parsing.")
+    if config.NO_MEMPOOL:
+        logger.warning("Mempool parsing disabled.")
 
     # If we're far behind, start Prefetcher.
     block_count = backend.getblockcount()  # TODO: Need retry logic
@@ -1064,7 +1063,7 @@ def follow(db):
             block_count = backend.getblockcount()
             block_index += 1
 
-        else:
+        elif config.NO_MEMPOOL is False:
             # TODO: add zeromq support here to await TXs and Blocks instead of constantly polling
             # Get old mempool.
             old_mempool = list(cursor.execute("""SELECT * FROM mempool"""))
@@ -1150,10 +1149,10 @@ def follow(db):
 
                         tx_hex = raw_transactions[tx_hash]
                         if tx_hex is None:
-                            logger.debug(
-                                "tx_hash %s not found in backend.  Not adding to mempool.",
-                                (tx_hash,),
-                            )
+                            # logger.debug(
+                            #     "tx_hash %s not found in backend.  Not adding to mempool.",
+                            #     (tx_hash,),
+                            # )
                             raise MempoolError
                         mempool_tx_index = list_tx(
                             db,
@@ -1227,11 +1226,14 @@ def follow(db):
             )
 
             logger.getChild("mempool").debug(
-                f"Refresh mempool: {len(xcp_mempool)} XCP txs seen, out of {len(raw_mempool)} total entries (took {elapsed_time:.2f}, next refresh in {sleep_time:.2f})"
+                f"Mempool refreshed ({len(xcp_mempool)} Counterparty / {len(raw_mempool)} Bitcoin transactions)"
             )
 
             # Wait
             db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
             time.sleep(sleep_time)
-
-    cursor.close()
+        else:
+            # Wait
+            # logger.debug(f"Waiting for new blocks. Block index: {block_index}")
+            db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
+            time.sleep(config.BACKEND_POLL_INTERVAL)

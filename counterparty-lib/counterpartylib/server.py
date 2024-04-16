@@ -195,6 +195,8 @@ def initialise_config(
     utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE,
     estimate_fee_per_kb=None,
     customnet=None,
+    no_mempool=False,
+    skip_db_check=False,
 ):
     # log config alreasdy initialized
     logger.debug("VERBOSE: %s", config.VERBOSE)
@@ -333,7 +335,7 @@ def initialise_config(
     if backend_poll_interval:
         config.BACKEND_POLL_INTERVAL = backend_poll_interval
     else:
-        config.BACKEND_POLL_INTERVAL = 0.5
+        config.BACKEND_POLL_INTERVAL = 3.0
 
     # Construct backend URL.
     config.BACKEND_URL = (
@@ -541,6 +543,9 @@ def initialise_config(
     if estimate_fee_per_kb is not None:
         config.ESTIMATE_FEE_PER_KB = estimate_fee_per_kb
 
+    config.NO_MEMPOOL = no_mempool
+    config.SKIP_DB_CHECK = skip_db_check
+
     logger.info(f"Running v{config.VERSION_STRING} of counterparty-lib.")
 
 
@@ -555,6 +560,14 @@ def initialise_db():
     # Database
     logger.info(f"Connecting to database (SQLite {apsw.apswversion()}).")
     db = database.get_connection(read_only=False)
+
+    # perform quick integrity check
+    if not config.SKIP_DB_CHECK:
+        logger.info("Running PRAGMA quick_check...")
+        db.execute("PRAGMA quick_check")
+        logger.info("PRAGMA quick_check done.")
+    else:
+        logger.warning("Skipping PRAGMA quick_check.")
 
     ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
 
@@ -623,8 +636,13 @@ def start_all(catch_up="normal"):
 
 
 def reparse(block_index):
-    db = initialise_db()
-    blocks.reparse(db, block_index=block_index)
+    connect_to_addrindexrs()
+    try:
+        db = initialise_db()
+        blocks.reparse(db, block_index=block_index)
+    finally:
+        backend.stop()
+        db.close()
 
 
 def rollback(block_index=None):

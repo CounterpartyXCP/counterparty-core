@@ -227,6 +227,14 @@ CONFIG_ARGS = [
             "help": "how long to keep a lock on a UTXO being tracked",
         },
     ],
+    [
+        ("--no-mempool",),
+        {"action": "store_true", "default": False, "help": "Disable mempool parsing"},
+    ],
+    [
+        ("--skip-db-check",),
+        {"action": "store_true", "default": False, "help": "Skip integrity check on the database"},
+    ],
 ]
 
 
@@ -388,6 +396,8 @@ def main():
         p2sh_dust_return_pubkey=args.p2sh_dust_return_pubkey,
         utxo_locks_max_addresses=args.utxo_locks_max_addresses,
         utxo_locks_max_age=args.utxo_locks_max_age,
+        no_mempool=args.no_mempool,
+        skip_db_check=args.skip_db_check,
     )
 
     server.initialise_log_config(
