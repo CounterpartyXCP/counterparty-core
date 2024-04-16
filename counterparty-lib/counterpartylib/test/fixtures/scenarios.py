@@ -34,25 +34,25 @@ UNITTEST_FIXTURE = [
     ["burn", (ADDR[0], DP["burn_quantity"]), {"encoding": "multisig"}],  # 310000
     [
         "issuance",
-        (ADDR[0], None, "DIVISIBLE", DP["quantity"] * 1000, True, None, None, "Divisible asset"),
+        (ADDR[0], "DIVISIBLE", DP["quantity"] * 1000, None, True, None, None, "Divisible asset"),
         {"encoding": "multisig"},
     ],
     [
         "issuance",
-        (ADDR[0], None, "NODIVISIBLE", 1000, False, None, None, "No divisible asset"),
+        (ADDR[0], "NODIVISIBLE", 1000, None, False, None, None, "No divisible asset"),
         {"encoding": "multisig"},
     ],
     [
         "issuance",
-        (ADDR[0], None, "CALLABLE", 1000, True, None, None, "Callable asset"),
+        (ADDR[0], "CALLABLE", 1000, None, True, None, None, "Callable asset"),
         {"encoding": "multisig"},
     ],
     [
         "issuance",
-        (ADDR[0], None, "LOCKED", 1000, True, None, None, "Locked asset"),
+        (ADDR[0], "LOCKED", 1000, None, True, None, None, "Locked asset"),
         {"encoding": "multisig"},
     ],
-    ["issuance", (ADDR[0], None, "LOCKED", 0, True, None, None, "LOCK"), {"encoding": "multisig"}],
+    ["issuance", (ADDR[0], "LOCKED", 0, None, True, None, None, "LOCK"), {"encoding": "multisig"}],
     [
         "order",
         (ADDR[0], "XCP", DP["quantity"], "DIVISIBLE", DP["quantity"], 2000, 0),
@@ -94,7 +94,7 @@ UNITTEST_FIXTURE = [
     ["send", (ADDR[0], MULTISIGADDR[0], "NODIVISIBLE", 10), {"encoding": "multisig"}, None],
     [
         "issuance",
-        (ADDR[0], None, "MAXI", 2**63 - 1, True, None, None, "Maximum quantity"),
+        (ADDR[0], "MAXI", 2**63 - 1, None, True, None, None, "Maximum quantity"),
         {"encoding": "multisig"},
     ],
     [
@@ -120,7 +120,7 @@ UNITTEST_FIXTURE = [
     ["burn", (P2SH_ADDR[0], int(DP["burn_quantity"] / 2)), {"encoding": "opreturn"}],
     [
         "issuance",
-        (P2SH_ADDR[0], None, "PAYTOSCRIPT", 1000, False, None, None, "PSH issued asset"),
+        (P2SH_ADDR[0], "PAYTOSCRIPT", 1000, None, False, None, None, "PSH issued asset"),
         {"encoding": "multisig", "dust_return_pubkey": False},
     ],
     ["send", (ADDR[0], P2SH_ADDR[0], "DIVISIBLE", DP["quantity"]), {"encoding": "multisig"}, None],
@@ -137,17 +137,17 @@ UNITTEST_FIXTURE = [
     # locked with an issuance after lock
     [
         "issuance",
-        (ADDR[6], None, "LOCKEDPREV", 1000, True, None, None, "Locked asset"),
+        (ADDR[6], "LOCKEDPREV", 1000, None, True, None, None, "Locked asset"),
         {"encoding": "multisig"},
     ],
     [
         "issuance",
-        (ADDR[6], None, "LOCKEDPREV", 0, True, None, None, "LOCK"),
+        (ADDR[6], "LOCKEDPREV", 0, None, True, None, None, "LOCK"),
         {"encoding": "multisig"},
     ],
     [
         "issuance",
-        (ADDR[6], None, "LOCKEDPREV", 0, True, None, None, "changed"),
+        (ADDR[6], "LOCKEDPREV", 0, None, True, None, None, "changed"),
         {"encoding": "multisig"},
     ],
     ["burn", (P2WPKH_ADDR[0], DP["burn_quantity"]), {"encoding": "opreturn"}],
@@ -209,23 +209,23 @@ UNITTEST_FIXTURE = [
     ["burn", (ADDR[2], DP["burn_quantity"]), {"encoding": "multisig"}],
     [
         "issuance",
-        (ADDR[2], None, "DIVIDEND", 100, True, "Test dividend", None, None),
+        (ADDR[2], "DIVIDEND", 100, None, True, "Test dividend", None, None),
         {"encoding": "multisig"},
     ],
     ["send", (ADDR[2], ADDR[3], "DIVIDEND", 10), {"encoding": "multisig"}, None],
     ["send", (ADDR[2], ADDR[3], "XCP", 92945878046), {"encoding": "multisig"}, None],
     [
         "issuance",
-        (ADDR[0], None, "PARENT", DP["quantity"] * 1, True, None, None, "Parent asset"),
+        (ADDR[0], "PARENT", DP["quantity"] * 1, None, True, None, None, "Parent asset"),
         {"encoding": "opreturn"},
     ],
     [
         "issuance",
         (
             ADDR[0],
-            None,
             "PARENT.already.issued",
             DP["quantity"] * 1,
+            None,
             True,
             None,
             None,
@@ -267,12 +267,12 @@ def generate_standard_scenario(address1, address2, order_matches):
         ["btcpay", (address1, order_matches[0]), {"encoding": "multisig"}],
         [
             "issuance",
-            (address1, None, "BBBB", DP["quantity"] * 10, True, None, None, ""),
+            (address1, "BBBB", DP["quantity"] * 10, None, True, None, None, ""),
             {"encoding": "multisig"},
         ],
         [
             "issuance",
-            (address1, None, "BBBC", round(DP["quantity"] / 1000), False, None, None, "foobar"),
+            (address1, "BBBC", round(DP["quantity"] / 1000), None, False, None, None, "foobar"),
             {"encoding": "multisig"},
         ],
         [

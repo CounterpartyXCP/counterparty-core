@@ -540,6 +540,15 @@ def adjust_get_transactions_results(query_result):
     return filtered_results
 
 
+def get_default_args(func):
+    signature = inspect.signature(func)
+    return {
+        k: v.default
+        for k, v in signature.parameters.items()
+        if v.default is not inspect.Parameter.empty
+    }
+
+
 def compose_transaction(
     db,
     name,
@@ -601,8 +610,13 @@ def compose_transaction(
     compose_method = sys.modules[f"counterpartylib.lib.messages.{name}"].compose
     compose_params = inspect.getfullargspec(compose_method)[0]
     missing_params = [p for p in compose_params if p not in params and p != "db"]
-    for param in missing_params:
-        params[param] = None
+    if len(missing_params) > 0:
+        default_values = get_default_args(compose_method)
+        for param in missing_params:
+            if param in default_values:
+                params[param] = default_values[param]
+            else:
+                raise exceptions.ComposeError(f"missing parameters: {', '.join(missing_params)}")
 
     # dont override fee_per_kb if specified
     if fee_per_kb is not None:
