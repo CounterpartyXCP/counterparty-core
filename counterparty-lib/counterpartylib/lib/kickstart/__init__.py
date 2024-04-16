@@ -300,20 +300,15 @@ def parse_block(kickstart_db, cursor, block, block_parser, tx_index):
 
     with kickstart_db:  # ensure all the block or nothing
         # insert block
-        cursor.execute(
-            """
-            INSERT INTO blocks
-                (block_index, block_hash, block_time, previous_block_hash, difficulty)
-            VALUES (?, ?, ?, ?, ?)
-        """,
-            (
-                block["block_index"],
-                block["block_hash"],
-                block["block_time"],
-                block["hash_prev"],
-                block["bits"],
-            ),
-        )
+        block_bindings = {
+            "block_index": block["block_index"],
+            "block_hash": block["block_hash"],
+            "block_time": block["block_time"],
+            "previous_block_hash": block["hash_prev"],
+            "difficulty": block["bits"],
+        }
+        ledger.insert_record(kickstart_db, "blocks", block_bindings, "NEW_BLOCK")
+
         # save transactions
         for transaction in block["transactions"]:
             # Cache transaction. We do that here because the block is fetched by another process.
