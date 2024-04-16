@@ -246,6 +246,7 @@ def parse_block(
     previous_txlist_hash=None,
     txlist_hash=None,
     previous_messages_hash=None,
+    reparsing=False,
 ):
     """Parse the block, return hash of new ledger, txlist and messages.
 
@@ -275,6 +276,28 @@ def parse_block(
     txlist = []
     for tx in list(cursor):
         try:
+            # Add manual event to journal because transaction already exists
+            if reparsing:
+                transaction_bindings = {
+                    "tx_index": tx["tx_index"],
+                    "tx_hash": tx["tx_hash"],
+                    "block_index": tx["block_index"],
+                    "block_hash": tx["block_hash"],
+                    "block_time": tx["block_time"],
+                    "source": tx["source"],
+                    "destination": tx["destination"],
+                    "btc_amount": tx["btc_amount"],
+                    "fee": tx["fee"],
+                    "data": tx["data"],
+                }
+                ledger.add_to_journal(
+                    db,
+                    block_index,
+                    "insert",
+                    "transactions",
+                    "NEW_TRANSACTION",
+                    transaction_bindings,
+                )
             parse_tx(db, tx)
             data = binascii.hexlify(tx["data"]).decode("UTF-8") if tx["data"] else ""
             txlist.append(
@@ -806,7 +829,22 @@ def reparse(db, block_index=0):
         for block in cursor.fetchall():
             start_time_block_parse = time.time()
             ledger.CURRENT_BLOCK_INDEX = block["block_index"]
-            parse_block(db, block["block_index"], block["block_time"])
+            # Add event manually to journal because block already exists
+            ledger.add_to_journal(
+                db,
+                block["block_index"],
+                "insert",
+                "blocks",
+                "NEW_BLOCK",
+                {
+                    "block_index": block["block_index"],
+                    "block_hash": block["block_hash"],
+                    "block_time": block["block_time"],
+                    "previous_block_hash": block["previous_block_hash"],
+                    "difficulty": block["difficulty"],
+                },
+            )
+            parse_block(db, block["block_index"], block["block_time"], reparsing=True)
             block_parsed_count += 1
             message = generate_progression_message(
                 block,
