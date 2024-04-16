@@ -187,7 +187,7 @@ def initialise_config(
     force=False,
     requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
     rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
-    check_asset_conservation=config.DEFAULT_CHECK_ASSET_CONSERVATION,
+    check_asset_conservation=False,
     backend_ssl_verify=None,
     rpc_allow_cors=None,
     p2sh_dust_return_pubkey=None,

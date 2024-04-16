@@ -1080,6 +1080,8 @@ def follow(db):
             if block_index == block_count:
                 if config.CHECK_ASSET_CONSERVATION:
                     check.asset_conservation(db)
+                else:
+                    logger.debug("Skip asset conservation check.")
 
             # Remove any non‐supported transactions older than ten blocks.
             while len(not_supported_sorted) and not_supported_sorted[0][0] <= block_index - 10:

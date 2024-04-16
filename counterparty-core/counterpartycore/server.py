@@ -114,7 +114,7 @@ CONFIG_ARGS = [
         {"type": float, "default": 0.5, "help": "poll interval, in seconds (default: 0.5)"},
     ],
     [
-        ("--no-check-asset-conservation",),
+        ("--check-asset-conservation",),
         {
             "action": "store_true",
             "default": False,
@@ -391,7 +391,7 @@ def main():
         rpc_no_allow_cors=args.rpc_no_allow_cors,
         requests_timeout=args.requests_timeout,
         rpc_batch_size=args.rpc_batch_size,
-        check_asset_conservation=not args.no_check_asset_conservation,
+        check_asset_conservation=args.check_asset_conservation,
         force=args.force,
         p2sh_dust_return_pubkey=args.p2sh_dust_return_pubkey,
         utxo_locks_max_addresses=args.utxo_locks_max_addresses,
