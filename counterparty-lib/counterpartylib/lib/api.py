@@ -757,6 +757,8 @@ class APIServer(threading.Thread):
     def __init__(self, db=None):
         self.db = db
         self.is_ready = False
+        self.server = None
+        self.ctx = None
         threading.Thread.__init__(self)
 
     def stop(self):
