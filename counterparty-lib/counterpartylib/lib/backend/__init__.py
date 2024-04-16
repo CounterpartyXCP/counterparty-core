@@ -47,6 +47,7 @@ def backend(initialize=True):
 
 
 def stop():
+    logger.info("Stopping backend...")
     backend(initialize=False).stop()
 
 

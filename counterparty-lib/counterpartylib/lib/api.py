@@ -32,6 +32,7 @@ from flask import request  # noqa: E402
 from flask_httpauth import HTTPBasicAuth  # noqa: E402
 from jsonrpc import dispatcher  # noqa: E402
 from jsonrpc.exceptions import JSONRPCDispatchException  # noqa: E402
+from werkzeug.serving import make_server  # noqa: E402
 from xmltodict import unparse as serialize_to_xml  # noqa: E402
 
 from counterpartylib.lib import (  # noqa: E402
@@ -702,16 +703,23 @@ class APIStatusPoller(threading.Thread):
         self.last_database_check = 0
         threading.Thread.__init__(self)
         self.stop_event = threading.Event()
+        self.stopping = False
+        self.stopped = False
+        self.db = None
 
     def stop(self):
-        self.stop_event.set()
+        logger.info("Stopping API Status Poller...")
+        self.stopping = True
+        self.db.close()
+        while not self.stopped:
+            time.sleep(0.1)
 
     def run(self):
-        logger.debug("Starting API Status Poller.")
+        logger.debug("Starting API Status Poller...")
         global CURRENT_API_STATUS_CODE, CURRENT_API_STATUS_RESPONSE_JSON  # noqa: PLW0603
-        db = database.get_connection(read_only=True)
+        self.db = database.get_connection(read_only=True)
 
-        while self.stop_event.is_set() != True:  # noqa: E712
+        while not self.stopping:  # noqa: E712
             try:
                 # Check that backend is running, communicable, and caught up with the blockchain.
                 # Check that the database has caught up with bitcoind.
@@ -724,7 +732,7 @@ class APIStatusPoller(threading.Thread):
                         check_backend_state()
                         code = 12
                         logger.debug("Checking database state.")
-                        check_database_state(db, backend.getblockcount())
+                        check_database_state(self.db, backend.getblockcount())
                         self.last_database_check = time.time()
             except (BackendError, DatabaseError) as e:
                 exception_name = e.__class__.__name__
@@ -738,7 +746,9 @@ class APIStatusPoller(threading.Thread):
             else:
                 CURRENT_API_STATUS_CODE = None
                 CURRENT_API_STATUS_RESPONSE_JSON = None
-            time.sleep(config.BACKEND_POLL_INTERVAL)
+            time.sleep(0.5)  # sleep for 0.5 seconds
+            if self.stopping:
+                self.stopped = True
 
 
 class APIServer(threading.Thread):
@@ -748,14 +758,14 @@ class APIServer(threading.Thread):
         self.db = db
         self.is_ready = False
         threading.Thread.__init__(self)
-        self.stop_event = threading.Event()
 
     def stop(self):
-        self.join()
-        self.stop_event.set()
+        logger.info("Stopping API Server...")
+        self.server.shutdown()
+        self.db.close()
 
     def run(self):
-        logger.info("Starting API Server.")
+        logger.info("Starting API Server...")
         self.db = self.db or database.get_connection(read_only=True)
         app = flask.Flask(__name__)
         auth = HTTPBasicAuth()
@@ -1527,14 +1537,10 @@ class APIServer(threading.Thread):
             return response
 
         # Init the HTTP Server.
-        init_api_access_log(app)
-
-        # Run app server (blocking)
         self.is_ready = True
-        app.run(host=config.RPC_HOST, port=config.RPC_PORT, threaded=True)
-
-        self.db.close()
-        return
-
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
+        self.server = make_server(config.RPC_HOST, config.RPC_PORT, app)
+        init_api_access_log(app)
+        self.ctx = app.app_context()
+        self.ctx.push()
+        # Run app server (blocking)
+        self.server.serve_forever()

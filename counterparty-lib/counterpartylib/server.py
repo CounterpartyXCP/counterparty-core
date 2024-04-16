@@ -5,9 +5,7 @@ import decimal
 import logging
 import os
 import platform
-import signal
 import socket
-import sys
 import tarfile
 import tempfile
 import time
@@ -43,35 +41,6 @@ SPINNER_STYLE = "bouncingBar"
 
 class ConfigurationError(Exception):
     pass
-
-
-SIGTERM_CALLBACKS = []
-
-
-def sigterm_handler(_signo, _stack_frame):
-    if _signo == 15:
-        signal_name = "SIGTERM"
-    elif _signo == 2:
-        signal_name = "SIGINT"
-    else:
-        assert False  # noqa: B011
-    logger.info(f"Received {signal_name}.")
-
-    if "api_server" in globals():
-        logger.info("Stopping API server.")
-        api_server.stop()  # noqa: F821
-        api_status_poller.stop()  # noqa: F821
-    logger.info("Stopping backend.")
-    backend.stop()
-    logger.info("Shutting down.")
-    logging.shutdown()
-    for callback in SIGTERM_CALLBACKS:
-        callback()
-    sys.exit(0)
-
-
-signal.signal(signal.SIGTERM, sigterm_handler)
-signal.signal(signal.SIGINT, sigterm_handler)
 
 
 # Lock database access by opening a socket.
@@ -571,16 +540,6 @@ def initialise_db():
 
     ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
 
-    def shutdown_handler():
-        """run PRAGMA optimize before sys.exit()"""
-        logger.info("Running PRAGMA optimize...")
-        cursor = db.cursor()
-        cursor.execute("PRAGMA optimize")
-        logger.info("PRAGMA optimize done.")
-        # NOTE: it's not necessary to explicitly close the connection with db.close()
-
-    SIGTERM_CALLBACKS.append(shutdown_handler)
-
     return db
 
 
@@ -609,45 +568,62 @@ def connect_to_addrindexrs():
 
 
 def start_all(catch_up="normal"):
-    # Backend.
-    connect_to_backend()
+    try:
+        # Backend.
+        connect_to_backend()
 
-    if not os.path.exists(config.DATABASE) and catch_up == "bootstrap":
-        bootstrap(no_confirm=True)
+        if not os.path.exists(config.DATABASE) and catch_up == "bootstrap":
+            bootstrap(no_confirm=True)
 
-    db = initialise_db()
+        db = initialise_db()
 
-    # Reset UTXO_LOCKS.  This previously was done in
-    # initilise_config
-    transaction.initialise()
+        # Reset UTXO_LOCKS.  This previously was done in
+        # initilise_config
+        transaction.initialise()
 
-    # API Status Poller.
-    api_status_poller = api.APIStatusPoller()
-    api_status_poller.daemon = True
-    api_status_poller.start()
+        # API Status Poller.
+        api_status_poller = api.APIStatusPoller()
+        api_status_poller.daemon = True
+        api_status_poller.start()
 
-    # API Server.
-    api_server = api.APIServer()
-    api_server.daemon = True
-    api_server.start()
+        # API Server.
+        api_server = api.APIServer()
+        api_server.daemon = True
+        api_server.start()
 
-    # Server
-    blocks.follow(db)
+        # Server
+        blocks.follow(db)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        api_status_poller.stop()
+        api_server.stop()
+        backend.stop()
+        database.optimize(db)
+        logger.info("Closing database...")
+        db.close()
+        logger.info("Shutting down logging...")
+        logging.shutdown()
 
 
 def reparse(block_index):
     connect_to_addrindexrs()
+    db = initialise_db()
     try:
-        db = initialise_db()
         blocks.reparse(db, block_index=block_index)
     finally:
         backend.stop()
+        database.optimize(db)
         db.close()
 
 
 def rollback(block_index=None):
     db = initialise_db()
-    blocks.rollback(db, block_index=block_index)
+    try:
+        blocks.rollback(db, block_index=block_index)
+    finally:
+        database.optimize(db)
+        db.close()
 
 
 def kickstart(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):

@@ -108,6 +108,13 @@ def vacuum(db):
     logger.info("Database VACUUM completed.")
 
 
+def optimize(db):
+    logger.info("Running PRAGMA optimize...")
+    cursor = db.cursor()
+    cursor.execute("PRAGMA optimize")
+    logger.info("PRAGMA optimize done.")
+
+
 def field_is_pk(cursor, table, field):
     cursor.execute(f"PRAGMA table_info({table})")
     for row in cursor:
