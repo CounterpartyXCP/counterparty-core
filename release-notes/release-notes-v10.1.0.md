@@ -17,10 +17,13 @@ Note: This update requires a reparse from block 835,500. (If you are upgrading f
 * Refactor transaction file singleton to class
 * Run `PRAGMA optimize` on shutting down
 * Run `PRAGMA quick_check` on database initialization
-* Add `--skip-db-check` flag to skip database quick check
+* Temporary disable asset conservation checking after each new block
+* Improve `/healthz` check
 
 ## Command-Line Interface
 * Rename `counterpary-client` to `counterparty-wallet`
+* Add `--skip-db-check` flag to skip database quick check
+* Add `--no-mempool` flash to disable mempool parsing
 
 # Credits
 * Ouziel Slama
