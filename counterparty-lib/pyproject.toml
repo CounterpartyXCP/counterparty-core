@@ -50,6 +50,9 @@ pre-install-commands = [
   "pip install -e ../counterparty-rs",
 ]
 
+[project.scripts]
+counterparty-server = "counterpartylib:cli.main"
+
 [tool.license_scanner]
 allowed-licences = [
     'Apache license',

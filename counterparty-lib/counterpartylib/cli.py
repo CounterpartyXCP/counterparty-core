@@ -4,9 +4,10 @@ import argparse
 import logging
 from urllib.parse import quote_plus as urlencode
 
+from termcolor import cprint
+
 from counterpartylib import server
 from counterpartylib.lib import config, log, setup
-from termcolor import cprint
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -458,6 +459,3 @@ def main():
         server.check_database()
     else:
         parser.print_help()
-
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
