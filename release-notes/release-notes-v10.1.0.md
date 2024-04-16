@@ -5,7 +5,7 @@ This release includes fixes for a number of bugs as well as a few regressions in
 
 # Upgrade Procedure
 
-This upgrade is optional but highly recommended. Upgrading from v10.0.x requires a reparse from block 835,500 on `mainnet`. If you are upgrading directly from v9.x.y, then a full database rebuild will occur automatically.
+This upgrade is optional but highly recommended. Upgrading from v10.0.x requires an automatic reparse from block 835,500 on `mainnet`, which should take a few minutes. If you are upgrading directly from v9.x.y, then there will be an automatic full database rebuild, which may take a long time (refer to the release notes for v10.0.0.)
 
 In order to perform a manual installation, you must first uninstall all existing Counterparty Core Python packages:
 
