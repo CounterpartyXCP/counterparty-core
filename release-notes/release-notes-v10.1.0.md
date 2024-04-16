@@ -30,7 +30,6 @@ pip3 uninstall counterparty-rs counterparty-lib counterparty-cli
 * Run `PRAGMA optimize` on shutting down
 * Run `PRAGMA quick_check` on database initialization
 * Temporary disable asset conservation checking after each new block
-* Improve `/healthz` node health check
 * Add instrumentation for optional Sentry error and performance monitoring 
 
 ## Command-Line Interface
