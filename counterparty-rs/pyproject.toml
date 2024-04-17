@@ -22,4 +22,4 @@ dependencies = [
 strip = true
 
 [tool.hatch.version]
-path = "../counterparty-lib/counterpartylib/lib/config.py"
+path = "../counterparty-core/counterpartycore/lib/config.py"

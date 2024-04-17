@@ -10,7 +10,7 @@
 - [ ] Merge PR into `master`
 - [ ] Tag and sign release, copying release notes from the codebase
 - [ ] Rebase `gh-pages` against `master`
-- [ ] Upload (signed) package to PyPi
+- [ ] Upload (signed) package to PyPi (INACTIVE)
 	* `sudo python3 setup.py sdist build`
 	* `sudo python3 setup.py sdist upload -r pypi`
 - [ ] Publish bootstrap files

@@ -4,8 +4,8 @@ import logging
 import time
 
 import requests
-from counterpartylib.lib import config
-from counterpartylib.lib.util import value_input, value_output
+from counterpartycore.lib import config
+from counterpartycore.lib.util import value_input, value_output
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal

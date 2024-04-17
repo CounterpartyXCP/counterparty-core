@@ -4,9 +4,9 @@ import logging
 import sys
 from decimal import Decimal as D
 
-from counterpartylib.lib import config, log, script, setup
-from counterpartylib.lib.exceptions import TransactionError
-from counterpartylib.lib.util import BET_TYPE_NAME
+from counterpartycore.lib import config, log, script, setup
+from counterpartycore.lib.exceptions import TransactionError
+from counterpartycore.lib.util import BET_TYPE_NAME
 
 from counterpartywallet import APP_VERSION, clientapi, console, messages, util, wallet
 
@@ -197,7 +197,7 @@ def main():
         "-V",
         "--version",
         action="version",
-        version=f"{APP_NAME} v{APP_VERSION}; counterparty-lib v{config.VERSION_STRING}",
+        version=f"{APP_NAME} v{APP_VERSION}; counterparty-core v{config.VERSION_STRING}",
     )
     parser.add_argument("--config-file", help="the location of the configuration file")
 

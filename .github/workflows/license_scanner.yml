@@ -29,12 +29,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install license_scanner maturin sh
         cd counterparty-rs && pip install -e . && cd ..
-        cd counterparty-lib && pip install -e . && cd ..
         cd counterparty-core && pip install -e . && cd ..
         pip install evdev
     - name: Analysing dependencies with licence_scanner
       run: |
-        python counterparty-lib/tools/checklicences.py
+        python counterparty-core/tools/checklicences.py
     - name: Upload SARIF
       uses: github/codeql-action/upload-sarif/@v2
       with:
