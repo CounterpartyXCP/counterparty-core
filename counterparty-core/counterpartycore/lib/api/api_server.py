@@ -65,7 +65,10 @@ def api_root():
 def inject_headers(result):
     server_ready = ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT
     http_code = 200 if server_ready else config.API_NOT_READY_HTTP_CODE
-    response = flask.make_response(flask.jsonify(result), http_code)
+    if isinstance(result, flask.Response):
+        response = result
+    else:
+        response = flask.make_response(flask.jsonify(result), http_code)
     response.headers["X-COUNTERPARTY-HEIGHT"] = ledger.CURRENT_BLOCK_INDEX
     response.headers["X-COUNTERPARTY-READY"] = ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT
     response.headers["X-BACKEND-HEIGHT"] = BACKEND_HEIGHT

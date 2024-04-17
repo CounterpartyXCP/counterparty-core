@@ -1063,45 +1063,8 @@ class APIServer(threading.Thread):
 
         @app.route("/healthz", methods=["GET"])
         def handle_healthz():
-            msg, code = "Healthy", 200
-
-            type_ = request.args.get("type", "light")
-
-            def light_check():
-                latest_block_index = backend.getblockcount()
-                api_util.check_last_parsed_block(self.db, latest_block_index)
-
-            def heavy_check():
-                transaction.compose_transaction(
-                    self.db,
-                    name="send",
-                    params={
-                        "source": config.UNSPENDABLE,
-                        "destination": config.UNSPENDABLE,
-                        "asset": config.XCP,
-                        "quantity": 100000000,
-                    },
-                    allow_unconfirmed_inputs=True,
-                    fee=1000,
-                )
-
-            try:
-                if type_ == "heavy":
-                    # Perform a heavy healthz check.
-                    # Do everything in light but also compose a
-                    # send tx
-
-                    logger.debug("Performing heavy healthz check.")
-
-                    light_check()
-                    heavy_check()
-                else:
-                    logger.debug("Performing light healthz check.")
-                    light_check()
-
-            except Exception:
-                msg, code = "Unhealthy", 503
-            return flask.Response(msg, code, mimetype="application/json")
+            check_type = request.args.get("type", "light")
+            return api_util.handle_healthz_route(self.db, check_type)
 
         @app.route("/", defaults={"args_path": ""}, methods=["GET", "POST", "OPTIONS"])
         @app.route("/<path:args_path>", methods=["GET", "POST", "OPTIONS"])
