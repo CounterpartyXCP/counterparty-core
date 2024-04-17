@@ -14,7 +14,7 @@ from fractions import Fraction
 import bitcoin as bitcoinlib
 
 from counterpartycore.lib import address, config, exceptions, script  # noqa: F401
-from counterpartycore.lib.api import APIError
+from counterpartycore.lib.api.api_v1 import APIError
 from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser
 from counterpartycore.lib.ledger import CreditError, DebitError
 from counterpartycore.lib.messages import issuance

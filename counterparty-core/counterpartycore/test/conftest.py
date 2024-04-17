@@ -263,7 +263,7 @@ def api_server_v2(request, cp_server):
         "force": False,
         "requests_timeout": config.DEFAULT_REQUESTS_TIMEOUT,
         "rpc_batch_size": config.DEFAULT_RPC_BATCH_SIZE,
-        "check_asset_conservation": config.DEFAULT_CHECK_ASSET_CONSERVATION,
+        "check_asset_conservation": False,
         "backend_ssl_verify": None,
         "rpc_allow_cors": None,
         "p2sh_dust_return_pubkey": None,
@@ -280,6 +280,8 @@ def api_server_v2(request, cp_server):
         "no_check_asset_conservation": True,
         "action": "",
         "no_refresh_backend_height": True,
+        "no_mempool": False,
+        "skip_db_check": False,
     }
     server_config = (
         default_config
@@ -289,7 +291,6 @@ def api_server_v2(request, cp_server):
             "api_port": TEST_RPC_PORT + 10,
         }
     )
-
     args = argparse.Namespace(**server_config)
     api_server = api_v2.APIServer()
     api_server.start(args)
@@ -521,7 +522,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     monkeypatch.setattr("counterpartycore.lib.log.isodt", isodt)
     monkeypatch.setattr("counterpartycore.lib.ledger.curr_time", curr_time)
     monkeypatch.setattr("counterpartycore.lib.util.date_passed", date_passed)
-    monkeypatch.setattr("counterpartycore.lib.api.init_api_access_log", init_api_access_log)
+    monkeypatch.setattr("counterpartycore.lib.api.util.init_api_access_log", init_api_access_log)
     if hasattr(config, "PREFIX"):
         monkeypatch.setattr("counterpartycore.lib.config.PREFIX", b"TESTXXXX")
     monkeypatch.setattr("counterpartycore.lib.backend.getrawtransaction", mocked_getrawtransaction)

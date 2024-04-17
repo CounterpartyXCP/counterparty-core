@@ -8,7 +8,6 @@ problem.
 import binascii
 import collections
 import decimal
-import inspect
 import json
 import logging
 import math
@@ -481,15 +480,6 @@ def adjust_get_transactions_results(query_result):
         transaction_row["data"] = transaction_row["data"].hex()
         filtered_results.append(transaction_row)
     return filtered_results
-
-
-def get_default_args(func):
-    signature = inspect.signature(func)
-    return {
-        k: v.default
-        for k, v in signature.parameters.items()
-        if v.default is not inspect.Parameter.empty
-    }
 
 
 def conditional_decorator(decorator, condition):

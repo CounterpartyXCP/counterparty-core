@@ -4,7 +4,8 @@ import tempfile
 import pytest
 from apsw import ConstraintError
 
-from counterpartycore.lib import api, blocks, ledger, util
+from counterpartycore.lib import blocks, ledger, util
+from counterpartycore.lib.api import api_v1
 
 # this is require near the top to do setup of the test suite
 from counterpartycore.test import (
@@ -216,7 +217,7 @@ def test_update_lock(server_db):
 
 @pytest.mark.usefixtures("api_server")
 def test_updated_tables_endpoints():
-    for table in api.API_TABLES:
+    for table in api_v1.API_TABLES:
         if table in ["mempool"]:
             continue
         result = util.api("get_" + table, {})

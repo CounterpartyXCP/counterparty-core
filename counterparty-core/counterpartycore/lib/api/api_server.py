@@ -146,6 +146,7 @@ class APIServer(object):
         return self.process
 
     def stop(self):
+        logger.info("Stopping API server v2...")
         if self.process and self.process.is_alive():
             self.process.terminate()
         self.process = None

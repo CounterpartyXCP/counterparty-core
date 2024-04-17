@@ -3,6 +3,7 @@ import logging
 import sys
 import traceback
 from datetime import datetime
+from logging.handlers import RotatingFileHandler
 
 from colorlog import ColoredFormatter
 from dateutil.tz import tzlocal
@@ -34,7 +35,7 @@ def set_up(verbose=False, quiet=True, log_file=None, log_in_console=False):
     # File Logging
     if log_file:
         max_log_size = 20 * 1024 * 1024  # 20 MB
-        fileh = logging.handlers.RotatingFileHandler(log_file, maxBytes=max_log_size, backupCount=5)
+        fileh = RotatingFileHandler(log_file, maxBytes=max_log_size, backupCount=5)
         fileh.setLevel(log_level)
         log_format = "%(asctime)s [%(levelname)s] %(message)s"
         formatter = logging.Formatter(log_format, "%Y-%m-%d-T%H:%M:%S%z")
