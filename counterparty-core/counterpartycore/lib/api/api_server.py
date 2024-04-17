@@ -62,9 +62,13 @@ def api_root():
     }
 
 
-def inject_headers(result):
+def inject_headers(result, return_code=None):
     server_ready = ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT
-    http_code = 200 if server_ready else config.API_NOT_READY_HTTP_CODE
+    http_code = 200
+    if return_code:
+        http_code = return_code
+    elif not server_ready:
+        http_code = config.API_NOT_READY_HTTP_CODE
     if isinstance(result, flask.Response):
         response = result
     else:
@@ -73,6 +77,24 @@ def inject_headers(result):
     response.headers["X-COUNTERPARTY-READY"] = ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT
     response.headers["X-BACKEND-HEIGHT"] = BACKEND_HEIGHT
     return response
+
+
+def prepare_args(route, **kwargs):
+    function_args = dict(kwargs)
+    if "pass_all_args" in route and route["pass_all_args"]:
+        function_args = request.args | function_args
+    elif "args" in route:
+        for arg in route["args"]:
+            str_arg = request.args.get(arg[0])
+            if str_arg is None:
+                function_args[arg[0]] = arg[2]
+            elif arg[1] == bool:
+                function_args[arg[0]] = str_arg.lower() in ["true", "1"]
+            elif arg[1] == int:
+                function_args[arg[0]] = int(str_arg)
+            else:
+                function_args[arg[0]] = str_arg
+    return function_args
 
 
 @auth.login_required
@@ -85,12 +107,10 @@ def handle_route(**kwargs):
         result = api_root()
     else:
         route = ROUTES.get(rule)
-        function_args = dict(kwargs)
-        if "pass_all_args" in route and route["pass_all_args"]:
-            function_args = request.args | function_args
-        elif "args" in route:
-            for arg in route["args"]:
-                function_args[arg[0]] = request.args.get(arg[0], arg[1])
+        try:
+            function_args = prepare_args(route, **kwargs)
+        except ValueError as e:
+            return inject_headers({"error": f"Invalid parameter: {e}"}, return_code=400)
         result = route["function"](db, **function_args)
         result = remove_rowids(result)
     return inject_headers(result)

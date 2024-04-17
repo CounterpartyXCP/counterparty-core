@@ -11,7 +11,7 @@ ROUTES = {
     ### /blocks ###
     "/blocks": {
         "function": ledger.get_blocks,
-        "args": [("last", None), ("limit", 10)],
+        "args": [("last", int, None), ("limit", int, 10)],
     },
     "/blocks/<int:block_index>": {
         "function": ledger.get_block,
@@ -58,11 +58,11 @@ ROUTES = {
     ### /transactions ###
     "/transactions/info": {
         "function": transaction.info,
-        "args": [("rawtransaction", None), ("block_index", None)],
+        "args": [("rawtransaction", str, None), ("block_index", int, None)],
     },
     "/transactions/unpack": {
         "function": transaction.unpack,
-        "args": [("datahex", None), ("block_index", None)],
+        "args": [("datahex", str, None), ("block_index", int, None)],
     },
     "/transactions/<tx_hash>": {
         "function": ledger.get_transaction,
@@ -82,7 +82,7 @@ ROUTES = {
     },
     "/addresses/<address>/bets": {
         "function": ledger.get_bet_by_feed,
-        "args": [("status", "open")],
+        "args": [("status", str, "open")],
     },
     "/addresses/<address>/broadcasts": {
         "function": ledger.get_broadcasts_by_source,
@@ -104,11 +104,11 @@ ROUTES = {
     },
     "/addresses/<address>/dispensers": {
         "function": ledger.get_dispensers,
-        "args": [("status", 0)],
+        "args": [("status", int, 0)],
     },
     "/addresses/<address>/dispensers/<asset>": {
         "function": ledger.get_dispensers,
-        "args": [("status", 0)],
+        "args": [("status", int, 0)],
     },
     "/addresses/<address>/sweeps": {
         "function": ledger.get_sweeps,
@@ -128,7 +128,7 @@ ROUTES = {
     },
     "/assets/<asset>/orders": {
         "function": ledger.get_orders_by_asset,
-        "args": [("status", "open")],
+        "args": [("status", str, "open")],
     },
     "/assets/<asset>/credits": {
         "function": ledger.get_credits,
@@ -147,11 +147,11 @@ ROUTES = {
     },
     "/assets/<asset>/dispensers": {
         "function": ledger.get_dispensers,
-        "args": [("status", 0)],
+        "args": [("status", int, 0)],
     },
     "/assets/<asset>/dispensers/<address>": {
         "function": ledger.get_dispensers,
-        "args": [("status", 0)],
+        "args": [("status", int, 0)],
     },
     "/assets/<asset>/holders": {
         "function": ledger.get_asset_holders,
@@ -162,11 +162,11 @@ ROUTES = {
     },
     "/orders/<tx_hash>/matches": {
         "function": ledger.get_order_matches_by_order,
-        "args": [("status", "pending")],
+        "args": [("status", str, "pending")],
     },
     "/orders/<tx_hash>/btcpays": {
         "function": ledger.get_btcpays_by_order,
-        "args": [("status", "pending")],
+        "args": [("status", str, "pending")],
     },
     ### /bets ###
     "/bets/<tx_hash>": {
@@ -174,11 +174,11 @@ ROUTES = {
     },
     "/bets/<tx_hash>/matches": {
         "function": ledger.get_bet_matches_by_bet,
-        "args": [("status", "pending")],
+        "args": [("status", str, "pending")],
     },
     "/bets/<tx_hash>/resolutions": {
         "function": ledger.get_resolutions_by_bet,
-        "args": [("status", "pending")],
+        "args": [("status", str, "pending")],
     },
     ### /burns ###
     "/burns": {
@@ -194,7 +194,7 @@ ROUTES = {
     ### /events ###
     "/events": {
         "function": ledger.get_events,
-        "args": [("last", None), ("limit", 100)],
+        "args": [("last", int, None), ("limit", int, 100)],
     },
     "/events/<int:event_index>": {
         "function": ledger.get_events,
@@ -204,42 +204,42 @@ ROUTES = {
     },
     "/events/<event>": {
         "function": ledger.get_events,
-        "args": [("last", None), ("limit", 100)],
+        "args": [("last", int, None), ("limit", int, 100)],
     },
     ### /healthz ###
     "/healthz": {
         "function": util.handle_healthz_route,
-        "args": [("check_type", "heavy")],
+        "args": [("check_type", str, "heavy")],
     },
     ### /backend ###
     "/backend/addresses/<address>/transactions": {
         "function": backend.search_raw_transactions,
-        "args": [("unconfirmed", True), ("only_tx_hashes", False)],
+        "args": [("unconfirmed", bool, True), ("only_tx_hashes", bool, False)],
     },
     "/backend/addresses/<address>/transactions/oldest": {
         "function": backend.get_oldest_tx,
     },
     "/backend/addresses/<address>/utxos": {
         "function": backend.get_unspent_txouts,
-        "args": [("unconfirmed", True), ("unspent_tx_hash", None)],
+        "args": [("unconfirmed", bool, True), ("unspent_tx_hash", str, None)],
     },
     "/backend/addresses/<address>/pubkey": {
         "function": util.pubkeyhash_to_pubkey,
-        "args": [("provided_pubkeys", "")],
+        "args": [("provided_pubkeys", str, "")],
     },
     "/backend/transactions": {
         "function": util.getrawtransactions,
-        "args": [("tx_hashes", ""), ("verbose", False), ("skip_missing", False)],
+        "args": [("tx_hashes", str, ""), ("verbose", bool, False), ("skip_missing", bool, False)],
     },
     "/backend/transactions/<tx_hash>": {
         "function": backend.getrawtransaction,
-        "args": [("verbose", False), ("skip_missing", False)],
+        "args": [("verbose", bool, False), ("skip_missing", bool, False)],
     },
     "/backend/estimatesmartfee": {
         "function": backend.fee_per_kb,
         "args": [
-            ("conf_target", config.ESTIMATE_FEE_CONF_TARGET),
-            ("mode", config.ESTIMATE_FEE_MODE),
+            ("conf_target", int, config.ESTIMATE_FEE_CONF_TARGET),
+            ("mode", str, config.ESTIMATE_FEE_MODE),
         ],
     },
     ### /mempool ###
