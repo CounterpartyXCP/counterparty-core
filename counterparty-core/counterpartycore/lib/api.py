@@ -19,6 +19,8 @@ from logging import handlers as logging_handlers
 
 import requests  # noqa: F401
 
+import counterpartycore.lib.sentry  # noqa: F401
+
 D = decimal.Decimal
 import binascii  # noqa: E402
 import inspect  # noqa: E402
@@ -68,22 +70,6 @@ from counterpartycore.lib.messages import (  # noqa: E402
 from counterpartycore.lib.messages.versions import enhanced_send  # noqa: E402
 
 logger = logging.getLogger(config.LOGGER_NAME)
-
-if os.environ.get("SENTRY_DSN"):
-    import sentry_sdk
-
-    environment = os.environ.get("SENTRY_ENVIRONMENT", "development")
-
-    release = os.environ.get("SENTRY_RELEASE", config.__version__)
-
-    logger.info("Sentry DSN found, initializing Sentry")
-
-    sentry_sdk.init(
-        dsn=os.environ["SENTRY_DSN"],
-        environment=environment,
-        release=release,
-        traces_sample_rate=1.0,
-    )
 
 
 API_TABLES = [
