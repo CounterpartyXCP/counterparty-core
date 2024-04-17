@@ -26,7 +26,6 @@ from counterpartycore.lib import (
     config,
     database,
     ledger,
-    log,  # noqa: F401
     transaction,
     util,
 )
@@ -52,7 +51,7 @@ def get_lock():
     logger.info("Acquiring lock.")
 
     # Cross‐platform.
-    if os.name == "nt" or platform.system() == "Darwin":  # Windows or OS X
+    if platform.system() == "Darwin":  # Windows or OS X
         # Not database‐specific.
         socket_family = socket.AF_INET
         socket_address = ("localhost", 8999)
