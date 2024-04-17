@@ -1071,7 +1071,7 @@ def compose_transaction(
         if not script.is_fully_valid(binascii.unhexlify(pubkey)):
             raise script.AddressError(f"invalid public key: {pubkey}")
 
-    compose_method = sys.modules[f"counterpartylib.lib.messages.{name}"].compose
+    compose_method = sys.modules[f"counterpartycore.lib.messages.{name}"].compose
     compose_params = inspect.getfullargspec(compose_method)[0]
     missing_params = [p for p in compose_params if p not in params and p != "db"]
     for param in missing_params:

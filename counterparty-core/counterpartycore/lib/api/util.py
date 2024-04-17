@@ -2,7 +2,7 @@ import logging
 from logging import handlers as logging_handlers
 
 import flask
-from counterpartylib.lib import backend, config, exceptions, ledger, transaction
+from counterpartycore.lib import backend, config, exceptions, ledger, transaction
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

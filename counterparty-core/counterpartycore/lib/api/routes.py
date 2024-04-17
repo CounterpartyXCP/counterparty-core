@@ -1,10 +1,10 @@
-from counterpartylib.lib import (
+from counterpartycore.lib import (
     backend,
     config,
     ledger,
     transaction,
 )
-from counterpartylib.lib.api import util
+from counterpartycore.lib.api import util
 
 # Define the API routes except root (`/`) defined in `api_server.py`
 ROUTES = {

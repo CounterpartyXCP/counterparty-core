@@ -26,4 +26,5 @@ arc4==0.4.0
 halo==0.0.31
 termcolor==2.4.0
 sentry-sdk==1.45.0
+Flask-Cors==4.0.0
 counterparty-rs==10.1.0
