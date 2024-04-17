@@ -58,7 +58,7 @@ class TestTelemetryCollectorLive:
         )
 
         assert data["version"] == "1.2.3"
-        assert data["addrindex_version"] == "4.5.6"
+        assert data["addrindexrs_version"] == "4.5.6"
         assert data["uptime"] == "0.10"
         assert data["network"] == "MAINNET"
         assert data["is_docker_process"] == False  # noqa: E712
