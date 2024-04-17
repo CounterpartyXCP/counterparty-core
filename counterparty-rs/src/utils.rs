@@ -1,24 +1,23 @@
+use bitcoin::blockdata::opcodes;
+use bitcoin::blockdata::opcodes::all::*;
+use bitcoin::blockdata::script::{Instruction, Script};
+use bitcoin::util::address::{Payload, WitnessVersion};
+use bitcoin::{Address, Network};
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use pyo3::wrap_pyfunction;
-use bitcoin::{Address, Network};
-use bitcoin::util::address::{Payload, WitnessVersion};
-use bitcoin::blockdata::script::{Script, Instruction};
-use bitcoin::blockdata::opcodes;
-use bitcoin::blockdata::opcodes::all::*;
 use std::panic;
 
 #[pyfunction]
 fn inverse_hash(hashstring: &str) -> String {
-   hashstring
-       .chars()
-       .rev()
-       .collect::<Vec<char>>()
-       .chunks(2)
-       .flat_map(|chunk| chunk.iter().rev())
-       .collect::<String>()
+    hashstring
+        .chars()
+        .rev()
+        .collect::<Vec<char>>()
+        .chunks(2)
+        .flat_map(|chunk| chunk.iter().rev())
+        .collect::<String>()
 }
-
 
 #[pyfunction]
 fn script_to_address(script_pubkey: Vec<u8>, network: &str) -> PyResult<String> {
@@ -31,18 +30,26 @@ fn script_to_address(script_pubkey: Vec<u8>, network: &str) -> PyResult<String> 
         "testnet" => Network::Testnet,
         "signet" => Network::Signet,
         "regtest" => Network::Regtest,
-        _ => return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid network value")),
+        _ => {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "Invalid network value",
+            ))
+        }
     };
     if script.is_witness_program() {
         // This block below is necessary to reproduce a prior truncation bug in the python codebase.
         let version = match WitnessVersion::try_from(opcodes::All::from(script[0])) {
             Ok(vers) => vers,
-            Err(_) => return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid version value")),
+            Err(_) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    "Invalid version value",
+                ))
+            }
         };
 
         let address = Address {
             payload: Payload::WitnessProgram {
-                version: version,
+                version,
                 program: script[2..22].to_vec(),
             },
             network: network_enum,
@@ -55,13 +62,16 @@ fn script_to_address(script_pubkey: Vec<u8>, network: &str) -> PyResult<String> 
          */
         let _address = match Address::from_script(&script, network_enum) {
             Ok(addr) => addr,
-            Err(_) => return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to derive address")),
+            Err(_) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    "Failed to derive address",
+                ))
+            }
         };
         panic!("we thought this shouldn't happen!");
         //Ok(address.to_string())
     }
 }
-
 
 #[pyfunction]
 fn script_to_asm(script_bytes: Vec<u8>, py: Python) -> PyResult<Vec<PyObject>> {
@@ -79,9 +89,11 @@ fn script_to_asm(script_bytes: Vec<u8>, py: Python) -> PyResult<Vec<PyObject>> {
                         Instruction::PushBytes(data) => data.to_vec(),
                     };
                     asm.push(PyBytes::new(py, &py_instruction).into());
-                },
+                }
                 Err(_) => {
-                    return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Error processing script"));
+                    return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                        "Error processing script",
+                    ));
                 }
             }
         }
@@ -93,10 +105,11 @@ fn script_to_asm(script_bytes: Vec<u8>, py: Python) -> PyResult<Vec<PyObject>> {
     match result {
         Ok(Ok(value)) => Ok(value), // If there was no panic, return the result
         Ok(Err(err)) => Err(err), // If there was a panic and it returned an error, return that error
-        Err(_) => Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Panic occurred")), // If there was a panic but it didn't return an error, return a custom error
+        Err(_) => Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+            "Panic occurred",
+        )), // If there was a panic but it didn't return an error, return a custom error
     }
 }
-
 
 fn opcode_to_bytes(opcode: bitcoin::blockdata::opcodes::All) -> Vec<u8> {
     match opcode {
@@ -288,12 +301,11 @@ fn opcode_to_bytes(opcode: bitcoin::blockdata::opcodes::All) -> Vec<u8> {
     }
 }
 
-
 /// A Python module implemented in Rust.
 pub fn create_utils_module(py: Python) -> PyResult<&'_ PyModule> {
-   let m = PyModule::new(py, "utils")?;
-   m.add_function(wrap_pyfunction!(inverse_hash, m)?)?;
-   m.add_function(wrap_pyfunction!(script_to_asm, m)?)?;
-   m.add_function(wrap_pyfunction!(script_to_address, m)?)?;
-   Ok(m)
+    let m = PyModule::new(py, "utils")?;
+    m.add_function(wrap_pyfunction!(inverse_hash, m)?)?;
+    m.add_function(wrap_pyfunction!(script_to_asm, m)?)?;
+    m.add_function(wrap_pyfunction!(script_to_address, m)?)?;
+    Ok(m)
 }

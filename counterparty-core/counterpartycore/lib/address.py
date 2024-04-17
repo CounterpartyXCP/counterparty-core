@@ -71,6 +71,6 @@ def unpack(short_address_bytes):
         witver = short_address_bytes[0] - 0x80
         witprog = short_address_bytes[1:]
         return str(bitcoin.bech32.CBech32Data.from_bytes(witver, witprog))
-    else:
-        check = bitcoin.core.Hash(short_address_bytes)[0:4]
-        return bitcoin.base58.encode(short_address_bytes + check)
+
+    check = bitcoin.core.Hash(short_address_bytes)[0:4]
+    return bitcoin.base58.encode(short_address_bytes + check)

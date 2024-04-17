@@ -2,7 +2,8 @@ name: PyTest
 
 on:
   push:
-    branches: "**"
+    branches:
+      - "**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -13,77 +14,13 @@ env:
   COUNTERPARTY_RS_DIR: "./counterparty-rs"
 
 jobs:
-  macos-x86_64:
-    runs-on: macos-12 #x86_64
-    steps:
-      - uses: actions/checkout@v3
-
-      # Install dependencies
-  
-      - uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          default: true
-
-      - name: Set up Homebrew
-        id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@master
-
-      - name: Install leveldb
-        run: |
-          brew install leveldb
-
-      - name: Install pytest and build module
-        run: |
-          pip install pytest hatch
-          python -m pip install --upgrade build
-
-      # Build counterparty packages
-
-      - name: Build counterparty-rs
-        uses: messense/maturin-action@v1
-        with:
-          args: --release --out dist --sdist -m ${{ env.COUNTERPARTY_RS_DIR }}/Cargo.toml
-
-      - name: Build counterparty-core
-        run: |
-          cd counterparty-core && hatch build ../dist
-
-      # Install counterparty packages
-
-      - name: Install wheels
-        run: |
-          pip install dist/*.whl --force-reinstall
-
-      # Run counterparty-core tests
-
-      - name: Run counterparty-core tests
-        run: |
-          cd counterparty-core
-          pytest
-
-      # Upload wheels
-
-      - name: Upload wheels
-        uses: actions/upload-artifact@v2
-        with:
-          name: wheels
-          path: dist
-
   macos-m1:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v3
 
       # Install dependencies
-  
+
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -138,18 +75,18 @@ jobs:
         with:
           name: wheels
           path: dist
-  
+
   ubuntu-22-04:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
 
       # Install dependencies
-  
+
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
+          cache: "pip"
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1

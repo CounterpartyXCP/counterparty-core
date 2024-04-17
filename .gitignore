@@ -2,6 +2,17 @@ env
 venv
 docs/_build/*
 target/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.db-old
+test.log
+test_dbs/
+.DS_Store
+pyrightconfig.json
+typings/
+consumer.log
 
 profile.txt
 
