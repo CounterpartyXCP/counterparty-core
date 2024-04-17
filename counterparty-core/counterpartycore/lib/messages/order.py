@@ -432,7 +432,14 @@ def validate(
 
 
 def compose(
-    db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required
+    db,
+    source: str,
+    give_asset: str,
+    give_quantity: int,
+    get_asset: str,
+    get_quantity: int,
+    expiration: int,
+    fee_required: int,
 ):
     cursor = db.cursor()
 

@@ -358,15 +358,15 @@ def validate(
 
 def compose(
     db,
-    source,
-    feed_address,
-    bet_type,
-    deadline,
-    wager_quantity,
-    counterwager_quantity,
-    target_value,
-    leverage,
-    expiration,
+    source: str,
+    feed_address: str,
+    bet_type: int,
+    deadline: int,
+    wager_quantity: int,
+    counterwager_quantity: int,
+    target_value: int,
+    leverage: int,
+    expiration: int,
 ):
     if ledger.get_balance(db, source, config.XCP) < wager_quantity:
         raise exceptions.ComposeError("insufficient funds")

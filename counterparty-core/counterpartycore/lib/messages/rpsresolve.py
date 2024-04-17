@@ -106,7 +106,7 @@ def validate(db, source, move, random, rps_match_id):
     return txn, rps_match, problems
 
 
-def compose(db, source, move, random, rps_match_id):
+def compose(db, source: str, move: int, random: str, rps_match_id: str):
     tx0_hash, tx1_hash = util.parse_id(rps_match_id)
 
     txn, rps_match, problems = validate(db, source, move, random, rps_match_id)

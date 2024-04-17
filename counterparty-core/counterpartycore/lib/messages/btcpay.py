@@ -106,7 +106,7 @@ def validate(db, source, order_match_id, block_index):
     return destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems
 
 
-def compose(db, source, order_match_id):
+def compose(db, source: str, order_match_id: str):
     tx0_hash, tx1_hash = util.parse_id(order_match_id)
 
     destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(

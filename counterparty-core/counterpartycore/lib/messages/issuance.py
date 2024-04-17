@@ -347,14 +347,14 @@ def validate(
 
 def compose(
     db,
-    source,
-    asset,
-    quantity,
-    transfer_destination=None,
-    divisible=None,
-    lock=None,
-    reset=None,
-    description=None,
+    source: str,
+    asset: str,
+    quantity: int,
+    transfer_destination: str | None = None,
+    divisible: bool | None = None,
+    lock: bool | None = None,
+    reset: bool | None = None,
+    description: str | None = None,
 ):
     # Callability is deprecated, so for re‐issuances set relevant parameters
     # to old values; for first issuances, make uncallable.

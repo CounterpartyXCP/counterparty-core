@@ -98,7 +98,9 @@ def validate(db, source, destination, asset, quantity, memo_bytes, block_index):
     return problems
 
 
-def compose(db, source, destination, asset, quantity, memo, memo_is_hex):
+def compose(
+    db, source: str, destination: str, asset: str, quantity: int, memo: str, memo_is_hex: bool
+):
     cursor = db.cursor()
 
     # Just send BTC?

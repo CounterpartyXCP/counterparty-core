@@ -957,31 +957,6 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
     return dust_return_pubkey
 
 
-COMPOSE_COMMONS_ARGS = [
-    "encoding",
-    "fee_per_kb",
-    "regular_dust_size",
-    "multisig_dust_size",
-    "op_return_value",
-    "pubkey",
-    "allow_unconfirmed_inputs",
-    "fee",
-    "fee_provided",
-    "estimate_fee_per_kb",
-    "estimate_fee_per_kb_nblocks",
-    "estimate_fee_per_kb_conf_target",
-    "estimate_fee_per_kb_mode",
-    "unspent_tx_hash",
-    "custom_inputs",
-    "dust_return_pubkey",
-    "disable_utxo_locks",
-    "extended_tx_info",
-    "p2sh_source_multisig_pubkeys",
-    "p2sh_source_multisig_pubkeys_required",
-    "p2sh_pretx_txid",
-]
-
-
 def split_compose_arams(**kwargs):
     transaction_args = {}
     common_args = {}
@@ -1005,28 +980,25 @@ def get_default_args(func):
     }
 
 
-COMPOSE_COMMONS_ARGS = [
-    "encoding",
-    "fee_per_kb",
-    "estimate_fee_per_kb",
-    "regular_dust_size",
-    "multisig_dust_size",
-    "op_return_value",
-    "pubkey",
-    "allow_unconfirmed_inputs",
-    "fee",
-    "fee_provided",
-    "unspent_tx_hash",
-    "custom_inputs",
-    "dust_return_pubkey",
-    "disable_utxo_locks",
-    "extended_tx_info",
-    "p2sh_source_multisig_pubkeys",
-    "p2sh_source_multisig_pubkeys_required",
-    "p2sh_pretx_txid",
-    "old_style_api",
-    "segwit",
-]
+COMPOSE_COMMONS_ARGS = {
+    "encoding": (str, "auto"),
+    "fee_per_kb": (int, None),
+    "estimate_fee_per_kb": (int, None),
+    "regular_dust_size": (int, config.DEFAULT_REGULAR_DUST_SIZE),
+    "multisig_dust_size": (int, config.DEFAULT_MULTISIG_DUST_SIZE),
+    "op_return_value": (int, config.DEFAULT_OP_RETURN_VALUE),
+    "pubkey": (str, None),
+    "allow_unconfirmed_inputs": (bool, False),
+    "fee": (int, None),
+    "fee_provided": (int, 0),
+    "unspent_tx_hash": (str, None),
+    "dust_return_pubkey": (str, None),
+    "disable_utxo_locks": (bool, False),
+    "extended_tx_info": (bool, False),
+    "p2sh_pretx_txid": (str, None),
+    "old_style_api": (bool, True),
+    "segwit": (bool, False),
+}
 
 
 def compose_transaction(
@@ -1175,6 +1147,10 @@ for transaction_name in COMPOSABLE_TRANSACTIONS:
     COMPOSE_FUNCTIONS[transaction_name] = functools.partial(
         compose, transaction_name=transaction_name
     )
+
+
+def get_compose_common_args():
+    return [(name, value[0], value[1]) for name, value in COMPOSE_COMMONS_ARGS.items()]
 
 
 def info(db, rawtransaction, block_index=None):

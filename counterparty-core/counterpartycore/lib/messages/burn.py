@@ -72,7 +72,7 @@ def validate(db, source, destination, quantity, block_index, overburn=False):
     return problems
 
 
-def compose(db, source, quantity, overburn=False):
+def compose(db, source: str, quantity: int, overburn: bool = False):
     cursor = db.cursor()
     destination = config.UNSPENDABLE
     problems = validate(

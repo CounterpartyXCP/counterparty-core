@@ -179,7 +179,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
     return dividend_total, outputs, problems, fee
 
 
-def compose(db, source, quantity_per_unit, asset, dividend_asset):
+def compose(db, source: str, quantity_per_unit: int, asset: str, dividend_asset: str):
     # resolve subassets
     asset = ledger.resolve_subasset_longname(db, asset)
     dividend_asset = ledger.resolve_subasset_longname(db, dividend_asset)

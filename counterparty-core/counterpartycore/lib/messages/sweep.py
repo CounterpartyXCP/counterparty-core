@@ -103,7 +103,7 @@ def validate(db, source, destination, flags, memo, block_index):
     return problems, total_fee
 
 
-def compose(db, source, destination, flags, memo):
+def compose(db, source: str, destination: str, flags: int, memo: str):
     if memo is None:
         memo = b""
     elif flags & FLAG_BINARY_MEMO:

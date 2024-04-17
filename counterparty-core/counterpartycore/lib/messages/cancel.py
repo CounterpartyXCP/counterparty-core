@@ -82,7 +82,7 @@ def validate(db, source, offer_hash):
     return offer, offer_type, problems
 
 
-def compose(db, source, offer_hash):
+def compose(db, source: str, offer_hash: str):
     # Check that offer exists.
     offer, offer_type, problems = validate(db, source, offer_hash)
     if problems:

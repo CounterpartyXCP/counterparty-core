@@ -338,14 +338,14 @@ def validate(
 
 def compose(
     db,
-    source,
-    asset,
-    give_quantity,
-    escrow_quantity,
-    mainchainrate,
-    status,
-    open_address=None,
-    oracle_address=None,
+    source: str,
+    asset: str,
+    give_quantity: int,
+    escrow_quantity: int,
+    mainchainrate: int,
+    status: int,
+    open_address: str = None,
+    oracle_address: str = None,
 ):
     assetid, problems = validate(
         db,

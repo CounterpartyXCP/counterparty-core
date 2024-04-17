@@ -135,7 +135,7 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, block_index):
     return problems
 
 
-def compose(db, source, timestamp, value, fee_fraction, text):
+def compose(db, source: str, timestamp: int, value: int, fee_fraction: float, text: str):
     # Store the fee fraction as an integer.
     fee_fraction_int = int(fee_fraction * 1e8)
 
