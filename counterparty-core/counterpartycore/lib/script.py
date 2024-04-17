@@ -176,7 +176,7 @@ def base58_check_decode_py(s, version):
 def base58_check_decode(s, version):
     try:
         decoded = b58.b58_decode(s)
-    except BaseException:  # TODO: update pycoin_rs to raise a specific exception
+    except ValueError:
         raise Base58Error("invalid base58 string")  # noqa: B904
 
     if decoded[0] != ord(version):
