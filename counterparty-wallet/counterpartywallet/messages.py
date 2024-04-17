@@ -350,6 +350,3 @@ def compose(message, args):
         return compose_transaction(args, message, param_names)
     else:
         raise ArgumentError("Invalid message name")
-
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

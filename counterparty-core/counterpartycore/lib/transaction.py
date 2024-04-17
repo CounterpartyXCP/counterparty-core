@@ -6,6 +6,7 @@ This module contains no consensus‐critical code.
 
 import binascii
 import decimal
+import functools
 import hashlib
 import inspect
 import io
@@ -995,24 +996,6 @@ def split_compose_arams(**kwargs):
     return transaction_args, common_args, private_key_wif
 
 
-COMPOSABLE_TRANSACTIONS = [
-    "bet",
-    "broadcast",
-    "btcpay",
-    "burn",
-    "cancel",
-    "destroy",
-    "dispenser",
-    "dividend",
-    "issuance",
-    "order",
-    "send",
-    "rps",
-    "rpsresolve",
-    "sweep",
-]
-
-
 def get_default_args(func):
     signature = inspect.signature(func)
     return {
@@ -1020,6 +1003,30 @@ def get_default_args(func):
         for k, v in signature.parameters.items()
         if v.default is not inspect.Parameter.empty
     }
+
+
+COMPOSE_COMMONS_ARGS = [
+    "encoding",
+    "fee_per_kb",
+    "estimate_fee_per_kb",
+    "regular_dust_size",
+    "multisig_dust_size",
+    "op_return_value",
+    "pubkey",
+    "allow_unconfirmed_inputs",
+    "fee",
+    "fee_provided",
+    "unspent_tx_hash",
+    "custom_inputs",
+    "dust_return_pubkey",
+    "disable_utxo_locks",
+    "extended_tx_info",
+    "p2sh_source_multisig_pubkeys",
+    "p2sh_source_multisig_pubkeys_required",
+    "p2sh_pretx_txid",
+    "old_style_api",
+    "segwit",
+]
 
 
 def compose_transaction(
@@ -1137,11 +1144,37 @@ def compose_transaction(
     )
 
 
-def compose(db, transaction_name, **kwargs):
+COMPOSABLE_TRANSACTIONS = [
+    "bet",
+    "broadcast",
+    "btcpay",
+    "burn",
+    "cancel",
+    "destroy",
+    "dispenser",
+    "dividend",
+    "issuance",
+    "order",
+    "send",
+    "rps",
+    "rpsresolve",
+    "sweep",
+]
+
+
+def compose(db, source, transaction_name, **kwargs):
     if transaction_name not in COMPOSABLE_TRANSACTIONS:
         raise exceptions.TransactionError("Transaction type not composable.")
     transaction_args, common_args, _ = split_compose_arams(**kwargs)
+    transaction_args["source"] = source
     return compose_transaction(db, name=transaction_name, params=transaction_args, **common_args)
+
+
+COMPOSE_FUNCTIONS = {}
+for transaction_name in COMPOSABLE_TRANSACTIONS:
+    COMPOSE_FUNCTIONS[transaction_name] = functools.partial(
+        compose, transaction_name=transaction_name
+    )
 
 
 def info(db, rawtransaction, block_index=None):

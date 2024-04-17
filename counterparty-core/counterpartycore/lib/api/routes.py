@@ -56,10 +56,6 @@ ROUTES = {
         "function": ledger.get_sweeps,
     },
     ### /transactions ###
-    "/transactions/compose/<transaction_name>": {
-        "function": transaction.compose,
-        "pass_all_args": True,
-    },
     "/transactions/info": {
         "function": transaction.info,
         "args": [("rawtransaction", None), ("block_index", None)],
@@ -254,3 +250,9 @@ ROUTES = {
         "function": ledger.get_mempool_events,
     },
 }
+### /address/<source>/compose/<transaction_name> ###
+for transaction_name, compose_function in transaction.COMPOSE_FUNCTIONS.items():
+    ROUTES[f"/address/<source>/compose/{transaction_name}"] = {
+        "function": compose_function,
+        "pass_all_args": True,
+    }
