@@ -52,10 +52,6 @@ jobs:
         with:
           args: --release --out dist --sdist -m ${{ env.COUNTERPARTY_RS_DIR }}/Cargo.toml
 
-      - name: Build counterparty-lib
-        run: |
-          cd counterparty-lib && hatch build ../dist
-
       - name: Build counterparty-core
         run: |
           cd counterparty-core && hatch build ../dist
@@ -66,11 +62,11 @@ jobs:
         run: |
           pip install dist/*.whl --force-reinstall
 
-      # Run counterparty-lib tests
+      # Run counterparty-core tests
 
-      - name: Run counterparty-lib tests
+      - name: Run counterparty-core tests
         run: |
-          cd counterparty-lib
+          cd counterparty-core
           pytest
 
       # Upload wheels
@@ -116,10 +112,6 @@ jobs:
         with:
           args: --release --out dist --sdist -m ${{ env.COUNTERPARTY_RS_DIR }}/Cargo.toml
 
-      - name: Build counterparty-lib
-        run: |
-          cd counterparty-lib && hatch build ../dist
-
       - name: Build counterparty-core
         run: |
           cd counterparty-core && hatch build ../dist
@@ -132,11 +124,11 @@ jobs:
           export CPATH="$CPATH:$(brew --prefix)/include"
           pip3.10 install dist/*.whl --force-reinstall
 
-      # Run counterparty-lib tests
+      # Run counterparty-core tests
 
-      - name: Run counterparty-lib tests
+      - name: Run counterparty-core tests
         run: |
-          cd counterparty-lib
+          cd counterparty-core
           pytest
 
       # Upload wheels
@@ -182,10 +174,6 @@ jobs:
         with:
           args: --release --out dist --sdist -m ${{ env.COUNTERPARTY_RS_DIR }}/Cargo.toml
 
-      - name: Build counterparty-lib
-        run: |
-          cd counterparty-lib && hatch build ../dist
-
       - name: Build counterparty-core
         run: |
           cd counterparty-core && hatch build ../dist
@@ -196,11 +184,11 @@ jobs:
         run: |
           pip install dist/*.whl --force-reinstall
 
-      # Run counterparty-lib tests
+      # Run counterparty-core tests
 
-      - name: Run counterparty-lib tests
+      - name: Run counterparty-core tests
         run: |
-          cd counterparty-lib
+          cd counterparty-core
           pytest
 
       # Upload wheels

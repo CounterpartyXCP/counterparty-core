@@ -29,12 +29,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install pylint maturin pytest
         cd counterparty-rs && pip install -e . && cd ..
-        cd counterparty-lib && pip install -e . && cd ..
         cd counterparty-core && pip install -e . && cd ..
     - name: Bootstrap testnet database
       run: |
         counterparty-server --testnet bootstrap --no-confirm
     - name: Run tests
       run: |
-        cd counterparty-lib
-        pytest counterpartylib/test/book_test.py --testbook -s
+        cd counterparty-core
+        pytest counterpartycore/test/book_test.py --testbook -s

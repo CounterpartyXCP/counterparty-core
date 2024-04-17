@@ -20,7 +20,7 @@ jobs:
         sudo sh get-docker.sh
     - name: Build, tag, login and push image
       run: |
-        export VERSION=v$(cat counterparty-lib/counterpartylib/lib/config.py | grep '__version__ =' | awk -F '"' '{print $2}')
+        export VERSION=v$(cat counterparty-core/counterpartycore/lib/config.py | grep '__version__ =' | awk -F '"' '{print $2}')
         docker build -t $DOCKER_REPO:$VERSION .
         docker tag $DOCKER_REPO:$VERSION $DOCKER_REPO:latest
         docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
