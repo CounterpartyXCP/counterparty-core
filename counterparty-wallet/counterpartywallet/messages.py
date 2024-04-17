@@ -7,9 +7,9 @@ from math import ceil
 
 import bitcoin as bitcoinlib
 import dateutil.parser
-from counterpartylib.lib import config, exceptions, script, transaction
-from counterpartylib.lib.kickstart.utils import ib2h
-from counterpartylib.lib.util import BET_TYPE_ID, dhash
+from counterpartycore.lib import config, exceptions, script, transaction
+from counterpartycore.lib.kickstart.utils import ib2h
+from counterpartycore.lib.util import BET_TYPE_ID, dhash
 
 from counterpartywallet import util, wallet
 

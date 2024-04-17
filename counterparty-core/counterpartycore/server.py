@@ -1,463 +1,782 @@
 #! /usr/bin/env python3
 
-import argparse
+import binascii
+import decimal
 import logging
+import os
+import platform
+import socket
+import tarfile
+import tempfile
+import time
+import urllib
 from urllib.parse import quote_plus as urlencode
 
-from counterpartylib import server
-from counterpartylib.lib import config, log, setup
-from termcolor import cprint
+import appdirs
+import apsw
+import bitcoin as bitcoinlib
+from halo import Halo
+from termcolor import colored, cprint
+
+from counterpartycore.lib import (
+    api,
+    backend,
+    blocks,
+    check,
+    config,
+    database,
+    ledger,
+    log,  # noqa: F401
+    transaction,
+    util,
+)
+from counterpartycore.lib import kickstart as kickstarter
 
 logger = logging.getLogger(config.LOGGER_NAME)
+D = decimal.Decimal
 
-APP_NAME = "counterparty-server"
-APP_VERSION = config.VERSION_STRING
-
-CONFIG_ARGS = [
-    [
-        ("-v", "--verbose"),
-        {
-            "dest": "verbose",
-            "action": "store_true",
-            "default": False,
-            "help": "sets log level to DEBUG",
-        },
-    ],
-    [
-        ("--quiet",),
-        {
-            "dest": "quiet",
-            "action": "store_true",
-            "default": False,
-            "help": "sets log level to ERROR",
-        },
-    ],
-    [
-        ("--mainnet",),
-        {
-            "action": "store_true",
-            "default": True,
-            "help": f"use {config.BTC_NAME} mainet addresses and block numbers",
-        },
-    ],
-    [
-        ("--testnet",),
-        {
-            "action": "store_true",
-            "default": False,
-            "help": f"use {config.BTC_NAME} testnet addresses and block numbers",
-        },
-    ],
-    [
-        ("--testcoin",),
-        {
-            "action": "store_true",
-            "default": False,
-            "help": f"use the test {config.XCP_NAME} network on every blockchain",
-        },
-    ],
-    [
-        ("--regtest",),
-        {
-            "action": "store_true",
-            "default": False,
-            "help": f"use {config.BTC_NAME} regtest addresses and block numbers",
-        },
-    ],
-    [
-        ("--customnet",),
-        {
-            "default": "",
-            "help": "use a custom network (specify as UNSPENDABLE_ADDRESS|ADDRESSVERSION|P2SH_ADDRESSVERSION with version bytes in HH hex format)",
-        },
-    ],
-    [
-        ("--api-limit-rows",),
-        {
-            "type": int,
-            "default": 1000,
-            "help": "limit api calls to the set results (defaults to 1000). Setting to 0 removes the limit.",
-        },
-    ],
-    [("--backend-name",), {"default": "addrindex", "help": "the backend name to connect to"}],
-    [
-        ("--backend-connect",),
-        {"default": "localhost", "help": "the hostname or IP of the backend server"},
-    ],
-    [("--backend-port",), {"type": int, "help": "the backend port to connect to"}],
-    [
-        ("--backend-user",),
-        {"default": "rpc", "help": "the username used to communicate with backend"},
-    ],
-    [
-        ("--backend-password",),
-        {"default": "rpc", "help": "the password used to communicate with backend"},
-    ],
-    [
-        ("--backend-ssl",),
-        {
-            "action": "store_true",
-            "default": False,
-            "help": "use SSL to connect to backend (default: false)",
-        },
-    ],
-    [
-        ("--backend-ssl-no-verify",),
-        {
-            "action": "store_true",
-            "default": False,
-            "help": "verify SSL certificate of backend; disallow use of self‐signed certificates (default: true)",
-        },
-    ],
-    [
-        ("--backend-poll-interval",),
-        {"type": float, "default": 0.5, "help": "poll interval, in seconds (default: 0.5)"},
-    ],
-    [
-        ("--check-asset-conservation",),
-        {
-            "action": "store_true",
-            "default": False,
-            "help": "Skip asset conservation checking (default: false)",
-        },
-    ],
-    [
-        ("--p2sh-dust-return-pubkey",),
-        {
-            "help": "pubkey to receive dust when multisig encoding is used for P2SH source (default: none)"
-        },
-    ],
-    [
-        ("--indexd-connect",),
-        {"default": "localhost", "help": "the hostname or IP of the indexd server"},
-    ],
-    [("--indexd-port",), {"type": int, "help": "the indexd server port to connect to"}],
-    [
-        ("--rpc-host",),
-        {
-            "default": "localhost",
-            "help": "the IP of the interface to bind to for providing JSON-RPC API access (0.0.0.0 for all interfaces)",
-        },
-    ],
-    [
-        ("--rpc-port",),
-        {"type": int, "help": f"port on which to provide the {config.APP_NAME} JSON-RPC API"},
-    ],
-    [
-        ("--rpc-user",),
-        {
-            "default": "rpc",
-            "help": f"required username to use the {config.APP_NAME} JSON-RPC API (via HTTP basic auth)",
-        },
-    ],
-    [
-        ("--rpc-password",),
-        {
-            "default": "rpc",
-            "help": f"required password (for rpc-user) to use the {config.APP_NAME} JSON-RPC API (via HTTP basic auth)",
-        },
-    ],
-    [
-        ("--rpc-no-allow-cors",),
-        {"action": "store_true", "default": False, "help": "allow ajax cross domain request"},
-    ],
-    [
-        ("--rpc-batch-size",),
-        {
-            "type": int,
-            "default": config.DEFAULT_RPC_BATCH_SIZE,
-            "help": f"number of RPC queries by batch (default: {config.DEFAULT_RPC_BATCH_SIZE})",
-        },
-    ],
-    [
-        ("--requests-timeout",),
-        {
-            "type": int,
-            "default": config.DEFAULT_REQUESTS_TIMEOUT,
-            "help": "timeout value (in seconds) used for all HTTP requests (default: 5)",
-        },
-    ],
-    [
-        ("--force",),
-        {
-            "action": "store_true",
-            "default": False,
-            "help": "skip backend check, version check, process lock (NOT FOR USE ON PRODUCTION SYSTEMS)",
-        },
-    ],
-    [
-        ("--no-confirm",),
-        {"action": "store_true", "default": False, "help": "don't ask for confirmation"},
-    ],
-    [("--database-file",), {"default": None, "help": "the path to the SQLite3 database file"}],
-    [
-        ("--log-file",),
-        {"nargs": "?", "const": None, "default": False, "help": "log to the specified file"},
-    ],
-    [
-        ("--api-log-file",),
-        {
-            "nargs": "?",
-            "const": None,
-            "default": False,
-            "help": "log API requests to the specified file",
-        },
-    ],
-    [
-        ("--no-log-files",),
-        {"action": "store_true", "default": False, "help": "Don't write log files"},
-    ],
-    [
-        ("--json-log",),
-        {"action": "store_true", "default": False, "help": "Log events in JSON format"},
-    ],
-    [
-        ("--utxo-locks-max-addresses",),
-        {
-            "type": int,
-            "default": config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES,
-            "help": "max number of addresses for which to track UTXO locks",
-        },
-    ],
-    [
-        ("--utxo-locks-max-age",),
-        {
-            "type": int,
-            "default": config.DEFAULT_UTXO_LOCKS_MAX_AGE,
-            "help": "how long to keep a lock on a UTXO being tracked",
-        },
-    ],
-    [
-        ("--no-mempool",),
-        {"action": "store_true", "default": False, "help": "Disable mempool parsing"},
-    ],
-    [
-        ("--skip-db-check",),
-        {"action": "store_true", "default": False, "help": "Skip integrity check on the database"},
-    ],
-]
+OK_GREEN = colored("[OK]", "green")
+SPINNER_STYLE = "bouncingBar"
 
 
-def welcome_message(action, server_configfile):
-    cprint(f"Running v{config.__version__} of {config.FULL_APP_NAME}.", "magenta")
-
-    # print some info
-    cprint(f"Configuration file: {server_configfile}", "light_grey")
-    cprint(f"Counterparty database: {config.DATABASE}", "light_grey")
-    if config.LOG:
-        cprint(f"Writing log to file: `{config.LOG}`", "light_grey")
-    else:
-        cprint("Warning: log disabled", "yellow")
-    if config.API_LOG:
-        cprint(f"Writing API accesses log to file: `{config.API_LOG}`", "light_grey")
-    else:
-        cprint("Warning: API log disabled", "yellow")
-
-    if config.VERBOSE:
-        if config.TESTNET:
-            cprint("NETWORK: Testnet", "light_grey")
-        elif config.REGTEST:
-            cprint("NETWORK: Regtest", "light_grey")
-        else:
-            cprint("NETWORK: Mainnet", "light_grey")
-
-        pass_str = f":{urlencode(config.BACKEND_PASSWORD)}@"
-        cleaned_backend_url = config.BACKEND_URL.replace(pass_str, ":*****@")
-        cprint(f"BACKEND_URL: {cleaned_backend_url}", "light_grey")
-        cprint(f"INDEXD_URL: {config.INDEXD_URL}", "light_grey")
-        pass_str = f":{urlencode(config.RPC_PASSWORD)}@"
-        cleaned_rpc_url = config.RPC.replace(pass_str, ":*****@")
-        cprint(f"RPC: {cleaned_rpc_url}", "light_grey")
-
-    cprint(f"{'-' * 30} {action} {'-' * 30}\n", "green")
-
-
-class VersionError(Exception):
+class ConfigurationError(Exception):
     pass
 
 
-def main():
-    # Post installation tasks
-    server_configfile = setup.generate_server_config_file(CONFIG_ARGS)
+# Lock database access by opening a socket.
+class LockingError(Exception):
+    pass
 
-    # Parse command-line arguments.
-    parser = argparse.ArgumentParser(
-        prog=APP_NAME,
-        description=f"Server for the {config.XCP_NAME} protocol",
-        add_help=False,
-        exit_on_error=False,
+
+def get_lock():
+    logger.info("Acquiring lock.")
+
+    # Cross‐platform.
+    if os.name == "nt" or platform.system() == "Darwin":  # Windows or OS X
+        # Not database‐specific.
+        socket_family = socket.AF_INET
+        socket_address = ("localhost", 8999)
+        error = "Another copy of server is currently running."
+    else:
+        socket_family = socket.AF_UNIX
+        socket_address = "\0" + config.DATABASE
+        error = f"Another copy of server is currently writing to database {config.DATABASE}"
+
+    lock_socket = socket.socket(socket_family, socket.SOCK_DGRAM)
+    try:
+        lock_socket.bind(socket_address)
+    except socket.error:
+        raise LockingError(error)  # noqa: B904
+    logger.debug("Lock acquired.")
+
+
+def initialise(*args, **kwargs):
+    initialise_log_config(
+        verbose=kwargs.pop("verbose", False),
+        quiet=kwargs.pop("quiet", False),
+        log_file=kwargs.pop("log_file", None),
+        api_log_file=kwargs.pop("api_log_file", None),
+        no_log_files=kwargs.pop("no_log_files", False),
+        testnet=kwargs.get("testnet", False),
+        testcoin=kwargs.get("testcoin", False),
+        regtest=kwargs.get("regtest", False),
     )
-    parser.add_argument(
-        "-h", "--help", dest="help", action="store_true", help="show this help message and exit"
+    initialise_config(*args, **kwargs)
+    return initialise_db()
+
+
+def initialise_log_config(
+    verbose=False,
+    quiet=False,
+    log_file=None,
+    api_log_file=None,
+    no_log_files=False,
+    testnet=False,
+    testcoin=False,
+    regtest=False,
+    json_log=False,
+):
+    # Log directory
+    log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
+    if not os.path.isdir(log_dir):
+        os.makedirs(log_dir, mode=0o755)
+
+    # Set up logging.
+    config.VERBOSE = verbose
+    config.QUIET = quiet
+
+    network = ""
+    if testnet:
+        network += ".testnet"
+    if regtest:
+        network += ".regtest"
+    if testcoin:
+        network += ".testcoin"
+
+    # Log
+    if no_log_files:
+        config.LOG = None
+    elif not log_file:  # default location
+        filename = f"server{network}.log"
+        config.LOG = os.path.join(log_dir, filename)
+    else:  # user-specified location
+        config.LOG = log_file
+
+    if no_log_files:  # no file logging
+        config.API_LOG = None
+    elif not api_log_file:  # default location
+        filename = f"server{network}.access.log"
+        config.API_LOG = os.path.join(log_dir, filename)
+    else:  # user-specified location
+        config.API_LOG = api_log_file
+
+    config.JSON_LOG = json_log
+
+
+def initialise_config(
+    database_file=None,
+    testnet=False,
+    testcoin=False,
+    regtest=False,
+    api_limit_rows=1000,
+    backend_connect=None,
+    backend_port=None,
+    backend_user=None,
+    backend_password=None,
+    indexd_connect=None,
+    indexd_port=None,
+    backend_ssl=False,
+    backend_ssl_no_verify=False,
+    backend_poll_interval=None,
+    rpc_host=None,
+    rpc_port=None,
+    rpc_user=None,
+    rpc_password=None,
+    rpc_no_allow_cors=False,
+    force=False,
+    requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
+    rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
+    check_asset_conservation=False,
+    backend_ssl_verify=None,
+    rpc_allow_cors=None,
+    p2sh_dust_return_pubkey=None,
+    utxo_locks_max_addresses=config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES,
+    utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE,
+    estimate_fee_per_kb=None,
+    customnet=None,
+    no_mempool=False,
+    skip_db_check=False,
+):
+    # log config alreasdy initialized
+    logger.debug("VERBOSE: %s", config.VERBOSE)
+    logger.debug("QUIET: %s", config.QUIET)
+    logger.debug("LOG: %s", config.LOG)
+    logger.debug("API_LOG: %s", config.API_LOG)
+
+    # Data directory
+    data_dir = appdirs.user_data_dir(
+        appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
     )
-    parser.add_argument(
-        "-V",
-        "--version",
-        action="version",
-        version=f"{APP_NAME} v{APP_VERSION}; counterparty-lib v{config.VERSION_STRING}",
-    )
-    parser.add_argument("--config-file", help="the path to the configuration file")
+    if not os.path.isdir(data_dir):
+        os.makedirs(data_dir, mode=0o755)
 
-    cmd_args = parser.parse_known_args()[0]
-    config_file_path = getattr(cmd_args, "config_file", None)
-    configfile = setup.read_config_file("server.conf", config_file_path)
+    # testnet
+    if testnet:
+        config.TESTNET = testnet
+    else:
+        config.TESTNET = False
 
-    setup.add_config_arguments(parser, CONFIG_ARGS, configfile, add_default=True)
+    # testcoin
+    if testcoin:
+        config.TESTCOIN = testcoin
+    else:
+        config.TESTCOIN = False
 
-    subparsers = parser.add_subparsers(dest="action", help="the action to be taken")
+    # regtest
+    if regtest:
+        config.REGTEST = regtest
+    else:
+        config.REGTEST = False
 
-    parser_server = subparsers.add_parser("start", help="run the server")
-    parser_server.add_argument("--config-file", help="the path to the configuration file")
-    parser_server.add_argument(
-        "--catch-up",
-        choices=["normal", "bootstrap"],
-        default="normal",
-        help="Catch up mode (default: normal)",
-    )
-    setup.add_config_arguments(parser_server, CONFIG_ARGS, configfile)
+    if customnet != None and len(customnet) > 0:  # noqa: E711
+        config.CUSTOMNET = True
+        config.REGTEST = True  # Custom nets are regtests with different parameters
+    else:
+        config.CUSTOMNET = False
 
-    parser_reparse = subparsers.add_parser(
-        "reparse", help="reparse all transactions in the database"
-    )
-    parser_reparse.add_argument(
-        "block_index", type=int, help="the index of the last known good block"
-    )
-    setup.add_config_arguments(parser_reparse, CONFIG_ARGS, configfile)
+    if config.TESTNET:
+        bitcoinlib.SelectParams("testnet")
+        logger.debug("NETWORK: testnet")
+    elif config.REGTEST:
+        bitcoinlib.SelectParams("regtest")
+        logger.debug("NETWORK: regtest")
+    else:
+        bitcoinlib.SelectParams("mainnet")
+        logger.debug("NETWORK: mainnet")
 
-    parser_vacuum = subparsers.add_parser(
-        "vacuum", help="VACUUM the database (to improve performance)"
-    )
-    setup.add_config_arguments(parser_vacuum, CONFIG_ARGS, configfile)
+    network = ""
+    if config.TESTNET:
+        network += ".testnet"
+    if config.REGTEST:
+        network += ".regtest"
+    if config.TESTCOIN:
+        network += ".testcoin"
 
-    parser_rollback = subparsers.add_parser("rollback", help="rollback database")
-    parser_rollback.add_argument(
-        "block_index", type=int, help="the index of the last known good block"
-    )
-    setup.add_config_arguments(parser_rollback, CONFIG_ARGS, configfile)
+    # Database
+    if database_file:
+        config.DATABASE = database_file
+    else:
+        filename = f"{config.APP_NAME}{network}.db"
+        config.DATABASE = os.path.join(data_dir, filename)
 
-    parser_kickstart = subparsers.add_parser(
-        "kickstart", help="rapidly build database by reading from Bitcoin Core blockchain"
-    )
-    parser_kickstart.add_argument("--bitcoind-dir", help="Bitcoin Core data directory")
-    parser_kickstart.add_argument(
-        "--max-queue-size", type=int, help="Size of the multiprocessing.Queue for parsing blocks"
-    )
-    parser_kickstart.add_argument(
-        "--debug-block", type=int, help="Rollback and run kickstart for a single block;"
-    )
-    setup.add_config_arguments(parser_kickstart, CONFIG_ARGS, configfile)
+    logger.debug("DATABASE: %s", config.DATABASE)
 
-    parser_bootstrap = subparsers.add_parser(
-        "bootstrap", help="bootstrap database with hosted snapshot"
-    )
-    setup.add_config_arguments(parser_bootstrap, CONFIG_ARGS, configfile)
+    config.API_LIMIT_ROWS = api_limit_rows
 
-    parser_checkdb = subparsers.add_parser("check-db", help="do an integrity check on the database")
-    setup.add_config_arguments(parser_checkdb, CONFIG_ARGS, configfile)
+    ##############
+    # THINGS WE CONNECT TO
 
-    parser_show_config = subparsers.add_parser(
-        "show-params", help="Show counterparty-server configuration"
-    )
-    setup.add_config_arguments(parser_show_config, CONFIG_ARGS, configfile)
+    # Backend name
+    config.BACKEND_NAME = "addrindexrs"
 
-    args = parser.parse_args()
+    # Backend RPC host (Bitcoin Core)
+    if backend_connect:
+        config.BACKEND_CONNECT = backend_connect
+    else:
+        config.BACKEND_CONNECT = "localhost"
 
-    # Help message
-    if args.help:
-        parser.print_help()
-        exit(0)
+    # Backend Core RPC port (Bitcoin Core)
+    if backend_port:
+        config.BACKEND_PORT = backend_port
+    else:
+        if config.TESTNET:
+            config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET
+        elif config.REGTEST:
+            config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_REGTEST
+        else:
+            config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT
 
-    # Configuration
-    init_args = dict(
-        database_file=args.database_file,
-        testnet=args.testnet,
-        testcoin=args.testcoin,
-        regtest=args.regtest,
-        customnet=args.customnet,
-        api_limit_rows=args.api_limit_rows,
-        backend_connect=args.backend_connect,
-        backend_port=args.backend_port,
-        backend_user=args.backend_user,
-        backend_password=args.backend_password,
-        backend_ssl=args.backend_ssl,
-        backend_ssl_no_verify=args.backend_ssl_no_verify,
-        backend_poll_interval=args.backend_poll_interval,
-        indexd_connect=args.indexd_connect,
-        indexd_port=args.indexd_port,
-        rpc_host=args.rpc_host,
-        rpc_port=args.rpc_port,
-        rpc_user=args.rpc_user,
-        rpc_password=args.rpc_password,
-        rpc_no_allow_cors=args.rpc_no_allow_cors,
-        requests_timeout=args.requests_timeout,
-        rpc_batch_size=args.rpc_batch_size,
-        check_asset_conservation=args.check_asset_conservation,
-        force=args.force,
-        p2sh_dust_return_pubkey=args.p2sh_dust_return_pubkey,
-        utxo_locks_max_addresses=args.utxo_locks_max_addresses,
-        utxo_locks_max_age=args.utxo_locks_max_age,
-        no_mempool=args.no_mempool,
-        skip_db_check=args.skip_db_check,
-    )
-
-    server.initialise_log_config(
-        verbose=args.verbose,
-        quiet=args.quiet,
-        log_file=args.log_file,
-        api_log_file=args.api_log_file,
-        no_log_files=args.no_log_files,
-        testnet=args.testnet,
-        testcoin=args.testcoin,
-        regtest=args.regtest,
-        json_log=args.json_log,
-    )
-
-    # set up logging
-    log.set_up(
-        verbose=config.VERBOSE,
-        quiet=config.QUIET,
-        log_file=config.LOG,
-        log_in_console=args.action == "start",
-    )
-
-    server.initialise_config(**init_args)
-
-    logger.info(f"Running v{APP_VERSION} of {APP_NAME}.")
-
-    welcome_message(args.action, server_configfile)
-
-    # Bootstrapping
-    if args.action == "bootstrap":
-        server.bootstrap(no_confirm=args.no_confirm)
-
-    # PARSING
-    elif args.action == "reparse":
-        server.reparse(block_index=args.block_index)
-
-    elif args.action == "rollback":
-        server.rollback(block_index=args.block_index)
-
-    elif args.action == "kickstart":
-        server.kickstart(
-            bitcoind_dir=args.bitcoind_dir,
-            force=args.force,
-            max_queue_size=args.max_queue_size,
-            debug_block=args.debug_block,
+    try:
+        config.BACKEND_PORT = int(config.BACKEND_PORT)
+        if not (int(config.BACKEND_PORT) > 1 and int(config.BACKEND_PORT) < 65535):
+            raise ConfigurationError("invalid backend API port number")
+    except:  # noqa: E722
+        raise ConfigurationError(  # noqa: B904
+            "Please specific a valid port number backend-port configuration parameter"
         )
 
-    elif args.action == "start":
-        server.start_all(catch_up=args.catch_up)
-
-    elif args.action == "show-params":
-        server.show_params()
-
-    elif args.action == "vacuum":
-        server.vacuum()
-
-    elif args.action == "check-db":
-        server.check_database()
+    # Backend Core RPC user (Bitcoin Core)
+    if backend_user:
+        config.BACKEND_USER = backend_user
     else:
-        parser.print_help()
+        config.BACKEND_USER = "rpc"
+
+    # Backend Core RPC password (Bitcoin Core)
+    if backend_password:
+        config.BACKEND_PASSWORD = backend_password
+    else:
+        raise ConfigurationError(
+            "Please specific a valid password backend-password configuration parameter"
+        )
+
+    # Backend Core RPC SSL
+    if backend_ssl:
+        config.BACKEND_SSL = backend_ssl
+    else:
+        config.BACKEND_SSL = False  # Default to off.
+
+    # Backend Core RPC SSL Verify
+    if backend_ssl_verify is not None:
+        cprint(
+            "The server parameter `backend_ssl_verify` is deprecated. Use `backend_ssl_no_verify` instead.",
+            "yellow",
+        )
+        config.BACKEND_SSL_NO_VERIFY = not backend_ssl_verify
+    else:
+        if backend_ssl_no_verify:
+            config.BACKEND_SSL_NO_VERIFY = backend_ssl_no_verify
+        else:
+            config.BACKEND_SSL_NO_VERIFY = (
+                False  # Default to on (don't support self‐signed certificates)
+            )
+
+    # Backend Poll Interval
+    if backend_poll_interval:
+        config.BACKEND_POLL_INTERVAL = backend_poll_interval
+    else:
+        config.BACKEND_POLL_INTERVAL = 3.0
+
+    # Construct backend URL.
+    config.BACKEND_URL = (
+        config.BACKEND_USER
+        + ":"
+        + config.BACKEND_PASSWORD
+        + "@"
+        + config.BACKEND_CONNECT
+        + ":"
+        + str(config.BACKEND_PORT)
+    )
+    if config.BACKEND_SSL:
+        config.BACKEND_URL = "https://" + config.BACKEND_URL
+    else:
+        config.BACKEND_URL = "http://" + config.BACKEND_URL
+
+    cleaned_backend_url = config.BACKEND_URL.replace(f":{config.BACKEND_PASSWORD}@", ":*****@")
+    logger.debug("BACKEND_URL: %s", cleaned_backend_url)
+
+    # Indexd RPC host
+    if indexd_connect:
+        config.INDEXD_CONNECT = indexd_connect
+    else:
+        config.INDEXD_CONNECT = "localhost"
+
+    # Indexd RPC port
+    if indexd_port:
+        config.INDEXD_PORT = indexd_port
+    else:
+        if config.TESTNET:
+            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT_TESTNET
+        elif config.REGTEST:
+            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT_REGTEST
+        else:
+            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT
+
+    try:
+        config.INDEXD_PORT = int(config.INDEXD_PORT)
+        if not (int(config.INDEXD_PORT) > 1 and int(config.INDEXD_PORT) < 65535):
+            raise ConfigurationError("invalid Indexd API port number")
+    except:  # noqa: E722
+        raise ConfigurationError(  # noqa: B904
+            "Please specific a valid port number indexd-port configuration parameter"
+        )
+
+    # Construct Indexd URL.
+    config.INDEXD_URL = "http://" + config.INDEXD_CONNECT + ":" + str(config.INDEXD_PORT)
+
+    logger.debug("INDEXD_URL: %s", config.INDEXD_URL)
+
+    ##############
+    # THINGS WE SERVE
+
+    # Server API RPC host
+    if rpc_host:
+        config.RPC_HOST = rpc_host
+    else:
+        config.RPC_HOST = "localhost"
+
+    # The web root directory for API calls, eg. localhost:14000/rpc/
+    config.RPC_WEBROOT = "/rpc/"
+
+    # Server API RPC port
+    if rpc_port:
+        config.RPC_PORT = rpc_port
+    else:
+        if config.TESTNET:
+            if config.TESTCOIN:
+                config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET + 1
+            else:
+                config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET
+        elif config.REGTEST:
+            if config.TESTCOIN:
+                config.RPC_PORT = config.DEFAULT_RPC_PORT_REGTEST + 1
+            else:
+                config.RPC_PORT = config.DEFAULT_RPC_PORT_REGTEST
+        else:
+            if config.TESTCOIN:
+                config.RPC_PORT = config.DEFAULT_RPC_PORT + 1
+            else:
+                config.RPC_PORT = config.DEFAULT_RPC_PORT
+    try:
+        config.RPC_PORT = int(config.RPC_PORT)
+        if not (int(config.RPC_PORT) > 1 and int(config.RPC_PORT) < 65535):
+            raise ConfigurationError("invalid server API port number")
+    except:  # noqa: E722
+        raise ConfigurationError(  # noqa: B904
+            "Please specific a valid port number rpc-port configuration parameter"
+        )
+
+    # Server API RPC user
+    if rpc_user:
+        config.RPC_USER = rpc_user
+    else:
+        config.RPC_USER = "rpc"
+
+    configure_rpc(rpc_password)
+
+    # RPC CORS
+    if rpc_allow_cors is not None:
+        cprint(
+            "The server parameter `rpc_allow_cors` is deprecated. Use `rpc_no_allow_cors` instead.",
+            "yellow",
+        )
+        config.RPC_NO_ALLOW_CORS = not rpc_allow_cors
+    else:
+        if rpc_no_allow_cors:
+            config.RPC_NO_ALLOW_CORS = rpc_no_allow_cors
+        else:
+            config.RPC_NO_ALLOW_CORS = False
+
+    config.RPC_BATCH_SIZE = rpc_batch_size
+
+    ##############
+    # OTHER SETTINGS
+
+    # skip checks
+    if force:
+        config.FORCE = force
+    else:
+        config.FORCE = False
+
+    # Encoding
+    if config.TESTCOIN:
+        config.PREFIX = b"XX"  # 2 bytes (possibly accidentally created)
+    else:
+        config.PREFIX = b"CNTRPRTY"  # 8 bytes
+
+    # (more) Testnet
+    if config.TESTNET:
+        config.MAGIC_BYTES = config.MAGIC_BYTES_TESTNET
+        if config.TESTCOIN:
+            config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
+            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET
+            config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET_TESTCOIN
+            config.BURN_START = config.BURN_START_TESTNET_TESTCOIN
+            config.BURN_END = config.BURN_END_TESTNET_TESTCOIN
+            config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+        else:
+            config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
+            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET
+            config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET
+            config.BURN_START = config.BURN_START_TESTNET
+            config.BURN_END = config.BURN_END_TESTNET
+            config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+    elif config.CUSTOMNET:
+        custom_args = customnet.split("|")
+
+        if len(custom_args) == 3:
+            config.MAGIC_BYTES = config.MAGIC_BYTES_REGTEST
+            config.ADDRESSVERSION = binascii.unhexlify(custom_args[1])
+            config.P2SH_ADDRESSVERSION = binascii.unhexlify(custom_args[2])
+            config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST
+            config.BURN_START = config.BURN_START_REGTEST
+            config.BURN_END = config.BURN_END_REGTEST
+            config.UNSPENDABLE = custom_args[0]
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+        else:
+            raise "Custom net parameter needs to be like UNSPENDABLE_ADDRESS|ADDRESSVERSION|P2SH_ADDRESSVERSION (version bytes in HH format)"  # noqa: B016
+    elif config.REGTEST:
+        config.MAGIC_BYTES = config.MAGIC_BYTES_REGTEST
+        if config.TESTCOIN:
+            config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
+            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_REGTEST
+            config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST_TESTCOIN
+            config.BURN_START = config.BURN_START_REGTEST_TESTCOIN
+            config.BURN_END = config.BURN_END_REGTEST_TESTCOIN
+            config.UNSPENDABLE = config.UNSPENDABLE_REGTEST
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+        else:
+            config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
+            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_REGTEST
+            config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST
+            config.BURN_START = config.BURN_START_REGTEST
+            config.BURN_END = config.BURN_END_REGTEST
+            config.UNSPENDABLE = config.UNSPENDABLE_REGTEST
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+    else:
+        config.MAGIC_BYTES = config.MAGIC_BYTES_MAINNET
+        if config.TESTCOIN:
+            config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_MAINNET
+            config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET_TESTCOIN
+            config.BURN_START = config.BURN_START_MAINNET_TESTCOIN
+            config.BURN_END = config.BURN_END_MAINNET_TESTCOIN
+            config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+        else:
+            config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_MAINNET
+            config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET
+            config.BURN_START = config.BURN_START_MAINNET
+            config.BURN_END = config.BURN_END_MAINNET
+            config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+
+    # Misc
+    config.REQUESTS_TIMEOUT = requests_timeout
+    config.CHECK_ASSET_CONSERVATION = check_asset_conservation
+    config.UTXO_LOCKS_MAX_ADDRESSES = utxo_locks_max_addresses
+    config.UTXO_LOCKS_MAX_AGE = utxo_locks_max_age
+
+    if estimate_fee_per_kb is not None:
+        config.ESTIMATE_FEE_PER_KB = estimate_fee_per_kb
+
+    config.NO_MEMPOOL = no_mempool
+    config.SKIP_DB_CHECK = skip_db_check
+
+    logger.info(f"Running v{config.VERSION_STRING} of counterparty-core.")
 
 
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
+def initialise_db():
+    if config.FORCE:
+        cprint("THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.", "yellow")
+
+    # Lock
+    if not config.FORCE:
+        get_lock()
+
+    # Database
+    logger.info(f"Connecting to database (SQLite {apsw.apswversion()}).")
+    db = database.get_connection(read_only=False)
+
+    # perform quick integrity check
+    if not config.SKIP_DB_CHECK:
+        logger.info("Running PRAGMA quick_check...")
+        db.execute("PRAGMA quick_check")
+        logger.info("PRAGMA quick_check done.")
+    else:
+        logger.warning("Skipping PRAGMA quick_check.")
+
+    ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
+
+    return db
+
+
+def connect_to_backend():
+    if not config.FORCE:
+        backend.getblockcount()
+
+
+def connect_to_addrindexrs():
+    step = "Connecting to `addrindexrs`..."
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        ledger.CURRENT_BLOCK_INDEX = 0
+        backend.backend()
+        check_addrindexrs = {}
+        while check_addrindexrs == {}:
+            check_address = (
+                "mrHFGUKSiNMeErqByjX97qPKfumdZxe6mC"
+                if config.TESTNET
+                else "1GsjsKKT4nH4GPmDnaxaZEDWgoBpmexwMA"
+            )
+            check_addrindexrs = backend.get_oldest_tx(check_address, 99999999999)
+            if check_addrindexrs == {}:
+                logger.info("`addrindexrs` is not ready. Waiting one second.")
+                time.sleep(1)
+    print(f"{OK_GREEN} {step}")
+
+
+def start_all(catch_up="normal"):
+    try:
+        # Backend.
+        connect_to_backend()
+
+        if not os.path.exists(config.DATABASE) and catch_up == "bootstrap":
+            bootstrap(no_confirm=True)
+
+        db = initialise_db()
+
+        # Reset UTXO_LOCKS.  This previously was done in
+        # initilise_config
+        transaction.initialise()
+
+        # API Status Poller.
+        api_status_poller = api.APIStatusPoller()
+        api_status_poller.daemon = True
+        api_status_poller.start()
+
+        # API Server.
+        api_server = api.APIServer()
+        api_server.daemon = True
+        api_server.start()
+
+        # Server
+        blocks.follow(db)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        api_status_poller.stop()
+        api_server.stop()
+        backend.stop()
+        database.optimize(db)
+        logger.info("Closing database...")
+        db.close()
+        logger.info("Shutting down logging...")
+        logging.shutdown()
+
+
+def reparse(block_index):
+    connect_to_addrindexrs()
+    db = initialise_db()
+    try:
+        blocks.reparse(db, block_index=block_index)
+    finally:
+        backend.stop()
+        database.optimize(db)
+        db.close()
+
+
+def rollback(block_index=None):
+    db = initialise_db()
+    try:
+        blocks.rollback(db, block_index=block_index)
+    finally:
+        database.optimize(db)
+        db.close()
+
+
+def kickstart(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
+    kickstarter.run(
+        bitcoind_dir=bitcoind_dir,
+        force=force,
+        max_queue_size=max_queue_size,
+        debug_block=debug_block,
+    )
+
+
+def vacuum():
+    db = initialise_db()
+    step = "Vacuuming database..."
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        database.vacuum(db)
+    print(f"{OK_GREEN} {step}")
+
+
+def check_database():
+    db = initialise_db()
+
+    start_all_time = time.time()
+
+    start_time = time.time()
+    step = "Checking asset conservation..."
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        check.asset_conservation(db)
+    print(f"{OK_GREEN} {step} (in {time.time() - start_time:.2f}s)")
+
+    start_time = time.time()
+    step = "Checking database foreign keys...."
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        database.check_foreign_keys(db)
+    print(f"{OK_GREEN} {step} (in {time.time() - start_time:.2f}s)")
+
+    start_time = time.time()
+    step = "Checking database integrity..."
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        database.intergrity_check(db)
+    print(f"{OK_GREEN} {step} (in {time.time() - start_time:.2f}s)")
+
+    cprint(f"Database checks complete in {time.time() - start_all_time:.2f}s.", "green")
+
+
+def show_params():
+    output = vars(config)
+    for k in list(output.keys()):
+        if k.isupper():
+            print(f"{k}: {output[k]}")
+
+
+def generate_move_random_hash(move):
+    move = int(move).to_bytes(2, byteorder="big")
+    random_bin = os.urandom(16)
+    move_random_hash_bin = util.dhash(random_bin + move)
+    return binascii.hexlify(random_bin).decode("utf8"), binascii.hexlify(
+        move_random_hash_bin
+    ).decode("utf8")
+
+
+def configure_rpc(rpc_password=None):
+    # Server API RPC password
+    if rpc_password:
+        config.RPC_PASSWORD = rpc_password
+        config.API_ROOT = (
+            "http://"
+            + urlencode(config.RPC_USER)
+            + ":"
+            + urlencode(config.RPC_PASSWORD)
+            + "@"
+            + config.RPC_HOST
+            + ":"
+            + str(config.RPC_PORT)
+        )
+    else:
+        config.API_ROOT = "http://" + config.RPC_HOST + ":" + str(config.RPC_PORT)
+    config.RPC = config.API_ROOT + config.RPC_WEBROOT
+
+    cleaned_rpc_url = config.RPC.replace(f":{urlencode(config.RPC_PASSWORD)}@", ":*****@")
+    logger.debug("RPC: %s", cleaned_rpc_url)
+
+
+def bootstrap(no_confirm=False):
+    warning_message = """WARNING: `counterparty-server bootstrap` downloads a recent snapshot of a Counterparty database
+from a centralized server maintained by the Counterparty Core development team.
+Because this method does not involve verifying the history of Counterparty transactions yourself,
+the `bootstrap` command should not be used for mission-critical, commercial or public-facing nodes.
+        """
+    cprint(warning_message, "yellow")
+
+    if not no_confirm:
+        confirmation_message = colored("Continue? (y/N): ", "magenta")
+        if input(confirmation_message).lower() != "y":
+            exit()
+
+    data_dir = appdirs.user_data_dir(
+        appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
+    )
+
+    # Set Constants.
+    bootstrap_url = config.BOOTSTRAP_URL_TESTNET if config.TESTNET else config.BOOTSTRAP_URL_MAINNET
+    tar_filename = os.path.basename(bootstrap_url)
+    tarball_path = os.path.join(tempfile.gettempdir(), tar_filename)
+    database_path = os.path.join(data_dir, config.APP_NAME)
+    if config.TESTNET:
+        database_path += ".testnet"
+    database_path += ".db"
+
+    # Prepare Directory.
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir, mode=0o755)
+    if os.path.exists(database_path):
+        os.remove(database_path)
+    # Delete SQLite Write-Ahead-Log
+    wal_path = database_path + "-wal"
+    shm_path = database_path + "-shm"
+    if os.path.exists(wal_path):
+        os.remove(wal_path)
+    if os.path.exists(shm_path):
+        os.remove(shm_path)
+
+    # Define Progress Bar.
+    step = f"Downloading database from {bootstrap_url}..."
+    spinner = Halo(text=step, spinner=SPINNER_STYLE)
+
+    def bootstrap_progress(blocknum, blocksize, totalsize):
+        readsofar = blocknum * blocksize
+        if totalsize > 0:
+            percent = readsofar * 1e2 / totalsize
+            message = f"Downloading database: {percent:5.1f}% {readsofar} / {totalsize}"
+            spinner.text = message
+
+    # Downloading
+    spinner.start()
+    urllib.request.urlretrieve(bootstrap_url, tarball_path, bootstrap_progress)  # nosec B310  # noqa: S310
+    spinner.stop()
+    print(f"{OK_GREEN} {step}")
+
+    # TODO: check checksum, filenames, etc.
+    step = f"Extracting database to {data_dir}..."
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        with tarfile.open(tarball_path, "r:gz") as tar_file:
+            tar_file.extractall(path=data_dir)  # nosec B202  # noqa: S202
+    print(f"{OK_GREEN} {step}")
+
+    assert os.path.exists(database_path)
+    # user and group have "rw" access
+    os.chmod(database_path, 0o660)  # nosec B103
+
+    step = "Cleaning up..."
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        os.remove(tarball_path)
+    print(f"{OK_GREEN} {step}")
+
+    cprint(f"Database has been successfully bootstrapped to {database_path}.", "green")

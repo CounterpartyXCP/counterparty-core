@@ -30,12 +30,11 @@ jobs:
         pip install pylint maturin
         pip install pylint-sarif-unofficial
         cd counterparty-rs && pip install -e . && cd ..
-        cd counterparty-lib && pip install -e . && cd ..
         cd counterparty-core && pip install -e . && cd ..
         pip install evdev
     - name: Analysing the code with pylint
       run: |
-        pylint2sarif $(git ls-files '*.py' | grep -v counterparty-rs/tests/ | grep -v counterparty-lib/counterpartylib/test/ | grep -v counterparty-lib/tools/) || true
+        pylint2sarif $(git ls-files '*.py' | grep -v counterparty-rs/tests/ | grep -v counterparty-core/counterpartycore/test/ | grep -v counterparty-core/tools/) || true
     - name: Upload SARIF
       uses: github/codeql-action/upload-sarif/@v2
       with:

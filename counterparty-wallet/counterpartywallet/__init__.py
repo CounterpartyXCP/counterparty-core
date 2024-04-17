@@ -1,7 +1,7 @@
 import os
 import sys
 
-from counterpartylib.lib import config
+from counterpartycore.lib import config
 
 APP_VERSION = config.VERSION_STRING
 
