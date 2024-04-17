@@ -36,7 +36,7 @@ class TestTelemetryDaemon:
 
 
 class TestTelemetryCollectorLive:
-    @patch("counterpartycore.lib.telemetry.collector.config")
+    @patch("counterpartycore.lib.telemetry.util.config")
     @patch("counterpartycore.lib.telemetry.collector.ledger")
     def test_collect(self, mock_ledger, mock_config):
         mock_db = MagicMock()
@@ -59,9 +59,9 @@ class TestTelemetryCollectorLive:
 
         assert data["version"] == "1.2.3"
         assert data["addrindexrs_version"] == "4.5.6"
-        assert data["uptime"] == "0.10"
+        assert data["uptime"] > 0
         assert data["network"] == "MAINNET"
-        assert data["is_docker_process"] == False  # noqa: E712
+        assert data["docker"] == False  # noqa: E712
         assert data["force_enabled"] == False  # noqa: E712
 
     @patch("counterpartycore.lib.telemetry.collector.ledger")
@@ -72,4 +72,4 @@ class TestTelemetryCollectorLive:
         mock_ledger.last_message.return_value = {"block_index": 12345}
         collector = TelemetryCollectorLive(mock_db)
         data = collector.collect()
-        assert data["is_docker_process"] == True  # noqa: E712
+        assert data["docker"] == True  # noqa: E712

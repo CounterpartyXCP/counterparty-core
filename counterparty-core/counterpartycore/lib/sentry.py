@@ -24,7 +24,7 @@ def before_send(event, _hint):
 
     event["tags"]["core_version"] = data["version"]
     event["tags"]["addrindexrs_version"] = data["addrindexrs_version"]
-    event["tags"]["docker"] = data["is_docker_process"]
+    event["tags"]["docker"] = data["docker"]
     event["tags"]["network"] = data["network"]
     event["tags"]["force_enabled"] = data["force_enabled"]
 

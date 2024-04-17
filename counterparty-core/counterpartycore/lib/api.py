@@ -68,6 +68,12 @@ from counterpartycore.lib.messages import (  # noqa: E402
     sweep,  # noqa: F401
 )
 from counterpartycore.lib.messages.versions import enhanced_send  # noqa: E402
+from counterpartycore.lib.telemetry.util import (  # noqa: E402
+    get_addrindexrs_version,
+    get_uptime,
+    is_docker,
+    is_force_enabled,
+)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -1040,6 +1046,8 @@ class APIServer(threading.Thread):
 
             server_ready = caught_up and indexd_caught_up
 
+            addrindexrs_version = get_addrindexrs_version().split(".")
+
             return {
                 "server_ready": server_ready,
                 "db_caught_up": caught_up,
@@ -1055,6 +1063,12 @@ class APIServer(threading.Thread):
                 "version_major": config.VERSION_MAJOR,
                 "version_minor": config.VERSION_MINOR,
                 "version_revision": config.VERSION_REVISION,
+                "addrindexrs_version_major": int(addrindexrs_version[0]),
+                "addrindexrs_version_minor": int(addrindexrs_version[1]),
+                "addrindexrs_version_revision": int(addrindexrs_version[2]),
+                "uptime": int(get_uptime()),
+                "docker": is_docker(),
+                "force_enabled": is_force_enabled(),
             }
 
         @dispatcher.add_method
