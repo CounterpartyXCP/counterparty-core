@@ -41,7 +41,7 @@ class TelemetryCollectorLive(TelemetryCollectorBase):
         return {
             "version": version,
             "addrindexrs_version": addrindexrs_version,
-            "uptime": f"{uptime:.2f}",
+            "uptime": int(uptime),
             "docker": is_docker,
             "network": network,
             "force_enabled": force_enabled,
