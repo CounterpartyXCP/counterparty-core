@@ -7,7 +7,7 @@
 * Fix missing events (`NEW_BLOCK` and `NEW_TRANSACTION`) when kickstarting and reparsing. Needs an optional full reparse to update the `messages` table.
 
 ## Codebase
-
+* Merge `counterparty-lib` and `counterparty-core` package into `counterparty-core`
 
 ## Command-Line Interface
 * Replace `--no-check-asset-conservation` by `--check-asset-conservation`
