@@ -577,6 +577,7 @@ def start_all(catch_up="normal"):
             bootstrap(no_confirm=True)
 
         db = initialise_db()
+        blocks.initialise(db)
 
         # Reset UTXO_LOCKS.  This previously was done in
         # initilise_config
