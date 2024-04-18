@@ -964,7 +964,12 @@ def get_burns(db, address=None, status="valid"):
 ######################################
 
 
-def get_blocks(db, last=None, limit=10):
+def get_blocks(db, last: int = None, limit: int = 10):
+    """
+    Returns the list of the last ten blocks
+    :param int last: The index of the most recent block to return
+    :param int limit: The number of blocks to return
+    """
     cursor = db.cursor()
     bindings = []
     query = """
@@ -980,7 +985,7 @@ def get_blocks(db, last=None, limit=10):
     return cursor.fetchall()
 
 
-def get_block(db, block_index):
+def get_block(db, block_index: int):
     blocks = get_blocks(db, last=block_index, limit=1)
     if blocks:
         return blocks[0]

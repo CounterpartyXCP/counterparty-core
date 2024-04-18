@@ -1,8 +1,10 @@
+import inspect
 import logging
 from logging import handlers as logging_handlers
 
 import flask
 from counterpartycore.lib import backend, config, exceptions, ledger, transaction
+from docstring_parser import parse as parse_docstring
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -115,3 +117,38 @@ def init_api_access_log(flask_app):
         werkzeug_logger.addHandler(handler)
 
     flask.cli.show_server_banner = lambda *args: None
+
+
+def get_args_description(function):
+    docstring = parse_docstring(function.__doc__)
+    args = {}
+    for param in docstring.params:
+        args[param.arg_name] = param.description
+    return args
+
+
+def prepare_route_args(function):
+    args = []
+    function_args = inspect.signature(function).parameters
+    args_description = get_args_description(function)
+    for arg_name, arg in function_args.items():
+        annotation = arg.annotation
+        if annotation is inspect.Parameter.empty:
+            continue
+        route_arg = {"name": arg_name}
+        default = arg.default
+        if default is not inspect.Parameter.empty:
+            route_arg["default"] = default
+            route_arg["required"] = False
+        else:
+            route_arg["required"] = True
+        route_arg["type"] = arg.annotation.__name__
+        if arg_name in args_description:
+            route_arg["description"] = args_description[arg_name]
+        args.append(route_arg)
+    return args
+
+
+def get_function_description(function):
+    docstring = parse_docstring(function.__doc__)
+    return docstring.description

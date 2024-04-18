@@ -44,7 +44,16 @@ def verify_password(username, password):
 
 def api_root():
     counterparty_height = blocks.last_db_index(get_db())
-    routes = list(ROUTES.keys())
+    routes = []
+    for path in ROUTES:
+        route = ROUTES[path]
+        routes.append(
+            {
+                "path": path,
+                "args": route.get("args", []),
+                "description": route.get("description", ""),
+            }
+        )
     network = "mainnet"
     if config.TESTNET:
         network = "testnet"
@@ -85,15 +94,23 @@ def prepare_args(route, **kwargs):
         function_args = request.args | function_args
     elif "args" in route:
         for arg in route["args"]:
-            str_arg = request.args.get(arg[0])
+            arg_name = arg["name"]
+            if arg_name in function_args:
+                continue
+            str_arg = request.args.get(arg_name)
+            if str_arg is None and arg["required"]:
+                raise ValueError(f"Missing required parameter: {arg_name}")
             if str_arg is None:
-                function_args[arg[0]] = arg[2]
-            elif arg[1] == bool:
-                function_args[arg[0]] = str_arg.lower() in ["true", "1"]
-            elif arg[1] == int:
-                function_args[arg[0]] = int(str_arg)
+                function_args[arg_name] = arg["default"]
+            elif arg["type"] == "bool":
+                function_args[arg_name] = str_arg.lower() in ["true", "1"]
+            elif arg["type"] == "int":
+                try:
+                    function_args[arg_name] = int(str_arg)
+                except ValueError as e:
+                    raise ValueError(f"Invalid integer: {arg_name}") from e
             else:
-                function_args[arg[0]] = str_arg
+                function_args[arg_name] = str_arg
     return function_args
 
 
@@ -110,7 +127,7 @@ def handle_route(**kwargs):
         try:
             function_args = prepare_args(route, **kwargs)
         except ValueError as e:
-            return inject_headers({"error": f"Invalid parameter: {e}"}, return_code=400)
+            return inject_headers({"error": str(e)}, return_code=400)
         result = route["function"](db, **function_args)
         result = remove_rowids(result)
     return inject_headers(result)

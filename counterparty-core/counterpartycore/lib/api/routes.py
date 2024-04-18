@@ -11,7 +11,6 @@ ROUTES = {
     ### /blocks ###
     "/blocks": {
         "function": ledger.get_blocks,
-        "args": [("last", int, None), ("limit", int, 10)],
     },
     "/blocks/<int:block_index>": {
         "function": ledger.get_block,
@@ -250,9 +249,18 @@ ROUTES = {
         "function": ledger.get_mempool_events,
     },
 }
+
+# Add compose routes for each transaction type
 ### /address/<source>/compose/<transaction_name> ###
 for transaction_name, compose_function in transaction.COMPOSE_FUNCTIONS.items():
     ROUTES[f"/address/<source>/compose/{transaction_name}"] = {
         "function": compose_function,
         "pass_all_args": True,
     }
+
+# Add description and args to each route
+for path, route in ROUTES.items():
+    if "/compose/" in path:
+        continue
+    ROUTES[path]["description"] = util.get_function_description(route["function"])
+    ROUTES[path]["args"] = util.prepare_route_args(route["function"])
