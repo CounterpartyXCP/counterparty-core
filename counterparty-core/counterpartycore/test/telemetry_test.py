@@ -61,7 +61,7 @@ class TestTelemetryCollectorLive:
         assert data["addrindexrs_version"] == "4.5.6"
         assert data["uptime"] > 0
         assert data["network"] == "MAINNET"
-        assert data["docker"] == False  # noqa: E712
+        assert data["dockerized"] == False  # noqa: E712
         assert data["force_enabled"] == False  # noqa: E712
 
     @patch("counterpartycore.lib.telemetry.collector.ledger")
@@ -72,4 +72,4 @@ class TestTelemetryCollectorLive:
         mock_ledger.last_message.return_value = {"block_index": 12345}
         collector = TelemetryCollectorLive(mock_db)
         data = collector.collect()
-        assert data["docker"] == True  # noqa: E712
+        assert data["dockerized"] == True  # noqa: E712

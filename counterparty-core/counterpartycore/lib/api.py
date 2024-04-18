@@ -1067,7 +1067,7 @@ class APIServer(threading.Thread):
                 "addrindexrs_version_minor": int(addrindexrs_version[1]),
                 "addrindexrs_version_revision": int(addrindexrs_version[2]),
                 "uptime": int(get_uptime()),
-                "docker": is_docker(),
+                "dockerized": is_docker(),
                 "force_enabled": is_force_enabled(),
             }
 
