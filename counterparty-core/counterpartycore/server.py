@@ -567,6 +567,8 @@ def connect_to_addrindexrs():
 
 
 def start_all(catch_up="normal"):
+    api_status_poller, api_server, db = None, None, None
+
     try:
         # Backend.
         connect_to_backend()
@@ -595,12 +597,15 @@ def start_all(catch_up="normal"):
     except KeyboardInterrupt:
         pass
     finally:
-        api_status_poller.stop()
-        api_server.stop()
+        if api_status_poller:
+            api_status_poller.stop()
+        if api_server:
+            api_server.stop()
         backend.stop()
-        database.optimize(db)
-        logger.info("Closing database...")
-        db.close()
+        if db:
+            database.optimize(db)
+            logger.info("Closing database...")
+            db.close()
         logger.info("Shutting down logging...")
         logging.shutdown()
 
