@@ -51,7 +51,11 @@ def healthz(db, check_type="heavy"):
     return True
 
 
-def handle_healthz_route(db, check_type="heavy"):
+def handle_healthz_route(db, check_type: str = "heavy"):
+    """
+    Health check route.
+    :param check_type: Type of health check to perform. Options are 'light' and 'heavy'.
+    """
     msg, code = "Healthy", 200
     if not healthz(db, check_type):
         msg, code = "Unhealthy", 503
@@ -84,12 +88,26 @@ def getrawtransactions(tx_hashes, verbose=False, skip_missing=False, _retry=0):
     return backend.getrawtransaction_batch(txhash_list, verbose, skip_missing, _retry)
 
 
-def pubkeyhash_to_pubkey(address, provided_pubkeys=None):
+def pubkeyhash_to_pubkey(address: str, provided_pubkeys: str = None):
+    """
+    Get pubkey for an address.
+    :param address: Address to get pubkey for.
+    :param provided_pubkeys: Comma separated list of provided pubkeys.
+    """
     if provided_pubkeys:
         provided_pubkeys_list = provided_pubkeys.split(",")
     else:
         provided_pubkeys_list = None
     return backend.pubkeyhash_to_pubkey(address, provided_pubkeys=provided_pubkeys_list)
+
+
+def get_raw_transaction(tx_hash: str, verbose: bool = False):
+    """
+    Get a raw transaction from the blockchain
+    :param tx_hash: The transaction hash
+    :param verbose: Whether to return JSON output or raw hex
+    """
+    return backend.getrawtransaction(tx_hash, verbose=verbose)
 
 
 def get_backend_height():
