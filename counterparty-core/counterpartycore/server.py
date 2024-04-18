@@ -66,7 +66,7 @@ def get_lock():
         lock_socket.bind(socket_address)
     except socket.error:
         raise LockingError(error)  # noqa: B904
-    logger.debug("Lock acquired.")
+    logger.info("Lock acquired.")
 
 
 def initialise(*args, **kwargs):
