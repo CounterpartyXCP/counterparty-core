@@ -901,9 +901,6 @@ def follow(db):
     check.software_version()
     last_software_check = time.time()
 
-    # Initialise.
-    initialise(db)
-
     # Get index of last block.
     if ledger.CURRENT_BLOCK_INDEX == 0:
         logger.warning("New database.")

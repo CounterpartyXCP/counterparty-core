@@ -9,109 +9,40 @@ from counterpartycore.lib.api import util
 # Define the API routes except root (`/`) defined in `api_server.py`
 ROUTES = {
     ### /blocks ###
-    "/blocks": {
-        "function": ledger.get_blocks,
-    },
-    "/blocks/<int:block_index>": {
-        "function": ledger.get_block,
-    },
-    "/blocks/<int:block_index>/transactions": {
-        "function": ledger.get_transactions_by_block,
-    },
-    "/blocks/<int:block_index>/events": {
-        "function": ledger.get_events,
-    },
-    "/blocks/<int:block_index>/events/counts": {
-        "function": ledger.get_events_counts,
-    },
-    "/blocks/<int:block_index>/events/<event>": {
-        "function": ledger.get_events,
-    },
-    "/blocks/<int:block_index>/credits": {
-        "function": ledger.get_credits,
-    },
-    "/blocks/<int:block_index>/debits": {
-        "function": ledger.get_debits,
-    },
-    "/blocks/<int:block_index>/expirations": {
-        "function": ledger.get_expirations,
-    },
-    "/blocks/<int:block_index>/cancels": {
-        "function": ledger.get_cancels,
-    },
-    "/blocks/<int:block_index>/destructions": {
-        "function": ledger.get_destructions,
-    },
-    "/blocks/<int:block_index>/issuances": {
-        "function": ledger.get_issuances,
-    },
-    "/blocks/<int:block_index>/sends": {
-        "function": ledger.get_sends_or_receives,
-    },
-    "/blocks/<int:block_index>/dispenses": {
-        "function": ledger.get_dispenses,
-    },
-    "/blocks/<int:block_index>/sweeps": {
-        "function": ledger.get_sweeps,
-    },
+    "/blocks": ledger.get_blocks,
+    "/blocks/<int:block_index>": ledger.get_block,
+    "/blocks/<int:block_index>/transactions": ledger.get_transactions_by_block,
+    "/blocks/<int:block_index>/events": ledger.get_events_by_block,
+    "/blocks/<int:block_index>/events/counts": ledger.get_events_counts_by_block,
+    "/blocks/<int:block_index>/events/<event>": ledger.get_events_by_block_and_event,
+    "/blocks/<int:block_index>/credits": ledger.get_credits_by_block,
+    "/blocks/<int:block_index>/debits": ledger.get_debits_by_block,
+    "/blocks/<int:block_index>/expirations": ledger.get_expirations,
+    "/blocks/<int:block_index>/cancels": ledger.get_cancels,
+    "/blocks/<int:block_index>/destructions": ledger.get_destructions,
+    "/blocks/<int:block_index>/issuances": ledger.get_issuances_by_block,
+    "/blocks/<int:block_index>/sends": ledger.get_sends_or_receives_by_block,
+    "/blocks/<int:block_index>/dispenses": ledger.get_dispenses_by_block,
+    "/blocks/<int:block_index>/sweeps": ledger.get_sweeps_by_block,
     ### /transactions ###
-    "/transactions/info": {
-        "function": transaction.info,
-        "args": [("rawtransaction", str, None), ("block_index", int, None)],
-    },
-    "/transactions/unpack": {
-        "function": transaction.unpack,
-        "args": [("datahex", str, None), ("block_index", int, None)],
-    },
-    "/transactions/<tx_hash>": {
-        "function": ledger.get_transaction,
-    },
+    "/transactions/info": transaction.info,
+    "/transactions/unpack": transaction.unpack,
+    "/transactions/<tx_hash>": ledger.get_transaction,
     ### /addresses ###
-    "/addresses/<address>/balances": {
-        "function": ledger.get_address_balances,
-    },
-    "/addresses/<address>/balances/<asset>": {
-        "function": ledger.get_balance_object,
-    },
-    "/addresses/<address>/credits": {
-        "function": ledger.get_credits,
-    },
-    "/addresses/<address>/debits": {
-        "function": ledger.get_debits,
-    },
-    "/addresses/<address>/bets": {
-        "function": ledger.get_bet_by_feed,
-        "args": [("status", str, "open")],
-    },
-    "/addresses/<address>/broadcasts": {
-        "function": ledger.get_broadcasts_by_source,
-    },
-    "/addresses/<address>/burns": {
-        "function": ledger.get_burns,
-    },
-    "/addresses/<address>/sends": {
-        "function": ledger.get_sends,
-    },
-    "/addresses/<address>/receives": {
-        "function": ledger.get_receives,
-    },
-    "/addresses/<address>/sends/<asset>": {
-        "function": ledger.get_sends,
-    },
-    "/addresses/<address>/receives/<asset>": {
-        "function": ledger.get_receives,
-    },
-    "/addresses/<address>/dispensers": {
-        "function": ledger.get_dispensers,
-        "args": [("status", int, 0)],
-    },
-    "/addresses/<address>/dispensers/<asset>": {
-        "function": ledger.get_dispensers,
-        "args": [("status", int, 0)],
-    },
-    "/addresses/<address>/sweeps": {
-        "function": ledger.get_sweeps,
-    },
+    "/addresses/<address>/balances": ledger.get_address_balances,
+    "/addresses/<address>/balances/<asset>": ledger.get_balance_object,
+    "/addresses/<address>/credits": ledger.get_credits_by_address,
+    "/addresses/<address>/debits": ledger.get_debits_by_address,
+    "/addresses/<address>/bets": ledger.get_bet_by_feed,
+    "/addresses/<address>/broadcasts": ledger.get_broadcasts_by_source,
+    "/addresses/<address>/burns": ledger.get_burns,
+    "/addresses/<address>/sends": ledger.get_send_by_address,
+    "/addresses/<address>/receives": ledger.get_receive_by_address,
+    "/addresses/<address>/sends/<asset>": ledger.get_send_by_address_and_asset,
+    "/addresses/<address>/receives/<asset>": ledger.get_receive_by_address_and_asset,
+    "/addresses/<address>/dispensers": ledger.get_dispensers_by_address,
+    "/addresses/<address>/dispensers/<asset>": ledger.get_dispensers_by_address_and_asset,
+    "/addresses/<address>/sweeps": ledger.get_sweeps_by_address,
     ### /assets ###
     "/assets": {
         "function": ledger.get_valid_assets,
@@ -144,10 +75,7 @@ ROUTES = {
     "/assets/<asset>/sends": {
         "function": ledger.get_sends_or_receives,
     },
-    "/assets/<asset>/dispensers": {
-        "function": ledger.get_dispensers,
-        "args": [("status", int, 0)],
-    },
+    "/assets/<asset>/dispensers": ledger.get_dispensers_by_asset,
     "/assets/<asset>/dispensers/<address>": {
         "function": ledger.get_dispensers,
         "args": [("status", int, 0)],
@@ -249,6 +177,12 @@ ROUTES = {
         "function": ledger.get_mempool_events,
     },
 }
+
+for path, route in ROUTES.items():
+    if not isinstance(route, dict):
+        ROUTES[path] = {
+            "function": route,
+        }
 
 # Add compose routes for each transaction type
 ### /address/<source>/compose/<transaction_name> ###

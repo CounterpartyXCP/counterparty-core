@@ -1153,8 +1153,12 @@ def get_compose_common_args():
     return [(name, value[0], value[1]) for name, value in COMPOSE_COMMONS_ARGS.items()]
 
 
-def info(db, rawtransaction, block_index=None):
-    # block_index mandatory for transactions before block 335000
+def info(db, rawtransaction: str, block_index: int = None):
+    """
+    Returns Counterparty information from a raw transaction in hex format.
+    :param rawtransaction: Raw transaction in hex format
+    :param block_index: Block index mandatory for transactions before block 335000
+    """
     source, destination, btc_amount, fee, data, extra = gettxinfo.get_tx_info(
         db, BlockchainParser().deserialize_tx(rawtransaction), block_index=block_index
     )
@@ -1167,7 +1171,12 @@ def info(db, rawtransaction, block_index=None):
     }
 
 
-def unpack(db, datahex, block_index=None):
+def unpack(db, datahex: str, block_index: int = None):
+    """
+    Unpacks Counterparty data in hex format and returns the message type and data.
+    :param datahex: Data in hex format
+    :param block_index: Block index of the transaction containing this data
+    """
     data = binascii.unhexlify(datahex)
     message_type_id, message = message_type.unpack(data)
     block_index = block_index or ledger.CURRENT_BLOCK_INDEX

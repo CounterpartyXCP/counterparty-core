@@ -100,6 +100,23 @@ def get_events(db, block_index=None, event=None, event_index=None, last=None, li
     return events
 
 
+def get_events_by_block(db, block_index: int):
+    """
+    Returns the events of a block
+    :param int block_index: The index of the block to return
+    """
+    return get_events(db, block_index=block_index)
+
+
+def get_events_by_block_and_event(db, block_index: int, event: str):
+    """
+    Returns the events of a block filtered by event
+    :param int block_index: The index of the block to return
+    :param str event: The event to filter by
+    """
+    return get_events(db, block_index=block_index, event=event)
+
+
 def get_mempool_events(db, event_name=None):
     cursor = db.cursor()
     where = []
@@ -135,6 +152,14 @@ def get_events_counts(db, block_index=None):
     query += "GROUP BY event"
     cursor.execute(query)
     return cursor.fetchall()
+
+
+def get_events_counts_by_block(db, block_index: int):
+    """
+    Returns the event counts of a block
+    :param int block_index: The index of the block to return
+    """
+    return get_events_counts(db, block_index=block_index)
 
 
 # we are using a function here for testing purposes
@@ -358,7 +383,12 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False, return_list
     return balances[0]["quantity"]
 
 
-def get_balance_object(db, address, asset):
+def get_balance_object(db, address: str, asset: str):
+    """
+    Returns the balance of an address and asset
+    :param str address: The address to return
+    :param str asset: The asset to return
+    """
     return {
         "address": address,
         "asset": asset,
@@ -366,7 +396,11 @@ def get_balance_object(db, address, asset):
     }
 
 
-def get_address_balances(db, address):
+def get_address_balances(db, address: str):
+    """
+    Returns the balances of an address
+    :param str address: The address to return
+    """
     cursor = db.cursor()
     query = """
         SELECT address, asset, quantity, MAX(rowid)
@@ -433,8 +467,40 @@ def get_credits(db, address=None, asset=None, block_index=None, tx_index=None):
     return get_credits_or_debits(db, "credits", address, asset, block_index, tx_index)
 
 
+def get_credits_by_block(db, block_index: int):
+    """
+    Returns the credits of a block
+    :param int block_index: The index of the block to return
+    """
+    return get_credits(db, block_index=block_index)
+
+
+def get_credits_by_address(db, address: str):
+    """
+    Returns the credits of an address
+    :param str address: The address to return
+    """
+    return get_credits(db, address=address)
+
+
 def get_debits(db, address=None, asset=None, block_index=None, tx_index=None):
     return get_credits_or_debits(db, "debits", address, asset, block_index, tx_index)
+
+
+def get_debits_by_block(db, block_index: int):
+    """
+    Returns the debits of a block
+    :param int block_index: The index of the block to return
+    """
+    return get_debits(db, block_index=block_index)
+
+
+def get_debits_by_address(db, address: str):
+    """
+    Returns the debits of an address
+    :param str address: The address to return
+    """
+    return get_debits(db, address=address)
 
 
 def get_sends_or_receives(
@@ -464,16 +530,58 @@ def get_sends_or_receives(
     return cursor.fetchall()
 
 
+def get_sends_or_receives_by_block(db, block_index: int):
+    """
+    Returns the sends of a block
+    :param int block_index: The index of the block to return
+    """
+    return get_sends_or_receives(db, block_index=block_index)
+
+
 def get_sends(db, address=None, asset=None, block_index=None, status="valid"):
     return get_sends_or_receives(
         db, source=address, asset=asset, block_index=block_index, status=status
     )
 
 
+def get_send_by_address(db, address: str):
+    """
+    Returns the sends of an address
+    :param str address: The address to return
+    """
+    return get_sends(db, address=address)
+
+
+def get_send_by_address_and_asset(db, address: str, asset: str):
+    """
+    Returns the sends of an address and asset
+    :param str address: The address to return
+    :param str asset: The asset to return
+    """
+    return get_sends(db, address=address, asset=asset)
+
+
 def get_receives(db, address=None, asset=None, block_index=None, status="valid"):
     return get_sends_or_receives(
         db, destination=address, asset=asset, block_index=block_index, status=status
     )
+
+
+def get_receive_by_address(db, address: str):
+    """
+    Returns the receives of an address
+    :param str address: The address to return
+    """
+    return get_receives(db, address=address)
+
+
+def get_receive_by_address_and_asset(db, address: str, asset: str):
+    """
+    Returns the receives of an address and asset
+    :param str address: The address to return
+    :param str asset: The asset to return
+    """
+    return get_receives(db, address=address, asset=asset)
 
 
 def get_sweeps(db, address=None, block_index=None, status="valid"):
@@ -493,6 +601,22 @@ def get_sweeps(db, address=None, block_index=None, status="valid"):
     query = f"""SELECT * FROM sweeps WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
+
+
+def get_sweeps_by_block(db, block_index: int):
+    """
+    Returns the sweeps of a block
+    :param int block_index: The index of the block to return
+    """
+    return get_sweeps(db, block_index=block_index)
+
+
+def get_sweeps_by_address(db, address: str):
+    """
+    Returns the sweeps of an address
+    :param str address: The address to return
+    """
+    return get_sweeps(db, address=address)
 
 
 #####################
@@ -856,6 +980,14 @@ def get_issuances(
     return cursor.fetchall()
 
 
+def get_issuances_by_block(db, block_index: int):
+    """
+    Returns the issuances of a block
+    :param int block_index: The index of the block to return
+    """
+    return get_issuances(db, block_index=block_index)
+
+
 def get_assets_by_longname(db, asset_longname):
     cursor = db.cursor()
     query = """
@@ -926,7 +1058,15 @@ def get_oracle_last_price(db, oracle_address, block_index):
     )
 
 
-def get_broadcasts_by_source(db, address, status="valid", order_by="DESC"):
+def get_broadcasts_by_source(db, address: str, status: str = "valid", order_by: str = "DESC"):
+    """
+    Returns the broadcasts of a source
+    :param str address: The address to return
+    :param str status: The status of the broadcasts to return
+    :param str order_by: The order of the broadcasts to return
+    """
+    if order_by not in ["ASC", "DESC"]:
+        raise exceptions.InvalidArgument("Invalid order_by parameter")
     cursor = db.cursor()
     query = f"""
         SELECT * FROM broadcasts
@@ -943,7 +1083,12 @@ def get_broadcasts_by_source(db, address, status="valid", order_by="DESC"):
 #####################
 
 
-def get_burns(db, address=None, status="valid"):
+def get_burns(db, address: str = None, status: str = "valid"):
+    """
+    Returns the burns of an address
+    :param str address: The address to return
+    :param str status: The status of the burns to return
+    """
     cursor = db.cursor()
     where = []
     bindings = []
@@ -986,13 +1131,21 @@ def get_blocks(db, last: int = None, limit: int = 10):
 
 
 def get_block(db, block_index: int):
+    """
+    Return the information of a block
+    :param int block_index: The index of the block to return
+    """
     blocks = get_blocks(db, last=block_index, limit=1)
     if blocks:
         return blocks[0]
     return None
 
 
-def get_transactions_by_block(db, block_index):
+def get_transactions_by_block(db, block_index: int):
+    """
+    Returns the transactions of a block
+    :param int block_index: The index of the block to return
+    """
     cursor = db.cursor()
     query = """
         SELECT * FROM transactions
@@ -1031,7 +1184,11 @@ def get_transactions(db, tx_hash=None):
     return cursor.fetchall()
 
 
-def get_transaction(db, tx_hash):
+def get_transaction(db, tx_hash: str):
+    """
+    Returns the information of a transaction
+    :param str tx_hash: The hash of the transaction to return
+    """
     transactions = get_transactions(db, tx_hash)
     if transactions:
         return transactions[0]
@@ -1059,7 +1216,11 @@ def get_addresses(db, address=None):
     return cursor.fetchall()
 
 
-def get_expirations(db, block_index):
+def get_expirations(db, block_index: int):
+    """
+    Returns the expirations of a block
+    :param int block_index: The index of the block to return
+    """
     cursor = db.cursor()
     queries = [
         """
@@ -1093,7 +1254,11 @@ def get_expirations(db, block_index):
     return cursor.fetchall()
 
 
-def get_cancels(db, block_index):
+def get_cancels(db, block_index: int):
+    """
+    Returns the cancels of a block
+    :param int block_index: The index of the block to return
+    """
     cursor = db.cursor()
     query = """
         SELECT * FROM cancels
@@ -1104,7 +1269,11 @@ def get_cancels(db, block_index):
     return cursor.fetchall()
 
 
-def get_destructions(db, block_index):
+def get_destructions(db, block_index: int):
+    """
+    Returns the destructions of a block
+    :param int block_index: The index of the block to return
+    """
     cursor = db.cursor()
     query = """
         SELECT * FROM destructions
@@ -1455,6 +1624,31 @@ def get_dispensers(
     return cursor.fetchall()
 
 
+def get_dispensers_by_address(db, address: str, status: int = 0):
+    """
+    Returns the dispensers of an address
+    :param str address: The address to return
+    """
+    return get_dispensers(db, address=address, status=status)
+
+
+def get_dispensers_by_asset(db, asset: str, status: int = 0):
+    """
+    Returns the dispensers of an asset
+    :param str asset: The asset to return
+    """
+    return get_dispensers(db, asset=asset, status=status)
+
+
+def get_dispensers_by_address_and_asset(db, address: str, asset: str, status: int = 0):
+    """
+    Returns the dispensers of an address and an asset
+    :param str address: The address to return
+    :param str asset: The asset to return
+    """
+    return get_dispensers(db, address=address, asset=asset, status=status)
+
+
 def get_dispenses(db, dispenser_tx_hash=None, block_index=None):
     cursor = db.cursor()
     where = []
@@ -1469,6 +1663,14 @@ def get_dispenses(db, dispenser_tx_hash=None, block_index=None):
     query = f"""SELECT * FROM dispenses WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
+
+
+def get_dispenses_by_block(db, block_index: int):
+    """
+    Returns the dispenses of a block
+    :param int block_index: The index of the block to return
+    """
+    return get_dispenses(db, block_index=block_index)
 
 
 ### UPDATES ###
@@ -1569,7 +1771,12 @@ def get_matching_bets(db, feed_address, bet_type):
     return cursor.fetchall()
 
 
-def get_bet_by_feed(db, address, status="open"):
+def get_bet_by_feed(db, address: str, status: str = "open"):
+    """
+    Returns the bets of a feed
+    :param str address: The address of the feed
+    :param str status: The status of the bet
+    """
     cursor = db.cursor()
     query = """
         SELECT * FROM (
