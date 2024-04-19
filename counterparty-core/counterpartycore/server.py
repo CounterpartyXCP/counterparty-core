@@ -614,7 +614,6 @@ def initialise_log_and_config(args):
         "utxo_locks_max_addresses": args.utxo_locks_max_addresses,
         "utxo_locks_max_age": args.utxo_locks_max_age,
         "no_mempool": args.no_mempool,
-        "skip_db_check": args.skip_db_check,
     }
 
     initialise_log_config(
