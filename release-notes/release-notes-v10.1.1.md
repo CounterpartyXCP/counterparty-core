@@ -11,13 +11,12 @@ To upgrade from v10.1.0 manually, you must first uninstall the following Counter
 pip3 uninstall counterparty-rs counterparty-lib counterparty-cli
 ```
 
-This release contains no protocol changes. The API is unmodified, except that some parameters to `create_*` RPC calls may be required where before they were optional. (See below.)
+This release contains no protocol changes, and the API has not been modified.
 
 
 # ChangeLog
 
 ## Bugfixes
-* Don't automatically use `None` for missing arguments during an RPC call to `create_*`. Instead use the default value defined in the signature of the corresponding `*.compose()` function. If no default value is defined, the parameter is mandatory.
 * Fix missing events (`NEW_BLOCK` and `NEW_TRANSACTION`) when kickstarting and reparsing. To correct the values in the `messages` table, a full reparse is required.
 * Fix the current block index after a blockchain reorganisation.
 * Fix database shutdown, which caused a recovery of the WAL file on each startup.

@@ -605,13 +605,8 @@ def compose_transaction(
     compose_method = sys.modules[f"counterpartycore.lib.messages.{name}"].compose
     compose_params = inspect.getfullargspec(compose_method)[0]
     missing_params = [p for p in compose_params if p not in params and p != "db"]
-    if len(missing_params) > 0:
-        default_values = get_default_args(compose_method)
-        for param in missing_params:
-            if param in default_values:
-                params[param] = default_values[param]
-            else:
-                raise exceptions.ComposeError(f"missing parameters: {', '.join(missing_params)}")
+    for param in missing_params:
+        params[param] = None
 
     # dont override fee_per_kb if specified
     if fee_per_kb is not None:
