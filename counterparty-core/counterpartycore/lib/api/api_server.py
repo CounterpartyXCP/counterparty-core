@@ -14,7 +14,12 @@ from counterpartycore.lib import (
     ledger,
 )
 from counterpartycore.lib.api.routes import ROUTES
-from counterpartycore.lib.api.util import get_backend_height, init_api_access_log, remove_rowids
+from counterpartycore.lib.api.util import (
+    get_backend_height,
+    init_api_access_log,
+    remove_rowids,
+    to_json,
+)
 from flask import Flask, request
 from flask import g as flask_globals
 from flask_cors import CORS
@@ -81,7 +86,7 @@ def inject_headers(result, return_code=None):
     if isinstance(result, flask.Response):
         response = result
     else:
-        response = flask.make_response(flask.jsonify(result), http_code)
+        response = flask.make_response(to_json(result), http_code)
     response.headers["X-COUNTERPARTY-HEIGHT"] = ledger.CURRENT_BLOCK_INDEX
     response.headers["X-COUNTERPARTY-READY"] = ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT
     response.headers["X-BACKEND-HEIGHT"] = BACKEND_HEIGHT

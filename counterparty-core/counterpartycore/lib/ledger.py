@@ -123,6 +123,8 @@ def get_events_by_block_and_event(db, block_index: int, event: str):
     :param int block_index: The index of the block to return
     :param str event: The event to filter by
     """
+    if event == "count":
+        return get_events_counts_by_block(db, block_index=block_index)
     return get_events(db, block_index=block_index, event=event)
 
 
@@ -191,8 +193,8 @@ def get_events_counts(db, block_index=None):
     if block_index is not None:
         query += "WHERE block_index = ?"
         bindings.append(block_index)
-    query += "GROUP BY event"
-    cursor.execute(query)
+    query += " GROUP BY event"
+    cursor.execute(query, bindings)
     return cursor.fetchall()
 
 
@@ -1254,13 +1256,12 @@ def get_blocks(db, last: int = None, limit: int = 10):
     cursor = db.cursor()
     bindings = []
     query = """
-        SELECT * FROM blocks WHERE 
-        ORDER BY block_index DESC
+        SELECT * FROM blocks
     """
     if last is not None:
-        query += "WHERE BLOCK_INDEX <= ?"
+        query += "WHERE block_index <= ?"
         bindings.append(last)
-    query += "LIMIT ?"
+    query += " ORDER BY block_index DESC LIMIT ?"
     bindings.append(limit)
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
@@ -1385,7 +1386,7 @@ def get_expirations(db, block_index: int):
         """,
     ]
     query = " UNION ALL ".join(queries)
-    bindings = (block_index,)
+    bindings = (block_index,) * 6
     cursor.execute(query, bindings)
     return cursor.fetchall()
 

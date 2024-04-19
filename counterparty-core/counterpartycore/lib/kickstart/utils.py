@@ -1,7 +1,5 @@
 import binascii
-import decimal
 import hashlib
-import json
 import math
 import os
 from multiprocessing import resource_tracker
@@ -29,13 +27,6 @@ def inverse_hash(hashstring):
 
 def ib2h(b):
     return inverse_hash(b2h(b))
-
-
-class JsonDecimalEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, decimal.Decimal):
-            return str(o)
-        return super(DecimalEncoder, self).default(o)  # noqa: F821
 
 
 def decode_value(key, value):

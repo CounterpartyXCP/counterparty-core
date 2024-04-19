@@ -1,4 +1,6 @@
+import decimal
 import inspect
+import json
 import logging
 from logging import handlers as logging_handlers
 
@@ -193,3 +195,16 @@ def prepare_routes(routes):
             "args": prepare_route_args(function),
         }
     return prepared_routes
+
+
+class ApiJsonEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, decimal.Decimal):
+            return str(o)
+        if isinstance(o, bytes):
+            return o.hex()
+        return super().default(o)
+
+
+def to_json(obj):
+    return json.dumps(obj, cls=ApiJsonEncoder, indent=4)

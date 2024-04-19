@@ -4,6 +4,7 @@ import pytest
 import requests
 
 from counterpartycore.lib import util
+from counterpartycore.lib.api import routes
 
 # this is require near the top to do setup of the test suite
 from counterpartycore.test import (
@@ -15,6 +16,18 @@ from counterpartycore.test.util_test import CURR_DIR
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"
 FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
 API_ROOT = "http://api:api@localhost:10009"
+
+
+@pytest.mark.usefixtures("api_server_v2")
+def test_api_v2():
+    block_index = 310491
+    for route in routes.ROUTES:
+        url = f"{API_ROOT}{route}"
+        if route.startswith("/blocks"):
+            url = url.replace("<int:block_index>", str(block_index))
+            # print(url)
+            result = requests.get(url)  # noqa: S113
+            assert result.status_code == 200
 
 
 @pytest.mark.usefixtures("api_server_v2")
