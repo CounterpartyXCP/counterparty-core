@@ -30,9 +30,6 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib import kickstart as kickstarter
-from counterpartycore.lib.telemetry.client import TelemetryClientLocal
-from counterpartycore.lib.telemetry.collector import TelemetryCollectorLive
-from counterpartycore.lib.telemetry.daemon import TelemetryDaemon
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -571,14 +568,6 @@ def start_all(catch_up="normal"):
 
         db = initialise_db()
         blocks.initialise(db)
-
-        telemetry_daemon = TelemetryDaemon(
-            interval=60,
-            collector=TelemetryCollectorLive(db=db),
-            client=TelemetryClientLocal(),
-        )
-
-        telemetry_daemon.start()
 
         # Reset UTXO_LOCKS.  This previously was done in
         # initilise_config
