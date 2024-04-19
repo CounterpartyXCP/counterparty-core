@@ -21,6 +21,7 @@ This release contains no protocol changes. The API is unmodified, except that so
 * Fix missing events (`NEW_BLOCK` and `NEW_TRANSACTION`) when kickstarting and reparsing. To correct the values in the `messages` table, a full reparse is required.
 * Fix the current block index after a blockchain reorganisation.
 * Fix database shutdown, which caused a recovery of the WAL file on each startup.
+* Eliminate some extraneous error messages
 
 ## Codebase
 * Merge `counterparty-lib` and `counterparty-core` package into `counterparty-core`
