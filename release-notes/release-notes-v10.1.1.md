@@ -11,7 +11,7 @@ To upgrade from v10.1.0 manually, you must first uninstall the following Counter
 pip3 uninstall counterparty-rs counterparty-lib counterparty-cli
 ```
 
-This release contains no protocol changes. The API is unmodified, except that some parameters to `create_*` RPC calls may be required where before they were optional. (See below.)
+This release contains no protocol changes, and the API has not been modified.
 
 
 # ChangeLog
