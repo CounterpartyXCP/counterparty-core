@@ -5,6 +5,7 @@
 - [ ] Update Counterparty Docker images versions in the `docker-compose.yml` files
 - [ ] Review all open pull requests
 - [ ] Write release notes
+- [ ] Add a checkpoint verified on all supported versions
 - [ ] Create pull request against `master`
 - [ ] Ensure all tests pass in CI
 - [ ] Merge PR into `master`
