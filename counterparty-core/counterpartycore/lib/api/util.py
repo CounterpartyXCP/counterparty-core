@@ -150,6 +150,18 @@ def prepare_route_args(function):
     function_args = inspect.signature(function).parameters
     args_description = get_args_description(function)
     for arg_name, arg in function_args.items():
+        if arg_name == "construct_args":
+            for carg_name, carg_info in transaction.COMPOSE_COMMONS_ARGS.items():
+                args.append(
+                    {
+                        "name": carg_name,
+                        "type": carg_info[0].__name__,
+                        "default": carg_info[1],
+                        "description": carg_info[2],
+                        "required": False,
+                    }
+                )
+            continue
         annotation = arg.annotation
         if annotation is inspect.Parameter.empty:
             continue
@@ -170,3 +182,14 @@ def prepare_route_args(function):
 def get_function_description(function):
     docstring = parse_docstring(function.__doc__)
     return docstring.description
+
+
+def prepare_routes(routes):
+    prepared_routes = {}
+    for route, function in routes.items():
+        prepared_routes[route] = {
+            "function": function,
+            "description": get_function_description(function),
+            "args": prepare_route_args(function),
+        }
+    return prepared_routes

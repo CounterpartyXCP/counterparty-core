@@ -6,7 +6,6 @@ This module contains no consensus‐critical code.
 
 import binascii
 import decimal
-import functools
 import hashlib
 import inspect
 import io
@@ -957,6 +956,78 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
     return dust_return_pubkey
 
 
+COMPOSE_COMMONS_ARGS = {
+    "encoding": (str, "auto", "The encoding method to use"),
+    "fee_per_kb": (
+        int,
+        None,
+        "The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshi)",
+    ),
+    "regular_dust_size": (
+        int,
+        config.DEFAULT_REGULAR_DUST_SIZE,
+        "Specify (in satoshi) to override the (dust) amount of BTC used for each non-(bare) multisig output.",
+    ),
+    "multisig_dust_size": (
+        int,
+        config.DEFAULT_MULTISIG_DUST_SIZE,
+        "Specify (in satoshi) to override the (dust) amount of BTC used for each (bare) multisig output",
+    ),
+    "op_return_value": (
+        int,
+        config.DEFAULT_OP_RETURN_VALUE,
+        "The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away",
+    ),
+    "pubkey": (
+        str,
+        None,
+        "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+    ),
+    "allow_unconfirmed_inputs": (
+        bool,
+        False,
+        "Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs",
+    ),
+    "fee": (
+        int,
+        None,
+        "If you'd like to specify a custom miners' fee, specify it here (in satoshi). Leave as default for the server to automatically choose",
+    ),
+    "fee_provided": (
+        int,
+        0,
+        "If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshi). This differs from fee in that this is an upper bound value, which fee is an exact value",
+    ),
+    "unspent_tx_hash": (
+        str,
+        None,
+        "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+    ),
+    "dust_return_pubkey": (
+        str,
+        None,
+        "The dust return pubkey is used in multi-sig data outputs (as the only real pubkey) to make those the outputs spendable. By default, this pubkey is taken from the pubkey used in the first transaction input. However, it can be overridden here (and is required to be specified if a P2SH input is used and multisig is used as the data output encoding.) If specified, specify the public key (in hex format) where dust will be returned to so that it can be reclaimed. Only valid/useful when used with transactions that utilize multisig data encoding. Note that if this value is set to false, this instructs counterparty-server to use the default dust return pubkey configured at the node level. If this default is not set at the node level, the call will generate an exception",
+    ),
+    "disable_utxo_locks": (
+        bool,
+        False,
+        "By default, UTXO's utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs",
+    ),
+    "extended_tx_info": (
+        bool,
+        False,
+        "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+    ),
+    "p2sh_pretx_txid": (
+        str,
+        None,
+        "The previous transaction txid for a two part P2SH message. This txid must be taken from the signed transaction",
+    ),
+    "old_style_api": (bool, True, "Use the old style API"),
+    "segwit": (bool, False, "Use segwit"),
+}
+
+
 def split_compose_arams(**kwargs):
     transaction_args = {}
     common_args = {}
@@ -978,27 +1049,6 @@ def get_default_args(func):
         for k, v in signature.parameters.items()
         if v.default is not inspect.Parameter.empty
     }
-
-
-COMPOSE_COMMONS_ARGS = {
-    "encoding": (str, "auto"),
-    "fee_per_kb": (int, None),
-    "estimate_fee_per_kb": (int, None),
-    "regular_dust_size": (int, config.DEFAULT_REGULAR_DUST_SIZE),
-    "multisig_dust_size": (int, config.DEFAULT_MULTISIG_DUST_SIZE),
-    "op_return_value": (int, config.DEFAULT_OP_RETURN_VALUE),
-    "pubkey": (str, None),
-    "allow_unconfirmed_inputs": (bool, False),
-    "fee": (int, None),
-    "fee_provided": (int, 0),
-    "unspent_tx_hash": (str, None),
-    "dust_return_pubkey": (str, None),
-    "disable_utxo_locks": (bool, False),
-    "extended_tx_info": (bool, False),
-    "p2sh_pretx_txid": (str, None),
-    "old_style_api": (bool, True),
-    "segwit": (bool, False),
-}
 
 
 def compose_transaction(
@@ -1142,15 +1192,47 @@ def compose(db, source, transaction_name, **kwargs):
     return compose_transaction(db, name=transaction_name, params=transaction_args, **common_args)
 
 
-COMPOSE_FUNCTIONS = {}
-for transaction_name in COMPOSABLE_TRANSACTIONS:
-    COMPOSE_FUNCTIONS[transaction_name] = functools.partial(
-        compose, transaction_name=transaction_name
+def compose_bet(
+    db,
+    address: str,
+    feed_address: str,
+    bet_type: int,
+    deadline: int,
+    wager_quantity: int,
+    counterwager_quantity: int,
+    expiration: int,
+    leverage: int = 5040,
+    target_value: float = None,
+    **construct_args,
+):
+    """
+    Composes a transaction to issue a bet against a feed.
+    :param address: The address that will make the bet
+    :param feed_address: The address that hosts the feed to be bet on
+    :param bet_type: Bet 0 for Bullish CFD (deprecated), 1 for Bearish CFD (deprecated), 2 for Equal, 3 for NotEqual
+    :param deadline: The time at which the bet should be decided/settled, in Unix time (seconds since epoch)
+    :param wager_quantity: The quantities of XCP to wager (in satoshis, hence integer).
+    :param counterwager_quantity: The minimum quantities of XCP to be wagered against, for the bets to match
+    :param target_value: Target value for Equal/NotEqual bet
+    :param leverage: Leverage, as a fraction of 5040
+    :param expiration: The number of blocks after which the bet expires if it remains unmatched
+    """
+    return compose_transaction(
+        db,
+        name="bet",
+        params={
+            "source": address,
+            "feed_address": feed_address,
+            "bet_type": bet_type,
+            "deadline": deadline,
+            "wager_quantity": wager_quantity,
+            "counterwager_quantity": counterwager_quantity,
+            "target_value": target_value,
+            "leverage": leverage,
+            "expiration": expiration,
+        },
+        **construct_args,
     )
-
-
-def get_compose_common_args():
-    return [(name, value[0], value[1]) for name, value in COMPOSE_COMMONS_ARGS.items()]
 
 
 def info(db, rawtransaction: str, block_index: int = None):
