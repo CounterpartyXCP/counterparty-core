@@ -1537,7 +1537,7 @@ class APIServer(threading.Thread):
 
         # Init the HTTP Server.
         self.is_ready = True
-        self.server = make_server(config.RPC_HOST, config.RPC_PORT, app)
+        self.server = make_server(config.RPC_HOST, config.RPC_PORT, app, threaded=True)
         init_api_access_log(app)
         self.ctx = app.app_context()
         self.ctx.push()
