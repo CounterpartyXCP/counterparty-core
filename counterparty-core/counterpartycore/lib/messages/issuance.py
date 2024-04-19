@@ -347,14 +347,14 @@ def validate(
 
 def compose(
     db,
-    source,
-    asset,
-    quantity,
-    transfer_destination=None,
-    divisible=None,
-    lock=None,
-    reset=None,
-    description=None,
+    source: str,
+    asset: str,
+    quantity: int,
+    transfer_destination: str = None,
+    divisible: bool = None,
+    lock: bool = None,
+    reset: bool = None,
+    description: str = None,
 ):
     # Callability is deprecated, so for re‐issuances set relevant parameters
     # to old values; for first issuances, make uncallable.
@@ -565,27 +565,26 @@ def compose(
     return (source, destination_outputs, data)
 
 
-def parse(db, tx, message, message_type_id):
-    issuance_parse_cursor = db.cursor()
+def unpack(db, message, message_type_id, block_index, return_dict=False):
     asset_format = ledger.get_value_by_block_index(
-        "issuance_asset_serialization_format", tx["block_index"]
+        "issuance_asset_serialization_format", block_index
     )
     asset_format_length = ledger.get_value_by_block_index(
-        "issuance_asset_serialization_length", tx["block_index"]
+        "issuance_asset_serialization_length", block_index
     )
     subasset_format = ledger.get_value_by_block_index(
-        "issuance_subasset_serialization_format", tx["block_index"]
+        "issuance_subasset_serialization_format", block_index
     )
     subasset_format_length = ledger.get_value_by_block_index(
-        "issuance_subasset_serialization_length", tx["block_index"]
+        "issuance_subasset_serialization_length", block_index
     )
 
     # Unpack message.
     try:
         subasset_longname = None
         if message_type_id == LR_SUBASSET_ID or message_type_id == SUBASSET_ID:
-            if not ledger.enabled("subassets", block_index=tx["block_index"]):
-                logger.warning(f"subassets are not enabled at block {tx['block_index']}")
+            if not ledger.enabled("subassets", block_index=block_index):
+                logger.warning(f"subassets are not enabled at block {block_index}")
                 raise exceptions.UnpackError
 
             # parse a subasset original issuance message
@@ -607,9 +606,7 @@ def parse(db, tx, message, message_type_id):
 
             description_length = len(message) - subasset_format_length - compacted_subasset_length
             if description_length < 0:
-                logger.warning(
-                    f"invalid subasset length: [issuance] tx [{tx['tx_hash']}]: {compacted_subasset_length}"
-                )
+                logger.warning(f"invalid subasset length: {compacted_subasset_length}")
                 raise exceptions.UnpackError
             messages_format = f">{compacted_subasset_length}s{description_length}s"
             compacted_subasset_longname, description = struct.unpack(
@@ -628,7 +625,7 @@ def parse(db, tx, message, message_type_id):
                             description = None
                     except UnicodeDecodeError:
                         description = ""
-        elif (tx["block_index"] > 283271 or config.TESTNET or config.REGTEST) and len(
+        elif (block_index > 283271 or config.TESTNET or config.REGTEST) and len(
             message
         ) >= asset_format_length:  # Protocol change.
             if (len(message) - asset_format_length <= 42) and not ledger.enabled(
@@ -698,11 +695,11 @@ def parse(db, tx, message, message_type_id):
                 "",
             )
         try:
-            asset = ledger.generate_asset_name(asset_id, tx["block_index"])
+            asset = ledger.generate_asset_name(asset_id, block_index)
 
             ##This is for backwards compatibility with assets names longer than 12 characters
             if asset.startswith("A"):
-                named_asset = ledger.get_asset_name(db, asset_id, tx["block_index"])
+                named_asset = ledger.get_asset_name(db, asset_id, block_index)
 
                 if named_asset != 0:
                     asset = named_asset
@@ -718,7 +715,21 @@ def parse(db, tx, message, message_type_id):
             asset = None
             status = "invalid: bad asset name"
     except exceptions.UnpackError as e:  # noqa: F841
-        asset, quantity, divisible, lock, reset, callable_, call_date, call_price, description = (
+        (
+            asset_id,
+            asset,
+            subasset_longname,
+            quantity,
+            divisible,
+            lock,
+            reset,
+            callable_,
+            call_date,
+            call_price,
+            description,
+        ) = (
+            None,
+            None,
             None,
             None,
             None,
@@ -731,6 +742,52 @@ def parse(db, tx, message, message_type_id):
         )
         status = "invalid: could not unpack"
 
+    if return_dict:
+        return {
+            "asset_id": asset_id,
+            "asset": asset,
+            "subasset_longname": subasset_longname,
+            "quantity": quantity,
+            "divisible": divisible,
+            "lock": lock,
+            "reset": reset,
+            "callable": callable_,
+            "call_date": call_date,
+            "call_price": call_price,
+            "description": description,
+            "status": status,
+        }
+    return (
+        asset_id,
+        asset,
+        subasset_longname,
+        quantity,
+        divisible,
+        lock,
+        reset,
+        callable_,
+        call_date,
+        call_price,
+        description,
+        status,
+    )
+
+
+def parse(db, tx, message, message_type_id):
+    (
+        asset_id,
+        asset,
+        subasset_longname,
+        quantity,
+        divisible,
+        lock,
+        reset,
+        callable_,
+        call_date,
+        call_price,
+        description,
+        status,
+    ) = unpack(db, message, message_type_id, tx["block_index"])
     # parse and validate the subasset from the message
     subasset_parent = None
     if status == "valid" and subasset_longname is not None:  # Protocol change.
@@ -942,5 +999,3 @@ def parse(db, tx, message, message_type_id):
                 action="issuance",
                 event=tx["tx_hash"],
             )
-
-        issuance_parse_cursor.close()

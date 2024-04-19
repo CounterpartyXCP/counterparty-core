@@ -7,30 +7,25 @@ This module contains no consensus‐critical code.
 import binascii
 import decimal
 import hashlib
+import inspect
 import io
-import json  # noqa: F401
 import logging
-import math  # noqa: F401
-import os  # noqa: F401
-import re  # noqa: F401
-import sys  # noqa: F401
+import sys
 import threading
-import time  # noqa: F401
 
 import bitcoin as bitcoinlib
 import cachetools
-import requests  # noqa: F401
-from bitcoin.core import CTransaction, b2lx, x  # noqa: F401
-from bitcoin.core.script import CScript  # noqa: F401
+from bitcoin.core import CTransaction
 
 from counterpartycore.lib import (
     arc4,  # noqa: F401
     backend,
-    blocks,  # noqa: F401
     config,
     exceptions,
     gettxinfo,
     ledger,
+    message_type,
+    messages,
     script,
     util,
 )
@@ -959,3 +954,717 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
         raise script.InputError("Invalid private key.")  # noqa: B904
 
     return dust_return_pubkey
+
+
+COMPOSE_COMMONS_ARGS = {
+    "encoding": (str, "auto", "The encoding method to use"),
+    "fee_per_kb": (
+        int,
+        None,
+        "The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshi)",
+    ),
+    "regular_dust_size": (
+        int,
+        config.DEFAULT_REGULAR_DUST_SIZE,
+        "Specify (in satoshi) to override the (dust) amount of BTC used for each non-(bare) multisig output.",
+    ),
+    "multisig_dust_size": (
+        int,
+        config.DEFAULT_MULTISIG_DUST_SIZE,
+        "Specify (in satoshi) to override the (dust) amount of BTC used for each (bare) multisig output",
+    ),
+    "op_return_value": (
+        int,
+        config.DEFAULT_OP_RETURN_VALUE,
+        "The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away",
+    ),
+    "pubkey": (
+        str,
+        None,
+        "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+    ),
+    "allow_unconfirmed_inputs": (
+        bool,
+        False,
+        "Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs",
+    ),
+    "fee": (
+        int,
+        None,
+        "If you'd like to specify a custom miners' fee, specify it here (in satoshi). Leave as default for the server to automatically choose",
+    ),
+    "fee_provided": (
+        int,
+        0,
+        "If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshi). This differs from fee in that this is an upper bound value, which fee is an exact value",
+    ),
+    "unspent_tx_hash": (
+        str,
+        None,
+        "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+    ),
+    "dust_return_pubkey": (
+        str,
+        None,
+        "The dust return pubkey is used in multi-sig data outputs (as the only real pubkey) to make those the outputs spendable. By default, this pubkey is taken from the pubkey used in the first transaction input. However, it can be overridden here (and is required to be specified if a P2SH input is used and multisig is used as the data output encoding.) If specified, specify the public key (in hex format) where dust will be returned to so that it can be reclaimed. Only valid/useful when used with transactions that utilize multisig data encoding. Note that if this value is set to false, this instructs counterparty-server to use the default dust return pubkey configured at the node level. If this default is not set at the node level, the call will generate an exception",
+    ),
+    "disable_utxo_locks": (
+        bool,
+        False,
+        "By default, UTXO's utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs",
+    ),
+    "extended_tx_info": (
+        bool,
+        False,
+        "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+    ),
+    "p2sh_pretx_txid": (
+        str,
+        None,
+        "The previous transaction txid for a two part P2SH message. This txid must be taken from the signed transaction",
+    ),
+    "old_style_api": (bool, True, "Use the old style API"),
+    "segwit": (bool, False, "Use segwit"),
+}
+
+
+def split_compose_arams(**kwargs):
+    transaction_args = {}
+    common_args = {}
+    private_key_wif = None
+    for key, value in kwargs.items():
+        if key in COMPOSE_COMMONS_ARGS:
+            common_args[key] = value
+        elif key == "privkey":
+            private_key_wif = value
+        else:
+            transaction_args[key] = value
+    return transaction_args, common_args, private_key_wif
+
+
+def get_default_args(func):
+    signature = inspect.signature(func)
+    return {
+        k: v.default
+        for k, v in signature.parameters.items()
+        if v.default is not inspect.Parameter.empty
+    }
+
+
+def compose_transaction(
+    db,
+    name,
+    params,
+    encoding="auto",
+    fee_per_kb=None,
+    estimate_fee_per_kb=None,
+    regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
+    multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
+    op_return_value=config.DEFAULT_OP_RETURN_VALUE,
+    pubkey=None,
+    allow_unconfirmed_inputs=False,
+    fee=None,
+    fee_provided=0,
+    unspent_tx_hash=None,
+    custom_inputs=None,
+    dust_return_pubkey=None,
+    disable_utxo_locks=False,
+    extended_tx_info=False,
+    p2sh_source_multisig_pubkeys=None,
+    p2sh_source_multisig_pubkeys_required=None,
+    p2sh_pretx_txid=None,
+    old_style_api=True,
+    segwit=False,
+):
+    """Create and return a transaction."""
+
+    # Get provided pubkeys.
+    if isinstance(pubkey, str):
+        provided_pubkeys = [pubkey]
+    elif isinstance(pubkey, list):
+        provided_pubkeys = pubkey
+    elif pubkey is None:
+        provided_pubkeys = []
+    else:
+        raise exceptions.TransactionError("Invalid pubkey.")
+
+    # Get additional pubkeys from `source` and `destination` params.
+    # Convert `source` and `destination` to pubkeyhash form.
+    for address_name in ["source", "destination"]:
+        if address_name in params:
+            address = params[address_name]
+            if isinstance(address, list):
+                # pkhshs = []
+                # for addr in address:
+                #    provided_pubkeys += script.extract_pubkeys(addr)
+                #    pkhshs.append(script.make_pubkeyhash(addr))
+                # params[address_name] = pkhshs
+                pass
+            else:
+                provided_pubkeys += script.extract_pubkeys(address)
+                params[address_name] = script.make_pubkeyhash(address)
+
+    # Check validity of collected pubkeys.
+    for pubkey in provided_pubkeys:
+        if not script.is_fully_valid(binascii.unhexlify(pubkey)):
+            raise script.AddressError(f"invalid public key: {pubkey}")
+
+    compose_method = sys.modules[f"counterpartycore.lib.messages.{name}"].compose
+    compose_params = inspect.getfullargspec(compose_method)[0]
+    missing_params = [p for p in compose_params if p not in params and p != "db"]
+    if len(missing_params) > 0:
+        default_values = get_default_args(compose_method)
+        for param in missing_params:
+            if param in default_values:
+                params[param] = default_values[param]
+            else:
+                raise exceptions.ComposeError(f"missing parameters: {', '.join(missing_params)}")
+
+    # dont override fee_per_kb if specified
+    if fee_per_kb is not None:
+        estimate_fee_per_kb = False
+    else:
+        fee_per_kb = config.DEFAULT_FEE_PER_KB
+
+    if "extended_tx_info" in params:
+        extended_tx_info = params["extended_tx_info"]
+        del params["extended_tx_info"]
+
+    if "old_style_api" in params:
+        old_style_api = params["old_style_api"]
+        del params["old_style_api"]
+
+    if "segwit" in params:
+        segwit = params["segwit"]
+        del params["segwit"]
+
+    tx_info = compose_method(db, **params)
+    initialise(db)
+    return construct(
+        db,
+        tx_info,
+        encoding=encoding,
+        fee_per_kb=fee_per_kb,
+        estimate_fee_per_kb=estimate_fee_per_kb,
+        regular_dust_size=regular_dust_size,
+        multisig_dust_size=multisig_dust_size,
+        op_return_value=op_return_value,
+        provided_pubkeys=provided_pubkeys,
+        allow_unconfirmed_inputs=allow_unconfirmed_inputs,
+        exact_fee=fee,
+        fee_provided=fee_provided,
+        unspent_tx_hash=unspent_tx_hash,
+        custom_inputs=custom_inputs,
+        dust_return_pubkey=dust_return_pubkey,
+        disable_utxo_locks=disable_utxo_locks,
+        extended_tx_info=extended_tx_info,
+        p2sh_source_multisig_pubkeys=p2sh_source_multisig_pubkeys,
+        p2sh_source_multisig_pubkeys_required=p2sh_source_multisig_pubkeys_required,
+        p2sh_pretx_txid=p2sh_pretx_txid,
+        old_style_api=old_style_api,
+        segwit=segwit,
+    )
+
+
+COMPOSABLE_TRANSACTIONS = [
+    "bet",
+    "broadcast",
+    "btcpay",
+    "burn",
+    "cancel",
+    "destroy",
+    "dispenser",
+    "dividend",
+    "issuance",
+    "mpma",
+    "order",
+    "send",
+    "sweep",
+]
+
+
+def compose(db, source, transaction_name, **kwargs):
+    if transaction_name not in COMPOSABLE_TRANSACTIONS:
+        raise exceptions.TransactionError("Transaction type not composable.")
+    transaction_args, common_args, _ = split_compose_arams(**kwargs)
+    transaction_args["source"] = source
+    return compose_transaction(db, name=transaction_name, params=transaction_args, **common_args)
+
+
+def compose_bet(
+    db,
+    address: str,
+    feed_address: str,
+    bet_type: int,
+    deadline: int,
+    wager_quantity: int,
+    counterwager_quantity: int,
+    expiration: int,
+    leverage: int = 5040,
+    target_value: float = None,
+    **construct_args,
+):
+    """
+    Composes a transaction to issue a bet against a feed.
+    :param address: The address that will make the bet
+    :param feed_address: The address that hosts the feed to be bet on
+    :param bet_type: Bet 0 for Bullish CFD (deprecated), 1 for Bearish CFD (deprecated), 2 for Equal, 3 for NotEqual
+    :param deadline: The time at which the bet should be decided/settled, in Unix time (seconds since epoch)
+    :param wager_quantity: The quantities of XCP to wager (in satoshis, hence integer).
+    :param counterwager_quantity: The minimum quantities of XCP to be wagered against, for the bets to match
+    :param target_value: Target value for Equal/NotEqual bet
+    :param leverage: Leverage, as a fraction of 5040
+    :param expiration: The number of blocks after which the bet expires if it remains unmatched
+    """
+    return compose_transaction(
+        db,
+        name="bet",
+        params={
+            "source": address,
+            "feed_address": feed_address,
+            "bet_type": bet_type,
+            "deadline": deadline,
+            "wager_quantity": wager_quantity,
+            "counterwager_quantity": counterwager_quantity,
+            "target_value": target_value,
+            "leverage": leverage,
+            "expiration": expiration,
+        },
+        **construct_args,
+    )
+
+
+def compose_broadcast(
+    db, address: str, timestamp: int, value: float, fee_fraction: float, text: str, **construct_args
+):
+    """
+    Composes a transaction to broadcast textual and numerical information to the network.
+    :param address: The address that will be sending (must have the necessary quantity of the specified asset)
+    :param timestamp: The timestamp of the broadcast, in Unix time
+    :param value: Numerical value of the broadcast
+    :param fee_fraction: How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. 0.05 is five percent)
+    :param text: The textual part of the broadcast
+    """
+    return compose_transaction(
+        db,
+        name="broadcast",
+        params={
+            "source": address,
+            "timestamp": timestamp,
+            "value": value,
+            "fee_fraction": fee_fraction,
+            "text": text,
+        },
+        **construct_args,
+    )
+
+
+def compose_btcpay(db, address: str, order_match_id: str, **construct_args):
+    """
+    Composes a transaction to pay for a BTC order match.
+    :param address: The address that will be sending the payment
+    :param order_match_id: The ID of the order match to pay for
+    """
+    return compose_transaction(
+        db,
+        name="btcpay",
+        params={"source": address, "order_match_id": order_match_id},
+        **construct_args,
+    )
+
+
+def compose_burn(db, address: str, quantity: int, overburn: bool = False, **construct_args):
+    """
+    Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, possible between blocks 278310 and 283810; on testnet it is still available).
+    :param address: The address with the BTC to burn
+    :param quantity: The quantities of BTC to burn (1 BTC maximum burn per address)
+    :param overburn: Whether to allow the burn to exceed 1 BTC for the address
+    """
+    return compose_transaction(
+        db,
+        name="burn",
+        params={"source": address, "quantity": quantity, "overburn": overburn},
+        **construct_args,
+    )
+
+
+def compose_cancel(db, address: str, offer_hash: str, **construct_args):
+    """
+    Composes a transaction to cancel an open order or bet.
+    :param address: The address that placed the order/bet to be cancelled
+    :param offer_hash: The hash of the order/bet to be cancelled
+    """
+    return compose_transaction(
+        db,
+        name="cancel",
+        params={"source": address, "offer_hash": offer_hash},
+        **construct_args,
+    )
+
+
+def compose_destroy(db, address: str, asset: str, quantity: int, tag: str, **construct_args):
+    """
+    Composes a transaction to destroy a quantity of an asset.
+    :param address: The address that will be sending the asset to be destroyed
+    :param asset: The asset to be destroyed
+    :param quantity: The quantity of the asset to be destroyed
+    :param tag: A tag for the destruction
+    """
+    return compose_transaction(
+        db,
+        name="destroy",
+        params={"source": address, "asset": asset, "quantity": quantity, "tag": tag},
+        **construct_args,
+    )
+
+
+def compose_dispenser(
+    db,
+    address: str,
+    asset: str,
+    give_quantity: int,
+    escrow_quantity: int,
+    mainchainrate: int,
+    status: int,
+    open_address: str = None,
+    oracle_address: str = None,
+    **construct_args,
+):
+    """
+    Opens or closes a dispenser for a given asset at a given rate of main chain asset (BTC). Escrowed quantity on open must be equal or greater than give_quantity. It is suggested that you escrow multiples of give_quantity to ease dispenser operation.
+    :param address: The address that will be dispensing (must have the necessary escrow_quantity of the specified asset)
+    :param asset: The asset or subasset to dispense
+    :param give_quantity: The quantity of the asset to dispense
+    :param escrow_quantity: The quantity of the asset to reserve for this dispenser
+    :param mainchainrate: The quantity of the main chain asset (BTC) per dispensed portion
+    :param status: The state of the dispenser. 0 for open, 1 for open using open_address, 10 for closed
+    :param open_address: The address that you would like to open the dispenser on
+    :param oracle_address: The address that you would like to use as a price oracle for this dispenser
+    """
+    return compose_transaction(
+        db,
+        name="dispenser",
+        params={
+            "source": address,
+            "asset": asset,
+            "give_quantity": give_quantity,
+            "escrow_quantity": escrow_quantity,
+            "mainchainrate": mainchainrate,
+            "status": status,
+            "open_address": open_address,
+            "oracle_address": oracle_address,
+        },
+        **construct_args,
+    )
+
+
+def compose_dividend(
+    db, address: str, quantity_per_unit: int, asset: str, dividend_asset: str, **construct_args
+):
+    """
+    Composes a transaction to issue a dividend to holders of a given asset.
+    :param address: The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on)
+    :param quantity_per_unit: The amount of dividend_asset rewarded
+    :param asset: The asset or subasset that the dividends are being rewarded on
+    :param dividend_asset: The asset or subasset that the dividends are paid in
+    """
+    return compose_transaction(
+        db,
+        name="dividend",
+        params={
+            "source": address,
+            "quantity_per_unit": quantity_per_unit,
+            "asset": asset,
+            "dividend_asset": dividend_asset,
+        },
+        **construct_args,
+    )
+
+
+def compose_issuance(
+    db,
+    address: str,
+    asset: str,
+    quantity: int,
+    transfer_destination: str = None,
+    divisible: bool = True,
+    lock: bool = False,
+    reset: bool = False,
+    description: str = None,
+    **construct_args,
+):
+    """
+    Composes a transaction to Issue a new asset, issue more of an existing asset, lock an asset, reset existing supply, or transfer the ownership of an asset.
+    :param address: The address that will be issuing or transfering the asset
+    :param asset: The assets to issue or transfer. This can also be a subasset longname for new subasset issuances
+    :param quantity: The quantity of the asset to issue (set to 0 if transferring an asset)
+    :param transfer_destination: The address to receive the asset
+    :param divisible: Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued)
+    :param lock: Whether this issuance should lock supply of this asset forever
+    :param reset: Wether this issuance should reset any existing supply
+    :param description: A textual description for the asset
+    """
+    return compose_transaction(
+        db,
+        name="issuance",
+        params={
+            "source": address,
+            "asset": asset,
+            "quantity": quantity,
+            "transfer_destination": transfer_destination,
+            "divisible": divisible,
+            "lock": lock,
+            "reset": reset,
+            "description": description,
+        },
+        **construct_args,
+    )
+
+
+def compose_mpma(
+    db,
+    source: str,
+    assets: str,
+    destinations: str,
+    quantities: str,
+    memo: str,
+    memo_is_hex: bool,
+    **construct_args,
+):
+    """
+    Composes a transaction to send multiple payments to multiple addresses.
+    :param source: The address that will be sending (must have the necessary quantity of the specified asset)
+    :param assets: comma-separated list of assets to send
+    :param destinations: comma-separated list of addresses to send to
+    :param quantities: comma-separated list of quantities to send
+    :param memo: The Memo associated with this transaction
+    :param memo_is_hex: Whether the memo field is a hexadecimal string
+    """
+    asset_list = assets.split(",")
+    destination_list = destinations.split(",")
+    quantity_list = quantities.split(",")
+    if len(asset_list) != len(destination_list) or len(asset_list) != len(quantity_list):
+        raise exceptions.ComposeError(
+            "The number of assets, destinations, and quantities must be equal"
+        )
+    for quantity in quantity_list:
+        if not quantity.isdigit():
+            raise exceptions.ComposeError("Quantity must be an integer")
+    asset_dest_quant_list = list(zip(asset_list, destination_list, quantity_list))
+
+    return compose_transaction(
+        db,
+        name="version.mpma",
+        params={
+            "source": source,
+            "asset_dest_quant_list": asset_dest_quant_list,
+            "memo": memo,
+            "memo_is_hex": memo_is_hex,
+        },
+        **construct_args,
+    )
+
+
+def compose_order(
+    db,
+    address: str,
+    give_asset: str,
+    give_quantity: int,
+    get_asset: str,
+    get_quantity: int,
+    expiration: int,
+    fee_required: int,
+    **construct_args,
+):
+    """
+    Composes a transaction to place an order on the distributed exchange.
+    :param address: The address that will be issuing the order request (must have the necessary quantity of the specified asset to give)
+    :param give_asset: The asset that will be given in the trade
+    :param give_quantity: The quantity of the asset that will be given
+    :param get_asset: The asset that will be received in the trade
+    :param get_quantity: The quantity of the asset that will be received
+    :param expiration: The number of blocks for which the order should be valid
+    :param fee_required: The miners’ fee required to be paid by orders for them to match this one; in BTC; required only if buying BTC (may be zero, though)
+    """
+    return compose_transaction(
+        db,
+        name="order",
+        params={
+            "source": address,
+            "give_asset": give_asset,
+            "give_quantity": give_quantity,
+            "get_asset": get_asset,
+            "get_quantity": get_quantity,
+            "expiration": expiration,
+            "fee_required": fee_required,
+        },
+        **construct_args,
+    )
+
+
+def compose_send(
+    db,
+    address: str,
+    destination: str,
+    asset: str,
+    quantity: int,
+    memo: str = None,
+    memo_is_hex: bool = False,
+    use_enhanced_send: bool = True,
+    **construct_args,
+):
+    """
+    Composes a transaction to send a quantity of an asset to another address.
+    :param address: The address that will be sending (must have the necessary quantity of the specified asset)
+    :param destination: The address that will be receiving the asset
+    :param asset: The asset or subasset to send
+    :param quantity: The quantity of the asset to send
+    :param memo: The Memo associated with this transaction
+    :param memo_is_hex: Whether the memo field is a hexadecimal string
+    :param use_enhanced_send: If this is false, the construct a legacy transaction sending bitcoin dust
+    """
+    return compose_transaction(
+        db,
+        name="send",
+        params={
+            "source": address,
+            "destination": destination,
+            "asset": asset,
+            "quantity": quantity,
+            "memo": memo,
+            "memo_is_hex": memo_is_hex,
+            "use_enhanced_send": use_enhanced_send,
+        },
+        **construct_args,
+    )
+
+
+def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **construct_args):
+    """
+    Composes a transaction to Sends all assets and/or transfer ownerships to a destination address.
+    :param address: The address that will be sending
+    :param destination: The address to receive the assets and/or ownerships
+    :param flags: An OR mask of flags indicating how the sweep should be processed. Possible flags are:
+                    - FLAG_BALANCES: (integer) 1, specifies that all balances should be transferred.
+                    - FLAG_OWNERSHIP: (integer) 2, specifies that all ownerships should be transferred.
+                    - FLAG_BINARY_MEMO: (integer) 4, specifies that the memo is in binary/hex form.
+    :param memo: The Memo associated with this transaction
+    """
+    return compose_transaction(
+        db,
+        name="sweep",
+        params={
+            "source": address,
+            "destination": destination,
+            "flags": flags,
+            "memo": memo,
+        },
+        **construct_args,
+    )
+
+
+def info(db, rawtransaction: str, block_index: int = None):
+    """
+    Returns Counterparty information from a raw transaction in hex format.
+    :param rawtransaction: Raw transaction in hex format
+    :param block_index: Block index mandatory for transactions before block 335000
+    """
+    source, destination, btc_amount, fee, data, extra = gettxinfo.get_tx_info(
+        db, BlockchainParser().deserialize_tx(rawtransaction), block_index=block_index
+    )
+    return {
+        "source": source,
+        "destination": destination,
+        "btc_amount": btc_amount,
+        "fee": fee,
+        "data": util.hexlify(data) if data else "",
+    }
+
+
+def unpack(db, datahex: str, block_index: int = None):
+    """
+    Unpacks Counterparty data in hex format and returns the message type and data.
+    :param datahex: Data in hex format
+    :param block_index: Block index of the transaction containing this data
+    """
+    data = binascii.unhexlify(datahex)
+    message_type_id, message = message_type.unpack(data)
+    block_index = block_index or ledger.CURRENT_BLOCK_INDEX
+
+    issuance_ids = [
+        messages.issuance.ID,
+        messages.issuance.LR_ISSUANCE_ID,
+        messages.issuance.SUBASSET_ID,
+        messages.issuance.LR_SUBASSET_ID,
+    ]
+
+    # Unknown message type
+    message_data = {"error": "Unknown message type"}
+    # Bet
+    if message_type_id == messages.bet.ID:
+        message_type_name = "bet"
+        message_data = messages.bet.unpack(message, return_dict=True)
+    # Broadcast
+    elif message_type_id == messages.broadcast.ID:
+        message_type_name = "broadcast"
+        message_data = messages.broadcast.unpack(message, block_index, return_dict=True)
+    # BTCPay
+    elif message_type_id == messages.btcpay.ID:
+        message_type_name = "btcpay"
+        message_data = messages.btcpay.unpack(message, return_dict=True)
+    # Cancel
+    elif message_type_id == messages.cancel.ID:
+        message_type_name = "cancel"
+        message_data = messages.cancel.unpack(message, return_dict=True)
+    # Destroy
+    elif message_type_id == messages.destroy.ID:
+        message_type_name = "destroy"
+        message_data = messages.destroy.unpack(db, message, return_dict=True)
+    # Dispenser
+    elif message_type_id == messages.dispenser.ID:
+        message_type_name = "dispenser"
+        message_data = messages.dispenser.unpack(message, return_dict=True)
+    # Dividend
+    elif message_type_id == messages.dividend.ID:
+        message_type_name = "dividend"
+        message_data = messages.dividend.unpack(db, message, block_index, return_dict=True)
+    # Issuance
+    elif message_type_id in issuance_ids:
+        message_type_name = "issuance"
+        message_data = messages.issuance.unpack(
+            db, message, message_type_id, block_index, return_dict=True
+        )
+    # Order
+    elif message_type_id == messages.order.ID:
+        message_type_name = "order"
+        message_data = messages.order.unpack(db, message, block_index, return_dict=True)
+    # Send
+    elif message_type_id == messages.send.ID:
+        message_type_name = "send"
+        message_data = messages.send.unpack(db, message, block_index)
+    # Enhanced send
+    elif message_type_id == messages.versions.enhanced_send.ID:
+        message_type_name = "enhanced_send"
+        message_data = messages.versions.enhanced_send.unpack(message, block_index)
+    # MPMA send
+    elif message_type_id == messages.versions.mpma.ID:
+        message_type_name = "mpma_send"
+        message_data = messages.versions.mpma.unpack(message, block_index)
+    # RPS
+    elif message_type_id == messages.rps.ID:
+        message_type_name = "rps"
+        message_data = messages.rps.unpack(message, return_dict=True)
+    # RPS Resolve
+    elif message_type_id == messages.rpsresolve.ID:
+        message_type_name = "rpsresolve"
+        message_data = messages.rpsresolve.unpack(message, return_dict=True)
+    # Sweep
+    elif message_type_id == messages.sweep.ID:
+        message_type_name = "sweep"
+        message_data = messages.sweep.unpack(message)
+
+    return {
+        "message_type": message_type_name,
+        "message_type_id": message_type_id,
+        "message_data": message_data,
+    }

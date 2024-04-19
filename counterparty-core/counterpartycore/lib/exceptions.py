@@ -83,4 +83,8 @@ class ComposeTransactionError(Exception):
     pass
 
 
+class InvalidArgument(Exception):
+    pass
+
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

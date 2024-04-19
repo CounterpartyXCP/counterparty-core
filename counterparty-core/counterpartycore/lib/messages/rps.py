@@ -282,7 +282,9 @@ def validate(db, source, possible_moves, wager, move_random_hash, expiration, bl
     return problems
 
 
-def compose(db, source, possible_moves, wager, move_random_hash, expiration):
+def compose(
+    db, source: str, possible_moves: int, wager: int, move_random_hash: str, expiration: int
+):
     problems = validate(
         db, source, possible_moves, wager, move_random_hash, expiration, ledger.CURRENT_BLOCK_INDEX
     )
@@ -298,9 +300,7 @@ def compose(db, source, possible_moves, wager, move_random_hash, expiration):
     return (source, [], data)
 
 
-def parse(db, tx, message):
-    rps_parse_cursor = db.cursor()
-    # Unpack message.
+def unpack(message, return_dict=False):
     try:
         if len(message) != LENGTH:
             raise exceptions.UnpackError
@@ -309,6 +309,22 @@ def parse(db, tx, message):
     except (exceptions.UnpackError, struct.error):
         (possible_moves, wager, move_random_hash, expiration) = 0, 0, "", 0
         status = "invalid: could not unpack"
+
+    if return_dict:
+        return {
+            "possible_moves": possible_moves,
+            "wager": wager,
+            "move_random_hash": binascii.hexlify(move_random_hash).decode("utf8"),
+            "expiration": expiration,
+            "status": status,
+        }
+    return possible_moves, wager, move_random_hash, expiration, status
+
+
+def parse(db, tx, message):
+    rps_parse_cursor = db.cursor()
+    # Unpack message.
+    possible_moves, wager, move_random_hash, expiration, status = unpack(message)
 
     if status == "open":
         move_random_hash = binascii.hexlify(move_random_hash).decode("utf8")

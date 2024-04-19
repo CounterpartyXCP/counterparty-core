@@ -667,7 +667,7 @@ def get_unspent_txouts(source):
 #  ]
 #
 # }
-def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
+def search_raw_transactions(address, unconfirmed: bool = True, only_tx_hashes: bool = False):
     hsh = _address_to_hash(address)
     txs = INDEXER_THREAD.send({"method": "blockchain.scripthash.get_history", "params": [hsh]})[
         "result"
@@ -801,7 +801,7 @@ GET_OLDEST_TX_HARDCODED = {
 ADDRINDEXRS_CLIENT = None
 
 
-def get_oldest_tx(address, block_index=None):
+def get_oldest_tx(address: str, block_index: int = None):
     current_block_index = block_index or ledger.CURRENT_BLOCK_INDEX
     hardcoded_key = f"{current_block_index}-{address}"
     if hardcoded_key in GET_OLDEST_TX_HARDCODED:

@@ -53,9 +53,13 @@ APP_NAME = XCP_NAME.lower()
 FULL_APP_NAME = "Counterparty Core"
 LOGGER_NAME = APP_NAME
 
-DEFAULT_RPC_PORT_REGTEST = 24000
-DEFAULT_RPC_PORT_TESTNET = 14000
-DEFAULT_RPC_PORT = 4000
+DEFAULT_API_PORT_REGTEST = 24000
+DEFAULT_API_PORT_TESTNET = 14000
+DEFAULT_API_PORT = 4000
+
+DEFAULT_RPC_PORT_REGTEST = 24100
+DEFAULT_RPC_PORT_TESTNET = 14100
+DEFAULT_RPC_PORT = 4100
 
 DEFAULT_BACKEND_PORT_REGTEST = 28332
 DEFAULT_BACKEND_PORT_TESTNET = 18332
@@ -151,5 +155,7 @@ PROTOCOL_CHANGES_URL = "https://counterparty.io/protocol_changes.json"
 BOOTSTRAP_URL_MAINNET = "https://bootstrap.counterparty.io/counterparty.latest.tar.gz"
 BOOTSTRAP_URL_TESTNET = "https://bootstrap.counterparty.io/counterparty-testnet.latest.tar.gz"
 
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
+API_MAX_LOG_SIZE = (
+    10 * 1024 * 1024
+)  # max log size of 20 MB before rotation (make configurable later)
+API_MAX_LOG_COUNT = 10

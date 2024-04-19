@@ -68,7 +68,7 @@ def pack(db, asset, quantity, tag):
     return data
 
 
-def unpack(db, message):
+def unpack(db, message, return_dict=False):
     try:
         asset_id, quantity = struct.unpack(FORMAT, message[0:16])
         tag = message[16:]
@@ -80,6 +80,8 @@ def unpack(db, message):
     except AssetIDError:  # noqa: F405
         raise UnpackError("asset id invalid")  # noqa: B904, F405
 
+    if return_dict:
+        return {"asset": asset, "quantity": quantity, "tag": tag}
     return asset, quantity, tag
 
 
@@ -113,7 +115,7 @@ def validate(db, source, destination, asset, quantity):
         raise BalanceError("balance insufficient")  # noqa: F405
 
 
-def compose(db, source, asset, quantity, tag):
+def compose(db, source: str, asset: str, quantity: int, tag: str):
     # resolve subassets
     asset = ledger.resolve_subasset_longname(db, asset)
 

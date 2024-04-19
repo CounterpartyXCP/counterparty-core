@@ -228,12 +228,12 @@ def validate(
             and open_address != source
         ):
             open_dispensers = ledger.get_dispensers(
-                db, status_in=[0, 11], source=open_address, asset=asset, origin=source
+                db, status_in=[0, 11], address=open_address, asset=asset, origin=source
             )
         else:
             query_address = open_address if status == STATUS_OPEN_EMPTY_ADDRESS else source
             open_dispensers = ledger.get_dispensers(
-                db, status_in=[0, 11], source=query_address, asset=asset
+                db, status_in=[0, 11], address=query_address, asset=asset
             )
 
         if len(open_dispensers) == 0 or open_dispensers[0]["status"] != STATUS_CLOSING:
@@ -338,14 +338,14 @@ def validate(
 
 def compose(
     db,
-    source,
-    asset,
-    give_quantity,
-    escrow_quantity,
-    mainchainrate,
-    status,
-    open_address=None,
-    oracle_address=None,
+    source: str,
+    asset: str,
+    give_quantity: int,
+    escrow_quantity: int,
+    mainchainrate: int,
+    status: int,
+    open_address: str = None,
+    oracle_address: str = None,
 ):
     assetid, problems = validate(
         db,
@@ -409,12 +409,9 @@ def calculate_oracle_fee(
     return oracle_fee_btc
 
 
-def parse(db, tx, message):
-    cursor = db.cursor()
-
-    # Unpack message.
+def unpack(message, return_dict=False):
     try:
-        action_address = tx["source"]
+        action_address = None
         oracle_address = None
         assetid, give_quantity, escrow_quantity, mainchainrate, dispenser_status = struct.unpack(
             FORMAT, message[0:LENGTH]
@@ -432,8 +429,56 @@ def parse(db, tx, message):
         asset = ledger.generate_asset_name(assetid, ledger.CURRENT_BLOCK_INDEX)
         status = "valid"
     except (exceptions.UnpackError, struct.error) as e:  # noqa: F841
-        assetid, give_quantity, mainchainrate, asset = None, None, None, None
+        (
+            give_quantity,
+            escrow_quantity,
+            mainchainrate,
+            dispenser_status,
+            action_address,
+            oracle_address,
+            asset,
+        ) = None, None, None, None, None, None, None
         status = "invalid: could not unpack"
+
+    if return_dict:
+        return {
+            "asset": asset,
+            "give_quantity": give_quantity,
+            "escrow_quantity": escrow_quantity,
+            "mainchainrate": mainchainrate,
+            "dispenser_status": dispenser_status,
+            "action_address": action_address,
+            "oracle_address": oracle_address,
+            "status": status,
+        }
+    return (
+        asset,
+        give_quantity,
+        escrow_quantity,
+        mainchainrate,
+        dispenser_status,
+        action_address,
+        oracle_address,
+        status,
+    )
+
+
+def parse(db, tx, message):
+    cursor = db.cursor()
+
+    # Unpack message.
+    (
+        asset,
+        give_quantity,
+        escrow_quantity,
+        mainchainrate,
+        dispenser_status,
+        action_address,
+        oracle_address,
+        status,
+    ) = unpack(message)
+    if action_address is None:
+        action_address = tx["source"]
 
     if status == "valid":
         if ledger.enabled("dispenser_parsing_validation", ledger.CURRENT_BLOCK_INDEX):
@@ -459,7 +504,7 @@ def parse(db, tx, message):
         else:
             if dispenser_status == STATUS_OPEN or dispenser_status == STATUS_OPEN_EMPTY_ADDRESS:
                 existing = ledger.get_dispensers(
-                    db, source=action_address, asset=asset, status=STATUS_OPEN
+                    db, address=action_address, asset=asset, status=STATUS_OPEN
                 )
 
                 if len(existing) == 0:
@@ -612,7 +657,7 @@ def parse(db, tx, message):
                                 )
 
                                 dispenser_tx_hash = ledger.get_dispensers(
-                                    db, source=action_address, asset=asset, status=STATUS_OPEN
+                                    db, address=action_address, asset=asset, status=STATUS_OPEN
                                 )[0]["tx_hash"]
                                 bindings_refill = {
                                     "tx_index": tx["tx_index"],
@@ -647,14 +692,14 @@ def parse(db, tx, message):
                 if close_from_another_address:
                     existing = ledger.get_dispensers(
                         db,
-                        source=action_address,
+                        address=action_address,
                         asset=asset,
                         status=STATUS_OPEN,
                         origin=tx["source"],
                     )
                 else:
                     existing = ledger.get_dispensers(
-                        db, source=tx["source"], asset=asset, status=STATUS_OPEN
+                        db, address=tx["source"], asset=asset, status=STATUS_OPEN
                     )
                 if len(existing) == 1:
                     if close_delay == 0:
@@ -692,7 +737,7 @@ def is_dispensable(db, address, amount):
     if address is None:
         return False
 
-    dispensers = ledger.get_dispensers(db, source=address, status_in=[0, 11])
+    dispensers = ledger.get_dispensers(db, address=address, status_in=[0, 11])
 
     for next_dispenser in dispensers:
         if next_dispenser["oracle_address"] != None:  # noqa: E711
@@ -731,7 +776,7 @@ def dispense(db, tx):
         dispensers = []
         if next_out["destination"] is not None:
             dispensers = ledger.get_dispensers(
-                db, source=next_out["destination"], status_in=[0, 11], order_by="asset"
+                db, address=next_out["destination"], status_in=[0, 11], order_by="asset"
             )
 
         for dispenser in dispensers:

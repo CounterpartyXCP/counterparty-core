@@ -19,17 +19,19 @@ from halo import Halo
 from termcolor import colored, cprint
 
 from counterpartycore.lib import (
-    api,
     backend,
     blocks,
     check,
     config,
     database,
     ledger,
+    log,
     transaction,
     util,
 )
 from counterpartycore.lib import kickstart as kickstarter
+from counterpartycore.lib.api import api_server as api_v2
+from counterpartycore.lib.api import api_v1
 from counterpartycore.lib.telemetry.client import TelemetryClientLocal
 from counterpartycore.lib.telemetry.collector import TelemetryCollectorLive
 from counterpartycore.lib.telemetry.daemon import TelemetryDaemon
@@ -155,6 +157,12 @@ def initialise_config(
     rpc_user=None,
     rpc_password=None,
     rpc_no_allow_cors=False,
+    api_host=None,
+    api_port=None,
+    api_user=None,
+    api_password=None,
+    api_no_allow_cors=False,
+    api_not_ready_http_code=503,
     force=False,
     requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
     rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
@@ -366,7 +374,7 @@ def initialise_config(
         config.RPC_HOST = "localhost"
 
     # The web root directory for API calls, eg. localhost:14000/rpc/
-    config.RPC_WEBROOT = "/rpc/"
+    config.RPC_WEBROOT = "/old/rpc/"
 
     # Server API RPC port
     if rpc_port:
@@ -418,6 +426,58 @@ def initialise_config(
             config.RPC_NO_ALLOW_CORS = False
 
     config.RPC_BATCH_SIZE = rpc_batch_size
+
+    # Server API RPC host
+    if api_host:
+        config.API_HOST = api_host
+    else:
+        config.API_HOST = "localhost"
+
+    # Server API port
+    if api_port:
+        config.API_PORT = api_port
+    else:
+        if config.TESTNET:
+            if config.TESTCOIN:
+                config.API_PORT = config.DEFAULT_API_PORT_TESTNET + 1
+            else:
+                config.API_PORT = config.DEFAULT_API_PORT_TESTNET
+        elif config.REGTEST:
+            if config.TESTCOIN:
+                config.API_PORT = config.DEFAULT_API_PORT_REGTEST + 1
+            else:
+                config.API_PORT = config.DEFAULT_API_PORT_REGTEST
+        else:
+            if config.TESTCOIN:
+                config.API_PORT = config.DEFAULT_API_PORT + 1
+            else:
+                config.API_PORT = config.DEFAULT_API_PORT
+    try:
+        config.API_PORT = int(config.API_PORT)
+        if not (int(config.API_PORT) > 1 and int(config.API_PORT) < 65535):
+            raise ConfigurationError("invalid server API port number")
+    except:  # noqa: E722
+        raise ConfigurationError(  # noqa: B904
+            "Please specific a valid port number rpc-port configuration parameter"
+        )
+
+    # Server API user
+    if api_user:
+        config.API_USER = api_user
+    else:
+        config.API_USER = "api"
+
+    if api_password:
+        config.API_PASSWORD = api_password
+    else:
+        config.API_PASSWORD = "api"  # noqa: S105
+
+    config.API_NOT_READY_HTTP_CODE = api_not_ready_http_code
+
+    if api_no_allow_cors:
+        config.API_NO_ALLOW_CORS = api_no_allow_cors
+    else:
+        config.API_NO_ALLOW_CORS = False
 
     ##############
     # OTHER SETTINGS
@@ -518,6 +578,67 @@ def initialise_config(
     logger.info(f"Running v{config.VERSION_STRING} of counterparty-core.")
 
 
+def initialise_log_and_config(args):
+    # Configuration
+    init_args = {
+        "database_file": args.database_file,
+        "testnet": args.testnet,
+        "testcoin": args.testcoin,
+        "regtest": args.regtest,
+        "customnet": args.customnet,
+        "api_limit_rows": args.api_limit_rows,
+        "backend_connect": args.backend_connect,
+        "backend_port": args.backend_port,
+        "backend_user": args.backend_user,
+        "backend_password": args.backend_password,
+        "backend_ssl": args.backend_ssl,
+        "backend_ssl_no_verify": args.backend_ssl_no_verify,
+        "backend_poll_interval": args.backend_poll_interval,
+        "indexd_connect": args.indexd_connect,
+        "indexd_port": args.indexd_port,
+        "rpc_host": args.rpc_host,
+        "rpc_port": args.rpc_port,
+        "rpc_user": args.rpc_user,
+        "rpc_password": args.rpc_password,
+        "rpc_no_allow_cors": args.rpc_no_allow_cors,
+        "api_host": args.api_host,
+        "api_port": args.api_port,
+        "api_user": args.api_user,
+        "api_password": args.api_password,
+        "api_no_allow_cors": args.api_no_allow_cors,
+        "requests_timeout": args.requests_timeout,
+        "rpc_batch_size": args.rpc_batch_size,
+        "check_asset_conservation": args.check_asset_conservation,
+        "force": args.force,
+        "p2sh_dust_return_pubkey": args.p2sh_dust_return_pubkey,
+        "utxo_locks_max_addresses": args.utxo_locks_max_addresses,
+        "utxo_locks_max_age": args.utxo_locks_max_age,
+        "no_mempool": args.no_mempool,
+        "skip_db_check": args.skip_db_check,
+    }
+
+    initialise_log_config(
+        verbose=args.verbose,
+        quiet=args.quiet,
+        log_file=args.log_file,
+        api_log_file=args.api_log_file,
+        no_log_files=args.no_log_files,
+        testnet=args.testnet,
+        testcoin=args.testcoin,
+        regtest=args.regtest,
+        json_log=args.json_log,
+    )
+
+    # set up logging
+    log.set_up(
+        verbose=config.VERBOSE,
+        quiet=config.QUIET,
+        log_file=config.LOG,
+        log_in_console=args.action == "start",
+    )
+    initialise_config(**init_args)
+
+
 def initialise_db():
     if config.FORCE:
         cprint("THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.", "yellow")
@@ -559,14 +680,16 @@ def connect_to_addrindexrs():
     print(f"{OK_GREEN} {step}")
 
 
-def start_all(catch_up="normal"):
-    api_status_poller, api_server, db = None, None, None
+def start_all(args):
+    api_status_poller = None
+    api_server_v1 = None
+    api_server_v2 = None
+
+    # Backend.
+    connect_to_backend()
 
     try:
-        # Backend.
-        connect_to_backend()
-
-        if not os.path.exists(config.DATABASE) and catch_up == "bootstrap":
+        if not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap":
             bootstrap(no_confirm=True)
 
         db = initialise_db()
@@ -584,25 +707,33 @@ def start_all(catch_up="normal"):
         # initilise_config
         transaction.initialise()
 
-        # API Status Poller.
-        api_status_poller = api.APIStatusPoller()
-        api_status_poller.daemon = True
-        api_status_poller.start()
+        if args.enable_api_v1:
+            # API Status Poller.
+            api_status_poller = api_v1.APIStatusPoller()
+            api_status_poller.daemon = True
+            api_status_poller.start()
 
-        # API Server.
-        api_server = api.APIServer()
-        api_server.daemon = True
-        api_server.start()
+            # API Server v1.
+            api_server_v1 = api_v1.APIServer()
+            api_server_v1.daemon = True
+            api_server_v1.start()
+
+        # API Server v2.
+        api_server_v2 = api_v2.APIServer()
+        api_server_v2.start(args)
 
         # Server
         blocks.follow(db)
     except KeyboardInterrupt:
         pass
     finally:
-        if api_status_poller:
-            api_status_poller.stop()
-        if api_server:
-            api_server.stop()
+        if args.enable_api_v1:
+            if api_status_poller:
+                api_status_poller.stop()
+            if api_server_v1:
+                api_server_v1.stop()
+        if api_server_v2:
+            api_server_v2.stop()
         backend.stop()
         if db:
             database.optimize(db)

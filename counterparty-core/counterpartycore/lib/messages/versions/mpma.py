@@ -21,7 +21,7 @@ ID = 3  # 0x03 is this specific message type
 
 
 ## expected functions for message version
-def unpack(db, message, block_index):
+def unpack(message, block_index):
     try:
         unpacked = _decode_mpma_send_decode(message, block_index)
     except struct.error as e:  # noqa: F841
@@ -98,7 +98,7 @@ def validate(db, source, asset_dest_quant_list, block_index):
     return problems
 
 
-def compose(db, source, asset_dest_quant_list, memo, memo_is_hex):
+def compose(db, source: str, asset_dest_quant_list: list, memo: str, memo_is_hex: bool):
     cursor = db.cursor()
 
     out_balances = util.accumulate([(t[0], t[2]) for t in asset_dest_quant_list])
@@ -132,7 +132,7 @@ def compose(db, source, asset_dest_quant_list, memo, memo_is_hex):
 
 def parse(db, tx, message):
     try:
-        unpacked = unpack(db, message, tx["block_index"])
+        unpacked = unpack(message, tx["block_index"])
         status = "valid"
     except struct.error as e:  # noqa: F841
         status = "invalid: truncated message"

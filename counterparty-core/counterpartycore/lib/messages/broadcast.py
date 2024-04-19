@@ -111,7 +111,7 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, block_index):
     if not source:
         problems.append("null source address")
     # Check previous broadcast in this feed.
-    broadcasts = ledger.get_broadcasts_by_source(db, source, "valid")
+    broadcasts = ledger.get_broadcasts_by_source(db, source, "valid", order_by="ASC")
     if broadcasts:
         last_broadcast = broadcasts[-1]
         if last_broadcast["locked"]:
@@ -135,7 +135,7 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, block_index):
     return problems
 
 
-def compose(db, source, timestamp, value, fee_fraction, text):
+def compose(db, source: str, timestamp: int, value: float, fee_fraction: float, text: str):
     # Store the fee fraction as an integer.
     fee_fraction_int = int(fee_fraction * 1e8)
 
@@ -162,12 +162,9 @@ def compose(db, source, timestamp, value, fee_fraction, text):
     return (source, [], data)
 
 
-def parse(db, tx, message):
-    cursor = db.cursor()
-
-    # Unpack message.
+def unpack(message, block_index, return_dict=False):
     try:
-        if ledger.enabled("broadcast_pack_text", tx["block_index"]):
+        if ledger.enabled("broadcast_pack_text", block_index):
             timestamp, value, fee_fraction_int, rawtext = struct.unpack(
                 FORMAT + f"{len(message) - LENGTH}s", message
             )
@@ -197,6 +194,24 @@ def parse(db, tx, message):
     except AssertionError:
         timestamp, value, fee_fraction_int, text = 0, None, 0, None
         status = "invalid: could not unpack text"
+
+    if return_dict:
+        return {
+            "timestamp": timestamp,
+            "value": value,
+            "fee_fraction_int": fee_fraction_int,
+            "text": text,
+            "status": status,
+        }
+    return timestamp, value, fee_fraction_int, text, status
+
+
+def parse(db, tx, message):
+    cursor = db.cursor()
+
+    # Unpack message.
+    timestamp, value, fee_fraction_int, text, status = unpack(message, tx["block_index"])
+
     if status == "valid":
         # For SQLite3
         timestamp = min(timestamp, config.MAX_INT)
@@ -256,7 +271,7 @@ def parse(db, tx, message):
     if value is None or value < 0:
         # Cancel Open Bets?
         if value == -2:
-            for i in ledger.get_open_bet_by_feed(db, tx["source"]):
+            for i in ledger.get_bet_by_feed(db, tx["source"], status="open"):
                 bet.cancel_bet(db, i, "dropped", tx["block_index"], tx["tx_index"])
         # Cancel Pending Bet Matches?
         if value == -3:

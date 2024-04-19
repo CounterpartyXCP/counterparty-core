@@ -2,11 +2,10 @@
 Test suite configuration
 """
 
+import argparse
 import binascii
 import json
 import logging
-import os  # noqa: F401
-import pprint  # noqa: F401
 import time
 from datetime import datetime
 
@@ -18,7 +17,9 @@ from Crypto.Cipher import ARC4
 from pycoin.coins.bitcoin import Tx  # noqa: F401
 
 from counterpartycore import server
-from counterpartycore.lib import api, arc4, config, database, ledger, log, script, util
+from counterpartycore.lib import arc4, config, database, ledger, log, script, util
+from counterpartycore.lib.api import api_server as api_v2
+from counterpartycore.lib.api import api_v1 as api
 from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS
 from counterpartycore.test.fixtures.scenarios import INTEGRATION_SCENARIOS
@@ -235,11 +236,78 @@ def api_server(request, cp_server):
 
 
 @pytest.fixture(scope="module")
+def api_server_v2(request, cp_server):
+    default_config = {
+        "testnet": False,
+        "testcoin": False,
+        "regtest": False,
+        "api_limit_rows": 1000,
+        "backend_connect": None,
+        "backend_port": None,
+        "backend_user": None,
+        "backend_password": None,
+        "indexd_connect": None,
+        "indexd_port": None,
+        "backend_ssl": False,
+        "backend_ssl_no_verify": False,
+        "backend_poll_interval": None,
+        "rpc_host": None,
+        "rpc_user": None,
+        "rpc_password": None,
+        "rpc_no_allow_cors": False,
+        "api_host": "localhost",
+        "api_user": "api",
+        "api_password": "api",
+        "api_no_allow_cors": False,
+        "api_not_ready_http_code": 503,
+        "force": False,
+        "requests_timeout": config.DEFAULT_REQUESTS_TIMEOUT,
+        "rpc_batch_size": config.DEFAULT_RPC_BATCH_SIZE,
+        "check_asset_conservation": False,
+        "backend_ssl_verify": None,
+        "rpc_allow_cors": None,
+        "p2sh_dust_return_pubkey": None,
+        "utxo_locks_max_addresses": config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES,
+        "utxo_locks_max_age": config.DEFAULT_UTXO_LOCKS_MAX_AGE,
+        "estimate_fee_per_kb": None,
+        "customnet": None,
+        "verbose": False,
+        "quiet": False,
+        "log_file": None,
+        "api_log_file": None,
+        "no_log_files": False,
+        "json_log": False,
+        "no_check_asset_conservation": True,
+        "action": "",
+        "no_refresh_backend_height": True,
+        "no_mempool": False,
+        "skip_db_check": False,
+    }
+    server_config = (
+        default_config
+        | util_test.COUNTERPARTYD_OPTIONS
+        | {
+            "database_file": request.module.FIXTURE_DB,
+            "api_port": TEST_RPC_PORT + 10,
+        }
+    )
+    args = argparse.Namespace(**server_config)
+    api_server = api_v2.APIServer()
+    api_server.start(args)
+    time.sleep(1)
+
+    request.addfinalizer(lambda: api_server.stop())
+
+    return api_server
+
+
+@pytest.fixture(scope="module")
 def cp_server(request):
     dbfile = request.module.FIXTURE_DB
     sqlfile = request.module.FIXTURE_SQL_FILE
     options = getattr(request.module, "FIXTURE_OPTIONS", {})
 
+    print(f"cp_server: {dbfile} {sqlfile} {options}")
     db = util_test.init_database(sqlfile, dbfile, options)  # noqa: F841
 
     # monkeypatch this here because init_mock_functions can run before cp_server
@@ -454,7 +522,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     monkeypatch.setattr("counterpartycore.lib.log.isodt", isodt)
     monkeypatch.setattr("counterpartycore.lib.ledger.curr_time", curr_time)
     monkeypatch.setattr("counterpartycore.lib.util.date_passed", date_passed)
-    monkeypatch.setattr("counterpartycore.lib.api.init_api_access_log", init_api_access_log)
+    monkeypatch.setattr("counterpartycore.lib.api.util.init_api_access_log", init_api_access_log)
     if hasattr(config, "PREFIX"):
         monkeypatch.setattr("counterpartycore.lib.config.PREFIX", b"TESTXXXX")
     monkeypatch.setattr("counterpartycore.lib.backend.getrawtransaction", mocked_getrawtransaction)

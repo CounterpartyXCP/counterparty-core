@@ -68,7 +68,7 @@ def validate(db, source, destination, asset, quantity, block_index):
     return problems
 
 
-def compose(db, source, destination, asset, quantity):
+def compose(db, source: str, destination: str, asset: str, quantity: int):
     cursor = db.cursor()
 
     # Just send BTC?
