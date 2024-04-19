@@ -1235,6 +1235,74 @@ def compose_bet(
     )
 
 
+def compose_broadcast(
+    db, address: str, timestamp: int, value: float, fee_fraction: float, text: str, **construct_args
+):
+    """
+    Composes a transaction to broadcast textual and numerical information to the network.
+    :param address: The address that will be sending (must have the necessary quantity of the specified asset)
+    :param timestamp: The timestamp of the broadcast, in Unix time
+    :param value: Numerical value of the broadcast
+    :param fee_fraction: How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. 0.05 is five percent)
+    :param text: The textual part of the broadcast
+    """
+    return compose_transaction(
+        db,
+        name="broadcast",
+        params={
+            "source": address,
+            "timestamp": timestamp,
+            "value": value,
+            "fee_fraction": fee_fraction,
+            "text": text,
+        },
+        **construct_args,
+    )
+
+
+def compose_btcpay(db, address: str, order_match_id: str, **construct_args):
+    """
+    Composes a transaction to pay for a BTC order match.
+    :param address: The address that will be sending the payment
+    :param order_match_id: The ID of the order match to pay for
+    """
+    return compose_transaction(
+        db,
+        name="btcpay",
+        params={"source": address, "order_match_id": order_match_id},
+        **construct_args,
+    )
+
+
+def compose_burn(db, address: str, quantity: int, overburn: bool = False, **construct_args):
+    """
+    Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, possible between blocks 278310 and 283810; on testnet it is still available).
+    :param address: The address with the BTC to burn
+    :param quantity: The quantities of BTC to burn (1 BTC maximum burn per address)
+    :param overburn: Whether to allow the burn to exceed 1 BTC for the address
+    """
+    return compose_transaction(
+        db,
+        name="burn",
+        params={"source": address, "quantity": quantity, "overburn": overburn},
+        **construct_args,
+    )
+
+
+def compose_cancel(db, address: str, offer_hash: str, **construct_args):
+    """
+    Composes a transaction to cancel an open order or bet.
+    :param address: The address that placed the order/bet to be cancelled
+    :param offer_hash: The hash of the order/bet to be cancelled
+    """
+    return compose_transaction(
+        db,
+        name="cancel",
+        params={"source": address, "offer_hash": offer_hash},
+        **construct_args,
+    )
+
+
 def info(db, rawtransaction: str, block_index: int = None):
     """
     Returns Counterparty information from a raw transaction in hex format.
