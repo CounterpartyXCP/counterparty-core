@@ -24,7 +24,6 @@ This release contains no protocol changes, and the API has not been modified.
 
 ## Codebase
 * Merge `counterparty-lib` and `counterparty-core` package into `counterparty-core`
-* Integrate telemetry with optional Sentry service
 
 ## Command-Line Interface
 * Replace `--no-check-asset-conservation` with `--check-asset-conservation`
