@@ -1075,6 +1075,7 @@ def compose_transaction(
     p2sh_pretx_txid=None,
     old_style_api=True,
     segwit=False,
+    api_v1=False,
 ):
     """Create and return a transaction."""
 
@@ -1112,13 +1113,19 @@ def compose_transaction(
     compose_method = sys.modules[f"counterpartycore.lib.messages.{name}"].compose
     compose_params = inspect.getfullargspec(compose_method)[0]
     missing_params = [p for p in compose_params if p not in params and p != "db"]
-    if len(missing_params) > 0:
-        default_values = get_default_args(compose_method)
+    if api_v1:
         for param in missing_params:
-            if param in default_values:
-                params[param] = default_values[param]
-            else:
-                raise exceptions.ComposeError(f"missing parameters: {', '.join(missing_params)}")
+            params[param] = None
+    else:
+        if len(missing_params) > 0:
+            default_values = get_default_args(compose_method)
+            for param in missing_params:
+                if param in default_values:
+                    params[param] = default_values[param]
+                else:
+                    raise exceptions.ComposeError(
+                        f"missing parameters: {', '.join(missing_params)}"
+                    )
 
     # dont override fee_per_kb if specified
     if fee_per_kb is not None:
@@ -1183,12 +1190,14 @@ COMPOSABLE_TRANSACTIONS = [
 ]
 
 
-def compose(db, source, transaction_name, **kwargs):
+def compose(db, source, transaction_name, api_v1=False, **kwargs):
     if transaction_name not in COMPOSABLE_TRANSACTIONS:
         raise exceptions.TransactionError("Transaction type not composable.")
     transaction_args, common_args, _ = split_compose_arams(**kwargs)
     transaction_args["source"] = source
-    return compose_transaction(db, name=transaction_name, params=transaction_args, **common_args)
+    return compose_transaction(
+        db, name=transaction_name, params=transaction_args, api_v1=api_v1, **common_args
+    )
 
 
 def compose_bet(

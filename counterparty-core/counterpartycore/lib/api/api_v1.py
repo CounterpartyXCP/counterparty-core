@@ -599,7 +599,7 @@ class APIServer(threading.Thread):
                         transaction.split_compose_arams(**kwargs)
                     )
                     return transaction.compose_transaction(
-                        self.db, name=tx, params=transaction_args, **common_args
+                        self.db, name=tx, params=transaction_args, api_v1=True, **common_args
                     )
                 except (
                     TypeError,
