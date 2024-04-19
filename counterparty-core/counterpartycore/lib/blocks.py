@@ -1014,7 +1014,7 @@ def follow(db):
 
                 # Rollback the DB.
                 rollback(db, block_index=current_index - 1)
-                block_index = current_index
+                block_index = current_index - 1
                 tx_index = get_next_tx_index(db)
                 continue
 
