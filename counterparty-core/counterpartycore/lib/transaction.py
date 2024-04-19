@@ -1176,10 +1176,9 @@ COMPOSABLE_TRANSACTIONS = [
     "dispenser",
     "dividend",
     "issuance",
+    "mpma",
     "order",
     "send",
-    "rps",
-    "rpsresolve",
     "sweep",
 ]
 
@@ -1299,6 +1298,267 @@ def compose_cancel(db, address: str, offer_hash: str, **construct_args):
         db,
         name="cancel",
         params={"source": address, "offer_hash": offer_hash},
+        **construct_args,
+    )
+
+
+def compose_destroy(db, address: str, asset: str, quantity: int, tag: str, **construct_args):
+    """
+    Composes a transaction to destroy a quantity of an asset.
+    :param address: The address that will be sending the asset to be destroyed
+    :param asset: The asset to be destroyed
+    :param quantity: The quantity of the asset to be destroyed
+    :param tag: A tag for the destruction
+    """
+    return compose_transaction(
+        db,
+        name="destroy",
+        params={"source": address, "asset": asset, "quantity": quantity, "tag": tag},
+        **construct_args,
+    )
+
+
+def compose_dispenser(
+    db,
+    address: str,
+    asset: str,
+    give_quantity: int,
+    escrow_quantity: int,
+    mainchainrate: int,
+    status: int,
+    open_address: str = None,
+    oracle_address: str = None,
+    **construct_args,
+):
+    """
+    Opens or closes a dispenser for a given asset at a given rate of main chain asset (BTC). Escrowed quantity on open must be equal or greater than give_quantity. It is suggested that you escrow multiples of give_quantity to ease dispenser operation.
+    :param address: The address that will be dispensing (must have the necessary escrow_quantity of the specified asset)
+    :param asset: The asset or subasset to dispense
+    :param give_quantity: The quantity of the asset to dispense
+    :param escrow_quantity: The quantity of the asset to reserve for this dispenser
+    :param mainchainrate: The quantity of the main chain asset (BTC) per dispensed portion
+    :param status: The state of the dispenser. 0 for open, 1 for open using open_address, 10 for closed
+    :param open_address: The address that you would like to open the dispenser on
+    :param oracle_address: The address that you would like to use as a price oracle for this dispenser
+    """
+    return compose_transaction(
+        db,
+        name="dispenser",
+        params={
+            "source": address,
+            "asset": asset,
+            "give_quantity": give_quantity,
+            "escrow_quantity": escrow_quantity,
+            "mainchainrate": mainchainrate,
+            "status": status,
+            "open_address": open_address,
+            "oracle_address": oracle_address,
+        },
+        **construct_args,
+    )
+
+
+def compose_dividend(
+    db, address: str, quantity_per_unit: int, asset: str, dividend_asset: str, **construct_args
+):
+    """
+    Composes a transaction to issue a dividend to holders of a given asset.
+    :param address: The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on)
+    :param quantity_per_unit: The amount of dividend_asset rewarded
+    :param asset: The asset or subasset that the dividends are being rewarded on
+    :param dividend_asset: The asset or subasset that the dividends are paid in
+    """
+    return compose_transaction(
+        db,
+        name="dividend",
+        params={
+            "source": address,
+            "quantity_per_unit": quantity_per_unit,
+            "asset": asset,
+            "dividend_asset": dividend_asset,
+        },
+        **construct_args,
+    )
+
+
+def compose_issuance(
+    db,
+    address: str,
+    asset: str,
+    quantity: int,
+    transfer_destination: str = None,
+    divisible: bool = True,
+    lock: bool = False,
+    reset: bool = False,
+    description: str = None,
+    **construct_args,
+):
+    """
+    Composes a transaction to Issue a new asset, issue more of an existing asset, lock an asset, reset existing supply, or transfer the ownership of an asset.
+    :param address: The address that will be issuing or transfering the asset
+    :param asset: The assets to issue or transfer. This can also be a subasset longname for new subasset issuances
+    :param quantity: The quantity of the asset to issue (set to 0 if transferring an asset)
+    :param transfer_destination: The address to receive the asset
+    :param divisible: Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued)
+    :param lock: Whether this issuance should lock supply of this asset forever
+    :param reset: Wether this issuance should reset any existing supply
+    :param description: A textual description for the asset
+    """
+    return compose_transaction(
+        db,
+        name="issuance",
+        params={
+            "source": address,
+            "asset": asset,
+            "quantity": quantity,
+            "transfer_destination": transfer_destination,
+            "divisible": divisible,
+            "lock": lock,
+            "reset": reset,
+            "description": description,
+        },
+        **construct_args,
+    )
+
+
+def compose_mpma(
+    db,
+    source: str,
+    assets: str,
+    destinations: str,
+    quantities: str,
+    memo: str,
+    memo_is_hex: bool,
+    **construct_args,
+):
+    """
+    Composes a transaction to send multiple payments to multiple addresses.
+    :param source: The address that will be sending (must have the necessary quantity of the specified asset)
+    :param assets: comma-separated list of assets to send
+    :param destinations: comma-separated list of addresses to send to
+    :param quantities: comma-separated list of quantities to send
+    :param memo: The Memo associated with this transaction
+    :param memo_is_hex: Whether the memo field is a hexadecimal string
+    """
+    asset_list = assets.split(",")
+    destination_list = destinations.split(",")
+    quantity_list = quantities.split(",")
+    if len(asset_list) != len(destination_list) or len(asset_list) != len(quantity_list):
+        raise exceptions.ComposeError(
+            "The number of assets, destinations, and quantities must be equal"
+        )
+    for quantity in quantity_list:
+        if not quantity.isdigit():
+            raise exceptions.ComposeError("Quantity must be an integer")
+    asset_dest_quant_list = list(zip(asset_list, destination_list, quantity_list))
+
+    return compose_transaction(
+        db,
+        name="version.mpma",
+        params={
+            "source": source,
+            "asset_dest_quant_list": asset_dest_quant_list,
+            "memo": memo,
+            "memo_is_hex": memo_is_hex,
+        },
+        **construct_args,
+    )
+
+
+def compose_order(
+    db,
+    address: str,
+    give_asset: str,
+    give_quantity: int,
+    get_asset: str,
+    get_quantity: int,
+    expiration: int,
+    fee_required: int,
+    **construct_args,
+):
+    """
+    Composes a transaction to place an order on the distributed exchange.
+    :param address: The address that will be issuing the order request (must have the necessary quantity of the specified asset to give)
+    :param give_asset: The asset that will be given in the trade
+    :param give_quantity: The quantity of the asset that will be given
+    :param get_asset: The asset that will be received in the trade
+    :param get_quantity: The quantity of the asset that will be received
+    :param expiration: The number of blocks for which the order should be valid
+    :param fee_required: The miners’ fee required to be paid by orders for them to match this one; in BTC; required only if buying BTC (may be zero, though)
+    """
+    return compose_transaction(
+        db,
+        name="order",
+        params={
+            "source": address,
+            "give_asset": give_asset,
+            "give_quantity": give_quantity,
+            "get_asset": get_asset,
+            "get_quantity": get_quantity,
+            "expiration": expiration,
+            "fee_required": fee_required,
+        },
+        **construct_args,
+    )
+
+
+def compose_send(
+    db,
+    address: str,
+    destination: str,
+    asset: str,
+    quantity: int,
+    memo: str = None,
+    memo_is_hex: bool = False,
+    use_enhanced_send: bool = True,
+    **construct_args,
+):
+    """
+    Composes a transaction to send a quantity of an asset to another address.
+    :param address: The address that will be sending (must have the necessary quantity of the specified asset)
+    :param destination: The address that will be receiving the asset
+    :param asset: The asset or subasset to send
+    :param quantity: The quantity of the asset to send
+    :param memo: The Memo associated with this transaction
+    :param memo_is_hex: Whether the memo field is a hexadecimal string
+    :param use_enhanced_send: If this is false, the construct a legacy transaction sending bitcoin dust
+    """
+    return compose_transaction(
+        db,
+        name="send",
+        params={
+            "source": address,
+            "destination": destination,
+            "asset": asset,
+            "quantity": quantity,
+            "memo": memo,
+            "memo_is_hex": memo_is_hex,
+            "use_enhanced_send": use_enhanced_send,
+        },
+        **construct_args,
+    )
+
+
+def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **construct_args):
+    """
+    Composes a transaction to Sends all assets and/or transfer ownerships to a destination address.
+    :param address: The address that will be sending
+    :param destination: The address to receive the assets and/or ownerships
+    :param flags: An OR mask of flags indicating how the sweep should be processed. Possible flags are:
+                    - FLAG_BALANCES: (integer) 1, specifies that all balances should be transferred.
+                    - FLAG_OWNERSHIP: (integer) 2, specifies that all ownerships should be transferred.
+                    - FLAG_BINARY_MEMO: (integer) 4, specifies that the memo is in binary/hex form.
+    :param memo: The Memo associated with this transaction
+    """
+    return compose_transaction(
+        db,
+        name="sweep",
+        params={
+            "source": address,
+            "destination": destination,
+            "flags": flags,
+            "memo": memo,
+        },
         **construct_args,
     )
 

@@ -350,11 +350,11 @@ def compose(
     source: str,
     asset: str,
     quantity: int,
-    transfer_destination: str | None = None,
-    divisible: bool | None = None,
-    lock: bool | None = None,
-    reset: bool | None = None,
-    description: str | None = None,
+    transfer_destination: str = None,
+    divisible: bool = None,
+    lock: bool = None,
+    reset: bool = None,
+    description: str = None,
 ):
     # Callability is deprecated, so for re‐issuances set relevant parameters
     # to old values; for first issuances, make uncallable.

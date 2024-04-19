@@ -117,9 +117,9 @@ def compose(
     destination: str,
     asset: str,
     quantity: int,
-    memo: str | None = None,
+    memo: str = None,
     memo_is_hex: bool = False,
-    use_enhanced_send: bool | None = None,
+    use_enhanced_send: bool = None,
 ):
     # special case - enhanced_send replaces send by default when it is enabled
     #   but it can be explicitly disabled with an API parameter
