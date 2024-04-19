@@ -574,7 +574,7 @@ def start_all(catch_up="normal"):
 
         telemetry_daemon = TelemetryDaemon(
             interval=60,
-            collector=TelemetryCollectorLive(db=db),
+            collector=TelemetryCollectorLive(db=database.get_connection(read_only=True)),
             client=TelemetryClientLocal(),
         )
 
