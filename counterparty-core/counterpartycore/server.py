@@ -167,7 +167,6 @@ def initialise_config(
     estimate_fee_per_kb=None,
     customnet=None,
     no_mempool=False,
-    skip_db_check=False,
 ):
     # log config alreasdy initialized
     logger.debug("VERBOSE: %s", config.VERBOSE)
@@ -515,7 +514,6 @@ def initialise_config(
         config.ESTIMATE_FEE_PER_KB = estimate_fee_per_kb
 
     config.NO_MEMPOOL = no_mempool
-    config.SKIP_DB_CHECK = skip_db_check
 
     logger.info(f"Running v{config.VERSION_STRING} of counterparty-core.")
 
@@ -531,14 +529,6 @@ def initialise_db():
     # Database
     logger.info(f"Connecting to database (SQLite {apsw.apswversion()}).")
     db = database.get_connection(read_only=False)
-
-    # perform quick integrity check
-    if not config.SKIP_DB_CHECK:
-        logger.info("Running PRAGMA quick_check...")
-        db.execute("PRAGMA quick_check")
-        logger.info("PRAGMA quick_check done.")
-    else:
-        logger.warning("Skipping PRAGMA quick_check.")
 
     ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
 
