@@ -17,8 +17,8 @@ release = os.environ.get("SENTRY_RELEASE", config.__version__)
 
 def before_send(event, _hint):
     db = database.get_connection(read_only=True)
-
     data = TelemetryCollectorLive(db).collect()
+    db.close()
 
     event["tags"] = event.get("tags", {})
 

@@ -599,6 +599,7 @@ def start_all(catch_up="normal"):
     except KeyboardInterrupt:
         pass
     finally:
+        telemetry_daemon.stop()
         if api_status_poller:
             api_status_poller.stop()
         if api_server:
