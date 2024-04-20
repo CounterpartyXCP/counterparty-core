@@ -23,7 +23,7 @@ class TelemetryDaemon:
         self.thread.daemon = True
         self.client = client
         self.collector = collector
-        self.interval = interval
+        self.interval = interval  # must be greater than 0.5
         self.is_running = False
 
     def start(self):
