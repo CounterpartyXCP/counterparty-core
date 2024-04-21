@@ -25,10 +25,10 @@ class TestTelemetryDaemon:
     def test_send_at_intervals(self):
         collector = MagicMock()
         client = MagicMock()
-        daemon = TelemetryDaemon(collector, client, interval=0.1)
+        daemon = TelemetryDaemon(collector, client, interval=0.5)
         daemon.start()
         assert daemon.is_running == True  # noqa: E712
-        time.sleep(0.5)
+        time.sleep(2)
         daemon.stop()
         assert daemon.is_running == False  # noqa: E712
         assert client.send.call_count > 1

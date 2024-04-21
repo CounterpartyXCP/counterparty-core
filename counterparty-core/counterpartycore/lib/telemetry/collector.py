@@ -63,3 +63,6 @@ class TelemetryCollectorLive(TelemetryCollectorBase):
 
     def __read_config_with_default(self, key, default):
         return getattr(config, key, default)
+
+    def close(self):
+        self.db.close()
