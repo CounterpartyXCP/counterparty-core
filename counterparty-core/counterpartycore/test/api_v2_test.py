@@ -69,6 +69,18 @@ def test_api_v2(request):
 
 
 @pytest.mark.usefixtures("api_server_v2")
+def test_api_v2_unpack(request, server_db):
+    with open(CURR_DIR + "/fixtures/api_v2_unpack_fixtures.json", "r") as f:
+        datas = json.load(f)
+    url = f"{API_ROOT}/transactions/unpack"
+
+    for data in datas:
+        result = requests.get(url, params={"datahex": data["datahex"]})  # noqa: S113
+        assert result.status_code == 200
+        assert result.json() == data["result"]
+
+
+@pytest.mark.usefixtures("api_server_v2")
 def test_new_get_balances_by_address():
     alice = ADDR[0]
     url = f"{API_ROOT}/addresses/{alice}/balances"
