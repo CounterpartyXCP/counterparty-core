@@ -1660,13 +1660,17 @@ def info(db, rawtransaction: str, block_index: int = None):
     source, destination, btc_amount, fee, data, extra = gettxinfo.get_tx_info(
         db, BlockchainParser().deserialize_tx(rawtransaction), block_index=block_index
     )
-    return {
+    result = {
         "source": source,
         "destination": destination,
         "btc_amount": btc_amount,
         "fee": fee,
         "data": util.hexlify(data) if data else "",
     }
+    if data:
+        result["data"] = util.hexlify(data)
+        result["unpacked_data"] = unpack(db, result["data"], block_index)
+    return result
 
 
 def unpack(db, datahex: str, block_index: int = None):
