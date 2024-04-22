@@ -90,6 +90,7 @@ def inject_headers(result, return_code=None):
     response.headers["X-COUNTERPARTY-HEIGHT"] = ledger.CURRENT_BLOCK_INDEX
     response.headers["X-COUNTERPARTY-READY"] = ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT
     response.headers["X-BACKEND-HEIGHT"] = BACKEND_HEIGHT
+    response.headers["Content-Type"] = "application/json"
     return response
 
 
