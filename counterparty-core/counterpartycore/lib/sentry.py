@@ -5,11 +5,6 @@ import sentry_sdk
 from counterpartycore.lib import config, database
 from counterpartycore.lib.telemetry.collector import TelemetryCollectorLive
 
-
-def send_exception(exception):
-    sentry_sdk.capture_exception(exception)
-
-
 environment = os.environ.get("SENTRY_ENVIRONMENT", "development")
 
 release = os.environ.get("SENTRY_RELEASE", config.__version__)
@@ -34,10 +29,15 @@ def before_send(event, _hint):
     return event
 
 
-sentry_sdk.init(
-    dsn=os.environ.get("SENTRY_DSN"),
-    environment=environment,
-    release=release,
-    traces_sample_rate=1.0,
-    before_send=before_send,
-)
+def init():
+    # No-op if SENTRY_DSN is not set
+    if not os.environ.get("SENTRY_DSN"):
+        return
+
+    sentry_sdk.init(
+        dsn=os.environ.get("SENTRY_DSN"),
+        environment=environment,
+        release=release,
+        traces_sample_rate=1.0,
+        before_send=before_send,
+    )

@@ -19,7 +19,7 @@ from logging import handlers as logging_handlers
 
 import requests  # noqa: F401
 
-import counterpartycore.lib.sentry  # noqa: F401
+import counterpartycore.lib.sentry as sentry  # noqa: F401
 
 D = decimal.Decimal
 import binascii  # noqa: E402
@@ -749,6 +749,7 @@ class APIServer(threading.Thread):
         self.server = None
         self.ctx = None
         threading.Thread.__init__(self)
+        sentry.init()
 
     def stop(self):
         logger.info("Stopping API Server...")
