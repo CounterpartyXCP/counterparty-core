@@ -33,7 +33,7 @@ for path, route in server.routes.ROUTES.items():
         required = "required" if arg["required"] else "optional"
         md += f"    + {arg['name']} ({arg['type']}, {required}) - {arg.get('description', '')}\n"
         if not arg["required"]:
-            md += f"\n        + Default: `{arg.get('default', '')}`\n\n"
+            md += f"        + Default: `{arg.get('default', '')}`\n"
 
 with open(API_DOC_FILE, "w") as f:
     f.write(md)
