@@ -30,7 +30,11 @@ for path, route in server.routes.ROUTES.items():
     md += route["description"]
     md += "\n\n+ Parameters\n"
     for arg in route["args"]:
-        md += f"    + {arg['name']} ({arg['type']}) - {arg.get('description', '')}\n"
+        required = "required" if arg["required"] else "optional"
+        md += f"    + {arg['name']} ({arg['type']}, {required}) - {arg.get('description', '')}\n"
+        if not arg["required"]:
+            md += f"\n        + Default: `{arg.get('default', '')}`\n\n"
 
 with open(API_DOC_FILE, "w") as f:
     f.write(md)
+    print(f"API documentation written to {API_DOC_FILE}")
