@@ -179,6 +179,12 @@ def pytest_addoption(parser):
     parser.addoption(
         "--testbook", action="store_true", default=False, help="Include testnet test book"
     )
+    parser.addoption(
+        "--saveapifixtures",
+        action="store_true",
+        default=False,
+        help="Generate api v2 fixtures for tests",
+    )
 
 
 @pytest.fixture(scope="function")

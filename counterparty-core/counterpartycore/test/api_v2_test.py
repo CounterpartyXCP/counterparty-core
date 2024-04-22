@@ -1,3 +1,4 @@
+import json
 import tempfile
 
 import pytest
@@ -15,11 +16,12 @@ from counterpartycore.test.util_test import CURR_DIR
 
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"
 FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
+API_V2_FIXTURES = CURR_DIR + "/fixtures/api_v2_fixtures.json"
 API_ROOT = "http://api:api@localhost:10009"
 
 
 @pytest.mark.usefixtures("api_server_v2")
-def test_api_v2():
+def test_api_v2(request):
     block_index = 310491
     address = ADDR[0]
     asset = "NODIVISIBLE"
@@ -30,6 +32,10 @@ def test_api_v2():
     event = "CREDIT"
     event_index = 10
     exclude_routes = ["compose", "unpack", "info", "mempool", "healthz", "backend"]
+    results = {}
+    fixtures = {}
+    with open(API_V2_FIXTURES, "r") as f:
+        fixtures = json.load(f)
 
     for route in routes.ROUTES:
         if any([exclude in route for exclude in exclude_routes]):
@@ -49,9 +55,17 @@ def test_api_v2():
             url = url.replace("<tx_hash>", dispsenser_hash)
         else:
             url = url.replace("<tx_hash>", tx_hash)
+        if route.startswith("/events"):
+            url += "?limit=5"
         # print(url)
         result = requests.get(url)  # noqa: S113
+        results[url] = result.json()
         assert result.status_code == 200
+        assert results[url] == fixtures[url]
+
+    if request.config.getoption("saveapifixtures"):
+        with open(API_V2_FIXTURES, "w") as f:
+            f.write(json.dumps(results, indent=4))
 
 
 @pytest.mark.usefixtures("api_server_v2")
