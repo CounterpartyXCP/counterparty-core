@@ -87,12 +87,17 @@ def get_events(db, block_index=None, event=None, event_index=None, last=None, li
     else:
         limit = ""
     # no sql injection here
-    query = f"""
+    query = """
         SELECT message_index AS event_index, event, bindings, block_index, timestamp
         FROM messages
-        WHERE ({" AND ".join(where)})
+    """
+    if len(where) > 0:
+        query += f"""
+            WHERE ({" AND ".join(where)})
+        """  # nosec B608  # noqa: S608
+    query += f"""
         ORDER BY message_index DESC {limit}
-    """  # nosec B608  # noqa: S608
+    """
     cursor.execute(query, tuple(bindings))
     events = cursor.fetchall()
     for i, _ in enumerate(events):
@@ -1978,9 +1983,9 @@ def get_resolutions_by_bet(db, tx_hash: str):
     query = """
         SELECT *
         FROM bet_match_resolutions
-        WHERE bet_match_id LIKE '%?%'
+        WHERE bet_match_id LIKE '%:tx_hash%'
     """
-    bindings = (tx_hash,)
+    bindings = {"tx_hash": tx_hash}
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -2187,10 +2192,10 @@ def get_btcpays_by_order(db, tx_hash: str):
     cursor = db.cursor()
     query = """
         SELECT *
-        FROM btc_pays
-        WHERE order_match_id LIKE '%?%'
+        FROM btcpays
+        WHERE order_match_id LIKE '%:tx_hash%'
     """
-    bindings = (tx_hash,)
+    bindings = {"tx_hash": tx_hash}
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
