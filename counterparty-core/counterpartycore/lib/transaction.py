@@ -1225,22 +1225,28 @@ def compose_bet(
     :param leverage: Leverage, as a fraction of 5040
     :param expiration: The number of blocks after which the bet expires if it remains unmatched
     """
-    return compose_transaction(
+    params = {
+        "source": address,
+        "feed_address": feed_address,
+        "bet_type": bet_type,
+        "deadline": deadline,
+        "wager_quantity": wager_quantity,
+        "counterwager_quantity": counterwager_quantity,
+        "target_value": target_value,
+        "leverage": leverage,
+        "expiration": expiration,
+    }
+    rawtransaction = compose_transaction(
         db,
         name="bet",
-        params={
-            "source": address,
-            "feed_address": feed_address,
-            "bet_type": bet_type,
-            "deadline": deadline,
-            "wager_quantity": wager_quantity,
-            "counterwager_quantity": counterwager_quantity,
-            "target_value": target_value,
-            "leverage": leverage,
-            "expiration": expiration,
-        },
+        params=params,
         **construct_args,
     )
+    return {
+        "rawtransaction": rawtransaction,
+        "params": params,
+        "name": "bet",
+    }
 
 
 def compose_broadcast(
@@ -1254,18 +1260,24 @@ def compose_broadcast(
     :param fee_fraction: How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. 0.05 is five percent)
     :param text: The textual part of the broadcast
     """
-    return compose_transaction(
+    params = {
+        "source": address,
+        "timestamp": timestamp,
+        "value": value,
+        "fee_fraction": fee_fraction,
+        "text": text,
+    }
+    rawtransaction = compose_transaction(
         db,
         name="broadcast",
-        params={
-            "source": address,
-            "timestamp": timestamp,
-            "value": value,
-            "fee_fraction": fee_fraction,
-            "text": text,
-        },
+        params=params,
         **construct_args,
     )
+    return {
+        "rawtransaction": rawtransaction,
+        "params": params,
+        "name": "broadcast",
+    }
 
 
 def compose_btcpay(db, address: str, order_match_id: str, **construct_args):
@@ -1274,12 +1286,18 @@ def compose_btcpay(db, address: str, order_match_id: str, **construct_args):
     :param address: The address that will be sending the payment
     :param order_match_id: The ID of the order match to pay for
     """
-    return compose_transaction(
+    params = {"source": address, "order_match_id": order_match_id}
+    rawtransaction = compose_transaction(
         db,
         name="btcpay",
-        params={"source": address, "order_match_id": order_match_id},
+        params=params,
         **construct_args,
     )
+    return {
+        "rawtransaction": rawtransaction,
+        "params": params,
+        "name": "btcpay",
+    }
 
 
 def compose_burn(db, address: str, quantity: int, overburn: bool = False, **construct_args):
@@ -1289,12 +1307,18 @@ def compose_burn(db, address: str, quantity: int, overburn: bool = False, **cons
     :param quantity: The quantities of BTC to burn (1 BTC maximum burn per address)
     :param overburn: Whether to allow the burn to exceed 1 BTC for the address
     """
-    return compose_transaction(
+    params = {"source": address, "quantity": quantity, "overburn": overburn}
+    rawtransaction = compose_transaction(
         db,
         name="burn",
-        params={"source": address, "quantity": quantity, "overburn": overburn},
+        params=params,
         **construct_args,
     )
+    return {
+        "rawtransaction": rawtransaction,
+        "params": params,
+        "name": "burn",
+    }
 
 
 def compose_cancel(db, address: str, offer_hash: str, **construct_args):
@@ -1303,12 +1327,18 @@ def compose_cancel(db, address: str, offer_hash: str, **construct_args):
     :param address: The address that placed the order/bet to be cancelled
     :param offer_hash: The hash of the order/bet to be cancelled
     """
-    return compose_transaction(
+    params = {"source": address, "offer_hash": offer_hash}
+    rawtransaction = compose_transaction(
         db,
         name="cancel",
-        params={"source": address, "offer_hash": offer_hash},
+        params=params,
         **construct_args,
     )
+    return {
+        "rawtransaction": rawtransaction,
+        "params": params,
+        "name": "cancel",
+    }
 
 
 def compose_destroy(db, address: str, asset: str, quantity: int, tag: str, **construct_args):
@@ -1319,12 +1349,18 @@ def compose_destroy(db, address: str, asset: str, quantity: int, tag: str, **con
     :param quantity: The quantity of the asset to be destroyed
     :param tag: A tag for the destruction
     """
-    return compose_transaction(
+    params = {"source": address, "asset": asset, "quantity": quantity, "tag": tag}
+    rawtransaction = compose_transaction(
         db,
         name="destroy",
-        params={"source": address, "asset": asset, "quantity": quantity, "tag": tag},
+        params=params,
         **construct_args,
     )
+    return {
+        "rawtransaction": rawtransaction,
+        "params": params,
+        "name": "destroy",
+    }
 
 
 def compose_dispenser(
@@ -1350,21 +1386,27 @@ def compose_dispenser(
     :param open_address: The address that you would like to open the dispenser on
     :param oracle_address: The address that you would like to use as a price oracle for this dispenser
     """
-    return compose_transaction(
+    params = {
+        "source": address,
+        "asset": asset,
+        "give_quantity": give_quantity,
+        "escrow_quantity": escrow_quantity,
+        "mainchainrate": mainchainrate,
+        "status": status,
+        "open_address": open_address,
+        "oracle_address": oracle_address,
+    }
+    rawtransaction = compose_transaction(
         db,
         name="dispenser",
-        params={
-            "source": address,
-            "asset": asset,
-            "give_quantity": give_quantity,
-            "escrow_quantity": escrow_quantity,
-            "mainchainrate": mainchainrate,
-            "status": status,
-            "open_address": open_address,
-            "oracle_address": oracle_address,
-        },
+        params=params,
         **construct_args,
     )
+    return {
+        "rawtransaction": rawtransaction,
+        "params": params,
+        "name": "dispenser",
+    }
 
 
 def compose_dividend(
@@ -1377,17 +1419,23 @@ def compose_dividend(
     :param asset: The asset or subasset that the dividends are being rewarded on
     :param dividend_asset: The asset or subasset that the dividends are paid in
     """
-    return compose_transaction(
+    params = {
+        "source": address,
+        "quantity_per_unit": quantity_per_unit,
+        "asset": asset,
+        "dividend_asset": dividend_asset,
+    }
+    rawtransaction = compose_transaction(
         db,
         name="dividend",
-        params={
-            "source": address,
-            "quantity_per_unit": quantity_per_unit,
-            "asset": asset,
-            "dividend_asset": dividend_asset,
-        },
+        params=params,
         **construct_args,
     )
+    return {
+        "rawtransaction": rawtransaction,
+        "params": params,
+        "name": "dividend",
+    }
 
 
 def compose_issuance(
@@ -1413,21 +1461,27 @@ def compose_issuance(
     :param reset: Wether this issuance should reset any existing supply
     :param description: A textual description for the asset
     """
-    return compose_transaction(
+    params = {
+        "source": address,
+        "asset": asset,
+        "quantity": quantity,
+        "transfer_destination": transfer_destination,
+        "divisible": divisible,
+        "lock": lock,
+        "reset": reset,
+        "description": description,
+    }
+    rawtransaction = compose_transaction(
         db,
         name="issuance",
-        params={
-            "source": address,
-            "asset": asset,
-            "quantity": quantity,
-            "transfer_destination": transfer_destination,
-            "divisible": divisible,
-            "lock": lock,
-            "reset": reset,
-            "description": description,
-        },
+        params=params,
         **construct_args,
     )
+    return {
+        "rawtransaction": rawtransaction,
+        "params": params,
+        "name": "issuance",
+    }
 
 
 def compose_mpma(
@@ -1461,17 +1515,24 @@ def compose_mpma(
             raise exceptions.ComposeError("Quantity must be an integer")
     asset_dest_quant_list = list(zip(asset_list, destination_list, quantity_list))
 
-    return compose_transaction(
+    params = {
+        "source": source,
+        "asset_dest_quant_list": asset_dest_quant_list,
+        "memo": memo,
+        "memo_is_hex": memo_is_hex,
+    }
+
+    rawtransaction = compose_transaction(
         db,
         name="version.mpma",
-        params={
-            "source": source,
-            "asset_dest_quant_list": asset_dest_quant_list,
-            "memo": memo,
-            "memo_is_hex": memo_is_hex,
-        },
+        params=params,
         **construct_args,
     )
+    return {
+        "rawtransaction": rawtransaction,
+        "params": params,
+        "name": "mpma",
+    }
 
 
 def compose_order(
@@ -1495,20 +1556,26 @@ def compose_order(
     :param expiration: The number of blocks for which the order should be valid
     :param fee_required: The miners’ fee required to be paid by orders for them to match this one; in BTC; required only if buying BTC (may be zero, though)
     """
-    return compose_transaction(
+    params = {
+        "source": address,
+        "give_asset": give_asset,
+        "give_quantity": give_quantity,
+        "get_asset": get_asset,
+        "get_quantity": get_quantity,
+        "expiration": expiration,
+        "fee_required": fee_required,
+    }
+    rawtransaction = compose_transaction(
         db,
         name="order",
-        params={
-            "source": address,
-            "give_asset": give_asset,
-            "give_quantity": give_quantity,
-            "get_asset": get_asset,
-            "get_quantity": get_quantity,
-            "expiration": expiration,
-            "fee_required": fee_required,
-        },
+        params=params,
         **construct_args,
     )
+    return {
+        "rawtransaction": rawtransaction,
+        "params": params,
+        "name": "order",
+    }
 
 
 def compose_send(
@@ -1532,20 +1599,26 @@ def compose_send(
     :param memo_is_hex: Whether the memo field is a hexadecimal string
     :param use_enhanced_send: If this is false, the construct a legacy transaction sending bitcoin dust
     """
-    return compose_transaction(
+    params = {
+        "source": address,
+        "destination": destination,
+        "asset": asset,
+        "quantity": quantity,
+        "memo": memo,
+        "memo_is_hex": memo_is_hex,
+        "use_enhanced_send": use_enhanced_send,
+    }
+    rawtransaction = compose_transaction(
         db,
         name="send",
-        params={
-            "source": address,
-            "destination": destination,
-            "asset": asset,
-            "quantity": quantity,
-            "memo": memo,
-            "memo_is_hex": memo_is_hex,
-            "use_enhanced_send": use_enhanced_send,
-        },
+        params=params,
         **construct_args,
     )
+    return {
+        "rawtransaction": rawtransaction,
+        "params": params,
+        "name": "send",
+    }
 
 
 def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **construct_args):
@@ -1559,17 +1632,23 @@ def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **c
                     - FLAG_BINARY_MEMO: (integer) 4, specifies that the memo is in binary/hex form.
     :param memo: The Memo associated with this transaction
     """
-    return compose_transaction(
+    params = {
+        "source": address,
+        "destination": destination,
+        "flags": flags,
+        "memo": memo,
+    }
+    rawtransaction = compose_transaction(
         db,
         name="sweep",
-        params={
-            "source": address,
-            "destination": destination,
-            "flags": flags,
-            "memo": memo,
-        },
+        params=params,
         **construct_args,
     )
+    return {
+        "rawtransaction": rawtransaction,
+        "params": params,
+        "name": "sweep",
+    }
 
 
 def info(db, rawtransaction: str, block_index: int = None):
