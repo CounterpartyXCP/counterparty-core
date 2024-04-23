@@ -180,11 +180,11 @@ def intialize_kickstart_db(bitcoind_dir, last_known_hash, resuming, new_database
         if not resuming:
             first_block = config.BLOCK_FIRST
             if not new_database:
-                first_block_info = cursor.execute(
-                    "SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1"
+                most_recent_transaction = cursor.execute(
+                    "SELECT block_index FROM transactions ORDER BY block_index DESC LIMIT 1"
                 ).fetchone()
-                if first_block_info is not None:
-                    first_block = first_block_info["block_index"]
+                if most_recent_transaction is not None:
+                    first_block = most_recent_transaction["block_index"] + 1
             fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner)
         else:
             # check if kickstart_blocks is complete
