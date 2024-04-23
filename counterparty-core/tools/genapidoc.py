@@ -1,9 +1,28 @@
+import json
 import os
 
+import requests
 from counterpartycore import server
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 API_DOC_FILE = os.path.join(CURR_DIR, "../../../Documentation/docs/advanced/api/rest.md")
+API_ROOT = "http://api:api@localhost:4000"
+
+
+def get_example_output(path, args):
+    url_keys = []
+    for key, value in args.items():
+        if f"{key}>" in path:
+            path = path.replace(f"<{key}>", value)
+            path = path.replace(f"<int:{key}>", value)
+            url_keys.append(key)
+    for key in url_keys:
+        args.pop(key)
+    url = f"{API_ROOT}{path}"
+    print(f"GET {url}")
+    response = requests.get(url, params=args)  # noqa S113
+    return response.json()
+
 
 md = """---
 title: REST API V2
@@ -29,11 +48,25 @@ for path, route in server.routes.ROUTES.items():
     md += f"\n### {title} [`{blueprint_path}`]\n\n"
     md += route["description"]
     md += "\n\n+ Parameters\n"
+    example_args = {}
     for arg in route["args"]:
         required = "required" if arg["required"] else "optional"
-        md += f"    + {arg['name']} ({arg['type']}, {required}) - {arg.get('description', '')}\n"
+        description = arg.get("description", "")
+        example_arg = ""
+        if "(e.g. " in description:
+            desc_arr = description.split("(e.g. ")
+            description = desc_arr[0]
+            example_args[arg["name"]] = desc_arr[1].replace(")", "")
+            example_arg = f": `{example_args[arg['name']]}`"
+        md += f"    + {arg['name']}{example_arg} ({arg['type']}, {required}) - {description}\n"
         if not arg["required"]:
             md += f"        + Default: `{arg.get('default', '')}`\n"
+    if example_args != {}:
+        example_output = get_example_output(path, example_args)
+        example_output_json = json.dumps(example_output, indent=4)
+        md += "\n+ Response 200 (application/json)\n\n"
+        for line in example_output_json.split("\n"):
+            md += f"        {line}\n"
 
 with open(API_DOC_FILE, "w") as f:
     f.write(md)

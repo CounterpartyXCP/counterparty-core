@@ -1255,8 +1255,8 @@ def get_all_burns(db, status: str = "valid", offset: int = 0, limit: int = 100):
 def get_blocks(db, last: int = None, limit: int = 10):
     """
     Returns the list of the last ten blocks
-    :param int last: The index of the most recent block to return
-    :param int limit: The number of blocks to return
+    :param int last: The index of the most recent block to return (e.g. 840000)
+    :param int limit: The number of blocks to return (e.g. 2)
     """
     cursor = db.cursor()
     bindings = []
