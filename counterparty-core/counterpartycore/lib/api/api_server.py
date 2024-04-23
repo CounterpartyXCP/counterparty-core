@@ -115,6 +115,11 @@ def prepare_args(route, **kwargs):
                     function_args[arg_name] = int(str_arg)
                 except ValueError as e:
                     raise ValueError(f"Invalid integer: {arg_name}") from e
+            elif arg["type"] == "float":
+                try:
+                    function_args[arg_name] = float(str_arg)
+                except ValueError as e:
+                    raise ValueError(f"Invalid float: {arg_name}") from e
             else:
                 function_args[arg_name] = str_arg
     return function_args
