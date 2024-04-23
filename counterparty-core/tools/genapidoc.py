@@ -11,9 +11,9 @@ title: REST API V2
 
 FORMAT: 1A
 
-# Counterpaty Core API
+# Counterparty Core API
 
-The Counterparty Core API is the recommended way to query the state of a Counterparty node. The following routes are available.
+The Counterparty Core API is the recommended (and only supported) way to query the state of a Counterparty node. The following routes are available:
 """
 
 current_group = None
