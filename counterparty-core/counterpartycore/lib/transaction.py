@@ -1654,7 +1654,7 @@ def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **c
 def info(db, rawtransaction: str, block_index: int = None):
     """
     Returns Counterparty information from a raw transaction in hex format.
-    :param rawtransaction: Raw transaction in hex format
+    :param rawtransaction: Raw transaction in hex format (e.g. 01000000017828697743c03aef6a3a8ba54b22bf579ffcab8161faf20e7b20c4ecd75cc986010000006b483045022100d1bd0531bb1ed2dd2cbf77d6933273e792a3dbfa84327d419169850ddd5976f502205d1ab0f7bcbf1a0cc183f0520c9aa8f711d41cb790c0c4ac39da6da4a093d798012103d3b1f711e907acb556e239f6cafb6a4f7fe40d8dd809b0e06e739c2afd73f202ffffffff0200000000000000004d6a4bf29880b93b0711524c7ef9c76835752088db8bd4113a3daf41fc45ffdc8867ebdbf26817fae377696f36790e52f51005806e9399a427172fedf348cf798ed86e548002ee96909eef0775ec3c2b0100000000001976a91443434cf159cc585fbd74daa9c4b833235b19761b88ac00000000)
     :param block_index: Block index mandatory for transactions before block 335000
     """
     source, destination, btc_amount, fee, data, extra = gettxinfo.get_tx_info(
@@ -1676,7 +1676,7 @@ def info(db, rawtransaction: str, block_index: int = None):
 def unpack(db, datahex: str, block_index: int = None):
     """
     Unpacks Counterparty data in hex format and returns the message type and data.
-    :param datahex: Data in hex format
+    :param datahex: Data in hex format (e.g. 16010b9142801429a60000000000000001000000554e4e45474f544941424c45205745204d555354204245434f4d4520554e4e45474f544941424c4520574520415245)
     :param block_index: Block index of the transaction containing this data
     """
     data = binascii.unhexlify(datahex)

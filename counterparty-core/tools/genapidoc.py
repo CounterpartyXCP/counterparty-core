@@ -61,7 +61,7 @@ for path, route in server.routes.ROUTES.items():
         md += f"    + {arg['name']}{example_arg} ({arg['type']}, {required}) - {description}\n"
         if not arg["required"]:
             md += f"        + Default: `{arg.get('default', '')}`\n"
-    if example_args != {}:
+    if example_args != {} or route["args"] == []:
         example_output = get_example_output(path, example_args)
         example_output_json = json.dumps(example_output, indent=4)
         md += "\n+ Response 200 (application/json)\n\n"
