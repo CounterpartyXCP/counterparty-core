@@ -1254,11 +1254,11 @@ def compose_broadcast(
 ):
     """
     Composes a transaction to broadcast textual and numerical information to the network.
-    :param address: The address that will be sending (must have the necessary quantity of the specified asset)
-    :param timestamp: The timestamp of the broadcast, in Unix time
-    :param value: Numerical value of the broadcast
-    :param fee_fraction: How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. 0.05 is five percent)
-    :param text: The textual part of the broadcast
+    :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. 1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev)
+    :param timestamp: The timestamp of the broadcast, in Unix time (e.g. 4003903983)
+    :param value: Numerical value of the broadcast (e.g. 100)
+    :param fee_fraction: How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. 0.05 is five percent) (e.g. 0.05)
+    :param text: The textual part of the broadcast (e.g. "Hello, world!")
     """
     params = {
         "source": address,
@@ -1283,8 +1283,8 @@ def compose_broadcast(
 def compose_btcpay(db, address: str, order_match_id: str, **construct_args):
     """
     Composes a transaction to pay for a BTC order match.
-    :param address: The address that will be sending the payment
-    :param order_match_id: The ID of the order match to pay for
+    :param address: The address that will be sending the payment (e.g. bc1qsteve3tfxfg9pcmvzw645sr9zy7es5rx645p6l)
+    :param order_match_id: The ID of the order match to pay for (e.g. e470416a9500fb046835192da013f48e6468a07dba1bede4a0b68e666ed23c8d_4953bde3d9417b103615c2d3d4b284d4fcf7cbd820e5dd19ac0084e9ebd090b2)
     """
     params = {"source": address, "order_match_id": order_match_id}
     rawtransaction = compose_transaction(

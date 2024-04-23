@@ -1828,5 +1828,24 @@
         "ledger_hash": "b3f8cbb50b0705a5c4a8495f8b5128de13a32daebd8ac5e8316a010f0d203584",
         "txlist_hash": "84bdc5b9073f775a2b65de7da2b10b89a2235f3501883b0a836e41e68cd00d46",
         "messages_hash": "801d961c45a257f85ef0f10a6a8fdf048a520ae4861c0903f26365b3eaaaf540"
+    },
+    "/addresses/<address>/compose/broadcast": {
+        "rawtransaction": "01000000019a753a6b8be54cdee2acd408f6199e29092c8c32e13912865a68da8a0d9ae065010000001976a914bce6191bf2fd5981313cae869e9fafe164f7dbaf88acffffffff0200000000000000002b6a2988dab644080b5ae67a54ba74394f5f94b41e385fc911aa5c810c5f98e6f6b17518ca736e94353de8e82a282b00000000001976a914bce6191bf2fd5981313cae869e9fafe164f7dbaf88ac00000000",
+        "params": {
+            "source": "1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev",
+            "timestamp": 4003903983,
+            "value": 100.0,
+            "fee_fraction": 0.05,
+            "text": "\"Hello, world!\""
+        },
+        "name": "broadcast"
+    },
+    "/addresses/<address>/compose/btcpay": {
+        "rawtransaction": "0200000000010161101e1990879ee64168cce92c9caf338bb571e9cb246b1c2ab87124b95091900200000016001482f2ccc569325050e36c13b55a4065113d985066ffffffff0383c3040000000000160014a9943f67bcd30331d5a4ec6d902cbe03789a1b9700000000000000004b6a49aae396d448ed266a7785be1f6fcfa38dbe3e6e043e3d67691f678d6aa3b30e423f66ffad71eaf3231ef8f05dd5cc2f5b1ea14d33274b9cddacca5bd816a1ce6d5b4d498eb66a981db70bc758000000000016001482f2ccc569325050e36c13b55a4065113d98506602000000000000",
+        "params": {
+            "source": "bc1qsteve3tfxfg9pcmvzw645sr9zy7es5rx645p6l",
+            "order_match_id": "e470416a9500fb046835192da013f48e6468a07dba1bede4a0b68e666ed23c8d_4953bde3d9417b103615c2d3d4b284d4fcf7cbd820e5dd19ac0084e9ebd090b2"
+        },
+        "name": "btcpay"
     }
 }
