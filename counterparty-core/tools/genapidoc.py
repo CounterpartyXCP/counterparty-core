@@ -8,7 +8,7 @@ CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 API_DOC_FILE = os.path.join(CURR_DIR, "../../../Documentation/docs/advanced/api/rest.md")
 CACHE_FILE = os.path.join(CURR_DIR, "apicache.json")
 API_ROOT = "http://api:api@localhost:4000"
-USE_API_CACHE = False
+USE_API_CACHE = True
 
 
 def get_example_output(path, args):
@@ -68,11 +68,11 @@ for path, route in server.routes.ROUTES.items():
         if not arg["required"]:
             md += f"        + Default: `{arg.get('default', '')}`\n"
     if example_args != {} or route["args"] == []:
-        if not USE_API_CACHE:
+        if not USE_API_CACHE or path not in cache:
             example_output = get_example_output(path, example_args)
             cache[path] = example_output
         else:
-            example_output = cache.get(path, {})
+            example_output = cache[path]
         example_output_json = json.dumps(example_output, indent=4)
         md += "\n+ Response 200 (application/json)\n\n"
         md += "        ```\n"
@@ -80,9 +80,8 @@ for path, route in server.routes.ROUTES.items():
             md += f"        {line}\n"
         md += "        ```\n"
 
-if not USE_API_CACHE:
-    with open(CACHE_FILE, "w") as f:
-        json.dump(cache, f, indent=4)
+with open(CACHE_FILE, "w") as f:
+    json.dump(cache, f, indent=4)
 
 with open(API_DOC_FILE, "w") as f:
     f.write(md)

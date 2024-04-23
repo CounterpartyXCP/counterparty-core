@@ -21,16 +21,6 @@
             "messages_hash": "16b7d40543b7b80587f4d98c84fcdfdceb2d1c18abba82c7064c09c2795b7ab2"
         }
     ],
-    "/blocks/<int:block_index>": {
-        "block_index": 840464,
-        "block_hash": "00000000000000000001093d4d6b21b80800fff6e5ea15cce6d65066f482cce9",
-        "block_time": 1713852783,
-        "previous_block_hash": "00000000000000000002db1e5aa19784eec3de949f98ec757e7a7f2fc392079d",
-        "difficulty": 86388558925171.02,
-        "ledger_hash": "b3f8cbb50b0705a5c4a8495f8b5128de13a32daebd8ac5e8316a010f0d203584",
-        "txlist_hash": "84bdc5b9073f775a2b65de7da2b10b89a2235f3501883b0a836e41e68cd00d46",
-        "messages_hash": "801d961c45a257f85ef0f10a6a8fdf048a520ae4861c0903f26365b3eaaaf540"
-    },
     "/blocks/<int:block_index>/transactions": [
         {
             "tx_index": 2726605,
@@ -1828,5 +1818,15 @@
         "success": true
     },
     "/mempool/events": [],
-    "/mempool/events/<event>": []
+    "/mempool/events/<event>": [],
+    "/blocks/<int:block_index>": {
+        "block_index": 840464,
+        "block_hash": "00000000000000000001093d4d6b21b80800fff6e5ea15cce6d65066f482cce9",
+        "block_time": 1713852783,
+        "previous_block_hash": "00000000000000000002db1e5aa19784eec3de949f98ec757e7a7f2fc392079d",
+        "difficulty": 86388558925171.02,
+        "ledger_hash": "b3f8cbb50b0705a5c4a8495f8b5128de13a32daebd8ac5e8316a010f0d203584",
+        "txlist_hash": "84bdc5b9073f775a2b65de7da2b10b89a2235f3501883b0a836e41e68cd00d46",
+        "messages_hash": "801d961c45a257f85ef0f10a6a8fdf048a520ae4861c0903f26365b3eaaaf540"
+    }
 }
