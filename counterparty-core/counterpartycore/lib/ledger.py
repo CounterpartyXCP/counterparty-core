@@ -108,8 +108,8 @@ def get_events(db, block_index=None, event=None, event_index=None, last=None, li
 def get_all_events(db, last: int = None, limit: int = 100):
     """
     Returns all events
-    :param int last: The last event index to return
-    :param int limit: The maximum number of events to return
+    :param int last: The last event index to return (e.g. 10665092)
+    :param int limit: The maximum number of events to return (e.g. 5)
     """
     return get_events(db, last=last, limit=limit)
 
@@ -117,7 +117,7 @@ def get_all_events(db, last: int = None, limit: int = 100):
 def get_events_by_block(db, block_index: int):
     """
     Returns the events of a block
-    :param int block_index: The index of the block to return
+    :param int block_index: The index of the block to return (e.g. 840464)
     """
     return get_events(db, block_index=block_index)
 
@@ -125,8 +125,8 @@ def get_events_by_block(db, block_index: int):
 def get_events_by_block_and_event(db, block_index: int, event: str):
     """
     Returns the events of a block filtered by event
-    :param int block_index: The index of the block to return
-    :param str event: The event to filter by
+    :param int block_index: The index of the block to return (e.g. 840464)
+    :param str event: The event to filter by (e.g. CREDIT)
     """
     if event == "count":
         return get_events_counts_by_block(db, block_index=block_index)
@@ -136,7 +136,7 @@ def get_events_by_block_and_event(db, block_index: int, event: str):
 def get_event_by_index(db, event_index: int):
     """
     Returns the event of an index
-    :param int event_index: The index of the event to return
+    :param int event_index: The index of the event to return (e.g. 10665092)
     """
     return get_events(db, event_index=event_index)
 
@@ -144,9 +144,9 @@ def get_event_by_index(db, event_index: int):
 def get_events_by_event(db, event: str, last: int = None, limit: int = 100):
     """
     Returns the events filtered by event name
-    :param str event: The event to return
-    :param int last: The last event index to return
-    :param int limit: The maximum number of events to return
+    :param str event: The event to return (e.g. CREDIT)
+    :param int last: The last event index to return (e.g. 10665092)
+    :param int limit: The maximum number of events to return (e.g. 5)
     """
     return get_events(db, event=event, last=last, limit=limit)
 
@@ -180,12 +180,12 @@ def get_all_mempool_events(db):
     return get_mempool_events(db)
 
 
-def get_mempool_events_by_event(db, event_name: str):
+def get_mempool_events_by_event(db, event: str):
     """
     Returns the mempool events filtered by event name
-    :param str event_name: The event to return
+    :param str event: The event to return (e.g. CREDIT)
     """
-    return get_mempool_events(db, event_name=event_name)
+    return get_mempool_events(db, event_name=event)
 
 
 def get_events_counts(db, block_index=None):
@@ -206,7 +206,7 @@ def get_events_counts(db, block_index=None):
 def get_events_counts_by_block(db, block_index: int):
     """
     Returns the event counts of a block
-    :param int block_index: The index of the block to return
+    :param int block_index: The index of the block to return (e.g. 840464)
     """
     return get_events_counts(db, block_index=block_index)
 
@@ -526,7 +526,7 @@ def get_credits(db, address=None, asset=None, block_index=None, tx_index=None):
 def get_credits_by_block(db, block_index: int):
     """
     Returns the credits of a block
-    :param int block_index: The index of the block to return
+    :param int block_index: The index of the block to return (e.g. 840464)
     """
     return get_credits(db, block_index=block_index)
 
@@ -534,7 +534,7 @@ def get_credits_by_block(db, block_index: int):
 def get_credits_by_address(db, address: str):
     """
     Returns the credits of an address
-    :param str address: The address to return
+    :param str address: The address to return (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
     """
     return get_credits(db, address=address)
 
@@ -542,7 +542,7 @@ def get_credits_by_address(db, address: str):
 def get_credits_by_asset(db, asset: str):
     """
     Returns the credits of an asset
-    :param str asset: The asset to return
+    :param str asset: The asset to return (e.g. UNNEGOTIABLE)
     """
     return get_credits(db, asset=asset)
 
@@ -554,7 +554,7 @@ def get_debits(db, address=None, asset=None, block_index=None, tx_index=None):
 def get_debits_by_block(db, block_index: int):
     """
     Returns the debits of a block
-    :param int block_index: The index of the block to return
+    :param int block_index: The index of the block to return (e.g. 840464)
     """
     return get_debits(db, block_index=block_index)
 
@@ -562,7 +562,7 @@ def get_debits_by_block(db, block_index: int):
 def get_debits_by_address(db, address: str):
     """
     Returns the debits of an address
-    :param str address: The address to return
+    :param str address: The address to return (e.g. 178etygrwEeeyQso9we85rUqYZbkiqzL4A)
     """
     return get_debits(db, address=address)
 
@@ -570,7 +570,7 @@ def get_debits_by_address(db, address: str):
 def get_debits_by_asset(db, asset: str):
     """
     Returns the debits of an asset
-    :param str asset: The asset to return
+    :param str asset: The asset to return (e.g. UNNEGOTIABLE)
     """
     return get_debits(db, asset=asset)
 
@@ -950,8 +950,8 @@ def get_asset_issued(db, address):
 def get_asset_balances(db, asset: str, exclude_zero_balances: bool = True):
     """
     Returns the asset balances
-    :param str asset: The asset to return
-    :param bool exclude_zero_balances: Whether to exclude zero balances
+    :param str asset: The asset to return (e.g. UNNEGOTIABLE)
+    :param bool exclude_zero_balances: Whether to exclude zero balances (e.g. True)
     """
     cursor = db.cursor()
     query = """
@@ -989,7 +989,7 @@ def get_asset_issuances_quantity(db, asset):
 def get_asset_info(db, asset: str):
     """
     Returns the asset information
-    :param str asset: The asset to return
+    :param str asset: The asset to return (e.g. UNNEGOTIABLE)
     """
     asset_name = resolve_subasset_longname(db, asset)
 
@@ -1275,7 +1275,7 @@ def get_blocks(db, last: int = None, limit: int = 10):
 def get_block(db, block_index: int):
     """
     Return the information of a block
-    :param int block_index: The index of the block to return
+    :param int block_index: The index of the block to return (e.g. 840464)
     """
     blocks = get_blocks(db, last=block_index, limit=1)
     if blocks:
@@ -1286,7 +1286,7 @@ def get_block(db, block_index: int):
 def get_transactions_by_block(db, block_index: int):
     """
     Returns the transactions of a block
-    :param int block_index: The index of the block to return
+    :param int block_index: The index of the block to return (e.g. 840464)
     """
     cursor = db.cursor()
     query = """
@@ -1329,7 +1329,7 @@ def get_transactions(db, tx_hash=None):
 def get_transaction(db, tx_hash: str):
     """
     Returns the information of a transaction
-    :param str tx_hash: The hash of the transaction to return
+    :param str tx_hash: The hash of the transaction to return (e.g. 876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5)
     """
     transactions = get_transactions(db, tx_hash)
     if transactions:
