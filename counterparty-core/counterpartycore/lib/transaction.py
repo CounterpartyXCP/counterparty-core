@@ -1210,20 +1210,20 @@ def compose_bet(
     counterwager_quantity: int,
     expiration: int,
     leverage: int = 5040,
-    target_value: float = None,
+    target_value: int = None,
     **construct_args,
 ):
     """
     Composes a transaction to issue a bet against a feed.
-    :param address: The address that will make the bet
-    :param feed_address: The address that hosts the feed to be bet on
-    :param bet_type: Bet 0 for Bullish CFD (deprecated), 1 for Bearish CFD (deprecated), 2 for Equal, 3 for NotEqual
-    :param deadline: The time at which the bet should be decided/settled, in Unix time (seconds since epoch)
-    :param wager_quantity: The quantities of XCP to wager (in satoshis, hence integer).
-    :param counterwager_quantity: The minimum quantities of XCP to be wagered against, for the bets to match
-    :param target_value: Target value for Equal/NotEqual bet
+    :param address: The address that will make the bet (e.g. 1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev)
+    :param feed_address: The address that hosts the feed to be bet on (e.g. 1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev)
+    :param bet_type: Bet 0 for Bullish CFD (deprecated), 1 for Bearish CFD (deprecated), 2 for Equal, 3 for NotEqual (e.g. 2)
+    :param deadline: The time at which the bet should be decided/settled, in Unix time (seconds since epoch) (e.g. 3000000000)
+    :param wager_quantity: The quantities of XCP to wager (in satoshis, hence integer) (e.g. 1000)
+    :param counterwager_quantity: The minimum quantities of XCP to be wagered against, for the bets to match (e.g. 1000)
+    :param expiration: The number of blocks after which the bet expires if it remains unmatched (e.g. 100)
     :param leverage: Leverage, as a fraction of 5040
-    :param expiration: The number of blocks after which the bet expires if it remains unmatched
+    :param target_value: Target value for Equal/NotEqual bet (e.g. 1000)
     """
     params = {
         "source": address,

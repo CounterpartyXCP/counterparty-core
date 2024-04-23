@@ -6,7 +6,9 @@ from counterpartycore import server
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 API_DOC_FILE = os.path.join(CURR_DIR, "../../../Documentation/docs/advanced/api/rest.md")
+CACHE_FILE = os.path.join(CURR_DIR, "apicache.json")
 API_ROOT = "http://api:api@localhost:4000"
+USE_API_CACHE = False
 
 
 def get_example_output(path, args):
@@ -35,8 +37,12 @@ FORMAT: 1A
 The Counterparty Core API is the recommended (and only supported) way to query the state of a Counterparty node. The following routes are available:
 """
 
-current_group = None
+cache = {}
+if USE_API_CACHE and os.path.exists(CACHE_FILE):
+    with open(CACHE_FILE, "r") as f:
+        cache = json.load(f)
 
+current_group = None
 for path, route in server.routes.ROUTES.items():
     route_group = path.split("/")[1]
     if route_group != current_group:
@@ -62,13 +68,21 @@ for path, route in server.routes.ROUTES.items():
         if not arg["required"]:
             md += f"        + Default: `{arg.get('default', '')}`\n"
     if example_args != {} or route["args"] == []:
-        example_output = get_example_output(path, example_args)
+        if not USE_API_CACHE:
+            example_output = get_example_output(path, example_args)
+            cache[path] = example_output
+        else:
+            example_output = cache.get(path, {})
         example_output_json = json.dumps(example_output, indent=4)
         md += "\n+ Response 200 (application/json)\n\n"
         md += "        ```\n"
         for line in example_output_json.split("\n"):
             md += f"        {line}\n"
         md += "        ```\n"
+
+if not USE_API_CACHE:
+    with open(CACHE_FILE, "w") as f:
+        json.dump(cache, f, indent=4)
 
 with open(API_DOC_FILE, "w") as f:
     f.write(md)
