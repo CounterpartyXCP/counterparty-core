@@ -65,8 +65,10 @@ for path, route in server.routes.ROUTES.items():
         example_output = get_example_output(path, example_args)
         example_output_json = json.dumps(example_output, indent=4)
         md += "\n+ Response 200 (application/json)\n\n"
+        md += "        ```\n"
         for line in example_output_json.split("\n"):
             md += f"        {line}\n"
+        md += "        ```\n"
 
 with open(API_DOC_FILE, "w") as f:
     f.write(md)

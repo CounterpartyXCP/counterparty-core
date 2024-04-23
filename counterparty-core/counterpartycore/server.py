@@ -31,7 +31,7 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib import kickstart as kickstarter
 from counterpartycore.lib.api import api_server as api_v2
-from counterpartycore.lib.api import api_v1
+from counterpartycore.lib.api import api_v1, routes  # noqa: F401
 from counterpartycore.lib.telemetry.client import TelemetryClientLocal
 from counterpartycore.lib.telemetry.collector import TelemetryCollectorLive
 from counterpartycore.lib.telemetry.daemon import TelemetryDaemon
