@@ -11,6 +11,7 @@ from counterpartycore.lib import (
     blocks,
     config,
     database,
+    exceptions,
     ledger,
 )
 from counterpartycore.lib.api.routes import ROUTES
@@ -138,8 +139,13 @@ def handle_route(**kwargs):
         try:
             function_args = prepare_args(route, **kwargs)
         except ValueError as e:
-            return inject_headers({"error": str(e)}, return_code=400)
-        result = route["function"](db, **function_args)
+            return inject_headers({"success": False, "error": str(e)}, return_code=400)
+        try:
+            result = route["function"](db, **function_args)
+        except (exceptions.ComposeError, exceptions.UnpackError) as e:
+            return inject_headers({"success": False, "error": str(e)}, return_code=503)
+        except Exception:
+            return inject_headers({"success": False, "error": "Unknwon error"}, return_code=503)
         result = remove_rowids(result)
     return inject_headers(result)
 
