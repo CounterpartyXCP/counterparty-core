@@ -78,18 +78,24 @@ def api_root():
 
 
 def inject_headers(result, return_code=None):
-    server_ready = ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT
+    server_ready = ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT - 1
+    json_result = {"success": True, "result": result}
     http_code = 200
     if return_code:
         http_code = return_code
     elif not server_ready:
         http_code = config.API_NOT_READY_HTTP_CODE
+        json_result["error"] = "Counterparty not ready"
+    if http_code != 200:
+        json_result["success"] = False
+
     if isinstance(result, flask.Response):
         response = result
     else:
-        response = flask.make_response(to_json(result), http_code)
+        response = flask.make_response(to_json(json_result), http_code)
+
     response.headers["X-COUNTERPARTY-HEIGHT"] = ledger.CURRENT_BLOCK_INDEX
-    response.headers["X-COUNTERPARTY-READY"] = ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT
+    response.headers["X-COUNTERPARTY-READY"] = server_ready
     response.headers["X-BACKEND-HEIGHT"] = BACKEND_HEIGHT
     response.headers["Content-Type"] = "application/json"
     return response

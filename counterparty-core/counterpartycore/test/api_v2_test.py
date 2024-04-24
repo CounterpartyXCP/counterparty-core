@@ -77,7 +77,7 @@ def test_api_v2_unpack(request, server_db):
     for data in datas:
         result = requests.get(url, params={"datahex": data["datahex"]})  # noqa: S113
         assert result.status_code == 200
-        assert result.json() == data["result"]
+        assert result.json()["result"] == data["result"]
 
 
 @pytest.mark.usefixtures("api_server_v2")
@@ -85,7 +85,7 @@ def test_new_get_balances_by_address():
     alice = ADDR[0]
     url = f"{API_ROOT}/addresses/{alice}/balances"
     result = requests.get(url)  # noqa: S113
-    assert result.json() == [
+    assert result.json()["result"] == [
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "A95428956661682277",
@@ -134,7 +134,7 @@ def test_new_get_balances_by_asset():
     asset = "XCP"
     url = f"{API_ROOT}/assets/{asset}/balances"
     result = requests.get(url)  # noqa: S113
-    assert result.json() == [
+    assert result.json()["result"] == [
         {
             "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
             "asset": "XCP",
@@ -193,7 +193,7 @@ def test_new_get_balances_by_asset():
 def test_new_get_balances_vs_old():
     asset = "XCP"
     url = f"{API_ROOT}/assets/{asset}/balances"
-    new_balances = requests.get(url).json()  # noqa: S113
+    new_balances = requests.get(url).json()["result"]  # noqa: S113
     old_balance = util.api(
         "get_balances",
         {
@@ -218,7 +218,7 @@ def test_new_get_asset_info():
     url = f"{API_ROOT}/assets/{asset}"
     result = requests.get(url)  # noqa: S113
 
-    assert result.json() == {
+    assert result.json()["result"] == {
         "asset": "NODIVISIBLE",
         "asset_longname": None,
         "description": "No divisible asset",
@@ -235,7 +235,7 @@ def test_new_get_asset_info():
 def test_new_get_asset_orders():
     asset = "XCP"
     url = f"{API_ROOT}/assets/{asset}/orders"
-    result = requests.get(url).json()  # noqa: S113
+    result = requests.get(url).json()["result"]  # noqa: S113
     assert len(result) == 6
     assert result[0] == {
         "tx_index": 11,
@@ -262,7 +262,7 @@ def test_new_get_asset_orders():
 def test_new_get_order_info():
     tx_hash = "1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a"
     url = f"{API_ROOT}/orders/{tx_hash}"
-    result = requests.get(url).json()  # noqa: S113
+    result = requests.get(url).json()["result"]  # noqa: S113
     assert result[0] == {
         "tx_index": 11,
         "tx_hash": "1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a",
@@ -288,7 +288,7 @@ def test_new_get_order_info():
 def test_new_get_order_matches():
     tx_hash = "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
     url = f"{API_ROOT}/orders/{tx_hash}/matches"
-    result = requests.get(url).json()  # noqa: S113
+    result = requests.get(url).json()["result"]  # noqa: S113
     assert result[0] == {
         "id": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498_1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81",
         "tx0_index": 492,
