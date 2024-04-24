@@ -2,6 +2,7 @@ import argparse
 import logging
 import multiprocessing
 import signal
+import traceback
 from multiprocessing import Process
 from threading import Timer
 
@@ -151,7 +152,8 @@ def handle_route(**kwargs):
         except (exceptions.ComposeError, exceptions.UnpackError) as e:
             return inject_headers({"success": False, "error": str(e)}, return_code=503)
         except Exception as e:
-            logger.error("Error in API: %s", e)
+            logger.exception("Error in API: %s", e)
+            traceback.print_exc()
             return inject_headers({"success": False, "error": "Unknwon error"}, return_code=503)
         result = remove_rowids(result)
     return inject_headers(result)

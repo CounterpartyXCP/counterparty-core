@@ -1215,7 +1215,7 @@ def compose_bet(
 ):
     """
     Composes a transaction to issue a bet against a feed.
-    :param address: The address that will make the bet (e.g. 1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev)
+    :param address: The address that will make the bet (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
     :param feed_address: The address that hosts the feed to be bet on (e.g. 1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev)
     :param bet_type: Bet 0 for Bullish CFD (deprecated), 1 for Bearish CFD (deprecated), 2 for Equal, 3 for NotEqual (e.g. 2)
     :param deadline: The time at which the bet should be decided/settled, in Unix time (seconds since epoch) (e.g. 3000000000)
@@ -1254,7 +1254,7 @@ def compose_broadcast(
 ):
     """
     Composes a transaction to broadcast textual and numerical information to the network.
-    :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. 1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev)
+    :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
     :param timestamp: The timestamp of the broadcast, in Unix time (e.g. 4003903983)
     :param value: Numerical value of the broadcast (e.g. 100)
     :param fee_fraction: How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. 0.05 is five percent) (e.g. 0.05)
@@ -1303,8 +1303,8 @@ def compose_btcpay(db, address: str, order_match_id: str, **construct_args):
 def compose_burn(db, address: str, quantity: int, overburn: bool = False, **construct_args):
     """
     Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, possible between blocks 278310 and 283810; on testnet it is still available).
-    :param address: The address with the BTC to burn
-    :param quantity: The quantities of BTC to burn (1 BTC maximum burn per address)
+    :param address: The address with the BTC to burn (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
+    :param quantity: The quantities of BTC to burn (1 BTC maximum burn per address) (e.g. 1000)
     :param overburn: Whether to allow the burn to exceed 1 BTC for the address
     """
     params = {"source": address, "quantity": quantity, "overburn": overburn}
@@ -1324,8 +1324,8 @@ def compose_burn(db, address: str, quantity: int, overburn: bool = False, **cons
 def compose_cancel(db, address: str, offer_hash: str, **construct_args):
     """
     Composes a transaction to cancel an open order or bet.
-    :param address: The address that placed the order/bet to be cancelled
-    :param offer_hash: The hash of the order/bet to be cancelled
+    :param address: The address that placed the order/bet to be cancelled (e.g. 15e15ua6A3FJqjMevtrWcFSzKn9k6bMQeA)
+    :param offer_hash: The hash of the order/bet to be cancelled (e.g. 8ce3335391bf71f8f12c0573b4f85b9adc4882a9955d9f8e5ababfdd0060279a)
     """
     params = {"source": address, "offer_hash": offer_hash}
     rawtransaction = compose_transaction(
@@ -1344,10 +1344,10 @@ def compose_cancel(db, address: str, offer_hash: str, **construct_args):
 def compose_destroy(db, address: str, asset: str, quantity: int, tag: str, **construct_args):
     """
     Composes a transaction to destroy a quantity of an asset.
-    :param address: The address that will be sending the asset to be destroyed
-    :param asset: The asset to be destroyed
-    :param quantity: The quantity of the asset to be destroyed
-    :param tag: A tag for the destruction
+    :param address: The address that will be sending the asset to be destroyed (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
+    :param asset: The asset to be destroyed (e.g. XCP)
+    :param quantity: The quantity of the asset to be destroyed (e.g. 1000)
+    :param tag: A tag for the destruction (e.g. "bugs!")
     """
     params = {"source": address, "asset": asset, "quantity": quantity, "tag": tag}
     rawtransaction = compose_transaction(
@@ -1377,12 +1377,12 @@ def compose_dispenser(
 ):
     """
     Opens or closes a dispenser for a given asset at a given rate of main chain asset (BTC). Escrowed quantity on open must be equal or greater than give_quantity. It is suggested that you escrow multiples of give_quantity to ease dispenser operation.
-    :param address: The address that will be dispensing (must have the necessary escrow_quantity of the specified asset)
-    :param asset: The asset or subasset to dispense
-    :param give_quantity: The quantity of the asset to dispense
-    :param escrow_quantity: The quantity of the asset to reserve for this dispenser
-    :param mainchainrate: The quantity of the main chain asset (BTC) per dispensed portion
-    :param status: The state of the dispenser. 0 for open, 1 for open using open_address, 10 for closed
+    :param address: The address that will be dispensing (must have the necessary escrow_quantity of the specified asset) (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
+    :param asset: The asset or subasset to dispense (e.g. XCP)
+    :param give_quantity: The quantity of the asset to dispense (e.g. 1000)
+    :param escrow_quantity: The quantity of the asset to reserve for this dispenser (e.g. 1000)
+    :param mainchainrate: The quantity of the main chain asset (BTC) per dispensed portion (e.g. 100)
+    :param status: The state of the dispenser. 0 for open, 1 for open using open_address, 10 for closed (e.g. 0)
     :param open_address: The address that you would like to open the dispenser on
     :param oracle_address: The address that you would like to use as a price oracle for this dispenser
     """
@@ -1414,10 +1414,10 @@ def compose_dividend(
 ):
     """
     Composes a transaction to issue a dividend to holders of a given asset.
-    :param address: The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on)
-    :param quantity_per_unit: The amount of dividend_asset rewarded
-    :param asset: The asset or subasset that the dividends are being rewarded on
-    :param dividend_asset: The asset or subasset that the dividends are paid in
+    :param address: The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on) (e.g. 1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD)
+    :param quantity_per_unit: The amount of dividend_asset rewarded (e.g. 1)
+    :param asset: The asset or subasset that the dividends are being rewarded on (e.g. PEPECASH)
+    :param dividend_asset: The asset or subasset that the dividends are paid in (e.g. XCP)
     """
     params = {
         "source": address,
@@ -1452,10 +1452,10 @@ def compose_issuance(
 ):
     """
     Composes a transaction to Issue a new asset, issue more of an existing asset, lock an asset, reset existing supply, or transfer the ownership of an asset.
-    :param address: The address that will be issuing or transfering the asset
-    :param asset: The assets to issue or transfer. This can also be a subasset longname for new subasset issuances
-    :param quantity: The quantity of the asset to issue (set to 0 if transferring an asset)
-    :param transfer_destination: The address to receive the asset
+    :param address: The address that will be issuing or transfering the asset (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
+    :param asset: The assets to issue or transfer. This can also be a subasset longname for new subasset issuances (e.g. XCPTEST)
+    :param quantity: The quantity of the asset to issue (set to 0 if transferring an asset) (e.g. 1000)
+    :param transfer_destination: The address to receive the asset (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
     :param divisible: Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued)
     :param lock: Whether this issuance should lock supply of this asset forever
     :param reset: Wether this issuance should reset any existing supply
@@ -1486,7 +1486,7 @@ def compose_issuance(
 
 def compose_mpma(
     db,
-    source: str,
+    address: str,
     assets: str,
     destinations: str,
     quantities: str,
@@ -1496,12 +1496,12 @@ def compose_mpma(
 ):
     """
     Composes a transaction to send multiple payments to multiple addresses.
-    :param source: The address that will be sending (must have the necessary quantity of the specified asset)
-    :param assets: comma-separated list of assets to send
-    :param destinations: comma-separated list of addresses to send to
-    :param quantities: comma-separated list of quantities to send
-    :param memo: The Memo associated with this transaction
-    :param memo_is_hex: Whether the memo field is a hexadecimal string
+    :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. 1Fv87qmdtjQDP9d4p9E5ncBQvYB4a3Rhy6)
+    :param assets: comma-separated list of assets to send (e.g. BAABAABLKSHP,BADHAIRDAY,BADWOJAK)
+    :param destinations: comma-separated list of addresses to send to (e.g. 1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev,1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD,1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
+    :param quantities: comma-separated list of quantities to send (e.g. 1,2,3)
+    :param memo: The Memo associated with this transaction (e.g. "Hello, world!")
+    :param memo_is_hex: Whether the memo field is a hexadecimal string (e.g. False)
     """
     asset_list = assets.split(",")
     destination_list = destinations.split(",")
@@ -1513,10 +1513,11 @@ def compose_mpma(
     for quantity in quantity_list:
         if not quantity.isdigit():
             raise exceptions.ComposeError("Quantity must be an integer")
+    quantity_list = [int(quantity) for quantity in quantity_list]
     asset_dest_quant_list = list(zip(asset_list, destination_list, quantity_list))
 
     params = {
-        "source": source,
+        "source": address,
         "asset_dest_quant_list": asset_dest_quant_list,
         "memo": memo,
         "memo_is_hex": memo_is_hex,
@@ -1524,7 +1525,7 @@ def compose_mpma(
 
     rawtransaction = compose_transaction(
         db,
-        name="version.mpma",
+        name="versions.mpma",
         params=params,
         **construct_args,
     )
@@ -1548,13 +1549,13 @@ def compose_order(
 ):
     """
     Composes a transaction to place an order on the distributed exchange.
-    :param address: The address that will be issuing the order request (must have the necessary quantity of the specified asset to give)
-    :param give_asset: The asset that will be given in the trade
-    :param give_quantity: The quantity of the asset that will be given
-    :param get_asset: The asset that will be received in the trade
-    :param get_quantity: The quantity of the asset that will be received
-    :param expiration: The number of blocks for which the order should be valid
-    :param fee_required: The miners’ fee required to be paid by orders for them to match this one; in BTC; required only if buying BTC (may be zero, though)
+    :param address: The address that will be issuing the order request (must have the necessary quantity of the specified asset to give) (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
+    :param give_asset: The asset that will be given in the trade (e.g. XCP)
+    :param give_quantity: The quantity of the asset that will be given (e.g. 1000)
+    :param get_asset: The asset that will be received in the trade (e.g. PEPECASH)
+    :param get_quantity: The quantity of the asset that will be received (e.g. 1000)
+    :param expiration: The number of blocks for which the order should be valid (e.g. 100)
+    :param fee_required: The miners’ fee required to be paid by orders for them to match this one; in BTC; required only if buying BTC (may be zero, though) (e.g. 100)
     """
     params = {
         "source": address,
@@ -1591,10 +1592,10 @@ def compose_send(
 ):
     """
     Composes a transaction to send a quantity of an asset to another address.
-    :param address: The address that will be sending (must have the necessary quantity of the specified asset)
-    :param destination: The address that will be receiving the asset
-    :param asset: The asset or subasset to send
-    :param quantity: The quantity of the asset to send
+    :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
+    :param destination: The address that will be receiving the asset (e.g. 1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev)
+    :param asset: The asset or subasset to send (e.g. XCP)
+    :param quantity: The quantity of the asset to send (e.g. 1000)
     :param memo: The Memo associated with this transaction
     :param memo_is_hex: Whether the memo field is a hexadecimal string
     :param use_enhanced_send: If this is false, the construct a legacy transaction sending bitcoin dust
@@ -1624,13 +1625,14 @@ def compose_send(
 def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **construct_args):
     """
     Composes a transaction to Sends all assets and/or transfer ownerships to a destination address.
-    :param address: The address that will be sending
-    :param destination: The address to receive the assets and/or ownerships
+    :param address: The address that will be sending (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
+    :param destination: The address to receive the assets and/or ownerships (e.g. 1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev)
     :param flags: An OR mask of flags indicating how the sweep should be processed. Possible flags are:
                     - FLAG_BALANCES: (integer) 1, specifies that all balances should be transferred.
                     - FLAG_OWNERSHIP: (integer) 2, specifies that all ownerships should be transferred.
                     - FLAG_BINARY_MEMO: (integer) 4, specifies that the memo is in binary/hex form.
-    :param memo: The Memo associated with this transaction
+                    (e.g. 7)
+    :param memo: The Memo associated with this transaction in hex format (e.g. FFFF)
     """
     params = {
         "source": address,

@@ -61,7 +61,7 @@ def handle_healthz_route(db, check_type: str = "heavy"):
     msg, code = "Healthy", 200
     if not healthz(db, check_type):
         msg, code = "Unhealthy", 503
-    result = {"data": msg, "success": code == 200}
+    result = {"result": msg, "success": code == 200}
     if code != 200:
         result["error"] = msg
     return flask.Response(to_json(result), code, mimetype="application/json")
