@@ -723,6 +723,7 @@ def start_all(args):
     except KeyboardInterrupt:
         pass
     finally:
+        telemetry_daemon.stop()
         if args.enable_api_v1:
             if api_status_poller:
                 api_status_poller.stop()

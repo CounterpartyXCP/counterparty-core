@@ -16,6 +16,7 @@ import threading
 import time
 import traceback
 
+import counterpartycore.lib.sentry as sentry  # noqa: F401
 import flask
 import jsonrpc
 from counterpartycore.lib import (
@@ -546,6 +547,7 @@ class APIServer(threading.Thread):
         self.server = None
         self.ctx = None
         threading.Thread.__init__(self)
+        sentry.init()
 
     def stop(self):
         self.db.close()

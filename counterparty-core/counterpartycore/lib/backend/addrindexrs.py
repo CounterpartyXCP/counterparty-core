@@ -314,12 +314,8 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                     if raw_transactions_cache[tx_hash] is not None
                     else None
                 )
-        except KeyError as e:  # shows up most likely due to finickyness with addrindex not always returning results that we need...
-            _hash = hashlib.md5(
-                json.dumps(list(txhash_list)).encode(), usedforsecurity=False
-            ).hexdigest()
-            _list = list(txhash_list.difference(noncached_txhashes))
-            _logger.exception(f"tx missing in rawtx cache: {e}")
+        except KeyError:  # shows up most likely due to finickyness with addrindex not always returning results that we need...
+            _logger.debug(f"tx missing in rawtx cache: {tx_hash}")
             if _retry < GETRAWTRANSACTION_MAX_RETRIES:  # try again
                 time.sleep(
                     0.05 * (_retry + 1)

@@ -1516,7 +1516,7 @@ def insert_record(db, table_name, record, event):
     cursor.execute(query, record)
     cursor.close()
     # Add event to journal
-    add_to_journal(db, record["block_index"], "insert", table_name, event, record)
+    add_to_journal(db, CURRENT_BLOCK_INDEX, "insert", table_name, event, record)
 
 
 # This function allows you to update a record using an INSERT.
