@@ -4,6 +4,11 @@
 
 # Upgrading
 
+To continue using the old API you must:
+- start `counterparty-server` with the flag `----enable-api-v1`
+- replace port `4100` with port `4000` for mainnet and port `14000` with port `14100`
+- prefix all endpoints with `/old/`
+To easily migrate to the new API, an equivalence table is available in the documentation
 
 # ChangeLog
 
@@ -11,6 +16,7 @@
 * Fix logging of some raw tracebacks (#1715) 
 
 ## Codebase
+* New REST API
 
 ## Command-Line Interface
 
