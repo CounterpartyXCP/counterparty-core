@@ -40,7 +40,7 @@ def healthz_heavy(db):
     )
 
 
-def healthz(db, check_type="heavy"):
+def healthz(db, check_type: str = "heavy"):
     try:
         if check_type == "light":
             healthz_light(db)
@@ -65,6 +65,16 @@ def handle_healthz_route(db, check_type: str = "heavy"):
     if code != 200:
         result["error"] = msg
     return flask.Response(to_json(result), code, mimetype="application/json")
+
+
+def handle_healthz_route_v2(db, check_type: str = "heavy"):
+    """
+    Health check route.
+    :param check_type: Type of health check to perform. Options are 'light' and 'heavy' (e.g. light)
+    """
+    if not healthz(db, check_type):
+        return {"status": "Unhealthy"}
+    return {"status": "Healthy"}
 
 
 def remove_rowids(query_result):

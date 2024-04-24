@@ -79,25 +79,32 @@ def api_root():
     }
 
 
-def inject_headers(result, return_code=None):
-    server_ready = ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT - 1
-    json_result = {"success": True, "result": result}
-    http_code = 200
-    if return_code:
-        http_code = return_code
-    elif not server_ready:
-        http_code = config.API_NOT_READY_HTTP_CODE
-        json_result["error"] = "Counterparty not ready"
-    if http_code != 200:
-        json_result["success"] = False
+def is_server_ready():
+    return ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT - 1
 
-    if isinstance(result, flask.Response):
-        response = result
-    else:
-        response = flask.make_response(to_json(json_result), http_code)
 
+def is_cachable(rule):
+    if rule.startswith("/blocks"):
+        return True
+    if rule.startswith("/transactions"):
+        return True
+    if rule.startswith("/backend"):
+        return True
+
+
+def return_result_if_not_ready(rule):
+    return is_cachable(rule) or rule == "/"
+
+
+def return_result(success, http_code, result=None, error=None):
+    api_result = {"success": success}
+    if result is not None:
+        api_result["result"] = result
+    if error is not None:
+        api_result["error"] = error
+    response = flask.make_response(to_json(api_result), http_code)
     response.headers["X-COUNTERPARTY-HEIGHT"] = ledger.CURRENT_BLOCK_INDEX
-    response.headers["X-COUNTERPARTY-READY"] = server_ready
+    response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
     response.headers["X-BACKEND-HEIGHT"] = BACKEND_HEIGHT
     response.headers["Content-Type"] = "application/json"
     return response
@@ -137,28 +144,34 @@ def handle_route(**kwargs):
     db = get_db()
     # update the current block index
     ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
+
     rule = str(request.url_rule.rule)
-    if rule == "/":
-        result = api_root()
+
+    if not is_server_ready() and not return_result_if_not_ready(rule):
+        return return_result(False, 503, error="Counterparty not ready")
     else:
-        route = ROUTES.get(rule)
-        try:
-            function_args = prepare_args(route, **kwargs)
-        except ValueError as e:
-            return inject_headers({"success": False, "error": str(e)}, return_code=400)
-        try:
-            if function_needs_db(route["function"]):
-                result = route["function"](db, **function_args)
-            else:
-                result = route["function"](**function_args)
-        except (exceptions.ComposeError, exceptions.UnpackError) as e:
-            return inject_headers({"success": False, "error": str(e)}, return_code=503)
-        except Exception as e:
-            logger.exception("Error in API: %s", e)
-            traceback.print_exc()
-            return inject_headers({"success": False, "error": "Unknwon error"}, return_code=503)
-        result = remove_rowids(result)
-    return inject_headers(result)
+        if rule == "/":
+            return return_result(True, 200, result=api_root())
+        else:
+            route = ROUTES.get(rule)
+            try:
+                function_args = prepare_args(route, **kwargs)
+            except ValueError as e:
+                return return_result(False, 400, error=str(e))
+            try:
+                if function_needs_db(route["function"]):
+                    result = route["function"](db, **function_args)
+                else:
+                    result = route["function"](**function_args)
+            except (exceptions.ComposeError, exceptions.UnpackError) as e:
+                return return_result(False, 503, error=str(e))
+            except Exception as e:
+                logger.exception("Error in API: %s", e)
+                traceback.print_exc()
+                return return_result(False, 503, error="Unknwon error")
+
+            result = remove_rowids(result)
+            return return_result(True, 200, result=result)
 
 
 def run_api_server(args):

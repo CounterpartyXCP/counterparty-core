@@ -90,7 +90,7 @@ ROUTES = util.prepare_routes(
         "/events/counts": ledger.get_all_events_counts,
         "/events/<event>": ledger.get_events_by_event,
         ### /healthz ###
-        "/healthz": util.handle_healthz_route,
+        "/healthz": util.handle_healthz_route_v2,
         ### /backend ###
         "/backend/addresses/<address>/transactions": backend.search_raw_transactions,
         "/backend/addresses/<address>/transactions/oldest": backend.get_oldest_tx,

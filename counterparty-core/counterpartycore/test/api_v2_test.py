@@ -57,7 +57,7 @@ def test_api_v2(request):
             url = url.replace("<tx_hash>", tx_hash)
         if route.startswith("/events"):
             url += "?limit=5"
-        # print(url)
+        print(url)
         result = requests.get(url)  # noqa: S113
         results[url] = result.json()
         assert result.status_code == 200
