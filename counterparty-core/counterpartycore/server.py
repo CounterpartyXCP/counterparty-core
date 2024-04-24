@@ -162,7 +162,6 @@ def initialise_config(
     api_user=None,
     api_password=None,
     api_no_allow_cors=False,
-    api_not_ready_http_code=503,
     force=False,
     requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
     rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
@@ -471,8 +470,6 @@ def initialise_config(
         config.API_PASSWORD = api_password
     else:
         config.API_PASSWORD = "api"  # noqa: S105
-
-    config.API_NOT_READY_HTTP_CODE = api_not_ready_http_code
 
     if api_no_allow_cors:
         config.API_NO_ALLOW_CORS = api_no_allow_cors

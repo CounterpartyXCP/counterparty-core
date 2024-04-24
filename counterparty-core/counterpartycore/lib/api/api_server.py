@@ -1,7 +1,6 @@
 import argparse
 import logging
 import multiprocessing
-import signal
 import traceback
 from multiprocessing import Process
 from threading import Timer
@@ -112,30 +111,30 @@ def return_result(success, http_code, result=None, error=None):
 
 def prepare_args(route, **kwargs):
     function_args = dict(kwargs)
-    if "args" in route:
-        for arg in route["args"]:
-            arg_name = arg["name"]
-            if arg_name in function_args:
-                continue
-            str_arg = request.args.get(arg_name)
-            if str_arg is None and arg["required"]:
-                raise ValueError(f"Missing required parameter: {arg_name}")
-            if str_arg is None:
-                function_args[arg_name] = arg["default"]
-            elif arg["type"] == "bool":
-                function_args[arg_name] = str_arg.lower() in ["true", "1"]
-            elif arg["type"] == "int":
-                try:
-                    function_args[arg_name] = int(str_arg)
-                except ValueError as e:
-                    raise ValueError(f"Invalid integer: {arg_name}") from e
-            elif arg["type"] == "float":
-                try:
-                    function_args[arg_name] = float(str_arg)
-                except ValueError as e:
-                    raise ValueError(f"Invalid float: {arg_name}") from e
-            else:
-                function_args[arg_name] = str_arg
+    # inject args from request.args
+    for arg in route["args"]:
+        arg_name = arg["name"]
+        if arg_name in function_args:
+            continue
+        str_arg = request.args.get(arg_name)
+        if str_arg is None and arg["required"]:
+            raise ValueError(f"Missing required parameter: {arg_name}")
+        if str_arg is None:
+            function_args[arg_name] = arg["default"]
+        elif arg["type"] == "bool":
+            function_args[arg_name] = str_arg.lower() in ["true", "1"]
+        elif arg["type"] == "int":
+            try:
+                function_args[arg_name] = int(str_arg)
+            except ValueError as e:
+                raise ValueError(f"Invalid integer: {arg_name}") from e
+        elif arg["type"] == "float":
+            try:
+                function_args[arg_name] = float(str_arg)
+            except ValueError as e:
+                raise ValueError(f"Invalid float: {arg_name}") from e
+        else:
+            function_args[arg_name] = str_arg
     return function_args
 
 
@@ -175,10 +174,6 @@ def handle_route(**kwargs):
 
 
 def run_api_server(args):
-    # default signal handlers
-    signal.signal(signal.SIGTERM, signal.SIG_DFL)
-    signal.signal(signal.SIGINT, signal.default_int_handler)
-
     app = Flask(config.APP_NAME)
     # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
