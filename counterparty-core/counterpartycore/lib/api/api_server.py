@@ -52,8 +52,7 @@ def verify_password(username, password):
 def api_root():
     counterparty_height = blocks.last_db_index(get_db())
     routes = []
-    for path in ROUTES:
-        route = ROUTES[path]
+    for path, route in ROUTES.item():
         routes.append(
             {
                 "path": path,
@@ -89,6 +88,7 @@ def is_cachable(rule):
         return True
     if rule.startswith("/backend"):
         return True
+    return False
 
 
 def return_result_if_not_ready(rule):
@@ -117,8 +117,10 @@ def prepare_args(route, **kwargs):
         if arg_name in function_args:
             continue
         str_arg = request.args.get(arg_name)
+
         if str_arg is None and arg["required"]:
             raise ValueError(f"Missing required parameter: {arg_name}")
+
         if str_arg is None:
             function_args[arg_name] = arg["default"]
         elif arg["type"] == "bool":
@@ -146,31 +148,37 @@ def handle_route(**kwargs):
 
     rule = str(request.url_rule.rule)
 
+    # check if server must be ready
     if not is_server_ready() and not return_result_if_not_ready(rule):
         return return_result(False, 503, error="Counterparty not ready")
-    else:
-        if rule == "/":
-            return return_result(True, 200, result=api_root())
-        else:
-            route = ROUTES.get(rule)
-            try:
-                function_args = prepare_args(route, **kwargs)
-            except ValueError as e:
-                return return_result(False, 400, error=str(e))
-            try:
-                if function_needs_db(route["function"]):
-                    result = route["function"](db, **function_args)
-                else:
-                    result = route["function"](**function_args)
-            except (exceptions.ComposeError, exceptions.UnpackError) as e:
-                return return_result(False, 503, error=str(e))
-            except Exception as e:
-                logger.exception("Error in API: %s", e)
-                traceback.print_exc()
-                return return_result(False, 503, error="Unknwon error")
 
-            result = remove_rowids(result)
-            return return_result(True, 200, result=result)
+    if rule == "/":
+        return return_result(True, 200, result=api_root())
+
+    route = ROUTES.get(rule)
+
+    # parse args
+    try:
+        function_args = prepare_args(route, **kwargs)
+    except ValueError as e:
+        return return_result(False, 400, error=str(e))
+
+    # call the function
+    try:
+        if function_needs_db(route["function"]):
+            result = route["function"](db, **function_args)
+        else:
+            result = route["function"](**function_args)
+    except (exceptions.ComposeError, exceptions.UnpackError) as e:
+        return return_result(False, 503, error=str(e))
+    except Exception as e:
+        logger.exception("Error in API: %s", e)
+        traceback.print_exc()
+        return return_result(False, 503, error="Unknwon error")
+
+    # clean up and return the result
+    result = remove_rowids(result)
+    return return_result(True, 200, result=result)
 
 
 def run_api_server(args):

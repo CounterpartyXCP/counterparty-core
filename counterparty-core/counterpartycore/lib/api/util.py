@@ -18,7 +18,7 @@ def check_last_parsed_block(blockcount):
     logger.debug("Database state check passed.")
 
 
-def healthz_light(db):
+def healthz_light():
     logger.debug("Performing light healthz check.")
     latest_block_index = backend.getblockcount()
     check_last_parsed_block(latest_block_index)
@@ -43,9 +43,9 @@ def healthz_heavy(db):
 def healthz(db, check_type: str = "heavy"):
     try:
         if check_type == "light":
-            healthz_light(db)
+            healthz_light()
         else:
-            healthz_light(db)
+            healthz_light()
             healthz_heavy(db)
     except Exception as e:
         logger.error(f"Health check failed: {e}")
