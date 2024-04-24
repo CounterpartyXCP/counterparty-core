@@ -96,7 +96,7 @@ def getrawtransactions(tx_hashes, verbose=False, skip_missing=False, _retry=0):
 def pubkeyhash_to_pubkey(address: str, provided_pubkeys: str = None):
     """
     Get pubkey for an address.
-    :param address: Address to get pubkey for.
+    :param address: Address to get pubkey for. (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
     :param provided_pubkeys: Comma separated list of provided pubkeys.
     """
     if provided_pubkeys:
@@ -109,8 +109,8 @@ def pubkeyhash_to_pubkey(address: str, provided_pubkeys: str = None):
 def get_raw_transaction(tx_hash: str, verbose: bool = False):
     """
     Get a raw transaction from the blockchain
-    :param tx_hash: The transaction hash
-    :param verbose: Whether to return JSON output or raw hex
+    :param tx_hash: The transaction hash (e.g. 3190047bf2320bdcd0fade655ae49be309519d151330aa478573815229cc0018)
+    :param verbose: Whether to return JSON output or raw hex (e.g. True)
     """
     return backend.getrawtransaction(tx_hash, verbose=verbose)
 

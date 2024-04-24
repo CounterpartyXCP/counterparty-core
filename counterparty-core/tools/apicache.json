@@ -2279,10 +2279,189 @@
         ]
     },
     "/backend/addresses/<address>/transactions": {
-        "success": false,
+        "success": true,
+        "result": [
+            {
+                "tx_hash": "eae4f1dba4d75bda9dd0de12f69a980be267bbc16b7a280a2a4b40c4b3bbb70a"
+            },
+            {
+                "tx_hash": "7ec16c461e3ba2d3acae48fcc8f58c04fba9f307b00c391eab507337ddc0bf16"
+            },
+            {
+                "tx_hash": "ad35f05767aadd39019122b4f4828ccb059b8121c07be6d36eb1e2ddbe9ac317"
+            },
+            {
+                "tx_hash": "3190047bf2320bdcd0fade655ae49be309519d151330aa478573815229cc0018"
+            },
+            {
+                "tx_hash": "aba5810714aa6196fec5538a83bbc281077a84ef2cbce2045b4c9f3c4439f14f"
+            },
+            {
+                "tx_hash": "23758832e0fc92a7ea303623b8f743219cb8e637e7e7ac9fb6f90641efac9379"
+            },
+            {
+                "tx_hash": "98bef616ef265dd2f6004683e908d7df97e0c5f322cdf2fb2ebea9a9131cfa79"
+            },
+            {
+                "tx_hash": "687b875d1dc472aa2fb994c5753c9b9b56e5c6fd1a6de18a92fcb3dc7ba8067e"
+            },
+            {
+                "tx_hash": "ec97c11ff5cb318505ebe20d7aa3c033816824a79f9a49821ffb584ed7d6c78f"
+            },
+            {
+                "tx_hash": "c732f0906eeada2113524c6652c17b2784780110bffd4333eb8f719ac0eff3be"
+            },
+            {
+                "tx_hash": "2c8bc3eede9ec60d26c6fd7f44829adc64da593552044a28c673022220f560c3"
+            },
+            {
+                "tx_hash": "a209e345549cffef6e2190b53ac0222afc965fd618843df5ccbd645a6a7999ee"
+            }
+        ]
+    },
+    "/backend/addresses/<address>/transactions/oldest": {
+        "success": true,
         "result": {
-            "success": false,
-            "error": "Unknwon error"
+            "block_index": 833187,
+            "tx_hash": "2c8bc3eede9ec60d26c6fd7f44829adc64da593552044a28c673022220f560c3"
         }
+    },
+    "/backend/addresses/<address>/utxos": {
+        "success": true,
+        "result": [
+            {
+                "vout": 6,
+                "height": 833559,
+                "value": 34611,
+                "confirmations": 7083,
+                "amount": 0.00034611,
+                "txid": "98bef616ef265dd2f6004683e908d7df97e0c5f322cdf2fb2ebea9a9131cfa79"
+            },
+            {
+                "vout": 0,
+                "height": 833187,
+                "value": 619481,
+                "confirmations": 7455,
+                "amount": 0.00619481,
+                "txid": "2c8bc3eede9ec60d26c6fd7f44829adc64da593552044a28c673022220f560c3"
+            },
+            {
+                "vout": 0,
+                "height": 837379,
+                "value": 992721,
+                "confirmations": 3263,
+                "amount": 0.00992721,
+                "txid": "ad35f05767aadd39019122b4f4828ccb059b8121c07be6d36eb1e2ddbe9ac317"
+            },
+            {
+                "vout": 0,
+                "height": 840640,
+                "value": 838185,
+                "confirmations": 2,
+                "amount": 0.00838185,
+                "txid": "3190047bf2320bdcd0fade655ae49be309519d151330aa478573815229cc0018"
+            },
+            {
+                "vout": 0,
+                "height": 839421,
+                "value": 336973,
+                "confirmations": 1221,
+                "amount": 0.00336973,
+                "txid": "c732f0906eeada2113524c6652c17b2784780110bffd4333eb8f719ac0eff3be"
+            },
+            {
+                "vout": 0,
+                "height": 839462,
+                "value": 78615,
+                "confirmations": 1180,
+                "amount": 0.00078615,
+                "txid": "eae4f1dba4d75bda9dd0de12f69a980be267bbc16b7a280a2a4b40c4b3bbb70a"
+            },
+            {
+                "vout": 0,
+                "height": 838442,
+                "value": 557283,
+                "confirmations": 2200,
+                "amount": 0.00557283,
+                "txid": "aba5810714aa6196fec5538a83bbc281077a84ef2cbce2045b4c9f3c4439f14f"
+            },
+            {
+                "vout": 0,
+                "height": 838608,
+                "value": 77148,
+                "confirmations": 2034,
+                "amount": 0.00077148,
+                "txid": "ec97c11ff5cb318505ebe20d7aa3c033816824a79f9a49821ffb584ed7d6c78f"
+            },
+            {
+                "vout": 0,
+                "height": 837402,
+                "value": 70501,
+                "confirmations": 3240,
+                "amount": 0.00070501,
+                "txid": "687b875d1dc472aa2fb994c5753c9b9b56e5c6fd1a6de18a92fcb3dc7ba8067e"
+            },
+            {
+                "vout": 0,
+                "height": 839021,
+                "value": 12354,
+                "confirmations": 1621,
+                "amount": 0.00012354,
+                "txid": "23758832e0fc92a7ea303623b8f743219cb8e637e7e7ac9fb6f90641efac9379"
+            }
+        ]
+    },
+    "/backend/addresses/<address>/pubkey": {
+        "success": true,
+        "result": "0388ef0905568d425f1ffd4031d93dda4ef0e220c9b5fc4a6cbaf11544c4a5ca49"
+    },
+    "/backend/transactions/<tx_hash>": {
+        "success": true,
+        "result": {
+            "txid": "3190047bf2320bdcd0fade655ae49be309519d151330aa478573815229cc0018",
+            "hash": "417c24d7a5539bc5b8496e26528382ac297a85a1c6b891b220f72712405ec300",
+            "version": 2,
+            "size": 195,
+            "vsize": 113,
+            "weight": 450,
+            "locktime": 0,
+            "vin": [
+                {
+                    "txid": "fc940430637d22a3d276bde8f7eb489760265cab642d8392f6017d73df94cd7a",
+                    "vout": 2,
+                    "scriptSig": {
+                        "asm": "",
+                        "hex": ""
+                    },
+                    "txinwitness": [
+                        "3045022100e4a30e5c0e0f7a28dfcec566cda00d0775a4207744ed6f223a4234cbed87a8ac02205b2403279ba7d8235ea1e8b6497465b97b46f3b3066a58c326822a9b1c25b4a501",
+                        "020e66cffeb4657b40a89063340cf7066030af3c6ce55744ed3570a7aecaa6b0da"
+                    ],
+                    "sequence": 4294967295
+                }
+            ],
+            "vout": [
+                {
+                    "value": 0.00838185,
+                    "n": 0,
+                    "scriptPubKey": {
+                        "asm": "OP_DUP OP_HASH160 25f70b0f1512c1742d3301fe34370894c79127bb OP_EQUALVERIFY OP_CHECKSIG",
+                        "desc": "addr(14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)#68uhm9u9",
+                        "hex": "76a91425f70b0f1512c1742d3301fe34370894c79127bb88ac",
+                        "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS",
+                        "type": "pubkeyhash"
+                    }
+                }
+            ],
+            "hex": "020000000001017acd94df737d01f692832d64ab5c26609748ebf7e8bd76d2a3227d63300494fc0200000000ffffffff0129ca0c00000000001976a91425f70b0f1512c1742d3301fe34370894c79127bb88ac02483045022100e4a30e5c0e0f7a28dfcec566cda00d0775a4207744ed6f223a4234cbed87a8ac02205b2403279ba7d8235ea1e8b6497465b97b46f3b3066a58c326822a9b1c25b4a50121020e66cffeb4657b40a89063340cf7066030af3c6ce55744ed3570a7aecaa6b0da00000000",
+            "blockhash": "000000000000000000020f596ed481076b7754143284b47fc8d32642202e5f76",
+            "confirmations": 2,
+            "time": 1713951767,
+            "blocktime": 1713951767
+        }
+    },
+    "/backend/estimatesmartfee": {
+        "success": true,
+        "result": 673559
     }
 }

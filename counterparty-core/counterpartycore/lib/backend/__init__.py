@@ -131,8 +131,8 @@ def fee_per_kb(
 ):
     """
     Get the fee per kilobyte for a transaction to be confirmed in `conf_target` blocks.
-    :param conf_target: Confirmation target in blocks (1 - 1008)
-    :param mode: The fee estimate mode.
+    :param conf_target: Confirmation target in blocks (1 - 1008) (e.g. 2)
+    :param mode: The fee estimate mode. (e.g. CONSERVATIVE)
     """
     return backend().fee_per_kb(conf_target, mode, nblocks=None)
 
@@ -213,7 +213,7 @@ class MempoolError(Exception):
 def get_unspent_txouts(address: str, unconfirmed: bool = False, unspent_tx_hash: str = None):
     """
     Returns a list of unspent outputs for a specific address
-    :param address: The address to search for
+    :param address: The address to search for (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
     :param unconfirmed: Include unconfirmed transactions
     :param unspent_tx_hash: Filter by unspent_tx_hash
     """
@@ -241,7 +241,7 @@ def get_unspent_txouts(address: str, unconfirmed: bool = False, unspent_tx_hash:
 def search_raw_transactions(address: str, unconfirmed: bool = True, only_tx_hashes: bool = False):
     """
     Returns all transactions involving a given address
-    :param address: The address to search for (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
+    :param address: The address to search for (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
     :param unconfirmed: Include unconfirmed transactions (e.g. True)
     :param only_tx_hashes: Return only the tx hashes (e.g. True)
     """
@@ -251,7 +251,7 @@ def search_raw_transactions(address: str, unconfirmed: bool = True, only_tx_hash
 def get_oldest_tx(address: str, block_index: int = None):
     """
     Get the oldest transaction for an address.
-    :param address: The address to search for.
+    :param address: The address to search for. (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
     :param block_index: The block index to search from.
     """
     return backend().get_oldest_tx(address, block_index=block_index)
