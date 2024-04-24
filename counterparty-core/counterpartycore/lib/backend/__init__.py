@@ -210,15 +210,15 @@ class MempoolError(Exception):
     pass
 
 
-def get_unspent_txouts(source: str, unconfirmed: bool = False, unspent_tx_hash: str = None):
+def get_unspent_txouts(address: str, unconfirmed: bool = False, unspent_tx_hash: str = None):
     """
     Returns a list of unspent outputs for a specific address
-    :param source: The address to search for
+    :param address: The address to search for
     :param unconfirmed: Include unconfirmed transactions
     :param unspent_tx_hash: Filter by unspent_tx_hash
     """
 
-    unspent = backend().get_unspent_txouts(source)
+    unspent = backend().get_unspent_txouts(address)
 
     # filter by unspent_tx_hash
     if unspent_tx_hash is not None:
@@ -238,12 +238,12 @@ def get_unspent_txouts(source: str, unconfirmed: bool = False, unspent_tx_hash: 
     return unspent
 
 
-def search_raw_transactions(address, unconfirmed: bool = True, only_tx_hashes: bool = False):
+def search_raw_transactions(address: str, unconfirmed: bool = True, only_tx_hashes: bool = False):
     """
     Returns all transactions involving a given address
-    :param address: The address to search for
-    :param unconfirmed: Include unconfirmed transactions
-    :param only_tx_hashes: Return only the tx hashes
+    :param address: The address to search for (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
+    :param unconfirmed: Include unconfirmed transactions (e.g. True)
+    :param only_tx_hashes: Return only the tx hashes (e.g. True)
     """
     return backend().search_raw_transactions(address, unconfirmed, only_tx_hashes)
 

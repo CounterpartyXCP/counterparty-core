@@ -183,7 +183,7 @@ def get_all_mempool_events(db):
 def get_mempool_events_by_event(db, event: str):
     """
     Returns the mempool events filtered by event name
-    :param str event: The event to return (e.g. CREDIT)
+    :param str event: The event to return (e.g. OPEN_ORDER)
     """
     return get_mempool_events(db, event_name=event)
 

@@ -2041,14 +2041,6 @@
             "name": "burn"
         }
     },
-    "/mempool/events": {
-        "success": true,
-        "result": []
-    },
-    "/mempool/events/<event>": {
-        "success": true,
-        "result": []
-    },
     "/addresses/<address>/compose/cancel": {
         "success": true,
         "result": {
@@ -2192,6 +2184,105 @@
                 "memo": "FFFF"
             },
             "name": "sweep"
+        }
+    },
+    "/mempool/events": {
+        "success": true,
+        "result": [
+            {
+                "tx_hash": "8a154886671713cae6d72d2996f07fac61529c0d8d1ebc476f448212ff3d535e",
+                "event": "NEW_TRANSACTION",
+                "bindings": {
+                    "block_hash": "mempool",
+                    "block_index": 9999999,
+                    "block_time": 1713952590,
+                    "btc_amount": 0,
+                    "data": "0200454ceacf416ccf0000000000000001005461639d06ebc42d541b54b1c5525543ae4d6db3",
+                    "destination": "",
+                    "fee": 9900,
+                    "source": "14PxDTVUMCjLoAcGPZGQf6cEtn7yLzdHp1",
+                    "tx_hash": "8a154886671713cae6d72d2996f07fac61529c0d8d1ebc476f448212ff3d535e",
+                    "tx_index": 2726767
+                },
+                "timestamp": 1713952691
+            },
+            {
+                "tx_hash": "8a154886671713cae6d72d2996f07fac61529c0d8d1ebc476f448212ff3d535e",
+                "event": "ENHANCED_SEND",
+                "bindings": {
+                    "asset": "FIERCERABBIT",
+                    "destination": "18hARq2fFJxiypHSnZ8yLcbPNpUfaozD8U",
+                    "memo": null,
+                    "quantity": 1,
+                    "source": "14PxDTVUMCjLoAcGPZGQf6cEtn7yLzdHp1",
+                    "tx_hash": "8a154886671713cae6d72d2996f07fac61529c0d8d1ebc476f448212ff3d535e"
+                },
+                "timestamp": 1713952691
+            },
+            {
+                "tx_hash": "8a154886671713cae6d72d2996f07fac61529c0d8d1ebc476f448212ff3d535e",
+                "event": "TRANSACTION_PARSED",
+                "bindings": {
+                    "supported": true,
+                    "tx_hash": "8a154886671713cae6d72d2996f07fac61529c0d8d1ebc476f448212ff3d535e",
+                    "tx_index": 2726767
+                },
+                "timestamp": 1713952691
+            }
+        ]
+    },
+    "/mempool/events/<event>": {
+        "success": true,
+        "result": [
+            {
+                "tx_hash": "90ba95c4578b9ab7866515d66736c5b4132e88a0bd9b0fca7b2f1be830a1bb81",
+                "event": "OPEN_ORDER",
+                "bindings": {
+                    "expiration": 5000,
+                    "expire_index": 10004999,
+                    "fee_provided": 5016,
+                    "fee_provided_remaining": 5016,
+                    "fee_required": 0,
+                    "fee_required_remaining": 0,
+                    "get_asset": "XCP",
+                    "get_quantity": 3300000000,
+                    "get_remaining": 3300000000,
+                    "give_asset": "PEPEPASSPORT",
+                    "give_quantity": 100000000,
+                    "give_remaining": 100000000,
+                    "source": "1A36UrLHxeg9ABoS4zPsRUegyCWTWER2kF",
+                    "tx_hash": "90ba95c4578b9ab7866515d66736c5b4132e88a0bd9b0fca7b2f1be830a1bb81"
+                },
+                "timestamp": 1713952690
+            },
+            {
+                "tx_hash": "bc553f3d4349a266b70e7ed98e2198a18d634a5b247997f59817f69e19de2ad6",
+                "event": "OPEN_ORDER",
+                "bindings": {
+                    "expiration": 5000,
+                    "expire_index": 10004999,
+                    "fee_provided": 5016,
+                    "fee_provided_remaining": 5016,
+                    "fee_required": 0,
+                    "fee_required_remaining": 0,
+                    "get_asset": "XCP",
+                    "get_quantity": 1185000000,
+                    "get_remaining": 1185000000,
+                    "give_asset": "FRATPEPE",
+                    "give_quantity": 3,
+                    "give_remaining": 3,
+                    "source": "1A36UrLHxeg9ABoS4zPsRUegyCWTWER2kF",
+                    "tx_hash": "bc553f3d4349a266b70e7ed98e2198a18d634a5b247997f59817f69e19de2ad6"
+                },
+                "timestamp": 1713952690
+            }
+        ]
+    },
+    "/backend/addresses/<address>/transactions": {
+        "success": false,
+        "result": {
+            "success": false,
+            "error": "Unknwon error"
         }
     }
 }

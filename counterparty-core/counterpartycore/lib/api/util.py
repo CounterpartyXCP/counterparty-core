@@ -150,6 +150,10 @@ def get_args_description(function):
     return args
 
 
+def function_needs_db(function):
+    return "db" in inspect.signature(function).parameters
+
+
 def prepare_route_args(function):
     args = []
     function_args = inspect.signature(function).parameters

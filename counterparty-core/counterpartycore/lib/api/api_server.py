@@ -17,6 +17,7 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.api.routes import ROUTES
 from counterpartycore.lib.api.util import (
+    function_needs_db,
     get_backend_height,
     init_api_access_log,
     remove_rowids,
@@ -104,9 +105,7 @@ def inject_headers(result, return_code=None):
 
 def prepare_args(route, **kwargs):
     function_args = dict(kwargs)
-    if "pass_all_args" in route and route["pass_all_args"]:
-        function_args = request.args | function_args
-    elif "args" in route:
+    if "args" in route:
         for arg in route["args"]:
             arg_name = arg["name"]
             if arg_name in function_args:
@@ -148,7 +147,10 @@ def handle_route(**kwargs):
         except ValueError as e:
             return inject_headers({"success": False, "error": str(e)}, return_code=400)
         try:
-            result = route["function"](db, **function_args)
+            if function_needs_db(route["function"]):
+                result = route["function"](db, **function_args)
+            else:
+                result = route["function"](**function_args)
         except (exceptions.ComposeError, exceptions.UnpackError) as e:
             return inject_headers({"success": False, "error": str(e)}, return_code=503)
         except Exception as e:
