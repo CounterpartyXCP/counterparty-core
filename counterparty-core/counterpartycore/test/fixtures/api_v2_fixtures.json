@@ -139,6 +139,21 @@
         "success": true,
         "result": [
             {
+                "event_index": 1183,
+                "event": "NEW_BLOCK",
+                "bindings": {
+                    "block_hash": "8a09b2faf0a7ad67eb4ab5c948b9769fc87eb2ec5e16108f2cde8bd9e6cf7607",
+                    "block_index": 310492,
+                    "block_time": 310492000,
+                    "difficulty": null,
+                    "ledger_hash": null,
+                    "previous_block_hash": null,
+                    "txlist_hash": null
+                },
+                "block_index": 310491,
+                "timestamp": 0
+            },
+            {
                 "event_index": 1182,
                 "event": "BLOCK_PARSED",
                 "bindings": {
@@ -216,21 +231,6 @@
                     "supported": true,
                     "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                     "tx_index": 492
-                },
-                "block_index": 310491,
-                "timestamp": 0
-            },
-            {
-                "event_index": 1177,
-                "event": "NEW_BLOCK",
-                "bindings": {
-                    "block_hash": "811abd7cf2b768cfdaa84ab44c63f4463c96a368ead52125bf149cf0c7447b16",
-                    "block_index": 310491,
-                    "block_time": 310491000,
-                    "difficulty": null,
-                    "ledger_hash": null,
-                    "previous_block_hash": null,
-                    "txlist_hash": null
                 },
                 "block_index": 310491,
                 "timestamp": 0
@@ -1333,7 +1333,7 @@
                     "previous_block_hash": null,
                     "txlist_hash": null
                 },
-                "block_index": 310500,
+                "block_index": 310499,
                 "timestamp": 0
             },
             {
@@ -1360,7 +1360,7 @@
                     "previous_block_hash": null,
                     "txlist_hash": null
                 },
-                "block_index": 310499,
+                "block_index": 310498,
                 "timestamp": 0
             },
             {
