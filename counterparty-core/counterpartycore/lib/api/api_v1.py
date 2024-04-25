@@ -598,7 +598,7 @@ class APIServer(threading.Thread):
             def create_method(**kwargs):
                 try:
                     transaction_args, common_args, private_key_wif = (
-                        transaction.split_compose_arams(**kwargs)
+                        transaction.split_compose_params(**kwargs)
                     )
                     return transaction.compose_transaction(
                         self.db, name=tx, params=transaction_args, api_v1=True, **common_args
@@ -1186,7 +1186,7 @@ class APIServer(threading.Thread):
             query_data = {}
 
             if compose:
-                transaction_args, common_args, private_key_wif = transaction.split_compose_arams(
+                transaction_args, common_args, private_key_wif = transaction.split_compose_params(
                     **extra_args
                 )
 

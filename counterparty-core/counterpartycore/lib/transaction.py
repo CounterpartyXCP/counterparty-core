@@ -1028,7 +1028,7 @@ COMPOSE_COMMONS_ARGS = {
 }
 
 
-def split_compose_arams(**kwargs):
+def split_compose_params(**kwargs):
     transaction_args = {}
     common_args = {}
     private_key_wif = None
@@ -1193,7 +1193,7 @@ COMPOSABLE_TRANSACTIONS = [
 def compose(db, source, transaction_name, api_v1=False, **kwargs):
     if transaction_name not in COMPOSABLE_TRANSACTIONS:
         raise exceptions.TransactionError("Transaction type not composable.")
-    transaction_args, common_args, _ = split_compose_arams(**kwargs)
+    transaction_args, common_args, _ = split_compose_params(**kwargs)
     transaction_args["source"] = source
     return compose_transaction(
         db, name=transaction_name, params=transaction_args, api_v1=api_v1, **common_args
