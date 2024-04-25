@@ -86,7 +86,7 @@ md += gen_groups_toc()
 md += """
 Notes:
 
-- When the server is not ready, that is to say when all the blocks are not yet parsed, all routes return a 503 error except those in the `/blocks`, `/transactions` and `/backend` groups which always return a result.
+- When the server is not ready, that is to say when all the blocks are not yet parsed, all routes return a 503 error except `/` and those in the `/blocks`, `/transactions` and `/backend` groups which always return a result.
 
 - All API responses contain the following 3 headers:
 
