@@ -439,7 +439,7 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False, return_list
     return balances[0]["quantity"]
 
 
-def get_balance_object(db, address: str, asset: str):
+def get_balance_by_address_and_asset(db, address: str, asset: str):
     """
     Returns the balance of an address and asset
     :param str address: The address to return (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)

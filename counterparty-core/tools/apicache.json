@@ -2385,5 +2385,182 @@
     },
     "/backend/estimatesmartfee": {
         "result": 295443
+    },
+    "/orders/<order_hash>": {
+        "result": [
+            {
+                "tx_index": 2724132,
+                "tx_hash": "23f68fdf934e81144cca31ce8ef69062d553c521321a039166e7ba99aede0776",
+                "block_index": 840381,
+                "source": "15L7U55PAsHLEpQkZqz62e3eqWd9AHb2DH",
+                "give_asset": "PEPECASH",
+                "give_quantity": 6966600000000,
+                "give_remaining": 900000000000,
+                "get_asset": "XCP",
+                "get_quantity": 11076894000,
+                "get_remaining": 1431000000,
+                "expiration": 5000,
+                "expire_index": 843055,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 4488,
+                "fee_provided_remaining": 4488,
+                "status": "open"
+            }
+        ]
+    },
+    "/orders/<order_hash>/matches": {
+        "result": [
+            {
+                "id": "23f68fdf934e81144cca31ce8ef69062d553c521321a039166e7ba99aede0776_5461e6f99a37a7167428b4a720a52052cd9afed43905f818f5d7d4f56abd0947",
+                "tx0_index": 2724132,
+                "tx0_hash": "23f68fdf934e81144cca31ce8ef69062d553c521321a039166e7ba99aede0776",
+                "tx0_address": "15L7U55PAsHLEpQkZqz62e3eqWd9AHb2DH",
+                "tx1_index": 2726591,
+                "tx1_hash": "5461e6f99a37a7167428b4a720a52052cd9afed43905f818f5d7d4f56abd0947",
+                "tx1_address": "15e15ua6A3FJqjMevtrWcFSzKn9k6bMQeA",
+                "forward_asset": "PEPECASH",
+                "forward_quantity": 6066600000000,
+                "backward_asset": "XCP",
+                "backward_quantity": 9645894000,
+                "tx0_block_index": 838055,
+                "tx1_block_index": 840381,
+                "block_index": 840381,
+                "tx0_expiration": 5000,
+                "tx1_expiration": 8064,
+                "match_expire_index": 840401,
+                "fee_paid": 0,
+                "status": "completed"
+            }
+        ]
+    },
+    "/orders/<order_hash>/btcpays": {
+        "result": [
+            {
+                "tx_index": 2719343,
+                "tx_hash": "6cfa7f31b43a46e5ad74a9db810bd6cac56235a8ebc73ec63d01b38ea7ea2414",
+                "block_index": 836188,
+                "source": "1NfJnJdAdmm2rJCFW54NsAKqqTTMexCNJ3",
+                "destination": "1BepkwAhEmEuEGF349XjmEUrRvoy9a7Biv",
+                "btc_amount": 4500000,
+                "order_match_id": "0a1387df82a8a7e9cec01c52c8fee01f6995c4e39dc5804e1d2bf40d9368f5c5_299b5b648f54eacb839f3487232d49aea373cdd681b706d4cc0b5e0b03688db4",
+                "status": "valid"
+            }
+        ]
+    },
+    "/bets/<bet_hash>": {
+        "result": [
+            {
+                "tx_index": 15106,
+                "tx_hash": "5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed",
+                "block_index": 304063,
+                "source": "18ZNyaAcH4HugeofwbrpLoUNiayxJRH65c",
+                "feed_address": "1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk",
+                "bet_type": 3,
+                "deadline": 1401828300,
+                "wager_quantity": 50000000,
+                "wager_remaining": 0,
+                "counterwager_quantity": 50000000,
+                "counterwager_remaining": 0,
+                "target_value": 1.0,
+                "leverage": 5040,
+                "expiration": 11,
+                "expire_index": 304073,
+                "fee_fraction_int": 1000000,
+                "status": "filled"
+            }
+        ]
+    },
+    "/bets/<bet_hash>/matches": {
+        "result": [
+            {
+                "id": "5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed_cb5f888c299a50967d523513daed71636d927e6ef3dbda85feb11ff112ae4330",
+                "tx0_index": 15106,
+                "tx0_hash": "5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed",
+                "tx0_address": "18ZNyaAcH4HugeofwbrpLoUNiayxJRH65c",
+                "tx1_index": 15108,
+                "tx1_hash": "cb5f888c299a50967d523513daed71636d927e6ef3dbda85feb11ff112ae4330",
+                "tx1_address": "1PTqJmRCMGs4qBEh2APAFSrBv95Uf1hfiD",
+                "tx0_bet_type": 3,
+                "tx1_bet_type": 2,
+                "feed_address": "1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk",
+                "initial_value": -1,
+                "deadline": 1401828300,
+                "target_value": 1.0,
+                "leverage": 5040,
+                "forward_quantity": 50000000,
+                "backward_quantity": 50000000,
+                "tx0_block_index": 304062,
+                "tx1_block_index": 304063,
+                "block_index": 306379,
+                "tx0_expiration": 11,
+                "tx1_expiration": 1459,
+                "match_expire_index": 304073,
+                "fee_fraction_int": 1000000,
+                "status": "expired"
+            }
+        ]
+    },
+    "/bets/<bet_hash>/resolutions": {
+        "result": [
+            {
+                "bet_match_id": "36bbbb7dbd85054dac140a8ad8204eda2ee859545528bd2a9da69ad77c277ace_d70ee4e44f02fe6258ee0c267f33f304a0fc61d4ce424852f58c28967dc1924f",
+                "bet_match_type_id": 5,
+                "block_index": 401128,
+                "winner": "Equal",
+                "settled": null,
+                "bull_credit": null,
+                "bear_credit": null,
+                "escrow_less_fee": 2000000,
+                "fee": 0
+            }
+        ]
+    },
+    "/dispensers/<dispenser_hash>": {
+        "result": [
+            {
+                "tx_index": 2536311,
+                "tx_hash": "753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a",
+                "block_index": 840322,
+                "source": "bc1qq735dv8peps2ayr3qwwwdwylq4ddwcgrpyg9r2",
+                "asset": "FLOCK",
+                "give_quantity": 10000000000,
+                "escrow_quantity": 250000000000,
+                "satoshirate": 330000,
+                "status": 0,
+                "give_remaining": 140000000000,
+                "oracle_address": null,
+                "last_status_tx_hash": null,
+                "origin": "bc1qq735dv8peps2ayr3qwwwdwylq4ddwcgrpyg9r2",
+                "dispense_count": 2,
+                "asset_longname": null
+            }
+        ]
+    },
+    "/dispensers/<dispenser_hash>/dispenses": {
+        "result": [
+            {
+                "tx_index": 2610745,
+                "dispense_index": 0,
+                "tx_hash": "8c95cc6afc8fd466c784fd1c02749c585988999bbc66251b944c443dc31af757",
+                "block_index": 821450,
+                "source": "bc1qq735dv8peps2ayr3qwwwdwylq4ddwcgrpyg9r2",
+                "destination": "1FKYM1CP9RfttJhNG8HTNQdE2uV3YvwbRB",
+                "asset": "FLOCK",
+                "dispense_quantity": 20000000000,
+                "dispenser_tx_hash": "753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a"
+            },
+            {
+                "tx_index": 2726580,
+                "dispense_index": 0,
+                "tx_hash": "e7f0f2c9bef7a492b714a5952ec61b283be344419c5bc33f405f9af41ebfa48b",
+                "block_index": 840322,
+                "source": "bc1qq735dv8peps2ayr3qwwwdwylq4ddwcgrpyg9r2",
+                "destination": "bc1qzcdkhnexpjc8wvkyrpyrsn0f5xzcpu877mjmgj",
+                "asset": "FLOCK",
+                "dispense_quantity": 90000000000,
+                "dispenser_tx_hash": "753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a"
+            }
+        ]
     }
 }

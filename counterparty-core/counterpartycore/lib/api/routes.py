@@ -30,7 +30,7 @@ ROUTES = util.prepare_routes(
         "/transactions/<tx_hash>": ledger.get_transaction,
         ### /addresses ###
         "/addresses/<address>/balances": ledger.get_address_balances,
-        "/addresses/<address>/balances/<asset>": ledger.get_balance_object,
+        "/addresses/<address>/balances/<asset>": ledger.get_balance_by_address_and_asset,
         "/addresses/<address>/credits": ledger.get_credits_by_address,
         "/addresses/<address>/debits": ledger.get_debits_by_address,
         "/addresses/<address>/bets": ledger.get_bet_by_feed,
@@ -61,7 +61,7 @@ ROUTES = util.prepare_routes(
         "/assets": ledger.get_valid_assets,
         "/assets/<asset>": ledger.get_asset_info,
         "/assets/<asset>/balances": ledger.get_asset_balances,
-        "/assets/<asset>/balances/<address>": ledger.get_balance_object,
+        "/assets/<asset>/balances/<address>": ledger.get_balance_by_address_and_asset,
         "/assets/<asset>/orders": ledger.get_orders_by_asset,
         "/assets/<asset>/credits": ledger.get_credits_by_asset,
         "/assets/<asset>/debits": ledger.get_debits_by_asset,
