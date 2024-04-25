@@ -5,7 +5,7 @@ import requests
 from counterpartycore import server
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-API_DOC_FILE = os.path.join(CURR_DIR, "../../../Documentation/docs/advanced/api/rest.md")
+API_DOC_FILE = os.path.join(CURR_DIR, "../../../Documentation/docs/advanced/api-v2/rest.md")
 CACHE_FILE = os.path.join(CURR_DIR, "apicache.json")
 API_ROOT = "http://api:api@localhost:4000"
 USE_API_CACHE = True
@@ -64,13 +64,33 @@ Notes:
 
 ```
 {
-     "success": <True|False>,
      "error": <error_messsage_if_success_is_false>,
      "result": <result_of_the_query_if_success_is_true>
 }
 ```
 
 - Routes in the `/backend` group serve as a proxy to make requests to AddrindexRS.
+
+## Root Path
+
+### Get Server Info [`/`]
+
+Returns server information and the list of documented routes in JSON format.
+
++ Response 200 (application/json)
+
+        ```
+        {
+            "server_ready": true,
+            "network": "mainnet",
+            "version": "10.1.1",
+            "backend_height": 840796,
+            "counterparty_height": 840796,
+            "routes": [
+                <API Documentation in JSON>
+            ]
+        }
+        ```
 
 """
 
