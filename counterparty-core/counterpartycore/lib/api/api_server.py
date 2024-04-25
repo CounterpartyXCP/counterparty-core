@@ -52,7 +52,7 @@ def verify_password(username, password):
 def api_root():
     counterparty_height = blocks.last_db_index(get_db())
     routes = []
-    for path, route in ROUTES.item():
+    for path, route in ROUTES.items():
         routes.append(
             {
                 "path": path,

@@ -223,5 +223,5 @@ class ApiJsonEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-def to_json(obj):
-    return json.dumps(obj, cls=ApiJsonEncoder, indent=4)
+def to_json(obj, indent=None):
+    return json.dumps(obj, cls=ApiJsonEncoder, indent=indent)
