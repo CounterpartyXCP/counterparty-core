@@ -95,8 +95,9 @@ def return_result_if_not_ready(rule):
     return is_cachable(rule) or rule == "/"
 
 
-def return_result(success, http_code, result=None, error=None):
-    api_result = {"success": success}
+def return_result(http_code, result=None, error=None):
+    assert result is None or error is None
+    api_result = {}
     if result is not None:
         api_result["result"] = result
     if error is not None:
@@ -150,10 +151,10 @@ def handle_route(**kwargs):
 
     # check if server must be ready
     if not is_server_ready() and not return_result_if_not_ready(rule):
-        return return_result(False, 503, error="Counterparty not ready")
+        return return_result(503, error="Counterparty not ready")
 
     if rule == "/":
-        return return_result(True, 200, result=api_root())
+        return return_result(200, result=api_root())
 
     route = ROUTES.get(rule)
 
@@ -161,7 +162,7 @@ def handle_route(**kwargs):
     try:
         function_args = prepare_args(route, **kwargs)
     except ValueError as e:
-        return return_result(False, 400, error=str(e))
+        return return_result(400, error=str(e))
 
     # call the function
     try:
@@ -170,15 +171,15 @@ def handle_route(**kwargs):
         else:
             result = route["function"](**function_args)
     except (exceptions.ComposeError, exceptions.UnpackError) as e:
-        return return_result(False, 503, error=str(e))
+        return return_result(503, error=str(e))
     except Exception as e:
         logger.exception("Error in API: %s", e)
         traceback.print_exc()
-        return return_result(False, 503, error="Unknwon error")
+        return return_result(503, error="Unknwon error")
 
     # clean up and return the result
     result = remove_rowids(result)
-    return return_result(True, 200, result=result)
+    return return_result(200, result=result)
 
 
 def run_api_server(args):
