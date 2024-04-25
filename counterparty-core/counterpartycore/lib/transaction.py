@@ -1146,7 +1146,7 @@ def compose_transaction(
         del params["segwit"]
 
     tx_info = compose_method(db, **params)
-    initialise(db)
+
     return construct(
         db,
         tx_info,
