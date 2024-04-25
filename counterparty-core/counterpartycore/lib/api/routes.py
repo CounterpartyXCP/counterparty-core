@@ -96,7 +96,7 @@ ROUTES = util.prepare_routes(
         "/bitcoin/addresses/<address>/transactions/oldest": backend.get_oldest_transaction_by_address,
         "/bitcoin/addresses/<address>/utxos": backend.get_unspent_txouts,
         "/bitcoin/addresses/<address>/pubkey": util.pubkeyhash_to_pubkey,
-        "/bitcoin/transactions/<tx_hash>": util.get_raw_transaction,
+        "/bitcoin/transactions/<tx_hash>": util.get_transaction,
         "/bitcoin/estimatesmartfee": backend.fee_per_kb,
         ### /mempool ###
         "/mempool/events": ledger.get_all_mempool_events,

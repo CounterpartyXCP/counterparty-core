@@ -116,9 +116,9 @@ def pubkeyhash_to_pubkey(address: str, provided_pubkeys: str = None):
     return backend.pubkeyhash_to_pubkey(address, provided_pubkeys=provided_pubkeys_list)
 
 
-def get_raw_transaction(tx_hash: str, verbose: bool = False):
+def get_transaction(tx_hash: str, verbose: bool = False):
     """
-    Get a raw transaction from the blockchain
+    Get a transaction from the blockchain
     :param tx_hash: The transaction hash (e.g. 3190047bf2320bdcd0fade655ae49be309519d151330aa478573815229cc0018)
     :param verbose: Whether to return JSON output or raw hex (e.g. True)
     """
