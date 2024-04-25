@@ -103,7 +103,7 @@ Notes:
     }
     ```
 
-- Routes in the `/backend` group serve as a proxy to make requests to AddrindexRS.
+- Routes in the `/bitcoin` group serve as a proxy to make requests to Bitcoin Core.
 
 # Counterparty API Root [{root_path}]
 

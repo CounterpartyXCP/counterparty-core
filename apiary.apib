@@ -16,7 +16,7 @@ API routes are divided into 11 groups:
 - [`/burns`](#/reference/burns)
 - [`/events`](#/reference/events)
 - [`/mempool`](#/reference/mempool)
-- [`/backend`](#/reference/backend)
+- [`/bitcoin`](#/reference/bitcoin)
 
 Notes:
 
@@ -37,7 +37,7 @@ Notes:
     }
     ```
 
-- Routes in the `/backend` group serve as a proxy to make requests to AddrindexRS.
+- Routes in the `/bitcoin` group serve as a proxy to make requests to Bitcoin Core.
 
 # Counterparty API Root [/]
 
@@ -3649,9 +3649,9 @@ Health check route.
         }
     ```
 
-## Group Backend
+## Group Bitcoin
 
-### Search Raw Transactions [GET /backend/addresses/{address}/transactions{?unconfirmed}{?only_tx_hashes}]
+### Search Raw Transactions [GET /bitcoin/addresses/{address}/transactions{?unconfirmed}{?only_tx_hashes}]
 
 Returns all transactions involving a given address
 
@@ -3707,7 +3707,7 @@ Returns all transactions involving a given address
         }
     ```
 
-### Get Oldest Tx [GET /backend/addresses/{address}/transactions/oldest{?block_index}]
+### Get Oldest Tx [GET /bitcoin/addresses/{address}/transactions/oldest{?block_index}]
 
 Get the oldest transaction for an address.
 
@@ -3727,7 +3727,7 @@ Get the oldest transaction for an address.
         }
     ```
 
-### Get Unspent Txouts [GET /backend/addresses/{address}/utxos{?unconfirmed}{?unspent_tx_hash}]
+### Get Unspent Txouts [GET /bitcoin/addresses/{address}/utxos{?unconfirmed}{?unspent_tx_hash}]
 
 Returns a list of unspent outputs for a specific address
 
@@ -3827,7 +3827,7 @@ Returns a list of unspent outputs for a specific address
         }
     ```
 
-### Pubkeyhash To Pubkey [GET /backend/addresses/{address}/pubkey{?provided_pubkeys}]
+### Pubkeyhash To Pubkey [GET /bitcoin/addresses/{address}/pubkey{?provided_pubkeys}]
 
 Get pubkey for an address.
 
@@ -3844,7 +3844,7 @@ Get pubkey for an address.
         }
     ```
 
-### Get Raw Transaction [GET /backend/transactions/{tx_hash}{?verbose}]
+### Get Raw Transaction [GET /bitcoin/transactions/{tx_hash}{?verbose}]
 
 Get a raw transaction from the blockchain
 
@@ -3902,7 +3902,7 @@ Get a raw transaction from the blockchain
         }
     ```
 
-### Fee Per Kb [GET /backend/estimatesmartfee{?conf_target}{?mode}]
+### Fee Per Kb [GET /bitcoin/estimatesmartfee{?conf_target}{?mode}]
 
 Get the fee per kilobyte for a transaction to be confirmed in `conf_target` blocks.
 
