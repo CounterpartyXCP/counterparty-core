@@ -37,6 +37,31 @@ def get_example_output(path, args):
 
 root_path = "`/`" if TARGET == "docusaurus" else "/"
 
+GROUPS = [
+    "/blocks",
+    "/transactions",
+    "/addresses",
+    "/assets",
+    "/orders",
+    "/bets",
+    "/dispensers",
+    "/burns",
+    "/events",
+    "/mempool",
+    "/backend",
+]
+
+
+def gen_groups_toc():
+    toc = ""
+    for group in GROUPS:
+        if TARGET == "docusaurus":
+            toc += f"- [`{group}`](#group{group[1:]})\n"
+        else:
+            toc += f"- [`{group}`](#/reference{group})\n"
+    return toc
+
+
 if TARGET == "docusaurus":
     md = """---
 title: REST API V2
@@ -54,19 +79,11 @@ HOST: https://api.counterparty.io
 The Counterparty Core API is the recommended (and only supported) way to query the state of a Counterparty node. 
 
 API routes are divided into 11 groups:
+"""
 
-- [`/blocks`](#group-blocks)
-- [`/transactions`](#group-transactions)
-- [`/addresses`](#group-addresses)
-- [`/assets`](#group-assets)
-- [`/orders`](#group-orders)
-- [`/bets`](#group-bets)
-- [`/dispensers`](#group-dispensers)
-- [`/burns`](#group-burns)
-- [`/events`](#group-events)
-- [`/mempool`](#group-mempool)
-- [`/backend`](#group-backend)
+md += gen_groups_toc()
 
+md += """
 Notes:
 
 - When the server is not ready, that is to say when all the blocks are not yet parsed, all routes return a 503 error except those in the `/blocks`, `/transactions` and `/backend` groups which always return a result.
