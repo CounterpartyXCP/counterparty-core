@@ -1,4 +1,3 @@
-
 FORMAT: 1A
 HOST: https://api.counterparty.io
 
@@ -65,7 +64,7 @@ Returns server information and the list of documented routes in JSON format.
 
 ## Group Blocks
 
-### Get Blocks [GET /blocks]
+### Get Blocks [GET /blocks{?last}{?limit}]
 
 Returns the list of the last ten blocks
 
@@ -544,7 +543,7 @@ Returns the issuances of a block
         }
     ```
 
-### Get Sends Or Receives By Block [GET /blocks/{block_index}/sends]
+### Get Sends Or Receives By Block [GET /blocks/{block_index}/sends{?limit}{?offset}]
 
 Returns the sends of a block
 
@@ -643,7 +642,7 @@ Returns the sweeps of a block
 
 ## Group Transactions
 
-### Info [GET /transactions/info]
+### Info [GET /transactions/info{?rawtransaction}{?block_index}]
 
 Returns Counterparty information from a raw transaction in hex format.
 
@@ -684,7 +683,7 @@ Returns Counterparty information from a raw transaction in hex format.
         }
     ```
 
-### Unpack [GET /transactions/unpack]
+### Unpack [GET /transactions/unpack{?datahex}{?block_index}]
 
 Unpacks Counterparty data in hex format and returns the message type and data.
 
@@ -788,7 +787,7 @@ Returns the balance of an address and asset
         }
     ```
 
-### Get Credits By Address [GET /addresses/{address}/credits]
+### Get Credits By Address [GET /addresses/{address}/credits{?limit}{?offset}]
 
 Returns the credits of an address
 
@@ -817,7 +816,7 @@ Returns the credits of an address
         }
     ```
 
-### Get Debits By Address [GET /addresses/{address}/debits]
+### Get Debits By Address [GET /addresses/{address}/debits{?limit}{?offset}]
 
 Returns the debits of an address
 
@@ -855,7 +854,7 @@ Returns the debits of an address
         }
     ```
 
-### Get Bet By Feed [GET /addresses/{address}/bets]
+### Get Bet By Feed [GET /addresses/{address}/bets{?status}]
 
 Returns the bets of a feed
 
@@ -911,7 +910,7 @@ Returns the bets of a feed
         }
     ```
 
-### Get Broadcasts By Source [GET /addresses/{address}/broadcasts]
+### Get Broadcasts By Source [GET /addresses/{address}/broadcasts{?status}{?order_by}]
 
 Returns the broadcasts of a source
 
@@ -980,7 +979,7 @@ Returns the burns of an address
         }
     ```
 
-### Get Send By Address [GET /addresses/{address}/sends]
+### Get Send By Address [GET /addresses/{address}/sends{?limit}{?offset}]
 
 Returns the sends of an address
 
@@ -1012,7 +1011,7 @@ Returns the sends of an address
         }
     ```
 
-### Get Receive By Address [GET /addresses/{address}/receives]
+### Get Receive By Address [GET /addresses/{address}/receives{?limit}{?offset}]
 
 Returns the receives of an address
 
@@ -1073,7 +1072,7 @@ Returns the sends of an address and asset
         }
     ```
 
-### Get Receive By Address And Asset [GET /addresses/{address}/receives/{asset}]
+### Get Receive By Address And Asset [GET /addresses/{address}/receives/{asset}{?limit}{?offset}]
 
 Returns the receives of an address and asset
 
@@ -1106,7 +1105,7 @@ Returns the receives of an address and asset
         }
     ```
 
-### Get Dispensers By Address [GET /addresses/{address}/dispensers]
+### Get Dispensers By Address [GET /addresses/{address}/dispensers{?status}]
 
 Returns the dispensers of an address
 
@@ -1140,7 +1139,7 @@ Returns the dispensers of an address
         }
     ```
 
-### Get Dispensers By Address And Asset [GET /addresses/{address}/dispensers/{asset}]
+### Get Dispensers By Address And Asset [GET /addresses/{address}/dispensers/{asset}{?status}]
 
 Returns the dispensers of an address and an asset
 
@@ -1202,7 +1201,7 @@ Returns the sweeps of an address
         }
     ```
 
-### Compose Bet [GET /addresses/{address}/compose/bet]
+### Compose Bet [GET /addresses/{address}/compose/bet{?feed_address}{?bet_type}{?deadline}{?wager_quantity}{?counterwager_quantity}{?expiration}{?leverage}{?target_value}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
 
 Composes a transaction to issue a bet against a feed.
 
@@ -1273,7 +1272,7 @@ Composes a transaction to issue a bet against a feed.
         }
     ```
 
-### Compose Broadcast [GET /addresses/{address}/compose/broadcast]
+### Compose Broadcast [GET /addresses/{address}/compose/broadcast{?timestamp}{?value}{?fee_fraction}{?text}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
 
 Composes a transaction to broadcast textual and numerical information to the network.
 
@@ -1334,7 +1333,7 @@ Composes a transaction to broadcast textual and numerical information to the net
         }
     ```
 
-### Compose Btcpay [GET /addresses/{address}/compose/btcpay]
+### Compose Btcpay [GET /addresses/{address}/compose/btcpay{?order_match_id}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
 
 Composes a transaction to pay for a BTC order match.
 
@@ -1389,7 +1388,7 @@ Composes a transaction to pay for a BTC order match.
         }
     ```
 
-### Compose Burn [GET /addresses/{address}/compose/burn]
+### Compose Burn [GET /addresses/{address}/compose/burn{?quantity}{?overburn}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
 
 Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, possible between blocks 278310 and 283810; on testnet it is still available).
 
@@ -1447,7 +1446,7 @@ Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, poss
         }
     ```
 
-### Compose Cancel [GET /addresses/{address}/compose/cancel]
+### Compose Cancel [GET /addresses/{address}/compose/cancel{?offer_hash}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
 
 Composes a transaction to cancel an open order or bet.
 
@@ -1502,7 +1501,7 @@ Composes a transaction to cancel an open order or bet.
         }
     ```
 
-### Compose Destroy [GET /addresses/{address}/compose/destroy]
+### Compose Destroy [GET /addresses/{address}/compose/destroy{?asset}{?quantity}{?tag}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
 
 Composes a transaction to destroy a quantity of an asset.
 
@@ -1561,7 +1560,7 @@ Composes a transaction to destroy a quantity of an asset.
         }
     ```
 
-### Compose Dispenser [GET /addresses/{address}/compose/dispenser]
+### Compose Dispenser [GET /addresses/{address}/compose/dispenser{?asset}{?give_quantity}{?escrow_quantity}{?mainchainrate}{?status}{?open_address}{?oracle_address}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
 
 Opens or closes a dispenser for a given asset at a given rate of main chain asset (BTC). Escrowed quantity on open must be equal or greater than give_quantity. It is suggested that you escrow multiples of give_quantity to ease dispenser operation.
 
@@ -1630,7 +1629,7 @@ Opens or closes a dispenser for a given asset at a given rate of main chain asse
         }
     ```
 
-### Compose Dividend [GET /addresses/{address}/compose/dividend]
+### Compose Dividend [GET /addresses/{address}/compose/dividend{?quantity_per_unit}{?asset}{?dividend_asset}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
 
 Composes a transaction to issue a dividend to holders of a given asset.
 
@@ -1689,7 +1688,7 @@ Composes a transaction to issue a dividend to holders of a given asset.
         }
     ```
 
-### Compose Issuance [GET /addresses/{address}/compose/issuance]
+### Compose Issuance [GET /addresses/{address}/compose/issuance{?asset}{?quantity}{?transfer_destination}{?divisible}{?lock}{?reset}{?description}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
 
 Composes a transaction to Issue a new asset, issue more of an existing asset, lock an asset, reset existing supply, or transfer the ownership of an asset.
 
@@ -1761,7 +1760,7 @@ Composes a transaction to Issue a new asset, issue more of an existing asset, lo
         }
     ```
 
-### Compose Mpma [GET /addresses/{address}/compose/mpma]
+### Compose Mpma [GET /addresses/{address}/compose/mpma{?assets}{?destinations}{?quantities}{?memo}{?memo_is_hex}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
 
 Composes a transaction to send multiple payments to multiple addresses.
 
@@ -1838,7 +1837,7 @@ Composes a transaction to send multiple payments to multiple addresses.
         }
     ```
 
-### Compose Order [GET /addresses/{address}/compose/order]
+### Compose Order [GET /addresses/{address}/compose/order{?give_asset}{?give_quantity}{?get_asset}{?get_quantity}{?expiration}{?fee_required}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
 
 Composes a transaction to place an order on the distributed exchange.
 
@@ -1903,7 +1902,7 @@ Composes a transaction to place an order on the distributed exchange.
         }
     ```
 
-### Compose Send [GET /addresses/{address}/compose/send]
+### Compose Send [GET /addresses/{address}/compose/send{?destination}{?asset}{?quantity}{?memo}{?memo_is_hex}{?use_enhanced_send}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
 
 Composes a transaction to send a quantity of an asset to another address.
 
@@ -1971,18 +1970,14 @@ Composes a transaction to send a quantity of an asset to another address.
         }
     ```
 
-### Compose Sweep [GET /addresses/{address}/compose/sweep]
+### Compose Sweep [GET /addresses/{address}/compose/sweep{?destination}{?flags}{?memo}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
 
 Composes a transaction to Sends all assets and/or transfer ownerships to a destination address.
 
 + Parameters
     + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be sending 
     + destination: `1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev` (str, required) - The address to receive the assets and/or ownerships 
-    + flags: `7` (int, required) - An OR mask of flags indicating how the sweep should be processed. Possible flags are:
-- FLAG_BALANCES: (integer) 1, specifies that all balances should be transferred.
-- FLAG_OWNERSHIP: (integer) 2, specifies that all ownerships should be transferred.
-- FLAG_BINARY_MEMO: (integer) 4, specifies that the memo is in binary/hex form.
-
+    + flags: `7` (int, required) - An OR mask of flags indicating how the sweep should be processed. Possible flags are: - FLAG_BALANCES: (integer) 1, specifies that all balances should be transferred. - FLAG_OWNERSHIP: (integer) 2, specifies that all ownerships should be transferred. - FLAG_BINARY_MEMO: (integer) 4, specifies that the memo is in binary/hex form. 
     + memo: `FFFF` (str, required) - The Memo associated with this transaction in hex format 
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
@@ -2036,7 +2031,7 @@ Composes a transaction to Sends all assets and/or transfer ownerships to a desti
 
 ## Group Assets
 
-### Get Valid Assets [GET /assets]
+### Get Valid Assets [GET /assets{?offset}{?limit}]
 
 Returns the valid assets
 
@@ -2100,7 +2095,7 @@ Returns the asset information
         }
     ```
 
-### Get Asset Balances [GET /assets/{asset}/balances]
+### Get Asset Balances [GET /assets/{asset}/balances{?exclude_zero_balances}]
 
 Returns the asset balances
 
@@ -2143,7 +2138,7 @@ Returns the balance of an address and asset
         }
     ```
 
-### Get Orders By Asset [GET /assets/{asset}/orders]
+### Get Orders By Asset [GET /assets/{asset}/orders{?status}]
 
 Returns the orders of an asset
 
@@ -2370,7 +2365,7 @@ Returns the orders of an asset
         }
     ```
 
-### Get Credits By Asset [GET /assets/{asset}/credits]
+### Get Credits By Asset [GET /assets/{asset}/credits{?limit}{?offset}]
 
 Returns the credits of an asset
 
@@ -2399,7 +2394,7 @@ Returns the credits of an asset
         }
     ```
 
-### Get Debits By Asset [GET /assets/{asset}/debits]
+### Get Debits By Asset [GET /assets/{asset}/debits{?limit}{?offset}]
 
 Returns the debits of an asset
 
@@ -2649,7 +2644,7 @@ Returns the issuances of an asset
         }
     ```
 
-### Get Sends Or Receives By Asset [GET /assets/{asset}/sends]
+### Get Sends Or Receives By Asset [GET /assets/{asset}/sends{?limit}{?offset}]
 
 Returns the sends of an asset
 
@@ -2729,7 +2724,7 @@ Returns the sends of an asset
         }
     ```
 
-### Get Dispensers By Asset [GET /assets/{asset}/dispensers]
+### Get Dispensers By Asset [GET /assets/{asset}/dispensers{?status}]
 
 Returns the dispensers of an asset
 
@@ -2763,7 +2758,7 @@ Returns the dispensers of an asset
         }
     ```
 
-### Get Dispensers By Address And Asset [GET /assets/{asset}/dispensers/{address}]
+### Get Dispensers By Address And Asset [GET /assets/{asset}/dispensers/{address}{?status}]
 
 Returns the dispensers of an address and an asset
 
@@ -2891,7 +2886,7 @@ Returns the information of an order
         }
     ```
 
-### Get Order Matches By Order [GET /orders/{order_hash}/matches]
+### Get Order Matches By Order [GET /orders/{order_hash}/matches{?status}]
 
 Returns the order matches of an order
 
@@ -2993,7 +2988,7 @@ Returns the information of a bet
         }
     ```
 
-### Get Bet Matches By Bet [GET /bets/{bet_hash}/matches]
+### Get Bet Matches By Bet [GET /bets/{bet_hash}/matches{?status}]
 
 Returns the bet matches of a bet
 
@@ -3066,7 +3061,7 @@ Returns the resolutions of a bet
 
 ## Group Burns
 
-### Get All Burns [GET /burns]
+### Get All Burns [GET /burns{?status}{?offset}{?limit}]
 
 Returns the burns
 
@@ -3207,7 +3202,7 @@ Returns the dispenses of a dispenser
 
 ## Group Events
 
-### Get All Events [GET /events]
+### Get All Events [GET /events{?last}{?limit}]
 
 Returns all events
 
@@ -3325,9 +3320,6 @@ Returns the event of an index
 ### Get All Events Counts [GET /events/counts]
 
 Returns the event counts of all blocks
-
-+ Parameters
-
 + Response 200 (application/json)
 
     ```
@@ -3525,7 +3517,7 @@ Returns the event counts of all blocks
         }
     ```
 
-### Get Events By Name [GET /events/{event}]
+### Get Events By Name [GET /events/{event}{?last}{?limit}]
 
 Returns the events filtered by event name
 
@@ -3622,7 +3614,7 @@ Returns the events filtered by event name
 
 ## Group Healthz
 
-### Check Server Status [GET /healthz]
+### Check Server Status [GET /healthz{?check_type}]
 
 Health check route.
 
@@ -3642,7 +3634,7 @@ Health check route.
 
 ## Group Backend
 
-### Search Raw Transactions [GET /backend/addresses/{address}/transactions]
+### Search Raw Transactions [GET /backend/addresses/{address}/transactions{?unconfirmed}{?only_tx_hashes}]
 
 Returns all transactions involving a given address
 
@@ -3698,7 +3690,7 @@ Returns all transactions involving a given address
         }
     ```
 
-### Get Oldest Tx [GET /backend/addresses/{address}/transactions/oldest]
+### Get Oldest Tx [GET /backend/addresses/{address}/transactions/oldest{?block_index}]
 
 Get the oldest transaction for an address.
 
@@ -3718,7 +3710,7 @@ Get the oldest transaction for an address.
         }
     ```
 
-### Get Unspent Txouts [GET /backend/addresses/{address}/utxos]
+### Get Unspent Txouts [GET /backend/addresses/{address}/utxos{?unconfirmed}{?unspent_tx_hash}]
 
 Returns a list of unspent outputs for a specific address
 
@@ -3818,7 +3810,7 @@ Returns a list of unspent outputs for a specific address
         }
     ```
 
-### Pubkeyhash To Pubkey [GET /backend/addresses/{address}/pubkey]
+### Pubkeyhash To Pubkey [GET /backend/addresses/{address}/pubkey{?provided_pubkeys}]
 
 Get pubkey for an address.
 
@@ -3835,7 +3827,7 @@ Get pubkey for an address.
         }
     ```
 
-### Get Raw Transaction [GET /backend/transactions/{tx_hash}]
+### Get Raw Transaction [GET /backend/transactions/{tx_hash}{?verbose}]
 
 Get a raw transaction from the blockchain
 
@@ -3893,7 +3885,7 @@ Get a raw transaction from the blockchain
         }
     ```
 
-### Fee Per Kb [GET /backend/estimatesmartfee]
+### Fee Per Kb [GET /backend/estimatesmartfee{?conf_target}{?mode}]
 
 Get the fee per kilobyte for a transaction to be confirmed in `conf_target` blocks.
 
@@ -3916,9 +3908,6 @@ Get the fee per kilobyte for a transaction to be confirmed in `conf_target` bloc
 ### Get All Mempool Events [GET /mempool/events]
 
 Returns all mempool events
-
-+ Parameters
-
 + Response 200 (application/json)
 
     ```

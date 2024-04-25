@@ -46,8 +46,7 @@ title: REST API V2
 else:
     md = ""
 
-md += """
-FORMAT: 1A
+md += """FORMAT: 1A
 HOST: https://api.counterparty.io
 
 # Counterparty Core API
@@ -131,22 +130,31 @@ for path, route in server.routes.ROUTES.items():
     if TARGET == "docusaurus":
         md += f"[GET `{blueprint_path}`]\n\n"
     else:
+        for arg in route["args"]:
+            if f"{{{arg['name']}}}" in blueprint_path:
+                continue
+            else:
+                blueprint_path += f"{{?{arg['name']}}}"
         md += f"[GET {blueprint_path}]\n\n"
+
     md += route["description"]
-    md += "\n\n+ Parameters\n"
+
     example_args = {}
-    for arg in route["args"]:
-        required = "required" if arg["required"] else "optional"
-        description = arg.get("description", "")
-        example_arg = ""
-        if "(e.g. " in description:
-            desc_arr = description.split("(e.g. ")
-            description = desc_arr[0]
-            example_args[arg["name"]] = desc_arr[1].replace(")", "")
-            example_arg = f": `{example_args[arg['name']]}`"
-        md += f"    + {arg['name']}{example_arg} ({arg['type']}, {required}) - {description}\n"
-        if not arg["required"]:
-            md += f"        + Default: `{arg.get('default', '')}`\n"
+    if len(route["args"]) > 0:
+        md += "\n\n+ Parameters\n"
+        for arg in route["args"]:
+            required = "required" if arg["required"] else "optional"
+            description = arg.get("description", "")
+            example_arg = ""
+            if "(e.g. " in description:
+                desc_arr = description.split("(e.g. ")
+                description = desc_arr[0].replace("\n", " ")
+                example_args[arg["name"]] = desc_arr[1].replace(")", "")
+                example_arg = f": `{example_args[arg['name']]}`"
+            md += f"    + {arg['name']}{example_arg} ({arg['type']}, {required}) - {description}\n"
+            if not arg["required"]:
+                md += f"        + Default: `{arg.get('default', '')}`\n"
+
     if example_args != {} or route["args"] == []:
         if not USE_API_CACHE or path not in cache:
             example_output = get_example_output(path, example_args)
