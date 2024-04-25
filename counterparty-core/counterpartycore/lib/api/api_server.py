@@ -105,7 +105,7 @@ def return_result(http_code, result=None, error=None):
     response = flask.make_response(to_json(api_result), http_code)
     response.headers["X-COUNTERPARTY-HEIGHT"] = ledger.CURRENT_BLOCK_INDEX
     response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
-    response.headers["X-BACKEND-HEIGHT"] = BACKEND_HEIGHT
+    response.headers["X-BITCOIN-HEIGHT"] = BACKEND_HEIGHT
     response.headers["Content-Type"] = "application/json"
     return response
 

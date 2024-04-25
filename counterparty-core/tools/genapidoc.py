@@ -48,7 +48,7 @@ GROUPS = [
     "/burns",
     "/events",
     "/mempool",
-    "/backend",
+    "/bitcoin",
 ]
 
 
@@ -91,8 +91,8 @@ Notes:
 - All API responses contain the following 3 headers:
 
     * `X-COUNTERPARTY-HEIGHT` contains the last block parsed by Counterparty
-    * `X-BACKEND-HEIGHT` contains the last block known to Bitcoin Core
-    * `X-COUNTERPARTY-READY` contains true if `X-COUNTERPARTY-HEIGHT` >= `X-BACKEND-HEIGHT` - 1
+    * `X-BITCOIN-HEIGHT` contains the last block known to Bitcoin Core
+    * `X-COUNTERPARTY-READY` contains true if `X-COUNTERPARTY-HEIGHT` >= `X-BITCOIN-HEIGHT` - 1
 
 - All API responses follow the following format:
 

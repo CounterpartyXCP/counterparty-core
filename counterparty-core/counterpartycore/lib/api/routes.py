@@ -91,13 +91,13 @@ ROUTES = util.prepare_routes(
         "/events/<event>": ledger.get_events_by_name,
         ### /healthz ###
         "/healthz": util.check_server_status,
-        ### /backend ###
-        "/backend/addresses/<address>/transactions": backend.search_raw_transactions,
-        "/backend/addresses/<address>/transactions/oldest": backend.get_oldest_tx,
-        "/backend/addresses/<address>/utxos": backend.get_unspent_txouts,
-        "/backend/addresses/<address>/pubkey": util.pubkeyhash_to_pubkey,
-        "/backend/transactions/<tx_hash>": util.get_raw_transaction,
-        "/backend/estimatesmartfee": backend.fee_per_kb,
+        ### /bitcoin ###
+        "/bitcoin/addresses/<address>/transactions": backend.search_raw_transactions,
+        "/bitcoin/addresses/<address>/transactions/oldest": backend.get_oldest_tx,
+        "/bitcoin/addresses/<address>/utxos": backend.get_unspent_txouts,
+        "/bitcoin/addresses/<address>/pubkey": util.pubkeyhash_to_pubkey,
+        "/bitcoin/transactions/<tx_hash>": util.get_raw_transaction,
+        "/bitcoin/estimatesmartfee": backend.fee_per_kb,
         ### /mempool ###
         "/mempool/events": ledger.get_all_mempool_events,
         "/mempool/events/<event>": ledger.get_mempool_events_by_name,

@@ -2133,7 +2133,7 @@
             }
         ]
     },
-    "/backend/addresses/<address>/transactions": {
+    "/bitcoin/addresses/<address>/transactions": {
         "result": [
             {
                 "tx_hash": "eae4f1dba4d75bda9dd0de12f69a980be267bbc16b7a280a2a4b40c4b3bbb70a"
@@ -2173,13 +2173,13 @@
             }
         ]
     },
-    "/backend/addresses/<address>/transactions/oldest": {
+    "/bitcoin/addresses/<address>/transactions/oldest": {
         "result": {
             "block_index": 833187,
             "tx_hash": "2c8bc3eede9ec60d26c6fd7f44829adc64da593552044a28c673022220f560c3"
         }
     },
-    "/backend/addresses/<address>/utxos": {
+    "/bitcoin/addresses/<address>/utxos": {
         "result": [
             {
                 "vout": 6,
@@ -2263,10 +2263,10 @@
             }
         ]
     },
-    "/backend/addresses/<address>/pubkey": {
+    "/bitcoin/addresses/<address>/pubkey": {
         "result": "0388ef0905568d425f1ffd4031d93dda4ef0e220c9b5fc4a6cbaf11544c4a5ca49"
     },
-    "/backend/transactions/<tx_hash>": {
+    "/bitcoin/transactions/<tx_hash>": {
         "result": {
             "txid": "3190047bf2320bdcd0fade655ae49be309519d151330aa478573815229cc0018",
             "hash": "417c24d7a5539bc5b8496e26528382ac297a85a1c6b891b220f72712405ec300",
@@ -2368,7 +2368,7 @@
             "status": "Healthy"
         }
     },
-    "/backend/estimatesmartfee": {
+    "/bitcoin/estimatesmartfee": {
         "result": 295443
     },
     "/orders/<order_hash>": {
