@@ -67,7 +67,7 @@ def handle_healthz_route(db, check_type: str = "heavy"):
     return flask.Response(to_json(result), code, mimetype="application/json")
 
 
-def handle_healthz_route_v2(db, check_type: str = "heavy"):
+def check_server_status(db, check_type: str = "heavy"):
     """
     Health check route.
     :param check_type: Type of health check to perform. Options are 'light' and 'heavy' (e.g. light)
