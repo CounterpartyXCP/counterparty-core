@@ -15,7 +15,7 @@ USE_API_CACHE = True
 TARGET_FILE = API_DOC_FILE
 TARGET = "docusaurus"
 
-if len(sys.argv) and sys.argv[1] == "blueprint":
+if len(sys.argv) > 1 and sys.argv[1] == "blueprint":
     TARGET_FILE = API_BLUEPRINT_FILE
     TARGET = "apiary"
 
@@ -56,7 +56,7 @@ def gen_groups_toc():
     toc = ""
     for group in GROUPS:
         if TARGET == "docusaurus":
-            toc += f"- [`{group}`](#group{group[1:]})\n"
+            toc += f"- [`{group}`](#group-{group[1:]})\n"
         else:
             toc += f"- [`{group}`](#/reference{group})\n"
     return toc
@@ -105,7 +105,7 @@ Notes:
 
 - Routes in the `/backend` group serve as a proxy to make requests to AddrindexRS.
 
-# Counterparty Core API [{root_path}]
+# Counterparty API Root [{root_path}]
 
 ### Get Server Info [GET]
 
