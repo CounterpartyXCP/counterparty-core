@@ -1,14 +1,23 @@
 import json
 import os
+import sys
 
 import requests
 from counterpartycore import server
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 API_DOC_FILE = os.path.join(CURR_DIR, "../../../Documentation/docs/advanced/api-v2/rest.md")
+API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../counterparty-core.apib")
 CACHE_FILE = os.path.join(CURR_DIR, "apicache.json")
 API_ROOT = "http://api:api@localhost:4000"
 USE_API_CACHE = True
+
+TARGET_FILE = API_DOC_FILE
+TARGET = "docusaurus"
+
+if len(sys.argv) and sys.argv[1] == "blueprint":
+    TARGET_FILE = API_BLUEPRINT_FILE
+    TARGET = "apiary"
 
 
 def get_example_output(path, args):
@@ -26,11 +35,20 @@ def get_example_output(path, args):
     return response.json()
 
 
-md = """---
+root_path = "`/`" if TARGET == "docusaurus" else "/"
+
+if TARGET == "docusaurus":
+    md = """---
 title: REST API V2
 ---
 
+"""
+else:
+    md = ""
+
+md += """
 FORMAT: 1A
+HOST: https://api.counterparty.io
 
 # Counterparty Core API
 
@@ -73,7 +91,7 @@ Notes:
 
 ## Root Path
 
-### Get Server Info [`/`]
+### Get Server Info [GET {root_path}]
 
 Returns server information and the list of documented routes in JSON format.
 
@@ -93,6 +111,7 @@ Returns server information and the list of documented routes in JSON format.
     ```
 
 """
+md = md.replace("{root_path}", root_path)
 
 cache = {}
 if USE_API_CACHE and os.path.exists(CACHE_FILE):
@@ -108,7 +127,11 @@ for path, route in server.routes.ROUTES.items():
     blueprint_path = path.replace("<", "{").replace(">", "}").replace("int:", "")
 
     title = " ".join([part.capitalize() for part in str(route["function"].__name__).split("_")])
-    md += f"\n### {title} [`{blueprint_path}`]\n\n"
+    md += f"\n### {title} "
+    if TARGET == "docusaurus":
+        md += f"[GET `{blueprint_path}`]\n\n"
+    else:
+        md += f"[GET {blueprint_path}]\n\n"
     md += route["description"]
     md += "\n\n+ Parameters\n"
     example_args = {}
@@ -140,6 +163,6 @@ for path, route in server.routes.ROUTES.items():
 with open(CACHE_FILE, "w") as f:
     json.dump(cache, f, indent=4)
 
-with open(API_DOC_FILE, "w") as f:
+with open(TARGET_FILE, "w") as f:
     f.write(md)
-    print(f"API documentation written to {API_DOC_FILE}")
+    print(f"API documentation written to {TARGET_FILE}")
