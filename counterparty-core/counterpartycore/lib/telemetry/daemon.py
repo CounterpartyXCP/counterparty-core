@@ -2,8 +2,10 @@ import threading  # noqa: I001
 import time
 import logging
 
-from .collector import TelemetryCollectorI
-from .client import TelemetryClientI
+
+from counterpartycore.lib.telemetry.collectors.interface import TelemetryCollectorI
+from counterpartycore.lib.telemetry.clients.interface import TelemetryClientI
+
 
 from counterpartycore.lib import config
 

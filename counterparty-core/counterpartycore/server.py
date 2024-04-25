@@ -32,8 +32,10 @@ from counterpartycore.lib import (
 from counterpartycore.lib import kickstart as kickstarter
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1, routes  # noqa: F401
-from counterpartycore.lib.telemetry.client import TelemetryClientLocal
-from counterpartycore.lib.telemetry.collector import TelemetryCollectorLive
+from counterpartycore.lib.telemetry.clients.influxdb import TelemetryClientInfluxDB
+from counterpartycore.lib.telemetry.collectors.influxdb import (
+    TelemetryCollectorInfluxDB,
+)
 from counterpartycore.lib.telemetry.daemon import TelemetryDaemon
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -174,6 +176,7 @@ def initialise_config(
     estimate_fee_per_kb=None,
     customnet=None,
     no_mempool=False,
+    no_telemetry=False,
 ):
     # log config alreasdy initialized
     logger.debug("VERBOSE: %s", config.VERBOSE)
@@ -572,6 +575,8 @@ def initialise_config(
 
     config.NO_MEMPOOL = no_mempool
 
+    config.NO_TELEMETRY = no_telemetry
+
     logger.info(f"Running v{config.VERSION_STRING} of counterparty-core.")
 
 
@@ -611,6 +616,7 @@ def initialise_log_and_config(args):
         "utxo_locks_max_addresses": args.utxo_locks_max_addresses,
         "utxo_locks_max_age": args.utxo_locks_max_age,
         "no_mempool": args.no_mempool,
+        "no_telemetry": args.no_telemetry,
     }
 
     initialise_log_config(
@@ -696,13 +702,16 @@ def start_all(args):
         # Backend.
         connect_to_backend()
 
-        telemetry_daemon = TelemetryDaemon(
-            interval=60,
-            collector=TelemetryCollectorLive(db=database.get_connection(read_only=True)),
-            client=TelemetryClientLocal(),
-        )
-
-        telemetry_daemon.start()
+        if not config.NO_TELEMETRY:
+            logger.info("Telemetry enabled.")
+            telemetry_daemon = TelemetryDaemon(
+                interval=config.TELEMETRY_INTERVAL,
+                collector=TelemetryCollectorInfluxDB(db=database.get_connection(read_only=True)),
+                client=TelemetryClientInfluxDB(),
+            )
+            telemetry_daemon.start()
+        else:
+            logger.info("Telemetry disabled.")
 
         # Reset UTXO_LOCKS.  This previously was done in
         # initilise_config

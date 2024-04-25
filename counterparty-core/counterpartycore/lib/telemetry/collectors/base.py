@@ -1,17 +1,13 @@
-# INTERFACE
-from counterpartycore.lib import config, ledger  # noqa: I001, F401
 import os
 
 import counterpartycore.lib.telemetry.util as util
+from counterpartycore.lib import config, ledger  # noqa: I001, F4
 
-
-class TelemetryCollectorI:
-    def collect(self):
-        raise NotImplementedError()
+from .interface import TelemetryCollectorI
 
 
 # DEFAULT IMPLEMENTATION
-class TelemetryCollectorBase(TelemetryCollectorI):
+class TelemetryCollectorKwargs(TelemetryCollectorI):
     def __init__(self, **kwargs):
         self.static_attrs = kwargs
 
@@ -19,7 +15,7 @@ class TelemetryCollectorBase(TelemetryCollectorI):
         return self.static_attrs
 
 
-class TelemetryCollectorLive(TelemetryCollectorBase):
+class TelemetryCollectorBase(TelemetryCollectorKwargs):
     def __init__(self, db, **kwargs):
         super().__init__(**kwargs)
         self.db = db
