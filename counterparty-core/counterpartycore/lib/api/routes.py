@@ -72,18 +72,18 @@ ROUTES = util.prepare_routes(
         "/assets/<asset>/dispensers/<address>": ledger.get_dispensers_by_address_and_asset,
         "/assets/<asset>/holders": ledger.get_asset_holders,
         ### /orders ###
-        "/orders/<tx_hash>": ledger.get_order,
-        "/orders/<tx_hash>/matches": ledger.get_order_matches_by_order,
-        "/orders/<tx_hash>/btcpays": ledger.get_btcpays_by_order,
+        "/orders/<order_hash>": ledger.get_order,
+        "/orders/<order_hash>/matches": ledger.get_order_matches_by_order,
+        "/orders/<order_hash>/btcpays": ledger.get_btcpays_by_order,
         ### /bets ###
-        "/bets/<tx_hash>": ledger.get_bet,
-        "/bets/<tx_hash>/matches": ledger.get_bet_matches_by_bet,
-        "/bets/<tx_hash>/resolutions": ledger.get_resolutions_by_bet,
+        "/bets/<bet_hash>": ledger.get_bet,
+        "/bets/<bet_hash>/matches": ledger.get_bet_matches_by_bet,
+        "/bets/<bet_hash>/resolutions": ledger.get_resolutions_by_bet,
         ### /burns ###
         "/burns": ledger.get_all_burns,
         ### /dispensers ###
-        "/dispensers/<tx_hash>": ledger.get_dispenser_info_by_tx_hash,
-        "/dispensers/<tx_hash>/dispenses": ledger.get_dispenses_by_dispenser,
+        "/dispensers/<dispenser_hash>": ledger.get_dispenser_info_by_hash,
+        "/dispensers/<dispenser_hash>/dispenses": ledger.get_dispenses_by_dispenser,
         ### /events ###
         "/events": ledger.get_all_events,
         "/events/<int:event_index>": ledger.get_event_by_index,

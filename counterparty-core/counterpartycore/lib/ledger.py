@@ -1673,12 +1673,12 @@ def get_dispenser_info(db, tx_hash=None, tx_index=None):
     return cursor.fetchall()
 
 
-def get_dispenser_info_by_tx_hash(db, tx_hash: str):
+def get_dispenser_info_by_hash(db, dispenser_hash: str):
     """
     Returns the dispenser information by tx_hash
-    :param str tx_hash: The hash of the dispenser to return (e.g. 753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a)
+    :param str dispenser_hash: The hash of the dispenser to return (e.g. 753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a)
     """
-    return get_dispenser_info(db, tx_hash=tx_hash)
+    return get_dispenser_info(db, tx_hash=dispenser_hash)
 
 
 def get_refilling_count(db, dispenser_tx_hash):
@@ -1899,12 +1899,12 @@ def get_dispenses_by_block(db, block_index: int):
     return get_dispenses(db, block_index=block_index)
 
 
-def get_dispenses_by_dispenser(db, tx_hash: str):
+def get_dispenses_by_dispenser(db, dispenser_hash: str):
     """
     Returns the dispenses of a dispenser
-    :param str tx_hash: The hash of the dispenser to return (e.g. 753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a)
+    :param str dispenser_hash: The hash of the dispenser to return (e.g. 753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a)
     """
-    return get_dispenses(db, dispenser_tx_hash=tx_hash)
+    return get_dispenses(db, dispenser_tx_hash=dispenser_hash)
 
 
 ### UPDATES ###
@@ -1961,10 +1961,10 @@ def get_bet_matches_to_expire(db, block_time):
     return cursor.fetchall()
 
 
-def get_bet(db, tx_hash: str):
+def get_bet(db, bet_hash: str):
     """
     Returns the information of a bet
-    :param str tx_hash: The hash of the bet to return (e.g. 5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed)
+    :param str bet_hash: The hash of the transaction that created the bet (e.g. 5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed)
     """
     cursor = db.cursor()
     query = """
@@ -1972,7 +1972,7 @@ def get_bet(db, tx_hash: str):
         WHERE tx_hash = ?
         ORDER BY rowid DESC LIMIT 1
     """
-    bindings = (tx_hash,)
+    bindings = (bet_hash,)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -2030,10 +2030,10 @@ def get_bet_by_feed(db, address: str, status: str = "open"):
     return cursor.fetchall()
 
 
-def get_bet_matches_by_bet(db, tx_hash: str, status: str = "pending"):
+def get_bet_matches_by_bet(db, bet_hash: str, status: str = "pending"):
     """
     Returns the bet matches of a bet
-    :param str tx_hash: The hash of the bet (e.g. 5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed)
+    :param str bet_hash: The hash of the transaction that created the bet (e.g. 5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed)
     :param str status: The status of the bet matches (e.g. expired)
     """
     cursor = db.cursor()
@@ -2045,15 +2045,15 @@ def get_bet_matches_by_bet(db, tx_hash: str, status: str = "pending"):
             GROUP BY id
         ) WHERE status = ?
     """
-    bindings = (tx_hash, tx_hash, status)
+    bindings = (bet_hash, bet_hash, status)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
 
-def get_resolutions_by_bet(db, tx_hash: str):
+def get_resolutions_by_bet(db, bet_hash: str):
     """
     Returns the resolutions of a bet
-    :param str tx_hash: The hash of the bet (e.g. 36bbbb7dbd85054dac140a8ad8204eda2ee859545528bd2a9da69ad77c277ace)
+    :param str bet_hash: The hash of the transaction that created the bet (e.g. 36bbbb7dbd85054dac140a8ad8204eda2ee859545528bd2a9da69ad77c277ace)
     """
     cursor = db.cursor()
     query = """
@@ -2061,7 +2061,7 @@ def get_resolutions_by_bet(db, tx_hash: str):
         FROM bet_match_resolutions
         WHERE bet_match_id LIKE ?
     """
-    bindings = (f"%{tx_hash}%",)
+    bindings = (f"%{bet_hash}%",)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -2145,10 +2145,10 @@ def get_order_matches_to_expire(db, block_index):
     return cursor.fetchall()
 
 
-def get_order(db, tx_hash: str):
+def get_order(db, order_hash: str):
     """
     Returns the information of an order
-    :param str tx_hash: The hash of the order to return (e.g. 23f68fdf934e81144cca31ce8ef69062d553c521321a039166e7ba99aede0776)
+    :param str order_hash: The hash of the transaction that created the order (e.g. 23f68fdf934e81144cca31ce8ef69062d553c521321a039166e7ba99aede0776)
     """
     cursor = db.cursor()
     query = """
@@ -2156,7 +2156,7 @@ def get_order(db, tx_hash: str):
         WHERE tx_hash = ?
         ORDER BY rowid DESC LIMIT 1
     """
-    bindings = (tx_hash,)
+    bindings = (order_hash,)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -2240,10 +2240,10 @@ def get_orders_by_asset(db, asset: str, status: str = "open"):
     return cursor.fetchall()
 
 
-def get_order_matches_by_order(db, tx_hash: str, status: str = "pending"):
+def get_order_matches_by_order(db, order_hash: str, status: str = "pending"):
     """
     Returns the order matches of an order
-    :param str tx_hash: The hash of the order (e.g. 5461e6f99a37a7167428b4a720a52052cd9afed43905f818f5d7d4f56abd0947)
+    :param str order_hash: The hash of the transaction that created the order (e.g. 5461e6f99a37a7167428b4a720a52052cd9afed43905f818f5d7d4f56abd0947)
     :param str status: The status of the order matches to return (e.g. completed)
     """
     cursor = db.cursor()
@@ -2255,15 +2255,15 @@ def get_order_matches_by_order(db, tx_hash: str, status: str = "pending"):
             GROUP BY id
         ) WHERE status = ?
     """
-    bindings = (tx_hash, tx_hash, status)
+    bindings = (order_hash, order_hash, status)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
 
-def get_btcpays_by_order(db, tx_hash: str):
+def get_btcpays_by_order(db, order_hash: str):
     """
     Returns the BTC pays of an order
-    :param str tx_hash: The hash of the order (e.g. 299b5b648f54eacb839f3487232d49aea373cdd681b706d4cc0b5e0b03688db4)
+    :param str order_hash: The hash of the transaction that created the order (e.g. 299b5b648f54eacb839f3487232d49aea373cdd681b706d4cc0b5e0b03688db4)
     """
     cursor = db.cursor()
     query = """
@@ -2271,7 +2271,7 @@ def get_btcpays_by_order(db, tx_hash: str):
         FROM btcpays
         WHERE order_match_id LIKE ?
     """
-    bindings = (f"%{tx_hash}%",)
+    bindings = (f"%{order_hash}%",)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 

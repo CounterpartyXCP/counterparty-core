@@ -549,7 +549,7 @@ def parse(db, tx, message):
 
 def match(db, tx):
     # Get bet in question.
-    bets = ledger.get_bet(db, tx_hash=tx["tx_hash"])
+    bets = ledger.get_bet(db, bet_hash=tx["tx_hash"])
     if not bets:
         return
     else:

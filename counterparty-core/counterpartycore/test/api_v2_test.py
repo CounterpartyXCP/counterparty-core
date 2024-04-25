@@ -28,7 +28,7 @@ def test_api_v2(request):
     tx_hash = "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
     order_hash = "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
     bet_hash = "e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42"
-    dispsenser_hash = "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
+    dispenser_hash = "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
     event = "CREDIT"
     event_index = 10
     exclude_routes = ["compose", "unpack", "info", "mempool", "healthz", "backend"]
@@ -47,14 +47,10 @@ def test_api_v2(request):
         url = url.replace("<asset>", asset)
         url = url.replace("<event>", event)
         url = url.replace("<int:event_index>", str(event_index))
-        if route.startswith("/orders"):
-            url = url.replace("<tx_hash>", order_hash)
-        elif route.startswith("/bets"):
-            url = url.replace("<tx_hash>", bet_hash)
-        elif route.startswith("/dispensers"):
-            url = url.replace("<tx_hash>", dispsenser_hash)
-        else:
-            url = url.replace("<tx_hash>", tx_hash)
+        url = url.replace("<order_hash>", order_hash)
+        url = url.replace("<bet_hash>", bet_hash)
+        url = url.replace("<dispenser_hash>", dispenser_hash)
+        url = url.replace("<tx_hash>", tx_hash)
         if route.startswith("/events"):
             url += "?limit=5"
         print(url)
