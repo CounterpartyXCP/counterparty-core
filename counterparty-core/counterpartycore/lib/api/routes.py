@@ -88,7 +88,7 @@ ROUTES = util.prepare_routes(
         "/events": ledger.get_all_events,
         "/events/<int:event_index>": ledger.get_event_by_index,
         "/events/counts": ledger.get_all_events_counts,
-        "/events/<event>": ledger.get_events_by_event,
+        "/events/<event>": ledger.get_events_by_name,
         ### /healthz ###
         "/healthz": util.handle_healthz_route_v2,
         ### /backend ###
@@ -100,6 +100,6 @@ ROUTES = util.prepare_routes(
         "/backend/estimatesmartfee": backend.fee_per_kb,
         ### /mempool ###
         "/mempool/events": ledger.get_all_mempool_events,
-        "/mempool/events/<event>": ledger.get_mempool_events_by_event,
+        "/mempool/events/<event>": ledger.get_mempool_events_by_name,
     }
 )

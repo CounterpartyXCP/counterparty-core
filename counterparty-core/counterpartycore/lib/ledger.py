@@ -141,7 +141,7 @@ def get_event_by_index(db, event_index: int):
     return get_events(db, event_index=event_index)
 
 
-def get_events_by_event(db, event: str, last: int = None, limit: int = 100):
+def get_events_by_name(db, event: str, last: int = None, limit: int = 100):
     """
     Returns the events filtered by event name
     :param str event: The event to return (e.g. CREDIT)
@@ -180,7 +180,7 @@ def get_all_mempool_events(db):
     return get_mempool_events(db)
 
 
-def get_mempool_events_by_event(db, event: str):
+def get_mempool_events_by_name(db, event: str):
     """
     Returns the mempool events filtered by event name
     :param str event: The event to return (e.g. OPEN_ORDER)
