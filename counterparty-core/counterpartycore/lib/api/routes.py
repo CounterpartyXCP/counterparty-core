@@ -27,7 +27,7 @@ ROUTES = util.prepare_routes(
         ### /transactions ###
         "/transactions/info": transaction.info,
         "/transactions/unpack": transaction.unpack,
-        "/transactions/<tx_hash>": ledger.get_transaction,
+        "/transactions/<tx_hash>": transaction.get_transaction_by_hash,
         ### /addresses ###
         "/addresses/<address>/balances": ledger.get_address_balances,
         "/addresses/<address>/balances/<asset>": ledger.get_balance_by_address_and_asset,

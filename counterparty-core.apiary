@@ -716,12 +716,12 @@ Unpacks Counterparty data in hex format and returns the message type and data.
         }
     ```
 
-### Get Transaction [GET /transactions/{tx_hash}]
+### Get Transaction By Hash [GET /transactions/{tx_hash}]
 
-Returns the information of a transaction
+Returns a transaction by its hash.
 
 + Parameters
-    + tx_hash: `876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5` (str, required) - The hash of the transaction to return 
+    + tx_hash: `876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5` (str, required) - The hash of the transaction 
 
 + Response 200 (application/json)
 
@@ -738,7 +738,25 @@ Returns the information of a transaction
                 "btc_amount": 0,
                 "fee": 56565,
                 "data": "16010b9142801429a60000000000000001000000554e4e45474f544941424c45205745204d555354204245434f4d4520554e4e45474f544941424c4520574520415245",
-                "supported": 1
+                "supported": 1,
+                "unpacked_data": {
+                    "message_type": "issuance",
+                    "message_type_id": 22,
+                    "message_data": {
+                        "asset_id": 75313533584419238,
+                        "asset": "UNNEGOTIABLE",
+                        "subasset_longname": null,
+                        "quantity": 1,
+                        "divisible": false,
+                        "lock": false,
+                        "reset": false,
+                        "callable": false,
+                        "call_date": 0,
+                        "call_price": 0.0,
+                        "description": "UNNEGOTIABLE WE MUST BECOME UNNEGOTIABLE WE ARE",
+                        "status": "valid"
+                    }
+                }
             }
         }
     ```

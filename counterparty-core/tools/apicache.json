@@ -381,21 +381,6 @@
             }
         }
     },
-    "/transactions/<tx_hash>": {
-        "result": {
-            "tx_index": 2726605,
-            "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
-            "block_index": 840464,
-            "block_hash": "00000000000000000001093d4d6b21b80800fff6e5ea15cce6d65066f482cce9",
-            "block_time": 1713852783,
-            "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-            "destination": "",
-            "btc_amount": 0,
-            "fee": 56565,
-            "data": "16010b9142801429a60000000000000001000000554e4e45474f544941424c45205745204d555354204245434f4d4520554e4e45474f544941424c4520574520415245",
-            "supported": 1
-        }
-    },
     "/addresses/<address>/balances": {
         "result": [
             {
@@ -2562,5 +2547,38 @@
                 "dispenser_tx_hash": "753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a"
             }
         ]
+    },
+    "/transactions/<tx_hash>": {
+        "result": {
+            "tx_index": 2726605,
+            "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
+            "block_index": 840464,
+            "block_hash": "00000000000000000001093d4d6b21b80800fff6e5ea15cce6d65066f482cce9",
+            "block_time": 1713852783,
+            "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+            "destination": "",
+            "btc_amount": 0,
+            "fee": 56565,
+            "data": "16010b9142801429a60000000000000001000000554e4e45474f544941424c45205745204d555354204245434f4d4520554e4e45474f544941424c4520574520415245",
+            "supported": 1,
+            "unpacked_data": {
+                "message_type": "issuance",
+                "message_type_id": 22,
+                "message_data": {
+                    "asset_id": 75313533584419238,
+                    "asset": "UNNEGOTIABLE",
+                    "subasset_longname": null,
+                    "quantity": 1,
+                    "divisible": false,
+                    "lock": false,
+                    "reset": false,
+                    "callable": false,
+                    "call_date": 0,
+                    "call_price": 0.0,
+                    "description": "UNNEGOTIABLE WE MUST BECOME UNNEGOTIABLE WE ARE",
+                    "status": "valid"
+                }
+            }
+        }
     }
 }

@@ -1653,6 +1653,17 @@ def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **c
     }
 
 
+def get_transaction_by_hash(db, tx_hash: str):
+    """
+    Returns a transaction by its hash.
+    :param tx_hash: The hash of the transaction (e.g. 876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5)
+    """
+    tx = ledger.get_transaction(db, tx_hash)
+    if tx and tx["data"]:
+        tx["unpacked_data"] = unpack(db, binascii.hexlify(tx["data"]), tx["block_index"])
+    return tx
+
+
 def info(db, rawtransaction: str, block_index: int = None):
     """
     Returns Counterparty information from a raw transaction in hex format.
