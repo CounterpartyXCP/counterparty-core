@@ -88,9 +88,9 @@ Notes:
 
 - Routes in the `/backend` group serve as a proxy to make requests to AddrindexRS.
 
-## Root Path
+# Counterparty Core API [{root_path}]
 
-### Get Server Info [GET {root_path}]
+### Get Server Info [GET]
 
 Returns server information and the list of documented routes in JSON format.
 
