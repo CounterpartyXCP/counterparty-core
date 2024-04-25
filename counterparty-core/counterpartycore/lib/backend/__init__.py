@@ -239,22 +239,32 @@ def get_unspent_txouts(address: str, unconfirmed: bool = False, unspent_tx_hash:
 
 
 def search_raw_transactions(address: str, unconfirmed: bool = True, only_tx_hashes: bool = False):
+    return backend().search_raw_transactions(address, unconfirmed, only_tx_hashes)
+
+
+def get_transactions_by_address(
+    address: str, unconfirmed: bool = True, only_tx_hashes: bool = False
+):
     """
     Returns all transactions involving a given address
     :param address: The address to search for (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
     :param unconfirmed: Include unconfirmed transactions (e.g. True)
     :param only_tx_hashes: Return only the tx hashes (e.g. True)
     """
-    return backend().search_raw_transactions(address, unconfirmed, only_tx_hashes)
+    return search_raw_transactions(address, unconfirmed, only_tx_hashes)
 
 
 def get_oldest_tx(address: str, block_index: int = None):
+    return backend().get_oldest_tx(address, block_index=block_index)
+
+
+def get_oldest_transaction_by_address(address: str, block_index: int = None):
     """
     Get the oldest transaction for an address.
     :param address: The address to search for. (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
     :param block_index: The block index to search from.
     """
-    return backend().get_oldest_tx(address, block_index=block_index)
+    return get_oldest_tx(address, block_index=block_index)
 
 
 class UnknownPubKeyError(Exception):

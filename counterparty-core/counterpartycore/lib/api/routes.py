@@ -92,8 +92,8 @@ ROUTES = util.prepare_routes(
         ### /healthz ###
         "/healthz": util.check_server_status,
         ### /bitcoin ###
-        "/bitcoin/addresses/<address>/transactions": transaction.get_transactions_by_address,
-        "/bitcoin/addresses/<address>/transactions/oldest": backend.get_oldest_tx,
+        "/bitcoin/addresses/<address>/transactions": backend.get_transactions_by_address,
+        "/bitcoin/addresses/<address>/transactions/oldest": backend.get_oldest_transaction_by_address,
         "/bitcoin/addresses/<address>/utxos": backend.get_unspent_txouts,
         "/bitcoin/addresses/<address>/pubkey": util.pubkeyhash_to_pubkey,
         "/bitcoin/transactions/<tx_hash>": util.get_raw_transaction,

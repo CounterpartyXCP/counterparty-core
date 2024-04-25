@@ -1777,15 +1777,3 @@ def unpack(db, datahex: str, block_index: int = None):
         "message_type_id": message_type_id,
         "message_data": message_data,
     }
-
-
-def get_transactions_by_address(
-    address: str, unconfirmed: bool = True, only_tx_hashes: bool = False
-):
-    """
-    Returns all transactions involving a given address
-    :param address: The address to search for (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
-    :param unconfirmed: Include unconfirmed transactions (e.g. True)
-    :param only_tx_hashes: Return only the tx hashes (e.g. True)
-    """
-    return backend.search_raw_transactions(address, unconfirmed, only_tx_hashes)
