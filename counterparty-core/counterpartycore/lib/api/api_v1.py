@@ -1074,8 +1074,8 @@ class APIServer(threading.Thread):
             request_path = args_path.lower()
             if (
                 request_path == "old"
-                or request_path.startswith("old/api/")
-                or request_path.startswith("old/rpc/")
+                or request_path.startswith("v1/api/")
+                or request_path.startswith("v1/rpc/")
             ):
                 if flask.request.method == "POST":
                     # Need to get those here because it might not be available in this aux function.
@@ -1088,7 +1088,7 @@ class APIServer(threading.Thread):
                 else:
                     error = "Invalid method."
                     return flask.Response(error, 405, mimetype="application/json")
-            elif request_path.startswith("old/rest/"):
+            elif request_path.startswith("v1/rest/"):
                 if flask.request.method == "GET" or flask.request.method == "POST":
                     # Pass the URL path without /REST/ part and Flask request object.
                     rest_path = args_path.split("/", 1)[1]
