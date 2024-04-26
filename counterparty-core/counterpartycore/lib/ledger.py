@@ -87,7 +87,7 @@ def get_events(db, block_index=None, event=None, event_index=None, last=None, li
     else:
         limit = ""
     # no sql injection here
-    select_fields = "message_index AS event_index, event, bindings AS payload"
+    select_fields = "message_index AS event_index, event, bindings AS params"
     if block_index is None:
         select_fields += ", block_index, timestamp"
     query = f"""
@@ -104,7 +104,7 @@ def get_events(db, block_index=None, event=None, event_index=None, last=None, li
     cursor.execute(query, tuple(bindings))
     events = cursor.fetchall()
     for i, _ in enumerate(events):
-        events[i]["payload"] = json.loads(events[i]["payload"])
+        events[i]["params"] = json.loads(events[i]["params"])
     return events
 
 
@@ -163,7 +163,7 @@ def get_mempool_events(db, event_name=None):
         bindings.append(event_name)
     # no sql injection here
     query = """
-        SELECT tx_hash, event, bindings AS payload, timestamp
+        SELECT tx_hash, event, bindings AS params, timestamp
         FROM mempool
     """
     if event_name is not None:
@@ -172,7 +172,7 @@ def get_mempool_events(db, event_name=None):
     cursor.execute(query, tuple(bindings))
     events = cursor.fetchall()
     for i, _ in enumerate(events):
-        events[i]["payload"] = json.loads(events[i]["payload"])
+        events[i]["params"] = json.loads(events[i]["params"])
     return events
 
 
