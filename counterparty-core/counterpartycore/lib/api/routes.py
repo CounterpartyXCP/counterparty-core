@@ -21,7 +21,7 @@ ROUTES = util.prepare_routes(
         "/blocks/<int:block_index>/cancels": ledger.get_cancels,
         "/blocks/<int:block_index>/destructions": ledger.get_destructions,
         "/blocks/<int:block_index>/issuances": ledger.get_issuances_by_block,
-        "/blocks/<int:block_index>/sends": ledger.get_sends_or_receives_by_block,
+        "/blocks/<int:block_index>/sends": ledger.get_sends_by_block,
         "/blocks/<int:block_index>/dispenses": ledger.get_dispenses_by_block,
         "/blocks/<int:block_index>/sweeps": ledger.get_sweeps_by_block,
         ### /transactions ###
@@ -67,7 +67,7 @@ ROUTES = util.prepare_routes(
         "/assets/<asset>/debits": ledger.get_debits_by_asset,
         "/assets/<asset>/dividends": ledger.get_dividends,
         "/assets/<asset>/issuances": ledger.get_issuances_by_asset,
-        "/assets/<asset>/sends": ledger.get_sends_or_receives_by_asset,
+        "/assets/<asset>/sends": ledger.get_sends_by_asset,
         "/assets/<asset>/dispensers": ledger.get_dispensers_by_asset,
         "/assets/<asset>/dispensers/<address>": ledger.get_dispensers_by_address_and_asset,
         "/assets/<asset>/holders": ledger.get_asset_holders,
@@ -90,7 +90,7 @@ ROUTES = util.prepare_routes(
         "/events/counts": ledger.get_all_events_counts,
         "/events/<event>": ledger.get_events_by_name,
         ### /healthz ###
-        "/healthz": util.check_server_status,
+        "/healthz": util.check_server_health,
         ### /bitcoin ###
         "/bitcoin/addresses/<address>/transactions": backend.get_transactions_by_address,
         "/bitcoin/addresses/<address>/transactions/oldest": backend.get_oldest_transaction_by_address,

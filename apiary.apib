@@ -68,9 +68,9 @@ Returns server information and the list of documented routes in JSON format.
 Returns the list of the last ten blocks
 
 + Parameters
-    + last: `840000` (int, optional) - The index of the most recent block to return 
+    + last: `840000` (int, optional) - The index of the most recent block to return
         + Default: `None`
-    + limit: `2` (int, optional) - The number of blocks to return 
+    + limit: `2` (int, optional) - The number of blocks to return
         + Default: `10`
 
 + Response 200 (application/json)
@@ -107,7 +107,7 @@ Returns the list of the last ten blocks
 Return the information of a block
 
 + Parameters
-    + block_index: `840464` (int, required) - The index of the block to return 
+    + block_index: `840464` (int, required) - The index of the block to return
 
 + Response 200 (application/json)
 
@@ -131,7 +131,7 @@ Return the information of a block
 Returns the transactions of a block
 
 + Parameters
-    + block_index: `840464` (int, required) - The index of the block to return 
+    + block_index: `840464` (int, required) - The index of the block to return
 
 + Response 200 (application/json)
 
@@ -160,7 +160,7 @@ Returns the transactions of a block
 Returns the events of a block
 
 + Parameters
-    + block_index: `840464` (int, required) - The index of the block to return 
+    + block_index: `840464` (int, required) - The index of the block to return
 
 + Response 200 (application/json)
 
@@ -298,7 +298,7 @@ Returns the events of a block
 Returns the event counts of a block
 
 + Parameters
-    + block_index: `840464` (int, required) - The index of the block to return 
+    + block_index: `840464` (int, required) - The index of the block to return
 
 + Response 200 (application/json)
 
@@ -346,8 +346,8 @@ Returns the event counts of a block
 Returns the events of a block filtered by event
 
 + Parameters
-    + block_index: `840464` (int, required) - The index of the block to return 
-    + event: `CREDIT` (str, required) - The event to filter by 
+    + block_index: `840464` (int, required) - The index of the block to return
+    + event: `CREDIT` (str, required) - The event to filter by
 
 + Response 200 (application/json)
 
@@ -378,7 +378,7 @@ Returns the events of a block filtered by event
 Returns the credits of a block
 
 + Parameters
-    + block_index: `840464` (int, required) - The index of the block to return 
+    + block_index: `840464` (int, required) - The index of the block to return
 
 + Response 200 (application/json)
 
@@ -403,7 +403,7 @@ Returns the credits of a block
 Returns the debits of a block
 
 + Parameters
-    + block_index: `840464` (int, required) - The index of the block to return 
+    + block_index: `840464` (int, required) - The index of the block to return
 
 + Response 200 (application/json)
 
@@ -428,7 +428,7 @@ Returns the debits of a block
 Returns the expirations of a block
 
 + Parameters
-    + block_index: `840356` (int, required) - The index of the block to return 
+    + block_index: `840356` (int, required) - The index of the block to return
 
 + Response 200 (application/json)
 
@@ -452,7 +452,7 @@ Returns the expirations of a block
 Returns the cancels of a block
 
 + Parameters
-    + block_index: `839746` (int, required) - The index of the block to return 
+    + block_index: `839746` (int, required) - The index of the block to return
 
 + Response 200 (application/json)
 
@@ -484,7 +484,7 @@ Returns the cancels of a block
 Returns the destructions of a block
 
 + Parameters
-    + block_index: `839988` (int, required) - The index of the block to return 
+    + block_index: `839988` (int, required) - The index of the block to return
 
 + Response 200 (application/json)
 
@@ -510,7 +510,7 @@ Returns the destructions of a block
 Returns the issuances of a block
 
 + Parameters
-    + block_index: `840464` (int, required) - The index of the block to return 
+    + block_index: `840464` (int, required) - The index of the block to return
 
 + Response 200 (application/json)
 
@@ -542,15 +542,15 @@ Returns the issuances of a block
         }
     ```
 
-### Get Sends Or Receives By Block [GET /blocks/{block_index}/sends{?limit}{?offset}]
+### Get Sends By Block [GET /blocks/{block_index}/sends{?limit}{?offset}]
 
 Returns the sends of a block
 
 + Parameters
-    + block_index: `840459` (int, required) - The index of the block to return 
-    + limit (int, optional) - 
+    + block_index: `840459` (int, required) - The index of the block to return
+    + limit: `5` (int, optional) - The maximum number of sends to return
         + Default: `100`
-    + offset (int, optional) - 
+    + offset: `0` (int, optional) - The offset of the sends to return
         + Default: `0`
 
 + Response 200 (application/json)
@@ -579,7 +579,7 @@ Returns the sends of a block
 Returns the dispenses of a block
 
 + Parameters
-    + block_index: `840322` (int, required) - The index of the block to return 
+    + block_index: `840322` (int, required) - The index of the block to return
 
 + Response 200 (application/json)
 
@@ -606,7 +606,7 @@ Returns the dispenses of a block
 Returns the sweeps of a block
 
 + Parameters
-    + block_index: `836519` (int, required) - The index of the block to return 
+    + block_index: `836519` (int, required) - The index of the block to return
 
 + Response 200 (application/json)
 
@@ -646,7 +646,7 @@ Returns the sweeps of a block
 Returns Counterparty information from a raw transaction in hex format.
 
 + Parameters
-    + rawtransaction: `01000000017828697743c03aef6a3a8ba54b22bf579ffcab8161faf20e7b20c4ecd75cc986010000006b483045022100d1bd0531bb1ed2dd2cbf77d6933273e792a3dbfa84327d419169850ddd5976f502205d1ab0f7bcbf1a0cc183f0520c9aa8f711d41cb790c0c4ac39da6da4a093d798012103d3b1f711e907acb556e239f6cafb6a4f7fe40d8dd809b0e06e739c2afd73f202ffffffff0200000000000000004d6a4bf29880b93b0711524c7ef9c76835752088db8bd4113a3daf41fc45ffdc8867ebdbf26817fae377696f36790e52f51005806e9399a427172fedf348cf798ed86e548002ee96909eef0775ec3c2b0100000000001976a91443434cf159cc585fbd74daa9c4b833235b19761b88ac00000000` (str, required) - Raw transaction in hex format 
+    + rawtransaction: `01000000017828697743c03aef6a3a8ba54b22bf579ffcab8161faf20e7b20c4ecd75cc986010000006b483045022100d1bd0531bb1ed2dd2cbf77d6933273e792a3dbfa84327d419169850ddd5976f502205d1ab0f7bcbf1a0cc183f0520c9aa8f711d41cb790c0c4ac39da6da4a093d798012103d3b1f711e907acb556e239f6cafb6a4f7fe40d8dd809b0e06e739c2afd73f202ffffffff0200000000000000004d6a4bf29880b93b0711524c7ef9c76835752088db8bd4113a3daf41fc45ffdc8867ebdbf26817fae377696f36790e52f51005806e9399a427172fedf348cf798ed86e548002ee96909eef0775ec3c2b0100000000001976a91443434cf159cc585fbd74daa9c4b833235b19761b88ac00000000` (str, required) - Raw transaction in hex format
     + block_index (int, optional) - Block index mandatory for transactions before block 335000
         + Default: `None`
 
@@ -687,7 +687,7 @@ Returns Counterparty information from a raw transaction in hex format.
 Unpacks Counterparty data in hex format and returns the message type and data.
 
 + Parameters
-    + datahex: `16010b9142801429a60000000000000001000000554e4e45474f544941424c45205745204d555354204245434f4d4520554e4e45474f544941424c4520574520415245` (str, required) - Data in hex format 
+    + datahex: `16010b9142801429a60000000000000001000000554e4e45474f544941424c45205745204d555354204245434f4d4520554e4e45474f544941424c4520574520415245` (str, required) - Data in hex format
     + block_index (int, optional) - Block index of the transaction containing this data
         + Default: `None`
 
@@ -721,7 +721,7 @@ Unpacks Counterparty data in hex format and returns the message type and data.
 Returns a transaction by its hash.
 
 + Parameters
-    + tx_hash: `876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5` (str, required) - The hash of the transaction 
+    + tx_hash: `876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5` (str, required) - The hash of the transaction
 
 + Response 200 (application/json)
 
@@ -768,7 +768,7 @@ Returns a transaction by its hash.
 Returns the balances of an address
 
 + Parameters
-    + address: `1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs` (str, required) - The address to return 
+    + address: `1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs` (str, required) - The address to return
 
 + Response 200 (application/json)
 
@@ -789,8 +789,8 @@ Returns the balances of an address
 Returns the balance of an address and asset
 
 + Parameters
-    + address: `1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs` (str, required) - The address to return 
-    + asset: `XCP` (str, required) - The asset to return 
+    + address: `1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs` (str, required) - The address to return
+    + asset: `XCP` (str, required) - The asset to return
 
 + Response 200 (application/json)
 
@@ -809,10 +809,10 @@ Returns the balance of an address and asset
 Returns the credits of an address
 
 + Parameters
-    + address: `1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs` (str, required) - The address to return 
-    + limit: `5` (int, optional) - The maximum number of credits to return 
+    + address: `1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs` (str, required) - The address to return
+    + limit: `5` (int, optional) - The maximum number of credits to return
         + Default: `100`
-    + offset: `0` (int, optional) - The offset of the credits to return 
+    + offset: `0` (int, optional) - The offset of the credits to return
         + Default: `0`
 
 + Response 200 (application/json)
@@ -838,10 +838,10 @@ Returns the credits of an address
 Returns the debits of an address
 
 + Parameters
-    + address: `bc1q7787j6msqczs58asdtetchl3zwe8ruj57p9r9y` (str, required) - The address to return 
-    + limit: `5` (int, optional) - The maximum number of debits to return 
+    + address: `bc1q7787j6msqczs58asdtetchl3zwe8ruj57p9r9y` (str, required) - The address to return
+    + limit: `5` (int, optional) - The maximum number of debits to return
         + Default: `100`
-    + offset: `0` (int, optional) - The offset of the debits to return 
+    + offset: `0` (int, optional) - The offset of the debits to return
         + Default: `0`
 
 + Response 200 (application/json)
@@ -876,8 +876,8 @@ Returns the debits of an address
 Returns the bets of a feed
 
 + Parameters
-    + address: `1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk` (str, required) - The address of the feed 
-    + status: `filled` (str, optional) - The status of the bet 
+    + address: `1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk` (str, required) - The address of the feed
+    + status: `filled` (str, optional) - The status of the bet
         + Default: `open`
 
 + Response 200 (application/json)
@@ -932,10 +932,10 @@ Returns the bets of a feed
 Returns the broadcasts of a source
 
 + Parameters
-    + address: `1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk` (str, required) - The address to return 
-    + status: `valid` (str, optional) - The status of the broadcasts to return 
+    + address: `1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk` (str, required) - The address to return
+    + status: `valid` (str, optional) - The status of the broadcasts to return
         + Default: `valid`
-    + order_by: `ASC` (str, optional) - The order of the broadcasts to return 
+    + order_by: `ASC` (str, optional) - The order of the broadcasts to return
         + Default: `DESC`
 
 + Response 200 (application/json)
@@ -976,7 +976,7 @@ Returns the broadcasts of a source
 Returns the burns of an address
 
 + Parameters
-    + address: `1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W` (str, required) - The address to return 
+    + address: `1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W` (str, required) - The address to return
 
 + Response 200 (application/json)
 
@@ -1001,10 +1001,10 @@ Returns the burns of an address
 Returns the sends of an address
 
 + Parameters
-    + address: `1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W` (str, required) - The address to return 
-    + limit: `5` (int, optional) - The maximum number of sends to return 
+    + address: `1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W` (str, required) - The address to return
+    + limit: `5` (int, optional) - The maximum number of sends to return
         + Default: `100`
-    + offset: `0` (int, optional) - The offset of the sends to return 
+    + offset: `0` (int, optional) - The offset of the sends to return
         + Default: `0`
 
 + Response 200 (application/json)
@@ -1033,10 +1033,10 @@ Returns the sends of an address
 Returns the receives of an address
 
 + Parameters
-    + address: `1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs` (str, required) - The address to return 
-    + limit: `5` (int, optional) - The maximum number of receives to return 
+    + address: `1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs` (str, required) - The address to return
+    + limit: `5` (int, optional) - The maximum number of receives to return
         + Default: `100`
-    + offset: `0` (int, optional) - The offset of the receives to return 
+    + offset: `0` (int, optional) - The offset of the receives to return
         + Default: `0`
 
 + Response 200 (application/json)
@@ -1065,8 +1065,8 @@ Returns the receives of an address
 Returns the sends of an address and asset
 
 + Parameters
-    + address: `1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W` (str, required) - The address to return 
-    + asset: `XCP` (str, required) - The asset to return 
+    + address: `1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W` (str, required) - The address to return
+    + asset: `XCP` (str, required) - The asset to return
 
 + Response 200 (application/json)
 
@@ -1094,11 +1094,11 @@ Returns the sends of an address and asset
 Returns the receives of an address and asset
 
 + Parameters
-    + address: `1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs` (str, required) - The address to return 
-    + asset: `XCP` (str, required) - The asset to return 
-    + limit: `5` (int, optional) - The maximum number of receives to return 
+    + address: `1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs` (str, required) - The address to return
+    + asset: `XCP` (str, required) - The asset to return
+    + limit: `5` (int, optional) - The maximum number of receives to return
         + Default: `100`
-    + offset: `0` (int, optional) - The offset of the receives to return 
+    + offset: `0` (int, optional) - The offset of the receives to return
         + Default: `0`
 
 + Response 200 (application/json)
@@ -1127,7 +1127,7 @@ Returns the receives of an address and asset
 Returns the dispensers of an address
 
 + Parameters
-    + address: `bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz` (str, required) - The address to return 
+    + address: `bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz` (str, required) - The address to return
     + status (int, optional) - 
         + Default: `0`
 
@@ -1161,8 +1161,8 @@ Returns the dispensers of an address
 Returns the dispensers of an address and an asset
 
 + Parameters
-    + address: `bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz` (str, required) - The address to return 
-    + asset: `ERYKAHPEPU` (str, required) - The asset to return 
+    + address: `bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz` (str, required) - The address to return
+    + asset: `ERYKAHPEPU` (str, required) - The asset to return
     + status (int, optional) - 
         + Default: `0`
 
@@ -1196,7 +1196,7 @@ Returns the dispensers of an address and an asset
 Returns the sweeps of an address
 
 + Parameters
-    + address: `18szqTVJUWwYrtRHq98Wn4DhCGGiy3jZ87` (str, required) - The address to return 
+    + address: `18szqTVJUWwYrtRHq98Wn4DhCGGiy3jZ87` (str, required) - The address to return
 
 + Response 200 (application/json)
 
@@ -1223,16 +1223,16 @@ Returns the sweeps of an address
 Composes a transaction to issue a bet against a feed.
 
 + Parameters
-    + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will make the bet 
-    + feed_address: `1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev` (str, required) - The address that hosts the feed to be bet on 
-    + bet_type: `2` (int, required) - Bet 0 for Bullish CFD (deprecated), 1 for Bearish CFD (deprecated), 2 for Equal, 3 for NotEqual 
-    + deadline: `3000000000` (int, required) - The time at which the bet should be decided/settled, in Unix time (seconds since epoch) 
-    + wager_quantity: `1000` (int, required) - The quantities of XCP to wager (in satoshis, hence integer) 
-    + counterwager_quantity: `1000` (int, required) - The minimum quantities of XCP to be wagered against, for the bets to match 
-    + expiration: `100` (int, required) - The number of blocks after which the bet expires if it remains unmatched 
+    + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will make the bet
+    + feed_address: `1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev` (str, required) - The address that hosts the feed to be bet on
+    + bet_type: `2` (int, required) - Bet 0 for Bullish CFD (deprecated), 1 for Bearish CFD (deprecated), 2 for Equal, 3 for NotEqual
+    + deadline: `3000000000` (int, required) - The time at which the bet should be decided/settled, in Unix time (seconds since epoch)
+    + wager_quantity: `1000` (int, required) - The quantities of XCP to wager (in satoshis, hence integer)
+    + counterwager_quantity: `1000` (int, required) - The minimum quantities of XCP to be wagered against, for the bets to match
+    + expiration: `100` (int, required) - The number of blocks after which the bet expires if it remains unmatched
     + leverage (int, optional) - Leverage, as a fraction of 5040
         + Default: `5040`
-    + target_value: `1000` (int, optional) - Target value for Equal/NotEqual bet 
+    + target_value: `1000` (int, optional) - Target value for Equal/NotEqual bet
         + Default: `None`
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
@@ -1292,11 +1292,11 @@ Composes a transaction to issue a bet against a feed.
 Composes a transaction to broadcast textual and numerical information to the network.
 
 + Parameters
-    + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be sending (must have the necessary quantity of the specified asset) 
-    + timestamp: `4003903983` (int, required) - The timestamp of the broadcast, in Unix time 
-    + value: `100` (float, required) - Numerical value of the broadcast 
-    + fee_fraction: `0.05` (float, required) - How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. 0.05 is five percent) 
-    + text: `"Hello, world!"` (str, required) - The textual part of the broadcast 
+    + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be sending (must have the necessary quantity of the specified asset)
+    + timestamp: `4003903983` (int, required) - The timestamp of the broadcast, in Unix time
+    + value: `100` (float, required) - Numerical value of the broadcast
+    + fee_fraction: `0.05` (float, required) - How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. 0.05 is five percent)
+    + text: `"Hello, world!"` (str, required) - The textual part of the broadcast
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
     + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
@@ -1351,8 +1351,8 @@ Composes a transaction to broadcast textual and numerical information to the net
 Composes a transaction to pay for a BTC order match.
 
 + Parameters
-    + address: `bc1qsteve3tfxfg9pcmvzw645sr9zy7es5rx645p6l` (str, required) - The address that will be sending the payment 
-    + order_match_id: `e470416a9500fb046835192da013f48e6468a07dba1bede4a0b68e666ed23c8d_4953bde3d9417b103615c2d3d4b284d4fcf7cbd820e5dd19ac0084e9ebd090b2` (str, required) - The ID of the order match to pay for 
+    + address: `bc1qsteve3tfxfg9pcmvzw645sr9zy7es5rx645p6l` (str, required) - The address that will be sending the payment
+    + order_match_id: `e470416a9500fb046835192da013f48e6468a07dba1bede4a0b68e666ed23c8d_4953bde3d9417b103615c2d3d4b284d4fcf7cbd820e5dd19ac0084e9ebd090b2` (str, required) - The ID of the order match to pay for
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
     + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
@@ -1404,8 +1404,8 @@ Composes a transaction to pay for a BTC order match.
 Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, possible between blocks 278310 and 283810; on testnet it is still available).
 
 + Parameters
-    + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address with the BTC to burn 
-    + quantity: `1000` (int, required) - The quantities of BTC to burn (1 BTC maximum burn per address) 
+    + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address with the BTC to burn
+    + quantity: `1000` (int, required) - The quantities of BTC to burn (1 BTC maximum burn per address)
     + overburn (bool, optional) - Whether to allow the burn to exceed 1 BTC for the address
         + Default: `False`
     + encoding (str, optional) - The encoding method to use
@@ -1460,8 +1460,8 @@ Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, poss
 Composes a transaction to cancel an open order or bet.
 
 + Parameters
-    + address: `15e15ua6A3FJqjMevtrWcFSzKn9k6bMQeA` (str, required) - The address that placed the order/bet to be cancelled 
-    + offer_hash: `8ce3335391bf71f8f12c0573b4f85b9adc4882a9955d9f8e5ababfdd0060279a` (str, required) - The hash of the order/bet to be cancelled 
+    + address: `15e15ua6A3FJqjMevtrWcFSzKn9k6bMQeA` (str, required) - The address that placed the order/bet to be cancelled
+    + offer_hash: `8ce3335391bf71f8f12c0573b4f85b9adc4882a9955d9f8e5ababfdd0060279a` (str, required) - The hash of the order/bet to be cancelled
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
     + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
@@ -1513,10 +1513,10 @@ Composes a transaction to cancel an open order or bet.
 Composes a transaction to destroy a quantity of an asset.
 
 + Parameters
-    + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be sending the asset to be destroyed 
-    + asset: `XCP` (str, required) - The asset to be destroyed 
-    + quantity: `1000` (int, required) - The quantity of the asset to be destroyed 
-    + tag: `"bugs!"` (str, required) - A tag for the destruction 
+    + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be sending the asset to be destroyed
+    + asset: `XCP` (str, required) - The asset to be destroyed
+    + quantity: `1000` (int, required) - The quantity of the asset to be destroyed
+    + tag: `"bugs!"` (str, required) - A tag for the destruction
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
     + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
@@ -1570,12 +1570,12 @@ Composes a transaction to destroy a quantity of an asset.
 Opens or closes a dispenser for a given asset at a given rate of main chain asset (BTC). Escrowed quantity on open must be equal or greater than give_quantity. It is suggested that you escrow multiples of give_quantity to ease dispenser operation.
 
 + Parameters
-    + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be dispensing (must have the necessary escrow_quantity of the specified asset) 
-    + asset: `XCP` (str, required) - The asset or subasset to dispense 
-    + give_quantity: `1000` (int, required) - The quantity of the asset to dispense 
-    + escrow_quantity: `1000` (int, required) - The quantity of the asset to reserve for this dispenser 
-    + mainchainrate: `100` (int, required) - The quantity of the main chain asset (BTC) per dispensed portion 
-    + status: `0` (int, required) - The state of the dispenser. 0 for open, 1 for open using open_address, 10 for closed 
+    + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be dispensing (must have the necessary escrow_quantity of the specified asset)
+    + asset: `XCP` (str, required) - The asset or subasset to dispense
+    + give_quantity: `1000` (int, required) - The quantity of the asset to dispense
+    + escrow_quantity: `1000` (int, required) - The quantity of the asset to reserve for this dispenser
+    + mainchainrate: `100` (int, required) - The quantity of the main chain asset (BTC) per dispensed portion
+    + status: `0` (int, required) - The state of the dispenser. 0 for open, 1 for open using open_address, 10 for closed
     + open_address (str, optional) - The address that you would like to open the dispenser on
         + Default: `None`
     + oracle_address (str, optional) - The address that you would like to use as a price oracle for this dispenser
@@ -1637,10 +1637,10 @@ Opens or closes a dispenser for a given asset at a given rate of main chain asse
 Composes a transaction to issue a dividend to holders of a given asset.
 
 + Parameters
-    + address: `1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD` (str, required) - The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on) 
-    + quantity_per_unit: `1` (int, required) - The amount of dividend_asset rewarded 
-    + asset: `PEPECASH` (str, required) - The asset or subasset that the dividends are being rewarded on 
-    + dividend_asset: `XCP` (str, required) - The asset or subasset that the dividends are paid in 
+    + address: `1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD` (str, required) - The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on)
+    + quantity_per_unit: `1` (int, required) - The amount of dividend_asset rewarded
+    + asset: `PEPECASH` (str, required) - The asset or subasset that the dividends are being rewarded on
+    + dividend_asset: `XCP` (str, required) - The asset or subasset that the dividends are paid in
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
     + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
@@ -1694,10 +1694,10 @@ Composes a transaction to issue a dividend to holders of a given asset.
 Composes a transaction to Issue a new asset, issue more of an existing asset, lock an asset, reset existing supply, or transfer the ownership of an asset.
 
 + Parameters
-    + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be issuing or transfering the asset 
-    + asset: `XCPTEST` (str, required) - The assets to issue or transfer. This can also be a subasset longname for new subasset issuances 
-    + quantity: `1000` (int, required) - The quantity of the asset to issue (set to 0 if transferring an asset) 
-    + transfer_destination: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, optional) - The address to receive the asset 
+    + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be issuing or transfering the asset
+    + asset: `XCPTEST` (str, required) - The assets to issue or transfer. This can also be a subasset longname for new subasset issuances
+    + quantity: `1000` (int, required) - The quantity of the asset to issue (set to 0 if transferring an asset)
+    + transfer_destination: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, optional) - The address to receive the asset
         + Default: `None`
     + divisible (bool, optional) - Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued)
         + Default: `True`
@@ -1764,12 +1764,12 @@ Composes a transaction to Issue a new asset, issue more of an existing asset, lo
 Composes a transaction to send multiple payments to multiple addresses.
 
 + Parameters
-    + address: `1Fv87qmdtjQDP9d4p9E5ncBQvYB4a3Rhy6` (str, required) - The address that will be sending (must have the necessary quantity of the specified asset) 
-    + assets: `BAABAABLKSHP,BADHAIRDAY,BADWOJAK` (str, required) - comma-separated list of assets to send 
-    + destinations: `1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev,1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD,1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs` (str, required) - comma-separated list of addresses to send to 
-    + quantities: `1,2,3` (str, required) - comma-separated list of quantities to send 
-    + memo: `"Hello, world!"` (str, required) - The Memo associated with this transaction 
-    + memo_is_hex: `False` (bool, required) - Whether the memo field is a hexadecimal string 
+    + address: `1Fv87qmdtjQDP9d4p9E5ncBQvYB4a3Rhy6` (str, required) - The address that will be sending (must have the necessary quantity of the specified asset)
+    + assets: `BAABAABLKSHP,BADHAIRDAY,BADWOJAK` (str, required) - comma-separated list of assets to send
+    + destinations: `1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev,1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD,1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs` (str, required) - comma-separated list of addresses to send to
+    + quantities: `1,2,3` (str, required) - comma-separated list of quantities to send
+    + memo: `"Hello, world!"` (str, required) - The Memo associated with this transaction
+    + memo_is_hex: `False` (bool, required) - Whether the memo field is a hexadecimal string
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
     + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
@@ -1839,13 +1839,13 @@ Composes a transaction to send multiple payments to multiple addresses.
 Composes a transaction to place an order on the distributed exchange.
 
 + Parameters
-    + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be issuing the order request (must have the necessary quantity of the specified asset to give) 
-    + give_asset: `XCP` (str, required) - The asset that will be given in the trade 
-    + give_quantity: `1000` (int, required) - The quantity of the asset that will be given 
-    + get_asset: `PEPECASH` (str, required) - The asset that will be received in the trade 
-    + get_quantity: `1000` (int, required) - The quantity of the asset that will be received 
-    + expiration: `100` (int, required) - The number of blocks for which the order should be valid 
-    + fee_required: `100` (int, required) - The miners’ fee required to be paid by orders for them to match this one; in BTC; required only if buying BTC (may be zero, though) 
+    + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be issuing the order request (must have the necessary quantity of the specified asset to give)
+    + give_asset: `XCP` (str, required) - The asset that will be given in the trade
+    + give_quantity: `1000` (int, required) - The quantity of the asset that will be given
+    + get_asset: `PEPECASH` (str, required) - The asset that will be received in the trade
+    + get_quantity: `1000` (int, required) - The quantity of the asset that will be received
+    + expiration: `100` (int, required) - The number of blocks for which the order should be valid
+    + fee_required: `100` (int, required) - The miners’ fee required to be paid by orders for them to match this one; in BTC; required only if buying BTC (may be zero, though)
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
     + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
@@ -1902,10 +1902,10 @@ Composes a transaction to place an order on the distributed exchange.
 Composes a transaction to send a quantity of an asset to another address.
 
 + Parameters
-    + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be sending (must have the necessary quantity of the specified asset) 
-    + destination: `1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev` (str, required) - The address that will be receiving the asset 
-    + asset: `XCP` (str, required) - The asset or subasset to send 
-    + quantity: `1000` (int, required) - The quantity of the asset to send 
+    + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be sending (must have the necessary quantity of the specified asset)
+    + destination: `1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev` (str, required) - The address that will be receiving the asset
+    + asset: `XCP` (str, required) - The asset or subasset to send
+    + quantity: `1000` (int, required) - The quantity of the asset to send
     + memo (str, optional) - The Memo associated with this transaction
         + Default: `None`
     + memo_is_hex (bool, optional) - Whether the memo field is a hexadecimal string
@@ -1968,10 +1968,10 @@ Composes a transaction to send a quantity of an asset to another address.
 Composes a transaction to Sends all assets and/or transfer ownerships to a destination address.
 
 + Parameters
-    + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be sending 
-    + destination: `1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev` (str, required) - The address to receive the assets and/or ownerships 
-    + flags: `7` (int, required) - An OR mask of flags indicating how the sweep should be processed. Possible flags are: - FLAG_BALANCES: (integer) 1, specifies that all balances should be transferred. - FLAG_OWNERSHIP: (integer) 2, specifies that all ownerships should be transferred. - FLAG_BINARY_MEMO: (integer) 4, specifies that the memo is in binary/hex form. 
-    + memo: `FFFF` (str, required) - The Memo associated with this transaction in hex format 
+    + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be sending
+    + destination: `1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev` (str, required) - The address to receive the assets and/or ownerships
+    + flags: `7` (int, required) - An OR mask of flags indicating how the sweep should be processed. Possible flags are: - FLAG_BALANCES: (integer) 1, specifies that all balances should be transferred. - FLAG_OWNERSHIP: (integer) 2, specifies that all ownerships should be transferred. - FLAG_BINARY_MEMO: (integer) 4, specifies that the memo is in binary/hex form.
+    + memo: `FFFF` (str, required) - The Memo associated with this transaction in hex format
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
     + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
@@ -2027,9 +2027,9 @@ Composes a transaction to Sends all assets and/or transfer ownerships to a desti
 Returns the valid assets
 
 + Parameters
-    + offset: `0` (int, optional) - The offset of the assets to return 
+    + offset: `0` (int, optional) - The offset of the assets to return
         + Default: `0`
-    + limit: `5` (int, optional) - The limit of the assets to return 
+    + limit: `5` (int, optional) - The limit of the assets to return
         + Default: `100`
 
 + Response 200 (application/json)
@@ -2066,7 +2066,7 @@ Returns the valid assets
 Returns the asset information
 
 + Parameters
-    + asset: `UNNEGOTIABLE` (str, required) - The asset to return 
+    + asset: `UNNEGOTIABLE` (str, required) - The asset to return
 
 + Response 200 (application/json)
 
@@ -2091,8 +2091,8 @@ Returns the asset information
 Returns the asset balances
 
 + Parameters
-    + asset: `UNNEGOTIABLE` (str, required) - The asset to return 
-    + exclude_zero_balances: `True` (bool, optional) - Whether to exclude zero balances 
+    + asset: `UNNEGOTIABLE` (str, required) - The asset to return
+    + exclude_zero_balances: `True` (bool, optional) - Whether to exclude zero balances
         + Default: `True`
 
 + Response 200 (application/json)
@@ -2114,8 +2114,8 @@ Returns the asset balances
 Returns the balance of an address and asset
 
 + Parameters
-    + address: `1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs` (str, required) - The address to return 
-    + asset: `XCP` (str, required) - The asset to return 
+    + address: `1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs` (str, required) - The address to return
+    + asset: `XCP` (str, required) - The asset to return
 
 + Response 200 (application/json)
 
@@ -2134,8 +2134,8 @@ Returns the balance of an address and asset
 Returns the orders of an asset
 
 + Parameters
-    + asset: `NEEDPEPE` (str, required) - The asset to return 
-    + status: `filled` (str, optional) - The status of the orders to return 
+    + asset: `NEEDPEPE` (str, required) - The asset to return
+    + status: `filled` (str, optional) - The status of the orders to return
         + Default: `open`
 
 + Response 200 (application/json)
@@ -2361,10 +2361,10 @@ Returns the orders of an asset
 Returns the credits of an asset
 
 + Parameters
-    + asset: `UNNEGOTIABLE` (str, required) - The asset to return 
-    + limit: `5` (int, optional) - The maximum number of credits to return 
+    + asset: `UNNEGOTIABLE` (str, required) - The asset to return
+    + limit: `5` (int, optional) - The maximum number of credits to return
         + Default: `100`
-    + offset: `0` (int, optional) - The offset of the credits to return 
+    + offset: `0` (int, optional) - The offset of the credits to return
         + Default: `0`
 
 + Response 200 (application/json)
@@ -2390,10 +2390,10 @@ Returns the credits of an asset
 Returns the debits of an asset
 
 + Parameters
-    + asset: `XCP` (str, required) - The asset to return 
-    + limit: `5` (int, optional) - The maximum number of debits to return 
+    + asset: `XCP` (str, required) - The asset to return
+    + limit: `5` (int, optional) - The maximum number of debits to return
         + Default: `100`
-    + offset: `0` (int, optional) - The offset of the debits to return 
+    + offset: `0` (int, optional) - The offset of the debits to return
         + Default: `0`
 
 + Response 200 (application/json)
@@ -2455,7 +2455,7 @@ Returns the debits of an asset
 Returns the dividends of an asset
 
 + Parameters
-    + asset: `GMONEYPEPE` (str, required) - The asset to return 
+    + asset: `GMONEYPEPE` (str, required) - The asset to return
 
 + Response 200 (application/json)
 
@@ -2603,7 +2603,7 @@ Returns the dividends of an asset
 Returns the issuances of an asset
 
 + Parameters
-    + asset: `UNNEGOTIABLE` (str, required) - The asset to return 
+    + asset: `UNNEGOTIABLE` (str, required) - The asset to return
 
 + Response 200 (application/json)
 
@@ -2635,15 +2635,15 @@ Returns the issuances of an asset
         }
     ```
 
-### Get Sends Or Receives By Asset [GET /assets/{asset}/sends{?limit}{?offset}]
+### Get Sends By Asset [GET /assets/{asset}/sends{?limit}{?offset}]
 
 Returns the sends of an asset
 
 + Parameters
-    + asset: `XCP` (str, required) - The asset to return 
-    + limit: `5` (int, optional) - The maximum number of sends to return 
+    + asset: `XCP` (str, required) - The asset to return
+    + limit: `5` (int, optional) - The maximum number of sends to return
         + Default: `100`
-    + offset: `0` (int, optional) - The offset of the sends to return 
+    + offset: `0` (int, optional) - The offset of the sends to return
         + Default: `0`
 
 + Response 200 (application/json)
@@ -2720,7 +2720,7 @@ Returns the sends of an asset
 Returns the dispensers of an asset
 
 + Parameters
-    + asset: `ERYKAHPEPU` (str, required) - The asset to return 
+    + asset: `ERYKAHPEPU` (str, required) - The asset to return
     + status (int, optional) - 
         + Default: `0`
 
@@ -2754,8 +2754,8 @@ Returns the dispensers of an asset
 Returns the dispensers of an address and an asset
 
 + Parameters
-    + address: `bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz` (str, required) - The address to return 
-    + asset: `ERYKAHPEPU` (str, required) - The asset to return 
+    + address: `bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz` (str, required) - The address to return
+    + asset: `ERYKAHPEPU` (str, required) - The asset to return
     + status (int, optional) - 
         + Default: `0`
 
@@ -2789,7 +2789,7 @@ Returns the dispensers of an address and an asset
 Returns the holders of an asset
 
 + Parameters
-    + asset: `ERYKAHPEPU` (str, required) - The asset to return 
+    + asset: `ERYKAHPEPU` (str, required) - The asset to return
 
 + Response 200 (application/json)
 
@@ -2847,7 +2847,7 @@ Returns the holders of an asset
 Returns the information of an order
 
 + Parameters
-    + order_hash: `23f68fdf934e81144cca31ce8ef69062d553c521321a039166e7ba99aede0776` (str, required) - The hash of the transaction that created the order 
+    + order_hash: `23f68fdf934e81144cca31ce8ef69062d553c521321a039166e7ba99aede0776` (str, required) - The hash of the transaction that created the order
 
 + Response 200 (application/json)
 
@@ -2882,8 +2882,8 @@ Returns the information of an order
 Returns the order matches of an order
 
 + Parameters
-    + order_hash: `5461e6f99a37a7167428b4a720a52052cd9afed43905f818f5d7d4f56abd0947` (str, required) - The hash of the transaction that created the order 
-    + status: `completed` (str, optional) - The status of the order matches to return 
+    + order_hash: `5461e6f99a37a7167428b4a720a52052cd9afed43905f818f5d7d4f56abd0947` (str, required) - The hash of the transaction that created the order
+    + status: `completed` (str, optional) - The status of the order matches to return
         + Default: `pending`
 
 + Response 200 (application/json)
@@ -2921,7 +2921,7 @@ Returns the order matches of an order
 Returns the BTC pays of an order
 
 + Parameters
-    + order_hash: `299b5b648f54eacb839f3487232d49aea373cdd681b706d4cc0b5e0b03688db4` (str, required) - The hash of the transaction that created the order 
+    + order_hash: `299b5b648f54eacb839f3487232d49aea373cdd681b706d4cc0b5e0b03688db4` (str, required) - The hash of the transaction that created the order
 
 + Response 200 (application/json)
 
@@ -2949,7 +2949,7 @@ Returns the BTC pays of an order
 Returns the information of a bet
 
 + Parameters
-    + bet_hash: `5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed` (str, required) - The hash of the transaction that created the bet 
+    + bet_hash: `5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed` (str, required) - The hash of the transaction that created the bet
 
 + Response 200 (application/json)
 
@@ -2984,8 +2984,8 @@ Returns the information of a bet
 Returns the bet matches of a bet
 
 + Parameters
-    + bet_hash: `5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed` (str, required) - The hash of the transaction that created the bet 
-    + status: `expired` (str, optional) - The status of the bet matches 
+    + bet_hash: `5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed` (str, required) - The hash of the transaction that created the bet
+    + status: `expired` (str, optional) - The status of the bet matches
         + Default: `pending`
 
 + Response 200 (application/json)
@@ -3028,7 +3028,7 @@ Returns the bet matches of a bet
 Returns the resolutions of a bet
 
 + Parameters
-    + bet_hash: `36bbbb7dbd85054dac140a8ad8204eda2ee859545528bd2a9da69ad77c277ace` (str, required) - The hash of the transaction that created the bet 
+    + bet_hash: `36bbbb7dbd85054dac140a8ad8204eda2ee859545528bd2a9da69ad77c277ace` (str, required) - The hash of the transaction that created the bet
 
 + Response 200 (application/json)
 
@@ -3057,11 +3057,11 @@ Returns the resolutions of a bet
 Returns the burns
 
 + Parameters
-    + status: `valid` (str, optional) - The status of the burns to return 
+    + status: `valid` (str, optional) - The status of the burns to return
         + Default: `valid`
-    + offset: `10` (int, optional) - The offset of the burns to return 
+    + offset: `10` (int, optional) - The offset of the burns to return
         + Default: `0`
-    + limit: `5` (int, optional) - The limit of the burns to return 
+    + limit: `5` (int, optional) - The limit of the burns to return
         + Default: `100`
 
 + Response 200 (application/json)
@@ -3125,7 +3125,7 @@ Returns the burns
 Returns the dispenser information by tx_hash
 
 + Parameters
-    + dispenser_hash: `753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a` (str, required) - The hash of the dispenser to return 
+    + dispenser_hash: `753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a` (str, required) - The hash of the dispenser to return
 
 + Response 200 (application/json)
 
@@ -3158,7 +3158,7 @@ Returns the dispenser information by tx_hash
 Returns the dispenses of a dispenser
 
 + Parameters
-    + dispenser_hash: `753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a` (str, required) - The hash of the dispenser to return 
+    + dispenser_hash: `753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a` (str, required) - The hash of the dispenser to return
 
 + Response 200 (application/json)
 
@@ -3198,9 +3198,9 @@ Returns the dispenses of a dispenser
 Returns all events
 
 + Parameters
-    + last: `10665092` (int, optional) - The last event index to return 
+    + last: `10665092` (int, optional) - The last event index to return
         + Default: `None`
-    + limit: `5` (int, optional) - The maximum number of events to return 
+    + limit: `5` (int, optional) - The maximum number of events to return
         + Default: `100`
 
 + Response 200 (application/json)
@@ -3286,7 +3286,7 @@ Returns all events
 Returns the event of an index
 
 + Parameters
-    + event_index: `10665092` (int, required) - The index of the event to return 
+    + event_index: `10665092` (int, required) - The index of the event to return
 
 + Response 200 (application/json)
 
@@ -3513,10 +3513,10 @@ Returns the event counts of all blocks
 Returns the events filtered by event name
 
 + Parameters
-    + event: `CREDIT` (str, required) - The event to return 
-    + last: `10665092` (int, optional) - The last event index to return 
+    + event: `CREDIT` (str, required) - The event to return
+    + last: `10665092` (int, optional) - The last event index to return
         + Default: `None`
-    + limit: `5` (int, optional) - The maximum number of events to return 
+    + limit: `5` (int, optional) - The maximum number of events to return
         + Default: `100`
 
 + Response 200 (application/json)
@@ -3603,14 +3603,14 @@ Returns the events filtered by event name
         }
     ```
 
-## Group Healthz
+## Group Z-pages
 
-### Check Server Status [GET /healthz{?check_type}]
+### Check Server Health [GET /healthz{?check_type}]
 
 Health check route.
 
 + Parameters
-    + check_type: `light` (str, optional) - Type of health check to perform. Options are 'light' and 'heavy' 
+    + check_type: `light` (str, optional) - Type of health check to perform. Options are 'light' and 'heavy'
         + Default: `heavy`
 
 + Response 200 (application/json)
@@ -3630,10 +3630,10 @@ Health check route.
 Returns all transactions involving a given address
 
 + Parameters
-    + address: `14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS` (str, required) - The address to search for 
-    + unconfirmed: `True` (bool, optional) - Include unconfirmed transactions 
+    + address: `14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS` (str, required) - The address to search for
+    + unconfirmed: `True` (bool, optional) - Include unconfirmed transactions
         + Default: `True`
-    + only_tx_hashes: `True` (bool, optional) - Return only the tx hashes 
+    + only_tx_hashes: `True` (bool, optional) - Return only the tx hashes
         + Default: `False`
 
 + Response 200 (application/json)
@@ -3686,7 +3686,7 @@ Returns all transactions involving a given address
 Get the oldest transaction for an address.
 
 + Parameters
-    + address: `14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS` (str, required) - The address to search for. 
+    + address: `14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS` (str, required) - The address to search for.
     + block_index (int, optional) - The block index to search from.
         + Default: `None`
 
@@ -3706,7 +3706,7 @@ Get the oldest transaction for an address.
 Returns a list of unspent outputs for a specific address
 
 + Parameters
-    + address: `14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS` (str, required) - The address to search for 
+    + address: `14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS` (str, required) - The address to search for
     + unconfirmed (bool, optional) - Include unconfirmed transactions
         + Default: `False`
     + unspent_tx_hash (str, optional) - Filter by unspent_tx_hash
@@ -3806,7 +3806,7 @@ Returns a list of unspent outputs for a specific address
 Get pubkey for an address.
 
 + Parameters
-    + address: `14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS` (str, required) - Address to get pubkey for. 
+    + address: `14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS` (str, required) - Address to get pubkey for.
     + provided_pubkeys (str, optional) - Comma separated list of provided pubkeys.
         + Default: `None`
 
@@ -3823,8 +3823,8 @@ Get pubkey for an address.
 Get a transaction from the blockchain
 
 + Parameters
-    + tx_hash: `3190047bf2320bdcd0fade655ae49be309519d151330aa478573815229cc0018` (str, required) - The transaction hash 
-    + verbose: `True` (bool, optional) - Whether to return JSON output or raw hex 
+    + tx_hash: `3190047bf2320bdcd0fade655ae49be309519d151330aa478573815229cc0018` (str, required) - The transaction hash
+    + verbose: `True` (bool, optional) - Whether to return JSON output or raw hex
         + Default: `False`
 
 + Response 200 (application/json)
@@ -3881,9 +3881,9 @@ Get a transaction from the blockchain
 Get the fee per kilobyte for a transaction to be confirmed in `conf_target` blocks.
 
 + Parameters
-    + conf_target: `2` (int, optional) - Confirmation target in blocks (1 - 1008) 
+    + conf_target: `2` (int, optional) - Confirmation target in blocks (1 - 1008)
         + Default: `3`
-    + mode: `CONSERVATIVE` (str, optional) - The fee estimate mode. 
+    + mode: `CONSERVATIVE` (str, optional) - The fee estimate mode.
         + Default: `CONSERVATIVE`
 
 + Response 200 (application/json)
@@ -3953,7 +3953,7 @@ Returns all mempool events
 Returns the mempool events filtered by event name
 
 + Parameters
-    + event: `OPEN_ORDER` (str, required) - The event to return 
+    + event: `OPEN_ORDER` (str, required) - The event to return
 
 + Response 200 (application/json)
 

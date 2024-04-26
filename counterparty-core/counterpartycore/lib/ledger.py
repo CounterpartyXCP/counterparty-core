@@ -639,15 +639,17 @@ def get_sends_or_receives(
     return cursor.fetchall()
 
 
-def get_sends_or_receives_by_block(db, block_index: int, limit: int = 100, offset: int = 0):
+def get_sends_by_block(db, block_index: int, limit: int = 100, offset: int = 0):
     """
     Returns the sends of a block
     :param int block_index: The index of the block to return (e.g. 840459)
+    :param int limit: The maximum number of sends to return (e.g. 5)
+    :param int offset: The offset of the sends to return (e.g. 0)
     """
     return get_sends_or_receives(db, block_index=block_index, limit=limit, offset=offset)
 
 
-def get_sends_or_receives_by_asset(db, asset: str, limit: int = 100, offset: int = 0):
+def get_sends_by_asset(db, asset: str, limit: int = 100, offset: int = 0):
     """
     Returns the sends of an asset
     :param str asset: The asset to return (e.g. XCP)

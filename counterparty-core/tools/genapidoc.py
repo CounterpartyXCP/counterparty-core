@@ -139,6 +139,8 @@ for path, route in server.routes.ROUTES.items():
     route_group = path.split("/")[1]
     if route_group != current_group:
         current_group = route_group
+        if current_group == "healthz":
+            current_group = "Z-Pages"
         md += f"\n## Group {current_group.capitalize()}\n"
     blueprint_path = path.replace("<", "{").replace(">", "}").replace("int:", "")
 
@@ -146,7 +148,7 @@ for path, route in server.routes.ROUTES.items():
     title = title.replace("Pubkeyhash", "PubKeyHash")
     title = title.replace("Mpma", "MPMA")
     title = title.replace("Btcpay", "BTCPay")
-    md += f"\n### {title} "
+    md += f"\n### {title.strip()} "
     if TARGET == "docusaurus":
         md += f"[GET `{blueprint_path}`]\n\n"
     else:
@@ -157,7 +159,7 @@ for path, route in server.routes.ROUTES.items():
                 blueprint_path += f"{{?{arg['name']}}}"
         md += f"[GET {blueprint_path}]\n\n"
 
-    md += route["description"]
+    md += route["description"].strip()
 
     example_args = {}
     if len(route["args"]) > 0:
@@ -168,7 +170,7 @@ for path, route in server.routes.ROUTES.items():
             example_arg = ""
             if "(e.g. " in description:
                 desc_arr = description.split("(e.g. ")
-                description = desc_arr[0].replace("\n", " ")
+                description = desc_arr[0].replace("\n", " ").strip()
                 example_args[arg["name"]] = desc_arr[1].replace(")", "")
                 example_arg = f": `{example_args[arg['name']]}`"
             md += f"    + {arg['name']}{example_arg} ({arg['type']}, {required}) - {description}\n"
