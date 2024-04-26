@@ -303,6 +303,7 @@ def initialise_config(
 
     # Backend Poll Interval
     if backend_poll_interval:
+        assert backend_poll_interval >= 3.0
         config.BACKEND_POLL_INTERVAL = backend_poll_interval
     else:
         config.BACKEND_POLL_INTERVAL = 3.0
