@@ -178,6 +178,8 @@ def handle_route(**kwargs):
         return return_result(503, error="Unknwon error")
 
     # clean up and return the result
+    if result is None:
+        return return_result(404, error="Not found")
     result = remove_rowids(result)
     return return_result(200, result=result)
 
