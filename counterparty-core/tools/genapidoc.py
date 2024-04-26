@@ -122,12 +122,12 @@ Notes:
 
 - All API responses follow the following format:
 
-    ``
+    ```
     {
         "error": <error_messsage_if_success_is_false>,
         "result": <result_of_the_query_if_success_is_true>
     }
-    ``
+    ```
 
 - Routes in the `/bitcoin` group serve as a proxy to make requests to Bitcoin Core.
 
@@ -139,7 +139,7 @@ Returns server information and the list of documented routes in JSON format.
 
 + Response 200 (application/json)
 
-    ``
+    ```
     {
         "server_ready": true,
         "network": "mainnet",
@@ -150,7 +150,7 @@ Returns server information and the list of documented routes in JSON format.
             <API Documentation in JSON>
         ]
     }
-    ``
+    ```
 
 """
 md = md.replace("{root_path}", root_path)
@@ -216,10 +216,10 @@ for path, route in server.routes.ROUTES.items():
             example_output = cache[path]
         example_output_json = json.dumps(example_output, indent=4)
         md += "\n+ Response 200 (application/json)\n\n"
-        md += "    ``\n"
+        md += "    ```\n"
         for line in example_output_json.split("\n"):
             md += f"        {line}\n"
-        md += "    ``\n"
+        md += "    ```\n"
 
 with open(CACHE_FILE, "w") as f:
     json.dump(cache, f, indent=4)
