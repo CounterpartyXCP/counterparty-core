@@ -973,11 +973,6 @@ COMPOSE_COMMONS_ARGS = {
         config.DEFAULT_MULTISIG_DUST_SIZE,
         "Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output",
     ),
-    "op_return_value": (
-        int,
-        config.DEFAULT_OP_RETURN_VALUE,
-        "The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away",
-    ),
     "pubkey": (
         str,
         None,

@@ -170,30 +170,26 @@ Returns the events of a block
                 {
                     "event_index": 14194760,
                     "event": "BLOCK_PARSED",
-                    "bindings": {
+                    "payload": {
                         "block_index": 840464,
                         "ledger_hash": "b3f8cbb50b0705a5c4a8495f8b5128de13a32daebd8ac5e8316a010f0d203584",
                         "messages_hash": "801d961c45a257f85ef0f10a6a8fdf048a520ae4861c0903f26365b3eaaaf540",
                         "txlist_hash": "84bdc5b9073f775a2b65de7da2b10b89a2235f3501883b0a836e41e68cd00d46"
-                    },
-                    "block_index": 840464,
-                    "timestamp": 1713852780
+                    }
                 },
                 {
                     "event_index": 14194759,
                     "event": "TRANSACTION_PARSED",
-                    "bindings": {
+                    "payload": {
                         "supported": true,
                         "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
                         "tx_index": 2726605
-                    },
-                    "block_index": 840464,
-                    "timestamp": 1713852780
+                    }
                 },
                 {
                     "event_index": 14194758,
                     "event": "CREDIT",
-                    "bindings": {
+                    "payload": {
                         "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
                         "asset": "UNNEGOTIABLE",
                         "block_index": 840464,
@@ -201,14 +197,12 @@ Returns the events of a block
                         "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
                         "quantity": 1,
                         "tx_index": 2726605
-                    },
-                    "block_index": 840464,
-                    "timestamp": 1713852780
+                    }
                 },
                 {
                     "event_index": 14194757,
                     "event": "ASSET_ISSUANCE",
-                    "bindings": {
+                    "payload": {
                         "asset": "UNNEGOTIABLE",
                         "asset_longname": null,
                         "block_index": 840464,
@@ -227,26 +221,22 @@ Returns the events of a block
                         "transfer": false,
                         "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
                         "tx_index": 2726605
-                    },
-                    "block_index": 840464,
-                    "timestamp": 1713852780
+                    }
                 },
                 {
                     "event_index": 14194756,
                     "event": "ASSET_CREATION",
-                    "bindings": {
+                    "payload": {
                         "asset_id": "75313533584419238",
                         "asset_longname": null,
                         "asset_name": "UNNEGOTIABLE",
                         "block_index": 840464
-                    },
-                    "block_index": 840464,
-                    "timestamp": 1713852780
+                    }
                 },
                 {
                     "event_index": 14194755,
                     "event": "DEBIT",
-                    "bindings": {
+                    "payload": {
                         "action": "issuance fee",
                         "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
                         "asset": "XCP",
@@ -254,14 +244,12 @@ Returns the events of a block
                         "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
                         "quantity": 50000000,
                         "tx_index": 2726605
-                    },
-                    "block_index": 840464,
-                    "timestamp": 1713852780
+                    }
                 },
                 {
                     "event_index": 14194754,
                     "event": "NEW_TRANSACTION",
-                    "bindings": {
+                    "payload": {
                         "block_hash": "00000000000000000001093d4d6b21b80800fff6e5ea15cce6d65066f482cce9",
                         "block_index": 840464,
                         "block_time": 1713852783,
@@ -272,22 +260,18 @@ Returns the events of a block
                         "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
                         "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
                         "tx_index": 2726605
-                    },
-                    "block_index": 840464,
-                    "timestamp": 1713852779
+                    }
                 },
                 {
                     "event_index": 14194753,
                     "event": "NEW_BLOCK",
-                    "bindings": {
+                    "payload": {
                         "block_hash": "00000000000000000001093d4d6b21b80800fff6e5ea15cce6d65066f482cce9",
                         "block_index": 840464,
                         "block_time": 1713852783,
                         "difficulty": 86388558925171.02,
                         "previous_block_hash": "00000000000000000002db1e5aa19784eec3de949f98ec757e7a7f2fc392079d"
-                    },
-                    "block_index": 840464,
-                    "timestamp": 1713852779
+                    }
                 }
             ]
         }
@@ -357,7 +341,7 @@ Returns the events of a block filtered by event
                 {
                     "event_index": 14194758,
                     "event": "CREDIT",
-                    "bindings": {
+                    "payload": {
                         "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
                         "asset": "UNNEGOTIABLE",
                         "block_index": 840464,
@@ -365,9 +349,7 @@ Returns the events of a block filtered by event
                         "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
                         "quantity": 1,
                         "tx_index": 2726605
-                    },
-                    "block_index": 840464,
-                    "timestamp": 1713852780
+                    }
                 }
             ]
         }
@@ -1218,7 +1200,7 @@ Returns the sweeps of an address
         }
     ```
 
-### Compose Bet [GET /addresses/{address}/compose/bet{?feed_address}{?bet_type}{?deadline}{?wager_quantity}{?counterwager_quantity}{?expiration}{?leverage}{?target_value}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Bet [GET /addresses/{address}/compose/bet{?feed_address}{?bet_type}{?deadline}{?wager_quantity}{?counterwager_quantity}{?expiration}{?leverage}{?target_value}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to issue a bet against a feed.
 
@@ -1242,8 +1224,6 @@ Composes a transaction to issue a bet against a feed.
         + Default: `546`
     + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
-    + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
-        + Default: `0`
     + pubkey (str, optional) - The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
@@ -1287,7 +1267,7 @@ Composes a transaction to issue a bet against a feed.
         }
     ```
 
-### Compose Broadcast [GET /addresses/{address}/compose/broadcast{?timestamp}{?value}{?fee_fraction}{?text}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Broadcast [GET /addresses/{address}/compose/broadcast{?timestamp}{?value}{?fee_fraction}{?text}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to broadcast textual and numerical information to the network.
 
@@ -1305,8 +1285,6 @@ Composes a transaction to broadcast textual and numerical information to the net
         + Default: `546`
     + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
-    + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
-        + Default: `0`
     + pubkey (str, optional) - The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
@@ -1346,7 +1324,7 @@ Composes a transaction to broadcast textual and numerical information to the net
         }
     ```
 
-### Compose BTCPay [GET /addresses/{address}/compose/btcpay{?order_match_id}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose BTCPay [GET /addresses/{address}/compose/btcpay{?order_match_id}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to pay for a BTC order match.
 
@@ -1361,8 +1339,6 @@ Composes a transaction to pay for a BTC order match.
         + Default: `546`
     + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
-    + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
-        + Default: `0`
     + pubkey (str, optional) - The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
@@ -1399,7 +1375,7 @@ Composes a transaction to pay for a BTC order match.
         }
     ```
 
-### Compose Burn [GET /addresses/{address}/compose/burn{?quantity}{?overburn}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Burn [GET /addresses/{address}/compose/burn{?quantity}{?overburn}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, possible between blocks 278310 and 283810; on testnet it is still available).
 
@@ -1416,8 +1392,6 @@ Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, poss
         + Default: `546`
     + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
-    + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
-        + Default: `0`
     + pubkey (str, optional) - The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
@@ -1455,7 +1429,7 @@ Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, poss
         }
     ```
 
-### Compose Cancel [GET /addresses/{address}/compose/cancel{?offer_hash}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Cancel [GET /addresses/{address}/compose/cancel{?offer_hash}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to cancel an open order or bet.
 
@@ -1470,8 +1444,6 @@ Composes a transaction to cancel an open order or bet.
         + Default: `546`
     + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
-    + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
-        + Default: `0`
     + pubkey (str, optional) - The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
@@ -1508,7 +1480,7 @@ Composes a transaction to cancel an open order or bet.
         }
     ```
 
-### Compose Destroy [GET /addresses/{address}/compose/destroy{?asset}{?quantity}{?tag}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Destroy [GET /addresses/{address}/compose/destroy{?asset}{?quantity}{?tag}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to destroy a quantity of an asset.
 
@@ -1525,8 +1497,6 @@ Composes a transaction to destroy a quantity of an asset.
         + Default: `546`
     + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
-    + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
-        + Default: `0`
     + pubkey (str, optional) - The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
@@ -1565,7 +1535,7 @@ Composes a transaction to destroy a quantity of an asset.
         }
     ```
 
-### Compose Dispenser [GET /addresses/{address}/compose/dispenser{?asset}{?give_quantity}{?escrow_quantity}{?mainchainrate}{?status}{?open_address}{?oracle_address}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Dispenser [GET /addresses/{address}/compose/dispenser{?asset}{?give_quantity}{?escrow_quantity}{?mainchainrate}{?status}{?open_address}{?oracle_address}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Opens or closes a dispenser for a given asset at a given rate of main chain asset (BTC). Escrowed quantity on open must be equal or greater than give_quantity. It is suggested that you escrow multiples of give_quantity to ease dispenser operation.
 
@@ -1588,8 +1558,6 @@ Opens or closes a dispenser for a given asset at a given rate of main chain asse
         + Default: `546`
     + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
-    + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
-        + Default: `0`
     + pubkey (str, optional) - The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
@@ -1632,7 +1600,7 @@ Opens or closes a dispenser for a given asset at a given rate of main chain asse
         }
     ```
 
-### Compose Dividend [GET /addresses/{address}/compose/dividend{?quantity_per_unit}{?asset}{?dividend_asset}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Dividend [GET /addresses/{address}/compose/dividend{?quantity_per_unit}{?asset}{?dividend_asset}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to issue a dividend to holders of a given asset.
 
@@ -1649,8 +1617,6 @@ Composes a transaction to issue a dividend to holders of a given asset.
         + Default: `546`
     + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
-    + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
-        + Default: `0`
     + pubkey (str, optional) - The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
@@ -1689,7 +1655,7 @@ Composes a transaction to issue a dividend to holders of a given asset.
         }
     ```
 
-### Compose Issuance [GET /addresses/{address}/compose/issuance{?asset}{?quantity}{?transfer_destination}{?divisible}{?lock}{?reset}{?description}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Issuance [GET /addresses/{address}/compose/issuance{?asset}{?quantity}{?transfer_destination}{?divisible}{?lock}{?reset}{?description}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to Issue a new asset, issue more of an existing asset, lock an asset, reset existing supply, or transfer the ownership of an asset.
 
@@ -1715,8 +1681,6 @@ Composes a transaction to Issue a new asset, issue more of an existing asset, lo
         + Default: `546`
     + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
-    + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
-        + Default: `0`
     + pubkey (str, optional) - The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
@@ -1759,7 +1723,7 @@ Composes a transaction to Issue a new asset, issue more of an existing asset, lo
         }
     ```
 
-### Compose MPMA [GET /addresses/{address}/compose/mpma{?assets}{?destinations}{?quantities}{?memo}{?memo_is_hex}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose MPMA [GET /addresses/{address}/compose/mpma{?assets}{?destinations}{?quantities}{?memo}{?memo_is_hex}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to send multiple payments to multiple addresses.
 
@@ -1778,8 +1742,6 @@ Composes a transaction to send multiple payments to multiple addresses.
         + Default: `546`
     + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
-    + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
-        + Default: `0`
     + pubkey (str, optional) - The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
@@ -1834,7 +1796,7 @@ Composes a transaction to send multiple payments to multiple addresses.
         }
     ```
 
-### Compose Order [GET /addresses/{address}/compose/order{?give_asset}{?give_quantity}{?get_asset}{?get_quantity}{?expiration}{?fee_required}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Order [GET /addresses/{address}/compose/order{?give_asset}{?give_quantity}{?get_asset}{?get_quantity}{?expiration}{?fee_required}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to place an order on the distributed exchange.
 
@@ -1854,8 +1816,6 @@ Composes a transaction to place an order on the distributed exchange.
         + Default: `546`
     + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
-    + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
-        + Default: `0`
     + pubkey (str, optional) - The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
@@ -1897,7 +1857,7 @@ Composes a transaction to place an order on the distributed exchange.
         }
     ```
 
-### Compose Send [GET /addresses/{address}/compose/send{?destination}{?asset}{?quantity}{?memo}{?memo_is_hex}{?use_enhanced_send}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Send [GET /addresses/{address}/compose/send{?destination}{?asset}{?quantity}{?memo}{?memo_is_hex}{?use_enhanced_send}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to send a quantity of an asset to another address.
 
@@ -1920,8 +1880,6 @@ Composes a transaction to send a quantity of an asset to another address.
         + Default: `546`
     + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
-    + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
-        + Default: `0`
     + pubkey (str, optional) - The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
@@ -1963,7 +1921,7 @@ Composes a transaction to send a quantity of an asset to another address.
         }
     ```
 
-### Compose Sweep [GET /addresses/{address}/compose/sweep{?destination}{?flags}{?memo}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Sweep [GET /addresses/{address}/compose/sweep{?destination}{?flags}{?memo}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to Sends all assets and/or transfer ownerships to a destination address.
 
@@ -1980,8 +1938,6 @@ Composes a transaction to Sends all assets and/or transfer ownerships to a desti
         + Default: `546`
     + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
-    + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
-        + Default: `0`
     + pubkey (str, optional) - The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
@@ -3211,7 +3167,7 @@ Returns all events
                 {
                     "event_index": 10665092,
                     "event": "TRANSACTION_PARSED",
-                    "bindings": {
+                    "payload": {
                         "supported": true,
                         "tx_hash": "7b39d3ebd9fe8293004a1a8b8eb2d01f1664e5d8b05e8cb94f30b1da2c2f9650",
                         "tx_index": 2056160
@@ -3222,7 +3178,7 @@ Returns all events
                 {
                     "event_index": 10665091,
                     "event": "ENHANCED_SEND",
-                    "bindings": {
+                    "payload": {
                         "asset": "THOTHPEPE",
                         "block_index": 744232,
                         "destination": "13re7J5Y5a8nZZSp8o1a3sEUqGik4NMXhS",
@@ -3239,7 +3195,7 @@ Returns all events
                 {
                     "event_index": 10665090,
                     "event": "CREDIT",
-                    "bindings": {
+                    "payload": {
                         "address": "13re7J5Y5a8nZZSp8o1a3sEUqGik4NMXhS",
                         "asset": "THOTHPEPE",
                         "block_index": 744232,
@@ -3254,7 +3210,7 @@ Returns all events
                 {
                     "event_index": 10665089,
                     "event": "DEBIT",
-                    "bindings": {
+                    "payload": {
                         "action": "send",
                         "address": "173cE6ScUFCmBLCqZeG18ij6r9KHRPbAjC",
                         "asset": "THOTHPEPE",
@@ -3269,7 +3225,7 @@ Returns all events
                 {
                     "event_index": 10665088,
                     "event": "TRANSACTION_PARSED",
-                    "bindings": {
+                    "payload": {
                         "supported": true,
                         "tx_hash": "bbb2dfa7e7a32288a702ef0091ece8b2a929f94fd967a18e6071cd9c2b085eaf",
                         "tx_index": 2056159
@@ -3296,7 +3252,7 @@ Returns the event of an index
                 {
                     "event_index": 10665092,
                     "event": "TRANSACTION_PARSED",
-                    "bindings": {
+                    "payload": {
                         "supported": true,
                         "tx_hash": "7b39d3ebd9fe8293004a1a8b8eb2d01f1664e5d8b05e8cb94f30b1da2c2f9650",
                         "tx_index": 2056160
@@ -3527,7 +3483,7 @@ Returns the events filtered by event name
                 {
                     "event_index": 10665090,
                     "event": "CREDIT",
-                    "bindings": {
+                    "payload": {
                         "address": "13re7J5Y5a8nZZSp8o1a3sEUqGik4NMXhS",
                         "asset": "THOTHPEPE",
                         "block_index": 744232,
@@ -3542,7 +3498,7 @@ Returns the events filtered by event name
                 {
                     "event_index": 10665085,
                     "event": "CREDIT",
-                    "bindings": {
+                    "payload": {
                         "address": "1LfDk3Ex9KPYS6L1WGwNdt1TvEg6Le8uq",
                         "asset": "XCP",
                         "block_index": 744232,
@@ -3557,7 +3513,7 @@ Returns the events filtered by event name
                 {
                     "event_index": 10665082,
                     "event": "CREDIT",
-                    "bindings": {
+                    "payload": {
                         "address": "173cE6ScUFCmBLCqZeG18ij6r9KHRPbAjC",
                         "asset": "FREEDOMKEK",
                         "block_index": 744232,
@@ -3572,7 +3528,7 @@ Returns the events filtered by event name
                 {
                     "event_index": 10665078,
                     "event": "CREDIT",
-                    "bindings": {
+                    "payload": {
                         "address": "1P8nYZwLmecAkQUHsx2H9Nkxd51UJ2Asau",
                         "asset": "PEPEFRIDAY",
                         "block_index": 744232,
@@ -3587,7 +3543,7 @@ Returns the events filtered by event name
                 {
                     "event_index": 10665074,
                     "event": "CREDIT",
-                    "bindings": {
+                    "payload": {
                         "address": "1NzDQ7HLm6PqJ2Wy6jEKMT7Zw1UbtjUV5a",
                         "asset": "PEPEFRIDAY",
                         "block_index": 744232,
@@ -3903,48 +3859,7 @@ Returns all mempool events
 
     ```
         {
-            "result": [
-                {
-                    "tx_hash": "8a154886671713cae6d72d2996f07fac61529c0d8d1ebc476f448212ff3d535e",
-                    "event": "NEW_TRANSACTION",
-                    "bindings": {
-                        "block_hash": "mempool",
-                        "block_index": 9999999,
-                        "block_time": 1713952590,
-                        "btc_amount": 0,
-                        "data": "0200454ceacf416ccf0000000000000001005461639d06ebc42d541b54b1c5525543ae4d6db3",
-                        "destination": "",
-                        "fee": 9900,
-                        "source": "14PxDTVUMCjLoAcGPZGQf6cEtn7yLzdHp1",
-                        "tx_hash": "8a154886671713cae6d72d2996f07fac61529c0d8d1ebc476f448212ff3d535e",
-                        "tx_index": 2726767
-                    },
-                    "timestamp": 1713952691
-                },
-                {
-                    "tx_hash": "8a154886671713cae6d72d2996f07fac61529c0d8d1ebc476f448212ff3d535e",
-                    "event": "ENHANCED_SEND",
-                    "bindings": {
-                        "asset": "FIERCERABBIT",
-                        "destination": "18hARq2fFJxiypHSnZ8yLcbPNpUfaozD8U",
-                        "memo": null,
-                        "quantity": 1,
-                        "source": "14PxDTVUMCjLoAcGPZGQf6cEtn7yLzdHp1",
-                        "tx_hash": "8a154886671713cae6d72d2996f07fac61529c0d8d1ebc476f448212ff3d535e"
-                    },
-                    "timestamp": 1713952691
-                },
-                {
-                    "tx_hash": "8a154886671713cae6d72d2996f07fac61529c0d8d1ebc476f448212ff3d535e",
-                    "event": "TRANSACTION_PARSED",
-                    "bindings": {
-                        "supported": true,
-                        "tx_hash": "8a154886671713cae6d72d2996f07fac61529c0d8d1ebc476f448212ff3d535e",
-                        "tx_index": 2726767
-                    },
-                    "timestamp": 1713952691
-                }
-            ]
+            "result": []
         }
     ```
 
@@ -3959,49 +3874,6 @@ Returns the mempool events filtered by event name
 
     ```
         {
-            "result": [
-                {
-                    "tx_hash": "90ba95c4578b9ab7866515d66736c5b4132e88a0bd9b0fca7b2f1be830a1bb81",
-                    "event": "OPEN_ORDER",
-                    "bindings": {
-                        "expiration": 5000,
-                        "expire_index": 10004999,
-                        "fee_provided": 5016,
-                        "fee_provided_remaining": 5016,
-                        "fee_required": 0,
-                        "fee_required_remaining": 0,
-                        "get_asset": "XCP",
-                        "get_quantity": 3300000000,
-                        "get_remaining": 3300000000,
-                        "give_asset": "PEPEPASSPORT",
-                        "give_quantity": 100000000,
-                        "give_remaining": 100000000,
-                        "source": "1A36UrLHxeg9ABoS4zPsRUegyCWTWER2kF",
-                        "tx_hash": "90ba95c4578b9ab7866515d66736c5b4132e88a0bd9b0fca7b2f1be830a1bb81"
-                    },
-                    "timestamp": 1713952690
-                },
-                {
-                    "tx_hash": "bc553f3d4349a266b70e7ed98e2198a18d634a5b247997f59817f69e19de2ad6",
-                    "event": "OPEN_ORDER",
-                    "bindings": {
-                        "expiration": 5000,
-                        "expire_index": 10004999,
-                        "fee_provided": 5016,
-                        "fee_provided_remaining": 5016,
-                        "fee_required": 0,
-                        "fee_required_remaining": 0,
-                        "get_asset": "XCP",
-                        "get_quantity": 1185000000,
-                        "get_remaining": 1185000000,
-                        "give_asset": "FRATPEPE",
-                        "give_quantity": 3,
-                        "give_remaining": 3,
-                        "source": "1A36UrLHxeg9ABoS4zPsRUegyCWTWER2kF",
-                        "tx_hash": "bc553f3d4349a266b70e7ed98e2198a18d634a5b247997f59817f69e19de2ad6"
-                    },
-                    "timestamp": 1713952690
-                }
-            ]
+            "result": []
         }
     ```

@@ -137,7 +137,7 @@
             {
                 "event_index": 1183,
                 "event": "NEW_BLOCK",
-                "bindings": {
+                "payload": {
                     "block_hash": "8a09b2faf0a7ad67eb4ab5c948b9769fc87eb2ec5e16108f2cde8bd9e6cf7607",
                     "block_index": 310492,
                     "block_time": 310492000,
@@ -145,37 +145,31 @@
                     "ledger_hash": null,
                     "previous_block_hash": null,
                     "txlist_hash": null
-                },
-                "block_index": 310491,
-                "timestamp": 0
+                }
             },
             {
                 "event_index": 1182,
                 "event": "BLOCK_PARSED",
-                "bindings": {
+                "payload": {
                     "block_index": 310491,
                     "ledger_hash": "3114d8091cfcaa9944c6fab49d51950535c4ef269877d58c372ed80b2b472ec6",
                     "messages_hash": "9671cfedb3124b67ed996c547cb26a32e95490009ad56065c79be54a28c45994",
                     "txlist_hash": "f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8"
-                },
-                "block_index": 310491,
-                "timestamp": 0
+                }
             },
             {
                 "event_index": 1181,
                 "event": "TRANSACTION_PARSED",
-                "bindings": {
+                "payload": {
                     "supported": true,
                     "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                     "tx_index": 492
-                },
-                "block_index": 310491,
-                "timestamp": 0
+                }
             },
             {
                 "event_index": 1180,
                 "event": "OPEN_ORDER",
-                "bindings": {
+                "payload": {
                     "block_index": 310491,
                     "expiration": 2000,
                     "expire_index": 312491,
@@ -193,14 +187,12 @@
                     "status": "open",
                     "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                     "tx_index": 492
-                },
-                "block_index": 310491,
-                "timestamp": 0
+                }
             },
             {
                 "event_index": 1179,
                 "event": "DEBIT",
-                "bindings": {
+                "payload": {
                     "action": "open order",
                     "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     "asset": "XCP",
@@ -208,14 +200,12 @@
                     "event": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                     "quantity": 100000000,
                     "tx_index": 492
-                },
-                "block_index": 310491,
-                "timestamp": 0
+                }
             },
             {
                 "event_index": 1178,
                 "event": "NEW_TRANSACTION",
-                "bindings": {
+                "payload": {
                     "block_hash": "811abd7cf2b768cfdaa84ab44c63f4463c96a368ead52125bf149cf0c7447b16",
                     "block_index": 310491,
                     "block_time": 310491000,
@@ -227,9 +217,7 @@
                     "supported": true,
                     "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                     "tx_index": 492
-                },
-                "block_index": 310491,
-                "timestamp": 0
+                }
             }
         ]
     },
@@ -1272,7 +1260,7 @@
             {
                 "event_index": 1237,
                 "event": "BLOCK_PARSED",
-                "bindings": {
+                "payload": {
                     "block_index": 310500,
                     "ledger_hash": "5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d",
                     "messages_hash": "45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f",
@@ -1284,7 +1272,7 @@
             {
                 "event_index": 1236,
                 "event": "NEW_BLOCK",
-                "bindings": {
+                "payload": {
                     "block_hash": "54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b",
                     "block_index": 310500,
                     "block_time": 310500000,
@@ -1299,7 +1287,7 @@
             {
                 "event_index": 1235,
                 "event": "BLOCK_PARSED",
-                "bindings": {
+                "payload": {
                     "block_index": 310499,
                     "ledger_hash": "b9fcbdafddd46fdda061f6e9f8744b426b6ca37e32b315df1098cbc7899ae9b9",
                     "messages_hash": "d6aedacd4f81520d86ae47c9c776d17a213c706a5cf7c91203a4299261d1648c",
@@ -1311,7 +1299,7 @@
             {
                 "event_index": 1234,
                 "event": "NEW_BLOCK",
-                "bindings": {
+                "payload": {
                     "block_hash": "1950e1a4d7fc820ed9603f6df6819c3c953c277c726340dec2a4253e261a1764",
                     "block_index": 310499,
                     "block_time": 310499000,
@@ -1326,7 +1314,7 @@
             {
                 "event_index": 1233,
                 "event": "BLOCK_PARSED",
-                "bindings": {
+                "payload": {
                     "block_index": 310498,
                     "ledger_hash": "5fe6cdb0828379bf240fad99c68bba34e1889bbc19605ce5c297b82352264414",
                     "messages_hash": "113207bd13dda56b5e5edf305f70a56e62cc861184e1e95a64e79ce100462c98",
@@ -1342,7 +1330,7 @@
             {
                 "event_index": 10,
                 "event": "ASSET_CREATION",
-                "bindings": {
+                "payload": {
                     "asset_id": "697326324582",
                     "asset_longname": null,
                     "asset_name": "DIVISIBLE",
@@ -1446,7 +1434,7 @@
             {
                 "event_index": 1231,
                 "event": "CREDIT",
-                "bindings": {
+                "payload": {
                     "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     "asset": "A95428956661682277",
                     "block_index": 310498,
@@ -1461,7 +1449,7 @@
             {
                 "event_index": 1223,
                 "event": "CREDIT",
-                "bindings": {
+                "payload": {
                     "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     "asset": "PARENT",
                     "block_index": 310497,
@@ -1476,7 +1464,7 @@
             {
                 "event_index": 1214,
                 "event": "CREDIT",
-                "bindings": {
+                "payload": {
                     "address": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj",
                     "asset": "XCP",
                     "block_index": 310496,
@@ -1491,7 +1479,7 @@
             {
                 "event_index": 1207,
                 "event": "CREDIT",
-                "bindings": {
+                "payload": {
                     "address": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj",
                     "asset": "DIVIDEND",
                     "block_index": 310495,
@@ -1506,7 +1494,7 @@
             {
                 "event_index": 1201,
                 "event": "CREDIT",
-                "bindings": {
+                "payload": {
                     "address": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
                     "asset": "DIVIDEND",
                     "block_index": 310494,

@@ -87,10 +87,13 @@ def get_events(db, block_index=None, event=None, event_index=None, last=None, li
     else:
         limit = ""
     # no sql injection here
-    query = """
-        SELECT message_index AS event_index, event, bindings, block_index, timestamp
+    select_fields = "message_index AS event_index, event, bindings AS payload"
+    if block_index is None:
+        select_fields += ", block_index, timestamp"
+    query = f"""
+        SELECT {select_fields}
         FROM messages
-    """
+    """  # noqa S608
     if len(where) > 0:
         query += f"""
             WHERE ({" AND ".join(where)})
@@ -101,7 +104,7 @@ def get_events(db, block_index=None, event=None, event_index=None, last=None, li
     cursor.execute(query, tuple(bindings))
     events = cursor.fetchall()
     for i, _ in enumerate(events):
-        events[i]["bindings"] = json.loads(events[i]["bindings"])
+        events[i]["payload"] = json.loads(events[i]["payload"])
     return events
 
 
@@ -160,7 +163,7 @@ def get_mempool_events(db, event_name=None):
         bindings.append(event_name)
     # no sql injection here
     query = """
-        SELECT tx_hash, event, bindings, timestamp
+        SELECT tx_hash, event, bindings AS payload, timestamp
         FROM mempool
     """
     if event_name is not None:
@@ -169,7 +172,7 @@ def get_mempool_events(db, event_name=None):
     cursor.execute(query, tuple(bindings))
     events = cursor.fetchall()
     for i, _ in enumerate(events):
-        events[i]["bindings"] = json.loads(events[i]["bindings"])
+        events[i]["payload"] = json.loads(events[i]["payload"])
     return events
 
 
