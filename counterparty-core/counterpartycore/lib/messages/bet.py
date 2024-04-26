@@ -254,7 +254,7 @@ def cancel_bet_match(db, bet_match, status, block_index, tx_index):
 
 def get_fee_fraction(db, feed_address):
     """Get fee fraction from last broadcast from the feed_address address."""
-    broadcasts = ledger.get_broadcasts_by_source(db, feed_address, "valid")
+    broadcasts = ledger.get_broadcasts_by_source(db, feed_address, "valid", order_by="ASC")
 
     if broadcasts:
         last_broadcast = broadcasts[-1]
@@ -297,7 +297,7 @@ def validate(
         problems.append("integer overflow")
 
     # Look at feed to be bet on.
-    broadcasts = ledger.get_broadcasts_by_source(db, feed_address, "valid")
+    broadcasts = ledger.get_broadcasts_by_source(db, feed_address, "valid", order_by="ASC")
     if not broadcasts:
         problems.append("feed doesn’t exist")
     elif not broadcasts[-1]["text"]:
@@ -358,15 +358,15 @@ def validate(
 
 def compose(
     db,
-    source,
-    feed_address,
-    bet_type,
-    deadline,
-    wager_quantity,
-    counterwager_quantity,
-    target_value,
-    leverage,
-    expiration,
+    source: str,
+    feed_address: str,
+    bet_type: int,
+    deadline: int,
+    wager_quantity: int,
+    counterwager_quantity: int,
+    target_value: int,
+    leverage: int,
+    expiration: int,
 ):
     if ledger.get_balance(db, source, config.XCP) < wager_quantity:
         raise exceptions.ComposeError("insufficient funds")
@@ -403,9 +403,7 @@ def compose(
     return (source, [(feed_address, None)], data)
 
 
-def parse(db, tx, message):
-    bet_parse_cursor = db.cursor()
-
+def unpack(message, return_dict=False):
     # Unpack message.
     try:
         if len(message) != LENGTH:
@@ -429,9 +427,45 @@ def parse(db, tx, message):
             target_value,
             leverage,
             expiration,
-            fee_fraction_int,  # noqa: F841
-        ) = 0, 0, 0, 0, 0, 0, 0, 0
+        ) = 0, 0, 0, 0, 0, 0, 0
         status = "invalid: could not unpack"
+    if return_dict:
+        return {
+            "bet_type": bet_type,
+            "deadline": deadline,
+            "wager_quantity": wager_quantity,
+            "counterwager_quantity": counterwager_quantity,
+            "target_value": target_value,
+            "leverage": leverage,
+            "expiration": expiration,
+            "status": status,
+        }
+    return (
+        bet_type,
+        deadline,
+        wager_quantity,
+        counterwager_quantity,
+        target_value,
+        leverage,
+        expiration,
+        status,
+    )
+
+
+def parse(db, tx, message):
+    bet_parse_cursor = db.cursor()
+
+    # Unpack message.
+    (
+        bet_type,
+        deadline,
+        wager_quantity,
+        counterwager_quantity,
+        target_value,
+        leverage,
+        expiration,
+        status,
+    ) = unpack(message)
 
     odds, fee_fraction = 0, 0
     feed_address = tx["destination"]
@@ -515,7 +549,7 @@ def parse(db, tx, message):
 
 def match(db, tx):
     # Get bet in question.
-    bets = ledger.get_bet(db, tx_hash=tx["tx_hash"])
+    bets = ledger.get_bet(db, bet_hash=tx["tx_hash"])
     if not bets:
         return
     else:
@@ -661,7 +695,7 @@ def match(db, tx):
             ledger.update_bet(db, tx1["tx_hash"], set_data)
 
             # Get last value of feed.
-            broadcasts = ledger.get_broadcasts_by_source(db, feed_address, "valid")
+            broadcasts = ledger.get_broadcasts_by_source(db, feed_address, "valid", order_by="ASC")
             initial_value = broadcasts[-1]["value"]
 
             # Record bet fulfillment.

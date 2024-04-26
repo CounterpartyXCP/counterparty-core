@@ -1,8 +1,6 @@
 import binascii
 import hashlib
 import logging
-import math  # noqa: F401
-import pprint  # noqa: F401
 import tempfile
 import time
 
@@ -20,14 +18,13 @@ from counterpartycore.test.util_test import CURR_DIR
 logger = logging.getLogger(__name__)
 
 from counterpartycore.lib import (  # noqa: E402
-    api,
     backend,
     config,
     exceptions,
     gettxinfo,
     ledger,
     script,
-    util,  # noqa: F401
+    transaction,
 )
 from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
 from counterpartycore.lib.transaction_helper import p2sh_encoding, serializer  # noqa: E402, F401
@@ -78,7 +75,7 @@ def test_p2sh_encoding(server_db):
 
         fee = 20000
         fee_per_kb = 50000
-        result = api.compose_transaction(
+        result = transaction.compose_transaction(
             server_db,
             "send",
             {"source": source, "destination": destination, "asset": "XCP", "quantity": 100},
@@ -150,7 +147,7 @@ def test_p2sh_encoding(server_db):
         logger.debug(f"pretxid {pretxid}")
 
         # check that when we do another, unrelated, send that it won't use our UTXO
-        result = api.compose_transaction(
+        result = transaction.compose_transaction(
             server_db,
             "send",
             {"source": source, "destination": destination, "asset": "XCP", "quantity": 100},
@@ -164,7 +161,7 @@ def test_p2sh_encoding(server_db):
         )
 
         # now compose the data transaction
-        result = api.compose_transaction(
+        result = transaction.compose_transaction(
             server_db,
             "send",
             {"source": source, "destination": destination, "asset": "XCP", "quantity": 100},
@@ -256,7 +253,7 @@ def test_p2sh_encoding_long_data(server_db):
         # pprint.pprint(utxos)
 
         fee_per_kb = 50000
-        result = api.compose_transaction(
+        result = transaction.compose_transaction(
             server_db,
             "broadcast",
             {
@@ -333,7 +330,7 @@ def test_p2sh_encoding_long_data(server_db):
         logger.debug(f"pretxid {pretxid}")
 
         # now compose the data transaction
-        result = api.compose_transaction(
+        result = transaction.compose_transaction(
             server_db,
             "broadcast",
             {
@@ -438,7 +435,7 @@ def test_p2sh_encoding_p2sh_source_not_supported(server_db):
         fee_per_kb = 50000
 
         with pytest.raises(exceptions.TransactionError):
-            result = api.compose_transaction(  # noqa: F841
+            result = transaction.compose_transaction(  # noqa: F841
                 server_db,
                 "send",
                 {"source": source, "destination": destination, "asset": "XCP", "quantity": 100},
@@ -480,7 +477,7 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
         # setup transaction
         fee = 20000
         fee_per_kb = 50000
-        pretxhex = api.compose_transaction(
+        pretxhex = transaction.compose_transaction(
             server_db,
             "send",
             {
@@ -506,7 +503,7 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
         logger.debug(f"pretxid {pretxid}")
 
         # now compose the data transaction
-        result = api.compose_transaction(
+        result = transaction.compose_transaction(
             server_db,
             "send",
             {"source": source, "destination": destination, "asset": "XCP", "quantity": 100},

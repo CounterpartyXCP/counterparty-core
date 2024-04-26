@@ -4,7 +4,7 @@ import tempfile
 
 import bitcoin as bitcoinlib
 
-from counterpartycore.lib import api, backend, transaction
+from counterpartycore.lib import backend, transaction
 from counterpartycore.test import (
     util_test,
 )
@@ -41,7 +41,7 @@ def test_estimate_fee_per_kb(fee_per_kb, fee_per_kb_used, server_db, monkeypatch
     with util_test.ConfigContext(ESTIMATE_FEE_PER_KB=True):
         transaction.initialise()
 
-        txhex = api.compose_transaction(
+        txhex = transaction.compose_transaction(
             server_db,
             "send",
             {"source": ADDR[0], "destination": ADDR[1], "asset": "XCP", "quantity": 100},

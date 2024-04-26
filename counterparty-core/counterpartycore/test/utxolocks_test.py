@@ -4,7 +4,6 @@ import tempfile
 from io import BytesIO
 
 import bitcoin
-import pytest  # noqa: F401
 
 from counterpartycore.lib import transaction
 from counterpartycore.lib.messages import send

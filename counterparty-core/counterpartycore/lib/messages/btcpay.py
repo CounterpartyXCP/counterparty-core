@@ -106,7 +106,7 @@ def validate(db, source, order_match_id, block_index):
     return destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems
 
 
-def compose(db, source, order_match_id):
+def compose(db, source: str, order_match_id: str):
     tx0_hash, tx1_hash = util.parse_id(order_match_id)
 
     destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(
@@ -133,10 +133,7 @@ def compose(db, source, order_match_id):
     return (source, [(destination, btc_quantity)], data)
 
 
-def parse(db, tx, message):
-    cursor = db.cursor()
-
-    # Unpack message.
+def unpack(message, return_dict=False):
     try:
         if len(message) != LENGTH:
             raise exceptions.UnpackError
@@ -150,6 +147,22 @@ def parse(db, tx, message):
     except (exceptions.UnpackError, struct.error) as e:  # noqa: F841
         tx0_hash, tx1_hash, order_match_id = None, None, None
         status = "invalid: could not unpack"
+
+    if return_dict:
+        return {
+            "tx0_hash": tx0_hash,
+            "tx1_hash": tx1_hash,
+            "order_match_id": order_match_id,
+            "status": status,
+        }
+    return tx0_hash, tx1_hash, order_match_id, status
+
+
+def parse(db, tx, message):
+    cursor = db.cursor()
+
+    # Unpack message.
+    tx0_hash, tx1_hash, order_match_id, status = unpack(message)
 
     if status == "valid":
         destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = (

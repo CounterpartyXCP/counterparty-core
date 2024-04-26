@@ -67,6 +67,7 @@ COUNTERPARTYD_OPTIONS = {
     "testcoin": False,
     "rpc_port": 9999,
     "rpc_password": "pass",
+    "api_password": "api",
     "backend_port": 18332,
     "backend_password": "pass",
     "backend_ssl_no_verify": True,
@@ -777,6 +778,9 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         or tx_name == "backend"
         or tx_name == "message_type"
         or tx_name == "address"
+        or (tx_name == "versions.enhanced_send" and method == "unpack")
+        or (tx_name == "versions.mpma" and method == "unpack")
+        or (tx_name == "sweep" and method == "unpack")
     ):
         return tested_method(*inputs)
     else:
@@ -803,7 +807,10 @@ def check_outputs(
     try:
         tested_module = sys.modules[f"counterpartycore.lib.{tx_name}"]
     except KeyError:  # TODO: hack
-        tested_module = sys.modules[f"counterpartycore.lib.messages.{tx_name}"]
+        if tx_name == "api_v1":
+            tested_module = sys.modules["counterpartycore.lib.api.api_v1"]
+        else:
+            tested_module = sys.modules[f"counterpartycore.lib.messages.{tx_name}"]
     tested_method = getattr(tested_module, method)
 
     with MockProtocolChangesContext(**(mock_protocol_changes or {})):

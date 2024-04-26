@@ -112,7 +112,14 @@ def validate(db, source, destination, asset, quantity, block_index):
 
 
 def compose(
-    db, source, destination, asset, quantity, memo=None, memo_is_hex=False, use_enhanced_send=None
+    db,
+    source: str,
+    destination: str,
+    asset: str,
+    quantity: int,
+    memo: str = None,
+    memo_is_hex: bool = False,
+    use_enhanced_send: bool = None,
 ):
     # special case - enhanced_send replaces send by default when it is enabled
     #   but it can be explicitly disabled with an API parameter

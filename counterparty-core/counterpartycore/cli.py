@@ -7,7 +7,7 @@ from urllib.parse import quote_plus as urlencode
 from termcolor import cprint
 
 from counterpartycore import server
-from counterpartycore.lib import config, log, setup
+from counterpartycore.lib import config, setup
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -171,6 +171,35 @@ CONFIG_ARGS = [
         },
     ],
     [
+        ("--api-host",),
+        {
+            "default": "localhost",
+            "help": "the IP of the interface to bind to for providing  API access (0.0.0.0 for all interfaces)",
+        },
+    ],
+    [
+        ("--api-port",),
+        {"type": int, "help": f"port on which to provide the {config.APP_NAME} API"},
+    ],
+    [
+        ("--api-user",),
+        {
+            "default": "api",
+            "help": f"required username to use the {config.APP_NAME} API (via HTTP basic auth)",
+        },
+    ],
+    [
+        ("--api-password",),
+        {
+            "default": "api",
+            "help": f"required password (for rpc-user) to use the {config.APP_NAME} API (via HTTP basic auth)",
+        },
+    ],
+    [
+        ("--api-no-allow-cors",),
+        {"action": "store_true", "default": False, "help": "allow ajax cross domain request"},
+    ],
+    [
         ("--requests-timeout",),
         {
             "type": int,
@@ -203,6 +232,10 @@ CONFIG_ARGS = [
             "default": False,
             "help": "log API requests to the specified file",
         },
+    ],
+    [
+        ("--enable-api-v1",),
+        {"action": "store_true", "default": False, "help": "Enable the API v1"},
     ],
     [
         ("--no-log-files",),
@@ -364,59 +397,8 @@ def main():
         parser.print_help()
         exit(0)
 
-    # Configuration
-    init_args = dict(
-        database_file=args.database_file,
-        testnet=args.testnet,
-        testcoin=args.testcoin,
-        regtest=args.regtest,
-        customnet=args.customnet,
-        api_limit_rows=args.api_limit_rows,
-        backend_connect=args.backend_connect,
-        backend_port=args.backend_port,
-        backend_user=args.backend_user,
-        backend_password=args.backend_password,
-        backend_ssl=args.backend_ssl,
-        backend_ssl_no_verify=args.backend_ssl_no_verify,
-        backend_poll_interval=args.backend_poll_interval,
-        indexd_connect=args.indexd_connect,
-        indexd_port=args.indexd_port,
-        rpc_host=args.rpc_host,
-        rpc_port=args.rpc_port,
-        rpc_user=args.rpc_user,
-        rpc_password=args.rpc_password,
-        rpc_no_allow_cors=args.rpc_no_allow_cors,
-        requests_timeout=args.requests_timeout,
-        rpc_batch_size=args.rpc_batch_size,
-        check_asset_conservation=args.check_asset_conservation,
-        force=args.force,
-        p2sh_dust_return_pubkey=args.p2sh_dust_return_pubkey,
-        utxo_locks_max_addresses=args.utxo_locks_max_addresses,
-        utxo_locks_max_age=args.utxo_locks_max_age,
-        no_mempool=args.no_mempool,
-    )
-
-    server.initialise_log_config(
-        verbose=args.verbose,
-        quiet=args.quiet,
-        log_file=args.log_file,
-        api_log_file=args.api_log_file,
-        no_log_files=args.no_log_files,
-        testnet=args.testnet,
-        testcoin=args.testcoin,
-        regtest=args.regtest,
-        json_log=args.json_log,
-    )
-
-    # set up logging
-    log.set_up(
-        verbose=config.VERBOSE,
-        quiet=config.QUIET,
-        log_file=config.LOG,
-        log_in_console=args.action == "start",
-    )
-
-    server.initialise_config(**init_args)
+    # Configuration and logging
+    server.initialise_log_and_config(args)
 
     logger.info(f"Running v{APP_VERSION} of {APP_NAME}.")
 
@@ -442,7 +424,7 @@ def main():
         )
 
     elif args.action == "start":
-        server.start_all(catch_up=args.catch_up)
+        server.start_all(args)
 
     elif args.action == "show-params":
         server.show_params()

@@ -72,7 +72,9 @@ def clear_pretx(txid):
     del PRETX_CACHE[binascii.hexlify(txid).decode("utf8")]
 
 
-def getrawtransaction(tx_hash, verbose=False, skip_missing=False, block_index=None):
+def getrawtransaction(
+    tx_hash: str, verbose: bool = False, skip_missing: bool = False, block_index: int = None
+):
     if block_index and block_index in prefetcher.BLOCKCHAIN_CACHE:
         return prefetcher.BLOCKCHAIN_CACHE[block_index]["raw_transactions"][tx_hash]
 
@@ -124,14 +126,15 @@ def ensure_script_pub_key_for_inputs(coins):
     return coins
 
 
-def fee_per_kb(conf_target, mode, nblocks=None):
+def fee_per_kb(
+    conf_target: int = config.ESTIMATE_FEE_CONF_TARGET, mode: str = config.ESTIMATE_FEE_MODE
+):
     """
-    :param conf_target:
-    :param mode:
-    :return: fee_per_kb in satoshis, or None when unable to determine
+    Get the fee per kilobyte for a transaction to be confirmed in `conf_target` blocks.
+    :param conf_target: Confirmation target in blocks (1 - 1008) (e.g. 2)
+    :param mode: The fee estimate mode. (e.g. CONSERVATIVE)
     """
-
-    return backend().fee_per_kb(conf_target, mode, nblocks=nblocks)
+    return backend().fee_per_kb(conf_target, mode, nblocks=None)
 
 
 def deserialize(tx_hex):
@@ -207,12 +210,15 @@ class MempoolError(Exception):
     pass
 
 
-def get_unspent_txouts(source, unconfirmed=False, unspent_tx_hash=None):
-    """returns a list of unspent outputs for a specific address
-    @return: A list of dicts, with each entry in the dict having the following keys:
+def get_unspent_txouts(address: str, unconfirmed: bool = False, unspent_tx_hash: str = None):
+    """
+    Returns a list of unspent outputs for a specific address
+    :param address: The address to search for (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
+    :param unconfirmed: Include unconfirmed transactions
+    :param unspent_tx_hash: Filter by unspent_tx_hash
     """
 
-    unspent = backend().get_unspent_txouts(source)
+    unspent = backend().get_unspent_txouts(address)
 
     # filter by unspent_tx_hash
     if unspent_tx_hash is not None:
@@ -232,12 +238,33 @@ def get_unspent_txouts(source, unconfirmed=False, unspent_tx_hash=None):
     return unspent
 
 
-def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
+def search_raw_transactions(address: str, unconfirmed: bool = True, only_tx_hashes: bool = False):
     return backend().search_raw_transactions(address, unconfirmed, only_tx_hashes)
 
 
-def get_oldest_tx(address, block_index=None):
+def get_transactions_by_address(
+    address: str, unconfirmed: bool = True, only_tx_hashes: bool = False
+):
+    """
+    Returns all transactions involving a given address
+    :param address: The address to search for (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
+    :param unconfirmed: Include unconfirmed transactions (e.g. True)
+    :param only_tx_hashes: Return only the tx hashes (e.g. True)
+    """
+    return search_raw_transactions(address, unconfirmed, only_tx_hashes)
+
+
+def get_oldest_tx(address: str, block_index: int = None):
     return backend().get_oldest_tx(address, block_index=block_index)
+
+
+def get_oldest_transaction_by_address(address: str, block_index: int = None):
+    """
+    Get the oldest transaction for an address.
+    :param address: The address to search for. (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
+    :param block_index: The block index to search from.
+    """
+    return get_oldest_tx(address, block_index=block_index)
 
 
 class UnknownPubKeyError(Exception):
