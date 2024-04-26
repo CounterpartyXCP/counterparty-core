@@ -112,7 +112,7 @@ CONFIG_ARGS = [
     ],
     [
         ("--backend-poll-interval",),
-        {"type": float, "default": 0.5, "help": "poll interval, in seconds (default: 0.5)"},
+        {"type": float, "default": 3.0, "help": "poll interval, in seconds (default: 3.0)"},
     ],
     [
         ("--check-asset-conservation",),
