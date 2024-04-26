@@ -207,6 +207,9 @@ def run_api_server(args):
         # `no_refresh_backend_height` used only for testing. TODO: find a way to mock it
         if "no_refresh_backend_height" not in args or not args["no_refresh_backend_height"]:
             refresh_backend_height(start=True)
+        else:
+            global BACKEND_HEIGHT  # noqa F811
+            BACKEND_HEIGHT = 0
     try:
         # Start the API server
         app.run(host=config.API_HOST, port=config.API_PORT, debug=False, threaded=True)

@@ -56,6 +56,7 @@ def test_api_v2(request):
         print(url)
         result = requests.get(url)  # noqa: S113
         results[url] = result.json()
+        print(result.json())
         assert result.status_code == 200
         if not request.config.getoption("saveapifixtures"):
             assert results[url] == fixtures[url]
