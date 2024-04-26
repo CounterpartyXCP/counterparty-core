@@ -680,9 +680,7 @@ def start_all(args):
     api_status_poller = None
     api_server_v1 = None
     api_server_v2 = None
-
-    # Backend.
-    connect_to_backend()
+    telemetry_daemon = None
 
     try:
         if not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap":
@@ -690,6 +688,13 @@ def start_all(args):
 
         db = initialise_db()
         blocks.initialise(db)
+
+        # API Server v2.
+        api_server_v2 = api_v2.APIServer()
+        api_server_v2.start(args)
+
+        # Backend.
+        connect_to_backend()
 
         telemetry_daemon = TelemetryDaemon(
             interval=60,
@@ -714,16 +719,13 @@ def start_all(args):
             api_server_v1.daemon = True
             api_server_v1.start()
 
-        # API Server v2.
-        api_server_v2 = api_v2.APIServer()
-        api_server_v2.start(args)
-
         # Server
         blocks.follow(db)
     except KeyboardInterrupt:
         pass
     finally:
-        telemetry_daemon.stop()
+        if telemetry_daemon:
+            telemetry_daemon.stop()
         if args.enable_api_v1:
             if api_status_poller:
                 api_status_poller.stop()

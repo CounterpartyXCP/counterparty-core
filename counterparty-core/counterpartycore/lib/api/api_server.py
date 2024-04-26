@@ -32,7 +32,7 @@ multiprocessing.set_start_method("spawn", force=True)
 logger = logging.getLogger(config.LOGGER_NAME)
 auth = HTTPBasicAuth()
 
-BACKEND_HEIGHT = 0
+BACKEND_HEIGHT = None
 REFRESH_BACKEND_HEIGHT_INTERVAL = 10
 BACKEND_HEIGHT_TIMER = None
 
@@ -78,6 +78,8 @@ def api_root():
 
 
 def is_server_ready():
+    if BACKEND_HEIGHT is None:
+        return False
     return ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT - 1
 
 
@@ -143,6 +145,8 @@ def prepare_args(route, **kwargs):
 
 @auth.login_required
 def handle_route(**kwargs):
+    if BACKEND_HEIGHT is None:
+        return return_result(503, error="Backend still not ready. Please retry later.")
     db = get_db()
     # update the current block index
     ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
@@ -202,19 +206,25 @@ def run_api_server(args):
         # run the scheduler to refresh the backend height
         # `no_refresh_backend_height` used only for testing. TODO: find a way to mock it
         if "no_refresh_backend_height" not in args or not args["no_refresh_backend_height"]:
-            refresh_backend_height()
+            refresh_backend_height(start=True)
     try:
         # Start the API server
-        app.run(host=config.API_HOST, port=config.API_PORT, debug=False)
+        app.run(host=config.API_HOST, port=config.API_PORT, debug=False, threaded=True)
     finally:
         # ensure timer is cancelled
         if BACKEND_HEIGHT_TIMER:
             BACKEND_HEIGHT_TIMER.cancel()
 
 
-def refresh_backend_height():
+def refresh_backend_height(start=False):
     global BACKEND_HEIGHT, BACKEND_HEIGHT_TIMER  # noqa F811
-    BACKEND_HEIGHT = get_backend_height()
+    if not start:
+        BACKEND_HEIGHT = get_backend_height()
+    else:
+        # starting the timer is not blocking in case of Addrindexrs is not ready
+        BACKEND_HEIGHT_TIMER = Timer(0.5, refresh_backend_height)
+        BACKEND_HEIGHT_TIMER.start()
+        return
     if BACKEND_HEIGHT_TIMER:
         BACKEND_HEIGHT_TIMER.cancel()
     BACKEND_HEIGHT_TIMER = Timer(REFRESH_BACKEND_HEIGHT_INTERVAL, refresh_backend_height)
