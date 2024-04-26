@@ -64,7 +64,7 @@ def gen_groups_toc():
 
 if TARGET == "docusaurus":
     md = """---
-title: REST API V2
+title: ReST API V2
 ---
 
 """
@@ -143,6 +143,9 @@ for path, route in server.routes.ROUTES.items():
     blueprint_path = path.replace("<", "{").replace(">", "}").replace("int:", "")
 
     title = " ".join([part.capitalize() for part in str(route["function"].__name__).split("_")])
+    title = title.replace("Pubkeyhash", "PubKeyHash")
+    title = title.replace("Mpma", "MPMA")
+    title = title.replace("Btcpay", "BTCPay")
     md += f"\n### {title} "
     if TARGET == "docusaurus":
         md += f"[GET `{blueprint_path}`]\n\n"

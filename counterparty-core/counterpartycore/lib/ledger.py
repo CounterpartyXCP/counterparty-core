@@ -129,7 +129,7 @@ def get_events_by_block_and_event(db, block_index: int, event: str):
     :param str event: The event to filter by (e.g. CREDIT)
     """
     if event == "count":
-        return get_events_counts_by_block(db, block_index=block_index)
+        return get_event_counts_by_block(db, block_index=block_index)
     return get_events(db, block_index=block_index, event=event)
 
 
@@ -203,7 +203,7 @@ def get_events_counts(db, block_index=None):
     return cursor.fetchall()
 
 
-def get_events_counts_by_block(db, block_index: int):
+def get_event_counts_by_block(db, block_index: int):
     """
     Returns the event counts of a block
     :param int block_index: The index of the block to return (e.g. 840464)

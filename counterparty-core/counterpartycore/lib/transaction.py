@@ -961,17 +961,17 @@ COMPOSE_COMMONS_ARGS = {
     "fee_per_kb": (
         int,
         None,
-        "The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshi)",
+        "The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)",
     ),
     "regular_dust_size": (
         int,
         config.DEFAULT_REGULAR_DUST_SIZE,
-        "Specify (in satoshi) to override the (dust) amount of BTC used for each non-(bare) multisig output.",
+        "Specify (in satoshis) to override the (dust) amount of BTC used for each non-(bare) multisig output.",
     ),
     "multisig_dust_size": (
         int,
         config.DEFAULT_MULTISIG_DUST_SIZE,
-        "Specify (in satoshi) to override the (dust) amount of BTC used for each (bare) multisig output",
+        "Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output",
     ),
     "op_return_value": (
         int,
@@ -991,12 +991,12 @@ COMPOSE_COMMONS_ARGS = {
     "fee": (
         int,
         None,
-        "If you'd like to specify a custom miners' fee, specify it here (in satoshi). Leave as default for the server to automatically choose",
+        "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",
     ),
     "fee_provided": (
         int,
         0,
-        "If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshi). This differs from fee in that this is an upper bound value, which fee is an exact value",
+        "If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshis). This differs from fee in that this is an upper bound value, which fee is an exact value",
     ),
     "unspent_tx_hash": (
         str,
@@ -1011,7 +1011,7 @@ COMPOSE_COMMONS_ARGS = {
     "disable_utxo_locks": (
         bool,
         False,
-        "By default, UTXO's utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs",
+        "By default, UTXOs utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs",
     ),
     "extended_tx_info": (
         bool,
@@ -1023,7 +1023,6 @@ COMPOSE_COMMONS_ARGS = {
         None,
         "The previous transaction txid for a two part P2SH message. This txid must be taken from the signed transaction",
     ),
-    "old_style_api": (bool, True, "Use the old style API"),
     "segwit": (bool, False, "Use segwit"),
 }
 

@@ -13,7 +13,7 @@ ROUTES = util.prepare_routes(
         "/blocks/<int:block_index>": ledger.get_block,
         "/blocks/<int:block_index>/transactions": ledger.get_transactions_by_block,
         "/blocks/<int:block_index>/events": ledger.get_events_by_block,
-        "/blocks/<int:block_index>/events/counts": ledger.get_events_counts_by_block,
+        "/blocks/<int:block_index>/events/counts": ledger.get_event_counts_by_block,
         "/blocks/<int:block_index>/events/<event>": ledger.get_events_by_block_and_event,
         "/blocks/<int:block_index>/credits": ledger.get_credits_by_block,
         "/blocks/<int:block_index>/debits": ledger.get_debits_by_block,

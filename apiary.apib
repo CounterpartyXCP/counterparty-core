@@ -293,7 +293,7 @@ Returns the events of a block
         }
     ```
 
-### Get Events Counts By Block [GET /blocks/{block_index}/events/counts]
+### Get Event Counts By Block [GET /blocks/{block_index}/events/counts]
 
 Returns the event counts of a block
 
@@ -1218,7 +1218,7 @@ Returns the sweeps of an address
         }
     ```
 
-### Compose Bet [GET /addresses/{address}/compose/bet{?feed_address}{?bet_type}{?deadline}{?wager_quantity}{?counterwager_quantity}{?expiration}{?leverage}{?target_value}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
+### Compose Bet [GET /addresses/{address}/compose/bet{?feed_address}{?bet_type}{?deadline}{?wager_quantity}{?counterwager_quantity}{?expiration}{?leverage}{?target_value}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to issue a bet against a feed.
 
@@ -1236,11 +1236,11 @@ Composes a transaction to issue a bet against a feed.
         + Default: `None`
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
-    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshi)
+    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
         + Default: `None`
-    + regular_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each non-(bare) multisig output.
+    + regular_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each non-(bare) multisig output.
         + Default: `546`
-    + multisig_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each (bare) multisig output
+    + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
     + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
         + Default: `0`
@@ -1248,22 +1248,20 @@ Composes a transaction to issue a bet against a feed.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
         + Default: `False`
-    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshi). Leave as default for the server to automatically choose
+    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose
         + Default: `None`
-    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshi). This differs from fee in that this is an upper bound value, which fee is an exact value
+    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshis). This differs from fee in that this is an upper bound value, which fee is an exact value
         + Default: `0`
     + unspent_tx_hash (str, optional) - When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs
         + Default: `None`
     + dust_return_pubkey (str, optional) - The dust return pubkey is used in multi-sig data outputs (as the only real pubkey) to make those the outputs spendable. By default, this pubkey is taken from the pubkey used in the first transaction input. However, it can be overridden here (and is required to be specified if a P2SH input is used and multisig is used as the data output encoding.) If specified, specify the public key (in hex format) where dust will be returned to so that it can be reclaimed. Only valid/useful when used with transactions that utilize multisig data encoding. Note that if this value is set to false, this instructs counterparty-server to use the default dust return pubkey configured at the node level. If this default is not set at the node level, the call will generate an exception
         + Default: `None`
-    + disable_utxo_locks (bool, optional) - By default, UTXO's utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
+    + disable_utxo_locks (bool, optional) - By default, UTXOs utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
         + Default: `False`
     + extended_tx_info (bool, optional) - When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee
         + Default: `False`
     + p2sh_pretx_txid (str, optional) - The previous transaction txid for a two part P2SH message. This txid must be taken from the signed transaction
         + Default: `None`
-    + old_style_api (bool, optional) - Use the old style API
-        + Default: `True`
     + segwit (bool, optional) - Use segwit
         + Default: `False`
 
@@ -1289,7 +1287,7 @@ Composes a transaction to issue a bet against a feed.
         }
     ```
 
-### Compose Broadcast [GET /addresses/{address}/compose/broadcast{?timestamp}{?value}{?fee_fraction}{?text}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
+### Compose Broadcast [GET /addresses/{address}/compose/broadcast{?timestamp}{?value}{?fee_fraction}{?text}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to broadcast textual and numerical information to the network.
 
@@ -1301,11 +1299,11 @@ Composes a transaction to broadcast textual and numerical information to the net
     + text: `"Hello, world!"` (str, required) - The textual part of the broadcast 
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
-    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshi)
+    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
         + Default: `None`
-    + regular_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each non-(bare) multisig output.
+    + regular_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each non-(bare) multisig output.
         + Default: `546`
-    + multisig_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each (bare) multisig output
+    + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
     + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
         + Default: `0`
@@ -1313,22 +1311,20 @@ Composes a transaction to broadcast textual and numerical information to the net
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
         + Default: `False`
-    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshi). Leave as default for the server to automatically choose
+    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose
         + Default: `None`
-    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshi). This differs from fee in that this is an upper bound value, which fee is an exact value
+    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshis). This differs from fee in that this is an upper bound value, which fee is an exact value
         + Default: `0`
     + unspent_tx_hash (str, optional) - When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs
         + Default: `None`
     + dust_return_pubkey (str, optional) - The dust return pubkey is used in multi-sig data outputs (as the only real pubkey) to make those the outputs spendable. By default, this pubkey is taken from the pubkey used in the first transaction input. However, it can be overridden here (and is required to be specified if a P2SH input is used and multisig is used as the data output encoding.) If specified, specify the public key (in hex format) where dust will be returned to so that it can be reclaimed. Only valid/useful when used with transactions that utilize multisig data encoding. Note that if this value is set to false, this instructs counterparty-server to use the default dust return pubkey configured at the node level. If this default is not set at the node level, the call will generate an exception
         + Default: `None`
-    + disable_utxo_locks (bool, optional) - By default, UTXO's utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
+    + disable_utxo_locks (bool, optional) - By default, UTXOs utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
         + Default: `False`
     + extended_tx_info (bool, optional) - When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee
         + Default: `False`
     + p2sh_pretx_txid (str, optional) - The previous transaction txid for a two part P2SH message. This txid must be taken from the signed transaction
         + Default: `None`
-    + old_style_api (bool, optional) - Use the old style API
-        + Default: `True`
     + segwit (bool, optional) - Use segwit
         + Default: `False`
 
@@ -1350,7 +1346,7 @@ Composes a transaction to broadcast textual and numerical information to the net
         }
     ```
 
-### Compose Btcpay [GET /addresses/{address}/compose/btcpay{?order_match_id}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
+### Compose BTCPay [GET /addresses/{address}/compose/btcpay{?order_match_id}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to pay for a BTC order match.
 
@@ -1359,11 +1355,11 @@ Composes a transaction to pay for a BTC order match.
     + order_match_id: `e470416a9500fb046835192da013f48e6468a07dba1bede4a0b68e666ed23c8d_4953bde3d9417b103615c2d3d4b284d4fcf7cbd820e5dd19ac0084e9ebd090b2` (str, required) - The ID of the order match to pay for 
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
-    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshi)
+    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
         + Default: `None`
-    + regular_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each non-(bare) multisig output.
+    + regular_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each non-(bare) multisig output.
         + Default: `546`
-    + multisig_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each (bare) multisig output
+    + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
     + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
         + Default: `0`
@@ -1371,22 +1367,20 @@ Composes a transaction to pay for a BTC order match.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
         + Default: `False`
-    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshi). Leave as default for the server to automatically choose
+    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose
         + Default: `None`
-    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshi). This differs from fee in that this is an upper bound value, which fee is an exact value
+    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshis). This differs from fee in that this is an upper bound value, which fee is an exact value
         + Default: `0`
     + unspent_tx_hash (str, optional) - When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs
         + Default: `None`
     + dust_return_pubkey (str, optional) - The dust return pubkey is used in multi-sig data outputs (as the only real pubkey) to make those the outputs spendable. By default, this pubkey is taken from the pubkey used in the first transaction input. However, it can be overridden here (and is required to be specified if a P2SH input is used and multisig is used as the data output encoding.) If specified, specify the public key (in hex format) where dust will be returned to so that it can be reclaimed. Only valid/useful when used with transactions that utilize multisig data encoding. Note that if this value is set to false, this instructs counterparty-server to use the default dust return pubkey configured at the node level. If this default is not set at the node level, the call will generate an exception
         + Default: `None`
-    + disable_utxo_locks (bool, optional) - By default, UTXO's utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
+    + disable_utxo_locks (bool, optional) - By default, UTXOs utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
         + Default: `False`
     + extended_tx_info (bool, optional) - When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee
         + Default: `False`
     + p2sh_pretx_txid (str, optional) - The previous transaction txid for a two part P2SH message. This txid must be taken from the signed transaction
         + Default: `None`
-    + old_style_api (bool, optional) - Use the old style API
-        + Default: `True`
     + segwit (bool, optional) - Use segwit
         + Default: `False`
 
@@ -1405,7 +1399,7 @@ Composes a transaction to pay for a BTC order match.
         }
     ```
 
-### Compose Burn [GET /addresses/{address}/compose/burn{?quantity}{?overburn}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
+### Compose Burn [GET /addresses/{address}/compose/burn{?quantity}{?overburn}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, possible between blocks 278310 and 283810; on testnet it is still available).
 
@@ -1416,11 +1410,11 @@ Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, poss
         + Default: `False`
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
-    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshi)
+    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
         + Default: `None`
-    + regular_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each non-(bare) multisig output.
+    + regular_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each non-(bare) multisig output.
         + Default: `546`
-    + multisig_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each (bare) multisig output
+    + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
     + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
         + Default: `0`
@@ -1428,22 +1422,20 @@ Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, poss
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
         + Default: `False`
-    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshi). Leave as default for the server to automatically choose
+    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose
         + Default: `None`
-    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshi). This differs from fee in that this is an upper bound value, which fee is an exact value
+    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshis). This differs from fee in that this is an upper bound value, which fee is an exact value
         + Default: `0`
     + unspent_tx_hash (str, optional) - When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs
         + Default: `None`
     + dust_return_pubkey (str, optional) - The dust return pubkey is used in multi-sig data outputs (as the only real pubkey) to make those the outputs spendable. By default, this pubkey is taken from the pubkey used in the first transaction input. However, it can be overridden here (and is required to be specified if a P2SH input is used and multisig is used as the data output encoding.) If specified, specify the public key (in hex format) where dust will be returned to so that it can be reclaimed. Only valid/useful when used with transactions that utilize multisig data encoding. Note that if this value is set to false, this instructs counterparty-server to use the default dust return pubkey configured at the node level. If this default is not set at the node level, the call will generate an exception
         + Default: `None`
-    + disable_utxo_locks (bool, optional) - By default, UTXO's utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
+    + disable_utxo_locks (bool, optional) - By default, UTXOs utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
         + Default: `False`
     + extended_tx_info (bool, optional) - When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee
         + Default: `False`
     + p2sh_pretx_txid (str, optional) - The previous transaction txid for a two part P2SH message. This txid must be taken from the signed transaction
         + Default: `None`
-    + old_style_api (bool, optional) - Use the old style API
-        + Default: `True`
     + segwit (bool, optional) - Use segwit
         + Default: `False`
 
@@ -1463,7 +1455,7 @@ Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, poss
         }
     ```
 
-### Compose Cancel [GET /addresses/{address}/compose/cancel{?offer_hash}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
+### Compose Cancel [GET /addresses/{address}/compose/cancel{?offer_hash}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to cancel an open order or bet.
 
@@ -1472,11 +1464,11 @@ Composes a transaction to cancel an open order or bet.
     + offer_hash: `8ce3335391bf71f8f12c0573b4f85b9adc4882a9955d9f8e5ababfdd0060279a` (str, required) - The hash of the order/bet to be cancelled 
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
-    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshi)
+    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
         + Default: `None`
-    + regular_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each non-(bare) multisig output.
+    + regular_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each non-(bare) multisig output.
         + Default: `546`
-    + multisig_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each (bare) multisig output
+    + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
     + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
         + Default: `0`
@@ -1484,22 +1476,20 @@ Composes a transaction to cancel an open order or bet.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
         + Default: `False`
-    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshi). Leave as default for the server to automatically choose
+    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose
         + Default: `None`
-    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshi). This differs from fee in that this is an upper bound value, which fee is an exact value
+    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshis). This differs from fee in that this is an upper bound value, which fee is an exact value
         + Default: `0`
     + unspent_tx_hash (str, optional) - When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs
         + Default: `None`
     + dust_return_pubkey (str, optional) - The dust return pubkey is used in multi-sig data outputs (as the only real pubkey) to make those the outputs spendable. By default, this pubkey is taken from the pubkey used in the first transaction input. However, it can be overridden here (and is required to be specified if a P2SH input is used and multisig is used as the data output encoding.) If specified, specify the public key (in hex format) where dust will be returned to so that it can be reclaimed. Only valid/useful when used with transactions that utilize multisig data encoding. Note that if this value is set to false, this instructs counterparty-server to use the default dust return pubkey configured at the node level. If this default is not set at the node level, the call will generate an exception
         + Default: `None`
-    + disable_utxo_locks (bool, optional) - By default, UTXO's utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
+    + disable_utxo_locks (bool, optional) - By default, UTXOs utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
         + Default: `False`
     + extended_tx_info (bool, optional) - When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee
         + Default: `False`
     + p2sh_pretx_txid (str, optional) - The previous transaction txid for a two part P2SH message. This txid must be taken from the signed transaction
         + Default: `None`
-    + old_style_api (bool, optional) - Use the old style API
-        + Default: `True`
     + segwit (bool, optional) - Use segwit
         + Default: `False`
 
@@ -1518,7 +1508,7 @@ Composes a transaction to cancel an open order or bet.
         }
     ```
 
-### Compose Destroy [GET /addresses/{address}/compose/destroy{?asset}{?quantity}{?tag}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
+### Compose Destroy [GET /addresses/{address}/compose/destroy{?asset}{?quantity}{?tag}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to destroy a quantity of an asset.
 
@@ -1529,11 +1519,11 @@ Composes a transaction to destroy a quantity of an asset.
     + tag: `"bugs!"` (str, required) - A tag for the destruction 
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
-    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshi)
+    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
         + Default: `None`
-    + regular_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each non-(bare) multisig output.
+    + regular_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each non-(bare) multisig output.
         + Default: `546`
-    + multisig_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each (bare) multisig output
+    + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
     + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
         + Default: `0`
@@ -1541,22 +1531,20 @@ Composes a transaction to destroy a quantity of an asset.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
         + Default: `False`
-    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshi). Leave as default for the server to automatically choose
+    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose
         + Default: `None`
-    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshi). This differs from fee in that this is an upper bound value, which fee is an exact value
+    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshis). This differs from fee in that this is an upper bound value, which fee is an exact value
         + Default: `0`
     + unspent_tx_hash (str, optional) - When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs
         + Default: `None`
     + dust_return_pubkey (str, optional) - The dust return pubkey is used in multi-sig data outputs (as the only real pubkey) to make those the outputs spendable. By default, this pubkey is taken from the pubkey used in the first transaction input. However, it can be overridden here (and is required to be specified if a P2SH input is used and multisig is used as the data output encoding.) If specified, specify the public key (in hex format) where dust will be returned to so that it can be reclaimed. Only valid/useful when used with transactions that utilize multisig data encoding. Note that if this value is set to false, this instructs counterparty-server to use the default dust return pubkey configured at the node level. If this default is not set at the node level, the call will generate an exception
         + Default: `None`
-    + disable_utxo_locks (bool, optional) - By default, UTXO's utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
+    + disable_utxo_locks (bool, optional) - By default, UTXOs utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
         + Default: `False`
     + extended_tx_info (bool, optional) - When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee
         + Default: `False`
     + p2sh_pretx_txid (str, optional) - The previous transaction txid for a two part P2SH message. This txid must be taken from the signed transaction
         + Default: `None`
-    + old_style_api (bool, optional) - Use the old style API
-        + Default: `True`
     + segwit (bool, optional) - Use segwit
         + Default: `False`
 
@@ -1577,7 +1565,7 @@ Composes a transaction to destroy a quantity of an asset.
         }
     ```
 
-### Compose Dispenser [GET /addresses/{address}/compose/dispenser{?asset}{?give_quantity}{?escrow_quantity}{?mainchainrate}{?status}{?open_address}{?oracle_address}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
+### Compose Dispenser [GET /addresses/{address}/compose/dispenser{?asset}{?give_quantity}{?escrow_quantity}{?mainchainrate}{?status}{?open_address}{?oracle_address}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Opens or closes a dispenser for a given asset at a given rate of main chain asset (BTC). Escrowed quantity on open must be equal or greater than give_quantity. It is suggested that you escrow multiples of give_quantity to ease dispenser operation.
 
@@ -1594,11 +1582,11 @@ Opens or closes a dispenser for a given asset at a given rate of main chain asse
         + Default: `None`
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
-    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshi)
+    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
         + Default: `None`
-    + regular_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each non-(bare) multisig output.
+    + regular_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each non-(bare) multisig output.
         + Default: `546`
-    + multisig_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each (bare) multisig output
+    + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
     + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
         + Default: `0`
@@ -1606,22 +1594,20 @@ Opens or closes a dispenser for a given asset at a given rate of main chain asse
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
         + Default: `False`
-    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshi). Leave as default for the server to automatically choose
+    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose
         + Default: `None`
-    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshi). This differs from fee in that this is an upper bound value, which fee is an exact value
+    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshis). This differs from fee in that this is an upper bound value, which fee is an exact value
         + Default: `0`
     + unspent_tx_hash (str, optional) - When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs
         + Default: `None`
     + dust_return_pubkey (str, optional) - The dust return pubkey is used in multi-sig data outputs (as the only real pubkey) to make those the outputs spendable. By default, this pubkey is taken from the pubkey used in the first transaction input. However, it can be overridden here (and is required to be specified if a P2SH input is used and multisig is used as the data output encoding.) If specified, specify the public key (in hex format) where dust will be returned to so that it can be reclaimed. Only valid/useful when used with transactions that utilize multisig data encoding. Note that if this value is set to false, this instructs counterparty-server to use the default dust return pubkey configured at the node level. If this default is not set at the node level, the call will generate an exception
         + Default: `None`
-    + disable_utxo_locks (bool, optional) - By default, UTXO's utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
+    + disable_utxo_locks (bool, optional) - By default, UTXOs utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
         + Default: `False`
     + extended_tx_info (bool, optional) - When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee
         + Default: `False`
     + p2sh_pretx_txid (str, optional) - The previous transaction txid for a two part P2SH message. This txid must be taken from the signed transaction
         + Default: `None`
-    + old_style_api (bool, optional) - Use the old style API
-        + Default: `True`
     + segwit (bool, optional) - Use segwit
         + Default: `False`
 
@@ -1646,7 +1632,7 @@ Opens or closes a dispenser for a given asset at a given rate of main chain asse
         }
     ```
 
-### Compose Dividend [GET /addresses/{address}/compose/dividend{?quantity_per_unit}{?asset}{?dividend_asset}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
+### Compose Dividend [GET /addresses/{address}/compose/dividend{?quantity_per_unit}{?asset}{?dividend_asset}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to issue a dividend to holders of a given asset.
 
@@ -1657,11 +1643,11 @@ Composes a transaction to issue a dividend to holders of a given asset.
     + dividend_asset: `XCP` (str, required) - The asset or subasset that the dividends are paid in 
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
-    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshi)
+    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
         + Default: `None`
-    + regular_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each non-(bare) multisig output.
+    + regular_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each non-(bare) multisig output.
         + Default: `546`
-    + multisig_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each (bare) multisig output
+    + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
     + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
         + Default: `0`
@@ -1669,22 +1655,20 @@ Composes a transaction to issue a dividend to holders of a given asset.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
         + Default: `False`
-    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshi). Leave as default for the server to automatically choose
+    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose
         + Default: `None`
-    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshi). This differs from fee in that this is an upper bound value, which fee is an exact value
+    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshis). This differs from fee in that this is an upper bound value, which fee is an exact value
         + Default: `0`
     + unspent_tx_hash (str, optional) - When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs
         + Default: `None`
     + dust_return_pubkey (str, optional) - The dust return pubkey is used in multi-sig data outputs (as the only real pubkey) to make those the outputs spendable. By default, this pubkey is taken from the pubkey used in the first transaction input. However, it can be overridden here (and is required to be specified if a P2SH input is used and multisig is used as the data output encoding.) If specified, specify the public key (in hex format) where dust will be returned to so that it can be reclaimed. Only valid/useful when used with transactions that utilize multisig data encoding. Note that if this value is set to false, this instructs counterparty-server to use the default dust return pubkey configured at the node level. If this default is not set at the node level, the call will generate an exception
         + Default: `None`
-    + disable_utxo_locks (bool, optional) - By default, UTXO's utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
+    + disable_utxo_locks (bool, optional) - By default, UTXOs utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
         + Default: `False`
     + extended_tx_info (bool, optional) - When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee
         + Default: `False`
     + p2sh_pretx_txid (str, optional) - The previous transaction txid for a two part P2SH message. This txid must be taken from the signed transaction
         + Default: `None`
-    + old_style_api (bool, optional) - Use the old style API
-        + Default: `True`
     + segwit (bool, optional) - Use segwit
         + Default: `False`
 
@@ -1705,7 +1689,7 @@ Composes a transaction to issue a dividend to holders of a given asset.
         }
     ```
 
-### Compose Issuance [GET /addresses/{address}/compose/issuance{?asset}{?quantity}{?transfer_destination}{?divisible}{?lock}{?reset}{?description}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
+### Compose Issuance [GET /addresses/{address}/compose/issuance{?asset}{?quantity}{?transfer_destination}{?divisible}{?lock}{?reset}{?description}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to Issue a new asset, issue more of an existing asset, lock an asset, reset existing supply, or transfer the ownership of an asset.
 
@@ -1725,11 +1709,11 @@ Composes a transaction to Issue a new asset, issue more of an existing asset, lo
         + Default: `None`
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
-    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshi)
+    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
         + Default: `None`
-    + regular_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each non-(bare) multisig output.
+    + regular_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each non-(bare) multisig output.
         + Default: `546`
-    + multisig_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each (bare) multisig output
+    + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
     + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
         + Default: `0`
@@ -1737,22 +1721,20 @@ Composes a transaction to Issue a new asset, issue more of an existing asset, lo
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
         + Default: `False`
-    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshi). Leave as default for the server to automatically choose
+    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose
         + Default: `None`
-    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshi). This differs from fee in that this is an upper bound value, which fee is an exact value
+    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshis). This differs from fee in that this is an upper bound value, which fee is an exact value
         + Default: `0`
     + unspent_tx_hash (str, optional) - When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs
         + Default: `None`
     + dust_return_pubkey (str, optional) - The dust return pubkey is used in multi-sig data outputs (as the only real pubkey) to make those the outputs spendable. By default, this pubkey is taken from the pubkey used in the first transaction input. However, it can be overridden here (and is required to be specified if a P2SH input is used and multisig is used as the data output encoding.) If specified, specify the public key (in hex format) where dust will be returned to so that it can be reclaimed. Only valid/useful when used with transactions that utilize multisig data encoding. Note that if this value is set to false, this instructs counterparty-server to use the default dust return pubkey configured at the node level. If this default is not set at the node level, the call will generate an exception
         + Default: `None`
-    + disable_utxo_locks (bool, optional) - By default, UTXO's utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
+    + disable_utxo_locks (bool, optional) - By default, UTXOs utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
         + Default: `False`
     + extended_tx_info (bool, optional) - When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee
         + Default: `False`
     + p2sh_pretx_txid (str, optional) - The previous transaction txid for a two part P2SH message. This txid must be taken from the signed transaction
         + Default: `None`
-    + old_style_api (bool, optional) - Use the old style API
-        + Default: `True`
     + segwit (bool, optional) - Use segwit
         + Default: `False`
 
@@ -1777,7 +1759,7 @@ Composes a transaction to Issue a new asset, issue more of an existing asset, lo
         }
     ```
 
-### Compose Mpma [GET /addresses/{address}/compose/mpma{?assets}{?destinations}{?quantities}{?memo}{?memo_is_hex}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
+### Compose MPMA [GET /addresses/{address}/compose/mpma{?assets}{?destinations}{?quantities}{?memo}{?memo_is_hex}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to send multiple payments to multiple addresses.
 
@@ -1790,11 +1772,11 @@ Composes a transaction to send multiple payments to multiple addresses.
     + memo_is_hex: `False` (bool, required) - Whether the memo field is a hexadecimal string 
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
-    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshi)
+    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
         + Default: `None`
-    + regular_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each non-(bare) multisig output.
+    + regular_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each non-(bare) multisig output.
         + Default: `546`
-    + multisig_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each (bare) multisig output
+    + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
     + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
         + Default: `0`
@@ -1802,22 +1784,20 @@ Composes a transaction to send multiple payments to multiple addresses.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
         + Default: `False`
-    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshi). Leave as default for the server to automatically choose
+    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose
         + Default: `None`
-    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshi). This differs from fee in that this is an upper bound value, which fee is an exact value
+    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshis). This differs from fee in that this is an upper bound value, which fee is an exact value
         + Default: `0`
     + unspent_tx_hash (str, optional) - When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs
         + Default: `None`
     + dust_return_pubkey (str, optional) - The dust return pubkey is used in multi-sig data outputs (as the only real pubkey) to make those the outputs spendable. By default, this pubkey is taken from the pubkey used in the first transaction input. However, it can be overridden here (and is required to be specified if a P2SH input is used and multisig is used as the data output encoding.) If specified, specify the public key (in hex format) where dust will be returned to so that it can be reclaimed. Only valid/useful when used with transactions that utilize multisig data encoding. Note that if this value is set to false, this instructs counterparty-server to use the default dust return pubkey configured at the node level. If this default is not set at the node level, the call will generate an exception
         + Default: `None`
-    + disable_utxo_locks (bool, optional) - By default, UTXO's utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
+    + disable_utxo_locks (bool, optional) - By default, UTXOs utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
         + Default: `False`
     + extended_tx_info (bool, optional) - When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee
         + Default: `False`
     + p2sh_pretx_txid (str, optional) - The previous transaction txid for a two part P2SH message. This txid must be taken from the signed transaction
         + Default: `None`
-    + old_style_api (bool, optional) - Use the old style API
-        + Default: `True`
     + segwit (bool, optional) - Use segwit
         + Default: `False`
 
@@ -1854,7 +1834,7 @@ Composes a transaction to send multiple payments to multiple addresses.
         }
     ```
 
-### Compose Order [GET /addresses/{address}/compose/order{?give_asset}{?give_quantity}{?get_asset}{?get_quantity}{?expiration}{?fee_required}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
+### Compose Order [GET /addresses/{address}/compose/order{?give_asset}{?give_quantity}{?get_asset}{?get_quantity}{?expiration}{?fee_required}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to place an order on the distributed exchange.
 
@@ -1868,11 +1848,11 @@ Composes a transaction to place an order on the distributed exchange.
     + fee_required: `100` (int, required) - The miners’ fee required to be paid by orders for them to match this one; in BTC; required only if buying BTC (may be zero, though) 
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
-    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshi)
+    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
         + Default: `None`
-    + regular_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each non-(bare) multisig output.
+    + regular_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each non-(bare) multisig output.
         + Default: `546`
-    + multisig_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each (bare) multisig output
+    + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
     + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
         + Default: `0`
@@ -1880,22 +1860,20 @@ Composes a transaction to place an order on the distributed exchange.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
         + Default: `False`
-    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshi). Leave as default for the server to automatically choose
+    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose
         + Default: `None`
-    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshi). This differs from fee in that this is an upper bound value, which fee is an exact value
+    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshis). This differs from fee in that this is an upper bound value, which fee is an exact value
         + Default: `0`
     + unspent_tx_hash (str, optional) - When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs
         + Default: `None`
     + dust_return_pubkey (str, optional) - The dust return pubkey is used in multi-sig data outputs (as the only real pubkey) to make those the outputs spendable. By default, this pubkey is taken from the pubkey used in the first transaction input. However, it can be overridden here (and is required to be specified if a P2SH input is used and multisig is used as the data output encoding.) If specified, specify the public key (in hex format) where dust will be returned to so that it can be reclaimed. Only valid/useful when used with transactions that utilize multisig data encoding. Note that if this value is set to false, this instructs counterparty-server to use the default dust return pubkey configured at the node level. If this default is not set at the node level, the call will generate an exception
         + Default: `None`
-    + disable_utxo_locks (bool, optional) - By default, UTXO's utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
+    + disable_utxo_locks (bool, optional) - By default, UTXOs utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
         + Default: `False`
     + extended_tx_info (bool, optional) - When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee
         + Default: `False`
     + p2sh_pretx_txid (str, optional) - The previous transaction txid for a two part P2SH message. This txid must be taken from the signed transaction
         + Default: `None`
-    + old_style_api (bool, optional) - Use the old style API
-        + Default: `True`
     + segwit (bool, optional) - Use segwit
         + Default: `False`
 
@@ -1919,7 +1897,7 @@ Composes a transaction to place an order on the distributed exchange.
         }
     ```
 
-### Compose Send [GET /addresses/{address}/compose/send{?destination}{?asset}{?quantity}{?memo}{?memo_is_hex}{?use_enhanced_send}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
+### Compose Send [GET /addresses/{address}/compose/send{?destination}{?asset}{?quantity}{?memo}{?memo_is_hex}{?use_enhanced_send}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to send a quantity of an asset to another address.
 
@@ -1936,11 +1914,11 @@ Composes a transaction to send a quantity of an asset to another address.
         + Default: `True`
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
-    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshi)
+    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
         + Default: `None`
-    + regular_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each non-(bare) multisig output.
+    + regular_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each non-(bare) multisig output.
         + Default: `546`
-    + multisig_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each (bare) multisig output
+    + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
     + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
         + Default: `0`
@@ -1948,22 +1926,20 @@ Composes a transaction to send a quantity of an asset to another address.
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
         + Default: `False`
-    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshi). Leave as default for the server to automatically choose
+    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose
         + Default: `None`
-    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshi). This differs from fee in that this is an upper bound value, which fee is an exact value
+    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshis). This differs from fee in that this is an upper bound value, which fee is an exact value
         + Default: `0`
     + unspent_tx_hash (str, optional) - When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs
         + Default: `None`
     + dust_return_pubkey (str, optional) - The dust return pubkey is used in multi-sig data outputs (as the only real pubkey) to make those the outputs spendable. By default, this pubkey is taken from the pubkey used in the first transaction input. However, it can be overridden here (and is required to be specified if a P2SH input is used and multisig is used as the data output encoding.) If specified, specify the public key (in hex format) where dust will be returned to so that it can be reclaimed. Only valid/useful when used with transactions that utilize multisig data encoding. Note that if this value is set to false, this instructs counterparty-server to use the default dust return pubkey configured at the node level. If this default is not set at the node level, the call will generate an exception
         + Default: `None`
-    + disable_utxo_locks (bool, optional) - By default, UTXO's utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
+    + disable_utxo_locks (bool, optional) - By default, UTXOs utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
         + Default: `False`
     + extended_tx_info (bool, optional) - When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee
         + Default: `False`
     + p2sh_pretx_txid (str, optional) - The previous transaction txid for a two part P2SH message. This txid must be taken from the signed transaction
         + Default: `None`
-    + old_style_api (bool, optional) - Use the old style API
-        + Default: `True`
     + segwit (bool, optional) - Use segwit
         + Default: `False`
 
@@ -1987,7 +1963,7 @@ Composes a transaction to send a quantity of an asset to another address.
         }
     ```
 
-### Compose Sweep [GET /addresses/{address}/compose/sweep{?destination}{?flags}{?memo}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?old_style_api}{?segwit}]
+### Compose Sweep [GET /addresses/{address}/compose/sweep{?destination}{?flags}{?memo}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?op_return_value}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
 
 Composes a transaction to Sends all assets and/or transfer ownerships to a destination address.
 
@@ -1998,11 +1974,11 @@ Composes a transaction to Sends all assets and/or transfer ownerships to a desti
     + memo: `FFFF` (str, required) - The Memo associated with this transaction in hex format 
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
-    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshi)
+    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
         + Default: `None`
-    + regular_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each non-(bare) multisig output.
+    + regular_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each non-(bare) multisig output.
         + Default: `546`
-    + multisig_dust_size (int, optional) - Specify (in satoshi) to override the (dust) amount of BTC used for each (bare) multisig output
+    + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
         + Default: `1000`
     + op_return_value (int, optional) - The value (in satoshis) to use with any OP_RETURN outputs in the generated transaction. Defaults to 0. Don't use this, unless you like throwing your money away
         + Default: `0`
@@ -2010,22 +1986,20 @@ Composes a transaction to Sends all assets and/or transfer ownerships to a desti
         + Default: `None`
     + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
         + Default: `False`
-    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshi). Leave as default for the server to automatically choose
+    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose
         + Default: `None`
-    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshi). This differs from fee in that this is an upper bound value, which fee is an exact value
+    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshis). This differs from fee in that this is an upper bound value, which fee is an exact value
         + Default: `0`
     + unspent_tx_hash (str, optional) - When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs
         + Default: `None`
     + dust_return_pubkey (str, optional) - The dust return pubkey is used in multi-sig data outputs (as the only real pubkey) to make those the outputs spendable. By default, this pubkey is taken from the pubkey used in the first transaction input. However, it can be overridden here (and is required to be specified if a P2SH input is used and multisig is used as the data output encoding.) If specified, specify the public key (in hex format) where dust will be returned to so that it can be reclaimed. Only valid/useful when used with transactions that utilize multisig data encoding. Note that if this value is set to false, this instructs counterparty-server to use the default dust return pubkey configured at the node level. If this default is not set at the node level, the call will generate an exception
         + Default: `None`
-    + disable_utxo_locks (bool, optional) - By default, UTXO's utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
+    + disable_utxo_locks (bool, optional) - By default, UTXOs utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
         + Default: `False`
     + extended_tx_info (bool, optional) - When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee
         + Default: `False`
     + p2sh_pretx_txid (str, optional) - The previous transaction txid for a two part P2SH message. This txid must be taken from the signed transaction
         + Default: `None`
-    + old_style_api (bool, optional) - Use the old style API
-        + Default: `True`
     + segwit (bool, optional) - Use segwit
         + Default: `False`
 
@@ -2942,7 +2916,7 @@ Returns the order matches of an order
         }
     ```
 
-### Get Btcpays By Order [GET /orders/{order_hash}/btcpays]
+### Get BTCPays By Order [GET /orders/{order_hash}/btcpays]
 
 Returns the BTC pays of an order
 
@@ -3827,7 +3801,7 @@ Returns a list of unspent outputs for a specific address
         }
     ```
 
-### Pubkeyhash To Pubkey [GET /bitcoin/addresses/{address}/pubkey{?provided_pubkeys}]
+### PubKeyHash To Pubkey [GET /bitcoin/addresses/{address}/pubkey{?provided_pubkeys}]
 
 Get pubkey for an address.
 

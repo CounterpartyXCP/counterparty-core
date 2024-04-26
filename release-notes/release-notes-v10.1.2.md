@@ -16,7 +16,7 @@ To easily migrate to the new API, an equivalence table is available in the docum
 * Fix logging of some raw tracebacks (#1715) 
 
 ## Codebase
-* New REST API
+* New ReST API
 
 ## Command-Line Interface
 
