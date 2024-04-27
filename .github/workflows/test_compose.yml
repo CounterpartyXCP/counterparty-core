@@ -2,7 +2,7 @@ name: Docker Compose
 
 on:
   push:
-    branches: ['develop', 'master']
+    branches: ['develop', 'master', 'testcompose']
     #branches: ['compose']
 
 jobs:
