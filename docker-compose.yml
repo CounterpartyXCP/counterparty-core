@@ -65,6 +65,7 @@ services:
       - "--backend-connect=bitcoind"
       - "--indexd-connect=addrindexrs"
       - "--rpc-host=0.0.0.0"
+      - "--api-host=0.0.0.0"
       - "--catch-up=bootstrap"
       - "--enable-api-v1"
       #- "--verbose"
