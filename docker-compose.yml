@@ -55,8 +55,10 @@ services:
       - data:/root/.bitcoin
       - data:/data
     ports:
-      - "4000:4000"                                        # mainnet
-      - "14000:14000"                                      # testnet
+      - "4000:4000"                                        # mainnet API v2
+      - "14000:14000"                                      # testnet API v2
+      - "4100:4100"                                        # mainnet API v1
+      - "14100:14100"                                      # testnet API v1
     command:
       - start
       - "--${BITCOIN_CHAIN:-main}net"                      # export BITCOIN_CHAIN=test for testnet
@@ -64,6 +66,7 @@ services:
       - "--indexd-connect=addrindexrs"
       - "--rpc-host=0.0.0.0"
       - "--catch-up=bootstrap"
+      - "--enable-api-v1"
       #- "--verbose"
     environment:
       - "XDG_DATA_HOME=/data/"
