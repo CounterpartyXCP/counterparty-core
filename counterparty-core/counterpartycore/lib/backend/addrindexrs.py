@@ -16,7 +16,7 @@ import time
 import bitcoin.wallet
 import requests
 from pkg_resources import parse_version  # noqa: F401
-from requests.exceptions import ConnectionError, ReadTimeout, Timeout
+from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
 
 from counterpartycore.lib import config, exceptions, ledger, util
 
@@ -53,6 +53,7 @@ def rpc_call(payload):
     response = None
 
     tries = 0
+    broken_error = None
     while True:
         try:
             tries += 1
@@ -86,11 +87,16 @@ def rpc_call(payload):
         except KeyboardInterrupt:
             logger.warning("Interrupted by user")
             exit(0)
-        except (Timeout, ReadTimeout, ConnectionError):
+        except (Timeout, ReadTimeout, ConnectionError, ChunkedEncodingError):
             logger.debug(
                 f"Could not connect to backend at `{util.clean_url_for_log(url)}`. (Try {tries})"
             )
             time.sleep(5)
+        except Exception as e:
+            broken_error = e
+            break
+    if broken_error:
+        raise broken_error
 
     # Handle json decode errors
     try:
