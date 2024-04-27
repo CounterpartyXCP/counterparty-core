@@ -44,14 +44,22 @@ done
 
 rm -f ../DOCKER_COMPOSE_TEST_LOCK
 
-server_response=$(curl -X POST http://127.0.0.1:14100/v1/api/ \
+server_response_v1=$(curl -X POST http://127.0.0.1:14100/v1/api/ \
                         --user rpc:rpc \
                         -H 'Content-Type: application/json; charset=UTF-8'\
                         -H 'Accept: application/json, text/javascript' \
                         --data-binary '{ "jsonrpc": "2.0", "id": 0, "method": "get_running_info" }' \
                         --write-out '%{http_code}' --silent --output /dev/null)
 
-if [ "$server_response" -ne 200 ]; then
+if [ "$server_response_v1" -ne 200 ]; then
     echo "Failed to get_running_info"
+    exit 1
+fi
+
+server_response_v2=$(curl http://api:api@127.0.0.1:14000/ \
+                        --write-out '%{http_code}' --silent --output /dev/null)
+
+if [ "$server_response_v2" -ne 200 ]; then
+    echo "Failed to get API v2 root"
     exit 1
 fi
