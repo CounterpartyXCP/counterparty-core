@@ -44,7 +44,7 @@ done
 
 rm -f ../DOCKER_COMPOSE_TEST_LOCK
 
-server_response=$(curl -X POST http://127.0.0.1:14000/v1/api/ \
+server_response=$(curl -X POST http://127.0.0.1:14100/v1/api/ \
                         --user rpc:rpc \
                         -H 'Content-Type: application/json; charset=UTF-8'\
                         -H 'Accept: application/json, text/javascript' \
