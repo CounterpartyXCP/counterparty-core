@@ -19,7 +19,6 @@ import http  # noqa: E402
 import logging  # noqa: E402
 import platform  # noqa: E402, F401
 
-import apsw  # noqa: E402
 import bitcoin as bitcoinlib  # noqa: E402
 from bitcoin.core.script import CScriptInvalidError  # noqa: E402, F401
 from halo import Halo  # noqa: E402
@@ -1270,10 +1269,11 @@ def follow(db):
             )
 
             # Wait
-            db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
+            # db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
             time.sleep(sleep_time)
         else:
             # Wait
             # logger.debug(f"Waiting for new blocks. Block index: {block_index}")
-            db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
+
+            # db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
             time.sleep(config.BACKEND_POLL_INTERVAL)
