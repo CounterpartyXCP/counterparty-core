@@ -64,6 +64,7 @@ services:
       - "--indexd-connect=addrindexrs"
       - "--rpc-host=0.0.0.0"
       - "--catch-up=bootstrap"
+      - "--enable-api-v1"
       #- "--verbose"
     environment:
       - "XDG_DATA_HOME=/data/"
