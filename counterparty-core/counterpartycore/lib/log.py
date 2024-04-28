@@ -15,14 +15,37 @@ logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
 
 
+class SingleLevelFilter(logging.Filter):
+    def __init__(self, passlevel, reject):
+        self.passlevel = passlevel
+        self.reject = reject
+
+    def filter(self, record):
+        if self.reject:
+            return record.levelno != self.passlevel
+        else:
+            return record.levelno == self.passlevel
+
+
+def add_console_logger(log_level, only_info=False):
+    out = sys.stdout if only_info else sys.stderr
+    console = logging.StreamHandler(out)
+    filter = SingleLevelFilter(logging.INFO, not only_info)
+    console.addFilter(filter)
+    console.setLevel(log_level)
+    log_format = "%(log_color)s[%(asctime)s][%(levelname)s] %(message)s%(reset)s"
+    log_colors = {"WARNING": "yellow", "ERROR": "red", "CRITICAL": "red"}
+    formatter = ColoredFormatter(log_format, "%Y-%m-%d %H:%M:%S", log_colors=log_colors)
+    console.setFormatter(formatter)
+    logger.addHandler(console)
+
+
 def set_up(verbose=False, quiet=True, log_file=None, log_in_console=False):
     loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
-    for logger in loggers:
-        logger.handlers.clear()
-        logger.setLevel(logging.CRITICAL)
-        logger.propagate = False
-
-    logger = logging.getLogger(config.LOGGER_NAME)
+    for a_logger in loggers:
+        a_logger.handlers.clear()
+        a_logger.setLevel(logging.CRITICAL)
+        a_logger.propagate = False
 
     log_level = logging.ERROR
     if verbose == quiet:
@@ -43,13 +66,8 @@ def set_up(verbose=False, quiet=True, log_file=None, log_in_console=False):
         logger.addHandler(fileh)
 
     if log_in_console:
-        console = logging.StreamHandler(sys.stdout)
-        console.setLevel(log_level)
-        log_format = "%(log_color)s[%(asctime)s][%(levelname)s] %(message)s%(reset)s"
-        log_colors = {"WARNING": "yellow", "ERROR": "red", "CRITICAL": "red"}
-        formatter = ColoredFormatter(log_format, "%Y-%m-%d %H:%M:%S", log_colors=log_colors)
-        console.setFormatter(formatter)
-        logger.addHandler(console)
+        add_console_logger(log_level, only_info=True)
+        add_console_logger(log_level, only_info=False)
 
     # Log unhandled errors.
     def handle_exception(exc_type, exc_value, exc_traceback):
