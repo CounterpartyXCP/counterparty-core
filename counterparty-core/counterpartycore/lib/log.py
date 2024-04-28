@@ -23,15 +23,14 @@ class SingleLevelFilter(logging.Filter):
     def filter(self, record):
         if self.reject:
             return record.levelno != self.passlevel
-        else:
-            return record.levelno == self.passlevel
+        return record.levelno == self.passlevel
 
 
 def add_console_logger(log_level, only_info=False):
     out = sys.stdout if only_info else sys.stderr
     console = logging.StreamHandler(out)
-    filter = SingleLevelFilter(logging.INFO, not only_info)
-    console.addFilter(filter)
+    log_filter = SingleLevelFilter(logging.INFO, not only_info)
+    console.addFilter(log_filter)
     console.setLevel(log_level)
     log_format = "%(log_color)s[%(asctime)s][%(levelname)s] %(message)s%(reset)s"
     log_colors = {"WARNING": "yellow", "ERROR": "red", "CRITICAL": "red"}
