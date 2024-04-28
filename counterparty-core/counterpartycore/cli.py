@@ -14,6 +14,20 @@ logger = logging.getLogger(config.LOGGER_NAME)
 APP_NAME = "counterparty-server"
 APP_VERSION = config.VERSION_STRING
 
+
+def float_range(min):
+    def float_range_checker(arg):
+        try:
+            f = float(arg)
+        except ValueError as e:
+            raise argparse.ArgumentTypeError("must be a floating point number") from e
+        if f < min:
+            raise argparse.ArgumentTypeError(f"must be in greater than or equal to {min}")
+        return f
+
+    return float_range_checker
+
+
 CONFIG_ARGS = [
     [
         ("-v", "--verbose"),
@@ -112,7 +126,11 @@ CONFIG_ARGS = [
     ],
     [
         ("--backend-poll-interval",),
-        {"type": float, "default": 3.0, "help": "poll interval, in seconds (default: 3.0)"},
+        {
+            "type": float_range(3.0),
+            "default": 3.0,
+            "help": "poll interval, in seconds. Minimum 3.0. (default: 3.0)",
+        },
     ],
     [
         ("--check-asset-conservation",),
