@@ -43,7 +43,7 @@ def set_up(verbose=False, quiet=True, log_file=None, log_in_console=False):
         logger.addHandler(fileh)
 
     if log_in_console:
-        console = logging.StreamHandler()
+        console = logging.StreamHandler(sys.stdout)
         console.setLevel(log_level)
         log_format = "%(log_color)s[%(asctime)s][%(levelname)s] %(message)s%(reset)s"
         log_colors = {"WARNING": "yellow", "ERROR": "red", "CRITICAL": "red"}
