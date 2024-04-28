@@ -14,6 +14,8 @@ To easily migrate to the new API, an equivalence table is available in the docum
 
 ## Bugfixes
 * Fix logging of some raw tracebacks (#1715) 
+* Retry on `ChunkedEncodingError` with AddrIndexRs; break loop on all errors
+
 
 ## Codebase
 * New ReST API
