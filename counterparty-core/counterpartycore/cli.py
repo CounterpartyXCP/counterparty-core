@@ -15,14 +15,14 @@ APP_NAME = "counterparty-server"
 APP_VERSION = config.VERSION_STRING
 
 
-def float_range(min):
+def float_range(min_value):
     def float_range_checker(arg):
         try:
             f = float(arg)
         except ValueError as e:
             raise argparse.ArgumentTypeError("must be a floating point number") from e
-        if f < min:
-            raise argparse.ArgumentTypeError(f"must be in greater than or equal to {min}")
+        if f < min_value:
+            raise argparse.ArgumentTypeError(f"must be in greater than or equal to {min_value}")
         return f
 
     return float_range_checker
