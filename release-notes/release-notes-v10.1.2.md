@@ -19,6 +19,7 @@ To easily migrate to the new API, an equivalence table is available in the docum
 * New ReST API
 
 ## Command-Line Interface
+* Set default and minimum values for Backend Poll Interval to 3.0 seconds
 
 # Credits
 * Ouziel Slama
