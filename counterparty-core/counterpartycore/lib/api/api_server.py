@@ -2,6 +2,7 @@ import argparse
 import logging
 import multiprocessing
 import traceback
+from collections import OrderedDict
 from multiprocessing import Process
 from threading import Timer
 
@@ -35,6 +36,8 @@ auth = HTTPBasicAuth()
 BACKEND_HEIGHT = None
 REFRESH_BACKEND_HEIGHT_INTERVAL = 10
 BACKEND_HEIGHT_TIMER = None
+BLOCK_CACHE = OrderedDict()
+MAX_BLOCK_CACHE_SIZE = 1000
 
 
 def get_db():
@@ -170,10 +173,17 @@ def handle_route(**kwargs):
 
     # call the function
     try:
-        if function_needs_db(route["function"]):
-            result = route["function"](db, **function_args)
+        cache_key = f"{ledger.CURRENT_BLOCK_INDEX}:{request.url}"
+        if cache_key in BLOCK_CACHE:
+            result = BLOCK_CACHE[cache_key]
         else:
-            result = route["function"](**function_args)
+            if function_needs_db(route["function"]):
+                result = route["function"](db, **function_args)
+            else:
+                result = route["function"](**function_args)
+            BLOCK_CACHE[cache_key] = result
+            if len(BLOCK_CACHE) > MAX_BLOCK_CACHE_SIZE:
+                BLOCK_CACHE.popitem(last=False)
     except (exceptions.ComposeError, exceptions.UnpackError) as e:
         return return_result(503, error=str(e))
     except Exception as e:
