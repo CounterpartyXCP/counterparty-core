@@ -34,6 +34,9 @@ class TelemetryCollectorBase(TelemetryCollectorKwargs):
             "SELECT * FROM blocks where block_index = ?", [block_index]
         ).fetchone()
 
+        if not last_block:
+            return None
+
         return {
             "version": version,
             "addrindexrs_version": addrindexrs_version,
@@ -41,7 +44,7 @@ class TelemetryCollectorBase(TelemetryCollectorKwargs):
             "dockerized": is_docker,
             "network": network,
             "force_enabled": force_enabled,
-            "last_block": last_block,
+            **last_block,
             **self.static_attrs,
         }
 

@@ -39,8 +39,9 @@ class TelemetryDaemon:
                 time.sleep(0.5)
                 continue
             data = self.collector.collect()
-            self.client.send(data)
-            last_run = time.time()
+            if data:
+                self.client.send(data)
+                last_run = time.time()
 
     def stop(self):
         logger.info("Stopping telemetry daemon...")

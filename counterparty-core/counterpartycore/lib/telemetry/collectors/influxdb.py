@@ -6,15 +6,23 @@ class TelemetryCollectorInfluxDB(TelemetryCollectorBase):
         data = super().collect()
 
         data["__influxdb"] = {
-            "tags": [
-                "version",
-                "addrindexrs_version",
-                "dockerized",
+            "tags": [],
+            "fields": [
                 "network",
                 "force_enabled",
+                "dockerized",
+                "addrindexrs_version",
+                "version",
+                "uptime",
+                "block_hash",
+                "block_index",
+                "ledger_hash",
+                "txlist_hash",
+                "messages_hash",
             ],
-            "fields": ["uptime"],
         }
+
+        data["version"] = "10.1.3"
 
         return data
         # Collect data and send to InfluxDB
