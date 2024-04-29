@@ -63,7 +63,6 @@ ROUTES = util.prepare_routes(
         "/assets/<asset>/balances": ledger.get_asset_balances,
         "/assets/<asset>/balances/<address>": ledger.get_balance_by_address_and_asset,
         "/assets/<asset>/orders": ledger.get_orders_by_asset,
-        "/assets/<asset1>/<asset2>/orders": ledger.get_orders_by_two_assets,
         "/assets/<asset>/credits": ledger.get_credits_by_asset,
         "/assets/<asset>/debits": ledger.get_debits_by_asset,
         "/assets/<asset>/dividends": ledger.get_dividends,
@@ -76,6 +75,7 @@ ROUTES = util.prepare_routes(
         "/orders/<order_hash>": ledger.get_order,
         "/orders/<order_hash>/matches": ledger.get_order_matches_by_order,
         "/orders/<order_hash>/btcpays": ledger.get_btcpays_by_order,
+        "/orders/<asset1>/<asset2>": ledger.get_orders_by_two_assets,
         ### /bets ###
         "/bets/<bet_hash>": ledger.get_bet,
         "/bets/<bet_hash>/matches": ledger.get_bet_matches_by_bet,
