@@ -13,6 +13,7 @@ from counterpartycore.lib import (
     database,
     exceptions,
     ledger,
+    transaction,
 )
 from counterpartycore.lib.api.routes import ROUTES
 from counterpartycore.lib.api.util import (
@@ -26,6 +27,7 @@ from flask import Flask, request
 from flask import g as flask_globals
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
+from werkzeug.serving import make_server
 
 multiprocessing.set_start_method("spawn", force=True)
 
@@ -192,6 +194,7 @@ def run_api_server(args):
     app = Flask(config.APP_NAME)
     # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
+    transaction.initialise()
     with app.app_context():
         if not config.API_NO_ALLOW_CORS:
             CORS(app)
@@ -211,9 +214,13 @@ def run_api_server(args):
             global BACKEND_HEIGHT  # noqa F811
             BACKEND_HEIGHT = 0
     try:
-        # Start the API server
-        app.run(host=config.API_HOST, port=config.API_PORT, debug=False, threaded=True)
+        # Init the HTTP Server.
+        werkzeug_server = make_server(config.API_HOST, config.API_PORT, app, threaded=True)
+        app.app_context().push()
+        # Run app server (blocking)
+        werkzeug_server.serve_forever()
     finally:
+        werkzeug_server.shutdown()
         # ensure timer is cancelled
         if BACKEND_HEIGHT_TIMER:
             BACKEND_HEIGHT_TIMER.cancel()
