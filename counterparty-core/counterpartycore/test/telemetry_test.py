@@ -1,7 +1,7 @@
 import time
 from unittest.mock import MagicMock, patch
 
-from counterpartycore.lib.telemetry.collector import TelemetryCollectorLive
+from counterpartycore.lib.telemetry.collectors.base import TelemetryCollectorBase
 from counterpartycore.lib.telemetry.daemon import TelemetryDaemon
 
 
@@ -35,9 +35,9 @@ class TestTelemetryDaemon:
         assert collector.collect.call_count > 1
 
 
-class TestTelemetryCollectorLive:
+class TestTelemetryCollectorBase:
     @patch("counterpartycore.lib.telemetry.util.config")
-    @patch("counterpartycore.lib.telemetry.collector.ledger")
+    @patch("counterpartycore.lib.telemetry.collectors.base.ledger")
     def test_collect(self, mock_ledger, mock_config):
         mock_db = MagicMock()
         mock_ledger.last_message.return_value = {"block_index": 12345}
@@ -46,7 +46,7 @@ class TestTelemetryCollectorLive:
         mock_config.TESTNET = False
         mock_config.FORCE = False
 
-        collector = TelemetryCollectorLive(mock_db)
+        collector = TelemetryCollectorBase(mock_db)
         time.sleep(0.1)
         data = collector.collect()
 
@@ -64,12 +64,12 @@ class TestTelemetryCollectorLive:
         assert data["dockerized"] == False  # noqa: E712
         assert data["force_enabled"] == False  # noqa: E712
 
-    @patch("counterpartycore.lib.telemetry.collector.ledger")
-    @patch("counterpartycore.lib.telemetry.collector.os.path.exists")
+    @patch("counterpartycore.lib.telemetry.collectors.base.ledger")
+    @patch("counterpartycore.lib.telemetry.collectors.base.os.path.exists")
     def test_collect_with_docker(self, mock_exists, mock_ledger):
         mock_db = MagicMock()
         mock_exists.return_value = True
         mock_ledger.last_message.return_value = {"block_index": 12345}
-        collector = TelemetryCollectorLive(mock_db)
+        collector = TelemetryCollectorBase(mock_db)
         data = collector.collect()
         assert data["dockerized"] == True  # noqa: E712

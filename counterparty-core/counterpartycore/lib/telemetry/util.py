@@ -1,5 +1,6 @@
 import os
 import time
+from uuid import uuid4
 
 from counterpartycore.lib import config
 
@@ -41,3 +42,22 @@ def is_force_enabled():
 
 def __read_config_with_default(key, default):
     return getattr(config, key, default)
+
+
+TELEMETRY_FILE_PATH = ".counterparty-node-uuid"
+
+
+class ID:
+    def __init__(self):
+        # if file exists, read id from file
+        # else create new id and write to file
+        id = None
+        if os.path.exists(TELEMETRY_FILE_PATH):
+            with open(TELEMETRY_FILE_PATH, "r") as f:
+                id = f.read()
+        else:
+            id = str(uuid4())
+            with open(TELEMETRY_FILE_PATH, "w") as f:
+                f.write(id)
+
+        self.id = id

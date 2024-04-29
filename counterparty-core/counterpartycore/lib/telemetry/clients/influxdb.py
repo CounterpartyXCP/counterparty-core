@@ -1,7 +1,6 @@
-from uuid import uuid4
-
 import influxdb_client
 from counterpartycore.lib import config
+from counterpartycore.lib.telemetry.util import ID
 from influxdb_client.client.write_api import SYNCHRONOUS
 
 from .interface import TelemetryClientI
@@ -11,7 +10,7 @@ class TelemetryClientInfluxDB(TelemetryClientI):
     def __init__(self):
         # UUID for life of process
 
-        self.__id = uuid4()
+        self.__id = ID().id
 
         self.__influxdb_client = influxdb_client.InfluxDBClient(
             url=config.INFLUX_DB_URL,
