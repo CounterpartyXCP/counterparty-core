@@ -2588,6 +2588,101 @@ Returns the orders of an asset
         }
     ```
 
+### Get Orders By Two Assets [GET /assets/{asset1}/{asset2}/orders{?status}]
+
+Returns the orders to exchange two assets
+
++ Parameters
+    + asset1: `NEEDPEPE` (str, required) - The first asset to return
+    + asset2: `XCP` (str, required) - The second asset to return
+    + status: `filled` (str, optional) - The status of the orders to return
+        + Default: `open`
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": [
+                {
+                    "tx_index": 2225134,
+                    "tx_hash": "5b6e0c741d765ebd883dc16eecfb5c340c52865cabf297ca2c1432437c1348b7",
+                    "block_index": 772817,
+                    "source": "1FnM7akSCD8G3fRQHCUEXRCfL35gptsPZB",
+                    "give_asset": "NEEDPEPE",
+                    "give_quantity": 1,
+                    "give_remaining": 0,
+                    "get_asset": "XCP",
+                    "get_quantity": 80800000000,
+                    "get_remaining": 0,
+                    "expiration": 5000,
+                    "expire_index": 777817,
+                    "fee_required": 0,
+                    "fee_required_remaining": 0,
+                    "fee_provided": 5544,
+                    "fee_provided_remaining": 5544,
+                    "status": "filled"
+                },
+                {
+                    "tx_index": 1946026,
+                    "tx_hash": "75dc6ee1f67317e674ef33b617d3a9839ee53bf4a2e8274c88d6202d4d89b59a",
+                    "block_index": 727444,
+                    "source": "1GotRejB6XsGgMsM79TvcypeanDJRJbMtg",
+                    "give_asset": "NEEDPEPE",
+                    "give_quantity": 1,
+                    "give_remaining": 0,
+                    "get_asset": "XCP",
+                    "get_quantity": 70000000000,
+                    "get_remaining": 0,
+                    "expiration": 5000,
+                    "expire_index": 732381,
+                    "fee_required": 0,
+                    "fee_required_remaining": 0,
+                    "fee_provided": 264,
+                    "fee_provided_remaining": 264,
+                    "status": "filled"
+                },
+                {
+                    "tx_index": 2202451,
+                    "tx_hash": "77f568fc6604dbe209d2ea1b0158d7de20723c0178107eb570f4f2a719b0d7c7",
+                    "block_index": 772817,
+                    "source": "184gKLQTtQU29LXbxbYJkUV4if9SmW6v2d",
+                    "give_asset": "XCP",
+                    "give_quantity": 80800000000,
+                    "give_remaining": 0,
+                    "get_asset": "NEEDPEPE",
+                    "get_quantity": 1,
+                    "get_remaining": 0,
+                    "expiration": 5000,
+                    "expire_index": 773300,
+                    "fee_required": 0,
+                    "fee_required_remaining": 0,
+                    "fee_provided": 264,
+                    "fee_provided_remaining": 264,
+                    "status": "filled"
+                },
+                {
+                    "tx_index": 1946587,
+                    "tx_hash": "b747f290cbbad6faa1c1c05d5c6d001b5a3ef487027bb0d4eefcdc9f6e865c39",
+                    "block_index": 727444,
+                    "source": "1AtcSh7uxenQ6AR5xqr6agAegWRUF5N4uh",
+                    "give_asset": "XCP",
+                    "give_quantity": 70000000000,
+                    "give_remaining": 0,
+                    "get_asset": "NEEDPEPE",
+                    "get_quantity": 1,
+                    "get_remaining": 0,
+                    "expiration": 5000,
+                    "expire_index": 732444,
+                    "fee_required": 0,
+                    "fee_required_remaining": 0,
+                    "fee_provided": 792,
+                    "fee_provided_remaining": 792,
+                    "status": "filled"
+                }
+            ]
+        }
+    ```
+
 ### Get Credits By Asset [GET /assets/{asset}/credits{?limit}{?offset}]
 
 Returns the credits of an asset
