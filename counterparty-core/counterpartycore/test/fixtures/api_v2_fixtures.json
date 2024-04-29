@@ -979,6 +979,9 @@
     "http://api:api@localhost:10009/assets/NODIVISIBLE/orders": {
         "result": []
     },
+    "http://api:api@localhost:10009/assets/NODIVISIBLE/XCP/orders": {
+        "result": []
+    },
     "http://api:api@localhost:10009/assets/NODIVISIBLE/credits": {
         "result": [
             {
