@@ -288,7 +288,7 @@ CONFIG_ARGS = [
         {
             "action": "store_true",
             "default": False,
-            "help": "Do not send anonymous node telemetry data to telemerty server",
+            "help": "Do not send anonymous node telemetry data to telemetry server",
         },
     ],
 ]
