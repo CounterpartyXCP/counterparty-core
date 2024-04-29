@@ -295,6 +295,7 @@ def api_server_v2(request, cp_server):
         "no_refresh_backend_height": True,
         "no_mempool": False,
         "skip_db_check": False,
+        "no_telemetry": True,
     }
     server_config = (
         default_config
