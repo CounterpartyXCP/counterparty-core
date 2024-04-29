@@ -1164,6 +1164,9 @@
     "http://api:api@localhost:10009/orders/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/btcpays": {
         "result": []
     },
+    "http://api:api@localhost:10009/orders/NODIVISIBLE/XCP": {
+        "result": []
+    },
     "http://api:api@localhost:10009/bets/e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42": {
         "result": []
     },

@@ -25,6 +25,8 @@ def test_api_v2(request):
     block_index = 310491
     address = ADDR[0]
     asset = "NODIVISIBLE"
+    asset1 = asset
+    asset2 = "XCP"
     tx_hash = "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
     order_hash = "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
     bet_hash = "e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42"
@@ -44,7 +46,7 @@ def test_api_v2(request):
         url = f"{API_ROOT}{route}"
         url = url.replace("<int:block_index>", str(block_index))
         url = url.replace("<address>", address)
-        url = url.replace("<asset>", asset)
+        url = url.replace("<asset>", asset).replace("<asset1>", asset1).replace("<asset2>", asset2)
         url = url.replace("<event>", event)
         url = url.replace("<int:event_index>", str(event_index))
         url = url.replace("<order_hash>", order_hash)

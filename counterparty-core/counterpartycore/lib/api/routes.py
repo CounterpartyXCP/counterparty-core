@@ -75,6 +75,7 @@ ROUTES = util.prepare_routes(
         "/orders/<order_hash>": ledger.get_order,
         "/orders/<order_hash>/matches": ledger.get_order_matches_by_order,
         "/orders/<order_hash>/btcpays": ledger.get_btcpays_by_order,
+        "/orders/<asset1>/<asset2>": ledger.get_orders_by_two_assets,
         ### /bets ###
         "/bets/<bet_hash>": ledger.get_bet,
         "/bets/<bet_hash>/matches": ledger.get_bet_matches_by_bet,
