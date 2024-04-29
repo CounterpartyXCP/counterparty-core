@@ -35,7 +35,7 @@ docker build -t counterparty/counterparty:$VERSION .
 # sudo rm -rf ~/.local/share/counterparty-docker-data/counterparty/*
 
 # re-start containers
-BITCOIN_CHAIN=test docker compose up -d
+docker compose --profile testnet up -d
 
 while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Ready for queries')" = "" ]; do
     echo "Waiting for counterparty-core to be ready"
