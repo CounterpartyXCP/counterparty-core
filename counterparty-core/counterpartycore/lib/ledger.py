@@ -2245,6 +2245,27 @@ def get_orders_by_asset(db, asset: str, status: str = "open"):
     return cursor.fetchall()
 
 
+def get_orders_by_two_assets(db, asset1: str, asset2: str, status: str = "open"):
+    """
+    Returns the orders to exchange two assets
+    :param str asset1: The first asset to return (e.g. NEEDPEPE)
+    :param str asset2: The second asset to return (e.g. XCP)
+    :param str status: The status of the orders to return (e.g. filled)
+    """
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM (
+            SELECT *, MAX(rowid)
+            FROM orders
+            WHERE (give_asset = ? AND get_asset = ?) OR (give_asset = ? AND get_asset = ?)
+            GROUP BY tx_hash
+        ) WHERE status = ?
+    """
+    bindings = (asset1, asset2, asset2, asset1, status)
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
 def get_order_matches_by_order(db, order_hash: str, status: str = "pending"):
     """
     Returns the order matches of an order

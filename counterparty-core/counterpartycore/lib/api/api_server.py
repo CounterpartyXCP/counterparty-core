@@ -2,6 +2,7 @@ import argparse
 import logging
 import multiprocessing
 import traceback
+from collections import OrderedDict
 from multiprocessing import Process
 from threading import Timer
 
@@ -13,6 +14,7 @@ from counterpartycore.lib import (
     database,
     exceptions,
     ledger,
+    transaction,
 )
 from counterpartycore.lib.api.routes import ROUTES
 from counterpartycore.lib.api.util import (
@@ -26,6 +28,7 @@ from flask import Flask, request
 from flask import g as flask_globals
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
+from werkzeug.serving import make_server
 
 multiprocessing.set_start_method("spawn", force=True)
 
@@ -35,6 +38,8 @@ auth = HTTPBasicAuth()
 BACKEND_HEIGHT = None
 REFRESH_BACKEND_HEIGHT_INTERVAL = 10
 BACKEND_HEIGHT_TIMER = None
+BLOCK_CACHE = OrderedDict()
+MAX_BLOCK_CACHE_SIZE = 1000
 
 
 def get_db():
@@ -170,10 +175,17 @@ def handle_route(**kwargs):
 
     # call the function
     try:
-        if function_needs_db(route["function"]):
-            result = route["function"](db, **function_args)
+        cache_key = f"{ledger.CURRENT_BLOCK_INDEX}:{request.url}"
+        if cache_key in BLOCK_CACHE:
+            result = BLOCK_CACHE[cache_key]
         else:
-            result = route["function"](**function_args)
+            if function_needs_db(route["function"]):
+                result = route["function"](db, **function_args)
+            else:
+                result = route["function"](**function_args)
+            BLOCK_CACHE[cache_key] = result
+            if len(BLOCK_CACHE) > MAX_BLOCK_CACHE_SIZE:
+                BLOCK_CACHE.popitem(last=False)
     except (exceptions.ComposeError, exceptions.UnpackError) as e:
         return return_result(503, error=str(e))
     except Exception as e:
@@ -192,6 +204,7 @@ def run_api_server(args):
     app = Flask(config.APP_NAME)
     # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
+    transaction.initialise()
     with app.app_context():
         if not config.API_NO_ALLOW_CORS:
             CORS(app)
@@ -211,9 +224,13 @@ def run_api_server(args):
             global BACKEND_HEIGHT  # noqa F811
             BACKEND_HEIGHT = 0
     try:
-        # Start the API server
-        app.run(host=config.API_HOST, port=config.API_PORT, debug=False, threaded=True)
+        # Init the HTTP Server.
+        werkzeug_server = make_server(config.API_HOST, config.API_PORT, app, threaded=True)
+        app.app_context().push()
+        # Run app server (blocking)
+        werkzeug_server.serve_forever()
     finally:
+        werkzeug_server.shutdown()
         # ensure timer is cancelled
         if BACKEND_HEIGHT_TIMER:
             BACKEND_HEIGHT_TIMER.cancel()
