@@ -19,7 +19,7 @@ cd counterparty-core
 VERSION=$(cat docker-compose.yml | grep 'image: counterparty/counterparty:' | awk -F ":" '{print $3}')
 
 # stop the running containers
-docker compose stop
+docker compose --profile testnet stop
 
 # remove counterparty-core container
 #docker rm counterparty-core-counterparty-core-1
@@ -37,7 +37,7 @@ docker build -t counterparty/counterparty:$VERSION .
 # re-start containers
 docker compose --profile testnet up -d
 
-while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Ready for queries')" = "" ]; do
+while [ "$(docker compose --profile testnet logs counterparty-core 2>&1 | grep 'Ready for queries')" = "" ]; do
     echo "Waiting for counterparty-core to be ready"
     sleep 1
 done
