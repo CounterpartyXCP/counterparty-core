@@ -124,8 +124,9 @@ def prepare_args(route, **kwargs):
         arg_name = arg["name"]
         if arg_name in function_args:
             continue
+
         str_arg = request.args.get(arg_name)
-        if str_arg.lower() == "none":
+        if str_arg is not None and str_arg.lower() == "none":
             str_arg = None
         if str_arg is None and arg["required"]:
             raise ValueError(f"Missing required parameter: {arg_name}")
