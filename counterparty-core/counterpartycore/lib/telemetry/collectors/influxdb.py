@@ -5,6 +5,9 @@ class TelemetryCollectorInfluxDB(TelemetryCollectorBase):
     def collect(self):
         data = super().collect()
 
+        if data is None:
+            return None
+
         data["__influxdb"] = {
             "tags": [],
             "fields": [
@@ -21,8 +24,6 @@ class TelemetryCollectorInfluxDB(TelemetryCollectorBase):
                 "messages_hash",
             ],
         }
-
-        data["version"] = "10.1.3"
 
         return data
         # Collect data and send to InfluxDB
