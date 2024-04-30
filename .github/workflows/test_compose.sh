@@ -37,7 +37,7 @@ docker build -t counterparty/counterparty:$VERSION .
 # re-start containers
 docker compose --profile testnet up -d
 
-while [ "$(docker compose --profile testnet logs counterparty-core 2>&1 | grep 'Ready for queries')" = "" ]; do
+while [ "$(docker compose --profile testnet logs counterparty-core-testnet 2>&1 | grep 'Ready for queries')" = "" ]; do
     echo "Waiting for counterparty-core to be ready"
     sleep 1
 done
