@@ -6,9 +6,9 @@
 
 To continue using the old API you must:
 - start `counterparty-server` with the flag `--enable-api-v1`
-- replace port `4100` with port `4000` for mainnet and port `14000` with port `14100` for testnet
+- use port `4100` for mainnet and port `14100` for testnet
 - prefix all endpoints with `/v1/`
-To easily migrate to the new API, an equivalence table is available in the documentation
+To easily migrate to the new API, an equivalence table is available in the documentation.
 
 # ChangeLog
 
@@ -18,11 +18,11 @@ To easily migrate to the new API, an equivalence table is available in the docum
 
 
 ## Codebase
-* New ReST API
+* Implement API v2
 
 ## Command-Line Interface
 * Set default and minimum values for Backend Poll Interval to 3.0 seconds
-* Updates `docker-compose.yml` to be able to run a `mainnet` node and a `testnet` node on the same machine
+* Update `docker-compose.yml` to use different profiles for `mainnet` and `testnet`
 
 # Credits
 * Ouziel Slama
