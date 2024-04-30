@@ -85,7 +85,7 @@ services:
       #- "--verbose"
 
   ###################
-  # Tesnet Services #
+  # Testnet Services #
   ###################
 
   bitcoind-testnet:
