@@ -16,7 +16,7 @@ jobs:
   macos-x86_64:
     runs-on: macos-12 #x86_64
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # Install dependencies
   
@@ -72,7 +72,7 @@ jobs:
       # Upload wheels
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: wheels
           path: dist
@@ -80,7 +80,7 @@ jobs:
   macos-m1:
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # Install dependencies
   
@@ -134,7 +134,7 @@ jobs:
       # Upload wheels
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: wheels
           path: dist
@@ -142,7 +142,7 @@ jobs:
   ubuntu-22-04:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # Install dependencies
   
@@ -194,7 +194,7 @@ jobs:
       # Upload wheels
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: wheels
           path: dist
