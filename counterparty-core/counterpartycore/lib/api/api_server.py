@@ -175,7 +175,12 @@ def handle_route(**kwargs):
 
     # call the function
     try:
+        # cache everything for one block
         cache_key = f"{ledger.CURRENT_BLOCK_INDEX}:{request.url}"
+        # except for blocks and transactions cached forever
+        if request.path.startswith("/blocks/") or request.path.startswith("/transactions/"):
+            cache_key = request.url
+
         if cache_key in BLOCK_CACHE:
             result = BLOCK_CACHE[cache_key]
         else:
