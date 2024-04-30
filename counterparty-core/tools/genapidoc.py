@@ -183,11 +183,14 @@ for path, route in server.routes.ROUTES.items():
     if TARGET == "docusaurus":
         md += f"[GET `{blueprint_path}`]\n\n"
     else:
+        first_query_arg = True
         for arg in route["args"]:
             if f"{{{arg['name']}}}" in blueprint_path:
                 continue
             else:
-                blueprint_path += f"{{?{arg['name']}}}"
+                prefix = "?" if first_query_arg else "&"
+                first_query_arg = False
+                blueprint_path += f"{{{prefix}{arg['name']}}}"
         md += f"[GET {blueprint_path}]\n\n"
 
     md += route["description"].strip()

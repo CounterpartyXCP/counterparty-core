@@ -1,0 +1,17 @@
+color: true
+init: true
+names: false
+only: []
+reporter: apiary
+output: []
+header: []
+sorted: false
+user: api:api
+inline-errors: false
+details: false
+method: []
+loglevel: warning
+path: []
+config: ./dredd.yml
+blueprint: apiary.apib
+endpoint: 'http://127.0.0.1:4000'

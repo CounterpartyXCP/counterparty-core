@@ -64,7 +64,7 @@ Returns server information and the list of documented routes in JSON format.
 
 ## Group Blocks
 
-### Get Blocks [GET /blocks{?last}{?limit}]
+### Get Blocks [GET /blocks{?last}{&limit}]
 
 Returns the list of the last ten blocks
 
@@ -525,7 +525,7 @@ Returns the issuances of a block
         }
     ```
 
-### Get Sends By Block [GET /blocks/{block_index}/sends{?limit}{?offset}]
+### Get Sends By Block [GET /blocks/{block_index}/sends{?limit}{&offset}]
 
 Returns the sends of a block
 
@@ -624,7 +624,7 @@ Returns the sweeps of a block
 
 ## Group Transactions
 
-### Info [GET /transactions/info{?rawtransaction}{?block_index}]
+### Info [GET /transactions/info{?rawtransaction}{&block_index}]
 
 Returns Counterparty information from a raw transaction in hex format.
 
@@ -665,7 +665,7 @@ Returns Counterparty information from a raw transaction in hex format.
         }
     ```
 
-### Unpack [GET /transactions/unpack{?datahex}{?block_index}]
+### Unpack [GET /transactions/unpack{?datahex}{&block_index}]
 
 Unpacks Counterparty data in hex format and returns the message type and data.
 
@@ -787,7 +787,7 @@ Returns the balance of an address and asset
         }
     ```
 
-### Get Credits By Address [GET /addresses/{address}/credits{?limit}{?offset}]
+### Get Credits By Address [GET /addresses/{address}/credits{?limit}{&offset}]
 
 Returns the credits of an address
 
@@ -816,7 +816,7 @@ Returns the credits of an address
         }
     ```
 
-### Get Debits By Address [GET /addresses/{address}/debits{?limit}{?offset}]
+### Get Debits By Address [GET /addresses/{address}/debits{?limit}{&offset}]
 
 Returns the debits of an address
 
@@ -910,7 +910,7 @@ Returns the bets of a feed
         }
     ```
 
-### Get Broadcasts By Source [GET /addresses/{address}/broadcasts{?status}{?order_by}]
+### Get Broadcasts By Source [GET /addresses/{address}/broadcasts{?status}{&order_by}]
 
 Returns the broadcasts of a source
 
@@ -979,7 +979,7 @@ Returns the burns of an address
         }
     ```
 
-### Get Send By Address [GET /addresses/{address}/sends{?limit}{?offset}]
+### Get Send By Address [GET /addresses/{address}/sends{?limit}{&offset}]
 
 Returns the sends of an address
 
@@ -1011,7 +1011,7 @@ Returns the sends of an address
         }
     ```
 
-### Get Receive By Address [GET /addresses/{address}/receives{?limit}{?offset}]
+### Get Receive By Address [GET /addresses/{address}/receives{?limit}{&offset}]
 
 Returns the receives of an address
 
@@ -1072,7 +1072,7 @@ Returns the sends of an address and asset
         }
     ```
 
-### Get Receive By Address And Asset [GET /addresses/{address}/receives/{asset}{?limit}{?offset}]
+### Get Receive By Address And Asset [GET /addresses/{address}/receives/{asset}{?limit}{&offset}]
 
 Returns the receives of an address and asset
 
@@ -1224,7 +1224,7 @@ By default the default value of the `encoding` parameter detailed above is `auto
     - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
 
 
-### Compose Bet [GET /addresses/{address}/compose/bet{?feed_address}{?bet_type}{?deadline}{?wager_quantity}{?counterwager_quantity}{?expiration}{?leverage}{?target_value}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Bet [GET /addresses/{address}/compose/bet{?feed_address}{&bet_type}{&deadline}{&wager_quantity}{&counterwager_quantity}{&expiration}{&leverage}{&target_value}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}]
 
 Composes a transaction to issue a bet against a feed.
 
@@ -1312,7 +1312,7 @@ By default the default value of the `encoding` parameter detailed above is `auto
     - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
 
 
-### Compose Broadcast [GET /addresses/{address}/compose/broadcast{?timestamp}{?value}{?fee_fraction}{?text}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Broadcast [GET /addresses/{address}/compose/broadcast{?timestamp}{&value}{&fee_fraction}{&text}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}]
 
 Composes a transaction to broadcast textual and numerical information to the network.
 
@@ -1390,7 +1390,7 @@ By default the default value of the `encoding` parameter detailed above is `auto
     - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
 
 
-### Compose BTCPay [GET /addresses/{address}/compose/btcpay{?order_match_id}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose BTCPay [GET /addresses/{address}/compose/btcpay{?order_match_id}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}]
 
 Composes a transaction to pay for a BTC order match.
 
@@ -1462,7 +1462,7 @@ By default the default value of the `encoding` parameter detailed above is `auto
     - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
 
 
-### Compose Burn [GET /addresses/{address}/compose/burn{?quantity}{?overburn}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Burn [GET /addresses/{address}/compose/burn{?quantity}{&overburn}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}]
 
 Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, possible between blocks 278310 and 283810; on testnet it is still available).
 
@@ -1537,7 +1537,7 @@ By default the default value of the `encoding` parameter detailed above is `auto
     - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
 
 
-### Compose Cancel [GET /addresses/{address}/compose/cancel{?offer_hash}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Cancel [GET /addresses/{address}/compose/cancel{?offer_hash}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}]
 
 Composes a transaction to cancel an open order or bet.
 
@@ -1609,7 +1609,7 @@ By default the default value of the `encoding` parameter detailed above is `auto
     - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
 
 
-### Compose Destroy [GET /addresses/{address}/compose/destroy{?asset}{?quantity}{?tag}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Destroy [GET /addresses/{address}/compose/destroy{?asset}{&quantity}{&tag}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}]
 
 Composes a transaction to destroy a quantity of an asset.
 
@@ -1685,7 +1685,7 @@ By default the default value of the `encoding` parameter detailed above is `auto
     - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
 
 
-### Compose Dispenser [GET /addresses/{address}/compose/dispenser{?asset}{?give_quantity}{?escrow_quantity}{?mainchainrate}{?status}{?open_address}{?oracle_address}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Dispenser [GET /addresses/{address}/compose/dispenser{?asset}{&give_quantity}{&escrow_quantity}{&mainchainrate}{&status}{&open_address}{&oracle_address}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}]
 
 Opens or closes a dispenser for a given asset at a given rate of main chain asset (BTC). Escrowed quantity on open must be equal or greater than give_quantity. It is suggested that you escrow multiples of give_quantity to ease dispenser operation.
 
@@ -1771,7 +1771,7 @@ By default the default value of the `encoding` parameter detailed above is `auto
     - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
 
 
-### Compose Dividend [GET /addresses/{address}/compose/dividend{?quantity_per_unit}{?asset}{?dividend_asset}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Dividend [GET /addresses/{address}/compose/dividend{?quantity_per_unit}{&asset}{&dividend_asset}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}]
 
 Composes a transaction to issue a dividend to holders of a given asset.
 
@@ -1847,7 +1847,7 @@ By default the default value of the `encoding` parameter detailed above is `auto
     - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
 
 
-### Compose Issuance [GET /addresses/{address}/compose/issuance{?asset}{?quantity}{?transfer_destination}{?divisible}{?lock}{?reset}{?description}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Issuance [GET /addresses/{address}/compose/issuance{?asset}{&quantity}{&transfer_destination}{&divisible}{&lock}{&reset}{&description}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}]
 
 Composes a transaction to Issue a new asset, issue more of an existing asset, lock an asset, reset existing supply, or transfer the ownership of an asset.
 
@@ -1936,7 +1936,7 @@ By default the default value of the `encoding` parameter detailed above is `auto
     - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
 
 
-### Compose MPMA [GET /addresses/{address}/compose/mpma{?assets}{?destinations}{?quantities}{?memo}{?memo_is_hex}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose MPMA [GET /addresses/{address}/compose/mpma{?assets}{&destinations}{&quantities}{&memo}{&memo_is_hex}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}]
 
 Composes a transaction to send multiple payments to multiple addresses.
 
@@ -2030,7 +2030,7 @@ By default the default value of the `encoding` parameter detailed above is `auto
     - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
 
 
-### Compose Order [GET /addresses/{address}/compose/order{?give_asset}{?give_quantity}{?get_asset}{?get_quantity}{?expiration}{?fee_required}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Order [GET /addresses/{address}/compose/order{?give_asset}{&give_quantity}{&get_asset}{&get_quantity}{&expiration}{&fee_required}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}]
 
 Composes a transaction to place an order on the distributed exchange.
 
@@ -2112,7 +2112,7 @@ By default the default value of the `encoding` parameter detailed above is `auto
     - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
 
 
-### Compose Send [GET /addresses/{address}/compose/send{?destination}{?asset}{?quantity}{?memo}{?memo_is_hex}{?use_enhanced_send}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Send [GET /addresses/{address}/compose/send{?destination}{&asset}{&quantity}{&memo}{&memo_is_hex}{&use_enhanced_send}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}]
 
 Composes a transaction to send a quantity of an asset to another address.
 
@@ -2197,7 +2197,7 @@ By default the default value of the `encoding` parameter detailed above is `auto
     - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
 
 
-### Compose Sweep [GET /addresses/{address}/compose/sweep{?destination}{?flags}{?memo}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}]
+### Compose Sweep [GET /addresses/{address}/compose/sweep{?destination}{&flags}{&memo}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}]
 
 Composes a transaction to Sends all assets and/or transfer ownerships to a destination address.
 
@@ -2254,7 +2254,7 @@ Composes a transaction to Sends all assets and/or transfer ownerships to a desti
 
 ## Group Assets
 
-### Get Valid Assets [GET /assets{?offset}{?limit}]
+### Get Valid Assets [GET /assets{?offset}{&limit}]
 
 Returns the valid assets
 
@@ -2588,7 +2588,7 @@ Returns the orders of an asset
         }
     ```
 
-### Get Credits By Asset [GET /assets/{asset}/credits{?limit}{?offset}]
+### Get Credits By Asset [GET /assets/{asset}/credits{?limit}{&offset}]
 
 Returns the credits of an asset
 
@@ -2617,7 +2617,7 @@ Returns the credits of an asset
         }
     ```
 
-### Get Debits By Asset [GET /assets/{asset}/debits{?limit}{?offset}]
+### Get Debits By Asset [GET /assets/{asset}/debits{?limit}{&offset}]
 
 Returns the debits of an asset
 
@@ -2867,7 +2867,7 @@ Returns the issuances of an asset
         }
     ```
 
-### Get Sends By Asset [GET /assets/{asset}/sends{?limit}{?offset}]
+### Get Sends By Asset [GET /assets/{asset}/sends{?limit}{&offset}]
 
 Returns the sends of an asset
 
@@ -3379,7 +3379,7 @@ Returns the resolutions of a bet
 
 ## Group Burns
 
-### Get All Burns [GET /burns{?status}{?offset}{?limit}]
+### Get All Burns [GET /burns{?status}{&offset}{&limit}]
 
 Returns the burns
 
@@ -3520,7 +3520,7 @@ Returns the dispenses of a dispenser
 
 ## Group Events
 
-### Get All Events [GET /events{?last}{?limit}]
+### Get All Events [GET /events{?last}{&limit}]
 
 Returns all events
 
@@ -3835,7 +3835,7 @@ Returns the event counts of all blocks
         }
     ```
 
-### Get Events By Name [GET /events/{event}{?last}{?limit}]
+### Get Events By Name [GET /events/{event}{?last}{&limit}]
 
 Returns the events filtered by event name
 
@@ -3952,7 +3952,7 @@ Health check route.
 
 ## Group Bitcoin
 
-### Get Transactions By Address [GET /bitcoin/addresses/{address}/transactions{?unconfirmed}{?only_tx_hashes}]
+### Get Transactions By Address [GET /bitcoin/addresses/{address}/transactions{?unconfirmed}{&only_tx_hashes}]
 
 Returns all transactions involving a given address
 
@@ -4028,7 +4028,7 @@ Get the oldest transaction for an address.
         }
     ```
 
-### Get Unspent Txouts [GET /bitcoin/addresses/{address}/utxos{?unconfirmed}{?unspent_tx_hash}]
+### Get Unspent Txouts [GET /bitcoin/addresses/{address}/utxos{?unconfirmed}{&unspent_tx_hash}]
 
 Returns a list of unspent outputs for a specific address
 
@@ -4203,7 +4203,7 @@ Get a transaction from the blockchain
         }
     ```
 
-### Fee Per Kb [GET /bitcoin/estimatesmartfee{?conf_target}{?mode}]
+### Fee Per Kb [GET /bitcoin/estimatesmartfee{?conf_target}{&mode}]
 
 Get the fee per kilobyte for a transaction to be confirmed in `conf_target` blocks.
 
