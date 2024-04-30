@@ -1,5 +1,3 @@
-version: '3' 
-
 x-bitcoind-common: &bitcoind-common
   image: kylemanna/bitcoind:latest
   volumes:
