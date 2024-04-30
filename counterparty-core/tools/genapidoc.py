@@ -3,11 +3,13 @@ import os
 import sys
 
 import requests
+import yaml
 from counterpartycore import server
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 API_DOC_FILE = os.path.join(CURR_DIR, "../../../Documentation/docs/advanced/api-v2/rest.md")
 API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../apiary.apib")
+DREDD_FILE = os.path.join(CURR_DIR, "../../dredd.yml")
 CACHE_FILE = os.path.join(CURR_DIR, "apicache.json")
 API_ROOT = "http://api:api@localhost:4000"
 USE_API_CACHE = True
@@ -76,6 +78,23 @@ By default the default value of the `encoding` parameter detailed above is `auto
 
 """
 }
+
+DREDD_CONFIG = {
+    "user": "api:api",
+    "loglevel": "error",
+    "path": [],
+    "blueprint": "apiary.apib",
+    "endpoint": "http://127.0.0.1:4000",
+    "only": [],
+}
+
+
+def include_in_dredd(group, path):
+    if group in ["Compose", "bitcoin", "mempool"]:
+        return False
+    if path in ["/events/counts"]:
+        return False
+    return True
 
 
 def gen_groups_toc():
@@ -179,7 +198,13 @@ for path, route in server.routes.ROUTES.items():
     title = title.replace("Pubkeyhash", "PubKeyHash")
     title = title.replace("Mpma", "MPMA")
     title = title.replace("Btcpay", "BTCPay")
-    md += f"\n### {title.strip()} "
+    title = title.strip()
+
+    if include_in_dredd(current_group, blueprint_path):
+        dredd_name = f"{current_group.capitalize()} > {title} > {title}"
+        DREDD_CONFIG["only"].append(dredd_name)
+
+    md += f"\n### {title} "
     if TARGET == "docusaurus":
         md += f"[GET `{blueprint_path}`]\n\n"
     else:
@@ -230,3 +255,7 @@ with open(CACHE_FILE, "w") as f:
 with open(TARGET_FILE, "w") as f:
     f.write(md)
     print(f"API documentation written to {TARGET_FILE}")
+
+with open(DREDD_FILE, "w") as f:
+    yaml.dump(DREDD_CONFIG, f)
+    print(f"Dredd file written to {DREDD_FILE}")
