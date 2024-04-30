@@ -74,7 +74,7 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels
+          name: macos-x86_64-wheels
           path: dist
 
   macos-m1:
@@ -136,7 +136,7 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels
+          name: macos-m1-wheels
           path: dist
   
   ubuntu-22-04:
@@ -196,5 +196,5 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels
+          name: ubuntu-22-04-wheels
           path: dist
