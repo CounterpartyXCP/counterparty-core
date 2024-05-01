@@ -883,6 +883,8 @@ CREATE INDEX credits_address_idx ON credits (address)
         ;
 CREATE INDEX credits_asset_idx ON credits (asset)
         ;
+CREATE INDEX credits_block_index_idx ON credits (block_index)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -944,6 +946,8 @@ CREATE TRIGGER block_update_debits
 CREATE INDEX debits_address_idx ON debits (address)
         ;
 CREATE INDEX debits_asset_idx ON debits (asset)
+        ;
+CREATE INDEX debits_block_index_idx ON debits (block_index)
         ;
 
 COMMIT TRANSACTION;
