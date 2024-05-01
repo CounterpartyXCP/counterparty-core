@@ -154,6 +154,61 @@ def prepare_args(route, **kwargs):
     return function_args
 
 
+def execute_api_function(db, route, function_args):
+    # cache everything for one block
+    cache_key = f"{ledger.CURRENT_BLOCK_INDEX}:{request.url}"
+    # except for blocks and transactions cached forever
+    if request.path.startswith("/blocks/") or request.path.startswith("/transactions/"):
+        cache_key = request.url
+
+    if cache_key in BLOCK_CACHE:
+        print("CACHE HIT")
+        result = BLOCK_CACHE[cache_key]
+    else:
+        if function_needs_db(route["function"]):
+            result = route["function"](db, **function_args)
+        else:
+            result = route["function"](**function_args)
+        BLOCK_CACHE[cache_key] = result
+        if len(BLOCK_CACHE) > MAX_BLOCK_CACHE_SIZE:
+            BLOCK_CACHE.popitem(last=False)
+
+    return result
+
+
+def inject_issuance(db, result):
+    # gather asset list
+    asset_list = []
+    result_list = result if isinstance(result, list) else [result]
+    for item in result_list:
+        if "asset_longname" in item:
+            continue
+        for field_name in ["asset", "give_asset", "get_asset"]:
+            if field_name in item:
+                asset_list.append(item[field_name])
+
+    # get asset issuances
+    issuance_by_asset = ledger.get_assets_last_issuance(db, asset_list)
+
+    # inject issuance
+    if isinstance(result, list):
+        for item in result:
+            for field_name in ["asset", "give_asset", "get_asset"]:
+                if field_name in item and item[field_name] in issuance_by_asset:
+                    item[field_name + "_issuance"] = issuance_by_asset[item[field_name]]
+    elif isinstance(result, dict):
+        for field_name in ["asset", "give_asset", "get_asset"]:
+            if field_name in result and result[field_name] in issuance_by_asset:
+                result[field_name + "_issuance"] = issuance_by_asset[item[field_name]]
+
+    return result
+
+
+def inject_details(db, result):
+    result = inject_issuance(db, result)
+    return result
+
+
 @auth.login_required
 def handle_route(**kwargs):
     if BACKEND_HEIGHT is None:
@@ -189,22 +244,7 @@ def handle_route(**kwargs):
 
     # call the function
     try:
-        # cache everything for one block
-        cache_key = f"{ledger.CURRENT_BLOCK_INDEX}:{request.url}"
-        # except for blocks and transactions cached forever
-        if request.path.startswith("/blocks/") or request.path.startswith("/transactions/"):
-            cache_key = request.url
-
-        if cache_key in BLOCK_CACHE:
-            result = BLOCK_CACHE[cache_key]
-        else:
-            if function_needs_db(route["function"]):
-                result = route["function"](db, **function_args)
-            else:
-                result = route["function"](**function_args)
-            BLOCK_CACHE[cache_key] = result
-            if len(BLOCK_CACHE) > MAX_BLOCK_CACHE_SIZE:
-                BLOCK_CACHE.popitem(last=False)
+        result = execute_api_function(db, route, function_args)
     except (exceptions.ComposeError, exceptions.UnpackError) as e:
         return return_result(503, error=str(e))
     except Exception as e:
@@ -216,6 +256,12 @@ def handle_route(**kwargs):
     if result is None:
         return return_result(404, error="Not found")
     result = remove_rowids(result)
+
+    # inject details
+    verbose = request.args.get("verbose", "False")
+    if verbose.lower() in ["true", "1"]:
+        result = inject_details(db, result)
+
     return return_result(200, result=result)
 
 

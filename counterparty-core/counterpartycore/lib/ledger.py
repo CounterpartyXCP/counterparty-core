@@ -1120,6 +1120,28 @@ def get_asset_info(db, asset: str):
     return asset_info
 
 
+def get_assets_last_issuance(db, asset_list):
+    cursor = db.cursor()
+    fields = ["asset", "asset_longname", "description", "issuer", "divisible", "locked"]
+    query = f"""
+        SELECT {", ".join(fields)}, MAX(rowid) AS rowid
+        FROM issuances
+        WHERE asset IN ({",".join(["?"] * len(asset_list))})
+        AND status = ?
+        GROUP BY asset
+    """  # nosec B608  # noqa: S608
+    cursor.execute(query, asset_list + ["valid"])
+    issuances = cursor.fetchall()
+
+    result = {}
+    for issuance in issuances:
+        del issuance["rowid"]
+        asset = issuance["asset"]
+        del issuance["asset"]
+        result[asset] = issuance
+    return result
+
+
 def get_issuances(
     db, asset=None, status=None, locked=None, block_index=None, first=False, last=False
 ):
