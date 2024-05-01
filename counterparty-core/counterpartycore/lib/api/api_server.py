@@ -177,9 +177,15 @@ def execute_api_function(db, route, function_args):
 
 
 def inject_issuance(db, result):
+    # let's work with a list
+    result_list = result
+    result_is_dict = False
+    if isinstance(result, dict):
+        result_list = [result]
+        result_is_dict = True
+
     # gather asset list
     asset_list = []
-    result_list = result if isinstance(result, list) else [result]
     for item in result_list:
         if "asset_longname" in item:
             continue
@@ -191,16 +197,38 @@ def inject_issuance(db, result):
     issuance_by_asset = ledger.get_assets_last_issuance(db, asset_list)
 
     # inject issuance
-    if isinstance(result, list):
-        for item in result:
-            for field_name in ["asset", "give_asset", "get_asset"]:
-                if field_name in item and item[field_name] in issuance_by_asset:
-                    item[field_name + "_issuance"] = issuance_by_asset[item[field_name]]
-    elif isinstance(result, dict):
+    for item in result_list:
         for field_name in ["asset", "give_asset", "get_asset"]:
-            if field_name in result and result[field_name] in issuance_by_asset:
-                result[field_name + "_issuance"] = issuance_by_asset[result[field_name]]
+            if field_name in item and item[field_name] in issuance_by_asset:
+                item[field_name + "_issuance"] = issuance_by_asset[item[field_name]]
 
+    # inject normalized quantities
+    for item in result_list:
+        for field_name in [
+            "quantity",
+            "give_quantity",
+            "get_quantity",
+            "get_remaining",
+            "give_remaining",
+            "escrow_quantity",
+        ]:
+            if field_name not in item:
+                continue
+            issuance_field_name = (
+                field_name.replace("quantity", "asset").replace("remaining", "asset") + "_issuance"
+            )
+            print("issuance_field_name", issuance_field_name)
+            if issuance_field_name not in item:
+                issuance_field_name = "asset_issuance"
+            if issuance_field_name not in item:
+                continue
+            is_divisible = item[issuance_field_name]["divisible"]
+            item[field_name + "_normalized"] = (
+                item[field_name] / 10**8 if is_divisible else item[field_name]
+            )
+
+    if result_is_dict:
+        return result_list[0]
     return result
 
 

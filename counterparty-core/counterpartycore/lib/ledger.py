@@ -1698,11 +1698,10 @@ def get_dispenser_info(db, tx_hash=None, tx_index=None):
         bindings.append(tx_index)
     # no sql injection here
     query = f"""
-        SELECT d.*, a.asset_longname
-        FROM dispensers d
-        LEFT JOIN assets a ON a.asset_name = d.asset
+        SELECT *
+        FROM dispensers
         WHERE ({" AND ".join(where)})
-        ORDER BY d.rowid DESC LIMIT 1
+        ORDER BY rowid DESC LIMIT 1
     """  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
