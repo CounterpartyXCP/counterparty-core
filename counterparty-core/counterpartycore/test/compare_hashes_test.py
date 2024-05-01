@@ -12,6 +12,7 @@ LOCAL_API_URL = "http://api:api@localhost:4000"
 # [server_url, api_version]
 CHECK_SERVERS = [
     ["http://rpc:rpc@api1.counterparty.io:4000", "v1"],  # v9.61.3
+    ["http://rpc:rpc@api3.counterparty.io:4000", "v1"],  # v10.1.1
 ]
 
 
@@ -70,6 +71,7 @@ def test_compare_hashes(skip):
     # get block hashes
     local_ledger_hash, local_txlist_hash = get_block_hashes_api_v2(LOCAL_API_URL, last_block_index)
     for check_server in CHECK_SERVERS:
+        print(f"Checking server: {check_server[0]}")
         check_server_url, check_server_version = check_server
         if check_server_version == "v1":
             check_ledger_hash, check_txlist_hash = get_block_hashes_api_v1(
