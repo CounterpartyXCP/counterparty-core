@@ -2,6 +2,7 @@ import decimal
 import inspect
 import json
 import logging
+import time
 from logging import handlers as logging_handlers
 
 import flask
@@ -11,17 +12,20 @@ from docstring_parser import parse as parse_docstring
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
-def check_last_parsed_block(blockcount):
+def check_last_parsed_block(db, blockcount):
     """Checks database to see if is caught up with backend."""
+    last_block = ledger.get_last_block(db)
+    if time.time() - last_block["block_time"] < 60:
+        return
     if ledger.CURRENT_BLOCK_INDEX + 1 < blockcount:
         raise exceptions.DatabaseError(f"{config.XCP_NAME} database is behind backend.")
     logger.debug("Database state check passed.")
 
 
-def healthz_light():
+def healthz_light(db):
     logger.debug("Performing light healthz check.")
     latest_block_index = backend.getblockcount()
-    check_last_parsed_block(latest_block_index)
+    check_last_parsed_block(db, latest_block_index)
 
 
 def healthz_heavy(db):
@@ -43,9 +47,9 @@ def healthz_heavy(db):
 def healthz(db, check_type: str = "heavy"):
     try:
         if check_type == "light":
-            healthz_light()
+            healthz_light(db)
         else:
-            healthz_light()
+            healthz_light(db)
             healthz_heavy(db)
     except Exception as e:
         logger.error(f"Health check failed: {e}")

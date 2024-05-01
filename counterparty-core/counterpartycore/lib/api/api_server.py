@@ -1,6 +1,7 @@
 import argparse
 import logging
 import multiprocessing
+import time
 import traceback
 from collections import OrderedDict
 from multiprocessing import Process
@@ -36,6 +37,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 auth = HTTPBasicAuth()
 
 BACKEND_HEIGHT = None
+CURRENT_BLOCK_TIME = None
 REFRESH_BACKEND_HEIGHT_INTERVAL = 10
 BACKEND_HEIGHT_TIMER = None
 BLOCK_CACHE = OrderedDict()
@@ -85,7 +87,11 @@ def api_root():
 def is_server_ready():
     if BACKEND_HEIGHT is None:
         return False
-    return ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT - 1
+    if ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT - 1:
+        return True
+    if time.time() - CURRENT_BLOCK_TIME < 60:
+        return True
+    return False
 
 
 def is_cachable(rule):
@@ -153,8 +159,16 @@ def handle_route(**kwargs):
     if BACKEND_HEIGHT is None:
         return return_result(503, error="Backend still not ready. Please retry later.")
     db = get_db()
+
     # update the current block index
-    ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
+    global CURRENT_BLOCK_TIME  # noqa F811
+    last_block = ledger.get_last_block(db)
+    if last_block:
+        ledger.CURRENT_BLOCK_INDEX = last_block["block_index"]
+        CURRENT_BLOCK_TIME = last_block["block_time"]
+    else:
+        ledger.CURRENT_BLOCK_INDEX = 0
+        CURRENT_BLOCK_TIME = 0
 
     rule = str(request.url_rule.rule)
 
