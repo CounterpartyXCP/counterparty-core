@@ -1364,6 +1364,14 @@ def get_block(db, block_index: int):
     return None
 
 
+def get_last_block(db):
+    cursor = db.cursor()
+    query = "SELECT * FROM blocks ORDER BY block_index DESC LIMIT 1"
+    cursor.execute(query)
+    block = cursor.fetchone()
+    return block
+
+
 def get_transactions_by_block(db, block_index: int):
     """
     Returns the transactions of a block
