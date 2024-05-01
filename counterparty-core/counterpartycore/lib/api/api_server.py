@@ -193,7 +193,8 @@ def inject_issuance(db, result):
             item = item["params"]
         for field_name in ["asset", "give_asset", "get_asset"]:
             if field_name in item:
-                asset_list.append(item[field_name])
+                if item[field_name] not in asset_list:
+                    asset_list.append(item[field_name])
 
     # get asset issuances
     issuance_by_asset = ledger.get_assets_last_issuance(db, asset_list)
@@ -217,9 +218,13 @@ def inject_issuance(db, result):
             "get_remaining",
             "give_remaining",
             "escrow_quantity",
+            "dispense_quantity",
         ]:
             if "params" in item:
                 item = item["params"]
+            if "dispenser" in item:
+                item = result_item["dispenser"]
+                # item["asset_issuance"] = result_item["asset_issuance"]
             if field_name not in item:
                 continue
             issuance_field_name = (
@@ -227,9 +232,12 @@ def inject_issuance(db, result):
             )
             if issuance_field_name not in item:
                 issuance_field_name = "asset_issuance"
-            if issuance_field_name not in item:
+            if issuance_field_name not in item and issuance_field_name not in result_item:
                 continue
-            is_divisible = item[issuance_field_name]["divisible"]
+            if issuance_field_name not in item:
+                is_divisible = result_item[issuance_field_name]["divisible"]
+            else:
+                is_divisible = item[issuance_field_name]["divisible"]
             item[field_name + "_normalized"] = (
                 item[field_name] / 10**8 if is_divisible else item[field_name]
             )
@@ -239,7 +247,39 @@ def inject_issuance(db, result):
     return result
 
 
+def inject_dispensers(db, result):
+    # let's work with a list
+    result_list = result
+    result_is_dict = False
+    if isinstance(result, dict):
+        result_list = [result]
+        result_is_dict = True
+
+    # gather dispenser list
+    dispenser_list = []
+    for result_item in result_list:
+        if "dispenser_tx_hash" in result_item:
+            if result_item["dispenser_tx_hash"] not in dispenser_list:
+                dispenser_list.append(result_item["dispenser_tx_hash"])
+
+    # get dispenser info
+    dispenser_info = ledger.get_dispensers_info(db, dispenser_list)
+
+    # inject dispenser info
+    for result_item in result_list:
+        if (
+            "dispenser_tx_hash" in result_item
+            and result_item["dispenser_tx_hash"] in dispenser_info
+        ):
+            result_item["dispenser"] = dispenser_info[result_item["dispenser_tx_hash"]]
+
+    if result_is_dict:
+        return result_list[0]
+    return result
+
+
 def inject_details(db, result):
+    result = inject_dispensers(db, result)
     result = inject_issuance(db, result)
     return result
 

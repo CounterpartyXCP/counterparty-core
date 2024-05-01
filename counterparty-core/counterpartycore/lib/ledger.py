@@ -1707,6 +1707,25 @@ def get_dispenser_info(db, tx_hash=None, tx_index=None):
     return cursor.fetchall()
 
 
+def get_dispensers_info(db, tx_hash_list):
+    cursor = db.cursor()
+    query = """
+        SELECT *, MAX(rowid) AS rowid FROM dispensers
+        WHERE tx_hash IN ({})
+        GROUP BY tx_hash
+    """.format(",".join(["?" for e in range(0, len(tx_hash_list))]))  # nosec B608  # noqa: S608
+    cursor.execute(query, tx_hash_list)
+    dispensers = cursor.fetchall()
+    result = {}
+    for dispenser in dispensers:
+        del dispenser["rowid"]
+        tx_hash = dispenser["tx_hash"]
+        del dispenser["tx_hash"]
+        del dispenser["asset"]
+        result[tx_hash] = dispenser
+    return result
+
+
 def get_dispenser_info_by_hash(db, dispenser_hash: str):
     """
     Returns the dispenser information by tx_hash
