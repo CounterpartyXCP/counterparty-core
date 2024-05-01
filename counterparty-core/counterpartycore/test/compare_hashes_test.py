@@ -7,9 +7,44 @@ from counterpartycore.test import (
     conftest,  # noqa: F401
 )
 
-# This two servers must be up and running
-API_V9_URL = "http://rpc:rpc@api1.counterparty.io:4000"
-API_V10_URL = "http://api:api@localhost:4000"
+LOCAL_API_URL = "http://api:api@localhost:4000"
+
+CHECK_SERVERS = [
+    ["http://rpc:rpc@api1.counterparty.io:4000", "v9"],
+]
+
+
+def get_last_block_v9(api_url):
+    headers = {"content-type": "application/json"}
+    payload = {
+        "method": "get_running_info",
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+    response = requests.post(api_url, data=json.dumps(payload), headers=headers, timeout=10)
+    return response.json()["result"]["last_block"]["block_index"]
+
+
+def get_last_block_v10(api_url):
+    response = requests.get(f"{api_url}/", timeout=10)
+    return response.json()["result"]["counterparty_height"]
+
+
+def get_block_hashes_v9(api_url, block_index):
+    headers = {"content-type": "application/json"}
+    payload = {
+        "method": "get_block_info",
+        "jsonrpc": "2.0",
+        "id": 0,
+        "params": {"block_index": block_index},
+    }
+    response = requests.post(api_url, data=json.dumps(payload), headers=headers, timeout=10)
+    return response.json()["result"]["ledger_hash"], response.json()["result"]["txlist_hash"]
+
+
+def get_block_hashes_v10(api_url, block_index):
+    response = requests.get(f"{api_url}/blocks/{block_index}", timeout=10)
+    return response.json()["result"]["ledger_hash"], response.json()["result"]["txlist_hash"]
 
 
 def test_compare_hashes(skip):
@@ -17,43 +52,33 @@ def test_compare_hashes(skip):
         pytest.skip("Skipping test book")
         return
 
-    # get v9 last block
-    headers = {"content-type": "application/json"}
-    payload = {
-        "method": "get_running_info",
-        "jsonrpc": "2.0",
-        "id": 0,
-    }
-    response = requests.post(API_V9_URL, data=json.dumps(payload), headers=headers, timeout=10)
-    v9_block_index = response.json()["result"]["last_block"]["block_index"]
-    # print(v9_block_index)
-
-    # get v10 last block
-    response = requests.get(f"{API_V10_URL}/", timeout=10)
-    v10_block_index = response.json()["result"]["counterparty_height"]
-    # print(v10_block_index)
+    # get last blocks
+    local_block_index = get_last_block_v10(LOCAL_API_URL)
+    check_servers_block_indexes = [local_block_index]
+    for check_server in CHECK_SERVERS:
+        check_server_url, check_server_version = check_server
+        if check_server_version == "v9":
+            check_servers_block_indexes.append(get_last_block_v9(check_server_url))
+        else:
+            check_servers_block_indexes.append(get_last_block_v10(check_server_url))
 
     # take the lower block
-    last_block_index = min(v9_block_index, v10_block_index)
+    last_block_index = min(*check_servers_block_indexes)
+    print(f"Last block index: {last_block_index}")
 
-    # get v9 block hashes
-    payload = {
-        "method": "get_block_info",
-        "jsonrpc": "2.0",
-        "id": 0,
-        "params": {"block_index": last_block_index},
-    }
-    response = requests.post(API_V9_URL, data=json.dumps(payload), headers=headers, timeout=10)
-    v9_ledger_hash = response.json()["result"]["ledger_hash"]
-    v9_txlist_hash = response.json()["result"]["txlist_hash"]
-    # print(v9_ledger_hash, v9_txlist_hash)
+    # get block hashes
+    local_ledger_hash, local_txlist_hash = get_block_hashes_v10(LOCAL_API_URL, last_block_index)
+    for check_server in CHECK_SERVERS:
+        check_server_url, check_server_version = check_server
+        if check_server_version == "v9":
+            check_ledger_hash, check_txlist_hash = get_block_hashes_v9(
+                check_server_url, last_block_index
+            )
+        else:
+            check_ledger_hash, check_txlist_hash = get_block_hashes_v10(
+                check_server_url, last_block_index
+            )
 
-    # get v10 block hashes
-    response = requests.get(f"{API_V10_URL}/blocks/{last_block_index}", timeout=10)
-    v10_ledger_hash = response.json()["result"]["ledger_hash"]
-    v10_txlist_hash = response.json()["result"]["txlist_hash"]
-    # print(v10_ledger_hash, v10_txlist_hash)
-
-    # compare hashes
-    assert v9_ledger_hash == v10_ledger_hash
-    assert v9_txlist_hash == v10_txlist_hash
+        # compare hashes
+        assert check_ledger_hash == local_ledger_hash
+        assert check_txlist_hash == local_txlist_hash
