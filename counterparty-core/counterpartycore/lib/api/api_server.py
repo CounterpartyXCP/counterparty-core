@@ -199,7 +199,7 @@ def inject_issuance(db, result):
     elif isinstance(result, dict):
         for field_name in ["asset", "give_asset", "get_asset"]:
             if field_name in result and result[field_name] in issuance_by_asset:
-                result[field_name + "_issuance"] = issuance_by_asset[item[field_name]]
+                result[field_name + "_issuance"] = issuance_by_asset[result[field_name]]
 
     return result
 
