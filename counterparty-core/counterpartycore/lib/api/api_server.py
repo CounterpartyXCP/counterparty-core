@@ -162,7 +162,6 @@ def execute_api_function(db, route, function_args):
         cache_key = request.url
 
     if cache_key in BLOCK_CACHE:
-        print("CACHE HIT")
         result = BLOCK_CACHE[cache_key]
     else:
         if function_needs_db(route["function"]):
@@ -186,9 +185,12 @@ def inject_issuance(db, result):
 
     # gather asset list
     asset_list = []
-    for item in result_list:
-        if "asset_longname" in item:
+    for result_item in result_list:
+        if "asset_longname" in result_item:
             continue
+        item = result_item
+        if "params" in item:
+            item = item["params"]
         for field_name in ["asset", "give_asset", "get_asset"]:
             if field_name in item:
                 asset_list.append(item[field_name])
@@ -197,13 +199,17 @@ def inject_issuance(db, result):
     issuance_by_asset = ledger.get_assets_last_issuance(db, asset_list)
 
     # inject issuance
-    for item in result_list:
+    for result_item in result_list:
+        item = result_item
+        if "params" in item:
+            item = item["params"]
         for field_name in ["asset", "give_asset", "get_asset"]:
             if field_name in item and item[field_name] in issuance_by_asset:
                 item[field_name + "_issuance"] = issuance_by_asset[item[field_name]]
 
     # inject normalized quantities
-    for item in result_list:
+    for result_item in result_list:
+        item = result_item
         for field_name in [
             "quantity",
             "give_quantity",
@@ -212,12 +218,13 @@ def inject_issuance(db, result):
             "give_remaining",
             "escrow_quantity",
         ]:
+            if "params" in item:
+                item = item["params"]
             if field_name not in item:
                 continue
             issuance_field_name = (
                 field_name.replace("quantity", "asset").replace("remaining", "asset") + "_issuance"
             )
-            print("issuance_field_name", issuance_field_name)
             if issuance_field_name not in item:
                 issuance_field_name = "asset_issuance"
             if issuance_field_name not in item:
