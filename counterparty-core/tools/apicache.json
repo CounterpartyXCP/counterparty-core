@@ -35,134 +35,6 @@
             }
         ]
     },
-    "/blocks/<int:block_index>/credits": {
-        "result": [
-            {
-                "block_index": 840464,
-                "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                "asset": "UNNEGOTIABLE",
-                "quantity": 1,
-                "calling_function": "issuance",
-                "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
-                "tx_index": 2726605
-            }
-        ]
-    },
-    "/blocks/<int:block_index>/debits": {
-        "result": [
-            {
-                "block_index": 840464,
-                "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                "asset": "XCP",
-                "quantity": 50000000,
-                "action": "issuance fee",
-                "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
-                "tx_index": 2726605
-            }
-        ]
-    },
-    "/blocks/<int:block_index>/expirations": {
-        "result": [
-            {
-                "type": "order",
-                "object_id": "533d5c0ecd8ca9c2946d3298cc5e570eee55b62b887dd85c95de6de4fdc7f441"
-            },
-            {
-                "type": "order",
-                "object_id": "b048661afeee3f266792481168024abc0d7648fe0e019e4a1e0fd9867c2c0ffc"
-            }
-        ]
-    },
-    "/blocks/<int:block_index>/cancels": {
-        "result": [
-            {
-                "tx_index": 2725738,
-                "tx_hash": "793af9129c7368f974c3ea0c87ad38131f0d82d19fbaf1adf8aaf2e657ec42b8",
-                "block_index": 839746,
-                "source": "1E6tyJ2zCyX74XgEK8t9iNMjxjNVLCGR1u",
-                "offer_hash": "04b258ac37f73e3b9a8575110320d67c752e1baace0f516da75845f388911735",
-                "status": "valid"
-            },
-            {
-                "tx_index": 2725739,
-                "tx_hash": "2071e8a6fbc0c443b152d513c754356f8f962db2fa694de8c6826b57413cc190",
-                "block_index": 839746,
-                "source": "1E6tyJ2zCyX74XgEK8t9iNMjxjNVLCGR1u",
-                "offer_hash": "b1622dbe4f0ce740cb6c18f6f136876bc4949c40a62bc8cceefa81fd6679a57f",
-                "status": "valid"
-            }
-        ]
-    },
-    "/blocks/<int:block_index>/destructions": {
-        "result": [
-            {
-                "tx_index": 2726496,
-                "tx_hash": "f5609facc8dac6cdf70b15c514ea15a9acc24a9bd86dcac2b845d5740fbcc50b",
-                "block_index": 839988,
-                "source": "1FpLAtreZjTVCMcj1pq1AHWuqcs3n7obMm",
-                "asset": "COBBEE",
-                "quantity": 50000,
-                "tag": "",
-                "status": "valid"
-            }
-        ]
-    },
-    "/blocks/<int:block_index>/issuances": {
-        "result": [
-            {
-                "tx_index": 2726605,
-                "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
-                "msg_index": 0,
-                "block_index": 840464,
-                "asset": "UNNEGOTIABLE",
-                "quantity": 1,
-                "divisible": 0,
-                "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                "transfer": 0,
-                "callable": 0,
-                "call_date": 0,
-                "call_price": 0.0,
-                "description": "UNNEGOTIABLE WE MUST BECOME UNNEGOTIABLE WE ARE",
-                "fee_paid": 50000000,
-                "locked": 0,
-                "status": "valid",
-                "asset_longname": null,
-                "reset": 0
-            }
-        ]
-    },
-    "/blocks/<int:block_index>/sends": {
-        "result": [
-            {
-                "tx_index": 2726604,
-                "tx_hash": "b4bbb14c99dd260eb634243e5c595e1b7213459979857a32850de84989bb71ec",
-                "block_index": 840459,
-                "source": "13Hnmhs5gy2yXKVBx4wSM5HCBdKnaSBZJH",
-                "destination": "1LfT83WAxbN9qKhtrXxcQA6xgdhfZk21Hz",
-                "asset": "GAMESOFTRUMP",
-                "quantity": 1,
-                "status": "valid",
-                "msg_index": 0,
-                "memo": null
-            }
-        ]
-    },
-    "/blocks/<int:block_index>/dispenses": {
-        "result": [
-            {
-                "tx_index": 2726580,
-                "dispense_index": 0,
-                "tx_hash": "e7f0f2c9bef7a492b714a5952ec61b283be344419c5bc33f405f9af41ebfa48b",
-                "block_index": 840322,
-                "source": "bc1qq735dv8peps2ayr3qwwwdwylq4ddwcgrpyg9r2",
-                "destination": "bc1qzcdkhnexpjc8wvkyrpyrsn0f5xzcpu877mjmgj",
-                "asset": "FLOCK",
-                "dispense_quantity": 90000000000,
-                "dispenser_tx_hash": "753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a"
-            }
-        ]
-    },
     "/blocks/<int:block_index>/sweeps": {
         "result": [
             {
@@ -236,244 +108,6 @@
             }
         }
     },
-    "/addresses/<address>/balances": {
-        "result": [
-            {
-                "address": "1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs",
-                "asset": "XCP",
-                "quantity": 104200000000
-            }
-        ]
-    },
-    "/addresses/<address>/balances/<asset>": {
-        "result": {
-            "address": "1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs",
-            "asset": "XCP",
-            "quantity": 104200000000
-        }
-    },
-    "/addresses/<address>/credits": {
-        "result": [
-            {
-                "block_index": 830981,
-                "address": "1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs",
-                "asset": "XCP",
-                "quantity": 104200000000,
-                "calling_function": "send",
-                "event": "7e4fbb0a1eeeee34bf499955f1027fb78c514d63a3c8ff2e28c6dad005e4d850",
-                "tx_index": 2677412
-            }
-        ]
-    },
-    "/addresses/<address>/debits": {
-        "result": [
-            {
-                "block_index": 836949,
-                "address": "bc1q7787j6msqczs58asdtetchl3zwe8ruj57p9r9y",
-                "asset": "XCP",
-                "quantity": 40000000000,
-                "action": "open dispenser",
-                "event": "53ed08176d3479f49986e9282293da85cebc03835b128d8e790ee587f9f1c750",
-                "tx_index": 2721524
-            },
-            {
-                "block_index": 840388,
-                "address": "bc1q7787j6msqczs58asdtetchl3zwe8ruj57p9r9y",
-                "asset": "XCP",
-                "quantity": 250000000000,
-                "action": "send",
-                "event": "bc54968ba7d0a59a47b276602e2dbdcf01b14009742e0d7b50272cbae529a9a4",
-                "tx_index": 2726594
-            }
-        ]
-    },
-    "/addresses/<address>/bets": {
-        "result": [
-            {
-                "tx_index": 15106,
-                "tx_hash": "5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed",
-                "block_index": 304063,
-                "source": "18ZNyaAcH4HugeofwbrpLoUNiayxJRH65c",
-                "feed_address": "1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk",
-                "bet_type": 3,
-                "deadline": 1401828300,
-                "wager_quantity": 50000000,
-                "wager_remaining": 0,
-                "counterwager_quantity": 50000000,
-                "counterwager_remaining": 0,
-                "target_value": 1.0,
-                "leverage": 5040,
-                "expiration": 11,
-                "expire_index": 304073,
-                "fee_fraction_int": 1000000,
-                "status": "filled"
-            },
-            {
-                "tx_index": 61338,
-                "tx_hash": "0fcc7f5190c028f6c5534554d10ec5b4a9246d63826421cd58be2d572d11f088",
-                "block_index": 320704,
-                "source": "1Ew38GxczvV1KxjzZsq9f8UuRzHkHQrL5C",
-                "feed_address": "1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk",
-                "bet_type": 2,
-                "deadline": 1410728400,
-                "wager_quantity": 1000000,
-                "wager_remaining": 0,
-                "counterwager_quantity": 1999991,
-                "counterwager_remaining": 0,
-                "target_value": 1.0,
-                "leverage": 5040,
-                "expiration": 13,
-                "expire_index": 320715,
-                "fee_fraction_int": 1000000,
-                "status": "filled"
-            }
-        ]
-    },
-    "/addresses/<address>/broadcasts": {
-        "result": [
-            {
-                "tx_index": 15055,
-                "tx_hash": "774887e555a6ae5a8c058ebc0185058307977f01a2d4d326e71f37d6dd977154",
-                "block_index": 304048,
-                "source": "1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk",
-                "timestamp": 1401815290,
-                "value": -1.0,
-                "fee_fraction_int": 1000000,
-                "text": "xbet.io/feed/1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk",
-                "locked": 0,
-                "status": "valid"
-            },
-            {
-                "tx_index": 61477,
-                "tx_hash": "5d49993bec727622c7b41c84e2b1e65c368f33390d633d217131ffcc5b592f0d",
-                "block_index": 320718,
-                "source": "1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk",
-                "timestamp": 1410732503,
-                "value": 1.0,
-                "fee_fraction_int": 1000000,
-                "text": "xbet.io/feed/1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk",
-                "locked": 0,
-                "status": "valid"
-            }
-        ]
-    },
-    "/addresses/<address>/burns": {
-        "result": [
-            {
-                "tx_index": 3070,
-                "tx_hash": "4560d0e3d04927108b615ab106040489aca9c4aceedcf69d2b71f63b3139c7ae",
-                "block_index": 283810,
-                "source": "1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W",
-                "burned": 10000000,
-                "earned": 10000000000,
-                "status": "valid"
-            }
-        ]
-    },
-    "/addresses/<address>/sends": {
-        "result": [
-            {
-                "tx_index": 163106,
-                "tx_hash": "1c447b41816f1cfbb83f125c8e05faeaae70dbf27255745ba7393f809bd388eb",
-                "block_index": 343049,
-                "source": "1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W",
-                "destination": "16cRBUNnTWiUh2sXWNn1P7KHyJUmyMkdfH",
-                "asset": "XCP",
-                "quantity": 10000000000,
-                "status": "valid",
-                "msg_index": 0,
-                "memo": null
-            }
-        ]
-    },
-    "/addresses/<address>/receives": {
-        "result": [
-            {
-                "tx_index": 2677412,
-                "tx_hash": "7e4fbb0a1eeeee34bf499955f1027fb78c514d63a3c8ff2e28c6dad005e4d850",
-                "block_index": 830981,
-                "source": "bc1qqxr9grqw73dm95cen3g56mzswuj6eqjedu6csx",
-                "destination": "1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs",
-                "asset": "XCP",
-                "quantity": 104200000000,
-                "status": "valid",
-                "msg_index": 0,
-                "memo": null
-            }
-        ]
-    },
-    "/addresses/<address>/sends/<asset>": {
-        "result": [
-            {
-                "tx_index": 163106,
-                "tx_hash": "1c447b41816f1cfbb83f125c8e05faeaae70dbf27255745ba7393f809bd388eb",
-                "block_index": 343049,
-                "source": "1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W",
-                "destination": "16cRBUNnTWiUh2sXWNn1P7KHyJUmyMkdfH",
-                "asset": "XCP",
-                "quantity": 10000000000,
-                "status": "valid",
-                "msg_index": 0,
-                "memo": null
-            }
-        ]
-    },
-    "/addresses/<address>/receives/<asset>": {
-        "result": [
-            {
-                "tx_index": 2677412,
-                "tx_hash": "7e4fbb0a1eeeee34bf499955f1027fb78c514d63a3c8ff2e28c6dad005e4d850",
-                "block_index": 830981,
-                "source": "bc1qqxr9grqw73dm95cen3g56mzswuj6eqjedu6csx",
-                "destination": "1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs",
-                "asset": "XCP",
-                "quantity": 104200000000,
-                "status": "valid",
-                "msg_index": 0,
-                "memo": null
-            }
-        ]
-    },
-    "/addresses/<address>/dispensers": {
-        "result": [
-            {
-                "tx_index": 2726460,
-                "tx_hash": "b592d8ca4994d182e4ec63e1659dc4282b1a84466b7d71ed68c281ce63ed4897",
-                "block_index": 839964,
-                "source": "bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz",
-                "asset": "ERYKAHPEPU",
-                "give_quantity": 1,
-                "escrow_quantity": 25,
-                "satoshirate": 50000,
-                "status": 0,
-                "give_remaining": 25,
-                "oracle_address": null,
-                "last_status_tx_hash": null,
-                "origin": "1E6tyJ2zCyX74XgEK8t9iNMjxjNVLCGR1u",
-                "dispense_count": 0
-            }
-        ]
-    },
-    "/addresses/<address>/dispensers/<asset>": {
-        "result": [
-            {
-                "tx_index": 2726460,
-                "tx_hash": "b592d8ca4994d182e4ec63e1659dc4282b1a84466b7d71ed68c281ce63ed4897",
-                "block_index": 839964,
-                "source": "bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz",
-                "asset": "ERYKAHPEPU",
-                "give_quantity": 1,
-                "escrow_quantity": 25,
-                "satoshirate": 50000,
-                "status": 0,
-                "give_remaining": 25,
-                "oracle_address": null,
-                "last_status_tx_hash": null,
-                "origin": "1E6tyJ2zCyX74XgEK8t9iNMjxjNVLCGR1u",
-                "dispense_count": 0
-            }
-        ]
-    },
     "/addresses/<address>/sweeps": {
         "result": [
             {
@@ -498,599 +132,6 @@
             },
             "name": "btcpay"
         }
-    },
-    "/assets": {
-        "result": [
-            {
-                "asset": "A100000000000000000",
-                "asset_longname": null
-            },
-            {
-                "asset": "A1000000000000000000",
-                "asset_longname": null
-            },
-            {
-                "asset": "A10000000000000000000",
-                "asset_longname": null
-            },
-            {
-                "asset": "A10000000000000000001",
-                "asset_longname": null
-            },
-            {
-                "asset": "A10000000000000000002",
-                "asset_longname": null
-            }
-        ]
-    },
-    "/assets/<asset>": {
-        "result": {
-            "asset": "UNNEGOTIABLE",
-            "asset_longname": null,
-            "owner": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-            "divisible": false,
-            "locked": false,
-            "supply": 1,
-            "description": "UNNEGOTIABLE WE MUST BECOME UNNEGOTIABLE WE ARE",
-            "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-            "holder_count": 1
-        }
-    },
-    "/assets/<asset>/balances": {
-        "result": [
-            {
-                "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                "asset": "UNNEGOTIABLE",
-                "quantity": 1
-            }
-        ]
-    },
-    "/assets/<asset>/balances/<address>": {
-        "result": {
-            "address": "1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs",
-            "asset": "XCP",
-            "quantity": 104200000000
-        }
-    },
-    "/assets/<asset>/orders": {
-        "result": [
-            {
-                "tx_index": 825373,
-                "tx_hash": "0129611a0aece52adddf6d929e75c703baa9cdcb7e4ce887aa859f9640aa9640",
-                "block_index": 455461,
-                "source": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
-                "give_asset": "NEEDPEPE",
-                "give_quantity": 1,
-                "give_remaining": 0,
-                "get_asset": "PEPECASH",
-                "get_quantity": 400000000000,
-                "get_remaining": 0,
-                "expiration": 1000,
-                "expire_index": 456457,
-                "fee_required": 0,
-                "fee_required_remaining": 0,
-                "fee_provided": 46098,
-                "fee_provided_remaining": 46098,
-                "status": "filled"
-            },
-            {
-                "tx_index": 2225134,
-                "tx_hash": "5b6e0c741d765ebd883dc16eecfb5c340c52865cabf297ca2c1432437c1348b7",
-                "block_index": 772817,
-                "source": "1FnM7akSCD8G3fRQHCUEXRCfL35gptsPZB",
-                "give_asset": "NEEDPEPE",
-                "give_quantity": 1,
-                "give_remaining": 0,
-                "get_asset": "XCP",
-                "get_quantity": 80800000000,
-                "get_remaining": 0,
-                "expiration": 5000,
-                "expire_index": 777817,
-                "fee_required": 0,
-                "fee_required_remaining": 0,
-                "fee_provided": 5544,
-                "fee_provided_remaining": 5544,
-                "status": "filled"
-            },
-            {
-                "tx_index": 1946026,
-                "tx_hash": "75dc6ee1f67317e674ef33b617d3a9839ee53bf4a2e8274c88d6202d4d89b59a",
-                "block_index": 727444,
-                "source": "1GotRejB6XsGgMsM79TvcypeanDJRJbMtg",
-                "give_asset": "NEEDPEPE",
-                "give_quantity": 1,
-                "give_remaining": 0,
-                "get_asset": "XCP",
-                "get_quantity": 70000000000,
-                "get_remaining": 0,
-                "expiration": 5000,
-                "expire_index": 732381,
-                "fee_required": 0,
-                "fee_required_remaining": 0,
-                "fee_provided": 264,
-                "fee_provided_remaining": 264,
-                "status": "filled"
-            },
-            {
-                "tx_index": 2202451,
-                "tx_hash": "77f568fc6604dbe209d2ea1b0158d7de20723c0178107eb570f4f2a719b0d7c7",
-                "block_index": 772817,
-                "source": "184gKLQTtQU29LXbxbYJkUV4if9SmW6v2d",
-                "give_asset": "XCP",
-                "give_quantity": 80800000000,
-                "give_remaining": 0,
-                "get_asset": "NEEDPEPE",
-                "get_quantity": 1,
-                "get_remaining": 0,
-                "expiration": 5000,
-                "expire_index": 773300,
-                "fee_required": 0,
-                "fee_required_remaining": 0,
-                "fee_provided": 264,
-                "fee_provided_remaining": 264,
-                "status": "filled"
-            },
-            {
-                "tx_index": 825411,
-                "tx_hash": "7b2369f40078f4d98a3d3a7733315a1c4efd7977c75f7066dd447d5c7eed7f20",
-                "block_index": 455461,
-                "source": "18cmgoX99Nrm411YKpmTQsp23qczWdxS6w",
-                "give_asset": "PEPECASH",
-                "give_quantity": 300000000000,
-                "give_remaining": 0,
-                "get_asset": "NEEDPEPE",
-                "get_quantity": 1,
-                "get_remaining": 0,
-                "expiration": 5000,
-                "expire_index": 460461,
-                "fee_required": 0,
-                "fee_required_remaining": 0,
-                "fee_provided": 40000,
-                "fee_provided_remaining": 40000,
-                "status": "filled"
-            },
-            {
-                "tx_index": 825403,
-                "tx_hash": "7e1abf6ad57eb61227015fc7a333da034b4dd2f1c4e23cf106864b60a20feef7",
-                "block_index": 455460,
-                "source": "18cmgoX99Nrm411YKpmTQsp23qczWdxS6w",
-                "give_asset": "PEPECASH",
-                "give_quantity": 200000000000,
-                "give_remaining": 0,
-                "get_asset": "NEEDPEPE",
-                "get_quantity": 1,
-                "get_remaining": 0,
-                "expiration": 1000,
-                "expire_index": 456460,
-                "fee_required": 20000,
-                "fee_required_remaining": 20000,
-                "fee_provided": 50766,
-                "fee_provided_remaining": 50766,
-                "status": "filled"
-            },
-            {
-                "tx_index": 825370,
-                "tx_hash": "8e4d324407b62de773af53f8f7a556882ac82a217c216491a28072f293918fe6",
-                "block_index": 455457,
-                "source": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
-                "give_asset": "NEEDPEPE",
-                "give_quantity": 1,
-                "give_remaining": 0,
-                "get_asset": "PEPECASH",
-                "get_quantity": 100000000000,
-                "get_remaining": -1100000000,
-                "expiration": 1000,
-                "expire_index": 456457,
-                "fee_required": 0,
-                "fee_required_remaining": 0,
-                "fee_provided": 75791,
-                "fee_provided_remaining": 75791,
-                "status": "filled"
-            },
-            {
-                "tx_index": 825413,
-                "tx_hash": "927878fa98edb6d24310c45254c324f3d5a7f625e2a3a0e7fd1e749b49493750",
-                "block_index": 455461,
-                "source": "18cmgoX99Nrm411YKpmTQsp23qczWdxS6w",
-                "give_asset": "PEPECASH",
-                "give_quantity": 400000000000,
-                "give_remaining": 0,
-                "get_asset": "NEEDPEPE",
-                "get_quantity": 1,
-                "get_remaining": 0,
-                "expiration": 5000,
-                "expire_index": 460461,
-                "fee_required": 0,
-                "fee_required_remaining": 0,
-                "fee_provided": 40000,
-                "fee_provided_remaining": 40000,
-                "status": "filled"
-            },
-            {
-                "tx_index": 1946587,
-                "tx_hash": "b747f290cbbad6faa1c1c05d5c6d001b5a3ef487027bb0d4eefcdc9f6e865c39",
-                "block_index": 727444,
-                "source": "1AtcSh7uxenQ6AR5xqr6agAegWRUF5N4uh",
-                "give_asset": "XCP",
-                "give_quantity": 70000000000,
-                "give_remaining": 0,
-                "get_asset": "NEEDPEPE",
-                "get_quantity": 1,
-                "get_remaining": 0,
-                "expiration": 5000,
-                "expire_index": 732444,
-                "fee_required": 0,
-                "fee_required_remaining": 0,
-                "fee_provided": 792,
-                "fee_provided_remaining": 792,
-                "status": "filled"
-            },
-            {
-                "tx_index": 825371,
-                "tx_hash": "b83c96217214decb6316c3619bc88a3471d17e46eb3708406c8f878dedd61610",
-                "block_index": 455460,
-                "source": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
-                "give_asset": "NEEDPEPE",
-                "give_quantity": 1,
-                "give_remaining": 0,
-                "get_asset": "PEPECASH",
-                "get_quantity": 200000000000,
-                "get_remaining": 0,
-                "expiration": 1000,
-                "expire_index": 456457,
-                "fee_required": 0,
-                "fee_required_remaining": 0,
-                "fee_provided": 46098,
-                "fee_provided_remaining": 46098,
-                "status": "filled"
-            },
-            {
-                "tx_index": 825372,
-                "tx_hash": "e32154f8ade796df0b121604de140703d062d22d1e82e77e629e6096668c812f",
-                "block_index": 455461,
-                "source": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
-                "give_asset": "NEEDPEPE",
-                "give_quantity": 1,
-                "give_remaining": 0,
-                "get_asset": "PEPECASH",
-                "get_quantity": 300000000000,
-                "get_remaining": 0,
-                "expiration": 1000,
-                "expire_index": 456457,
-                "fee_required": 0,
-                "fee_required_remaining": 0,
-                "fee_provided": 46098,
-                "fee_provided_remaining": 46098,
-                "status": "filled"
-            }
-        ]
-    },
-    "/assets/<asset>/credits": {
-        "result": [
-            {
-                "block_index": 840464,
-                "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                "asset": "UNNEGOTIABLE",
-                "quantity": 1,
-                "calling_function": "issuance",
-                "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
-                "tx_index": 2726605
-            }
-        ]
-    },
-    "/assets/<asset>/debits": {
-        "result": [
-            {
-                "block_index": 280091,
-                "address": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
-                "asset": "XCP",
-                "quantity": 1000000000,
-                "action": "send",
-                "event": "1c20d6596f6be031c94def5ad93a52217d76371885adcc53c91c3b1eaf76ccce",
-                "tx_index": 729
-            },
-            {
-                "block_index": 280112,
-                "address": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
-                "asset": "XCP",
-                "quantity": 1100000000,
-                "action": "send",
-                "event": "4dacd03d73cb497229dbfe2e7209adc4221540efe0e4c57f408b09b2fd36ece6",
-                "tx_index": 749
-            },
-            {
-                "block_index": 280112,
-                "address": "1PMacKVWDszkBRbb2iWWvX63BwhKUTsSBd",
-                "asset": "XCP",
-                "quantity": 100000000,
-                "action": "send",
-                "event": "057d10cc33455f4f7af44d2f030b3866e3a16416ecf984e304c76abe98393c1d",
-                "tx_index": 752
-            },
-            {
-                "block_index": 280114,
-                "address": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
-                "asset": "XCP",
-                "quantity": 1100000000,
-                "action": "send",
-                "event": "3ac6ea5b329832e2dc31ead6c5277beccb7d95f0d9f20f256f97067223c81e00",
-                "tx_index": 755
-            },
-            {
-                "block_index": 280156,
-                "address": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
-                "asset": "XCP",
-                "quantity": 1100000000,
-                "action": "send",
-                "event": "66fc1409ac6646bd8c267de89c57d2204e31bb6dfce9ee2a3ab18416fadf9e9c",
-                "tx_index": 766
-            }
-        ]
-    },
-    "/assets/<asset>/dividends": {
-        "result": [
-            {
-                "tx_index": 1914456,
-                "tx_hash": "30760e413947ebdc80ed7a5ada1bd4466800b87e9976bbe811ad4e2b46546359",
-                "block_index": 724381,
-                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
-                "asset": "GMONEYPEPE",
-                "dividend_asset": "ENDTHEFED",
-                "quantity_per_unit": 1,
-                "fee_paid": 2520000,
-                "status": "valid"
-            },
-            {
-                "tx_index": 1915246,
-                "tx_hash": "827794cbab3299f80a5b8b8cb8ec29ec3aee1373f7da2c05a156bed902bf4684",
-                "block_index": 724479,
-                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
-                "asset": "GMONEYPEPE",
-                "dividend_asset": "TRUMPDANCING",
-                "quantity_per_unit": 100,
-                "fee_paid": 2520000,
-                "status": "valid"
-            },
-            {
-                "tx_index": 1920208,
-                "tx_hash": "7014f1e259531ba9632ca5000c35df5bd47f237318e48955900453ce9c07e917",
-                "block_index": 724931,
-                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
-                "asset": "GMONEYPEPE",
-                "dividend_asset": "CTRWOJACK",
-                "quantity_per_unit": 1111,
-                "fee_paid": 2700000,
-                "status": "valid"
-            },
-            {
-                "tx_index": 1927909,
-                "tx_hash": "5556fd2b0802cf3bc0abd5001ecbac3adbc5b7c5c46a145a78daeef358c308de",
-                "block_index": 725654,
-                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
-                "asset": "GMONEYPEPE",
-                "dividend_asset": "WHITERUSSIAN",
-                "quantity_per_unit": 1,
-                "fee_paid": 3220000,
-                "status": "valid"
-            },
-            {
-                "tx_index": 1983693,
-                "tx_hash": "cda646285cc63f758d19b5403070f23e2a6e4b34eb3b86b63a0f56f971345657",
-                "block_index": 730568,
-                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
-                "asset": "GMONEYPEPE",
-                "dividend_asset": "A4520591452211866149",
-                "quantity_per_unit": 1,
-                "fee_paid": 4040000,
-                "status": "valid"
-            },
-            {
-                "tx_index": 1983842,
-                "tx_hash": "e4b73dc974cc279b873b78e5dc4a347c08788b02143ae27aa0582f900289be10",
-                "block_index": 730588,
-                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
-                "asset": "GMONEYPEPE",
-                "dividend_asset": "NCSWIC",
-                "quantity_per_unit": 1,
-                "fee_paid": 4040000,
-                "status": "valid"
-            },
-            {
-                "tx_index": 1996395,
-                "tx_hash": "b342feb1421df107010ad3c8ee2043ded802bdf6cd619862459da3d0f87d6a99",
-                "block_index": 731994,
-                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
-                "asset": "GMONEYPEPE",
-                "dividend_asset": "FUCKTHEFED",
-                "quantity_per_unit": 1,
-                "fee_paid": 4380000,
-                "status": "valid"
-            },
-            {
-                "tx_index": 2035947,
-                "tx_hash": "02d715fd9e8b7bbc782b1b2d92a1b9ffae9326bfc88ba76c453c515ad7c8c2bc",
-                "block_index": 738763,
-                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
-                "asset": "GMONEYPEPE",
-                "dividend_asset": "HOLDTHELINE",
-                "quantity_per_unit": 1,
-                "fee_paid": 4940000,
-                "status": "valid"
-            },
-            {
-                "tx_index": 2174481,
-                "tx_hash": "b935a06fc34d8fa4f0c526984085b1b12c78e899415e595b625f1bee84ce3709",
-                "block_index": 762733,
-                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
-                "asset": "GMONEYPEPE",
-                "dividend_asset": "EOXIXIZERO",
-                "quantity_per_unit": 1,
-                "fee_paid": 6500000,
-                "status": "valid"
-            },
-            {
-                "tx_index": 2198534,
-                "tx_hash": "a063e9a745b9f6bc3201f72abff196de20ec106bcc71d820673d516ddbb3aa90",
-                "block_index": 767569,
-                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
-                "asset": "GMONEYPEPE",
-                "dividend_asset": "TRUMPCARDS",
-                "quantity_per_unit": 1,
-                "fee_paid": 6660000,
-                "status": "valid"
-            },
-            {
-                "tx_index": 2704948,
-                "tx_hash": "437102ca4698f63a12e369f6168e3c7f5f8eef3e225395d515775673e33d39c1",
-                "block_index": 832745,
-                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
-                "asset": "GMONEYPEPE",
-                "dividend_asset": "FUCKYOUWAR",
-                "quantity_per_unit": 1,
-                "fee_paid": 6840000,
-                "status": "valid"
-            },
-            {
-                "tx_index": 2704949,
-                "tx_hash": "7d3807cc58fa2d9751b2b0089bfa8fa86ef795821be6d8e9418ab3a819eba299",
-                "block_index": 832745,
-                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
-                "asset": "GMONEYPEPE",
-                "dividend_asset": "MEDICINEPEPE",
-                "quantity_per_unit": 1,
-                "fee_paid": 6840000,
-                "status": "valid"
-            }
-        ]
-    },
-    "/assets/<asset>/issuances": {
-        "result": [
-            {
-                "tx_index": 2726605,
-                "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
-                "msg_index": 0,
-                "block_index": 840464,
-                "asset": "UNNEGOTIABLE",
-                "quantity": 1,
-                "divisible": 0,
-                "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                "transfer": 0,
-                "callable": 0,
-                "call_date": 0,
-                "call_price": 0.0,
-                "description": "UNNEGOTIABLE WE MUST BECOME UNNEGOTIABLE WE ARE",
-                "fee_paid": 50000000,
-                "locked": 0,
-                "status": "valid",
-                "asset_longname": null,
-                "reset": 0
-            }
-        ]
-    },
-    "/assets/<asset>/sends": {
-        "result": [
-            {
-                "tx_index": 729,
-                "tx_hash": "1c20d6596f6be031c94def5ad93a52217d76371885adcc53c91c3b1eaf76ccce",
-                "block_index": 280091,
-                "source": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
-                "destination": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
-                "asset": "XCP",
-                "quantity": 1000000000,
-                "status": "valid",
-                "msg_index": 0,
-                "memo": null
-            },
-            {
-                "tx_index": 749,
-                "tx_hash": "4dacd03d73cb497229dbfe2e7209adc4221540efe0e4c57f408b09b2fd36ece6",
-                "block_index": 280112,
-                "source": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
-                "destination": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
-                "asset": "XCP",
-                "quantity": 1100000000,
-                "status": "valid",
-                "msg_index": 0,
-                "memo": null
-            },
-            {
-                "tx_index": 752,
-                "tx_hash": "057d10cc33455f4f7af44d2f030b3866e3a16416ecf984e304c76abe98393c1d",
-                "block_index": 280112,
-                "source": "1PMacKVWDszkBRbb2iWWvX63BwhKUTsSBd",
-                "destination": "1PMacKVWDszkBRbb2iWWvX63BwhKUTsSBd",
-                "asset": "XCP",
-                "quantity": 100000000,
-                "status": "valid",
-                "msg_index": 0,
-                "memo": null
-            },
-            {
-                "tx_index": 755,
-                "tx_hash": "3ac6ea5b329832e2dc31ead6c5277beccb7d95f0d9f20f256f97067223c81e00",
-                "block_index": 280114,
-                "source": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
-                "destination": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
-                "asset": "XCP",
-                "quantity": 1100000000,
-                "status": "valid",
-                "msg_index": 0,
-                "memo": null
-            },
-            {
-                "tx_index": 766,
-                "tx_hash": "66fc1409ac6646bd8c267de89c57d2204e31bb6dfce9ee2a3ab18416fadf9e9c",
-                "block_index": 280156,
-                "source": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
-                "destination": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
-                "asset": "XCP",
-                "quantity": 1100000000,
-                "status": "valid",
-                "msg_index": 0,
-                "memo": null
-            }
-        ]
-    },
-    "/assets/<asset>/dispensers": {
-        "result": [
-            {
-                "tx_index": 2726460,
-                "tx_hash": "b592d8ca4994d182e4ec63e1659dc4282b1a84466b7d71ed68c281ce63ed4897",
-                "block_index": 839964,
-                "source": "bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz",
-                "asset": "ERYKAHPEPU",
-                "give_quantity": 1,
-                "escrow_quantity": 25,
-                "satoshirate": 50000,
-                "status": 0,
-                "give_remaining": 25,
-                "oracle_address": null,
-                "last_status_tx_hash": null,
-                "origin": "1E6tyJ2zCyX74XgEK8t9iNMjxjNVLCGR1u",
-                "dispense_count": 0
-            }
-        ]
-    },
-    "/assets/<asset>/dispensers/<address>": {
-        "result": [
-            {
-                "tx_index": 2726460,
-                "tx_hash": "b592d8ca4994d182e4ec63e1659dc4282b1a84466b7d71ed68c281ce63ed4897",
-                "block_index": 839964,
-                "source": "bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz",
-                "asset": "ERYKAHPEPU",
-                "give_quantity": 1,
-                "escrow_quantity": 25,
-                "satoshirate": 50000,
-                "status": 0,
-                "give_remaining": 25,
-                "oracle_address": null,
-                "last_status_tx_hash": null,
-                "origin": "1E6tyJ2zCyX74XgEK8t9iNMjxjNVLCGR1u",
-                "dispense_count": 0
-            }
-        ]
     },
     "/assets/<asset>/holders": {
         "result": [
@@ -1133,54 +174,6 @@
                 "address": "bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz",
                 "address_quantity": 25,
                 "escrow": null
-            }
-        ]
-    },
-    "/orders/<tx_hash>": {
-        "result": [
-            {
-                "tx_index": 2724132,
-                "tx_hash": "23f68fdf934e81144cca31ce8ef69062d553c521321a039166e7ba99aede0776",
-                "block_index": 840381,
-                "source": "15L7U55PAsHLEpQkZqz62e3eqWd9AHb2DH",
-                "give_asset": "PEPECASH",
-                "give_quantity": 6966600000000,
-                "give_remaining": 900000000000,
-                "get_asset": "XCP",
-                "get_quantity": 11076894000,
-                "get_remaining": 1431000000,
-                "expiration": 5000,
-                "expire_index": 843055,
-                "fee_required": 0,
-                "fee_required_remaining": 0,
-                "fee_provided": 4488,
-                "fee_provided_remaining": 4488,
-                "status": "open"
-            }
-        ]
-    },
-    "/orders/<tx_hash>/matches": {
-        "result": [
-            {
-                "id": "23f68fdf934e81144cca31ce8ef69062d553c521321a039166e7ba99aede0776_5461e6f99a37a7167428b4a720a52052cd9afed43905f818f5d7d4f56abd0947",
-                "tx0_index": 2724132,
-                "tx0_hash": "23f68fdf934e81144cca31ce8ef69062d553c521321a039166e7ba99aede0776",
-                "tx0_address": "15L7U55PAsHLEpQkZqz62e3eqWd9AHb2DH",
-                "tx1_index": 2726591,
-                "tx1_hash": "5461e6f99a37a7167428b4a720a52052cd9afed43905f818f5d7d4f56abd0947",
-                "tx1_address": "15e15ua6A3FJqjMevtrWcFSzKn9k6bMQeA",
-                "forward_asset": "PEPECASH",
-                "forward_quantity": 6066600000000,
-                "backward_asset": "XCP",
-                "backward_quantity": 9645894000,
-                "tx0_block_index": 838055,
-                "tx1_block_index": 840381,
-                "block_index": 840381,
-                "tx0_expiration": 5000,
-                "tx1_expiration": 8064,
-                "match_expire_index": 840401,
-                "fee_paid": 0,
-                "status": "completed"
             }
         ]
     },
@@ -1312,53 +305,6 @@
                 "burned": 99900000,
                 "earned": 147970063636,
                 "status": "valid"
-            }
-        ]
-    },
-    "/dispensers/<tx_hash>": {
-        "result": [
-            {
-                "tx_index": 2536311,
-                "tx_hash": "753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a",
-                "block_index": 840322,
-                "source": "bc1qq735dv8peps2ayr3qwwwdwylq4ddwcgrpyg9r2",
-                "asset": "FLOCK",
-                "give_quantity": 10000000000,
-                "escrow_quantity": 250000000000,
-                "satoshirate": 330000,
-                "status": 0,
-                "give_remaining": 140000000000,
-                "oracle_address": null,
-                "last_status_tx_hash": null,
-                "origin": "bc1qq735dv8peps2ayr3qwwwdwylq4ddwcgrpyg9r2",
-                "dispense_count": 2,
-                "asset_longname": null
-            }
-        ]
-    },
-    "/dispensers/<tx_hash>/dispenses": {
-        "result": [
-            {
-                "tx_index": 2610745,
-                "dispense_index": 0,
-                "tx_hash": "8c95cc6afc8fd466c784fd1c02749c585988999bbc66251b944c443dc31af757",
-                "block_index": 821450,
-                "source": "bc1qq735dv8peps2ayr3qwwwdwylq4ddwcgrpyg9r2",
-                "destination": "1FKYM1CP9RfttJhNG8HTNQdE2uV3YvwbRB",
-                "asset": "FLOCK",
-                "dispense_quantity": 20000000000,
-                "dispenser_tx_hash": "753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a"
-            },
-            {
-                "tx_index": 2726580,
-                "dispense_index": 0,
-                "tx_hash": "e7f0f2c9bef7a492b714a5952ec61b283be344419c5bc33f405f9af41ebfa48b",
-                "block_index": 840322,
-                "source": "bc1qq735dv8peps2ayr3qwwwdwylq4ddwcgrpyg9r2",
-                "destination": "bc1qzcdkhnexpjc8wvkyrpyrsn0f5xzcpu877mjmgj",
-                "asset": "FLOCK",
-                "dispense_quantity": 90000000000,
-                "dispenser_tx_hash": "753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a"
             }
         ]
     },
@@ -1908,6 +854,20 @@
             "blocktime": 1713951767
         }
     },
+    "/healthz": {
+        "result": {
+            "status": "Healthy"
+        }
+    },
+    "/bitcoin/estimatesmartfee": {
+        "result": 295443
+    },
+    "/mempool/events": {
+        "result": []
+    },
+    "/mempool/events/<event>": {
+        "result": []
+    },
     "/blocks": {
         "result": [
             {
@@ -1961,34 +921,1905 @@
             }
         ]
     },
-    "/healthz": {
+    "/blocks/<int:block_index>/events": {
+        "result": [
+            {
+                "event_index": 14194760,
+                "event": "BLOCK_PARSED",
+                "params": {
+                    "block_index": 840464,
+                    "ledger_hash": "b3f8cbb50b0705a5c4a8495f8b5128de13a32daebd8ac5e8316a010f0d203584",
+                    "messages_hash": "801d961c45a257f85ef0f10a6a8fdf048a520ae4861c0903f26365b3eaaaf540",
+                    "txlist_hash": "84bdc5b9073f775a2b65de7da2b10b89a2235f3501883b0a836e41e68cd00d46"
+                }
+            },
+            {
+                "event_index": 14194759,
+                "event": "TRANSACTION_PARSED",
+                "params": {
+                    "supported": true,
+                    "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
+                    "tx_index": 2726605
+                }
+            },
+            {
+                "event_index": 14194758,
+                "event": "CREDIT",
+                "params": {
+                    "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "asset": "UNNEGOTIABLE",
+                    "block_index": 840464,
+                    "calling_function": "issuance",
+                    "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
+                    "quantity": 1,
+                    "tx_index": 2726605,
+                    "asset_issuance": {
+                        "asset_longname": null,
+                        "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                        "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
+                }
+            },
+            {
+                "event_index": 14194757,
+                "event": "ASSET_ISSUANCE",
+                "params": {
+                    "asset": "UNNEGOTIABLE",
+                    "asset_longname": null,
+                    "block_index": 840464,
+                    "call_date": 0,
+                    "call_price": 0.0,
+                    "callable": false,
+                    "description": "UNNEGOTIABLE WE MUST BECOME UNNEGOTIABLE WE ARE",
+                    "divisible": false,
+                    "fee_paid": 50000000,
+                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "locked": false,
+                    "quantity": 1,
+                    "reset": false,
+                    "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "status": "valid",
+                    "transfer": false,
+                    "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
+                    "tx_index": 2726605,
+                    "asset_issuance": {
+                        "asset_longname": null,
+                        "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                        "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
+                }
+            },
+            {
+                "event_index": 14194756,
+                "event": "ASSET_CREATION",
+                "params": {
+                    "asset_id": "75313533584419238",
+                    "asset_longname": null,
+                    "asset_name": "UNNEGOTIABLE",
+                    "block_index": 840464
+                }
+            },
+            {
+                "event_index": 14194755,
+                "event": "DEBIT",
+                "params": {
+                    "action": "issuance fee",
+                    "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "asset": "XCP",
+                    "block_index": 840464,
+                    "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
+                    "quantity": 50000000,
+                    "tx_index": 2726605,
+                    "asset_issuance": {
+                        "divisible": true,
+                        "asset_longname": "Counterparty",
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true
+                    },
+                    "quantity_normalized": "0.5"
+                }
+            },
+            {
+                "event_index": 14194754,
+                "event": "NEW_TRANSACTION",
+                "params": {
+                    "block_hash": "00000000000000000001093d4d6b21b80800fff6e5ea15cce6d65066f482cce9",
+                    "block_index": 840464,
+                    "block_time": 1713852783,
+                    "btc_amount": 0,
+                    "data": "16010b9142801429a60000000000000001000000554e4e45474f544941424c45205745204d555354204245434f4d4520554e4e45474f544941424c4520574520415245",
+                    "destination": "",
+                    "fee": 56565,
+                    "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
+                    "tx_index": 2726605
+                }
+            },
+            {
+                "event_index": 14194753,
+                "event": "NEW_BLOCK",
+                "params": {
+                    "block_hash": "00000000000000000001093d4d6b21b80800fff6e5ea15cce6d65066f482cce9",
+                    "block_index": 840464,
+                    "block_time": 1713852783,
+                    "difficulty": 86388558925171.02,
+                    "previous_block_hash": "00000000000000000002db1e5aa19784eec3de949f98ec757e7a7f2fc392079d"
+                }
+            }
+        ]
+    },
+    "/blocks/<int:block_index>/events/<event>": {
+        "result": [
+            {
+                "event_index": 14194758,
+                "event": "CREDIT",
+                "params": {
+                    "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "asset": "UNNEGOTIABLE",
+                    "block_index": 840464,
+                    "calling_function": "issuance",
+                    "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
+                    "quantity": 1,
+                    "tx_index": 2726605,
+                    "asset_issuance": {
+                        "asset_longname": null,
+                        "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                        "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
+                }
+            }
+        ]
+    },
+    "/blocks/<int:block_index>/credits": {
+        "result": [
+            {
+                "block_index": 840464,
+                "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                "asset": "UNNEGOTIABLE",
+                "quantity": 1,
+                "calling_function": "issuance",
+                "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
+                "tx_index": 2726605,
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "quantity_normalized": "1"
+            }
+        ]
+    },
+    "/blocks/<int:block_index>/debits": {
+        "result": [
+            {
+                "block_index": 840464,
+                "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                "asset": "XCP",
+                "quantity": 50000000,
+                "action": "issuance fee",
+                "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
+                "tx_index": 2726605,
+                "asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "quantity_normalized": "0.5"
+            }
+        ]
+    },
+    "/blocks/<int:block_index>/expirations": {
+        "result": [
+            {
+                "type": "order",
+                "object_id": "533d5c0ecd8ca9c2946d3298cc5e570eee55b62b887dd85c95de6de4fdc7f441"
+            },
+            {
+                "type": "order",
+                "object_id": "b048661afeee3f266792481168024abc0d7648fe0e019e4a1e0fd9867c2c0ffc"
+            }
+        ]
+    },
+    "/blocks/<int:block_index>/cancels": {
+        "result": [
+            {
+                "tx_index": 2725738,
+                "tx_hash": "793af9129c7368f974c3ea0c87ad38131f0d82d19fbaf1adf8aaf2e657ec42b8",
+                "block_index": 839746,
+                "source": "1E6tyJ2zCyX74XgEK8t9iNMjxjNVLCGR1u",
+                "offer_hash": "04b258ac37f73e3b9a8575110320d67c752e1baace0f516da75845f388911735",
+                "status": "valid"
+            },
+            {
+                "tx_index": 2725739,
+                "tx_hash": "2071e8a6fbc0c443b152d513c754356f8f962db2fa694de8c6826b57413cc190",
+                "block_index": 839746,
+                "source": "1E6tyJ2zCyX74XgEK8t9iNMjxjNVLCGR1u",
+                "offer_hash": "b1622dbe4f0ce740cb6c18f6f136876bc4949c40a62bc8cceefa81fd6679a57f",
+                "status": "valid"
+            }
+        ]
+    },
+    "/blocks/<int:block_index>/destructions": {
+        "result": [
+            {
+                "tx_index": 2726496,
+                "tx_hash": "f5609facc8dac6cdf70b15c514ea15a9acc24a9bd86dcac2b845d5740fbcc50b",
+                "block_index": 839988,
+                "source": "1FpLAtreZjTVCMcj1pq1AHWuqcs3n7obMm",
+                "asset": "COBBEE",
+                "quantity": 50000,
+                "tag": "",
+                "status": "valid",
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "https://easyasset.art/j/m4dl0x/COBBE.json",
+                    "issuer": "1P3KQWLsTPXVWimiF2Q6WSES5vbJE8be5i",
+                    "divisible": 0,
+                    "locked": 0
+                },
+                "quantity_normalized": "50000"
+            }
+        ]
+    },
+    "/blocks/<int:block_index>/issuances": {
+        "result": [
+            {
+                "tx_index": 2726605,
+                "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
+                "msg_index": 0,
+                "block_index": 840464,
+                "asset": "UNNEGOTIABLE",
+                "quantity": 1,
+                "divisible": 0,
+                "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                "transfer": 0,
+                "callable": 0,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "UNNEGOTIABLE WE MUST BECOME UNNEGOTIABLE WE ARE",
+                "fee_paid": 50000000,
+                "locked": 0,
+                "status": "valid",
+                "asset_longname": null,
+                "reset": 0
+            }
+        ]
+    },
+    "/blocks/<int:block_index>/sends": {
+        "result": [
+            {
+                "tx_index": 2726604,
+                "tx_hash": "b4bbb14c99dd260eb634243e5c595e1b7213459979857a32850de84989bb71ec",
+                "block_index": 840459,
+                "source": "13Hnmhs5gy2yXKVBx4wSM5HCBdKnaSBZJH",
+                "destination": "1LfT83WAxbN9qKhtrXxcQA6xgdhfZk21Hz",
+                "asset": "GAMESOFTRUMP",
+                "quantity": 1,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                    "divisible": 0,
+                    "locked": 0
+                },
+                "quantity_normalized": "1"
+            }
+        ]
+    },
+    "/blocks/<int:block_index>/dispenses": {
+        "result": [
+            {
+                "tx_index": 2726580,
+                "dispense_index": 0,
+                "tx_hash": "e7f0f2c9bef7a492b714a5952ec61b283be344419c5bc33f405f9af41ebfa48b",
+                "block_index": 840322,
+                "source": "bc1qq735dv8peps2ayr3qwwwdwylq4ddwcgrpyg9r2",
+                "destination": "bc1qzcdkhnexpjc8wvkyrpyrsn0f5xzcpu877mjmgj",
+                "asset": "FLOCK",
+                "dispense_quantity": 90000000000,
+                "dispenser_tx_hash": "753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a",
+                "dispenser": {
+                    "tx_index": 2536311,
+                    "block_index": 840322,
+                    "source": "bc1qq735dv8peps2ayr3qwwwdwylq4ddwcgrpyg9r2",
+                    "give_quantity": 10000000000,
+                    "escrow_quantity": 250000000000,
+                    "satoshirate": 330000,
+                    "status": 0,
+                    "give_remaining": 140000000000,
+                    "oracle_address": null,
+                    "last_status_tx_hash": null,
+                    "origin": "bc1qq735dv8peps2ayr3qwwwdwylq4ddwcgrpyg9r2",
+                    "dispense_count": 2,
+                    "give_quantity_normalized": "100",
+                    "give_remaining_normalized": "1400",
+                    "escrow_quantity_normalized": "2500"
+                },
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "18VNeRv8vL528HF7ruKwxycrfNEeoqmHpa",
+                    "divisible": 1,
+                    "locked": 1
+                }
+            }
+        ]
+    },
+    "/transactions/<tx_hash>": {
         "result": {
-            "status": "Healthy"
+            "tx_index": 2726605,
+            "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
+            "block_index": 840464,
+            "block_hash": "00000000000000000001093d4d6b21b80800fff6e5ea15cce6d65066f482cce9",
+            "block_time": 1713852783,
+            "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+            "destination": "",
+            "btc_amount": 0,
+            "fee": 56565,
+            "data": "16010b9142801429a60000000000000001000000554e4e45474f544941424c45205745204d555354204245434f4d4520554e4e45474f544941424c4520574520415245",
+            "supported": 1,
+            "unpacked_data": {
+                "message_type": "issuance",
+                "message_type_id": 22,
+                "message_data": {
+                    "asset_id": 75313533584419238,
+                    "asset": "UNNEGOTIABLE",
+                    "subasset_longname": null,
+                    "quantity": 1,
+                    "divisible": false,
+                    "lock": false,
+                    "reset": false,
+                    "callable": false,
+                    "call_date": 0,
+                    "call_price": 0.0,
+                    "description": "UNNEGOTIABLE WE MUST BECOME UNNEGOTIABLE WE ARE",
+                    "status": "valid"
+                }
+            }
         }
     },
-    "/bitcoin/estimatesmartfee": {
-        "result": 295443
+    "/addresses/<address>/balances": {
+        "result": [
+            {
+                "address": "1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs",
+                "asset": "XCP",
+                "quantity": 104200000000,
+                "asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "quantity_normalized": "1042"
+            }
+        ]
+    },
+    "/addresses/<address>/balances/<asset>": {
+        "result": {
+            "address": "1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs",
+            "asset": "XCP",
+            "quantity": 104200000000,
+            "asset_issuance": {
+                "divisible": true,
+                "asset_longname": "Counterparty",
+                "description": "The Counterparty protocol native currency",
+                "locked": true
+            },
+            "quantity_normalized": "1042"
+        }
+    },
+    "/addresses/<address>/credits": {
+        "result": [
+            {
+                "block_index": 830981,
+                "address": "1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs",
+                "asset": "XCP",
+                "quantity": 104200000000,
+                "calling_function": "send",
+                "event": "7e4fbb0a1eeeee34bf499955f1027fb78c514d63a3c8ff2e28c6dad005e4d850",
+                "tx_index": 2677412,
+                "asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "quantity_normalized": "1042"
+            }
+        ]
+    },
+    "/addresses/<address>/debits": {
+        "result": [
+            {
+                "block_index": 836949,
+                "address": "bc1q7787j6msqczs58asdtetchl3zwe8ruj57p9r9y",
+                "asset": "XCP",
+                "quantity": 40000000000,
+                "action": "open dispenser",
+                "event": "53ed08176d3479f49986e9282293da85cebc03835b128d8e790ee587f9f1c750",
+                "tx_index": 2721524,
+                "asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "quantity_normalized": "400"
+            },
+            {
+                "block_index": 840388,
+                "address": "bc1q7787j6msqczs58asdtetchl3zwe8ruj57p9r9y",
+                "asset": "XCP",
+                "quantity": 250000000000,
+                "action": "send",
+                "event": "bc54968ba7d0a59a47b276602e2dbdcf01b14009742e0d7b50272cbae529a9a4",
+                "tx_index": 2726594,
+                "asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "quantity_normalized": "2500"
+            }
+        ]
+    },
+    "/addresses/<address>/bets": {
+        "result": [
+            {
+                "tx_index": 15106,
+                "tx_hash": "5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed",
+                "block_index": 304063,
+                "source": "18ZNyaAcH4HugeofwbrpLoUNiayxJRH65c",
+                "feed_address": "1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk",
+                "bet_type": 3,
+                "deadline": 1401828300,
+                "wager_quantity": 50000000,
+                "wager_remaining": 0,
+                "counterwager_quantity": 50000000,
+                "counterwager_remaining": 0,
+                "target_value": 1.0,
+                "leverage": 5040,
+                "expiration": 11,
+                "expire_index": 304073,
+                "fee_fraction_int": 1000000,
+                "status": "filled"
+            },
+            {
+                "tx_index": 61338,
+                "tx_hash": "0fcc7f5190c028f6c5534554d10ec5b4a9246d63826421cd58be2d572d11f088",
+                "block_index": 320704,
+                "source": "1Ew38GxczvV1KxjzZsq9f8UuRzHkHQrL5C",
+                "feed_address": "1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk",
+                "bet_type": 2,
+                "deadline": 1410728400,
+                "wager_quantity": 1000000,
+                "wager_remaining": 0,
+                "counterwager_quantity": 1999991,
+                "counterwager_remaining": 0,
+                "target_value": 1.0,
+                "leverage": 5040,
+                "expiration": 13,
+                "expire_index": 320715,
+                "fee_fraction_int": 1000000,
+                "status": "filled"
+            }
+        ]
+    },
+    "/addresses/<address>/broadcasts": {
+        "result": [
+            {
+                "tx_index": 15055,
+                "tx_hash": "774887e555a6ae5a8c058ebc0185058307977f01a2d4d326e71f37d6dd977154",
+                "block_index": 304048,
+                "source": "1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk",
+                "timestamp": 1401815290,
+                "value": -1.0,
+                "fee_fraction_int": 1000000,
+                "text": "xbet.io/feed/1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk",
+                "locked": 0,
+                "status": "valid"
+            },
+            {
+                "tx_index": 61477,
+                "tx_hash": "5d49993bec727622c7b41c84e2b1e65c368f33390d633d217131ffcc5b592f0d",
+                "block_index": 320718,
+                "source": "1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk",
+                "timestamp": 1410732503,
+                "value": 1.0,
+                "fee_fraction_int": 1000000,
+                "text": "xbet.io/feed/1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk",
+                "locked": 0,
+                "status": "valid"
+            }
+        ]
+    },
+    "/addresses/<address>/burns": {
+        "result": [
+            {
+                "tx_index": 3070,
+                "tx_hash": "4560d0e3d04927108b615ab106040489aca9c4aceedcf69d2b71f63b3139c7ae",
+                "block_index": 283810,
+                "source": "1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W",
+                "burned": 10000000,
+                "earned": 10000000000,
+                "status": "valid"
+            }
+        ]
+    },
+    "/addresses/<address>/sends": {
+        "result": [
+            {
+                "tx_index": 163106,
+                "tx_hash": "1c447b41816f1cfbb83f125c8e05faeaae70dbf27255745ba7393f809bd388eb",
+                "block_index": 343049,
+                "source": "1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W",
+                "destination": "16cRBUNnTWiUh2sXWNn1P7KHyJUmyMkdfH",
+                "asset": "XCP",
+                "quantity": 10000000000,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "quantity_normalized": "100"
+            }
+        ]
+    },
+    "/addresses/<address>/receives": {
+        "result": [
+            {
+                "tx_index": 2677412,
+                "tx_hash": "7e4fbb0a1eeeee34bf499955f1027fb78c514d63a3c8ff2e28c6dad005e4d850",
+                "block_index": 830981,
+                "source": "bc1qqxr9grqw73dm95cen3g56mzswuj6eqjedu6csx",
+                "destination": "1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs",
+                "asset": "XCP",
+                "quantity": 104200000000,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "quantity_normalized": "1042"
+            }
+        ]
+    },
+    "/addresses/<address>/sends/<asset>": {
+        "result": [
+            {
+                "tx_index": 163106,
+                "tx_hash": "1c447b41816f1cfbb83f125c8e05faeaae70dbf27255745ba7393f809bd388eb",
+                "block_index": 343049,
+                "source": "1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W",
+                "destination": "16cRBUNnTWiUh2sXWNn1P7KHyJUmyMkdfH",
+                "asset": "XCP",
+                "quantity": 10000000000,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "quantity_normalized": "100"
+            }
+        ]
+    },
+    "/addresses/<address>/receives/<asset>": {
+        "result": [
+            {
+                "tx_index": 2677412,
+                "tx_hash": "7e4fbb0a1eeeee34bf499955f1027fb78c514d63a3c8ff2e28c6dad005e4d850",
+                "block_index": 830981,
+                "source": "bc1qqxr9grqw73dm95cen3g56mzswuj6eqjedu6csx",
+                "destination": "1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs",
+                "asset": "XCP",
+                "quantity": 104200000000,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "quantity_normalized": "1042"
+            }
+        ]
+    },
+    "/addresses/<address>/dispensers": {
+        "result": [
+            {
+                "tx_index": 2726460,
+                "tx_hash": "b592d8ca4994d182e4ec63e1659dc4282b1a84466b7d71ed68c281ce63ed4897",
+                "block_index": 839964,
+                "source": "bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz",
+                "asset": "ERYKAHPEPU",
+                "give_quantity": 1,
+                "escrow_quantity": 25,
+                "satoshirate": 50000,
+                "status": 0,
+                "give_remaining": 25,
+                "oracle_address": null,
+                "last_status_tx_hash": null,
+                "origin": "1E6tyJ2zCyX74XgEK8t9iNMjxjNVLCGR1u",
+                "dispense_count": 0,
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "https://ipfs.io/ipfs/QmPzRXMYVTQ3zoYhaxW5ZRkt4o9vUnnzdBW4kV5CXUyjT4/ERYKAHPEPU.json",
+                    "issuer": "1E6tyJ2zCyX74XgEK8t9iNMjxjNVLCGR1u",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "give_quantity_normalized": "1",
+                "give_remaining_normalized": "25",
+                "escrow_quantity_normalized": "25"
+            }
+        ]
+    },
+    "/addresses/<address>/dispensers/<asset>": {
+        "result": [
+            {
+                "tx_index": 2726460,
+                "tx_hash": "b592d8ca4994d182e4ec63e1659dc4282b1a84466b7d71ed68c281ce63ed4897",
+                "block_index": 839964,
+                "source": "bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz",
+                "asset": "ERYKAHPEPU",
+                "give_quantity": 1,
+                "escrow_quantity": 25,
+                "satoshirate": 50000,
+                "status": 0,
+                "give_remaining": 25,
+                "oracle_address": null,
+                "last_status_tx_hash": null,
+                "origin": "1E6tyJ2zCyX74XgEK8t9iNMjxjNVLCGR1u",
+                "dispense_count": 0,
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "https://ipfs.io/ipfs/QmPzRXMYVTQ3zoYhaxW5ZRkt4o9vUnnzdBW4kV5CXUyjT4/ERYKAHPEPU.json",
+                    "issuer": "1E6tyJ2zCyX74XgEK8t9iNMjxjNVLCGR1u",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "give_quantity_normalized": "1",
+                "give_remaining_normalized": "25",
+                "escrow_quantity_normalized": "25"
+            }
+        ]
+    },
+    "/assets": {
+        "result": [
+            {
+                "asset": "A100000000000000000",
+                "asset_longname": null
+            },
+            {
+                "asset": "A1000000000000000000",
+                "asset_longname": null
+            },
+            {
+                "asset": "A10000000000000000000",
+                "asset_longname": null
+            },
+            {
+                "asset": "A10000000000000000001",
+                "asset_longname": null
+            },
+            {
+                "asset": "A10000000000000000002",
+                "asset_longname": null
+            }
+        ]
+    },
+    "/assets/<asset>": {
+        "result": {
+            "asset": "UNNEGOTIABLE",
+            "asset_longname": null,
+            "owner": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+            "divisible": false,
+            "locked": true,
+            "supply": 1776,
+            "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+            "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+            "holder_count": 6
+        }
+    },
+    "/assets/<asset>/balances": {
+        "result": [
+            {
+                "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                "asset": "UNNEGOTIABLE",
+                "quantity": 1700,
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "quantity_normalized": "1700"
+            },
+            {
+                "address": "17LV3y5KhExPdVcqS81zXuVUfNV9pmaGA",
+                "asset": "UNNEGOTIABLE",
+                "quantity": 1,
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "quantity_normalized": "1"
+            },
+            {
+                "address": "1ADca8k8XRY278QfQ3f9ynWaNYFzUDhkrk",
+                "asset": "UNNEGOTIABLE",
+                "quantity": 2,
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "quantity_normalized": "2"
+            },
+            {
+                "address": "1FmEBHzkZGqQZ7kprf53xU8XijUiv2SDYW",
+                "asset": "UNNEGOTIABLE",
+                "quantity": 1,
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "quantity_normalized": "1"
+            },
+            {
+                "address": "1kEXrh8MQqotJq2qgcVLeZqdmeuDG8HXX",
+                "asset": "UNNEGOTIABLE",
+                "quantity": 1,
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "quantity_normalized": "1"
+            }
+        ]
+    },
+    "/assets/<asset>/balances/<address>": {
+        "result": {
+            "address": "1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs",
+            "asset": "XCP",
+            "quantity": 104200000000,
+            "asset_issuance": {
+                "divisible": true,
+                "asset_longname": "Counterparty",
+                "description": "The Counterparty protocol native currency",
+                "locked": true
+            },
+            "quantity_normalized": "1042"
+        }
+    },
+    "/assets/<asset>/orders": {
+        "result": [
+            {
+                "tx_index": 825373,
+                "tx_hash": "0129611a0aece52adddf6d929e75c703baa9cdcb7e4ce887aa859f9640aa9640",
+                "block_index": 455461,
+                "source": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
+                "give_asset": "NEEDPEPE",
+                "give_quantity": 1,
+                "give_remaining": 0,
+                "get_asset": "PEPECASH",
+                "get_quantity": 400000000000,
+                "get_remaining": 0,
+                "expiration": 1000,
+                "expire_index": 456457,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 46098,
+                "fee_provided_remaining": 46098,
+                "status": "filled",
+                "give_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "get_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "http://rarepepedirectory.com/json/pc.json",
+                    "issuer": "1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD",
+                    "divisible": 1,
+                    "locked": 1
+                },
+                "give_quantity_normalized": "1",
+                "get_quantity_normalized": "4000",
+                "get_remaining_normalized": "0",
+                "give_remaining_normalized": "0"
+            },
+            {
+                "tx_index": 2225134,
+                "tx_hash": "5b6e0c741d765ebd883dc16eecfb5c340c52865cabf297ca2c1432437c1348b7",
+                "block_index": 772817,
+                "source": "1FnM7akSCD8G3fRQHCUEXRCfL35gptsPZB",
+                "give_asset": "NEEDPEPE",
+                "give_quantity": 1,
+                "give_remaining": 0,
+                "get_asset": "XCP",
+                "get_quantity": 80800000000,
+                "get_remaining": 0,
+                "expiration": 5000,
+                "expire_index": 777817,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 5544,
+                "fee_provided_remaining": 5544,
+                "status": "filled",
+                "give_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "get_asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "give_quantity_normalized": "1",
+                "get_quantity_normalized": "808",
+                "get_remaining_normalized": "0",
+                "give_remaining_normalized": "0"
+            },
+            {
+                "tx_index": 1946026,
+                "tx_hash": "75dc6ee1f67317e674ef33b617d3a9839ee53bf4a2e8274c88d6202d4d89b59a",
+                "block_index": 727444,
+                "source": "1GotRejB6XsGgMsM79TvcypeanDJRJbMtg",
+                "give_asset": "NEEDPEPE",
+                "give_quantity": 1,
+                "give_remaining": 0,
+                "get_asset": "XCP",
+                "get_quantity": 70000000000,
+                "get_remaining": 0,
+                "expiration": 5000,
+                "expire_index": 732381,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 264,
+                "fee_provided_remaining": 264,
+                "status": "filled",
+                "give_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "get_asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "give_quantity_normalized": "1",
+                "get_quantity_normalized": "700",
+                "get_remaining_normalized": "0",
+                "give_remaining_normalized": "0"
+            },
+            {
+                "tx_index": 2202451,
+                "tx_hash": "77f568fc6604dbe209d2ea1b0158d7de20723c0178107eb570f4f2a719b0d7c7",
+                "block_index": 772817,
+                "source": "184gKLQTtQU29LXbxbYJkUV4if9SmW6v2d",
+                "give_asset": "XCP",
+                "give_quantity": 80800000000,
+                "give_remaining": 0,
+                "get_asset": "NEEDPEPE",
+                "get_quantity": 1,
+                "get_remaining": 0,
+                "expiration": 5000,
+                "expire_index": 773300,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 264,
+                "fee_provided_remaining": 264,
+                "status": "filled",
+                "give_asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "get_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "give_quantity_normalized": "808",
+                "get_quantity_normalized": "1",
+                "get_remaining_normalized": "0",
+                "give_remaining_normalized": "0"
+            },
+            {
+                "tx_index": 825411,
+                "tx_hash": "7b2369f40078f4d98a3d3a7733315a1c4efd7977c75f7066dd447d5c7eed7f20",
+                "block_index": 455461,
+                "source": "18cmgoX99Nrm411YKpmTQsp23qczWdxS6w",
+                "give_asset": "PEPECASH",
+                "give_quantity": 300000000000,
+                "give_remaining": 0,
+                "get_asset": "NEEDPEPE",
+                "get_quantity": 1,
+                "get_remaining": 0,
+                "expiration": 5000,
+                "expire_index": 460461,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 40000,
+                "fee_provided_remaining": 40000,
+                "status": "filled",
+                "give_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "http://rarepepedirectory.com/json/pc.json",
+                    "issuer": "1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD",
+                    "divisible": 1,
+                    "locked": 1
+                },
+                "get_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "give_quantity_normalized": "3000",
+                "get_quantity_normalized": "1",
+                "get_remaining_normalized": "0",
+                "give_remaining_normalized": "0"
+            },
+            {
+                "tx_index": 825403,
+                "tx_hash": "7e1abf6ad57eb61227015fc7a333da034b4dd2f1c4e23cf106864b60a20feef7",
+                "block_index": 455460,
+                "source": "18cmgoX99Nrm411YKpmTQsp23qczWdxS6w",
+                "give_asset": "PEPECASH",
+                "give_quantity": 200000000000,
+                "give_remaining": 0,
+                "get_asset": "NEEDPEPE",
+                "get_quantity": 1,
+                "get_remaining": 0,
+                "expiration": 1000,
+                "expire_index": 456460,
+                "fee_required": 20000,
+                "fee_required_remaining": 20000,
+                "fee_provided": 50766,
+                "fee_provided_remaining": 50766,
+                "status": "filled",
+                "give_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "http://rarepepedirectory.com/json/pc.json",
+                    "issuer": "1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD",
+                    "divisible": 1,
+                    "locked": 1
+                },
+                "get_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "give_quantity_normalized": "2000",
+                "get_quantity_normalized": "1",
+                "get_remaining_normalized": "0",
+                "give_remaining_normalized": "0"
+            },
+            {
+                "tx_index": 825370,
+                "tx_hash": "8e4d324407b62de773af53f8f7a556882ac82a217c216491a28072f293918fe6",
+                "block_index": 455457,
+                "source": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
+                "give_asset": "NEEDPEPE",
+                "give_quantity": 1,
+                "give_remaining": 0,
+                "get_asset": "PEPECASH",
+                "get_quantity": 100000000000,
+                "get_remaining": -1100000000,
+                "expiration": 1000,
+                "expire_index": 456457,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 75791,
+                "fee_provided_remaining": 75791,
+                "status": "filled",
+                "give_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "get_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "http://rarepepedirectory.com/json/pc.json",
+                    "issuer": "1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD",
+                    "divisible": 1,
+                    "locked": 1
+                },
+                "give_quantity_normalized": "1",
+                "get_quantity_normalized": "1000",
+                "get_remaining_normalized": "-11",
+                "give_remaining_normalized": "0"
+            },
+            {
+                "tx_index": 825413,
+                "tx_hash": "927878fa98edb6d24310c45254c324f3d5a7f625e2a3a0e7fd1e749b49493750",
+                "block_index": 455461,
+                "source": "18cmgoX99Nrm411YKpmTQsp23qczWdxS6w",
+                "give_asset": "PEPECASH",
+                "give_quantity": 400000000000,
+                "give_remaining": 0,
+                "get_asset": "NEEDPEPE",
+                "get_quantity": 1,
+                "get_remaining": 0,
+                "expiration": 5000,
+                "expire_index": 460461,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 40000,
+                "fee_provided_remaining": 40000,
+                "status": "filled",
+                "give_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "http://rarepepedirectory.com/json/pc.json",
+                    "issuer": "1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD",
+                    "divisible": 1,
+                    "locked": 1
+                },
+                "get_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "give_quantity_normalized": "4000",
+                "get_quantity_normalized": "1",
+                "get_remaining_normalized": "0",
+                "give_remaining_normalized": "0"
+            },
+            {
+                "tx_index": 1946587,
+                "tx_hash": "b747f290cbbad6faa1c1c05d5c6d001b5a3ef487027bb0d4eefcdc9f6e865c39",
+                "block_index": 727444,
+                "source": "1AtcSh7uxenQ6AR5xqr6agAegWRUF5N4uh",
+                "give_asset": "XCP",
+                "give_quantity": 70000000000,
+                "give_remaining": 0,
+                "get_asset": "NEEDPEPE",
+                "get_quantity": 1,
+                "get_remaining": 0,
+                "expiration": 5000,
+                "expire_index": 732444,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 792,
+                "fee_provided_remaining": 792,
+                "status": "filled",
+                "give_asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "get_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "give_quantity_normalized": "700",
+                "get_quantity_normalized": "1",
+                "get_remaining_normalized": "0",
+                "give_remaining_normalized": "0"
+            },
+            {
+                "tx_index": 825371,
+                "tx_hash": "b83c96217214decb6316c3619bc88a3471d17e46eb3708406c8f878dedd61610",
+                "block_index": 455460,
+                "source": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
+                "give_asset": "NEEDPEPE",
+                "give_quantity": 1,
+                "give_remaining": 0,
+                "get_asset": "PEPECASH",
+                "get_quantity": 200000000000,
+                "get_remaining": 0,
+                "expiration": 1000,
+                "expire_index": 456457,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 46098,
+                "fee_provided_remaining": 46098,
+                "status": "filled",
+                "give_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "get_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "http://rarepepedirectory.com/json/pc.json",
+                    "issuer": "1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD",
+                    "divisible": 1,
+                    "locked": 1
+                },
+                "give_quantity_normalized": "1",
+                "get_quantity_normalized": "2000",
+                "get_remaining_normalized": "0",
+                "give_remaining_normalized": "0"
+            },
+            {
+                "tx_index": 825372,
+                "tx_hash": "e32154f8ade796df0b121604de140703d062d22d1e82e77e629e6096668c812f",
+                "block_index": 455461,
+                "source": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
+                "give_asset": "NEEDPEPE",
+                "give_quantity": 1,
+                "give_remaining": 0,
+                "get_asset": "PEPECASH",
+                "get_quantity": 300000000000,
+                "get_remaining": 0,
+                "expiration": 1000,
+                "expire_index": 456457,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 46098,
+                "fee_provided_remaining": 46098,
+                "status": "filled",
+                "give_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "get_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "http://rarepepedirectory.com/json/pc.json",
+                    "issuer": "1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD",
+                    "divisible": 1,
+                    "locked": 1
+                },
+                "give_quantity_normalized": "1",
+                "get_quantity_normalized": "3000",
+                "get_remaining_normalized": "0",
+                "give_remaining_normalized": "0"
+            }
+        ]
+    },
+    "/assets/<asset>/credits": {
+        "result": [
+            {
+                "block_index": 840464,
+                "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                "asset": "UNNEGOTIABLE",
+                "quantity": 1,
+                "calling_function": "issuance",
+                "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
+                "tx_index": 2726605,
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "quantity_normalized": "1"
+            },
+            {
+                "block_index": 840744,
+                "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                "asset": "UNNEGOTIABLE",
+                "quantity": 1775,
+                "calling_function": "issuance",
+                "event": "92f6d2e3b07ff6aa558357d6c2c324a763f54bbcc4b887c725d61e60a57b4a7e",
+                "tx_index": 2726753,
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "quantity_normalized": "1775"
+            },
+            {
+                "block_index": 840759,
+                "address": "1AFmKo6v7tNBm45bo6eDhB6gACZhFD8oby",
+                "asset": "UNNEGOTIABLE",
+                "quantity": 76,
+                "calling_function": "open dispenser empty addr",
+                "event": "382fcc65fddc7ac39ab37fe66b2bb24d3e431b7bf0d99e509d7e761c49e28cb8",
+                "tx_index": 2726781,
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "quantity_normalized": "76"
+            },
+            {
+                "block_index": 840870,
+                "address": "17LV3y5KhExPdVcqS81zXuVUfNV9pmaGA",
+                "asset": "UNNEGOTIABLE",
+                "quantity": 1,
+                "calling_function": "dispense",
+                "event": "f3775d4cc481b17c860c32d175a02535fef3d5d4642d9a4e947768a6bc406207",
+                "tx_index": 2726916,
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "quantity_normalized": "1"
+            },
+            {
+                "block_index": 840895,
+                "address": "1FmEBHzkZGqQZ7kprf53xU8XijUiv2SDYW",
+                "asset": "UNNEGOTIABLE",
+                "quantity": 1,
+                "calling_function": "dispense",
+                "event": "ce3c2d55978a5b7700ef543926af84bb3f8f94ae1f3312880ee32cd0ce1743fd",
+                "tx_index": 2726969,
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "quantity_normalized": "1"
+            }
+        ]
+    },
+    "/assets/<asset>/debits": {
+        "result": [
+            {
+                "block_index": 280091,
+                "address": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
+                "asset": "XCP",
+                "quantity": 1000000000,
+                "action": "send",
+                "event": "1c20d6596f6be031c94def5ad93a52217d76371885adcc53c91c3b1eaf76ccce",
+                "tx_index": 729,
+                "asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "quantity_normalized": "10"
+            },
+            {
+                "block_index": 280112,
+                "address": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
+                "asset": "XCP",
+                "quantity": 1100000000,
+                "action": "send",
+                "event": "4dacd03d73cb497229dbfe2e7209adc4221540efe0e4c57f408b09b2fd36ece6",
+                "tx_index": 749,
+                "asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "quantity_normalized": "11"
+            },
+            {
+                "block_index": 280112,
+                "address": "1PMacKVWDszkBRbb2iWWvX63BwhKUTsSBd",
+                "asset": "XCP",
+                "quantity": 100000000,
+                "action": "send",
+                "event": "057d10cc33455f4f7af44d2f030b3866e3a16416ecf984e304c76abe98393c1d",
+                "tx_index": 752,
+                "asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "quantity_normalized": "1"
+            },
+            {
+                "block_index": 280114,
+                "address": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
+                "asset": "XCP",
+                "quantity": 1100000000,
+                "action": "send",
+                "event": "3ac6ea5b329832e2dc31ead6c5277beccb7d95f0d9f20f256f97067223c81e00",
+                "tx_index": 755,
+                "asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "quantity_normalized": "11"
+            },
+            {
+                "block_index": 280156,
+                "address": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
+                "asset": "XCP",
+                "quantity": 1100000000,
+                "action": "send",
+                "event": "66fc1409ac6646bd8c267de89c57d2204e31bb6dfce9ee2a3ab18416fadf9e9c",
+                "tx_index": 766,
+                "asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "quantity_normalized": "11"
+            }
+        ]
+    },
+    "/assets/<asset>/dividends": {
+        "result": [
+            {
+                "tx_index": 1914456,
+                "tx_hash": "30760e413947ebdc80ed7a5ada1bd4466800b87e9976bbe811ad4e2b46546359",
+                "block_index": 724381,
+                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                "asset": "GMONEYPEPE",
+                "dividend_asset": "ENDTHEFED",
+                "quantity_per_unit": 1,
+                "fee_paid": 2520000,
+                "status": "valid",
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "xcp.coindaddy.io/GMONEYPEPE.json",
+                    "issuer": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                    "divisible": 0,
+                    "locked": 1
+                }
+            },
+            {
+                "tx_index": 1915246,
+                "tx_hash": "827794cbab3299f80a5b8b8cb8ec29ec3aee1373f7da2c05a156bed902bf4684",
+                "block_index": 724479,
+                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                "asset": "GMONEYPEPE",
+                "dividend_asset": "TRUMPDANCING",
+                "quantity_per_unit": 100,
+                "fee_paid": 2520000,
+                "status": "valid",
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "xcp.coindaddy.io/GMONEYPEPE.json",
+                    "issuer": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                    "divisible": 0,
+                    "locked": 1
+                }
+            },
+            {
+                "tx_index": 1920208,
+                "tx_hash": "7014f1e259531ba9632ca5000c35df5bd47f237318e48955900453ce9c07e917",
+                "block_index": 724931,
+                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                "asset": "GMONEYPEPE",
+                "dividend_asset": "CTRWOJACK",
+                "quantity_per_unit": 1111,
+                "fee_paid": 2700000,
+                "status": "valid",
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "xcp.coindaddy.io/GMONEYPEPE.json",
+                    "issuer": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                    "divisible": 0,
+                    "locked": 1
+                }
+            },
+            {
+                "tx_index": 1927909,
+                "tx_hash": "5556fd2b0802cf3bc0abd5001ecbac3adbc5b7c5c46a145a78daeef358c308de",
+                "block_index": 725654,
+                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                "asset": "GMONEYPEPE",
+                "dividend_asset": "WHITERUSSIAN",
+                "quantity_per_unit": 1,
+                "fee_paid": 3220000,
+                "status": "valid",
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "xcp.coindaddy.io/GMONEYPEPE.json",
+                    "issuer": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                    "divisible": 0,
+                    "locked": 1
+                }
+            },
+            {
+                "tx_index": 1983693,
+                "tx_hash": "cda646285cc63f758d19b5403070f23e2a6e4b34eb3b86b63a0f56f971345657",
+                "block_index": 730568,
+                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                "asset": "GMONEYPEPE",
+                "dividend_asset": "A4520591452211866149",
+                "quantity_per_unit": 1,
+                "fee_paid": 4040000,
+                "status": "valid",
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "xcp.coindaddy.io/GMONEYPEPE.json",
+                    "issuer": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                    "divisible": 0,
+                    "locked": 1
+                }
+            },
+            {
+                "tx_index": 1983842,
+                "tx_hash": "e4b73dc974cc279b873b78e5dc4a347c08788b02143ae27aa0582f900289be10",
+                "block_index": 730588,
+                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                "asset": "GMONEYPEPE",
+                "dividend_asset": "NCSWIC",
+                "quantity_per_unit": 1,
+                "fee_paid": 4040000,
+                "status": "valid",
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "xcp.coindaddy.io/GMONEYPEPE.json",
+                    "issuer": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                    "divisible": 0,
+                    "locked": 1
+                }
+            },
+            {
+                "tx_index": 1996395,
+                "tx_hash": "b342feb1421df107010ad3c8ee2043ded802bdf6cd619862459da3d0f87d6a99",
+                "block_index": 731994,
+                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                "asset": "GMONEYPEPE",
+                "dividend_asset": "FUCKTHEFED",
+                "quantity_per_unit": 1,
+                "fee_paid": 4380000,
+                "status": "valid",
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "xcp.coindaddy.io/GMONEYPEPE.json",
+                    "issuer": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                    "divisible": 0,
+                    "locked": 1
+                }
+            },
+            {
+                "tx_index": 2035947,
+                "tx_hash": "02d715fd9e8b7bbc782b1b2d92a1b9ffae9326bfc88ba76c453c515ad7c8c2bc",
+                "block_index": 738763,
+                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                "asset": "GMONEYPEPE",
+                "dividend_asset": "HOLDTHELINE",
+                "quantity_per_unit": 1,
+                "fee_paid": 4940000,
+                "status": "valid",
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "xcp.coindaddy.io/GMONEYPEPE.json",
+                    "issuer": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                    "divisible": 0,
+                    "locked": 1
+                }
+            },
+            {
+                "tx_index": 2174481,
+                "tx_hash": "b935a06fc34d8fa4f0c526984085b1b12c78e899415e595b625f1bee84ce3709",
+                "block_index": 762733,
+                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                "asset": "GMONEYPEPE",
+                "dividend_asset": "EOXIXIZERO",
+                "quantity_per_unit": 1,
+                "fee_paid": 6500000,
+                "status": "valid",
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "xcp.coindaddy.io/GMONEYPEPE.json",
+                    "issuer": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                    "divisible": 0,
+                    "locked": 1
+                }
+            },
+            {
+                "tx_index": 2198534,
+                "tx_hash": "a063e9a745b9f6bc3201f72abff196de20ec106bcc71d820673d516ddbb3aa90",
+                "block_index": 767569,
+                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                "asset": "GMONEYPEPE",
+                "dividend_asset": "TRUMPCARDS",
+                "quantity_per_unit": 1,
+                "fee_paid": 6660000,
+                "status": "valid",
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "xcp.coindaddy.io/GMONEYPEPE.json",
+                    "issuer": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                    "divisible": 0,
+                    "locked": 1
+                }
+            },
+            {
+                "tx_index": 2704948,
+                "tx_hash": "437102ca4698f63a12e369f6168e3c7f5f8eef3e225395d515775673e33d39c1",
+                "block_index": 832745,
+                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                "asset": "GMONEYPEPE",
+                "dividend_asset": "FUCKYOUWAR",
+                "quantity_per_unit": 1,
+                "fee_paid": 6840000,
+                "status": "valid",
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "xcp.coindaddy.io/GMONEYPEPE.json",
+                    "issuer": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                    "divisible": 0,
+                    "locked": 1
+                }
+            },
+            {
+                "tx_index": 2704949,
+                "tx_hash": "7d3807cc58fa2d9751b2b0089bfa8fa86ef795821be6d8e9418ab3a819eba299",
+                "block_index": 832745,
+                "source": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                "asset": "GMONEYPEPE",
+                "dividend_asset": "MEDICINEPEPE",
+                "quantity_per_unit": 1,
+                "fee_paid": 6840000,
+                "status": "valid",
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "xcp.coindaddy.io/GMONEYPEPE.json",
+                    "issuer": "1JJP986hdU9Qy9b49rafM9FoXdbz1Mgbjo",
+                    "divisible": 0,
+                    "locked": 1
+                }
+            }
+        ]
+    },
+    "/assets/<asset>/issuances": {
+        "result": [
+            {
+                "tx_index": 2726605,
+                "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
+                "msg_index": 0,
+                "block_index": 840464,
+                "asset": "UNNEGOTIABLE",
+                "quantity": 1,
+                "divisible": 0,
+                "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                "transfer": 0,
+                "callable": 0,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "UNNEGOTIABLE WE MUST BECOME UNNEGOTIABLE WE ARE",
+                "fee_paid": 50000000,
+                "locked": 0,
+                "status": "valid",
+                "asset_longname": null,
+                "reset": 0
+            },
+            {
+                "tx_index": 2726737,
+                "tx_hash": "d15580fa7ba62d7e7928db41836521af9e7cbc8cce2efa06cc2cc57d22bf4f0f",
+                "msg_index": 0,
+                "block_index": 840738,
+                "asset": "UNNEGOTIABLE",
+                "quantity": 0,
+                "divisible": 0,
+                "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                "transfer": 0,
+                "callable": 0,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                "fee_paid": 0,
+                "locked": 0,
+                "status": "valid",
+                "asset_longname": null,
+                "reset": 0
+            },
+            {
+                "tx_index": 2726753,
+                "tx_hash": "92f6d2e3b07ff6aa558357d6c2c324a763f54bbcc4b887c725d61e60a57b4a7e",
+                "msg_index": 0,
+                "block_index": 840744,
+                "asset": "UNNEGOTIABLE",
+                "quantity": 1775,
+                "divisible": 0,
+                "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                "transfer": 0,
+                "callable": 0,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                "fee_paid": 0,
+                "locked": 0,
+                "status": "valid",
+                "asset_longname": null,
+                "reset": 0
+            },
+            {
+                "tx_index": 2726769,
+                "tx_hash": "935fc9682e0aa630df4e640e3cbf730b5a722a41002cb425a69eb33a66556501",
+                "msg_index": 0,
+                "block_index": 840756,
+                "asset": "UNNEGOTIABLE",
+                "quantity": 0,
+                "divisible": 0,
+                "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                "transfer": 0,
+                "callable": 0,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                "fee_paid": 0,
+                "locked": 1,
+                "status": "valid",
+                "asset_longname": null,
+                "reset": 0
+            }
+        ]
+    },
+    "/assets/<asset>/sends": {
+        "result": [
+            {
+                "tx_index": 729,
+                "tx_hash": "1c20d6596f6be031c94def5ad93a52217d76371885adcc53c91c3b1eaf76ccce",
+                "block_index": 280091,
+                "source": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
+                "destination": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
+                "asset": "XCP",
+                "quantity": 1000000000,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "quantity_normalized": "10"
+            },
+            {
+                "tx_index": 749,
+                "tx_hash": "4dacd03d73cb497229dbfe2e7209adc4221540efe0e4c57f408b09b2fd36ece6",
+                "block_index": 280112,
+                "source": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
+                "destination": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
+                "asset": "XCP",
+                "quantity": 1100000000,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "quantity_normalized": "11"
+            },
+            {
+                "tx_index": 752,
+                "tx_hash": "057d10cc33455f4f7af44d2f030b3866e3a16416ecf984e304c76abe98393c1d",
+                "block_index": 280112,
+                "source": "1PMacKVWDszkBRbb2iWWvX63BwhKUTsSBd",
+                "destination": "1PMacKVWDszkBRbb2iWWvX63BwhKUTsSBd",
+                "asset": "XCP",
+                "quantity": 100000000,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "quantity_normalized": "1"
+            },
+            {
+                "tx_index": 755,
+                "tx_hash": "3ac6ea5b329832e2dc31ead6c5277beccb7d95f0d9f20f256f97067223c81e00",
+                "block_index": 280114,
+                "source": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
+                "destination": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
+                "asset": "XCP",
+                "quantity": 1100000000,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "quantity_normalized": "11"
+            },
+            {
+                "tx_index": 766,
+                "tx_hash": "66fc1409ac6646bd8c267de89c57d2204e31bb6dfce9ee2a3ab18416fadf9e9c",
+                "block_index": 280156,
+                "source": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
+                "destination": "1Pcpxw6wJwXABhjCspe3CNf3gqSeh6eien",
+                "asset": "XCP",
+                "quantity": 1100000000,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "quantity_normalized": "11"
+            }
+        ]
+    },
+    "/assets/<asset>/dispensers": {
+        "result": [
+            {
+                "tx_index": 2726460,
+                "tx_hash": "b592d8ca4994d182e4ec63e1659dc4282b1a84466b7d71ed68c281ce63ed4897",
+                "block_index": 839964,
+                "source": "bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz",
+                "asset": "ERYKAHPEPU",
+                "give_quantity": 1,
+                "escrow_quantity": 25,
+                "satoshirate": 50000,
+                "status": 0,
+                "give_remaining": 25,
+                "oracle_address": null,
+                "last_status_tx_hash": null,
+                "origin": "1E6tyJ2zCyX74XgEK8t9iNMjxjNVLCGR1u",
+                "dispense_count": 0,
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "https://ipfs.io/ipfs/QmPzRXMYVTQ3zoYhaxW5ZRkt4o9vUnnzdBW4kV5CXUyjT4/ERYKAHPEPU.json",
+                    "issuer": "1E6tyJ2zCyX74XgEK8t9iNMjxjNVLCGR1u",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "give_quantity_normalized": "1",
+                "give_remaining_normalized": "25",
+                "escrow_quantity_normalized": "25"
+            }
+        ]
+    },
+    "/assets/<asset>/dispensers/<address>": {
+        "result": [
+            {
+                "tx_index": 2726460,
+                "tx_hash": "b592d8ca4994d182e4ec63e1659dc4282b1a84466b7d71ed68c281ce63ed4897",
+                "block_index": 839964,
+                "source": "bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz",
+                "asset": "ERYKAHPEPU",
+                "give_quantity": 1,
+                "escrow_quantity": 25,
+                "satoshirate": 50000,
+                "status": 0,
+                "give_remaining": 25,
+                "oracle_address": null,
+                "last_status_tx_hash": null,
+                "origin": "1E6tyJ2zCyX74XgEK8t9iNMjxjNVLCGR1u",
+                "dispense_count": 0,
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "https://ipfs.io/ipfs/QmPzRXMYVTQ3zoYhaxW5ZRkt4o9vUnnzdBW4kV5CXUyjT4/ERYKAHPEPU.json",
+                    "issuer": "1E6tyJ2zCyX74XgEK8t9iNMjxjNVLCGR1u",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "give_quantity_normalized": "1",
+                "give_remaining_normalized": "25",
+                "escrow_quantity_normalized": "25"
+            }
+        ]
     },
     "/orders/<order_hash>": {
         "result": [
             {
                 "tx_index": 2724132,
                 "tx_hash": "23f68fdf934e81144cca31ce8ef69062d553c521321a039166e7ba99aede0776",
-                "block_index": 840381,
+                "block_index": 840918,
                 "source": "15L7U55PAsHLEpQkZqz62e3eqWd9AHb2DH",
                 "give_asset": "PEPECASH",
                 "give_quantity": 6966600000000,
-                "give_remaining": 900000000000,
+                "give_remaining": 0,
                 "get_asset": "XCP",
                 "get_quantity": 11076894000,
-                "get_remaining": 1431000000,
+                "get_remaining": 0,
                 "expiration": 5000,
                 "expire_index": 843055,
                 "fee_required": 0,
                 "fee_required_remaining": 0,
                 "fee_provided": 4488,
                 "fee_provided_remaining": 4488,
-                "status": "open"
+                "status": "filled",
+                "give_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "http://rarepepedirectory.com/json/pc.json",
+                    "issuer": "1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD",
+                    "divisible": 1,
+                    "locked": 1
+                },
+                "get_asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "give_quantity_normalized": "69666",
+                "get_quantity_normalized": "110.76894",
+                "get_remaining_normalized": "0",
+                "give_remaining_normalized": "0"
             }
         ]
     },
@@ -2028,6 +2859,166 @@
                 "btc_amount": 4500000,
                 "order_match_id": "0a1387df82a8a7e9cec01c52c8fee01f6995c4e39dc5804e1d2bf40d9368f5c5_299b5b648f54eacb839f3487232d49aea373cdd681b706d4cc0b5e0b03688db4",
                 "status": "valid"
+            }
+        ]
+    },
+    "/orders/<asset1>/<asset2>": {
+        "result": [
+            {
+                "tx_index": 2225134,
+                "tx_hash": "5b6e0c741d765ebd883dc16eecfb5c340c52865cabf297ca2c1432437c1348b7",
+                "block_index": 772817,
+                "source": "1FnM7akSCD8G3fRQHCUEXRCfL35gptsPZB",
+                "give_asset": "NEEDPEPE",
+                "give_quantity": 1,
+                "give_remaining": 0,
+                "get_asset": "XCP",
+                "get_quantity": 80800000000,
+                "get_remaining": 0,
+                "expiration": 5000,
+                "expire_index": 777817,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 5544,
+                "fee_provided_remaining": 5544,
+                "status": "filled",
+                "market_pair": "NEEDPEPE/XCP",
+                "market_dir": "SELL",
+                "give_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "get_asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "give_quantity_normalized": "1",
+                "get_quantity_normalized": "808",
+                "get_remaining_normalized": "0",
+                "give_remaining_normalized": "0",
+                "market_price": "808"
+            },
+            {
+                "tx_index": 1946026,
+                "tx_hash": "75dc6ee1f67317e674ef33b617d3a9839ee53bf4a2e8274c88d6202d4d89b59a",
+                "block_index": 727444,
+                "source": "1GotRejB6XsGgMsM79TvcypeanDJRJbMtg",
+                "give_asset": "NEEDPEPE",
+                "give_quantity": 1,
+                "give_remaining": 0,
+                "get_asset": "XCP",
+                "get_quantity": 70000000000,
+                "get_remaining": 0,
+                "expiration": 5000,
+                "expire_index": 732381,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 264,
+                "fee_provided_remaining": 264,
+                "status": "filled",
+                "market_pair": "NEEDPEPE/XCP",
+                "market_dir": "SELL",
+                "give_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "get_asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "give_quantity_normalized": "1",
+                "get_quantity_normalized": "700",
+                "get_remaining_normalized": "0",
+                "give_remaining_normalized": "0",
+                "market_price": "700"
+            },
+            {
+                "tx_index": 2202451,
+                "tx_hash": "77f568fc6604dbe209d2ea1b0158d7de20723c0178107eb570f4f2a719b0d7c7",
+                "block_index": 772817,
+                "source": "184gKLQTtQU29LXbxbYJkUV4if9SmW6v2d",
+                "give_asset": "XCP",
+                "give_quantity": 80800000000,
+                "give_remaining": 0,
+                "get_asset": "NEEDPEPE",
+                "get_quantity": 1,
+                "get_remaining": 0,
+                "expiration": 5000,
+                "expire_index": 773300,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 264,
+                "fee_provided_remaining": 264,
+                "status": "filled",
+                "market_pair": "NEEDPEPE/XCP",
+                "market_dir": "BUY",
+                "give_asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "get_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "give_quantity_normalized": "808",
+                "get_quantity_normalized": "1",
+                "get_remaining_normalized": "0",
+                "give_remaining_normalized": "0",
+                "market_price": "808"
+            },
+            {
+                "tx_index": 1946587,
+                "tx_hash": "b747f290cbbad6faa1c1c05d5c6d001b5a3ef487027bb0d4eefcdc9f6e865c39",
+                "block_index": 727444,
+                "source": "1AtcSh7uxenQ6AR5xqr6agAegWRUF5N4uh",
+                "give_asset": "XCP",
+                "give_quantity": 70000000000,
+                "give_remaining": 0,
+                "get_asset": "NEEDPEPE",
+                "get_quantity": 1,
+                "get_remaining": 0,
+                "expiration": 5000,
+                "expire_index": 732444,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 792,
+                "fee_provided_remaining": 792,
+                "status": "filled",
+                "market_pair": "NEEDPEPE/XCP",
+                "market_dir": "BUY",
+                "give_asset_issuance": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true
+                },
+                "get_asset_issuance": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "1Fpx9NPBJsRbx6RXkvfZ3n1iCYj7n7VaJR",
+                    "divisible": 0,
+                    "locked": 1
+                },
+                "give_quantity_normalized": "700",
+                "get_quantity_normalized": "1",
+                "get_remaining_normalized": "0",
+                "give_remaining_normalized": "0",
+                "market_price": "700"
             }
         ]
     },
@@ -2116,7 +3107,16 @@
                 "last_status_tx_hash": null,
                 "origin": "bc1qq735dv8peps2ayr3qwwwdwylq4ddwcgrpyg9r2",
                 "dispense_count": 2,
-                "asset_longname": null
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "18VNeRv8vL528HF7ruKwxycrfNEeoqmHpa",
+                    "divisible": 1,
+                    "locked": 1
+                },
+                "give_quantity_normalized": "100",
+                "give_remaining_normalized": "1400",
+                "escrow_quantity_normalized": "2500"
             }
         ]
     },
@@ -2131,7 +3131,31 @@
                 "destination": "1FKYM1CP9RfttJhNG8HTNQdE2uV3YvwbRB",
                 "asset": "FLOCK",
                 "dispense_quantity": 20000000000,
-                "dispenser_tx_hash": "753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a"
+                "dispenser_tx_hash": "753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a",
+                "dispenser": {
+                    "tx_index": 2536311,
+                    "block_index": 840322,
+                    "source": "bc1qq735dv8peps2ayr3qwwwdwylq4ddwcgrpyg9r2",
+                    "give_quantity": 10000000000,
+                    "escrow_quantity": 250000000000,
+                    "satoshirate": 330000,
+                    "status": 0,
+                    "give_remaining": 140000000000,
+                    "oracle_address": null,
+                    "last_status_tx_hash": null,
+                    "origin": "bc1qq735dv8peps2ayr3qwwwdwylq4ddwcgrpyg9r2",
+                    "dispense_count": 2,
+                    "give_quantity_normalized": "100",
+                    "give_remaining_normalized": "1400",
+                    "escrow_quantity_normalized": "2500"
+                },
+                "asset_issuance": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "18VNeRv8vL528HF7ruKwxycrfNEeoqmHpa",
+                    "divisible": 1,
+                    "locked": 1
+                }
             },
             {
                 "tx_index": 2726580,
@@ -2142,166 +3166,30 @@
                 "destination": "bc1qzcdkhnexpjc8wvkyrpyrsn0f5xzcpu877mjmgj",
                 "asset": "FLOCK",
                 "dispense_quantity": 90000000000,
-                "dispenser_tx_hash": "753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a"
-            }
-        ]
-    },
-    "/transactions/<tx_hash>": {
-        "result": {
-            "tx_index": 2726605,
-            "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
-            "block_index": 840464,
-            "block_hash": "00000000000000000001093d4d6b21b80800fff6e5ea15cce6d65066f482cce9",
-            "block_time": 1713852783,
-            "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-            "destination": "",
-            "btc_amount": 0,
-            "fee": 56565,
-            "data": "16010b9142801429a60000000000000001000000554e4e45474f544941424c45205745204d555354204245434f4d4520554e4e45474f544941424c4520574520415245",
-            "supported": 1,
-            "unpacked_data": {
-                "message_type": "issuance",
-                "message_type_id": 22,
-                "message_data": {
-                    "asset_id": 75313533584419238,
-                    "asset": "UNNEGOTIABLE",
-                    "subasset_longname": null,
-                    "quantity": 1,
-                    "divisible": false,
-                    "lock": false,
-                    "reset": false,
-                    "callable": false,
-                    "call_date": 0,
-                    "call_price": 0.0,
-                    "description": "UNNEGOTIABLE WE MUST BECOME UNNEGOTIABLE WE ARE",
-                    "status": "valid"
-                }
-            }
-        }
-    },
-    "/blocks/<int:block_index>/events": {
-        "result": [
-            {
-                "event_index": 14194760,
-                "event": "BLOCK_PARSED",
-                "params": {
-                    "block_index": 840464,
-                    "ledger_hash": "b3f8cbb50b0705a5c4a8495f8b5128de13a32daebd8ac5e8316a010f0d203584",
-                    "messages_hash": "801d961c45a257f85ef0f10a6a8fdf048a520ae4861c0903f26365b3eaaaf540",
-                    "txlist_hash": "84bdc5b9073f775a2b65de7da2b10b89a2235f3501883b0a836e41e68cd00d46"
-                }
-            },
-            {
-                "event_index": 14194759,
-                "event": "TRANSACTION_PARSED",
-                "params": {
-                    "supported": true,
-                    "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
-                    "tx_index": 2726605
-                }
-            },
-            {
-                "event_index": 14194758,
-                "event": "CREDIT",
-                "params": {
-                    "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                    "asset": "UNNEGOTIABLE",
-                    "block_index": 840464,
-                    "calling_function": "issuance",
-                    "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
-                    "quantity": 1,
-                    "tx_index": 2726605
-                }
-            },
-            {
-                "event_index": 14194757,
-                "event": "ASSET_ISSUANCE",
-                "params": {
-                    "asset": "UNNEGOTIABLE",
+                "dispenser_tx_hash": "753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a",
+                "dispenser": {
+                    "tx_index": 2536311,
+                    "block_index": 840322,
+                    "source": "bc1qq735dv8peps2ayr3qwwwdwylq4ddwcgrpyg9r2",
+                    "give_quantity": 10000000000,
+                    "escrow_quantity": 250000000000,
+                    "satoshirate": 330000,
+                    "status": 0,
+                    "give_remaining": 140000000000,
+                    "oracle_address": null,
+                    "last_status_tx_hash": null,
+                    "origin": "bc1qq735dv8peps2ayr3qwwwdwylq4ddwcgrpyg9r2",
+                    "dispense_count": 2,
+                    "give_quantity_normalized": "100",
+                    "give_remaining_normalized": "1400",
+                    "escrow_quantity_normalized": "2500"
+                },
+                "asset_issuance": {
                     "asset_longname": null,
-                    "block_index": 840464,
-                    "call_date": 0,
-                    "call_price": 0.0,
-                    "callable": false,
-                    "description": "UNNEGOTIABLE WE MUST BECOME UNNEGOTIABLE WE ARE",
-                    "divisible": false,
-                    "fee_paid": 50000000,
-                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                    "locked": false,
-                    "quantity": 1,
-                    "reset": false,
-                    "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                    "status": "valid",
-                    "transfer": false,
-                    "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
-                    "tx_index": 2726605
-                }
-            },
-            {
-                "event_index": 14194756,
-                "event": "ASSET_CREATION",
-                "params": {
-                    "asset_id": "75313533584419238",
-                    "asset_longname": null,
-                    "asset_name": "UNNEGOTIABLE",
-                    "block_index": 840464
-                }
-            },
-            {
-                "event_index": 14194755,
-                "event": "DEBIT",
-                "params": {
-                    "action": "issuance fee",
-                    "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                    "asset": "XCP",
-                    "block_index": 840464,
-                    "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
-                    "quantity": 50000000,
-                    "tx_index": 2726605
-                }
-            },
-            {
-                "event_index": 14194754,
-                "event": "NEW_TRANSACTION",
-                "params": {
-                    "block_hash": "00000000000000000001093d4d6b21b80800fff6e5ea15cce6d65066f482cce9",
-                    "block_index": 840464,
-                    "block_time": 1713852783,
-                    "btc_amount": 0,
-                    "data": "16010b9142801429a60000000000000001000000554e4e45474f544941424c45205745204d555354204245434f4d4520554e4e45474f544941424c4520574520415245",
-                    "destination": "",
-                    "fee": 56565,
-                    "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                    "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
-                    "tx_index": 2726605
-                }
-            },
-            {
-                "event_index": 14194753,
-                "event": "NEW_BLOCK",
-                "params": {
-                    "block_hash": "00000000000000000001093d4d6b21b80800fff6e5ea15cce6d65066f482cce9",
-                    "block_index": 840464,
-                    "block_time": 1713852783,
-                    "difficulty": 86388558925171.02,
-                    "previous_block_hash": "00000000000000000002db1e5aa19784eec3de949f98ec757e7a7f2fc392079d"
-                }
-            }
-        ]
-    },
-    "/blocks/<int:block_index>/events/<event>": {
-        "result": [
-            {
-                "event_index": 14194758,
-                "event": "CREDIT",
-                "params": {
-                    "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                    "asset": "UNNEGOTIABLE",
-                    "block_index": 840464,
-                    "calling_function": "issuance",
-                    "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
-                    "quantity": 1,
-                    "tx_index": 2726605
+                    "description": "",
+                    "issuer": "18VNeRv8vL528HF7ruKwxycrfNEeoqmHpa",
+                    "divisible": 1,
+                    "locked": 1
                 }
             }
         ]
@@ -2331,7 +3219,15 @@
                     "source": "173cE6ScUFCmBLCqZeG18ij6r9KHRPbAjC",
                     "status": "valid",
                     "tx_hash": "7b39d3ebd9fe8293004a1a8b8eb2d01f1664e5d8b05e8cb94f30b1da2c2f9650",
-                    "tx_index": 2056160
+                    "tx_index": 2056160,
+                    "asset_issuance": {
+                        "asset_longname": null,
+                        "description": "",
+                        "issuer": "14CepDzwxKDQritbC7oAq7FTJiiEPPauyu",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
                 },
                 "block_index": 744232,
                 "timestamp": 1712256340
@@ -2346,7 +3242,15 @@
                     "calling_function": "send",
                     "event": "7b39d3ebd9fe8293004a1a8b8eb2d01f1664e5d8b05e8cb94f30b1da2c2f9650",
                     "quantity": 1,
-                    "tx_index": 2056160
+                    "tx_index": 2056160,
+                    "asset_issuance": {
+                        "asset_longname": null,
+                        "description": "",
+                        "issuer": "14CepDzwxKDQritbC7oAq7FTJiiEPPauyu",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
                 },
                 "block_index": 744232,
                 "timestamp": 1712256340
@@ -2361,7 +3265,15 @@
                     "block_index": 744232,
                     "event": "7b39d3ebd9fe8293004a1a8b8eb2d01f1664e5d8b05e8cb94f30b1da2c2f9650",
                     "quantity": 1,
-                    "tx_index": 2056160
+                    "tx_index": 2056160,
+                    "asset_issuance": {
+                        "asset_longname": null,
+                        "description": "",
+                        "issuer": "14CepDzwxKDQritbC7oAq7FTJiiEPPauyu",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
                 },
                 "block_index": 744232,
                 "timestamp": 1712256340
@@ -2406,7 +3318,15 @@
                     "calling_function": "send",
                     "event": "7b39d3ebd9fe8293004a1a8b8eb2d01f1664e5d8b05e8cb94f30b1da2c2f9650",
                     "quantity": 1,
-                    "tx_index": 2056160
+                    "tx_index": 2056160,
+                    "asset_issuance": {
+                        "asset_longname": null,
+                        "description": "",
+                        "issuer": "14CepDzwxKDQritbC7oAq7FTJiiEPPauyu",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
                 },
                 "block_index": 744232,
                 "timestamp": 1712256340
@@ -2421,7 +3341,14 @@
                     "calling_function": "dispense",
                     "event": "bbb2dfa7e7a32288a702ef0091ece8b2a929f94fd967a18e6071cd9c2b085eaf",
                     "quantity": 10000000000,
-                    "tx_index": 2056159
+                    "tx_index": 2056159,
+                    "asset_issuance": {
+                        "divisible": true,
+                        "asset_longname": "Counterparty",
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true
+                    },
+                    "quantity_normalized": "100"
                 },
                 "block_index": 744232,
                 "timestamp": 1712256340
@@ -2436,7 +3363,15 @@
                     "calling_function": "send",
                     "event": "b419d19729c2be813405c548431f4840d5c909b875f94b7c56aeca134e328ef6",
                     "quantity": 1,
-                    "tx_index": 2056158
+                    "tx_index": 2056158,
+                    "asset_issuance": {
+                        "asset_longname": null,
+                        "description": "xcp.coindaddy.io/FREEDOMKEK.json",
+                        "issuer": "1E6tyJ2zCyX74XgEK8t9iNMjxjNVLCGR1u",
+                        "divisible": 0,
+                        "locked": 0
+                    },
+                    "quantity_normalized": "1"
                 },
                 "block_index": 744232,
                 "timestamp": 1712256340
@@ -2451,7 +3386,15 @@
                     "calling_function": "send",
                     "event": "145ebf6c563c4e91a2bc488954ef701dad730fc065697979c80d6d85cbba63e1",
                     "quantity": 1,
-                    "tx_index": 2056157
+                    "tx_index": 2056157,
+                    "asset_issuance": {
+                        "asset_longname": null,
+                        "description": "https://easyasset.art/j/gnyrdg/PEPEFRIDAY.json",
+                        "issuer": "1CCPbFbST8ruJrTGjm2Ss5aTAaqng4naBN",
+                        "divisible": 0,
+                        "locked": 0
+                    },
+                    "quantity_normalized": "1"
                 },
                 "block_index": 744232,
                 "timestamp": 1712256340
@@ -2466,176 +3409,18 @@
                     "calling_function": "send",
                     "event": "388c7208d52bf617c1a3eef238a668f694a4f72dc97b3be92562fe636ca646fa",
                     "quantity": 2,
-                    "tx_index": 2056156
+                    "tx_index": 2056156,
+                    "asset_issuance": {
+                        "asset_longname": null,
+                        "description": "https://easyasset.art/j/gnyrdg/PEPEFRIDAY.json",
+                        "issuer": "1CCPbFbST8ruJrTGjm2Ss5aTAaqng4naBN",
+                        "divisible": 0,
+                        "locked": 0
+                    },
+                    "quantity_normalized": "2"
                 },
                 "block_index": 744232,
                 "timestamp": 1712256340
-            }
-        ]
-    },
-    "/mempool/events": {
-        "result": []
-    },
-    "/mempool/events/<event>": {
-        "result": []
-    },
-    "/assets/<asset1>/<asset2>/orders": {
-        "result": [
-            {
-                "tx_index": 2225134,
-                "tx_hash": "5b6e0c741d765ebd883dc16eecfb5c340c52865cabf297ca2c1432437c1348b7",
-                "block_index": 772817,
-                "source": "1FnM7akSCD8G3fRQHCUEXRCfL35gptsPZB",
-                "give_asset": "NEEDPEPE",
-                "give_quantity": 1,
-                "give_remaining": 0,
-                "get_asset": "XCP",
-                "get_quantity": 80800000000,
-                "get_remaining": 0,
-                "expiration": 5000,
-                "expire_index": 777817,
-                "fee_required": 0,
-                "fee_required_remaining": 0,
-                "fee_provided": 5544,
-                "fee_provided_remaining": 5544,
-                "status": "filled"
-            },
-            {
-                "tx_index": 1946026,
-                "tx_hash": "75dc6ee1f67317e674ef33b617d3a9839ee53bf4a2e8274c88d6202d4d89b59a",
-                "block_index": 727444,
-                "source": "1GotRejB6XsGgMsM79TvcypeanDJRJbMtg",
-                "give_asset": "NEEDPEPE",
-                "give_quantity": 1,
-                "give_remaining": 0,
-                "get_asset": "XCP",
-                "get_quantity": 70000000000,
-                "get_remaining": 0,
-                "expiration": 5000,
-                "expire_index": 732381,
-                "fee_required": 0,
-                "fee_required_remaining": 0,
-                "fee_provided": 264,
-                "fee_provided_remaining": 264,
-                "status": "filled"
-            },
-            {
-                "tx_index": 2202451,
-                "tx_hash": "77f568fc6604dbe209d2ea1b0158d7de20723c0178107eb570f4f2a719b0d7c7",
-                "block_index": 772817,
-                "source": "184gKLQTtQU29LXbxbYJkUV4if9SmW6v2d",
-                "give_asset": "XCP",
-                "give_quantity": 80800000000,
-                "give_remaining": 0,
-                "get_asset": "NEEDPEPE",
-                "get_quantity": 1,
-                "get_remaining": 0,
-                "expiration": 5000,
-                "expire_index": 773300,
-                "fee_required": 0,
-                "fee_required_remaining": 0,
-                "fee_provided": 264,
-                "fee_provided_remaining": 264,
-                "status": "filled"
-            },
-            {
-                "tx_index": 1946587,
-                "tx_hash": "b747f290cbbad6faa1c1c05d5c6d001b5a3ef487027bb0d4eefcdc9f6e865c39",
-                "block_index": 727444,
-                "source": "1AtcSh7uxenQ6AR5xqr6agAegWRUF5N4uh",
-                "give_asset": "XCP",
-                "give_quantity": 70000000000,
-                "give_remaining": 0,
-                "get_asset": "NEEDPEPE",
-                "get_quantity": 1,
-                "get_remaining": 0,
-                "expiration": 5000,
-                "expire_index": 732444,
-                "fee_required": 0,
-                "fee_required_remaining": 0,
-                "fee_provided": 792,
-                "fee_provided_remaining": 792,
-                "status": "filled"
-            }
-        ]
-    },
-    "/orders/<asset1>/<asset2>": {
-        "result": [
-            {
-                "tx_index": 2225134,
-                "tx_hash": "5b6e0c741d765ebd883dc16eecfb5c340c52865cabf297ca2c1432437c1348b7",
-                "block_index": 772817,
-                "source": "1FnM7akSCD8G3fRQHCUEXRCfL35gptsPZB",
-                "give_asset": "NEEDPEPE",
-                "give_quantity": 1,
-                "give_remaining": 0,
-                "get_asset": "XCP",
-                "get_quantity": 80800000000,
-                "get_remaining": 0,
-                "expiration": 5000,
-                "expire_index": 777817,
-                "fee_required": 0,
-                "fee_required_remaining": 0,
-                "fee_provided": 5544,
-                "fee_provided_remaining": 5544,
-                "status": "filled"
-            },
-            {
-                "tx_index": 1946026,
-                "tx_hash": "75dc6ee1f67317e674ef33b617d3a9839ee53bf4a2e8274c88d6202d4d89b59a",
-                "block_index": 727444,
-                "source": "1GotRejB6XsGgMsM79TvcypeanDJRJbMtg",
-                "give_asset": "NEEDPEPE",
-                "give_quantity": 1,
-                "give_remaining": 0,
-                "get_asset": "XCP",
-                "get_quantity": 70000000000,
-                "get_remaining": 0,
-                "expiration": 5000,
-                "expire_index": 732381,
-                "fee_required": 0,
-                "fee_required_remaining": 0,
-                "fee_provided": 264,
-                "fee_provided_remaining": 264,
-                "status": "filled"
-            },
-            {
-                "tx_index": 2202451,
-                "tx_hash": "77f568fc6604dbe209d2ea1b0158d7de20723c0178107eb570f4f2a719b0d7c7",
-                "block_index": 772817,
-                "source": "184gKLQTtQU29LXbxbYJkUV4if9SmW6v2d",
-                "give_asset": "XCP",
-                "give_quantity": 80800000000,
-                "give_remaining": 0,
-                "get_asset": "NEEDPEPE",
-                "get_quantity": 1,
-                "get_remaining": 0,
-                "expiration": 5000,
-                "expire_index": 773300,
-                "fee_required": 0,
-                "fee_required_remaining": 0,
-                "fee_provided": 264,
-                "fee_provided_remaining": 264,
-                "status": "filled"
-            },
-            {
-                "tx_index": 1946587,
-                "tx_hash": "b747f290cbbad6faa1c1c05d5c6d001b5a3ef487027bb0d4eefcdc9f6e865c39",
-                "block_index": 727444,
-                "source": "1AtcSh7uxenQ6AR5xqr6agAegWRUF5N4uh",
-                "give_asset": "XCP",
-                "give_quantity": 70000000000,
-                "give_remaining": 0,
-                "get_asset": "NEEDPEPE",
-                "get_quantity": 1,
-                "get_remaining": 0,
-                "expiration": 5000,
-                "expire_index": 732444,
-                "fee_required": 0,
-                "fee_required_remaining": 0,
-                "fee_provided": 792,
-                "fee_provided_remaining": 792,
-                "status": "filled"
             }
         ]
     }

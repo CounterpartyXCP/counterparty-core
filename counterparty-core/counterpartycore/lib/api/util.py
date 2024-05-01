@@ -200,6 +200,15 @@ def prepare_route_args(function):
         if arg_name in args_description:
             route_arg["description"] = args_description[arg_name]
         args.append(route_arg)
+    args.append(
+        {
+            "name": "verbose",
+            "type": "bool",
+            "default": "false",
+            "description": "Include asset and dispenser info and normalized quantities in the response.",
+            "required": False,
+        }
+    )
     return args
 
 

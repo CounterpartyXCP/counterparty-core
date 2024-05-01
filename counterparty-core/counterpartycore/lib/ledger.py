@@ -1133,7 +1133,20 @@ def get_assets_last_issuance(db, asset_list):
     cursor.execute(query, asset_list + ["valid"])
     issuances = cursor.fetchall()
 
-    result = {}
+    result = {
+        "BTC": {
+            "divisible": True,
+            "asset_longname": "Bitcoin",
+            "description": "The Bitcoin cryptocurrency",
+            "locked": False,
+        },
+        "XCP": {
+            "divisible": True,
+            "asset_longname": "Counterparty",
+            "description": "The Counterparty protocol native currency",
+            "locked": True,
+        },
+    }
     for issuance in issuances:
         del issuance["rowid"]
         asset = issuance["asset"]

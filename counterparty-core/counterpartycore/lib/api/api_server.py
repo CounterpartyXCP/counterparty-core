@@ -131,6 +131,8 @@ def prepare_args(route, **kwargs):
     # inject args from request.args
     for arg in route["args"]:
         arg_name = arg["name"]
+        if arg_name == "verbose":
+            continue
         if arg_name in function_args:
             continue
         str_arg = request.args.get(arg_name)

@@ -31,6 +31,7 @@ def get_example_output(path, args):
         args.pop(key)
     url = f"{API_ROOT}{path}"
     print(f"GET {url}")
+    args["verbose"] = "true"
     response = requests.get(url, params=args)  # noqa S113
     return response.json()
 
@@ -204,6 +205,8 @@ for path, route in server.routes.ROUTES.items():
                 description = desc_arr[0].replace("\n", " ").strip()
                 example_args[arg["name"]] = desc_arr[1].replace(")", "")
                 example_arg = f": `{example_args[arg['name']]}`"
+            elif arg["name"] == "verbose":
+                example_arg = ": `true`"
             md += f"    + {arg['name']}{example_arg} ({arg['type']}, {required}) - {description}\n"
             if not arg["required"]:
                 md += f"        + Default: `{arg.get('default', '')}`\n"
