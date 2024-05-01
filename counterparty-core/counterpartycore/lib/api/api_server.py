@@ -1,4 +1,5 @@
 import argparse
+import decimal
 import logging
 import multiprocessing
 import time
@@ -33,6 +34,7 @@ from werkzeug.serving import make_server
 
 multiprocessing.set_start_method("spawn", force=True)
 
+D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
 auth = HTTPBasicAuth()
 
@@ -175,6 +177,11 @@ def execute_api_function(db, route, function_args):
     return result
 
 
+def divide(value1, value2):
+    decimal.getcontext().prec = 8
+    return D(value1) / D(value2)
+
+
 def inject_issuance(db, result):
     # let's work with a list
     result_list = result
@@ -239,8 +246,17 @@ def inject_issuance(db, result):
             else:
                 is_divisible = item[issuance_field_name]["divisible"]
             item[field_name + "_normalized"] = (
-                item[field_name] / 10**8 if is_divisible else item[field_name]
+                divide(item[field_name], 10**8) if is_divisible else str(item[field_name])
             )
+        if "get_quantity" in item and "give_quantity" in item and "market_dir" in item:
+            if item["market_dir"] == "SELL":
+                item["market_price"] = divide(
+                    item["get_quantity_normalized"], item["give_quantity_normalized"]
+                )
+            else:
+                item["market_price"] = divide(
+                    item["give_quantity_normalized"], item["get_quantity_normalized"]
+                )
 
     if result_is_dict:
         return result_list[0]

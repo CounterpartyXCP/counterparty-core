@@ -2311,7 +2311,14 @@ def get_orders_by_two_assets(db, asset1: str, asset2: str, status: str = "open")
     """
     bindings = (asset1, asset2, asset2, asset1, status)
     cursor.execute(query, bindings)
-    return cursor.fetchall()
+    orders = cursor.fetchall()
+    for order in orders:
+        order["market_pair"] = f"{asset1}/{asset2}"
+        if order["give_asset"] == asset1:
+            order["market_dir"] = "SELL"
+        else:
+            order["market_dir"] = "BUY"
+    return orders
 
 
 def get_order_matches_by_order(db, order_hash: str, status: str = "pending"):
