@@ -1,5 +1,3 @@
-#! /usr/bin/python3
-
 import pytest
 
 # this is require near the top to do setup of the test suite
