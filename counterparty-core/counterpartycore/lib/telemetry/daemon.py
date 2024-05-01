@@ -35,13 +35,16 @@ class TelemetryDaemon:
     def _run(self):
         last_run = time.time()
         while self.is_running:
-            if time.time() - last_run < self.interval:
-                time.sleep(0.5)
-                continue
-            data = self.collector.collect()
-            if data:
-                self.client.send(data)
-                last_run = time.time()
+            try:
+                if time.time() - last_run < self.interval:
+                    time.sleep(0.5)
+                    continue
+                data = self.collector.collect()
+                if data:
+                    self.client.send(data)
+                    last_run = time.time()
+            except Exception as e:
+                logger.error(f"Error in telemetry daemon: {e}")
 
     def stop(self):
         logger.info("Stopping telemetry daemon...")
