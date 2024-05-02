@@ -2,7 +2,7 @@ import binascii
 import logging
 import struct
 
-from counterpartycore.lib import arc4, backend, config, ledger, script, util
+from counterpartycore.lib import arc4, backend, config, script, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser
 from counterpartycore.lib.kickstart.utils import ib2h
@@ -513,7 +513,7 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
 def _get_tx_info(db, decoded_tx, block_index, block_parser=None, p2sh_is_segwit=False):
     """Get the transaction info. Calls one of two subfunctions depending on signature type."""
     if not block_index:
-        block_index = ledger.CURRENT_BLOCK_INDEX
+        block_index = util.CURRENT_BLOCK_INDEX
 
     if util.enabled("p2sh_addresses", block_index=block_index):  # Protocol change.
         return get_tx_info_new(

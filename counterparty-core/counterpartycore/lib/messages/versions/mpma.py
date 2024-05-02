@@ -114,7 +114,7 @@ def compose(db, source: str, asset_dest_quant_list: list, memo: str, memo_is_hex
         if balance < quantity:
             raise exceptions.ComposeError(f"insufficient funds for {asset}")
 
-    block_index = ledger.CURRENT_BLOCK_INDEX
+    block_index = util.CURRENT_BLOCK_INDEX
 
     cursor.close()
 

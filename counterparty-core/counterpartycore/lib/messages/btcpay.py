@@ -108,13 +108,13 @@ def compose(db, source: str, order_match_id: str):
     tx0_hash, tx1_hash = util.parse_id(order_match_id)
 
     destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(
-        db, source, order_match_id, ledger.CURRENT_BLOCK_INDEX
+        db, source, order_match_id, util.CURRENT_BLOCK_INDEX
     )
     if problems:
         raise exceptions.ComposeError(problems)
 
     # Warn if down to the wire.
-    time_left = order_match["match_expire_index"] - ledger.CURRENT_BLOCK_INDEX
+    time_left = order_match["match_expire_index"] - util.CURRENT_BLOCK_INDEX
     if time_left < 4:
         logger.warning(
             f"Only {time_left} blocks until that order match expires. The payment might not make into the blockchain in time."

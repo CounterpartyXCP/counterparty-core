@@ -192,7 +192,7 @@ def compose(db, source: str, quantity_per_unit: int, asset: str, dividend_asset:
     dividend_asset = ledger.resolve_subasset_longname(db, dividend_asset)
 
     dividend_total, outputs, problems, fee = validate(
-        db, source, quantity_per_unit, asset, dividend_asset, ledger.CURRENT_BLOCK_INDEX
+        db, source, quantity_per_unit, asset, dividend_asset, util.CURRENT_BLOCK_INDEX
     )
     if problems:
         raise exceptions.ComposeError(problems)
@@ -207,8 +207,8 @@ def compose(db, source: str, quantity_per_unit: int, asset: str, dividend_asset:
             None,
         )
 
-    asset_id = ledger.get_asset_id(db, asset, ledger.CURRENT_BLOCK_INDEX)
-    dividend_asset_id = ledger.get_asset_id(db, dividend_asset, ledger.CURRENT_BLOCK_INDEX)
+    asset_id = ledger.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX)
+    dividend_asset_id = ledger.get_asset_id(db, dividend_asset, util.CURRENT_BLOCK_INDEX)
     data = message_type.pack(ID)
     data += struct.pack(FORMAT_2, quantity_per_unit, asset_id, dividend_asset_id)
     return (source, [], data)

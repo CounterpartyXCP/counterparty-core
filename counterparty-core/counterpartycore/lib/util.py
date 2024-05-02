@@ -15,9 +15,11 @@ from operator import itemgetter
 
 import requests
 
-from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib import config, exceptions
 
 logger = logging.getLogger(config.LOGGER_NAME)
+
+CURRENT_BLOCK_INDEX = None
 
 D = decimal.Decimal
 B26_DIGITS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -481,7 +483,7 @@ def enabled(change_name, block_index=None):
     enable_block_index = PROTOCOL_CHANGES[change_name][index_name]
 
     if not block_index:
-        block_index = ledger.CURRENT_BLOCK_INDEX
+        block_index = CURRENT_BLOCK_INDEX
 
     if block_index >= enable_block_index:
         return True
@@ -491,7 +493,7 @@ def enabled(change_name, block_index=None):
 
 def get_value_by_block_index(change_name, block_index=None):
     if not block_index:
-        block_index = ledger.CURRENT_BLOCK_INDEX
+        block_index = CURRENT_BLOCK_INDEX
 
     max_block_index = -1
 

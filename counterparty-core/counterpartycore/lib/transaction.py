@@ -837,7 +837,7 @@ class TransactionService:
                 gettxinfo.get_tx_info_new(
                     db,
                     BlockchainParser().deserialize_tx(unsigned_tx_hex),
-                    ledger.CURRENT_BLOCK_INDEX,
+                    util.CURRENT_BLOCK_INDEX,
                     p2sh_is_segwit=script.is_bech32(desired_source),
                     composing=True,
                 )
@@ -1688,7 +1688,7 @@ def unpack(db, datahex: str, block_index: int = None):
     """
     data = binascii.unhexlify(datahex)
     message_type_id, message = message_type.unpack(data)
-    block_index = block_index or ledger.CURRENT_BLOCK_INDEX
+    block_index = block_index or util.CURRENT_BLOCK_INDEX
 
     issuance_ids = [
         messages.issuance.ID,

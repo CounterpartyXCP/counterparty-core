@@ -461,13 +461,13 @@ def compose(
         get_quantity,
         expiration,
         fee_required,
-        ledger.CURRENT_BLOCK_INDEX,
+        util.CURRENT_BLOCK_INDEX,
     )
     if problems:
         raise exceptions.ComposeError(problems)
 
-    give_id = ledger.get_asset_id(db, give_asset, ledger.CURRENT_BLOCK_INDEX)
-    get_id = ledger.get_asset_id(db, get_asset, ledger.CURRENT_BLOCK_INDEX)
+    give_id = ledger.get_asset_id(db, give_asset, util.CURRENT_BLOCK_INDEX)
+    get_id = ledger.get_asset_id(db, get_asset, util.CURRENT_BLOCK_INDEX)
     data = message_type.pack(ID)
     data += struct.pack(
         FORMAT, give_id, give_quantity, get_id, get_quantity, expiration, fee_required

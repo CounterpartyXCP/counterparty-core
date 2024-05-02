@@ -128,7 +128,7 @@ def compose(
         memo = memo.encode("utf-8")
         memo_bytes = struct.pack(f">{len(memo)}s", memo)
 
-    block_index = ledger.CURRENT_BLOCK_INDEX
+    block_index = util.CURRENT_BLOCK_INDEX
 
     problems = validate(db, source, destination, asset, quantity, memo_bytes, block_index)
     if problems:

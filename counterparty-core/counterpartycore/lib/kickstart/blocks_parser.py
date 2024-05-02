@@ -11,7 +11,7 @@ from multiprocessing import JoinableQueue, Process, shared_memory
 
 import apsw
 
-from counterpartycore.lib import config, gettxinfo, ledger, util
+from counterpartycore.lib import config, gettxinfo, util
 from counterpartycore.lib.exceptions import DecodeError
 
 from .bc_data_stream import BCDataStream
@@ -79,7 +79,7 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
                 use_txid=util.enabled("correct_segwit_txids", block_index=db_block[1]),
             )
 
-            ledger.CURRENT_BLOCK_INDEX = db_block[1]
+            util.CURRENT_BLOCK_INDEX = db_block[1]
             for i, transaction in enumerate(block["transactions"]):  # noqa: B007
                 try:
                     block["transactions"][i]["parsed_vouts"] = gettxinfo.parse_transaction_vouts(

@@ -810,7 +810,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
     assert field in ("ledger_hash", "txlist_hash", "messages_hash")
 
     cursor = db.cursor()
-    block_index = ledger.CURRENT_BLOCK_INDEX
+    block_index = util.CURRENT_BLOCK_INDEX
 
     # Initialise previous hash on first block.
     if block_index <= config.BLOCK_FIRST:
@@ -937,7 +937,7 @@ def check_change(protocol_change, change_name):
         explanation += (
             f"Reason: ‘{change_name}’. Please upgrade to the latest version and restart the server."
         )
-        if ledger.CURRENT_BLOCK_INDEX >= protocol_change["block_index"]:
+        if util.CURRENT_BLOCK_INDEX >= protocol_change["block_index"]:
             raise VersionUpdateRequiredError(explanation)
         else:
             warnings.warn(explanation)  # noqa: B028

@@ -381,7 +381,7 @@ def compose(
         target_value,
         leverage,
         expiration,
-        ledger.CURRENT_BLOCK_INDEX,
+        util.CURRENT_BLOCK_INDEX,
     )
     if util.date_passed(deadline):
         problems.append("deadline passed")

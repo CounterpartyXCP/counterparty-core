@@ -87,7 +87,7 @@ def compose(db, source: str, destination: str, asset: str, quantity: int):
     if balance < quantity:
         raise exceptions.ComposeError("insufficient funds")
 
-    block_index = ledger.CURRENT_BLOCK_INDEX
+    block_index = util.CURRENT_BLOCK_INDEX
 
     problems = validate(db, source, destination, asset, quantity, block_index)
     if problems:

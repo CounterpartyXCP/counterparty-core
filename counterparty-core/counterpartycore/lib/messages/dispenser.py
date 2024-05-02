@@ -291,7 +291,7 @@ def validate(
 
                         if util.enabled("dispenser_origin_permission_extended", block_index):
                             address_oldest_transaction = backend.get_oldest_tx(
-                                query_address, block_index=ledger.CURRENT_BLOCK_INDEX
+                                query_address, block_index=util.CURRENT_BLOCK_INDEX
                             )
                             if (
                                 ("block_index" in address_oldest_transaction)
@@ -358,7 +358,7 @@ def compose(
         mainchainrate,
         status,
         open_address,
-        ledger.CURRENT_BLOCK_INDEX,
+        util.CURRENT_BLOCK_INDEX,
         oracle_address,
     )
     if problems:
@@ -381,7 +381,7 @@ def compose(
             give_quantity,
             mainchainrate,
             oracle_address,
-            ledger.CURRENT_BLOCK_INDEX,
+            util.CURRENT_BLOCK_INDEX,
         )
 
         if oracle_fee >= config.DEFAULT_REGULAR_DUST_SIZE:
@@ -428,7 +428,7 @@ def unpack(message, return_dict=False):
             read = LENGTH + 21
         if len(message) > read:
             oracle_address = address.unpack(message[read : read + 21])
-        asset = ledger.generate_asset_name(assetid, ledger.CURRENT_BLOCK_INDEX)
+        asset = ledger.generate_asset_name(assetid, util.CURRENT_BLOCK_INDEX)
         status = "valid"
     except (exceptions.UnpackError, struct.error) as e:  # noqa: F841
         (
@@ -483,7 +483,7 @@ def parse(db, tx, message):
         action_address = tx["source"]
 
     if status == "valid":
-        if util.enabled("dispenser_parsing_validation", ledger.CURRENT_BLOCK_INDEX):
+        if util.enabled("dispenser_parsing_validation", util.CURRENT_BLOCK_INDEX):
             asset_id, problems = validate(
                 db,
                 tx["source"],
@@ -744,7 +744,7 @@ def is_dispensable(db, address, amount):
     for next_dispenser in dispensers:
         if next_dispenser["oracle_address"] != None:  # noqa: E711
             last_price, last_fee, last_fiat_label, last_updated = ledger.get_oracle_last_price(
-                db, next_dispenser["oracle_address"], ledger.CURRENT_BLOCK_INDEX
+                db, next_dispenser["oracle_address"], util.CURRENT_BLOCK_INDEX
             )
             fiatrate = util.satoshirate_to_fiat(next_dispenser["satoshirate"])
             if fiatrate == 0 or last_price == 0:

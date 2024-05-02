@@ -113,7 +113,7 @@ def compose(db, source: str, destination: str, flags: int, memo: str):
         memo = memo.encode("utf-8")
         memo = struct.pack(f">{len(memo)}s", memo)
 
-    block_index = ledger.CURRENT_BLOCK_INDEX
+    block_index = util.CURRENT_BLOCK_INDEX
     problems, total_fee = validate(db, source, destination, flags, memo, block_index)
     if problems:
         raise exceptions.ComposeError(problems)

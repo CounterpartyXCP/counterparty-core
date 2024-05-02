@@ -9,7 +9,6 @@ from counterpartycore.lib import backend, config, exceptions, log, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-CURRENT_BLOCK_INDEX = None
 BLOCK_LEDGER = []
 BLOCK_JOURNAL = []
 
@@ -294,7 +293,7 @@ def remove_from_balance(db, address, asset, quantity, tx_index):
             "quantity": balance,
             "address": address,
             "asset": asset,
-            "block_index": CURRENT_BLOCK_INDEX,
+            "block_index": util.CURRENT_BLOCK_INDEX,
             "tx_index": tx_index,
         }
         query = """
@@ -310,7 +309,7 @@ class DebitError(Exception):
 
 def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     """Debit given address by quantity of asset."""
-    block_index = CURRENT_BLOCK_INDEX
+    block_index = util.CURRENT_BLOCK_INDEX
 
     if type(quantity) != int:  # noqa: E721
         raise DebitError("Quantity must be an integer.")
@@ -359,7 +358,7 @@ def add_to_balance(db, address, asset, quantity, tx_index):
         "quantity": balance,
         "address": address,
         "asset": asset,
-        "block_index": CURRENT_BLOCK_INDEX,
+        "block_index": util.CURRENT_BLOCK_INDEX,
         "tx_index": tx_index,
     }
     query = """
@@ -375,7 +374,7 @@ class CreditError(Exception):
 
 def credit(db, address, asset, quantity, tx_index, action=None, event=None):
     """Credit given address by quantity of asset."""
-    block_index = CURRENT_BLOCK_INDEX
+    block_index = util.CURRENT_BLOCK_INDEX
 
     if type(quantity) != int:  # noqa: E721
         raise CreditError("Quantity must be an integer.")
@@ -952,7 +951,7 @@ def value_in(db, quantity, asset, divisible=None):
 
 def price(numerator, denominator):
     """Return price as Fraction or Decimal."""
-    if CURRENT_BLOCK_INDEX >= 294500 or config.TESTNET or config.REGTEST:  # Protocol change.
+    if util.CURRENT_BLOCK_INDEX >= 294500 or config.TESTNET or config.REGTEST:  # Protocol change.
         return fractions.Fraction(numerator, denominator)
     else:
         numerator = D(numerator)
@@ -1558,7 +1557,7 @@ def insert_record(db, table_name, record, event):
     cursor.execute(query, record)
     cursor.close()
     # Add event to journal
-    add_to_journal(db, CURRENT_BLOCK_INDEX, "insert", table_name, event, record)
+    add_to_journal(db, util.CURRENT_BLOCK_INDEX, "insert", table_name, event, record)
 
 
 # This function allows you to update a record using an INSERT.
@@ -1583,7 +1582,7 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     for key, value in update_data.items():
         new_record[key] = value
     # new block_index and tx_index
-    new_record["block_index"] = CURRENT_BLOCK_INDEX
+    new_record["block_index"] = util.CURRENT_BLOCK_INDEX
     # let's keep the original tx_index so we can preserve order
     # with the old queries (ordered by default by old primary key)
     # TODO: restore with protocol change and checkpoints update
@@ -1602,7 +1601,9 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     event_paylod = update_data | {id_name: id_value} | event_info
     if "rowid" in event_paylod:
         del event_paylod["rowid"]
-    add_to_journal(db, CURRENT_BLOCK_INDEX, "update", table_name, event, update_data | event_paylod)
+    add_to_journal(
+        db, util.CURRENT_BLOCK_INDEX, "update", table_name, event, update_data | event_paylod
+    )
 
 
 MUTABLE_FIELDS = {

@@ -139,7 +139,7 @@ def compose(db, source: str, timestamp: int, value: float, fee_fraction: float, 
     fee_fraction_int = int(fee_fraction * 1e8)
 
     problems = validate(
-        db, source, timestamp, value, fee_fraction_int, text, ledger.CURRENT_BLOCK_INDEX
+        db, source, timestamp, value, fee_fraction_int, text, util.CURRENT_BLOCK_INDEX
     )
     if problems:
         raise exceptions.ComposeError(problems)

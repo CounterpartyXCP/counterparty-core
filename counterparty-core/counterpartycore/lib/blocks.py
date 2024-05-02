@@ -246,7 +246,7 @@ def parse_block(
     ledger.BLOCK_LEDGER = []
     ledger.BLOCK_JOURNAL = []
 
-    assert block_index == ledger.CURRENT_BLOCK_INDEX
+    assert block_index == util.CURRENT_BLOCK_INDEX
 
     # Expire orders, bets and rps.
     order.expire(db, block_index)
@@ -671,7 +671,7 @@ def list_tx(
         block_hash = config.MEMPOOL_BLOCK_HASH
         block_index = config.MEMPOOL_BLOCK_INDEX
     else:
-        assert block_index == ledger.CURRENT_BLOCK_INDEX
+        assert block_index == util.CURRENT_BLOCK_INDEX
 
     if source and (data or destination == config.UNSPENDABLE or dispensers_outs):
         logger.debug(f"Saving transaction: {tx_hash}")
@@ -764,7 +764,7 @@ def rollback(db, block_index=0):
             clean_transactions_tables(cursor, block_index=block_index)
             cursor.close()
         logger.info(f"Database rolled back to block_index {block_index}")
-    ledger.CURRENT_BLOCK_INDEX = block_index - 1
+    util.CURRENT_BLOCK_INDEX = block_index - 1
     print(f"{OK_GREEN} {step}")
     print(f"Rollback done in {time.time() - start_time:.2f}s")
 
@@ -823,7 +823,7 @@ def reparse(db, block_index=0):
         )
         for block in cursor.fetchall():
             start_time_block_parse = time.time()
-            ledger.CURRENT_BLOCK_INDEX = block["block_index"]
+            util.CURRENT_BLOCK_INDEX = block["block_index"]
             # Add event manually to journal because block already exists
             ledger.add_to_journal(
                 db,
@@ -894,12 +894,12 @@ def follow(db):
     last_software_check = time.time()
 
     # Get index of last block.
-    if ledger.CURRENT_BLOCK_INDEX == 0:
+    if util.CURRENT_BLOCK_INDEX == 0:
         logger.warning("New database.")
         block_index = config.BLOCK_FIRST
         database.update_version(db)
     else:
-        block_index = ledger.CURRENT_BLOCK_INDEX + 1
+        block_index = util.CURRENT_BLOCK_INDEX + 1
 
         # Check database version.
         try:
@@ -1047,7 +1047,7 @@ def follow(db):
                 block_difficulty = block.difficulty
 
             with db:
-                ledger.CURRENT_BLOCK_INDEX = block_index
+                util.CURRENT_BLOCK_INDEX = block_index
 
                 # List the block.
                 block_bindings = {

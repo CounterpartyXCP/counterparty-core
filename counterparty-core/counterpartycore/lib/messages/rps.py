@@ -285,7 +285,7 @@ def compose(
     db, source: str, possible_moves: int, wager: int, move_random_hash: str, expiration: int
 ):
     problems = validate(
-        db, source, possible_moves, wager, move_random_hash, expiration, ledger.CURRENT_BLOCK_INDEX
+        db, source, possible_moves, wager, move_random_hash, expiration, util.CURRENT_BLOCK_INDEX
     )
 
     if problems:

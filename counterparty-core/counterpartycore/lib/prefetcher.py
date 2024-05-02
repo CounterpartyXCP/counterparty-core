@@ -5,7 +5,7 @@ import time
 
 import bitcoin as bitcoinlib
 
-from counterpartycore.lib import backend, config, ledger, util
+from counterpartycore.lib import backend, config, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -71,7 +71,7 @@ class Prefetcher(threading.Thread):
 def start_all(num_prefetcher_threads):
     # Block Prefetcher and Indexer
     block_first = config.BLOCK_FIRST_TESTNET if config.TESTNET else config.BLOCK_FIRST
-    block_first = ledger.CURRENT_BLOCK_INDEX or block_first
+    block_first = util.CURRENT_BLOCK_INDEX or block_first
     NEXT_BLOCK_TO_PREFETCH.put(block_first)
     for thread_index in range(1, num_prefetcher_threads + 1):
         prefetcher_thread = Prefetcher(thread_index)
