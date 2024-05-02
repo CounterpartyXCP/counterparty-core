@@ -530,6 +530,9 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         else:
             return ARC4.new(binascii.unhexlify("00" * 32))
 
+    def check_wal_file():
+        pass
+
     monkeypatch.setattr("counterpartycore.lib.transaction.arc4.init_arc4", init_arc4)
     monkeypatch.setattr("counterpartycore.lib.backend.get_unspent_txouts", get_unspent_txouts)
     monkeypatch.setattr("counterpartycore.lib.log.isodt", isodt)
@@ -550,3 +553,4 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         "counterpartycore.lib.backend.multisig_pubkeyhashes_to_pubkeys",
         multisig_pubkeyhashes_to_pubkeys,
     )
+    monkeypatch.setattr("counterpartycore.lib.database.check_wal_file", check_wal_file)
