@@ -1158,7 +1158,7 @@ def follow(db):
                 # Get block count everytime we parse some mempool_txs. If there is a new block, we just interrupt this process
                 if parsed_txs_count % 100 == 0:
                     if len(parse_txs) > 1000:
-                        logger.info(
+                        logger.trace(
                             f"Mempool parsed txs count:{parsed_txs_count} from {len(parse_txs)}"
                         )
 
@@ -1266,7 +1266,7 @@ def follow(db):
                 else 0
             )
 
-            logger.getChild("mempool").debug(
+            logger.trace(
                 f"Mempool refreshed ({len(xcp_mempool)} Counterparty / {len(raw_mempool)} Bitcoin transactions)"
             )
 
@@ -1275,7 +1275,7 @@ def follow(db):
             time.sleep(sleep_time)
         else:
             # Wait
-            # logger.debug(f"Waiting for new blocks. Block index: {block_index}")
+            # logger.trace(f"Waiting for new blocks. Block index: {block_index}")
 
             # db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
             time.sleep(config.BACKEND_POLL_INTERVAL)
