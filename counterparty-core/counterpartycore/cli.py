@@ -33,9 +33,9 @@ CONFIG_ARGS = [
         ("-v", "--verbose"),
         {
             "dest": "verbose",
-            "action": "store_true",
-            "default": False,
-            "help": "sets log level to DEBUG",
+            "action": "count",
+            "default": 0,
+            "help": "verbose output (-v for DEBUG, -vv for TRACE)",
         },
     ],
     [

@@ -76,7 +76,7 @@ def get_lock():
 
 def initialise(*args, **kwargs):
     initialise_log_config(
-        verbose=kwargs.pop("verbose", False),
+        verbose=kwargs.pop("verbose", 0),
         quiet=kwargs.pop("quiet", False),
         log_file=kwargs.pop("log_file", None),
         api_log_file=kwargs.pop("api_log_file", None),
@@ -90,7 +90,7 @@ def initialise(*args, **kwargs):
 
 
 def initialise_log_config(
-    verbose=False,
+    verbose=0,
     quiet=False,
     log_file=None,
     api_log_file=None,

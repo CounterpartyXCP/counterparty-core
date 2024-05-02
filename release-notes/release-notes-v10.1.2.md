@@ -21,9 +21,11 @@ To easily migrate to the new API, an equivalence table is available in the docum
 * New ReST API
 * APIs return ready if the last block is less than 1 minute old
 * Add an index on the `block_index` field in the `credits` and `debits` tables
+* Add TRACE level to python logging
 
 ## Command-Line Interface
 * Set default and minimum values for Backend Poll Interval to 3.0 seconds
+* The `--verbose` flag can be repeated to increase verbosity, `-vv` is also supported
 
 # Credits
 * Ouziel Slama

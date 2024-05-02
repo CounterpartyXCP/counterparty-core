@@ -284,7 +284,7 @@ def api_server_v2(request, cp_server):
         "utxo_locks_max_age": config.DEFAULT_UTXO_LOCKS_MAX_AGE,
         "estimate_fee_per_kb": None,
         "customnet": None,
-        "verbose": False,
+        "verbose": 0,
         "quiet": False,
         "log_file": None,
         "api_log_file": None,
