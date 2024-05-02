@@ -277,7 +277,7 @@ def inject_issuance(db, result):
             item = item["params"]
         for field_name in ["asset", "give_asset", "get_asset"]:
             if field_name in item and item[field_name] in issuance_by_asset:
-                item[field_name + "_issuance"] = issuance_by_asset[item[field_name]]
+                item[field_name + "_info"] = issuance_by_asset[item[field_name]]
 
     if result_is_dict:
         return result_list[0]
@@ -308,14 +308,13 @@ def inject_normalized_quantities(result):
                 item = item["params"]
             if "dispenser" in item:
                 item = result_item["dispenser"]
-                # item["asset_issuance"] = result_item["asset_issuance"]
             if field_name not in item:
                 continue
             issuance_field_name = (
-                field_name.replace("quantity", "asset").replace("remaining", "asset") + "_issuance"
+                field_name.replace("quantity", "asset").replace("remaining", "asset") + "_info"
             )
             if issuance_field_name not in item:
-                issuance_field_name = "asset_issuance"
+                issuance_field_name = "asset_info"
             if issuance_field_name not in item and issuance_field_name not in result_item:
                 continue
             if issuance_field_name not in item:
