@@ -4,8 +4,6 @@ import binascii
 import decimal
 import logging
 import os
-import platform
-import socket
 import tarfile
 import tempfile
 import time
@@ -45,33 +43,6 @@ SPINNER_STYLE = "bouncingBar"
 
 class ConfigurationError(Exception):
     pass
-
-
-# Lock database access by opening a socket.
-class LockingError(Exception):
-    pass
-
-
-def get_lock():
-    logger.info("Acquiring lock.")
-
-    # Cross‐platform.
-    if platform.system() == "Darwin":  # Windows or OS X
-        # Not database‐specific.
-        socket_family = socket.AF_INET
-        socket_address = ("localhost", 8999)
-        error = "Another copy of server is currently running."
-    else:
-        socket_family = socket.AF_UNIX
-        socket_address = "\0" + config.DATABASE
-        error = f"Another copy of server is currently writing to database {config.DATABASE}"
-
-    lock_socket = socket.socket(socket_family, socket.SOCK_DGRAM)
-    try:
-        lock_socket.bind(socket_address)
-    except socket.error:
-        raise LockingError(error)  # noqa: B904
-    logger.info("Lock acquired.")
 
 
 def initialise(*args, **kwargs):
@@ -639,10 +610,6 @@ def initialise_db():
     if config.FORCE:
         cprint("THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.", "yellow")
 
-    # Lock
-    if not config.FORCE:
-        get_lock()
-
     # Database
     logger.info(f"Connecting to database (SQLite {apsw.apswversion()}).")
     db = database.get_connection(read_only=False)
@@ -681,6 +648,7 @@ def start_all(args):
     api_server_v1 = None
     api_server_v2 = None
     telemetry_daemon = None
+    db = None
 
     try:
         if not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap":

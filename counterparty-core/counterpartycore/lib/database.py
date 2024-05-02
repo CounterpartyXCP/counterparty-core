@@ -1,7 +1,9 @@
 import logging
+import os
 
 import apsw
 import apsw.bestpractice
+import psutil
 
 from counterpartycore.lib import config, exceptions  # noqa: E402, F401
 
@@ -17,9 +19,46 @@ def rowtracer(cursor, sql):
     return dictionary
 
 
+def get_file_openers(filename):
+    pids = []
+    for proc in psutil.process_iter():
+        try:
+            # this returns the list of opened files by the current process
+            flist = proc.open_files()
+            if flist:
+                for nt in flist:
+                    if filename in nt.path:
+                        pids.append(proc.pid)
+                        break
+        # This catches a race condition where a process ends
+        # before we can examine its files
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+    return pids
+
+
+def check_wal_file():
+    wal_file = f"{config.DATABASE}-wal"
+    if os.path.exists(wal_file):
+        pids = get_file_openers(wal_file)
+        if len(pids) > 0:
+            raise exceptions.DatabaseError(f"Database already opened by a process ({pids}).")
+        raise exceptions.WALFileFoundError("Found WAL file. Database may be corrupted.")
+
+
 def get_connection(read_only=True):
     """Connects to the SQLite database, returning a db `Connection` object"""
     logger.debug(f"Creating connection to `{config.DATABASE}`.")
+
+    need_quick_check = False
+    if not read_only:
+        try:
+            check_wal_file()
+        except exceptions.WALFileFoundError:
+            logger.warning(
+                "Found WAL file. Database may be corrupted. Running a quick check after connection."
+            )
+            need_quick_check = True
 
     if read_only:
         db = apsw.Connection(config.DATABASE, flags=apsw.SQLITE_OPEN_READONLY)
@@ -35,6 +74,10 @@ def get_connection(read_only=True):
     cursor.execute("PRAGMA journal_size_limit = 6144000")
     cursor.execute("PRAGMA foreign_keys = ON")
     cursor.execute("PRAGMA defer_foreign_keys = ON")
+
+    if need_quick_check and not config.FORCE:
+        logger.info("Running a quick check...")
+        cursor.execute("PRAGMA quick_check")
 
     db.setrowtrace(rowtracer)
 

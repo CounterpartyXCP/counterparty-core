@@ -5,6 +5,10 @@ class DatabaseError(Exception):
     pass
 
 
+class WALFileFoundError(Exception):
+    pass
+
+
 class TransactionError(Exception):
     pass
 
