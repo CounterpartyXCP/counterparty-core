@@ -6,7 +6,7 @@ import time
 import bitcoin as bitcoinlib
 from bitcoin.core import CBlock
 
-from counterpartycore.lib import config, ledger, prefetcher, script, util
+from counterpartycore.lib import config, prefetcher, script, util
 from counterpartycore.lib.backend import addrindexrs  # noqa: F401
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -155,12 +155,12 @@ def get_txhash_list(block):
     return [bitcoinlib.core.b2lx(ctx.GetHash()) for ctx in block.vtx]
 
 
-def get_tx_list(block, block_index=None):
+def get_tx_list(block, correct_segwit=True):
     raw_transactions = {}
     tx_hash_list = []
 
     for ctx in block.vtx:
-        if ledger.enabled("correct_segwit_txids", block_index=block_index):
+        if correct_segwit:
             hsh = ctx.GetTxid()
         else:
             hsh = ctx.GetHash()

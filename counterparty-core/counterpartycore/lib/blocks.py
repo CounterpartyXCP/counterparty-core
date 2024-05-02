@@ -1039,7 +1039,10 @@ def follow(db):
                 block = backend.getblock(block_hash)
                 previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
                 block_time = block.nTime
-                txhash_list, raw_transactions = backend.get_tx_list(block)
+                txhash_list, raw_transactions = backend.get_tx_list(
+                    block,
+                    correct_segwit=ledger.enabled("correct_segwit_txids", block_index=block_index),
+                )
                 block_difficulty = block.difficulty
 
             with db:

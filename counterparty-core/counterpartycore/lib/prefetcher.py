@@ -54,7 +54,10 @@ class Prefetcher(threading.Thread):
             )
             block_hash = backend.getblockhash(block_index)
             block = backend.getblock(block_hash)
-            txhash_list, raw_transactions = backend.get_tx_list(block, block_index=block_index)
+            txhash_list, raw_transactions = backend.get_tx_list(
+                block,
+                correct_segwit=ledger.enabled("correct_segwit_txids", block_index=block_index),
+            )
             BLOCKCHAIN_CACHE[block_index] = {
                 "block_hash": block_hash,
                 "txhash_list": txhash_list,
