@@ -455,6 +455,7 @@ def initialise(db):
         [
             ["address"],
             ["asset"],
+            ["block_index"],
         ],
     )
 
@@ -481,6 +482,7 @@ def initialise(db):
         [
             ["address"],
             ["asset"],
+            ["block_index"],
         ],
     )
 

@@ -9,6 +9,7 @@ import flask
 from counterpartycore.lib import backend, config, exceptions, ledger, transaction
 from docstring_parser import parse as parse_docstring
 
+D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
@@ -120,13 +121,13 @@ def pubkeyhash_to_pubkey(address: str, provided_pubkeys: str = None):
     return backend.pubkeyhash_to_pubkey(address, provided_pubkeys=provided_pubkeys_list)
 
 
-def get_transaction(tx_hash: str, verbose: bool = False):
+def get_transaction(tx_hash: str, format: str = "json"):
     """
     Get a transaction from the blockchain
     :param tx_hash: The transaction hash (e.g. 3190047bf2320bdcd0fade655ae49be309519d151330aa478573815229cc0018)
-    :param verbose: Whether to return JSON output or raw hex (e.g. True)
+    :param format: Whether to return JSON output or raw hex (e.g. hex)
     """
-    return backend.getrawtransaction(tx_hash, verbose=verbose)
+    return backend.getrawtransaction(tx_hash, verbose=(format == "json"))
 
 
 def get_backend_height():
@@ -199,6 +200,15 @@ def prepare_route_args(function):
         if arg_name in args_description:
             route_arg["description"] = args_description[arg_name]
         args.append(route_arg)
+    args.append(
+        {
+            "name": "verbose",
+            "type": "bool",
+            "default": "false",
+            "description": "Include asset and dispenser info and normalized quantities in the response.",
+            "required": False,
+        }
+    )
     return args
 
 
@@ -229,3 +239,132 @@ class ApiJsonEncoder(json.JSONEncoder):
 
 def to_json(obj, indent=None):
     return json.dumps(obj, cls=ApiJsonEncoder, indent=indent)
+
+
+def divide(value1, value2):
+    decimal.getcontext().prec = 8
+    return D(value1) / D(value2)
+
+
+def inject_issuance(db, result):
+    # let's work with a list
+    result_list = result
+    result_is_dict = False
+    if isinstance(result, dict):
+        result_list = [result]
+        result_is_dict = True
+
+    # gather asset list
+    asset_list = []
+    for result_item in result_list:
+        if "asset_longname" in result_item:
+            continue
+        item = result_item
+        if "params" in item:
+            item = item["params"]
+        for field_name in ["asset", "give_asset", "get_asset"]:
+            if field_name in item:
+                if item[field_name] not in asset_list:
+                    asset_list.append(item[field_name])
+
+    # get asset issuances
+    issuance_by_asset = ledger.get_assets_last_issuance(db, asset_list)
+
+    # inject issuance
+    for result_item in result_list:
+        item = result_item
+        if "params" in item:
+            item = item["params"]
+        for field_name in ["asset", "give_asset", "get_asset"]:
+            if field_name in item and item[field_name] in issuance_by_asset:
+                item[field_name + "_info"] = issuance_by_asset[item[field_name]]
+
+    if result_is_dict:
+        return result_list[0]
+    return result
+
+
+def inject_normalized_quantities(result):
+    # let's work with a list
+    result_list = result
+    result_is_dict = False
+    if isinstance(result, dict):
+        result_list = [result]
+        result_is_dict = True
+
+    # inject normalized quantities
+    for result_item in result_list:
+        item = result_item
+        for field_name in [
+            "quantity",
+            "give_quantity",
+            "get_quantity",
+            "get_remaining",
+            "give_remaining",
+            "escrow_quantity",
+            "dispense_quantity",
+        ]:
+            if "params" in item:
+                item = item["params"]
+            if "dispenser" in item:
+                item = result_item["dispenser"]
+            if field_name not in item:
+                continue
+            issuance_field_name = (
+                field_name.replace("quantity", "asset").replace("remaining", "asset") + "_info"
+            )
+            if issuance_field_name not in item:
+                issuance_field_name = "asset_info"
+            if issuance_field_name not in item and issuance_field_name not in result_item:
+                continue
+            if issuance_field_name not in item:
+                is_divisible = result_item[issuance_field_name]["divisible"]
+            else:
+                is_divisible = item[issuance_field_name]["divisible"]
+            item[field_name + "_normalized"] = (
+                divide(item[field_name], 10**8) if is_divisible else str(item[field_name])
+            )
+        if "get_quantity" in item and "give_quantity" in item and "market_dir" in item:
+            if item["market_dir"] == "SELL":
+                item["market_price"] = divide(
+                    item["get_quantity_normalized"], item["give_quantity_normalized"]
+                )
+            else:
+                item["market_price"] = divide(
+                    item["give_quantity_normalized"], item["get_quantity_normalized"]
+                )
+
+    if result_is_dict:
+        return result_list[0]
+    return result
+
+
+def inject_dispensers(db, result):
+    # let's work with a list
+    result_list = result
+    result_is_dict = False
+    if isinstance(result, dict):
+        result_list = [result]
+        result_is_dict = True
+
+    # gather dispenser list
+    dispenser_list = []
+    for result_item in result_list:
+        if "dispenser_tx_hash" in result_item:
+            if result_item["dispenser_tx_hash"] not in dispenser_list:
+                dispenser_list.append(result_item["dispenser_tx_hash"])
+
+    # get dispenser info
+    dispenser_info = ledger.get_dispensers_info(db, dispenser_list)
+
+    # inject dispenser info
+    for result_item in result_list:
+        if (
+            "dispenser_tx_hash" in result_item
+            and result_item["dispenser_tx_hash"] in dispenser_info
+        ):
+            result_item["dispenser"] = dispenser_info[result_item["dispenser_tx_hash"]]
+
+    if result_is_dict:
+        return result_list[0]
+    return result

@@ -22,6 +22,9 @@ from counterpartycore.lib.api.util import (
     function_needs_db,
     get_backend_height,
     init_api_access_log,
+    inject_dispensers,
+    inject_issuance,
+    inject_normalized_quantities,
     remove_rowids,
     to_json,
 )
@@ -128,6 +131,8 @@ def prepare_args(route, **kwargs):
     # inject args from request.args
     for arg in route["args"]:
         arg_name = arg["name"]
+        if arg_name == "verbose":
+            continue
         if arg_name in function_args:
             continue
         str_arg = request.args.get(arg_name)
@@ -152,6 +157,34 @@ def prepare_args(route, **kwargs):
         else:
             function_args[arg_name] = str_arg
     return function_args
+
+
+def execute_api_function(db, route, function_args):
+    # cache everything for one block
+    cache_key = f"{ledger.CURRENT_BLOCK_INDEX}:{request.url}"
+    # except for blocks and transactions cached forever
+    if request.path.startswith("/blocks/") or request.path.startswith("/transactions/"):
+        cache_key = request.url
+
+    if cache_key in BLOCK_CACHE:
+        result = BLOCK_CACHE[cache_key]
+    else:
+        if function_needs_db(route["function"]):
+            result = route["function"](db, **function_args)
+        else:
+            result = route["function"](**function_args)
+        BLOCK_CACHE[cache_key] = result
+        if len(BLOCK_CACHE) > MAX_BLOCK_CACHE_SIZE:
+            BLOCK_CACHE.popitem(last=False)
+
+    return result
+
+
+def inject_details(db, result):
+    result = inject_dispensers(db, result)
+    result = inject_issuance(db, result)
+    result = inject_normalized_quantities(result)
+    return result
 
 
 @auth.login_required
@@ -189,22 +222,7 @@ def handle_route(**kwargs):
 
     # call the function
     try:
-        # cache everything for one block
-        cache_key = f"{ledger.CURRENT_BLOCK_INDEX}:{request.url}"
-        # except for blocks and transactions cached forever
-        if request.path.startswith("/blocks/") or request.path.startswith("/transactions/"):
-            cache_key = request.url
-
-        if cache_key in BLOCK_CACHE:
-            result = BLOCK_CACHE[cache_key]
-        else:
-            if function_needs_db(route["function"]):
-                result = route["function"](db, **function_args)
-            else:
-                result = route["function"](**function_args)
-            BLOCK_CACHE[cache_key] = result
-            if len(BLOCK_CACHE) > MAX_BLOCK_CACHE_SIZE:
-                BLOCK_CACHE.popitem(last=False)
+        result = execute_api_function(db, route, function_args)
     except (exceptions.ComposeError, exceptions.UnpackError) as e:
         return return_result(503, error=str(e))
     except Exception as e:
@@ -216,6 +234,12 @@ def handle_route(**kwargs):
     if result is None:
         return return_result(404, error="Not found")
     result = remove_rowids(result)
+
+    # inject details
+    verbose = request.args.get("verbose", "False")
+    if verbose.lower() in ["true", "1"]:
+        result = inject_details(db, result)
+
     return return_result(200, result=result)
 
 

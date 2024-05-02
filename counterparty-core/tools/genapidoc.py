@@ -6,7 +6,7 @@ import requests
 from counterpartycore import server
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-API_DOC_FILE = os.path.join(CURR_DIR, "../../../Documentation/docs/advanced/api-v2/rest.md")
+API_DOC_FILE = os.path.join(CURR_DIR, "../../../Documentation/docs/advanced/api-v2/node-api.md")
 API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../apiary.apib")
 CACHE_FILE = os.path.join(CURR_DIR, "apicache.json")
 API_ROOT = "http://api:api@localhost:4000"
@@ -31,6 +31,7 @@ def get_example_output(path, args):
         args.pop(key)
     url = f"{API_ROOT}{path}"
     print(f"GET {url}")
+    args["verbose"] = "true"
     response = requests.get(url, params=args)  # noqa S113
     return response.json()
 
@@ -204,6 +205,8 @@ for path, route in server.routes.ROUTES.items():
                 description = desc_arr[0].replace("\n", " ").strip()
                 example_args[arg["name"]] = desc_arr[1].replace(")", "")
                 example_arg = f": `{example_args[arg['name']]}`"
+            elif arg["name"] == "verbose":
+                example_arg = ": `true`"
             md += f"    + {arg['name']}{example_arg} ({arg['type']}, {required}) - {description}\n"
             if not arg["required"]:
                 md += f"        + Default: `{arg.get('default', '')}`\n"
