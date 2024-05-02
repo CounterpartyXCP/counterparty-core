@@ -35,7 +35,7 @@ CONFIG_ARGS = [
             "dest": "verbose",
             "action": "count",
             "default": 0,
-            "help": "verbose output (repeat for increased verbosity)",
+            "help": "verbose output (-v for DEBUG, -vv for TRACE)",
         },
     ],
     [
