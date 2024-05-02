@@ -7,22 +7,12 @@ This module contains no consensus‐critical code.
 import binascii
 import decimal
 import hashlib
-import json  # noqa: F401
 import logging
-import os  # noqa: F401
-import re  # noqa: F401
-import sys  # noqa: F401
-import time  # noqa: F401
 
 import bitcoin as bitcoinlib
-import cachetools  # noqa: F401
-import requests  # noqa: F401
 from bitcoin.bech32 import CBech32Data
-from bitcoin.core import Hash160  # noqa: F401
-from bitcoin.core.script import CScript  # noqa: F401
-from bitcoin.wallet import P2PKHBitcoinAddress, P2SHBitcoinAddress  # noqa: F401
 
-from counterpartycore.lib import arc4, backend, config, exceptions, script, util  # noqa: F401
+from counterpartycore.lib import arc4, backend, config, exceptions, script  # noqa: F401
 from counterpartycore.lib.transaction_helper import p2sh_encoding
 
 logger = logging.getLogger(config.LOGGER_NAME)

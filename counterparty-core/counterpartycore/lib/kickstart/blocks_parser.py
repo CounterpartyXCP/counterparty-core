@@ -6,7 +6,6 @@ import os
 # Used to pickle and unpickle blocks from shared_memory
 import pickle  # nosec B403
 import signal
-import time  # noqa: F401
 from collections import OrderedDict
 from multiprocessing import JoinableQueue, Process, shared_memory
 

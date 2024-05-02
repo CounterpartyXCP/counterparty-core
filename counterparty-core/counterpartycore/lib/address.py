@@ -1,9 +1,8 @@
 import logging
-import struct  # noqa: F401
 
 import bitcoin
 
-from counterpartycore.lib import config, exceptions, ledger, script  # noqa: F401
+from counterpartycore.lib import config, exceptions, script  # noqa: F401
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

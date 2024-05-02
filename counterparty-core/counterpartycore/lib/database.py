@@ -1,14 +1,11 @@
+import logging
+
 import apsw
 import apsw.bestpractice
 
+from counterpartycore.lib import config, exceptions  # noqa: E402, F401
+
 apsw.bestpractice.apply(apsw.bestpractice.recommended)  # includes WAL mode
-import collections  # noqa: E402, F401
-import copy  # noqa: E402, F401
-import logging  # noqa: E402
-import time  # noqa: E402, F401
-
-from counterpartycore.lib import config, exceptions, ledger, log  # noqa: E402, F401
-
 logger = logging.getLogger(config.LOGGER_NAME)
 
 

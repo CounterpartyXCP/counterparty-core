@@ -30,7 +30,6 @@ from counterpartycore.lib import (  # noqa: F401
     database,
     exceptions,
     ledger,
-    log,
     message_type,
     util,
 )

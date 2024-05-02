@@ -2,9 +2,7 @@
 
 import binascii
 import os
-import pprint  # noqa: F401
 import re
-import shutil  # noqa: F401
 import sys
 
 COMMIT = "8906a8188ba841599f66627157e29a270ca838cf"

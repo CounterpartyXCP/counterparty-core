@@ -2,9 +2,6 @@ import binascii
 import logging
 import struct
 
-import bitcoin as bitcoinlib  # noqa: F401
-from bitcoin.core.script import CScriptInvalidError  # noqa: F401
-
 from counterpartycore.lib import arc4, backend, config, ledger, script
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser

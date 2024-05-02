@@ -1,13 +1,10 @@
-import binascii  # noqa: F401
 import collections
 import concurrent.futures
 import functools
 import hashlib
 import json
 import logging
-import os  # noqa: F401
 import queue
-import signal  # noqa: F401
 import socket
 import sys
 import threading
@@ -15,7 +12,6 @@ import time
 
 import bitcoin.wallet
 import requests
-from pkg_resources import parse_version  # noqa: F401
 from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
 
 from counterpartycore.lib import config, exceptions, ledger, util
