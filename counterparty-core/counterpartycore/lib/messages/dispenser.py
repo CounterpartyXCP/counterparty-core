@@ -290,7 +290,9 @@ def validate(
                             )
 
                         if ledger.enabled("dispenser_origin_permission_extended", block_index):
-                            address_oldest_transaction = backend.get_oldest_tx(query_address)
+                            address_oldest_transaction = backend.get_oldest_tx(
+                                query_address, block_index=ledger.CURRENT_BLOCK_INDEX
+                            )
                             if (
                                 ("block_index" in address_oldest_transaction)
                                 and (address_oldest_transaction["block_index"] > 0)

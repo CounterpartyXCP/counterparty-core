@@ -931,7 +931,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_oldest_tx(address):
-            return backend.get_oldest_tx(address)
+            return backend.get_oldest_tx(address, block_index=ledger.CURRENT_BLOCK_INDEX)
 
         @dispatcher.add_method
         def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None, order_by=None):
