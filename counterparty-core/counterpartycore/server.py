@@ -681,6 +681,7 @@ def start_all(args):
     api_server_v1 = None
     api_server_v2 = None
     telemetry_daemon = None
+    db = None
 
     try:
         if not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap":

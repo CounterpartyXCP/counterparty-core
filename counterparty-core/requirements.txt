@@ -28,4 +28,5 @@ termcolor==2.4.0
 sentry-sdk==1.45.0
 Flask-Cors==4.0.0
 docstring_parser==0.16
+psutil==5.9.8
 counterparty-rs==10.1.1
