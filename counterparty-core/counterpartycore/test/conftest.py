@@ -30,7 +30,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 # used to increment RPC port between test modules to avoid conflicts
 TEST_RPC_PORT = 9999
 
-# we swap out ledger.enabled with a custom one which has the option to mock the protocol changes
+# we swap out util.enabled with a custom one which has the option to mock the protocol changes
 MOCK_PROTOCOL_CHANGES = {
     "bytespersigop": False,  # default to False to avoid all old vectors breaking
 }
@@ -65,7 +65,7 @@ ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = (
     False  # if true, always check MOCK_PROTOCOL_CHANGES_AT_BLOCK
 )
 ALWAYS_LATEST_PROTOCOL_CHANGES = False  # Even when this is true, this can be overridden if allow_always_latest is False in MOCK_PROTOCOL_CHANGES_AT_BLOCK
-_enabled = ledger.enabled
+_enabled = util.enabled
 
 
 def enabled(change_name, block_index=None):
@@ -84,8 +84,8 @@ def enabled(change_name, block_index=None):
 
     # used to force unit tests to always run against latest protocol changes
     if ALWAYS_LATEST_PROTOCOL_CHANGES:
-        # KeyError to mimic real ledger.enabled
-        if change_name not in ledger.PROTOCOL_CHANGES:
+        # KeyError to mimic real util.enabled
+        if change_name not in util.PROTOCOL_CHANGES:
             raise KeyError(change_name)
 
         # print(f"ALWAYS_LATEST_PROTOCOL_CHANGES {change_name} {block_index or ledger.CURRENT_BLOCK_INDEX} enabled: True")
@@ -95,7 +95,7 @@ def enabled(change_name, block_index=None):
         return _enabled(change_name, block_index)
 
 
-ledger.enabled = enabled
+util.enabled = enabled
 
 
 # This is true if ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK is set

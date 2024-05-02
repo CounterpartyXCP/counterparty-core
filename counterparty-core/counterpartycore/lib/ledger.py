@@ -2,7 +2,6 @@ import binascii
 import fractions
 import json
 import logging
-import os
 import time
 from decimal import Decimal as D
 
@@ -13,11 +12,6 @@ logger = logging.getLogger(config.LOGGER_NAME)
 CURRENT_BLOCK_INDEX = None
 BLOCK_LEDGER = []
 BLOCK_JOURNAL = []
-
-CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-with open(CURR_DIR + "/../protocol_changes.json") as f:
-    PROTOCOL_CHANGES = json.load(f)
-
 
 ###########################
 #         MESSAGES        #
@@ -330,7 +324,7 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     debit_cursor = db.cursor()  # noqa: F841
 
     # Contracts can only hold XCP balances.
-    if enabled("contracts_only_xcp_balances"):  # Protocol change.
+    if util.enabled("contracts_only_xcp_balances"):  # Protocol change.
         if len(address) == 40:
             assert asset == config.XCP
 
@@ -395,7 +389,7 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
     credit_cursor = db.cursor()  # noqa: F841
 
     # Contracts can only hold XCP balances.
-    if enabled("contracts_only_xcp_balances"):  # Protocol change.
+    if util.enabled("contracts_only_xcp_balances"):  # Protocol change.
         if len(address) == 40:
             assert asset == config.XCP
 
@@ -795,7 +789,7 @@ def generate_asset_id(asset_name, block_index):
         raise exceptions.AssetNameError("too short")
 
     # Numeric asset names.
-    if enabled("numeric_asset_names"):  # Protocol change.
+    if util.enabled("numeric_asset_names"):  # Protocol change.
         if asset_name[0] == "A":
             # Must be numeric.
             try:
@@ -840,7 +834,7 @@ def generate_asset_name(asset_id, block_index):
     if asset_id < 26**3:
         raise exceptions.AssetIDError("too low")
 
-    if enabled("numeric_asset_names"):  # Protocol change.
+    if util.enabled("numeric_asset_names"):  # Protocol change.
         if asset_id <= 2**64 - 1:
             if 26**12 + 1 <= asset_id:
                 asset_name = "A" + str(asset_id)
@@ -864,7 +858,7 @@ def generate_asset_name(asset_id, block_index):
 
 def get_asset_id(db, asset_name, block_index):
     """Return asset_id from asset_name."""
-    if not enabled("hotfix_numeric_assets"):
+    if not util.enabled("hotfix_numeric_assets"):
         return generate_asset_id(asset_name, block_index)
     cursor = db.cursor()
     query = """
@@ -882,7 +876,7 @@ def get_asset_id(db, asset_name, block_index):
 
 def get_asset_name(db, asset_id, block_index):
     """Return asset_name from asset_id."""
-    if not enabled("hotfix_numeric_assets"):
+    if not util.enabled("hotfix_numeric_assets"):
         return generate_asset_name(asset_id, block_index)
     cursor = db.cursor()
     query = """
@@ -901,7 +895,7 @@ def get_asset_name(db, asset_id, block_index):
 # If asset_name is an existing subasset (PARENT.child) then return the corresponding numeric asset name (A12345)
 #   If asset_name is not an existing subasset, then return the unmodified asset_name
 def resolve_subasset_longname(db, asset_name):
-    if enabled("subassets"):
+    if util.enabled("subassets"):
         subasset_longname = None
         try:
             subasset_parent, subasset_longname = util.parse_subasset_from_asset_name(asset_name)
@@ -2773,7 +2767,7 @@ def holders(db, asset, exclude_empty_holders=False):
             table="rps_matches",
         )
 
-    if enabled("dispensers_in_holders"):
+    if util.enabled("dispensers_in_holders"):
         # Funds escrowed in dispensers.
         query = """
             SELECT * FROM (
@@ -3070,53 +3064,3 @@ def held(db):  # TODO: Rename ?
         held[asset] = total
 
     return held
-
-
-#############################
-#     PROTOCOL CHANGES      #
-#############################
-
-
-def enabled(change_name, block_index=None):
-    """Return True if protocol change is enabled."""
-    if config.REGTEST:
-        return True  # All changes are always enabled on REGTEST
-
-    if config.TESTNET:
-        index_name = "testnet_block_index"
-    else:
-        index_name = "block_index"
-
-    enable_block_index = PROTOCOL_CHANGES[change_name][index_name]
-
-    if not block_index:
-        block_index = CURRENT_BLOCK_INDEX
-
-    if block_index >= enable_block_index:
-        return True
-    else:
-        return False
-
-
-def get_value_by_block_index(change_name, block_index=None):
-    if not block_index:
-        block_index = CURRENT_BLOCK_INDEX
-
-    max_block_index = -1
-
-    if config.REGTEST:
-        for key, value in PROTOCOL_CHANGES[change_name]["testnet"]:  # noqa: B007
-            if int(key) > int(max_block_index):
-                max_block_index = key
-        return PROTOCOL_CHANGES[change_name]["testnet"][max_block_index]["value"]
-
-    if config.TESTNET:
-        index_name = "testnet"
-    else:
-        index_name = "mainnet"
-
-    for key in PROTOCOL_CHANGES[change_name][index_name]:
-        if int(key) > int(max_block_index) and block_index >= int(key):
-            max_block_index = key
-
-    return PROTOCOL_CHANGES[change_name][index_name][max_block_index]["value"]

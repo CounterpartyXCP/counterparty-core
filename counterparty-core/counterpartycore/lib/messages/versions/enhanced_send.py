@@ -81,7 +81,7 @@ def validate(db, source, destination, asset, quantity, memo_bytes, block_index):
     if memo_bytes is not None and len(memo_bytes) > MAX_MEMO_LENGTH:
         problems.append("memo is too long")
 
-    if ledger.enabled("options_require_memo"):
+    if util.enabled("options_require_memo"):
         cursor = db.cursor()
         try:
             results = ledger.get_addresses(db, address=destination)

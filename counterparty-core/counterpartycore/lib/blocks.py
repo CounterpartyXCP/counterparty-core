@@ -28,6 +28,7 @@ from counterpartycore.lib import (  # noqa: E402
     ledger,
     message_type,
     prefetcher,
+    util,
 )
 from counterpartycore.lib.gettxinfo import get_tx_info  # noqa: E402
 from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
@@ -134,11 +135,11 @@ def parse_tx(db, tx):
 
             if message_type_id == send.ID:
                 send.parse(db, tx, message)
-            elif message_type_id == enhanced_send.ID and ledger.enabled(
+            elif message_type_id == enhanced_send.ID and util.enabled(
                 "enhanced_sends", block_index=tx["block_index"]
             ):
                 enhanced_send.parse(db, tx, message)
-            elif message_type_id == mpma.ID and ledger.enabled(
+            elif message_type_id == mpma.ID and util.enabled(
                 "mpma_sends", block_index=tx["block_index"]
             ):
                 mpma.parse(db, tx, message)
@@ -147,15 +148,15 @@ def parse_tx(db, tx):
             elif message_type_id == btcpay.ID:
                 btcpay.parse(db, tx, message)
             elif message_type_id == issuance.ID or (
-                ledger.enabled("issuance_backwards_compatibility", block_index=tx["block_index"])
+                util.enabled("issuance_backwards_compatibility", block_index=tx["block_index"])
                 and message_type_id == issuance.LR_ISSUANCE_ID
             ):
                 issuance.parse(db, tx, message, message_type_id)
             elif (
                 message_type_id == issuance.SUBASSET_ID
-                and ledger.enabled("subassets", block_index=tx["block_index"])
+                and util.enabled("subassets", block_index=tx["block_index"])
             ) or (
-                ledger.enabled("issuance_backwards_compatibility", block_index=tx["block_index"])
+                util.enabled("issuance_backwards_compatibility", block_index=tx["block_index"])
                 and message_type_id == issuance.LR_SUBASSET_ID
             ):
                 issuance.parse(db, tx, message, message_type_id)
@@ -171,19 +172,19 @@ def parse_tx(db, tx):
                 rps.parse(db, tx, message)
             elif message_type_id == rpsresolve.ID and rps_enabled:
                 rpsresolve.parse(db, tx, message)
-            elif message_type_id == destroy.ID and ledger.enabled(
+            elif message_type_id == destroy.ID and util.enabled(
                 "destroy_reactivated", block_index=tx["block_index"]
             ):
                 destroy.parse(db, tx, message)
-            elif message_type_id == sweep.ID and ledger.enabled(
+            elif message_type_id == sweep.ID and util.enabled(
                 "sweep_send", block_index=tx["block_index"]
             ):
                 sweep.parse(db, tx, message)
-            elif message_type_id == dispenser.ID and ledger.enabled(
+            elif message_type_id == dispenser.ID and util.enabled(
                 "dispensers", block_index=tx["block_index"]
             ):
                 dispenser.parse(db, tx, message)
-            elif message_type_id == dispenser.DISPENSE_ID and ledger.enabled(
+            elif message_type_id == dispenser.DISPENSE_ID and util.enabled(
                 "dispensers", block_index=tx["block_index"]
             ):
                 dispenser.dispense(db, tx)
@@ -1041,7 +1042,7 @@ def follow(db):
                 block_time = block.nTime
                 txhash_list, raw_transactions = backend.get_tx_list(
                     block,
-                    correct_segwit=ledger.enabled("correct_segwit_txids", block_index=block_index),
+                    correct_segwit=util.enabled("correct_segwit_txids", block_index=block_index),
                 )
                 block_difficulty = block.difficulty
 

@@ -189,7 +189,7 @@ def parse(db, tx, message):
             ledger.update_order_match_status(db, order_match_id, "completed")
 
             # Update give and get order status as filled if order_match is completed
-            if ledger.enabled("btc_order_filled"):
+            if util.enabled("btc_order_filled"):
                 order_matches = ledger.get_pending_order_matches(db, tx0_hash, tx1_hash)
                 if len(order_matches) == 0:
                     # mark both btc get and give orders as filled when order_match is completed and give or get remaining = 0

@@ -5,7 +5,7 @@ import time
 
 import bitcoin as bitcoinlib
 
-from counterpartycore.lib import backend, config, ledger
+from counterpartycore.lib import backend, config, ledger, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -56,7 +56,7 @@ class Prefetcher(threading.Thread):
             block = backend.getblock(block_hash)
             txhash_list, raw_transactions = backend.get_tx_list(
                 block,
-                correct_segwit=ledger.enabled("correct_segwit_txids", block_index=block_index),
+                correct_segwit=util.enabled("correct_segwit_txids", block_index=block_index),
             )
             BLOCKCHAIN_CACHE[block_index] = {
                 "block_hash": block_hash,

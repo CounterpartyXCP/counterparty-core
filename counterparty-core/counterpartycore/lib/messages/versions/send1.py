@@ -48,11 +48,11 @@ def validate(db, source, destination, asset, quantity, block_index):
     if quantity > config.MAX_INT:
         problems.append("integer overflow")
 
-    if ledger.enabled("send_destination_required"):  # Protocol change.
+    if util.enabled("send_destination_required"):  # Protocol change.
         if not destination:
             problems.append("destination is required")
 
-    if ledger.enabled("options_require_memo"):
+    if util.enabled("options_require_memo"):
         # Check destination address options
 
         cursor = db.cursor()

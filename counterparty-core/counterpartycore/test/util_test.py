@@ -755,6 +755,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
                     "parse_subasset_from_asset_name",
                     "compact_subasset_longname",
                     "expand_subasset_longname",
+                    "enabled",
                 ]
             )
         )
@@ -766,7 +767,6 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
                     "price",
                     "generate_asset_id",
                     "generate_asset_name",
-                    "enabled",
                 ]
             )
         )

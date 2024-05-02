@@ -243,7 +243,7 @@ def update_rps_match_status(db, rps_match, status, block_index, tx_index):
 def validate(db, source, possible_moves, wager, move_random_hash, expiration, block_index):
     problems = []
 
-    if ledger.enabled("disable_rps"):
+    if util.enabled("disable_rps"):
         problems.append("rps disabled")
 
     if not isinstance(possible_moves, int):

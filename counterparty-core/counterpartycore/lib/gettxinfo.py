@@ -2,7 +2,7 @@ import binascii
 import logging
 import struct
 
-from counterpartycore.lib import arc4, backend, config, ledger, script
+from counterpartycore.lib import arc4, backend, config, ledger, script, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser
 from counterpartycore.lib.kickstart.utils import ib2h
@@ -83,7 +83,7 @@ def decode_checkmultisig(asm, decoded_tx):
 
 def get_pubkeyhash(scriptpubkey, block_index):
     asm = script.script_to_asm(scriptpubkey)
-    if ledger.enabled("multisig_addresses", block_index=block_index):
+    if util.enabled("multisig_addresses", block_index=block_index):
         if len(asm) > 0:
             if asm[0] == OP_DUP:  # noqa: F405
                 if (
@@ -96,7 +96,7 @@ def get_pubkeyhash(scriptpubkey, block_index):
                 else:
                     return asm[2], config.ADDRESSVERSION
 
-            elif (asm[0] == OP_HASH160) and ledger.enabled("p2sh_dispensers_support"):  # noqa: F405
+            elif (asm[0] == OP_HASH160) and util.enabled("p2sh_dispensers_support"):  # noqa: F405
                 if len(asm) != 3 or asm[-1] != "OP_EQUAL":
                     return None, None
                 else:
@@ -120,7 +120,7 @@ def is_witness_v0_keyhash(scriptpubkey):
 
 
 def get_address(scriptpubkey, block_index):
-    if ledger.enabled("correct_segwit_txids") and is_witness_v0_keyhash(scriptpubkey):
+    if util.enabled("correct_segwit_txids") and is_witness_v0_keyhash(scriptpubkey):
         address = script.script_to_address(scriptpubkey)
         return address
     else:
@@ -168,7 +168,7 @@ def get_transaction_sources(decoded_tx, block_parser=None):
             new_source, new_data = decode_scripthash(asm)
             if new_data or not new_source:
                 raise DecodeError("data in source")
-        elif ledger.enabled("segwit_support") and asm[0] == b"":
+        elif util.enabled("segwit_support") and asm[0] == b"":
             # Segwit output
             new_source = script.script_to_address(script_pubkey)
             new_data = None
@@ -177,7 +177,7 @@ def get_transaction_sources(decoded_tx, block_parser=None):
 
         # old; append to sources, results in invalid addresses
         # new; first found source is source, the rest can be anything (to fund the TX for example)
-        if not (ledger.enabled("first_input_is_source") and len(sources)):
+        if not (util.enabled("first_input_is_source") and len(sources)):
             # Collect unique sources.
             if new_source not in sources:
                 sources.append(new_source)
@@ -198,7 +198,7 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit, block_parser=No
             vin_tx = backend.getrawtransaction(ib2h(vin["hash"]), block_index=None)
             vin_ctx = BlockchainParser().deserialize_tx(vin_tx)
 
-        if ledger.enabled("prevout_segwit_fix"):
+        if util.enabled("prevout_segwit_fix"):
             prevout_is_segwit = len(vin_ctx["vtxinwit"]) > 0
         else:
             prevout_is_segwit = p2sh_is_segwit
@@ -254,7 +254,7 @@ def get_dispensers_tx_info(sources, dispensers_outputs):
             data = struct.pack(config.SHORT_TXTYPE_FORMAT, dispenser.DISPENSE_ID)
             data += b"\x00"
 
-            if ledger.enabled("multiple_dispenses"):
+            if util.enabled("multiple_dispenses"):
                 outs.append({"destination": out[0], "btc_amount": out[1], "out_index": out_index})
             else:
                 break  # Prevent inspection of further dispenses (only first one is valid)
@@ -288,20 +288,20 @@ def parse_transaction_vouts(decoded_tx):
             except script.MultiSigAddressError:
                 raise DecodeError("invalid OP_CHECKMULTISIG")  # noqa: B904
         elif (
-            ledger.enabled("p2sh_addresses")
+            util.enabled("p2sh_addresses")
             and asm[0] == OP_HASH160  # noqa: F405
             and asm[-1] == OP_EQUAL  # noqa: F405
             and len(asm) == 3
         ):
             new_destination, new_data = decode_scripthash(asm)
-            if ledger.enabled("p2sh_dispensers_support"):
+            if util.enabled("p2sh_dispensers_support"):
                 potential_dispensers[-1] = (new_destination, output_value)
-        elif ledger.enabled("segwit_support") and asm[0] == b"":
+        elif util.enabled("segwit_support") and asm[0] == b"":
             # Segwit Vout, second param is redeemScript
             # redeemScript = asm[1]
             new_destination = script.script_to_address(vout["scriptPubKey"])
             new_data = None
-            if ledger.enabled("correct_segwit_txids"):
+            if util.enabled("correct_segwit_txids"):
                 potential_dispensers[-1] = (new_destination, output_value)
         else:
             raise DecodeError("unrecognised output type")
@@ -310,7 +310,7 @@ def parse_transaction_vouts(decoded_tx):
             new_destination != None or new_data != None  # noqa: E711
         )  # `decode_*()` should never return `None, None`.
 
-        if ledger.enabled("null_data_check"):
+        if util.enabled("null_data_check"):
             if new_data == []:
                 raise DecodeError("new destination is `None`")
 
@@ -362,7 +362,7 @@ def get_tx_info_new(
     fee_added = False
     # P2SH encoding signalling
     p2sh_encoding_source = None
-    if ledger.enabled("p2sh_encoding") and data == b"P2SH":
+    if util.enabled("p2sh_encoding") and data == b"P2SH":
         p2sh_encoding_source, data, outputs_value = get_transaction_source_from_p2sh(
             decoded_tx, p2sh_is_segwit, block_parser=block_parser
         )
@@ -375,7 +375,7 @@ def get_tx_info_new(
     if not data and destinations != [
         config.UNSPENDABLE,
     ]:
-        if ledger.enabled("dispensers", block_index) and not composing:
+        if util.enabled("dispensers", block_index) and not composing:
             dispensers_outputs = get_dispensers_outputs(db, potential_dispensers)
             if len(dispensers_outputs) == 0:
                 raise BTCOnlyError("no data and not unspendable")
@@ -394,7 +394,7 @@ def get_tx_info_new(
     if not data and destinations != [
         config.UNSPENDABLE,
     ]:
-        assert ledger.enabled(
+        assert util.enabled(
             "dispensers", block_index
         )  # else an exception would have been raised above
         assert len(dispensers_outputs) > 0  # else an exception would have been raised above
@@ -515,7 +515,7 @@ def _get_tx_info(db, decoded_tx, block_index, block_parser=None, p2sh_is_segwit=
     if not block_index:
         block_index = ledger.CURRENT_BLOCK_INDEX
 
-    if ledger.enabled("p2sh_addresses", block_index=block_index):  # Protocol change.
+    if util.enabled("p2sh_addresses", block_index=block_index):  # Protocol change.
         return get_tx_info_new(
             db,
             decoded_tx,
@@ -523,7 +523,7 @@ def _get_tx_info(db, decoded_tx, block_index, block_parser=None, p2sh_is_segwit=
             block_parser=block_parser,
             p2sh_is_segwit=p2sh_is_segwit,
         )
-    elif ledger.enabled("multisig_addresses", block_index=block_index):  # Protocol change.
+    elif util.enabled("multisig_addresses", block_index=block_index):  # Protocol change.
         return get_tx_info_new(
             db,
             decoded_tx,
