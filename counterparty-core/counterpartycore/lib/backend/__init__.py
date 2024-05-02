@@ -2,13 +2,11 @@ import binascii
 import logging
 import sys
 import time
-from decimal import Decimal as D  # noqa: F401
 
 import bitcoin as bitcoinlib
-import bitcoin.rpc as bitcoinlib_rpc  # noqa: F401
 from bitcoin.core import CBlock
 
-from counterpartycore.lib import config, exceptions, ledger, prefetcher, script, util  # noqa: F401
+from counterpartycore.lib import config, ledger, prefetcher, script, util
 from counterpartycore.lib.backend import addrindexrs  # noqa: F401
 
 logger = logging.getLogger(config.LOGGER_NAME)

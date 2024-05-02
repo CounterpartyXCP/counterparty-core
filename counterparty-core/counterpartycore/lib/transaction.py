@@ -18,7 +18,7 @@ import cachetools
 from bitcoin.core import CTransaction
 
 from counterpartycore.lib import (
-    arc4,  # noqa: F401
+    arc4,  # noqa: F401 # TODO: need for test: clean that up
     backend,
     config,
     exceptions,

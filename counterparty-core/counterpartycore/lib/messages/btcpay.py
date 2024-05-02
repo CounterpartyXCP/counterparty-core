@@ -3,7 +3,6 @@
 import binascii
 import json
 import logging
-import pprint  # noqa: F401
 import struct
 
 from counterpartycore.lib import (  # noqa: F401
@@ -11,7 +10,6 @@ from counterpartycore.lib import (  # noqa: F401
     database,
     exceptions,
     ledger,
-    log,
     message_type,
     util,
 )
