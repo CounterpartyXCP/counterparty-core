@@ -12,6 +12,7 @@ class TelemetryCollectorInfluxDB(TelemetryCollectorBase):
             "tags": [],
             "fields": [
                 "network",
+                "platform",
                 "force_enabled",
                 "dockerized",
                 "addrindexrs_version",

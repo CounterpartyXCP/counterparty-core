@@ -44,7 +44,8 @@ class TelemetryDaemon:
                     self.client.send(data)
                     last_run = time.time()
             except Exception as e:
-                logger.error(f"Error in telemetry daemon: {e}")
+                logger.exception(f"Error in telemetry daemon: {e}")
+                time.sleep(0.5)
 
     def stop(self):
         logger.info("Stopping telemetry daemon...")

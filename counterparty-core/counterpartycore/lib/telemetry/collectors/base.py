@@ -27,6 +27,7 @@ class TelemetryCollectorBase(TelemetryCollectorKwargs):
         is_docker = util.is_docker()
         network = util.get_network()
         force_enabled = util.is_force_enabled()
+        platform = util.get_system()
 
         block_index = ledger.last_message(self.db)["block_index"]
         cursor = self.db.cursor()
@@ -44,6 +45,7 @@ class TelemetryCollectorBase(TelemetryCollectorKwargs):
             "dockerized": is_docker,
             "network": network,
             "force_enabled": force_enabled,
+            "platform": platform,
             **last_block,
             **self.static_attrs,
         }
