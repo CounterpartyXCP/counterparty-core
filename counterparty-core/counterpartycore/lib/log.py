@@ -22,7 +22,7 @@ def trace(self, msg, *args, **kwargs):
     self._log(logging.TRACE, msg, args, **kwargs)
 
 
-def set_up(verbose=False, quiet=True, log_file=None, log_in_console=False):
+def set_up(verbose=0, quiet=True, log_file=None, log_in_console=False):
     logging.Logger.trace = trace
 
     loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
@@ -34,10 +34,14 @@ def set_up(verbose=False, quiet=True, log_file=None, log_in_console=False):
     logger = logging.getLogger(config.LOGGER_NAME)
 
     log_level = logging.ERROR
-    if verbose == quiet:
+    if quiet:
+        log_level = logging.ERROR
+    elif verbose == 0:
         log_level = logging.INFO
-    elif verbose:
+    elif verbose == 1:
         log_level = logging.DEBUG
+    elif verbose > 1:
+        log_level = logging.TRACE
 
     logger.setLevel(log_level)
 
