@@ -5,45 +5,34 @@ Sieve blockchain for Counterparty transactions, and add them to the database.
 """
 
 import binascii
+import collections  # noqa: E402
+import csv  # noqa: E402
 import decimal
+import http  # noqa: E402
+import logging  # noqa: E402
 import os
 import struct
 import time
 from datetime import timedelta
 
-D = decimal.Decimal
-import collections  # noqa: E402
-import copy  # noqa: E402, F401
-import csv  # noqa: E402
-import http  # noqa: E402
-import logging  # noqa: E402
-import platform  # noqa: E402, F401
-
 import bitcoin as bitcoinlib  # noqa: E402
-from bitcoin.core.script import CScriptInvalidError  # noqa: E402, F401
 from halo import Halo  # noqa: E402
 from termcolor import colored  # noqa: E402
 
 from counterpartycore.lib import (  # noqa: E402
-    arc4,  # noqa: F401
     backend,
     check,
     config,
     database,
     exceptions,
     ledger,
-    log,  # noqa: F401
     message_type,
     prefetcher,
-    script,  # noqa: F401
-    util,  # noqa: F401
 )
 from counterpartycore.lib.gettxinfo import get_tx_info  # noqa: E402
 from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
 from counterpartycore.lib.transaction_helper import p2sh_encoding  # noqa: E402, F401
 
-from .exceptions import BTCOnlyError, DecodeError  # noqa: E402, F401
-from .kickstart.utils import ib2h  # noqa: E402, F401
 from .messages import (  # noqa: E402
     bet,
     broadcast,
@@ -62,6 +51,7 @@ from .messages import (  # noqa: E402
 )
 from .messages.versions import enhanced_send, mpma  # noqa: E402
 
+D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
 
 NUM_PREFETCHER_THREADS = 3
@@ -1158,7 +1148,7 @@ def follow(db):
                 # Get block count everytime we parse some mempool_txs. If there is a new block, we just interrupt this process
                 if parsed_txs_count % 100 == 0:
                     if len(parse_txs) > 1000:
-                        logger.info(
+                        logger.trace(
                             f"Mempool parsed txs count:{parsed_txs_count} from {len(parse_txs)}"
                         )
 
@@ -1266,7 +1256,7 @@ def follow(db):
                 else 0
             )
 
-            logger.getChild("mempool").debug(
+            logger.trace(
                 f"Mempool refreshed ({len(xcp_mempool)} Counterparty / {len(raw_mempool)} Bitcoin transactions)"
             )
 
@@ -1275,7 +1265,7 @@ def follow(db):
             time.sleep(sleep_time)
         else:
             # Wait
-            # logger.debug(f"Waiting for new blocks. Block index: {block_index}")
+            # logger.trace(f"Waiting for new blocks. Block index: {block_index}")
 
             # db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
             time.sleep(config.BACKEND_POLL_INTERVAL)

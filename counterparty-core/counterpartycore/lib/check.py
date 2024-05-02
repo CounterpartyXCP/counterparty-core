@@ -1,12 +1,11 @@
 import json
 import logging
 import sys
-import time  # noqa: F401
 import warnings
 
 import requests
 
-from counterpartycore.lib import config, database, exceptions, ledger, util  # noqa: F401
+from counterpartycore.lib import config, database, ledger, util  # noqa: F401
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

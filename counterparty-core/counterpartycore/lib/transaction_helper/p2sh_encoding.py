@@ -4,9 +4,7 @@ This module contains p2sh data encoding functions
 
 import binascii
 import logging
-import math  # noqa: F401
 import struct
-import traceback  # not needed if not printing exceptions on p2sh decoding  # noqa: F401
 
 import bitcoin as bitcoinlib
 from bitcoin.core.script import CScript

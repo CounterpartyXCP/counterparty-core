@@ -11,11 +11,20 @@ from termcolor import cprint
 
 from counterpartycore.lib import config
 
+logging.TRACE = logging.DEBUG - 5
+logging.addLevelName(logging.TRACE, "TRACE")
 logger = logging.getLogger(config.LOGGER_NAME)
+
 D = decimal.Decimal
 
 
-def set_up(verbose=False, quiet=True, log_file=None, log_in_console=False):
+def trace(self, msg, *args, **kwargs):
+    self._log(logging.TRACE, msg, args, **kwargs)
+
+
+def set_up(verbose=0, quiet=True, log_file=None, log_in_console=False):
+    logging.Logger.trace = trace
+
     loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
     for logger in loggers:
         logger.handlers.clear()
@@ -25,10 +34,14 @@ def set_up(verbose=False, quiet=True, log_file=None, log_in_console=False):
     logger = logging.getLogger(config.LOGGER_NAME)
 
     log_level = logging.ERROR
-    if verbose == quiet:
+    if quiet:
+        log_level = logging.ERROR
+    elif verbose == 0:
         log_level = logging.INFO
-    elif verbose:
+    elif verbose == 1:
         log_level = logging.DEBUG
+    elif verbose > 1:
+        log_level = logging.TRACE
 
     logger.setLevel(log_level)
 
@@ -36,7 +49,7 @@ def set_up(verbose=False, quiet=True, log_file=None, log_in_console=False):
     if log_file:
         max_log_size = 20 * 1024 * 1024  # 20 MB
         fileh = RotatingFileHandler(log_file, maxBytes=max_log_size, backupCount=5)
-        fileh.setLevel(log_level)
+        fileh.setLevel(logging.TRACE)
         log_format = "%(asctime)s [%(levelname)s] %(message)s"
         formatter = logging.Formatter(log_format, "%Y-%m-%d-T%H:%M:%S%z")
         fileh.setFormatter(formatter)

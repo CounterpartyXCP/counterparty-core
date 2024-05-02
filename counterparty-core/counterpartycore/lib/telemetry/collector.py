@@ -1,5 +1,5 @@
 # INTERFACE
-from counterpartycore.lib import config, blocks, ledger  # noqa: I001, F401
+from counterpartycore.lib import config, ledger  # noqa: I001, F401
 import os
 
 import counterpartycore.lib.telemetry.util as util

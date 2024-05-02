@@ -5,10 +5,9 @@ import apsw
 import apsw.bestpractice
 import psutil
 
-from counterpartycore.lib import config, exceptions, ledger, log  # noqa: E402, F401
+from counterpartycore.lib import config, exceptions  # noqa: E402, F401
 
 apsw.bestpractice.apply(apsw.bestpractice.recommended)  # includes WAL mode
-
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
