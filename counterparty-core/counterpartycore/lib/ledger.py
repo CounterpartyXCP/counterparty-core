@@ -1120,6 +1120,41 @@ def get_asset_info(db, asset: str):
     return asset_info
 
 
+def get_assets_last_issuance(db, asset_list):
+    cursor = db.cursor()
+    fields = ["asset", "asset_longname", "description", "issuer", "divisible", "locked"]
+    query = f"""
+        SELECT {", ".join(fields)}, MAX(rowid) AS rowid
+        FROM issuances
+        WHERE asset IN ({",".join(["?"] * len(asset_list))})
+        AND status = ?
+        GROUP BY asset
+    """  # nosec B608  # noqa: S608
+    cursor.execute(query, asset_list + ["valid"])
+    issuances = cursor.fetchall()
+
+    result = {
+        "BTC": {
+            "divisible": True,
+            "asset_longname": "Bitcoin",
+            "description": "The Bitcoin cryptocurrency",
+            "locked": False,
+        },
+        "XCP": {
+            "divisible": True,
+            "asset_longname": "Counterparty",
+            "description": "The Counterparty protocol native currency",
+            "locked": True,
+        },
+    }
+    for issuance in issuances:
+        del issuance["rowid"]
+        asset = issuance["asset"]
+        del issuance["asset"]
+        result[asset] = issuance
+    return result
+
+
 def get_issuances(
     db, asset=None, status=None, locked=None, block_index=None, first=False, last=False
 ):
@@ -1362,6 +1397,14 @@ def get_block(db, block_index: int):
     if blocks:
         return blocks[0]
     return None
+
+
+def get_last_block(db):
+    cursor = db.cursor()
+    query = "SELECT * FROM blocks ORDER BY block_index DESC LIMIT 1"
+    cursor.execute(query)
+    block = cursor.fetchone()
+    return block
 
 
 def get_transactions_by_block(db, block_index: int):
@@ -1668,14 +1711,32 @@ def get_dispenser_info(db, tx_hash=None, tx_index=None):
         bindings.append(tx_index)
     # no sql injection here
     query = f"""
-        SELECT d.*, a.asset_longname
-        FROM dispensers d
-        LEFT JOIN assets a ON a.asset_name = d.asset
+        SELECT *
+        FROM dispensers
         WHERE ({" AND ".join(where)})
-        ORDER BY d.rowid DESC LIMIT 1
+        ORDER BY rowid DESC LIMIT 1
     """  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
+
+
+def get_dispensers_info(db, tx_hash_list):
+    cursor = db.cursor()
+    query = """
+        SELECT *, MAX(rowid) AS rowid FROM dispensers
+        WHERE tx_hash IN ({})
+        GROUP BY tx_hash
+    """.format(",".join(["?" for e in range(0, len(tx_hash_list))]))  # nosec B608  # noqa: S608
+    cursor.execute(query, tx_hash_list)
+    dispensers = cursor.fetchall()
+    result = {}
+    for dispenser in dispensers:
+        del dispenser["rowid"]
+        tx_hash = dispenser["tx_hash"]
+        del dispenser["tx_hash"]
+        del dispenser["asset"]
+        result[tx_hash] = dispenser
+    return result
 
 
 def get_dispenser_info_by_hash(db, dispenser_hash: str):
@@ -2263,7 +2324,14 @@ def get_orders_by_two_assets(db, asset1: str, asset2: str, status: str = "open")
     """
     bindings = (asset1, asset2, asset2, asset1, status)
     cursor.execute(query, bindings)
-    return cursor.fetchall()
+    orders = cursor.fetchall()
+    for order in orders:
+        order["market_pair"] = f"{asset1}/{asset2}"
+        if order["give_asset"] == asset1:
+            order["market_dir"] = "SELL"
+        else:
+            order["market_dir"] = "BUY"
+    return orders
 
 
 def get_order_matches_by_order(db, order_hash: str, status: str = "pending"):

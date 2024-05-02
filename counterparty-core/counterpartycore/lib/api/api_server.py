@@ -1,6 +1,7 @@
 import argparse
 import logging
 import multiprocessing
+import time
 import traceback
 from collections import OrderedDict
 from multiprocessing import Process
@@ -21,6 +22,9 @@ from counterpartycore.lib.api.util import (
     function_needs_db,
     get_backend_height,
     init_api_access_log,
+    inject_dispensers,
+    inject_issuance,
+    inject_normalized_quantities,
     remove_rowids,
     to_json,
 )
@@ -36,6 +40,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 auth = HTTPBasicAuth()
 
 BACKEND_HEIGHT = None
+CURRENT_BLOCK_TIME = None
 REFRESH_BACKEND_HEIGHT_INTERVAL = 10
 BACKEND_HEIGHT_TIMER = None
 BLOCK_CACHE = OrderedDict()
@@ -85,7 +90,11 @@ def api_root():
 def is_server_ready():
     if BACKEND_HEIGHT is None:
         return False
-    return ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT - 1
+    if ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT - 1:
+        return True
+    if time.time() - CURRENT_BLOCK_TIME < 60:
+        return True
+    return False
 
 
 def is_cachable(rule):
@@ -122,6 +131,8 @@ def prepare_args(route, **kwargs):
     # inject args from request.args
     for arg in route["args"]:
         arg_name = arg["name"]
+        if arg_name == "verbose":
+            continue
         if arg_name in function_args:
             continue
 
@@ -150,13 +161,49 @@ def prepare_args(route, **kwargs):
     return function_args
 
 
+def execute_api_function(db, route, function_args):
+    # cache everything for one block
+    cache_key = f"{ledger.CURRENT_BLOCK_INDEX}:{request.url}"
+    # except for blocks and transactions cached forever
+    if request.path.startswith("/blocks/") or request.path.startswith("/transactions/"):
+        cache_key = request.url
+
+    if cache_key in BLOCK_CACHE:
+        result = BLOCK_CACHE[cache_key]
+    else:
+        if function_needs_db(route["function"]):
+            result = route["function"](db, **function_args)
+        else:
+            result = route["function"](**function_args)
+        BLOCK_CACHE[cache_key] = result
+        if len(BLOCK_CACHE) > MAX_BLOCK_CACHE_SIZE:
+            BLOCK_CACHE.popitem(last=False)
+
+    return result
+
+
+def inject_details(db, result):
+    result = inject_dispensers(db, result)
+    result = inject_issuance(db, result)
+    result = inject_normalized_quantities(result)
+    return result
+
+
 @auth.login_required
 def handle_route(**kwargs):
     if BACKEND_HEIGHT is None:
         return return_result(503, error="Backend still not ready. Please retry later.")
     db = get_db()
+
     # update the current block index
-    ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
+    global CURRENT_BLOCK_TIME  # noqa F811
+    last_block = ledger.get_last_block(db)
+    if last_block:
+        ledger.CURRENT_BLOCK_INDEX = last_block["block_index"]
+        CURRENT_BLOCK_TIME = last_block["block_time"]
+    else:
+        ledger.CURRENT_BLOCK_INDEX = 0
+        CURRENT_BLOCK_TIME = 0
 
     rule = str(request.url_rule.rule)
 
@@ -177,17 +224,7 @@ def handle_route(**kwargs):
 
     # call the function
     try:
-        cache_key = f"{ledger.CURRENT_BLOCK_INDEX}:{request.url}"
-        if cache_key in BLOCK_CACHE:
-            result = BLOCK_CACHE[cache_key]
-        else:
-            if function_needs_db(route["function"]):
-                result = route["function"](db, **function_args)
-            else:
-                result = route["function"](**function_args)
-            BLOCK_CACHE[cache_key] = result
-            if len(BLOCK_CACHE) > MAX_BLOCK_CACHE_SIZE:
-                BLOCK_CACHE.popitem(last=False)
+        result = execute_api_function(db, route, function_args)
     except (exceptions.ComposeError, exceptions.UnpackError) as e:
         return return_result(503, error=str(e))
     except Exception as e:
@@ -199,6 +236,12 @@ def handle_route(**kwargs):
     if result is None:
         return return_result(404, error="Not found")
     result = remove_rowids(result)
+
+    # inject details
+    verbose = request.args.get("verbose", "False")
+    if verbose.lower() in ["true", "1"]:
+        result = inject_details(db, result)
+
     return return_result(200, result=result)
 
 

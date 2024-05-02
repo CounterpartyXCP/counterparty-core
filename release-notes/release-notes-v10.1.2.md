@@ -18,7 +18,9 @@ To easily migrate to the new API, an equivalence table is available in the docum
 
 
 ## Codebase
-* Implement API v2
+* New ReST API
+* APIs return ready if the last block is less than 1 minute old
+* Add an index on the `block_index` field in the `credits` and `debits` tables
 
 ## Command-Line Interface
 * Set default and minimum values for Backend Poll Interval to 3.0 seconds
