@@ -9,6 +9,8 @@ environment = os.environ.get("SENTRY_ENVIRONMENT", "development")
 
 release = os.environ.get("SENTRY_RELEASE", config.__version__)
 
+EXCLUDED_TRANSACTIONS = ["handle_healthz"]
+
 
 def before_send(event, _hint):
     db = database.get_connection(read_only=True)
@@ -32,7 +34,8 @@ def before_send(event, _hint):
 def filter_transactions(event, _hint):
     if "transaction" not in event:
         return event
-    if event["transaction"] == "handle_healthz":
+    if event["transaction"] in EXCLUDED_TRANSACTIONS:
+        print("SKIP")
         return None
     return event
 
