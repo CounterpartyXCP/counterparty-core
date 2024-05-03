@@ -33,6 +33,7 @@ from flask import Flask, request
 from flask import g as flask_globals
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
+from sentry_sdk import configure_scope as configure_sentry_scope
 from werkzeug.serving import make_server
 
 multiprocessing.set_start_method("spawn", force=True)
@@ -188,6 +189,12 @@ def inject_details(db, result):
     return result
 
 
+def get_transaction_name(rule):
+    if rule == "/":
+        return "APIRoot"
+    return "".join([part.capitalize() for part in ROUTES[rule]["function"].__name__.split("_")])
+
+
 @auth.login_required
 def handle_route(**kwargs):
     if BACKEND_HEIGHT is None:
@@ -205,6 +212,9 @@ def handle_route(**kwargs):
         CURRENT_BLOCK_TIME = 0
 
     rule = str(request.url_rule.rule)
+
+    with configure_sentry_scope() as scope:
+        scope.set_transaction_name(get_transaction_name(rule))
 
     # check if server must be ready
     if not is_server_ready() and not return_result_if_not_ready(rule):
