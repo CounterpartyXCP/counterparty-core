@@ -10,6 +10,13 @@ fi
 touch "./DOCKER_COMPOSE_TEST_LOCK"
 
 GIT_BRANCH="$1"
+PROFILE="$2"
+
+if [ "$PROFILE" = "testnet" ]; then
+    PORT=14000
+else
+    PORT=4000
+fi
 
 # pull the latest code
 rm -rf counterparty-core
@@ -19,7 +26,7 @@ cd counterparty-core
 VERSION=$(cat docker-compose.yml | grep 'image: counterparty/counterparty:' | awk -F ":" '{print $3}')
 
 # stop the running containers
-docker compose --profile testnet stop
+docker compose --profile $PROFILE stop
 
 # remove counterparty-core container
 #docker rm counterparty-core-counterparty-core-1
@@ -35,16 +42,16 @@ docker build -t counterparty/counterparty:$VERSION .
 # sudo rm -rf ~/.local/share/counterparty-docker-data/counterparty/*
 
 # re-start containers
-docker compose --profile testnet up -d
+docker compose --profile $PROFILE up -d
 
-while [ "$(docker compose --profile testnet logs counterparty-core-testnet 2>&1 | grep 'Ready for queries')" = "" ]; do
-    echo "Waiting for counterparty-core to be ready"
+while [ "$(docker compose --profile $PROFILE logs counterparty-core-$PROFILE 2>&1 | grep 'Ready for queries')" = "" ]; do
+    echo "Waiting for counterparty-core $PROFILE to be ready"
     sleep 1
 done
 
 rm -f ../DOCKER_COMPOSE_TEST_LOCK
 
-server_response_v1=$(curl -X POST http://127.0.0.1:14100/v1/api/ \
+server_response_v1=$(curl -X POST http://127.0.0.1:$PORT/v1/api/ \
                         --user rpc:rpc \
                         -H 'Content-Type: application/json; charset=UTF-8'\
                         -H 'Accept: application/json, text/javascript' \
@@ -56,7 +63,7 @@ if [ "$server_response_v1" -ne 200 ]; then
     exit 1
 fi
 
-server_response_v2=$(curl http://api:api@127.0.0.1:14000/ \
+server_response_v2=$(curl http://api:api@127.0.0.1:$PORT/ \
                         --write-out '%{http_code}' --silent --output /dev/null)
 
 if [ "$server_response_v2" -ne 200 ]; then

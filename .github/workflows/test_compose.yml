@@ -2,7 +2,7 @@ name: Docker Compose
 
 on:
   push:
-    branches: ['develop', 'master', "compose"]
+    branches: ['develop', 'master', "_compose"]
 
 jobs:
   build:
@@ -22,4 +22,5 @@ jobs:
         scp: |
           .github/workflows/test_compose.sh ${{ secrets.TEST_SERVER_USER }}@${{ secrets.TEST_SERVER_IP }}:~/test_compose.sh
         ssh_after: |
-          sh test_compose.sh ${{ steps.branch-names.outputs.current_branch }}
+          sh test_compose.sh ${{ steps.branch-names.outputs.current_branch }} testnet
+          sh test_compose.sh ${{ steps.branch-names.outputs.current_branch }} mainnet
