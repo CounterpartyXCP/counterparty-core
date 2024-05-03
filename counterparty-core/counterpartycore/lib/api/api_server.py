@@ -192,6 +192,8 @@ def inject_details(db, result):
 def get_transaction_name(rule):
     if rule == "/":
         return "APIRoot"
+    if rule == "/healthz":
+        return "healthcheck"
     return "".join([part.capitalize() for part in ROUTES[rule]["function"].__name__.split("_")])
 
 

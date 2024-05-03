@@ -1063,6 +1063,8 @@ class APIServer(threading.Thread):
 
         @app.route("/healthz", methods=["GET"])
         def handle_healthz():
+            with configure_sentry_scope() as scope:
+                scope.set_transaction_name("healthcheck")
             check_type = request.args.get("type", "light")
             return api_util.handle_healthz_route(self.db, check_type)
 

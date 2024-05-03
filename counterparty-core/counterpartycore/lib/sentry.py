@@ -9,8 +9,6 @@ environment = os.environ.get("SENTRY_ENVIRONMENT", "development")
 
 release = os.environ.get("SENTRY_RELEASE", config.__version__)
 
-EXCLUDED_URL = ["/healthz"]
-
 
 def before_send(event, _hint):
     db = database.get_connection(read_only=True)
@@ -31,17 +29,6 @@ def before_send(event, _hint):
     return event
 
 
-def filter_transactions(event, _hint):
-    if "transaction" not in event:
-        return event
-    if "request" not in event:
-        return event
-    for excluded in EXCLUDED_URL:
-        if excluded in event["request"]["url"]:
-            return None
-    return event
-
-
 def init():
     # No-op if SENTRY_DSN is not set
     if not os.environ.get("SENTRY_DSN"):
@@ -53,5 +40,4 @@ def init():
         release=release,
         traces_sample_rate=1.0,
         before_send=before_send,
-        before_send_transaction=filter_transactions,
     )
