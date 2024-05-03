@@ -60,6 +60,7 @@ from flask import request
 from flask_httpauth import HTTPBasicAuth
 from jsonrpc import dispatcher
 from jsonrpc.exceptions import JSONRPCDispatchException
+from sentry_sdk import configure_scope as configure_sentry_scope
 from werkzeug.serving import make_server
 from xmltodict import unparse as serialize_to_xml
 
@@ -1062,6 +1063,8 @@ class APIServer(threading.Thread):
 
         @app.route("/healthz", methods=["GET"])
         def handle_healthz():
+            with configure_sentry_scope() as scope:
+                scope.set_transaction_name("healthcheck")
             check_type = request.args.get("type", "light")
             return api_util.handle_healthz_route(self.db, check_type)
 
@@ -1126,6 +1129,9 @@ class APIServer(threading.Thread):
                     data="Invalid JSON-RPC 2.0 request format"
                 )
                 return flask.Response(obj_error.json.encode(), 400, mimetype="application/json")
+
+            with configure_sentry_scope() as scope:
+                scope.set_transaction_name(request_data["method"])
 
             # Only arguments passed as a `dict` are supported.
             if request_data.get("params", None) and not isinstance(request_data["params"], dict):
