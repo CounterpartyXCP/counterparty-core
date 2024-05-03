@@ -29,6 +29,14 @@ def before_send(event, _hint):
     return event
 
 
+def filter_transactions(event, _hint):
+    if "transaction" not in event:
+        return event
+    if event["transaction"] == "handle_healthz":
+        return None
+    return event
+
+
 def init():
     # No-op if SENTRY_DSN is not set
     if not os.environ.get("SENTRY_DSN"):
@@ -40,4 +48,5 @@ def init():
         release=release,
         traces_sample_rate=1.0,
         before_send=before_send,
+        before_send_transaction=filter_transactions,
     )
