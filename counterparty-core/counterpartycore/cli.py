@@ -283,6 +283,14 @@ CONFIG_ARGS = [
         ("--no-mempool",),
         {"action": "store_true", "default": False, "help": "Disable mempool parsing"},
     ],
+    [
+        ("--no-telemetry",),
+        {
+            "action": "store_true",
+            "default": False,
+            "help": "Do not send anonymous node telemetry data to telemetry server",
+        },
+    ],
 ]
 
 

@@ -295,6 +295,7 @@ def api_server_v2(request, cp_server):
         "no_refresh_backend_height": True,
         "no_mempool": False,
         "skip_db_check": False,
+        "no_telemetry": True,
     }
     server_config = (
         default_config
@@ -307,7 +308,8 @@ def api_server_v2(request, cp_server):
     args = argparse.Namespace(**server_config)
     api_server = api_v2.APIServer()
     api_server.start(args)
-    time.sleep(1)
+    # TODO: wait for server to be ready
+    time.sleep(1.5)
 
     request.addfinalizer(lambda: api_server.stop())
 

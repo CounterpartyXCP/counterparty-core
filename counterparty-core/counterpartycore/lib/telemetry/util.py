@@ -1,9 +1,15 @@
 import os
+import platform
 import time
+from uuid import uuid4
 
 from counterpartycore.lib import config
 
 start_time = time.time()
+
+
+def get_system():
+    return platform.system()
 
 
 def get_version():
@@ -41,3 +47,24 @@ def is_force_enabled():
 
 def __read_config_with_default(key, default):
     return getattr(config, key, default)
+
+
+NODE_UUID_FILENAME = ".counterparty-node-uuid"
+NODE_UUID_FILEPATH = os.path.join(os.path.expanduser("~"), NODE_UUID_FILENAME)
+
+
+class ID:
+    def __init__(self):
+        # if file exists, read id from file
+        # else create new id and write to file
+        id = None
+
+        if os.path.exists(NODE_UUID_FILEPATH):
+            with open(NODE_UUID_FILEPATH) as f:
+                id = f.read()
+        else:
+            id = str(uuid4())
+            with open(NODE_UUID_FILEPATH, "w") as f:
+                f.write(id)
+
+        self.id = id

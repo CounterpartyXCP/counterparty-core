@@ -3,7 +3,7 @@ import os
 import sentry_sdk
 
 from counterpartycore.lib import config, database
-from counterpartycore.lib.telemetry.collector import TelemetryCollectorLive
+from counterpartycore.lib.telemetry.collectors.base import TelemetryCollectorBase
 
 environment = os.environ.get("SENTRY_ENVIRONMENT", "development")
 
@@ -12,7 +12,7 @@ release = os.environ.get("SENTRY_RELEASE", config.__version__)
 
 def before_send(event, _hint):
     db = database.get_connection(read_only=True)
-    data = TelemetryCollectorLive(db).collect()
+    data = TelemetryCollectorBase(db).collect()
     db.close()
 
     event["tags"] = event.get("tags", {})
