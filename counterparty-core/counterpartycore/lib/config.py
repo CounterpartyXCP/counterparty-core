@@ -160,7 +160,7 @@ API_MAX_LOG_COUNT = 10
 
 NO_TELEMETRY = False
 TELEMETRY_INTERVAL = 5 * 60
-INFLUX_DB_URL = "http://34.134.43.133:8086"
+INFLUX_DB_URL = "http://telemetry.counterparty.io:8086"
 INFLUX_DB_TOKEN = (
     "7iViyy6TEVwmpH-YPE7shO36fzfGsyVYm0DC2tuLv0ZDTLp5uqRTW2Zv9IBcujF5zQRV6mauGdb1W3n7UrUu6A=="  # noqa: S105
 )
