@@ -9,7 +9,7 @@ environment = os.environ.get("SENTRY_ENVIRONMENT", "development")
 
 release = os.environ.get("SENTRY_RELEASE", config.__version__)
 
-EXCLUDED_TRANSACTIONS = ["handle_healthz"]
+EXCLUDED_URL = ["/healthz"]
 
 
 def before_send(event, _hint):
@@ -34,9 +34,11 @@ def before_send(event, _hint):
 def filter_transactions(event, _hint):
     if "transaction" not in event:
         return event
-    if event["transaction"] in EXCLUDED_TRANSACTIONS:
-        print("SKIP")
-        return None
+    if "request" not in event:
+        return event
+    for excluded in EXCLUDED_URL:
+        if excluded in event["request"]["url"]:
+            return None
     return event
 
 

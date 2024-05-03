@@ -15,6 +15,7 @@ from counterpartycore.lib import (
     database,
     exceptions,
     ledger,
+    sentry,
     transaction,
 )
 from counterpartycore.lib.api.routes import ROUTES
@@ -244,6 +245,8 @@ def handle_route(**kwargs):
 
 
 def run_api_server(args):
+    logger.info("Starting API Server v2.")
+    sentry.init()
     app = Flask(config.APP_NAME)
     # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
