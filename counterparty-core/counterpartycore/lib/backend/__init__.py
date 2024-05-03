@@ -6,7 +6,7 @@ import time
 import bitcoin as bitcoinlib
 from bitcoin.core import CBlock
 
-from counterpartycore.lib import config, prefetcher, script, util
+from counterpartycore.lib import config, script, util
 from counterpartycore.lib.backend import addrindexrs  # noqa: F401
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -14,6 +14,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 MEMPOOL_CACHE_INITIALIZED = False
 INITIALIZED = False
 
+BLOCKCHAIN_CACHE = {}
 PRETX_CACHE = {}
 
 
@@ -73,8 +74,8 @@ def clear_pretx(txid):
 def getrawtransaction(
     tx_hash: str, verbose: bool = False, skip_missing: bool = False, block_index: int = None
 ):
-    if block_index and block_index in prefetcher.BLOCKCHAIN_CACHE:
-        return prefetcher.BLOCKCHAIN_CACHE[block_index]["raw_transactions"][tx_hash]
+    if block_index and block_index in BLOCKCHAIN_CACHE:
+        return BLOCKCHAIN_CACHE[block_index]["raw_transactions"][tx_hash]
 
     if tx_hash in PRETX_CACHE:
         return PRETX_CACHE[tx_hash]

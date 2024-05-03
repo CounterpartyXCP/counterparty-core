@@ -1021,18 +1021,16 @@ def follow(db):
                 check.software_version()
 
             # Get and parse transactions in this block (atomically).
-            # logger.debug(f'Blockchain cache size: {len(prefetcher.BLOCKCHAIN_CACHE)}')
-            if current_index in prefetcher.BLOCKCHAIN_CACHE:
+            # logger.debug(f'Blockchain cache size: {len(backend.BLOCKCHAIN_CACHE)}')
+            if current_index in backend.BLOCKCHAIN_CACHE:
                 # logger.debug(f'Blockchain cache hit! Block index: {current_index}')
-                block_hash = prefetcher.BLOCKCHAIN_CACHE[current_index]["block_hash"]
-                txhash_list = prefetcher.BLOCKCHAIN_CACHE[current_index]["txhash_list"]
-                raw_transactions = prefetcher.BLOCKCHAIN_CACHE[current_index]["raw_transactions"]
-                previous_block_hash = prefetcher.BLOCKCHAIN_CACHE[current_index][
-                    "previous_block_hash"
-                ]
-                block_time = prefetcher.BLOCKCHAIN_CACHE[current_index]["block_time"]
-                block_difficulty = prefetcher.BLOCKCHAIN_CACHE[current_index]["block_difficulty"]
-                del prefetcher.BLOCKCHAIN_CACHE[current_index]
+                block_hash = backend.BLOCKCHAIN_CACHE[current_index]["block_hash"]
+                txhash_list = backend.BLOCKCHAIN_CACHE[current_index]["txhash_list"]
+                raw_transactions = backend.BLOCKCHAIN_CACHE[current_index]["raw_transactions"]
+                previous_block_hash = backend.BLOCKCHAIN_CACHE[current_index]["previous_block_hash"]
+                block_time = backend.BLOCKCHAIN_CACHE[current_index]["block_time"]
+                block_difficulty = backend.BLOCKCHAIN_CACHE[current_index]["block_difficulty"]
+                del backend.BLOCKCHAIN_CACHE[current_index]
             else:
                 if block_index < block_count - 100:
                     logger.warning(f"Blockchain cache miss :/ Block index: {current_index}")
