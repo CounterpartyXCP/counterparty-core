@@ -6,7 +6,7 @@ import logging
 D = decimal.Decimal
 from fractions import Fraction  # noqa: E402
 
-from counterpartycore.lib import config, database, exceptions, ledger  # noqa: E402
+from counterpartycore.lib import config, database, exceptions, ledger, util  # noqa: E402
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -75,7 +75,7 @@ def compose(db, source: str, quantity: int, overburn: bool = False):
     cursor = db.cursor()
     destination = config.UNSPENDABLE
     problems = validate(
-        db, source, destination, quantity, ledger.CURRENT_BLOCK_INDEX, overburn=overburn
+        db, source, destination, quantity, util.CURRENT_BLOCK_INDEX, overburn=overburn
     )
     if problems:
         raise exceptions.ComposeError(problems)

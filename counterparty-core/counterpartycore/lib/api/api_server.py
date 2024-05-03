@@ -16,6 +16,7 @@ from counterpartycore.lib import (
     exceptions,
     ledger,
     transaction,
+    util,
 )
 from counterpartycore.lib.api.routes import ROUTES
 from counterpartycore.lib.api.util import (
@@ -90,7 +91,7 @@ def api_root():
 def is_server_ready():
     if BACKEND_HEIGHT is None:
         return False
-    if ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT - 1:
+    if util.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT - 1:
         return True
     if time.time() - CURRENT_BLOCK_TIME < 60:
         return True
@@ -119,7 +120,7 @@ def return_result(http_code, result=None, error=None):
     if error is not None:
         api_result["error"] = error
     response = flask.make_response(to_json(api_result), http_code)
-    response.headers["X-COUNTERPARTY-HEIGHT"] = ledger.CURRENT_BLOCK_INDEX
+    response.headers["X-COUNTERPARTY-HEIGHT"] = util.CURRENT_BLOCK_INDEX
     response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
     response.headers["X-BITCOIN-HEIGHT"] = BACKEND_HEIGHT
     response.headers["Content-Type"] = "application/json"
@@ -161,7 +162,7 @@ def prepare_args(route, **kwargs):
 
 def execute_api_function(db, route, function_args):
     # cache everything for one block
-    cache_key = f"{ledger.CURRENT_BLOCK_INDEX}:{request.url}"
+    cache_key = f"{util.CURRENT_BLOCK_INDEX}:{request.url}"
     # except for blocks and transactions cached forever
     if request.path.startswith("/blocks/") or request.path.startswith("/transactions/"):
         cache_key = request.url
@@ -197,10 +198,10 @@ def handle_route(**kwargs):
     global CURRENT_BLOCK_TIME  # noqa F811
     last_block = ledger.get_last_block(db)
     if last_block:
-        ledger.CURRENT_BLOCK_INDEX = last_block["block_index"]
+        util.CURRENT_BLOCK_INDEX = last_block["block_index"]
         CURRENT_BLOCK_TIME = last_block["block_time"]
     else:
-        ledger.CURRENT_BLOCK_INDEX = 0
+        util.CURRENT_BLOCK_INDEX = 0
         CURRENT_BLOCK_TIME = 0
 
     rule = str(request.url_rule.rule)
@@ -254,7 +255,7 @@ def run_api_server(args):
         # Initialise the API access log
         init_api_access_log(app)
         # Get the last block index
-        ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(get_db())
+        util.CURRENT_BLOCK_INDEX = blocks.last_db_index(get_db())
         # Add routes
         app.add_url_rule("/", view_func=handle_route)
         for path in ROUTES:

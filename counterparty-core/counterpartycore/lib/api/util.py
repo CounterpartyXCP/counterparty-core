@@ -6,7 +6,7 @@ import time
 from logging import handlers as logging_handlers
 
 import flask
-from counterpartycore.lib import backend, config, exceptions, ledger, transaction
+from counterpartycore.lib import backend, config, exceptions, ledger, transaction, util
 from docstring_parser import parse as parse_docstring
 
 D = decimal.Decimal
@@ -18,7 +18,7 @@ def check_last_parsed_block(db, blockcount):
     last_block = ledger.get_last_block(db)
     if time.time() - last_block["block_time"] < 60:
         return
-    if ledger.CURRENT_BLOCK_INDEX + 1 < blockcount:
+    if util.CURRENT_BLOCK_INDEX + 1 < blockcount:
         raise exceptions.DatabaseError(f"{config.XCP_NAME} database is behind backend.")
     logger.debug("Database state check passed.")
 
@@ -128,6 +128,15 @@ def get_transaction(tx_hash: str, format: str = "json"):
     :param format: Whether to return JSON output or raw hex (e.g. hex)
     """
     return backend.getrawtransaction(tx_hash, verbose=(format == "json"))
+
+
+def get_oldest_transaction_by_address(address: str, block_index: int = None):
+    """
+    Get the oldest transaction for an address.
+    :param address: The address to search for. (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
+    :param block_index: The block index to search from.
+    """
+    return backend.get_oldest_tx(address, block_index=block_index or util.CURRENT_BLOCK_INDEX)
 
 
 def get_backend_height():

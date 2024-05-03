@@ -97,7 +97,7 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, block_index):
     if timestamp > config.MAX_INT or value > config.MAX_INT or fee_fraction_int > config.MAX_INT:
         problems.append("integer overflow")
 
-    if ledger.enabled("max_fee_fraction"):
+    if util.enabled("max_fee_fraction"):
         if fee_fraction_int >= config.UNIT:
             problems.append("fee fraction greater than or equal to 1")
     else:
@@ -122,7 +122,7 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, block_index):
         if len(text) > 52:
             problems.append("text too long")
 
-    if ledger.enabled("options_require_memo") and text and text.lower().startswith("options"):
+    if util.enabled("options_require_memo") and text and text.lower().startswith("options"):
         try:
             # Check for options and if they are valid.
             options = util.parse_options_from_string(text)
@@ -139,7 +139,7 @@ def compose(db, source: str, timestamp: int, value: float, fee_fraction: float, 
     fee_fraction_int = int(fee_fraction * 1e8)
 
     problems = validate(
-        db, source, timestamp, value, fee_fraction_int, text, ledger.CURRENT_BLOCK_INDEX
+        db, source, timestamp, value, fee_fraction_int, text, util.CURRENT_BLOCK_INDEX
     )
     if problems:
         raise exceptions.ComposeError(problems)
@@ -147,7 +147,7 @@ def compose(db, source: str, timestamp: int, value: float, fee_fraction: float, 
     data = message_type.pack(ID)
 
     # always use custom length byte instead of problematic usage of 52p format and make sure to encode('utf-8') for length
-    if ledger.enabled("broadcast_pack_text"):
+    if util.enabled("broadcast_pack_text"):
         data += struct.pack(FORMAT, timestamp, value, fee_fraction_int)
         data += VarIntSerializer.serialize(len(text.encode("utf-8")))
         data += text.encode("utf-8")
@@ -163,7 +163,7 @@ def compose(db, source: str, timestamp: int, value: float, fee_fraction: float, 
 
 def unpack(message, block_index, return_dict=False):
     try:
-        if ledger.enabled("broadcast_pack_text", block_index):
+        if util.enabled("broadcast_pack_text", block_index):
             timestamp, value, fee_fraction_int, rawtext = struct.unpack(
                 FORMAT + f"{len(message) - LENGTH}s", message
             )
@@ -250,11 +250,11 @@ def parse(db, tx, message):
         logger.debug(f"Bindings: {json.dumps(bindings)}")
 
     # stop processing if broadcast is invalid for any reason
-    if ledger.enabled("broadcast_invalid_check") and status != "valid":
+    if util.enabled("broadcast_invalid_check") and status != "valid":
         return
 
     # Options? Should not fail to parse due to above checks.
-    if ledger.enabled("options_require_memo") and text and text.lower().startswith("options"):
+    if util.enabled("options_require_memo") and text and text.lower().startswith("options"):
         options = util.parse_options_from_string(text)
         if options is not False:
             op_bindings = {
@@ -281,7 +281,7 @@ def parse(db, tx, message):
 
     # stop processing if broadcast is invalid for any reason
     # @TODO: remove this check once broadcast_invalid_check has been activated
-    if ledger.enabled("max_fee_fraction") and status != "valid":
+    if util.enabled("max_fee_fraction") and status != "valid":
         return
 
     # Handle bet matches that use this feed.
@@ -298,7 +298,7 @@ def parse(db, tx, message):
         # to betters.
         total_escrow = bet_match["forward_quantity"] + bet_match["backward_quantity"]
 
-        if ledger.enabled("inmutable_fee_fraction"):
+        if util.enabled("inmutable_fee_fraction"):
             fee_fraction = bet_match["fee_fraction_int"] / config.UNIT
         else:
             fee_fraction = fee_fraction_int / config.UNIT

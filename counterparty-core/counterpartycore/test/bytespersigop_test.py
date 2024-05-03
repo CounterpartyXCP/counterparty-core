@@ -19,7 +19,7 @@ FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
 
 
 def test_bytespersigop(server_db):
-    assert ledger.enabled("bytespersigop") == False  # noqa: E712
+    assert util.enabled("bytespersigop") == False  # noqa: E712
 
     transaction.initialise()
 
@@ -66,7 +66,7 @@ def test_bytespersigop(server_db):
 
     # enable byterpersigop
     with util_test.MockProtocolChangesContext(bytespersigop=True):
-        assert ledger.enabled("bytespersigop") == True  # noqa: E712
+        assert util.enabled("bytespersigop") == True  # noqa: E712
 
         # ADDR[0], bytespersigop=True, desc 41 bytes, opreturn
         txhex = transaction.compose_transaction(

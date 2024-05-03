@@ -81,7 +81,7 @@ def validate(db, source, destination, asset, quantity, memo_bytes, block_index):
     if memo_bytes is not None and len(memo_bytes) > MAX_MEMO_LENGTH:
         problems.append("memo is too long")
 
-    if ledger.enabled("options_require_memo"):
+    if util.enabled("options_require_memo"):
         cursor = db.cursor()
         try:
             results = ledger.get_addresses(db, address=destination)
@@ -128,7 +128,7 @@ def compose(
         memo = memo.encode("utf-8")
         memo_bytes = struct.pack(f">{len(memo)}s", memo)
 
-    block_index = ledger.CURRENT_BLOCK_INDEX
+    block_index = util.CURRENT_BLOCK_INDEX
 
     problems = validate(db, source, destination, asset, quantity, memo_bytes, block_index)
     if problems:

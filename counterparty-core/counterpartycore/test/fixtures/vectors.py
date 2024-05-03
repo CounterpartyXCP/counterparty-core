@@ -8755,15 +8755,6 @@ UNITTEST_VECTOR = {
             {"in": (0, DP["default_block_index"]), "out": "BTC"},
             {"in": (453, DP["default_block_index"]), "out": 0},
         ],
-        "enabled": [
-            {"in": ("numeric_asset_names",), "out": True},
-            {"in": ("foobar",), "error": (KeyError, "foobar")},
-            {
-                "mock_protocol_changes": {"numeric_asset_names": False},
-                "in": ("numeric_asset_names",),
-                "out": False,
-            },
-        ],
         "holders": [
             {
                 "in": ("XCP",),
@@ -9542,6 +9533,15 @@ UNITTEST_VECTOR = {
             {
                 "in": (binascii.unhexlify("8e90a57dba99d3a77b0a2470b1816edb"),),
                 "out": "PARENT.a-zA-Z0-9.-_@!",
+            },
+        ],
+        "enabled": [
+            {"in": ("numeric_asset_names",), "out": True},
+            {"in": ("foobar",), "error": (KeyError, "foobar")},
+            {
+                "mock_protocol_changes": {"numeric_asset_names": False},
+                "in": ("numeric_asset_names",),
+                "out": False,
             },
         ],
     },

@@ -344,7 +344,7 @@ class TransactionService:
         final_fee = fee_per_kb
         desired_input_count = 1
 
-        if encoding == "multisig" and data_array and ledger.enabled("bytespersigop"):
+        if encoding == "multisig" and data_array and util.enabled("bytespersigop"):
             desired_input_count = len(data_array) * 2
 
         # pop inputs until we can pay for the fee
@@ -540,11 +540,11 @@ class TransactionService:
                 else:
                     encoding = (
                         "p2sh"
-                        if not old_style_api and ledger.enabled("p2sh_encoding")
+                        if not old_style_api and util.enabled("p2sh_encoding")
                         else "multisig"
                     )  # p2sh is not possible with old_style_api
 
-            elif desired_encoding == "p2sh" and not ledger.enabled("p2sh_encoding"):
+            elif desired_encoding == "p2sh" and not util.enabled("p2sh_encoding"):
                 raise exceptions.TransactionError("P2SH encoding not enabled yet")
 
             elif encoding not in ("pubkeyhash", "multisig", "opreturn", "p2sh"):
@@ -837,7 +837,7 @@ class TransactionService:
                 gettxinfo.get_tx_info_new(
                     db,
                     BlockchainParser().deserialize_tx(unsigned_tx_hex),
-                    ledger.CURRENT_BLOCK_INDEX,
+                    util.CURRENT_BLOCK_INDEX,
                     p2sh_is_segwit=script.is_bech32(desired_source),
                     composing=True,
                 )
@@ -1688,7 +1688,7 @@ def unpack(db, datahex: str, block_index: int = None):
     """
     data = binascii.unhexlify(datahex)
     message_type_id, message = message_type.unpack(data)
-    block_index = block_index or ledger.CURRENT_BLOCK_INDEX
+    block_index = block_index or util.CURRENT_BLOCK_INDEX
 
     issuance_ids = [
         messages.issuance.ID,

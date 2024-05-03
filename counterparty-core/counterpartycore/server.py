@@ -22,7 +22,6 @@ from counterpartycore.lib import (
     check,
     config,
     database,
-    ledger,
     log,
     transaction,
     util,
@@ -614,7 +613,7 @@ def initialise_db():
     logger.info(f"Connecting to database (SQLite {apsw.apswversion()}).")
     db = database.get_connection(read_only=False)
 
-    ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
+    util.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
 
     return db
 
@@ -627,7 +626,7 @@ def connect_to_backend():
 def connect_to_addrindexrs():
     step = "Connecting to `addrindexrs`..."
     with Halo(text=step, spinner=SPINNER_STYLE):
-        ledger.CURRENT_BLOCK_INDEX = 0
+        util.CURRENT_BLOCK_INDEX = 0
         backend.backend()
         check_addrindexrs = {}
         while check_addrindexrs == {}:

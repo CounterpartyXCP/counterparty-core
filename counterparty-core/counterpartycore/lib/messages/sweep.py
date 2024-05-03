@@ -3,7 +3,7 @@
 import logging
 import struct
 
-from counterpartycore.lib import address, config, database, exceptions, ledger, message_type
+from counterpartycore.lib import address, config, database, exceptions, ledger, message_type, util
 from counterpartycore.lib.exceptions import *  # noqa: F403
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -71,7 +71,7 @@ def validate(db, source, destination, flags, memo, block_index):
 
     result = ledger.get_balance(db, source, "XCP")
 
-    antispamfee = ledger.get_value_by_block_index("sweep_antispam_fee", block_index) * config.UNIT
+    antispamfee = util.get_value_by_block_index("sweep_antispam_fee", block_index) * config.UNIT
     total_fee = ANTISPAM_FEE
 
     if antispamfee > 0:
@@ -113,7 +113,7 @@ def compose(db, source: str, destination: str, flags: int, memo: str):
         memo = memo.encode("utf-8")
         memo = struct.pack(f">{len(memo)}s", memo)
 
-    block_index = ledger.CURRENT_BLOCK_INDEX
+    block_index = util.CURRENT_BLOCK_INDEX
     problems, total_fee = validate(db, source, destination, flags, memo, block_index)
     if problems:
         raise exceptions.ComposeError(problems)
@@ -191,8 +191,7 @@ def parse(db, tx, message):
     if status == "valid":
         try:
             antispamfee = (
-                ledger.get_value_by_block_index("sweep_antispam_fee", tx["block_index"])
-                * config.UNIT
+                util.get_value_by_block_index("sweep_antispam_fee", tx["block_index"]) * config.UNIT
             )
 
             if antispamfee > 0:
@@ -247,7 +246,7 @@ def parse(db, tx, message):
             sweep_pos = 0
 
             assets_issued = balances
-            if ledger.enabled("zero_balance_ownership_sweep_fix", tx["block_index"]):
+            if util.enabled("zero_balance_ownership_sweep_fix", tx["block_index"]):
                 assets_issued = ledger.get_asset_issued(db, tx["source"])
 
             for next_asset_issued in assets_issued:
