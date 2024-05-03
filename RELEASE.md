@@ -22,7 +22,7 @@
 
 # Announcements
 
-- [ ] [Official Forums](https://forums.counterparty.io/t/new-version-announcements-counterparty-and-counterpartyd/363))
+- [ ] [Official Forums](https://forums.counterparty.io/t/new-version-announcements-counterparty-and-counterpartyd/363)
 - [ ] Mailing list
 - [ ] Telegram
 - [ ] Twitter

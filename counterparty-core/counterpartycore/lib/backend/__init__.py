@@ -2,13 +2,11 @@ import binascii
 import logging
 import sys
 import time
-from decimal import Decimal as D  # noqa: F401
 
 import bitcoin as bitcoinlib
-import bitcoin.rpc as bitcoinlib_rpc  # noqa: F401
 from bitcoin.core import CBlock
 
-from counterpartycore.lib import config, exceptions, ledger, prefetcher, script, util  # noqa: F401
+from counterpartycore.lib import config, script, util
 from counterpartycore.lib.backend import addrindexrs  # noqa: F401
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -16,6 +14,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 MEMPOOL_CACHE_INITIALIZED = False
 INITIALIZED = False
 
+BLOCKCHAIN_CACHE = {}
 PRETX_CACHE = {}
 
 
@@ -75,8 +74,8 @@ def clear_pretx(txid):
 def getrawtransaction(
     tx_hash: str, verbose: bool = False, skip_missing: bool = False, block_index: int = None
 ):
-    if block_index and block_index in prefetcher.BLOCKCHAIN_CACHE:
-        return prefetcher.BLOCKCHAIN_CACHE[block_index]["raw_transactions"][tx_hash]
+    if block_index and block_index in BLOCKCHAIN_CACHE:
+        return BLOCKCHAIN_CACHE[block_index]["raw_transactions"][tx_hash]
 
     if tx_hash in PRETX_CACHE:
         return PRETX_CACHE[tx_hash]
@@ -157,12 +156,12 @@ def get_txhash_list(block):
     return [bitcoinlib.core.b2lx(ctx.GetHash()) for ctx in block.vtx]
 
 
-def get_tx_list(block, block_index=None):
+def get_tx_list(block, correct_segwit=True):
     raw_transactions = {}
     tx_hash_list = []
 
     for ctx in block.vtx:
-        if ledger.enabled("correct_segwit_txids", block_index=block_index):
+        if correct_segwit:
             hsh = ctx.GetTxid()
         else:
             hsh = ctx.GetHash()
@@ -254,17 +253,8 @@ def get_transactions_by_address(
     return search_raw_transactions(address, unconfirmed, only_tx_hashes)
 
 
-def get_oldest_tx(address: str, block_index: int = None):
+def get_oldest_tx(address: str, block_index: int):
     return backend().get_oldest_tx(address, block_index=block_index)
-
-
-def get_oldest_transaction_by_address(address: str, block_index: int = None):
-    """
-    Get the oldest transaction for an address.
-    :param address: The address to search for. (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
-    :param block_index: The block index to search from.
-    """
-    return get_oldest_tx(address, block_index=block_index)
 
 
 class UnknownPubKeyError(Exception):

@@ -60,6 +60,7 @@ from flask import request
 from flask_httpauth import HTTPBasicAuth
 from jsonrpc import dispatcher
 from jsonrpc.exceptions import JSONRPCDispatchException
+from sentry_sdk import configure_scope as configure_sentry_scope
 from werkzeug.serving import make_server
 from xmltodict import unparse as serialize_to_xml
 
@@ -348,7 +349,7 @@ def get_rows(
     # legacy filters
     if not show_expired and table == "orders":
         # Ignore BTC orders one block early.
-        expire_index = ledger.CURRENT_BLOCK_INDEX + 1
+        expire_index = util.CURRENT_BLOCK_INDEX + 1
         more_conditions.append("""((give_asset == ? AND expire_index > ?) OR give_asset != ?)""")
         bindings += [config.BTC, expire_index, config.BTC]
 
@@ -809,7 +810,7 @@ class APIServer(threading.Thread):
                 blocks = list(
                     cursor.execute(
                         """SELECT * FROM blocks WHERE block_index = ?""",
-                        (ledger.CURRENT_BLOCK_INDEX,),
+                        (util.CURRENT_BLOCK_INDEX,),
                     )
                 )
                 assert len(blocks) == 1
@@ -931,7 +932,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_oldest_tx(address):
-            return backend.get_oldest_tx(address)
+            return backend.get_oldest_tx(address, block_index=util.CURRENT_BLOCK_INDEX)
 
         @dispatcher.add_method
         def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None, order_by=None):
@@ -981,9 +982,9 @@ class APIServer(threading.Thread):
 
             # TODO: Enabled only for `send`.
             if message_type_id == send.ID:
-                unpacked = send.unpack(self.db, message, ledger.CURRENT_BLOCK_INDEX)
+                unpacked = send.unpack(self.db, message, util.CURRENT_BLOCK_INDEX)
             elif message_type_id == enhanced_send.ID:
-                unpacked = enhanced_send.unpack(message, ledger.CURRENT_BLOCK_INDEX)
+                unpacked = enhanced_send.unpack(message, util.CURRENT_BLOCK_INDEX)
             else:
                 raise APIError("unsupported message type")
             return message_type_id, unpacked
@@ -1020,7 +1021,7 @@ class APIServer(threading.Thread):
                         oracle_fiat_label,
                         oracle_price_last_updated,
                     ) = ledger.get_oracle_last_price(
-                        self.db, dispenser["oracle_address"], ledger.CURRENT_BLOCK_INDEX
+                        self.db, dispenser["oracle_address"], util.CURRENT_BLOCK_INDEX
                     )
 
                     if oracle_price > 0:
@@ -1062,6 +1063,8 @@ class APIServer(threading.Thread):
 
         @app.route("/healthz", methods=["GET"])
         def handle_healthz():
+            with configure_sentry_scope() as scope:
+                scope.set_transaction_name("healthcheck")
             check_type = request.args.get("type", "light")
             return api_util.handle_healthz_route(self.db, check_type)
 
@@ -1126,6 +1129,9 @@ class APIServer(threading.Thread):
                     data="Invalid JSON-RPC 2.0 request format"
                 )
                 return flask.Response(obj_error.json.encode(), 400, mimetype="application/json")
+
+            with configure_sentry_scope() as scope:
+                scope.set_transaction_name(request_data["method"])
 
             # Only arguments passed as a `dict` are supported.
             if request_data.get("params", None) and not isinstance(request_data["params"], dict):

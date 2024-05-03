@@ -17,7 +17,7 @@ from Crypto.Cipher import ARC4
 from pycoin.coins.bitcoin import Tx  # noqa: F401
 
 from counterpartycore import server
-from counterpartycore.lib import arc4, config, database, ledger, log, script, util
+from counterpartycore.lib import arc4, config, database, log, script, util
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1 as api
 from counterpartycore.test import util_test
@@ -30,7 +30,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 # used to increment RPC port between test modules to avoid conflicts
 TEST_RPC_PORT = 9999
 
-# we swap out ledger.enabled with a custom one which has the option to mock the protocol changes
+# we swap out util.enabled with a custom one which has the option to mock the protocol changes
 MOCK_PROTOCOL_CHANGES = {
     "bytespersigop": False,  # default to False to avoid all old vectors breaking
 }
@@ -65,7 +65,7 @@ ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = (
     False  # if true, always check MOCK_PROTOCOL_CHANGES_AT_BLOCK
 )
 ALWAYS_LATEST_PROTOCOL_CHANGES = False  # Even when this is true, this can be overridden if allow_always_latest is False in MOCK_PROTOCOL_CHANGES_AT_BLOCK
-_enabled = ledger.enabled
+_enabled = util.enabled
 
 
 def enabled(change_name, block_index=None):
@@ -77,25 +77,25 @@ def enabled(change_name, block_index=None):
     if shouldCheckForMockProtocolChangesAtBlock(change_name):
         _block_index = block_index
         if _block_index is None:
-            _block_index = ledger.CURRENT_BLOCK_INDEX
+            _block_index = util.CURRENT_BLOCK_INDEX
         if _block_index >= MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]["block_index"]:
             return True
         return False
 
     # used to force unit tests to always run against latest protocol changes
     if ALWAYS_LATEST_PROTOCOL_CHANGES:
-        # KeyError to mimic real ledger.enabled
-        if change_name not in ledger.PROTOCOL_CHANGES:
+        # KeyError to mimic real util.enabled
+        if change_name not in util.PROTOCOL_CHANGES:
             raise KeyError(change_name)
 
-        # print(f"ALWAYS_LATEST_PROTOCOL_CHANGES {change_name} {block_index or ledger.CURRENT_BLOCK_INDEX} enabled: True")
+        # print(f"ALWAYS_LATEST_PROTOCOL_CHANGES {change_name} {block_index or util.CURRENT_BLOCK_INDEX} enabled: True")
         return True
     else:
-        # print(f"ALWAYS_LATEST_PROTOCOL_CHANGES {change_name} {block_index or ledger.CURRENT_BLOCK_INDEX} enabled: {_enabled(change_name, block_index)}")
+        # print(f"ALWAYS_LATEST_PROTOCOL_CHANGES {change_name} {block_index or util.CURRENT_BLOCK_INDEX} enabled: {_enabled(change_name, block_index)}")
         return _enabled(change_name, block_index)
 
 
-ledger.enabled = enabled
+util.enabled = enabled
 
 
 # This is true if ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK is set
@@ -284,7 +284,7 @@ def api_server_v2(request, cp_server):
         "utxo_locks_max_age": config.DEFAULT_UTXO_LOCKS_MAX_AGE,
         "estimate_fee_per_kb": None,
         "customnet": None,
-        "verbose": False,
+        "verbose": 0,
         "quiet": False,
         "log_file": None,
         "api_log_file": None,
@@ -530,6 +530,9 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         else:
             return ARC4.new(binascii.unhexlify("00" * 32))
 
+    def check_wal_file():
+        pass
+
     monkeypatch.setattr("counterpartycore.lib.transaction.arc4.init_arc4", init_arc4)
     monkeypatch.setattr("counterpartycore.lib.backend.get_unspent_txouts", get_unspent_txouts)
     monkeypatch.setattr("counterpartycore.lib.log.isodt", isodt)
@@ -550,3 +553,4 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         "counterpartycore.lib.backend.multisig_pubkeyhashes_to_pubkeys",
         multisig_pubkeyhashes_to_pubkeys,
     )
+    monkeypatch.setattr("counterpartycore.lib.database.check_wal_file", check_wal_file)

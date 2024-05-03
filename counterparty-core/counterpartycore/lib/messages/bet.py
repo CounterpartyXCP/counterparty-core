@@ -24,7 +24,6 @@ from counterpartycore.lib import (  # noqa: E402
     database,
     exceptions,
     ledger,
-    log,  # noqa: F401
     message_type,
     util,
 )
@@ -382,7 +381,7 @@ def compose(
         target_value,
         leverage,
         expiration,
-        ledger.CURRENT_BLOCK_INDEX,
+        util.CURRENT_BLOCK_INDEX,
     )
     if util.date_passed(deadline):
         problems.append("deadline passed")

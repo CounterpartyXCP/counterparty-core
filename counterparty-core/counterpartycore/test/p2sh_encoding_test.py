@@ -22,9 +22,9 @@ from counterpartycore.lib import (  # noqa: E402
     config,
     exceptions,
     gettxinfo,
-    ledger,
     script,
     transaction,
+    util,
 )
 from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
 from counterpartycore.lib.transaction_helper import p2sh_encoding, serializer  # noqa: E402, F401
@@ -48,7 +48,7 @@ def test_p2sh_encoding_composed(server_db):
             gettxinfo._get_tx_info(
                 server_db,
                 BlockchainParser().deserialize_tx(datatxhex, True),
-                ledger.CURRENT_BLOCK_INDEX,
+                util.CURRENT_BLOCK_INDEX,
             )
         )
         print("!!!!!!!!!!!!!!!!>1")
@@ -138,7 +138,7 @@ def test_p2sh_encoding(server_db):
             gettxinfo._get_tx_info(
                 server_db,
                 BlockchainParser().deserialize_tx(pretxhex, True),
-                ledger.CURRENT_BLOCK_INDEX,
+                util.CURRENT_BLOCK_INDEX,
             )
 
         # store transaction
@@ -214,7 +214,7 @@ def test_p2sh_encoding(server_db):
             gettxinfo._get_tx_info(
                 server_db,
                 BlockchainParser().deserialize_tx(datatxhex, True),
-                ledger.CURRENT_BLOCK_INDEX,
+                util.CURRENT_BLOCK_INDEX,
             )
         )
         # assert parsed_source == source # make_canonical cannot calculate this address
@@ -406,7 +406,7 @@ def test_p2sh_encoding_long_data(server_db):
             gettxinfo._get_tx_info(
                 server_db,
                 BlockchainParser().deserialize_tx(datatxhex, True),
-                ledger.CURRENT_BLOCK_INDEX,
+                util.CURRENT_BLOCK_INDEX,
             )
         )
         # assert parsed_source == source # make_canonical can't calculate this address
@@ -527,7 +527,7 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
             gettxinfo._get_tx_info(
                 server_db,
                 BlockchainParser().deserialize_tx(datatxhex, True),
-                ledger.CURRENT_BLOCK_INDEX,
+                util.CURRENT_BLOCK_INDEX,
             )
         )
         assert parsed_source == source

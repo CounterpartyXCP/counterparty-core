@@ -1,13 +1,10 @@
-import binascii  # noqa: F401
 import collections
 import concurrent.futures
 import functools
 import hashlib
 import json
 import logging
-import os  # noqa: F401
 import queue
-import signal  # noqa: F401
 import socket
 import sys
 import threading
@@ -15,10 +12,9 @@ import time
 
 import bitcoin.wallet
 import requests
-from pkg_resources import parse_version  # noqa: F401
 from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
 
-from counterpartycore.lib import config, exceptions, ledger, util
+from counterpartycore.lib import config, exceptions, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -786,11 +782,11 @@ class AddrindexrsSocket:
             self.connect()
             return self.send(query, timeout=timeout, retry=retry + 1)
 
-    def get_oldest_tx(self, address, timeout=ADDRINDEXRS_CLIENT_TIMEOUT, block_index=None):
+    def get_oldest_tx(self, address, block_index, timeout=ADDRINDEXRS_CLIENT_TIMEOUT):
         hsh = _address_to_hash(address)
         query = {
             "method": "blockchain.scripthash.get_oldest_tx",
-            "params": [hsh, block_index or ledger.CURRENT_BLOCK_INDEX],
+            "params": [hsh, block_index],
         }
         return self.send(query, timeout=timeout)
 
@@ -803,8 +799,10 @@ GET_OLDEST_TX_HARDCODED = {
 ADDRINDEXRS_CLIENT = None
 
 
-def get_oldest_tx(address: str, block_index: int = None):
-    current_block_index = block_index or ledger.CURRENT_BLOCK_INDEX
+def get_oldest_tx(address: str, block_index: int):
+    if block_index is None:
+        raise ValueError("block_index is required")
+    current_block_index = block_index
     hardcoded_key = f"{current_block_index}-{address}"
     if hardcoded_key in GET_OLDEST_TX_HARDCODED:
         result = GET_OLDEST_TX_HARDCODED[hardcoded_key]

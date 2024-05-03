@@ -1,7 +1,7 @@
 import logging
 import struct
 
-from counterpartycore.lib import config, ledger
+from counterpartycore.lib import config, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -9,7 +9,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 def pack(message_type_id, block_index=None):
     # pack message ID into 1 byte if not zero
     if (
-        ledger.enabled("short_tx_type_id", block_index)
+        util.enabled("short_tx_type_id", block_index)
         and message_type_id > 0
         and message_type_id < 256
     ):
@@ -26,7 +26,7 @@ def unpack(packed_data, block_index=None):
 
     if len(packed_data) > 1:
         # try to read 1 byte first
-        if ledger.enabled("short_tx_type_id", block_index):
+        if util.enabled("short_tx_type_id", block_index):
             message_type_id = struct.unpack(config.SHORT_TXTYPE_FORMAT, packed_data[:1])[0]
             if message_type_id > 0:
                 message_remainder = packed_data[1:]

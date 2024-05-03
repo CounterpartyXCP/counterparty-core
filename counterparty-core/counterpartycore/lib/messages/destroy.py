@@ -6,7 +6,7 @@ import json
 import logging
 import struct
 
-from counterpartycore.lib import config, database, ledger, message_type, script
+from counterpartycore.lib import config, database, ledger, message_type, script, util
 from counterpartycore.lib.exceptions import *  # noqa: F403
 from counterpartycore.lib.script import AddressError
 
@@ -61,9 +61,7 @@ def pack(db, asset, quantity, tag):
     else:
         tag = b""
 
-    data += struct.pack(
-        FORMAT, ledger.get_asset_id(db, asset, ledger.CURRENT_BLOCK_INDEX), quantity
-    )
+    data += struct.pack(FORMAT, ledger.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX), quantity)
     data += tag
     return data
 
@@ -72,7 +70,7 @@ def unpack(db, message, return_dict=False):
     try:
         asset_id, quantity = struct.unpack(FORMAT, message[0:16])
         tag = message[16:]
-        asset = ledger.get_asset_name(db, asset_id, ledger.CURRENT_BLOCK_INDEX)
+        asset = ledger.get_asset_name(db, asset_id, util.CURRENT_BLOCK_INDEX)
 
     except struct.error:
         raise UnpackError("could not unpack")  # noqa: B904, F405
@@ -87,7 +85,7 @@ def unpack(db, message, return_dict=False):
 
 def validate(db, source, destination, asset, quantity):
     try:
-        ledger.get_asset_id(db, asset, ledger.CURRENT_BLOCK_INDEX)
+        ledger.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX)
     except AssetError:  # noqa: F405
         raise ValidateError("asset invalid")  # noqa: B904, F405
 

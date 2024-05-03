@@ -5,6 +5,7 @@ import hashlib
 import itertools
 import json
 import logging
+import os
 import random
 import re
 import sys
@@ -17,6 +18,8 @@ import requests
 from counterpartycore.lib import config, exceptions
 
 logger = logging.getLogger(config.LOGGER_NAME)
+
+CURRENT_BLOCK_INDEX = None
 
 D = decimal.Decimal
 B26_DIGITS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -456,3 +459,57 @@ def clean_url_for_log(url):
 # ORACLES
 def satoshirate_to_fiat(satoshirate):
     return round(satoshirate / 100.0, 2)
+
+
+#############################
+#     PROTOCOL CHANGES      #
+#############################
+
+CURR_DIR = os.path.dirname(os.path.realpath(__file__))
+with open(CURR_DIR + "/../protocol_changes.json") as f:
+    PROTOCOL_CHANGES = json.load(f)
+
+
+def enabled(change_name, block_index=None):
+    """Return True if protocol change is enabled."""
+    if config.REGTEST:
+        return True  # All changes are always enabled on REGTEST
+
+    if config.TESTNET:
+        index_name = "testnet_block_index"
+    else:
+        index_name = "block_index"
+
+    enable_block_index = PROTOCOL_CHANGES[change_name][index_name]
+
+    if not block_index:
+        block_index = CURRENT_BLOCK_INDEX
+
+    if block_index >= enable_block_index:
+        return True
+    else:
+        return False
+
+
+def get_value_by_block_index(change_name, block_index=None):
+    if not block_index:
+        block_index = CURRENT_BLOCK_INDEX
+
+    max_block_index = -1
+
+    if config.REGTEST:
+        for key, value in PROTOCOL_CHANGES[change_name]["testnet"]:  # noqa: B007
+            if int(key) > int(max_block_index):
+                max_block_index = key
+        return PROTOCOL_CHANGES[change_name]["testnet"][max_block_index]["value"]
+
+    if config.TESTNET:
+        index_name = "testnet"
+    else:
+        index_name = "mainnet"
+
+    for key in PROTOCOL_CHANGES[change_name][index_name]:
+        if int(key) > int(max_block_index) and block_index >= int(key):
+            max_block_index = key
+
+    return PROTOCOL_CHANGES[change_name][index_name][max_block_index]["value"]

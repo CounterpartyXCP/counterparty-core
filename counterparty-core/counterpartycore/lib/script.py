@@ -20,7 +20,7 @@ from pycoin.encoding.exceptions import EncodingError
 from pycoin.encoding.sec import public_pair_to_sec
 from ripemd import ripemd160 as RIPEMD160  # nosec B413
 
-from counterpartycore.lib import config, exceptions, ledger, opcodes, util
+from counterpartycore.lib import config, exceptions, opcodes, util
 from counterpartycore.lib.opcodes import *  # noqa: F403
 
 B58_DIGITS = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
@@ -64,7 +64,7 @@ def validate(address, allow_p2sh=True):
     # Check validity by attempting to decode.
     for pubkeyhash in pubkeyhashes:
         try:
-            if ledger.enabled("segwit_support"):
+            if util.enabled("segwit_support"):
                 if not is_bech32(pubkeyhash):
                     base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
             else:
@@ -74,7 +74,7 @@ def validate(address, allow_p2sh=True):
                 raise e
             base58_check_decode(pubkeyhash, config.P2SH_ADDRESSVERSION)
         except Base58Error as e:
-            if not ledger.enabled("segwit_support") or not is_bech32(pubkeyhash):
+            if not util.enabled("segwit_support") or not is_bech32(pubkeyhash):
                 raise e
 
 
@@ -484,7 +484,7 @@ def make_pubkeyhash(address):
             pubkeyhashes.append(pubkeyhash)
         pubkeyhash_address = construct_array(signatures_required, pubkeyhashes, signatures_possible)
     else:
-        if ledger.enabled("segwit_support") and is_bech32(address):
+        if util.enabled("segwit_support") and is_bech32(address):
             pubkeyhash_address = address  # Some bech32 addresses are valid base58 data
         elif is_pubkeyhash(address):
             pubkeyhash_address = address
@@ -505,7 +505,7 @@ def extract_pubkeys(pub):
                 pubkeys.append(pub)
     elif is_p2sh(pub):
         pass
-    elif ledger.enabled("segwit_support") and is_bech32(pub):
+    elif util.enabled("segwit_support") and is_bech32(pub):
         pass
     else:
         if not is_pubkeyhash(pub):

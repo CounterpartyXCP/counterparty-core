@@ -3,7 +3,6 @@
 import binascii
 import json
 import logging
-import pprint  # noqa: F401
 import struct
 
 from counterpartycore.lib import (  # noqa: F401
@@ -11,7 +10,6 @@ from counterpartycore.lib import (  # noqa: F401
     database,
     exceptions,
     ledger,
-    log,
     message_type,
     util,
 )
@@ -110,13 +108,13 @@ def compose(db, source: str, order_match_id: str):
     tx0_hash, tx1_hash = util.parse_id(order_match_id)
 
     destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(
-        db, source, order_match_id, ledger.CURRENT_BLOCK_INDEX
+        db, source, order_match_id, util.CURRENT_BLOCK_INDEX
     )
     if problems:
         raise exceptions.ComposeError(problems)
 
     # Warn if down to the wire.
-    time_left = order_match["match_expire_index"] - ledger.CURRENT_BLOCK_INDEX
+    time_left = order_match["match_expire_index"] - util.CURRENT_BLOCK_INDEX
     if time_left < 4:
         logger.warning(
             f"Only {time_left} blocks until that order match expires. The payment might not make into the blockchain in time."
@@ -191,7 +189,7 @@ def parse(db, tx, message):
             ledger.update_order_match_status(db, order_match_id, "completed")
 
             # Update give and get order status as filled if order_match is completed
-            if ledger.enabled("btc_order_filled"):
+            if util.enabled("btc_order_filled"):
                 order_matches = ledger.get_pending_order_matches(db, tx0_hash, tx1_hash)
                 if len(order_matches) == 0:
                     # mark both btc get and give orders as filled when order_match is completed and give or get remaining = 0

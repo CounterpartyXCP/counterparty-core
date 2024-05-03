@@ -3,7 +3,6 @@
 #
 import mmap
 import struct
-from io import BytesIO  # noqa: F401
 
 from .exceptions import SerializationError
 

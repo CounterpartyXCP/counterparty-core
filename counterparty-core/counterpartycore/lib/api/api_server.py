@@ -15,7 +15,9 @@ from counterpartycore.lib import (
     database,
     exceptions,
     ledger,
+    sentry,
     transaction,
+    util,
 )
 from counterpartycore.lib.api.routes import ROUTES
 from counterpartycore.lib.api.util import (
@@ -32,6 +34,7 @@ from flask import Flask, request
 from flask import g as flask_globals
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
+from sentry_sdk import configure_scope as configure_sentry_scope
 from werkzeug.serving import make_server
 
 multiprocessing.set_start_method("spawn", force=True)
@@ -90,7 +93,7 @@ def api_root():
 def is_server_ready():
     if BACKEND_HEIGHT is None:
         return False
-    if ledger.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT - 1:
+    if util.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT - 1:
         return True
     if time.time() - CURRENT_BLOCK_TIME < 60:
         return True
@@ -119,7 +122,7 @@ def return_result(http_code, result=None, error=None):
     if error is not None:
         api_result["error"] = error
     response = flask.make_response(to_json(api_result), http_code)
-    response.headers["X-COUNTERPARTY-HEIGHT"] = ledger.CURRENT_BLOCK_INDEX
+    response.headers["X-COUNTERPARTY-HEIGHT"] = util.CURRENT_BLOCK_INDEX
     response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
     response.headers["X-BITCOIN-HEIGHT"] = BACKEND_HEIGHT
     response.headers["Content-Type"] = "application/json"
@@ -163,7 +166,7 @@ def prepare_args(route, **kwargs):
 
 def execute_api_function(db, route, function_args):
     # cache everything for one block
-    cache_key = f"{ledger.CURRENT_BLOCK_INDEX}:{request.url}"
+    cache_key = f"{util.CURRENT_BLOCK_INDEX}:{request.url}"
     # except for blocks and transactions cached forever
     if request.path.startswith("/blocks/") or request.path.startswith("/transactions/"):
         cache_key = request.url
@@ -189,6 +192,14 @@ def inject_details(db, result):
     return result
 
 
+def get_transaction_name(rule):
+    if rule == "/":
+        return "APIRoot"
+    if rule == "/healthz":
+        return "healthcheck"
+    return "".join([part.capitalize() for part in ROUTES[rule]["function"].__name__.split("_")])
+
+
 @auth.login_required
 def handle_route(**kwargs):
     if BACKEND_HEIGHT is None:
@@ -199,13 +210,16 @@ def handle_route(**kwargs):
     global CURRENT_BLOCK_TIME  # noqa F811
     last_block = ledger.get_last_block(db)
     if last_block:
-        ledger.CURRENT_BLOCK_INDEX = last_block["block_index"]
+        util.CURRENT_BLOCK_INDEX = last_block["block_index"]
         CURRENT_BLOCK_TIME = last_block["block_time"]
     else:
-        ledger.CURRENT_BLOCK_INDEX = 0
+        util.CURRENT_BLOCK_INDEX = 0
         CURRENT_BLOCK_TIME = 0
 
     rule = str(request.url_rule.rule)
+
+    with configure_sentry_scope() as scope:
+        scope.set_transaction_name(get_transaction_name(rule))
 
     # check if server must be ready
     if not is_server_ready() and not return_result_if_not_ready(rule):
@@ -246,6 +260,8 @@ def handle_route(**kwargs):
 
 
 def run_api_server(args):
+    logger.info("Starting API Server.")
+    sentry.init()
     app = Flask(config.APP_NAME)
     # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
@@ -256,7 +272,7 @@ def run_api_server(args):
         # Initialise the API access log
         init_api_access_log(app)
         # Get the last block index
-        ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(get_db())
+        util.CURRENT_BLOCK_INDEX = blocks.last_db_index(get_db())
         # Add routes
         app.add_url_rule("/", view_func=handle_route)
         for path in ROUTES:
