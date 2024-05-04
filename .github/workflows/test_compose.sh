@@ -10,15 +10,6 @@ fi
 touch "./DOCKER_COMPOSE_TEST_LOCK"
 
 GIT_BRANCH="$1"
-PROFILE="$2"
-
-if [ "$PROFILE" = "testnet" ]; then
-    PORT_V1=14100
-    PORT_V2=14000
-else
-    PORT_V1=4100
-    PORT_V2=4000
-fi
 
 # pull the latest code
 rm -rf counterparty-core
@@ -28,7 +19,8 @@ cd counterparty-core
 VERSION=$(cat docker-compose.yml | grep 'image: counterparty/counterparty:' | awk -F ":" '{print $3}')
 
 # stop the running containers
-docker compose --profile $PROFILE stop
+docker compose --profile mainnet stop
+docker compose --profile testnet stop
 
 # remove counterparty-core container
 #docker rm counterparty-core-counterparty-core-1
@@ -40,58 +32,82 @@ docker rmi counterparty/counterparty:$VERSION || true
 # build the counterparty-core new image
 docker build -t counterparty/counterparty:$VERSION .
 
-# remove the counterparty-core data
-# sudo rm -rf ~/.local/share/counterparty-docker-data/counterparty/*
-
 # re-start containers
-docker compose --profile $PROFILE up -d
+docker compose --profile mainnet up -d
+docker compose --profile testnet up -d
 
-if [ "$PROFILE" = "mainnet" ]; then
-    while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Ready for queries')" = "" ]; do
-        echo "Waiting for counterparty-core $PROFILE to be ready"
-        sleep 1
-    done
-else
-    while [ "$(docker compose logs counterparty-core-testnet 2>&1 | grep 'Ready for queries')" = "" ]; do
-        echo "Waiting for counterparty-core $PROFILE to be ready"
-        sleep 1
-    done
-fi
+# wait for counterparty-core to be ready
+while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Ready for queries')" = "" ]; do
+    echo "Waiting for counterparty-core mainnet to be ready"
+    sleep 1
+done
 
-if [ "$PROFILE" = "mainnet" ]; then
-    # Run dredd rest
-    dredd
-    # Run compare hashes test
-    pip uninstall -y counterparty-rs
-    pip install -e counterparty-rs
-    cd counterparty-core
-    hatch env prune
-    hatch run pytest counterpartycore/test/compare_hashes_test.py --comparehashes
-    cd ..
-fi
+while [ "$(docker compose logs counterparty-core-testnet 2>&1 | grep 'Ready for queries')" = "" ]; do
+    echo "Waiting for counterparty-core testnet to be ready"
+    sleep 1
+done
 
 
-server_response_v1=$(curl -X POST http://127.0.0.1:$PORT_V1/v1/api/ \
+# check running info with API v1 mainnet
+response_v1_mainnet=$(curl -X POST http://127.0.0.1:4000/v1/api/ \
                         --user rpc:rpc \
                         -H 'Content-Type: application/json; charset=UTF-8'\
                         -H 'Accept: application/json, text/javascript' \
                         --data-binary '{ "jsonrpc": "2.0", "id": 0, "method": "get_running_info" }' \
                         --write-out '%{http_code}' --silent --output /dev/null)
 
-if [ "$server_response_v1" -ne 200 ]; then
-    echo "Failed to get_running_info"
+if [ "$response_v1_mainnet" -ne 200 ]; then
+    echo "Failed to get_running_info mainnet"
     rm -f ../DOCKER_COMPOSE_TEST_LOCK
     exit 1
 fi
 
-server_response_v2=$(curl http://api:api@127.0.0.1:$PORT_V2/ \
+# check running info with API v1 testnet
+response_v1_testnet=$(curl -X POST http://127.0.0.1:14100/v1/api/ \
+                        --user rpc:rpc \
+                        -H 'Content-Type: application/json; charset=UTF-8'\
+                        -H 'Accept: application/json, text/javascript' \
+                        --data-binary '{ "jsonrpc": "2.0", "id": 0, "method": "get_running_info" }' \
                         --write-out '%{http_code}' --silent --output /dev/null)
 
-if [ "$server_response_v2" -ne 200 ]; then
-    echo "Failed to get API v2 root"
+if [ "$response_v1_testnet" -ne 200 ]; then
+    echo "Failed to get_running_info testnet"
     rm -f ../DOCKER_COMPOSE_TEST_LOCK
     exit 1
 fi
+
+# check running info with API v2 mainnet
+response_v2_mainnet=$(curl http://api:api@127.0.0.1:4000/ \
+                        --write-out '%{http_code}' --silent --output /dev/null)
+
+if [ "$response_v2_mainnet" -ne 200 ]; then
+    echo "Failed to get API v2 root mainnet"
+    rm -f ../DOCKER_COMPOSE_TEST_LOCK
+    exit 1
+fi
+
+# check running info with API v2 testnet
+response_v2_testnet=$(curl http://api:api@127.0.0.1:14000/ \
+                        --write-out '%{http_code}' --silent --output /dev/null)
+
+if [ "$response_v2_mainnet" -ne 200 ]; then
+    echo "Failed to get API v2 root mainnet"
+    rm -f ../DOCKER_COMPOSE_TEST_LOCK
+    exit 1
+fi
+
+
+# Run dredd rest
+dredd
+
+# Run compare hashes test
+pip uninstall -y counterparty-rs
+pip install -e counterparty-rs
+cd counterparty-core
+hatch env prune
+hatch run pytest counterpartycore/test/compare_hashes_test.py --comparehashes
+cd ..
+
 
 rm -f ../DOCKER_COMPOSE_TEST_LOCK
 exit 0
