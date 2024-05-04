@@ -49,7 +49,7 @@ done
 
 
 # check running info with API v1 mainnet
-response_v1_mainnet=$(curl -X POST http://127.0.0.1:4000/v1/api/ \
+response_v1_mainnet=$(curl -X POST http://127.0.0.1:4100/v1/rpc/ \
                         --user rpc:rpc \
                         -H 'Content-Type: application/json; charset=UTF-8'\
                         -H 'Accept: application/json, text/javascript' \
