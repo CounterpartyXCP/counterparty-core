@@ -49,7 +49,18 @@ while [ "$(docker compose --profile $PROFILE logs counterparty-core-$PROFILE 2>&
     sleep 1
 done
 
-rm -f ../DOCKER_COMPOSE_TEST_LOCK
+if [ "$PROFILE" = "mainnet" ]; then
+    # Run dredd rest
+    dredd
+    # Run compare hashes test
+    pip uninstall -y counterparty-rs
+    pip install -e counterparty-rs
+    cd counterparty-core
+    hatch env prune
+    hatch run pytest counterpartycore/test/compare_hashes_test.py --comparehashes
+    cd ..
+fi
+
 
 server_response_v1=$(curl -X POST http://127.0.0.1:$PORT/v1/api/ \
                         --user rpc:rpc \
@@ -60,6 +71,7 @@ server_response_v1=$(curl -X POST http://127.0.0.1:$PORT/v1/api/ \
 
 if [ "$server_response_v1" -ne 200 ]; then
     echo "Failed to get_running_info"
+    rm -f ../DOCKER_COMPOSE_TEST_LOCK
     exit 1
 fi
 
@@ -68,5 +80,9 @@ server_response_v2=$(curl http://api:api@127.0.0.1:$PORT/ \
 
 if [ "$server_response_v2" -ne 200 ]; then
     echo "Failed to get API v2 root"
+    rm -f ../DOCKER_COMPOSE_TEST_LOCK
     exit 1
 fi
+
+rm -f ../DOCKER_COMPOSE_TEST_LOCK
+exit 0
