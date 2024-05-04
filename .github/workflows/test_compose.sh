@@ -44,10 +44,17 @@ docker build -t counterparty/counterparty:$VERSION .
 # re-start containers
 docker compose --profile $PROFILE up -d
 
-while [ "$(docker compose --profile $PROFILE logs counterparty-core-$PROFILE 2>&1 | grep 'Ready for queries')" = "" ]; do
-    echo "Waiting for counterparty-core $PROFILE to be ready"
-    sleep 1
-done
+if [ "$PROFILE" = "mainnet" ]; then
+    while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Ready for queries')" = "" ]; do
+        echo "Waiting for counterparty-core $PROFILE to be ready"
+        sleep 1
+    done
+else
+    while [ "$(docker compose logs counterparty-core-testnet 2>&1 | grep 'Ready for queries')" = "" ]; do
+        echo "Waiting for counterparty-core $PROFILE to be ready"
+        sleep 1
+    done
+fi
 
 if [ "$PROFILE" = "mainnet" ]; then
     # Run dredd rest
