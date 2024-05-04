@@ -19,8 +19,8 @@ cd counterparty-core
 VERSION=$(cat docker-compose.yml | grep 'image: counterparty/counterparty:' | awk -F ":" '{print $3}')
 
 # stop the running containers
-docker compose --profile mainnet stop
-docker compose --profile testnet stop
+docker compose --profile mainnet stop counterparty-core
+docker compose --profile testnet stop counterparty-core-testnet
 
 # remove counterparty-core container
 #docker rm counterparty-core-counterparty-core-1
