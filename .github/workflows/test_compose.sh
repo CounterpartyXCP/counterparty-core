@@ -13,9 +13,11 @@ GIT_BRANCH="$1"
 PROFILE="$2"
 
 if [ "$PROFILE" = "testnet" ]; then
-    PORT=14000
+    PORT_V1=14100
+    PORT_V2=14000
 else
-    PORT=4000
+    PORT_V1=4100
+    PORT_V2=4000
 fi
 
 # pull the latest code
@@ -69,7 +71,7 @@ if [ "$PROFILE" = "mainnet" ]; then
 fi
 
 
-server_response_v1=$(curl -X POST http://127.0.0.1:$PORT/v1/api/ \
+server_response_v1=$(curl -X POST http://127.0.0.1:$PORT_V1/v1/api/ \
                         --user rpc:rpc \
                         -H 'Content-Type: application/json; charset=UTF-8'\
                         -H 'Accept: application/json, text/javascript' \
@@ -82,7 +84,7 @@ if [ "$server_response_v1" -ne 200 ]; then
     exit 1
 fi
 
-server_response_v2=$(curl http://api:api@127.0.0.1:$PORT/ \
+server_response_v2=$(curl http://api:api@127.0.0.1:$PORT_V2/ \
                         --write-out '%{http_code}' --silent --output /dev/null)
 
 if [ "$server_response_v2" -ne 200 ]; then
