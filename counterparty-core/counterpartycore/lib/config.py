@@ -157,3 +157,12 @@ API_MAX_LOG_SIZE = (
     10 * 1024 * 1024
 )  # max log size of 20 MB before rotation (make configurable later)
 API_MAX_LOG_COUNT = 10
+
+NO_TELEMETRY = False
+TELEMETRY_INTERVAL = 5 * 60
+INFLUX_DB_URL = "http://telemetry.counterparty.io:8086"
+INFLUX_DB_TOKEN = (
+    "7iViyy6TEVwmpH-YPE7shO36fzfGsyVYm0DC2tuLv0ZDTLp5uqRTW2Zv9IBcujF5zQRV6mauGdb1W3n7UrUu6A=="  # noqa: S105
+)
+INFLUX_DB_ORG = "counterparty"
+INFLUX_DB_BUCKET = "node-telemetry"

@@ -1,17 +1,13 @@
-# INTERFACE
-from counterpartycore.lib import config, ledger  # noqa: I001, F401
 import os
 
 import counterpartycore.lib.telemetry.util as util
+from counterpartycore.lib import config, ledger  # noqa: I001, F4
 
-
-class TelemetryCollectorI:
-    def collect(self):
-        raise NotImplementedError()
+from .interface import TelemetryCollectorI
 
 
 # DEFAULT IMPLEMENTATION
-class TelemetryCollectorBase(TelemetryCollectorI):
+class TelemetryCollectorKwargs(TelemetryCollectorI):
     def __init__(self, **kwargs):
         self.static_attrs = kwargs
 
@@ -19,7 +15,7 @@ class TelemetryCollectorBase(TelemetryCollectorI):
         return self.static_attrs
 
 
-class TelemetryCollectorLive(TelemetryCollectorBase):
+class TelemetryCollectorBase(TelemetryCollectorKwargs):
     def __init__(self, db, **kwargs):
         super().__init__(**kwargs)
         self.db = db
@@ -31,12 +27,16 @@ class TelemetryCollectorLive(TelemetryCollectorBase):
         is_docker = util.is_docker()
         network = util.get_network()
         force_enabled = util.is_force_enabled()
+        platform = util.get_system()
 
         block_index = ledger.last_message(self.db)["block_index"]
         cursor = self.db.cursor()
         last_block = cursor.execute(
             "SELECT * FROM blocks where block_index = ?", [block_index]
         ).fetchone()
+
+        if not last_block:
+            return None
 
         return {
             "version": version,
@@ -45,7 +45,8 @@ class TelemetryCollectorLive(TelemetryCollectorBase):
             "dockerized": is_docker,
             "network": network,
             "force_enabled": force_enabled,
-            "last_block": last_block,
+            "platform": platform,
+            **last_block,
             **self.static_attrs,
         }
 
