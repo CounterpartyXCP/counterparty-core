@@ -4,7 +4,7 @@ set -e
 set -x
 
 if [ -f "./DOCKER_COMPOSE_TEST_LOCK" ]; then
-    echo "A test is already running. Exiting."
+    echo "A test is already running or the last one failed. Exiting."
     exit 1
 fi
 touch "./DOCKER_COMPOSE_TEST_LOCK"
@@ -58,7 +58,6 @@ response_v1_mainnet=$(curl -X POST http://127.0.0.1:4000/v1/api/ \
 
 if [ "$response_v1_mainnet" -ne 200 ]; then
     echo "Failed to get_running_info mainnet"
-    rm -f ../DOCKER_COMPOSE_TEST_LOCK
     exit 1
 fi
 
@@ -72,7 +71,6 @@ response_v1_testnet=$(curl -X POST http://127.0.0.1:14100/v1/api/ \
 
 if [ "$response_v1_testnet" -ne 200 ]; then
     echo "Failed to get_running_info testnet"
-    rm -f ../DOCKER_COMPOSE_TEST_LOCK
     exit 1
 fi
 
@@ -82,7 +80,6 @@ response_v2_mainnet=$(curl http://api:api@127.0.0.1:4000/ \
 
 if [ "$response_v2_mainnet" -ne 200 ]; then
     echo "Failed to get API v2 root mainnet"
-    rm -f ../DOCKER_COMPOSE_TEST_LOCK
     exit 1
 fi
 
@@ -92,7 +89,6 @@ response_v2_testnet=$(curl http://api:api@127.0.0.1:14000/ \
 
 if [ "$response_v2_mainnet" -ne 200 ]; then
     echo "Failed to get API v2 root mainnet"
-    rm -f ../DOCKER_COMPOSE_TEST_LOCK
     exit 1
 fi
 
