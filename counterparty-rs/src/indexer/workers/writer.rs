@@ -5,7 +5,7 @@ use crate::indexer::{
     database::DatabaseOps,
     types::{
         error::Error,
-        pipeline::{Done, HasEntries, HasHeight, HasTargetHeight, PipelineDataBatch},
+        pipeline::{Done, HasEntries, HasHeight, PipelineDataBatch},
     },
     utils::in_reorg_window,
 };
@@ -17,7 +17,7 @@ pub fn new<T, U, D>(
     max_num_entries: usize,
 ) -> impl FnMut(Receiver<Box<T>>, Sender<Box<PipelineDataBatch<U>>>, Done) -> Result<(), Error> + Clone
 where
-    T: HasHeight + HasTargetHeight + HasEntries<U>,
+    T: HasHeight + HasEntries<U>,
     D: DatabaseOps,
 {
     move |rx, tx, done| loop {

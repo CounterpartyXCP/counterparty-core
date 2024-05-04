@@ -7,7 +7,7 @@ use std::{
 
 use crossbeam_channel::{after, select, unbounded, Receiver, Sender};
 use rand::{thread_rng, Rng};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 use super::types::{error::Error, pipeline::Done};
 
@@ -57,7 +57,7 @@ where
                         return Err(Error::OperationCancelled(error_message));
                     }
                     recv(retry_timer) -> _ => {
-                        error!("{} Retrying after error: {:?}", error_message, e);
+                        debug!("{} Retrying after error: {:?}", error_message, e);
                     }
                     recv(timeout_timer) -> _ => {
                         error!("{} Maximum timeout reached. Last error: {:?}", error_message, e);

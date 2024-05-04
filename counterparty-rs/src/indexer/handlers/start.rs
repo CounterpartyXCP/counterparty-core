@@ -2,20 +2,22 @@ use std::{thread::JoinHandle, time::Instant};
 
 use crate::indexer::{
     bitcoin_client::{BitcoinClient, BitcoinRpc},
+    config::Config,
     database::DatabaseOps,
     types::{error::Error, pipeline::Stopper},
     utils::timed,
-    workers::{extractor, fetcher, new_worker_pool, orderer, producer, reporter, writer},
+    workers::{consumer, extractor, fetcher, new_worker_pool, orderer, producer, reporter, writer},
 };
 use bitcoincore_rpc::bitcoin::Block;
-use crossbeam_channel::{bounded, unbounded, Sender};
+use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 use tracing::info;
 
 pub fn new<D>(
     parallelism: usize,
+    config: Config,
     client: BitcoinClient,
     stopper: Stopper,
-    tx_block: Sender<Box<Block>>,
+    chan: (Sender<Box<Block>>, Receiver<Box<Block>>),
     db: D,
 ) -> Result<Vec<JoinHandle<Result<(), Error>>>, Error>
 where
@@ -33,7 +35,7 @@ where
     let start = Instant::now();
 
     let capacity = 32;
-    let (_, rx_start) = unbounded();
+    let (tx_end, rx_start) = unbounded();
     let (tx_c1, rx_c1) = bounded(capacity);
     let (tx_c2, rx_c2) = bounded(capacity);
     let (tx_c3, rx_c3) = bounded(capacity);
@@ -97,10 +99,21 @@ where
         "Reporter".into(),
         1,
         rx_c5.clone(),
-        tx_block.clone(),
+        chan.0,
         stopper.clone(),
         reporter::new(start, start_height, rx_c1, rx_c2, rx_c3, rx_c4),
     )?);
+
+    if config.consume_blocks {
+        handles.append(&mut new_worker_pool(
+            "Consumer".into(),
+            1,
+            chan.1,
+            tx_end,
+            stopper.clone(),
+            consumer::new(),
+        )?);
+    }
 
     info!("Indexer started");
     Ok(handles)

@@ -52,6 +52,7 @@ pub struct Config {
     pub log_format: LogFormat,
     pub log_output: LogOutput,
     pub db_dir: String,
+    pub consume_blocks: bool,
 }
 
 impl<'source> FromPyObject<'source> for Config {
@@ -84,6 +85,11 @@ impl<'source> FromPyObject<'source> for Config {
             None => LogOutput::Stdout,
         };
 
+        let consume_blocks = match dict.get_item("consume_blocks")? {
+            Some(item) => item.extract()?,
+            None => false,
+        };
+
         Ok(Config {
             rpc_address,
             rpc_user,
@@ -91,6 +97,7 @@ impl<'source> FromPyObject<'source> for Config {
             log_format,
             log_output,
             db_dir,
+            consume_blocks,
         })
     }
 }

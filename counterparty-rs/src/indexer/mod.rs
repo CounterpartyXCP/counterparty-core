@@ -12,10 +12,10 @@ mod types;
 mod utils;
 mod workers;
 
-use std::{fs::OpenOptions, sync::Arc, thread::JoinHandle};
+use std::thread::JoinHandle;
 
 use bitcoincore_rpc::bitcoin::Block;
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender};
 use pyo3::prelude::*;
 
 use self::{
@@ -24,7 +24,6 @@ use self::{
     database::Database,
     handlers::{new, start, stop},
     types::{error::Error, pipeline::Stopper},
-    workers::{consumer, new_worker_pool},
 };
 
 #[pyclass]
@@ -48,25 +47,11 @@ impl Indexer {
     pub fn start(&mut self) -> PyResult<()> {
         self.handles.append(&mut start::new(
             self.parallelism,
+            self.config.clone(),
             self.client.clone(),
             self.stopper.clone(),
-            self.chan.0.clone(),
+            self.chan.clone(),
             self.db.clone(),
-        )?);
-        let (tx_end, _) = unbounded::<()>();
-        // TODO: remove after testing
-        let file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open("./consumer.log")?;
-        self.handles.append(&mut new_worker_pool(
-            "Consumer".into(),
-            1,
-            self.chan.1.clone(),
-            tx_end,
-            self.stopper.clone(),
-            consumer::new(Arc::new(file), self.client.clone(), self.db.clone()),
         )?);
         Ok(())
     }

@@ -11,8 +11,7 @@ use crate::indexer::{
     types::{
         error::Error,
         pipeline::{
-            BlockHasEntries, Done, HasBlock, HasHeight, HasTargetHeight, PipelineDataBatch,
-            PipelineDataInitial,
+            BlockHasEntries, Done, HasBlock, HasHeight, PipelineDataBatch, PipelineDataInitial,
         },
     },
 };
@@ -26,7 +25,7 @@ pub fn new<C, D, E, F, T, U, B>(
     rx_c4: Receiver<F>,
 ) -> impl Fn(Receiver<Box<PipelineDataBatch<T>>>, Sender<Box<B>>, Done) -> Result<(), Error> + Clone
 where
-    T: HasHeight + HasBlock<B, U, PipelineDataInitial> + HasTargetHeight,
+    T: HasHeight + HasBlock<B, U, PipelineDataInitial>,
     B: BlockHasEntries,
 {
     move |rx, tx, done| {

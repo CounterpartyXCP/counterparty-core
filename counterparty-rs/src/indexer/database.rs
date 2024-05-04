@@ -20,11 +20,14 @@ const MAX_BLOCK_HEIGHT_KEY: &[u8; 16] = b"max_block_height";
 
 pub trait DatabaseOps: Clone + Send + 'static {
     fn get_max_block_height(&self) -> Result<u32, Error>;
-    fn get_funding_block_heights(&self, script_hash: [u8; 20]) -> Result<Vec<u32>, Error>;
+    fn get_funding_block_entries(
+        &self,
+        script_hash: [u8; 20],
+    ) -> Result<Vec<BlockAtHeightHasHash>, Error>;
     fn filter_spent(
         &self,
-        txid_vout_prefixes: Vec<TxidVoutPrefix>,
-    ) -> Result<Vec<TxidVoutPrefix>, Error>;
+        outputs: Vec<(TxidVoutPrefix, u64)>,
+    ) -> Result<Vec<(TxidVoutPrefix, u64)>, Error>;
     fn put_max_block_height(&self, batch: &mut WriteBatch, height: u32) -> Result<(), Error>;
     #[allow(clippy::ptr_arg)]
     fn put_entries(
@@ -97,32 +100,51 @@ impl DatabaseOps for Database {
         ))
     }
 
-    fn get_funding_block_heights(&self, script_hash: [u8; 20]) -> Result<Vec<u32>, Error> {
-        let mut heights = Vec::new();
-        let iter = self.db.prefix_iterator_cf(
+    fn get_funding_block_entries(
+        &self,
+        script_hash: [u8; 20],
+    ) -> Result<Vec<BlockAtHeightHasHash>, Error> {
+        let mut results = Vec::new();
+        let height_iter = self.db.prefix_iterator_cf(
             self.cf(to_cf_name::<ScriptHashHasOutputsInBlockAtHeight>())?,
             script_hash,
         );
-        for result in iter {
+        for result in height_iter {
             let (key, value) = result?;
             let entry = (key.to_vec(), value.to_vec());
-            heights.push(ScriptHashHasOutputsInBlockAtHeight::from_entry(entry)?.height);
+            let height = ScriptHashHasOutputsInBlockAtHeight::from_entry(entry)?.height;
+            let height_as_bytes = height.to_be_bytes();
+            #[allow(clippy::expect_used, clippy::expect_fun_call)]
+            let hash = self
+                .db
+                .get_cf(
+                    self.cf(to_cf_name::<BlockAtHeightHasHash>())?,
+                    height_as_bytes,
+                )?
+                .expect(&format!(
+                    "DB should have BlockAtHeightHasHash index for block at height: {}",
+                    height
+                ));
+            results.push(BlockAtHeightHasHash::from_entry((
+                height_as_bytes.to_vec(),
+                hash,
+            ))?);
         }
-        Ok(heights)
+        Ok(results)
     }
 
     fn filter_spent(
         &self,
-        txid_vout_prefixes: Vec<TxidVoutPrefix>,
-    ) -> Result<Vec<TxidVoutPrefix>, Error> {
+        outputs: Vec<(TxidVoutPrefix, u64)>,
+    ) -> Result<Vec<(TxidVoutPrefix, u64)>, Error> {
         let mut unspent = Vec::new();
-        for prefix in txid_vout_prefixes {
+        for o in outputs {
             let mut iter = self.db.prefix_iterator_cf(
                 self.cf(to_cf_name::<BlockAtHeightSpentOutputInTx>())?,
-                prefix.to_prefix(),
+                o.0.to_prefix(),
             );
             if iter.next().is_none() {
-                unspent.push(prefix);
+                unspent.push(o);
             }
         }
         Ok(unspent)
@@ -274,20 +296,28 @@ mod tests {
                 script_hash,
                 height: 1001,
             }),
+            Box::new(BlockAtHeightHasHash {
+                height: 1001,
+                hash: test_sha256_hash(1),
+            }),
             Box::new(ScriptHashHasOutputsInBlockAtHeight {
                 script_hash,
                 height: 1002,
+            }),
+            Box::new(BlockAtHeightHasHash {
+                height: 1002,
+                hash: test_sha256_hash(2),
             }),
         ];
         db.write_batch(|batch| db.put_entries(batch, None, &entries))
             .unwrap();
 
-        let heights = db.get_funding_block_heights(script_hash).unwrap();
-        assert_eq!(
-            heights,
-            vec![1001, 1002],
-            "Heights should match the input entries"
-        );
+        let entries = db.get_funding_block_entries(script_hash).unwrap();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].height, 1001);
+        assert_eq!(entries[0].hash, test_sha256_hash(1));
+        assert_eq!(entries[1].height, 1002);
+        assert_eq!(entries[1].hash, test_sha256_hash(2));
     }
 
     #[test]
@@ -301,81 +331,85 @@ mod tests {
                 script_hash: script_hash1,
                 height: 1001,
             }),
+            Box::new(BlockAtHeightHasHash {
+                height: 1001,
+                hash: test_sha256_hash(1),
+            }),
             Box::new(ScriptHashHasOutputsInBlockAtHeight {
                 script_hash: script_hash2,
                 height: 1002,
+            }),
+            Box::new(BlockAtHeightHasHash {
+                height: 1002,
+                hash: test_sha256_hash(2),
             }),
         ];
         db.write_batch(|batch| db.put_entries(batch, None, &entries))
             .unwrap();
 
-        let heights1 = db.get_funding_block_heights(script_hash1).unwrap();
-        let heights2 = db.get_funding_block_heights(script_hash2).unwrap();
-        assert_eq!(
-            heights1,
-            vec![1001],
-            "Heights for script_hash1 should match"
-        );
-        assert_eq!(
-            heights2,
-            vec![1002],
-            "Heights for script_hash2 should match"
-        );
+        let entries1 = db.get_funding_block_entries(script_hash1).unwrap();
+        assert_eq!(entries1.len(), 1);
+        assert_eq!(entries1[0].height, 1001);
+        let entries2 = db.get_funding_block_entries(script_hash2).unwrap();
+        assert_eq!(entries2.len(), 1);
+        assert_eq!(entries2[0].height, 1002);
     }
 
     #[test]
     fn test_filter_spent_all_unspent() {
         let db = new_test_db!().unwrap();
-        let txid_vout_prefixes = vec![
-            TxidVoutPrefix {
-                txid: test_sha256_hash(1),
-                vout: 0,
-            },
-            TxidVoutPrefix {
-                txid: test_sha256_hash(2),
-                vout: 1,
-            },
+        let inputs = vec![
+            (
+                TxidVoutPrefix {
+                    txid: test_sha256_hash(1),
+                    vout: 0,
+                },
+                0,
+            ),
+            (
+                TxidVoutPrefix {
+                    txid: test_sha256_hash(2),
+                    vout: 1,
+                },
+                1,
+            ),
         ];
 
-        let result = db.filter_spent(txid_vout_prefixes.clone()).unwrap();
-        assert_eq!(
-            result, txid_vout_prefixes,
-            "All txid/vout should be unspent"
-        );
+        let result = db.filter_spent(inputs.clone()).unwrap();
+        assert_eq!(result, inputs, "All txid/vout should be unspent");
     }
 
     #[test]
     fn test_filter_spent_some_spent() {
         let db = new_test_db!().unwrap();
-        let txid_vout_prefixes = vec![
-            TxidVoutPrefix {
-                txid: test_sha256_hash(1),
-                vout: 0,
-            },
-            TxidVoutPrefix {
-                txid: test_sha256_hash(2),
-                vout: 1,
-            },
+        let inputs = vec![
+            (
+                TxidVoutPrefix {
+                    txid: test_sha256_hash(0),
+                    vout: 0,
+                },
+                0,
+            ),
+            (
+                TxidVoutPrefix {
+                    txid: test_sha256_hash(1),
+                    vout: 1,
+                },
+                1,
+            ),
         ];
 
         // Simulate some txid/vout being spent
         let spent_entry = BlockAtHeightSpentOutputInTx {
-            txid: test_sha256_hash(1),
+            txid: test_sha256_hash(0),
             vout: 0,
             height: 1,
         };
         db.write_batch(|batch| db.put_entries(batch, Some(0), &vec![Box::new(spent_entry)]))
             .unwrap();
 
-        let result = db.filter_spent(txid_vout_prefixes).unwrap();
-        assert_eq!(
-            result,
-            vec![TxidVoutPrefix {
-                txid: test_sha256_hash(2),
-                vout: 1
-            }],
-            "Only txid 2 should be unspent"
-        );
+        let result = db.filter_spent(inputs.clone()).unwrap();
+        assert_eq!(result, inputs[1..], "Only txid 1 should be unspent");
     }
 
     fn get_indexes<T: FromEntry>(db: &Database) -> Result<Vec<Box<T>>, Error> {

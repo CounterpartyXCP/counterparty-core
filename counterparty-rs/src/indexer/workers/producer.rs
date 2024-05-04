@@ -70,7 +70,7 @@ where
 {
     move |_, tx, done| {
         let mut height = start_height;
-        let mut target_height = height - 1;
+        let mut target_height = if height > 0 { height - 1 } else { 0 };
         let mut reorg_detection_enabled = false;
         loop {
             if done.try_recv().is_ok() {

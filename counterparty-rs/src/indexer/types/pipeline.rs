@@ -8,7 +8,10 @@ use crossbeam_channel::Receiver;
 
 use crate::indexer::utils::Broadcaster;
 
-use super::{entry::ToEntry, error::Error};
+use super::{
+    entry::{ToEntry, TxidVoutPrefix},
+    error::Error,
+};
 
 pub type Done = Receiver<()>;
 
@@ -45,20 +48,21 @@ pub trait BlockHasEntries {
     fn get_entries(&self, height: u32) -> Vec<Box<dyn ToEntry>>;
 }
 
+pub trait BlockHasOutputs {
+    fn get_script_hash_outputs(&self, script_hash: [u8; 20]) -> Vec<(TxidVoutPrefix, u64)>;
+}
+
 pub trait BlockHasPrevBlockHash {
     fn get_prev_block_hash(&self) -> &BlockHash;
 }
 
 pub trait HasHeight {
     fn get_height(&self) -> u32;
+    fn get_target_height(&self) -> u32;
 }
 
 pub trait HasHash {
     fn get_hash(&self) -> &BlockHash;
-}
-
-pub trait HasTargetHeight {
-    fn get_target_height(&self) -> u32;
 }
 
 pub trait SetBlock<B: BlockHasEntries, U> {
@@ -83,9 +87,7 @@ impl HasHeight for PipelineDataInitial {
     fn get_height(&self) -> u32 {
         self.height
     }
-}
 
-impl HasTargetHeight for PipelineDataInitial {
     fn get_target_height(&self) -> u32 {
         self.target_height
     }
@@ -127,9 +129,7 @@ impl<B> HasHeight for PipelineDataWithBlock<B> {
     fn get_height(&self) -> u32 {
         self.prev.get_height()
     }
-}
 
-impl<B> HasTargetHeight for PipelineDataWithBlock<B> {
     fn get_target_height(&self) -> u32 {
         self.prev.get_target_height()
     }
@@ -150,9 +150,7 @@ impl<B> HasHeight for PipelineDataWithEntries<B> {
     fn get_height(&self) -> u32 {
         self.prev.get_height()
     }
-}
 
-impl<B> HasTargetHeight for PipelineDataWithEntries<B> {
     fn get_target_height(&self) -> u32 {
         self.prev.get_target_height()
     }

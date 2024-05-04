@@ -68,6 +68,10 @@ mod tests {
         fn get_height(&self) -> u32 {
             self.height
         }
+
+        fn get_target_height(&self) -> u32 {
+            unimplemented!()
+        }
     }
 
     #[derive(Debug, Clone, From, IntoIterator)]

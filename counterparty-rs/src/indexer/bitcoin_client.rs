@@ -11,10 +11,11 @@ use super::{
     types::{
         entry::{
             BlockAtHeightHasHash, BlockAtHeightSpentOutputInTx,
-            ScriptHashHasOutputsInBlockAtHeight, ToEntry, TxInBlockAtHeight, WritableEntry,
+            ScriptHashHasOutputsInBlockAtHeight, ToEntry, TxInBlockAtHeight, TxidVoutPrefix,
+            WritableEntry,
         },
         error::Error,
-        pipeline::{BlockHasEntries, BlockHasPrevBlockHash, Done, Stopper},
+        pipeline::{BlockHasEntries, BlockHasOutputs, BlockHasPrevBlockHash, Done, Stopper},
     },
     workers::new_worker_pool,
 };
@@ -60,6 +61,26 @@ impl BlockHasEntries for Block {
 impl BlockHasPrevBlockHash for Block {
     fn get_prev_block_hash(&self) -> &BlockHash {
         &self.header.prev_blockhash
+    }
+}
+
+impl BlockHasOutputs for Block {
+    fn get_script_hash_outputs(&self, script_hash: [u8; 20]) -> Vec<(TxidVoutPrefix, u64)> {
+        let mut outputs = Vec::new();
+        for tx in self.txdata.iter() {
+            for (i, o) in tx.output.iter().enumerate() {
+                if script_hash == o.script_pubkey.script_hash().as_byte_array().as_ref() {
+                    outputs.push((
+                        TxidVoutPrefix {
+                            txid: tx.txid().to_byte_array(),
+                            vout: i as u32,
+                        },
+                        o.value.to_sat(),
+                    ));
+                }
+            }
+        }
+        outputs
     }
 }
 
