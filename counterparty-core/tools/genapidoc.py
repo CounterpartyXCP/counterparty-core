@@ -110,7 +110,7 @@ def gen_groups_toc():
 
 if TARGET == "docusaurus":
     md = """---
-title: ReST API V2
+title: API v2
 ---
 
 """
