@@ -51,10 +51,6 @@ def handle_interrupt_signal(signum, _frame):
     raise KeyboardInterrupt(f"Received signal {signal.strsignal(signum)}")
 
 
-signal.signal(signal.SIGINT, handle_interrupt_signal)
-signal.signal(signal.SIGTERM, handle_interrupt_signal)
-
-
 def initialise(*args, **kwargs):
     initialise_log_config(
         verbose=kwargs.pop("verbose", 0),
@@ -665,6 +661,9 @@ def start_all(args):
     db = None
 
     try:
+        signal.signal(signal.SIGINT, handle_interrupt_signal)
+        signal.signal(signal.SIGTERM, handle_interrupt_signal)
+
         if not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap":
             bootstrap(no_confirm=True)
 

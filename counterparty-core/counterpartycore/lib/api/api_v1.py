@@ -499,8 +499,7 @@ class APIStatusPoller(threading.Thread):
         logger.info("Stopping API Status Poller...")
         self.stopping = True
         self.db.close()
-        while not self.stopped:
-            time.sleep(0.1)
+        self.join()
 
     def run(self):
         logger.debug("Starting API Status Poller...")
@@ -534,9 +533,8 @@ class APIStatusPoller(threading.Thread):
             else:
                 CURRENT_API_STATUS_CODE = None
                 CURRENT_API_STATUS_RESPONSE_JSON = None
-            time.sleep(0.5)  # sleep for 0.5 seconds
-            if self.stopping:
-                self.stopped = True
+            if not self.stopping:
+                time.sleep(0.5)  # sleep for 0.5 seconds
 
 
 class APIServer(threading.Thread):
