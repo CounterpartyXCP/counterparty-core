@@ -17,6 +17,7 @@ from operator import itemgetter
 
 import gnupg
 import requests
+
 from counterpartycore.lib import config, exceptions
 
 logger = logging.getLogger(config.LOGGER_NAME)
