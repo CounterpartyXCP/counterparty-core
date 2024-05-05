@@ -14,16 +14,16 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # install maturin
 RUN pip3 install maturin
 
-# copy repository
+# copy README
 COPY README.md /README.md
-COPY ./counterparty-rs /counterparty-rs
-COPY ./counterparty-core /counterparty-core
 
 # install counterparty-rs
+COPY ./counterparty-rs /counterparty-rs
 WORKDIR /counterparty-rs
 RUN pip3 install .
 
 # install counterparty-core
+COPY ./counterparty-core /counterparty-core
 WORKDIR /counterparty-core
 RUN pip3 install .
 

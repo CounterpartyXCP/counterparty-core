@@ -5,10 +5,10 @@
 # Upgrading
 
 To continue using the old API you must:
-- start `counterparty-server` with the flag `----enable-api-v1`
-- replace port `4100` with port `4000` for mainnet and port `14000` with port `14100`
+- start `counterparty-server` with the flag `--enable-api-v1`
+- use port `4100` for mainnet and port `14100` for testnet
 - prefix all endpoints with `/v1/`
-To easily migrate to the new API, an equivalence table is available in the documentation
+To easily migrate to the new API, an equivalence table is available in the documentation.
 
 # ChangeLog
 
@@ -25,6 +25,7 @@ To easily migrate to the new API, an equivalence table is available in the docum
 
 ## Command-Line Interface
 * Set default and minimum values for Backend Poll Interval to 3.0 seconds
+* Update `docker-compose.yml` to use different profiles for `mainnet` and `testnet`
 * Checks that another process is not connected to the database before starting the server
 * At startup, launches a quick check if the database has not been correctly closed
 * The `--verbose` flag can be repeated to increase verbosity, `-vv` is also supported

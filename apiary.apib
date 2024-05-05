@@ -64,7 +64,7 @@ Returns server information and the list of documented routes in JSON format.
 
 ## Group Blocks
 
-### Get Blocks [GET /blocks{?last}{?limit}{?verbose}]
+### Get Blocks [GET /blocks{?last}{&limit}{&verbose}]
 
 Returns the list of the last ten blocks
 
@@ -603,7 +603,7 @@ Returns the issuances of a block
         }
     ```
 
-### Get Sends By Block [GET /blocks/{block_index}/sends{?limit}{?offset}{?verbose}]
+### Get Sends By Block [GET /blocks/{block_index}/sends{?limit}{&offset}{&verbose}]
 
 Returns the sends of a block
 
@@ -740,7 +740,7 @@ Returns the sweeps of a block
 
 ## Group Transactions
 
-### Info [GET /transactions/info{?rawtransaction}{?block_index}{?verbose}]
+### Info [GET /transactions/info{?rawtransaction}{&block_index}{&verbose}]
 
 Returns Counterparty information from a raw transaction in hex format.
 
@@ -783,7 +783,7 @@ Returns Counterparty information from a raw transaction in hex format.
         }
     ```
 
-### Unpack [GET /transactions/unpack{?datahex}{?block_index}{?verbose}]
+### Unpack [GET /transactions/unpack{?datahex}{&block_index}{&verbose}]
 
 Unpacks Counterparty data in hex format and returns the message type and data.
 
@@ -927,7 +927,7 @@ Returns the balance of an address and asset
         }
     ```
 
-### Get Credits By Address [GET /addresses/{address}/credits{?limit}{?offset}{?verbose}]
+### Get Credits By Address [GET /addresses/{address}/credits{?limit}{&offset}{&verbose}]
 
 Returns the credits of an address
 
@@ -965,7 +965,7 @@ Returns the credits of an address
         }
     ```
 
-### Get Debits By Address [GET /addresses/{address}/debits{?limit}{?offset}{?verbose}]
+### Get Debits By Address [GET /addresses/{address}/debits{?limit}{&offset}{&verbose}]
 
 Returns the debits of an address
 
@@ -1019,7 +1019,7 @@ Returns the debits of an address
         }
     ```
 
-### Get Bet By Feed [GET /addresses/{address}/bets{?status}{?verbose}]
+### Get Bet By Feed [GET /addresses/{address}/bets{?status}{&verbose}]
 
 Returns the bets of a feed
 
@@ -1077,7 +1077,7 @@ Returns the bets of a feed
         }
     ```
 
-### Get Broadcasts By Source [GET /addresses/{address}/broadcasts{?status}{?order_by}{?verbose}]
+### Get Broadcasts By Source [GET /addresses/{address}/broadcasts{?status}{&order_by}{&verbose}]
 
 Returns the broadcasts of a source
 
@@ -1150,7 +1150,7 @@ Returns the burns of an address
         }
     ```
 
-### Get Send By Address [GET /addresses/{address}/sends{?limit}{?offset}{?verbose}]
+### Get Send By Address [GET /addresses/{address}/sends{?limit}{&offset}{&verbose}]
 
 Returns the sends of an address
 
@@ -1191,7 +1191,7 @@ Returns the sends of an address
         }
     ```
 
-### Get Receive By Address [GET /addresses/{address}/receives{?limit}{?offset}{?verbose}]
+### Get Receive By Address [GET /addresses/{address}/receives{?limit}{&offset}{&verbose}]
 
 Returns the receives of an address
 
@@ -1270,7 +1270,7 @@ Returns the sends of an address and asset
         }
     ```
 
-### Get Receive By Address And Asset [GET /addresses/{address}/receives/{asset}{?limit}{?offset}{?verbose}]
+### Get Receive By Address And Asset [GET /addresses/{address}/receives/{asset}{?limit}{&offset}{&verbose}]
 
 Returns the receives of an address and asset
 
@@ -1312,7 +1312,7 @@ Returns the receives of an address and asset
         }
     ```
 
-### Get Dispensers By Address [GET /addresses/{address}/dispensers{?status}{?verbose}]
+### Get Dispensers By Address [GET /addresses/{address}/dispensers{?status}{&verbose}]
 
 Returns the dispensers of an address
 
@@ -1358,7 +1358,7 @@ Returns the dispensers of an address
         }
     ```
 
-### Get Dispensers By Address And Asset [GET /addresses/{address}/dispensers/{asset}{?status}{?verbose}]
+### Get Dispensers By Address And Asset [GET /addresses/{address}/dispensers/{asset}{?status}{&verbose}]
 
 Returns the dispensers of an address and an asset
 
@@ -1457,7 +1457,7 @@ By default the default value of the `encoding` parameter detailed above is `auto
     - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
 
 
-### Compose Bet [GET /addresses/{address}/compose/bet{?feed_address}{?bet_type}{?deadline}{?wager_quantity}{?counterwager_quantity}{?expiration}{?leverage}{?target_value}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}{?verbose}]
+### Compose Bet [GET /addresses/{address}/compose/bet{?feed_address}{&bet_type}{&deadline}{&wager_quantity}{&counterwager_quantity}{&expiration}{&leverage}{&target_value}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
 Composes a transaction to issue a bet against a feed.
 
@@ -1526,28 +1526,7 @@ Composes a transaction to issue a bet against a feed.
         }
     ```
 
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
-
-### Compose Broadcast [GET /addresses/{address}/compose/broadcast{?timestamp}{?value}{?fee_fraction}{?text}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}{?verbose}]
+### Compose Broadcast [GET /addresses/{address}/compose/broadcast{?timestamp}{&value}{&fee_fraction}{&text}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
 Composes a transaction to broadcast textual and numerical information to the network.
 
@@ -1606,28 +1585,7 @@ Composes a transaction to broadcast textual and numerical information to the net
         }
     ```
 
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
-
-### Compose BTCPay [GET /addresses/{address}/compose/btcpay{?order_match_id}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}{?verbose}]
+### Compose BTCPay [GET /addresses/{address}/compose/btcpay{?order_match_id}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
 Composes a transaction to pay for a BTC order match.
 
@@ -1680,28 +1638,7 @@ Composes a transaction to pay for a BTC order match.
         }
     ```
 
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
-
-### Compose Burn [GET /addresses/{address}/compose/burn{?quantity}{?overburn}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}{?verbose}]
+### Compose Burn [GET /addresses/{address}/compose/burn{?quantity}{&overburn}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
 Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, possible between blocks 278310 and 283810; on testnet it is still available).
 
@@ -1757,28 +1694,7 @@ Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, poss
         }
     ```
 
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
-
-### Compose Cancel [GET /addresses/{address}/compose/cancel{?offer_hash}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}{?verbose}]
+### Compose Cancel [GET /addresses/{address}/compose/cancel{?offer_hash}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
 Composes a transaction to cancel an open order or bet.
 
@@ -1831,28 +1747,7 @@ Composes a transaction to cancel an open order or bet.
         }
     ```
 
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
-
-### Compose Destroy [GET /addresses/{address}/compose/destroy{?asset}{?quantity}{?tag}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}{?verbose}]
+### Compose Destroy [GET /addresses/{address}/compose/destroy{?asset}{&quantity}{&tag}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
 Composes a transaction to destroy a quantity of an asset.
 
@@ -1909,28 +1804,7 @@ Composes a transaction to destroy a quantity of an asset.
         }
     ```
 
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
-
-### Compose Dispenser [GET /addresses/{address}/compose/dispenser{?asset}{?give_quantity}{?escrow_quantity}{?mainchainrate}{?status}{?open_address}{?oracle_address}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}{?verbose}]
+### Compose Dispenser [GET /addresses/{address}/compose/dispenser{?asset}{&give_quantity}{&escrow_quantity}{&mainchainrate}{&status}{&open_address}{&oracle_address}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
 Opens or closes a dispenser for a given asset at a given rate of main chain asset (BTC). Escrowed quantity on open must be equal or greater than give_quantity. It is suggested that you escrow multiples of give_quantity to ease dispenser operation.
 
@@ -1997,28 +1871,7 @@ Opens or closes a dispenser for a given asset at a given rate of main chain asse
         }
     ```
 
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
-
-### Compose Dividend [GET /addresses/{address}/compose/dividend{?quantity_per_unit}{?asset}{?dividend_asset}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}{?verbose}]
+### Compose Dividend [GET /addresses/{address}/compose/dividend{?quantity_per_unit}{&asset}{&dividend_asset}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
 Composes a transaction to issue a dividend to holders of a given asset.
 
@@ -2075,28 +1928,7 @@ Composes a transaction to issue a dividend to holders of a given asset.
         }
     ```
 
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
-
-### Compose Issuance [GET /addresses/{address}/compose/issuance{?asset}{?quantity}{?transfer_destination}{?divisible}{?lock}{?reset}{?description}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}{?verbose}]
+### Compose Issuance [GET /addresses/{address}/compose/issuance{?asset}{&quantity}{&transfer_destination}{&divisible}{&lock}{&reset}{&description}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
 Composes a transaction to Issue a new asset, issue more of an existing asset, lock an asset, reset existing supply, or transfer the ownership of an asset.
 
@@ -2166,28 +1998,7 @@ Composes a transaction to Issue a new asset, issue more of an existing asset, lo
         }
     ```
 
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
-
-### Compose MPMA [GET /addresses/{address}/compose/mpma{?assets}{?destinations}{?quantities}{?memo}{?memo_is_hex}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}{?verbose}]
+### Compose MPMA [GET /addresses/{address}/compose/mpma{?assets}{&destinations}{&quantities}{&memo}{&memo_is_hex}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
 Composes a transaction to send multiple payments to multiple addresses.
 
@@ -2262,28 +2073,7 @@ Composes a transaction to send multiple payments to multiple addresses.
         }
     ```
 
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
-
-### Compose Order [GET /addresses/{address}/compose/order{?give_asset}{?give_quantity}{?get_asset}{?get_quantity}{?expiration}{?fee_required}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}{?verbose}]
+### Compose Order [GET /addresses/{address}/compose/order{?give_asset}{&give_quantity}{&get_asset}{&get_quantity}{&expiration}{&fee_required}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
 Composes a transaction to place an order on the distributed exchange.
 
@@ -2346,28 +2136,7 @@ Composes a transaction to place an order on the distributed exchange.
         }
     ```
 
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
-
-### Compose Send [GET /addresses/{address}/compose/send{?destination}{?asset}{?quantity}{?memo}{?memo_is_hex}{?use_enhanced_send}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}{?verbose}]
+### Compose Send [GET /addresses/{address}/compose/send{?destination}{&asset}{&quantity}{&memo}{&memo_is_hex}{&use_enhanced_send}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
 Composes a transaction to send a quantity of an asset to another address.
 
@@ -2433,28 +2202,7 @@ Composes a transaction to send a quantity of an asset to another address.
         }
     ```
 
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
-
-### Compose Sweep [GET /addresses/{address}/compose/sweep{?destination}{?flags}{?memo}{?encoding}{?fee_per_kb}{?regular_dust_size}{?multisig_dust_size}{?pubkey}{?allow_unconfirmed_inputs}{?fee}{?fee_provided}{?unspent_tx_hash}{?dust_return_pubkey}{?disable_utxo_locks}{?extended_tx_info}{?p2sh_pretx_txid}{?segwit}{?verbose}]
+### Compose Sweep [GET /addresses/{address}/compose/sweep{?destination}{&flags}{&memo}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
 Composes a transaction to Sends all assets and/or transfer ownerships to a destination address.
 
@@ -2513,7 +2261,7 @@ Composes a transaction to Sends all assets and/or transfer ownerships to a desti
 
 ## Group Assets
 
-### Get Valid Assets [GET /assets{?offset}{?limit}{?verbose}]
+### Get Valid Assets [GET /assets{?offset}{&limit}{&verbose}]
 
 Returns the valid assets
 
@@ -2581,7 +2329,7 @@ Returns the asset information
         }
     ```
 
-### Get Asset Balances [GET /assets/{asset}/balances{?exclude_zero_balances}{?verbose}]
+### Get Asset Balances [GET /assets/{asset}/balances{?exclude_zero_balances}{&verbose}]
 
 Returns the asset balances
 
@@ -2695,7 +2443,7 @@ Returns the balance of an address and asset
         }
     ```
 
-### Get Orders By Asset [GET /assets/{asset}/orders{?status}{?verbose}]
+### Get Orders By Asset [GET /assets/{asset}/orders{?status}{&verbose}]
 
 Returns the orders of an asset
 
@@ -3118,7 +2866,7 @@ Returns the orders of an asset
         }
     ```
 
-### Get Credits By Asset [GET /assets/{asset}/credits{?limit}{?offset}{?verbose}]
+### Get Credits By Asset [GET /assets/{asset}/credits{?limit}{&offset}{&verbose}]
 
 Returns the credits of an asset
 
@@ -3225,7 +2973,7 @@ Returns the credits of an asset
         }
     ```
 
-### Get Debits By Asset [GET /assets/{asset}/debits{?limit}{?offset}{?verbose}]
+### Get Debits By Asset [GET /assets/{asset}/debits{?limit}{&offset}{&verbose}]
 
 Returns the debits of an asset
 
@@ -3663,7 +3411,7 @@ Returns the issuances of an asset
         }
     ```
 
-### Get Sends By Asset [GET /assets/{asset}/sends{?limit}{?offset}{?verbose}]
+### Get Sends By Asset [GET /assets/{asset}/sends{?limit}{&offset}{&verbose}]
 
 Returns the sends of an asset
 
@@ -3780,7 +3528,7 @@ Returns the sends of an asset
         }
     ```
 
-### Get Dispensers By Asset [GET /assets/{asset}/dispensers{?status}{?verbose}]
+### Get Dispensers By Asset [GET /assets/{asset}/dispensers{?status}{&verbose}]
 
 Returns the dispensers of an asset
 
@@ -3826,7 +3574,7 @@ Returns the dispensers of an asset
         }
     ```
 
-### Get Dispensers By Address And Asset [GET /assets/{asset}/dispensers/{address}{?status}{?verbose}]
+### Get Dispensers By Address And Asset [GET /assets/{asset}/dispensers/{address}{?status}{&verbose}]
 
 Returns the dispensers of an address and an asset
 
@@ -3987,7 +3735,7 @@ Returns the information of an order
         }
     ```
 
-### Get Order Matches By Order [GET /orders/{order_hash}/matches{?status}{?verbose}]
+### Get Order Matches By Order [GET /orders/{order_hash}/matches{?status}{&verbose}]
 
 Returns the order matches of an order
 
@@ -4056,7 +3804,7 @@ Returns the BTC pays of an order
         }
     ```
 
-### Get Orders By Two Assets [GET /orders/{asset1}/{asset2}{?status}{?verbose}]
+### Get Orders By Two Assets [GET /orders/{asset1}/{asset2}{?status}{&verbose}]
 
 Returns the orders to exchange two assets
 
@@ -4272,7 +4020,7 @@ Returns the information of a bet
         }
     ```
 
-### Get Bet Matches By Bet [GET /bets/{bet_hash}/matches{?status}{?verbose}]
+### Get Bet Matches By Bet [GET /bets/{bet_hash}/matches{?status}{&verbose}]
 
 Returns the bet matches of a bet
 
@@ -4349,7 +4097,7 @@ Returns the resolutions of a bet
 
 ## Group Burns
 
-### Get All Burns [GET /burns{?status}{?offset}{?limit}{?verbose}]
+### Get All Burns [GET /burns{?status}{&offset}{&limit}{&verbose}]
 
 Returns the burns
 
@@ -4553,7 +4301,7 @@ Returns the dispenses of a dispenser
 
 ## Group Events
 
-### Get All Events [GET /events{?last}{?limit}{?verbose}]
+### Get All Events [GET /events{?last}{&limit}{&verbose}]
 
 Returns all events
 
@@ -4704,7 +4452,204 @@ Returns the event counts of all blocks
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
-### Get Events By Name [GET /events/{event}{?last}{?limit}{?verbose}]
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": [
+                {
+                    "event": "ASSET_CREATION",
+                    "event_count": 235860
+                },
+                {
+                    "event": "ASSET_DESTRUCTION",
+                    "event_count": 11141
+                },
+                {
+                    "event": "ASSET_DIVIDEND",
+                    "event_count": 4092
+                },
+                {
+                    "event": "ASSET_ISSUANCE",
+                    "event_count": 322678
+                },
+                {
+                    "event": "ASSET_TRANSFER",
+                    "event_count": 10639
+                },
+                {
+                    "event": "BET_EXPIRATION",
+                    "event_count": 588
+                },
+                {
+                    "event": "BET_MATCH",
+                    "event_count": 397
+                },
+                {
+                    "event": "BET_MATCH_EXPIRATION",
+                    "event_count": 9
+                },
+                {
+                    "event": "BET_MATCH_RESOLUTON",
+                    "event_count": 387
+                },
+                {
+                    "event": "BET_MATCH_UPDATE",
+                    "event_count": 397
+                },
+                {
+                    "event": "BET_UPDATE",
+                    "event_count": 1474
+                },
+                {
+                    "event": "BLOCK_PARSED",
+                    "event_count": 562364
+                },
+                {
+                    "event": "BROADCAST",
+                    "event_count": 106518
+                },
+                {
+                    "event": "BTC_PAY",
+                    "event_count": 2921
+                },
+                {
+                    "event": "BURN",
+                    "event_count": 2576
+                },
+                {
+                    "event": "CANCEL_BET",
+                    "event_count": 101
+                },
+                {
+                    "event": "CANCEL_ORDER",
+                    "event_count": 80168
+                },
+                {
+                    "event": "CREDIT",
+                    "event_count": 3659293
+                },
+                {
+                    "event": "DEBIT",
+                    "event_count": 2617404
+                },
+                {
+                    "event": "DISPENSE",
+                    "event_count": 190873
+                },
+                {
+                    "event": "DISPENSER_UPDATE",
+                    "event_count": 228954
+                },
+                {
+                    "event": "ENHANCED_SEND",
+                    "event_count": 538426
+                },
+                {
+                    "event": "MPMA_SEND",
+                    "event_count": 279142
+                },
+                {
+                    "event": "NEW_BLOCK",
+                    "event_count": 1992
+                },
+                {
+                    "event": "NEW_TRANSACTION",
+                    "event_count": 4498
+                },
+                {
+                    "event": "NEW_TRANSACTION_OUTPUT",
+                    "event_count": 596
+                },
+                {
+                    "event": "OPEN_BET",
+                    "event_count": 1149
+                },
+                {
+                    "event": "OPEN_DISPENSER",
+                    "event_count": 88229
+                },
+                {
+                    "event": "OPEN_ORDER",
+                    "event_count": 530117
+                },
+                {
+                    "event": "OPEN_RPS",
+                    "event_count": 266
+                },
+                {
+                    "event": "ORDER_EXPIRATION",
+                    "event_count": 195968
+                },
+                {
+                    "event": "ORDER_FILLED",
+                    "event_count": 805
+                },
+                {
+                    "event": "ORDER_MATCH",
+                    "event_count": 209415
+                },
+                {
+                    "event": "ORDER_MATCH_EXPIRATION",
+                    "event_count": 20860
+                },
+                {
+                    "event": "ORDER_MATCH_UPDATE",
+                    "event_count": 23689
+                },
+                {
+                    "event": "ORDER_UPDATE",
+                    "event_count": 732646
+                },
+                {
+                    "event": "REFILL_DISPENSER",
+                    "event_count": 187
+                },
+                {
+                    "event": "RESET_ISSUANCE",
+                    "event_count": 454
+                },
+                {
+                    "event": "RPS_EXPIRATION",
+                    "event_count": 59
+                },
+                {
+                    "event": "RPS_MATCH",
+                    "event_count": 171
+                },
+                {
+                    "event": "RPS_MATCH_EXPIRATION",
+                    "event_count": 145
+                },
+                {
+                    "event": "RPS_MATCH_UPDATE",
+                    "event_count": 271
+                },
+                {
+                    "event": "RPS_RESOLVE",
+                    "event_count": 129
+                },
+                {
+                    "event": "RPS_UPDATE",
+                    "event_count": 540
+                },
+                {
+                    "event": "SEND",
+                    "event_count": 805983
+                },
+                {
+                    "event": "SWEEP",
+                    "event_count": 1020
+                },
+                {
+                    "event": "TRANSACTION_PARSED",
+                    "event_count": 2723802
+                }
+            ]
+        }
+    ```
+
+### Get Events By Name [GET /events/{event}{?last}{&limit}{&verbose}]
 
 Returns the events filtered by event name
 
@@ -4842,7 +4787,7 @@ Returns the events filtered by event name
 
 ## Group Z-pages
 
-### Check Server Health [GET /healthz{?check_type}{?verbose}]
+### Check Server Health [GET /healthz{?check_type}{&verbose}]
 
 Health check route.
 
@@ -4864,7 +4809,7 @@ Health check route.
 
 ## Group Bitcoin
 
-### Get Transactions By Address [GET /bitcoin/addresses/{address}/transactions{?unconfirmed}{?only_tx_hashes}{?verbose}]
+### Get Transactions By Address [GET /bitcoin/addresses/{address}/transactions{?unconfirmed}{&only_tx_hashes}{&verbose}]
 
 Returns all transactions involving a given address
 
@@ -4922,7 +4867,7 @@ Returns all transactions involving a given address
         }
     ```
 
-### Get Oldest Transaction By Address [GET /bitcoin/addresses/{address}/transactions/oldest{?block_index}{?verbose}]
+### Get Oldest Transaction By Address [GET /bitcoin/addresses/{address}/transactions/oldest{?block_index}{&verbose}]
 
 Get the oldest transaction for an address.
 
@@ -4944,7 +4889,7 @@ Get the oldest transaction for an address.
         }
     ```
 
-### Get Unspent Txouts [GET /bitcoin/addresses/{address}/utxos{?unconfirmed}{?unspent_tx_hash}{?verbose}]
+### Get Unspent Txouts [GET /bitcoin/addresses/{address}/utxos{?unconfirmed}{&unspent_tx_hash}{&verbose}]
 
 Returns a list of unspent outputs for a specific address
 
@@ -5046,7 +4991,7 @@ Returns a list of unspent outputs for a specific address
         }
     ```
 
-### PubKeyHash To Pubkey [GET /bitcoin/addresses/{address}/pubkey{?provided_pubkeys}{?verbose}]
+### PubKeyHash To Pubkey [GET /bitcoin/addresses/{address}/pubkey{?provided_pubkeys}{&verbose}]
 
 Get pubkey for an address.
 
@@ -5065,7 +5010,7 @@ Get pubkey for an address.
         }
     ```
 
-### Get Transaction [GET /bitcoin/transactions/{tx_hash}{?format}{?verbose}]
+### Get Transaction [GET /bitcoin/transactions/{tx_hash}{?format}{&verbose}]
 
 Get a transaction from the blockchain
 
@@ -5125,7 +5070,7 @@ Get a transaction from the blockchain
         }
     ```
 
-### Fee Per Kb [GET /bitcoin/estimatesmartfee{?conf_target}{?mode}{?verbose}]
+### Fee Per Kb [GET /bitcoin/estimatesmartfee{?conf_target}{&mode}{&verbose}]
 
 Get the fee per kilobyte for a transaction to be confirmed in `conf_target` blocks.
 
@@ -5154,6 +5099,14 @@ Returns all mempool events
 + Parameters
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": []
+        }
+    ```
 
 ### Get Mempool Events By Name [GET /mempool/events/{event}{?verbose}]
 

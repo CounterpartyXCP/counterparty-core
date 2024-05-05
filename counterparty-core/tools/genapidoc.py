@@ -3,11 +3,13 @@ import os
 import sys
 
 import requests
+import yaml
 from counterpartycore import server
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 API_DOC_FILE = os.path.join(CURR_DIR, "../../../Documentation/docs/advanced/api-v2/node-api.md")
 API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../apiary.apib")
+DREDD_FILE = os.path.join(CURR_DIR, "../../dredd.yml")
 CACHE_FILE = os.path.join(CURR_DIR, "apicache.json")
 API_ROOT = "http://api:api@localhost:4000"
 USE_API_CACHE = True
@@ -77,6 +79,23 @@ By default the default value of the `encoding` parameter detailed above is `auto
 
 """
 }
+
+DREDD_CONFIG = {
+    "user": "api:api",
+    "loglevel": "error",
+    "path": [],
+    "blueprint": "apiary.apib",
+    "endpoint": "http://127.0.0.1:4000",
+    "only": [],
+}
+
+
+def include_in_dredd(group, path):
+    if group in ["Compose", "bitcoin", "mempool"]:
+        return False
+    if path in ["/events/counts"]:
+        return False
+    return True
 
 
 def gen_groups_toc():
@@ -172,23 +191,32 @@ for path, route in server.routes.ROUTES.items():
             current_group = "Z-Pages"
         md += f"\n## Group {current_group.capitalize()}\n"
 
-    if current_group in GROUP_DOCS:
-        md += GROUP_DOCS[current_group]
+        if current_group in GROUP_DOCS:
+            md += GROUP_DOCS[current_group]
 
     blueprint_path = path.replace("<", "{").replace(">", "}").replace("int:", "")
     title = " ".join([part.capitalize() for part in str(route["function"].__name__).split("_")])
     title = title.replace("Pubkeyhash", "PubKeyHash")
     title = title.replace("Mpma", "MPMA")
     title = title.replace("Btcpay", "BTCPay")
-    md += f"\n### {title.strip()} "
+    title = title.strip()
+
+    if include_in_dredd(current_group, blueprint_path):
+        dredd_name = f"{current_group.capitalize()} > {title} > {title}"
+        DREDD_CONFIG["only"].append(dredd_name)
+
+    md += f"\n### {title} "
     if TARGET == "docusaurus":
         md += f"[GET `{blueprint_path}`]\n\n"
     else:
+        first_query_arg = True
         for arg in route["args"]:
             if f"{{{arg['name']}}}" in blueprint_path:
                 continue
             else:
-                blueprint_path += f"{{?{arg['name']}}}"
+                prefix = "?" if first_query_arg else "&"
+                first_query_arg = False
+                blueprint_path += f"{{{prefix}{arg['name']}}}"
         md += f"[GET {blueprint_path}]\n\n"
 
     md += route["description"].strip()
@@ -211,7 +239,7 @@ for path, route in server.routes.ROUTES.items():
             if not arg["required"]:
                 md += f"        + Default: `{arg.get('default', '')}`\n"
 
-    if example_args != {} or route["args"] == []:
+    if example_args != {} or len(route["args"]) == 1:  # min 1 for verbose arg
         if not USE_API_CACHE or path not in cache:
             example_output = get_example_output(path, example_args)
             cache[path] = example_output
@@ -230,3 +258,7 @@ with open(CACHE_FILE, "w") as f:
 with open(TARGET_FILE, "w") as f:
     f.write(md)
     print(f"API documentation written to {TARGET_FILE}")
+
+with open(DREDD_FILE, "w") as f:
+    yaml.dump(DREDD_CONFIG, f)
+    print(f"Dredd file written to {DREDD_FILE}")
