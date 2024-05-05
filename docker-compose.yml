@@ -83,6 +83,7 @@ services:
       - "--api-host=0.0.0.0"
       - "--catch-up=bootstrap"
       - "--enable-api-v1"
+      - "--force"
       #- "--verbose"
 
   ###################
@@ -145,6 +146,7 @@ services:
       - "--api-host=0.0.0.0"
       - "--catch-up=bootstrap"
       - "--enable-api-v1"
+      - "--force"
       #- "--verbose"
 
 volumes: 

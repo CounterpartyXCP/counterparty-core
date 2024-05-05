@@ -98,7 +98,7 @@ dredd
 
 # Run compare hashes test
 pip uninstall -y counterparty-rs
-pip install -e counterparty-rs
+sudo pip install -e counterparty-rs
 cd counterparty-core
 hatch env prune
 hatch run pytest counterpartycore/test/compare_hashes_test.py --comparehashes
