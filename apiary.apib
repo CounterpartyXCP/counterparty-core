@@ -1526,27 +1526,6 @@ Composes a transaction to issue a bet against a feed.
         }
     ```
 
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
-
 ### Compose Broadcast [GET /addresses/{address}/compose/broadcast{?timestamp}{&value}{&fee_fraction}{&text}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
 Composes a transaction to broadcast textual and numerical information to the network.
@@ -1606,27 +1585,6 @@ Composes a transaction to broadcast textual and numerical information to the net
         }
     ```
 
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
-
 ### Compose BTCPay [GET /addresses/{address}/compose/btcpay{?order_match_id}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
 Composes a transaction to pay for a BTC order match.
@@ -1679,27 +1637,6 @@ Composes a transaction to pay for a BTC order match.
             }
         }
     ```
-
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
 
 ### Compose Burn [GET /addresses/{address}/compose/burn{?quantity}{&overburn}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
@@ -1757,27 +1694,6 @@ Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, poss
         }
     ```
 
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
-
 ### Compose Cancel [GET /addresses/{address}/compose/cancel{?offer_hash}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
 Composes a transaction to cancel an open order or bet.
@@ -1830,27 +1746,6 @@ Composes a transaction to cancel an open order or bet.
             }
         }
     ```
-
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
 
 ### Compose Destroy [GET /addresses/{address}/compose/destroy{?asset}{&quantity}{&tag}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
@@ -1908,27 +1803,6 @@ Composes a transaction to destroy a quantity of an asset.
             }
         }
     ```
-
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
 
 ### Compose Dispenser [GET /addresses/{address}/compose/dispenser{?asset}{&give_quantity}{&escrow_quantity}{&mainchainrate}{&status}{&open_address}{&oracle_address}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
@@ -1997,27 +1871,6 @@ Opens or closes a dispenser for a given asset at a given rate of main chain asse
         }
     ```
 
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
-
 ### Compose Dividend [GET /addresses/{address}/compose/dividend{?quantity_per_unit}{&asset}{&dividend_asset}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
 Composes a transaction to issue a dividend to holders of a given asset.
@@ -2074,27 +1927,6 @@ Composes a transaction to issue a dividend to holders of a given asset.
             }
         }
     ```
-
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
 
 ### Compose Issuance [GET /addresses/{address}/compose/issuance{?asset}{&quantity}{&transfer_destination}{&divisible}{&lock}{&reset}{&description}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
@@ -2165,27 +1997,6 @@ Composes a transaction to Issue a new asset, issue more of an existing asset, lo
             }
         }
     ```
-
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
 
 ### Compose MPMA [GET /addresses/{address}/compose/mpma{?assets}{&destinations}{&quantities}{&memo}{&memo_is_hex}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
@@ -2262,27 +2073,6 @@ Composes a transaction to send multiple payments to multiple addresses.
         }
     ```
 
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
-
 ### Compose Order [GET /addresses/{address}/compose/order{?give_asset}{&give_quantity}{&get_asset}{&get_quantity}{&expiration}{&fee_required}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
 Composes a transaction to place an order on the distributed exchange.
@@ -2345,27 +2135,6 @@ Composes a transaction to place an order on the distributed exchange.
             }
         }
     ```
-
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
 
 ### Compose Send [GET /addresses/{address}/compose/send{?destination}{&asset}{&quantity}{&memo}{&memo_is_hex}{&use_enhanced_send}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
@@ -2432,27 +2201,6 @@ Composes a transaction to send a quantity of an asset to another address.
             }
         }
     ```
-
-
-**Notes about optional parameter `encoding`.**
-
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
-
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
 
 ### Compose Sweep [GET /addresses/{address}/compose/sweep{?destination}{&flags}{&memo}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 

@@ -93,7 +93,7 @@ if [ "$response_v2_mainnet" -ne 200 ]; then
 fi
 
 
-# Run dredd rest
+# Run dredd test
 dredd
 
 # Run compare hashes test

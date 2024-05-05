@@ -191,8 +191,8 @@ for path, route in server.routes.ROUTES.items():
             current_group = "Z-Pages"
         md += f"\n## Group {current_group.capitalize()}\n"
 
-    if current_group in GROUP_DOCS:
-        md += GROUP_DOCS[current_group]
+        if current_group in GROUP_DOCS:
+            md += GROUP_DOCS[current_group]
 
     blueprint_path = path.replace("<", "{").replace(">", "}").replace("int:", "")
     title = " ".join([part.capitalize() for part in str(route["function"].__name__).split("_")])
