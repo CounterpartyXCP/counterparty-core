@@ -4452,6 +4452,203 @@ Returns the event counts of all blocks
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": [
+                {
+                    "event": "ASSET_CREATION",
+                    "event_count": 235860
+                },
+                {
+                    "event": "ASSET_DESTRUCTION",
+                    "event_count": 11141
+                },
+                {
+                    "event": "ASSET_DIVIDEND",
+                    "event_count": 4092
+                },
+                {
+                    "event": "ASSET_ISSUANCE",
+                    "event_count": 322678
+                },
+                {
+                    "event": "ASSET_TRANSFER",
+                    "event_count": 10639
+                },
+                {
+                    "event": "BET_EXPIRATION",
+                    "event_count": 588
+                },
+                {
+                    "event": "BET_MATCH",
+                    "event_count": 397
+                },
+                {
+                    "event": "BET_MATCH_EXPIRATION",
+                    "event_count": 9
+                },
+                {
+                    "event": "BET_MATCH_RESOLUTON",
+                    "event_count": 387
+                },
+                {
+                    "event": "BET_MATCH_UPDATE",
+                    "event_count": 397
+                },
+                {
+                    "event": "BET_UPDATE",
+                    "event_count": 1474
+                },
+                {
+                    "event": "BLOCK_PARSED",
+                    "event_count": 562364
+                },
+                {
+                    "event": "BROADCAST",
+                    "event_count": 106518
+                },
+                {
+                    "event": "BTC_PAY",
+                    "event_count": 2921
+                },
+                {
+                    "event": "BURN",
+                    "event_count": 2576
+                },
+                {
+                    "event": "CANCEL_BET",
+                    "event_count": 101
+                },
+                {
+                    "event": "CANCEL_ORDER",
+                    "event_count": 80168
+                },
+                {
+                    "event": "CREDIT",
+                    "event_count": 3659293
+                },
+                {
+                    "event": "DEBIT",
+                    "event_count": 2617404
+                },
+                {
+                    "event": "DISPENSE",
+                    "event_count": 190873
+                },
+                {
+                    "event": "DISPENSER_UPDATE",
+                    "event_count": 228954
+                },
+                {
+                    "event": "ENHANCED_SEND",
+                    "event_count": 538426
+                },
+                {
+                    "event": "MPMA_SEND",
+                    "event_count": 279142
+                },
+                {
+                    "event": "NEW_BLOCK",
+                    "event_count": 1992
+                },
+                {
+                    "event": "NEW_TRANSACTION",
+                    "event_count": 4498
+                },
+                {
+                    "event": "NEW_TRANSACTION_OUTPUT",
+                    "event_count": 596
+                },
+                {
+                    "event": "OPEN_BET",
+                    "event_count": 1149
+                },
+                {
+                    "event": "OPEN_DISPENSER",
+                    "event_count": 88229
+                },
+                {
+                    "event": "OPEN_ORDER",
+                    "event_count": 530117
+                },
+                {
+                    "event": "OPEN_RPS",
+                    "event_count": 266
+                },
+                {
+                    "event": "ORDER_EXPIRATION",
+                    "event_count": 195968
+                },
+                {
+                    "event": "ORDER_FILLED",
+                    "event_count": 805
+                },
+                {
+                    "event": "ORDER_MATCH",
+                    "event_count": 209415
+                },
+                {
+                    "event": "ORDER_MATCH_EXPIRATION",
+                    "event_count": 20860
+                },
+                {
+                    "event": "ORDER_MATCH_UPDATE",
+                    "event_count": 23689
+                },
+                {
+                    "event": "ORDER_UPDATE",
+                    "event_count": 732646
+                },
+                {
+                    "event": "REFILL_DISPENSER",
+                    "event_count": 187
+                },
+                {
+                    "event": "RESET_ISSUANCE",
+                    "event_count": 454
+                },
+                {
+                    "event": "RPS_EXPIRATION",
+                    "event_count": 59
+                },
+                {
+                    "event": "RPS_MATCH",
+                    "event_count": 171
+                },
+                {
+                    "event": "RPS_MATCH_EXPIRATION",
+                    "event_count": 145
+                },
+                {
+                    "event": "RPS_MATCH_UPDATE",
+                    "event_count": 271
+                },
+                {
+                    "event": "RPS_RESOLVE",
+                    "event_count": 129
+                },
+                {
+                    "event": "RPS_UPDATE",
+                    "event_count": 540
+                },
+                {
+                    "event": "SEND",
+                    "event_count": 805983
+                },
+                {
+                    "event": "SWEEP",
+                    "event_count": 1020
+                },
+                {
+                    "event": "TRANSACTION_PARSED",
+                    "event_count": 2723802
+                }
+            ]
+        }
+    ```
+
 ### Get Events By Name [GET /events/{event}{?last}{&limit}{&verbose}]
 
 Returns the events filtered by event name
@@ -4902,6 +5099,14 @@ Returns all mempool events
 + Parameters
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": []
+        }
+    ```
 
 ### Get Mempool Events By Name [GET /mempool/events/{event}{?verbose}]
 

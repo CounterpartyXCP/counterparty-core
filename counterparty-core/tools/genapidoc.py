@@ -239,7 +239,7 @@ for path, route in server.routes.ROUTES.items():
             if not arg["required"]:
                 md += f"        + Default: `{arg.get('default', '')}`\n"
 
-    if example_args != {} or route["args"] == []:
+    if example_args != {} or len(route["args"]) == 1:  # min 1 for verbose arg
         if not USE_API_CACHE or path not in cache:
             example_output = get_example_output(path, example_args)
             cache[path] = example_output
