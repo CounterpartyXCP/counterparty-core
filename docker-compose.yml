@@ -1,5 +1,6 @@
 x-bitcoind-common: &bitcoind-common
   image: kylemanna/bitcoind:latest
+  stop_grace_period: 1m
   volumes:
     - data:/bitcoin/.bitcoin
   restart: unless-stopped
@@ -15,6 +16,7 @@ x-addrindexrs-common: &addrindexrs-common
 
 x-counterparty-common: &counterparty-common
   image: counterparty/counterparty:v10.1.1
+  stop_grace_period: 1m
   volumes:
     - data:/root/.bitcoin
     - data:/data
@@ -83,7 +85,6 @@ services:
       - "--api-host=0.0.0.0"
       - "--catch-up=bootstrap"
       - "--enable-api-v1"
-      - "--force"
       #- "--verbose"
 
   ###################
@@ -146,7 +147,6 @@ services:
       - "--api-host=0.0.0.0"
       - "--catch-up=bootstrap"
       - "--enable-api-v1"
-      - "--force"
       #- "--verbose"
 
 volumes: 

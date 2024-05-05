@@ -4,6 +4,7 @@ import binascii
 import decimal
 import logging
 import os
+import signal
 import tarfile
 import tempfile
 import time
@@ -44,6 +45,14 @@ SPINNER_STYLE = "bouncingBar"
 
 class ConfigurationError(Exception):
     pass
+
+
+def handle_interrupt_signal(signum, _frame):
+    raise KeyboardInterrupt(f"Received signal {signal.strsignal(signum)}")
+
+
+signal.signal(signal.SIGINT, handle_interrupt_signal)
+signal.signal(signal.SIGTERM, handle_interrupt_signal)
 
 
 def initialise(*args, **kwargs):
@@ -698,6 +707,7 @@ def start_all(args):
         # Server
         blocks.follow(db)
     except KeyboardInterrupt:
+        logger.info("Keyboard interrupt.")
         pass
     finally:
         if telemetry_daemon:
