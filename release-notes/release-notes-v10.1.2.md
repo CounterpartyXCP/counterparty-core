@@ -1,6 +1,6 @@
-# Release Notes - Counterparty Core v10.1.2 (2024-04-??)
+# Release Notes - Counterparty Core v10.1.2 (2024-05-05)
 
-
+This release enables the new ReST API and basic node telemetry.
 
 # Upgrading
 
