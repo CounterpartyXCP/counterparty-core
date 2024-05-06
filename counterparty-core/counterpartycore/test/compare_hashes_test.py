@@ -7,7 +7,7 @@ from counterpartycore.test import (
     conftest,  # noqa: F401
 )
 
-LOCAL_API_URL = "http://api:api@localhost:4000"
+LOCAL_API_URL = "http://localhost:4000"
 
 # [server_url, api_version, server_version]
 CHECK_SERVERS = [
@@ -30,7 +30,7 @@ def get_last_block_api_v1(api_url):
 
 
 def get_last_block_api_v2(api_url):
-    response = requests.get(f"{api_url}/", timeout=10).json()
+    response = requests.get(f"{api_url}/v2/", timeout=10).json()
     last_block_index = response["result"]["counterparty_height"]
     version = f'v{response["result"]["version"]}'
     return last_block_index, version
@@ -49,7 +49,7 @@ def get_block_hashes_api_v1(api_url, block_index):
 
 
 def get_block_hashes_api_v2(api_url, block_index):
-    response = requests.get(f"{api_url}/blocks/{block_index}", timeout=10)
+    response = requests.get(f"{api_url}/v2/blocks/{block_index}", timeout=10)
     return response.json()["result"]["ledger_hash"], response.json()["result"]["txlist_hash"]
 
 
@@ -60,6 +60,7 @@ def test_compare_hashes(skip):
 
     # get last blocks
     local_block_index, _ = get_last_block_api_v2(LOCAL_API_URL)
+    print(f"Local block index: {local_block_index}")
     check_servers_block_indexes = [local_block_index]
     for check_server in CHECK_SERVERS:
         check_server_url, check_server_api_version, check_server_version = check_server
