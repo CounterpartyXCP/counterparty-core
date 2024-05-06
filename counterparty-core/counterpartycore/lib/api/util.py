@@ -390,7 +390,7 @@ def redirect_to_api_v1(subpath: str = ""):
         "headers": flask.request.headers,
         "auth": (config.RPC_USER, config.RPC_PASSWORD),
     }
-    url = f"http://localhost:4000/{subpath}"
+    url = f"http://localhost:{config.RPC_PORT}/{subpath}"
     if flask.request.query_string:
         url += f"?{flask.request.query_string}"
     request_function = getattr(requests, flask.request.method.lower())
