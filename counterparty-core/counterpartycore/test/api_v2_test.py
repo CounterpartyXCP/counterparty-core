@@ -17,7 +17,7 @@ from counterpartycore.test.util_test import CURR_DIR
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"
 FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
 API_V2_FIXTURES = CURR_DIR + "/fixtures/api_v2_fixtures.json"
-API_ROOT = "http://rpc:rpc@localhost:10009"
+API_ROOT = "http://localhost:10009"
 
 
 @pytest.mark.usefixtures("api_server_v2")

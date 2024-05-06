@@ -271,7 +271,7 @@ def api_server_v2(request, cp_server):
         "rpc_no_allow_cors": False,
         "api_host": "localhost",
         "api_user": "rpc",
-        "api_password": "rpc",
+        "api_password": None,
         "api_no_allow_cors": False,
         "force": False,
         "requests_timeout": config.DEFAULT_REQUESTS_TIMEOUT,
