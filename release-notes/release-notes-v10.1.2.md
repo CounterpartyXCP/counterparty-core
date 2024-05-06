@@ -19,7 +19,7 @@ This release maintains full backwards-compatibility and includes no protocol cha
 
 ## Codebase
 * Release API v2
-* Have API return `ready` if the last block is less than one minute old
+* Have both API v1 and v2 return `ready` if the last block is less than one minute old
 * Add an index on the `block_index` field in the `credits` and `debits` tables
 * Add `TRACE  level to Python logging
 * Add basic anonymous node telemetry
