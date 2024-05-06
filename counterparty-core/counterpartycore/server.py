@@ -15,6 +15,9 @@ from urllib.parse import quote_plus as urlencode
 import appdirs
 import apsw
 import bitcoin as bitcoinlib
+from halo import Halo
+from termcolor import colored, cprint
+
 from counterpartycore.lib import (
     backend,
     blocks,
@@ -34,8 +37,6 @@ from counterpartycore.lib.telemetry.collectors.influxdb import (
     TelemetryCollectorInfluxDB,
 )
 from counterpartycore.lib.telemetry.daemon import TelemetryDaemon
-from halo import Halo
-from termcolor import colored, cprint
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
