@@ -60,7 +60,12 @@ only:
 - Dispensers > Get Dispenses By Dispenser > Get Dispenses By Dispenser
 - Events > Get All Events > Get All Events
 - Events > Get Event By Index > Get Event By Index
+- Events > Get All Events Counts > Get All Events Counts
 - Events > Get Events By Name > Get Events By Name
 - Z-pages > Check Server Health > Check Server Health
+- V1 > Redirect To Api V1 > Redirect To Api V1
+- V1 > Redirect To Api V1 > Redirect To Api V1
+- V1 > Redirect To Api V1 > Redirect To Api V1
+- V1 > Redirect To Api V1 > Redirect To Api V1
+- V1 > Redirect To Api V1 > Redirect To Api V1
 path: []
-user: api:api

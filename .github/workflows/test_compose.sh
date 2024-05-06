@@ -49,7 +49,7 @@ done
 
 
 # check running info with API v1 mainnet
-response_v1_mainnet=$(curl -X POST http://127.0.0.1:4100/v1/rpc/ \
+response_v1_mainnet=$(curl -X POST http://127.0.0.1:4100/v1/ \
                         --user rpc:rpc \
                         -H 'Content-Type: application/json; charset=UTF-8'\
                         -H 'Accept: application/json, text/javascript' \
@@ -62,7 +62,7 @@ if [ "$response_v1_mainnet" -ne 200 ]; then
 fi
 
 # check running info with API v1 testnet
-response_v1_testnet=$(curl -X POST http://127.0.0.1:14100/v1/api/ \
+response_v1_testnet=$(curl -X POST http://127.0.0.1:14100/v1/ \
                         --user rpc:rpc \
                         -H 'Content-Type: application/json; charset=UTF-8'\
                         -H 'Accept: application/json, text/javascript' \
@@ -75,7 +75,7 @@ if [ "$response_v1_testnet" -ne 200 ]; then
 fi
 
 # check running info with API v2 mainnet
-response_v2_mainnet=$(curl http://api:api@127.0.0.1:4000/ \
+response_v2_mainnet=$(curl http://api:api@127.0.0.1:4000/v2/ \
                         --write-out '%{http_code}' --silent --output /dev/null)
 
 if [ "$response_v2_mainnet" -ne 200 ]; then
@@ -84,7 +84,7 @@ if [ "$response_v2_mainnet" -ne 200 ]; then
 fi
 
 # check running info with API v2 testnet
-response_v2_testnet=$(curl http://api:api@127.0.0.1:14000/ \
+response_v2_testnet=$(curl http://api:api@127.0.0.1:14000/v2/ \
                         --write-out '%{http_code}' --silent --output /dev/null)
 
 if [ "$response_v2_mainnet" -ne 200 ]; then

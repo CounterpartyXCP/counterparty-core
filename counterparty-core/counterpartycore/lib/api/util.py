@@ -6,6 +6,7 @@ import time
 from logging import handlers as logging_handlers
 
 import flask
+import requests
 from counterpartycore.lib import backend, config, exceptions, ledger, transaction, util
 from docstring_parser import parse as parse_docstring
 
@@ -209,15 +210,16 @@ def prepare_route_args(function):
         if arg_name in args_description:
             route_arg["description"] = args_description[arg_name]
         args.append(route_arg)
-    args.append(
-        {
-            "name": "verbose",
-            "type": "bool",
-            "default": "false",
-            "description": "Include asset and dispenser info and normalized quantities in the response.",
-            "required": False,
-        }
-    )
+    if function.__name__ != "redirect_to_api_v1":
+        args.append(
+            {
+                "name": "verbose",
+                "type": "bool",
+                "default": "false",
+                "description": "Include asset and dispenser info and normalized quantities in the response.",
+                "required": False,
+            }
+        )
     return args
 
 
@@ -377,3 +379,21 @@ def inject_dispensers(db, result):
     if result_is_dict:
         return result_list[0]
     return result
+
+
+def redirect_to_api_v1(subpath: str = ""):
+    """
+    Redirect to the API v1.
+    :param subpath: The path to redirect to (e.g. healthz)
+    """
+    query_params = {
+        "headers": flask.request.headers,
+        "auth": (config.RPC_USER, config.RPC_PASSWORD),
+    }
+    url = f"http://localhost:{config.RPC_PORT}/{subpath}"
+    if flask.request.query_string:
+        url += f"?{flask.request.query_string}"
+    request_function = getattr(requests, flask.request.method.lower())
+    if flask.request.method == "POST":
+        query_params["json"] = flask.request.json
+    return request_function(url, **query_params).json()

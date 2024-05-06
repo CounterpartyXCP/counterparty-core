@@ -351,7 +351,7 @@ def initialise_config(
         config.RPC_HOST = "localhost"
 
     # The web root directory for API calls, eg. localhost:14000/rpc/
-    config.RPC_WEBROOT = "/v1/rpc/"
+    config.RPC_WEBROOT = "/rpc/"
 
     # Server API RPC port
     if rpc_port:
@@ -442,12 +442,9 @@ def initialise_config(
     if api_user:
         config.API_USER = api_user
     else:
-        config.API_USER = "api"
+        config.API_USER = "rpc"
 
-    if api_password:
-        config.API_PASSWORD = api_password
-    else:
-        config.API_PASSWORD = "api"  # noqa: S105
+    config.API_PASSWORD = api_password
 
     if api_no_allow_cors:
         config.API_NO_ALLOW_CORS = api_no_allow_cors
@@ -692,16 +689,15 @@ def start_all(args):
         # initilise_config
         transaction.initialise()
 
-        if args.enable_api_v1:
-            # API Status Poller.
-            api_status_poller = api_v1.APIStatusPoller()
-            api_status_poller.daemon = True
-            api_status_poller.start()
+        # API Status Poller.
+        api_status_poller = api_v1.APIStatusPoller()
+        api_status_poller.daemon = True
+        api_status_poller.start()
 
-            # API Server v1.
-            api_server_v1 = api_v1.APIServer()
-            api_server_v1.daemon = True
-            api_server_v1.start()
+        # API Server v1.
+        api_server_v1 = api_v1.APIServer()
+        api_server_v1.daemon = True
+        api_server_v1.start()
 
         # Server
         blocks.follow(db)
@@ -711,11 +707,10 @@ def start_all(args):
     finally:
         if telemetry_daemon:
             telemetry_daemon.stop()
-        if args.enable_api_v1:
-            if api_status_poller:
-                api_status_poller.stop()
-            if api_server_v1:
-                api_server_v1.stop()
+        if api_status_poller:
+            api_status_poller.stop()
+        if api_server_v1:
+            api_server_v1.stop()
         if api_server_v2:
             api_server_v2.stop()
         backend.stop()

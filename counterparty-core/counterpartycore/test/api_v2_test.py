@@ -17,7 +17,7 @@ from counterpartycore.test.util_test import CURR_DIR
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"
 FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
 API_V2_FIXTURES = CURR_DIR + "/fixtures/api_v2_fixtures.json"
-API_ROOT = "http://api:api@localhost:10009"
+API_ROOT = "http://localhost:10009"
 
 
 @pytest.mark.usefixtures("api_server_v2")
@@ -33,13 +33,25 @@ def test_api_v2(request):
     dispenser_hash = "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
     event = "CREDIT"
     event_index = 10
-    exclude_routes = ["compose", "unpack", "info", "mempool", "healthz", "bitcoin"]
+    exclude_routes = [
+        "compose",
+        "unpack",
+        "info",
+        "mempool",
+        "healthz",
+        "bitcoin",
+        "v1",
+        "rpc",
+        "api",
+    ]
     results = {}
     fixtures = {}
     with open(API_V2_FIXTURES, "r") as f:
         fixtures = json.load(f)
 
     for route in routes.ROUTES:
+        if route == "/" or route == "/<path:subpath>":
+            continue
         if any([exclude in route for exclude in exclude_routes]):
             continue
 
@@ -53,7 +65,7 @@ def test_api_v2(request):
         url = url.replace("<bet_hash>", bet_hash)
         url = url.replace("<dispenser_hash>", dispenser_hash)
         url = url.replace("<tx_hash>", tx_hash)
-        if route.startswith("/events"):
+        if route.startswith("/v2/events"):
             url += "?limit=5"
         print(url)
         result = requests.get(url)  # noqa: S113
@@ -72,7 +84,7 @@ def test_api_v2(request):
 def test_api_v2_unpack(request, server_db):
     with open(CURR_DIR + "/fixtures/api_v2_unpack_fixtures.json", "r") as f:
         datas = json.load(f)
-    url = f"{API_ROOT}/transactions/unpack"
+    url = f"{API_ROOT}/v2/transactions/unpack"
 
     for data in datas:
         result = requests.get(url, params={"datahex": data["datahex"]})  # noqa: S113
@@ -83,7 +95,7 @@ def test_api_v2_unpack(request, server_db):
 @pytest.mark.usefixtures("api_server_v2")
 def test_new_get_balances_by_address():
     alice = ADDR[0]
-    url = f"{API_ROOT}/addresses/{alice}/balances"
+    url = f"{API_ROOT}/v2/addresses/{alice}/balances"
     result = requests.get(url)  # noqa: S113
     assert result.json()["result"] == [
         {
@@ -132,7 +144,7 @@ def test_new_get_balances_by_address():
 @pytest.mark.usefixtures("api_server_v2")
 def test_new_get_balances_by_asset():
     asset = "XCP"
-    url = f"{API_ROOT}/assets/{asset}/balances"
+    url = f"{API_ROOT}/v2/assets/{asset}/balances"
     result = requests.get(url)  # noqa: S113
     assert result.json()["result"] == [
         {
@@ -192,7 +204,7 @@ def test_new_get_balances_by_asset():
 @pytest.mark.usefixtures("api_server_v2")
 def test_new_get_balances_vs_old():
     asset = "XCP"
-    url = f"{API_ROOT}/assets/{asset}/balances"
+    url = f"{API_ROOT}/v2/assets/{asset}/balances"
     new_balances = requests.get(url).json()["result"]  # noqa: S113
     old_balance = util.api(
         "get_balances",
@@ -215,7 +227,7 @@ def test_new_get_balances_vs_old():
 @pytest.mark.usefixtures("api_server_v2")
 def test_new_get_asset_info():
     asset = "NODIVISIBLE"
-    url = f"{API_ROOT}/assets/{asset}"
+    url = f"{API_ROOT}/v2/assets/{asset}"
     result = requests.get(url)  # noqa: S113
 
     assert result.json()["result"] == {
@@ -234,7 +246,7 @@ def test_new_get_asset_info():
 @pytest.mark.usefixtures("api_server_v2")
 def test_new_get_asset_orders():
     asset = "XCP"
-    url = f"{API_ROOT}/assets/{asset}/orders"
+    url = f"{API_ROOT}/v2/assets/{asset}/orders"
     result = requests.get(url).json()["result"]  # noqa: S113
     assert len(result) == 6
     assert result[0] == {
@@ -261,7 +273,7 @@ def test_new_get_asset_orders():
 @pytest.mark.usefixtures("api_server_v2")
 def test_new_get_order_info():
     tx_hash = "1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a"
-    url = f"{API_ROOT}/orders/{tx_hash}"
+    url = f"{API_ROOT}/v2/orders/{tx_hash}"
     result = requests.get(url).json()["result"]  # noqa: S113
     assert result[0] == {
         "tx_index": 11,
@@ -287,7 +299,7 @@ def test_new_get_order_info():
 @pytest.mark.usefixtures("api_server_v2")
 def test_new_get_order_matches():
     tx_hash = "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
-    url = f"{API_ROOT}/orders/{tx_hash}/matches"
+    url = f"{API_ROOT}/v2/orders/{tx_hash}/matches"
     result = requests.get(url).json()["result"]  # noqa: S113
     assert result[0] == {
         "id": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498_1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81",

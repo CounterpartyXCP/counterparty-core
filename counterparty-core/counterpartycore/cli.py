@@ -202,15 +202,15 @@ CONFIG_ARGS = [
     [
         ("--api-user",),
         {
-            "default": "api",
+            "default": None,
             "help": f"required username to use the {config.APP_NAME} API (via HTTP basic auth)",
         },
     ],
     [
         ("--api-password",),
         {
-            "default": "api",
-            "help": f"required password (for rpc-user) to use the {config.APP_NAME} API (via HTTP basic auth)",
+            "default": None,
+            "help": f"required password (for api-user) to use the {config.APP_NAME} API (via HTTP basic auth)",
         },
     ],
     [
@@ -250,10 +250,6 @@ CONFIG_ARGS = [
             "default": False,
             "help": "log API requests to the specified file",
         },
-    ],
-    [
-        ("--enable-api-v1",),
-        {"action": "store_true", "default": False, "help": "Enable the API v1"},
     ],
     [
         ("--no-log-files",),

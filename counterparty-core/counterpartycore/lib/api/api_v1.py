@@ -1074,9 +1074,10 @@ class APIServer(threading.Thread):
             """Handle all paths, decide where to forward the query."""
             request_path = args_path.lower()
             if (
-                request_path == "old"
-                or request_path.startswith("v1/api/")
-                or request_path.startswith("v1/rpc/")
+                request_path == ""
+                or request_path.startswith("api/")
+                or request_path.startswith("rpc/")
+                or request_path.startswith("v1/")
             ):
                 if flask.request.method == "POST":
                     # Need to get those here because it might not be available in this aux function.
@@ -1108,7 +1109,7 @@ class APIServer(threading.Thread):
         def handle_rpc_options():
             response = flask.Response("", 204)
             _set_cors_headers(response)
-            response.headers["X-API-WARN"] = "Deprecated API"
+            # response.headers["X-API-WARN"] = "Deprecated API"
             return response
 
         def handle_rpc_post(request_json):
@@ -1151,10 +1152,10 @@ class APIServer(threading.Thread):
                 jsonrpc_response.json.encode(), 200, mimetype="application/json"
             )
             _set_cors_headers(response)
-            response.headers["X-API-WARN"] = "Deprecated API"
-            logger.warning(
-                "API v1 is deprecated and should be removed soon. Please migrate to REST API."
-            )
+            # response.headers["X-API-WARN"] = "Deprecated API"
+            # logger.warning(
+            #    "API v1 is deprecated and should be removed soon. Please migrate to REST API."
+            # )
             return response
 
         ######################

@@ -59,6 +59,8 @@ def get_db():
 
 @auth.verify_password
 def verify_password(username, password):
+    if config.API_PASSWORD is None:
+        return True
     return username == config.API_USER and password == config.API_PASSWORD
 
 
@@ -178,9 +180,11 @@ def execute_api_function(db, route, function_args):
             result = route["function"](db, **function_args)
         else:
             result = route["function"](**function_args)
-        BLOCK_CACHE[cache_key] = result
-        if len(BLOCK_CACHE) > MAX_BLOCK_CACHE_SIZE:
-            BLOCK_CACHE.popitem(last=False)
+        # don't cache API v1
+        if route["function"].__name__ != "refirect_to_api_v1":
+            BLOCK_CACHE[cache_key] = result
+            if len(BLOCK_CACHE) > MAX_BLOCK_CACHE_SIZE:
+                BLOCK_CACHE.popitem(last=False)
 
     return result
 
@@ -193,7 +197,7 @@ def inject_details(db, result):
 
 
 def get_transaction_name(rule):
-    if rule == "/":
+    if rule == "/v2/":
         return "APIRoot"
     if rule == "/healthz":
         return "healthcheck"
@@ -225,7 +229,7 @@ def handle_route(**kwargs):
     if not is_server_ready() and not return_result_if_not_ready(rule):
         return return_result(503, error="Counterparty not ready")
 
-    if rule == "/":
+    if rule == "/v2/":
         return return_result(200, result=api_root())
 
     route = ROUTES.get(rule)
@@ -249,6 +253,7 @@ def handle_route(**kwargs):
     # clean up and return the result
     if result is None:
         return return_result(404, error="Not found")
+
     result = remove_rowids(result)
 
     # inject details
@@ -274,9 +279,12 @@ def run_api_server(args):
         # Get the last block index
         util.CURRENT_BLOCK_INDEX = blocks.last_db_index(get_db())
         # Add routes
-        app.add_url_rule("/", view_func=handle_route)
+        app.add_url_rule("/v2/", view_func=handle_route)
         for path in ROUTES:
-            app.add_url_rule(path, view_func=handle_route)
+            methods = ["GET"]
+            if not path.startswith("/v2/"):
+                methods = ["GET", "POST"]
+            app.add_url_rule(path, view_func=handle_route, methods=methods)
         # run the scheduler to refresh the backend height
         # `no_refresh_backend_height` used only for testing. TODO: find a way to mock it
         if "no_refresh_backend_height" not in args or not args["no_refresh_backend_height"]:

@@ -11,7 +11,7 @@ API_DOC_FILE = os.path.join(CURR_DIR, "../../../Documentation/docs/advanced/api-
 API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../apiary.apib")
 DREDD_FILE = os.path.join(CURR_DIR, "../../dredd.yml")
 CACHE_FILE = os.path.join(CURR_DIR, "apicache.json")
-API_ROOT = "http://api:api@localhost:4000"
+API_ROOT = "http://localhost:4000"
 USE_API_CACHE = True
 
 TARGET_FILE = API_DOC_FILE
@@ -23,11 +23,13 @@ if len(sys.argv) > 1 and sys.argv[1] == "blueprint":
 
 
 def get_example_output(path, args):
+    print(f"args: {args}")
     url_keys = []
     for key, value in args.items():
         if f"{key}>" in path:
             path = path.replace(f"<{key}>", value)
             path = path.replace(f"<int:{key}>", value)
+            path = path.replace(f"<path:{key}>", value)
             url_keys.append(key)
     for key in url_keys:
         args.pop(key)
@@ -53,6 +55,7 @@ GROUPS = [
     "/events",
     "/mempool",
     "/bitcoin",
+    "/v1",
 ]
 
 GROUP_DOCS = {
@@ -81,7 +84,6 @@ By default the default value of the `encoding` parameter detailed above is `auto
 }
 
 DREDD_CONFIG = {
-    "user": "api:api",
     "loglevel": "error",
     "path": [],
     "blueprint": "apiary.apib",
@@ -182,7 +184,11 @@ if USE_API_CACHE and os.path.exists(CACHE_FILE):
 
 current_group = None
 for path, route in server.routes.ROUTES.items():
-    route_group = path.split("/")[1]
+    path_parts = path.split("/")
+    if path_parts[1] == "v2":
+        route_group = path.split("/")[2]
+    else:
+        route_group = "v1"
     if "compose" in path:
         route_group = "Compose"
     if route_group != current_group:
@@ -194,7 +200,9 @@ for path, route in server.routes.ROUTES.items():
         if current_group in GROUP_DOCS:
             md += GROUP_DOCS[current_group]
 
-    blueprint_path = path.replace("<", "{").replace(">", "}").replace("int:", "")
+    blueprint_path = (
+        path.replace("<", "{").replace(">", "}").replace("int:", "").replace("path:", "")
+    )
     title = " ".join([part.capitalize() for part in str(route["function"].__name__).split("_")])
     title = title.replace("Pubkeyhash", "PubKeyHash")
     title = title.replace("Mpma", "MPMA")
