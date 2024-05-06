@@ -5,6 +5,7 @@ import decimal
 import logging
 import os
 import signal
+import sys
 import tarfile
 import tempfile
 import time
@@ -14,9 +15,6 @@ from urllib.parse import quote_plus as urlencode
 import appdirs
 import apsw
 import bitcoin as bitcoinlib
-from halo import Halo
-from termcolor import colored, cprint
-
 from counterpartycore.lib import (
     backend,
     blocks,
@@ -30,11 +28,14 @@ from counterpartycore.lib import (
 from counterpartycore.lib import kickstart as kickstarter
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1, routes  # noqa: F401
+from counterpartycore.lib.public_keys import PUBLIC_KEYS
 from counterpartycore.lib.telemetry.clients.influxdb import TelemetryClientInfluxDB
 from counterpartycore.lib.telemetry.collectors.influxdb import (
     TelemetryCollectorInfluxDB,
 )
 from counterpartycore.lib.telemetry.daemon import TelemetryDaemon
+from halo import Halo
+from termcolor import colored, cprint
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -842,8 +843,13 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
 
     # Set Constants.
     bootstrap_url = config.BOOTSTRAP_URL_TESTNET if config.TESTNET else config.BOOTSTRAP_URL_MAINNET
+    bootstrap_sig_url = (
+        config.BOOTSTRAP_URL_TESTNET_SIG if config.TESTNET else config.BOOTSTRAP_URL_MAINNET_SIG
+    )
     tar_filename = os.path.basename(bootstrap_url)
+    sig_filename = os.path.basename(bootstrap_sig_url)
     tarball_path = os.path.join(tempfile.gettempdir(), tar_filename)
+    sig_path = os.path.join(tempfile.gettempdir(), sig_filename)
     database_path = os.path.join(data_dir, config.APP_NAME)
     if config.TESTNET:
         database_path += ".testnet"
@@ -876,7 +882,15 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
     # Downloading
     spinner.start()
     urllib.request.urlretrieve(bootstrap_url, tarball_path, bootstrap_progress)  # nosec B310  # noqa: S310
+    urllib.request.urlretrieve(bootstrap_sig_url, sig_path)  # nosec B310  # noqa: S310
     spinner.stop()
+    print(f"{OK_GREEN} {step}")
+
+    step = "Verifying signature..."
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        if not any(util.verify_signature(k, sig_path, tarball_path) for k in PUBLIC_KEYS):
+            print("Snaptshot was not signed by any trusted keys")
+            sys.exit(1)
     print(f"{OK_GREEN} {step}")
 
     # TODO: check checksum, filenames, etc.
