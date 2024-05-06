@@ -252,10 +252,6 @@ CONFIG_ARGS = [
         },
     ],
     [
-        ("--enable-api-v1",),
-        {"action": "store_true", "default": False, "help": "Enable the API v1"},
-    ],
-    [
         ("--no-log-files",),
         {"action": "store_true", "default": False, "help": "Don't write log files"},
     ],

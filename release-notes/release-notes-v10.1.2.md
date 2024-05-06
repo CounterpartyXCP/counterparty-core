@@ -5,13 +5,6 @@ This version of Counterparty Core most importantly marks the release of API v2, 
 
 # Upgrading
 
-The v1 API has been deprecated but not yet removed from the node software. To continue using it, you must: 
-- start `counterparty-server` with the flag `--enable-api-v1`
-- use port `4100` for mainnet and port `14100` for testnet
-- prefix all endpoints with `/v1/`
-
-There is a [migration guide](https://docs.counterparty.io/docs/advanced/api-v2/v1-to-v2/) in the documentation, which specifies equivalences between old and new functionality. 
-
 
 # ChangeLog
 
@@ -21,7 +14,7 @@ There is a [migration guide](https://docs.counterparty.io/docs/advanced/api-v2/v
 
 
 ## Codebase
-* Release API v2; deprecate API v1
+* Release API v2;
 * Have API return `ready` if the last block is less than one minute old
 * Add an index on the `block_index` field in the `credits` and `debits` tables
 * Add `TRACE  level to Python logging

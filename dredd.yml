@@ -1,5 +1,5 @@
 blueprint: apiary.apib
-endpoint: http://127.0.0.1:4000
+endpoint: http://127.0.0.1:4200
 loglevel: error
 only:
 - Blocks > Get Blocks > Get Blocks
