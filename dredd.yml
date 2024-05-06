@@ -62,5 +62,6 @@ only:
 - Events > Get Event By Index > Get Event By Index
 - Events > Get Events By Name > Get Events By Name
 - Z-pages > Check Server Health > Check Server Health
+- V1 > Redirect To Api V1 > Redirect To Api V1
 path: []
 user: api:api

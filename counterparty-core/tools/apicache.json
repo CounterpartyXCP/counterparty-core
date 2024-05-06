@@ -3423,5 +3423,11 @@
                 "timestamp": 1712256340
             }
         ]
+    },
+    "/v1/<path:subpath>": {
+        "result": {
+            "result": "Healthy",
+            "success": true
+        }
     }
 }

@@ -102,5 +102,7 @@ ROUTES = util.prepare_routes(
         ### /mempool ###
         "/mempool/events": ledger.get_all_mempool_events,
         "/mempool/events/<event>": ledger.get_mempool_events_by_name,
+        ### API v1 ###
+        "/v1/<path:subpath>": util.redirect_to_api_v1,
     }
 )

@@ -18,6 +18,7 @@ API routes are divided into 11 groups:
 - [`/events`](#/reference/events)
 - [`/mempool`](#/reference/mempool)
 - [`/bitcoin`](#/reference/bitcoin)
+- [`/v1`](#/reference/v1)
 
 Notes:
 
@@ -5122,5 +5123,25 @@ Returns the mempool events filtered by event name
     ```
         {
             "result": []
+        }
+    ```
+
+## Group V1
+
+### Redirect To Api V1 [GET /v1/{subpath}]
+
+Redirect to the API v1.
+
++ Parameters
+    + subpath: `healthz` (str, required) - The path to redirect to
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": {
+                "result": "Healthy",
+                "success": true
+            }
         }
     ```

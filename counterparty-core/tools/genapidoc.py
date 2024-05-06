@@ -23,11 +23,13 @@ if len(sys.argv) > 1 and sys.argv[1] == "blueprint":
 
 
 def get_example_output(path, args):
+    print(f"args: {args}")
     url_keys = []
     for key, value in args.items():
         if f"{key}>" in path:
             path = path.replace(f"<{key}>", value)
             path = path.replace(f"<int:{key}>", value)
+            path = path.replace(f"<path:{key}>", value)
             url_keys.append(key)
     for key in url_keys:
         args.pop(key)
@@ -53,6 +55,7 @@ GROUPS = [
     "/events",
     "/mempool",
     "/bitcoin",
+    "/v1",
 ]
 
 GROUP_DOCS = {
@@ -194,7 +197,9 @@ for path, route in server.routes.ROUTES.items():
         if current_group in GROUP_DOCS:
             md += GROUP_DOCS[current_group]
 
-    blueprint_path = path.replace("<", "{").replace(">", "}").replace("int:", "")
+    blueprint_path = (
+        path.replace("<", "{").replace(">", "}").replace("int:", "").replace("path:", "")
+    )
     title = " ".join([part.capitalize() for part in str(route["function"].__name__).split("_")])
     title = title.replace("Pubkeyhash", "PubKeyHash")
     title = title.replace("Mpma", "MPMA")
