@@ -75,7 +75,7 @@ if [ "$response_v1_testnet" -ne 200 ]; then
 fi
 
 # check running info with API v2 mainnet
-response_v2_mainnet=$(curl http://api:api@127.0.0.1:4100/ \
+response_v2_mainnet=$(curl http://api:api@127.0.0.1:4100/v2/ \
                         --write-out '%{http_code}' --silent --output /dev/null)
 
 if [ "$response_v2_mainnet" -ne 200 ]; then
@@ -84,7 +84,7 @@ if [ "$response_v2_mainnet" -ne 200 ]; then
 fi
 
 # check running info with API v2 testnet
-response_v2_testnet=$(curl http://api:api@127.0.0.1:14100/ \
+response_v2_testnet=$(curl http://api:api@127.0.0.1:14100/v2/ \
                         --write-out '%{http_code}' --silent --output /dev/null)
 
 if [ "$response_v2_mainnet" -ne 200 ]; then

@@ -195,7 +195,7 @@ def inject_details(db, result):
 
 
 def get_transaction_name(rule):
-    if rule == "/":
+    if rule == "/v2/":
         return "APIRoot"
     if rule == "/healthz":
         return "healthcheck"
@@ -227,7 +227,7 @@ def handle_route(**kwargs):
     if not is_server_ready() and not return_result_if_not_ready(rule):
         return return_result(503, error="Counterparty not ready")
 
-    if rule == "/":
+    if rule == "/v2/":
         return return_result(200, result=api_root())
 
     route = ROUTES.get(rule)
@@ -277,7 +277,7 @@ def run_api_server(args):
         # Get the last block index
         util.CURRENT_BLOCK_INDEX = blocks.last_db_index(get_db())
         # Add routes
-        app.add_url_rule("/", view_func=handle_route)
+        app.add_url_rule("/v2/", view_func=handle_route)
         for path in ROUTES:
             methods = ["GET"]
             if path == "/v1/<path:subpath>":

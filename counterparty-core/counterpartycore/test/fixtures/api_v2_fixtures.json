@@ -1,5 +1,5 @@
 {
-    "http://api:api@localhost:10009/blocks": {
+    "http://api:api@localhost:10009/v2/blocks": {
         "result": [
             {
                 "block_index": 310500,
@@ -103,7 +103,7 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/blocks/310491": {
+    "http://api:api@localhost:10009/v2/blocks/310491": {
         "result": {
             "block_index": 310491,
             "block_hash": "811abd7cf2b768cfdaa84ab44c63f4463c96a368ead52125bf149cf0c7447b16",
@@ -115,7 +115,7 @@
             "messages_hash": "9671cfedb3124b67ed996c547cb26a32e95490009ad56065c79be54a28c45994"
         }
     },
-    "http://api:api@localhost:10009/blocks/310491/transactions": {
+    "http://api:api@localhost:10009/v2/blocks/310491/transactions": {
         "result": [
             {
                 "tx_index": 492,
@@ -132,7 +132,7 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/blocks/310491/events": {
+    "http://api:api@localhost:10009/v2/blocks/310491/events": {
         "result": [
             {
                 "event_index": 1183,
@@ -221,7 +221,7 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/blocks/310491/events/counts": {
+    "http://api:api@localhost:10009/v2/blocks/310491/events/counts": {
         "result": [
             {
                 "event": "BLOCK_PARSED",
@@ -249,13 +249,13 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/blocks/310491/events/CREDIT": {
+    "http://api:api@localhost:10009/v2/blocks/310491/events/CREDIT": {
         "result": []
     },
-    "http://api:api@localhost:10009/blocks/310491/credits": {
+    "http://api:api@localhost:10009/v2/blocks/310491/credits": {
         "result": []
     },
-    "http://api:api@localhost:10009/blocks/310491/debits": {
+    "http://api:api@localhost:10009/v2/blocks/310491/debits": {
         "result": [
             {
                 "block_index": 310491,
@@ -268,28 +268,28 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/blocks/310491/expirations": {
+    "http://api:api@localhost:10009/v2/blocks/310491/expirations": {
         "result": []
     },
-    "http://api:api@localhost:10009/blocks/310491/cancels": {
+    "http://api:api@localhost:10009/v2/blocks/310491/cancels": {
         "result": []
     },
-    "http://api:api@localhost:10009/blocks/310491/destructions": {
+    "http://api:api@localhost:10009/v2/blocks/310491/destructions": {
         "result": []
     },
-    "http://api:api@localhost:10009/blocks/310491/issuances": {
+    "http://api:api@localhost:10009/v2/blocks/310491/issuances": {
         "result": []
     },
-    "http://api:api@localhost:10009/blocks/310491/sends": {
+    "http://api:api@localhost:10009/v2/blocks/310491/sends": {
         "result": []
     },
-    "http://api:api@localhost:10009/blocks/310491/dispenses": {
+    "http://api:api@localhost:10009/v2/blocks/310491/dispenses": {
         "result": []
     },
-    "http://api:api@localhost:10009/blocks/310491/sweeps": {
+    "http://api:api@localhost:10009/v2/blocks/310491/sweeps": {
         "result": []
     },
-    "http://api:api@localhost:10009/transactions/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498": {
+    "http://api:api@localhost:10009/v2/transactions/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498": {
         "result": {
             "tx_index": 492,
             "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
@@ -317,7 +317,7 @@
             }
         }
     },
-    "http://api:api@localhost:10009/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances": {
+    "http://api:api@localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances": {
         "result": [
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -361,14 +361,14 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances/NODIVISIBLE": {
+    "http://api:api@localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances/NODIVISIBLE": {
         "result": {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "NODIVISIBLE",
             "quantity": 985
         }
     },
-    "http://api:api@localhost:10009/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/credits": {
+    "http://api:api@localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/credits": {
         "result": [
             {
                 "block_index": 310000,
@@ -480,7 +480,7 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/debits": {
+    "http://api:api@localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/debits": {
         "result": [
             {
                 "block_index": 310001,
@@ -673,7 +673,7 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/bets": {
+    "http://api:api@localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/bets": {
         "result": [
             {
                 "tx_index": 102,
@@ -696,7 +696,7 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/broadcasts": {
+    "http://api:api@localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/broadcasts": {
         "result": [
             {
                 "tx_index": 103,
@@ -724,7 +724,7 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/burns": {
+    "http://api:api@localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/burns": {
         "result": [
             {
                 "tx_index": 1,
@@ -737,7 +737,7 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/sends": {
+    "http://api:api@localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/sends": {
         "result": [
             {
                 "tx_index": 8,
@@ -837,7 +837,7 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/receives": {
+    "http://api:api@localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/receives": {
         "result": [
             {
                 "tx_index": 483,
@@ -853,7 +853,7 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/sends/NODIVISIBLE": {
+    "http://api:api@localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/sends/NODIVISIBLE": {
         "result": [
             {
                 "tx_index": 15,
@@ -881,19 +881,19 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/receives/NODIVISIBLE": {
+    "http://api:api@localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/receives/NODIVISIBLE": {
         "result": []
     },
-    "http://api:api@localhost:10009/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispensers": {
+    "http://api:api@localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispensers": {
         "result": []
     },
-    "http://api:api@localhost:10009/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispensers/NODIVISIBLE": {
+    "http://api:api@localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispensers/NODIVISIBLE": {
         "result": []
     },
-    "http://api:api@localhost:10009/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/sweeps": {
+    "http://api:api@localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/sweeps": {
         "result": []
     },
-    "http://api:api@localhost:10009/assets": {
+    "http://api:api@localhost:10009/v2/assets": {
         "result": [
             {
                 "asset": "A95428956661682277",
@@ -937,7 +937,7 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/assets/NODIVISIBLE": {
+    "http://api:api@localhost:10009/v2/assets/NODIVISIBLE": {
         "result": {
             "asset": "NODIVISIBLE",
             "asset_longname": null,
@@ -950,7 +950,7 @@
             "holder_count": 3
         }
     },
-    "http://api:api@localhost:10009/assets/NODIVISIBLE/balances": {
+    "http://api:api@localhost:10009/v2/assets/NODIVISIBLE/balances": {
         "result": [
             {
                 "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
@@ -969,17 +969,17 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/assets/NODIVISIBLE/balances/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc": {
+    "http://api:api@localhost:10009/v2/assets/NODIVISIBLE/balances/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc": {
         "result": {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "NODIVISIBLE",
             "quantity": 985
         }
     },
-    "http://api:api@localhost:10009/assets/NODIVISIBLE/orders": {
+    "http://api:api@localhost:10009/v2/assets/NODIVISIBLE/orders": {
         "result": []
     },
-    "http://api:api@localhost:10009/assets/NODIVISIBLE/credits": {
+    "http://api:api@localhost:10009/v2/assets/NODIVISIBLE/credits": {
         "result": [
             {
                 "block_index": 310002,
@@ -1010,7 +1010,7 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/assets/NODIVISIBLE/debits": {
+    "http://api:api@localhost:10009/v2/assets/NODIVISIBLE/debits": {
         "result": [
             {
                 "block_index": 310014,
@@ -1032,10 +1032,10 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/assets/NODIVISIBLE/dividends": {
+    "http://api:api@localhost:10009/v2/assets/NODIVISIBLE/dividends": {
         "result": []
     },
-    "http://api:api@localhost:10009/assets/NODIVISIBLE/issuances": {
+    "http://api:api@localhost:10009/v2/assets/NODIVISIBLE/issuances": {
         "result": [
             {
                 "tx_index": 3,
@@ -1060,7 +1060,7 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/assets/NODIVISIBLE/sends": {
+    "http://api:api@localhost:10009/v2/assets/NODIVISIBLE/sends": {
         "result": [
             {
                 "tx_index": 15,
@@ -1088,13 +1088,13 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/assets/NODIVISIBLE/dispensers": {
+    "http://api:api@localhost:10009/v2/assets/NODIVISIBLE/dispensers": {
         "result": []
     },
-    "http://api:api@localhost:10009/assets/NODIVISIBLE/dispensers/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc": {
+    "http://api:api@localhost:10009/v2/assets/NODIVISIBLE/dispensers/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc": {
         "result": []
     },
-    "http://api:api@localhost:10009/assets/NODIVISIBLE/holders": {
+    "http://api:api@localhost:10009/v2/assets/NODIVISIBLE/holders": {
         "result": [
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -1113,7 +1113,7 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/orders/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498": {
+    "http://api:api@localhost:10009/v2/orders/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498": {
         "result": [
             {
                 "tx_index": 492,
@@ -1136,7 +1136,7 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/orders/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/matches": {
+    "http://api:api@localhost:10009/v2/orders/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/matches": {
         "result": [
             {
                 "id": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498_1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81",
@@ -1161,22 +1161,22 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/orders/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/btcpays": {
+    "http://api:api@localhost:10009/v2/orders/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/btcpays": {
         "result": []
     },
-    "http://api:api@localhost:10009/orders/NODIVISIBLE/XCP": {
+    "http://api:api@localhost:10009/v2/orders/NODIVISIBLE/XCP": {
         "result": []
     },
-    "http://api:api@localhost:10009/bets/e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42": {
+    "http://api:api@localhost:10009/v2/bets/e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42": {
         "result": []
     },
-    "http://api:api@localhost:10009/bets/e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42/matches": {
+    "http://api:api@localhost:10009/v2/bets/e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42/matches": {
         "result": []
     },
-    "http://api:api@localhost:10009/bets/e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42/resolutions": {
+    "http://api:api@localhost:10009/v2/bets/e566ab052d414d2c9b9d6ffc643bc5d2b31d80976dffe7acceaf2576246f9e42/resolutions": {
         "result": []
     },
-    "http://api:api@localhost:10009/burns": {
+    "http://api:api@localhost:10009/v2/burns": {
         "result": [
             {
                 "tx_index": 1,
@@ -1252,13 +1252,13 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/dispensers/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498": {
+    "http://api:api@localhost:10009/v2/dispensers/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498": {
         "result": []
     },
-    "http://api:api@localhost:10009/dispensers/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/dispenses": {
+    "http://api:api@localhost:10009/v2/dispensers/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/dispenses": {
         "result": []
     },
-    "http://api:api@localhost:10009/events?limit=5": {
+    "http://api:api@localhost:10009/v2/events?limit=5": {
         "result": [
             {
                 "event_index": 1237,
@@ -1328,7 +1328,7 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/events/10?limit=5": {
+    "http://api:api@localhost:10009/v2/events/10?limit=5": {
         "result": [
             {
                 "event_index": 10,
@@ -1344,7 +1344,7 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/events/counts?limit=5": {
+    "http://api:api@localhost:10009/v2/events/counts?limit=5": {
         "result": [
             {
                 "event": "ASSET_CREATION",
@@ -1432,7 +1432,7 @@
             }
         ]
     },
-    "http://api:api@localhost:10009/events/CREDIT?limit=5": {
+    "http://api:api@localhost:10009/v2/events/CREDIT?limit=5": {
         "result": [
             {
                 "event_index": 1231,

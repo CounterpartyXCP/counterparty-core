@@ -185,7 +185,7 @@ if USE_API_CACHE and os.path.exists(CACHE_FILE):
 
 current_group = None
 for path, route in server.routes.ROUTES.items():
-    route_group = path.split("/")[1]
+    route_group = path.split("/")[2]
     if "compose" in path:
         route_group = "Compose"
     if route_group != current_group:
