@@ -11,7 +11,7 @@ API_DOC_FILE = os.path.join(CURR_DIR, "../../../Documentation/docs/advanced/api-
 API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../apiary.apib")
 DREDD_FILE = os.path.join(CURR_DIR, "../../dredd.yml")
 CACHE_FILE = os.path.join(CURR_DIR, "apicache.json")
-API_ROOT = "http://api:api@localhost:4200"
+API_ROOT = "http://api:api@localhost:4100"
 USE_API_CACHE = True
 
 TARGET_FILE = API_DOC_FILE
