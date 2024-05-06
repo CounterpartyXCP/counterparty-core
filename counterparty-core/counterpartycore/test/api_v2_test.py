@@ -33,13 +33,25 @@ def test_api_v2(request):
     dispenser_hash = "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
     event = "CREDIT"
     event_index = 10
-    exclude_routes = ["compose", "unpack", "info", "mempool", "healthz", "bitcoin", "v1"]
+    exclude_routes = [
+        "compose",
+        "unpack",
+        "info",
+        "mempool",
+        "healthz",
+        "bitcoin",
+        "v1",
+        "rpc",
+        "api",
+    ]
     results = {}
     fixtures = {}
     with open(API_V2_FIXTURES, "r") as f:
         fixtures = json.load(f)
 
     for route in routes.ROUTES:
+        if route == "/" or route == "/<path:subpath>":
+            continue
         if any([exclude in route for exclude in exclude_routes]):
             continue
 
