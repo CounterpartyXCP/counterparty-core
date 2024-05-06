@@ -18,6 +18,7 @@ There is a [migration guide](https://docs.counterparty.io/docs/advanced/api-v2/v
 ## Bugfixes
 * Fix logging of some raw tracebacks (#1715) 
 * Retry on `ChunkedEncodingError` with AddrIndexRs; break loop on all errors
+* Fix bad logging of Rust module panic (#1721)
 
 
 ## Codebase
