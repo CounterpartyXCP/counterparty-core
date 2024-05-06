@@ -49,7 +49,7 @@ done
 
 
 # check running info with API v1 mainnet
-response_v1_mainnet=$(curl -X POST http://127.0.0.1:4000/ \
+response_v1_mainnet=$(curl -X POST http://127.0.0.1:4000/v1/ \
                         --user rpc:rpc \
                         -H 'Content-Type: application/json; charset=UTF-8'\
                         -H 'Accept: application/json, text/javascript' \
@@ -62,7 +62,7 @@ if [ "$response_v1_mainnet" -ne 200 ]; then
 fi
 
 # check running info with API v1 testnet
-response_v1_testnet=$(curl -X POST http://127.0.0.1:14000/ \
+response_v1_testnet=$(curl -X POST http://127.0.0.1:14000/v1/ \
                         --user rpc:rpc \
                         -H 'Content-Type: application/json; charset=UTF-8'\
                         -H 'Accept: application/json, text/javascript' \

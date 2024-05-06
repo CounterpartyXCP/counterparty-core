@@ -1077,6 +1077,7 @@ class APIServer(threading.Thread):
                 request_path == ""
                 or request_path.startswith("api/")
                 or request_path.startswith("rpc/")
+                or request_path.startswith("v1/")
             ):
                 if flask.request.method == "POST":
                     # Need to get those here because it might not be available in this aux function.
