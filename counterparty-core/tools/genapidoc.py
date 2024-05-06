@@ -11,7 +11,7 @@ API_DOC_FILE = os.path.join(CURR_DIR, "../../../Documentation/docs/advanced/api-
 API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../apiary.apib")
 DREDD_FILE = os.path.join(CURR_DIR, "../../dredd.yml")
 CACHE_FILE = os.path.join(CURR_DIR, "apicache.json")
-API_ROOT = "http://rpc:rpc@localhost:4000"
+API_ROOT = "http://localhost:4000"
 USE_API_CACHE = True
 
 TARGET_FILE = API_DOC_FILE
@@ -84,7 +84,6 @@ By default the default value of the `encoding` parameter detailed above is `auto
 }
 
 DREDD_CONFIG = {
-    "user": "rpc:rpc",
     "loglevel": "error",
     "path": [],
     "blueprint": "apiary.apib",

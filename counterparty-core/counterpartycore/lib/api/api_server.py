@@ -59,6 +59,8 @@ def get_db():
 
 @auth.verify_password
 def verify_password(username, password):
+    if config.API_PASSWORD is None:
+        return True
     return username == config.API_USER and password == config.API_PASSWORD
 
 

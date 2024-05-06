@@ -202,15 +202,15 @@ CONFIG_ARGS = [
     [
         ("--api-user",),
         {
-            "default": "rpc",
+            "default": None,
             "help": f"required username to use the {config.APP_NAME} API (via HTTP basic auth)",
         },
     ],
     [
         ("--api-password",),
         {
-            "default": "rpc",
-            "help": f"required password (for rpc-user) to use the {config.APP_NAME} API (via HTTP basic auth)",
+            "default": None,
+            "help": f"required password (for api-user) to use the {config.APP_NAME} API (via HTTP basic auth)",
         },
     ],
     [

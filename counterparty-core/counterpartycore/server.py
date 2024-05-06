@@ -444,10 +444,7 @@ def initialise_config(
     else:
         config.API_USER = "rpc"
 
-    if api_password:
-        config.API_PASSWORD = api_password
-    else:
-        config.API_PASSWORD = "rpc"  # noqa: S105
+    config.API_PASSWORD = api_password
 
     if api_no_allow_cors:
         config.API_NO_ALLOW_CORS = api_no_allow_cors
