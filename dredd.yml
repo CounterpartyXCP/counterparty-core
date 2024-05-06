@@ -1,5 +1,5 @@
 blueprint: apiary.apib
-endpoint: http://127.0.0.1:4200
+endpoint: http://127.0.0.1:4000
 loglevel: error
 only:
 - Blocks > Get Blocks > Get Blocks
@@ -69,4 +69,4 @@ only:
 - V1 > Redirect To Api V1 > Redirect To Api V1
 - V1 > Redirect To Api V1 > Redirect To Api V1
 path: []
-user: api:api
+user: rpc:rpc
