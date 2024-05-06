@@ -884,10 +884,6 @@ def get_next_tx_index(db):
     return tx_index
 
 
-class MempoolError(Exception):
-    pass
-
-
 def follow(db):
     # Check software version.
     check.software_version()
@@ -1096,7 +1092,7 @@ def follow(db):
             block_count = backend.getblockcount()
             block_index += 1
 
-        elif config.NO_MEMPOOL is False:
+        elif 1 == 2:
             # TODO: add zeromq support here to await TXs and Blocks instead of constantly polling
             # Get old mempool.
             old_mempool = list(cursor.execute("""SELECT * FROM mempool"""))
@@ -1186,7 +1182,7 @@ def follow(db):
                             #     "tx_hash %s not found in backend.  Not adding to mempool.",
                             #     (tx_hash,),
                             # )
-                            raise MempoolError
+                            raise exceptions.MempoolError
                         mempool_tx_index = list_tx(
                             db,
                             None,
@@ -1215,7 +1211,7 @@ def follow(db):
                             # Counterparty transaction.
                             not_supported[tx_hash] = ""
                             not_supported_sorted.append((block_index, tx_hash))
-                            raise MempoolError
+                            raise exceptions.MempoolError
 
                         # Save transaction and side‐effects in memory.
                         cursor.execute(
@@ -1226,10 +1222,10 @@ def follow(db):
                             xcp_mempool.append((tx_hash, message))
 
                         # Rollback.
-                        raise MempoolError
+                        raise exceptions.MempoolError
                 except exceptions.ParseTransactionError as e:
                     logger.warning(f"ParseTransactionError for tx {tx_hash}: {e}")
-                except MempoolError:
+                except exceptions.MempoolError:
                     pass
 
                 parsed_txs_count = parsed_txs_count + 1
