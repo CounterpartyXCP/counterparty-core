@@ -5126,14 +5126,91 @@ Returns the mempool events filtered by event name
         }
     ```
 
-## Group <path:subpath>
+## Group V1
+
+### Redirect To Api V1 [GET /{?subpath}]
+
+Redirect to the API v1.
+
++ Parameters
+    + subpath: `healthz` (str, optional) - The path to redirect to
+        + Default: ``
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": {
+                "result": "Healthy",
+                "success": true
+            }
+        }
+    ```
 
 ### Redirect To Api V1 [GET /v1/{subpath}]
 
 Redirect to the API v1.
 
 + Parameters
-    + subpath: `healthz` (str, required) - The path to redirect to
+    + subpath: `healthz` (str, optional) - The path to redirect to
+        + Default: ``
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": {
+                "result": "Healthy",
+                "success": true
+            }
+        }
+    ```
+
+### Redirect To Api V1 [GET /api/{subpath}]
+
+Redirect to the API v1.
+
++ Parameters
+    + subpath: `healthz` (str, optional) - The path to redirect to
+        + Default: ``
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": {
+                "result": "Healthy",
+                "success": true
+            }
+        }
+    ```
+
+### Redirect To Api V1 [GET /rpc/{subpath}]
+
+Redirect to the API v1.
+
++ Parameters
+    + subpath: `healthz` (str, optional) - The path to redirect to
+        + Default: ``
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": {
+                "result": "Healthy",
+                "success": true
+            }
+        }
+    ```
+
+### Redirect To Api V1 [GET /{subpath}]
+
+Redirect to the API v1.
+
++ Parameters
+    + subpath: `healthz` (str, optional) - The path to redirect to
+        + Default: ``
 
 + Response 200 (application/json)
 

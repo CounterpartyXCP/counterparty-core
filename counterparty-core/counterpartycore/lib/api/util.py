@@ -381,7 +381,7 @@ def inject_dispensers(db, result):
     return result
 
 
-def redirect_to_api_v1(subpath: str):
+def redirect_to_api_v1(subpath: str = ""):
     """
     Redirect to the API v1.
     :param subpath: The path to redirect to (e.g. healthz)

@@ -280,7 +280,7 @@ def run_api_server(args):
         app.add_url_rule("/v2/", view_func=handle_route)
         for path in ROUTES:
             methods = ["GET"]
-            if path == "/v1/<path:subpath>":
+            if not path.startswith("/v2/"):
                 methods = ["GET", "POST"]
             app.add_url_rule(path, view_func=handle_route, methods=methods)
         # run the scheduler to refresh the backend height

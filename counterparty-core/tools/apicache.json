@@ -3465,5 +3465,29 @@
             "result": "Healthy",
             "success": true
         }
+    },
+    "/api/<path:subpath>": {
+        "result": {
+            "result": "Healthy",
+            "success": true
+        }
+    },
+    "/rpc/<path:subpath>": {
+        "result": {
+            "result": "Healthy",
+            "success": true
+        }
+    },
+    "/<path:subpath>": {
+        "result": {
+            "result": "Healthy",
+            "success": true
+        }
+    },
+    "/": {
+        "result": {
+            "result": "Healthy",
+            "success": true
+        }
     }
 }
