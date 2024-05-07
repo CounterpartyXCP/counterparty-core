@@ -31,3 +31,4 @@ docstring_parser==0.16
 psutil==5.9.8
 counterparty-rs==10.1.2
 influxdb-client==1.42.0
+python-gnupg==0.5.2
