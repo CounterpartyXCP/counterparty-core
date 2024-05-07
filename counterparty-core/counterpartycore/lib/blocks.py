@@ -298,18 +298,18 @@ def parse_block(
 
     cursor.close()
 
-    # Calculate consensus hashes.
-    new_txlist_hash, found_txlist_hash = check.consensus_hash(
-        db, "txlist_hash", previous_txlist_hash, txlist
-    )
-    new_ledger_hash, found_ledger_hash = check.consensus_hash(
-        db, "ledger_hash", previous_ledger_hash, ledger.BLOCK_LEDGER
-    )
-    new_messages_hash, found_messages_hash = check.consensus_hash(
-        db, "messages_hash", previous_messages_hash, ledger.BLOCK_JOURNAL
-    )
-
     if block_index != config.MEMPOOL_BLOCK_INDEX:
+        # Calculate consensus hashes.
+        new_txlist_hash, found_txlist_hash = check.consensus_hash(
+            db, "txlist_hash", previous_txlist_hash, txlist
+        )
+        new_ledger_hash, found_ledger_hash = check.consensus_hash(
+            db, "ledger_hash", previous_ledger_hash, ledger.BLOCK_LEDGER
+        )
+        new_messages_hash, found_messages_hash = check.consensus_hash(
+            db, "messages_hash", previous_messages_hash, ledger.BLOCK_JOURNAL
+        )
+        # trigger BLOCK_PARSED event
         ledger.add_to_journal(
             db,
             block_index,
@@ -324,7 +324,9 @@ def parse_block(
             },
         )
 
-    return new_ledger_hash, new_txlist_hash, new_messages_hash, found_messages_hash
+        return new_ledger_hash, new_txlist_hash, new_messages_hash, found_messages_hash
+
+    return None, None, None, None
 
 
 def initialise(db):
@@ -824,6 +826,7 @@ def reparse(db, block_index=0):
     count_query = "SELECT COUNT(*) AS cnt FROM blocks WHERE block_index >= ?"
     block_count = cursor.execute(count_query, (block_index,)).fetchone()["cnt"]
     step = f"Reparsing blocks from block {block_index}..."
+    message = ""
     with Halo(text=step, spinner=SPINNER_STYLE) as spinner:
         cursor.execute(
             """SELECT * FROM blocks WHERE block_index >= ? ORDER BY block_index""", (block_index,)
