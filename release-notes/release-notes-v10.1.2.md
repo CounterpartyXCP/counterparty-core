@@ -1,6 +1,6 @@
 # Release Notes - Counterparty Core v10.1.2 (2024-05-06)
 
-This version of Counterparty Core most importantly marks the release of API v2, a new RESTful API—see the [official project documentation](https://docs.counterparty.io/docs/advanced/api-v2/node-api/). The new API is available at `/v2/`, while the old API is now available at `/v1/` in addition to `/`.
+This version of Counterparty Core marks the release of API v2, a new RESTful API—see the [official project documentation](https://docs.counterparty.io/docs/advanced/api-v2/node-api/). The new API is available at `/v2/`, while the old API is now available at `/v1/` in addition to `/`.
 
 
 # Upgrading
@@ -29,7 +29,7 @@ This release maintains full backwards-compatibility and includes no protocol cha
 * Set default and minimum values for Backend Poll Interval to 3.0 seconds
 * Update `docker-compose.yml` to use different profiles for `mainnet` and `testnet`
 * Check that another process is not connected to the database before starting the server
-* Launches database quick check on startup if the database was not been correctly shut down
+* Launch database quick check on startup if the database has not been correctly shut down
 * Support an additional level of verbosity with the CLI flags `-vv`
 * Add the `--no-telemetry` flag to disable node telemetry
 
