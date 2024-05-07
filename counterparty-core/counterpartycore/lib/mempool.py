@@ -10,12 +10,14 @@ import zmq
 import zmq.asyncio
 
 from counterpartycore import server
-from counterpartycore.lib import blocks, config, database, exceptions, ledger, sentry
+from counterpartycore.lib import blocks, config, database, exceptions, ledger, sentry, util
 from counterpartycore.lib.kickstart import blocks_parser
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 port = 28332
+
+util.CURRENT_BLOCK_INDEX = config.MEMPOOL_BLOCK_INDEX
 
 
 def parse_mempool_transaction(db, decoded_tx):
@@ -73,14 +75,13 @@ def clean_transaction_events(db, tx_hash):
 
 def clean_mempool(db):
     logger.debug("Cleaning mempool...")
-    with db:
-        cursor = db.cursor()
-        cursor.execute("SELECT * FROM mempool")
-        mempool_events = cursor.fetchall()
-        for event in mempool_events:
-            tx = ledger.get_transaction(db, event["tx_hash"])
-            if tx:
-                clean_transaction_events(db, event["tx_hash"])
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM mempool")
+    mempool_events = cursor.fetchall()
+    for event in mempool_events:
+        tx = ledger.get_transaction(db, event["tx_hash"])
+        if tx:
+            clean_transaction_events(db, event["tx_hash"])
 
 
 class ZMQHandler:
@@ -101,6 +102,7 @@ class ZMQHandler:
         if len(seq) == 4:
             sequence = str(struct.unpack("<I", seq)[-1])
         logger.debug("Received message: %s %s" % (topic, sequence))
+
         if topic == b"rawtx":
             # decode transactions as they come in
             tx = blocks_parser.BlockchainParser().deserialize_tx(body.hex())
@@ -122,7 +124,8 @@ class ZMQHandler:
             elif label in ["C", "D"]:
                 clean_mempool(self.db)
         # schedule ourselves to receive the next message
-        asyncio.ensure_future(self.handle())
+        if not self.paused:
+            asyncio.ensure_future(self.handle())
 
     def start(self):
         self.loop.add_signal_handler(signal.SIGINT, self.stop)
@@ -139,7 +142,7 @@ def run_zmq_handler(args):
     sentry.init()
     # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
-    db = database.get_connection(read_only=False)
+    db = database.get_connection(read_only=False, check_wal=False)
     daemon = ZMQHandler(db)
     try:
         daemon.start()

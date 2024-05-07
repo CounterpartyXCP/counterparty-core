@@ -24,12 +24,13 @@ from counterpartycore.lib import (
     config,
     database,
     log,
+    mempool,
     transaction,
     util,
 )
 from counterpartycore.lib import kickstart as kickstarter
 from counterpartycore.lib.api import api_server as api_v2
-from counterpartycore.lib.api import api_v1, routes  # noqa: F401
+from counterpartycore.lib.api import api_v1
 from counterpartycore.lib.telemetry.clients.influxdb import TelemetryClientInfluxDB
 from counterpartycore.lib.telemetry.collectors.influxdb import (
     TelemetryCollectorInfluxDB,
@@ -654,6 +655,7 @@ def start_all(args):
     api_status_poller = None
     api_server_v1 = None
     api_server_v2 = None
+    mempool_watcher = None
     telemetry_daemon = None
     db = None
 
@@ -699,8 +701,13 @@ def start_all(args):
         api_server_v1.daemon = True
         api_server_v1.start()
 
+        # Mempool watcher
+        if not config.NO_MEMPOOL:
+            mempool_watcher = mempool.MempoolWatcher()
+            mempool_watcher.start(args)
+
         # Server
-        blocks.follow(db)
+        blocks.follow(db, mempool_watcher)
     except KeyboardInterrupt:
         logger.info("Keyboard interrupt.")
         pass
@@ -713,6 +720,8 @@ def start_all(args):
             api_server_v1.stop()
         if api_server_v2:
             api_server_v2.stop()
+        if mempool_watcher:
+            mempool_watcher.stop()
         backend.stop()
         if db:
             database.optimize(db)
