@@ -839,7 +839,16 @@ def reparse(db, block_index=0):
                     "difficulty": block["difficulty"],
                 },
             )
-            parse_block(db, block["block_index"], block["block_time"], reparsing=True)
+            previous_block = ledger.get_block(db, block["block_index"] - 1)
+            parse_block(
+                db,
+                block["block_index"],
+                block["block_time"],
+                previous_ledger_hash=previous_block["ledger_hash"],
+                previous_txlist_hash=previous_block["txlist_hash"],
+                previous_messages_hash=previous_block["messages_hash"],
+                reparsing=True,
+            )
             block_parsed_count += 1
             message = generate_progression_message(
                 block,
