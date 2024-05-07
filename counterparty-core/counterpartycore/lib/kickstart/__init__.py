@@ -295,40 +295,6 @@ def backup_if_needed(new_database, resuming):
     return new_database
 
 
-def parse_block(kickstart_db, block, block_parser, tx_index):
-    util.CURRENT_BLOCK_INDEX = block["block_index"]
-
-    with kickstart_db:  # ensure all the block or nothing
-        # insert block
-        block_bindings = {
-            "block_index": block["block_index"],
-            "block_hash": block["block_hash"],
-            "block_time": block["block_time"],
-            "previous_block_hash": block["hash_prev"],
-            "difficulty": block["bits"],
-        }
-        ledger.insert_record(kickstart_db, "blocks", block_bindings, "NEW_BLOCK")
-
-        # save transactions
-        for transaction in block["transactions"]:
-            # Cache transaction. We do that here because the block is fetched by another process.
-            block_parser.put_in_cache(transaction)
-            tx_index = blocks.list_tx(
-                kickstart_db,
-                block["block_hash"],
-                block["block_index"],
-                block["block_time"],
-                transaction["tx_hash"],
-                tx_index,
-                decoded_tx=transaction,
-                block_parser=block_parser,
-            )
-        # Parse the transactions in the block.
-        blocks.parse_block(kickstart_db, block["block_index"], block["block_time"])
-
-    return tx_index
-
-
 def cleanup(kickstart_db, block_parser):
     remove_shm_from_resource_tracker()
     step = "Cleaning up..."
@@ -398,7 +364,7 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
             # initialize block parsing timer
             start_time_block_parse = time.time()
             # parse block
-            tx_index = parse_block(kickstart_db, block, block_parser, tx_index)
+            tx_index = blocks.parse_new_block(kickstart_db, block, block_parser, tx_index)
             # update last parsed block
             last_parsed_block = block["block_index"]
             # update block parsed count

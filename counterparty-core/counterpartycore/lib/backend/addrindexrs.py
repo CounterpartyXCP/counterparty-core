@@ -201,8 +201,8 @@ def getblockhash(blockcount):
     return rpc("getblockhash", [blockcount])
 
 
-def getblock(block_hash):
-    return rpc("getblock", [block_hash, False])
+def getrawblock(block_hash):
+    return rpc("getblock", [block_hash, 0])
 
 
 @functools.lru_cache

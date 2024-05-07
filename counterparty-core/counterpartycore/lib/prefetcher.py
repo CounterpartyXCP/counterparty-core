@@ -3,9 +3,8 @@ import queue
 import threading
 import time
 
-import bitcoin as bitcoinlib
-
 from counterpartycore.lib import backend, config, util
+from counterpartycore.lib.kickstart import blocks_parser
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -52,19 +51,9 @@ class Prefetcher(threading.Thread):
                 f"Fetching block {block_index} with Prefetcher thread {self.thread_index}."
             )
             block_hash = backend.getblockhash(block_index)
-            block = backend.getblock(block_hash)
-            txhash_list, raw_transactions = backend.get_tx_list(
-                block,
-                correct_segwit=util.enabled("correct_segwit_txids", block_index=block_index),
-            )
-            backend.BLOCKCHAIN_CACHE[block_index] = {
-                "block_hash": block_hash,
-                "txhash_list": txhash_list,
-                "raw_transactions": raw_transactions,
-                "previous_block_hash": bitcoinlib.core.b2lx(block.hashPrevBlock),
-                "block_time": block.nTime,
-                "block_difficulty": block.difficulty,
-            }
+            raw_block = backend.getrawblock(block_hash)
+            block = blocks_parser.BlockchainParser().deserialize_block(raw_block)
+            backend.BLOCKCHAIN_CACHE[block_index] = block
 
 
 def start_all(num_prefetcher_threads):

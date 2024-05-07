@@ -651,6 +651,19 @@ def connect_to_addrindexrs():
     print(f"{OK_GREEN} {step}")
 
 
+def initialize_telemetry():
+    if not config.NO_TELEMETRY:
+        logger.info("Telemetry enabled.")
+        telemetry_daemon = TelemetryDaemon(
+            interval=config.TELEMETRY_INTERVAL,
+            collector=TelemetryCollectorInfluxDB(db=database.get_connection(read_only=True)),
+            client=TelemetryClientInfluxDB(),
+        )
+        telemetry_daemon.start()
+    else:
+        logger.info("Telemetry disabled.")
+
+
 def start_all(args):
     api_status_poller = None
     api_server_v1 = None
@@ -660,14 +673,20 @@ def start_all(args):
     db = None
 
     try:
+        # set signal handlers (needed for graceful shutdown on SIGINT/SIGTERM)
         signal.signal(signal.SIGINT, handle_interrupt_signal)
         signal.signal(signal.SIGTERM, handle_interrupt_signal)
 
+        # download bootstrap if necessary
         if not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap":
             bootstrap(no_confirm=True)
 
+        # initialise database
         db = initialise_db()
         blocks.initialise(db)
+        # check software and database versions
+        # TODO: timer to check every day
+        blocks.check_versions(db)
 
         # API Server v2.
         api_server_v2 = api_v2.APIServer()
@@ -676,16 +695,8 @@ def start_all(args):
         # Backend.
         connect_to_backend()
 
-        if not config.NO_TELEMETRY:
-            logger.info("Telemetry enabled.")
-            telemetry_daemon = TelemetryDaemon(
-                interval=config.TELEMETRY_INTERVAL,
-                collector=TelemetryCollectorInfluxDB(db=database.get_connection(read_only=True)),
-                client=TelemetryClientInfluxDB(),
-            )
-            telemetry_daemon.start()
-        else:
-            logger.info("Telemetry disabled.")
+        # Initialise telemetry.
+        initialize_telemetry()
 
         # Reset UTXO_LOCKS.  This previously was done in
         # initilise_config
