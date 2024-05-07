@@ -113,7 +113,7 @@ def rpc_call(payload):
         )
     elif response_json["error"]["code"] in [-28, -8, -2]:
         # “Verifying blocks...” or “Block height out of range” or “The network does not appear to fully agree!“
-        logger.debug("Backend not ready. Sleeping for ten seconds.")
+        logger.debug(f"Backend not ready. Sleeping for ten seconds. ({response_json['error']})")
         # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
         # seconds to start, this’ll hit the maximum recursion depth limit.
         time.sleep(10)

@@ -670,6 +670,7 @@ def start_all(args):
     api_server_v2 = None
     mempool_watcher = None
     telemetry_daemon = None
+    follower_daemon = None
     db = None
 
     try:
@@ -716,13 +717,15 @@ def start_all(args):
         blocks.catch_up(db)
 
         # Blockchain watcher
-        follower = follow.BlockchainWatcher(db)
-        follower.start()
+        follower_daemon = follow.BlockchainWatcher(db)
+        follower_daemon.start()
 
     except KeyboardInterrupt:
         logger.info("Keyboard interrupt.")
         pass
     finally:
+        if follower_daemon:
+            follower_daemon.stop()
         if telemetry_daemon:
             telemetry_daemon.stop()
         if api_status_poller:

@@ -10,9 +10,9 @@ def parse_mempool_transaction(db, decoded_tx):
     logger.debug("Parsing mempool transaction: %s" % decoded_tx["tx_hash"])
     now = time.time()
     transaction_events = []
+    cursor = db.cursor()
     try:
         with db:
-            cursor = db.cursor()
             # insert fake block
             cursor.execute(
                 """INSERT INTO blocks(
@@ -52,6 +52,7 @@ def parse_mempool_transaction(db, decoded_tx):
                 """INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp, :event)""",
                 bindings,
             )
+    logger.trace("Mempool transaction parsed successfully")
 
 
 def clean_transaction_events(db, tx_hash):

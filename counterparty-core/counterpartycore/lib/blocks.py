@@ -243,7 +243,8 @@ def parse_block(
     ledger.BLOCK_LEDGER = []
     ledger.BLOCK_JOURNAL = []
 
-    assert block_index == util.CURRENT_BLOCK_INDEX
+    if block_index != config.MEMPOOL_BLOCK_INDEX:
+        assert block_index == util.CURRENT_BLOCK_INDEX
 
     # Expire orders, bets and rps.
     order.expire(db, block_index)
@@ -308,19 +309,20 @@ def parse_block(
         db, "messages_hash", previous_messages_hash, ledger.BLOCK_JOURNAL
     )
 
-    ledger.add_to_journal(
-        db,
-        block_index,
-        "parse",
-        "blocks",
-        "BLOCK_PARSED",
-        {
-            "block_index": block_index,
-            "ledger_hash": new_ledger_hash,
-            "txlist_hash": new_txlist_hash,
-            "messages_hash": new_messages_hash,
-        },
-    )
+    if block_index != config.MEMPOOL_BLOCK_INDEX:
+        ledger.add_to_journal(
+            db,
+            block_index,
+            "parse",
+            "blocks",
+            "BLOCK_PARSED",
+            {
+                "block_index": block_index,
+                "ledger_hash": new_ledger_hash,
+                "txlist_hash": new_txlist_hash,
+                "messages_hash": new_messages_hash,
+            },
+        )
 
     return new_ledger_hash, new_txlist_hash, new_messages_hash, found_messages_hash
 
@@ -664,7 +666,7 @@ def list_tx(
     )
 
     # For mempool
-    if block_hash == None:  # noqa: E711
+    if block_hash is None or block_hash == config.MEMPOOL_BLOCK_HASH:
         block_hash = config.MEMPOOL_BLOCK_HASH
         block_index = config.MEMPOOL_BLOCK_INDEX
     else:
@@ -908,8 +910,12 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
 
         # save transactions
         for transaction in decoded_block["transactions"]:
-            # Cache transaction. We do that here because the block is fetched by another process.
-            block_parser.put_in_cache(transaction)
+            # for kickstart
+            if block_parser is not None:
+                # Cache transaction. We do that here because the block is fetched by another process.
+                block_parser.put_in_cache(transaction)
+            # update transaction cache first time we see the transaction
+            backend.BLOCKCHAIN_CACHE[transaction["tx_hash"]] = transaction
             tx_index = list_tx(
                 db,
                 decoded_block["block_hash"],
@@ -978,12 +984,14 @@ def catch_up(db, check_asset_conservation=True):
     # Get index of last transaction.
     tx_index = get_next_tx_index(db)
 
-    while util.CURRENT_BLOCK_INDEX <= block_count:
+    while util.CURRENT_BLOCK_INDEX < block_count:
+        print(f"Block {util.CURRENT_BLOCK_INDEX}/{block_count}")
         # increment block index
         util.CURRENT_BLOCK_INDEX = util.CURRENT_BLOCK_INDEX + 1
 
         # Get block information and transactions
         decoded_block = get_decoded_block(util.CURRENT_BLOCK_INDEX)
+        decoded_block["block_index"] = util.CURRENT_BLOCK_INDEX
         tx_index = parse_new_block(db, decoded_block, block_parser=None, tx_index=tx_index)
 
         # Refresh block count.
@@ -994,3 +1002,5 @@ def catch_up(db, check_asset_conservation=True):
         check.asset_conservation(db)
         # catch up new blocks during asset conservation check
         catch_up(db, check_asset_conservation=False)
+
+    logger.info("Catch up done.")

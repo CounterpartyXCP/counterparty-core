@@ -32,6 +32,9 @@ multiprocessing.set_start_method("spawn", force=True)
 
 TX_CACHE_MAX_SIZE = 15000
 
+DESERIALIZE_TX_CACHE_MAX_SIZE = 10000
+DESERIALIZE_TX_CACHE = OrderedDict()
+
 
 def open_leveldb(db_dir):
     try:
@@ -318,11 +321,20 @@ class BlockchainParser:
         return transaction
 
     def deserialize_tx(self, tx_hex, use_txid=None):
+        if tx_hex in DESERIALIZE_TX_CACHE:
+            return DESERIALIZE_TX_CACHE[tx_hex]
+
         ds = BCDataStream()
         ds.map_hex(tx_hex)
         if use_txid is None:
             use_txid = util.enabled("correct_segwit_txids")
-        return self.read_transaction(ds, use_txid=use_txid)
+        tx = self.read_transaction(ds, use_txid=use_txid)
+
+        DESERIALIZE_TX_CACHE[tx_hex] = tx
+        if len(DESERIALIZE_TX_CACHE) > DESERIALIZE_TX_CACHE_MAX_SIZE:
+            DESERIALIZE_TX_CACHE.popitem(last=False)
+
+        return tx
 
     def deserialize_block(self, block_hex, only_header=False, use_txid=None):
         ds = BCDataStream()

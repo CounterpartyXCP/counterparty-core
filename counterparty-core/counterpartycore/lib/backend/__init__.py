@@ -74,9 +74,6 @@ def clear_pretx(txid):
 def getrawtransaction(
     tx_hash: str, verbose: bool = False, skip_missing: bool = False, block_index: int = None
 ):
-    if block_index and block_index in BLOCKCHAIN_CACHE:
-        return BLOCKCHAIN_CACHE[block_index]["raw_transactions"][tx_hash]
-
     if tx_hash in PRETX_CACHE:
         return PRETX_CACHE[tx_hash]
 
@@ -104,6 +101,10 @@ def getindexblocksbehind():
 
 def extract_addresses(txhash_list):
     return backend().extract_addresses(txhash_list)
+
+
+def getrawblock(block_hash):
+    return backend().getrawblock(block_hash)
 
 
 def ensure_script_pub_key_for_inputs(coins):
