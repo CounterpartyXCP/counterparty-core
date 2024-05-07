@@ -181,7 +181,7 @@ def execute_api_function(db, route, function_args):
         else:
             result = route["function"](**function_args)
         # don't cache API v1
-        if route["function"].__name__ != "refirect_to_api_v1":
+        if route["function"].__name__ != "redirect_to_api_v1":
             BLOCK_CACHE[cache_key] = result
             if len(BLOCK_CACHE) > MAX_BLOCK_CACHE_SIZE:
                 BLOCK_CACHE.popitem(last=False)
