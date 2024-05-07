@@ -1,23 +1,18 @@
-import argparse
 import asyncio
 import logging
 import signal
 import struct
 import time
-from multiprocessing import Process
 
 import zmq
 import zmq.asyncio
 
-from counterpartycore import server
-from counterpartycore.lib import blocks, config, database, exceptions, ledger, sentry, util
-from counterpartycore.lib.kickstart import blocks_parser
+from counterpartycore.lib import blocks, config, exceptions, ledger
+from counterpartycore.lib.kickstart import blocks_parser, parse_block
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 port = 28332
-
-util.CURRENT_BLOCK_INDEX = config.MEMPOOL_BLOCK_INDEX
 
 
 def parse_mempool_transaction(db, decoded_tx):
@@ -84,17 +79,32 @@ def clean_mempool(db):
             clean_transaction_events(db, event["tx_hash"])
 
 
-class ZMQHandler:
+def parse_new_block(db, block):
+    tx_index = blocks.get_next_tx_index(db)
+    parse_block(db, block, block_parser=None, tx_index=tx_index)
+
+
+def disconnect_block(db, block_hash):
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM blocks WHERE block_hash = ?", (block_hash,))
+    block = cursor.fetchone()
+    block_index = block["block_index"]
+    blocks.rollback(db, block_index)
+
+
+class BlockchainWatcher:
     def __init__(self, db):
         self.db = db
         self.loop = asyncio.get_event_loop()
         self.zmqContext = zmq.asyncio.Context()
         self.zmqSubSocket = self.zmqContext.socket(zmq.SUB)
         self.zmqSubSocket.setsockopt(zmq.RCVHWM, 0)
+        self.zmqSubSocket.setsockopt_string(zmq.SUBSCRIBE, "rawblock")
         self.zmqSubSocket.setsockopt_string(zmq.SUBSCRIBE, "rawtx")
         self.zmqSubSocket.setsockopt_string(zmq.SUBSCRIBE, "sequence")
         self.zmqSubSocket.connect("tcp://127.0.0.1:%i" % port)
         self.decoded_tx_cache = {}
+        self.block_cache = {}
 
     async def handle(self):
         topic, body, seq = await self.zmqSubSocket.recv_multipart()
@@ -103,7 +113,11 @@ class ZMQHandler:
             sequence = str(struct.unpack("<I", seq)[-1])
         logger.debug("Received message: %s %s" % (topic, sequence))
 
-        if topic == b"rawtx":
+        if topic == b"rawblock":
+            block = blocks_parser.BlockchainParser().deserialize_block(body.hex())
+            if block["block_hash"] not in self.block_cache:
+                self.block_cache[block["block_hash"]] = block
+        elif topic == b"rawtx":
             # decode transactions as they come in
             tx = blocks_parser.BlockchainParser().deserialize_tx(body.hex())
             if tx["tx_hash"] not in self.decoded_tx_cache:
@@ -114,15 +128,19 @@ class ZMQHandler:
             # new transaction in mempool
             if label == "A":
                 # parse the transaction
-                decoded_tx = self.decoded_tx_cache.get(hash)
-                if decoded_tx:
-                    parse_mempool_transaction(self.db, decoded_tx)
+                decoded_tx = self.decoded_tx_cache[hash]
+                parse_mempool_transaction(self.db, decoded_tx)
             elif label == "R":
                 # transaction removed from mempool for non-block inclusion reasons
                 clean_transaction_events(self.db, hash)
-            # new block connected or deconnected
-            elif label in ["C", "D"]:
+            # new block connected
+            elif label in ["C"]:
                 clean_mempool(self.db)
+                parse_new_block(self.db, self.block_cache[hash])
+            # block disconnected (reorg)
+            elif label in ["D"]:
+                clean_mempool(self.db)
+                disconnect_block(self.db, hash)
         # schedule ourselves to receive the next message
         if not self.paused:
             asyncio.ensure_future(self.handle())
@@ -135,38 +153,3 @@ class ZMQHandler:
     def stop(self):
         self.loop.stop()
         self.zmqContext.destroy()
-
-
-def run_zmq_handler(args):
-    logger.info("Starting Mempool Watcher.")
-    sentry.init()
-    # Initialise log and config
-    server.initialise_log_and_config(argparse.Namespace(**args))
-    db = database.get_connection(read_only=False, check_wal=False)
-    daemon = ZMQHandler(db)
-    try:
-        daemon.start()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        logger.debug("Stopping ZMQ Daemon.")
-        daemon.stop()
-        db.close()
-
-
-class MempoolWatcher(object):
-    def __init__(self):
-        self.process = None
-
-    def start(self, args):
-        if self.process is not None:
-            raise Exception("Mempool Watcher is already running")
-        self.process = Process(target=run_zmq_handler, args=(vars(args),))
-        self.process.start()
-        return self.process
-
-    def stop(self):
-        logger.info("Stopping Mempool Watcher...")
-        if self.process and self.process.is_alive():
-            self.process.terminate()
-        self.process = None

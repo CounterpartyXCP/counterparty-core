@@ -324,6 +324,13 @@ class BlockchainParser:
             use_txid = util.enabled("correct_segwit_txids")
         return self.read_transaction(ds, use_txid=use_txid)
 
+    def deserialize_block(self, block_hex, only_header=False, use_txid=None):
+        ds = BCDataStream()
+        ds.map_hex(block_hex)
+        if use_txid is None:
+            use_txid = util.enabled("correct_segwit_txids")
+        return self.read_block(ds, only_header=only_header, use_txid=use_txid)
+
     def close(self):
         if self.current_block_file:
             self.current_block_file.close()

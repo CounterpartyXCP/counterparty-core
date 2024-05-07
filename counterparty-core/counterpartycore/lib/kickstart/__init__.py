@@ -295,7 +295,7 @@ def backup_if_needed(new_database, resuming):
     return new_database
 
 
-def parse_block(kickstart_db, cursor, block, block_parser, tx_index):
+def parse_block(kickstart_db, block, block_parser, tx_index):
     util.CURRENT_BLOCK_INDEX = block["block_index"]
 
     with kickstart_db:  # ensure all the block or nothing
@@ -393,13 +393,12 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
 
     # start parsing blocks
     try:
-        cursor = kickstart_db.cursor()
         block = block_parser.next_block()
         while block is not None:
             # initialize block parsing timer
             start_time_block_parse = time.time()
             # parse block
-            tx_index = parse_block(kickstart_db, cursor, block, block_parser, tx_index)
+            tx_index = parse_block(kickstart_db, block, block_parser, tx_index)
             # update last parsed block
             last_parsed_block = block["block_index"]
             # update block parsed count

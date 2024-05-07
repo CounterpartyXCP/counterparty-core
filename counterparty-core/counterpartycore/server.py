@@ -23,8 +23,8 @@ from counterpartycore.lib import (
     check,
     config,
     database,
+    follow,
     log,
-    mempool,
     transaction,
     util,
 )
@@ -701,13 +701,13 @@ def start_all(args):
         api_server_v1.daemon = True
         api_server_v1.start()
 
-        # Mempool watcher
-        if not config.NO_MEMPOOL:
-            mempool_watcher = mempool.MempoolWatcher()
-            mempool_watcher.start(args)
+        # catch up
+        blocks.catch_up(db)
 
-        # Server
-        blocks.follow(db, mempool_watcher)
+        # Blockchain watcher
+        follower = follow.BlockchainWatcher(db)
+        follower.start()
+
     except KeyboardInterrupt:
         logger.info("Keyboard interrupt.")
         pass
