@@ -65,6 +65,7 @@ class BlockchainWatcher:
         elif topic == b"hashtx":
             self.hash_by_sequence[sequence] = body.hex()
         elif topic == b"rawtx":
+            # TODO: pop!
             tx_hash = self.hash_by_sequence.get(sequence)
             if tx_hash not in self.raw_tx_cache:
                 self.raw_tx_cache[tx_hash] = body.hex()
@@ -76,22 +77,21 @@ class BlockchainWatcher:
                 if hash not in self.mempool_block_hashes:
                     self.mempool_block_hashes.append(hash)
                     # get transaction from cache
+                    # TODO: pop!
                     raw_tx = self.raw_tx_cache.get(hash)
                     # add transaction to mempool block
                     logger.trace("Adding transaction to mempool block: %s" % hash)
                     logger.trace("Mempool block size: %s" % len(self.mempool_block))
                     self.mempool_block.append(raw_tx)
                     if len(self.mempool_block) == MEMPOOL_BLOCK_MAX_SIZE:
+                        # parse mempool block
                         mempool.parse_mempool_transactions(self.db, self.mempool_block)
+                        # reset mempool block
                         self.mempool_block = []
                         self.mempool_block_hashes = []
             # transaction removed from mempool for non-block inclusion reasons
             elif label == "R":
                 mempool.clean_transaction_events(self.db, hash)
-            # block disconnected (reorg)
-            elif label in ["D"]:
-                mempool.clean_mempool(self.db)
-                blocks.disconnect_block(self.db, hash)
 
     async def handle(self):
         try:

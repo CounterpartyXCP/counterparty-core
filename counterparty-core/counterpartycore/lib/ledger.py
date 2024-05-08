@@ -1401,6 +1401,21 @@ def get_block(db, block_index: int):
     return None
 
 
+def get_block_by_hash(db, block_hash: str):
+    """
+    Return the information of a block
+    :param int block_hash: The hash of the block to return (e.g. 00000000000000000001158f52eae43aa7fede1bb675736f105ccb545edcf5dd)
+    """
+    query = """
+        SELECT * FROM blocks
+        WHERE block_hash = ?
+    """
+    bindings = (block_hash,)
+    cursor = db.cursor()
+    cursor.execute(query, bindings)
+    return cursor.fetchone()
+
+
 def get_last_block(db):
     cursor = db.cursor()
     query = "SELECT * FROM blocks ORDER BY block_index DESC LIMIT 1"

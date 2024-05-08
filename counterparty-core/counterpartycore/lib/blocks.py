@@ -774,14 +774,6 @@ def rollback(db, block_index=0):
     print(f"Rollback done in {time.time() - start_time:.2f}s")
 
 
-def disconnect_block(db, block_hash):
-    cursor = db.cursor()
-    cursor.execute("SELECT * FROM blocks WHERE block_hash = ?", (block_hash,))
-    block = cursor.fetchone()
-    block_index = block["block_index"]
-    rollback(db, block_index)
-
-
 def generate_progression_message(
     block,
     start_time_block_parse,
@@ -910,8 +902,29 @@ def get_next_tx_index(db):
 def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
     util.CURRENT_BLOCK_INDEX = decoded_block["block_index"]
 
+    # get next tx index if not provided
     if tx_index is None:
         tx_index = get_next_tx_index(db)
+
+    # get previous block
+    previous_block = ledger.get_block(db, decoded_block["block_index"] - 1)
+
+    # check if reorg is needed
+    if decoded_block["hash_prev"] != previous_block["block_hash"]:
+        previous_block = ledger.get_block_by_hash(db, decoded_block["hash_prev"])
+        if previous_block is None:
+            raise exceptions.BlockNotFoundError(
+                f"Previous block hash {decoded_block['hash_prev']} not found"
+            )
+        logger.info(
+            "Blockchain reorganization detected from block %s", decoded_block["block_index"]
+        )
+        new_block_index = previous_block["block_index"] + 1
+        # roolback to the previous block
+        rollback(db, block_index=new_block_index)
+        # update the current block index
+        util.CURRENT_BLOCK_INDEX = new_block_index
+        decoded_block["block_index"] = new_block_index
 
     with db:  # ensure all the block or nothing
         # insert block
@@ -943,7 +956,6 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
                 block_parser=block_parser,
             )
         # Parse the transactions in the block.
-        previous_block = ledger.get_block(db, decoded_block["block_index"] - 1)
         parse_block(
             db,
             decoded_block["block_index"],
