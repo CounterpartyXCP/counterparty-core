@@ -11,8 +11,7 @@ from halo import Halo
 from termcolor import colored
 
 from counterpartycore import server
-from counterpartycore.lib import backend, blocks, config, database, ledger, util  # noqa: F401
-from counterpartycore.lib.backend.addrindexrs import AddrindexrsSocket  # noqa: F401
+from counterpartycore.lib import backend, blocks, config, database
 from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser, ChainstateParser
 from counterpartycore.lib.kickstart.utils import remove_shm_from_resource_tracker
 

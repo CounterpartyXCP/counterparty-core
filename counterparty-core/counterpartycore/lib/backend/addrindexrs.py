@@ -16,6 +16,8 @@ from counterpartycore.lib.backend.bitcoind import getblockcount, rpc_call
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
+INITIALIZED = False
+
 READ_BUF_SIZE = 65536
 SOCKET_TIMEOUT = 30.0
 BACKEND_PING_TIME = 30.0
@@ -59,54 +61,12 @@ def rpc_batch(request_list):
     return list(responses)
 
 
-def extract_addresses(txhash_list):
-    tx_hashes_tx = getrawtransaction_batch(txhash_list, verbose=True)
-
-    return extract_addresses_from_txlist(tx_hashes_tx, getrawtransaction_batch)
-
-
-def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
-    """
-    helper for extract_addresses, seperated so we can pass in a mocked _getrawtransaction_batch for test purposes
-    """
-
-    tx_hashes_addresses = {}
-    tx_inputs_hashes = set()  # use set to avoid duplicates
-
-    for tx_hash, tx in tx_hashes_tx.items():
-        tx_hashes_addresses[tx_hash] = set()
-        for vout in tx["vout"]:
-            if "addresses" in vout["scriptPubKey"]:
-                tx_hashes_addresses[tx_hash].update(tuple(vout["scriptPubKey"]["addresses"]))
-
-        tx_inputs_hashes.update([vin["txid"] for vin in tx["vin"]])
-
-    # chunk txs to avoid huge memory spikes
-    for tx_inputs_hashes_chunk in util.chunkify(
-        list(tx_inputs_hashes), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE
-    ):
-        raw_transactions = _getrawtransaction_batch(tx_inputs_hashes_chunk, verbose=True)
-        for tx_hash, tx in tx_hashes_tx.items():
-            for vin in tx["vin"]:
-                vin_tx = raw_transactions.get(vin["txid"], None)
-
-                if not vin_tx:
-                    continue
-
-                vout = vin_tx["vout"][vin["vout"]]
-                if "addresses" in vout["scriptPubKey"]:
-                    tx_hashes_addresses[tx_hash].update(tuple(vout["scriptPubKey"]["addresses"]))
-
-    return tx_hashes_addresses, tx_hashes_tx
-
-
 GETRAWTRANSACTION_MAX_RETRIES = 2
 MONOTONIC_CALL_ID = 0
 
 
 def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _retry=0):
-    _logger = logger.getChild("getrawtransaction_batch")
-
+    init()
     if len(txhash_list) > config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE:
         # don't try to load in more than BACKEND_RAW_TRANSACTIONS_CACHE_SIZE entries in a single call
         txhash_list_chunks = util.chunkify(txhash_list, config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)
@@ -181,7 +141,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                     else None
                 )
         except KeyError:  # shows up most likely due to finickyness with addrindex not always returning results that we need...
-            _logger.debug(f"tx missing in rawtx cache: {tx_hash}")
+            logger.debug(f"tx missing in rawtx cache: {tx_hash}")
             if _retry < GETRAWTRANSACTION_MAX_RETRIES:  # try again
                 time.sleep(
                     0.05 * (_retry + 1)
@@ -459,7 +419,7 @@ def unpack_vout(outpoint, tx, block_count):
     }
 
 
-def get_unspent_txouts(source):
+def _get_unspent_txouts(source):
     block_count = getblockcount()
     result = INDEXER_THREAD.send(
         {
@@ -484,6 +444,34 @@ def get_unspent_txouts(source):
         return batch
     else:
         return []
+
+
+def get_unspent_txouts(address: str, unconfirmed: bool = False, unspent_tx_hash: str = None):
+    """
+    Returns a list of unspent outputs for a specific address
+    :param address: The address to search for (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
+    :param unconfirmed: Include unconfirmed transactions
+    :param unspent_tx_hash: Filter by unspent_tx_hash
+    """
+    init()
+    unspent = _get_unspent_txouts(address)
+
+    # filter by unspent_tx_hash
+    if unspent_tx_hash is not None:
+        unspent = list(filter(lambda x: x["txId"] == unspent_tx_hash, unspent))
+
+    # filter unconfirmed
+    if not unconfirmed:
+        unspent = [utxo for utxo in unspent if utxo["confirmations"] > 0]
+
+    # format
+    for utxo in unspent:
+        utxo["amount"] = float(utxo["value"] / config.UNIT)
+        utxo["txid"] = utxo["txId"]
+        del utxo["txId"]
+        # do not add scriptPubKey
+
+    return unspent
 
 
 # Returns transactions in the following format
@@ -530,6 +518,7 @@ def get_unspent_txouts(source):
 #
 # }
 def search_raw_transactions(address, unconfirmed: bool = True, only_tx_hashes: bool = False):
+    init()
     hsh = _address_to_hash(address)
     txs = INDEXER_THREAD.send({"method": "blockchain.scripthash.get_history", "params": [hsh]})[
         "result"
@@ -546,26 +535,28 @@ def search_raw_transactions(address, unconfirmed: bool = True, only_tx_hashes: b
         return batch
 
 
-def get_oldest_tx_legacy(address):
-    hsh = _address_to_hash(address)
-    call_result = INDEXER_THREAD.send(
-        {"method": "blockchain.scripthash.get_oldest_tx", "params": [hsh]}
-    )
-
-    if call_result is not None and "error" not in call_result:
-        txs = call_result["result"]
-        return txs
-
-    return {}
+def get_transactions_by_address(
+    address: str, unconfirmed: bool = True, only_tx_hashes: bool = False
+):
+    """
+    Returns all transactions involving a given address
+    :param address: The address to search for (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
+    :param unconfirmed: Include unconfirmed transactions (e.g. True)
+    :param only_tx_hashes: Return only the tx hashes (e.g. True)
+    """
+    return search_raw_transactions(address, unconfirmed, only_tx_hashes)
 
 
 def init():
-    global INDEXER_THREAD  # noqa: PLW0603
+    global INDEXER_THREAD, INITIALIZED  # noqa: PLW0603
+    if INITIALIZED:
+        return
     INDEXER_THREAD = AddrIndexRsClient(config.INDEXD_CONNECT, config.INDEXD_PORT)
     INDEXER_THREAD.daemon = True
     INDEXER_THREAD.start()
     logger.info("Connecting to address indexer.")
     indexer_check_version()
+    INITIALIZED = True
 
 
 def stop():

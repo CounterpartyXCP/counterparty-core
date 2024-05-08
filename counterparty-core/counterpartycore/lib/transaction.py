@@ -189,6 +189,20 @@ class ThreadSafeTTLCache(BaseThreadSafeCache):
         return cachetools.TTLCache(*args, **kwargs)
 
 
+def sort_unspent_txouts(unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE):
+    # Filter out all dust amounts to avoid bloating the resultant transaction
+    unspent = list(filter(lambda x: x["value"] > dust_size, unspent))
+    # Sort by amount, using the largest UTXOs available
+    if config.REGTEST:
+        # REGTEST has a lot of coinbase inputs that can't be spent due to maturity
+        # this doesn't usually happens on mainnet or testnet because most fednodes aren't mining
+        unspent = sorted(unspent, key=lambda x: (x["confirmations"], x["value"]), reverse=True)
+    else:
+        unspent = sorted(unspent, key=lambda x: x["value"], reverse=True)
+
+    return unspent
+
+
 # set higher than the max number of UTXOs we should expect to
 # manage in an aging cache for any one source address, at any one period
 # UTXO_P2SH_ENCODING_LOCKS is TTLCache for UTXOs that are used for chaining p2sh encoding
@@ -292,13 +306,13 @@ class TransactionService:
             use_inputs = unspent = custom_inputs
         else:
             if unspent_tx_hash is not None:
-                unspent = self.backend.get_unspent_txouts(
+                unspent = self.backend.addrindexrs.get_unspent_txouts(
                     source,
                     unconfirmed=allow_unconfirmed_inputs,
                     unspent_tx_hash=unspent_tx_hash,
                 )
             else:
-                unspent = self.backend.get_unspent_txouts(
+                unspent = self.backend.addrindexrs.get_unspent_txouts(
                     source, unconfirmed=allow_unconfirmed_inputs
                 )
 
@@ -321,7 +335,7 @@ class TransactionService:
             else:
                 dust = self.default_regular_dust_size
 
-            unspent = self.backend.sort_unspent_txouts(unspent, dust_size=dust)
+            unspent = sort_unspent_txouts(unspent, dust_size=dust)
             # self.logger.debug(f"Sorted candidate UTXOs: {[print_coin(coin) for coin in unspent]}")
             use_inputs = unspent
 
@@ -420,7 +434,7 @@ class TransactionService:
 
         # ensure inputs have scriptPubKey
         #   this is not provided by indexd
-        inputs = self.backend.ensure_script_pub_key_for_inputs(inputs)
+        inputs = script.ensure_script_pub_key_for_inputs(inputs)
 
         return inputs, change_quantity, btc_in, final_fee
 
@@ -430,7 +444,9 @@ class TransactionService:
         """Get the first (biggest) input from the source address"""
 
         # Array of UTXOs, as retrieved by listunspent function from bitcoind
-        unspent = self.backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs)
+        unspent = self.backend.addrindexrs.get_unspent_txouts(
+            source, unconfirmed=allow_unconfirmed_inputs
+        )
 
         filter_unspents_utxo_locks = []
         if self.utxo_locks is not None and source in self.utxo_locks:
@@ -444,9 +460,7 @@ class TransactionService:
         unspent = filtered_unspent
 
         # sort
-        unspent = self.backend.sort_unspent_txouts(
-            unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE
-        )
+        unspent = sort_unspent_txouts(unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE)
 
         # use the first input
         input = unspent[0]

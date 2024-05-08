@@ -70,7 +70,8 @@ def test_p2sh_encoding(server_db):
         DISABLE_ARC4_MOCKING=True, OLD_STYLE_API=True
     ), util_test.MockProtocolChangesContext(enhanced_sends=True, p2sh_encoding=True):
         utxos = dict(
-            ((utxo["txid"], utxo["vout"]), utxo) for utxo in backend.get_unspent_txouts(source)
+            ((utxo["txid"], utxo["vout"]), utxo)
+            for utxo in backend.addrindexrs.get_unspent_txouts(source)
         )
 
         fee = 20000
@@ -247,7 +248,8 @@ def test_p2sh_encoding_long_data(server_db):
         enhanced_sends=True, p2sh_encoding=True
     ):
         utxos = dict(
-            ((utxo["txid"], utxo["vout"]), utxo) for utxo in backend.get_unspent_txouts(source)
+            ((utxo["txid"], utxo["vout"]), utxo)
+            for utxo in backend.addrindexrs.get_unspent_txouts(source)
         )
 
         # pprint.pprint(utxos)

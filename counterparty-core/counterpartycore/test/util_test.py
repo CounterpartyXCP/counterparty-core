@@ -43,9 +43,6 @@ from counterpartycore.lib import (  # noqa: E402
     transaction,
     util,
 )
-from counterpartycore.lib.backend.addrindexrs import (  # noqa: E402
-    extract_addresses_from_txlist,
-)
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: E402
 from counterpartycore.test.fixtures.scenarios import (  # noqa: E402
     INTEGRATION_SCENARIOS,
@@ -510,6 +507,41 @@ def getrawtransaction_batch(db, txhash_list, verbose=False):
         result[txhash] = getrawtransaction(db, txhash, verbose=verbose)
 
     return result
+
+
+def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
+    """
+    helper for extract_addresses, seperated so we can pass in a mocked _getrawtransaction_batch for test purposes
+    """
+
+    tx_hashes_addresses = {}
+    tx_inputs_hashes = set()  # use set to avoid duplicates
+
+    for tx_hash, tx in tx_hashes_tx.items():
+        tx_hashes_addresses[tx_hash] = set()
+        for vout in tx["vout"]:
+            if "addresses" in vout["scriptPubKey"]:
+                tx_hashes_addresses[tx_hash].update(tuple(vout["scriptPubKey"]["addresses"]))
+
+        tx_inputs_hashes.update([vin["txid"] for vin in tx["vin"]])
+
+    # chunk txs to avoid huge memory spikes
+    for tx_inputs_hashes_chunk in util.chunkify(
+        list(tx_inputs_hashes), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE
+    ):
+        raw_transactions = _getrawtransaction_batch(tx_inputs_hashes_chunk, verbose=True)
+        for tx_hash, tx in tx_hashes_tx.items():
+            for vin in tx["vin"]:
+                vin_tx = raw_transactions.get(vin["txid"], None)
+
+                if not vin_tx:
+                    continue
+
+                vout = vin_tx["vout"][vin["vout"]]
+                if "addresses" in vout["scriptPubKey"]:
+                    tx_hashes_addresses[tx_hash].update(tuple(vout["scriptPubKey"]["addresses"]))
+
+    return tx_hashes_addresses, tx_hashes_tx
 
 
 def search_raw_transactions(db, address, unconfirmed=False):
