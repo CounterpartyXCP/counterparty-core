@@ -3,7 +3,7 @@ import queue
 import threading
 import time
 
-from counterpartycore.lib import backend, config, util
+from counterpartycore.lib import backend, config, deserialize, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -51,10 +51,8 @@ class Prefetcher(threading.Thread):
             )
             block_hash = backend.getblockhash(block_index)
             raw_block = backend.getrawblock(block_hash)
-            # TODO!!!!
-            from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser
-
-            block = BlockchainParser().deserialize_block(raw_block)
+            use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
+            block = deserialize.deserialize_block(raw_block, use_txid=use_txid)
             backend.BLOCKCHAIN_CACHE[block_index] = block
 
 

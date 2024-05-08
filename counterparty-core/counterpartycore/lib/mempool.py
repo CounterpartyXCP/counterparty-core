@@ -1,8 +1,7 @@
 import logging
 import time
 
-from counterpartycore.lib import blocks, config, exceptions, ledger
-from counterpartycore.lib.kickstart import blocks_parser
+from counterpartycore.lib import blocks, config, deserialize, exceptions, ledger
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -27,7 +26,7 @@ def parse_mempool_transactions(db, raw_tx_list):
             mempool_tx_index = cursor.fetchone()["tx_index"] + 1
             # list_tx
             for raw_tx in raw_tx_list:
-                decoded_tx = blocks_parser.BlockchainParser().deserialize_tx(raw_tx)
+                decoded_tx = deserialize.deserialize_tx(raw_tx, use_txid=True)
                 logger.trace(f"Decoded transaction: {decoded_tx['tx_hash']}")
                 mempool_tx_index = blocks.list_tx(
                     db,

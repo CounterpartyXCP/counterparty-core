@@ -23,6 +23,7 @@ from counterpartycore.lib import (
     backend,
     config,
     database,
+    deserialize,
     exceptions,
     gettxinfo,
     ledger,
@@ -32,7 +33,6 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.api import util as api_util
-from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser
 from counterpartycore.lib.messages import (
     bet,  # noqa: F401
     broadcast,  # noqa: F401
@@ -960,9 +960,10 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_tx_info(tx_hex, block_index=None):
             # block_index mandatory for transactions before block 335000
+            use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
             source, destination, btc_amount, fee, data, extra = gettxinfo.get_tx_info(
                 self.db,
-                BlockchainParser().deserialize_tx(tx_hex),
+                deserialize.deserialize_tx(tx_hex, use_txid=use_txid),
                 block_index=block_index,
             )
             return (

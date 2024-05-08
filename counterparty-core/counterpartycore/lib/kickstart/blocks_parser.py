@@ -11,14 +11,12 @@ from multiprocessing import JoinableQueue, Process, shared_memory
 
 import apsw
 
-from counterpartycore.lib import config, gettxinfo, util
+from counterpartycore.lib import config, deserialize, gettxinfo, util
 from counterpartycore.lib.exceptions import DecodeError
 
 from .bc_data_stream import BCDataStream
 from .utils import (
-    b2h,
     decode_value,
-    double_hash,
     ib2h,
     inverse_hash,
     remove_shm_from_resource_tracker,
@@ -115,9 +113,6 @@ def fetch_blocks(bitcoind_dir, db_path, queue, first_block_index, parser_config)
 
 class BlockchainParser:
     def __init__(self, bitcoind_dir=None, db_path=None, first_block_index=0, queue_size=100):
-        if bitcoind_dir is None:  # for deserialize_tx()
-            return
-
         self.blocks_dir = os.path.join(bitcoind_dir, "blocks")
         self.file_num = -1
         self.current_file_size = 0
@@ -160,109 +155,11 @@ class BlockchainParser:
     def block_parsed(self):
         self.queue.task_done()
 
-    def read_tx_in(self, vds):
-        tx_in = {}
-        tx_in["hash"] = vds.read_bytes(32)
-        tx_in["n"] = vds.read_uint32()
-        script_sig_size = vds.read_compact_size()
-        tx_in["scriptSig"] = vds.read_bytes(script_sig_size)
-        tx_in["nSequence"] = vds.read_uint32()
-        tx_in["coinbase"] = False
-        if (
-            tx_in["hash"]
-            == b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-        ):
-            tx_in["coinbase"] = True
-        return tx_in
-
-    def read_tx_out(self, vds):
-        tx_out = {}
-        tx_out["nValue"] = vds.read_int64()
-        script = vds.read_bytes(vds.read_compact_size())
-        tx_out["scriptPubKey"] = script
-        return tx_out
-
-    def read_transaction(self, vds, use_txid=True):
-        transaction = {}
-        start_pos = vds.read_cursor
-        transaction["version"] = vds.read_int32()
-
-        flag = vds.read_bytes(2)
-        if flag == b"\x00\x01":
-            transaction["segwit"] = True
-        else:
-            transaction["segwit"] = False
-            vds.read_cursor = vds.read_cursor - 2
-
-        transaction["coinbase"] = False
-        transaction["vin"] = []
-        for i in range(vds.read_compact_size()):  # noqa: B007
-            vin = self.read_tx_in(vds)
-            transaction["vin"].append(vin)
-            transaction["coinbase"] = transaction["coinbase"] or vin["coinbase"]
-
-        transaction["vout"] = []
-        for i in range(vds.read_compact_size()):  # noqa: B007
-            transaction["vout"].append(self.read_tx_out(vds))
-
-        transaction["vtxinwit"] = []
-        if transaction["segwit"]:
-            offset_before_tx_witnesses = vds.read_cursor - start_pos
-            for vin in transaction["vin"]:  # noqa: B007
-                witnesses_count = vds.read_compact_size()
-                for i in range(witnesses_count):  # noqa: B007
-                    witness_length = vds.read_compact_size()
-                    witness = vds.read_bytes(witness_length)
-                    transaction["vtxinwit"].append(witness)
-
-        transaction["lock_time"] = vds.read_uint32()
-        data = vds.input[start_pos : vds.read_cursor]
-
-        transaction["tx_hash"] = ib2h(double_hash(data))
-        if transaction["segwit"]:
-            hash_data = data[:4] + data[6:offset_before_tx_witnesses] + data[-4:]
-            transaction["tx_id"] = ib2h(double_hash(hash_data))
-            if use_txid:
-                transaction["tx_hash"] = transaction["tx_id"]
-
-        transaction["__data__"] = b2h(data)
-
-        return transaction
-
     def put_in_cache(self, transaction):
         # save transaction to cache
         self.tx_cache[transaction["tx_hash"]] = transaction
         if len(self.tx_cache) > TX_CACHE_MAX_SIZE:
             self.tx_cache.popitem(last=False)
-
-    def read_block_header(self, vds):
-        block_header = {}
-        block_header["magic_bytes"] = vds.read_int32()
-        # if block_header['magic_bytes'] != 118034699:
-        #   raise Exception('Not a block')
-        block_header["block_size"] = vds.read_int32()
-        header_start = vds.read_cursor
-        block_header["version"] = vds.read_int32()
-        block_header["hash_prev"] = ib2h(vds.read_bytes(32))
-        block_header["hash_merkle_root"] = ib2h(vds.read_bytes(32))
-        block_header["block_time"] = vds.read_uint32()
-        block_header["bits"] = vds.read_uint32()
-        block_header["nonce"] = vds.read_uint32()
-        header_end = vds.read_cursor
-        header = vds.input[header_start:header_end]
-        block_header["block_hash"] = ib2h(double_hash(header))
-        # block_header['__header__'] = b2h(header)
-        return block_header
-
-    def read_block(self, vds, only_header=False, use_txid=True):
-        block = self.read_block_header(vds)
-        if only_header:
-            return block
-        block["transaction_count"] = vds.read_compact_size()
-        block["transactions"] = []
-        for i in range(block["transaction_count"]):  # noqa: B007
-            block["transactions"].append(self.read_transaction(vds, use_txid=use_txid))
-        return block
 
     def prepare_data_stream(self, file_num, pos_in_file):
         if self.data_stream is None or file_num != self.file_num:
@@ -292,7 +189,7 @@ class BlockchainParser:
         block_undo_pos_in_file = ds.read_var_int()  # noqa: F841
         block_header = ds.read_bytes(80)  # noqa: F841
         self.prepare_data_stream(file_num, block_pos_in_file)
-        block = self.read_block(self.data_stream, only_header=only_header, use_txid=use_txid)
+        block = deserialize.read_block(self.data_stream, only_header=only_header, use_txid=use_txid)
         block["block_index"] = height
         block["tx_count"] = tx_count
         return block
@@ -316,33 +213,9 @@ class BlockchainParser:
 
         self.prepare_data_stream(file_num, tx_pos_in_file)
 
-        transaction = self.read_transaction(self.data_stream, use_txid=use_txid)
+        transaction = deserialize.read_transaction(self.data_stream, use_txid=use_txid)
 
         return transaction
-
-    def deserialize_tx(self, tx_hex, use_txid=None):
-        if tx_hex in DESERIALIZE_TX_CACHE:
-            return DESERIALIZE_TX_CACHE[tx_hex]
-
-        ds = BCDataStream()
-        ds.map_hex(tx_hex)
-        if use_txid is None:
-            use_txid = util.enabled("correct_segwit_txids")
-        tx = self.read_transaction(ds, use_txid=use_txid)
-
-        DESERIALIZE_TX_CACHE[tx_hex] = tx
-        if len(DESERIALIZE_TX_CACHE) > DESERIALIZE_TX_CACHE_MAX_SIZE:
-            DESERIALIZE_TX_CACHE.popitem(last=False)
-
-        return tx
-
-    def deserialize_block(self, block_hex, only_header=False, use_txid=None):
-        block_hex = ("00" * 8) + block_hex  # fake magic bytes and block size
-        ds = BCDataStream()
-        ds.map_hex(block_hex)
-        if use_txid is None:
-            use_txid = util.enabled("correct_segwit_txids")
-        return self.read_block(ds, only_header=only_header, use_txid=use_txid)
 
     def close(self):
         if self.current_block_file:

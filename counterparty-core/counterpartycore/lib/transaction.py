@@ -21,6 +21,7 @@ from counterpartycore.lib import (
     arc4,  # noqa: F401 # TODO: need for test: clean that up
     backend,
     config,
+    deserialize,
     exceptions,
     gettxinfo,
     ledger,
@@ -29,7 +30,6 @@ from counterpartycore.lib import (
     script,
     util,
 )
-from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser
 from counterpartycore.lib.transaction_helper import p2sh_encoding, serializer
 
 # Constants
@@ -836,7 +836,7 @@ class TransactionService:
                 # TODO: inject
                 gettxinfo.get_tx_info_new(
                     db,
-                    BlockchainParser().deserialize_tx(unsigned_tx_hex),
+                    deserialize.deserialize_tx(unsigned_tx_hex, use_txid=True),
                     util.CURRENT_BLOCK_INDEX,
                     p2sh_is_segwit=script.is_bech32(desired_source),
                     composing=True,
@@ -1664,8 +1664,12 @@ def info(db, rawtransaction: str, block_index: int = None):
     :param rawtransaction: Raw transaction in hex format (e.g. 01000000017828697743c03aef6a3a8ba54b22bf579ffcab8161faf20e7b20c4ecd75cc986010000006b483045022100d1bd0531bb1ed2dd2cbf77d6933273e792a3dbfa84327d419169850ddd5976f502205d1ab0f7bcbf1a0cc183f0520c9aa8f711d41cb790c0c4ac39da6da4a093d798012103d3b1f711e907acb556e239f6cafb6a4f7fe40d8dd809b0e06e739c2afd73f202ffffffff0200000000000000004d6a4bf29880b93b0711524c7ef9c76835752088db8bd4113a3daf41fc45ffdc8867ebdbf26817fae377696f36790e52f51005806e9399a427172fedf348cf798ed86e548002ee96909eef0775ec3c2b0100000000001976a91443434cf159cc585fbd74daa9c4b833235b19761b88ac00000000)
     :param block_index: Block index mandatory for transactions before block 335000
     """
-    source, destination, btc_amount, fee, data, extra = gettxinfo.get_tx_info(
-        db, BlockchainParser().deserialize_tx(rawtransaction), block_index=block_index
+    source, destination, btc_amount, fee, data, _extra = gettxinfo.get_tx_info(
+        db,
+        deserialize.deserialize_tx(
+            rawtransaction, use_txid=util.enabled("correct_segwit_txids", block_index)
+        ),
+        block_index=block_index,
     )
     result = {
         "source": source,

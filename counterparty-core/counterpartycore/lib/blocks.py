@@ -21,6 +21,7 @@ from counterpartycore.lib import (  # noqa: E402
     check,
     config,
     database,
+    deserialize,
     exceptions,
     ledger,
     message_type,
@@ -28,8 +29,6 @@ from counterpartycore.lib import (  # noqa: E402
     util,
 )
 from counterpartycore.lib.gettxinfo import get_tx_info  # noqa: E402
-from counterpartycore.lib.kickstart import blocks_parser
-from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
 
 from .messages import (  # noqa: E402
     bet,
@@ -665,7 +664,9 @@ def list_tx(
     if decoded_tx is None:
         if tx_hex is None:
             tx_hex = backend.getrawtransaction(tx_hash, block_index=block_index)
-        decoded_tx = BlockchainParser().deserialize_tx(tx_hex)
+        decoded_tx = deserialize.deserialize_tx(
+            tx_hex, use_txid=util.enabled("correct_segwit_txids")
+        )
 
     source, destination, btc_amount, fee, data, dispensers_outs = get_tx_info(
         db, decoded_tx, block_index, block_parser=block_parser
@@ -978,7 +979,7 @@ def get_decoded_block(block_index):
 
     block_hash = backend.getblockhash(block_index)
     raw_block = backend.getrawblock(block_hash)
-    block = blocks_parser.BlockchainParser().deserialize_block(raw_block)
+    block = deserialize.deserialize_block(raw_block)
     return block
 
 

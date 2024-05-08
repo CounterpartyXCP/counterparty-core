@@ -8,8 +8,7 @@ import traceback
 import zmq
 import zmq.asyncio
 
-from counterpartycore.lib import blocks, config, mempool
-from counterpartycore.lib.kickstart import blocks_parser
+from counterpartycore.lib import blocks, config, deserialize, mempool
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -57,7 +56,7 @@ class BlockchainWatcher:
 
         if topic == b"rawblock":
             # parse blocks as they come in
-            decoded_block = blocks_parser.BlockchainParser().deserialize_block(body.hex())
+            decoded_block = deserialize.deserialize_block(body.hex(), use_txid=True)
             blocks.parse_new_block(self.db, decoded_block)
             mempool.clean_mempool(self.db)
         elif topic == b"hashtx":

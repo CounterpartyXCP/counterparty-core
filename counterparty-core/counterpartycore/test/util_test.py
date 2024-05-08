@@ -36,6 +36,7 @@ from counterpartycore.lib import (  # noqa: E402
     check,
     config,
     database,
+    deserialize,
     exceptions,
     gettxinfo,
     ledger,
@@ -43,14 +44,11 @@ from counterpartycore.lib import (  # noqa: E402
     util,
 )
 from counterpartycore.lib.backend.indexd import (  # noqa: E402
-    extract_addresses,  # noqa: F401
     extract_addresses_from_txlist,
 )
-from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: E402
 from counterpartycore.test.fixtures.scenarios import (  # noqa: E402
     INTEGRATION_SCENARIOS,
-    UNITTEST_FIXTURE,  # noqa: F401
     standard_scenarios_params,
 )
 
@@ -206,7 +204,7 @@ def insert_raw_transaction(raw_transaction, db):
     tx_index = block_index - config.BURN_START + 1
     try:
         source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
-            db, BlockchainParser().deserialize_tx(raw_transaction, True), block_index
+            db, deserialize.deserialize_tx(raw_transaction, True), block_index
         )
         bindings = {
             "tx_index": tx_index,
@@ -253,7 +251,7 @@ def insert_unconfirmed_raw_transaction(raw_transaction, db):
     tx_index = tx_index + 1
 
     source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
-        db, BlockchainParser().deserialize_tx(raw_transaction, True), util.CURRENT_BLOCK_INDEX
+        db, deserialize.deserialize_tx(raw_transaction, True), util.CURRENT_BLOCK_INDEX
     )
     tx = {
         "tx_index": tx_index,
@@ -358,7 +356,7 @@ def prefill_rawtransactions_db(db):
         wallet_unspent = json.load(listunspent_test_file)
         for output in wallet_unspent:
             txid = output["txid"]
-            tx = BlockchainParser().deserialize_tx(output["txhex"], True)  # noqa: F841
+            tx = deserialize.deserialize_tx(output["txhex"], True)  # noqa: F841
             cursor.execute(
                 "INSERT INTO raw_transactions VALUES (?, ?, ?)",
                 (txid, output["txhex"], output["confirmations"]),

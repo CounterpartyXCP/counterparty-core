@@ -2,9 +2,8 @@ import binascii
 import logging
 import struct
 
-from counterpartycore.lib import arc4, backend, config, script, util
+from counterpartycore.lib import arc4, backend, config, deserialize, script, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
-from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser
 from counterpartycore.lib.kickstart.utils import ib2h
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.opcodes import *  # noqa: F403
@@ -148,7 +147,9 @@ def get_transaction_sources(decoded_tx, block_parser=None):
         else:
             # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
             vin_tx = backend.getrawtransaction(ib2h(vin["hash"]), block_index=None)
-            vin_ctx = BlockchainParser().deserialize_tx(vin_tx)
+            vin_ctx = deserialize.deserialize_tx(
+                vin_tx, use_txid=util.enabled("correct_segwit_txids")
+            )
 
         vout = vin_ctx["vout"][vin["n"]]
         outputs_value += vout["nValue"]
@@ -196,7 +197,9 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit, block_parser=No
         else:
             # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
             vin_tx = backend.getrawtransaction(ib2h(vin["hash"]), block_index=None)
-            vin_ctx = BlockchainParser().deserialize_tx(vin_tx)
+            vin_ctx = deserialize.deserialize_tx(
+                vin_tx, use_txid=util.enabled("correct_segwit_txids")
+            )
 
         if util.enabled("prevout_segwit_fix"):
             prevout_is_segwit = len(vin_ctx["vtxinwit"]) > 0
@@ -489,7 +492,9 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
         else:
             # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
             vin_tx = backend.getrawtransaction(ib2h(vin["hash"]), block_index=None)
-            vin_ctx = BlockchainParser().deserialize_tx(vin_tx)
+            vin_ctx = deserialize.deserialize_tx(
+                vin_tx, use_txid=util.enabled("correct_segwit_txids")
+            )
 
         vout = vin_ctx["vout"][vin["n"]]
         fee += vout["nValue"]
