@@ -23,6 +23,7 @@ from counterpartycore.lib import config, exceptions
 logger = logging.getLogger(config.LOGGER_NAME)
 
 CURRENT_BLOCK_INDEX = None
+CURRENT_TX_HASH = None
 
 D = decimal.Decimal
 B26_DIGITS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"

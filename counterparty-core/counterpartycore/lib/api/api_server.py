@@ -170,7 +170,7 @@ def execute_api_function(db, route, function_args):
     # cache everything for one block
     cache_key = f"{util.CURRENT_BLOCK_INDEX}:{request.url}"
     # except for blocks and transactions cached forever
-    if request.path.startswith("/blocks/") or request.path.startswith("/transactions/"):
+    if request.path.startswith("/v2/blocks/") or request.path.startswith("/v2/transactions/"):
         cache_key = request.url
 
     if cache_key in BLOCK_CACHE:
@@ -180,8 +180,10 @@ def execute_api_function(db, route, function_args):
             result = route["function"](db, **function_args)
         else:
             result = route["function"](**function_args)
-        # don't cache API v1
-        if route["function"].__name__ != "redirect_to_api_v1":
+        # don't cache API v1 and mempool queries
+        if route["function"].__name__ != "redirect_to_api_v1" and not request.path.startswith(
+            "/v2/mempool/"
+        ):
             BLOCK_CACHE[cache_key] = result
             if len(BLOCK_CACHE) > MAX_BLOCK_CACHE_SIZE:
                 BLOCK_CACHE.popitem(last=False)

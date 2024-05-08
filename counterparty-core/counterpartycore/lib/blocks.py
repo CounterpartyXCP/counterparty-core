@@ -98,6 +98,7 @@ SPINNER_STYLE = "bouncingBar"
 
 
 def parse_tx(db, tx):
+    util.CURRENT_TX_HASH = tx["tx_hash"]
     """Parse the transaction, return True for success."""
     cursor = db.cursor()
 
@@ -222,6 +223,7 @@ def parse_tx(db, tx):
         raise exceptions.ParseTransactionError(f"{e}")  # noqa: B904
     finally:
         cursor.close()
+        util.CURRENT_TX_HASH = None
 
 
 def parse_block(
@@ -583,11 +585,14 @@ def initialise(db):
                       category TEXT,
                       bindings TEXT,
                       timestamp INTEGER,
-                      event TEXT)
+                      event TEXT,
+                      tx_hash TEXT)
                   """)
     columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(messages)""")]
     if "event" not in columns:
         cursor.execute("""ALTER TABLE messages ADD COLUMN event TEXT""")
+    if "tx_hash" not in columns:
+        cursor.execute("""ALTER TABLE messages ADD COLUMN tx_hash TEXT""")
 
     # TODO: FOREIGN KEY (block_index) REFERENCES blocks(block_index) DEFERRABLE INITIALLY DEFERRED)
     database.create_indexes(
@@ -611,15 +616,14 @@ def initialise(db):
                         FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    """)
 
-    # Mempool messages
-    # NOTE: `status`, 'block_index` are removed from bindings.
-    cursor.execute("""DROP TABLE IF EXISTS mempool""")
-    cursor.execute("""CREATE TABLE mempool(
+    # Mempool events
+    cursor.execute("""CREATE TABLE IF NOT EXISTS mempool(
                       tx_hash TEXT,
                       command TEXT,
                       category TEXT,
                       bindings TEXT,
-                      timestamp INTEGER)
+                      timestamp INTEGER,
+                      event TEXT)
                   """)
     columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(mempool)""")]
     if "event" not in columns:

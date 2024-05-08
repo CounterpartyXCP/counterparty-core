@@ -46,6 +46,9 @@ class BlockchainWatcher:
         self.hash_by_sequence = {}
         self.last_block_check = 0
 
+        # clean mempool before starting
+        mempool.clean_mempool(self.db)
+
     def receive_message(self, topic, body, seq):
         sequence = "Unknown"
         if len(seq) == 4:
@@ -103,9 +106,7 @@ class BlockchainWatcher:
                     )
                     self.receive_message(topic, body, seq)
                 except zmq.ZMQError:
-                    logger.trace(
-                        "No rawblock message available ---------------------------------------------------"
-                    )
+                    logger.trace("No rawblock message available")
                     pass
                 self.last_block_check = time.time()
         except Exception as e:
