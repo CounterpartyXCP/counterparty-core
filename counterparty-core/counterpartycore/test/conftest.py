@@ -543,7 +543,9 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     monkeypatch.setattr("counterpartycore.lib.api.util.init_api_access_log", init_api_access_log)
     if hasattr(config, "PREFIX"):
         monkeypatch.setattr("counterpartycore.lib.config.PREFIX", b"TESTXXXX")
-    monkeypatch.setattr("counterpartycore.lib.backend.getrawtransaction", mocked_getrawtransaction)
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.getrawtransaction", mocked_getrawtransaction
+    )
     monkeypatch.setattr(
         "counterpartycore.lib.backend.getrawtransaction_batch", mocked_getrawtransaction_batch
     )

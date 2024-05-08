@@ -43,7 +43,7 @@ from counterpartycore.lib import (  # noqa: E402
     transaction,
     util,
 )
-from counterpartycore.lib.backend.indexd import (  # noqa: E402
+from counterpartycore.lib.backend.addrindexrs import (  # noqa: E402
     extract_addresses_from_txlist,
 )
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: E402
@@ -772,7 +772,6 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         or method == "get_tx_info_legacy"
         or tx_name == "transaction"
         or tx_name == "transaction_helper.serializer"
-        or method == "sortkeypicker"
         or tx_name == "backend"
         or tx_name == "message_type"
         or tx_name == "address"

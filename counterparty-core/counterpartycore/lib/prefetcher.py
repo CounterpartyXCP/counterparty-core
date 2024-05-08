@@ -49,8 +49,8 @@ class Prefetcher(threading.Thread):
             logger.debug(
                 f"Fetching block {block_index} with Prefetcher thread {self.thread_index}."
             )
-            block_hash = backend.getblockhash(block_index)
-            raw_block = backend.getrawblock(block_hash)
+            block_hash = backend.bitcoind.getblockhash(block_index)
+            raw_block = backend.bitcoind.getblock(block_hash)
             use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
             block = deserialize.deserialize_block(raw_block, use_txid=use_txid)
             backend.BLOCKCHAIN_CACHE[block_index] = block

@@ -26,7 +26,7 @@ def check_last_parsed_block(db, blockcount):
 
 def healthz_light(db):
     logger.debug("Performing light healthz check.")
-    latest_block_index = backend.getblockcount()
+    latest_block_index = backend.bitcoind.getblockcount()
     check_last_parsed_block(db, latest_block_index)
 
 
@@ -104,11 +104,6 @@ def remove_rowids(query_result):
     return query_result
 
 
-def getrawtransactions(tx_hashes, verbose=False, skip_missing=False, _retry=0):
-    txhash_list = tx_hashes.split(",")
-    return backend.getrawtransaction_batch(txhash_list, verbose, skip_missing, _retry)
-
-
 def pubkeyhash_to_pubkey(address: str, provided_pubkeys: str = None):
     """
     Get pubkey for an address.
@@ -128,7 +123,7 @@ def get_transaction(tx_hash: str, format: str = "json"):
     :param tx_hash: The transaction hash (e.g. 3190047bf2320bdcd0fade655ae49be309519d151330aa478573815229cc0018)
     :param format: Whether to return JSON output or raw hex (e.g. hex)
     """
-    return backend.getrawtransaction(tx_hash, verbose=(format == "json"))
+    return backend.bitcoind.getrawtransaction(tx_hash, verbose=(format == "json"))
 
 
 def get_oldest_transaction_by_address(address: str, block_index: int = None):
@@ -141,8 +136,8 @@ def get_oldest_transaction_by_address(address: str, block_index: int = None):
 
 
 def get_backend_height():
-    block_count = backend.getblockcount()
-    blocks_behind = backend.getindexblocksbehind()
+    block_count = backend.bitcoind.getblockcount()
+    blocks_behind = backend.bitcoind.getindexblocksbehind()
     return block_count + blocks_behind
 
 

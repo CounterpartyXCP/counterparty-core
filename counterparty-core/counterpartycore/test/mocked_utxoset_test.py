@@ -22,7 +22,7 @@ def test_search_raw_transactions_output():
     txs = backend.search_raw_transactions(ADDR[0], unconfirmed=True)
     tx = txs[0]
 
-    tx = backend.getrawtransaction(
+    tx = backend.bitcoind.getrawtransaction(
         "02f95716d3c93a1e81b926d9d8d5f05b6f382c115d9ecf0dd0bc9514b0e08649", verbose=True
     )
 

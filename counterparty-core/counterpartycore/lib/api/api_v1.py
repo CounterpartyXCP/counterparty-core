@@ -162,15 +162,15 @@ class BackendError(Exception):
 
 def check_backend_state():
     f"""Checks blocktime of last block to see if {config.BTC_NAME} Core is running behind."""  # noqa: B021
-    block_count = backend.getblockcount()
-    block_hash = backend.getblockhash(block_count)
-    cblock = backend.getblock(block_hash)
+    block_count = backend.bitcoind.getblockcount()
+    block_hash = backend.bitcoind.getblockhash(block_count)
+    cblock = backend.bitcoind.getblock(block_hash)
     time_behind = time.time() - cblock.nTime  # TODO: Block times are not very reliable.
     if time_behind > 60 * 60 * 2:  # Two hours.
         raise BackendError(f"Bitcoind is running about {round(time_behind / 3600)} hours behind.")
 
     # check backend index
-    blocks_behind = backend.getindexblocksbehind()
+    blocks_behind = backend.bitcoind.getindexblocksbehind()
     if blocks_behind > 5:
         raise BackendError(f"Indexd is running {blocks_behind} blocks behind.")
 
@@ -519,7 +519,7 @@ class APIStatusPoller(threading.Thread):
                         check_backend_state()
                         code = 12
                         logger.debug("Checking database state.")
-                        api_util.check_last_parsed_block(self.db, backend.getblockcount())
+                        api_util.check_last_parsed_block(self.db, backend.bitcoind.getblockcount())
                         self.last_database_check = time.time()
             except (BackendError, DatabaseError) as e:
                 exception_name = e.__class__.__name__
@@ -652,7 +652,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_supply(asset):
             if asset == "BTC":
-                return backend.get_btc_supply(normalize=False)
+                return backend.bitcoind.get_btc_supply(normalize=False)
             elif asset == "XCP":
                 return ledger.xcp_supply(self.db)
             else:
@@ -680,7 +680,7 @@ class APIServer(threading.Thread):
                 # BTC and XCP.
                 if asset in [config.BTC, config.XCP]:
                     if asset == config.BTC:
-                        supply = backend.get_btc_supply(normalize=False)
+                        supply = backend.bitcoind.get_btc_supply(normalize=False)
                     else:
                         supply = ledger.xcp_supply(self.db)
 
@@ -741,7 +741,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def fee_per_kb(conf_target=config.ESTIMATE_FEE_CONF_TARGET, mode=config.ESTIMATE_FEE_MODE):
-            return backend.fee_per_kb(conf_target, mode)
+            return backend.bitcoind.fee_per_kb(conf_target, mode)
 
         @dispatcher.add_method
         def get_blocks(block_indexes, min_message_index=None):
@@ -794,7 +794,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_running_info():
-            latest_block_index = backend.getblockcount()
+            latest_block_index = backend.bitcoind.getblockcount()
 
             try:
                 api_util.check_last_parsed_block(self.db, latest_block_index)
@@ -823,7 +823,7 @@ class APIServer(threading.Thread):
                 last_message = None
 
             try:
-                indexd_blocks_behind = backend.getindexblocksbehind()
+                indexd_blocks_behind = backend.bitcoind.getindexblocksbehind()
             except:  # noqa: E722
                 indexd_blocks_behind = latest_block_index if latest_block_index > 0 else 999999
             indexd_caught_up = indexd_blocks_behind <= 1
@@ -949,7 +949,9 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
-            return backend.getrawtransaction(tx_hash, verbose=verbose, skip_missing=skip_missing)
+            return backend.bitcoind.getrawtransaction(
+                tx_hash, verbose=verbose, skip_missing=skip_missing
+            )
 
         @dispatcher.add_method
         def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):

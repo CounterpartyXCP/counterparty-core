@@ -4,6 +4,7 @@ from counterpartycore.lib import (
     transaction,
 )
 from counterpartycore.lib.api import util
+from counterpartycore.lib.backend import bitcoind
 
 # Define the API routes except root (`/`) defined in `api_server.py`
 ROUTES = util.prepare_routes(
@@ -98,7 +99,7 @@ ROUTES = util.prepare_routes(
         "/v2/bitcoin/addresses/<address>/utxos": backend.get_unspent_txouts,
         "/v2/bitcoin/addresses/<address>/pubkey": util.pubkeyhash_to_pubkey,
         "/v2/bitcoin/transactions/<tx_hash>": util.get_transaction,
-        "/v2/bitcoin/estimatesmartfee": backend.fee_per_kb,
+        "/v2/bitcoin/estimatesmartfee": bitcoind.fee_per_kb,
         ### /mempool ###
         "/v2/mempool/events": ledger.get_all_mempool_events,
         "/v2/mempool/events/<event>": ledger.get_mempool_events_by_name,

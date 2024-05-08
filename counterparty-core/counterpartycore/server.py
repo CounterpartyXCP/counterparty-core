@@ -631,7 +631,7 @@ def initialise_db():
 
 def connect_to_backend():
     if not config.FORCE:
-        backend.getblockcount()
+        backend.bitcoind.getblockcount()
 
 
 def connect_to_addrindexrs():

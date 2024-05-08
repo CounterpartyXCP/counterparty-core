@@ -1,6 +1,5 @@
 import collections
 import concurrent.futures
-import functools
 import hashlib
 import json
 import logging
@@ -11,10 +10,9 @@ import threading
 import time
 
 import bitcoin.wallet
-import requests
-from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
 
 from counterpartycore.lib import config, exceptions, util
+from counterpartycore.lib.backend.bitcoind import getblockcount, rpc_call
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -41,97 +39,6 @@ class AddrIndexRsRPCError(Exception):
 
 class AddrIndexRsClientError(Exception):
     pass
-
-
-def rpc_call(payload):
-    """Calls to bitcoin core and returns the response"""
-    url = config.BACKEND_URL
-    response = None
-
-    tries = 0
-    broken_error = None
-    while True:
-        try:
-            tries += 1
-            response = requests.post(
-                url,
-                data=json.dumps(payload),
-                headers={"content-type": "application/json"},
-                verify=(not config.BACKEND_SSL_NO_VERIFY),
-                timeout=config.REQUESTS_TIMEOUT,
-            )
-
-            if response == None:  # noqa: E711
-                if config.TESTNET:
-                    network = "testnet"
-                elif config.REGTEST:
-                    network = "regtest"
-                else:
-                    network = "mainnet"
-                raise BackendRPCError(
-                    f"Cannot communicate with backend at `{util.clean_url_for_log(url)}`. (server is set to run on {network}, is backend?)"
-                )
-            elif response.status_code in (401,):
-                raise BackendRPCError(
-                    f"Authorization error connecting to {util.clean_url_for_log(url)}: {response.status_code} {response.reason}"
-                )
-            elif response.status_code not in (200, 500):
-                raise BackendRPCError(str(response.status_code) + " " + response.reason)
-
-            else:
-                break
-        except KeyboardInterrupt:
-            logger.warning("Interrupted by user")
-            exit(0)
-        except (Timeout, ReadTimeout, ConnectionError, ChunkedEncodingError):
-            logger.debug(
-                f"Could not connect to backend at `{util.clean_url_for_log(url)}`. (Try {tries})"
-            )
-            time.sleep(5)
-        except Exception as e:
-            broken_error = e
-            break
-    if broken_error:
-        raise broken_error
-
-    # Handle json decode errors
-    try:
-        response_json = response.json()
-    except json.decoder.JSONDecodeError as e:  # noqa: F841
-        raise BackendRPCError(  # noqa: B904
-            f"Received invalid JSON from backend with a response of {str(response.status_code) + ' ' + response.reason}"
-        )
-
-    # Batch query returns a list
-    if isinstance(response_json, list):
-        return response_json
-    if "error" not in response_json.keys() or response_json["error"] == None:  # noqa: E711
-        return response_json["result"]
-    elif response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
-        raise BackendRPCError(
-            f"{response_json['error']} Is `txindex` enabled in {config.BTC_NAME} Core?"
-        )
-    elif response_json["error"]["code"] in [-28, -8, -2]:
-        # “Verifying blocks...” or “Block height out of range” or “The network does not appear to fully agree!“
-        logger.debug(f"Backend not ready. Sleeping for ten seconds. ({response_json['error']})")
-        # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
-        # seconds to start, this’ll hit the maximum recursion depth limit.
-        time.sleep(10)
-        return rpc_call(payload)
-    else:
-        raise BackendRPCError(
-            f"Error connecting to {util.clean_url_for_log(url)}: {response_json['error']}"
-        )
-
-
-def rpc(method, params):
-    payload = {
-        "method": method,
-        "params": params,
-        "jsonrpc": "2.0",
-        "id": 0,
-    }
-    return rpc_call(payload)
 
 
 def rpc_batch(request_list):
@@ -191,49 +98,6 @@ def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
                     tx_hashes_addresses[tx_hash].update(tuple(vout["scriptPubKey"]["addresses"]))
 
     return tx_hashes_addresses, tx_hashes_tx
-
-
-def getblockcount():
-    return rpc("getblockcount", [])
-
-
-def getblockhash(blockcount):
-    return rpc("getblockhash", [blockcount])
-
-
-def getrawblock(block_hash):
-    return rpc("getblock", [block_hash, 0])
-
-
-@functools.lru_cache
-def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
-    # logger.debug(f"Cache miss on transaction {tx_hash}!")
-    return getrawtransaction_batch([tx_hash], verbose=verbose, skip_missing=skip_missing)[tx_hash]
-
-
-def getrawmempool():
-    return rpc("getrawmempool", [])
-
-
-def fee_per_kb(conf_target, mode, nblocks=None):
-    """
-    :param conf_target:
-    :param mode:
-    :return: fee_per_kb in satoshis, or None when unable to determine
-    """
-    if nblocks is None and conf_target is None:
-        conf_target = nblocks
-
-    feeperkb = rpc("estimatesmartfee", [conf_target, mode])
-
-    if "errors" in feeperkb and feeperkb["errors"][0] == "Insufficient data or no feerate found":
-        return None
-
-    return int(max(feeperkb["feerate"] * config.UNIT, config.DEFAULT_FEE_PER_KB_ESTIMATE_SMART))
-
-
-def sendrawtransaction(tx_hex):
-    return rpc("sendrawtransaction", [tx_hex])
 
 
 GETRAWTRANSACTION_MAX_RETRIES = 2
@@ -693,12 +557,6 @@ def get_oldest_tx_legacy(address):
         return txs
 
     return {}
-
-
-# Returns the number of blocks the backend is behind the node
-def getindexblocksbehind():
-    # Addrindexrs never "gets behind"
-    return 0
 
 
 def init():

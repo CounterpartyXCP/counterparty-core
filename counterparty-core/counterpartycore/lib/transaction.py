@@ -263,7 +263,7 @@ class TransactionService:
 
     def make_outkey_vin_txid(self, txid, vout):
         if (txid, vout) not in self.utxo_p2sh_encoding_locks_cache:
-            txhex = self.backend.getrawtransaction(txid, verbose=False)
+            txhex = self.backend.bitcoind.getrawtransaction(txid, verbose=False)
             self.utxo_p2sh_encoding_locks_cache.set((txid, vout), make_outkey_vin(txhex, vout))
 
         return self.utxo_p2sh_encoding_locks_cache.get((txid, vout))
@@ -327,7 +327,7 @@ class TransactionService:
 
         # use backend estimated fee_per_kb
         if estimate_fee_per_kb:
-            estimated_fee_per_kb = self.backend.fee_per_kb(
+            estimated_fee_per_kb = self.backend.bitcoind.fee_per_kb(
                 estimate_fee_per_kb_nblocks, config.ESTIMATE_FEE_MODE
             )
             if estimated_fee_per_kb is not None:
@@ -830,8 +830,6 @@ class TransactionService:
 
         # Parsed transaction info.
         try:
-            if pretx_txid and unsigned_pretx:
-                self.backend.cache_pretx(pretx_txid, unsigned_pretx)
             parsed_source, parsed_destination, x, y, parsed_data, extra = (
                 # TODO: inject
                 gettxinfo.get_tx_info_new(
@@ -846,9 +844,6 @@ class TransactionService:
             if encoding == "p2sh":
                 # make_canonical can't determine the address, so we blindly change the desired to the parsed
                 desired_source = parsed_source
-
-            if pretx_txid and unsigned_pretx:
-                self.backend.clear_pretx(pretx_txid)
         except exceptions.BTCOnlyError:
             # Skip BTC‐only transactions.
             if extended_tx_info:

@@ -1088,7 +1088,7 @@ def get_asset_info(db, asset: str):
     }
 
     if asset_name == config.BTC:
-        asset_info["supply"] = backend.get_btc_supply(normalize=False)
+        asset_info["supply"] = backend.bitcoind.get_btc_supply(normalize=False)
         return asset_info
 
     if asset_name == config.XCP:

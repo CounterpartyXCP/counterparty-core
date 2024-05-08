@@ -663,7 +663,7 @@ def list_tx(
     # Get the important details about each transaction.
     if decoded_tx is None:
         if tx_hex is None:
-            tx_hex = backend.getrawtransaction(tx_hash, block_index=block_index)
+            tx_hex = backend.bitcoind.getrawtransaction(tx_hash, block_index=block_index)
         decoded_tx = deserialize.deserialize_tx(
             tx_hex, use_txid=util.enabled("correct_segwit_txids")
         )
@@ -977,9 +977,10 @@ def get_decoded_block(block_index):
         del backend.BLOCKCHAIN_CACHE[block_index]
         return block
 
-    block_hash = backend.getblockhash(block_index)
-    raw_block = backend.getrawblock(block_hash)
-    block = deserialize.deserialize_block(raw_block)
+    block_hash = backend.bitcoind.getblockhash(block_index)
+    raw_block = backend.bitcoind.getblock(block_hash)
+    use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
+    block = deserialize.deserialize_block(raw_block, use_txid=use_txid)
     return block
 
 
@@ -1014,7 +1015,7 @@ def catch_up(db, check_asset_conservation=True):
         util.CURRENT_BLOCK_INDEX = config.BLOCK_FIRST
 
     # Get block count.
-    block_count = backend.getblockcount()
+    block_count = backend.bitcoind.getblockcount()
 
     # If we're far behind, start Prefetcher.
     if util.CURRENT_BLOCK_INDEX <= block_count - 2000:
@@ -1032,7 +1033,7 @@ def catch_up(db, check_asset_conservation=True):
         tx_index = parse_new_block(db, decoded_block, block_parser=None, tx_index=tx_index)
 
         # Refresh block count.
-        block_count = backend.getblockcount()
+        block_count = backend.bitcoind.getblockcount()
 
     if config.CHECK_ASSET_CONSERVATION and check_asset_conservation:
         # TODO: timer to check asset conservation every N hours

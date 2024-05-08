@@ -1,7 +1,14 @@
+import binascii
 import time
 
-from counterpartycore.lib import backend, deserialize
+import bitcoin as bitcoinlib
+
+from counterpartycore.lib import deserialize
 from counterpartycore.lib.kickstart import utils
+
+
+def deserialize_bitcoinlib(tx_hex):
+    return bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
 
 
 def test_deserialize():
@@ -52,7 +59,7 @@ def test_deserialize():
         "01000000023031e115e560c0d468459d7db35f5ab1992eaa0ab6aa0d6da49e2b8bcf1bb915010000006a47304402205535a9ac25844514828bff3580120d5add488e09b7a6e62018fc265aabf95fe302200b66d4eb23fc348b31d58729b479ae73db9dfc467edf38f8dfd927c48cb46b5801210219fbee4b9cc12188598f244ff0ee352b124cbf9046180a1b25e020c0258f9d64fffffffff2efdee1e775d962f7be96964adb352f9ef748a360749d6b74c69854a5c70a840c0000006a47304402203a28d10c786907fcb71c7bf69c507d58884ea9af2e7fa3b413d4e2867eca601502205fb253d82e4daa2672842ec031584ea7a215774422aa7de3cf8928c240e2faa60121030be5aa6d5de8c6dd89d6ac4d0e2a112caf5b12801349ab30fbdf2b205f0b94b8ffffffff02b60e0100000000001976a914f133f0339987cd84b6017517de2a93f009728d7e88acfdd7c400000000001976a91406c3bc40cde01312e2b24f8d2c23e68ea7d572f888ac00000000",
     ]
     for hex in transactions_hex:
-        decoded_tx_bitcoinlib = backend.deserialize(hex)
+        decoded_tx_bitcoinlib = deserialize_bitcoinlib(hex)
         decoded_tx_parser = deserialize.deserialize_tx(hex, use_txid=False)
 
         for i, vin in enumerate(decoded_tx_bitcoinlib.vin):
@@ -84,7 +91,7 @@ def test_deserialize():
     start_time = time.time()
     for i in range(iterations):  # noqa: B007
         for hex in transactions_hex:
-            backend.deserialize(hex)
+            deserialize_bitcoinlib(hex)
     end_time = time.time()
     print(
         f"Time to deserialize  {4 * iterations} transactions with bitcoinlib: {end_time - start_time} seconds"
