@@ -101,3 +101,7 @@ class BlockNotFoundError(Exception):
 
 class BitcoindRPCError(Exception):
     pass
+
+
+class UnknownPubKeyError(Exception):
+    pass

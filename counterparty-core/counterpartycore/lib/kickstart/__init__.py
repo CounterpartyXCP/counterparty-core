@@ -304,7 +304,7 @@ def cleanup(kickstart_db, block_parser):
             block_parser.close()
         except (Empty, FileNotFoundError):
             pass
-        backend.stop()
+        backend.addrindexrs.stop()
         # remove kickstart tables if all blocks have been parsed
         clean_kicstart_blocks(kickstart_db)
     print(f"{OK_GREEN} {step}")

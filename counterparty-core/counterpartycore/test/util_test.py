@@ -998,7 +998,7 @@ def reparse(testnet=True, checkpoint_count=5):
 
     # mock the backend
     server.connect_to_addrindexrs = connect_to_addrindexrs_mock
-    backend.get_oldest_tx = get_oldest_tx_mock
+    backend.addrindexrs.get_oldest_tx = get_oldest_tx_mock
 
     # create a new in-memory DB
     options = dict(COUNTERPARTYD_OPTIONS)

@@ -8,6 +8,7 @@ from counterpartycore.lib import backend, config, deserialize, util
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
+BLOCKCHAIN_CACHE = {}
 BLOCKCHAIN_CACHE_MAX_SIZE = 100
 PREFETCHER_THREADS = []
 NEXT_BLOCK_TO_PREFETCH = queue.Queue()
@@ -35,7 +36,7 @@ class Prefetcher(threading.Thread):
             if self.stop_event.is_set():
                 break
 
-            if len(backend.BLOCKCHAIN_CACHE) >= BLOCKCHAIN_CACHE_MAX_SIZE:
+            if len(BLOCKCHAIN_CACHE) >= BLOCKCHAIN_CACHE_MAX_SIZE:
                 logger.debug(
                     f"Blockchain cache is full. Sleeping Prefetcher thread {self.thread_index}."
                 )
@@ -53,7 +54,7 @@ class Prefetcher(threading.Thread):
             raw_block = backend.bitcoind.getblock(block_hash)
             use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
             block = deserialize.deserialize_block(raw_block, use_txid=use_txid)
-            backend.BLOCKCHAIN_CACHE[block_index] = block
+            BLOCKCHAIN_CACHE[block_index] = block
 
 
 def start_all(num_prefetcher_threads):

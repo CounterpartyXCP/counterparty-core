@@ -638,7 +638,6 @@ def connect_to_addrindexrs():
     step = "Connecting to `addrindexrs`..."
     with Halo(text=step, spinner=SPINNER_STYLE):
         util.CURRENT_BLOCK_INDEX = 0
-        backend.backend()
         check_addrindexrs = {}
         while check_addrindexrs == {}:
             check_address = (
@@ -646,7 +645,7 @@ def connect_to_addrindexrs():
                 if config.TESTNET
                 else "1GsjsKKT4nH4GPmDnaxaZEDWgoBpmexwMA"
             )
-            check_addrindexrs = backend.get_oldest_tx(check_address, 99999999999)
+            check_addrindexrs = backend.addrindexrs.get_oldest_tx(check_address, 99999999999)
             if check_addrindexrs == {}:
                 logger.info("`addrindexrs` is not ready. Waiting one second.")
                 time.sleep(1)
@@ -738,7 +737,7 @@ def start_all(args):
             api_server_v2.stop()
         if mempool_watcher:
             mempool_watcher.stop()
-        backend.stop()
+        backend.addrindexrs.stop()
         if db:
             database.optimize(db)
             logger.info("Closing database...")
@@ -753,7 +752,7 @@ def reparse(block_index):
     try:
         blocks.reparse(db, block_index=block_index)
     finally:
-        backend.stop()
+        backend.addrindexrs.stop()
         database.optimize(db)
         db.close()
 

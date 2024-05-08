@@ -30,6 +30,7 @@ from counterpartycore.lib import (
     script,
     util,
 )
+from counterpartycore.lib.backend import addrindexrs
 from counterpartycore.lib.transaction_helper import p2sh_encoding, serializer
 
 # Constants
@@ -203,6 +204,54 @@ def sort_unspent_txouts(unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE):
     return unspent
 
 
+def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
+    # Search provided pubkeys.
+    if provided_pubkeys:
+        if type(provided_pubkeys) != list:  # noqa: E721
+            provided_pubkeys = [provided_pubkeys]
+        for pubkey in provided_pubkeys:
+            if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                return pubkey
+            elif pubkeyhash == script.pubkey_to_p2whash(util.unhexlify(pubkey)):
+                return pubkey
+
+    # Search blockchain.
+    raw_transactions = addrindexrs.search_raw_transactions(pubkeyhash, unconfirmed=True)
+    for tx_id in raw_transactions:
+        tx = raw_transactions[tx_id]
+        for vin in tx["vin"]:
+            if "txinwitness" in vin:
+                if len(vin["txinwitness"]) >= 2:
+                    # catch unhexlify errs for when txinwitness[1] isn't a witness program (eg; for P2W)
+                    try:
+                        pubkey = vin["txinwitness"][1]
+                        if pubkeyhash == script.pubkey_to_p2whash(util.unhexlify(pubkey)):
+                            return pubkey
+                    except binascii.Error:
+                        pass
+            elif "coinbase" not in vin:
+                scriptsig = vin["scriptSig"]
+                asm = scriptsig["asm"].split(" ")
+                if len(asm) >= 2:
+                    # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
+                    try:
+                        pubkey = asm[1]
+                        if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                            return pubkey
+                    except binascii.Error:
+                        pass
+
+    raise exceptions.UnknownPubKeyError(
+        "Public key was neither provided nor published in blockchain."
+    )
+
+
+def multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys=None):
+    signatures_required, pubkeyhashes, signatures_possible = script.extract_array(address)
+    pubkeys = [pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys) for pubkeyhash in pubkeyhashes]
+    return script.construct_array(signatures_required, pubkeys, signatures_possible)
+
+
 # set higher than the max number of UTXOs we should expect to
 # manage in an aging cache for any one source address, at any one period
 # UTXO_P2SH_ENCODING_LOCKS is TTLCache for UTXOs that are used for chaining p2sh encoding
@@ -261,11 +310,11 @@ class TransactionService:
         # inject `script`
         if script.is_multisig(source):
             a, self_pubkeys, b = script.extract_array(
-                self.backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
+                multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
             )
             dust_return_pubkey_hex = self_pubkeys[0]
         else:
-            dust_return_pubkey_hex = self.backend.pubkeyhash_to_pubkey(source, provided_pubkeys)
+            dust_return_pubkey_hex = pubkeyhash_to_pubkey(source, provided_pubkeys)
 
         # Convert hex public key into the (binary) dust return pubkey.
         try:
@@ -533,7 +582,7 @@ class TransactionService:
 
         # Normalize source
         if script.is_multisig(source):
-            source_address = self.backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
+            source_address = multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
         else:
             source_address = source
 
@@ -591,9 +640,7 @@ class TransactionService:
                 if script.is_multisig(address):
                     destination_outputs_new.append(
                         (
-                            self.backend.multisig_pubkeyhashes_to_pubkeys(
-                                address, provided_pubkeys
-                            ),
+                            multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys),
                             value,
                         )
                     )
@@ -950,11 +997,11 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
     # Get hex dust return pubkey.
     if script.is_multisig(source):
         a, self_pubkeys, b = script.extract_array(
-            backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
+            multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
         )
         dust_return_pubkey_hex = self_pubkeys[0]
     else:
-        dust_return_pubkey_hex = backend.pubkeyhash_to_pubkey(source, provided_pubkeys)
+        dust_return_pubkey_hex = pubkeyhash_to_pubkey(source, provided_pubkeys)
 
     # Convert hex public key into the (binary) dust return pubkey.
     try:

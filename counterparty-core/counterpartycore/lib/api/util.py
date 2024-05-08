@@ -114,7 +114,7 @@ def pubkeyhash_to_pubkey(address: str, provided_pubkeys: str = None):
         provided_pubkeys_list = provided_pubkeys.split(",")
     else:
         provided_pubkeys_list = None
-    return backend.pubkeyhash_to_pubkey(address, provided_pubkeys=provided_pubkeys_list)
+    return transaction.pubkeyhash_to_pubkey(address, provided_pubkeys=provided_pubkeys_list)
 
 
 def get_transaction(tx_hash: str, format: str = "json"):
@@ -132,7 +132,9 @@ def get_oldest_transaction_by_address(address: str, block_index: int = None):
     :param address: The address to search for. (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
     :param block_index: The block index to search from.
     """
-    return backend.get_oldest_tx(address, block_index=block_index or util.CURRENT_BLOCK_INDEX)
+    return backend.addrindexrs.get_oldest_tx(
+        address, block_index=block_index or util.CURRENT_BLOCK_INDEX
+    )
 
 
 def get_backend_height():

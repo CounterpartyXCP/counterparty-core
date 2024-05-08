@@ -930,7 +930,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_oldest_tx(address):
-            return backend.get_oldest_tx(address, block_index=util.CURRENT_BLOCK_INDEX)
+            return backend.addrindexrs.get_oldest_tx(address, block_index=util.CURRENT_BLOCK_INDEX)
 
         @dispatcher.add_method
         def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None, order_by=None):
@@ -993,7 +993,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         # TODO: Rename this method.
         def search_pubkey(pubkeyhash, provided_pubkeys=None):
-            return backend.pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=provided_pubkeys)
+            return transaction.pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=provided_pubkeys)
 
         @dispatcher.add_method
         def get_dispenser_info(tx_hash=None, tx_index=None):

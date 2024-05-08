@@ -947,7 +947,7 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
                 # Cache transaction. We do that here because the block is fetched by another process.
                 block_parser.put_in_cache(transaction)
             # update transaction cache first time we see the transaction
-            backend.BLOCKCHAIN_CACHE[transaction["tx_hash"]] = transaction
+            prefetcher.BLOCKCHAIN_CACHE[transaction["tx_hash"]] = transaction
             tx_index = list_tx(
                 db,
                 decoded_block["block_hash"],
@@ -972,9 +972,9 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
 
 
 def get_decoded_block(block_index):
-    if block_index in backend.BLOCKCHAIN_CACHE:
-        block = backend.BLOCKCHAIN_CACHE[block_index]
-        del backend.BLOCKCHAIN_CACHE[block_index]
+    if block_index in prefetcher.BLOCKCHAIN_CACHE:
+        block = prefetcher.BLOCKCHAIN_CACHE[block_index]
+        del prefetcher.BLOCKCHAIN_CACHE[block_index]
         return block
 
     block_hash = backend.bitcoind.getblockhash(block_index)

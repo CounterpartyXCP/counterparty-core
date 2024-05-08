@@ -560,6 +560,7 @@ def init():
 
 
 def stop():
+    logger.info("Stopping addrindexrs thread...")
     if "INDEXER_THREAD" in globals() and INDEXER_THREAD is not None:
         INDEXER_THREAD.stop()
 
@@ -649,6 +650,7 @@ ADDRINDEXRS_CLIENT = None
 
 
 def get_oldest_tx(address: str, block_index: int):
+    init()
     if block_index is None:
         raise ValueError("block_index is required")
     current_block_index = block_index
