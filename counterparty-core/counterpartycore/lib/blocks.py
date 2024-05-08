@@ -900,14 +900,15 @@ def get_next_tx_index(db):
 
 
 def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
-    util.CURRENT_BLOCK_INDEX = decoded_block["block_index"]
+    # increment block index
+    util.CURRENT_BLOCK_INDEX += 1
 
     # get next tx index if not provided
     if tx_index is None:
         tx_index = get_next_tx_index(db)
 
     # get previous block
-    previous_block = ledger.get_block(db, decoded_block["block_index"] - 1)
+    previous_block = ledger.get_block(db, util.CURRENT_BLOCK_INDEX - 1)
 
     # check if reorg is needed
     if decoded_block["hash_prev"] != previous_block["block_hash"]:
@@ -924,7 +925,8 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
         rollback(db, block_index=new_block_index)
         # update the current block index
         util.CURRENT_BLOCK_INDEX = new_block_index
-        decoded_block["block_index"] = new_block_index
+
+    decoded_block["block_index"] = util.CURRENT_BLOCK_INDEX
 
     with db:  # ensure all the block or nothing
         # insert block
@@ -1022,12 +1024,10 @@ def catch_up(db, check_asset_conservation=True):
 
     while util.CURRENT_BLOCK_INDEX < block_count:
         print(f"Block {util.CURRENT_BLOCK_INDEX}/{block_count}")
-        # increment block index
-        util.CURRENT_BLOCK_INDEX = util.CURRENT_BLOCK_INDEX + 1
 
         # Get block information and transactions
-        decoded_block = get_decoded_block(util.CURRENT_BLOCK_INDEX)
-        decoded_block["block_index"] = util.CURRENT_BLOCK_INDEX
+        decoded_block = get_decoded_block(util.CURRENT_BLOCK_INDEX + 1)
+        # util.CURRENT_BLOCK_INDEX is incremented in parse_new_block
         tx_index = parse_new_block(db, decoded_block, block_parser=None, tx_index=tx_index)
 
         # Refresh block count.
