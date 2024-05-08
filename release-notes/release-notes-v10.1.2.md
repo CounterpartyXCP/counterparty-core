@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v10.1.2 (2024-05-06)
+# Release Notes - Counterparty Core v10.1.2 (2024-05-08)
 
 This version of Counterparty Core marks the release of API v2, a new RESTful API—see the [official project documentation](https://docs.counterparty.io/docs/advanced/api-v2/node-api/). The new API is available at `/v2/`, while the old API is now available at `/v1/` in addition to `/`.
 
@@ -22,7 +22,7 @@ This release maintains full backwards-compatibility and includes no protocol cha
 * Release API v2
 * Have both API v1 and v2 return `ready` if the last block is less than one minute old
 * Add an index on the `block_index` field in the `credits` and `debits` tables
-* Add `TRACE  level to Python logging
+* Add `TRACE` level to Python logging
 * Add basic anonymous node telemetry
 
 ## Command-Line Interface
