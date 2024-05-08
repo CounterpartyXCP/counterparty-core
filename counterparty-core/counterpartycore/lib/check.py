@@ -1,12 +1,11 @@
 import json
 import logging
 import sys
-import time  # noqa: F401
 import warnings
 
 import requests
 
-from counterpartycore.lib import config, database, exceptions, ledger, util  # noqa: F401
+from counterpartycore.lib import config, database, ledger, util  # noqa: F401
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -632,6 +631,10 @@ CHECKPOINTS_MAINNET = {
         "ledger_hash": "e41bae2ddd431d1ddfeb9403b1b2f04e2ea75baeb991636e1a7fc5b4302605f4",
         "txlist_hash": "76ff941f15588a41124839acc80cc655407242154ba452285a348f17146807b7",
     },
+    842208: {
+        "ledger_hash": "6440b7d750fd29c2e9714df93989859cac1adef2b6098a7e1ef6d5ca7bb4f366",
+        "txlist_hash": "6e49153c8042f20227ffc52b4df7a450a8f8416230081e373dabf11e9aceb63d",
+    },
 }
 
 CONSENSUS_HASH_VERSION_TESTNET = 7
@@ -811,7 +814,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
     assert field in ("ledger_hash", "txlist_hash", "messages_hash")
 
     cursor = db.cursor()
-    block_index = ledger.CURRENT_BLOCK_INDEX
+    block_index = util.CURRENT_BLOCK_INDEX
 
     # Initialise previous hash on first block.
     if block_index <= config.BLOCK_FIRST:
@@ -938,7 +941,7 @@ def check_change(protocol_change, change_name):
         explanation += (
             f"Reason: ‘{change_name}’. Please upgrade to the latest version and restart the server."
         )
-        if ledger.CURRENT_BLOCK_INDEX >= protocol_change["block_index"]:
+        if util.CURRENT_BLOCK_INDEX >= protocol_change["block_index"]:
             raise VersionUpdateRequiredError(explanation)
         else:
             warnings.warn(explanation)  # noqa: B028

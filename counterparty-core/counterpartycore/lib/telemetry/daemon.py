@@ -1,10 +1,17 @@
 import threading  # noqa: I001
 import time
+import logging
 
-from .collector import TelemetryCollectorI
-from .client import TelemetryClientI
+
+from counterpartycore.lib.telemetry.collectors.interface import TelemetryCollectorI
+from counterpartycore.lib.telemetry.clients.interface import TelemetryClientI
+
+
+from counterpartycore.lib import config
 
 DEFAULT_INTERVAL = 60
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 
 class TelemetryDaemon:
@@ -18,7 +25,7 @@ class TelemetryDaemon:
         self.thread.daemon = True
         self.client = client
         self.collector = collector
-        self.interval = interval
+        self.interval = interval  # must be greater than 0.5
         self.is_running = False
 
     def start(self):
@@ -26,11 +33,22 @@ class TelemetryDaemon:
         self.thread.start()
 
     def _run(self):
+        last_run = time.time()
         while self.is_running:
-            data = self.collector.collect()
-            self.client.send(data)
-            time.sleep(self.interval)
+            try:
+                if time.time() - last_run < self.interval:
+                    time.sleep(0.5)
+                    continue
+                data = self.collector.collect()
+                if data:
+                    self.client.send(data)
+                    last_run = time.time()
+            except Exception as e:
+                logger.exception(f"Error in telemetry daemon: {e}")
+                time.sleep(0.5)
 
     def stop(self):
+        logger.info("Stopping telemetry daemon...")
         self.is_running = False
+        self.collector.close()
         self.thread.join()

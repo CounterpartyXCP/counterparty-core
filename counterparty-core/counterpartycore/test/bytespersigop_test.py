@@ -1,9 +1,7 @@
 import binascii
-import pprint  # noqa: F401
 import tempfile
 
 import bitcoin as bitcoinlib
-import pytest  # noqa: F401
 
 from counterpartycore.lib import api, blocks, exceptions, ledger, transaction, util  # noqa: F401
 from counterpartycore.test import (
@@ -21,12 +19,12 @@ FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
 
 
 def test_bytespersigop(server_db):
-    assert ledger.enabled("bytespersigop") == False  # noqa: E712
+    assert util.enabled("bytespersigop") == False  # noqa: E712
 
     transaction.initialise()
 
     # ADDR[0], bytespersigop=False, desc 41 bytes, opreturn
-    txhex = api.compose_transaction(
+    txhex = transaction.compose_transaction(
         server_db,
         "issuance",
         {
@@ -46,7 +44,7 @@ def test_bytespersigop(server_db):
     assert "OP_RETURN" in repr(tx.vout[0].scriptPubKey)
 
     # ADDR[0], bytespersigop=False, desc 42 bytes, multisig
-    txhex = api.compose_transaction(
+    txhex = transaction.compose_transaction(
         server_db,
         "issuance",
         {
@@ -68,10 +66,10 @@ def test_bytespersigop(server_db):
 
     # enable byterpersigop
     with util_test.MockProtocolChangesContext(bytespersigop=True):
-        assert ledger.enabled("bytespersigop") == True  # noqa: E712
+        assert util.enabled("bytespersigop") == True  # noqa: E712
 
         # ADDR[0], bytespersigop=True, desc 41 bytes, opreturn
-        txhex = api.compose_transaction(
+        txhex = transaction.compose_transaction(
             server_db,
             "issuance",
             {
@@ -91,7 +89,7 @@ def test_bytespersigop(server_db):
         assert "OP_RETURN" in repr(tx.vout[0].scriptPubKey)
 
         # ADDR[1], bytespersigop=True, desc 41 bytes, opreturn encoding
-        txhex = api.compose_transaction(
+        txhex = transaction.compose_transaction(
             server_db,
             "issuance",
             {
@@ -112,7 +110,7 @@ def test_bytespersigop(server_db):
 
         # ADDR[1], bytespersigop=True, desc 20 bytes, FORCED encoding=multisig
         #  will use 2 UTXOs to make the bytes:sigop ratio in our favor
-        txhex = api.compose_transaction(
+        txhex = transaction.compose_transaction(
             server_db,
             "issuance",
             {

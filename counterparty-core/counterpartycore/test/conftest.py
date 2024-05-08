@@ -2,11 +2,10 @@
 Test suite configuration
 """
 
+import argparse
 import binascii
 import json
 import logging
-import os  # noqa: F401
-import pprint  # noqa: F401
 import time
 from datetime import datetime
 
@@ -18,7 +17,9 @@ from Crypto.Cipher import ARC4
 from pycoin.coins.bitcoin import Tx  # noqa: F401
 
 from counterpartycore import server
-from counterpartycore.lib import api, arc4, config, database, ledger, log, script, util
+from counterpartycore.lib import arc4, config, database, log, script, util
+from counterpartycore.lib.api import api_server as api_v2
+from counterpartycore.lib.api import api_v1 as api
 from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS
 from counterpartycore.test.fixtures.scenarios import INTEGRATION_SCENARIOS
@@ -29,7 +30,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 # used to increment RPC port between test modules to avoid conflicts
 TEST_RPC_PORT = 9999
 
-# we swap out ledger.enabled with a custom one which has the option to mock the protocol changes
+# we swap out util.enabled with a custom one which has the option to mock the protocol changes
 MOCK_PROTOCOL_CHANGES = {
     "bytespersigop": False,  # default to False to avoid all old vectors breaking
 }
@@ -64,7 +65,7 @@ ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = (
     False  # if true, always check MOCK_PROTOCOL_CHANGES_AT_BLOCK
 )
 ALWAYS_LATEST_PROTOCOL_CHANGES = False  # Even when this is true, this can be overridden if allow_always_latest is False in MOCK_PROTOCOL_CHANGES_AT_BLOCK
-_enabled = ledger.enabled
+_enabled = util.enabled
 
 
 def enabled(change_name, block_index=None):
@@ -76,25 +77,25 @@ def enabled(change_name, block_index=None):
     if shouldCheckForMockProtocolChangesAtBlock(change_name):
         _block_index = block_index
         if _block_index is None:
-            _block_index = ledger.CURRENT_BLOCK_INDEX
+            _block_index = util.CURRENT_BLOCK_INDEX
         if _block_index >= MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]["block_index"]:
             return True
         return False
 
     # used to force unit tests to always run against latest protocol changes
     if ALWAYS_LATEST_PROTOCOL_CHANGES:
-        # KeyError to mimic real ledger.enabled
-        if change_name not in ledger.PROTOCOL_CHANGES:
+        # KeyError to mimic real util.enabled
+        if change_name not in util.PROTOCOL_CHANGES:
             raise KeyError(change_name)
 
-        # print(f"ALWAYS_LATEST_PROTOCOL_CHANGES {change_name} {block_index or ledger.CURRENT_BLOCK_INDEX} enabled: True")
+        # print(f"ALWAYS_LATEST_PROTOCOL_CHANGES {change_name} {block_index or util.CURRENT_BLOCK_INDEX} enabled: True")
         return True
     else:
-        # print(f"ALWAYS_LATEST_PROTOCOL_CHANGES {change_name} {block_index or ledger.CURRENT_BLOCK_INDEX} enabled: {_enabled(change_name, block_index)}")
+        # print(f"ALWAYS_LATEST_PROTOCOL_CHANGES {change_name} {block_index or util.CURRENT_BLOCK_INDEX} enabled: {_enabled(change_name, block_index)}")
         return _enabled(change_name, block_index)
 
 
-ledger.enabled = enabled
+util.enabled = enabled
 
 
 # This is true if ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK is set
@@ -156,6 +157,8 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("scenario_name, base_scenario_name, transactions, pytest_config", args)
     elif metafunc.function.__name__ == "test_book":
         metafunc.parametrize("skip", [not metafunc.config.getoption("testbook")])
+    elif metafunc.function.__name__ == "test_compare_hashes":
+        metafunc.parametrize("skip", [not metafunc.config.getoption("comparehashes")])
 
 
 def pytest_addoption(parser):
@@ -177,6 +180,18 @@ def pytest_addoption(parser):
     parser.addoption("--alternative", action="store_true", default=False)
     parser.addoption(
         "--testbook", action="store_true", default=False, help="Include testnet test book"
+    )
+    parser.addoption(
+        "--saveapifixtures",
+        action="store_true",
+        default=False,
+        help="Generate api v2 fixtures for tests",
+    )
+    parser.addoption(
+        "--comparehashes",
+        action="store_true",
+        default=False,
+        help="Compare last block hashes with v9 version",
     )
 
 
@@ -235,11 +250,79 @@ def api_server(request, cp_server):
 
 
 @pytest.fixture(scope="module")
+def api_server_v2(request, cp_server):
+    default_config = {
+        "testnet": False,
+        "testcoin": False,
+        "regtest": False,
+        "api_limit_rows": 1000,
+        "backend_connect": None,
+        "backend_port": None,
+        "backend_user": None,
+        "backend_password": None,
+        "indexd_connect": None,
+        "indexd_port": None,
+        "backend_ssl": False,
+        "backend_ssl_no_verify": False,
+        "backend_poll_interval": None,
+        "rpc_host": None,
+        "rpc_user": None,
+        "rpc_password": None,
+        "rpc_no_allow_cors": False,
+        "api_host": "localhost",
+        "api_user": "rpc",
+        "api_password": None,
+        "api_no_allow_cors": False,
+        "force": False,
+        "requests_timeout": config.DEFAULT_REQUESTS_TIMEOUT,
+        "rpc_batch_size": config.DEFAULT_RPC_BATCH_SIZE,
+        "check_asset_conservation": False,
+        "backend_ssl_verify": None,
+        "rpc_allow_cors": None,
+        "p2sh_dust_return_pubkey": None,
+        "utxo_locks_max_addresses": config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES,
+        "utxo_locks_max_age": config.DEFAULT_UTXO_LOCKS_MAX_AGE,
+        "estimate_fee_per_kb": None,
+        "customnet": None,
+        "verbose": 0,
+        "quiet": False,
+        "log_file": None,
+        "api_log_file": None,
+        "no_log_files": False,
+        "json_log": False,
+        "no_check_asset_conservation": True,
+        "action": "",
+        "no_refresh_backend_height": True,
+        "no_mempool": False,
+        "skip_db_check": False,
+        "no_telemetry": True,
+    }
+    server_config = (
+        default_config
+        | util_test.COUNTERPARTYD_OPTIONS
+        | {
+            "database_file": request.module.FIXTURE_DB,
+            "api_port": TEST_RPC_PORT + 10,
+        }
+    )
+    args = argparse.Namespace(**server_config)
+    api_server = api_v2.APIServer()
+    api_server.start(args)
+    # TODO: wait for server to be ready
+    time.sleep(1.5)
+
+    request.addfinalizer(lambda: api_server.stop())
+
+    return api_server
+
+
+@pytest.fixture(scope="module")
 def cp_server(request):
     dbfile = request.module.FIXTURE_DB
     sqlfile = request.module.FIXTURE_SQL_FILE
     options = getattr(request.module, "FIXTURE_OPTIONS", {})
 
+    print(f"cp_server: {dbfile} {sqlfile} {options}")
     db = util_test.init_database(sqlfile, dbfile, options)  # noqa: F841
 
     # monkeypatch this here because init_mock_functions can run before cp_server
@@ -449,12 +532,15 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         else:
             return ARC4.new(binascii.unhexlify("00" * 32))
 
+    def check_wal_file():
+        pass
+
     monkeypatch.setattr("counterpartycore.lib.transaction.arc4.init_arc4", init_arc4)
     monkeypatch.setattr("counterpartycore.lib.backend.get_unspent_txouts", get_unspent_txouts)
     monkeypatch.setattr("counterpartycore.lib.log.isodt", isodt)
     monkeypatch.setattr("counterpartycore.lib.ledger.curr_time", curr_time)
     monkeypatch.setattr("counterpartycore.lib.util.date_passed", date_passed)
-    monkeypatch.setattr("counterpartycore.lib.api.init_api_access_log", init_api_access_log)
+    monkeypatch.setattr("counterpartycore.lib.api.util.init_api_access_log", init_api_access_log)
     if hasattr(config, "PREFIX"):
         monkeypatch.setattr("counterpartycore.lib.config.PREFIX", b"TESTXXXX")
     monkeypatch.setattr("counterpartycore.lib.backend.getrawtransaction", mocked_getrawtransaction)
@@ -469,3 +555,4 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         "counterpartycore.lib.backend.multisig_pubkeyhashes_to_pubkeys",
         multisig_pubkeyhashes_to_pubkeys,
     )
+    monkeypatch.setattr("counterpartycore.lib.database.check_wal_file", check_wal_file)

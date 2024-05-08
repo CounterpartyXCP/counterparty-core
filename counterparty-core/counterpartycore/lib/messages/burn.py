@@ -2,12 +2,11 @@
 import decimal
 import json
 import logging
-import struct  # noqa: F401
 
 D = decimal.Decimal
 from fractions import Fraction  # noqa: E402
 
-from counterpartycore.lib import config, database, exceptions, ledger  # noqa: E402
+from counterpartycore.lib import config, database, exceptions, ledger, util  # noqa: E402
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -72,17 +71,17 @@ def validate(db, source, destination, quantity, block_index, overburn=False):
     return problems
 
 
-def compose(db, source, quantity, overburn=False):
+def compose(db, source: str, quantity: int, overburn: bool = False):
     cursor = db.cursor()
     destination = config.UNSPENDABLE
     problems = validate(
-        db, source, destination, quantity, ledger.CURRENT_BLOCK_INDEX, overburn=overburn
+        db, source, destination, quantity, util.CURRENT_BLOCK_INDEX, overburn=overburn
     )
     if problems:
         raise exceptions.ComposeError(problems)
 
     # Check that a maximum of 1 BTC total is burned per address.
-    burns = ledger.get_burns(db, status="valid", source=source)
+    burns = ledger.get_burns(db, source)
     already_burned = sum([burn["burned"] for burn in burns])
 
     if quantity > (1 * config.UNIT - already_burned) and not overburn:
@@ -118,7 +117,7 @@ def parse(db, tx, mainnet_burns, message=None):
 
         if status == "valid":
             # Calculate quantity of XCP earned. (Maximum 1 BTC in total, ever.)
-            burns = ledger.get_burns(db, status="valid", source=tx["source"])
+            burns = ledger.get_burns(db, tx["source"])
             already_burned = sum([burn["burned"] for burn in burns])
             one = 1 * config.UNIT
             max_burn = one - already_burned

@@ -12,7 +12,6 @@ from counterpartycore.lib import (  # noqa: F401
     database,
     exceptions,
     ledger,
-    log,
     message_type,
     util,
 )
@@ -247,7 +246,7 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
     ledger.update_order_match_status(db, order_match["id"], status)
 
     # If tx0 is dead, credit address directly; if not, replenish give remaining, get remaining, and fee required remaining.
-    orders = ledger.get_order(db, tx_hash=order_match["tx0_hash"])
+    orders = ledger.get_order(db, order_hash=order_match["tx0_hash"])
     assert len(orders) == 1
     tx0_order = orders[0]
     if tx0_order["status"] in ("expired", "cancelled"):
@@ -277,7 +276,7 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
 
         if (
             tx0_order_status == "filled"
-            and ledger.enabled("reopen_order_when_btcpay_expires_fix", block_index)
+            and util.enabled("reopen_order_when_btcpay_expires_fix", block_index)
         ):  # This case could happen if a BTCpay expires and before the expiration, the order was filled by a correct BTCpay
             tx0_order_status = "open"  # So, we have to open the order again
 
@@ -290,7 +289,7 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
         ledger.update_order(db, order_match["tx0_hash"], set_data)
 
     # If tx1 is dead, credit address directly; if not, replenish give remaining, get remaining, and fee required remaining.
-    orders = ledger.get_order(db, tx_hash=order_match["tx1_hash"])
+    orders = ledger.get_order(db, order_hash=order_match["tx1_hash"])
     assert len(orders) == 1
     tx1_order = orders[0]
     if tx1_order["status"] in ("expired", "cancelled"):
@@ -319,7 +318,7 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
         tx1_order_status = tx1_order["status"]
         if (
             tx1_order_status == "filled"
-            and ledger.enabled("reopen_order_when_btcpay_expires_fix", block_index)
+            and util.enabled("reopen_order_when_btcpay_expires_fix", block_index)
         ):  # This case could happen if a BTCpay expires and before the expiration, the order was filled by a correct BTCpay
             tx1_order_status = "open"  # So, we have to open the order again
 
@@ -432,7 +431,14 @@ def validate(
 
 
 def compose(
-    db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required
+    db,
+    source: str,
+    give_asset: str,
+    give_quantity: int,
+    get_asset: str,
+    get_quantity: int,
+    expiration: int,
+    fee_required: int,
 ):
     cursor = db.cursor()
 
@@ -455,13 +461,13 @@ def compose(
         get_quantity,
         expiration,
         fee_required,
-        ledger.CURRENT_BLOCK_INDEX,
+        util.CURRENT_BLOCK_INDEX,
     )
     if problems:
         raise exceptions.ComposeError(problems)
 
-    give_id = ledger.get_asset_id(db, give_asset, ledger.CURRENT_BLOCK_INDEX)
-    get_id = ledger.get_asset_id(db, get_asset, ledger.CURRENT_BLOCK_INDEX)
+    give_id = ledger.get_asset_id(db, give_asset, util.CURRENT_BLOCK_INDEX)
+    get_id = ledger.get_asset_id(db, get_asset, util.CURRENT_BLOCK_INDEX)
     data = message_type.pack(ID)
     data += struct.pack(
         FORMAT, give_id, give_quantity, get_id, get_quantity, expiration, fee_required
@@ -470,18 +476,15 @@ def compose(
     return (source, [], data)
 
 
-def parse(db, tx, message):
-    order_parse_cursor = db.cursor()
-
-    # Unpack message.
+def unpack(db, message, block_index, return_dict=False):
     try:
         if len(message) != LENGTH:
             raise exceptions.UnpackError
         give_id, give_quantity, get_id, get_quantity, expiration, fee_required = struct.unpack(
             FORMAT, message
         )
-        give_asset = ledger.get_asset_name(db, give_id, tx["block_index"])
-        get_asset = ledger.get_asset_name(db, get_id, tx["block_index"])
+        give_asset = ledger.get_asset_name(db, give_id, block_index)
+        get_asset = ledger.get_asset_name(db, get_id, block_index)
         status = "open"
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:  # noqa: F841
         give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required = (
@@ -493,6 +496,27 @@ def parse(db, tx, message):
             0,
         )
         status = "invalid: could not unpack"
+
+    if return_dict:
+        return {
+            "give_asset": give_asset,
+            "give_quantity": give_quantity,
+            "get_asset": get_asset,
+            "get_quantity": get_quantity,
+            "expiration": expiration,
+            "fee_required": fee_required,
+            "status": status,
+        }
+    return give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, status
+
+
+def parse(db, tx, message):
+    order_parse_cursor = db.cursor()
+
+    # Unpack message.
+    (give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, status) = unpack(
+        db, message, tx["block_index"]
+    )
 
     price = 0
     if status == "open":
@@ -525,9 +549,9 @@ def parse(db, tx, message):
         if problems:
             status = "invalid: " + "; ".join(problems)
 
-        if ledger.enabled("btc_order_minimum"):
+        if util.enabled("btc_order_minimum"):
             min_btc_quantity = 0.001 * config.UNIT  # 0.001 BTC
-            if ledger.enabled("btc_order_minimum_adjustment_1"):
+            if util.enabled("btc_order_minimum_adjustment_1"):
                 min_btc_quantity = 0.00001 * config.UNIT  # 0.00001 BTC
 
             if (give_asset == config.BTC and give_quantity < min_btc_quantity) or (
@@ -588,7 +612,7 @@ def match(db, tx, block_index=None):
     cursor = db.cursor()
 
     # Get order in question.
-    orders = ledger.get_order(db, tx_hash=tx["tx_hash"])
+    orders = ledger.get_order(db, order_hash=tx["tx_hash"])
     if not orders:
         cursor.close()
         return
@@ -931,7 +955,7 @@ def expire(db, block_index):
         )  # tx_index=0 for block action
 
         # Expire btc sell order if match expires
-        if ledger.enabled("btc_sell_expire_on_match_expire"):
+        if util.enabled("btc_sell_expire_on_match_expire"):
             # Check for other pending order matches involving either tx0_hash or tx1_hash
             order_matches_pending = ledger.get_pending_order_matches(
                 db, tx0_hash=order_match["tx0_hash"], tx1_hash=order_match["tx1_hash"]
@@ -941,14 +965,14 @@ def expire(db, block_index):
                 if order_match["backward_asset"] == "BTC" and order_match["status"] == "expired":
                     cancel_order(
                         db,
-                        ledger.get_order(db, tx_hash=order_match["tx1_hash"])[0],
+                        ledger.get_order(db, order_hash=order_match["tx1_hash"])[0],
                         "expired",
                         block_index,
                     )
                 if order_match["forward_asset"] == "BTC" and order_match["status"] == "expired":
                     cancel_order(
                         db,
-                        ledger.get_order(db, tx_hash=order_match["tx0_hash"])[0],
+                        ledger.get_order(db, order_hash=order_match["tx0_hash"])[0],
                         "expired",
                         block_index,
                     )
@@ -956,7 +980,7 @@ def expire(db, block_index):
     if block_index >= 315000 or config.TESTNET or config.REGTEST:  # Protocol change.
         # Re‐match.
         for order_match in order_matches:
-            match(db, ledger.get_order(db, tx_hash=order_match["tx0_hash"])[0], block_index)
-            match(db, ledger.get_order(db, tx_hash=order_match["tx1_hash"])[0], block_index)
+            match(db, ledger.get_order(db, order_hash=order_match["tx0_hash"])[0], block_index)
+            match(db, ledger.get_order(db, order_hash=order_match["tx1_hash"])[0], block_index)
 
     cursor.close()

@@ -1,9 +1,8 @@
 import logging
-import struct  # noqa: F401
 
 import bitcoin
 
-from counterpartycore.lib import config, exceptions, ledger, script  # noqa: F401
+from counterpartycore.lib import config, exceptions, script  # noqa: F401
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -21,7 +20,7 @@ def pack(address):
     """
     Converts a base58 bitcoin address into a 21 byte bytes object
     """
-    from .ledger import enabled  # Here to account for test mock changes
+    from .util import enabled  # Here to account for test mock changes
 
     if enabled("segwit_support"):
         try:
@@ -57,7 +56,7 @@ def unpack(short_address_bytes):
     """
     Converts a 21 byte prefix and public key hash into a full base58 bitcoin address
     """
-    from .ledger import enabled  # Here to account for test mock changes
+    from .util import enabled  # Here to account for test mock changes
 
     if short_address_bytes == b"":
         raise exceptions.UnpackError

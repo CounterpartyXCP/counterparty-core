@@ -2,6 +2,9 @@ env
 venv
 docs/_build/*
 target/
+typings/
+pyrightconfig.json
+.DS_Store
 
 profile.txt
 

@@ -5,6 +5,10 @@ class DatabaseError(Exception):
     pass
 
 
+class WALFileFoundError(Exception):
+    pass
+
+
 class TransactionError(Exception):
     pass
 
@@ -80,6 +84,10 @@ class InvalidVersion(Exception):
 
 
 class ComposeTransactionError(Exception):
+    pass
+
+
+class InvalidArgument(Exception):
     pass
 
 

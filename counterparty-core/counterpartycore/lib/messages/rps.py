@@ -30,7 +30,6 @@ from counterpartycore.lib import (  # noqa: F401
     database,
     exceptions,
     ledger,
-    log,
     message_type,
     util,
 )
@@ -244,7 +243,7 @@ def update_rps_match_status(db, rps_match, status, block_index, tx_index):
 def validate(db, source, possible_moves, wager, move_random_hash, expiration, block_index):
     problems = []
 
-    if ledger.enabled("disable_rps"):
+    if util.enabled("disable_rps"):
         problems.append("rps disabled")
 
     if not isinstance(possible_moves, int):
@@ -282,9 +281,11 @@ def validate(db, source, possible_moves, wager, move_random_hash, expiration, bl
     return problems
 
 
-def compose(db, source, possible_moves, wager, move_random_hash, expiration):
+def compose(
+    db, source: str, possible_moves: int, wager: int, move_random_hash: str, expiration: int
+):
     problems = validate(
-        db, source, possible_moves, wager, move_random_hash, expiration, ledger.CURRENT_BLOCK_INDEX
+        db, source, possible_moves, wager, move_random_hash, expiration, util.CURRENT_BLOCK_INDEX
     )
 
     if problems:
@@ -298,9 +299,7 @@ def compose(db, source, possible_moves, wager, move_random_hash, expiration):
     return (source, [], data)
 
 
-def parse(db, tx, message):
-    rps_parse_cursor = db.cursor()
-    # Unpack message.
+def unpack(message, return_dict=False):
     try:
         if len(message) != LENGTH:
             raise exceptions.UnpackError
@@ -309,6 +308,22 @@ def parse(db, tx, message):
     except (exceptions.UnpackError, struct.error):
         (possible_moves, wager, move_random_hash, expiration) = 0, 0, "", 0
         status = "invalid: could not unpack"
+
+    if return_dict:
+        return {
+            "possible_moves": possible_moves,
+            "wager": wager,
+            "move_random_hash": binascii.hexlify(move_random_hash).decode("utf8"),
+            "expiration": expiration,
+            "status": status,
+        }
+    return possible_moves, wager, move_random_hash, expiration, status
+
+
+def parse(db, tx, message):
+    rps_parse_cursor = db.cursor()
+    # Unpack message.
+    possible_moves, wager, move_random_hash, expiration, status = unpack(message)
 
     if status == "open":
         move_random_hash = binascii.hexlify(move_random_hash).decode("utf8")

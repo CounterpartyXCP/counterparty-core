@@ -5,41 +5,22 @@ The database connections are read‐only, so SQL injection attacks can’t be a
 problem.
 """
 
+import binascii
 import collections
 import decimal
 import json
 import logging
-import os  # noqa: F401
+import math
 import re
-import sys
 import threading
 import time
 import traceback
-from logging import handlers as logging_handlers
 
-import requests  # noqa: F401
-
-import counterpartycore.lib.sentry  # noqa: F401
-
-D = decimal.Decimal
-import binascii  # noqa: E402
-import inspect  # noqa: E402
-import math  # noqa: E402
-import struct  # noqa: E402, F401
-
-import apsw  # noqa: E402, F401
-import flask  # noqa: E402
-import jsonrpc  # noqa: E402
-from flask import request  # noqa: E402
-from flask_httpauth import HTTPBasicAuth  # noqa: E402
-from jsonrpc import dispatcher  # noqa: E402
-from jsonrpc.exceptions import JSONRPCDispatchException  # noqa: E402
-from werkzeug.serving import make_server  # noqa: E402
-from xmltodict import unparse as serialize_to_xml  # noqa: E402
-
-from counterpartycore.lib import (  # noqa: E402
+import counterpartycore.lib.sentry as sentry  # noqa: F401
+import flask
+import jsonrpc
+from counterpartycore.lib import (
     backend,
-    blocks,  # noqa: F401
     config,
     database,
     exceptions,
@@ -50,8 +31,9 @@ from counterpartycore.lib import (  # noqa: E402
     transaction,
     util,
 )
-from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
-from counterpartycore.lib.messages import (  # noqa: E402
+from counterpartycore.lib.api import util as api_util
+from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser
+from counterpartycore.lib.messages import (
     bet,  # noqa: F401
     broadcast,  # noqa: F401
     btcpay,  # noqa: F401
@@ -74,6 +56,15 @@ from counterpartycore.lib.telemetry.util import (  # noqa: E402
     is_docker,
     is_force_enabled,
 )
+from flask import request
+from flask_httpauth import HTTPBasicAuth
+from jsonrpc import dispatcher
+from jsonrpc.exceptions import JSONRPCDispatchException
+from sentry_sdk import configure_scope as configure_sentry_scope
+from werkzeug.serving import make_server
+from xmltodict import unparse as serialize_to_xml
+
+D = decimal.Decimal
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -155,49 +146,6 @@ VIEW_QUERIES = {
     """,
 }
 
-API_TRANSACTIONS = [
-    "bet",
-    "broadcast",
-    "btcpay",
-    "burn",
-    "cancel",
-    "destroy",
-    "dividend",
-    "issuance",
-    "order",
-    "send",
-    "rps",
-    "rpsresolve",
-    "sweep",
-    "dispenser",
-]
-
-COMMONS_ARGS = [
-    "encoding",
-    "fee_per_kb",
-    "regular_dust_size",
-    "multisig_dust_size",
-    "op_return_value",
-    "pubkey",
-    "allow_unconfirmed_inputs",
-    "fee",
-    "fee_provided",
-    "estimate_fee_per_kb",
-    "estimate_fee_per_kb_nblocks",
-    "unspent_tx_hash",
-    "custom_inputs",
-    "dust_return_pubkey",
-    "disable_utxo_locks",
-    "extended_tx_info",
-    "p2sh_source_multisig_pubkeys",
-    "p2sh_source_multisig_pubkeys_required",
-    "p2sh_pretx_txid",
-]
-
-API_MAX_LOG_SIZE = (
-    10 * 1024 * 1024
-)  # max log size of 20 MB before rotation (make configurable later)
-API_MAX_LOG_COUNT = 10
 JSON_RPC_ERROR_API_COMPOSE = -32001  # code to use for error composing transaction result
 
 CURRENT_API_STATUS_CODE = None  # is updated by the APIStatusPoller
@@ -231,16 +179,6 @@ def check_backend_state():
 
 class DatabaseError(Exception):
     pass
-
-
-def check_database_state(db, blockcount):
-    f"""Checks {config.XCP_NAME} database to see if is caught up with backend."""  # noqa: B021
-    if ledger.CURRENT_BLOCK_INDEX + 1 < blockcount:
-        raise DatabaseError(
-            f"{config.XCP_NAME} database is behind backend. [{ledger.CURRENT_BLOCK_INDEX }/{blockcount} blocks parsed]"
-        )
-    # logger.debug("Database state check passed.")
-    return
 
 
 # TODO: ALL queries EVERYWHERE should be done with these methods
@@ -411,7 +349,7 @@ def get_rows(
     # legacy filters
     if not show_expired and table == "orders":
         # Ignore BTC orders one block early.
-        expire_index = ledger.CURRENT_BLOCK_INDEX + 1
+        expire_index = util.CURRENT_BLOCK_INDEX + 1
         more_conditions.append("""((give_asset == ? AND expire_index > ?) OR give_asset != ?)""")
         bindings += [config.BTC, expire_index, config.BTC]
 
@@ -535,124 +473,6 @@ def adjust_get_transactions_results(query_result):
     return filtered_results
 
 
-def get_default_args(func):
-    signature = inspect.signature(func)
-    return {
-        k: v.default
-        for k, v in signature.parameters.items()
-        if v.default is not inspect.Parameter.empty
-    }
-
-
-def compose_transaction(
-    db,
-    name,
-    params,
-    encoding="auto",
-    fee_per_kb=None,
-    estimate_fee_per_kb=None,
-    regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
-    multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
-    op_return_value=config.DEFAULT_OP_RETURN_VALUE,
-    pubkey=None,
-    allow_unconfirmed_inputs=False,
-    fee=None,
-    fee_provided=0,
-    unspent_tx_hash=None,
-    custom_inputs=None,
-    dust_return_pubkey=None,
-    disable_utxo_locks=False,
-    extended_tx_info=False,
-    p2sh_source_multisig_pubkeys=None,
-    p2sh_source_multisig_pubkeys_required=None,
-    p2sh_pretx_txid=None,
-    old_style_api=True,
-    segwit=False,
-):
-    """Create and return a transaction."""
-
-    # Get provided pubkeys.
-    if type(pubkey) == str:  # noqa: E721
-        provided_pubkeys = [pubkey]
-    elif type(pubkey) == list:  # noqa: E721
-        provided_pubkeys = pubkey
-    elif pubkey == None:  # noqa: E711
-        provided_pubkeys = []
-    else:
-        assert False  # noqa: B011
-
-    # Get additional pubkeys from `source` and `destination` params.
-    # Convert `source` and `destination` to pubkeyhash form.
-    for address_name in ["source", "destination"]:
-        if address_name in params:
-            address = params[address_name]
-            if isinstance(address, list):
-                # pkhshs = []
-                # for addr in address:
-                #    provided_pubkeys += script.extract_pubkeys(addr)
-                #    pkhshs.append(script.make_pubkeyhash(addr))
-                # params[address_name] = pkhshs
-                pass
-            else:
-                provided_pubkeys += script.extract_pubkeys(address)
-                params[address_name] = script.make_pubkeyhash(address)
-
-    # Check validity of collected pubkeys.
-    for pubkey in provided_pubkeys:
-        if not script.is_fully_valid(binascii.unhexlify(pubkey)):
-            raise script.AddressError(f"invalid public key: {pubkey}")
-
-    compose_method = sys.modules[f"counterpartycore.lib.messages.{name}"].compose
-    compose_params = inspect.getfullargspec(compose_method)[0]
-    missing_params = [p for p in compose_params if p not in params and p != "db"]
-    for param in missing_params:
-        params[param] = None
-
-    # dont override fee_per_kb if specified
-    if fee_per_kb is not None:
-        estimate_fee_per_kb = False
-    else:
-        fee_per_kb = config.DEFAULT_FEE_PER_KB
-
-    if "extended_tx_info" in params:
-        extended_tx_info = params["extended_tx_info"]
-        del params["extended_tx_info"]
-
-    if "old_style_api" in params:
-        old_style_api = params["old_style_api"]
-        del params["old_style_api"]
-
-    if "segwit" in params:
-        segwit = params["segwit"]
-        del params["segwit"]
-
-    tx_info = compose_method(db, **params)
-    return transaction.construct(
-        db,
-        tx_info,
-        encoding=encoding,
-        fee_per_kb=fee_per_kb,
-        estimate_fee_per_kb=estimate_fee_per_kb,
-        regular_dust_size=regular_dust_size,
-        multisig_dust_size=multisig_dust_size,
-        op_return_value=op_return_value,
-        provided_pubkeys=provided_pubkeys,
-        allow_unconfirmed_inputs=allow_unconfirmed_inputs,
-        exact_fee=fee,
-        fee_provided=fee_provided,
-        unspent_tx_hash=unspent_tx_hash,
-        custom_inputs=custom_inputs,
-        dust_return_pubkey=dust_return_pubkey,
-        disable_utxo_locks=disable_utxo_locks,
-        extended_tx_info=extended_tx_info,
-        p2sh_source_multisig_pubkeys=p2sh_source_multisig_pubkeys,
-        p2sh_source_multisig_pubkeys_required=p2sh_source_multisig_pubkeys_required,
-        p2sh_pretx_txid=p2sh_pretx_txid,
-        old_style_api=old_style_api,
-        segwit=segwit,
-    )
-
-
 def conditional_decorator(decorator, condition):
     """Checks the condition and if True applies specified decorator."""
 
@@ -662,27 +482,6 @@ def conditional_decorator(decorator, condition):
         return decorator(f)
 
     return gen_decorator
-
-
-def init_api_access_log(app):
-    """Initialize API logger."""
-    loggers = (logging.getLogger("werkzeug"), app.logger)
-
-    # Disable console logging...
-    for l in loggers:  # noqa: E741
-        l.setLevel(logging.CRITICAL)
-        l.propagate = False
-
-    # Log to file, if configured...
-    if config.API_LOG:
-        handler = logging_handlers.RotatingFileHandler(
-            config.API_LOG, "a", API_MAX_LOG_SIZE, API_MAX_LOG_COUNT
-        )
-        for l in loggers:  # noqa: E741
-            handler.setLevel(logging.DEBUG)
-            l.addHandler(handler)
-
-    flask.cli.show_server_banner = lambda *args: None
 
 
 class APIStatusPoller(threading.Thread):
@@ -700,8 +499,7 @@ class APIStatusPoller(threading.Thread):
         logger.info("Stopping API Status Poller...")
         self.stopping = True
         self.db.close()
-        while not self.stopped:
-            time.sleep(0.1)
+        self.join()
 
     def run(self):
         logger.debug("Starting API Status Poller...")
@@ -721,7 +519,7 @@ class APIStatusPoller(threading.Thread):
                         check_backend_state()
                         code = 12
                         logger.debug("Checking database state.")
-                        check_database_state(self.db, backend.getblockcount())
+                        api_util.check_last_parsed_block(self.db, backend.getblockcount())
                         self.last_database_check = time.time()
             except (BackendError, DatabaseError) as e:
                 exception_name = e.__class__.__name__
@@ -735,9 +533,8 @@ class APIStatusPoller(threading.Thread):
             else:
                 CURRENT_API_STATUS_CODE = None
                 CURRENT_API_STATUS_RESPONSE_JSON = None
-            time.sleep(0.5)  # sleep for 0.5 seconds
-            if self.stopping:
-                self.stopped = True
+            if not self.stopping:
+                time.sleep(0.5)  # sleep for 0.5 seconds
 
 
 class APIServer(threading.Thread):
@@ -749,14 +546,15 @@ class APIServer(threading.Thread):
         self.server = None
         self.ctx = None
         threading.Thread.__init__(self)
+        sentry.init()
 
     def stop(self):
-        logger.info("Stopping API Server...")
-        self.server.shutdown()
         self.db.close()
+        self.server.shutdown()
+        self.join()
 
     def run(self):
-        logger.info("Starting API Server...")
+        logger.info("Starting API Server v1.")
         self.db = self.db or database.get_connection(read_only=True)
         app = flask.Flask(__name__)
         auth = HTTPBasicAuth()
@@ -796,24 +594,13 @@ class APIServer(threading.Thread):
 
         # Generate dynamically create_{transaction} methods
         def generate_create_method(tx):
-            def split_params(**kwargs):
-                transaction_args = {}
-                common_args = {}
-                private_key_wif = None
-                for key in kwargs:
-                    if key in COMMONS_ARGS:
-                        common_args[key] = kwargs[key]
-                    elif key == "privkey":
-                        private_key_wif = kwargs[key]
-                    else:
-                        transaction_args[key] = kwargs[key]
-                return transaction_args, common_args, private_key_wif
-
             def create_method(**kwargs):
                 try:
-                    transaction_args, common_args, private_key_wif = split_params(**kwargs)
-                    return compose_transaction(
-                        self.db, name=tx, params=transaction_args, **common_args
+                    transaction_args, common_args, private_key_wif = (
+                        transaction.split_compose_params(**kwargs)
+                    )
+                    return transaction.compose_transaction(
+                        self.db, name=tx, params=transaction_args, api_v1=True, **common_args
                     )
                 except (
                     TypeError,
@@ -832,7 +619,7 @@ class APIServer(threading.Thread):
 
             return create_method
 
-        for tx in API_TRANSACTIONS:
+        for tx in transaction.COMPOSABLE_TRANSACTIONS:
             create_method = generate_create_method(tx)
             create_method.__name__ = f"create_{tx}"
             dispatcher.add_method(create_method)
@@ -1010,7 +797,7 @@ class APIServer(threading.Thread):
             latest_block_index = backend.getblockcount()
 
             try:
-                check_database_state(self.db, latest_block_index)
+                api_util.check_last_parsed_block(self.db, latest_block_index)
             except DatabaseError:
                 caught_up = False
             else:
@@ -1021,7 +808,7 @@ class APIServer(threading.Thread):
                 blocks = list(
                     cursor.execute(
                         """SELECT * FROM blocks WHERE block_index = ?""",
-                        (ledger.CURRENT_BLOCK_INDEX,),
+                        (util.CURRENT_BLOCK_INDEX,),
                     )
                 )
                 assert len(blocks) == 1
@@ -1143,7 +930,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_oldest_tx(address):
-            return backend.get_oldest_tx(address)
+            return backend.get_oldest_tx(address, block_index=util.CURRENT_BLOCK_INDEX)
 
         @dispatcher.add_method
         def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None, order_by=None):
@@ -1193,12 +980,11 @@ class APIServer(threading.Thread):
 
             # TODO: Enabled only for `send`.
             if message_type_id == send.ID:
-                unpack_method = send.unpack
+                unpacked = send.unpack(self.db, message, util.CURRENT_BLOCK_INDEX)
             elif message_type_id == enhanced_send.ID:
-                unpack_method = enhanced_send.unpack
+                unpacked = enhanced_send.unpack(message, util.CURRENT_BLOCK_INDEX)
             else:
                 raise APIError("unsupported message type")
-            unpacked = unpack_method(self.db, message, ledger.CURRENT_BLOCK_INDEX)
             return message_type_id, unpacked
 
         @dispatcher.add_method
@@ -1233,7 +1019,7 @@ class APIServer(threading.Thread):
                         oracle_fiat_label,
                         oracle_price_last_updated,
                     ) = ledger.get_oracle_last_price(
-                        self.db, dispenser["oracle_address"], ledger.CURRENT_BLOCK_INDEX
+                        self.db, dispenser["oracle_address"], util.CURRENT_BLOCK_INDEX
                     )
 
                     if oracle_price > 0:
@@ -1273,74 +1059,12 @@ class APIServer(threading.Thread):
 
         ##### REST ROUTES #####
 
-        @app.route("/addresses/<address>/balances", methods=["GET"])
-        def handle_address_balances(address):
-            return remove_rowids(ledger.get_address_balances(self.db, address))
-
-        @app.route("/assets/<asset>/balances", methods=["GET"])
-        def handle_asset_balances(asset):
-            return remove_rowids(ledger.get_asset_balances(self.db, asset))
-
-        @app.route("/assets/<asset>/", methods=["GET"])
-        def handle_asset_info(asset):
-            return remove_rowids(get_asset_info(asset=asset))
-
-        @app.route("/assets/<asset>/orders", methods=["GET"])
-        def handle_asset_orders(asset):
-            status = request.args.get("status", "open")
-            return remove_rowids(ledger.get_orders_by_asset(self.db, asset, status))
-
-        @app.route("/orders/<tx_hash>", methods=["GET"])
-        def handle_order_info(tx_hash):
-            return remove_rowids(ledger.get_order(self.db, tx_hash))
-
-        @app.route("/orders/<tx_hash>/matches", methods=["GET"])
-        def handle_order_matches(tx_hash):
-            status = request.args.get("status", "pending")
-            return remove_rowids(ledger.get_order_matches_by_order(self.db, tx_hash, status))
-
         @app.route("/healthz", methods=["GET"])
         def handle_healthz():
-            msg, code = "Healthy", 200
-
-            type_ = request.args.get("type", "light")
-
-            def light_check():
-                latest_block_index = backend.getblockcount()
-                check_database_state(self.db, latest_block_index)
-
-            def heavy_check():
-                compose_transaction(
-                    self.db,
-                    name="send",
-                    params={
-                        "source": config.UNSPENDABLE,
-                        "destination": config.UNSPENDABLE,
-                        "asset": config.XCP,
-                        "quantity": 100000000,
-                    },
-                    allow_unconfirmed_inputs=True,
-                    fee=1000,
-                )
-
-            try:
-                if type_ == "heavy":
-                    # Perform a heavy healthz check.
-                    # Do everything in light but also compose a
-                    # send tx
-
-                    logger.debug("Performing heavy healthz check.")
-
-                    light_check()
-                    heavy_check()
-                else:
-                    logger.debug("Performing light healthz check.")
-                    light_check()
-
-            except Exception:
-                msg, code = "Unhealthy", 503
-
-            return flask.Response(msg, code, mimetype="application/json")
+            with configure_sentry_scope() as scope:
+                scope.set_transaction_name("healthcheck")
+            check_type = request.args.get("type", "light")
+            return api_util.handle_healthz_route(self.db, check_type)
 
         @app.route("/", defaults={"args_path": ""}, methods=["GET", "POST", "OPTIONS"])
         @app.route("/<path:args_path>", methods=["GET", "POST", "OPTIONS"])
@@ -1348,12 +1072,12 @@ class APIServer(threading.Thread):
         @conditional_decorator(auth.login_required, hasattr(config, "RPC_PASSWORD"))
         def handle_root(args_path):
             """Handle all paths, decide where to forward the query."""
+            request_path = args_path.lower()
             if (
-                args_path == ""
-                or args_path.startswith("api/")
-                or args_path.startswith("API/")
-                or args_path.startswith("rpc/")
-                or args_path.startswith("RPC/")
+                request_path == ""
+                or request_path.startswith("api/")
+                or request_path.startswith("rpc/")
+                or request_path.startswith("v1/")
             ):
                 if flask.request.method == "POST":
                     # Need to get those here because it might not be available in this aux function.
@@ -1366,7 +1090,7 @@ class APIServer(threading.Thread):
                 else:
                     error = "Invalid method."
                     return flask.Response(error, 405, mimetype="application/json")
-            elif args_path.startswith("rest/") or args_path.startswith("REST/"):
+            elif request_path.startswith("v1/rest/"):
                 if flask.request.method == "GET" or flask.request.method == "POST":
                     # Pass the URL path without /REST/ part and Flask request object.
                     rest_path = args_path.split("/", 1)[1]
@@ -1385,6 +1109,7 @@ class APIServer(threading.Thread):
         def handle_rpc_options():
             response = flask.Response("", 204)
             _set_cors_headers(response)
+            # response.headers["X-API-WARN"] = "Deprecated API"
             return response
 
         def handle_rpc_post(request_json):
@@ -1403,6 +1128,9 @@ class APIServer(threading.Thread):
                     data="Invalid JSON-RPC 2.0 request format"
                 )
                 return flask.Response(obj_error.json.encode(), 400, mimetype="application/json")
+
+            with configure_sentry_scope() as scope:
+                scope.set_transaction_name(request_data["method"])
 
             # Only arguments passed as a `dict` are supported.
             if request_data.get("params", None) and not isinstance(request_data["params"], dict):
@@ -1424,6 +1152,10 @@ class APIServer(threading.Thread):
                 jsonrpc_response.json.encode(), 200, mimetype="application/json"
             )
             _set_cors_headers(response)
+            # response.headers["X-API-WARN"] = "Deprecated API"
+            # logger.warning(
+            #    "API v1 is deprecated and should be removed soon. Please migrate to REST API."
+            # )
             return response
 
         ######################
@@ -1448,7 +1180,7 @@ class APIServer(threading.Thread):
                 error = "No query_type provided."
                 return flask.Response(error, 400, mimetype="application/json")
             # Check if message type or table name are valid.
-            if (compose and query_type not in API_TRANSACTIONS) or (
+            if (compose and query_type not in transaction.COMPOSABLE_TRANSACTIONS) or (
                 not compose and query_type not in API_TABLES
             ):
                 error = f'No such query type in supported queries: "{query_type}".'
@@ -1459,24 +1191,9 @@ class APIServer(threading.Thread):
             query_data = {}
 
             if compose:
-                common_args = {}
-                transaction_args = {}
-                for key, value in extra_args:
-                    # Determine value type.
-                    try:
-                        value = int(value)  # noqa: PLW2901
-                    except ValueError:
-                        try:
-                            value = float(value)  # noqa: PLW2901
-                        except ValueError:
-                            pass
-                    # Split keys into common and transaction-specific arguments. Discard the privkey.
-                    if key in COMMONS_ARGS:
-                        common_args[key] = value
-                    elif key == "privkey":
-                        pass
-                    else:
-                        transaction_args[key] = value
+                transaction_args, common_args, private_key_wif = transaction.split_compose_params(
+                    **extra_args
+                )
 
                 # Must have some additional transaction arguments.
                 if not len(transaction_args):
@@ -1485,7 +1202,7 @@ class APIServer(threading.Thread):
 
                 # Compose the transaction.
                 try:
-                    query_data = compose_transaction(
+                    query_data = transaction.compose_transaction(
                         self.db, name=query_type, params=transaction_args, **common_args
                     )
                 except (
@@ -1538,7 +1255,7 @@ class APIServer(threading.Thread):
         # Init the HTTP Server.
         self.is_ready = True
         self.server = make_server(config.RPC_HOST, config.RPC_PORT, app, threaded=True)
-        init_api_access_log(app)
+        api_util.init_api_access_log(app)
         self.ctx = app.app_context()
         self.ctx.push()
         # Run app server (blocking)

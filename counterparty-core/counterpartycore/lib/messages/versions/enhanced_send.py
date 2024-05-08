@@ -14,7 +14,7 @@ MAX_MEMO_LENGTH = 34
 ID = 2  # 0x02
 
 
-def unpack(db, message, block_index):
+def unpack(message, block_index):
     try:
         # account for memo bytes
         memo_bytes_length = len(message) - LENGTH
@@ -81,7 +81,7 @@ def validate(db, source, destination, asset, quantity, memo_bytes, block_index):
     if memo_bytes is not None and len(memo_bytes) > MAX_MEMO_LENGTH:
         problems.append("memo is too long")
 
-    if ledger.enabled("options_require_memo"):
+    if util.enabled("options_require_memo"):
         cursor = db.cursor()
         try:
             results = ledger.get_addresses(db, address=destination)
@@ -98,7 +98,9 @@ def validate(db, source, destination, asset, quantity, memo_bytes, block_index):
     return problems
 
 
-def compose(db, source, destination, asset, quantity, memo, memo_is_hex):
+def compose(
+    db, source: str, destination: str, asset: str, quantity: int, memo: str, memo_is_hex: bool
+):
     cursor = db.cursor()
 
     # Just send BTC?
@@ -126,7 +128,7 @@ def compose(db, source, destination, asset, quantity, memo, memo_is_hex):
         memo = memo.encode("utf-8")
         memo_bytes = struct.pack(f">{len(memo)}s", memo)
 
-    block_index = ledger.CURRENT_BLOCK_INDEX
+    block_index = util.CURRENT_BLOCK_INDEX
 
     problems = validate(db, source, destination, asset, quantity, memo_bytes, block_index)
     if problems:
@@ -150,7 +152,7 @@ def parse(db, tx, message):
 
     # Unpack message.
     try:
-        unpacked = unpack(db, message, tx["block_index"])
+        unpacked = unpack(message, tx["block_index"])
         asset, quantity, destination, memo_bytes = (
             unpacked["asset"],
             unpacked["quantity"],

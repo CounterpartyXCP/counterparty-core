@@ -106,7 +106,7 @@ def validate(db, source, move, random, rps_match_id):
     return txn, rps_match, problems
 
 
-def compose(db, source, move, random, rps_match_id):
+def compose(db, source: str, move: int, random: str, rps_match_id: str):
     tx0_hash, tx1_hash = util.parse_id(rps_match_id)
 
     txn, rps_match, problems = validate(db, source, move, random, rps_match_id)
@@ -114,7 +114,7 @@ def compose(db, source, move, random, rps_match_id):
         raise exceptions.ComposeError(problems)
 
     # Warn if down to the wire.
-    time_left = rps_match["match_expire_index"] - ledger.CURRENT_BLOCK_INDEX
+    time_left = rps_match["match_expire_index"] - util.CURRENT_BLOCK_INDEX
     if time_left < 4:
         logger.warning(
             f"Only {time_left} blocks until that rps match expires. The conclusion might not make into the blockchain in time."
@@ -128,10 +128,7 @@ def compose(db, source, move, random, rps_match_id):
     return (source, [], data)
 
 
-def parse(db, tx, message):
-    cursor = db.cursor()
-
-    # Unpack message.
+def unpack(message, return_dict=False):
     try:
         if len(message) != LENGTH:
             raise exceptions.UnpackError
@@ -146,6 +143,22 @@ def parse(db, tx, message):
     except (exceptions.UnpackError, struct.error) as e:  # noqa: F841
         move, random, tx0_hash, tx1_hash, rps_match_id = None, None, None, None, None
         status = "invalid: could not unpack"
+
+    if return_dict:
+        return {
+            "move": move,
+            "random": random,
+            "rps_match_id": rps_match_id,
+            "status": status,
+        }
+    return move, random, rps_match_id, status
+
+
+def parse(db, tx, message):
+    cursor = db.cursor()
+
+    # Unpack message.
+    move, random, rps_match_id, status = unpack(message)
 
     if status == "valid":
         txn, rps_match, problems = validate(db, tx["source"], move, random, rps_match_id)

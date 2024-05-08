@@ -1,5 +1,3 @@
-import sys  # noqa: F401
-
 """Variables prefixed with `DEFAULT` should be able to be overridden by
 configuration file and command‐line arguments."""
 
@@ -7,7 +5,7 @@ UNIT = 100000000  # The same across assets.
 
 
 # Semantic Version
-__version__ = "10.1.1"  # for hatch
+__version__ = "10.1.2"  # for hatch
 VERSION_STRING = __version__
 version = VERSION_STRING.split("-")[0].split(".")
 VERSION_MAJOR = int(version[0])
@@ -53,9 +51,13 @@ APP_NAME = XCP_NAME.lower()
 FULL_APP_NAME = "Counterparty Core"
 LOGGER_NAME = APP_NAME
 
-DEFAULT_RPC_PORT_REGTEST = 24000
-DEFAULT_RPC_PORT_TESTNET = 14000
-DEFAULT_RPC_PORT = 4000
+DEFAULT_API_PORT_REGTEST = 24000
+DEFAULT_API_PORT_TESTNET = 14000
+DEFAULT_API_PORT = 4000
+
+DEFAULT_RPC_PORT_REGTEST = 24100
+DEFAULT_RPC_PORT_TESTNET = 14100
+DEFAULT_RPC_PORT = 4100
 
 DEFAULT_BACKEND_PORT_REGTEST = 28332
 DEFAULT_BACKEND_PORT_TESTNET = 18332
@@ -149,7 +151,20 @@ MPMA_LIMIT = 1000
 
 PROTOCOL_CHANGES_URL = "https://counterparty.io/protocol_changes.json"
 BOOTSTRAP_URL_MAINNET = "https://bootstrap.counterparty.io/counterparty.latest.tar.gz"
+BOOTSTRAP_URL_MAINNET_SIG = "https://bootstrap.counterparty.io/counterparty.latest.sig"
 BOOTSTRAP_URL_TESTNET = "https://bootstrap.counterparty.io/counterparty-testnet.latest.tar.gz"
+BOOTSTRAP_URL_TESTNET_SIG = "https://bootstrap.counterparty.io/counterparty-testnet.latest.sig"
 
+API_MAX_LOG_SIZE = (
+    10 * 1024 * 1024
+)  # max log size of 20 MB before rotation (make configurable later)
+API_MAX_LOG_COUNT = 10
 
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
+NO_TELEMETRY = False
+TELEMETRY_INTERVAL = 5 * 60
+INFLUX_DB_URL = "http://telemetry.counterparty.io:8086"
+INFLUX_DB_TOKEN = (
+    "7iViyy6TEVwmpH-YPE7shO36fzfGsyVYm0DC2tuLv0ZDTLp5uqRTW2Zv9IBcujF5zQRV6mauGdb1W3n7UrUu6A=="  # noqa: S105
+)
+INFLUX_DB_ORG = "counterparty"
+INFLUX_DB_BUCKET = "node-telemetry"

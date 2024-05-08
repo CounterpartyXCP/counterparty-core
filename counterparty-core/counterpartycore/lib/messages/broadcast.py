@@ -36,7 +36,6 @@ from counterpartycore.lib import (  # noqa: E402
     database,
     exceptions,
     ledger,
-    log,  # noqa: F401
     message_type,
     util,
 )
@@ -98,7 +97,7 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, block_index):
     if timestamp > config.MAX_INT or value > config.MAX_INT or fee_fraction_int > config.MAX_INT:
         problems.append("integer overflow")
 
-    if ledger.enabled("max_fee_fraction"):
+    if util.enabled("max_fee_fraction"):
         if fee_fraction_int >= config.UNIT:
             problems.append("fee fraction greater than or equal to 1")
     else:
@@ -111,7 +110,7 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, block_index):
     if not source:
         problems.append("null source address")
     # Check previous broadcast in this feed.
-    broadcasts = ledger.get_broadcasts_by_source(db, source, "valid")
+    broadcasts = ledger.get_broadcasts_by_source(db, source, "valid", order_by="ASC")
     if broadcasts:
         last_broadcast = broadcasts[-1]
         if last_broadcast["locked"]:
@@ -123,7 +122,7 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, block_index):
         if len(text) > 52:
             problems.append("text too long")
 
-    if ledger.enabled("options_require_memo") and text and text.lower().startswith("options"):
+    if util.enabled("options_require_memo") and text and text.lower().startswith("options"):
         try:
             # Check for options and if they are valid.
             options = util.parse_options_from_string(text)
@@ -135,12 +134,12 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, block_index):
     return problems
 
 
-def compose(db, source, timestamp, value, fee_fraction, text):
+def compose(db, source: str, timestamp: int, value: float, fee_fraction: float, text: str):
     # Store the fee fraction as an integer.
     fee_fraction_int = int(fee_fraction * 1e8)
 
     problems = validate(
-        db, source, timestamp, value, fee_fraction_int, text, ledger.CURRENT_BLOCK_INDEX
+        db, source, timestamp, value, fee_fraction_int, text, util.CURRENT_BLOCK_INDEX
     )
     if problems:
         raise exceptions.ComposeError(problems)
@@ -148,7 +147,7 @@ def compose(db, source, timestamp, value, fee_fraction, text):
     data = message_type.pack(ID)
 
     # always use custom length byte instead of problematic usage of 52p format and make sure to encode('utf-8') for length
-    if ledger.enabled("broadcast_pack_text"):
+    if util.enabled("broadcast_pack_text"):
         data += struct.pack(FORMAT, timestamp, value, fee_fraction_int)
         data += VarIntSerializer.serialize(len(text.encode("utf-8")))
         data += text.encode("utf-8")
@@ -162,12 +161,9 @@ def compose(db, source, timestamp, value, fee_fraction, text):
     return (source, [], data)
 
 
-def parse(db, tx, message):
-    cursor = db.cursor()
-
-    # Unpack message.
+def unpack(message, block_index, return_dict=False):
     try:
-        if ledger.enabled("broadcast_pack_text", tx["block_index"]):
+        if util.enabled("broadcast_pack_text", block_index):
             timestamp, value, fee_fraction_int, rawtext = struct.unpack(
                 FORMAT + f"{len(message) - LENGTH}s", message
             )
@@ -197,6 +193,24 @@ def parse(db, tx, message):
     except AssertionError:
         timestamp, value, fee_fraction_int, text = 0, None, 0, None
         status = "invalid: could not unpack text"
+
+    if return_dict:
+        return {
+            "timestamp": timestamp,
+            "value": value,
+            "fee_fraction_int": fee_fraction_int,
+            "text": text,
+            "status": status,
+        }
+    return timestamp, value, fee_fraction_int, text, status
+
+
+def parse(db, tx, message):
+    cursor = db.cursor()
+
+    # Unpack message.
+    timestamp, value, fee_fraction_int, text, status = unpack(message, tx["block_index"])
+
     if status == "valid":
         # For SQLite3
         timestamp = min(timestamp, config.MAX_INT)
@@ -236,11 +250,11 @@ def parse(db, tx, message):
         logger.debug(f"Bindings: {json.dumps(bindings)}")
 
     # stop processing if broadcast is invalid for any reason
-    if ledger.enabled("broadcast_invalid_check") and status != "valid":
+    if util.enabled("broadcast_invalid_check") and status != "valid":
         return
 
     # Options? Should not fail to parse due to above checks.
-    if ledger.enabled("options_require_memo") and text and text.lower().startswith("options"):
+    if util.enabled("options_require_memo") and text and text.lower().startswith("options"):
         options = util.parse_options_from_string(text)
         if options is not False:
             op_bindings = {
@@ -256,7 +270,7 @@ def parse(db, tx, message):
     if value is None or value < 0:
         # Cancel Open Bets?
         if value == -2:
-            for i in ledger.get_open_bet_by_feed(db, tx["source"]):
+            for i in ledger.get_bet_by_feed(db, tx["source"], status="open"):
                 bet.cancel_bet(db, i, "dropped", tx["block_index"], tx["tx_index"])
         # Cancel Pending Bet Matches?
         if value == -3:
@@ -267,7 +281,7 @@ def parse(db, tx, message):
 
     # stop processing if broadcast is invalid for any reason
     # @TODO: remove this check once broadcast_invalid_check has been activated
-    if ledger.enabled("max_fee_fraction") and status != "valid":
+    if util.enabled("max_fee_fraction") and status != "valid":
         return
 
     # Handle bet matches that use this feed.
@@ -284,7 +298,7 @@ def parse(db, tx, message):
         # to betters.
         total_escrow = bet_match["forward_quantity"] + bet_match["backward_quantity"]
 
-        if ledger.enabled("inmutable_fee_fraction"):
+        if util.enabled("inmutable_fee_fraction"):
             fee_fraction = bet_match["fee_fraction_int"] / config.UNIT
         else:
             fee_fraction = fee_fraction_int / config.UNIT

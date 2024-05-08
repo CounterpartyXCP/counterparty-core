@@ -12,11 +12,15 @@ from bitcoin.bech32 import CBech32Data
 from bitcoin.core.key import CPubKey
 from counterparty_rs import b58, utils
 
-# We are using PyCryptodome not PyCrypto
-# from Crypto.Hash import RIPEMD160
+# TODO: Use `python-bitcointools` instead. (Get rid of `pycoin` dependency.)
+from pycoin.ecdsa.secp256k1 import secp256k1_generator as generator_secp256k1
+from pycoin.encoding.b58 import a2b_hashed_base58
+from pycoin.encoding.bytes32 import from_bytes_32
+from pycoin.encoding.exceptions import EncodingError
+from pycoin.encoding.sec import public_pair_to_sec
 from ripemd import ripemd160 as RIPEMD160  # nosec B413
 
-from counterpartycore.lib import config, exceptions, ledger, opcodes, util
+from counterpartycore.lib import config, exceptions, opcodes, util
 from counterpartycore.lib.opcodes import *  # noqa: F403
 
 B58_DIGITS = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
@@ -60,7 +64,7 @@ def validate(address, allow_p2sh=True):
     # Check validity by attempting to decode.
     for pubkeyhash in pubkeyhashes:
         try:
-            if ledger.enabled("segwit_support"):
+            if util.enabled("segwit_support"):
                 if not is_bech32(pubkeyhash):
                     base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
             else:
@@ -70,7 +74,7 @@ def validate(address, allow_p2sh=True):
                 raise e
             base58_check_decode(pubkeyhash, config.P2SH_ADDRESSVERSION)
         except Base58Error as e:
-            if not ledger.enabled("segwit_support") or not is_bech32(pubkeyhash):
+            if not util.enabled("segwit_support") or not is_bech32(pubkeyhash):
                 raise e
 
 
@@ -404,14 +408,6 @@ def scriptpubkey_to_address(scriptpubkey):
     return None
 
 
-# TODO: Use `python-bitcointools` instead. (Get rid of `pycoin` dependency.)
-from pycoin.ecdsa.secp256k1 import secp256k1_generator as generator_secp256k1  # noqa: E402
-from pycoin.encoding.b58 import a2b_hashed_base58  # noqa: E402
-from pycoin.encoding.bytes32 import from_bytes_32  # noqa: E402
-from pycoin.encoding.exceptions import EncodingError  # noqa: E402
-from pycoin.encoding.sec import public_pair_to_sec  # noqa: E402
-
-
 def wif_to_tuple_of_prefix_secret_exponent_compressed(wif):
     """
     Return a tuple of (prefix, secret_exponent, is_compressed).
@@ -488,7 +484,7 @@ def make_pubkeyhash(address):
             pubkeyhashes.append(pubkeyhash)
         pubkeyhash_address = construct_array(signatures_required, pubkeyhashes, signatures_possible)
     else:
-        if ledger.enabled("segwit_support") and is_bech32(address):
+        if util.enabled("segwit_support") and is_bech32(address):
             pubkeyhash_address = address  # Some bech32 addresses are valid base58 data
         elif is_pubkeyhash(address):
             pubkeyhash_address = address
@@ -509,7 +505,7 @@ def extract_pubkeys(pub):
                 pubkeys.append(pub)
     elif is_p2sh(pub):
         pass
-    elif ledger.enabled("segwit_support") and is_bech32(pub):
+    elif util.enabled("segwit_support") and is_bech32(pub):
         pass
     else:
         if not is_pubkeyhash(pub):

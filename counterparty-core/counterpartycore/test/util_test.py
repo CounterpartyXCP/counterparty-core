@@ -67,6 +67,7 @@ COUNTERPARTYD_OPTIONS = {
     "testcoin": False,
     "rpc_port": 9999,
     "rpc_password": "pass",
+    "api_password": None,
     "backend_port": 18332,
     "backend_password": "pass",
     "backend_ssl_no_verify": True,
@@ -98,10 +99,10 @@ def reset_current_block_index(db):
     latest_block = list(
         cursor.execute("""SELECT * FROM blocks ORDER BY block_index DESC LIMIT 1""")
     )[0]
-    ledger.CURRENT_BLOCK_INDEX = latest_block["block_index"]
+    util.CURRENT_BLOCK_INDEX = latest_block["block_index"]
     cursor.close()
 
-    return ledger.CURRENT_BLOCK_INDEX
+    return util.CURRENT_BLOCK_INDEX
 
 
 def dump_database(db):
@@ -161,7 +162,7 @@ def insert_block(db, block_index, parse_block=True):
         "difficulty": None,
     }
     ledger.insert_record(db, "blocks", bindings, "NEW_BLOCK")
-    ledger.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
+    util.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
 
     if parse_block:
         blocks.parse_block(db, block_index, block_time)
@@ -232,7 +233,7 @@ def insert_raw_transaction(raw_transaction, db):
 
     MOCK_UTXO_SET.add_raw_transaction(raw_transaction, tx_id=tx_hash, confirmations=1)
 
-    ledger.CURRENT_BLOCK_INDEX = block_index
+    util.CURRENT_BLOCK_INDEX = block_index
     blocks.parse_block(db, block_index, block_time)
     return tx_hash, tx
 
@@ -252,7 +253,7 @@ def insert_unconfirmed_raw_transaction(raw_transaction, db):
     tx_index = tx_index + 1
 
     source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
-        db, BlockchainParser().deserialize_tx(raw_transaction, True), ledger.CURRENT_BLOCK_INDEX
+        db, BlockchainParser().deserialize_tx(raw_transaction, True), util.CURRENT_BLOCK_INDEX
     )
     tx = {
         "tx_index": tx_index,
@@ -339,7 +340,7 @@ def insert_transaction(transaction, db):
         db, "transaction_outputs", transaction_outputs_bindings, "NEW_TRANSACTION_OUTPUT"
     )
 
-    ledger.CURRENT_BLOCK_INDEX = transaction["block_index"]
+    util.CURRENT_BLOCK_INDEX = transaction["block_index"]
 
 
 def initialise_rawtransactions_db(db):
@@ -754,6 +755,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
                     "parse_subasset_from_asset_name",
                     "compact_subasset_longname",
                     "expand_subasset_longname",
+                    "enabled",
                 ]
             )
         )
@@ -765,7 +767,6 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
                     "price",
                     "generate_asset_id",
                     "generate_asset_name",
-                    "enabled",
                 ]
             )
         )
@@ -777,6 +778,9 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         or tx_name == "backend"
         or tx_name == "message_type"
         or tx_name == "address"
+        or (tx_name == "versions.enhanced_send" and method == "unpack")
+        or (tx_name == "versions.mpma" and method == "unpack")
+        or (tx_name == "sweep" and method == "unpack")
     ):
         return tested_method(*inputs)
     else:
@@ -803,7 +807,10 @@ def check_outputs(
     try:
         tested_module = sys.modules[f"counterpartycore.lib.{tx_name}"]
     except KeyError:  # TODO: hack
-        tested_module = sys.modules[f"counterpartycore.lib.messages.{tx_name}"]
+        if tx_name == "api_v1":
+            tested_module = sys.modules["counterpartycore.lib.api.api_v1"]
+        else:
+            tested_module = sys.modules[f"counterpartycore.lib.messages.{tx_name}"]
     tested_method = getattr(tested_module, method)
 
     with MockProtocolChangesContext(**(mock_protocol_changes or {})):

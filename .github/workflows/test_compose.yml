@@ -2,14 +2,13 @@ name: Docker Compose
 
 on:
   push:
-    branches: ['develop', 'master']
-    #branches: ['compose']
+    branches: ['develop', 'master', "compose"]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Get branch names.
       id: branch-names
       uses: tj-actions/branch-names@v8

@@ -11,7 +11,7 @@ from halo import Halo
 from termcolor import colored
 
 from counterpartycore import server
-from counterpartycore.lib import backend, blocks, config, database, ledger, log  # noqa: F401
+from counterpartycore.lib import backend, blocks, config, database, ledger, util  # noqa: F401
 from counterpartycore.lib.backend.addrindexrs import AddrindexrsSocket  # noqa: F401
 from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser, ChainstateParser
 from counterpartycore.lib.kickstart.utils import remove_shm_from_resource_tracker
@@ -180,11 +180,11 @@ def intialize_kickstart_db(bitcoind_dir, last_known_hash, resuming, new_database
         if not resuming:
             first_block = config.BLOCK_FIRST
             if not new_database:
-                first_block_info = cursor.execute(
-                    "SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1"
+                most_recent_transaction = cursor.execute(
+                    "SELECT block_index FROM transactions ORDER BY block_index DESC LIMIT 1"
                 ).fetchone()
-                if first_block_info is not None:
-                    first_block = first_block_info["block_index"]
+                if most_recent_transaction is not None:
+                    first_block = most_recent_transaction["block_index"] + 1
             fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner)
         else:
             # check if kickstart_blocks is complete
@@ -296,7 +296,7 @@ def backup_if_needed(new_database, resuming):
 
 
 def parse_block(kickstart_db, cursor, block, block_parser, tx_index):
-    ledger.CURRENT_BLOCK_INDEX = block["block_index"]
+    util.CURRENT_BLOCK_INDEX = block["block_index"]
 
     with kickstart_db:  # ensure all the block or nothing
         # insert block

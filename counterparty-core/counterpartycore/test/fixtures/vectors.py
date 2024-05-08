@@ -9,13 +9,12 @@ The function supports three types of output checks:
 """
 
 import binascii
-import json  # noqa: F401
 from fractions import Fraction
 
 import bitcoin as bitcoinlib
 
 from counterpartycore.lib import address, config, exceptions, script  # noqa: F401
-from counterpartycore.lib.api import APIError
+from counterpartycore.lib.api.api_v1 import APIError
 from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser
 from counterpartycore.lib.ledger import CreditError, DebitError
 from counterpartycore.lib.messages import issuance
@@ -6479,28 +6478,24 @@ UNITTEST_VECTOR = {
             {
                 "in": (
                     b"o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x01",
-                    DP["default_block_index"],
                 ),
                 "out": {"destination": ADDR[5], "flags": 1, "memo": None},
             },
             {
                 "in": (
                     b"o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x02",
-                    DP["default_block_index"],
                 ),
                 "out": {"destination": ADDR[5], "flags": 2, "memo": None},
             },
             {
                 "in": (
                     b"o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x03test",
-                    DP["default_block_index"],
                 ),
                 "out": {"destination": ADDR[5], "flags": 3, "memo": "test"},
             },
             {
                 "in": (
                     b"o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x07\xca\xfe\xba\xbe",
-                    DP["default_block_index"],
                 ),
                 "out": {"destination": ADDR[5], "flags": 7, "memo": b"\xca\xfe\xba\xbe"},
             },
@@ -7696,7 +7691,7 @@ UNITTEST_VECTOR = {
             },
         ],
     },
-    "api": {
+    "api_v1": {
         "get_rows": [
             {
                 "in": ("balances", None, "AND", None, None, None, None, None, 1000, 0, True),
@@ -8760,15 +8755,6 @@ UNITTEST_VECTOR = {
             {"in": (0, DP["default_block_index"]), "out": "BTC"},
             {"in": (453, DP["default_block_index"]), "out": 0},
         ],
-        "enabled": [
-            {"in": ("numeric_asset_names",), "out": True},
-            {"in": ("foobar",), "error": (KeyError, "foobar")},
-            {
-                "mock_protocol_changes": {"numeric_asset_names": False},
-                "in": ("numeric_asset_names",),
-                "out": False,
-            },
-        ],
         "holders": [
             {
                 "in": ("XCP",),
@@ -9547,6 +9533,15 @@ UNITTEST_VECTOR = {
             {
                 "in": (binascii.unhexlify("8e90a57dba99d3a77b0a2470b1816edb"),),
                 "out": "PARENT.a-zA-Z0-9.-_@!",
+            },
+        ],
+        "enabled": [
+            {"in": ("numeric_asset_names",), "out": True},
+            {"in": ("foobar",), "error": (KeyError, "foobar")},
+            {
+                "mock_protocol_changes": {"numeric_asset_names": False},
+                "in": ("numeric_asset_names",),
+                "out": False,
             },
         ],
     },

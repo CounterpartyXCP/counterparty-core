@@ -21,7 +21,7 @@ ID = 3  # 0x03 is this specific message type
 
 
 ## expected functions for message version
-def unpack(db, message, block_index):
+def unpack(message, block_index):
     try:
         unpacked = _decode_mpma_send_decode(message, block_index)
     except struct.error as e:  # noqa: F841
@@ -82,7 +82,7 @@ def validate(db, source, asset_dest_quant_list, block_index):
         if not destination:
             problems.append(f"destination is required for {asset}")
 
-        if ledger.enabled("options_require_memo"):
+        if util.enabled("options_require_memo"):
             results = ledger.get_addresses(db, address=destination) if destination else None
             if results:
                 result = results[0]
@@ -98,12 +98,12 @@ def validate(db, source, asset_dest_quant_list, block_index):
     return problems
 
 
-def compose(db, source, asset_dest_quant_list, memo, memo_is_hex):
+def compose(db, source: str, asset_dest_quant_list: list, memo: str, memo_is_hex: bool):
     cursor = db.cursor()
 
     out_balances = util.accumulate([(t[0], t[2]) for t in asset_dest_quant_list])
     for asset, quantity in out_balances:
-        if ledger.enabled("mpma_subasset_support"):
+        if util.enabled("mpma_subasset_support"):
             # resolve subassets
             asset = ledger.resolve_subasset_longname(db, asset)  # noqa: PLW2901
 
@@ -114,7 +114,7 @@ def compose(db, source, asset_dest_quant_list, memo, memo_is_hex):
         if balance < quantity:
             raise exceptions.ComposeError(f"insufficient funds for {asset}")
 
-    block_index = ledger.CURRENT_BLOCK_INDEX
+    block_index = util.CURRENT_BLOCK_INDEX
 
     cursor.close()
 
@@ -132,7 +132,7 @@ def compose(db, source, asset_dest_quant_list, memo, memo_is_hex):
 
 def parse(db, tx, message):
     try:
-        unpacked = unpack(db, message, tx["block_index"])
+        unpacked = unpack(message, tx["block_index"])
         status = "valid"
     except struct.error as e:  # noqa: F841
         status = "invalid: truncated message"

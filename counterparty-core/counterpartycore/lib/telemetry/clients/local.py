@@ -1,13 +1,10 @@
 import logging
 
-
-# INTERFACE
-class TelemetryClientI:
-    def send(self, data):
-        raise NotImplementedError()
-
+from interface import TelemetryClientI
 
 # IMPLEMENTATIONS
+
+
 class TelemetryClientLocal(TelemetryClientI):
     def __init__(self):
         self.logger = logging.getLogger(__name__)

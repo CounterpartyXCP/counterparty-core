@@ -5,46 +5,35 @@ Sieve blockchain for Counterparty transactions, and add them to the database.
 """
 
 import binascii
+import collections  # noqa: E402
+import csv  # noqa: E402
 import decimal
+import http  # noqa: E402
+import logging  # noqa: E402
 import os
 import struct
 import time
 from datetime import timedelta
 
-D = decimal.Decimal
-import collections  # noqa: E402
-import copy  # noqa: E402, F401
-import csv  # noqa: E402
-import http  # noqa: E402
-import logging  # noqa: E402
-import platform  # noqa: E402, F401
-
-import apsw  # noqa: E402
 import bitcoin as bitcoinlib  # noqa: E402
-from bitcoin.core.script import CScriptInvalidError  # noqa: E402, F401
 from halo import Halo  # noqa: E402
 from termcolor import colored  # noqa: E402
 
 from counterpartycore.lib import (  # noqa: E402
-    arc4,  # noqa: F401
     backend,
     check,
     config,
     database,
     exceptions,
     ledger,
-    log,  # noqa: F401
     message_type,
     prefetcher,
-    script,  # noqa: F401
-    util,  # noqa: F401
+    util,
 )
 from counterpartycore.lib.gettxinfo import get_tx_info  # noqa: E402
 from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
 from counterpartycore.lib.transaction_helper import p2sh_encoding  # noqa: E402, F401
 
-from .exceptions import BTCOnlyError, DecodeError  # noqa: E402, F401
-from .kickstart.utils import ib2h  # noqa: E402, F401
 from .messages import (  # noqa: E402
     bet,
     broadcast,
@@ -63,6 +52,7 @@ from .messages import (  # noqa: E402
 )
 from .messages.versions import enhanced_send, mpma  # noqa: E402
 
+D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
 
 NUM_PREFETCHER_THREADS = 3
@@ -145,11 +135,11 @@ def parse_tx(db, tx):
 
             if message_type_id == send.ID:
                 send.parse(db, tx, message)
-            elif message_type_id == enhanced_send.ID and ledger.enabled(
+            elif message_type_id == enhanced_send.ID and util.enabled(
                 "enhanced_sends", block_index=tx["block_index"]
             ):
                 enhanced_send.parse(db, tx, message)
-            elif message_type_id == mpma.ID and ledger.enabled(
+            elif message_type_id == mpma.ID and util.enabled(
                 "mpma_sends", block_index=tx["block_index"]
             ):
                 mpma.parse(db, tx, message)
@@ -158,15 +148,15 @@ def parse_tx(db, tx):
             elif message_type_id == btcpay.ID:
                 btcpay.parse(db, tx, message)
             elif message_type_id == issuance.ID or (
-                ledger.enabled("issuance_backwards_compatibility", block_index=tx["block_index"])
+                util.enabled("issuance_backwards_compatibility", block_index=tx["block_index"])
                 and message_type_id == issuance.LR_ISSUANCE_ID
             ):
                 issuance.parse(db, tx, message, message_type_id)
             elif (
                 message_type_id == issuance.SUBASSET_ID
-                and ledger.enabled("subassets", block_index=tx["block_index"])
+                and util.enabled("subassets", block_index=tx["block_index"])
             ) or (
-                ledger.enabled("issuance_backwards_compatibility", block_index=tx["block_index"])
+                util.enabled("issuance_backwards_compatibility", block_index=tx["block_index"])
                 and message_type_id == issuance.LR_SUBASSET_ID
             ):
                 issuance.parse(db, tx, message, message_type_id)
@@ -182,19 +172,19 @@ def parse_tx(db, tx):
                 rps.parse(db, tx, message)
             elif message_type_id == rpsresolve.ID and rps_enabled:
                 rpsresolve.parse(db, tx, message)
-            elif message_type_id == destroy.ID and ledger.enabled(
+            elif message_type_id == destroy.ID and util.enabled(
                 "destroy_reactivated", block_index=tx["block_index"]
             ):
                 destroy.parse(db, tx, message)
-            elif message_type_id == sweep.ID and ledger.enabled(
+            elif message_type_id == sweep.ID and util.enabled(
                 "sweep_send", block_index=tx["block_index"]
             ):
                 sweep.parse(db, tx, message)
-            elif message_type_id == dispenser.ID and ledger.enabled(
+            elif message_type_id == dispenser.ID and util.enabled(
                 "dispensers", block_index=tx["block_index"]
             ):
                 dispenser.parse(db, tx, message)
-            elif message_type_id == dispenser.DISPENSE_ID and ledger.enabled(
+            elif message_type_id == dispenser.DISPENSE_ID and util.enabled(
                 "dispensers", block_index=tx["block_index"]
             ):
                 dispenser.dispense(db, tx)
@@ -256,7 +246,7 @@ def parse_block(
     ledger.BLOCK_LEDGER = []
     ledger.BLOCK_JOURNAL = []
 
-    assert block_index == ledger.CURRENT_BLOCK_INDEX
+    assert block_index == util.CURRENT_BLOCK_INDEX
 
     # Expire orders, bets and rps.
     order.expire(db, block_index)
@@ -456,6 +446,7 @@ def initialise(db):
         [
             ["address"],
             ["asset"],
+            ["block_index"],
         ],
     )
 
@@ -482,6 +473,7 @@ def initialise(db):
         [
             ["address"],
             ["asset"],
+            ["block_index"],
         ],
     )
 
@@ -628,6 +620,9 @@ def initialise(db):
                       bindings TEXT,
                       timestamp INTEGER)
                   """)
+    columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(mempool)""")]
+    if "event" not in columns:
+        cursor.execute("""ALTER TABLE mempool ADD COLUMN event TEXT""")
 
     # Lock UPDATE on all tables
     for table in TABLES:
@@ -676,7 +671,7 @@ def list_tx(
         block_hash = config.MEMPOOL_BLOCK_HASH
         block_index = config.MEMPOOL_BLOCK_INDEX
     else:
-        assert block_index == ledger.CURRENT_BLOCK_INDEX
+        assert block_index == util.CURRENT_BLOCK_INDEX
 
     if source and (data or destination == config.UNSPENDABLE or dispensers_outs):
         logger.debug(f"Saving transaction: {tx_hash}")
@@ -769,7 +764,7 @@ def rollback(db, block_index=0):
             clean_transactions_tables(cursor, block_index=block_index)
             cursor.close()
         logger.info(f"Database rolled back to block_index {block_index}")
-    ledger.CURRENT_BLOCK_INDEX = block_index - 1
+    util.CURRENT_BLOCK_INDEX = block_index - 1
     print(f"{OK_GREEN} {step}")
     print(f"Rollback done in {time.time() - start_time:.2f}s")
 
@@ -828,7 +823,7 @@ def reparse(db, block_index=0):
         )
         for block in cursor.fetchall():
             start_time_block_parse = time.time()
-            ledger.CURRENT_BLOCK_INDEX = block["block_index"]
+            util.CURRENT_BLOCK_INDEX = block["block_index"]
             # Add event manually to journal because block already exists
             ledger.add_to_journal(
                 db,
@@ -844,7 +839,16 @@ def reparse(db, block_index=0):
                     "difficulty": block["difficulty"],
                 },
             )
-            parse_block(db, block["block_index"], block["block_time"], reparsing=True)
+            previous_block = ledger.get_block(db, block["block_index"] - 1)
+            parse_block(
+                db,
+                block["block_index"],
+                block["block_time"],
+                previous_ledger_hash=previous_block["ledger_hash"],
+                previous_txlist_hash=previous_block["txlist_hash"],
+                previous_messages_hash=previous_block["messages_hash"],
+                reparsing=True,
+            )
             block_parsed_count += 1
             message = generate_progression_message(
                 block,
@@ -899,12 +903,12 @@ def follow(db):
     last_software_check = time.time()
 
     # Get index of last block.
-    if ledger.CURRENT_BLOCK_INDEX == 0:
+    if util.CURRENT_BLOCK_INDEX == 0:
         logger.warning("New database.")
         block_index = config.BLOCK_FIRST
         database.update_version(db)
     else:
-        block_index = ledger.CURRENT_BLOCK_INDEX + 1
+        block_index = util.CURRENT_BLOCK_INDEX + 1
 
         # Check database version.
         try:
@@ -1026,18 +1030,16 @@ def follow(db):
                 check.software_version()
 
             # Get and parse transactions in this block (atomically).
-            # logger.debug(f'Blockchain cache size: {len(prefetcher.BLOCKCHAIN_CACHE)}')
-            if current_index in prefetcher.BLOCKCHAIN_CACHE:
+            # logger.debug(f'Blockchain cache size: {len(backend.BLOCKCHAIN_CACHE)}')
+            if current_index in backend.BLOCKCHAIN_CACHE:
                 # logger.debug(f'Blockchain cache hit! Block index: {current_index}')
-                block_hash = prefetcher.BLOCKCHAIN_CACHE[current_index]["block_hash"]
-                txhash_list = prefetcher.BLOCKCHAIN_CACHE[current_index]["txhash_list"]
-                raw_transactions = prefetcher.BLOCKCHAIN_CACHE[current_index]["raw_transactions"]
-                previous_block_hash = prefetcher.BLOCKCHAIN_CACHE[current_index][
-                    "previous_block_hash"
-                ]
-                block_time = prefetcher.BLOCKCHAIN_CACHE[current_index]["block_time"]
-                block_difficulty = prefetcher.BLOCKCHAIN_CACHE[current_index]["block_difficulty"]
-                del prefetcher.BLOCKCHAIN_CACHE[current_index]
+                block_hash = backend.BLOCKCHAIN_CACHE[current_index]["block_hash"]
+                txhash_list = backend.BLOCKCHAIN_CACHE[current_index]["txhash_list"]
+                raw_transactions = backend.BLOCKCHAIN_CACHE[current_index]["raw_transactions"]
+                previous_block_hash = backend.BLOCKCHAIN_CACHE[current_index]["previous_block_hash"]
+                block_time = backend.BLOCKCHAIN_CACHE[current_index]["block_time"]
+                block_difficulty = backend.BLOCKCHAIN_CACHE[current_index]["block_difficulty"]
+                del backend.BLOCKCHAIN_CACHE[current_index]
             else:
                 if block_index < block_count - 100:
                     logger.warning(f"Blockchain cache miss :/ Block index: {current_index}")
@@ -1045,11 +1047,14 @@ def follow(db):
                 block = backend.getblock(block_hash)
                 previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
                 block_time = block.nTime
-                txhash_list, raw_transactions = backend.get_tx_list(block)
+                txhash_list, raw_transactions = backend.get_tx_list(
+                    block,
+                    correct_segwit=util.enabled("correct_segwit_txids", block_index=block_index),
+                )
                 block_difficulty = block.difficulty
 
             with db:
-                ledger.CURRENT_BLOCK_INDEX = block_index
+                util.CURRENT_BLOCK_INDEX = block_index
 
                 # List the block.
                 block_bindings = {
@@ -1154,7 +1159,7 @@ def follow(db):
                 # Get block count everytime we parse some mempool_txs. If there is a new block, we just interrupt this process
                 if parsed_txs_count % 100 == 0:
                     if len(parse_txs) > 1000:
-                        logger.info(
+                        logger.trace(
                             f"Mempool parsed txs count:{parsed_txs_count} from {len(parse_txs)}"
                         )
 
@@ -1251,7 +1256,7 @@ def follow(db):
                     tx_hash, new_message = message
                     new_message["tx_hash"] = tx_hash
                     cursor.execute(
-                        """INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)""",
+                        """INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp, :event)""",
                         new_message,
                     )
 
@@ -1262,15 +1267,16 @@ def follow(db):
                 else 0
             )
 
-            logger.getChild("mempool").debug(
+            logger.trace(
                 f"Mempool refreshed ({len(xcp_mempool)} Counterparty / {len(raw_mempool)} Bitcoin transactions)"
             )
 
             # Wait
-            db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
+            # db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
             time.sleep(sleep_time)
         else:
             # Wait
-            # logger.debug(f"Waiting for new blocks. Block index: {block_index}")
-            db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
+            # logger.trace(f"Waiting for new blocks. Block index: {block_index}")
+
+            # db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
             time.sleep(config.BACKEND_POLL_INTERVAL)

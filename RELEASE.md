@@ -6,6 +6,7 @@
 - [ ] Review all open pull requests
 - [ ] Write release notes
 - [ ] Add a checkpoint verified on all supported versions
+- [ ] Update the list of servers to compare hashes with (in `test/compare_hashes_test.py`)
 - [ ] Create pull request against `master`
 - [ ] Ensure all tests pass in CI
 - [ ] Merge PR into `master`
@@ -21,7 +22,7 @@
 
 # Announcements
 
-- [ ] [Official Forums](https://forums.counterparty.io/t/new-version-announcements-counterparty-and-counterpartyd/363))
+- [ ] [Official Forums](https://forums.counterparty.io/t/new-version-announcements-counterparty-and-counterpartyd/363)
 - [ ] Mailing list
 - [ ] Telegram
 - [ ] Twitter

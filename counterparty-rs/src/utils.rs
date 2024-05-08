@@ -40,10 +40,14 @@ fn script_to_address(script_pubkey: Vec<u8>, network: &str) -> PyResult<String> 
             Err(_) => return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid version value")),
         };
 
+        let n = 22;
+        if script.len() < n{
+          return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Script length is less than 22"))
+        }
         let address = Address {
             payload: Payload::WitnessProgram {
-                version: version,
-                program: script[2..22].to_vec(),
+                version,
+                program: script[2..n].to_vec(),
             },
             network: network_enum,
         };

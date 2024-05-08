@@ -20,7 +20,7 @@ class LockedWalletError(WalletError):
 
 
 def wallet():
-    return sys.modules[f"counterpartycli.wallet.{config.WALLET_NAME}"]
+    return sys.modules[f"counterpartywallet.wallet.{config.WALLET_NAME}"]
 
 
 def get_wallet_addresses():

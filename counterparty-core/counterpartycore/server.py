@@ -4,8 +4,8 @@ import binascii
 import decimal
 import logging
 import os
-import platform
-import socket
+import signal
+import sys
 import tarfile
 import tempfile
 import time
@@ -19,19 +19,23 @@ from halo import Halo
 from termcolor import colored, cprint
 
 from counterpartycore.lib import (
-    api,
     backend,
     blocks,
     check,
     config,
     database,
-    ledger,
+    log,
     transaction,
     util,
 )
 from counterpartycore.lib import kickstart as kickstarter
-from counterpartycore.lib.telemetry.client import TelemetryClientLocal
-from counterpartycore.lib.telemetry.collector import TelemetryCollectorLive
+from counterpartycore.lib.api import api_server as api_v2
+from counterpartycore.lib.api import api_v1, routes  # noqa: F401
+from counterpartycore.lib.public_keys import PUBLIC_KEYS
+from counterpartycore.lib.telemetry.clients.influxdb import TelemetryClientInfluxDB
+from counterpartycore.lib.telemetry.collectors.influxdb import (
+    TelemetryCollectorInfluxDB,
+)
 from counterpartycore.lib.telemetry.daemon import TelemetryDaemon
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -45,36 +49,13 @@ class ConfigurationError(Exception):
     pass
 
 
-# Lock database access by opening a socket.
-class LockingError(Exception):
-    pass
-
-
-def get_lock():
-    logger.info("Acquiring lock.")
-
-    # Cross‐platform.
-    if platform.system() == "Darwin":  # Windows or OS X
-        # Not database‐specific.
-        socket_family = socket.AF_INET
-        socket_address = ("localhost", 8999)
-        error = "Another copy of server is currently running."
-    else:
-        socket_family = socket.AF_UNIX
-        socket_address = "\0" + config.DATABASE
-        error = f"Another copy of server is currently writing to database {config.DATABASE}"
-
-    lock_socket = socket.socket(socket_family, socket.SOCK_DGRAM)
-    try:
-        lock_socket.bind(socket_address)
-    except socket.error:
-        raise LockingError(error)  # noqa: B904
-    logger.info("Lock acquired.")
+def handle_interrupt_signal(signum, _frame):
+    raise KeyboardInterrupt(f"Received signal {signal.strsignal(signum)}")
 
 
 def initialise(*args, **kwargs):
     initialise_log_config(
-        verbose=kwargs.pop("verbose", False),
+        verbose=kwargs.pop("verbose", 0),
         quiet=kwargs.pop("quiet", False),
         log_file=kwargs.pop("log_file", None),
         api_log_file=kwargs.pop("api_log_file", None),
@@ -88,7 +69,7 @@ def initialise(*args, **kwargs):
 
 
 def initialise_log_config(
-    verbose=False,
+    verbose=0,
     quiet=False,
     log_file=None,
     api_log_file=None,
@@ -155,6 +136,11 @@ def initialise_config(
     rpc_user=None,
     rpc_password=None,
     rpc_no_allow_cors=False,
+    api_host=None,
+    api_port=None,
+    api_user=None,
+    api_password=None,
+    api_no_allow_cors=False,
     force=False,
     requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
     rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
@@ -167,6 +153,7 @@ def initialise_config(
     estimate_fee_per_kb=None,
     customnet=None,
     no_mempool=False,
+    no_telemetry=False,
 ):
     # log config alreasdy initialized
     logger.debug("VERBOSE: %s", config.VERBOSE)
@@ -419,6 +406,53 @@ def initialise_config(
 
     config.RPC_BATCH_SIZE = rpc_batch_size
 
+    # Server API RPC host
+    if api_host:
+        config.API_HOST = api_host
+    else:
+        config.API_HOST = "localhost"
+
+    # Server API port
+    if api_port:
+        config.API_PORT = api_port
+    else:
+        if config.TESTNET:
+            if config.TESTCOIN:
+                config.API_PORT = config.DEFAULT_API_PORT_TESTNET + 1
+            else:
+                config.API_PORT = config.DEFAULT_API_PORT_TESTNET
+        elif config.REGTEST:
+            if config.TESTCOIN:
+                config.API_PORT = config.DEFAULT_API_PORT_REGTEST + 1
+            else:
+                config.API_PORT = config.DEFAULT_API_PORT_REGTEST
+        else:
+            if config.TESTCOIN:
+                config.API_PORT = config.DEFAULT_API_PORT + 1
+            else:
+                config.API_PORT = config.DEFAULT_API_PORT
+    try:
+        config.API_PORT = int(config.API_PORT)
+        if not (int(config.API_PORT) > 1 and int(config.API_PORT) < 65535):
+            raise ConfigurationError("invalid server API port number")
+    except:  # noqa: E722
+        raise ConfigurationError(  # noqa: B904
+            "Please specific a valid port number rpc-port configuration parameter"
+        )
+
+    # Server API user
+    if api_user:
+        config.API_USER = api_user
+    else:
+        config.API_USER = "rpc"
+
+    config.API_PASSWORD = api_password
+
+    if api_no_allow_cors:
+        config.API_NO_ALLOW_CORS = api_no_allow_cors
+    else:
+        config.API_NO_ALLOW_CORS = False
+
     ##############
     # OTHER SETTINGS
 
@@ -515,22 +549,81 @@ def initialise_config(
 
     config.NO_MEMPOOL = no_mempool
 
+    config.NO_TELEMETRY = no_telemetry
+
     logger.info(f"Running v{config.VERSION_STRING} of counterparty-core.")
+
+
+def initialise_log_and_config(args):
+    # Configuration
+    init_args = {
+        "database_file": args.database_file,
+        "testnet": args.testnet,
+        "testcoin": args.testcoin,
+        "regtest": args.regtest,
+        "customnet": args.customnet,
+        "api_limit_rows": args.api_limit_rows,
+        "backend_connect": args.backend_connect,
+        "backend_port": args.backend_port,
+        "backend_user": args.backend_user,
+        "backend_password": args.backend_password,
+        "backend_ssl": args.backend_ssl,
+        "backend_ssl_no_verify": args.backend_ssl_no_verify,
+        "backend_poll_interval": args.backend_poll_interval,
+        "indexd_connect": args.indexd_connect,
+        "indexd_port": args.indexd_port,
+        "rpc_host": args.rpc_host,
+        "rpc_port": args.rpc_port,
+        "rpc_user": args.rpc_user,
+        "rpc_password": args.rpc_password,
+        "rpc_no_allow_cors": args.rpc_no_allow_cors,
+        "api_host": args.api_host,
+        "api_port": args.api_port,
+        "api_user": args.api_user,
+        "api_password": args.api_password,
+        "api_no_allow_cors": args.api_no_allow_cors,
+        "requests_timeout": args.requests_timeout,
+        "rpc_batch_size": args.rpc_batch_size,
+        "check_asset_conservation": args.check_asset_conservation,
+        "force": args.force,
+        "p2sh_dust_return_pubkey": args.p2sh_dust_return_pubkey,
+        "utxo_locks_max_addresses": args.utxo_locks_max_addresses,
+        "utxo_locks_max_age": args.utxo_locks_max_age,
+        "no_mempool": args.no_mempool,
+        "no_telemetry": args.no_telemetry,
+    }
+
+    initialise_log_config(
+        verbose=args.verbose,
+        quiet=args.quiet,
+        log_file=args.log_file,
+        api_log_file=args.api_log_file,
+        no_log_files=args.no_log_files,
+        testnet=args.testnet,
+        testcoin=args.testcoin,
+        regtest=args.regtest,
+        json_log=args.json_log,
+    )
+
+    # set up logging
+    log.set_up(
+        verbose=config.VERBOSE,
+        quiet=config.QUIET,
+        log_file=config.LOG,
+        log_in_console=args.action == "start",
+    )
+    initialise_config(**init_args)
 
 
 def initialise_db():
     if config.FORCE:
         cprint("THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.", "yellow")
 
-    # Lock
-    if not config.FORCE:
-        get_lock()
-
     # Database
     logger.info(f"Connecting to database (SQLite {apsw.apswversion()}).")
     db = database.get_connection(read_only=False)
 
-    ledger.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
+    util.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
 
     return db
 
@@ -543,7 +636,7 @@ def connect_to_backend():
 def connect_to_addrindexrs():
     step = "Connecting to `addrindexrs`..."
     with Halo(text=step, spinner=SPINNER_STYLE):
-        ledger.CURRENT_BLOCK_INDEX = 0
+        util.CURRENT_BLOCK_INDEX = 0
         backend.backend()
         check_addrindexrs = {}
         while check_addrindexrs == {}:
@@ -559,50 +652,69 @@ def connect_to_addrindexrs():
     print(f"{OK_GREEN} {step}")
 
 
-def start_all(catch_up="normal"):
-    api_status_poller, api_server, db = None, None, None
+def start_all(args):
+    api_status_poller = None
+    api_server_v1 = None
+    api_server_v2 = None
+    telemetry_daemon = None
+    db = None
 
     try:
-        # Backend.
-        connect_to_backend()
+        signal.signal(signal.SIGINT, handle_interrupt_signal)
+        signal.signal(signal.SIGTERM, handle_interrupt_signal)
 
-        if not os.path.exists(config.DATABASE) and catch_up == "bootstrap":
+        if not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap":
             bootstrap(no_confirm=True)
 
         db = initialise_db()
         blocks.initialise(db)
 
-        telemetry_daemon = TelemetryDaemon(
-            interval=60,
-            collector=TelemetryCollectorLive(db=database.get_connection(read_only=True)),
-            client=TelemetryClientLocal(),
-        )
+        # API Server v2.
+        api_server_v2 = api_v2.APIServer()
+        api_server_v2.start(args)
 
-        telemetry_daemon.start()
+        # Backend.
+        connect_to_backend()
+
+        if not config.NO_TELEMETRY:
+            logger.info("Telemetry enabled.")
+            telemetry_daemon = TelemetryDaemon(
+                interval=config.TELEMETRY_INTERVAL,
+                collector=TelemetryCollectorInfluxDB(db=database.get_connection(read_only=True)),
+                client=TelemetryClientInfluxDB(),
+            )
+            telemetry_daemon.start()
+        else:
+            logger.info("Telemetry disabled.")
 
         # Reset UTXO_LOCKS.  This previously was done in
         # initilise_config
         transaction.initialise()
 
         # API Status Poller.
-        api_status_poller = api.APIStatusPoller()
+        api_status_poller = api_v1.APIStatusPoller()
         api_status_poller.daemon = True
         api_status_poller.start()
 
-        # API Server.
-        api_server = api.APIServer()
-        api_server.daemon = True
-        api_server.start()
+        # API Server v1.
+        api_server_v1 = api_v1.APIServer()
+        api_server_v1.daemon = True
+        api_server_v1.start()
 
         # Server
         blocks.follow(db)
     except KeyboardInterrupt:
+        logger.info("Keyboard interrupt.")
         pass
     finally:
+        if telemetry_daemon:
+            telemetry_daemon.stop()
         if api_status_poller:
             api_status_poller.stop()
-        if api_server:
-            api_server.stop()
+        if api_server_v1:
+            api_server_v1.stop()
+        if api_server_v2:
+            api_server_v2.stop()
         backend.stop()
         if db:
             database.optimize(db)
@@ -732,8 +844,13 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
 
     # Set Constants.
     bootstrap_url = config.BOOTSTRAP_URL_TESTNET if config.TESTNET else config.BOOTSTRAP_URL_MAINNET
+    bootstrap_sig_url = (
+        config.BOOTSTRAP_URL_TESTNET_SIG if config.TESTNET else config.BOOTSTRAP_URL_MAINNET_SIG
+    )
     tar_filename = os.path.basename(bootstrap_url)
+    sig_filename = os.path.basename(bootstrap_sig_url)
     tarball_path = os.path.join(tempfile.gettempdir(), tar_filename)
+    sig_path = os.path.join(tempfile.gettempdir(), sig_filename)
     database_path = os.path.join(data_dir, config.APP_NAME)
     if config.TESTNET:
         database_path += ".testnet"
@@ -766,7 +883,15 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
     # Downloading
     spinner.start()
     urllib.request.urlretrieve(bootstrap_url, tarball_path, bootstrap_progress)  # nosec B310  # noqa: S310
+    urllib.request.urlretrieve(bootstrap_sig_url, sig_path)  # nosec B310  # noqa: S310
     spinner.stop()
+    print(f"{OK_GREEN} {step}")
+
+    step = "Verifying signature..."
+    with Halo(text=step, spinner=SPINNER_STYLE):
+        if not any(util.verify_signature(k, sig_path, tarball_path) for k in PUBLIC_KEYS):
+            print("Snaptshot was not signed by any trusted keys")
+            sys.exit(1)
     print(f"{OK_GREEN} {step}")
 
     # TODO: check checksum, filenames, etc.

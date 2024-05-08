@@ -3,7 +3,6 @@
 import binascii
 import json
 import logging
-import pprint  # noqa: F401
 import struct
 
 from counterpartycore.lib import (  # noqa: F401
@@ -11,7 +10,6 @@ from counterpartycore.lib import (  # noqa: F401
     database,
     exceptions,
     ledger,
-    log,
     message_type,
     util,
 )
@@ -106,17 +104,17 @@ def validate(db, source, order_match_id, block_index):
     return destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems
 
 
-def compose(db, source, order_match_id):
+def compose(db, source: str, order_match_id: str):
     tx0_hash, tx1_hash = util.parse_id(order_match_id)
 
     destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(
-        db, source, order_match_id, ledger.CURRENT_BLOCK_INDEX
+        db, source, order_match_id, util.CURRENT_BLOCK_INDEX
     )
     if problems:
         raise exceptions.ComposeError(problems)
 
     # Warn if down to the wire.
-    time_left = order_match["match_expire_index"] - ledger.CURRENT_BLOCK_INDEX
+    time_left = order_match["match_expire_index"] - util.CURRENT_BLOCK_INDEX
     if time_left < 4:
         logger.warning(
             f"Only {time_left} blocks until that order match expires. The payment might not make into the blockchain in time."
@@ -133,10 +131,7 @@ def compose(db, source, order_match_id):
     return (source, [(destination, btc_quantity)], data)
 
 
-def parse(db, tx, message):
-    cursor = db.cursor()
-
-    # Unpack message.
+def unpack(message, return_dict=False):
     try:
         if len(message) != LENGTH:
             raise exceptions.UnpackError
@@ -150,6 +145,22 @@ def parse(db, tx, message):
     except (exceptions.UnpackError, struct.error) as e:  # noqa: F841
         tx0_hash, tx1_hash, order_match_id = None, None, None
         status = "invalid: could not unpack"
+
+    if return_dict:
+        return {
+            "tx0_hash": tx0_hash,
+            "tx1_hash": tx1_hash,
+            "order_match_id": order_match_id,
+            "status": status,
+        }
+    return tx0_hash, tx1_hash, order_match_id, status
+
+
+def parse(db, tx, message):
+    cursor = db.cursor()
+
+    # Unpack message.
+    tx0_hash, tx1_hash, order_match_id, status = unpack(message)
 
     if status == "valid":
         destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = (
@@ -178,7 +189,7 @@ def parse(db, tx, message):
             ledger.update_order_match_status(db, order_match_id, "completed")
 
             # Update give and get order status as filled if order_match is completed
-            if ledger.enabled("btc_order_filled"):
+            if util.enabled("btc_order_filled"):
                 order_matches = ledger.get_pending_order_matches(db, tx0_hash, tx1_hash)
                 if len(order_matches) == 0:
                     # mark both btc get and give orders as filled when order_match is completed and give or get remaining = 0

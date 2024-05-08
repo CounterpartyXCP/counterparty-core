@@ -1,13 +1,10 @@
-import binascii  # noqa: F401
 import collections
 import concurrent.futures
 import functools
 import hashlib
 import json
 import logging
-import os  # noqa: F401
 import queue
-import signal  # noqa: F401
 import socket
 import sys
 import threading
@@ -15,10 +12,9 @@ import time
 
 import bitcoin.wallet
 import requests
-from pkg_resources import parse_version  # noqa: F401
-from requests.exceptions import ConnectionError, ReadTimeout, Timeout
+from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
 
-from counterpartycore.lib import config, exceptions, ledger, util
+from counterpartycore.lib import config, exceptions, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -53,6 +49,7 @@ def rpc_call(payload):
     response = None
 
     tries = 0
+    broken_error = None
     while True:
         try:
             tries += 1
@@ -86,11 +83,16 @@ def rpc_call(payload):
         except KeyboardInterrupt:
             logger.warning("Interrupted by user")
             exit(0)
-        except (Timeout, ReadTimeout, ConnectionError):
+        except (Timeout, ReadTimeout, ConnectionError, ChunkedEncodingError):
             logger.debug(
                 f"Could not connect to backend at `{util.clean_url_for_log(url)}`. (Try {tries})"
             )
             time.sleep(5)
+        except Exception as e:
+            broken_error = e
+            break
+    if broken_error:
+        raise broken_error
 
     # Handle json decode errors
     try:
@@ -314,12 +316,8 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                     if raw_transactions_cache[tx_hash] is not None
                     else None
                 )
-        except KeyError as e:  # shows up most likely due to finickyness with addrindex not always returning results that we need...
-            _hash = hashlib.md5(
-                json.dumps(list(txhash_list)).encode(), usedforsecurity=False
-            ).hexdigest()
-            _list = list(txhash_list.difference(noncached_txhashes))
-            _logger.exception(f"tx missing in rawtx cache: {e}")
+        except KeyError:  # shows up most likely due to finickyness with addrindex not always returning results that we need...
+            _logger.debug(f"tx missing in rawtx cache: {tx_hash}")
             if _retry < GETRAWTRANSACTION_MAX_RETRIES:  # try again
                 time.sleep(
                     0.05 * (_retry + 1)
@@ -667,7 +665,7 @@ def get_unspent_txouts(source):
 #  ]
 #
 # }
-def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
+def search_raw_transactions(address, unconfirmed: bool = True, only_tx_hashes: bool = False):
     hsh = _address_to_hash(address)
     txs = INDEXER_THREAD.send({"method": "blockchain.scripthash.get_history", "params": [hsh]})[
         "result"
@@ -784,11 +782,11 @@ class AddrindexrsSocket:
             self.connect()
             return self.send(query, timeout=timeout, retry=retry + 1)
 
-    def get_oldest_tx(self, address, timeout=ADDRINDEXRS_CLIENT_TIMEOUT, block_index=None):
+    def get_oldest_tx(self, address, block_index, timeout=ADDRINDEXRS_CLIENT_TIMEOUT):
         hsh = _address_to_hash(address)
         query = {
             "method": "blockchain.scripthash.get_oldest_tx",
-            "params": [hsh, block_index or ledger.CURRENT_BLOCK_INDEX],
+            "params": [hsh, block_index],
         }
         return self.send(query, timeout=timeout)
 
@@ -801,8 +799,10 @@ GET_OLDEST_TX_HARDCODED = {
 ADDRINDEXRS_CLIENT = None
 
 
-def get_oldest_tx(address, block_index=None):
-    current_block_index = block_index or ledger.CURRENT_BLOCK_INDEX
+def get_oldest_tx(address: str, block_index: int):
+    if block_index is None:
+        raise ValueError("block_index is required")
+    current_block_index = block_index
     hardcoded_key = f"{current_block_index}-{address}"
     if hardcoded_key in GET_OLDEST_TX_HARDCODED:
         result = GET_OLDEST_TX_HARDCODED[hardcoded_key]

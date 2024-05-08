@@ -1,6 +1,6 @@
 #! /usr/bin/python3
 
-from counterpartycore.lib import config, database, exceptions, ledger, util
+from counterpartycore.lib import config, database, exceptions, util
 from counterpartycore.lib.messages.versions import enhanced_send, mpma, send1
 
 ID = send1.ID
@@ -112,14 +112,21 @@ def validate(db, source, destination, asset, quantity, block_index):
 
 
 def compose(
-    db, source, destination, asset, quantity, memo=None, memo_is_hex=False, use_enhanced_send=None
+    db,
+    source: str,
+    destination: str,
+    asset: str,
+    quantity: int,
+    memo: str = None,
+    memo_is_hex: bool = False,
+    use_enhanced_send: bool = None,
 ):
     # special case - enhanced_send replaces send by default when it is enabled
     #   but it can be explicitly disabled with an API parameter
-    if ledger.enabled("enhanced_sends"):
+    if util.enabled("enhanced_sends"):
         # Another special case, if destination, asset and quantity are arrays, it's an MPMA send
         if isinstance(destination, list) and isinstance(asset, list) and isinstance(quantity, list):
-            if ledger.enabled("mpma_sends"):
+            if util.enabled("mpma_sends"):
                 if len(destination) == len(asset) and len(asset) == len(quantity):
                     # Sending memos in a MPMA message can be done by several approaches:
                     # 1. Send a list of memos, there must be one for each send and they correspond to the sends by index
