@@ -337,6 +337,7 @@ class BlockchainParser:
         return tx
 
     def deserialize_block(self, block_hex, only_header=False, use_txid=None):
+        block_hex = ("00" * 8) + block_hex  # fake magic bytes and block size
         ds = BCDataStream()
         ds.map_hex(block_hex)
         if use_txid is None:
