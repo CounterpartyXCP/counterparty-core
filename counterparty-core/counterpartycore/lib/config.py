@@ -151,7 +151,9 @@ MPMA_LIMIT = 1000
 
 PROTOCOL_CHANGES_URL = "https://counterparty.io/protocol_changes.json"
 BOOTSTRAP_URL_MAINNET = "https://bootstrap.counterparty.io/counterparty.latest.tar.gz"
+BOOTSTRAP_URL_MAINNET_SIG = "https://bootstrap.counterparty.io/counterparty.latest.sig"
 BOOTSTRAP_URL_TESTNET = "https://bootstrap.counterparty.io/counterparty-testnet.latest.tar.gz"
+BOOTSTRAP_URL_TESTNET_SIG = "https://bootstrap.counterparty.io/counterparty-testnet.latest.sig"
 
 API_MAX_LOG_SIZE = (
     10 * 1024 * 1024

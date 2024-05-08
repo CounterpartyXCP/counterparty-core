@@ -8,11 +8,14 @@ import logging
 import os
 import random
 import re
+import shutil
 import sys
+import tempfile
 import threading
 import time
 from operator import itemgetter
 
+import gnupg
 import requests
 
 from counterpartycore.lib import config, exceptions
@@ -454,6 +457,24 @@ def clean_url_for_log(url):
         url = url.replace(m.group(1), "XXXXXXXX")
 
     return url
+
+
+def verify_signature(public_key_data, signature_path, snapshot_path):
+    temp_dir = tempfile.mkdtemp()
+    verified = False
+
+    try:
+        gpg = gnupg.GPG(gnupghome=temp_dir)
+
+        gpg.import_keys(public_key_data)
+
+        with open(signature_path, "rb") as s:
+            verified = gpg.verify_file(s, snapshot_path, close_file=False)
+
+    finally:
+        shutil.rmtree(temp_dir)
+
+    return verified
 
 
 # ORACLES
