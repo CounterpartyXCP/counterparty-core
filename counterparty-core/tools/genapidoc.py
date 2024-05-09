@@ -4,7 +4,7 @@ import sys
 
 import requests
 import yaml
-from counterpartycore import server
+from counterpartycore.lib.api import routes
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 API_DOC_FILE = os.path.join(CURR_DIR, "../../../Documentation/docs/advanced/api-v2/node-api.md")
@@ -183,7 +183,7 @@ if USE_API_CACHE and os.path.exists(CACHE_FILE):
         cache = json.load(f)
 
 current_group = None
-for path, route in server.routes.ROUTES.items():
+for path, route in routes.ROUTES.items():
     path_parts = path.split("/")
     if path_parts[1] == "v2":
         route_group = path.split("/")[2]

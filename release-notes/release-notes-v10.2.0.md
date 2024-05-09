@@ -1,0 +1,23 @@
+# Release Notes - Counterparty Core v10.2.0 (2024-05-??)
+
+
+# Upgrading
+
+
+# ChangeLog
+
+## Bugfixes
+* Fix circular imports
+
+## Codebase
+* Refactors mempool management and block tracking. Catching up is done using RPC and tracking using ZMQ.
+* Refactor the `backend` module. Separation between calls to Bitcoin Core and Addrindexrs in two different modules.
+
+## Command-Line Interface
+
+
+# Credits
+* Ouziel Slama
+* Adam Krellenstein
+* Warren Puffett
+* Matt Marcello
