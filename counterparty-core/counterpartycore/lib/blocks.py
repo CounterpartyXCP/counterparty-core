@@ -21,7 +21,6 @@ from counterpartycore.lib import (  # noqa: E402
     check,
     config,
     database,
-    deserialize,
     exceptions,
     ledger,
     message_type,
@@ -645,8 +644,7 @@ def list_tx(
     block_time,
     tx_hash,
     tx_index,
-    tx_hex=None,
-    decoded_tx=None,
+    decoded_tx,
     block_parser=None,
 ):
     assert type(tx_hash) == str  # noqa: E721
@@ -659,14 +657,6 @@ def list_tx(
         transactions = list(cursor)
         if transactions:
             return tx_index
-
-    # Get the important details about each transaction.
-    if decoded_tx is None:
-        if tx_hex is None:
-            tx_hex = backend.bitcoind.getrawtransaction(tx_hash, block_index=block_index)
-        decoded_tx = deserialize.deserialize_tx(
-            tx_hex, use_txid=util.enabled("correct_segwit_txids")
-        )
 
     source, destination, btc_amount, fee, data, dispensers_outs = get_tx_info(
         db, decoded_tx, block_index, block_parser=block_parser
@@ -946,8 +936,6 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
             if block_parser is not None:
                 # Cache transaction. We do that here because the block is fetched by another process.
                 block_parser.put_in_cache(transaction)
-            # update transaction cache first time we see the transaction
-            prefetcher.BLOCKCHAIN_CACHE[transaction["tx_hash"]] = transaction
             tx_index = list_tx(
                 db,
                 decoded_block["block_hash"],
@@ -969,19 +957,6 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
         )
 
     return tx_index
-
-
-def get_decoded_block(block_index):
-    if block_index in prefetcher.BLOCKCHAIN_CACHE:
-        block = prefetcher.BLOCKCHAIN_CACHE[block_index]
-        del prefetcher.BLOCKCHAIN_CACHE[block_index]
-        return block
-
-    block_hash = backend.bitcoind.getblockhash(block_index)
-    raw_block = backend.bitcoind.getblock(block_hash)
-    use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
-    block = deserialize.deserialize_block(raw_block, use_txid=use_txid)
-    return block
 
 
 def check_versions(db):
@@ -1028,7 +1003,7 @@ def catch_up(db, check_asset_conservation=True):
         print(f"Block {util.CURRENT_BLOCK_INDEX}/{block_count}")
 
         # Get block information and transactions
-        decoded_block = get_decoded_block(util.CURRENT_BLOCK_INDEX + 1)
+        decoded_block = prefetcher.get_decoded_block(util.CURRENT_BLOCK_INDEX + 1)
         # util.CURRENT_BLOCK_INDEX is incremented in parse_new_block
         tx_index = parse_new_block(db, decoded_block, block_parser=None, tx_index=tx_index)
 
