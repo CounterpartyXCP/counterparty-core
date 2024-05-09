@@ -13,7 +13,6 @@ import urllib
 from urllib.parse import quote_plus as urlencode
 
 import appdirs
-import apsw
 import bitcoin as bitcoinlib
 from halo import Halo
 from termcolor import colored, cprint
@@ -66,7 +65,7 @@ def initialise(*args, **kwargs):
         regtest=kwargs.get("regtest", False),
     )
     initialise_config(*args, **kwargs)
-    return initialise_db()
+    return database.initialise_db()
 
 
 def initialise_log_config(
@@ -616,40 +615,9 @@ def initialise_log_and_config(args):
     initialise_config(**init_args)
 
 
-def initialise_db():
-    if config.FORCE:
-        cprint("THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.", "yellow")
-
-    # Database
-    logger.info(f"Connecting to database (SQLite {apsw.apswversion()}).")
-    db = database.get_connection(read_only=False)
-
-    util.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
-
-    return db
-
-
 def connect_to_backend():
     if not config.FORCE:
         backend.bitcoind.getblockcount()
-
-
-def connect_to_addrindexrs():
-    step = "Connecting to `addrindexrs`..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
-        util.CURRENT_BLOCK_INDEX = 0
-        check_addrindexrs = {}
-        while check_addrindexrs == {}:
-            check_address = (
-                "mrHFGUKSiNMeErqByjX97qPKfumdZxe6mC"
-                if config.TESTNET
-                else "1GsjsKKT4nH4GPmDnaxaZEDWgoBpmexwMA"
-            )
-            check_addrindexrs = backend.addrindexrs.get_oldest_tx(check_address, 99999999999)
-            if check_addrindexrs == {}:
-                logger.info("`addrindexrs` is not ready. Waiting one second.")
-                time.sleep(1)
-    print(f"{OK_GREEN} {step}")
 
 
 def initialize_telemetry():
@@ -685,7 +653,7 @@ def start_all(args):
             bootstrap(no_confirm=True)
 
         # initialise database
-        db = initialise_db()
+        db = database.initialise_db()
         blocks.initialise(db)
         # check software and database versions
         # TODO: timer to check every day
@@ -737,17 +705,14 @@ def start_all(args):
         if follower_daemon:
             follower_daemon.stop()
         if db:
-            # database.optimize(db)
-            logger.info("Closing database...")
-            db.close()
+            database.close(db)
         backend.addrindexrs.stop()
-        logger.info("Shutting down logging...")
-        logging.shutdown()
+        log.shutdown()
 
 
 def reparse(block_index):
-    connect_to_addrindexrs()
-    db = initialise_db()
+    backend.addrindexrs.init()
+    db = database.initialise_db()
     try:
         blocks.reparse(db, block_index=block_index)
     finally:
@@ -757,7 +722,7 @@ def reparse(block_index):
 
 
 def rollback(block_index=None):
-    db = initialise_db()
+    db = database.initialise_db()
     try:
         blocks.rollback(db, block_index=block_index)
     finally:
@@ -775,7 +740,7 @@ def kickstart(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
 
 
 def vacuum():
-    db = initialise_db()
+    db = database.initialise_db()
     step = "Vacuuming database..."
     with Halo(text=step, spinner=SPINNER_STYLE):
         database.vacuum(db)
@@ -783,7 +748,7 @@ def vacuum():
 
 
 def check_database():
-    db = initialise_db()
+    db = database.initialise_db()
 
     start_all_time = time.time()
 

@@ -1085,7 +1085,6 @@ UNITTEST_VECTOR = {
             },
         ],
         "get_next_tx_index": [{"in": (), "out": 500}],
-        "last_db_index": [{"in": (), "out": DP["default_block_index"] - 1}],
     },
     "cancel": {
         "compose": [
@@ -8887,6 +8886,7 @@ UNITTEST_VECTOR = {
                 ],
             },
         ],
+        "last_db_index": [{"in": (), "out": DP["default_block_index"] - 1}],
     },
     "util": {
         "api": [

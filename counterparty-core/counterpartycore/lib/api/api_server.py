@@ -10,7 +10,6 @@ from threading import Timer
 import flask
 from counterpartycore import server
 from counterpartycore.lib import (
-    blocks,
     config,
     database,
     exceptions,
@@ -65,7 +64,7 @@ def verify_password(username, password):
 
 
 def api_root():
-    counterparty_height = blocks.last_db_index(get_db())
+    counterparty_height = ledger.last_db_index(get_db())
     routes = []
     for path, route in ROUTES.items():
         routes.append(
@@ -279,7 +278,7 @@ def run_api_server(args):
         # Initialise the API access log
         init_api_access_log(app)
         # Get the last block index
-        util.CURRENT_BLOCK_INDEX = blocks.last_db_index(get_db())
+        util.CURRENT_BLOCK_INDEX = ledger.last_db_index(get_db())
         # Add routes
         app.add_url_rule("/v2/", view_func=handle_route)
         for path in ROUTES:

@@ -976,10 +976,6 @@ class MockProtocolChangesContext(object):
             del self.mock_protocol_changes[k]
 
 
-def connect_to_addrindexrs_mock():
-    return True
-
-
 def get_oldest_tx_mock(address, block_index=None):
     if address == "mrHFGUKSiNMeErqByjX97qPKfumdZxe6mC" and block_index == 99999999999:
         return {
@@ -997,7 +993,6 @@ def reparse(testnet=True, checkpoint_count=5):
     """
 
     # mock the backend
-    server.connect_to_addrindexrs = connect_to_addrindexrs_mock
     backend.addrindexrs.get_oldest_tx = get_oldest_tx_mock
 
     # create a new in-memory DB

@@ -4,8 +4,9 @@ import os
 import apsw
 import apsw.bestpractice
 import psutil
+from termcolor import cprint
 
-from counterpartycore.lib import config, exceptions  # noqa: E402, F401
+from counterpartycore.lib import config, exceptions, ledger, util
 
 apsw.bestpractice.apply(apsw.bestpractice.recommended)  # includes WAL mode
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -85,6 +86,19 @@ def get_connection(read_only=True, check_wal=True):
     return db
 
 
+def initialise_db():
+    if config.FORCE:
+        cprint("THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.", "yellow")
+
+    # Database
+    logger.info(f"Connecting to database (SQLite {apsw.apswversion()}).")
+    db = get_connection(read_only=False)
+
+    util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
+
+    return db
+
+
 class DatabaseIntegrityError(exceptions.DatabaseError):
     pass
 
@@ -153,6 +167,12 @@ def optimize(db):
     cursor = db.cursor()
     cursor.execute("PRAGMA optimize")
     logger.info("PRAGMA optimize done.")
+
+
+def close(db):
+    optimize(db)
+    logger.info("Closing database...")
+    db.close()
 
 
 def field_is_pk(cursor, table, field):

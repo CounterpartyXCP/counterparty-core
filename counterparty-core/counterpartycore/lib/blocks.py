@@ -860,20 +860,6 @@ def reparse(db, block_index=0):
     print(f"All blocks reparsed in {time.time() - start_time_all_blocks_parse:.2f}s")
 
 
-def last_db_index(db):
-    cursor = db.cursor()
-    query = "SELECT name FROM sqlite_master WHERE type='table' AND name='blocks'"
-    if len(list(cursor.execute(query))) == 0:
-        return 0
-
-    query = "SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1"
-    blocks = list(cursor.execute(query))
-    if len(blocks) == 0:
-        return 0
-
-    return blocks[0]["block_index"]
-
-
 def get_next_tx_index(db):
     """Return index of next transaction."""
     cursor = db.cursor()
@@ -978,14 +964,14 @@ def check_versions(db):
         elif e.required_action == "reparse":
             reparse(db, block_index=e.from_block_index)
         # refresh the current block index
-        util.CURRENT_BLOCK_INDEX = last_db_index(db)
+        util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
         # update the database version
         database.update_version(db)
 
 
 def catch_up(db, check_asset_conservation=True):
     # update the current block index
-    util.CURRENT_BLOCK_INDEX = last_db_index(db)
+    util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
     if util.CURRENT_BLOCK_INDEX == 0:
         logger.info("New database.")
         util.CURRENT_BLOCK_INDEX = config.BLOCK_FIRST

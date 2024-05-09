@@ -10,7 +10,6 @@ import apsw
 from halo import Halo
 from termcolor import colored
 
-from counterpartycore import server
 from counterpartycore.lib import backend, blocks, config, database
 from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser, ChainstateParser
 from counterpartycore.lib.kickstart.utils import remove_shm_from_resource_tracker
@@ -167,7 +166,7 @@ def get_last_known_block_hash(bitcoind_dir):
 def intialize_kickstart_db(bitcoind_dir, last_known_hash, resuming, new_database, debug_block):
     step = "Initialising database..."
     with Halo(text=step, spinner=SPINNER_STYLE) as spinner:
-        kickstart_db = server.initialise_db()
+        kickstart_db = database.initialise_db()
         blocks.initialise(kickstart_db)
         database.update_version(kickstart_db)
         cursor = kickstart_db.cursor()
@@ -320,7 +319,7 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
         confirm_kickstart()
 
     # check addrindexrs
-    server.connect_to_addrindexrs()
+    backend.addrindexrs.init()
 
     # determine bitoincore data directory
     bitcoind_dir = get_bitcoind_dir(bitcoind_dir)
