@@ -3489,5 +3489,91 @@
             "result": "Healthy",
             "success": true
         }
+    },
+    "/v2/transactions/<tx_hash>/events": {
+        "result": [
+            {
+                "event_index": 14226375,
+                "event": "TRANSACTION_PARSED",
+                "params": {
+                    "supported": true,
+                    "tx_hash": "84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040",
+                    "tx_index": 2729603
+                },
+                "block_index": 842680,
+                "timestamp": 1715249118
+            },
+            {
+                "event_index": 14226374,
+                "event": "ENHANCED_SEND",
+                "params": {
+                    "asset": "PEPEBERLUSCA",
+                    "block_index": 842680,
+                    "destination": "14KPsMQwqeV478CGYjSDCgYKyNfMMA1bW9",
+                    "memo": null,
+                    "quantity": 1,
+                    "source": "1HDMT9EV4RqRSfPwFYCRzq1dUgHmuHH2ui",
+                    "status": "valid",
+                    "tx_hash": "84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040",
+                    "tx_index": 2729603,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "",
+                        "issuer": "12C72gY3tw2CUqno3o8FaCk7vzk9Q4LUox",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
+                },
+                "block_index": 842680,
+                "timestamp": 1715249118
+            },
+            {
+                "event_index": 14226373,
+                "event": "CREDIT",
+                "params": {
+                    "address": "14KPsMQwqeV478CGYjSDCgYKyNfMMA1bW9",
+                    "asset": "PEPEBERLUSCA",
+                    "block_index": 842680,
+                    "calling_function": "send",
+                    "event": "84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040",
+                    "quantity": 1,
+                    "tx_index": 2729603,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "",
+                        "issuer": "12C72gY3tw2CUqno3o8FaCk7vzk9Q4LUox",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
+                },
+                "block_index": 842680,
+                "timestamp": 1715249118
+            },
+            {
+                "event_index": 14226372,
+                "event": "DEBIT",
+                "params": {
+                    "action": "send",
+                    "address": "1HDMT9EV4RqRSfPwFYCRzq1dUgHmuHH2ui",
+                    "asset": "PEPEBERLUSCA",
+                    "block_index": 842680,
+                    "event": "84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040",
+                    "quantity": 1,
+                    "tx_index": 2729603,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "",
+                        "issuer": "12C72gY3tw2CUqno3o8FaCk7vzk9Q4LUox",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
+                },
+                "block_index": 842680,
+                "timestamp": 1715249118
+            }
+        ]
     }
 }

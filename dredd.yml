@@ -20,6 +20,7 @@ only:
 - Transactions > Info > Info
 - Transactions > Unpack > Unpack
 - Transactions > Get Transaction By Hash > Get Transaction By Hash
+- Transactions > Get Events By Transaction > Get Events By Transaction
 - Addresses > Get Address Balances > Get Address Balances
 - Addresses > Get Balance By Address And Asset > Get Balance By Address And Asset
 - Addresses > Get Credits By Address > Get Credits By Address

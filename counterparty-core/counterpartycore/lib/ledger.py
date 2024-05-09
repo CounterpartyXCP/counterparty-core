@@ -57,7 +57,9 @@ def get_messages(db, block_index=None, block_index_in=None, message_index_in=Non
     return cursor.fetchall()
 
 
-def get_events(db, block_index=None, event=None, event_index=None, last=None, limit=None):
+def get_events(
+    db, block_index=None, event=None, event_index=None, last=None, limit=None, tx_hash=None
+):
     cursor = db.cursor()
     where = []
     bindings = []
@@ -73,6 +75,9 @@ def get_events(db, block_index=None, event=None, event_index=None, last=None, li
     if last is not None:
         where.append("message_index <= ?")
         bindings.append(last)
+    if tx_hash is not None:
+        where.append("tx_hash = ?")
+        bindings.append(tx_hash)
     if block_index is None and limit is None:
         limit = 100
     if limit is not None:
@@ -116,6 +121,14 @@ def get_events_by_block(db, block_index: int):
     :param int block_index: The index of the block to return (e.g. 840464)
     """
     return get_events(db, block_index=block_index)
+
+
+def get_events_by_transaction(db, tx_hash: str):
+    """
+    Returns the events of a transaction
+    :param str tx_hash: The hash of the transaction to return (e.g. 84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040)
+    """
+    return get_events(db, tx_hash=tx_hash)
 
 
 def get_events_by_block_and_event(db, block_index: int, event: str):
