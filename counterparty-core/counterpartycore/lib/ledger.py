@@ -85,7 +85,7 @@ def get_events(
     else:
         limit = ""
     # no sql injection here
-    select_fields = "message_index AS event_index, event, bindings AS params"
+    select_fields = "message_index AS event_index, event, bindings AS params, tx_hash"
     if block_index is None:
         select_fields += ", block_index, timestamp"
     query = f"""

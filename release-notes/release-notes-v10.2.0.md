@@ -12,6 +12,9 @@
 ## Codebase
 * Refactors mempool management and block tracking. Catching up is done using RPC and tracking using ZMQ.
 * Refactor the `backend` module. Separation between calls to Bitcoin Core and Addrindexrs in two different modules.
+* Add indexed `tx_hash` field in `messages` table.
+* Add route to get events by transactions: `/v2/transactions/<tx_hash>/events`
+
 
 ## Command-Line Interface
 
