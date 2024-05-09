@@ -145,7 +145,8 @@
                     "ledger_hash": null,
                     "previous_block_hash": null,
                     "txlist_hash": null
-                }
+                },
+                "tx_hash": null
             },
             {
                 "event_index": 1182,
@@ -155,7 +156,8 @@
                     "ledger_hash": "3114d8091cfcaa9944c6fab49d51950535c4ef269877d58c372ed80b2b472ec6",
                     "messages_hash": "9671cfedb3124b67ed996c547cb26a32e95490009ad56065c79be54a28c45994",
                     "txlist_hash": "f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8"
-                }
+                },
+                "tx_hash": null
             },
             {
                 "event_index": 1181,
@@ -164,7 +166,8 @@
                     "supported": true,
                     "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                     "tx_index": 492
-                }
+                },
+                "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
             },
             {
                 "event_index": 1180,
@@ -187,7 +190,8 @@
                     "status": "open",
                     "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                     "tx_index": 492
-                }
+                },
+                "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
             },
             {
                 "event_index": 1179,
@@ -200,7 +204,8 @@
                     "event": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                     "quantity": 100000000,
                     "tx_index": 492
-                }
+                },
+                "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
             },
             {
                 "event_index": 1178,
@@ -217,7 +222,8 @@
                     "supported": true,
                     "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                     "tx_index": 492
-                }
+                },
+                "tx_hash": null
             }
         ]
     },
@@ -327,6 +333,7 @@
                     "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                     "tx_index": 492
                 },
+                "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                 "block_index": 310491,
                 "timestamp": 0
             },
@@ -352,6 +359,7 @@
                     "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                     "tx_index": 492
                 },
+                "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                 "block_index": 310491,
                 "timestamp": 0
             },
@@ -367,6 +375,7 @@
                     "quantity": 100000000,
                     "tx_index": 492
                 },
+                "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                 "block_index": 310491,
                 "timestamp": 0
             }
@@ -1324,6 +1333,7 @@
                     "messages_hash": "45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f",
                     "txlist_hash": "35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1"
                 },
+                "tx_hash": null,
                 "block_index": 310500,
                 "timestamp": 0
             },
@@ -1339,6 +1349,7 @@
                     "previous_block_hash": null,
                     "txlist_hash": null
                 },
+                "tx_hash": null,
                 "block_index": 310499,
                 "timestamp": 0
             },
@@ -1351,6 +1362,7 @@
                     "messages_hash": "d6aedacd4f81520d86ae47c9c776d17a213c706a5cf7c91203a4299261d1648c",
                     "txlist_hash": "032166892f568bb97f4f69ef5bdf49cc1b15cc9f8c7f6c1f3e1f9d54816ad7e5"
                 },
+                "tx_hash": null,
                 "block_index": 310499,
                 "timestamp": 0
             },
@@ -1366,6 +1378,7 @@
                     "previous_block_hash": null,
                     "txlist_hash": null
                 },
+                "tx_hash": null,
                 "block_index": 310498,
                 "timestamp": 0
             },
@@ -1378,6 +1391,7 @@
                     "messages_hash": "113207bd13dda56b5e5edf305f70a56e62cc861184e1e95a64e79ce100462c98",
                     "txlist_hash": "b488f6f0e6c233f202ee17c0843236d464144e79c870af88bae56355ae9372b7"
                 },
+                "tx_hash": null,
                 "block_index": 310498,
                 "timestamp": 0
             }
@@ -1394,6 +1408,7 @@
                     "asset_name": "DIVISIBLE",
                     "block_index": 310001
                 },
+                "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
                 "timestamp": 0
             }
@@ -1501,6 +1516,7 @@
                     "quantity": 100000000,
                     "tx_index": 499
                 },
+                "tx_hash": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf",
                 "block_index": 310498,
                 "timestamp": 0
             },
@@ -1516,6 +1532,7 @@
                     "quantity": 100000000,
                     "tx_index": 498
                 },
+                "tx_hash": "076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f",
                 "block_index": 310497,
                 "timestamp": 0
             },
@@ -1531,6 +1548,7 @@
                     "quantity": 92945878046,
                     "tx_index": 497
                 },
+                "tx_hash": "a35ab1736565aceddbd1d71f92fc7f39d1361006aa9099f731e54e762964d5ba",
                 "block_index": 310496,
                 "timestamp": 0
             },
@@ -1546,6 +1564,7 @@
                     "quantity": 10,
                     "tx_index": 496
                 },
+                "tx_hash": "02156b9a1f643fb48330396274a37620c8abbbe5eddb2f8b53dadd135f5d2e2e",
                 "block_index": 310495,
                 "timestamp": 0
             },
@@ -1561,6 +1580,7 @@
                     "quantity": 100,
                     "tx_index": 495
                 },
+                "tx_hash": "321bed395482e034f2ce0a4dbf28d1f800592a658e26ea91ae9c5b0928204503",
                 "block_index": 310494,
                 "timestamp": 0
             }
