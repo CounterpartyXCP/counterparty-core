@@ -37,12 +37,12 @@ docker compose --profile mainnet up -d
 docker compose --profile testnet up -d
 
 # wait for counterparty-core to be ready
-while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Ready for queries')" = "" ]; do
+while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Catch up done.')" = "" ]; do
     echo "Waiting for counterparty-core mainnet to be ready"
     sleep 1
 done
 
-while [ "$(docker compose logs counterparty-core-testnet 2>&1 | grep 'Ready for queries')" = "" ]; do
+while [ "$(docker compose logs counterparty-core-testnet 2>&1 | grep 'Catch up done.')" = "" ]; do
     echo "Waiting for counterparty-core testnet to be ready"
     sleep 1
 done
