@@ -317,6 +317,61 @@
             }
         }
     },
+    "http://localhost:10009/v2/transactions/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/events": {
+        "result": [
+            {
+                "event_index": 1181,
+                "event": "TRANSACTION_PARSED",
+                "params": {
+                    "supported": true,
+                    "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
+                    "tx_index": 492
+                },
+                "block_index": 310491,
+                "timestamp": 0
+            },
+            {
+                "event_index": 1180,
+                "event": "OPEN_ORDER",
+                "params": {
+                    "block_index": 310491,
+                    "expiration": 2000,
+                    "expire_index": 312491,
+                    "fee_provided": 6800,
+                    "fee_provided_remaining": 6800,
+                    "fee_required": 900000,
+                    "fee_required_remaining": 900000,
+                    "get_asset": "BTC",
+                    "get_quantity": 800000,
+                    "get_remaining": 800000,
+                    "give_asset": "XCP",
+                    "give_quantity": 100000000,
+                    "give_remaining": 100000000,
+                    "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "status": "open",
+                    "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
+                    "tx_index": 492
+                },
+                "block_index": 310491,
+                "timestamp": 0
+            },
+            {
+                "event_index": 1179,
+                "event": "DEBIT",
+                "params": {
+                    "action": "open order",
+                    "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "asset": "XCP",
+                    "block_index": 310491,
+                    "event": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
+                    "quantity": 100000000,
+                    "tx_index": 492
+                },
+                "block_index": 310491,
+                "timestamp": 0
+            }
+        ]
+    },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances": {
         "result": [
             {

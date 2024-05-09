@@ -2218,6 +2218,8 @@ CREATE INDEX messages_block_index_message_index_idx ON messages (block_index, me
         ;
 CREATE INDEX messages_event_idx ON messages (event)
         ;
+CREATE INDEX messages_tx_hash_idx ON messages (tx_hash)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
