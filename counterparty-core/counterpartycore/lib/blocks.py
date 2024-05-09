@@ -892,17 +892,27 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
     if decoded_block["hash_prev"] != previous_block["block_hash"]:
         previous_block = ledger.get_block_by_hash(db, decoded_block["hash_prev"])
         if previous_block is None:
-            raise exceptions.BlockNotFoundError(
-                f"Previous block hash {decoded_block['hash_prev']} not found"
+            # did we miss a block ?
+            catch_up(db, check_asset_conservation=False)
+            previous_block = ledger.get_block_by_hash(db, decoded_block["hash_prev"])
+            # if still not found, raise an error
+            if previous_block is None:
+                raise exceptions.BlockNotFoundError(
+                    f"Previous block hash {decoded_block['hash_prev']} not found"
+                )
+            # else fix the current block index
+            else:
+                new_block_index = previous_block["block_index"] + 1
+                util.CURRENT_BLOCK_INDEX = new_block_index
+        else:
+            logger.info(
+                "Blockchain reorganization detected from block %s", decoded_block["block_index"]
             )
-        logger.info(
-            "Blockchain reorganization detected from block %s", decoded_block["block_index"]
-        )
-        new_block_index = previous_block["block_index"] + 1
-        # roolback to the previous block
-        rollback(db, block_index=new_block_index)
-        # update the current block index
-        util.CURRENT_BLOCK_INDEX = new_block_index
+            new_block_index = previous_block["block_index"] + 1
+            # roolback to the previous block
+            rollback(db, block_index=new_block_index)
+            # update the current block index
+            util.CURRENT_BLOCK_INDEX = new_block_index
 
     decoded_block["block_index"] = util.CURRENT_BLOCK_INDEX
 

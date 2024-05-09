@@ -7,7 +7,7 @@ import traceback
 import zmq
 import zmq.asyncio
 
-from counterpartycore.lib import blocks, config, deserialize, mempool
+from counterpartycore.lib import blocks, config, deserialize, ledger, mempool
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -56,8 +56,11 @@ class BlockchainWatcher:
         if topic == b"rawblock":
             # parse blocks as they come in
             decoded_block = deserialize.deserialize_block(body.hex(), use_txid=True)
-            blocks.parse_new_block(self.db, decoded_block)
-            mempool.clean_mempool(self.db)
+            # check if already parsed by block.catch_up()
+            existing_block = ledger.get_block_by_hash(self.db, decoded_block["block_hash"])
+            if existing_block is None:
+                blocks.parse_new_block(self.db, decoded_block)
+                mempool.clean_mempool(self.db)
         elif topic == b"hashtx":
             self.hash_by_sequence[sequence] = body.hex()
         elif topic == b"rawtx":
@@ -121,6 +124,5 @@ class BlockchainWatcher:
 
     def stop(self):
         logger.info("Stopping blockchain watcher...")
-        self.db.close()
         self.loop.stop()
         self.zmq_context.destroy()
