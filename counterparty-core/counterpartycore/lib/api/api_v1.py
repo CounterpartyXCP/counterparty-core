@@ -164,8 +164,8 @@ def check_backend_state():
     f"""Checks blocktime of last block to see if {config.BTC_NAME} Core is running behind."""  # noqa: B021
     block_count = backend.bitcoind.getblockcount()
     block_hash = backend.bitcoind.getblockhash(block_count)
-    cblock = backend.bitcoind.getblock(block_hash)
-    time_behind = time.time() - cblock.nTime  # TODO: Block times are not very reliable.
+    cblock = backend.bitcoind.getblock(block_hash, verbosity=1)
+    time_behind = time.time() - cblock["time"]  # TODO: Block times are not very reliable.
     if time_behind > 60 * 60 * 2:  # Two hours.
         raise BackendError(f"Bitcoind is running about {round(time_behind / 3600)} hours behind.")
 
