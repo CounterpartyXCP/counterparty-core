@@ -301,6 +301,7 @@ def run_api_server(args):
         # Run app server (blocking)
         werkzeug_server.serve_forever()
     finally:
+        get_db().close()
         werkzeug_server.shutdown()
         # ensure timer is cancelled
         if BACKEND_HEIGHT_TIMER:
@@ -334,7 +335,7 @@ class APIServer(object):
         return self.process
 
     def stop(self):
-        logger.info("Stopping API server v2...")
+        logger.info("Stopping API server...")
         if self.process and self.process.is_alive():
             self.process.terminate()
         self.process = None

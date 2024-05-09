@@ -549,12 +549,13 @@ class APIServer(threading.Thread):
         sentry.init()
 
     def stop(self):
+        logger.info("Stopping API Server v1...")
         self.db.close()
         self.server.shutdown()
         self.join()
 
     def run(self):
-        logger.info("Starting API Server v1.")
+        logger.info("Starting API Server v1...")
         self.db = self.db or database.get_connection(read_only=True)
         app = flask.Flask(__name__)
         auth = HTTPBasicAuth()

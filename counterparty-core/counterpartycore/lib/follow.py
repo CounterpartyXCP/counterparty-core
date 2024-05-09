@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import signal
 import struct
 import time
 import traceback
@@ -116,10 +115,12 @@ class BlockchainWatcher:
 
     def start(self):
         logger.info("Starting blockchain watcher...")
-        self.loop.add_signal_handler(signal.SIGINT, self.stop)
+        # self.loop.add_signal_handler(signal.SIGINT, self.stop)
         self.loop.create_task(self.handle())
         self.loop.run_forever()
 
     def stop(self):
+        logger.info("Stopping blockchain watcher...")
+        self.db.close()
         self.loop.stop()
         self.zmq_context.destroy()

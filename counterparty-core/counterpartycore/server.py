@@ -664,12 +664,13 @@ def initialize_telemetry():
     else:
         logger.info("Telemetry disabled.")
 
+    return telemetry_daemon
+
 
 def start_all(args):
     api_status_poller = None
     api_server_v1 = None
     api_server_v2 = None
-    mempool_watcher = None
     telemetry_daemon = None
     follower_daemon = None
     db = None
@@ -698,7 +699,7 @@ def start_all(args):
         connect_to_backend()
 
         # Initialise telemetry.
-        initialize_telemetry()
+        telemetry_daemon = initialize_telemetry()
 
         # Reset UTXO_LOCKS.  This previously was done in
         # initilise_config
@@ -725,8 +726,6 @@ def start_all(args):
         logger.info("Keyboard interrupt.")
         pass
     finally:
-        if follower_daemon:
-            follower_daemon.stop()
         if telemetry_daemon:
             telemetry_daemon.stop()
         if api_status_poller:
@@ -735,13 +734,13 @@ def start_all(args):
             api_server_v1.stop()
         if api_server_v2:
             api_server_v2.stop()
-        if mempool_watcher:
-            mempool_watcher.stop()
-        backend.addrindexrs.stop()
+        if follower_daemon:
+            follower_daemon.stop()
         if db:
-            database.optimize(db)
+            # database.optimize(db)
             logger.info("Closing database...")
             db.close()
+        backend.addrindexrs.stop()
         logger.info("Shutting down logging...")
         logging.shutdown()
 
