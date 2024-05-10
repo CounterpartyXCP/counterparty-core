@@ -37,6 +37,8 @@ services:
       - mainnet
     ports: 
       - "8332:8332"
+      - "9332:9332"
+      - "9333:9333"
     command: 
       - "-chain=main"
       - "-rpcallowip=0.0.0.0/0"
@@ -100,6 +102,8 @@ services:
       - testnet
     ports: 
       - "18332:18332"
+      - "19332:19332"
+      - "19333:19333"
     command: 
       - "-chain=test"
       - "-rpcallowip=0.0.0.0/0"
