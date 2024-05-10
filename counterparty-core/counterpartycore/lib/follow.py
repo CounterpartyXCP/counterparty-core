@@ -64,10 +64,16 @@ class BlockchainWatcher:
         elif topic == b"hashtx":
             self.hash_by_sequence[sequence] = body.hex()
         elif topic == b"rawtx":
-            # TODO: pop!
             tx_hash = self.hash_by_sequence.get(sequence)
+            # first time seeing this transaction means from mempool
             if tx_hash not in self.raw_tx_cache:
                 self.raw_tx_cache[tx_hash] = body.hex()
+            # second time seeing this transaction means from valid block
+            # we can remove it from the cache
+            else:
+                self.raw_tx_cache.pop(tx_hash)
+                if sequence in self.hash_by_sequence:
+                    self.hash_by_sequence.pop(sequence)
         elif topic == b"sequence":
             hash = body[:32].hex()
             label = chr(body[32])
@@ -76,8 +82,7 @@ class BlockchainWatcher:
                 if hash not in self.mempool_block_hashes:
                     self.mempool_block_hashes.append(hash)
                     # get transaction from cache
-                    # TODO: pop!
-                    raw_tx = self.raw_tx_cache.get(hash)
+                    raw_tx = self.raw_tx_cache[hash]
                     # add transaction to mempool block
                     logger.trace("Adding transaction to mempool block: %s" % hash)
                     logger.trace("Mempool block size: %s" % len(self.mempool_block))
