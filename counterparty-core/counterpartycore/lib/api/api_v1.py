@@ -949,10 +949,8 @@ class APIServer(threading.Thread):
                 return sorted(results, key=lambda x: x[order_key], reverse=reverse)
 
         @dispatcher.add_method
-        def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
-            return backend.bitcoind.getrawtransaction(
-                tx_hash, verbose=verbose, skip_missing=skip_missing
-            )
+        def getrawtransaction(tx_hash, verbose=False):
+            return backend.bitcoind.getrawtransaction(tx_hash, verbose=verbose)
 
         @dispatcher.add_method
         def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):

@@ -29,7 +29,7 @@ def rpc_call(payload):
                 timeout=config.REQUESTS_TIMEOUT,
             )
 
-            if response == None:  # noqa: E711
+            if response is None:  # noqa: E711
                 if config.TESTNET:
                     network = "testnet"
                 elif config.REGTEST:
@@ -39,15 +39,13 @@ def rpc_call(payload):
                 raise exceptions.BitcoindRPCError(
                     f"Cannot communicate with backend at `{util.clean_url_for_log(url)}`. (server is set to run on {network}, is backend?)"
                 )
-            elif response.status_code in (401,):
+            if response.status_code in (401,):
                 raise exceptions.BitcoindRPCError(
                     f"Authorization error connecting to {util.clean_url_for_log(url)}: {response.status_code} {response.reason}"
                 )
-            elif response.status_code not in (200, 500):
+            if response.status_code not in (200, 500):
                 raise exceptions.BitcoindRPCError(str(response.status_code) + " " + response.reason)
-
-            else:
-                break
+            break
         except KeyboardInterrupt:
             logger.warning("Interrupted by user")
             exit(0)
@@ -68,28 +66,27 @@ def rpc_call(payload):
     except json.decoder.JSONDecodeError as e:  # noqa: F841
         raise exceptions.BitcoindRPCError(  # noqa: B904
             f"Received invalid JSON from backend with a response of {str(response.status_code) + ' ' + response.reason}"
-        )
+        ) from e
 
     # Batch query returns a list
     if isinstance(response_json, list):
         return response_json
-    if "error" not in response_json.keys() or response_json["error"] == None:  # noqa: E711
+    if "error" not in response_json.keys() or response_json["error"] is None:  # noqa: E711
         return response_json["result"]
-    elif response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
+    if response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
         raise exceptions.BitcoindRPCError(
             f"{response_json['error']} Is `txindex` enabled in {config.BTC_NAME} Core?"
         )
-    elif response_json["error"]["code"] in [-28, -8, -2]:
+    if response_json["error"]["code"] in [-28, -8, -2]:
         # “Verifying blocks...” or “Block height out of range” or “The network does not appear to fully agree!“
         logger.debug(f"Backend not ready. Sleeping for ten seconds. ({response_json['error']})")
         # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
         # seconds to start, this’ll hit the maximum recursion depth limit.
         time.sleep(10)
         return rpc_call(payload)
-    else:
-        raise exceptions.BitcoindRPCError(
-            f"Error connecting to {util.clean_url_for_log(url)}: {response_json['error']}"
-        )
+    raise exceptions.BitcoindRPCError(
+        f"Error connecting to {util.clean_url_for_log(url)}: {response_json['error']}"
+    )
 
 
 def rpc(method, params):

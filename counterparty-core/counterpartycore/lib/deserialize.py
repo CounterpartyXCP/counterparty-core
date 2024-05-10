@@ -44,7 +44,7 @@ def read_transaction(vds, use_txid=True):
 
     transaction["coinbase"] = False
     transaction["vin"] = []
-    for i in range(vds.read_compact_size()):  # noqa: B007
+    for _i in range(vds.read_compact_size()):  # noqa: B007
         vin = read_tx_in(vds)
         transaction["vin"].append(vin)
         transaction["coinbase"] = transaction["coinbase"] or vin["coinbase"]
@@ -104,7 +104,7 @@ def read_block(vds, only_header=False, use_txid=True):
         return block
     block["transaction_count"] = vds.read_compact_size()
     block["transactions"] = []
-    for i in range(block["transaction_count"]):  # noqa: B007
+    for _i in range(block["transaction_count"]):  # noqa: B007
         block["transactions"].append(read_transaction(vds, use_txid=use_txid))
     return block
 

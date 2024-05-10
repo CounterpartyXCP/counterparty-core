@@ -123,7 +123,7 @@ def get_transaction(tx_hash: str, format: str = "json"):
     :param tx_hash: The transaction hash (e.g. 3190047bf2320bdcd0fade655ae49be309519d151330aa478573815229cc0018)
     :param format: Whether to return JSON output or raw hex (e.g. hex)
     """
-    return backend.bitcoind.getrawtransaction(tx_hash, verbose=(format == "json"))
+    return backend.bitcoind.getrawtransaction(tx_hash, verbose=format == "json")
 
 
 def get_oldest_transaction_by_address(address: str, block_index: int = None):

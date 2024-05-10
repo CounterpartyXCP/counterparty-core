@@ -51,6 +51,10 @@ services:
       - "-prune=0"
       - "-dbcache=4000"
       - "-mempoolfullrbf=1"
+      - "-zmqpubrawtx=tcp://127.0.0.1:9332"
+      - "-zmqpubhashtx=tcp://127.0.0.1:9332"
+      - "-zmqpubsequence=tcp://127.0.0.1:9332"
+      - "-zmqpubrawblock=tcp://127.0.0.1:9333"
 
   addrindexrs:
     <<: *addrindexrs-common
@@ -110,6 +114,10 @@ services:
       - "-prune=0"
       - "-dbcache=4000"
       - "-mempoolfullrbf=1"
+      - "-zmqpubrawtx=tcp://127.0.0.1:19332"
+      - "-zmqpubhashtx=tcp://127.0.0.1:19332"
+      - "-zmqpubsequence=tcp://127.0.0.1:19332"
+      - "-zmqpubrawblock=tcp://127.0.0.1:19333"
 
   addrindexrs-testnet:
     <<: *addrindexrs-common

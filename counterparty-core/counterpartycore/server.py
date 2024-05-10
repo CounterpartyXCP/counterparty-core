@@ -154,6 +154,8 @@ def initialise_config(
     customnet=None,
     no_mempool=False,
     no_telemetry=False,
+    zmq_sequence_port=None,
+    zmq_rawblock_port=None,
 ):
     # log config alreasdy initialized
     logger.debug("VERBOSE: %s", config.VERBOSE)
@@ -342,6 +344,26 @@ def initialise_config(
     config.INDEXD_URL = "http://" + config.INDEXD_CONNECT + ":" + str(config.INDEXD_PORT)
 
     logger.debug("INDEXD_URL: %s", config.INDEXD_URL)
+
+    if zmq_rawblock_port:
+        config.ZMQ_RAWBLOCK_PORT = zmq_rawblock_port
+    else:
+        if config.TESTNET:
+            config.ZMQ_RAWBLOCK_PORT = config.DEFAULT_ZMQ_RAWBLOCK_PORT_TESTNET
+        elif config.REGTEST:
+            config.ZMQ_RAWBLOCK_PORT = config.DEFAULT_ZMQ_RAWBLOCK_PORT_REGTEST
+        else:
+            config.ZMQ_RAWBLOCK_PORT = config.DEFAULT_ZMQ_RAWBLOCK_PORT
+
+    if zmq_sequence_port:
+        config.ZMQ_SEQUENCE_PORT = zmq_sequence_port
+    else:
+        if config.TESTNET:
+            config.ZMQ_SEQUENCE_PORT = config.DEFAULT_ZMQ_SEQUENCE_PORT_TESTNET
+        elif config.REGTEST:
+            config.ZMQ_SEQUENCE_PORT = config.DEFAULT_ZMQ_SEQUENCE_PORT_REGTEST
+        else:
+            config.ZMQ_SEQUENCE_PORT = config.DEFAULT_ZMQ_SEQUENCE_PORT
 
     ##############
     # THINGS WE SERVE
@@ -591,6 +613,8 @@ def initialise_log_and_config(args):
         "utxo_locks_max_age": args.utxo_locks_max_age,
         "no_mempool": args.no_mempool,
         "no_telemetry": args.no_telemetry,
+        "zmq_sequence_port": args.zmq_sequence_port,
+        "zmq_rawblock_port": args.zmq_rawblock_port,
     }
 
     initialise_log_config(

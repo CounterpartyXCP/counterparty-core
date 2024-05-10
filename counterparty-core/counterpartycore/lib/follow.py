@@ -11,8 +11,6 @@ from counterpartycore.lib import blocks, config, deserialize, ledger, mempool
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-sequence_port = 28332
-rawblock_port = 28333
 
 MEMPOOL_BLOCK_MAX_SIZE = 100
 
@@ -38,11 +36,15 @@ class BlockchainWatcher:
         self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "rawtx")
         self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "hashtx")
         self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "sequence")
-        self.zmq_sub_socket_sequence.connect("tcp://127.0.0.1:%i" % sequence_port)
+        self.zmq_sub_socket_sequence.connect(
+            f"tcp://{config.BACKEND_CONNECT}:{config.ZMQ_SEQUENCE_PORT}"
+        )
         self.zmq_sub_socket_rawblock = self.zmq_context.socket(zmq.SUB)
         self.zmq_sub_socket_rawblock.setsockopt(zmq.RCVHWM, 0)
         self.zmq_sub_socket_rawblock.setsockopt_string(zmq.SUBSCRIBE, "rawblock")
-        self.zmq_sub_socket_rawblock.connect("tcp://127.0.0.1:%i" % rawblock_port)
+        self.zmq_sub_socket_rawblock.connect(
+            f"tcp://{config.BACKEND_CONNECT}:{config.ZMQ_RAWBLOCK_PORT}"
+        )
 
     def receive_rawblock(self, body):
         # parse blocks as they come in
@@ -73,17 +75,17 @@ class BlockchainWatcher:
             self.raw_tx_cache.pop(tx_hash)
 
     def receive_sequence(self, body):
-        hash = body[:32].hex()
+        item_hash = body[:32].hex()
         label = chr(body[32])
         # new transaction in mempool
         if label == "A":
-            if hash not in self.mempool_block_hashes:
-                self.mempool_block_hashes.append(hash)
+            if item_hash not in self.mempool_block_hashes:
+                self.mempool_block_hashes.append(item_hash)
                 # get transaction from cache
-                raw_tx = self.raw_tx_cache[hash]
+                raw_tx = self.raw_tx_cache[item_hash]
                 # add transaction to mempool block
-                logger.trace("Adding transaction to mempool block: %s" % hash)
-                logger.trace("Mempool block size: %s" % len(self.mempool_block))
+                logger.trace("Adding transaction to mempool block: %s", item_hash)
+                logger.trace("Mempool block size: %s", len(self.mempool_block))
                 self.mempool_block.append(raw_tx)
                 if len(self.mempool_block) == MEMPOOL_BLOCK_MAX_SIZE:
                     # parse mempool block
@@ -94,13 +96,13 @@ class BlockchainWatcher:
                     logger.debug("Waiting for new transactions from mempool or new block...")
         # transaction removed from mempool for non-block inclusion reasons
         elif label == "R":
-            mempool.clean_transaction_events(self.db, hash)
+            mempool.clean_transaction_events(self.db, item_hash)
 
     def receive_message(self, topic, body, seq):
         sequence = "Unknown"
         if len(seq) == 4:
             sequence = str(struct.unpack("<I", seq)[-1])
-        logger.trace("Received message: %s %s" % (topic, sequence))
+        logger.trace("Received message: %s %s", topic, sequence)
         if topic == b"rawblock":
             self.receive_rawblock(body)
         elif topic == b"hashtx":
@@ -124,7 +126,6 @@ class BlockchainWatcher:
                     self.receive_message(topic, body, seq)
                 except zmq.ZMQError:
                     logger.trace("No rawblock message available")
-                    pass
                 self.last_block_check_time = time.time()
         except Exception as e:
             logger.error(traceback.format_exc())

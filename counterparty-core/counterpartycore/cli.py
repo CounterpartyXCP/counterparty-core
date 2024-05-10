@@ -287,6 +287,20 @@ CONFIG_ARGS = [
             "help": "Do not send anonymous node telemetry data to telemetry server",
         },
     ],
+    [
+        ("--zmq-sequence-port",),
+        {
+            "type": int,
+            "help": "port on which bitcoind will publish ZMQ notificiations for `sequence` topic",
+        },
+    ],
+    [
+        ("--zmq-rawblock-port",),
+        {
+            "type": int,
+            "help": "port on which bitcoind will publish ZMQ notificiations for `rawblock` topic",
+        },
+    ],
 ]
 
 
