@@ -3572,8 +3572,7 @@
     },
     "/healthz": {
         "result": {
-            "result": "Healthy",
-            "success": true
+            "status": "Healthy"
         }
     }
 }
