@@ -36,13 +36,13 @@ class BlockchainWatcher:
         self.zmq_sub_socket_rawblock.setsockopt_string(zmq.SUBSCRIBE, "rawblock")
         self.zmq_sub_socket_rawblock.connect("tcp://127.0.0.1:%i" % rawblock_port)
 
-        self.raw_tx_cache = {}
-        self.decoded_tx_cache = {}
-        self.decoded_block_cache = {}
         self.mempool_block = []
         self.mempool_block_hashes = []
+
+        self.raw_tx_cache = {}
         self.hash_by_sequence = {}
-        self.last_block_check = 0
+
+        self.last_block_check_time = 0
 
         # clean mempool before starting
         mempool.clean_mempool(self.db)
@@ -61,10 +61,15 @@ class BlockchainWatcher:
             if existing_block is None:
                 blocks.parse_new_block(self.db, decoded_block)
                 mempool.clean_mempool(self.db)
+            print("self.hash_by_sequence:", len(self.hash_by_sequence))
+            print("self.raw_tx_cache:", len(self.raw_tx_cache))
         elif topic == b"hashtx":
             self.hash_by_sequence[sequence] = body.hex()
         elif topic == b"rawtx":
             tx_hash = self.hash_by_sequence.get(sequence)
+            if tx_hash is None:
+                decoded_tx = deserialize.deserialize_tx(body.hex(), use_txid=True)
+                tx_hash = decoded_tx["tx_hash"]
             # first time seeing this transaction means from mempool
             if tx_hash not in self.raw_tx_cache:
                 self.raw_tx_cache[tx_hash] = body.hex()
@@ -104,7 +109,7 @@ class BlockchainWatcher:
             topic, body, seq = await self.zmq_sub_socket_sequence.recv_multipart()
             self.receive_message(topic, body, seq)
             # rawblock topic
-            if time.time() - self.last_block_check > 10:
+            if time.time() - self.last_block_check_time > 10:
                 try:
                     topic, body, seq = await self.zmq_sub_socket_rawblock.recv_multipart(
                         flags=zmq.NOBLOCK
@@ -113,7 +118,7 @@ class BlockchainWatcher:
                 except zmq.ZMQError:
                     logger.trace("No rawblock message available")
                     pass
-                self.last_block_check = time.time()
+                self.last_block_check_time = time.time()
         except Exception as e:
             print(traceback.format_exc())
             self.stop()
