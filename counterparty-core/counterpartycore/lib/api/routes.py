@@ -104,10 +104,10 @@ ROUTES = util.prepare_routes(
         "/v2/mempool/events": ledger.get_all_mempool_events,
         "/v2/mempool/events/<event>": ledger.get_mempool_events_by_name,
         ### API v1 ###
-        "/": util.redirect_to_api_v1,
-        "/v1/<path:subpath>": util.redirect_to_api_v1,
-        "/api/<path:subpath>": util.redirect_to_api_v1,
-        "/rpc/<path:subpath>": util.redirect_to_api_v1,
-        "/<path:subpath>": util.redirect_to_api_v1,
+        "/": util.redirect_to_rpc_v1,
+        "/v1/": util.redirect_to_rpc_v1,
+        "/api/": util.redirect_to_rpc_v1,
+        "/rpc/": util.redirect_to_rpc_v1,
+        "/healthz": util.redirect_to_healthz_v1,
     }
 )

@@ -207,7 +207,7 @@ def prepare_route_args(function):
         if arg_name in args_description:
             route_arg["description"] = args_description[arg_name]
         args.append(route_arg)
-    if function.__name__ != "redirect_to_api_v1":
+    if not function.__name__.endswith("_v1"):
         args.append(
             {
                 "name": "verbose",
@@ -394,3 +394,17 @@ def redirect_to_api_v1(subpath: str = ""):
     if flask.request.method == "POST":
         query_params["json"] = flask.request.json
     return request_function(url, **query_params).json()
+
+
+def redirect_to_rpc_v1():
+    """
+    Redirect to the RPC API v1.
+    """
+    return redirect_to_api_v1()
+
+
+def redirect_to_healthz_v1():
+    """
+    Redirect to the API v1 healthz query.
+    """
+    return redirect_to_api_v1("healthz")

@@ -3072,36 +3072,6 @@
             }
         ]
     },
-    "/v1/<path:subpath>": {
-        "result": {
-            "result": "Healthy",
-            "success": true
-        }
-    },
-    "/api/<path:subpath>": {
-        "result": {
-            "result": "Healthy",
-            "success": true
-        }
-    },
-    "/rpc/<path:subpath>": {
-        "result": {
-            "result": "Healthy",
-            "success": true
-        }
-    },
-    "/<path:subpath>": {
-        "result": {
-            "result": "Healthy",
-            "success": true
-        }
-    },
-    "/": {
-        "result": {
-            "result": "Healthy",
-            "success": true
-        }
-    },
     "/v2/blocks/<int:block_index>/events": {
         "result": [
             {
@@ -3599,5 +3569,11 @@
                 "timestamp": 1712256340
             }
         ]
+    },
+    "/healthz": {
+        "result": {
+            "result": "Healthy",
+            "success": true
+        }
     }
 }

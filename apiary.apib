@@ -5252,90 +5252,21 @@ Returns the mempool events filtered by event name
 
 ## Group V1
 
-### Redirect To Api V1 [GET /{?subpath}]
+### Redirect To Rpc V1 [GET /]
 
-Redirect to the API v1.
+Redirect to the RPC API v1.
+### Redirect To Rpc V1 [GET /v1/]
 
-+ Parameters
-    + subpath: `healthz` (str, optional) - The path to redirect to
-        + Default: ``
+Redirect to the RPC API v1.
+### Redirect To Rpc V1 [GET /api/]
 
-+ Response 200 (application/json)
+Redirect to the RPC API v1.
+### Redirect To Rpc V1 [GET /rpc/]
 
-    ```
-        {
-            "result": {
-                "result": "Healthy",
-                "success": true
-            }
-        }
-    ```
+Redirect to the RPC API v1.
+### Redirect To Healthz V1 [GET /healthz]
 
-### Redirect To Api V1 [GET /v1/{subpath}]
-
-Redirect to the API v1.
-
-+ Parameters
-    + subpath: `healthz` (str, optional) - The path to redirect to
-        + Default: ``
-
-+ Response 200 (application/json)
-
-    ```
-        {
-            "result": {
-                "result": "Healthy",
-                "success": true
-            }
-        }
-    ```
-
-### Redirect To Api V1 [GET /api/{subpath}]
-
-Redirect to the API v1.
-
-+ Parameters
-    + subpath: `healthz` (str, optional) - The path to redirect to
-        + Default: ``
-
-+ Response 200 (application/json)
-
-    ```
-        {
-            "result": {
-                "result": "Healthy",
-                "success": true
-            }
-        }
-    ```
-
-### Redirect To Api V1 [GET /rpc/{subpath}]
-
-Redirect to the API v1.
-
-+ Parameters
-    + subpath: `healthz` (str, optional) - The path to redirect to
-        + Default: ``
-
-+ Response 200 (application/json)
-
-    ```
-        {
-            "result": {
-                "result": "Healthy",
-                "success": true
-            }
-        }
-    ```
-
-### Redirect To Api V1 [GET /{subpath}]
-
-Redirect to the API v1.
-
-+ Parameters
-    + subpath: `healthz` (str, optional) - The path to redirect to
-        + Default: ``
-
+Redirect to the API v1 healthz query.
 + Response 200 (application/json)
 
     ```
