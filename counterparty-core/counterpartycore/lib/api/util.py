@@ -378,33 +378,18 @@ def inject_dispensers(db, result):
     return result
 
 
-def redirect_to_api_v1(subpath: str = ""):
+def redirect_to_rpc_v1():
     """
-    Redirect to the API v1.
-    :param subpath: The path to redirect to (e.g. healthz)
+    Redirect to the RPC API v1.
     """
     query_params = {
         "headers": flask.request.headers,
         "auth": (config.RPC_USER, config.RPC_PASSWORD),
     }
-    url = f"http://localhost:{config.RPC_PORT}/{subpath}"
+    url = f"http://localhost:{config.RPC_PORT}/"
     if flask.request.query_string:
         url += f"?{flask.request.query_string}"
     request_function = getattr(requests, flask.request.method.lower())
     if flask.request.method == "POST":
         query_params["json"] = flask.request.json
     return request_function(url, **query_params).json()
-
-
-def redirect_to_rpc_v1():
-    """
-    Redirect to the RPC API v1.
-    """
-    return redirect_to_api_v1()
-
-
-def redirect_to_healthz_v1():
-    """
-    Redirect to the API v1 healthz query.
-    """
-    return redirect_to_api_v1("healthz")

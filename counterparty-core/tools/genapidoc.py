@@ -188,6 +188,8 @@ for path, route in routes.ROUTES.items():
     path_parts = path.split("/")
     if path_parts[1] == "v2":
         route_group = path.split("/")[2]
+    elif "healthz" in path:
+        route_group = "healthz"
     else:
         route_group = "v1"
     if "compose" in path:

@@ -4932,6 +4932,29 @@ Health check route.
         }
     ```
 
+## Group Z-pages
+
+### Check Server Health [GET /healthz{?check_type}{&verbose}]
+
+Health check route.
+
++ Parameters
+    + check_type: `light` (str, optional) - Type of health check to perform. Options are 'light' and 'heavy'
+        + Default: `heavy`
+    + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
+        + Default: `false`
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": {
+                "result": "Healthy",
+                "success": true
+            }
+        }
+    ```
+
 ## Group Bitcoin
 
 ### Get Transactions By Address [GET /v2/bitcoin/addresses/{address}/transactions{?unconfirmed}{&only_tx_hashes}{&verbose}]
@@ -5264,16 +5287,3 @@ Redirect to the RPC API v1.
 ### Redirect To Rpc V1 [GET /rpc/]
 
 Redirect to the RPC API v1.
-### Redirect To Healthz V1 [GET /healthz]
-
-Redirect to the API v1 healthz query.
-+ Response 200 (application/json)
-
-    ```
-        {
-            "result": {
-                "result": "Healthy",
-                "success": true
-            }
-        }
-    ```

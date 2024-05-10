@@ -93,6 +93,7 @@ ROUTES = util.prepare_routes(
         "/v2/events/<event>": ledger.get_events_by_name,
         ### /healthz ###
         "/v2/healthz": util.check_server_health,
+        "/healthz": util.check_server_health,
         ### /bitcoin ###
         "/v2/bitcoin/addresses/<address>/transactions": addrindexrs.get_transactions_by_address,
         "/v2/bitcoin/addresses/<address>/transactions/oldest": util.get_oldest_transaction_by_address,
@@ -108,6 +109,5 @@ ROUTES = util.prepare_routes(
         "/v1/": util.redirect_to_rpc_v1,
         "/api/": util.redirect_to_rpc_v1,
         "/rpc/": util.redirect_to_rpc_v1,
-        "/healthz": util.redirect_to_healthz_v1,
     }
 )
