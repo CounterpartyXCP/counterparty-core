@@ -22,9 +22,9 @@ from counterpartycore.lib import (  # noqa: E402
     config,
     database,
     exceptions,
+    fetcher,
     ledger,
     message_type,
-    prefetcher,
     util,
 )
 from counterpartycore.lib.gettxinfo import get_tx_info  # noqa: E402
@@ -989,9 +989,8 @@ def catch_up(db, check_asset_conservation=True):
     # Get block count.
     block_count = backend.bitcoind.getblockcount()
 
-    # If we're far behind, start Prefetcher.
-    if util.CURRENT_BLOCK_INDEX <= block_count - 2000:
-        prefetcher.start_all(NUM_PREFETCHER_THREADS)
+    # initialize blocks fetcher
+    block_fetcher = fetcher.BlockFetcher(util.CURRENT_BLOCK_INDEX + 1)
 
     # Get index of last transaction.
     tx_index = get_next_tx_index(db)
@@ -1000,7 +999,7 @@ def catch_up(db, check_asset_conservation=True):
         print(f"Block {util.CURRENT_BLOCK_INDEX}/{block_count}")
 
         # Get block information and transactions
-        decoded_block = prefetcher.get_decoded_block(util.CURRENT_BLOCK_INDEX + 1)
+        decoded_block = block_fetcher.get_next_block()
         # util.CURRENT_BLOCK_INDEX is incremented in parse_new_block
         tx_index = parse_new_block(db, decoded_block, block_parser=None, tx_index=tx_index)
 
