@@ -112,7 +112,7 @@ def is_cachable(rule):
 
 
 def return_result_if_not_ready(rule):
-    return is_cachable(rule) or rule == "/"
+    return is_cachable(rule) or rule == "/v2/"
 
 
 def return_result(http_code, result=None, error=None):
