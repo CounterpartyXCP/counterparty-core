@@ -121,7 +121,7 @@ else:
     md = ""
 
 md += """FORMAT: 1A
-HOST: https://api.counterparty.io
+HOST: https://api.counterparty.io:4000
 
 # Counterparty Core API
 
@@ -152,11 +152,11 @@ Notes:
     }
     ```
 
-- Routes in the `/bitcoin` group serve as a proxy to make requests to Bitcoin Core.
+- Routes in the `/v2/bitcoin` group serve as a proxy to make requests to Bitcoin Core.
 
 # Counterparty API Root [{root_path}]
 
-### Get Server Info [GET]
+### Get Server Info [GET /v2/]
 
 Returns server information and the list of documented routes in JSON format.
 
