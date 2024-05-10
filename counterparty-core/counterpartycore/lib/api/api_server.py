@@ -248,7 +248,7 @@ def handle_route(**kwargs):
     except Exception as e:
         logger.exception("Error in API: %s", e)
         traceback.print_exc()
-        return return_result(503, error="Unknwon error")
+        return return_result(503, error="Unknown error")
 
     # clean up and return the result
     if result is None:
