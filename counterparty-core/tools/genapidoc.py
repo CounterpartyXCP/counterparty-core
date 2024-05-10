@@ -41,7 +41,7 @@ def get_example_output(path, args):
     return response.json()
 
 
-root_path = "`/`" if TARGET == "docusaurus" else "/"
+root_path = "`/v2/`" if TARGET == "docusaurus" else "/v2/"
 
 GROUPS = [
     "/blocks",
