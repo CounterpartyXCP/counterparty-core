@@ -7,7 +7,7 @@ import traceback
 import zmq
 import zmq.asyncio
 
-from counterpartycore.lib import blocks, config, deserialize, ledger, mempool
+from counterpartycore.lib import backend, blocks, config, deserialize, exceptions, ledger, mempool
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -82,7 +82,13 @@ class BlockchainWatcher:
             if item_hash not in self.mempool_block_hashes:
                 self.mempool_block_hashes.append(item_hash)
                 # get transaction from cache
-                raw_tx = self.raw_tx_cache[item_hash]
+                raw_tx = self.raw_tx_cache.get(item_hash)
+                if raw_tx is None:
+                    try:
+                        raw_tx = backend.bitcoind.getrawtransaction(item_hash)
+                    except exceptions.BitcoindRPCError:
+                        logger.trace("Transaction not found in bitcoind: %s", item_hash)
+                        return
                 # add transaction to mempool block
                 logger.trace("Adding transaction to mempool block: %s", item_hash)
                 logger.trace("Mempool block size: %s", len(self.mempool_block))
