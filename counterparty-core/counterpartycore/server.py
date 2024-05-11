@@ -679,9 +679,10 @@ def start_all(args):
         # initialise database
         db = database.initialise_db()
         blocks.initialise(db)
-        # check software and database versions
-        # TODO: timer to check every day
-        blocks.check_versions(db)
+        blocks.check_database_version(db)
+
+        # check software version
+        check.software_version()
 
         # API Server v2.
         api_server_v2 = api_v2.APIServer()

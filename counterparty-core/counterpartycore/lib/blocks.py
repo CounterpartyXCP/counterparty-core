@@ -963,11 +963,8 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
     return tx_index
 
 
-def check_versions(db):
-    # Check software version.
-    check.software_version()
-
-    # Check database version.
+def check_database_version(db):
+    # Update version if new database.
     if util.CURRENT_BLOCK_INDEX <= config.BLOCK_FIRST:
         database.update_version(db)
         return

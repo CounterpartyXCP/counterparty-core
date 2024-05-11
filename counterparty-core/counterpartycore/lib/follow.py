@@ -7,7 +7,16 @@ import traceback
 import zmq
 import zmq.asyncio
 
-from counterpartycore.lib import backend, blocks, config, deserialize, exceptions, ledger, mempool
+from counterpartycore.lib import (
+    backend,
+    blocks,
+    check,
+    config,
+    deserialize,
+    exceptions,
+    ledger,
+    mempool,
+)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -26,6 +35,7 @@ class BlockchainWatcher:
         self.raw_tx_cache = {}
         self.hash_by_sequence = {}
         self.last_block_check_time = 0
+        self.last_software_version_check_time = 0
         # clean mempool before starting
         mempool.clean_mempool(self.db)
 
@@ -45,6 +55,11 @@ class BlockchainWatcher:
         self.zmq_sub_socket_rawblock.connect(
             f"tcp://{config.BACKEND_CONNECT}:{config.ZMQ_RAWBLOCK_PORT}"
         )
+
+    def check_software_version_if_needed(self):
+        if time.time() - self.last_software_version_check_time > 60 * 60 * 24:
+            check.software_version()
+            self.last_software_version_check_time = time.time()
 
     def receive_rawblock(self, body):
         # parse blocks as they come in
@@ -118,20 +133,22 @@ class BlockchainWatcher:
         elif topic == b"sequence":
             self.receive_sequence(body)
 
+    async def receive_multipart(self, socket, topic_name):
+        try:
+            topic, body, seq = await socket.recv_multipart(flags=zmq.NOBLOCK)
+        except zmq.ZMQError:
+            logger.trace("No message available in topic %s", topic_name)
+            return
+        self.receive_message(topic, body, seq)
+
     async def handle(self):
+        self.check_software_version_if_needed()
         try:
             # sequence topic
-            topic, body, seq = await self.zmq_sub_socket_sequence.recv_multipart()
-            self.receive_message(topic, body, seq)
+            await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")
             # check every 10 seconds rawblock topic
             if time.time() - self.last_block_check_time > 10:
-                try:
-                    topic, body, seq = await self.zmq_sub_socket_rawblock.recv_multipart(
-                        flags=zmq.NOBLOCK
-                    )
-                    self.receive_message(topic, body, seq)
-                except zmq.ZMQError:
-                    logger.trace("No rawblock message available")
+                await self.receive_multipart(self.zmq_sub_socket_rawblock, "rawblock")
                 self.last_block_check_time = time.time()
         except Exception as e:
             logger.error(traceback.format_exc())
