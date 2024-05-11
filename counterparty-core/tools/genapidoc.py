@@ -127,6 +127,8 @@ HOST: https://api.counterparty.io:4000
 
 The Counterparty Core API is the recommended (and only supported) way to query the state of a Counterparty node. 
 
+Please see [Apiary](https://counterpartycore.docs.apiary.io/) for interactive documentation.
+
 API routes are divided into 11 groups:
 """
 
