@@ -242,15 +242,6 @@ def add_to_journal(db, block_index, command, category, event, bindings):
     except exceptions.DatabaseError:
         message_index = 0
 
-    # Not to be misleading…
-    if block_index == config.MEMPOOL_BLOCK_INDEX:
-        try:
-            del bindings["status"]
-            del bindings["block_index"]
-            del bindings["tx_index"]
-        except KeyError:
-            pass
-
     # Handle binary data.
     items = {}
     for key, value in bindings.items():
@@ -285,7 +276,7 @@ def add_to_journal(db, block_index, command, category, event, bindings):
 
     BLOCK_JOURNAL.append(f"{command}{category}{bindings_string}")
 
-    log.log_event(event, items)
+    log.log_event(block_index, event, items)
 
 
 ###########################
