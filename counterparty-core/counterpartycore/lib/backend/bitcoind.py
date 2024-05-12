@@ -111,6 +111,11 @@ def getblock(block_hash, verbosity=0):
     return rpc("getblock", [block_hash, verbosity])
 
 
+def get_block_height(block_hash):
+    block_info = rpc("getblock", [block_hash, 1])
+    return block_info["height"]
+
+
 @functools.lru_cache
 def getrawtransaction(tx_hash, verbose=False):
     return rpc("getrawtransaction", [tx_hash, 1 if verbose else 0])
