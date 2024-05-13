@@ -146,7 +146,7 @@ def get_transaction_sources(decoded_tx, block_parser=None):
             vin_ctx = block_parser.read_raw_transaction(ib2h(vin["hash"]))
         else:
             # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
-            vin_ctx = fetcher.get_decoded_transaction(ib2h(vin["hash"]))
+            vin_ctx = fetcher.get_decoded_transaction(vin["hash"])
 
         vout = vin_ctx["vout"][vin["n"]]
         outputs_value += vout["value"]
@@ -193,7 +193,7 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit, block_parser=No
             vin_ctx = block_parser.read_raw_transaction(ib2h(vin["hash"]))
         else:
             # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
-            vin_ctx = fetcher.get_decoded_transaction(ib2h(vin["hash"]))
+            vin_ctx = fetcher.get_decoded_transaction(vin["hash"])
 
         if util.enabled("prevout_segwit_fix"):
             prevout_is_segwit = len(vin_ctx["vtxinwit"]) > 0
@@ -489,7 +489,7 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
             vin_ctx = block_parser.read_raw_transaction(ib2h(vin["hash"]))
         else:
             # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
-            vin_ctx = fetcher.get_decoded_transaction(ib2h(vin["hash"]))
+            vin_ctx = fetcher.get_decoded_transaction(vin["hash"])
 
         vout = vin_ctx["vout"][vin["n"]]
         fee += vout["value"]
