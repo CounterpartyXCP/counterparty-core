@@ -23,27 +23,27 @@ def test_deserialize():
             {
                 "hash": b"\xdb:\xcf7t:\xc0\x15\x80\x8fy\x11\xa8\x87aS\x0c\x80\x18\x19\xb3\xb9\x074\n\xa6]\xfbm\x98\xce$",
                 "n": 3,
-                "scriptSig": b"G0D\x02 \x02\x96\x1fH\x00\xcb\x15\x7f\x8c\t\x13\x08M\xb0\xee\x14\x8f\xa3\xe1\x13\x0e\x0b^@\xc3\xa4jmO\x83\xce\xaf\x02 ,=\xd8\xe61\xbf$\xf4\xc0\xc54\x1b>\x13\x82\xa2\x7f\x846\xd7_>\n\tY\x15\x99[\x0b\xf7\xdc\x8e\x01!\x03\x95\xc2#\xfb\xf9nI\xe5\xb9\xe0j#l\xa7\xef\x95\xb1\x0b\xf1\x8c\x07K\xd9\x1aYB\xfc@6\r\x0bh",
-                "nSequence": 4294967293,
+                "script_sig": b"G0D\x02 \x02\x96\x1fH\x00\xcb\x15\x7f\x8c\t\x13\x08M\xb0\xee\x14\x8f\xa3\xe1\x13\x0e\x0b^@\xc3\xa4jmO\x83\xce\xaf\x02 ,=\xd8\xe61\xbf$\xf4\xc0\xc54\x1b>\x13\x82\xa2\x7f\x846\xd7_>\n\tY\x15\x99[\x0b\xf7\xdc\x8e\x01!\x03\x95\xc2#\xfb\xf9nI\xe5\xb9\xe0j#l\xa7\xef\x95\xb1\x0b\xf1\x8c\x07K\xd9\x1aYB\xfc@6\r\x0bh",
+                "sequence": 4294967293,
                 "coinbase": False,
             }
         ],
         "vout": [
             {
-                "nValue": 0,
-                "scriptPubKey": b"jLPX2[\xd6\x13%\xdcc?\xad\xf0[\xec\x91W\xc21\x06u\x9c\xee@\x95M9\xd9\xdb\xff\xc1~\xc5\x85\x1a-\x1f\xeb]'\x1d\xa4\"\xe0\xe2Lz\xe8\xad)\xd2\xee\xab\xf7\xf9\xca=\xe3\x06\xbd+\xc9\x8e*9\xe4w1\xaa\x00\x0c\xaf@\x00S\x00\x0c\x12\x83\x00\x01I",
+                "value": 0,
+                "script_pub_key": b"jLPX2[\xd6\x13%\xdcc?\xad\xf0[\xec\x91W\xc21\x06u\x9c\xee@\x95M9\xd9\xdb\xff\xc1~\xc5\x85\x1a-\x1f\xeb]'\x1d\xa4\"\xe0\xe2Lz\xe8\xad)\xd2\xee\xab\xf7\xf9\xca=\xe3\x06\xbd+\xc9\x8e*9\xe4w1\xaa\x00\x0c\xaf@\x00S\x00\x0c\x12\x83\x00\x01I",
             },
             {
-                "nValue": 200,
-                "scriptPubKey": b"v\xa9\x14b\xbe\xf4\x11\x0f\x98\xfd\xcbJ\xac<\x18i\xdb\xed\x9b\xce\x87\x02\xed\x88\xac",
+                "value": 200,
+                "script_pub_key": b"v\xa9\x14b\xbe\xf4\x11\x0f\x98\xfd\xcbJ\xac<\x18i\xdb\xed\x9b\xce\x87\x02\xed\x88\xac",
             },
             {
-                "nValue": 200,
-                "scriptPubKey": b"\xa9\x14C\x17\xf7y\xc0\xa2\xcc\xf8\xf6\xbc=D\x0b\xd9\xe56\xa5\xbf\xf7R\x87",
+                "value": 200,
+                "script_pub_key": b"\xa9\x14C\x17\xf7y\xc0\xa2\xcc\xf8\xf6\xbc=D\x0b\xd9\xe56\xa5\xbf\xf7R\x87",
             },
             {
-                "nValue": 5324538,
-                "scriptPubKey": b"v\xa9\x14\xbf&F\xb8\xba\x8bJ\x142 R\x8b\xde\x9c0m\xacD\xa0\x1c\x88\xac",
+                "value": 5324538,
+                "script_pub_key": b"v\xa9\x14\xbf&F\xb8\xba\x8bJ\x142 R\x8b\xde\x9c0m\xacD\xa0\x1c\x88\xac",
             },
         ],
         "vtxinwit": [],
@@ -65,12 +65,12 @@ def test_deserialize():
         for i, vin in enumerate(decoded_tx_bitcoinlib.vin):
             assert vin.prevout.hash == decoded_tx_parser["vin"][i]["hash"]
             assert vin.prevout.n == decoded_tx_parser["vin"][i]["n"]
-            assert vin.scriptSig == decoded_tx_parser["vin"][i]["scriptSig"]
-            assert vin.nSequence == decoded_tx_parser["vin"][i]["nSequence"]
+            assert vin.scriptSig == decoded_tx_parser["vin"][i]["script_sig"]
+            assert vin.nSequence == decoded_tx_parser["vin"][i]["sequence"]
 
         for i, vout in enumerate(decoded_tx_bitcoinlib.vout):
             assert vout.nValue == decoded_tx_parser["vout"][i]["nValue"]
-            assert vout.scriptPubKey == decoded_tx_parser["vout"][i]["scriptPubKey"]
+            assert vout.scriptPubKey == decoded_tx_parser["vout"][i]["script_pub_key"]
 
         assert decoded_tx_bitcoinlib.has_witness() == (len(decoded_tx_parser["vtxinwit"]) > 0)
         assert decoded_tx_bitcoinlib.is_coinbase() == decoded_tx_parser["coinbase"]

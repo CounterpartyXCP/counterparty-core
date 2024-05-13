@@ -488,7 +488,7 @@ def mock_bitcoind_verbose_tx_output(tx, txid, confirmations):
         rvout = {
             "n": idx,
             "value": vout.nValue / config.UNIT,
-            "scriptPubKey": {
+            "script_pub_key": {
                 "type": type,
                 "addresses": addresses,
                 "hex": binascii.hexlify(vout.scriptPubKey).decode("ascii"),
@@ -520,8 +520,8 @@ def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
     for tx_hash, tx in tx_hashes_tx.items():
         tx_hashes_addresses[tx_hash] = set()
         for vout in tx["vout"]:
-            if "addresses" in vout["scriptPubKey"]:
-                tx_hashes_addresses[tx_hash].update(tuple(vout["scriptPubKey"]["addresses"]))
+            if "addresses" in vout["script_pub_key"]:
+                tx_hashes_addresses[tx_hash].update(tuple(vout["script_pub_key"]["addresses"]))
 
         tx_inputs_hashes.update([vin["txid"] for vin in tx["vin"]])
 
@@ -538,8 +538,8 @@ def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
                     continue
 
                 vout = vin_tx["vout"][vin["vout"]]
-                if "addresses" in vout["scriptPubKey"]:
-                    tx_hashes_addresses[tx_hash].update(tuple(vout["scriptPubKey"]["addresses"]))
+                if "addresses" in vout["script_pub_key"]:
+                    tx_hashes_addresses[tx_hash].update(tuple(vout["script_pub_key"]["addresses"]))
 
     return tx_hashes_addresses, tx_hashes_tx
 

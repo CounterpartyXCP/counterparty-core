@@ -516,7 +516,7 @@ def extract_pubkeys(pub):
 def ensure_script_pub_key_for_inputs(coins):
     txhash_set = set()
     for coin in coins:
-        if "scriptPubKey" not in coin:
+        if "script_pub_key" not in coin:
             txhash_set.add(coin["txid"])
 
     if len(txhash_set) > 0:
@@ -524,11 +524,11 @@ def ensure_script_pub_key_for_inputs(coins):
             list(txhash_set), verbose=True, skip_missing=False
         )
         for coin in coins:
-            if "scriptPubKey" not in coin:
+            if "script_pub_key" not in coin:
                 # get the scriptPubKey
                 txid = coin["txid"]
                 for vout in txs[txid]["vout"]:
                     if vout["n"] == coin["vout"]:
-                        coin["scriptPubKey"] = vout["scriptPubKey"]["hex"]
+                        coin["script_pub_key"] = vout["script_pub_key"]["hex"]
 
     return coins
