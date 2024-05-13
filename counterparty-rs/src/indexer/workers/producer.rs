@@ -96,10 +96,12 @@ where
                     info!("Entering reorg window");
                     reorg_detection_enabled = true;
                 }
-                let last_matching_height =
-                    get_last_matching_height(&client, &db, done.clone(), height)?;
-
                 let last_saved_height = height - 1;
+                let last_matching_height = if height == start_height {
+                    last_saved_height
+                } else {
+                    get_last_matching_height(&client, &db, done.clone(), height)?
+                };
                 if last_matching_height < last_saved_height {
                     info!(
                         "Reorganization detected. Rolling back from height {} to {}",
