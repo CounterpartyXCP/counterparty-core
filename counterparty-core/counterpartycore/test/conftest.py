@@ -296,6 +296,8 @@ def api_server_v2(request, cp_server):
         "no_mempool": False,
         "skip_db_check": False,
         "no_telemetry": True,
+        "zmq_rawblock_port": None,
+        "zmq_sequence_port": None,
     }
     server_config = (
         default_config
@@ -536,23 +538,31 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         pass
 
     monkeypatch.setattr("counterpartycore.lib.transaction.arc4.init_arc4", init_arc4)
-    monkeypatch.setattr("counterpartycore.lib.backend.get_unspent_txouts", get_unspent_txouts)
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.addrindexrs.get_unspent_txouts", get_unspent_txouts
+    )
     monkeypatch.setattr("counterpartycore.lib.log.isodt", isodt)
     monkeypatch.setattr("counterpartycore.lib.ledger.curr_time", curr_time)
     monkeypatch.setattr("counterpartycore.lib.util.date_passed", date_passed)
     monkeypatch.setattr("counterpartycore.lib.api.util.init_api_access_log", init_api_access_log)
     if hasattr(config, "PREFIX"):
         monkeypatch.setattr("counterpartycore.lib.config.PREFIX", b"TESTXXXX")
-    monkeypatch.setattr("counterpartycore.lib.backend.getrawtransaction", mocked_getrawtransaction)
     monkeypatch.setattr(
-        "counterpartycore.lib.backend.getrawtransaction_batch", mocked_getrawtransaction_batch
+        "counterpartycore.lib.backend.bitcoind.getrawtransaction", mocked_getrawtransaction
     )
     monkeypatch.setattr(
-        "counterpartycore.lib.backend.search_raw_transactions", mocked_search_raw_transactions
+        "counterpartycore.lib.backend.addrindexrs.getrawtransaction_batch",
+        mocked_getrawtransaction_batch,
     )
-    monkeypatch.setattr("counterpartycore.lib.backend.pubkeyhash_to_pubkey", pubkeyhash_to_pubkey)
     monkeypatch.setattr(
-        "counterpartycore.lib.backend.multisig_pubkeyhashes_to_pubkeys",
+        "counterpartycore.lib.backend.addrindexrs.search_raw_transactions",
+        mocked_search_raw_transactions,
+    )
+    monkeypatch.setattr(
+        "counterpartycore.lib.transaction.pubkeyhash_to_pubkey", pubkeyhash_to_pubkey
+    )
+    monkeypatch.setattr(
+        "counterpartycore.lib.transaction.multisig_pubkeyhashes_to_pubkeys",
         multisig_pubkeyhashes_to_pubkeys,
     )
     monkeypatch.setattr("counterpartycore.lib.database.check_wal_file", check_wal_file)

@@ -37,6 +37,8 @@ services:
       - mainnet
     ports: 
       - "8332:8332"
+      - "9332:9332"
+      - "9333:9333"
     command: 
       - "-chain=main"
       - "-rpcallowip=0.0.0.0/0"
@@ -51,6 +53,10 @@ services:
       - "-prune=0"
       - "-dbcache=4000"
       - "-mempoolfullrbf=1"
+      - "-zmqpubrawtx=tcp://0.0.0.0:9332"
+      - "-zmqpubhashtx=tcp://0.0.0.0:9332"
+      - "-zmqpubsequence=tcp://0.0.0.0:9332"
+      - "-zmqpubrawblock=tcp://0.0.0.0:9333"
 
   addrindexrs:
     <<: *addrindexrs-common
@@ -96,6 +102,8 @@ services:
       - testnet
     ports: 
       - "18332:18332"
+      - "19332:19332"
+      - "19333:19333"
     command: 
       - "-chain=test"
       - "-rpcallowip=0.0.0.0/0"
@@ -110,6 +118,10 @@ services:
       - "-prune=0"
       - "-dbcache=4000"
       - "-mempoolfullrbf=1"
+      - "-zmqpubrawtx=tcp://0.0.0.0:19332"
+      - "-zmqpubhashtx=tcp://0.0.0.0:19332"
+      - "-zmqpubsequence=tcp://0.0.0.0:19332"
+      - "-zmqpubrawblock=tcp://0.0.0.0:19333"
 
   addrindexrs-testnet:
     <<: *addrindexrs-common

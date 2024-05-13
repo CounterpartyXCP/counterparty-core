@@ -1,6 +1,5 @@
 import collections
 import concurrent.futures
-import functools
 import hashlib
 import json
 import logging
@@ -11,12 +10,13 @@ import threading
 import time
 
 import bitcoin.wallet
-import requests
-from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
 
 from counterpartycore.lib import config, exceptions, util
+from counterpartycore.lib.backend.bitcoind import getblockcount, rpc_call
 
 logger = logging.getLogger(config.LOGGER_NAME)
+
+INITIALIZED = False
 
 READ_BUF_SIZE = 65536
 SOCKET_TIMEOUT = 30.0
@@ -43,97 +43,6 @@ class AddrIndexRsClientError(Exception):
     pass
 
 
-def rpc_call(payload):
-    """Calls to bitcoin core and returns the response"""
-    url = config.BACKEND_URL
-    response = None
-
-    tries = 0
-    broken_error = None
-    while True:
-        try:
-            tries += 1
-            response = requests.post(
-                url,
-                data=json.dumps(payload),
-                headers={"content-type": "application/json"},
-                verify=(not config.BACKEND_SSL_NO_VERIFY),
-                timeout=config.REQUESTS_TIMEOUT,
-            )
-
-            if response == None:  # noqa: E711
-                if config.TESTNET:
-                    network = "testnet"
-                elif config.REGTEST:
-                    network = "regtest"
-                else:
-                    network = "mainnet"
-                raise BackendRPCError(
-                    f"Cannot communicate with backend at `{util.clean_url_for_log(url)}`. (server is set to run on {network}, is backend?)"
-                )
-            elif response.status_code in (401,):
-                raise BackendRPCError(
-                    f"Authorization error connecting to {util.clean_url_for_log(url)}: {response.status_code} {response.reason}"
-                )
-            elif response.status_code not in (200, 500):
-                raise BackendRPCError(str(response.status_code) + " " + response.reason)
-
-            else:
-                break
-        except KeyboardInterrupt:
-            logger.warning("Interrupted by user")
-            exit(0)
-        except (Timeout, ReadTimeout, ConnectionError, ChunkedEncodingError):
-            logger.debug(
-                f"Could not connect to backend at `{util.clean_url_for_log(url)}`. (Try {tries})"
-            )
-            time.sleep(5)
-        except Exception as e:
-            broken_error = e
-            break
-    if broken_error:
-        raise broken_error
-
-    # Handle json decode errors
-    try:
-        response_json = response.json()
-    except json.decoder.JSONDecodeError as e:  # noqa: F841
-        raise BackendRPCError(  # noqa: B904
-            f"Received invalid JSON from backend with a response of {str(response.status_code) + ' ' + response.reason}"
-        )
-
-    # Batch query returns a list
-    if isinstance(response_json, list):
-        return response_json
-    if "error" not in response_json.keys() or response_json["error"] == None:  # noqa: E711
-        return response_json["result"]
-    elif response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
-        raise BackendRPCError(
-            f"{response_json['error']} Is `txindex` enabled in {config.BTC_NAME} Core?"
-        )
-    elif response_json["error"]["code"] in [-28, -8, -2]:
-        # “Verifying blocks...” or “Block height out of range” or “The network does not appear to fully agree!“
-        logger.debug("Backend not ready. Sleeping for ten seconds.")
-        # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
-        # seconds to start, this’ll hit the maximum recursion depth limit.
-        time.sleep(10)
-        return rpc_call(payload)
-    else:
-        raise BackendRPCError(
-            f"Error connecting to {util.clean_url_for_log(url)}: {response_json['error']}"
-        )
-
-
-def rpc(method, params):
-    payload = {
-        "method": method,
-        "params": params,
-        "jsonrpc": "2.0",
-        "id": 0,
-    }
-    return rpc_call(payload)
-
-
 def rpc_batch(request_list):
     responses = collections.deque()
 
@@ -152,97 +61,12 @@ def rpc_batch(request_list):
     return list(responses)
 
 
-def extract_addresses(txhash_list):
-    tx_hashes_tx = getrawtransaction_batch(txhash_list, verbose=True)
-
-    return extract_addresses_from_txlist(tx_hashes_tx, getrawtransaction_batch)
-
-
-def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
-    """
-    helper for extract_addresses, seperated so we can pass in a mocked _getrawtransaction_batch for test purposes
-    """
-
-    tx_hashes_addresses = {}
-    tx_inputs_hashes = set()  # use set to avoid duplicates
-
-    for tx_hash, tx in tx_hashes_tx.items():
-        tx_hashes_addresses[tx_hash] = set()
-        for vout in tx["vout"]:
-            if "addresses" in vout["scriptPubKey"]:
-                tx_hashes_addresses[tx_hash].update(tuple(vout["scriptPubKey"]["addresses"]))
-
-        tx_inputs_hashes.update([vin["txid"] for vin in tx["vin"]])
-
-    # chunk txs to avoid huge memory spikes
-    for tx_inputs_hashes_chunk in util.chunkify(
-        list(tx_inputs_hashes), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE
-    ):
-        raw_transactions = _getrawtransaction_batch(tx_inputs_hashes_chunk, verbose=True)
-        for tx_hash, tx in tx_hashes_tx.items():
-            for vin in tx["vin"]:
-                vin_tx = raw_transactions.get(vin["txid"], None)
-
-                if not vin_tx:
-                    continue
-
-                vout = vin_tx["vout"][vin["vout"]]
-                if "addresses" in vout["scriptPubKey"]:
-                    tx_hashes_addresses[tx_hash].update(tuple(vout["scriptPubKey"]["addresses"]))
-
-    return tx_hashes_addresses, tx_hashes_tx
-
-
-def getblockcount():
-    return rpc("getblockcount", [])
-
-
-def getblockhash(blockcount):
-    return rpc("getblockhash", [blockcount])
-
-
-def getblock(block_hash):
-    return rpc("getblock", [block_hash, False])
-
-
-@functools.lru_cache
-def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
-    # logger.debug(f"Cache miss on transaction {tx_hash}!")
-    return getrawtransaction_batch([tx_hash], verbose=verbose, skip_missing=skip_missing)[tx_hash]
-
-
-def getrawmempool():
-    return rpc("getrawmempool", [])
-
-
-def fee_per_kb(conf_target, mode, nblocks=None):
-    """
-    :param conf_target:
-    :param mode:
-    :return: fee_per_kb in satoshis, or None when unable to determine
-    """
-    if nblocks is None and conf_target is None:
-        conf_target = nblocks
-
-    feeperkb = rpc("estimatesmartfee", [conf_target, mode])
-
-    if "errors" in feeperkb and feeperkb["errors"][0] == "Insufficient data or no feerate found":
-        return None
-
-    return int(max(feeperkb["feerate"] * config.UNIT, config.DEFAULT_FEE_PER_KB_ESTIMATE_SMART))
-
-
-def sendrawtransaction(tx_hex):
-    return rpc("sendrawtransaction", [tx_hex])
-
-
 GETRAWTRANSACTION_MAX_RETRIES = 2
 MONOTONIC_CALL_ID = 0
 
 
 def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _retry=0):
-    _logger = logger.getChild("getrawtransaction_batch")
-
+    init()
     if len(txhash_list) > config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE:
         # don't try to load in more than BACKEND_RAW_TRANSACTIONS_CACHE_SIZE entries in a single call
         txhash_list_chunks = util.chunkify(txhash_list, config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)
@@ -317,7 +141,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _ret
                     else None
                 )
         except KeyError:  # shows up most likely due to finickyness with addrindex not always returning results that we need...
-            _logger.debug(f"tx missing in rawtx cache: {tx_hash}")
+            logger.debug(f"tx missing in rawtx cache: {tx_hash}")
             if _retry < GETRAWTRANSACTION_MAX_RETRIES:  # try again
                 time.sleep(
                     0.05 * (_retry + 1)
@@ -595,7 +419,7 @@ def unpack_vout(outpoint, tx, block_count):
     }
 
 
-def get_unspent_txouts(source):
+def _get_unspent_txouts(source):
     block_count = getblockcount()
     result = INDEXER_THREAD.send(
         {
@@ -620,6 +444,34 @@ def get_unspent_txouts(source):
         return batch
     else:
         return []
+
+
+def get_unspent_txouts(address: str, unconfirmed: bool = False, unspent_tx_hash: str = None):
+    """
+    Returns a list of unspent outputs for a specific address
+    :param address: The address to search for (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
+    :param unconfirmed: Include unconfirmed transactions
+    :param unspent_tx_hash: Filter by unspent_tx_hash
+    """
+    init()
+    unspent = _get_unspent_txouts(address)
+
+    # filter by unspent_tx_hash
+    if unspent_tx_hash is not None:
+        unspent = list(filter(lambda x: x["txId"] == unspent_tx_hash, unspent))
+
+    # filter unconfirmed
+    if not unconfirmed:
+        unspent = [utxo for utxo in unspent if utxo["confirmations"] > 0]
+
+    # format
+    for utxo in unspent:
+        utxo["amount"] = float(utxo["value"] / config.UNIT)
+        utxo["txid"] = utxo["txId"]
+        del utxo["txId"]
+        # do not add scriptPubKey
+
+    return unspent
 
 
 # Returns transactions in the following format
@@ -666,6 +518,7 @@ def get_unspent_txouts(source):
 #
 # }
 def search_raw_transactions(address, unconfirmed: bool = True, only_tx_hashes: bool = False):
+    init()
     hsh = _address_to_hash(address)
     txs = INDEXER_THREAD.send({"method": "blockchain.scripthash.get_history", "params": [hsh]})[
         "result"
@@ -682,35 +535,32 @@ def search_raw_transactions(address, unconfirmed: bool = True, only_tx_hashes: b
         return batch
 
 
-def get_oldest_tx_legacy(address):
-    hsh = _address_to_hash(address)
-    call_result = INDEXER_THREAD.send(
-        {"method": "blockchain.scripthash.get_oldest_tx", "params": [hsh]}
-    )
-
-    if call_result is not None and "error" not in call_result:
-        txs = call_result["result"]
-        return txs
-
-    return {}
-
-
-# Returns the number of blocks the backend is behind the node
-def getindexblocksbehind():
-    # Addrindexrs never "gets behind"
-    return 0
+def get_transactions_by_address(
+    address: str, unconfirmed: bool = True, only_tx_hashes: bool = False
+):
+    """
+    Returns all transactions involving a given address
+    :param address: The address to search for (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
+    :param unconfirmed: Include unconfirmed transactions (e.g. True)
+    :param only_tx_hashes: Return only the tx hashes (e.g. True)
+    """
+    return search_raw_transactions(address, unconfirmed, only_tx_hashes)
 
 
 def init():
-    global INDEXER_THREAD  # noqa: PLW0603
+    global INDEXER_THREAD, INITIALIZED  # noqa: PLW0603
+    if INITIALIZED:
+        return
     INDEXER_THREAD = AddrIndexRsClient(config.INDEXD_CONNECT, config.INDEXD_PORT)
     INDEXER_THREAD.daemon = True
     INDEXER_THREAD.start()
     logger.info("Connecting to address indexer.")
     indexer_check_version()
+    INITIALIZED = True
 
 
 def stop():
+    logger.info("Stopping addrindexrs thread...")
     if "INDEXER_THREAD" in globals() and INDEXER_THREAD is not None:
         INDEXER_THREAD.stop()
 
@@ -800,6 +650,7 @@ ADDRINDEXRS_CLIENT = None
 
 
 def get_oldest_tx(address: str, block_index: int):
+    init()
     if block_index is None:
         raise ValueError("block_index is required")
     current_block_index = block_index

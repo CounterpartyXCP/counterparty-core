@@ -20,6 +20,7 @@ only:
 - Transactions > Info > Info
 - Transactions > Unpack > Unpack
 - Transactions > Get Transaction By Hash > Get Transaction By Hash
+- Transactions > Get Events By Transaction > Get Events By Transaction
 - Addresses > Get Address Balances > Get Address Balances
 - Addresses > Get Balance By Address And Asset > Get Balance By Address And Asset
 - Addresses > Get Credits By Address > Get Credits By Address
@@ -63,9 +64,9 @@ only:
 - Events > Get All Events Counts > Get All Events Counts
 - Events > Get Events By Name > Get Events By Name
 - Z-pages > Check Server Health > Check Server Health
-- V1 > Redirect To Api V1 > Redirect To Api V1
-- V1 > Redirect To Api V1 > Redirect To Api V1
-- V1 > Redirect To Api V1 > Redirect To Api V1
-- V1 > Redirect To Api V1 > Redirect To Api V1
-- V1 > Redirect To Api V1 > Redirect To Api V1
+- Z-pages > Check Server Health > Check Server Health
+- V1 > Redirect To Rpc V1 > Redirect To Rpc V1
+- V1 > Redirect To Rpc V1 > Redirect To Rpc V1
+- V1 > Redirect To Rpc V1 > Redirect To Rpc V1
+- V1 > Redirect To Rpc V1 > Redirect To Rpc V1
 path: []

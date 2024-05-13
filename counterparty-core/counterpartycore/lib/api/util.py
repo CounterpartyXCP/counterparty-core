@@ -26,7 +26,7 @@ def check_last_parsed_block(db, blockcount):
 
 def healthz_light(db):
     logger.debug("Performing light healthz check.")
-    latest_block_index = backend.getblockcount()
+    latest_block_index = backend.bitcoind.getblockcount()
     check_last_parsed_block(db, latest_block_index)
 
 
@@ -104,11 +104,6 @@ def remove_rowids(query_result):
     return query_result
 
 
-def getrawtransactions(tx_hashes, verbose=False, skip_missing=False, _retry=0):
-    txhash_list = tx_hashes.split(",")
-    return backend.getrawtransaction_batch(txhash_list, verbose, skip_missing, _retry)
-
-
 def pubkeyhash_to_pubkey(address: str, provided_pubkeys: str = None):
     """
     Get pubkey for an address.
@@ -119,7 +114,7 @@ def pubkeyhash_to_pubkey(address: str, provided_pubkeys: str = None):
         provided_pubkeys_list = provided_pubkeys.split(",")
     else:
         provided_pubkeys_list = None
-    return backend.pubkeyhash_to_pubkey(address, provided_pubkeys=provided_pubkeys_list)
+    return transaction.pubkeyhash_to_pubkey(address, provided_pubkeys=provided_pubkeys_list)
 
 
 def get_transaction(tx_hash: str, format: str = "json"):
@@ -128,7 +123,7 @@ def get_transaction(tx_hash: str, format: str = "json"):
     :param tx_hash: The transaction hash (e.g. 3190047bf2320bdcd0fade655ae49be309519d151330aa478573815229cc0018)
     :param format: Whether to return JSON output or raw hex (e.g. hex)
     """
-    return backend.getrawtransaction(tx_hash, verbose=(format == "json"))
+    return backend.bitcoind.getrawtransaction(tx_hash, verbose=format == "json")
 
 
 def get_oldest_transaction_by_address(address: str, block_index: int = None):
@@ -137,12 +132,14 @@ def get_oldest_transaction_by_address(address: str, block_index: int = None):
     :param address: The address to search for. (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
     :param block_index: The block index to search from.
     """
-    return backend.get_oldest_tx(address, block_index=block_index or util.CURRENT_BLOCK_INDEX)
+    return backend.addrindexrs.get_oldest_tx(
+        address, block_index=block_index or util.CURRENT_BLOCK_INDEX
+    )
 
 
 def get_backend_height():
-    block_count = backend.getblockcount()
-    blocks_behind = backend.getindexblocksbehind()
+    block_count = backend.bitcoind.getblockcount()
+    blocks_behind = backend.bitcoind.getindexblocksbehind()
     return block_count + blocks_behind
 
 
@@ -210,7 +207,7 @@ def prepare_route_args(function):
         if arg_name in args_description:
             route_arg["description"] = args_description[arg_name]
         args.append(route_arg)
-    if function.__name__ != "redirect_to_api_v1":
+    if not function.__name__.endswith("_v1"):
         args.append(
             {
                 "name": "verbose",
@@ -381,16 +378,15 @@ def inject_dispensers(db, result):
     return result
 
 
-def redirect_to_api_v1(subpath: str = ""):
+def redirect_to_rpc_v1():
     """
-    Redirect to the API v1.
-    :param subpath: The path to redirect to (e.g. healthz)
+    Redirect to the RPC API v1.
     """
     query_params = {
         "headers": flask.request.headers,
         "auth": (config.RPC_USER, config.RPC_PASSWORD),
     }
-    url = f"http://localhost:{config.RPC_PORT}/{subpath}"
+    url = f"http://localhost:{config.RPC_PORT}/"
     if flask.request.query_string:
         url += f"?{flask.request.query_string}"
     request_function = getattr(requests, flask.request.method.lower())

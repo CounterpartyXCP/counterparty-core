@@ -921,164 +921,6 @@
             }
         ]
     },
-    "/v2/blocks/<int:block_index>/events": {
-        "result": [
-            {
-                "event_index": 14194760,
-                "event": "BLOCK_PARSED",
-                "params": {
-                    "block_index": 840464,
-                    "ledger_hash": "b3f8cbb50b0705a5c4a8495f8b5128de13a32daebd8ac5e8316a010f0d203584",
-                    "messages_hash": "801d961c45a257f85ef0f10a6a8fdf048a520ae4861c0903f26365b3eaaaf540",
-                    "txlist_hash": "84bdc5b9073f775a2b65de7da2b10b89a2235f3501883b0a836e41e68cd00d46"
-                }
-            },
-            {
-                "event_index": 14194759,
-                "event": "TRANSACTION_PARSED",
-                "params": {
-                    "supported": true,
-                    "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
-                    "tx_index": 2726605
-                }
-            },
-            {
-                "event_index": 14194758,
-                "event": "CREDIT",
-                "params": {
-                    "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                    "asset": "UNNEGOTIABLE",
-                    "block_index": 840464,
-                    "calling_function": "issuance",
-                    "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
-                    "quantity": 1,
-                    "tx_index": 2726605,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
-                        "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                        "divisible": 0,
-                        "locked": 1
-                    },
-                    "quantity_normalized": "1"
-                }
-            },
-            {
-                "event_index": 14194757,
-                "event": "ASSET_ISSUANCE",
-                "params": {
-                    "asset": "UNNEGOTIABLE",
-                    "asset_longname": null,
-                    "block_index": 840464,
-                    "call_date": 0,
-                    "call_price": 0.0,
-                    "callable": false,
-                    "description": "UNNEGOTIABLE WE MUST BECOME UNNEGOTIABLE WE ARE",
-                    "divisible": false,
-                    "fee_paid": 50000000,
-                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                    "locked": false,
-                    "quantity": 1,
-                    "reset": false,
-                    "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                    "status": "valid",
-                    "transfer": false,
-                    "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
-                    "tx_index": 2726605,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
-                        "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                        "divisible": 0,
-                        "locked": 1
-                    },
-                    "quantity_normalized": "1"
-                }
-            },
-            {
-                "event_index": 14194756,
-                "event": "ASSET_CREATION",
-                "params": {
-                    "asset_id": "75313533584419238",
-                    "asset_longname": null,
-                    "asset_name": "UNNEGOTIABLE",
-                    "block_index": 840464
-                }
-            },
-            {
-                "event_index": 14194755,
-                "event": "DEBIT",
-                "params": {
-                    "action": "issuance fee",
-                    "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                    "asset": "XCP",
-                    "block_index": 840464,
-                    "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
-                    "quantity": 50000000,
-                    "tx_index": 2726605,
-                    "asset_info": {
-                        "divisible": true,
-                        "asset_longname": "Counterparty",
-                        "description": "The Counterparty protocol native currency",
-                        "locked": true
-                    },
-                    "quantity_normalized": "0.5"
-                }
-            },
-            {
-                "event_index": 14194754,
-                "event": "NEW_TRANSACTION",
-                "params": {
-                    "block_hash": "00000000000000000001093d4d6b21b80800fff6e5ea15cce6d65066f482cce9",
-                    "block_index": 840464,
-                    "block_time": 1713852783,
-                    "btc_amount": 0,
-                    "data": "16010b9142801429a60000000000000001000000554e4e45474f544941424c45205745204d555354204245434f4d4520554e4e45474f544941424c4520574520415245",
-                    "destination": "",
-                    "fee": 56565,
-                    "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                    "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
-                    "tx_index": 2726605
-                }
-            },
-            {
-                "event_index": 14194753,
-                "event": "NEW_BLOCK",
-                "params": {
-                    "block_hash": "00000000000000000001093d4d6b21b80800fff6e5ea15cce6d65066f482cce9",
-                    "block_index": 840464,
-                    "block_time": 1713852783,
-                    "difficulty": 86388558925171.02,
-                    "previous_block_hash": "00000000000000000002db1e5aa19784eec3de949f98ec757e7a7f2fc392079d"
-                }
-            }
-        ]
-    },
-    "/v2/blocks/<int:block_index>/events/<event>": {
-        "result": [
-            {
-                "event_index": 14194758,
-                "event": "CREDIT",
-                "params": {
-                    "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                    "asset": "UNNEGOTIABLE",
-                    "block_index": 840464,
-                    "calling_function": "issuance",
-                    "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
-                    "quantity": 1,
-                    "tx_index": 2726605,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
-                        "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                        "divisible": 0,
-                        "locked": 1
-                    },
-                    "quantity_normalized": "1"
-                }
-            }
-        ]
-    },
     "/v2/blocks/<int:block_index>/credits": {
         "result": [
             {
@@ -3194,236 +3036,6 @@
             }
         ]
     },
-    "/v2/events": {
-        "result": [
-            {
-                "event_index": 10665092,
-                "event": "TRANSACTION_PARSED",
-                "params": {
-                    "supported": true,
-                    "tx_hash": "7b39d3ebd9fe8293004a1a8b8eb2d01f1664e5d8b05e8cb94f30b1da2c2f9650",
-                    "tx_index": 2056160
-                },
-                "block_index": 744232,
-                "timestamp": 1712256340
-            },
-            {
-                "event_index": 10665091,
-                "event": "ENHANCED_SEND",
-                "params": {
-                    "asset": "THOTHPEPE",
-                    "block_index": 744232,
-                    "destination": "13re7J5Y5a8nZZSp8o1a3sEUqGik4NMXhS",
-                    "memo": null,
-                    "quantity": 1,
-                    "source": "173cE6ScUFCmBLCqZeG18ij6r9KHRPbAjC",
-                    "status": "valid",
-                    "tx_hash": "7b39d3ebd9fe8293004a1a8b8eb2d01f1664e5d8b05e8cb94f30b1da2c2f9650",
-                    "tx_index": 2056160,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "",
-                        "issuer": "14CepDzwxKDQritbC7oAq7FTJiiEPPauyu",
-                        "divisible": 0,
-                        "locked": 1
-                    },
-                    "quantity_normalized": "1"
-                },
-                "block_index": 744232,
-                "timestamp": 1712256340
-            },
-            {
-                "event_index": 10665090,
-                "event": "CREDIT",
-                "params": {
-                    "address": "13re7J5Y5a8nZZSp8o1a3sEUqGik4NMXhS",
-                    "asset": "THOTHPEPE",
-                    "block_index": 744232,
-                    "calling_function": "send",
-                    "event": "7b39d3ebd9fe8293004a1a8b8eb2d01f1664e5d8b05e8cb94f30b1da2c2f9650",
-                    "quantity": 1,
-                    "tx_index": 2056160,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "",
-                        "issuer": "14CepDzwxKDQritbC7oAq7FTJiiEPPauyu",
-                        "divisible": 0,
-                        "locked": 1
-                    },
-                    "quantity_normalized": "1"
-                },
-                "block_index": 744232,
-                "timestamp": 1712256340
-            },
-            {
-                "event_index": 10665089,
-                "event": "DEBIT",
-                "params": {
-                    "action": "send",
-                    "address": "173cE6ScUFCmBLCqZeG18ij6r9KHRPbAjC",
-                    "asset": "THOTHPEPE",
-                    "block_index": 744232,
-                    "event": "7b39d3ebd9fe8293004a1a8b8eb2d01f1664e5d8b05e8cb94f30b1da2c2f9650",
-                    "quantity": 1,
-                    "tx_index": 2056160,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "",
-                        "issuer": "14CepDzwxKDQritbC7oAq7FTJiiEPPauyu",
-                        "divisible": 0,
-                        "locked": 1
-                    },
-                    "quantity_normalized": "1"
-                },
-                "block_index": 744232,
-                "timestamp": 1712256340
-            },
-            {
-                "event_index": 10665088,
-                "event": "TRANSACTION_PARSED",
-                "params": {
-                    "supported": true,
-                    "tx_hash": "bbb2dfa7e7a32288a702ef0091ece8b2a929f94fd967a18e6071cd9c2b085eaf",
-                    "tx_index": 2056159
-                },
-                "block_index": 744232,
-                "timestamp": 1712256340
-            }
-        ]
-    },
-    "/v2/events/<int:event_index>": {
-        "result": [
-            {
-                "event_index": 10665092,
-                "event": "TRANSACTION_PARSED",
-                "params": {
-                    "supported": true,
-                    "tx_hash": "7b39d3ebd9fe8293004a1a8b8eb2d01f1664e5d8b05e8cb94f30b1da2c2f9650",
-                    "tx_index": 2056160
-                },
-                "block_index": 744232,
-                "timestamp": 1712256340
-            }
-        ]
-    },
-    "/v2/events/<event>": {
-        "result": [
-            {
-                "event_index": 10665090,
-                "event": "CREDIT",
-                "params": {
-                    "address": "13re7J5Y5a8nZZSp8o1a3sEUqGik4NMXhS",
-                    "asset": "THOTHPEPE",
-                    "block_index": 744232,
-                    "calling_function": "send",
-                    "event": "7b39d3ebd9fe8293004a1a8b8eb2d01f1664e5d8b05e8cb94f30b1da2c2f9650",
-                    "quantity": 1,
-                    "tx_index": 2056160,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "",
-                        "issuer": "14CepDzwxKDQritbC7oAq7FTJiiEPPauyu",
-                        "divisible": 0,
-                        "locked": 1
-                    },
-                    "quantity_normalized": "1"
-                },
-                "block_index": 744232,
-                "timestamp": 1712256340
-            },
-            {
-                "event_index": 10665085,
-                "event": "CREDIT",
-                "params": {
-                    "address": "1LfDk3Ex9KPYS6L1WGwNdt1TvEg6Le8uq",
-                    "asset": "XCP",
-                    "block_index": 744232,
-                    "calling_function": "dispense",
-                    "event": "bbb2dfa7e7a32288a702ef0091ece8b2a929f94fd967a18e6071cd9c2b085eaf",
-                    "quantity": 10000000000,
-                    "tx_index": 2056159,
-                    "asset_info": {
-                        "divisible": true,
-                        "asset_longname": "Counterparty",
-                        "description": "The Counterparty protocol native currency",
-                        "locked": true
-                    },
-                    "quantity_normalized": "100"
-                },
-                "block_index": 744232,
-                "timestamp": 1712256340
-            },
-            {
-                "event_index": 10665082,
-                "event": "CREDIT",
-                "params": {
-                    "address": "173cE6ScUFCmBLCqZeG18ij6r9KHRPbAjC",
-                    "asset": "FREEDOMKEK",
-                    "block_index": 744232,
-                    "calling_function": "send",
-                    "event": "b419d19729c2be813405c548431f4840d5c909b875f94b7c56aeca134e328ef6",
-                    "quantity": 1,
-                    "tx_index": 2056158,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "xcp.coindaddy.io/FREEDOMKEK.json",
-                        "issuer": "1E6tyJ2zCyX74XgEK8t9iNMjxjNVLCGR1u",
-                        "divisible": 0,
-                        "locked": 0
-                    },
-                    "quantity_normalized": "1"
-                },
-                "block_index": 744232,
-                "timestamp": 1712256340
-            },
-            {
-                "event_index": 10665078,
-                "event": "CREDIT",
-                "params": {
-                    "address": "1P8nYZwLmecAkQUHsx2H9Nkxd51UJ2Asau",
-                    "asset": "PEPEFRIDAY",
-                    "block_index": 744232,
-                    "calling_function": "send",
-                    "event": "145ebf6c563c4e91a2bc488954ef701dad730fc065697979c80d6d85cbba63e1",
-                    "quantity": 1,
-                    "tx_index": 2056157,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "https://easyasset.art/j/gnyrdg/PEPEFRIDAY.json",
-                        "issuer": "1CCPbFbST8ruJrTGjm2Ss5aTAaqng4naBN",
-                        "divisible": 0,
-                        "locked": 0
-                    },
-                    "quantity_normalized": "1"
-                },
-                "block_index": 744232,
-                "timestamp": 1712256340
-            },
-            {
-                "event_index": 10665074,
-                "event": "CREDIT",
-                "params": {
-                    "address": "1NzDQ7HLm6PqJ2Wy6jEKMT7Zw1UbtjUV5a",
-                    "asset": "PEPEFRIDAY",
-                    "block_index": 744232,
-                    "calling_function": "send",
-                    "event": "388c7208d52bf617c1a3eef238a668f694a4f72dc97b3be92562fe636ca646fa",
-                    "quantity": 2,
-                    "tx_index": 2056156,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "https://easyasset.art/j/gnyrdg/PEPEFRIDAY.json",
-                        "issuer": "1CCPbFbST8ruJrTGjm2Ss5aTAaqng4naBN",
-                        "divisible": 0,
-                        "locked": 0
-                    },
-                    "quantity_normalized": "2"
-                },
-                "block_index": 744232,
-                "timestamp": 1712256340
-            }
-        ]
-    },
     "/v2/blocks/<int:block_index>/events/counts": {
         "result": [
             {
@@ -3460,34 +3072,507 @@
             }
         ]
     },
-    "/v1/<path:subpath>": {
-        "result": {
-            "result": "Healthy",
-            "success": true
-        }
+    "/v2/blocks/<int:block_index>/events": {
+        "result": [
+            {
+                "event_index": 14194760,
+                "event": "BLOCK_PARSED",
+                "params": {
+                    "block_index": 840464,
+                    "ledger_hash": "b3f8cbb50b0705a5c4a8495f8b5128de13a32daebd8ac5e8316a010f0d203584",
+                    "messages_hash": "801d961c45a257f85ef0f10a6a8fdf048a520ae4861c0903f26365b3eaaaf540",
+                    "txlist_hash": "84bdc5b9073f775a2b65de7da2b10b89a2235f3501883b0a836e41e68cd00d46"
+                },
+                "tx_hash": null
+            },
+            {
+                "event_index": 14194759,
+                "event": "TRANSACTION_PARSED",
+                "params": {
+                    "supported": true,
+                    "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
+                    "tx_index": 2726605
+                },
+                "tx_hash": null
+            },
+            {
+                "event_index": 14194758,
+                "event": "CREDIT",
+                "params": {
+                    "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "asset": "UNNEGOTIABLE",
+                    "block_index": 840464,
+                    "calling_function": "issuance",
+                    "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
+                    "quantity": 1,
+                    "tx_index": 2726605,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                        "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
+                },
+                "tx_hash": null
+            },
+            {
+                "event_index": 14194757,
+                "event": "ASSET_ISSUANCE",
+                "params": {
+                    "asset": "UNNEGOTIABLE",
+                    "asset_longname": null,
+                    "block_index": 840464,
+                    "call_date": 0,
+                    "call_price": 0.0,
+                    "callable": false,
+                    "description": "UNNEGOTIABLE WE MUST BECOME UNNEGOTIABLE WE ARE",
+                    "divisible": false,
+                    "fee_paid": 50000000,
+                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "locked": false,
+                    "quantity": 1,
+                    "reset": false,
+                    "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "status": "valid",
+                    "transfer": false,
+                    "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
+                    "tx_index": 2726605,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                        "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
+                },
+                "tx_hash": null
+            },
+            {
+                "event_index": 14194756,
+                "event": "ASSET_CREATION",
+                "params": {
+                    "asset_id": "75313533584419238",
+                    "asset_longname": null,
+                    "asset_name": "UNNEGOTIABLE",
+                    "block_index": 840464
+                },
+                "tx_hash": null
+            },
+            {
+                "event_index": 14194755,
+                "event": "DEBIT",
+                "params": {
+                    "action": "issuance fee",
+                    "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "asset": "XCP",
+                    "block_index": 840464,
+                    "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
+                    "quantity": 50000000,
+                    "tx_index": 2726605,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": "Counterparty",
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true
+                    },
+                    "quantity_normalized": "0.5"
+                },
+                "tx_hash": null
+            },
+            {
+                "event_index": 14194754,
+                "event": "NEW_TRANSACTION",
+                "params": {
+                    "block_hash": "00000000000000000001093d4d6b21b80800fff6e5ea15cce6d65066f482cce9",
+                    "block_index": 840464,
+                    "block_time": 1713852783,
+                    "btc_amount": 0,
+                    "data": "16010b9142801429a60000000000000001000000554e4e45474f544941424c45205745204d555354204245434f4d4520554e4e45474f544941424c4520574520415245",
+                    "destination": "",
+                    "fee": 56565,
+                    "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
+                    "tx_index": 2726605
+                },
+                "tx_hash": null
+            },
+            {
+                "event_index": 14194753,
+                "event": "NEW_BLOCK",
+                "params": {
+                    "block_hash": "00000000000000000001093d4d6b21b80800fff6e5ea15cce6d65066f482cce9",
+                    "block_index": 840464,
+                    "block_time": 1713852783,
+                    "difficulty": 86388558925171.02,
+                    "previous_block_hash": "00000000000000000002db1e5aa19784eec3de949f98ec757e7a7f2fc392079d"
+                },
+                "tx_hash": null
+            }
+        ]
     },
-    "/api/<path:subpath>": {
-        "result": {
-            "result": "Healthy",
-            "success": true
-        }
+    "/v2/blocks/<int:block_index>/events/<event>": {
+        "result": [
+            {
+                "event_index": 14194758,
+                "event": "CREDIT",
+                "params": {
+                    "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "asset": "UNNEGOTIABLE",
+                    "block_index": 840464,
+                    "calling_function": "issuance",
+                    "event": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5",
+                    "quantity": 1,
+                    "tx_index": 2726605,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                        "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
+                },
+                "tx_hash": null
+            }
+        ]
     },
-    "/rpc/<path:subpath>": {
-        "result": {
-            "result": "Healthy",
-            "success": true
-        }
+    "/v2/transactions/<tx_hash>/events": {
+        "result": [
+            {
+                "event_index": 14226375,
+                "event": "TRANSACTION_PARSED",
+                "params": {
+                    "supported": true,
+                    "tx_hash": "84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040",
+                    "tx_index": 2729603
+                },
+                "tx_hash": "84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040",
+                "block_index": 842680,
+                "timestamp": 1715249118
+            },
+            {
+                "event_index": 14226374,
+                "event": "ENHANCED_SEND",
+                "params": {
+                    "asset": "PEPEBERLUSCA",
+                    "block_index": 842680,
+                    "destination": "14KPsMQwqeV478CGYjSDCgYKyNfMMA1bW9",
+                    "memo": null,
+                    "quantity": 1,
+                    "source": "1HDMT9EV4RqRSfPwFYCRzq1dUgHmuHH2ui",
+                    "status": "valid",
+                    "tx_hash": "84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040",
+                    "tx_index": 2729603,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "",
+                        "issuer": "12C72gY3tw2CUqno3o8FaCk7vzk9Q4LUox",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
+                },
+                "tx_hash": "84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040",
+                "block_index": 842680,
+                "timestamp": 1715249118
+            },
+            {
+                "event_index": 14226373,
+                "event": "CREDIT",
+                "params": {
+                    "address": "14KPsMQwqeV478CGYjSDCgYKyNfMMA1bW9",
+                    "asset": "PEPEBERLUSCA",
+                    "block_index": 842680,
+                    "calling_function": "send",
+                    "event": "84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040",
+                    "quantity": 1,
+                    "tx_index": 2729603,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "",
+                        "issuer": "12C72gY3tw2CUqno3o8FaCk7vzk9Q4LUox",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
+                },
+                "tx_hash": "84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040",
+                "block_index": 842680,
+                "timestamp": 1715249118
+            },
+            {
+                "event_index": 14226372,
+                "event": "DEBIT",
+                "params": {
+                    "action": "send",
+                    "address": "1HDMT9EV4RqRSfPwFYCRzq1dUgHmuHH2ui",
+                    "asset": "PEPEBERLUSCA",
+                    "block_index": 842680,
+                    "event": "84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040",
+                    "quantity": 1,
+                    "tx_index": 2729603,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "",
+                        "issuer": "12C72gY3tw2CUqno3o8FaCk7vzk9Q4LUox",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
+                },
+                "tx_hash": "84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040",
+                "block_index": 842680,
+                "timestamp": 1715249118
+            }
+        ]
     },
-    "/<path:subpath>": {
-        "result": {
-            "result": "Healthy",
-            "success": true
-        }
+    "/v2/events": {
+        "result": [
+            {
+                "event_index": 10665092,
+                "event": "TRANSACTION_PARSED",
+                "params": {
+                    "supported": true,
+                    "tx_hash": "7b39d3ebd9fe8293004a1a8b8eb2d01f1664e5d8b05e8cb94f30b1da2c2f9650",
+                    "tx_index": 2056160
+                },
+                "tx_hash": null,
+                "block_index": 744232,
+                "timestamp": 1712256340
+            },
+            {
+                "event_index": 10665091,
+                "event": "ENHANCED_SEND",
+                "params": {
+                    "asset": "THOTHPEPE",
+                    "block_index": 744232,
+                    "destination": "13re7J5Y5a8nZZSp8o1a3sEUqGik4NMXhS",
+                    "memo": null,
+                    "quantity": 1,
+                    "source": "173cE6ScUFCmBLCqZeG18ij6r9KHRPbAjC",
+                    "status": "valid",
+                    "tx_hash": "7b39d3ebd9fe8293004a1a8b8eb2d01f1664e5d8b05e8cb94f30b1da2c2f9650",
+                    "tx_index": 2056160,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "",
+                        "issuer": "14CepDzwxKDQritbC7oAq7FTJiiEPPauyu",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
+                },
+                "tx_hash": null,
+                "block_index": 744232,
+                "timestamp": 1712256340
+            },
+            {
+                "event_index": 10665090,
+                "event": "CREDIT",
+                "params": {
+                    "address": "13re7J5Y5a8nZZSp8o1a3sEUqGik4NMXhS",
+                    "asset": "THOTHPEPE",
+                    "block_index": 744232,
+                    "calling_function": "send",
+                    "event": "7b39d3ebd9fe8293004a1a8b8eb2d01f1664e5d8b05e8cb94f30b1da2c2f9650",
+                    "quantity": 1,
+                    "tx_index": 2056160,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "",
+                        "issuer": "14CepDzwxKDQritbC7oAq7FTJiiEPPauyu",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
+                },
+                "tx_hash": null,
+                "block_index": 744232,
+                "timestamp": 1712256340
+            },
+            {
+                "event_index": 10665089,
+                "event": "DEBIT",
+                "params": {
+                    "action": "send",
+                    "address": "173cE6ScUFCmBLCqZeG18ij6r9KHRPbAjC",
+                    "asset": "THOTHPEPE",
+                    "block_index": 744232,
+                    "event": "7b39d3ebd9fe8293004a1a8b8eb2d01f1664e5d8b05e8cb94f30b1da2c2f9650",
+                    "quantity": 1,
+                    "tx_index": 2056160,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "",
+                        "issuer": "14CepDzwxKDQritbC7oAq7FTJiiEPPauyu",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
+                },
+                "tx_hash": null,
+                "block_index": 744232,
+                "timestamp": 1712256340
+            },
+            {
+                "event_index": 10665088,
+                "event": "TRANSACTION_PARSED",
+                "params": {
+                    "supported": true,
+                    "tx_hash": "bbb2dfa7e7a32288a702ef0091ece8b2a929f94fd967a18e6071cd9c2b085eaf",
+                    "tx_index": 2056159
+                },
+                "tx_hash": null,
+                "block_index": 744232,
+                "timestamp": 1712256340
+            }
+        ]
     },
-    "/": {
+    "/v2/events/<int:event_index>": {
+        "result": [
+            {
+                "event_index": 10665092,
+                "event": "TRANSACTION_PARSED",
+                "params": {
+                    "supported": true,
+                    "tx_hash": "7b39d3ebd9fe8293004a1a8b8eb2d01f1664e5d8b05e8cb94f30b1da2c2f9650",
+                    "tx_index": 2056160
+                },
+                "tx_hash": null,
+                "block_index": 744232,
+                "timestamp": 1712256340
+            }
+        ]
+    },
+    "/v2/events/<event>": {
+        "result": [
+            {
+                "event_index": 10665090,
+                "event": "CREDIT",
+                "params": {
+                    "address": "13re7J5Y5a8nZZSp8o1a3sEUqGik4NMXhS",
+                    "asset": "THOTHPEPE",
+                    "block_index": 744232,
+                    "calling_function": "send",
+                    "event": "7b39d3ebd9fe8293004a1a8b8eb2d01f1664e5d8b05e8cb94f30b1da2c2f9650",
+                    "quantity": 1,
+                    "tx_index": 2056160,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "",
+                        "issuer": "14CepDzwxKDQritbC7oAq7FTJiiEPPauyu",
+                        "divisible": 0,
+                        "locked": 1
+                    },
+                    "quantity_normalized": "1"
+                },
+                "tx_hash": null,
+                "block_index": 744232,
+                "timestamp": 1712256340
+            },
+            {
+                "event_index": 10665085,
+                "event": "CREDIT",
+                "params": {
+                    "address": "1LfDk3Ex9KPYS6L1WGwNdt1TvEg6Le8uq",
+                    "asset": "XCP",
+                    "block_index": 744232,
+                    "calling_function": "dispense",
+                    "event": "bbb2dfa7e7a32288a702ef0091ece8b2a929f94fd967a18e6071cd9c2b085eaf",
+                    "quantity": 10000000000,
+                    "tx_index": 2056159,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": "Counterparty",
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true
+                    },
+                    "quantity_normalized": "100"
+                },
+                "tx_hash": null,
+                "block_index": 744232,
+                "timestamp": 1712256340
+            },
+            {
+                "event_index": 10665082,
+                "event": "CREDIT",
+                "params": {
+                    "address": "173cE6ScUFCmBLCqZeG18ij6r9KHRPbAjC",
+                    "asset": "FREEDOMKEK",
+                    "block_index": 744232,
+                    "calling_function": "send",
+                    "event": "b419d19729c2be813405c548431f4840d5c909b875f94b7c56aeca134e328ef6",
+                    "quantity": 1,
+                    "tx_index": 2056158,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "xcp.coindaddy.io/FREEDOMKEK.json",
+                        "issuer": "1E6tyJ2zCyX74XgEK8t9iNMjxjNVLCGR1u",
+                        "divisible": 0,
+                        "locked": 0
+                    },
+                    "quantity_normalized": "1"
+                },
+                "tx_hash": null,
+                "block_index": 744232,
+                "timestamp": 1712256340
+            },
+            {
+                "event_index": 10665078,
+                "event": "CREDIT",
+                "params": {
+                    "address": "1P8nYZwLmecAkQUHsx2H9Nkxd51UJ2Asau",
+                    "asset": "PEPEFRIDAY",
+                    "block_index": 744232,
+                    "calling_function": "send",
+                    "event": "145ebf6c563c4e91a2bc488954ef701dad730fc065697979c80d6d85cbba63e1",
+                    "quantity": 1,
+                    "tx_index": 2056157,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "https://easyasset.art/j/gnyrdg/PEPEFRIDAY.json",
+                        "issuer": "1CCPbFbST8ruJrTGjm2Ss5aTAaqng4naBN",
+                        "divisible": 0,
+                        "locked": 0
+                    },
+                    "quantity_normalized": "1"
+                },
+                "tx_hash": null,
+                "block_index": 744232,
+                "timestamp": 1712256340
+            },
+            {
+                "event_index": 10665074,
+                "event": "CREDIT",
+                "params": {
+                    "address": "1NzDQ7HLm6PqJ2Wy6jEKMT7Zw1UbtjUV5a",
+                    "asset": "PEPEFRIDAY",
+                    "block_index": 744232,
+                    "calling_function": "send",
+                    "event": "388c7208d52bf617c1a3eef238a668f694a4f72dc97b3be92562fe636ca646fa",
+                    "quantity": 2,
+                    "tx_index": 2056156,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "https://easyasset.art/j/gnyrdg/PEPEFRIDAY.json",
+                        "issuer": "1CCPbFbST8ruJrTGjm2Ss5aTAaqng4naBN",
+                        "divisible": 0,
+                        "locked": 0
+                    },
+                    "quantity_normalized": "2"
+                },
+                "tx_hash": null,
+                "block_index": 744232,
+                "timestamp": 1712256340
+            }
+        ]
+    },
+    "/healthz": {
         "result": {
-            "result": "Healthy",
-            "success": true
+            "status": "Healthy"
         }
     }
 }

@@ -290,7 +290,7 @@ def validate(
                             )
 
                         if util.enabled("dispenser_origin_permission_extended", block_index):
-                            address_oldest_transaction = backend.get_oldest_tx(
+                            address_oldest_transaction = backend.addrindexrs.get_oldest_tx(
                                 query_address, block_index=util.CURRENT_BLOCK_INDEX
                             )
                             if (

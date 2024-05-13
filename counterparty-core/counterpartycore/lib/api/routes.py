@@ -1,9 +1,9 @@
 from counterpartycore.lib import (
-    backend,
     ledger,
     transaction,
 )
 from counterpartycore.lib.api import util
+from counterpartycore.lib.backend import addrindexrs, bitcoind
 
 # Define the API routes except root (`/`) defined in `api_server.py`
 ROUTES = util.prepare_routes(
@@ -28,6 +28,7 @@ ROUTES = util.prepare_routes(
         "/v2/transactions/info": transaction.info,
         "/v2/transactions/unpack": transaction.unpack,
         "/v2/transactions/<tx_hash>": transaction.get_transaction_by_hash,
+        "/v2/transactions/<tx_hash>/events": ledger.get_events_by_transaction,
         ### /addresses ###
         "/v2/addresses/<address>/balances": ledger.get_address_balances,
         "/v2/addresses/<address>/balances/<asset>": ledger.get_balance_by_address_and_asset,
@@ -92,21 +93,21 @@ ROUTES = util.prepare_routes(
         "/v2/events/<event>": ledger.get_events_by_name,
         ### /healthz ###
         "/v2/healthz": util.check_server_health,
+        "/healthz": util.check_server_health,
         ### /bitcoin ###
-        "/v2/bitcoin/addresses/<address>/transactions": backend.get_transactions_by_address,
+        "/v2/bitcoin/addresses/<address>/transactions": addrindexrs.get_transactions_by_address,
         "/v2/bitcoin/addresses/<address>/transactions/oldest": util.get_oldest_transaction_by_address,
-        "/v2/bitcoin/addresses/<address>/utxos": backend.get_unspent_txouts,
+        "/v2/bitcoin/addresses/<address>/utxos": addrindexrs.get_unspent_txouts,
         "/v2/bitcoin/addresses/<address>/pubkey": util.pubkeyhash_to_pubkey,
         "/v2/bitcoin/transactions/<tx_hash>": util.get_transaction,
-        "/v2/bitcoin/estimatesmartfee": backend.fee_per_kb,
+        "/v2/bitcoin/estimatesmartfee": bitcoind.fee_per_kb,
         ### /mempool ###
         "/v2/mempool/events": ledger.get_all_mempool_events,
         "/v2/mempool/events/<event>": ledger.get_mempool_events_by_name,
         ### API v1 ###
-        "/": util.redirect_to_api_v1,
-        "/v1/<path:subpath>": util.redirect_to_api_v1,
-        "/api/<path:subpath>": util.redirect_to_api_v1,
-        "/rpc/<path:subpath>": util.redirect_to_api_v1,
-        "/<path:subpath>": util.redirect_to_api_v1,
+        "/": util.redirect_to_rpc_v1,
+        "/v1/": util.redirect_to_rpc_v1,
+        "/api/": util.redirect_to_rpc_v1,
+        "/rpc/": util.redirect_to_rpc_v1,
     }
 )

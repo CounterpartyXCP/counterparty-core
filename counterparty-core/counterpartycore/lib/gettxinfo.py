@@ -2,9 +2,8 @@ import binascii
 import logging
 import struct
 
-from counterpartycore.lib import arc4, backend, config, script, util
+from counterpartycore.lib import arc4, config, fetcher, script, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
-from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser
 from counterpartycore.lib.kickstart.utils import ib2h
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.opcodes import *  # noqa: F403
@@ -147,8 +146,7 @@ def get_transaction_sources(decoded_tx, block_parser=None):
             vin_ctx = block_parser.read_raw_transaction(ib2h(vin["hash"]))
         else:
             # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
-            vin_tx = backend.getrawtransaction(ib2h(vin["hash"]), block_index=None)
-            vin_ctx = BlockchainParser().deserialize_tx(vin_tx)
+            vin_ctx = fetcher.get_decoded_transaction(ib2h(vin["hash"]))
 
         vout = vin_ctx["vout"][vin["n"]]
         outputs_value += vout["nValue"]
@@ -195,8 +193,7 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit, block_parser=No
             vin_ctx = block_parser.read_raw_transaction(ib2h(vin["hash"]))
         else:
             # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
-            vin_tx = backend.getrawtransaction(ib2h(vin["hash"]), block_index=None)
-            vin_ctx = BlockchainParser().deserialize_tx(vin_tx)
+            vin_ctx = fetcher.get_decoded_transaction(ib2h(vin["hash"]))
 
         if util.enabled("prevout_segwit_fix"):
             prevout_is_segwit = len(vin_ctx["vtxinwit"]) > 0
@@ -488,8 +485,7 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
             vin_ctx = block_parser.read_raw_transaction(ib2h(vin["hash"]))
         else:
             # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
-            vin_tx = backend.getrawtransaction(ib2h(vin["hash"]), block_index=None)
-            vin_ctx = BlockchainParser().deserialize_tx(vin_tx)
+            vin_ctx = fetcher.get_decoded_transaction(ib2h(vin["hash"]))
 
         vout = vin_ctx["vout"][vin["n"]]
         fee += vout["nValue"]
