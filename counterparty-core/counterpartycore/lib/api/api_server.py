@@ -10,7 +10,6 @@ from threading import Timer
 import flask
 from counterpartycore import server
 from counterpartycore.lib import (
-    blocks,
     config,
     database,
     exceptions,
@@ -65,7 +64,7 @@ def verify_password(username, password):
 
 
 def api_root():
-    counterparty_height = blocks.last_db_index(get_db())
+    counterparty_height = ledger.last_db_index(get_db())
     routes = []
     for path, route in ROUTES.items():
         routes.append(
@@ -113,7 +112,7 @@ def is_cachable(rule):
 
 
 def return_result_if_not_ready(rule):
-    return is_cachable(rule) or rule == "/"
+    return is_cachable(rule) or rule == "/v2/"
 
 
 def return_result(http_code, result=None, error=None):
@@ -170,7 +169,7 @@ def execute_api_function(db, route, function_args):
     # cache everything for one block
     cache_key = f"{util.CURRENT_BLOCK_INDEX}:{request.url}"
     # except for blocks and transactions cached forever
-    if request.path.startswith("/blocks/") or request.path.startswith("/transactions/"):
+    if request.path.startswith("/v2/blocks/") or request.path.startswith("/v2/transactions/"):
         cache_key = request.url
 
     if cache_key in BLOCK_CACHE:
@@ -180,8 +179,10 @@ def execute_api_function(db, route, function_args):
             result = route["function"](db, **function_args)
         else:
             result = route["function"](**function_args)
-        # don't cache API v1
-        if route["function"].__name__ != "redirect_to_api_v1":
+        # don't cache API v1 and mempool queries
+        if route["function"].__name__ != "redirect_to_api_v1" and not request.path.startswith(
+            "/v2/mempool/"
+        ):
             BLOCK_CACHE[cache_key] = result
             if len(BLOCK_CACHE) > MAX_BLOCK_CACHE_SIZE:
                 BLOCK_CACHE.popitem(last=False)
@@ -277,7 +278,7 @@ def run_api_server(args):
         # Initialise the API access log
         init_api_access_log(app)
         # Get the last block index
-        util.CURRENT_BLOCK_INDEX = blocks.last_db_index(get_db())
+        util.CURRENT_BLOCK_INDEX = ledger.last_db_index(get_db())
         # Add routes
         app.add_url_rule("/v2/", view_func=handle_route)
         for path in ROUTES:
@@ -299,6 +300,7 @@ def run_api_server(args):
         # Run app server (blocking)
         werkzeug_server.serve_forever()
     finally:
+        get_db().close()
         werkzeug_server.shutdown()
         # ensure timer is cancelled
         if BACKEND_HEIGHT_TIMER:
@@ -332,7 +334,7 @@ class APIServer(object):
         return self.process
 
     def stop(self):
-        logger.info("Stopping API server v2...")
+        logger.info("Stopping API server...")
         if self.process and self.process.is_alive():
             self.process.terminate()
         self.process = None

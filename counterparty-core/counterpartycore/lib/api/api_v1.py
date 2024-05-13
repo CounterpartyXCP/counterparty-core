@@ -23,6 +23,7 @@ from counterpartycore.lib import (
     backend,
     config,
     database,
+    deserialize,
     exceptions,
     gettxinfo,
     ledger,
@@ -32,7 +33,6 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.api import util as api_util
-from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser
 from counterpartycore.lib.messages import (
     bet,  # noqa: F401
     broadcast,  # noqa: F401
@@ -162,15 +162,15 @@ class BackendError(Exception):
 
 def check_backend_state():
     f"""Checks blocktime of last block to see if {config.BTC_NAME} Core is running behind."""  # noqa: B021
-    block_count = backend.getblockcount()
-    block_hash = backend.getblockhash(block_count)
-    cblock = backend.getblock(block_hash)
-    time_behind = time.time() - cblock.nTime  # TODO: Block times are not very reliable.
+    block_count = backend.bitcoind.getblockcount()
+    block_hash = backend.bitcoind.getblockhash(block_count)
+    cblock = backend.bitcoind.getblock(block_hash, verbosity=1)
+    time_behind = time.time() - cblock["time"]  # TODO: Block times are not very reliable.
     if time_behind > 60 * 60 * 2:  # Two hours.
         raise BackendError(f"Bitcoind is running about {round(time_behind / 3600)} hours behind.")
 
     # check backend index
-    blocks_behind = backend.getindexblocksbehind()
+    blocks_behind = backend.bitcoind.getindexblocksbehind()
     if blocks_behind > 5:
         raise BackendError(f"Indexd is running {blocks_behind} blocks behind.")
 
@@ -519,7 +519,7 @@ class APIStatusPoller(threading.Thread):
                         check_backend_state()
                         code = 12
                         logger.debug("Checking database state.")
-                        api_util.check_last_parsed_block(self.db, backend.getblockcount())
+                        api_util.check_last_parsed_block(self.db, backend.bitcoind.getblockcount())
                         self.last_database_check = time.time()
             except (BackendError, DatabaseError) as e:
                 exception_name = e.__class__.__name__
@@ -549,12 +549,13 @@ class APIServer(threading.Thread):
         sentry.init()
 
     def stop(self):
+        logger.info("Stopping API Server v1...")
         self.db.close()
         self.server.shutdown()
         self.join()
 
     def run(self):
-        logger.info("Starting API Server v1.")
+        logger.info("Starting API Server v1...")
         self.db = self.db or database.get_connection(read_only=True)
         app = flask.Flask(__name__)
         auth = HTTPBasicAuth()
@@ -652,7 +653,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_supply(asset):
             if asset == "BTC":
-                return backend.get_btc_supply(normalize=False)
+                return backend.bitcoind.get_btc_supply(normalize=False)
             elif asset == "XCP":
                 return ledger.xcp_supply(self.db)
             else:
@@ -680,7 +681,7 @@ class APIServer(threading.Thread):
                 # BTC and XCP.
                 if asset in [config.BTC, config.XCP]:
                     if asset == config.BTC:
-                        supply = backend.get_btc_supply(normalize=False)
+                        supply = backend.bitcoind.get_btc_supply(normalize=False)
                     else:
                         supply = ledger.xcp_supply(self.db)
 
@@ -741,7 +742,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def fee_per_kb(conf_target=config.ESTIMATE_FEE_CONF_TARGET, mode=config.ESTIMATE_FEE_MODE):
-            return backend.fee_per_kb(conf_target, mode)
+            return backend.bitcoind.fee_per_kb(conf_target, mode)
 
         @dispatcher.add_method
         def get_blocks(block_indexes, min_message_index=None):
@@ -794,7 +795,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_running_info():
-            latest_block_index = backend.getblockcount()
+            latest_block_index = backend.bitcoind.getblockcount()
 
             try:
                 api_util.check_last_parsed_block(self.db, latest_block_index)
@@ -823,7 +824,7 @@ class APIServer(threading.Thread):
                 last_message = None
 
             try:
-                indexd_blocks_behind = backend.getindexblocksbehind()
+                indexd_blocks_behind = backend.bitcoind.getindexblocksbehind()
             except:  # noqa: E722
                 indexd_blocks_behind = latest_block_index if latest_block_index > 0 else 999999
             indexd_caught_up = indexd_blocks_behind <= 1
@@ -924,17 +925,17 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
-            return backend.search_raw_transactions(
+            return backend.addrindexrs.search_raw_transactions(
                 address, unconfirmed=unconfirmed, only_tx_hashes=only_tx_hashes
             )
 
         @dispatcher.add_method
         def get_oldest_tx(address):
-            return backend.get_oldest_tx(address, block_index=util.CURRENT_BLOCK_INDEX)
+            return backend.addrindexrs.get_oldest_tx(address, block_index=util.CURRENT_BLOCK_INDEX)
 
         @dispatcher.add_method
         def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None, order_by=None):
-            results = backend.get_unspent_txouts(
+            results = backend.addrindexrs.get_unspent_txouts(
                 address, unconfirmed=unconfirmed, unspent_tx_hash=unspent_tx_hash
             )
             if order_by is None:
@@ -948,21 +949,22 @@ class APIServer(threading.Thread):
                 return sorted(results, key=lambda x: x[order_key], reverse=reverse)
 
         @dispatcher.add_method
-        def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
-            return backend.getrawtransaction(tx_hash, verbose=verbose, skip_missing=skip_missing)
+        def getrawtransaction(tx_hash, verbose=False):
+            return backend.bitcoind.getrawtransaction(tx_hash, verbose=verbose)
 
         @dispatcher.add_method
         def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
-            return backend.getrawtransaction_batch(
+            return backend.addrindexrs.getrawtransaction_batch(
                 txhash_list, verbose=verbose, skip_missing=skip_missing
             )
 
         @dispatcher.add_method
         def get_tx_info(tx_hex, block_index=None):
             # block_index mandatory for transactions before block 335000
+            use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
             source, destination, btc_amount, fee, data, extra = gettxinfo.get_tx_info(
                 self.db,
-                BlockchainParser().deserialize_tx(tx_hex),
+                deserialize.deserialize_tx(tx_hex, use_txid=use_txid),
                 block_index=block_index,
             )
             return (
@@ -990,7 +992,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         # TODO: Rename this method.
         def search_pubkey(pubkeyhash, provided_pubkeys=None):
-            return backend.pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=provided_pubkeys)
+            return transaction.pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=provided_pubkeys)
 
         @dispatcher.add_method
         def get_dispenser_info(tx_hash=None, tx_index=None):

@@ -13,7 +13,6 @@ import urllib
 from urllib.parse import quote_plus as urlencode
 
 import appdirs
-import apsw
 import bitcoin as bitcoinlib
 from halo import Halo
 from termcolor import colored, cprint
@@ -24,13 +23,14 @@ from counterpartycore.lib import (
     check,
     config,
     database,
+    follow,
     log,
     transaction,
     util,
 )
 from counterpartycore.lib import kickstart as kickstarter
 from counterpartycore.lib.api import api_server as api_v2
-from counterpartycore.lib.api import api_v1, routes  # noqa: F401
+from counterpartycore.lib.api import api_v1
 from counterpartycore.lib.public_keys import PUBLIC_KEYS
 from counterpartycore.lib.telemetry.clients.influxdb import TelemetryClientInfluxDB
 from counterpartycore.lib.telemetry.collectors.influxdb import (
@@ -65,7 +65,7 @@ def initialise(*args, **kwargs):
         regtest=kwargs.get("regtest", False),
     )
     initialise_config(*args, **kwargs)
-    return initialise_db()
+    return database.initialise_db()
 
 
 def initialise_log_config(
@@ -154,6 +154,8 @@ def initialise_config(
     customnet=None,
     no_mempool=False,
     no_telemetry=False,
+    zmq_sequence_port=None,
+    zmq_rawblock_port=None,
 ):
     # log config alreasdy initialized
     logger.debug("VERBOSE: %s", config.VERBOSE)
@@ -342,6 +344,26 @@ def initialise_config(
     config.INDEXD_URL = "http://" + config.INDEXD_CONNECT + ":" + str(config.INDEXD_PORT)
 
     logger.debug("INDEXD_URL: %s", config.INDEXD_URL)
+
+    if zmq_rawblock_port:
+        config.ZMQ_RAWBLOCK_PORT = zmq_rawblock_port
+    else:
+        if config.TESTNET:
+            config.ZMQ_RAWBLOCK_PORT = config.DEFAULT_ZMQ_RAWBLOCK_PORT_TESTNET
+        elif config.REGTEST:
+            config.ZMQ_RAWBLOCK_PORT = config.DEFAULT_ZMQ_RAWBLOCK_PORT_REGTEST
+        else:
+            config.ZMQ_RAWBLOCK_PORT = config.DEFAULT_ZMQ_RAWBLOCK_PORT
+
+    if zmq_sequence_port:
+        config.ZMQ_SEQUENCE_PORT = zmq_sequence_port
+    else:
+        if config.TESTNET:
+            config.ZMQ_SEQUENCE_PORT = config.DEFAULT_ZMQ_SEQUENCE_PORT_TESTNET
+        elif config.REGTEST:
+            config.ZMQ_SEQUENCE_PORT = config.DEFAULT_ZMQ_SEQUENCE_PORT_REGTEST
+        else:
+            config.ZMQ_SEQUENCE_PORT = config.DEFAULT_ZMQ_SEQUENCE_PORT
 
     ##############
     # THINGS WE SERVE
@@ -591,6 +613,8 @@ def initialise_log_and_config(args):
         "utxo_locks_max_age": args.utxo_locks_max_age,
         "no_mempool": args.no_mempool,
         "no_telemetry": args.no_telemetry,
+        "zmq_sequence_port": args.zmq_sequence_port,
+        "zmq_rawblock_port": args.zmq_rawblock_port,
     }
 
     initialise_log_config(
@@ -615,41 +639,24 @@ def initialise_log_and_config(args):
     initialise_config(**init_args)
 
 
-def initialise_db():
-    if config.FORCE:
-        cprint("THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.", "yellow")
-
-    # Database
-    logger.info(f"Connecting to database (SQLite {apsw.apswversion()}).")
-    db = database.get_connection(read_only=False)
-
-    util.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
-
-    return db
-
-
 def connect_to_backend():
     if not config.FORCE:
-        backend.getblockcount()
+        backend.bitcoind.getblockcount()
 
 
-def connect_to_addrindexrs():
-    step = "Connecting to `addrindexrs`..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
-        util.CURRENT_BLOCK_INDEX = 0
-        backend.backend()
-        check_addrindexrs = {}
-        while check_addrindexrs == {}:
-            check_address = (
-                "mrHFGUKSiNMeErqByjX97qPKfumdZxe6mC"
-                if config.TESTNET
-                else "1GsjsKKT4nH4GPmDnaxaZEDWgoBpmexwMA"
-            )
-            check_addrindexrs = backend.get_oldest_tx(check_address, 99999999999)
-            if check_addrindexrs == {}:
-                logger.info("`addrindexrs` is not ready. Waiting one second.")
-                time.sleep(1)
-    print(f"{OK_GREEN} {step}")
+def initialize_telemetry():
+    if not config.NO_TELEMETRY:
+        logger.info("Telemetry enabled.")
+        telemetry_daemon = TelemetryDaemon(
+            interval=config.TELEMETRY_INTERVAL,
+            collector=TelemetryCollectorInfluxDB(db=database.get_connection(read_only=True)),
+            client=TelemetryClientInfluxDB(),
+        )
+        telemetry_daemon.start()
+    else:
+        logger.info("Telemetry disabled.")
+
+    return telemetry_daemon
 
 
 def start_all(args):
@@ -657,17 +664,25 @@ def start_all(args):
     api_server_v1 = None
     api_server_v2 = None
     telemetry_daemon = None
+    follower_daemon = None
     db = None
 
     try:
+        # set signal handlers (needed for graceful shutdown on SIGINT/SIGTERM)
         signal.signal(signal.SIGINT, handle_interrupt_signal)
         signal.signal(signal.SIGTERM, handle_interrupt_signal)
 
+        # download bootstrap if necessary
         if not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap":
             bootstrap(no_confirm=True)
 
-        db = initialise_db()
+        # initialise database
+        db = database.initialise_db()
         blocks.initialise(db)
+        blocks.check_database_version(db)
+
+        # check software version
+        check.software_version()
 
         # API Server v2.
         api_server_v2 = api_v2.APIServer()
@@ -676,16 +691,8 @@ def start_all(args):
         # Backend.
         connect_to_backend()
 
-        if not config.NO_TELEMETRY:
-            logger.info("Telemetry enabled.")
-            telemetry_daemon = TelemetryDaemon(
-                interval=config.TELEMETRY_INTERVAL,
-                collector=TelemetryCollectorInfluxDB(db=database.get_connection(read_only=True)),
-                client=TelemetryClientInfluxDB(),
-            )
-            telemetry_daemon.start()
-        else:
-            logger.info("Telemetry disabled.")
+        # Initialise telemetry.
+        telemetry_daemon = initialize_telemetry()
 
         # Reset UTXO_LOCKS.  This previously was done in
         # initilise_config
@@ -701,8 +708,13 @@ def start_all(args):
         api_server_v1.daemon = True
         api_server_v1.start()
 
-        # Server
-        blocks.follow(db)
+        # catch up
+        blocks.catch_up(db)
+
+        # Blockchain watcher
+        follower_daemon = follow.BlockchainWatcher(db)
+        follower_daemon.start()
+
     except KeyboardInterrupt:
         logger.info("Keyboard interrupt.")
         pass
@@ -715,28 +727,27 @@ def start_all(args):
             api_server_v1.stop()
         if api_server_v2:
             api_server_v2.stop()
-        backend.stop()
+        if follower_daemon:
+            follower_daemon.stop()
         if db:
-            database.optimize(db)
-            logger.info("Closing database...")
-            db.close()
-        logger.info("Shutting down logging...")
-        logging.shutdown()
+            database.close(db)
+        backend.addrindexrs.stop()
+        log.shutdown()
 
 
 def reparse(block_index):
-    connect_to_addrindexrs()
-    db = initialise_db()
+    backend.addrindexrs.init()
+    db = database.initialise_db()
     try:
         blocks.reparse(db, block_index=block_index)
     finally:
-        backend.stop()
+        backend.addrindexrs.stop()
         database.optimize(db)
         db.close()
 
 
 def rollback(block_index=None):
-    db = initialise_db()
+    db = database.initialise_db()
     try:
         blocks.rollback(db, block_index=block_index)
     finally:
@@ -754,7 +765,7 @@ def kickstart(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
 
 
 def vacuum():
-    db = initialise_db()
+    db = database.initialise_db()
     step = "Vacuuming database..."
     with Halo(text=step, spinner=SPINNER_STYLE):
         database.vacuum(db)
@@ -762,7 +773,7 @@ def vacuum():
 
 
 def check_database():
-    db = initialise_db()
+    db = database.initialise_db()
 
     start_all_time = time.time()
 

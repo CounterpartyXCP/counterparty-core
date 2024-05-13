@@ -4,7 +4,7 @@ import sys
 
 import requests
 import yaml
-from counterpartycore import server
+from counterpartycore.lib.api import routes
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 API_DOC_FILE = os.path.join(CURR_DIR, "../../../Documentation/docs/advanced/api-v2/node-api.md")
@@ -35,12 +35,13 @@ def get_example_output(path, args):
         args.pop(key)
     url = f"{API_ROOT}{path}"
     print(f"GET {url}")
-    args["verbose"] = "true"
+    if "v2/" in path:
+        args["verbose"] = "true"
     response = requests.get(url, params=args)  # noqa S113
     return response.json()
 
 
-root_path = "`/`" if TARGET == "docusaurus" else "/"
+root_path = "`/v2/`" if TARGET == "docusaurus" else "/v2/"
 
 GROUPS = [
     "/blocks",
@@ -120,11 +121,13 @@ else:
     md = ""
 
 md += """FORMAT: 1A
-HOST: https://api.counterparty.io
+HOST: https://api.counterparty.io:4000
 
 # Counterparty Core API
 
 The Counterparty Core API is the recommended (and only supported) way to query the state of a Counterparty node. 
+
+Please see [Apiary](https://counterpartycore.docs.apiary.io/) for interactive documentation.
 
 API routes are divided into 11 groups:
 """
@@ -151,11 +154,11 @@ Notes:
     }
     ```
 
-- Routes in the `/bitcoin` group serve as a proxy to make requests to Bitcoin Core.
+- Routes in the `/v2/bitcoin` group serve as a proxy to make requests to Bitcoin Core.
 
 # Counterparty API Root [{root_path}]
 
-### Get Server Info [GET]
+### Get Server Info [GET /v2/]
 
 Returns server information and the list of documented routes in JSON format.
 
@@ -183,10 +186,12 @@ if USE_API_CACHE and os.path.exists(CACHE_FILE):
         cache = json.load(f)
 
 current_group = None
-for path, route in server.routes.ROUTES.items():
+for path, route in routes.ROUTES.items():
     path_parts = path.split("/")
     if path_parts[1] == "v2":
         route_group = path.split("/")[2]
+    elif "healthz" in path:
+        route_group = "healthz"
     else:
         route_group = "v1"
     if "compose" in path:
@@ -247,7 +252,7 @@ for path, route in server.routes.ROUTES.items():
             if not arg["required"]:
                 md += f"        + Default: `{arg.get('default', '')}`\n"
 
-    if example_args != {} or len(route["args"]) == 1:  # min 1 for verbose arg
+    if example_args != {} or len(route["args"]) == 1 or "healthz" in path:  # min 1 for verbose arg
         if not USE_API_CACHE or path not in cache:
             example_output = get_example_output(path, example_args)
             cache[path] = example_output

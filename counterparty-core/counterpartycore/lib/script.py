@@ -20,7 +20,7 @@ from pycoin.encoding.exceptions import EncodingError
 from pycoin.encoding.sec import public_pair_to_sec
 from ripemd import ripemd160 as RIPEMD160  # nosec B413
 
-from counterpartycore.lib import config, exceptions, opcodes, util
+from counterpartycore.lib import backend, config, exceptions, opcodes, util
 from counterpartycore.lib.opcodes import *  # noqa: F403
 
 B58_DIGITS = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
@@ -511,3 +511,24 @@ def extract_pubkeys(pub):
         if not is_pubkeyhash(pub):
             pubkeys.append(pub)
     return pubkeys
+
+
+def ensure_script_pub_key_for_inputs(coins):
+    txhash_set = set()
+    for coin in coins:
+        if "scriptPubKey" not in coin:
+            txhash_set.add(coin["txid"])
+
+    if len(txhash_set) > 0:
+        txs = backend.addrindexrs.getrawtransaction_batch(
+            list(txhash_set), verbose=True, skip_missing=False
+        )
+        for coin in coins:
+            if "scriptPubKey" not in coin:
+                # get the scriptPubKey
+                txid = coin["txid"]
+                for vout in txs[txid]["vout"]:
+                    if vout["n"] == coin["vout"]:
+                        coin["scriptPubKey"] = vout["scriptPubKey"]["hex"]
+
+    return coins

@@ -91,4 +91,17 @@ class InvalidArgument(Exception):
     pass
 
 
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
+class MempoolError(Exception):
+    pass
+
+
+class BlockNotFoundError(Exception):
+    pass
+
+
+class BitcoindRPCError(Exception):
+    pass
+
+
+class UnknownPubKeyError(Exception):
+    pass

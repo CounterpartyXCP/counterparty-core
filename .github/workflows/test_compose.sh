@@ -37,12 +37,12 @@ docker compose --profile mainnet up -d
 docker compose --profile testnet up -d
 
 # wait for counterparty-core to be ready
-while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Ready for queries')" = "" ]; do
+while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Catch up done.')" = "" ]; do
     echo "Waiting for counterparty-core mainnet to be ready"
     sleep 1
 done
 
-while [ "$(docker compose logs counterparty-core-testnet 2>&1 | grep 'Ready for queries')" = "" ]; do
+while [ "$(docker compose logs counterparty-core-testnet 2>&1 | grep 'Catch up done.')" = "" ]; do
     echo "Waiting for counterparty-core testnet to be ready"
     sleep 1
 done
@@ -75,7 +75,7 @@ if [ "$response_v1_testnet" -ne 200 ]; then
 fi
 
 # check running info with API v2 mainnet
-response_v2_mainnet=$(curl http://api:api@127.0.0.1:4000/v2/ \
+response_v2_mainnet=$(curl http://localhost:4000/v2/ \
                         --write-out '%{http_code}' --silent --output /dev/null)
 
 if [ "$response_v2_mainnet" -ne 200 ]; then
@@ -84,7 +84,7 @@ if [ "$response_v2_mainnet" -ne 200 ]; then
 fi
 
 # check running info with API v2 testnet
-response_v2_testnet=$(curl http://api:api@127.0.0.1:14000/v2/ \
+response_v2_testnet=$(curl http://localhost:14000/v2/ \
                         --write-out '%{http_code}' --silent --output /dev/null)
 
 if [ "$response_v2_mainnet" -ne 200 ]; then

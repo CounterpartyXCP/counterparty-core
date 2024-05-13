@@ -21,6 +21,7 @@ from counterpartycore.lib import (
     arc4,  # noqa: F401 # TODO: need for test: clean that up
     backend,
     config,
+    deserialize,
     exceptions,
     gettxinfo,
     ledger,
@@ -29,7 +30,7 @@ from counterpartycore.lib import (
     script,
     util,
 )
-from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser
+from counterpartycore.lib.backend import addrindexrs
 from counterpartycore.lib.transaction_helper import p2sh_encoding, serializer
 
 # Constants
@@ -189,6 +190,68 @@ class ThreadSafeTTLCache(BaseThreadSafeCache):
         return cachetools.TTLCache(*args, **kwargs)
 
 
+def sort_unspent_txouts(unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE):
+    # Filter out all dust amounts to avoid bloating the resultant transaction
+    unspent = list(filter(lambda x: x["value"] > dust_size, unspent))
+    # Sort by amount, using the largest UTXOs available
+    if config.REGTEST:
+        # REGTEST has a lot of coinbase inputs that can't be spent due to maturity
+        # this doesn't usually happens on mainnet or testnet because most fednodes aren't mining
+        unspent = sorted(unspent, key=lambda x: (x["confirmations"], x["value"]), reverse=True)
+    else:
+        unspent = sorted(unspent, key=lambda x: x["value"], reverse=True)
+
+    return unspent
+
+
+def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
+    # Search provided pubkeys.
+    if provided_pubkeys:
+        if type(provided_pubkeys) != list:  # noqa: E721
+            provided_pubkeys = [provided_pubkeys]
+        for pubkey in provided_pubkeys:
+            if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                return pubkey
+            elif pubkeyhash == script.pubkey_to_p2whash(util.unhexlify(pubkey)):
+                return pubkey
+
+    # Search blockchain.
+    raw_transactions = addrindexrs.search_raw_transactions(pubkeyhash, unconfirmed=True)
+    for tx_id in raw_transactions:
+        tx = raw_transactions[tx_id]
+        for vin in tx["vin"]:
+            if "txinwitness" in vin:
+                if len(vin["txinwitness"]) >= 2:
+                    # catch unhexlify errs for when txinwitness[1] isn't a witness program (eg; for P2W)
+                    try:
+                        pubkey = vin["txinwitness"][1]
+                        if pubkeyhash == script.pubkey_to_p2whash(util.unhexlify(pubkey)):
+                            return pubkey
+                    except binascii.Error:
+                        pass
+            elif "coinbase" not in vin:
+                scriptsig = vin["scriptSig"]
+                asm = scriptsig["asm"].split(" ")
+                if len(asm) >= 2:
+                    # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
+                    try:
+                        pubkey = asm[1]
+                        if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                            return pubkey
+                    except binascii.Error:
+                        pass
+
+    raise exceptions.UnknownPubKeyError(
+        "Public key was neither provided nor published in blockchain."
+    )
+
+
+def multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys=None):
+    signatures_required, pubkeyhashes, signatures_possible = script.extract_array(address)
+    pubkeys = [pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys) for pubkeyhash in pubkeyhashes]
+    return script.construct_array(signatures_required, pubkeys, signatures_possible)
+
+
 # set higher than the max number of UTXOs we should expect to
 # manage in an aging cache for any one source address, at any one period
 # UTXO_P2SH_ENCODING_LOCKS is TTLCache for UTXOs that are used for chaining p2sh encoding
@@ -247,11 +310,11 @@ class TransactionService:
         # inject `script`
         if script.is_multisig(source):
             a, self_pubkeys, b = script.extract_array(
-                self.backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
+                multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
             )
             dust_return_pubkey_hex = self_pubkeys[0]
         else:
-            dust_return_pubkey_hex = self.backend.pubkeyhash_to_pubkey(source, provided_pubkeys)
+            dust_return_pubkey_hex = pubkeyhash_to_pubkey(source, provided_pubkeys)
 
         # Convert hex public key into the (binary) dust return pubkey.
         try:
@@ -263,7 +326,7 @@ class TransactionService:
 
     def make_outkey_vin_txid(self, txid, vout):
         if (txid, vout) not in self.utxo_p2sh_encoding_locks_cache:
-            txhex = self.backend.getrawtransaction(txid, verbose=False)
+            txhex = self.backend.bitcoind.getrawtransaction(txid, verbose=False)
             self.utxo_p2sh_encoding_locks_cache.set((txid, vout), make_outkey_vin(txhex, vout))
 
         return self.utxo_p2sh_encoding_locks_cache.get((txid, vout))
@@ -292,13 +355,13 @@ class TransactionService:
             use_inputs = unspent = custom_inputs
         else:
             if unspent_tx_hash is not None:
-                unspent = self.backend.get_unspent_txouts(
+                unspent = self.backend.addrindexrs.get_unspent_txouts(
                     source,
                     unconfirmed=allow_unconfirmed_inputs,
                     unspent_tx_hash=unspent_tx_hash,
                 )
             else:
-                unspent = self.backend.get_unspent_txouts(
+                unspent = self.backend.addrindexrs.get_unspent_txouts(
                     source, unconfirmed=allow_unconfirmed_inputs
                 )
 
@@ -321,13 +384,13 @@ class TransactionService:
             else:
                 dust = self.default_regular_dust_size
 
-            unspent = self.backend.sort_unspent_txouts(unspent, dust_size=dust)
+            unspent = sort_unspent_txouts(unspent, dust_size=dust)
             # self.logger.debug(f"Sorted candidate UTXOs: {[print_coin(coin) for coin in unspent]}")
             use_inputs = unspent
 
         # use backend estimated fee_per_kb
         if estimate_fee_per_kb:
-            estimated_fee_per_kb = self.backend.fee_per_kb(
+            estimated_fee_per_kb = self.backend.bitcoind.fee_per_kb(
                 estimate_fee_per_kb_nblocks, config.ESTIMATE_FEE_MODE
             )
             if estimated_fee_per_kb is not None:
@@ -420,7 +483,7 @@ class TransactionService:
 
         # ensure inputs have scriptPubKey
         #   this is not provided by indexd
-        inputs = self.backend.ensure_script_pub_key_for_inputs(inputs)
+        inputs = script.ensure_script_pub_key_for_inputs(inputs)
 
         return inputs, change_quantity, btc_in, final_fee
 
@@ -430,7 +493,9 @@ class TransactionService:
         """Get the first (biggest) input from the source address"""
 
         # Array of UTXOs, as retrieved by listunspent function from bitcoind
-        unspent = self.backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs)
+        unspent = self.backend.addrindexrs.get_unspent_txouts(
+            source, unconfirmed=allow_unconfirmed_inputs
+        )
 
         filter_unspents_utxo_locks = []
         if self.utxo_locks is not None and source in self.utxo_locks:
@@ -444,9 +509,7 @@ class TransactionService:
         unspent = filtered_unspent
 
         # sort
-        unspent = self.backend.sort_unspent_txouts(
-            unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE
-        )
+        unspent = sort_unspent_txouts(unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE)
 
         # use the first input
         input = unspent[0]
@@ -519,7 +582,7 @@ class TransactionService:
 
         # Normalize source
         if script.is_multisig(source):
-            source_address = self.backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
+            source_address = multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
         else:
             source_address = source
 
@@ -577,9 +640,7 @@ class TransactionService:
                 if script.is_multisig(address):
                     destination_outputs_new.append(
                         (
-                            self.backend.multisig_pubkeyhashes_to_pubkeys(
-                                address, provided_pubkeys
-                            ),
+                            multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys),
                             value,
                         )
                     )
@@ -830,13 +891,11 @@ class TransactionService:
 
         # Parsed transaction info.
         try:
-            if pretx_txid and unsigned_pretx:
-                self.backend.cache_pretx(pretx_txid, unsigned_pretx)
             parsed_source, parsed_destination, x, y, parsed_data, extra = (
                 # TODO: inject
                 gettxinfo.get_tx_info_new(
                     db,
-                    BlockchainParser().deserialize_tx(unsigned_tx_hex),
+                    deserialize.deserialize_tx(unsigned_tx_hex, use_txid=True),
                     util.CURRENT_BLOCK_INDEX,
                     p2sh_is_segwit=script.is_bech32(desired_source),
                     composing=True,
@@ -846,9 +905,6 @@ class TransactionService:
             if encoding == "p2sh":
                 # make_canonical can't determine the address, so we blindly change the desired to the parsed
                 desired_source = parsed_source
-
-            if pretx_txid and unsigned_pretx:
-                self.backend.clear_pretx(pretx_txid)
         except exceptions.BTCOnlyError:
             # Skip BTC‐only transactions.
             if extended_tx_info:
@@ -941,11 +997,11 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
     # Get hex dust return pubkey.
     if script.is_multisig(source):
         a, self_pubkeys, b = script.extract_array(
-            backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
+            multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
         )
         dust_return_pubkey_hex = self_pubkeys[0]
     else:
-        dust_return_pubkey_hex = backend.pubkeyhash_to_pubkey(source, provided_pubkeys)
+        dust_return_pubkey_hex = pubkeyhash_to_pubkey(source, provided_pubkeys)
 
     # Convert hex public key into the (binary) dust return pubkey.
     try:
@@ -1664,8 +1720,12 @@ def info(db, rawtransaction: str, block_index: int = None):
     :param rawtransaction: Raw transaction in hex format (e.g. 01000000017828697743c03aef6a3a8ba54b22bf579ffcab8161faf20e7b20c4ecd75cc986010000006b483045022100d1bd0531bb1ed2dd2cbf77d6933273e792a3dbfa84327d419169850ddd5976f502205d1ab0f7bcbf1a0cc183f0520c9aa8f711d41cb790c0c4ac39da6da4a093d798012103d3b1f711e907acb556e239f6cafb6a4f7fe40d8dd809b0e06e739c2afd73f202ffffffff0200000000000000004d6a4bf29880b93b0711524c7ef9c76835752088db8bd4113a3daf41fc45ffdc8867ebdbf26817fae377696f36790e52f51005806e9399a427172fedf348cf798ed86e548002ee96909eef0775ec3c2b0100000000001976a91443434cf159cc585fbd74daa9c4b833235b19761b88ac00000000)
     :param block_index: Block index mandatory for transactions before block 335000
     """
-    source, destination, btc_amount, fee, data, extra = gettxinfo.get_tx_info(
-        db, BlockchainParser().deserialize_tx(rawtransaction), block_index=block_index
+    source, destination, btc_amount, fee, data, _extra = gettxinfo.get_tx_info(
+        db,
+        deserialize.deserialize_tx(
+            rawtransaction, use_txid=util.enabled("correct_segwit_txids", block_index)
+        ),
+        block_index=block_index,
     )
     result = {
         "source": source,

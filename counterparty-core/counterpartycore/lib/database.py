@@ -4,8 +4,9 @@ import os
 import apsw
 import apsw.bestpractice
 import psutil
+from termcolor import cprint
 
-from counterpartycore.lib import config, exceptions  # noqa: E402, F401
+from counterpartycore.lib import config, exceptions, ledger, util
 
 apsw.bestpractice.apply(apsw.bestpractice.recommended)  # includes WAL mode
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -46,12 +47,12 @@ def check_wal_file():
         raise exceptions.WALFileFoundError("Found WAL file. Database may be corrupted.")
 
 
-def get_connection(read_only=True):
+def get_connection(read_only=True, check_wal=True):
     """Connects to the SQLite database, returning a db `Connection` object"""
     logger.debug(f"Creating connection to `{config.DATABASE}`.")
 
     need_quick_check = False
-    if not read_only:
+    if not read_only and check_wal:
         try:
             check_wal_file()
         except exceptions.WALFileFoundError:
@@ -82,6 +83,19 @@ def get_connection(read_only=True):
     db.setrowtrace(rowtracer)
 
     cursor.close()
+    return db
+
+
+def initialise_db():
+    if config.FORCE:
+        cprint("THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.", "yellow")
+
+    # Database
+    logger.info(f"Connecting to database (SQLite {apsw.apswversion()}).")
+    db = get_connection(read_only=False)
+
+    util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
+
     return db
 
 
@@ -153,6 +167,12 @@ def optimize(db):
     cursor = db.cursor()
     cursor.execute("PRAGMA optimize")
     logger.info("PRAGMA optimize done.")
+
+
+def close(db):
+    optimize(db)
+    logger.info("Closing database...")
+    db.close()
 
 
 def field_is_pk(cursor, table, field):

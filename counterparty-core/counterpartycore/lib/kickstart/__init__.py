@@ -10,9 +10,7 @@ import apsw
 from halo import Halo
 from termcolor import colored
 
-from counterpartycore import server
-from counterpartycore.lib import backend, blocks, config, database, ledger, util  # noqa: F401
-from counterpartycore.lib.backend.addrindexrs import AddrindexrsSocket  # noqa: F401
+from counterpartycore.lib import backend, blocks, config, database
 from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser, ChainstateParser
 from counterpartycore.lib.kickstart.utils import remove_shm_from_resource_tracker
 
@@ -168,7 +166,7 @@ def get_last_known_block_hash(bitcoind_dir):
 def intialize_kickstart_db(bitcoind_dir, last_known_hash, resuming, new_database, debug_block):
     step = "Initialising database..."
     with Halo(text=step, spinner=SPINNER_STYLE) as spinner:
-        kickstart_db = server.initialise_db()
+        kickstart_db = database.initialise_db()
         blocks.initialise(kickstart_db)
         database.update_version(kickstart_db)
         cursor = kickstart_db.cursor()
@@ -295,40 +293,6 @@ def backup_if_needed(new_database, resuming):
     return new_database
 
 
-def parse_block(kickstart_db, cursor, block, block_parser, tx_index):
-    util.CURRENT_BLOCK_INDEX = block["block_index"]
-
-    with kickstart_db:  # ensure all the block or nothing
-        # insert block
-        block_bindings = {
-            "block_index": block["block_index"],
-            "block_hash": block["block_hash"],
-            "block_time": block["block_time"],
-            "previous_block_hash": block["hash_prev"],
-            "difficulty": block["bits"],
-        }
-        ledger.insert_record(kickstart_db, "blocks", block_bindings, "NEW_BLOCK")
-
-        # save transactions
-        for transaction in block["transactions"]:
-            # Cache transaction. We do that here because the block is fetched by another process.
-            block_parser.put_in_cache(transaction)
-            tx_index = blocks.list_tx(
-                kickstart_db,
-                block["block_hash"],
-                block["block_index"],
-                block["block_time"],
-                transaction["tx_hash"],
-                tx_index,
-                decoded_tx=transaction,
-                block_parser=block_parser,
-            )
-        # Parse the transactions in the block.
-        blocks.parse_block(kickstart_db, block["block_index"], block["block_time"])
-
-    return tx_index
-
-
 def cleanup(kickstart_db, block_parser):
     remove_shm_from_resource_tracker()
     step = "Cleaning up..."
@@ -339,7 +303,7 @@ def cleanup(kickstart_db, block_parser):
             block_parser.close()
         except (Empty, FileNotFoundError):
             pass
-        backend.stop()
+        backend.addrindexrs.stop()
         # remove kickstart tables if all blocks have been parsed
         clean_kicstart_blocks(kickstart_db)
     print(f"{OK_GREEN} {step}")
@@ -355,7 +319,7 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
         confirm_kickstart()
 
     # check addrindexrs
-    server.connect_to_addrindexrs()
+    backend.addrindexrs.init()
 
     # determine bitoincore data directory
     bitcoind_dir = get_bitcoind_dir(bitcoind_dir)
@@ -393,13 +357,12 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
 
     # start parsing blocks
     try:
-        cursor = kickstart_db.cursor()
         block = block_parser.next_block()
         while block is not None:
             # initialize block parsing timer
             start_time_block_parse = time.time()
             # parse block
-            tx_index = parse_block(kickstart_db, cursor, block, block_parser, tx_index)
+            tx_index = blocks.parse_new_block(kickstart_db, block, block_parser, tx_index)
             # update last parsed block
             last_parsed_block = block["block_index"]
             # update block parsed count
