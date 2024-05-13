@@ -150,7 +150,7 @@ def get_transaction_sources(decoded_tx, block_parser=None):
 
         vout = vin_ctx["vout"][vin["n"]]
         outputs_value += vout["value"]
-        script_pubkey = binascii.unhexlify(vout["script_pub_key"])
+        script_pubkey = vout["script_pub_key"]
 
         asm = script.script_to_asm(script_pubkey)
 
@@ -271,7 +271,7 @@ def parse_transaction_vouts(decoded_tx):
         output_value = vout["value"]
         fee -= output_value
 
-        script_pub_key = binascii.unhexlify(vout["script_pub_key"])
+        script_pub_key = vout["script_pub_key"]
 
         # Ignore transactions with invalid script.
         asm = script.script_to_asm(script_pub_key)
@@ -418,7 +418,7 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
     for vout in decoded_tx["vout"]:
         fee -= vout["value"]
 
-        script_pub_key = binascii.unhexlify(vout["script_pub_key"])
+        script_pub_key = vout["script_pub_key"]
 
         # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
         asm = script.script_to_asm(script_pub_key)
@@ -493,7 +493,7 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
 
         vout = vin_ctx["vout"][vin["n"]]
         fee += vout["value"]
-        script_pubkey = binascii.unhexlify(vout["script_pub_key"])
+        script_pubkey = vout["script_pub_key"]
 
         address = get_address(script_pubkey, block_index)
         if not address:

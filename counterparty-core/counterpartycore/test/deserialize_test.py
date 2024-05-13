@@ -69,7 +69,7 @@ def test_deserialize():
             assert vin.nSequence == decoded_tx_parser["vin"][i]["sequence"]
 
         for i, vout in enumerate(decoded_tx_bitcoinlib.vout):
-            assert vout.nValue == decoded_tx_parser["vout"][i]["nValue"]
+            assert vout.nValue == decoded_tx_parser["vout"][i]["value"]
             assert vout.scriptPubKey == decoded_tx_parser["vout"][i]["script_pub_key"]
 
         assert decoded_tx_bitcoinlib.has_witness() == (len(decoded_tx_parser["vtxinwit"]) > 0)
