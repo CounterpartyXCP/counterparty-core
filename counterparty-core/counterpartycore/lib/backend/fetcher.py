@@ -1,6 +1,11 @@
 import json
+import binascii
+import logging
 
 from counterparty_rs import indexer
+from counterpartycore.lib import config
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 _fetcher = None
 
@@ -31,5 +36,11 @@ def stop():
 
 
 def get_block():
+    logger.debug('Fetching block with Rust backend.')
     block_bytes = instance().get_block()
-    return json.loads(block_bytes)
+    block = json.loads(block_bytes)
+    # TODO: move this
+    for tx in block['transactions']:
+        for vout in tx['vout']:
+            vout['script_pub_key'] = binascii.unhexlify(vout['script_pub_key'])
+    return block
