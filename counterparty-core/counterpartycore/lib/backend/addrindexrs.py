@@ -506,7 +506,7 @@ def get_unspent_txouts(address: str, unconfirmed: bool = False, unspent_tx_hash:
 #    {
 #       "n": num,
 #       "value": decimal,
-#       "scriptPubKey": {
+#       "script_pub_key": {
 #           "type": string,
 #           "reqSigs": num,
 #           "hex": hexstring, // the program in hex

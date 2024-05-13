@@ -149,8 +149,8 @@ def get_transaction_sources(decoded_tx, block_parser=None):
             vin_ctx = fetcher.get_decoded_transaction(ib2h(vin["hash"]))
 
         vout = vin_ctx["vout"][vin["n"]]
-        outputs_value += vout["nValue"]
-        script_pubkey = vout["scriptPubKey"]
+        outputs_value += vout["value"]
+        script_pubkey = binascii.unhexlify(vout["script_pub_key"])
 
         asm = script.script_to_asm(script_pubkey)
 
@@ -201,10 +201,10 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit, block_parser=No
             prevout_is_segwit = p2sh_is_segwit
 
         vout = vin_ctx["vout"][vin["n"]]
-        outputs_value += vout["nValue"]
+        outputs_value += vout["value"]
 
         # Ignore transactions with invalid script.
-        asm = script.script_to_asm(vin["scriptSig"])
+        asm = script.script_to_asm(vin["script_sig"])
 
         new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(
             asm, p2sh_is_segwit=prevout_is_segwit
@@ -268,11 +268,13 @@ def parse_transaction_vouts(decoded_tx):
     for vout in decoded_tx["vout"]:
         potential_dispensers.append((None, None))
         # Fee is the input values minus output values.
-        output_value = vout["nValue"]
+        output_value = vout["value"]
         fee -= output_value
 
+        script_pub_key = binascii.unhexlify(vout["script_pub_key"])
+
         # Ignore transactions with invalid script.
-        asm = script.script_to_asm(vout["scriptPubKey"])
+        asm = script.script_to_asm(script_pub_key)
         if asm[0] == OP_RETURN:  # noqa: F405
             new_destination, new_data = decode_opreturn(asm, decoded_tx)
         elif asm[-1] == OP_CHECKSIG:  # noqa: F405
@@ -296,7 +298,7 @@ def parse_transaction_vouts(decoded_tx):
         elif util.enabled("segwit_support") and asm[0] == b"":
             # Segwit Vout, second param is redeemScript
             # redeemScript = asm[1]
-            new_destination = script.script_to_address(vout["scriptPubKey"])
+            new_destination = script.script_to_address(script_pub_key)
             new_data = None
             if util.enabled("correct_segwit_txids"):
                 potential_dispensers[-1] = (new_destination, output_value)
@@ -414,10 +416,12 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
     destination, btc_amount, data = None, None, b""
     pubkeyhash_encoding = False
     for vout in decoded_tx["vout"]:
-        fee -= vout["nValue"]
+        fee -= vout["value"]
+
+        script_pub_key = binascii.unhexlify(vout["script_pub_key"])
 
         # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
-        asm = script.script_to_asm(vout["scriptPubKey"])
+        asm = script.script_to_asm(script_pub_key)
         if len(asm) == 2 and asm[0] == OP_RETURN:  # OP_RETURN  # noqa: F405
             if type(asm[1]) != bytes:  # noqa: E721
                 continue
@@ -436,7 +440,7 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
             block_index >= 293000 or config.TESTNET or config.REGTEST
         ):  # Protocol change.
             # Be strict.
-            pubkeyhash, address_version = get_pubkeyhash(vout["scriptPubKey"], block_index)
+            pubkeyhash, address_version = get_pubkeyhash(script_pub_key, block_index)
             if not pubkeyhash:
                 continue
 
@@ -456,10 +460,10 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
 
         # Destination is the first output before the data.
         if not destination and not btc_amount and not data:
-            address = get_address(vout["scriptPubKey"], block_index)
+            address = get_address(script_pub_key, block_index)
             if address:
                 destination = address
-                btc_amount = vout["nValue"]
+                btc_amount = vout["value"]
 
     # Check for, and strip away, prefix (except for burns).
     if destination == config.UNSPENDABLE:
@@ -488,8 +492,8 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
             vin_ctx = fetcher.get_decoded_transaction(ib2h(vin["hash"]))
 
         vout = vin_ctx["vout"][vin["n"]]
-        fee += vout["nValue"]
-        script_pubkey = vout["scriptPubKey"]
+        fee += vout["value"]
+        script_pubkey = binascii.unhexlify(vout["script_pub_key"])
 
         address = get_address(script_pubkey, block_index)
         if not address:
