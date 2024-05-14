@@ -660,6 +660,36 @@ def initialize_telemetry():
     return telemetry_daemon
 
 
+def test_temp():
+    from counterpartycore.lib.api.util import to_json
+    from counterpartycore.lib.backend import fetcher as fetcher_rs
+    from counterpartycore.lib.backend.bitcoind import get_decoded_block
+    from counterpartycore.lib.kickstart.utils import ib2h
+
+    fetcher_rs.initialize(843000)
+    rs_block = fetcher_rs.get_block()
+    fetcher_rs.stop()
+
+    py_block = get_decoded_block(843000)
+    # print(rs_block)
+    # print(py_block)
+    assert rs_block["hash_prev"] == py_block["hash_prev"]
+    for i, tx in enumerate(rs_block["transactions"]):
+        py_tx = py_block["transactions"][i]
+        if tx["tx_hash"] == "d4cd322bfe603204815f694cb6213ef39e6d95f189241fa18c491c7caa88dd68":
+            print(to_json(tx, indent=4))
+            print(to_json(py_tx, indent=4))
+        for j, vout in enumerate(tx["vout"]):
+            vout_py = py_tx["vout"][j]
+            # print(vout["script_pub_key"], vout_py["script_pub_key"])
+            assert vout["script_pub_key"] == vout_py["script_pub_key"]
+            assert vout["value"] == vout_py["value"]
+        for k, vin in enumerate(tx["vin"]):
+            vin_py = py_tx["vin"][k]
+            assert vin["hash"] == ib2h(vin_py["hash"])
+            assert vin["n"] == vin_py["n"]
+
+
 def start_all(args):
     api_status_poller = None
     api_server_v1 = None
