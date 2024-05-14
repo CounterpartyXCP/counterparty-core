@@ -898,13 +898,15 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
 
     # check if reorg is needed
     if decoded_block["hash_prev"] != previous_block["block_hash"]:
-        previous_block_index = backend.bitcoind.get_block_height(decoded_block["hash_prev"])
+        if "height" in decoded_block:
+            previous_block_index = decoded_block["height"] - 1
+        else:
+            previous_block_index = backend.bitcoind.get_block_height(decoded_block["hash_prev"])
         logger.info("Blockchain reorganization detected from block %s", previous_block_index)
         # roolback to the previous block
-        rollback(db, block_index=previous_block_index)
-        # update the current block index
-        catch_up(db, check_asset_conservation=False)
-        return get_next_tx_index(db)
+        util.CURRENT_BLOCK_INDEX = previous_block_index + 1
+        rollback(db, block_index=util.CURRENT_BLOCK_INDEX)
+        tx_index = get_next_tx_index(db)
 
     decoded_block["block_index"] = util.CURRENT_BLOCK_INDEX
 
