@@ -4,7 +4,7 @@ import struct
 
 from counterpartycore.lib import arc4, backend, config, script, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
-from counterpartycore.lib.kickstart.utils import ib2h
+from counterpartycore.lib.kickstart.utils import ib2h, inverse_hash
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.opcodes import *  # noqa: F403
 from counterpartycore.lib.transaction_helper import p2sh_encoding
@@ -13,8 +13,12 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def arc4_decrypt(cyphertext, decoded_tx):
-    """Un‐obfuscate. Initialise key once per attempt."""
-    key = arc4.init_arc4(decoded_tx["vin"][0]["hash"][::-1])
+    """Un-obfuscate. Initialise key once per attempt."""
+    if isinstance(decoded_tx["vin"][0]["hash"], str):
+        vin_hash = binascii.unhexlify(inverse_hash(decoded_tx["vin"][0]["hash"]))
+    else:
+        vin_hash = decoded_tx["vin"][0]["hash"]
+    key = arc4.init_arc4(vin_hash[::-1])
     return key.decrypt(cyphertext)
 
 
