@@ -29,8 +29,13 @@ impl Stopper {
         self.broadcaster.broadcast(())
     }
 
-    pub fn subscribe(&self) -> Result<(usize, Done), Error> {
+    pub fn subscribe(&self) -> Result<(u64, Done), Error> {
         self.broadcaster.subscribe()
+    }
+
+    #[allow(dead_code)]
+    pub fn unsubscribe(&self, id: u64) -> Result<(), Error> {
+        self.broadcaster.unsubscribe(id)
     }
 
     pub fn stopped(&self) -> bool {

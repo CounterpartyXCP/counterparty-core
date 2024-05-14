@@ -14,7 +14,7 @@ pub fn new(config: Config) -> Result<Indexer, Error> {
     info!("Indexer initializing...");
     let parallelism = std::thread::available_parallelism()?;
     let stopper = Stopper::new();
-    let client = BitcoinClient::new(&config, stopper.clone(), parallelism.into());
+    let client = BitcoinClient::new(&config, stopper.clone(), parallelism.into())?;
     let handles = client.start()?;
     info!("Connecting to database: {}", config.db_dir);
     let db = Database::new(config.db_dir.to_string())?;

@@ -94,8 +94,8 @@ pub fn in_reorg_window(height: u32, target_height: u32, reorg_window: u32) -> bo
 
 #[derive(Clone)]
 pub struct Broadcaster<T> {
-    subscribers: Arc<Mutex<HashMap<usize, Sender<T>>>>,
-    next_id: Arc<Mutex<usize>>,
+    subscribers: Arc<Mutex<HashMap<u64, Sender<T>>>>,
+    next_id: Arc<Mutex<u64>>,
 }
 
 impl<T> Broadcaster<T>
@@ -109,13 +109,19 @@ where
         }
     }
 
-    pub fn subscribe(&self) -> Result<(usize, Receiver<T>), Error> {
+    pub fn subscribe(&self) -> Result<(u64, Receiver<T>), Error> {
         let (tx, rx) = unbounded();
         let mut id_guard = self.next_id.lock()?;
         let id = *id_guard;
         *id_guard += 1;
         self.subscribers.lock()?.insert(id, tx);
         Ok((id, rx))
+    }
+
+    pub fn unsubscribe(&self, id: u64) -> Result<(), Error> {
+        let mut subscribers = self.subscribers.lock()?;
+        subscribers.remove(&id);
+        Ok(())
     }
 
     pub fn broadcast(&self, message: T) -> Result<(), Error> {

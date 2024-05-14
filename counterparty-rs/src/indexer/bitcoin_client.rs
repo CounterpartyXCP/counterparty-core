@@ -158,14 +158,6 @@ pub trait BitcoinRpc<B>: Send + Clone + 'static {
     fn get_blockchain_height(&self) -> Result<u32, Error>;
 }
 
-#[derive(Clone)]
-pub struct BitcoinClient {
-    n: usize,
-    config: Config,
-    stopper: Stopper,
-    channels: Channels,
-}
-
 struct GetBlockHash {
     height: u32,
     sender: Sender<Result<BlockHash, Error>>,
@@ -199,14 +191,25 @@ impl Channels {
     }
 }
 
+#[derive(Clone)]
+pub struct BitcoinClient {
+    n: usize,
+    config: Config,
+    stopper: Stopper,
+    done: Done,
+    channels: Channels,
+}
+
 impl BitcoinClient {
-    pub fn new(config: &Config, stopper: Stopper, n: usize) -> Self {
-        BitcoinClient {
+    pub fn new(config: &Config, stopper: Stopper, n: usize) -> Result<Self, Error> {
+        let (_, done) = stopper.subscribe()?;
+        Ok(BitcoinClient {
             n,
             config: config.clone(),
             stopper,
+            done,
             channels: Channels::new(n),
-        }
+        })
     }
 
     pub fn start(&self) -> Result<Vec<JoinHandle<Result<(), Error>>>, Error> {
@@ -258,9 +261,8 @@ impl BitcoinRpc<Block> for BitcoinClient {
             .get_block_hash
             .0
             .send(GetBlockHash { height, sender: tx })?;
-        let (_, done) = self.stopper.subscribe()?;
         select! {
-            recv(done) -> _ => Err(Error::Stopped),
+            recv(self.done) -> _ => Err(Error::Stopped),
             recv(rx) -> result => result?
         }
     }
@@ -271,9 +273,8 @@ impl BitcoinRpc<Block> for BitcoinClient {
             hash: *hash,
             sender: tx,
         })?;
-        let (_, done) = self.stopper.subscribe()?;
         select! {
-            recv(done) -> _ => Err(Error::Stopped),
+            recv(self.done) -> _ => Err(Error::Stopped),
             recv(rx) -> result => result?
         }
     }
@@ -284,9 +285,8 @@ impl BitcoinRpc<Block> for BitcoinClient {
             .get_blockchain_height
             .0
             .send(GetBlockchainHeight { sender: tx })?;
-        let (_, done) = self.stopper.subscribe()?;
         select! {
-            recv(done) -> _ => Err(Error::Stopped),
+            recv(self.done) -> _ => Err(Error::Stopped),
             recv(rx) -> result => result?
         }
     }
