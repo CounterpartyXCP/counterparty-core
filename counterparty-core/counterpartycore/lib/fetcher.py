@@ -2,6 +2,7 @@ import logging
 from collections import OrderedDict
 
 from counterpartycore.lib import backend, config, deserialize, util
+from counterpartycore.lib.kickstart.utils import ib2h
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -40,6 +41,8 @@ def get_decoded_block(block_index):
 
 
 def get_decoded_transaction(tx_hash, block_index=None):
+    if isinstance(tx_hash, bytes):
+        tx_hash = ib2h(tx_hash)
     if tx_hash in TRANSACTIONS_CACHE:
         return TRANSACTIONS_CACHE[tx_hash]
 
