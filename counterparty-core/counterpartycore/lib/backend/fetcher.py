@@ -4,7 +4,7 @@ import logging
 
 from counterparty_rs import indexer
 
-from counterpartycore.lib import config
+from counterpartycore.lib import config, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -43,8 +43,11 @@ def get_block():
     logger.debug("Fetching block with Rust backend.")
     block_bytes = instance().get_block()
     block = json.loads(block_bytes)
+    # print(json.dumps(block, indent=4))
     # TODO: move this
     for tx in block["transactions"]:
         for vout in tx["vout"]:
             vout["script_pub_key"] = binascii.unhexlify(vout["script_pub_key"])
+        if util.enabled("correct_segwit_txids", block_index=block["height"]):
+            tx["tx_hash"] = tx["tx_id"]
     return block
