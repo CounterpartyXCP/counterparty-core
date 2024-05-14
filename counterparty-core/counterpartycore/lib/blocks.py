@@ -993,6 +993,9 @@ def catch_up(db, check_asset_conservation=True):
     # Get index of last transaction.
     tx_index = get_next_tx_index(db)
 
+    start_time = time.time()
+    parsed_blocks = 0
+
     while util.CURRENT_BLOCK_INDEX < block_count:
         logger.debug(f"Catching up block {util.CURRENT_BLOCK_INDEX}/{block_count}...")
 
@@ -1001,6 +1004,10 @@ def catch_up(db, check_asset_conservation=True):
         # decoded_block = block_fetcher.get_block()
         # util.CURRENT_BLOCK_INDEX is incremented in parse_new_block
         tx_index = parse_new_block(db, decoded_block, block_parser=None, tx_index=tx_index)
+
+        parsed_blocks += 1
+        duration = timedelta(seconds=int(time.time() - start_time))
+        logger.info(f"{parsed_blocks} block parsed in {duration}")
 
         # Refresh block count.
         block_count = backend.bitcoind.getblockcount()

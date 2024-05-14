@@ -12,8 +12,8 @@ from counterpartycore.lib.kickstart.utils import ib2h
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-BLOCKS_CACHE = {}
-BLOCKS_CACHE_MAX_SIZE = 100
+BLOCKS_CACHE = OrderedDict()
+BLOCKS_CACHE_MAX_SIZE = 1000
 TRANSACTIONS_CACHE = OrderedDict()
 TRANSACTIONS_CACHE_MAX_SIZE = 10000
 
@@ -175,6 +175,8 @@ def add_transaction_in_cache(tx_hash, tx):
 
 def add_block_in_cache(block_index, block):
     BLOCKS_CACHE[block_index] = block
+    if len(BLOCKS_CACHE) > BLOCKS_CACHE_MAX_SIZE:
+        BLOCKS_CACHE.popitem(last=False)
     for transaction in block["transactions"]:
         add_transaction_in_cache(transaction["tx_hash"], transaction)
 
