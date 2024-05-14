@@ -1,4 +1,3 @@
-import binascii
 import json
 import logging
 import os
@@ -51,13 +50,8 @@ def get_block():
     block_bytes = instance().get_block()
     block = json.loads(block_bytes)
 
-    # TODO: move this
-    for tx in block["transactions"]:
-        for vin in tx["vin"]:
-            vin["script_sig"] = binascii.unhexlify(vin["script_sig"])
-        for vout in tx["vout"]:
-            vout["script_pub_key"] = binascii.unhexlify(vout["script_pub_key"])
-        if util.enabled("correct_segwit_txids", block_index=block["height"]):
+    if util.enabled("correct_segwit_txids", block_index=block["height"]):
+        for tx in block["transactions"]:
             tx["tx_hash"] = tx["tx_id"]
 
     return block

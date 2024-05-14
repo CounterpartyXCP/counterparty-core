@@ -123,6 +123,8 @@ def is_witness_v0_keyhash(scriptpubkey):
 
 
 def get_address(scriptpubkey, block_index):
+    if isinstance(scriptpubkey, str):
+        scriptpubkey = binascii.unhexlify(scriptpubkey)
     if util.enabled("correct_segwit_txids") and is_witness_v0_keyhash(scriptpubkey):
         address = script.script_to_address(scriptpubkey)
         return address

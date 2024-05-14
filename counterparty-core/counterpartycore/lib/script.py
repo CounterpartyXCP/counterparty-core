@@ -331,8 +331,11 @@ def get_asm(scriptpubkey):
 
 def script_to_asm(scriptpubkey):
     try:
-        script = bytes(scriptpubkey, "utf-8") if type(scriptpubkey) == str else bytes(scriptpubkey)  # noqa: E721
-        asm = utils.script_to_asm(script)
+        if isinstance(scriptpubkey, bitcoinlib.core.script.CScript):
+            scriptpubkey = bytes(scriptpubkey)
+        elif isinstance(scriptpubkey, str):
+            scriptpubkey = binascii.unhexlify(scriptpubkey)
+        asm = utils.script_to_asm(scriptpubkey)
         if asm[-1] == OP_CHECKMULTISIG:  # noqa: F405
             asm[-2] = int.from_bytes(asm[-2], "big")
             asm[0] = int.from_bytes(asm[0], "big")
@@ -342,6 +345,8 @@ def script_to_asm(scriptpubkey):
 
 
 def script_to_address(scriptpubkey):
+    if isinstance(scriptpubkey, str):
+        scriptpubkey = binascii.unhexlify(scriptpubkey)
     try:
         network = "mainnet" if config.TESTNET == False else "testnet"  # noqa: E712
         script = bytes(scriptpubkey, "utf-8") if type(scriptpubkey) == str else bytes(scriptpubkey)  # noqa: E721
