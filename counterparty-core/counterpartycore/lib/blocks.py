@@ -892,20 +892,27 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
     if tx_index is None:
         tx_index = get_next_tx_index(db)
 
-    # get previous block
-    previous_block = ledger.get_block(db, util.CURRENT_BLOCK_INDEX - 1)
+    if util.CURRENT_BLOCK_INDEX > config.BLOCK_FIRST:
+        # get previous block
+        previous_block = ledger.get_block(db, util.CURRENT_BLOCK_INDEX - 1)
 
-    # check if reorg is needed
-    if decoded_block["hash_prev"] != previous_block["block_hash"]:
-        if "height" in decoded_block:
-            previous_block_index = decoded_block["height"] - 1
-        else:
-            previous_block_index = backend.bitcoind.get_block_height(decoded_block["hash_prev"])
-        logger.info("Blockchain reorganization detected from block %s", previous_block_index)
-        # roolback to the previous block
-        util.CURRENT_BLOCK_INDEX = previous_block_index + 1
-        rollback(db, block_index=util.CURRENT_BLOCK_INDEX)
-        tx_index = get_next_tx_index(db)
+        # check if reorg is needed
+        if decoded_block["hash_prev"] != previous_block["block_hash"]:
+            if "height" in decoded_block:
+                previous_block_index = decoded_block["height"] - 1
+            else:
+                previous_block_index = backend.bitcoind.get_block_height(decoded_block["hash_prev"])
+            logger.info("Blockchain reorganization detected from block %s", previous_block_index)
+            # roolback to the previous block
+            util.CURRENT_BLOCK_INDEX = previous_block_index + 1
+            rollback(db, block_index=util.CURRENT_BLOCK_INDEX)
+            tx_index = get_next_tx_index(db)
+    else:
+        previous_block = {
+            "ledger_hash": None,
+            "txlist_hash": None,
+            "messages_hash": None,
+        }
 
     decoded_block["block_index"] = util.CURRENT_BLOCK_INDEX
 
@@ -974,7 +981,7 @@ def catch_up(db, check_asset_conservation=True):
     util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
     if util.CURRENT_BLOCK_INDEX == 0:
         logger.info("New database.")
-        util.CURRENT_BLOCK_INDEX = config.BLOCK_FIRST
+        util.CURRENT_BLOCK_INDEX = config.BLOCK_FIRST - 1
 
     # Get block count.
     block_count = backend.bitcoind.getblockcount()

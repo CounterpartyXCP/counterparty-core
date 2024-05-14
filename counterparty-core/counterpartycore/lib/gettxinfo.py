@@ -415,6 +415,9 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
     change, if it exists, always comes after.
     """
 
+    if decoded_tx["coinbase"]:
+        raise DecodeError("coinbase transaction")
+
     # Fee is the input values minus output values.
     fee = 0
 
@@ -450,9 +453,6 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
             if not pubkeyhash:
                 continue
 
-            if decoded_tx["coinbase"]:
-                raise DecodeError("coinbase transaction")
-
             data_pubkey = arc4_decrypt(pubkeyhash, decoded_tx)
             if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
                 pubkeyhash_encoding = True
@@ -486,9 +486,6 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
     # Collect all possible source addresses; ignore coinbase transactions and anything but the simplest Pay‐to‐PubkeyHash inputs.
     source_list = []
     for vin in decoded_tx["vin"][:]:  # Loop through input transactions.
-        if vin["coinbase"]:
-            raise DecodeError("coinbase transaction")
-
         # Get the full transaction data for this input transaction.
         script_pubkey = None
         if block_parser:
