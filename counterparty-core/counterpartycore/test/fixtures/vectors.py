@@ -6732,6 +6732,10 @@ UNITTEST_VECTOR = {
                 ),
                 "out": (None, ["integer overflow"]),
             },
+            {
+                "in": (ADDR[0], config.XCP, 100, 100, 100, 0, ADDR[5], DP["burn_start"], None),
+                "out": (None, ["dispenser must be created by source"]),
+            },
         ],
         "compose": [
             {
@@ -6751,11 +6755,10 @@ UNITTEST_VECTOR = {
                 ),
             },
             {
-                "in": (ADDR[0], "PARENT", 100, 10000, 2345, 0),
-                "out": (
-                    ADDR[0],
-                    [],
-                    b"\x00\x00\x00\x0c\x00\x00\x00\x00\n\xa4\t}\x00\x00\x00\x00\x00\x00\x00d\x00\x00\x00\x00\x00\x00'\x10\x00\x00\x00\x00\x00\x00\t)\x00",
+                "in": (ADDR[0], "PARENT", 100, 10000, 2345, 0, ADDR[5]),
+                "error": (
+                    exceptions.ComposeError,
+                    ["dispenser must be created by source"],
                 ),
             },
             {
@@ -6766,6 +6769,14 @@ UNITTEST_VECTOR = {
                         "escrow_quantity must be greater or equal than give_quantity",
                         "integer overflow",
                     ],
+                ),
+            },
+            {
+                "in": (ADDR[0], "PARENT", 100, 10000, 2345, 0),
+                "out": (
+                    ADDR[0],
+                    [],
+                    b"\x00\x00\x00\x0c\x00\x00\x00\x00\n\xa4\t}\x00\x00\x00\x00\x00\x00\x00d\x00\x00\x00\x00\x00\x00'\x10\x00\x00\x00\x00\x00\x00\t)\x00",
                 ),
             },
         ],
@@ -6815,6 +6826,26 @@ UNITTEST_VECTOR = {
                         },
                     },
                 ],
+            },
+            {
+                "mock_protocol_changes": {"dispensers": True},
+                "in": (
+                    {
+                        "tx_hash": "db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d",
+                        "source": ADDR[0],
+                        "supported": 1,
+                        "block_index": DP["default_block_index"],
+                        "fee": 10000,
+                        "block_time": 155409000,
+                        "block_hash": DP["default_block_hash"],
+                        "btc_amount": 17630,
+                        "tx_index": 503,
+                        "destination": ADDR[0],
+                        # source != open_address
+                        "data": b"\x00\x00\x00\x0c\x00\x00\x00\x00\n\xa4\t}\x00\x00\x00\x00\x00\x00\x00d\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\t)\x00",
+                    },
+                ),
+                "out": None,
             },
             {
                 "mock_protocol_changes": {"dispensers": True},
