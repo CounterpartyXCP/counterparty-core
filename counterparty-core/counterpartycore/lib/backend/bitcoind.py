@@ -123,7 +123,7 @@ def get_block_height(block_hash):
     return block_info["height"]
 
 
-@functools.lru_cache
+@functools.lru_cache(maxsize=10000)
 def getrawtransaction(tx_hash, verbose=False):
     return rpc("getrawtransaction", [tx_hash, 1 if verbose else 0])
 
