@@ -101,6 +101,7 @@ ROUTES = util.prepare_routes(
         "/v2/bitcoin/addresses/<address>/pubkey": util.pubkeyhash_to_pubkey,
         "/v2/bitcoin/transactions/<tx_hash>": util.get_transaction,
         "/v2/bitcoin/estimatesmartfee": bitcoind.fee_per_kb,
+        "/v2/bitcoin/transactions": bitcoind.sendrawtransaction,
         ### /mempool ###
         "/v2/mempool/events": ledger.get_all_mempool_events,
         "/v2/mempool/events/<event>": ledger.get_mempool_events_by_name,

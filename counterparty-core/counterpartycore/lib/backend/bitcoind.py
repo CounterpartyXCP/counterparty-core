@@ -158,3 +158,11 @@ def getindexblocksbehind():
     block_count = getblockcount()
     chain_tip = rpc("getchaintips", [])[0]["height"]
     return chain_tip - block_count
+
+
+def sendrawtransaction(signedhex: str):
+    """
+    Proxy to `sendrawtransaction` RPC call.
+    :param signedhex: The signed transaction hex.
+    """
+    return rpc("sendrawtransaction", [signedhex])
