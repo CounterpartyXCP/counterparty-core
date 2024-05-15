@@ -1,16 +1,13 @@
 import logging
 import time
 
-from counterpartycore.lib import blocks, config, deserialize, exceptions, ledger
+from counterpartycore.lib import blocks, config, deserialize, exceptions, ledger, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-PARSING_MEMPOOL = False
-
 
 def parse_mempool_transactions(db, raw_tx_list):
-    global PARSING_MEMPOOL  # noqa
-    PARSING_MEMPOOL = True
+    util.PARSING_MEMPOOL = True
 
     logger.debug(f"Parsing {len(raw_tx_list)} raw transactions from mempool...")
     now = time.time()
@@ -64,7 +61,7 @@ def parse_mempool_transactions(db, raw_tx_list):
                 event,
             )
     logger.trace("Mempool transaction parsed successfully")
-    PARSING_MEMPOOL = False
+    util.PARSING_MEMPOOL = False
 
 
 def clean_transaction_events(db, tx_hash):

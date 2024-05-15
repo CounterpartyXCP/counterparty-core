@@ -9,7 +9,7 @@ from colorlog import ColoredFormatter
 from dateutil.tz import tzlocal
 from termcolor import cprint
 
-from counterpartycore.lib import config, mempool
+from counterpartycore.lib import config, util
 
 logging.TRACE = logging.DEBUG - 5
 logging.addLevelName(logging.TRACE, "TRACE")
@@ -137,7 +137,7 @@ def log_event(block_index, event_name, bindings):
     if config.JSON_LOG:
         logger.info({"event": event_name, "bindings": bindings})
     elif event_name in EVENTS:
-        block_name = "mempool" if mempool.PARSING_MEMPOOL else block_index
+        block_name = "mempool" if util.PARSING_MEMPOOL else block_index
         log_message = f"[{block_name}] {EVENTS[event_name]}"
         logger.info(log_message, bindings)
 
