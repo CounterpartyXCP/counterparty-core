@@ -72,7 +72,10 @@ def clear_pretx(txid):
 
 
 def getrawtransaction(
-    tx_hash: str, verbose: bool = False, skip_missing: bool = False, block_index: int = None
+    tx_hash: str,
+    verbose: bool = False,
+    skip_missing: bool = False,
+    block_index: int = None,
 ):
     if block_index and block_index in BLOCKCHAIN_CACHE:
         return BLOCKCHAIN_CACHE[block_index]["raw_transactions"][tx_hash]
@@ -126,7 +129,8 @@ def ensure_script_pub_key_for_inputs(coins):
 
 
 def fee_per_kb(
-    conf_target: int = config.ESTIMATE_FEE_CONF_TARGET, mode: str = config.ESTIMATE_FEE_MODE
+    conf_target: int = config.ESTIMATE_FEE_CONF_TARGET,
+    mode: str = config.ESTIMATE_FEE_MODE,
 ):
     """
     Get the fee per kilobyte for a transaction to be confirmed in `conf_target` blocks.
@@ -336,6 +340,14 @@ def init_mempool_cache():
     logger.info(
         f"Mempool cache initialized: {time.time() - start:.2f}s for {num_tx + min(max_remaining_num_tx, len(vin_txhash_list)):,} transactions"
     )
+
+
+def bitcoin_rpc_sendrawtransaction(signedhex: str):
+    """
+    Proxy to `sendrawtransaction` RPC call.
+    :param signedhex: The signed transaction hex.
+    """
+    return backend().rpc("sendrawtransaction", [signedhex])
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
