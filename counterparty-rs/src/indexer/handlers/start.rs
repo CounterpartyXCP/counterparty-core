@@ -45,7 +45,7 @@ where
     let (tx_c2, rx_c2) = bounded(capacity);
     let (tx_c3, rx_c3) = bounded(capacity);
     let (tx_c4, rx_c4) = bounded(capacity);
-    let (tx_c5, rx_c5) = unbounded();
+    let (tx_c5, rx_c5) = bounded(capacity);
 
     let mut handles = Vec::new();
     let target_block = timed(
