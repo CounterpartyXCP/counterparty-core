@@ -295,6 +295,39 @@
     "http://localhost:10009/v2/blocks/310491/sweeps": {
         "result": []
     },
+    "http://localhost:10009/v2/transactions/2": {
+        "result": {
+            "tx_index": 2,
+            "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
+            "block_index": 310001,
+            "block_hash": "3c9f6a9c6cac46a9273bd3db39ad775acd5bc546378ec2fb0587e06e112cc78e",
+            "block_time": 310001000,
+            "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "destination": "",
+            "btc_amount": 0,
+            "fee": 6800,
+            "data": "00000014000000a25be34b66000000174876e800010000000000000000000f446976697369626c65206173736574",
+            "supported": 1,
+            "unpacked_data": {
+                "message_type": "issuance",
+                "message_type_id": 20,
+                "message_data": {
+                    "asset_id": 697326324582,
+                    "asset": "DIVISIBLE",
+                    "subasset_longname": null,
+                    "quantity": 100000000000,
+                    "divisible": true,
+                    "lock": null,
+                    "reset": null,
+                    "callable": false,
+                    "call_date": 0,
+                    "call_price": 0.0,
+                    "description": "Divisible asset",
+                    "status": "valid"
+                }
+            }
+        }
+    },
     "http://localhost:10009/v2/transactions/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498": {
         "result": {
             "tx_index": 492,

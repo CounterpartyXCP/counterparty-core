@@ -33,6 +33,7 @@ def test_api_v2(request):
     dispenser_hash = "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
     event = "CREDIT"
     event_index = 10
+    tx_index = 2
     exclude_routes = [
         "compose",
         "unpack",
@@ -57,6 +58,7 @@ def test_api_v2(request):
 
         url = f"{API_ROOT}{route}"
         url = url.replace("<int:block_index>", str(block_index))
+        url = url.replace("<int:tx_index>", str(tx_index))
         url = url.replace("<address>", address)
         url = url.replace("<asset>", asset).replace("<asset1>", asset1).replace("<asset2>", asset2)
         url = url.replace("<event>", event)

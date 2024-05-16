@@ -1472,13 +1472,16 @@ def get_vouts(db, tx_hash):
     return cursor.fetchall()
 
 
-def get_transactions(db, tx_hash=None):
+def get_transactions(db, tx_hash=None, tx_index=None):
     cursor = db.cursor()
     where = []
     bindings = []
     if tx_hash is not None:
         where.append("tx_hash = ?")
         bindings.append(tx_hash)
+    if tx_index is not None:
+        where.append("tx_index = ?")
+        bindings.append(tx_index)
     # no sql injection here
     query = f"""SELECT * FROM transactions WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
