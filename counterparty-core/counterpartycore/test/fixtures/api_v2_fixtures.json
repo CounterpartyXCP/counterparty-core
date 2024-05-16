@@ -356,6 +356,94 @@
             }
         }
     },
+    "http://localhost:10009/v2/transactions/2/events": {
+        "result": [
+            {
+                "event_index": 13,
+                "event": "TRANSACTION_PARSED",
+                "params": {
+                    "supported": true,
+                    "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
+                    "tx_index": 2
+                },
+                "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
+                "block_index": 310001,
+                "timestamp": 0
+            },
+            {
+                "event_index": 12,
+                "event": "CREDIT",
+                "params": {
+                    "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "asset": "DIVISIBLE",
+                    "block_index": 310001,
+                    "calling_function": "issuance",
+                    "event": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
+                    "quantity": 100000000000,
+                    "tx_index": 2
+                },
+                "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
+                "block_index": 310001,
+                "timestamp": 0
+            },
+            {
+                "event_index": 11,
+                "event": "ASSET_ISSUANCE",
+                "params": {
+                    "asset": "DIVISIBLE",
+                    "asset_longname": null,
+                    "block_index": 310001,
+                    "call_date": 0,
+                    "call_price": 0.0,
+                    "callable": false,
+                    "description": "Divisible asset",
+                    "divisible": true,
+                    "fee_paid": 50000000,
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "locked": false,
+                    "quantity": 100000000000,
+                    "reset": false,
+                    "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "status": "valid",
+                    "transfer": false,
+                    "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
+                    "tx_index": 2
+                },
+                "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
+                "block_index": 310001,
+                "timestamp": 0
+            },
+            {
+                "event_index": 10,
+                "event": "ASSET_CREATION",
+                "params": {
+                    "asset_id": "697326324582",
+                    "asset_longname": null,
+                    "asset_name": "DIVISIBLE",
+                    "block_index": 310001
+                },
+                "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
+                "block_index": 310001,
+                "timestamp": 0
+            },
+            {
+                "event_index": 9,
+                "event": "DEBIT",
+                "params": {
+                    "action": "issuance fee",
+                    "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "asset": "XCP",
+                    "block_index": 310001,
+                    "event": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
+                    "quantity": 50000000,
+                    "tx_index": 2
+                },
+                "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
+                "block_index": 310001,
+                "timestamp": 0
+            }
+        ]
+    },
     "http://localhost:10009/v2/transactions/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/events": {
         "result": [
             {

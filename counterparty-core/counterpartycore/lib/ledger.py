@@ -123,12 +123,24 @@ def get_events_by_block(db, block_index: int):
     return get_events(db, block_index=block_index)
 
 
-def get_events_by_transaction(db, tx_hash: str):
+def get_events_by_transaction_hash(db, tx_hash: str):
     """
     Returns the events of a transaction
     :param str tx_hash: The hash of the transaction to return (e.g. 84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040)
     """
     return get_events(db, tx_hash=tx_hash)
+
+
+def get_events_by_transaction_index(db, tx_index: int):
+    """
+    Returns the events of a transaction
+    :param str tx_index: The index of the transaction to return (e.g. 1000)
+    """
+    txs = get_transactions(db, tx_index=tx_index)
+    if txs:
+        tx = txs[0]
+        return get_events(db, tx_hash=tx["tx_hash"])
+    return None
 
 
 def get_events_by_block_and_event(db, block_index: int, event: str):
