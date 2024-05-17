@@ -3574,5 +3574,116 @@
         "result": {
             "status": "Healthy"
         }
+    },
+    "/v2/transactions/<int:tx_index>": {
+        "result": {
+            "tx_index": 10000,
+            "tx_hash": "f91fcf4e6f432037ca8d5844d64e4347bf0127cfbec6041982a9f1d048187160",
+            "block_index": 297259,
+            "block_hash": "00000000000000009aa8a70b99b6dc29ad52399246d86cf586768661bfcc5391",
+            "block_time": 1398229406,
+            "source": "1PVHbRqh1eYsGCVZ7t18UCQ6oPzXFR3HQz",
+            "destination": null,
+            "btc_amount": null,
+            "fee": 20000,
+            "data": "000000464f84c0428938f794972cd62c67a022f4f3d9d3802041015e49fd1581c95afc99",
+            "supported": 1,
+            "unpacked_data": {
+                "message_type": "cancel",
+                "message_type_id": 70,
+                "message_data": {
+                    "offer_hash": "4f84c0428938f794972cd62c67a022f4f3d9d3802041015e49fd1581c95afc99",
+                    "status": "valid"
+                }
+            }
+        }
+    },
+    "/v2/transactions/<int:tx_index>/events": {
+        "result": [
+            {
+                "event_index": 7464,
+                "event": "BURN",
+                "params": {
+                    "block_index": "280480",
+                    "burned": "100000000",
+                    "earned": "130272727273",
+                    "source": "16Pc1CgQpLHA77KFZVd8RCCR8NVmYAvBgZ",
+                    "status": "valid",
+                    "tx_hash": "8d720a855affae0b99f83bb22de553af72cdc2747ab336ca6bf606406cffcca7",
+                    "tx_index": 1000
+                },
+                "tx_hash": "8d720a855affae0b99f83bb22de553af72cdc2747ab336ca6bf606406cffcca7",
+                "block_index": 280480,
+                "timestamp": 1715450705
+            },
+            {
+                "event_index": 7463,
+                "event": "CREDIT",
+                "params": {
+                    "address": "16Pc1CgQpLHA77KFZVd8RCCR8NVmYAvBgZ",
+                    "asset": "XCP",
+                    "block_index": 280480,
+                    "calling_function": "burn",
+                    "event": "8d720a855affae0b99f83bb22de553af72cdc2747ab336ca6bf606406cffcca7",
+                    "quantity": 130272727273,
+                    "tx_index": 1000,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": "Counterparty",
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true
+                    },
+                    "quantity_normalized": "1302.7273"
+                },
+                "tx_hash": "8d720a855affae0b99f83bb22de553af72cdc2747ab336ca6bf606406cffcca7",
+                "block_index": 280480,
+                "timestamp": 1715450705
+            }
+        ]
+    },
+    "/v2/transactions/<int:tx_index>/events/<event>": {
+        "result": [
+            {
+                "event_index": 7463,
+                "event": "CREDIT",
+                "params": {
+                    "address": "16Pc1CgQpLHA77KFZVd8RCCR8NVmYAvBgZ",
+                    "asset": "XCP",
+                    "block_index": 280480,
+                    "calling_function": "burn",
+                    "event": "8d720a855affae0b99f83bb22de553af72cdc2747ab336ca6bf606406cffcca7",
+                    "quantity": 130272727273,
+                    "tx_index": 1000,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": "Counterparty",
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true
+                    },
+                    "quantity_normalized": "1302.7273"
+                },
+                "tx_hash": "8d720a855affae0b99f83bb22de553af72cdc2747ab336ca6bf606406cffcca7",
+                "block_index": 280480,
+                "timestamp": 1715450705
+            }
+        ]
+    },
+    "/v2/transactions/<tx_hash>/events/<event>": {
+        "result": []
+    },
+    "/v2/addresses/<address>/dispenses/sends": {
+        "result": []
+    },
+    "/v2/addresses/<address>/dispenses/receives": {
+        "result": []
+    },
+    "/v2/addresses/<address>/dispenses/sends/<asset>": {
+        "result": []
+    },
+    "/v2/addresses/<address>/dispenses/receives/<asset>": {
+        "result": []
+    },
+    "/v2/assets/<asset>/dispenses": {
+        "result": []
     }
 }

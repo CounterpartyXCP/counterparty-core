@@ -5,7 +5,10 @@ HOST: https://api.counterparty.io:4000
 
 The Counterparty Core API is the recommended (and only supported) way to query the state of a Counterparty node. 
 
+Please see [Apiary](https://counterpartycore.docs.apiary.io/) for interactive documentation.
+
 API routes are divided into 11 groups:
+
 - [`/blocks`](#/reference/blocks)
 - [`/transactions`](#/reference/transactions)
 - [`/addresses`](#/reference/addresses)
@@ -19,6 +22,7 @@ API routes are divided into 11 groups:
 - [`/mempool`](#/reference/mempool)
 - [`/bitcoin`](#/reference/bitcoin)
 - [`/v1`](#/reference/v1)
+
 
 Notes:
 
@@ -163,12 +167,16 @@ Returns the transactions of a block
         }
     ```
 
-### Get Events By Block [GET /v2/blocks/{block_index}/events{?verbose}]
+### Get Events By Block [GET /v2/blocks/{block_index}/events{?last}{&limit}{&verbose}]
 
 Returns the events of a block
 
 + Parameters
     + block_index: `840464` (int, required) - The index of the block to return
+    + last: `10665092` (int, optional) - The last event index to return
+        + Default: `None`
+    + limit: `5` (int, optional) - The maximum number of events to return
+        + Default: `100`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -368,13 +376,17 @@ Returns the event counts of a block
         }
     ```
 
-### Get Events By Block And Event [GET /v2/blocks/{block_index}/events/{event}{?verbose}]
+### Get Events By Block And Event [GET /v2/blocks/{block_index}/events/{event}{?last}{&limit}{&verbose}]
 
 Returns the events of a block filtered by event
 
 + Parameters
     + block_index: `840464` (int, required) - The index of the block to return
     + event: `CREDIT` (str, required) - The event to filter by
+    + last: `10665092` (int, optional) - The last event index to return
+        + Default: `None`
+    + limit: `5` (int, optional) - The maximum number of events to return
+        + Default: `100`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -829,6 +841,43 @@ Unpacks Counterparty data in hex format and returns the message type and data.
         }
     ```
 
+### Get Transaction By Tx Index [GET /v2/transactions/{tx_index}{?verbose}]
+
+Returns a transaction by its index.
+
++ Parameters
+    + tx_index: `10000` (int, required) - The index of the transaction
+    + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
+        + Default: `false`
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": {
+                "tx_index": 10000,
+                "tx_hash": "f91fcf4e6f432037ca8d5844d64e4347bf0127cfbec6041982a9f1d048187160",
+                "block_index": 297259,
+                "block_hash": "00000000000000009aa8a70b99b6dc29ad52399246d86cf586768661bfcc5391",
+                "block_time": 1398229406,
+                "source": "1PVHbRqh1eYsGCVZ7t18UCQ6oPzXFR3HQz",
+                "destination": null,
+                "btc_amount": null,
+                "fee": 20000,
+                "data": "000000464f84c0428938f794972cd62c67a022f4f3d9d3802041015e49fd1581c95afc99",
+                "supported": 1,
+                "unpacked_data": {
+                    "message_type": "cancel",
+                    "message_type_id": 70,
+                    "message_data": {
+                        "offer_hash": "4f84c0428938f794972cd62c67a022f4f3d9d3802041015e49fd1581c95afc99",
+                        "status": "valid"
+                    }
+                }
+            }
+        }
+    ```
+
 ### Get Transaction By Hash [GET /v2/transactions/{tx_hash}{?verbose}]
 
 Returns a transaction by its hash.
@@ -876,12 +925,77 @@ Returns a transaction by its hash.
         }
     ```
 
-### Get Events By Transaction [GET /v2/transactions/{tx_hash}/events{?verbose}]
+### Get Events By Transaction Index [GET /v2/transactions/{tx_index}/events{?last}{&limit}{&verbose}]
+
+Returns the events of a transaction
+
++ Parameters
+    + tx_index: `1000` (int, required) - The index of the transaction to return
+    + last: `10665092` (int, optional) - The last event index to return
+        + Default: `None`
+    + limit: `5` (int, optional) - The maximum number of events to return
+        + Default: `100`
+    + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
+        + Default: `false`
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": [
+                {
+                    "event_index": 7464,
+                    "event": "BURN",
+                    "params": {
+                        "block_index": "280480",
+                        "burned": "100000000",
+                        "earned": "130272727273",
+                        "source": "16Pc1CgQpLHA77KFZVd8RCCR8NVmYAvBgZ",
+                        "status": "valid",
+                        "tx_hash": "8d720a855affae0b99f83bb22de553af72cdc2747ab336ca6bf606406cffcca7",
+                        "tx_index": 1000
+                    },
+                    "tx_hash": "8d720a855affae0b99f83bb22de553af72cdc2747ab336ca6bf606406cffcca7",
+                    "block_index": 280480,
+                    "timestamp": 1715450705
+                },
+                {
+                    "event_index": 7463,
+                    "event": "CREDIT",
+                    "params": {
+                        "address": "16Pc1CgQpLHA77KFZVd8RCCR8NVmYAvBgZ",
+                        "asset": "XCP",
+                        "block_index": 280480,
+                        "calling_function": "burn",
+                        "event": "8d720a855affae0b99f83bb22de553af72cdc2747ab336ca6bf606406cffcca7",
+                        "quantity": 130272727273,
+                        "tx_index": 1000,
+                        "asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Counterparty",
+                            "description": "The Counterparty protocol native currency",
+                            "locked": true
+                        },
+                        "quantity_normalized": "1302.7273"
+                    },
+                    "tx_hash": "8d720a855affae0b99f83bb22de553af72cdc2747ab336ca6bf606406cffcca7",
+                    "block_index": 280480,
+                    "timestamp": 1715450705
+                }
+            ]
+        }
+    ```
+
+### Get Events By Transaction Hash [GET /v2/transactions/{tx_hash}/events{?last}{&limit}{&verbose}]
 
 Returns the events of a transaction
 
 + Parameters
     + tx_hash: `84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040` (str, required) - The hash of the transaction to return
+    + last: `10665092` (int, optional) - The last event index to return
+        + Default: `None`
+    + limit: `5` (int, optional) - The maximum number of events to return
+        + Default: `100`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -977,6 +1091,74 @@ Returns the events of a transaction
                     "timestamp": 1715249118
                 }
             ]
+        }
+    ```
+
+### Get Events By Transaction Index And Event [GET /v2/transactions/{tx_index}/events/{event}{?last}{&limit}{&verbose}]
+
+Returns the events of a transaction
+
++ Parameters
+    + tx_index: `1000` (int, required) - The index of the transaction to return
+    + event: `CREDIT` (str, required) - The event to filter by
+    + last: `10665092` (int, optional) - The last event index to return
+        + Default: `None`
+    + limit: `5` (int, optional) - The maximum number of events to return
+        + Default: `100`
+    + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
+        + Default: `false`
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": [
+                {
+                    "event_index": 7463,
+                    "event": "CREDIT",
+                    "params": {
+                        "address": "16Pc1CgQpLHA77KFZVd8RCCR8NVmYAvBgZ",
+                        "asset": "XCP",
+                        "block_index": 280480,
+                        "calling_function": "burn",
+                        "event": "8d720a855affae0b99f83bb22de553af72cdc2747ab336ca6bf606406cffcca7",
+                        "quantity": 130272727273,
+                        "tx_index": 1000,
+                        "asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Counterparty",
+                            "description": "The Counterparty protocol native currency",
+                            "locked": true
+                        },
+                        "quantity_normalized": "1302.7273"
+                    },
+                    "tx_hash": "8d720a855affae0b99f83bb22de553af72cdc2747ab336ca6bf606406cffcca7",
+                    "block_index": 280480,
+                    "timestamp": 1715450705
+                }
+            ]
+        }
+    ```
+
+### Get Events By Transaction Hash And Event [GET /v2/transactions/{tx_hash}/events/{event}{?last}{&limit}{&verbose}]
+
+Returns the events of a transaction
+
++ Parameters
+    + tx_hash: `84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040` (str, required) - The hash of the transaction to return
+    + event: `CREDIT` (str, required) - The event to filter by
+    + last: `10665092` (int, optional) - The last event index to return
+        + Default: `None`
+    + limit: `5` (int, optional) - The maximum number of events to return
+        + Default: `100`
+    + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
+        + Default: `false`
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": []
         }
     ```
 
@@ -1519,6 +1701,76 @@ Returns the dispensers of an address and an asset
         }
     ```
 
+### Get Dispenses By Source [GET /v2/addresses/{address}/dispenses/sends{?verbose}]
+
+Returns the dispenses of a source
+
++ Parameters
+    + address: `bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz` (str, required) - The address to return
+    + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
+        + Default: `false`
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": []
+        }
+    ```
+
+### Get Dispenses By Destination [GET /v2/addresses/{address}/dispenses/receives{?verbose}]
+
+Returns the dispenses of a destination
+
++ Parameters
+    + address: `bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz` (str, required) - The address to return
+    + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
+        + Default: `false`
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": []
+        }
+    ```
+
+### Get Dispenses By Source And Asset [GET /v2/addresses/{address}/dispenses/sends/{asset}{?verbose}]
+
+Returns the dispenses of an address and an asset
+
++ Parameters
+    + address: `bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz` (str, required) - The address to return
+    + asset: `ERYKAHPEPU` (str, required) - The asset to return
+    + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
+        + Default: `false`
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": []
+        }
+    ```
+
+### Get Dispenses By Destination And Asset [GET /v2/addresses/{address}/dispenses/receives/{asset}{?verbose}]
+
+Returns the dispenses of an address and an asset
+
++ Parameters
+    + address: `bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz` (str, required) - The address to return
+    + asset: `ERYKAHPEPU` (str, required) - The asset to return
+    + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
+        + Default: `false`
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": []
+        }
+    ```
+
 ### Get Sweeps By Address [GET /v2/addresses/{address}/sweeps{?verbose}]
 
 Returns the sweeps of an address
@@ -1549,19 +1801,20 @@ Returns the sweeps of an address
     ```
 
 ## Group Compose
-
-
 **Notes about optional parameter `encoding`.**
 
 By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
 
 - To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
    - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
+
 - To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
     - `pubkey` should be set to the hex-encoded public key of the source address.
     - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
+
 - To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
     - `pubkey` should be set to the hex-encoded public key of the source address.
+
 - To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
     - First call the `create_` method with the `encoding` set to `P2SH`.
     - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
@@ -1569,7 +1822,6 @@ By default the default value of the `encoding` parameter detailed above is `auto
     - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
     - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
     - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
-
 
 ### Compose Bet [GET /v2/addresses/{address}/compose/bet{?feed_address}{&bet_type}{&deadline}{&wager_quantity}{&counterwager_quantity}{&expiration}{&leverage}{&target_value}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
 
@@ -3793,6 +4045,23 @@ Returns the holders of an asset
         }
     ```
 
+### Get Dispenses By Asset [GET /v2/assets/{asset}/dispenses{?verbose}]
+
+Returns the dispenses of an asset
+
++ Parameters
+    + asset: `ERYKAHPEPU` (str, required) - The asset to return
+    + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
+        + Default: `false`
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": []
+        }
+    ```
+
 ## Group Orders
 
 ### Get Order [GET /v2/orders/{order_hash}{?verbose}]
@@ -5236,6 +5505,15 @@ Get the fee per kilobyte for a transaction to be confirmed in `conf_target` bloc
             "result": 295443
         }
     ```
+
+### Sendrawtransaction [GET /v2/bitcoin/transactions{?signedhex}{&verbose}]
+
+Proxy to `sendrawtransaction` RPC call.
+
++ Parameters
+    + signedhex (str, required) - The signed transaction hex.
+    + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
+        + Default: `false`
 
 ## Group Mempool
 

@@ -169,6 +169,8 @@ def get_events_by_transaction_index_and_event(
     Returns the events of a transaction
     :param str tx_index: The index of the transaction to return (e.g. 1000)
     :param str event: The event to filter by (e.g. CREDIT)
+    :param int last: The last event index to return (e.g. 10665092)
+    :param int limit: The maximum number of events to return (e.g. 5)
     """
     txs = get_transactions(db, tx_index=tx_index)
     if txs:
