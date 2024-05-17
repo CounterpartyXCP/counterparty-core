@@ -4670,5 +4670,8 @@
                 "timestamp": 1715450713
             }
         ]
+    },
+    "/v2/mempool/transactions/<tx_hash>/events": {
+        "result": []
     }
 }

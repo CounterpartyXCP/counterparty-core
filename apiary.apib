@@ -6774,6 +6774,23 @@ Returns the mempool events filtered by event name
         }
     ```
 
+### Get Mempool Events By Tx Hash [GET /v2/mempool/transactions/{tx_hash}/events{?verbose}]
+
+Returns the mempool events filtered by transaction hash
+
++ Parameters
+    + tx_hash: `84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040` (str, required) - The hash of the transaction to return
+    + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
+        + Default: `false`
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": []
+        }
+    ```
+
 ## Group V1
 
 ### Redirect To Rpc V1 [GET /]

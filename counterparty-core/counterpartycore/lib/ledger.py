@@ -212,19 +212,22 @@ def get_events_by_name(db, event: str, last: int = None, limit: int = 100):
     return get_events(db, event=event, last=last, limit=limit)
 
 
-def get_mempool_events(db, event_name=None):
+def get_mempool_events(db, event_name=None, tx_hash=None):
     cursor = db.cursor()
     where = []
     bindings = []
     if event_name is not None:
         where.append("event = ?")
         bindings.append(event_name)
+    if tx_hash is not None:
+        where.append("tx_hash = ?")
+        bindings.append(tx_hash)
     # no sql injection here
     query = """
         SELECT tx_hash, event, bindings AS params, timestamp
         FROM mempool
     """
-    if event_name is not None:
+    if len(where) > 0:
         query += f"""WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
     query += """ORDER BY timestamp DESC"""
     cursor.execute(query, tuple(bindings))
@@ -247,6 +250,14 @@ def get_mempool_events_by_name(db, event: str):
     :param str event: The event to return (e.g. OPEN_ORDER)
     """
     return get_mempool_events(db, event_name=event)
+
+
+def get_mempool_events_by_tx_hash(db, tx_hash: str):
+    """
+    Returns the mempool events filtered by transaction hash
+    :param str tx_hash: The hash of the transaction to return (e.g. 84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040)
+    """
+    return get_mempool_events(db, tx_hash=tx_hash)
 
 
 def get_events_counts(db, block_index=None):
