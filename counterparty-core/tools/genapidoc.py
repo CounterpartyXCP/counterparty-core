@@ -90,15 +90,13 @@ def gen_blueprint(target):
         if path_parts[1] == "v2":
             route_group = path.split("/")[2]
         elif "healthz" in path:
-            route_group = "healthz"
+            route_group = "Z-Pages"
         else:
             route_group = "v1"
         if "compose" in path:
             route_group = "Compose"
         if route_group != current_group:
             current_group = route_group
-            if current_group == "healthz":
-                current_group = "Z-Pages"
             md += f"\n## Group {current_group.capitalize()}\n"
 
             group_doc_path = os.path.join(CURR_DIR, "apidoc", f"group-{current_group.lower()}.md")
