@@ -35,6 +35,90 @@ GROUPS = [
     "/v1",
 ]
 
+EVENT_LIST = [
+    {
+        "group": "Blocks and Transactions",
+        "events": [
+            "NEW_BLOCK",
+            "NEW_TRANSACTION",
+            "NEW_TRANSACTION_OUTPUT",
+            "BLOCK_PARSED",
+            "TRANSACTION_PARSED",
+        ],
+    },
+    {
+        "group": "Asset Movements",
+        "events": [
+            "DEBIT",
+            "CREDIT",
+            "ENHANCED_SEND",
+            "MPMA_SEND",
+            "SEND",
+            "ASSET_TRANSFER",
+            "SWEEP",
+            "ASSET_DIVIDEND",
+        ],
+    },
+    {
+        "group": "Asset Creation and Destruction",
+        "events": [
+            "RESET_ISSUANCE",
+            "ASSET_CREATION",
+            "ASSET_ISSUANCE",
+            "ASSET_DESTRUCTION",
+        ],
+    },
+    {
+        "group": "DEX",
+        "events": [
+            "OPEN_ORDER",
+            "ORDER_MATCH",
+            "ORDER_UPDATE",
+            "ORDER_FILLED",
+            "ORDER_MATCH_UPDATE",
+            "BTC_PAY",
+            "CANCEL_ORDER",
+            "ORDER_EXPIRATION",
+            "ORDER_MATCH_EXPIRATION",
+        ],
+    },
+    {
+        "group": "Dispenser",
+        "events": [
+            "OPEN_DISPENSER",
+            "DISPENSER_UPDATE",
+            "REFILL_DISPENSER",
+            "DISPENSE",
+        ],
+    },
+    {
+        "group": "Broadcast",
+        "events": [
+            "BROADCAST",
+        ],
+    },
+    {
+        "group": "Bets",
+        "events": [
+            "OPEN_BET",
+            "BET_UPDATE",
+            "BET_MATCH",
+            "BET_MATCH_UPDATE",
+            "BET_EXPIRATION",
+            "BET_MATCH_EXPIRATION",
+            "BET_MATCH_RESOLUTON",
+            "CANCEL_BET",
+        ],
+    },
+    {
+        "group": "Burns",
+        "events": [
+            "BURN",
+        ],
+    },
+]
+
+
 DREDD_CONFIG = {
     "loglevel": "error",
     "path": [],
@@ -192,6 +276,7 @@ def update_blueprint(target, save_dredd=False):
     blueprint, dredd = gen_blueprint(target)
 
     md = md.replace("<GROUP_TOC>", gen_groups_toc(target))
+    md = md.replace("<EVENTS_DOC>", gen_events_doc())
     md = md.replace("<ROOT_PATH>", get_route_path(target))
     md = md.replace("<API_BLUEPRINT>", blueprint)
 
@@ -208,9 +293,33 @@ def update_blueprint(target, save_dredd=False):
             print(f"Dredd file written to {DREDD_FILE}")
 
 
-update_blueprint("apiary")
-update_blueprint("docusaurus", save_dredd=True)
+def gen_events_doc():
+    md = ""
+    for event_group in EVENT_LIST:
+        md += f"\n### {event_group['group']}\n"
+        for event in event_group["events"]:
+            md += f"\n#### `{event}`\n\n"
+            path = f"/v2/events/{event}"
+            if not USE_API_CACHE or path not in API_CACHE:
+                example_output = get_example_output(path, {"limit": "1", "verbose": "true"})
+                API_CACHE[path] = example_output
+            else:
+                example_output = API_CACHE[path]
+            example_output_json = json.dumps(example_output, indent=4)
+            md += "```\n"
+            for line in example_output_json.split("\n"):
+                md += f"{line}\n"
+            md += "```\n"
+    return md
 
-with open(CACHE_FILE, "w") as f:
-    json.dump(API_CACHE, f, indent=4)
-    print(f"Cache file written to {CACHE_FILE}")
+
+def update_doc():
+    update_blueprint("apiary")
+    update_blueprint("docusaurus", save_dredd=True)
+
+    with open(CACHE_FILE, "w") as f:
+        json.dump(API_CACHE, f, indent=4)
+        print(f"Cache file written to {CACHE_FILE}")
+
+
+update_doc()

@@ -53,71 +53,9 @@ Or to know the events triggered by a given transaction:
 
 `/v2/transactions/<tx_hash>/events`
 
-Here is the list of all the events that you can use classified by theme:
+Here is a list of events classified by theme and for each an example response:
 
-### Blocks and Transactions
-
-- `NEW_BLOCK`
-- `NEW_TRANSACTION`
-- `NEW_TRANSACTION_OUTPUT`
-- `BLOCK_PARSED`
-- `TRANSACTION_PARSED`
-
-### Asset Movements
-
-- `DEBIT`
-- `CREDIT`
-- `ENHANCED_SEND`
-- `MPMA_SEND`
-- `SEND`
-- `ASSET_TRANSFER`
-- `SWEEP`
-- `ASSET_DIVIDEND`
-
-### Asset Creation and Destruction
-
-- `RESET_ISSUANCE`
-- `ASSET_CREATION`
-- `ASSET_ISSUANCE`
-- `ASSET_DESTRUCTION`
-
-### DEX
-
-- `OPEN_ORDER`
-- `ORDER_MATCH`
-- `ORDER_UPDATE`
-- `ORDER_FILLED`
-- `ORDER_MATCH_UPDATE`
-- `BTC_PAY`
-- `CANCEL_ORDER`
-- `ORDER_EXPIRATION`
-- `ORDER_MATCH_EXPIRATION`
-
-### Dispenser
-
-- `OPEN_DISPENSER`
-- `DISPENSER_UPDATE`
-- `REFILL_DISPENSER`
-- `DISPENSE`
-
-### Broadcast
-
-- `BROADCAST`
-
-### Bets
-
-- `OPEN_BET`
-- `BET_UPDATE`
-- `BET_MATCH`
-- `BET_MATCH_UPDATE`
-- `BET_EXPIRATION`
-- `BET_MATCH_EXPIRATION`
-- `BET_MATCH_RESOLUTON`
-- `CANCEL_BET`
-
-### Burns
-
-- `BURN`
+<EVENTS_DOC>
 
 # Counterparty API Root [<ROOT_PATH>]
 
