@@ -11,7 +11,6 @@ pub struct Stopper {
 }
 
 impl Stopper {
-    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Stopper {
             broadcaster: Broadcaster::new(),
