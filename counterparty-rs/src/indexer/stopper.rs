@@ -12,7 +12,7 @@ pub type Done = Receiver<()>;
 #[derive(Clone)]
 pub struct Stopper {
     broadcaster: Broadcaster<()>,
-    stopped: Arc<AtomicBool>,
+    _stopped: Arc<AtomicBool>,
 }
 
 impl Stopper {
@@ -20,16 +20,19 @@ impl Stopper {
     pub fn new() -> Self {
         Stopper {
             broadcaster: Broadcaster::new(),
-            stopped: Arc::new(AtomicBool::new(false)),
+            _stopped: Arc::new(AtomicBool::new(false)),
         }
     }
 
     pub fn stop(&self) -> Result<(), Error> {
-        self.stopped.store(true, Ordering::SeqCst);
+        self._stopped.store(true, Ordering::SeqCst);
         self.broadcaster.broadcast(())
     }
 
     pub fn subscribe(&self) -> Result<(u64, Done), Error> {
+        if self.stopped() {
+            return Err(Error::Stopped);
+        }
         self.broadcaster.subscribe()
     }
 
@@ -39,6 +42,6 @@ impl Stopper {
     }
 
     pub fn stopped(&self) -> bool {
-        self.stopped.load(Ordering::SeqCst)
+        self._stopped.load(Ordering::SeqCst)
     }
 }
