@@ -115,44 +115,56 @@ def get_all_events(db, last: int = None, limit: int = 100):
     return get_events(db, last=last, limit=limit)
 
 
-def get_events_by_block(db, block_index: int):
+def get_events_by_block(db, block_index: int, last: int = None, limit: int = 100):
     """
     Returns the events of a block
     :param int block_index: The index of the block to return (e.g. 840464)
+    :param int last: The last event index to return (e.g. 10665092)
+    :param int limit: The maximum number of events to return (e.g. 5)
     """
-    return get_events(db, block_index=block_index)
+    return get_events(db, block_index=block_index, last=last, limit=limit)
 
 
-def get_events_by_transaction_hash(db, tx_hash: str):
+def get_events_by_transaction_hash(db, tx_hash: str, last: int = None, limit: int = 100):
     """
     Returns the events of a transaction
     :param str tx_hash: The hash of the transaction to return (e.g. 84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040)
+    :param int last: The last event index to return (e.g. 10665092)
+    :param int limit: The maximum number of events to return (e.g. 5)
     """
-    return get_events(db, tx_hash=tx_hash)
+    return get_events(db, tx_hash=tx_hash, last=last, limit=limit)
 
 
-def get_events_by_transaction_hash_and_event(db, tx_hash: str, event: str):
+def get_events_by_transaction_hash_and_event(
+    db, tx_hash: str, event: str, last: int = None, limit: int = 100
+):
     """
     Returns the events of a transaction
     :param str tx_hash: The hash of the transaction to return (e.g. 84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040)
     :param str event: The event to filter by (e.g. CREDIT)
+    :param int last: The last event index to return (e.g. 10665092)
+    :param int limit: The maximum number of events to return (e.g. 5)
     """
-    return get_events(db, tx_hash=tx_hash, event=event)
+    return get_events(db, tx_hash=tx_hash, event=event, last=last, limit=limit)
 
 
-def get_events_by_transaction_index(db, tx_index: int):
+def get_events_by_transaction_index(db, tx_index: int, last: int = None, limit: int = 100):
     """
     Returns the events of a transaction
     :param str tx_index: The index of the transaction to return (e.g. 1000)
+    :param int last: The last event index to return (e.g. 10665092)
+    :param int limit: The maximum number of events to return (e.g. 5)
     """
     txs = get_transactions(db, tx_index=tx_index)
     if txs:
         tx = txs[0]
-        return get_events(db, tx_hash=tx["tx_hash"])
+        return get_events(db, tx_hash=tx["tx_hash"], last=last, limit=limit)
     return None
 
 
-def get_events_by_transaction_index_and_event(db, tx_index: int, event: str):
+def get_events_by_transaction_index_and_event(
+    db, tx_index: int, event: str, last: int = None, limit: int = 100
+):
     """
     Returns the events of a transaction
     :param str tx_index: The index of the transaction to return (e.g. 1000)
@@ -161,19 +173,23 @@ def get_events_by_transaction_index_and_event(db, tx_index: int, event: str):
     txs = get_transactions(db, tx_index=tx_index)
     if txs:
         tx = txs[0]
-        return get_events(db, tx_hash=tx["tx_hash"], event=event)
+        return get_events(db, tx_hash=tx["tx_hash"], event=event, last=last, limit=limit)
     return None
 
 
-def get_events_by_block_and_event(db, block_index: int, event: str):
+def get_events_by_block_and_event(
+    db, block_index: int, event: str, last: int = None, limit: int = 100
+):
     """
     Returns the events of a block filtered by event
     :param int block_index: The index of the block to return (e.g. 840464)
     :param str event: The event to filter by (e.g. CREDIT)
+    :param int last: The last event index to return (e.g. 10665092)
+    :param int limit: The maximum number of events to return (e.g. 5)
     """
     if event == "count":
         return get_event_counts_by_block(db, block_index=block_index)
-    return get_events(db, block_index=block_index, event=event)
+    return get_events(db, block_index=block_index, event=event, last=last, limit=limit)
 
 
 def get_event_by_index(db, event_index: int):
