@@ -8,7 +8,7 @@ pub fn new(
     handles: &mut Vec<JoinHandle<Result<(), Error>>>,
     stopper: Stopper,
 ) -> Result<(), Error> {
-    if stopper.stopped() {
+    if stopper.stopped()? {
         return Err(Error::Stopped);
     }
     stopper.stop()?;

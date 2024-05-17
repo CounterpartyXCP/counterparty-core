@@ -23,7 +23,7 @@ pub fn new<D>(
 where
     D: DatabaseOps,
 {
-    if stopper.stopped() {
+    if stopper.stopped()? {
         return Err(Error::Stopped);
     }
 

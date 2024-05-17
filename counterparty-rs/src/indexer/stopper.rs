@@ -1,35 +1,33 @@
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
-
-use crossbeam_channel::Receiver;
-
 use super::{types::error::Error, utils::Broadcaster};
+use crossbeam_channel::Receiver;
+use std::sync::{Arc, Mutex};
 
 pub type Done = Receiver<()>;
 
 #[derive(Clone)]
 pub struct Stopper {
     broadcaster: Broadcaster<()>,
-    _stopped: Arc<AtomicBool>,
+    is_stopped: Arc<Mutex<bool>>,
 }
 
 impl Stopper {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Stopper {
             broadcaster: Broadcaster::new(),
-            _stopped: Arc::new(AtomicBool::new(false)),
+            is_stopped: Arc::new(Mutex::new(false)),
         }
     }
 
     pub fn stop(&self) -> Result<(), Error> {
-        self._stopped.store(true, Ordering::SeqCst);
+        let mut stopped_guard = self.is_stopped.lock()?;
+        *stopped_guard = true;
         self.broadcaster.broadcast(())
     }
 
     pub fn subscribe(&self) -> Result<(u64, Done), Error> {
-        if self.stopped() {
+        let stopped = self.is_stopped.lock()?;
+        if *stopped {
             return Err(Error::Stopped);
         }
         self.broadcaster.subscribe()
@@ -40,7 +38,8 @@ impl Stopper {
         self.broadcaster.unsubscribe(id)
     }
 
-    pub fn stopped(&self) -> bool {
-        self._stopped.load(Ordering::SeqCst)
+    pub fn stopped(&self) -> Result<bool, Error> {
+        let stopped = self.is_stopped.lock()?;
+        Ok(*stopped)
     }
 }
