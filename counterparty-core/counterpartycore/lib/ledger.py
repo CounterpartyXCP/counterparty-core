@@ -131,6 +131,15 @@ def get_events_by_transaction_hash(db, tx_hash: str):
     return get_events(db, tx_hash=tx_hash)
 
 
+def get_events_by_transaction_hash_and_event(db, tx_hash: str, event: str):
+    """
+    Returns the events of a transaction
+    :param str tx_hash: The hash of the transaction to return (e.g. 84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040)
+    :param str event: The event to filter by (e.g. CREDIT)
+    """
+    return get_events(db, tx_hash=tx_hash, event=event)
+
+
 def get_events_by_transaction_index(db, tx_index: int):
     """
     Returns the events of a transaction
@@ -140,6 +149,19 @@ def get_events_by_transaction_index(db, tx_index: int):
     if txs:
         tx = txs[0]
         return get_events(db, tx_hash=tx["tx_hash"])
+    return None
+
+
+def get_events_by_transaction_index_and_event(db, tx_index: int, event: str):
+    """
+    Returns the events of a transaction
+    :param str tx_index: The index of the transaction to return (e.g. 1000)
+    :param str event: The event to filter by (e.g. CREDIT)
+    """
+    txs = get_transactions(db, tx_index=tx_index)
+    if txs:
+        tx = txs[0]
+        return get_events(db, tx_hash=tx["tx_hash"], event=event)
     return None
 
 
