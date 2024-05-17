@@ -13,18 +13,17 @@ pub fn new(
     }
     stopper.stop()?;
     for handle in handles.drain(..) {
-        handle
-            .join()
-            .map_err(|e| {
-                Error::GracefulExitFailure(if let Some(s) = e.downcast_ref::<String>() {
-                    s.to_owned()
-                } else if let Some(&s) = e.downcast_ref::<&str>() {
-                    s.into()
-                } else {
-                    "unknown error".to_string()
-                })
-            })
-            .ok();
+        if let Err(e) = handle.join() {
+            let error_message = if let Some(s) = e.downcast_ref::<String>() {
+                s.clone()
+            } else if let Some(&s) = e.downcast_ref::<&str>() {
+                s.into()
+            } else {
+                "unknown error".to_string()
+            };
+
+            return Err(Error::GracefulExitFailure(error_message));
+        }
     }
     info!("stopped");
     Ok(())

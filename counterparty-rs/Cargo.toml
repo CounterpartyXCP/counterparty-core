@@ -20,7 +20,6 @@ par-map = "0.1.4"
 tracing = "0.1.40"
 crossbeam-channel = "0.5.12"
 bitcoincore-rpc = "0.18.0"
-signal-hook = "0.3.17"
 thiserror = "1.0.58"
 derive_more = "0.99.17"
 tracing-subscriber = { version = "0.3.18", features = [

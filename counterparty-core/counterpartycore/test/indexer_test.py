@@ -30,14 +30,22 @@ def test_fetcher_singleton():
 
 
 @pytest.mark.skip()
-def test_fetcher_get_block():
-    fetcher.initialize(TEST_CONFIG)
-    fetcher.start()
-    block = fetcher.get_block()
-    assert isinstance(block, dict)
-    assert "height" in block
-    fetcher.stop()
-    shutil.rmtree(TEST_DB_PATH)
+def test_fetcher_interrupt():
+    fetcher.initialize_with_config(TEST_CONFIG)
+    interrupted = False
+    try:
+        for _ in range(500):
+            block = fetcher.get_block_simple()
+            assert isinstance(block, dict)
+            assert "height" in block
+    except KeyboardInterrupt:
+        interrupted = True
+        pass
+    finally:
+        fetcher.stop()
+        shutil.rmtree(TEST_DB_PATH)
+
+    assert interrupted
 
 
 @pytest.mark.skip()

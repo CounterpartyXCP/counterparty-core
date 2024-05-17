@@ -63,7 +63,8 @@ impl Indexer {
     }
 
     pub fn get_block(&self, py: Python) -> PyResult<PyObject> {
-        let block_bytes = get_block::new(self.chan.1.clone())?;
+        let (_, done) = self.stopper.subscribe()?;
+        let block_bytes = get_block::new(self.chan.1.clone(), done)?;
         Ok(PyBytes::new(py, &block_bytes).into())
     }
 }
