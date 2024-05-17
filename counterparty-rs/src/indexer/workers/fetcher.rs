@@ -21,6 +21,7 @@ where
 {
     move |rx, tx, done| loop {
         select! {
+          recv(done) -> _ => return Ok(()),
           recv(rx) -> result => {
             let data = match result {
                 Ok(data) => data,
