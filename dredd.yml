@@ -75,7 +75,7 @@ only:
 - Events > Get Event By Index > Get Event By Index
 - Events > Get All Events Counts > Get All Events Counts
 - Events > Get Events By Name > Get Events By Name
-- Healthz > Check Server Health > Check Server Health
+- Z-pages > Check Server Health > Check Server Health
 - Z-pages > Check Server Health > Check Server Health
 - V1 > Redirect To Rpc V1 > Redirect To Rpc V1
 - V1 > Redirect To Rpc V1 > Redirect To Rpc V1
@@ -154,7 +154,7 @@ only:
 - Events > Get Event By Index > Get Event By Index
 - Events > Get All Events Counts > Get All Events Counts
 - Events > Get Events By Name > Get Events By Name
-- Healthz > Check Server Health > Check Server Health
+- Z-pages > Check Server Health > Check Server Health
 - Z-pages > Check Server Health > Check Server Health
 - V1 > Redirect To Rpc V1 > Redirect To Rpc V1
 - V1 > Redirect To Rpc V1 > Redirect To Rpc V1

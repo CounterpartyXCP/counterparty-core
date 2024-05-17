@@ -171,10 +171,10 @@ def gen_blueprint(target):
     current_group = None
     for path, route in routes.ROUTES.items():
         path_parts = path.split("/")
-        if path_parts[1] == "v2":
-            route_group = path.split("/")[2]
-        elif "healthz" in path:
+        if "healthz" in path:
             route_group = "Z-Pages"
+        elif path_parts[1] == "v2":
+            route_group = path.split("/")[2]
         else:
             route_group = "v1"
         if "compose" in path:
