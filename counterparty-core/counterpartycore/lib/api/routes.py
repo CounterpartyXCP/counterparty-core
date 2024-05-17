@@ -47,6 +47,10 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/receives/<asset>": ledger.get_receive_by_address_and_asset,
         "/v2/addresses/<address>/dispensers": ledger.get_dispensers_by_address,
         "/v2/addresses/<address>/dispensers/<asset>": ledger.get_dispensers_by_address_and_asset,
+        "/v2/addresses/<address>/dispenses/sends": ledger.get_dispenses_by_source,
+        "/v2/addresses/<address>/dispenses/receives": ledger.get_dispenses_by_destination,
+        "/v2/addresses/<address>/dispenses/sends/<asset>": ledger.get_dispenses_by_source_and_asset,
+        "/v2/addresses/<address>/dispenses/receives/<asset>": ledger.get_dispenses_by_destination_and_asset,
         "/v2/addresses/<address>/sweeps": ledger.get_sweeps_by_address,
         ### /addresses/<address>/compose/ ###
         "/v2/addresses/<address>/compose/bet": transaction.compose_bet,
@@ -76,6 +80,7 @@ ROUTES = util.prepare_routes(
         "/v2/assets/<asset>/dispensers": ledger.get_dispensers_by_asset,
         "/v2/assets/<asset>/dispensers/<address>": ledger.get_dispensers_by_address_and_asset,
         "/v2/assets/<asset>/holders": ledger.get_asset_holders,
+        "/v2/assets/<asset>/dispenses": ledger.get_dispenses_by_asset,
         ### /orders ###
         "/v2/orders/<order_hash>": ledger.get_order,
         "/v2/orders/<order_hash>/matches": ledger.get_order_matches_by_order,

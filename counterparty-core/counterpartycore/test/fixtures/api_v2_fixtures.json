@@ -1098,6 +1098,18 @@
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispensers/NODIVISIBLE": {
         "result": []
     },
+    "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispenses/sends": {
+        "result": []
+    },
+    "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispenses/receives": {
+        "result": []
+    },
+    "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispenses/sends/NODIVISIBLE": {
+        "result": []
+    },
+    "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispenses/receives/NODIVISIBLE": {
+        "result": []
+    },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/sweeps": {
         "result": []
     },
@@ -1320,6 +1332,9 @@
                 "escrow": null
             }
         ]
+    },
+    "http://localhost:10009/v2/assets/NODIVISIBLE/dispenses": {
+        "result": []
     },
     "http://localhost:10009/v2/orders/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498": {
         "result": [

@@ -2015,7 +2015,9 @@ def get_dispensers_by_address_and_asset(db, address: str, asset: str, status: in
     return get_dispensers(db, address=address, asset=asset, status=status)
 
 
-def get_dispenses(db, dispenser_tx_hash=None, block_index=None):
+def get_dispenses(
+    db, dispenser_tx_hash=None, block_index=None, asset=None, source=None, destination=None
+):
     cursor = db.cursor()
     where = []
     bindings = []
@@ -2025,6 +2027,15 @@ def get_dispenses(db, dispenser_tx_hash=None, block_index=None):
     if block_index is not None:
         where.append("block_index = ?")
         bindings.append(block_index)
+    if asset is not None:
+        where.append("asset = ?")
+        bindings.append(asset)
+    if source is not None:
+        where.append("source = ?")
+        bindings.append(source)
+    if destination is not None:
+        where.append("destination = ?")
+        bindings.append(destination)
     # no sql injection here
     query = f"""SELECT * FROM dispenses WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
@@ -2045,6 +2056,48 @@ def get_dispenses_by_dispenser(db, dispenser_hash: str):
     :param str dispenser_hash: The hash of the dispenser to return (e.g. 753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a)
     """
     return get_dispenses(db, dispenser_tx_hash=dispenser_hash)
+
+
+def get_dispenses_by_source(db, address: str):
+    """
+    Returns the dispenses of a source
+    :param str address: The address to return (e.g. bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz)
+    """
+    return get_dispenses(db, source=address)
+
+
+def get_dispenses_by_destination(db, address: str):
+    """
+    Returns the dispenses of a destination
+    :param str address: The address to return (e.g. bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz)
+    """
+    return get_dispenses(db, destination=address)
+
+
+def get_dispenses_by_asset(db, asset: str):
+    """
+    Returns the dispenses of an asset
+    :param str asset: The asset to return (e.g. ERYKAHPEPU)
+    """
+    return get_dispenses(db, asset=asset)
+
+
+def get_dispenses_by_source_and_asset(db, address: str, asset: str):
+    """
+    Returns the dispenses of an address and an asset
+    :param str address: The address to return (e.g. bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz)
+    :param str asset: The asset to return (e.g. ERYKAHPEPU)
+    """
+    return get_dispenses(db, source=address, asset=asset)
+
+
+def get_dispenses_by_destination_and_asset(db, address: str, asset: str):
+    """
+    Returns the dispenses of an address and an asset
+    :param str address: The address to return (e.g. bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz)
+    :param str asset: The asset to return (e.g. ERYKAHPEPU)
+    """
+    return get_dispenses(db, destination=address, asset=asset)
 
 
 ### UPDATES ###
