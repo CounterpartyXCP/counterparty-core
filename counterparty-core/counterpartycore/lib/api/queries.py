@@ -1,13 +1,15 @@
 from counterpartycore.lib import exceptions, ledger
 
 
-def get_blocks(db, last: int = None, limit: int = 10):
+def get_blocks(db, cursor: int = None, limit: int = 10):
     """
     Returns the list of the last ten blocks
-    :param int last: The index of the most recent block to return (e.g. 840000)
+    :param int cursor: The index of the most recent block to return (e.g. 840000)
     :param int limit: The number of blocks to return (e.g. 2)
     """
-    return ledger.get_blocks(db, last=last, limit=limit)
+    return ledger.select_rows(
+        db, "blocks", cursor_field="block_index", last_cursor=cursor, limit=limit
+    )
 
 
 def get_block_by_height(db, block_index: int):
@@ -15,111 +17,151 @@ def get_block_by_height(db, block_index: int):
     Return the information of a block
     :param int block_index: The index of the block to return (e.g. 840464)
     """
-    return ledger.get_block(db, block_index=block_index)
+    return ledger.select_row(db, "blocks", where={"block_index": block_index})
 
 
-def get_transactions_by_block(db, block_index: int):
+def get_transactions_by_block(db, block_index: int, cursor: int = None, limit: int = 10):
     """
     Returns the transactions of a block
     :param int block_index: The index of the block to return (e.g. 840464)
+    :param int cursor: The last transaction index to return (e.g. 10665092)
+    :param int limit: The maximum number of transactions to return (e.g. 5)
     """
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM transactions
-        WHERE block_index = ?
-        ORDER BY tx_index ASC
-    """
-    bindings = (block_index,)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
+    return ledger.select_rows(
+        db,
+        "transactions",
+        where={"block_index": block_index},
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+    )
 
 
-def get_all_events(db, last: int = None, limit: int = 100):
+def get_all_events(db, cursor: int = None, limit: int = 100):
     """
     Returns all events
-    :param int last: The last event index to return (e.g. 10665092)
+    :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     """
-    return ledger.get_events(db, last=last, limit=limit)
+    return ledger.select_rows(
+        db,
+        "events",
+        cursor_field="message_index",
+        last_cursor=cursor,
+        limit=limit,
+        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
+    )
 
 
-def get_events_by_block(db, block_index: int, last: int = None, limit: int = 100):
+def get_events_by_block(db, block_index: int, cursor: int = None, limit: int = 100):
     """
     Returns the events of a block
     :param int block_index: The index of the block to return (e.g. 840464)
-    :param int last: The last event index to return (e.g. 10665092)
+    :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     """
-    return ledger.get_events(db, block_index=block_index, last=last, limit=limit)
+    return ledger.select_rows(
+        db,
+        "events",
+        where={"block_index": block_index},
+        cursor_field="message_index",
+        last_cursor=cursor,
+        limit=limit,
+        select="message_index AS event_index, event, bindings AS params, tx_hash",
+    )
 
 
-def get_events_by_transaction_hash(db, tx_hash: str, last: int = None, limit: int = 100):
+def get_events_by_transaction_hash(db, tx_hash: str, cursor: int = None, limit: int = 100):
     """
     Returns the events of a transaction
     :param str tx_hash: The hash of the transaction to return (e.g. 84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040)
-    :param int last: The last event index to return (e.g. 10665092)
+    :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     """
-    return ledger.get_events(db, tx_hash=tx_hash, last=last, limit=limit)
+    return ledger.select_rows(
+        db,
+        "events",
+        where={"tx_hash": tx_hash},
+        cursor_field="message_index",
+        last_cursor=cursor,
+        limit=limit,
+        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
+    )
 
 
 def get_events_by_transaction_hash_and_event(
-    db, tx_hash: str, event: str, last: int = None, limit: int = 100
+    db, tx_hash: str, event: str, cursor: int = None, limit: int = 100
 ):
     """
     Returns the events of a transaction
     :param str tx_hash: The hash of the transaction to return (e.g. 84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040)
     :param str event: The event to filter by (e.g. CREDIT)
-    :param int last: The last event index to return (e.g. 10665092)
+    :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     """
-    return ledger.get_events(db, tx_hash=tx_hash, event=event, last=last, limit=limit)
+    return ledger.select_rows(
+        db,
+        "events",
+        where={"tx_hash": tx_hash, "event": event},
+        cursor_field="message_index",
+        last_cursor=cursor,
+        limit=limit,
+        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
+    )
 
 
-def get_events_by_transaction_index(db, tx_index: int, last: int = None, limit: int = 100):
+def get_events_by_transaction_index(db, tx_index: int, cursor: int = None, limit: int = 100):
     """
     Returns the events of a transaction
     :param str tx_index: The index of the transaction to return (e.g. 1000)
-    :param int last: The last event index to return (e.g. 10665092)
+    :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     """
-    txs = ledger.get_transactions(db, tx_index=tx_index)
-    if txs:
-        tx = txs[0]
-        return ledger.get_events(db, tx_hash=tx["tx_hash"], last=last, limit=limit)
+    tx = ledger.select_row(db, "transactions", where={"tx_index": tx_index})
+    if tx:
+        return get_events_by_transaction_hash(db, tx["tx_hash"], cursor=cursor, limit=limit)
     return None
 
 
 def get_events_by_transaction_index_and_event(
-    db, tx_index: int, event: str, last: int = None, limit: int = 100
+    db, tx_index: int, event: str, cursor: int = None, limit: int = 100
 ):
     """
     Returns the events of a transaction
     :param str tx_index: The index of the transaction to return (e.g. 1000)
     :param str event: The event to filter by (e.g. CREDIT)
-    :param int last: The last event index to return (e.g. 10665092)
+    :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     """
-    txs = ledger.get_transactions(db, tx_index=tx_index)
-    if txs:
-        tx = txs[0]
-        return ledger.get_events(db, tx_hash=tx["tx_hash"], event=event, last=last, limit=limit)
+    tx = ledger.select_row(db, "transactions", where={"tx_index": tx_index})
+    if tx:
+        return get_events_by_transaction_hash_and_event(
+            db, tx["tx_hash"], event, cursor=cursor, limit=limit
+        )
     return None
 
 
 def get_events_by_block_and_event(
-    db, block_index: int, event: str, last: int = None, limit: int = 100
+    db, block_index: int, event: str, cursor: int = None, limit: int = 100
 ):
     """
     Returns the events of a block filtered by event
     :param int block_index: The index of the block to return (e.g. 840464)
     :param str event: The event to filter by (e.g. CREDIT)
-    :param int last: The last event index to return (e.g. 10665092)
+    :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     """
     if event == "count":
-        return ledger.get_event_counts_by_block(db, block_index=block_index)
-    return ledger.get_events(db, block_index=block_index, event=event, last=last, limit=limit)
+        return get_event_counts_by_block(db, block_index=block_index)
+    return ledger.select_rows(
+        db,
+        "events",
+        where={"block_index": block_index, "event": event},
+        cursor_field="message_index",
+        last_cursor=cursor,
+        limit=limit,
+        select="message_index AS event_index, event, bindings AS params, tx_hash",
+    )
 
 
 def get_event_by_index(db, event_index: int):
@@ -127,17 +169,30 @@ def get_event_by_index(db, event_index: int):
     Returns the event of an index
     :param int event_index: The index of the event to return (e.g. 10665092)
     """
-    return ledger.get_events(db, event_index=event_index)
+    return ledger.select_row(
+        db,
+        "events",
+        where={"message_index": event_index},
+        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
+    )
 
 
-def get_events_by_name(db, event: str, last: int = None, limit: int = 100):
+def get_events_by_name(db, event: str, cursor: int = None, limit: int = 100):
     """
     Returns the events filtered by event name
     :param str event: The event to return (e.g. CREDIT)
-    :param int last: The last event index to return (e.g. 10665092)
+    :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     """
-    return ledger.get_events(db, event=event, last=last, limit=limit)
+    return ledger.select_rows(
+        db,
+        "events",
+        where={"event": event},
+        cursor_field="message_index",
+        last_cursor=cursor,
+        limit=limit,
+        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
+    )
 
 
 def get_all_mempool_events(db):

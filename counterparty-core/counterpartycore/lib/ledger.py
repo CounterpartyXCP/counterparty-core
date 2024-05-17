@@ -12,6 +12,105 @@ logger = logging.getLogger(config.LOGGER_NAME)
 BLOCK_LEDGER = []
 BLOCK_JOURNAL = []
 
+
+###############################
+#       UTIL FUNCTIONS        #
+###############################
+
+
+def insert_record(db, table_name, record, event):
+    cursor = db.cursor()
+    fields_name = ", ".join(record.keys())
+    fields_values = ", ".join([f":{key}" for key in record.keys()])
+    # no sql injection here
+    query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608  # noqa: S608
+    cursor.execute(query, record)
+    cursor.close()
+    # Add event to journal
+    add_to_journal(db, util.CURRENT_BLOCK_INDEX, "insert", table_name, event, record)
+
+
+# This function allows you to update a record using an INSERT.
+# The `block_index` and `rowid` fields allow you to
+# order updates and retrieve the row with the current data.
+def insert_update(db, table_name, id_name, id_value, update_data, event, event_info={}):  # noqa: B006
+    cursor = db.cursor()
+    # select records to update
+    select_query = f"""
+        SELECT *, rowid
+        FROM {table_name}
+        WHERE {id_name} = ?
+        ORDER BY rowid DESC
+        LIMIT 1
+    """  # nosec B608  # noqa: S608
+    bindings = (id_value,)
+    need_update_record = cursor.execute(select_query, bindings).fetchone()
+
+    # update record
+    new_record = need_update_record.copy()
+    # updade needed fields
+    for key, value in update_data.items():
+        new_record[key] = value
+    # new block_index and tx_index
+    new_record["block_index"] = util.CURRENT_BLOCK_INDEX
+    # let's keep the original tx_index so we can preserve order
+    # with the old queries (ordered by default by old primary key)
+    # TODO: restore with protocol change and checkpoints update
+    # if 'tx_index' in new_record:
+    #    new_record['tx_index'] = tx_index
+    # insert new record
+    if "rowid" in new_record:
+        del new_record["rowid"]
+    fields_name = ", ".join(new_record.keys())
+    fields_values = ", ".join([f":{key}" for key in new_record.keys()])
+    # no sql injection here
+    insert_query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608  # noqa: S608
+    cursor.execute(insert_query, new_record)
+    cursor.close()
+    # Add event to journal
+    event_paylod = update_data | {id_name: id_value} | event_info
+    if "rowid" in event_paylod:
+        del event_paylod["rowid"]
+    add_to_journal(
+        db, util.CURRENT_BLOCK_INDEX, "update", table_name, event, update_data | event_paylod
+    )
+
+
+def select_rows(db, table, where={}, cursor_field="rowid", last_cursor=None, limit=100, select="*"):  # noqa: B006
+    cursor = db.cursor()
+
+    where_field = []
+    bindings = []
+    for key, value in where.items():
+        where_field.append(f"{key} = ?")
+        bindings.append(value)
+    if last_cursor is not None:
+        where_field.append(f"{cursor_field} < ?")
+        bindings.append(last_cursor)
+    bindings.append(cursor_field)
+    bindings.append(limit)
+
+    where_clause = ""
+    if where_field:
+        where_clause = " AND ".join(where_field)
+        where_clause = f"WHERE {where_clause}"
+
+    query = f"""
+        SELECT {select} FROM {table} {where_clause}
+        ORDER BY {cursor_field} DESC
+        LIMIT ?
+    """  # nosec B608  # noqa: S608
+    cursor.execute(query)
+    return cursor.fetchall()
+
+
+def select_row(db, table, where, select="*"):
+    rows = select_rows(db, table, where, limit=1, select=select)
+    if rows:
+        return rows[0]
+    return None
+
+
 ###########################
 #         MESSAGES        #
 ###########################
@@ -1185,150 +1284,6 @@ def get_addresses(db, address=None):
         bindings.append(address)
     # no sql injection here
     query = f"""SELECT * FROM addresses WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
-    cursor.execute(query, tuple(bindings))
-    return cursor.fetchall()
-
-
-###############################
-#       UTIL FUNCTIONS        #
-###############################
-
-
-def insert_record(db, table_name, record, event):
-    cursor = db.cursor()
-    fields_name = ", ".join(record.keys())
-    fields_values = ", ".join([f":{key}" for key in record.keys()])
-    # no sql injection here
-    query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608  # noqa: S608
-    cursor.execute(query, record)
-    cursor.close()
-    # Add event to journal
-    add_to_journal(db, util.CURRENT_BLOCK_INDEX, "insert", table_name, event, record)
-
-
-# This function allows you to update a record using an INSERT.
-# The `block_index` and `rowid` fields allow you to
-# order updates and retrieve the row with the current data.
-def insert_update(db, table_name, id_name, id_value, update_data, event, event_info={}):  # noqa: B006
-    cursor = db.cursor()
-    # select records to update
-    select_query = f"""
-        SELECT *, rowid
-        FROM {table_name}
-        WHERE {id_name} = ?
-        ORDER BY rowid DESC
-        LIMIT 1
-    """  # nosec B608  # noqa: S608
-    bindings = (id_value,)
-    need_update_record = cursor.execute(select_query, bindings).fetchone()
-
-    # update record
-    new_record = need_update_record.copy()
-    # updade needed fields
-    for key, value in update_data.items():
-        new_record[key] = value
-    # new block_index and tx_index
-    new_record["block_index"] = util.CURRENT_BLOCK_INDEX
-    # let's keep the original tx_index so we can preserve order
-    # with the old queries (ordered by default by old primary key)
-    # TODO: restore with protocol change and checkpoints update
-    # if 'tx_index' in new_record:
-    #    new_record['tx_index'] = tx_index
-    # insert new record
-    if "rowid" in new_record:
-        del new_record["rowid"]
-    fields_name = ", ".join(new_record.keys())
-    fields_values = ", ".join([f":{key}" for key in new_record.keys()])
-    # no sql injection here
-    insert_query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608  # noqa: S608
-    cursor.execute(insert_query, new_record)
-    cursor.close()
-    # Add event to journal
-    event_paylod = update_data | {id_name: id_value} | event_info
-    if "rowid" in event_paylod:
-        del event_paylod["rowid"]
-    add_to_journal(
-        db, util.CURRENT_BLOCK_INDEX, "update", table_name, event, update_data | event_paylod
-    )
-
-
-MUTABLE_FIELDS = {
-    "balances": ["quantity"],
-    "orders": [
-        "give_remaining",
-        "get_remaining",
-        "fee_required_remaining",
-        "fee_provided_remaining",
-        "status",
-    ],
-    "order_matches": ["status"],
-    "bets": ["wager_remaining", "counterwager_remaining", "status"],
-    "bet_matches": ["status"],
-    "rps": ["status"],
-    "rps_matches": ["status"],
-    "dispensers": ["give_remaining", "status", "last_status_tx_hash"],
-}
-ID_FIELDS = {
-    "balances": ["address", "asset"],
-    "orders": ["tx_hash"],
-    "order_matches": ["id"],
-    "bets": ["tx_hash"],
-    "bet_matches": ["id"],
-    "rps": ["tx_hash"],
-    "rps_matches": ["id"],
-    "dispensers": ["tx_hash"],
-}
-
-
-def _gen_where_and_binding(key, value):
-    where = ""
-    bindings = []
-    _key = key.replace("_in", "")
-    if key.endswith("_in"):
-        assert isinstance(value, list)
-        where = f'{_key} IN ({",".join(["?" for e in range(0, len(value))])})'
-        bindings += value
-    else:
-        where = f"{_key} = ?"
-        bindings.append(value)
-    return where, bindings
-
-
-def select_last_revision(db, table_name, where_data):
-    cursor = db.cursor()
-    if table_name not in MUTABLE_FIELDS.keys():
-        raise exceptions.UnknownTable(f"Unknown table: {table_name}")
-    query = """
-        PRAGMA table_info(?)
-    """
-    bindings = (table_name,)
-    columns = [column["name"] for column in cursor.execute(query, bindings)]
-    for key in where_data.keys():
-        _key = key.replace("_in", "")
-        if _key not in columns:
-            raise exceptions.UnknownField(f"Unknown field: {key}")
-
-    where_immutable = []
-    where_mutable = []
-    bindings = []
-    for key, value in where_data.items():
-        if key.replace("_in", "") not in MUTABLE_FIELDS[table_name]:
-            _where, _bindings = _gen_where_and_binding(key, value)
-            where_immutable.append(_where)
-            bindings += _bindings
-    for key, value in where_data.items():
-        if key.replace("_in", "") in MUTABLE_FIELDS[table_name]:
-            _where, _bindings = _gen_where_and_binding(key, value)
-            where_mutable.append(_where)
-            bindings += _bindings
-    # no sql injection here
-    query = f"""SELECT * FROM (
-        SELECT *, MAX(rowid)
-        FROM {table_name}
-        WHERE ({" AND ".join(where_immutable)})
-        GROUP BY {", ".join(ID_FIELDS[table_name])}
-    ) WHERE ({" AND ".join(where_mutable)})
-    """  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
