@@ -76,7 +76,16 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     )
 
 
-def select_rows(db, table, where={}, cursor_field="rowid", last_cursor=None, limit=100, select="*"):  # noqa: B006
+def select_rows(
+    db,
+    table,
+    where={},  # noqa: B006
+    cursor_field="rowid",
+    last_cursor=None,
+    limit=100,
+    select="*",
+    group_by="",
+):
     cursor = db.cursor()
 
     where_field = []
@@ -95,8 +104,12 @@ def select_rows(db, table, where={}, cursor_field="rowid", last_cursor=None, lim
         where_clause = " AND ".join(where_field)
         where_clause = f"WHERE {where_clause}"
 
+    group_by_clause = ""
+    if group_by:
+        group_by_clause = f"GROUP BY {group_by}"
+
     query = f"""
-        SELECT {select} FROM {table} {where_clause}
+        SELECT {select} FROM {table} {where_clause} {group_by_clause}
         ORDER BY {cursor_field} DESC
         LIMIT ?
     """  # nosec B608  # noqa: S608
