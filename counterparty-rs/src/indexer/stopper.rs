@@ -2,8 +2,6 @@ use super::{types::error::Error, utils::Broadcaster};
 use crossbeam_channel::Receiver;
 use std::sync::{Arc, Mutex};
 
-pub type Done = Receiver<()>;
-
 #[derive(Clone)]
 pub struct Stopper {
     broadcaster: Broadcaster<()>,
@@ -24,7 +22,7 @@ impl Stopper {
         self.broadcaster.broadcast(())
     }
 
-    pub fn subscribe(&self) -> Result<(u64, Done), Error> {
+    pub fn subscribe(&self) -> Result<(u64, Receiver<()>), Error> {
         let stopped = self.is_stopped.lock()?;
         if *stopped {
             return Err(Error::Stopped);

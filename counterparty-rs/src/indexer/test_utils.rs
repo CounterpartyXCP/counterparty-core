@@ -4,24 +4,24 @@ use std::thread;
 use bitcoincore_rpc::bitcoin::{hashes::Hash, BlockHash};
 use crossbeam_channel::{unbounded, Receiver, Sender};
 
-use super::{
-    stopper::{Done, Stopper},
-    types::error::Error,
-};
+use super::{stopper::Stopper, types::error::Error};
 
 pub fn test_worker<T, U, F, I>(mut worker_fn: F, input_data: I) -> Vec<U>
 where
     T: Send + 'static,
     U: Send + 'static,
-    F: FnMut(Receiver<Box<T>>, Sender<Box<U>>, Done) -> Result<(), Error> + Clone + Send + 'static,
+    F: FnMut(Receiver<Box<T>>, Sender<Box<U>>, Stopper) -> Result<(), Error>
+        + Clone
+        + Send
+        + 'static,
     I: IntoIterator<Item = T>,
 {
     let (tx, rx) = unbounded::<Box<T>>();
     let (out_tx, out_rx) = unbounded::<Box<U>>();
     let stopper = Stopper::new();
-    let (_, done) = stopper.subscribe().unwrap();
+    let stopper_clone = stopper.clone();
 
-    let handle = thread::spawn(move || worker_fn(rx, out_tx, done));
+    let handle = thread::spawn(move || worker_fn(rx, out_tx, stopper_clone));
 
     let mut input_count = 0;
     for item in input_data {

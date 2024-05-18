@@ -9,7 +9,7 @@ use crossbeam_channel::{after, select, unbounded, Receiver, Sender};
 use rand::{thread_rng, Rng};
 use tracing::{debug, error, info};
 
-use super::{stopper::Done, types::error::Error};
+use super::{stopper::Stopper, types::error::Error};
 
 #[derive(Debug, Clone)]
 pub struct RetryConfig {
@@ -29,7 +29,7 @@ impl Default for RetryConfig {
 }
 
 pub fn with_retry_custom<T, F>(
-    done: Done,
+    stopper: Stopper,
     mut operation: F,
     error_message: String,
     config: RetryConfig,
@@ -40,6 +40,7 @@ where
     let mut rng = thread_rng();
     let timeout_timer = after(config.timeout);
     let mut attempts = 0;
+    let (_, done) = stopper.subscribe()?;
     loop {
         match operation() {
             Ok(result) => return Ok(result),
@@ -69,11 +70,20 @@ where
     }
 }
 
-pub fn with_retry<T, F>(done: Done, mut operation: F, error_message: String) -> Result<T, Error>
+pub fn with_retry<T, F>(
+    stopper: Stopper,
+    mut operation: F,
+    error_message: String,
+) -> Result<T, Error>
 where
     F: FnMut() -> Result<T, Error>,
 {
-    with_retry_custom(done, &mut operation, error_message, RetryConfig::default())
+    with_retry_custom(
+        stopper,
+        &mut operation,
+        error_message,
+        RetryConfig::default(),
+    )
 }
 
 pub fn timed<T, F>(m: String, f: F) -> Result<T, Error>

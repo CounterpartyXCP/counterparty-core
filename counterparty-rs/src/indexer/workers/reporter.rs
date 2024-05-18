@@ -8,7 +8,7 @@ use tracing::info;
 
 use crate::indexer::{
     constants::CP_HEIGHT,
-    stopper::Done,
+    stopper::Stopper,
     types::{
         error::Error,
         pipeline::{HasHeight, PipelineDataBatch, Transition},
@@ -25,11 +25,11 @@ pub fn new<C, D, E, F, G, H, T>(
     rx_c4: Receiver<F>,
     rx_c5: Receiver<G>,
     rx_c6: Receiver<H>,
-) -> impl Fn(Receiver<Box<PipelineDataBatch<T>>>, Sender<Vec<u8>>, Done) -> Result<(), Error> + Clone
+) -> impl Fn(Receiver<Box<PipelineDataBatch<T>>>, Sender<Vec<u8>>, Stopper) -> Result<(), Error> + Clone
 where
     T: HasHeight + Transition<(), (), Vec<u8>>,
 {
-    move |rx, tx, done| {
+    move |rx, tx, stopper| {
         let mut last_round_time = start;
         let mut prev_height = start_height - 1;
         let mut max_height = 0;
@@ -40,6 +40,8 @@ where
         let mut total_num_entries = 0;
         let mut num_blocks = 0;
         let mut num_entries = 0;
+
+        let (_, done) = stopper.subscribe()?;
         loop {
             select! {
                 recv(done) -> _ => return Ok(()),

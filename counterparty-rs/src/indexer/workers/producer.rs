@@ -7,7 +7,7 @@ use tracing::info;
 use crate::indexer::{
     bitcoin_client::BitcoinRpc,
     database::DatabaseOps,
-    stopper::Done,
+    stopper::Stopper,
     types::{
         error::Error,
         pipeline::{BlockHasPrevBlockHash, PipelineDataInitial},
@@ -18,7 +18,7 @@ use crate::indexer::{
 fn get_last_matching_height<C, D, B>(
     client: &C,
     db: &D,
-    done: Done,
+    stopper: Stopper,
     start_height: u32,
 ) -> Result<u32, Error>
 where
@@ -37,7 +37,7 @@ where
 
         let j = i - 1;
         let prev_block_hash = with_retry(
-            done.clone(),
+            stopper.clone(),
             || {
                 db.block_at_height_has_hash(j)?
                     .ok_or(Error::BlockNotWritten(j))
@@ -61,7 +61,7 @@ pub fn new<C, D, B>(
 ) -> impl Fn(
     Receiver<Box<PipelineDataInitial>>,
     Sender<Box<PipelineDataInitial>>,
-    Done,
+    Stopper,
 ) -> Result<(), Error>
        + Clone
 where
@@ -69,10 +69,11 @@ where
     D: DatabaseOps,
     B: BlockHasPrevBlockHash,
 {
-    move |_, tx, done| {
+    move |_, tx, stopper| {
         let mut height = start_height;
         let mut target_height = if height > 0 { height - 1 } else { 0 };
         let mut reorg_detection_enabled = false;
+        let (_, done) = stopper.subscribe()?;
         loop {
             if done.try_recv().is_ok() {
                 return Ok(());
@@ -80,7 +81,7 @@ where
 
             if target_height < height {
                 target_height = with_retry(
-                    done.clone(),
+                    stopper.clone(),
                     || client.get_blockchain_height(),
                     "Error fetching blockchain info".into(),
                 )?;
@@ -100,7 +101,7 @@ where
                 let last_matching_height = if height == start_height {
                     last_saved_height
                 } else {
-                    get_last_matching_height(&client, &db, done.clone(), height)?
+                    get_last_matching_height(&client, &db, stopper.clone(), height)?
                 };
                 if last_matching_height < last_saved_height {
                     info!(
@@ -140,7 +141,6 @@ where
 mod tests {
     use super::*;
     use bitcoincore_rpc::bitcoin::BlockHash;
-    use crossbeam_channel::unbounded;
 
     use crate::{
         indexer::{
@@ -240,8 +240,7 @@ mod tests {
         })
         .unwrap();
 
-        let (_, rx) = unbounded();
-        let result = get_last_matching_height(&mock_rpc, &db, rx, 2).unwrap();
+        let result = get_last_matching_height(&mock_rpc, &db, Stopper::new(), 2).unwrap();
         assert_eq!(result, 1);
     }
 
@@ -298,8 +297,7 @@ mod tests {
         })
         .unwrap();
 
-        let (_, rx) = unbounded();
-        let result = get_last_matching_height(&mock_rpc, &db, rx, 3).unwrap();
+        let result = get_last_matching_height(&mock_rpc, &db, Stopper::new(), 3).unwrap();
         assert_eq!(result, 1);
     }
 }

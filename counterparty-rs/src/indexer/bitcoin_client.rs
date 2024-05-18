@@ -14,7 +14,7 @@ use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
 use super::{
     block::{Block as CrateBlock, ToSerializedBlock, Transaction, Vin, Vout},
     config::{Config, Mode},
-    stopper::{Done, Stopper},
+    stopper::Stopper,
     types::{
         entry::{
             BlockAtHeightHasHash, BlockAtHeightSpentOutputInTx,
@@ -196,18 +196,15 @@ pub struct BitcoinClient {
     n: usize,
     config: Config,
     stopper: Stopper,
-    done: Done,
     channels: Channels,
 }
 
 impl BitcoinClient {
     pub fn new(config: &Config, stopper: Stopper, n: usize) -> Result<Self, Error> {
-        let (_, done) = stopper.subscribe()?;
         Ok(BitcoinClient {
             n,
             config: config.clone(),
             stopper,
-            done,
             channels: Channels::new(n),
         })
     }
@@ -228,8 +225,9 @@ impl BitcoinClient {
     fn worker(
         client: BitcoinClientInner,
         channels: Channels,
-    ) -> impl Fn(Receiver<()>, Sender<()>, Done) -> Result<(), Error> + Clone {
-        move |_, _, done| loop {
+    ) -> impl Fn(Receiver<()>, Sender<()>, Stopper) -> Result<(), Error> + Clone {
+        move |_, _, stopper| loop {
+            let (_, done) = stopper.subscribe()?;
             select! {
               recv(done) -> _ => {
                 return Ok(())
@@ -261,8 +259,9 @@ impl BitcoinRpc<Block> for BitcoinClient {
             .get_block_hash
             .0
             .send(GetBlockHash { height, sender: tx })?;
+        let (_, done) = self.stopper.subscribe()?;
         select! {
-            recv(self.done) -> _ => Err(Error::Stopped),
+            recv(done) -> _ => Err(Error::Stopped),
             recv(rx) -> result => result?
         }
     }
@@ -273,8 +272,9 @@ impl BitcoinRpc<Block> for BitcoinClient {
             hash: *hash,
             sender: tx,
         })?;
+        let (_, done) = self.stopper.subscribe()?;
         select! {
-            recv(self.done) -> _ => Err(Error::Stopped),
+            recv(done) -> _ => Err(Error::Stopped),
             recv(rx) -> result => result?
         }
     }
@@ -285,8 +285,9 @@ impl BitcoinRpc<Block> for BitcoinClient {
             .get_blockchain_height
             .0
             .send(GetBlockchainHeight { sender: tx })?;
+        let (_, done) = self.stopper.subscribe()?;
         select! {
-            recv(self.done) -> _ => Err(Error::Stopped),
+            recv(done) -> _ => Err(Error::Stopped),
             recv(rx) -> result => result?
         }
     }

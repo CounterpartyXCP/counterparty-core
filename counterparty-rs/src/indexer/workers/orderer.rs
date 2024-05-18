@@ -6,18 +6,19 @@ use std::{
 use crossbeam_channel::{select, Receiver, Sender};
 
 use crate::indexer::{
-    stopper::Done,
+    stopper::Stopper,
     types::{error::Error, pipeline::HasHeight},
 };
 
 pub fn new<T: HasHeight>(
     start_height: u32,
-) -> impl Fn(Receiver<Box<T>>, Sender<Box<T>>, Done) -> Result<(), Error> + Clone {
-    move |rx, tx, done| {
+) -> impl Fn(Receiver<Box<T>>, Sender<Box<T>>, Stopper) -> Result<(), Error> + Clone {
+    move |rx, tx, stopper| {
         let mut heap = BinaryHeap::new();
         let mut next_index = start_height;
         let mut pending_blocks = HashMap::new();
 
+        let (_, done) = stopper.subscribe()?;
         loop {
             select! {
                 recv(done) -> _ => {
