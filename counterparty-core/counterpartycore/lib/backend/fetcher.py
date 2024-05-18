@@ -1,7 +1,5 @@
 import json
 import logging
-import os
-import tempfile
 
 from counterparty_rs import indexer
 
@@ -22,8 +20,10 @@ def initialize(start_height):
             "rpc_address": f"http://{config.BACKEND_CONNECT}:{config.BACKEND_PORT}",
             "rpc_user": config.BACKEND_USER,
             "rpc_password": config.BACKEND_PASSWORD,
-            "db_dir": os.path.join(tempfile.gettempdir(), "fetcherdb"),
+            "db_dir": config.FETCHER_DB,
             "start_height": start_height,
+            "log_output": config.FETCHER_LOG,
+            "log_format": "structured",
         }
     )
     _fetcher.start()

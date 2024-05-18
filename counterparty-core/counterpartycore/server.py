@@ -106,6 +106,9 @@ def initialise_log_config(
     else:  # user-specified location
         config.LOG = log_file
 
+    if config.LOG:
+        config.FETCHER_LOG = os.path.join(os.path.dirname(config.LOG), "fetcher.log")
+
     if no_log_files:  # no file logging
         config.API_LOG = None
     elif not api_log_file:  # default location
@@ -221,6 +224,8 @@ def initialise_config(
         config.DATABASE = os.path.join(data_dir, filename)
 
     logger.debug("DATABASE: %s", config.DATABASE)
+
+    config.FETCHER_DB = os.path.join(os.path.dirname(config.DATABASE), "fetcherdb")
 
     config.API_LIMIT_ROWS = api_limit_rows
 
@@ -732,9 +737,9 @@ def start_all(args):
             follower_daemon.stop()
         if db:
             database.close(db)
-        fetcher.stop()
         backend.addrindexrs.stop()
         log.shutdown()
+        fetcher.stop()
 
 
 def reparse(block_index):
