@@ -1,16 +1,41 @@
 use std::thread::JoinHandle;
 
+use crossbeam_channel::{unbounded, Receiver, Sender};
 use tracing::info;
 
-use crate::indexer::{stopper::Stopper, types::error::Error};
+use crate::indexer::{
+    config::Config,
+    stopper::Stopper,
+    types::error::Error,
+    workers::{consumer, new_worker_pool},
+};
 
 pub fn new(
     handles: &mut Vec<JoinHandle<Result<(), Error>>>,
+    config: Config,
     stopper: Stopper,
+    chan: (Sender<Vec<u8>>, Receiver<Vec<u8>>),
 ) -> Result<(), Error> {
     if stopper.stopped()? {
         return Err(Error::Stopped);
     }
+
+    info!("Stopping");
+    let mut consumer_handle = None;
+    let consumer_stopper = Stopper::new();
+    let (tx, _) = unbounded::<()>();
+    if !config.consume_blocks {
+        let mut handles = new_worker_pool(
+            "Consumer".into(),
+            1,
+            chan.1,
+            tx,
+            consumer_stopper.clone(),
+            consumer::new(),
+        )?;
+        consumer_handle = Some(handles.remove(0));
+    }
+
     stopper.stop()?;
     for handle in handles.drain(..) {
         if let Err(e) = handle.join() {
@@ -25,6 +50,12 @@ pub fn new(
             return Err(Error::GracefulExitFailure(error_message));
         }
     }
-    info!("stopped");
+
+    if let Some(handle) = consumer_handle {
+        consumer_stopper.stop()?;
+        handle.join().ok();
+    }
+
+    info!("Stopped");
     Ok(())
 }

@@ -259,10 +259,13 @@ impl BitcoinRpc<Block> for BitcoinClient {
             .get_block_hash
             .0
             .send(GetBlockHash { height, sender: tx })?;
-        let (_, done) = self.stopper.subscribe()?;
+        let (id, done) = self.stopper.subscribe()?;
         select! {
             recv(done) -> _ => Err(Error::Stopped),
-            recv(rx) -> result => result?
+            recv(rx) -> result => {
+                self.stopper.unsubscribe(id)?;
+                result?
+            }
         }
     }
 
@@ -272,10 +275,13 @@ impl BitcoinRpc<Block> for BitcoinClient {
             hash: *hash,
             sender: tx,
         })?;
-        let (_, done) = self.stopper.subscribe()?;
+        let (id, done) = self.stopper.subscribe()?;
         select! {
             recv(done) -> _ => Err(Error::Stopped),
-            recv(rx) -> result => result?
+            recv(rx) -> result => {
+                self.stopper.unsubscribe(id)?;
+                result?
+            }
         }
     }
 
@@ -285,10 +291,13 @@ impl BitcoinRpc<Block> for BitcoinClient {
             .get_blockchain_height
             .0
             .send(GetBlockchainHeight { sender: tx })?;
-        let (_, done) = self.stopper.subscribe()?;
+        let (id, done) = self.stopper.subscribe()?;
         select! {
             recv(done) -> _ => Err(Error::Stopped),
-            recv(rx) -> result => result?
+            recv(rx) -> result => {
+                self.stopper.unsubscribe(id)?;
+                result?
+            }
         }
     }
 }

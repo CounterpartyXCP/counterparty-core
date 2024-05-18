@@ -59,7 +59,12 @@ impl Indexer {
     }
 
     pub fn stop(&mut self) -> PyResult<()> {
-        Ok(stop::new(&mut self.handles, self.stopper.clone())?)
+        Ok(stop::new(
+            &mut self.handles,
+            self.config.clone(),
+            self.stopper.clone(),
+            self.chan.clone(),
+        )?)
     }
 
     pub fn get_block(&self, py: Python) -> PyResult<PyObject> {

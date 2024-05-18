@@ -8,6 +8,7 @@ use std::{
 use crossbeam_channel::{after, select, unbounded, Receiver, Sender};
 use rand::{thread_rng, Rng};
 use tracing::{debug, error, info};
+use uuid::Uuid;
 
 use super::{stopper::Stopper, types::error::Error};
 
@@ -40,7 +41,7 @@ where
     let mut rng = thread_rng();
     let timeout_timer = after(config.timeout);
     let mut attempts = 0;
-    let (_, done) = stopper.subscribe()?;
+    let (id, done) = stopper.subscribe()?;
     loop {
         match operation() {
             Ok(result) => return Ok(result),
@@ -56,11 +57,13 @@ where
                 select! {
                     recv(done) -> _ => {
                         return Err(Error::OperationCancelled(error_message));
-                    }
+                    },
                     recv(retry_timer) -> _ => {
+                        stopper.unsubscribe(id)?;
                         debug!("{} Retrying after error: {:?}", error_message, e);
-                    }
+                    },
                     recv(timeout_timer) -> _ => {
+                        stopper.unsubscribe(id)?;
                         error!("{} Maximum timeout reached. Last error: {:?}", error_message, e);
                         return Err(e);
                     }
@@ -104,8 +107,7 @@ pub fn in_reorg_window(height: u32, target_height: u32, reorg_window: u32) -> bo
 
 #[derive(Clone)]
 pub struct Broadcaster<T> {
-    subscribers: Arc<Mutex<HashMap<u64, Sender<T>>>>,
-    next_id: Arc<Mutex<u64>>,
+    subscribers: Arc<Mutex<HashMap<Uuid, Sender<T>>>>,
 }
 
 impl<T> Broadcaster<T>
@@ -115,20 +117,18 @@ where
     pub fn new() -> Self {
         Broadcaster {
             subscribers: Arc::new(Mutex::new(HashMap::new())),
-            next_id: Arc::new(Mutex::new(0)),
         }
     }
 
-    pub fn subscribe(&self) -> Result<(u64, Receiver<T>), Error> {
+    pub fn subscribe(&self) -> Result<(Uuid, Receiver<T>), Error> {
         let (tx, rx) = unbounded();
-        let mut id_guard = self.next_id.lock()?;
-        let id = *id_guard;
-        *id_guard += 1;
-        self.subscribers.lock()?.insert(id, tx);
+        let id = Uuid::new_v4();
+        let mut subscribers = self.subscribers.lock()?;
+        subscribers.insert(id, tx);
         Ok((id, rx))
     }
 
-    pub fn unsubscribe(&self, id: u64) -> Result<(), Error> {
+    pub fn unsubscribe(&self, id: Uuid) -> Result<(), Error> {
         let mut subscribers = self.subscribers.lock()?;
         subscribers.remove(&id);
         Ok(())
