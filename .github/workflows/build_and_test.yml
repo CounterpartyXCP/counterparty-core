@@ -39,6 +39,7 @@ jobs:
 
       - name: Install pytest and build module
         run: |
+          python3.10 -m pip install --upgrade pyOpenSSL
           python3.10 -m pip install pytest hatch
           python3.10 -m pip install --upgrade build
 
