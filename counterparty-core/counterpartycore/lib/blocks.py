@@ -22,11 +22,11 @@ from counterpartycore.lib import (  # noqa: E402
     config,
     database,
     exceptions,
-    fetcher,
     ledger,
     message_type,
     util,
 )
+from counterpartycore.lib.backend import fetcher
 from counterpartycore.lib.gettxinfo import get_tx_info  # noqa: E402
 
 from .messages import (  # noqa: E402
@@ -892,18 +892,27 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
     if tx_index is None:
         tx_index = get_next_tx_index(db)
 
-    # get previous block
-    previous_block = ledger.get_block(db, util.CURRENT_BLOCK_INDEX - 1)
+    if util.CURRENT_BLOCK_INDEX > config.BLOCK_FIRST:
+        # get previous block
+        previous_block = ledger.get_block(db, util.CURRENT_BLOCK_INDEX - 1)
 
-    # check if reorg is needed
-    if decoded_block["hash_prev"] != previous_block["block_hash"]:
-        previous_block_index = backend.bitcoind.get_block_height(decoded_block["hash_prev"])
-        logger.info("Blockchain reorganization detected from block %s", previous_block_index)
-        # roolback to the previous block
-        rollback(db, block_index=previous_block_index)
-        # update the current block index
-        catch_up(db, check_asset_conservation=False)
-        return get_next_tx_index(db)
+        # check if reorg is needed
+        if decoded_block["hash_prev"] != previous_block["block_hash"]:
+            if "height" in decoded_block:
+                previous_block_index = decoded_block["height"] - 1
+            else:
+                previous_block_index = backend.bitcoind.get_block_height(decoded_block["hash_prev"])
+            logger.info("Blockchain reorganization detected from block %s", previous_block_index)
+            # roolback to the previous block
+            util.CURRENT_BLOCK_INDEX = previous_block_index + 1
+            rollback(db, block_index=util.CURRENT_BLOCK_INDEX)
+            tx_index = get_next_tx_index(db)
+    else:
+        previous_block = {
+            "ledger_hash": None,
+            "txlist_hash": None,
+            "messages_hash": None,
+        }
 
     decoded_block["block_index"] = util.CURRENT_BLOCK_INDEX
 
@@ -972,27 +981,38 @@ def catch_up(db, check_asset_conservation=True):
     util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
     if util.CURRENT_BLOCK_INDEX == 0:
         logger.info("New database.")
-        util.CURRENT_BLOCK_INDEX = config.BLOCK_FIRST
+        util.CURRENT_BLOCK_INDEX = config.BLOCK_FIRST - 1
 
     # Get block count.
     block_count = backend.bitcoind.getblockcount()
 
     # initialize blocks fetcher
-    block_fetcher = fetcher.BlockFetcher(util.CURRENT_BLOCK_INDEX + 1)
+    # block_fetcher = bitcoind.BlockFetcher(util.CURRENT_BLOCK_INDEX + 1)
+    fetcher.initialize(util.CURRENT_BLOCK_INDEX + 1)
 
     # Get index of last transaction.
     tx_index = get_next_tx_index(db)
 
+    start_time = time.time()
+    parsed_blocks = 0
+
     while util.CURRENT_BLOCK_INDEX < block_count:
-        print(f"Block {util.CURRENT_BLOCK_INDEX}/{block_count}")
+        logger.debug(f"Catching up block {util.CURRENT_BLOCK_INDEX}/{block_count}...")
 
         # Get block information and transactions
-        decoded_block = block_fetcher.get_next_block()
+        decoded_block = fetcher.get_block()
+        # decoded_block = block_fetcher.get_block()
         # util.CURRENT_BLOCK_INDEX is incremented in parse_new_block
         tx_index = parse_new_block(db, decoded_block, block_parser=None, tx_index=tx_index)
 
+        parsed_blocks += 1
+        duration = timedelta(seconds=int(time.time() - start_time))
+        logger.info(f"{parsed_blocks} block parsed in {duration}")
+
         # Refresh block count.
         block_count = backend.bitcoind.getblockcount()
+
+    fetcher.stop()
 
     if config.CHECK_ASSET_CONSERVATION and check_asset_conservation:
         # TODO: timer to check asset conservation every N hours

@@ -1,18 +1,20 @@
 mod b58;
+mod indexer;
 mod utils;
 
 use b58::create_b58_module;
+use indexer::create_indexer_module;
 use utils::create_utils_module;
 
 use pyo3::prelude::*;
 use pyo3::types::PyString;
-
 
 /// A Python module implemented in Rust.
 #[pymodule]
 fn counterparty_rs(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_submodule(create_b58_module(py)?)?;
     m.add_submodule(create_utils_module(py)?)?;
+    m.add_submodule(create_indexer_module(py)?)?;
 
     m.add(
         "__version__",

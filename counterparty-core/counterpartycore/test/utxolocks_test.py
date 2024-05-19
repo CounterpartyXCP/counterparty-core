@@ -60,7 +60,7 @@ def test_utxolocks_custom_input(server_db):
             "amount": 0.11121663,
             "vout": 0,
             "confirmations": 74,
-            "scriptPubKey": "76a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac",
+            "script_pub_key": "76a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac",
             "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
         }
     ]

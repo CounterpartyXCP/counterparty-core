@@ -550,7 +550,7 @@ def test_p2sh_script_decoding():
     script_hex = "1c8a5dda15fb6f05628a061e67576e926dc71a7fa2f0cceb97452b4d564101a914c088c83aeddd211096df9f5f0df1f3b885ac7fe70188210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad0075740087"
     script_sig = bitcoinlib.core.script.CScript(binascii.unhexlify(script_hex))
 
-    print("scriptSig", repr(script_sig), list(script_sig), len(list(script_sig)))
+    print("script_sig", repr(script_sig), list(script_sig), len(list(script_sig)))
 
     chunks = list(script_sig)
     if len(chunks) == 3:
@@ -589,7 +589,7 @@ def test_p2sh_signed_multisig_script_decoding():
 
         ctx = deserialize.deserialize_tx(txHex, True)
         vin = ctx["vin"][0]
-        asm = script.script_to_asm(vin["scriptSig"])
+        asm = script.script_to_asm(vin["script_sig"])
         new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm)
 
         assert new_data == binascii.unhexlify(
