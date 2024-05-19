@@ -102,7 +102,7 @@ jobs:
 
       - name: Install pytest and build module
         run: |
-          pip3.10 install pytest hatch
+          python3.10 -m pip install pytest hatch
           python3.10 -m pip install --upgrade build
 
       # Build counterparty packages
@@ -122,14 +122,14 @@ jobs:
         run: |
           export LIBRARY_PATH="$LIBRARY_PATH:$(brew --prefix)/lib"
           export CPATH="$CPATH:$(brew --prefix)/include"
-          pip3.10 install dist/*.whl --force-reinstall
+          python3.10 -m pip install dist/*.whl --force-reinstall
 
       # Run counterparty-core tests
 
       - name: Run counterparty-core tests
         run: |
           cd counterparty-core
-          pytest
+          hatch run pytest
 
       # Upload wheels
 
