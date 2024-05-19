@@ -129,7 +129,7 @@ jobs:
       - name: Run counterparty-core tests
         run: |
           cd counterparty-core
-          pytest
+          hatch run pytest
 
       # Upload wheels
 
