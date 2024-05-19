@@ -219,3 +219,11 @@ class BlockFetcher:
         block = get_decoded_block(self.current_block)
         self.current_block += 1
         return block
+
+
+def sendrawtransaction(signedhex: str):
+    """
+    Proxy to `sendrawtransaction` RPC call.
+    :param signedhex: The signed transaction hex.
+    """
+    return rpc("sendrawtransaction", [signedhex])
