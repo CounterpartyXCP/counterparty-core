@@ -1,4 +1,4 @@
-from counterpartycore.lib import exceptions, ledger
+from counterpartycore.lib import ledger
 
 
 def get_blocks(db, cursor: int = None, limit: int = 10):
@@ -563,64 +563,86 @@ def get_bet_by_feed(db, address: str, status: str = "open"):
     return ledger.get_bet_by_feed(db, address=address, status=status)
 
 
-def get_broadcasts_by_source(db, address: str, status: str = "valid", order_by: str = "DESC"):
+def get_broadcasts_by_source(
+    db, address: str, status: str = "valid", cursor: int = None, limit: int = 100
+):
     """
     Returns the broadcasts of a source
     :param str address: The address to return (e.g. 1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk)
     :param str status: The status of the broadcasts to return (e.g. valid)
-    :param str order_by: The order of the broadcasts to return (e.g. ASC)
+    :param int cursor: The last index of the broadcasts to return
+    :param int limit: The maximum number of broadcasts to return
     """
-    return ledger.get_broadcasts_by_source(db, address=address, status=status, order_by=order_by)
+    return ledger.select_rows(
+        db,
+        "broadcasts",
+        where={"source": address, "status": status},
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+    )
 
 
-def get_burns_by_address(db, address: str):
+def get_burns_by_address(db, address: str, cursor: int = None, limit: int = 100):
     """
     Returns the burns of an address
     :param str address: The address to return (e.g. 1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W)
+    :param int cursor: The last index of the burns to return
+    :param int limit: The maximum number of burns to return
     """
-    return ledger.get_burns(db, address=address)
+    return ledger.select_rows(db, "burns", where={"source": address}, cursor=cursor, limit=limit)
 
 
-def get_send_by_address(db, address: str, limit: int = 100, offset: int = 0):
+def get_send_by_address(db, address: str, cursor: int = None, limit: int = 100):
     """
     Returns the sends of an address
     :param str address: The address to return (e.g. 1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W)
-    :param int limit: The maximum number of sends to return (e.g. 5)
-    :param int offset: The offset of the sends to return (e.g. 0)
+    :param int cursor: The last index of the sends to return
+    :param int limit: The maximum number of sends to return
     """
-    return ledger.get_sends(db, address=address, limit=limit, offset=offset)
+    return ledger.select_rows(db, "sends", where={"source": address}, cursor=cursor, limit=limit)
 
 
-def get_send_by_address_and_asset(db, address: str, asset: str):
+def get_send_by_address_and_asset(
+    db, address: str, asset: str, cursor: int = None, limit: int = 100
+):
     """
     Returns the sends of an address and asset
     :param str address: The address to return (e.g. 1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W)
     :param str asset: The asset to return (e.g. XCP)
+    :param int cursor: The last index of the sends to return
+    :param int limit: The maximum number of sends to return
     """
-    return ledger.get_sends(db, address=address, asset=asset)
+    return ledger.select_rows(
+        db, "sends", where={"source": address, "asset": asset}, cursor=cursor, limit=limit
+    )
 
 
-def get_receive_by_address(db, address: str, limit: int = 100, offset: int = 0):
+def get_receive_by_address(db, address: str, cursor: int = None, limit: int = 100):
     """
     Returns the receives of an address
     :param str address: The address to return (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
-    :param int limit: The maximum number of receives to return (e.g. 5)
-    :param int offset: The offset of the receives to return (e.g. 0)
+    :param int cursor: The last index of the sends to return
+    :param int limit: The maximum number of sends to return
     """
-    return ledger.get_receives(db, address=address, limit=limit, offset=offset)
+    return ledger.select_rows(
+        db, "sends", where={"destination": address}, cursor=cursor, limit=limit
+    )
 
 
 def get_receive_by_address_and_asset(
-    db, address: str, asset: str, limit: int = 100, offset: int = 0
+    db, address: str, asset: str, cursor: int = None, limit: int = 100
 ):
     """
     Returns the receives of an address and asset
     :param str address: The address to return (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
     :param str asset: The asset to return (e.g. XCP)
-    :param int limit: The maximum number of receives to return (e.g. 5)
-    :param int offset: The offset of the receives to return (e.g. 0)
+    :param int cursor: The last index of the sends to return
+    :param int limit: The maximum number of sends to return
     """
-    return ledger.get_receives(db, address=address, asset=asset, limit=limit, offset=offset)
+    return ledger.select_rows(
+        db, "sends", where={"destination": address, "asset": asset}, cursor=cursor, limit=limit
+    )
 
 
 def get_dispensers_by_address(db, address: str, status: int = 0):
@@ -656,52 +678,61 @@ def get_asset_info(db, asset: str):
     return ledger.get_asset_info(db, asset=asset)
 
 
-def get_valid_assets(db, offset: int = 0, limit: int = 100):
+def get_valid_assets(db, cursor: int = None, limit: int = 100):
     """
     Returns the valid assets
     :param int offset: The offset of the assets to return (e.g. 0)
     :param int limit: The limit of the assets to return (e.g. 5)
+    :param int cursor: The last index of the assets to return
+    :param int limit: The maximum number of assets to return
     """
-    try:
-        int(offset)
-        int(limit)
-    except ValueError as e:
-        raise exceptions.InvalidArgument("Invalid offset or limit parameter") from e
-    cursor = db.cursor()
-    query = """
-        SELECT asset, asset_longname
-        FROM issuances
-        WHERE status = 'valid'
-        GROUP BY asset
-        ORDER BY asset ASC
-        LIMIT ? OFFSET ?
-    """
-    cursor.execute(query, (limit, offset))
-    return cursor.fetchall()
+    return ledger.select_rows(
+        db,
+        "issuances",
+        where={"status": "valid"},
+        cursor_field="asset",
+        group_by="asset",
+        order="ASC",
+        select="asset, asset_longname",
+        cursor=cursor,
+        limit=limit,
+    )
 
 
-def get_dividends(db, asset: str):
+def get_dividends(db, asset: str, cursor: int = None, limit: int = 100):
     """
     Returns the dividends of an asset
     :param str asset: The asset to return (e.g. GMONEYPEPE)
+    :param int cursor: The last index of the assets to return
+    :param int limit: The maximum number of assets to return
     """
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM dividends
-        WHERE asset = ? AND status = ?
-    """
-    bindings = (asset, "valid")
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
+    return ledger.select_rows(
+        db,
+        "dividends",
+        where={"asset": asset, "status": "valid"},
+        cursor=cursor,
+        limit=limit,
+    )
 
 
-def get_asset_balances(db, asset: str, exclude_zero_balances: bool = True):
+def get_asset_balances(db, asset: str, cursor: int = None, limit: int = 100):
     """
     Returns the asset balances
     :param str asset: The asset to return (e.g. UNNEGOTIABLE)
-    :param bool exclude_zero_balances: Whether to exclude zero balances (e.g. True)
+    :param int cursor: The last index of the balances to return
+    :param int limit: The maximum number of balances to return
     """
-    return ledger.get_asset_balances(db, asset=asset, exclude_zero_balances=exclude_zero_balances)
+    return ledger.select_rows(
+        db,
+        "balances",
+        where={"asset": asset, "quantity__gt": 0},
+        cursor_field="address",
+        select="address, asset, quantity, MAX(rowid) AS rowid",
+        group_by="address",
+        order="ASC",
+        cursor=cursor,
+        limit=limit,
+    )
 
 
 def get_orders_by_asset(db, asset: str, status: str = "open"):
@@ -788,20 +819,16 @@ def get_order_matches_by_order(db, order_hash: str, status: str = "pending"):
     return cursor.fetchall()
 
 
-def get_btcpays_by_order(db, order_hash: str):
+def get_btcpays_by_order(db, order_hash: str, cursor: int = None, limit: int = 100):
     """
     Returns the BTC pays of an order
     :param str order_hash: The hash of the transaction that created the order (e.g. 299b5b648f54eacb839f3487232d49aea373cdd681b706d4cc0b5e0b03688db4)
+    :param int cursor: The last index of the resolutions to return
+    :param int limit: The maximum number of resolutions to return
     """
-    cursor = db.cursor()
-    query = """
-        SELECT *
-        FROM btcpays
-        WHERE order_match_id LIKE ?
-    """
-    bindings = (f"%{order_hash}%",)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
+    return ledger.select_rows(
+        db, "btcpays", where={"order_match_id__like": f"%{order_hash}%"}, cursor=cursor, limit=limit
+    )
 
 
 def get_bet(db, bet_hash: str):
@@ -832,44 +859,30 @@ def get_bet_matches_by_bet(db, bet_hash: str, status: str = "pending"):
     return cursor.fetchall()
 
 
-def get_resolutions_by_bet(db, bet_hash: str):
+def get_resolutions_by_bet(db, bet_hash: str, cursor: int = None, limit: int = 100):
     """
     Returns the resolutions of a bet
     :param str bet_hash: The hash of the transaction that created the bet (e.g. 36bbbb7dbd85054dac140a8ad8204eda2ee859545528bd2a9da69ad77c277ace)
+    :param int cursor: The last index of the resolutions to return
+    :param int limit: The maximum number of resolutions to return
     """
-    cursor = db.cursor()
-    query = """
-        SELECT *
-        FROM bet_match_resolutions
-        WHERE bet_match_id LIKE ?
-    """
-    bindings = (f"%{bet_hash}%",)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
+    return ledger.select_rows(
+        db,
+        "bet_match_resolutions",
+        where={"bet_match_id__like": f"%{bet_hash}%"},
+        cursor=cursor,
+        limit=limit,
+    )
 
 
-def get_all_burns(db, status: str = "valid", offset: int = 0, limit: int = 100):
+def get_all_burns(db, status: str = "valid", cursor: int = None, limit: int = 100):
     """
     Returns the burns
     :param str status: The status of the burns to return (e.g. valid)
-    :param int offset: The offset of the burns to return (e.g. 10)
-    :param int limit: The limit of the burns to return (e.g. 5)
+    :param int cursor: The last index of the burns to return
+    :param int limit: The maximum number of burns to return
     """
-    try:
-        int(offset)
-        int(limit)
-    except ValueError as e:
-        raise exceptions.InvalidArgument("Invalid offset or limit parameter") from e
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM burns
-        WHERE status = ?
-        ORDER BY tx_index ASC
-        LIMIT ? OFFSET ?
-    """
-    bindings = (status, limit, offset)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
+    return ledger.select_rows(db, "burns", where={"status": status}, cursor=cursor, limit=limit)
 
 
 def get_dispenser_info_by_hash(db, dispenser_hash: str):
@@ -877,4 +890,8 @@ def get_dispenser_info_by_hash(db, dispenser_hash: str):
     Returns the dispenser information by tx_hash
     :param str dispenser_hash: The hash of the dispenser to return (e.g. 753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a)
     """
-    return ledger.get_dispenser_info(db, tx_hash=dispenser_hash)
+    return ledger.select_row(
+        db,
+        "dispensers",
+        where={"tx_hash": dispenser_hash},
+    )

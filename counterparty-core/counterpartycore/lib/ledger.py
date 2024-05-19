@@ -85,16 +85,25 @@ def select_rows(
     limit=100,
     select="*",
     group_by="",
+    order="DESC",
 ):
     cursor = db.cursor()
 
     where_field = []
     bindings = []
     for key, value in where.items():
-        where_field.append(f"{key} = ?")
+        if key.endswith("__gt"):
+            where_field.append(f"{key[:-4]} > ?")
+        elif key.endswith("__like"):
+            where_field.append(f"{key[:-6]} LIKE ?")
+        else:
+            where_field.append(f"{key} = ?")
         bindings.append(value)
     if last_cursor is not None:
-        where_field.append(f"{cursor_field} < ?")
+        if order == "ASC":
+            where_field.append(f"{cursor_field} > ?")
+        else:
+            where_field.append(f"{cursor_field} < ?")
         bindings.append(last_cursor)
     bindings.append(cursor_field)
     bindings.append(limit)
@@ -110,7 +119,7 @@ def select_rows(
 
     query = f"""
         SELECT {select} FROM {table} {where_clause} {group_by_clause}
-        ORDER BY {cursor_field} DESC
+        ORDER BY {cursor_field} {order}
         LIMIT ?
     """  # nosec B608  # noqa: S608
     cursor.execute(query)
