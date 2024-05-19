@@ -399,7 +399,6 @@ mod tests {
             ),
         ];
 
-        // Simulate some txid/vout being spent
         let spent_entry = BlockAtHeightSpentOutputInTx {
             txid: test_sha256_hash(0),
             vout: 0,

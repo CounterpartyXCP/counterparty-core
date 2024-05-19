@@ -57,7 +57,7 @@ impl<B: BlockHasEntries> Transition<Box<PipelineDataWithBlock<B>>, (BlockHash, B
         Ok((
             (),
             Box::new(PipelineDataWithBlock {
-                prev: self, // Assuming PipelineDataInitial is Clone
+                prev: self,
                 hash,
                 block,
             }),
