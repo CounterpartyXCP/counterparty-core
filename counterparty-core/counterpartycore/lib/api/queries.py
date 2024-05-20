@@ -1,3 +1,9 @@
+class QueryResult:
+    def __init__(self, result, next_cursor):
+        self.result = result
+        self.next_cursor = next_cursor
+
+
 def select_rows(
     db,
     table,
@@ -70,13 +76,20 @@ def select_rows(
 
     # print(query, bindings)
     cursor.execute(query, bindings)
-    return cursor.fetchall()
+    result = cursor.fetchall()
+
+    if result:
+        next_cursor = result[-1][cursor_field]
+    else:
+        next_cursor = None
+
+    return QueryResult(result, next_cursor)
 
 
 def select_row(db, table, where, select="*"):
     rows = select_rows(db, table, where, limit=1, select=select)
     if rows:
-        return rows[0]
+        return QueryResult(rows[0], None)
     return None
 
 

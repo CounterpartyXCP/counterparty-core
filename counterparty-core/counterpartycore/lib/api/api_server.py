@@ -18,6 +18,7 @@ from counterpartycore.lib import (
     transaction,
     util,
 )
+from counterpartycore.lib.api import queries
 from counterpartycore.lib.api.routes import ROUTES
 from counterpartycore.lib.api.util import (
     function_needs_db,
@@ -115,11 +116,13 @@ def return_result_if_not_ready(rule):
     return is_cachable(rule) or rule == "/v2/"
 
 
-def return_result(http_code, result=None, error=None):
+def return_result(http_code, result=None, error=None, next_cursor=None):
     assert result is None or error is None
     api_result = {}
     if result is not None:
         api_result["result"] = result
+        if isinstance(result, list):
+            api_result["next_cursor"] = next_cursor
     if error is not None:
         api_result["error"] = error
     response = flask.make_response(to_json(api_result), http_code)
@@ -255,6 +258,11 @@ def handle_route(**kwargs):
     if result is None:
         return return_result(404, error="Not found")
 
+    next_cursor = None
+    if isinstance(result, queries.QueryResult):
+        next_cursor = result.next_cursor
+        result = result.result
+
     result = remove_rowids(result)
 
     # inject details
@@ -262,7 +270,7 @@ def handle_route(**kwargs):
     if verbose.lower() in ["true", "1"]:
         result = inject_details(db, result)
 
-    return return_result(200, result=result)
+    return return_result(200, result=result, next_cursor=next_cursor)
 
 
 def run_api_server(args):
