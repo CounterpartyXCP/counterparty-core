@@ -1,3 +1,6 @@
+import json
+
+
 class QueryResult:
     def __init__(self, result, next_cursor):
         self.result = result
@@ -60,12 +63,18 @@ def select_rows(
     if group_by:
         group_by_clause = f"GROUP BY {group_by}"
 
+    if select == "*":
+        select = f"*, {cursor_field} AS {cursor_field}"
+
     query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608
 
     if wrap_where is not None:
         wrap_where_field = []
         for key, value in wrap_where.items():
-            wrap_where_field.append(f"{key} = ?")
+            if key.endswith("__gt"):
+                wrap_where_field.append(f"{key[:-4]} > ?")
+            else:
+                wrap_where_field.append(f"{key} = ?")
             bindings.append(value)
         wrap_where_clause = " AND ".join(wrap_where_field)
         wrap_where_clause = f"WHERE {wrap_where_clause}"
@@ -74,14 +83,21 @@ def select_rows(
     query = f"{query} ORDER BY {cursor_field} {order} LIMIT ?"  # nosec B608  # noqa: S608
     bindings.append(limit)
 
-    # print(query, bindings)
+    print(query, bindings)
     cursor.execute(query, bindings)
     result = cursor.fetchall()
+    print(result)
 
     if result:
         next_cursor = result[-1][cursor_field]
     else:
         next_cursor = None
+
+    if table == "messages":
+        for row in result:
+            if "params" not in row:
+                break
+            row["params"] = json.loads(row["params"])
 
     return QueryResult(result, next_cursor)
 
@@ -135,8 +151,8 @@ def get_all_events(db, cursor: int = None, limit: int = 100):
     """
     return select_rows(
         db,
-        "events",
-        cursor_field="message_index",
+        "messages",
+        cursor_field="event_index",
         last_cursor=cursor,
         limit=limit,
         select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
@@ -152,9 +168,9 @@ def get_events_by_block(db, block_index: int, cursor: int = None, limit: int = 1
     """
     return select_rows(
         db,
-        "events",
+        "messages",
         where={"block_index": block_index},
-        cursor_field="message_index",
+        cursor_field="event_index",
         last_cursor=cursor,
         limit=limit,
         select="message_index AS event_index, event, bindings AS params, tx_hash",
@@ -170,9 +186,9 @@ def get_events_by_transaction_hash(db, tx_hash: str, cursor: int = None, limit: 
     """
     return select_rows(
         db,
-        "events",
+        "messages",
         where={"tx_hash": tx_hash},
-        cursor_field="message_index",
+        cursor_field="event_index",
         last_cursor=cursor,
         limit=limit,
         select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
@@ -191,9 +207,9 @@ def get_events_by_transaction_hash_and_event(
     """
     return select_rows(
         db,
-        "events",
+        "messages",
         where={"tx_hash": tx_hash, "event": event},
-        cursor_field="message_index",
+        cursor_field="event_index",
         last_cursor=cursor,
         limit=limit,
         select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
@@ -207,9 +223,11 @@ def get_events_by_transaction_index(db, tx_index: int, cursor: int = None, limit
     :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     """
-    tx = select_row(db, "transactions", where={"tx_index": tx_index})
-    if tx:
-        return get_events_by_transaction_hash(db, tx["tx_hash"], last_cursor=cursor, limit=limit)
+    query_result = select_row(db, "transactions", where={"tx_index": tx_index})
+    if query_result:
+        return get_events_by_transaction_hash(
+            db, query_result.result["tx_hash"], cursor=cursor, limit=limit
+        )
     return None
 
 
@@ -223,10 +241,10 @@ def get_events_by_transaction_index_and_event(
     :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     """
-    tx = select_row(db, "transactions", where={"tx_index": tx_index})
-    if tx:
+    query_result = select_row(db, "transactions", where={"tx_index": tx_index})
+    if query_result:
         return get_events_by_transaction_hash_and_event(
-            db, tx["tx_hash"], event, last_cursor=cursor, limit=limit
+            db, query_result.result["tx_hash"], event, cursor=cursor, limit=limit
         )
     return None
 
@@ -245,9 +263,9 @@ def get_events_by_block_and_event(
         return get_event_counts_by_block(db, block_index=block_index)
     return select_rows(
         db,
-        "events",
+        "messages",
         where={"block_index": block_index, "event": event},
-        cursor_field="message_index",
+        cursor_field="event_index",
         last_cursor=cursor,
         limit=limit,
         select="message_index AS event_index, event, bindings AS params, tx_hash",
@@ -261,9 +279,9 @@ def get_event_by_index(db, event_index: int):
     """
     return select_row(
         db,
-        "events",
+        "messages",
         where={"message_index": event_index},
-        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
+        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp, rowid AS rowid",
     )
 
 
@@ -276,9 +294,9 @@ def get_events_by_name(db, event: str, cursor: int = None, limit: int = 100):
     """
     return select_rows(
         db,
-        "events",
+        "messages",
         where={"event": event},
-        cursor_field="message_index",
+        cursor_field="event_index",
         last_cursor=cursor,
         limit=limit,
         select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
@@ -612,7 +630,7 @@ def get_sweeps_by_address(db, address: str, cursor: int = None, limit: int = 100
     :param int cursor: The last index of the sweeps to return
     :param int limit: The maximum number of sweeps to return
     """
-    return select_rows(db, "sweeps", where={"address": address}, last_cursor=cursor, limit=limit)
+    return select_rows(db, "sweeps", where={"source": address}, last_cursor=cursor, limit=limit)
 
 
 def get_address_balances(db, address: str, cursor: int = None, limit: int = 100):
@@ -846,10 +864,11 @@ def get_asset_balances(db, asset: str, cursor: str = None, limit: int = 100):
     return select_rows(
         db,
         "balances",
-        where={"asset": asset, "quantity__gt": 0},
+        where={"asset": asset},
+        wrap_where={"quantity__gt": 0},
         cursor_field="address",
         select="address, asset, quantity, MAX(rowid) AS rowid",
-        group_by="address",
+        group_by="address, asset",
         order="ASC",
         last_cursor=cursor,
         limit=limit,
@@ -887,7 +906,7 @@ def get_orders_by_two_assets(
     :param int cursor: The last index of the orders to return
     :param int limit: The maximum number of orders to return
     """
-    orders = select_rows(
+    query_result = select_rows(
         db,
         "orders",
         where=[
@@ -900,13 +919,13 @@ def get_orders_by_two_assets(
         last_cursor=cursor,
         limit=limit,
     )
-    for order in orders:
+    for order in query_result.result:
         order["market_pair"] = f"{asset1}/{asset2}"
         if order["give_asset"] == asset1:
             order["market_dir"] = "SELL"
         else:
             order["market_dir"] = "BUY"
-    return orders
+    return QueryResult(query_result.result, query_result.next_cursor)
 
 
 def get_asset_holders(db, asset: str, cursor: str = None, limit: int = 100):

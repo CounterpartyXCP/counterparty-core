@@ -628,6 +628,8 @@ def initialise(db):
     if "event" not in columns:
         cursor.execute("""ALTER TABLE mempool ADD COLUMN event TEXT""")
 
+    create_views(db)
+
     # Lock UPDATE on all tables
     for table in TABLES:
         cursor.execute(f"""CREATE TRIGGER IF NOT EXISTS block_update_{table}
@@ -635,8 +637,13 @@ def initialise(db):
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
                         """)
+    cursor.close()
 
+
+def create_views(db):
+    cursor = db.cursor()
     # Create Expiration View
+    cursor.execute("""DROP VIEW IF EXISTS all_expirations""")
     expiration_queries = [
         """
         SELECT 'order' AS type, order_hash AS object_id, block_index,
