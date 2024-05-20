@@ -43,7 +43,7 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/sends/<asset>": queries.get_send_by_address_and_asset,
         "/v2/addresses/<address>/receives/<asset>": queries.get_receive_by_address_and_asset,
         "/v2/addresses/<address>/dispensers": queries.get_dispensers_by_address,
-        "/v2/addresses/<address>/dispensers/<asset>": queries.get_dispensers_by_address_and_asset,
+        "/v2/addresses/<address>/dispensers/<asset>": queries.get_dispenser_by_address_and_asset,
         "/v2/addresses/<address>/dispenses/sends": queries.get_dispenses_by_source,
         "/v2/addresses/<address>/dispenses/receives": queries.get_dispenses_by_destination,
         "/v2/addresses/<address>/dispenses/sends/<asset>": queries.get_dispenses_by_source_and_asset,
@@ -75,7 +75,7 @@ ROUTES = util.prepare_routes(
         "/v2/assets/<asset>/issuances": queries.get_issuances_by_asset,
         "/v2/assets/<asset>/sends": queries.get_sends_by_asset,
         "/v2/assets/<asset>/dispensers": queries.get_dispensers_by_asset,
-        "/v2/assets/<asset>/dispensers/<address>": queries.get_dispensers_by_address_and_asset,
+        "/v2/assets/<asset>/dispensers/<address>": queries.get_dispenser_by_address_and_asset,
         "/v2/assets/<asset>/holders": queries.get_asset_holders,
         "/v2/assets/<asset>/dispenses": queries.get_dispenses_by_asset,
         ### /orders ###

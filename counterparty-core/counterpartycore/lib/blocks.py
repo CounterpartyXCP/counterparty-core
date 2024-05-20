@@ -635,6 +635,32 @@ def initialise(db):
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
                         """)
+
+    # Create Expiration View
+    expiration_queries = [
+        """
+        SELECT 'order' AS type, order_hash AS object_id, block_index, rowid FROM order_expirations
+        """,
+        """
+        SELECT 'order_match' AS type, order_match_id AS object_id, block_index, rowid FROM order_match_expirations
+        """,
+        """
+        SELECT 'bet' AS type, bet_hash AS object_id, block_index, rowid FROM bet_expirations
+        """,
+        """
+        SELECT 'bet_match' AS type, bet_match_id AS object_id, block_index, rowid FROM bet_match_expirations
+        """,
+        """
+        SELECT 'rps' AS type, rps_hash AS object_id, block_index, rowid FROM rps_expirations
+        """,
+        """
+        SELECT 'rps_match' AS type, rps_match_id AS object_id, block_index, rowid FROM rps_match_expirations
+        """,
+    ]
+    expiration_query = " UNION ALL ".join(expiration_queries)
+    expiration_query = f"CREATE VIEW IF NOT EXISTS all_expirations AS {expiration_query}"
+    cursor.execute(expiration_query)
+
     cursor.close()
 
 
@@ -987,7 +1013,7 @@ def catch_up(db, check_asset_conservation=True):
     block_count = backend.bitcoind.getblockcount()
 
     # initialize blocks fetcher
-    # block_fetcher = bitcoind.BlockFetcher(util.CURRENT_BLOCK_INDEX + 1)
+    # block_fetcher = backend.bitcoind.BlockFetcher(util.CURRENT_BLOCK_INDEX + 1)
     fetcher.initialize(util.CURRENT_BLOCK_INDEX + 1)
 
     # Get index of last transaction.

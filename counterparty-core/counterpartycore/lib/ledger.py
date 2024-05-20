@@ -141,12 +141,13 @@ def select_rows(
             bindings.append(value)
         wrap_where_clause = " AND ".join(wrap_where_field)
         wrap_where_clause = f"WHERE {wrap_where_clause}"
-        query = f"SELECT * FROM ({query})"  # nosec B608  # noqa: S608
+        query = f"SELECT * FROM ({query}) {wrap_where_clause}"  # nosec B608  # noqa: S608
 
     query = f"{query} ORDER BY {cursor_field} {order} LIMIT ?"  # nosec B608  # noqa: S608
     bindings.append(limit)
 
-    cursor.execute(query)
+    print(query, bindings)
+    cursor.execute(query, bindings)
     return cursor.fetchall()
 
 
