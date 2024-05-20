@@ -87,9 +87,9 @@ def select_rows(
 
 
 def select_row(db, table, where, select="*"):
-    rows = select_rows(db, table, where, limit=1, select=select)
-    if rows:
-        return QueryResult(rows[0], None)
+    query_result = select_rows(db, table, where, limit=1, select=select)
+    if query_result.result:
+        return QueryResult(query_result.result[0], None)
     return None
 
 
