@@ -11,8 +11,8 @@ def read_tx_in(vds):
     tx_in["hash"] = vds.read_bytes(32)
     tx_in["n"] = vds.read_uint32()
     script_sig_size = vds.read_compact_size()
-    tx_in["scriptSig"] = vds.read_bytes(script_sig_size)
-    tx_in["nSequence"] = vds.read_uint32()
+    tx_in["script_sig"] = vds.read_bytes(script_sig_size)
+    tx_in["sequence"] = vds.read_uint32()
     tx_in["coinbase"] = False
     if (
         tx_in["hash"]
@@ -24,9 +24,9 @@ def read_tx_in(vds):
 
 def read_tx_out(vds):
     tx_out = {}
-    tx_out["nValue"] = vds.read_int64()
+    tx_out["value"] = vds.read_int64()
     script = vds.read_bytes(vds.read_compact_size())
-    tx_out["scriptPubKey"] = script
+    tx_out["script_pub_key"] = script
     return tx_out
 
 

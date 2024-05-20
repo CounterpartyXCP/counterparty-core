@@ -48,33 +48,34 @@ def test_search_raw_transactions_output():
     # vout 0
     assert tx["vout"][0]["value"] == 3.0
     assert tx["vout"][0]["n"] == 0
-    assert tx["vout"][0]["scriptPubKey"]["addresses"] == [
+    assert tx["vout"][0]["script_pub_key"]["addresses"] == [
         "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
         "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj",
     ]
     assert (
-        tx["vout"][0]["scriptPubKey"]["hex"]
+        tx["vout"][0]["script_pub_key"]["hex"]
         == "51210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210378ee11c3fb97054877a809ce083db292b16d971bcdc6aa4c8f92087133729d8b21037af2e06061b54cdfe3657bbc8496d69000b822e2db0c86ccbe376346a700b83353ae"
     )
     assert (
-        tx["vout"][0]["scriptPubKey"]["asm"]
+        tx["vout"][0]["script_pub_key"]["asm"]
         == "1 0282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0 0378ee11c3fb97054877a809ce083db292b16d971bcdc6aa4c8f92087133729d8b 037af2e06061b54cdfe3657bbc8496d69000b822e2db0c86ccbe376346a700b833 3 OP_CHECKMULTISIG"
     )
-    assert tx["vout"][0]["scriptPubKey"]["type"] == "multisig"
+    assert tx["vout"][0]["script_pub_key"]["type"] == "multisig"
 
     # vout 1
     assert tx["vout"][1]["value"] == 37.999422
     assert tx["vout"][1]["n"] == 1
-    assert tx["vout"][1]["scriptPubKey"]["addresses"] == ["mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj"]
+    assert tx["vout"][1]["script_pub_key"]["addresses"] == ["mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj"]
     assert (
-        tx["vout"][1]["scriptPubKey"]["hex"] == "76a9146c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a15288ac"
+        tx["vout"][1]["script_pub_key"]["hex"]
+        == "76a9146c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a15288ac"
     )
     assert (
-        tx["vout"][1]["scriptPubKey"]["asm"]
+        tx["vout"][1]["script_pub_key"]["asm"]
         == "OP_DUP OP_HASH160 6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a152 OP_EQUALVERIFY OP_CHECKSIG"
     )
-    assert tx["vout"][1]["scriptPubKey"]["type"] == "pubkeyhash"
+    assert tx["vout"][1]["script_pub_key"]["type"] == "pubkeyhash"
 
 
 @pytest.mark.usefixtures("api_server")

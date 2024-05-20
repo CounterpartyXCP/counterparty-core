@@ -31,6 +31,7 @@ from counterpartycore.lib import (
 from counterpartycore.lib import kickstart as kickstarter
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1
+from counterpartycore.lib.backend import fetcher
 from counterpartycore.lib.public_keys import PUBLIC_KEYS
 from counterpartycore.lib.telemetry.clients.influxdb import TelemetryClientInfluxDB
 from counterpartycore.lib.telemetry.collectors.influxdb import (
@@ -104,6 +105,9 @@ def initialise_log_config(
         config.LOG = os.path.join(log_dir, filename)
     else:  # user-specified location
         config.LOG = log_file
+
+    if config.LOG:
+        config.FETCHER_LOG = os.path.join(os.path.dirname(config.LOG), "fetcher.log")
 
     if no_log_files:  # no file logging
         config.API_LOG = None
@@ -220,6 +224,8 @@ def initialise_config(
         config.DATABASE = os.path.join(data_dir, filename)
 
     logger.debug("DATABASE: %s", config.DATABASE)
+
+    config.FETCHER_DB = os.path.join(os.path.dirname(config.DATABASE), "fetcherdb")
 
     config.API_LIMIT_ROWS = api_limit_rows
 
@@ -733,6 +739,7 @@ def start_all(args):
             database.close(db)
         backend.addrindexrs.stop()
         log.shutdown()
+        fetcher.stop()
 
 
 def reparse(block_index):
