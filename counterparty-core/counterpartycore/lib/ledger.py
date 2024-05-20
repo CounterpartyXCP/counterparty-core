@@ -79,49 +79,73 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
 def select_rows(
     db,
     table,
-    where={},  # noqa: B006
+    where=None,
     cursor_field="rowid",
     last_cursor=None,
     limit=100,
     select="*",
     group_by="",
     order="DESC",
+    wrap_where=None,
 ):
     cursor = db.cursor()
 
-    where_field = []
+    if where is None:
+        where = [{}]
+    if isinstance(where, dict):
+        where = [where]
+
     bindings = []
-    for key, value in where.items():
-        if key.endswith("__gt"):
-            where_field.append(f"{key[:-4]} > ?")
-        elif key.endswith("__like"):
-            where_field.append(f"{key[:-6]} LIKE ?")
-        else:
-            where_field.append(f"{key} = ?")
-        bindings.append(value)
-    if last_cursor is not None:
-        if order == "ASC":
-            where_field.append(f"{cursor_field} > ?")
-        else:
-            where_field.append(f"{cursor_field} < ?")
-        bindings.append(last_cursor)
-    bindings.append(cursor_field)
-    bindings.append(limit)
+
+    or_where = []
+    for where_dict in where:
+        where_field = []
+        for key, value in where_dict.items():
+            if key.endswith("__gt"):
+                where_field.append(f"{key[:-4]} > ?")
+            elif key.endswith("__like"):
+                where_field.append(f"{key[:-6]} LIKE ?")
+            else:
+                where_field.append(f"{key} = ?")
+            bindings.append(value)
+        and_where_clause = ""
+        if where_field:
+            and_where_clause = " AND ".join(where_field)
+            and_where_clause = f"({and_where_clause})"
+            or_where.append(and_where_clause)
 
     where_clause = ""
-    if where_field:
-        where_clause = " AND ".join(where_field)
+    if or_where:
+        where_clause = " OR ".join(or_where)
+
+    if last_cursor is not None:
+        if order == "ASC":
+            where_clause += f" AND {cursor_field} > ?"
+        else:
+            where_clause += f" AND {cursor_field} < ?"
+        bindings.append(last_cursor)
+
+    if where_clause:
         where_clause = f"WHERE {where_clause}"
 
     group_by_clause = ""
     if group_by:
         group_by_clause = f"GROUP BY {group_by}"
 
-    query = f"""
-        SELECT {select} FROM {table} {where_clause} {group_by_clause}
-        ORDER BY {cursor_field} {order}
-        LIMIT ?
-    """  # nosec B608  # noqa: S608
+    query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608
+
+    if wrap_where is not None:
+        wrap_where_field = []
+        for key, value in wrap_where.items():
+            wrap_where_field.append(f"{key} = ?")
+            bindings.append(value)
+        wrap_where_clause = " AND ".join(wrap_where_field)
+        wrap_where_clause = f"WHERE {wrap_where_clause}"
+        query = f"SELECT * FROM ({query})"  # nosec B608  # noqa: S608
+
+    query = f"{query} ORDER BY {cursor_field} {order} LIMIT ?"  # nosec B608  # noqa: S608
+    bindings.append(limit)
+
     cursor.execute(query)
     return cursor.fetchall()
 

@@ -799,24 +799,26 @@ def get_order(db, order_hash: str):
     return ledger.get_order(db, order_hash=order_hash)
 
 
-def get_order_matches_by_order(db, order_hash: str, status: str = "pending"):
+def get_order_matches_by_order(
+    db, order_hash: str, status: str = "pending", cursor: int = None, limit: int = 100
+):
     """
     Returns the order matches of an order
     :param str order_hash: The hash of the transaction that created the order (e.g. 5461e6f99a37a7167428b4a720a52052cd9afed43905f818f5d7d4f56abd0947)
     :param str status: The status of the order matches to return (e.g. completed)
+    :param int cursor: The last index of the order matches to return
+    :param int limit: The maximum number of order matches to return
     """
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM (
-            SELECT *, MAX(rowid)
-            FROM order_matches
-            WHERE (tx0_hash = ? OR tx1_hash = ?)
-            GROUP BY id
-        ) WHERE status = ?
-    """
-    bindings = (order_hash, order_hash, status)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
+    return ledger.select_rows(
+        db,
+        "order_matches",
+        where=[{"tx0_hash": order_hash}, {"tx1_hash": order_hash}],  # tx0_hash = ? OR tx1_hash = ?
+        select="*, MAX(rowid) AS rowid",
+        group_by="id",
+        wrap_where={"status": status},
+        cursor=cursor,
+        limit=limit,
+    )
 
 
 def get_btcpays_by_order(db, order_hash: str, cursor: int = None, limit: int = 100):
@@ -836,7 +838,11 @@ def get_bet(db, bet_hash: str):
     Returns the information of a bet
     :param str bet_hash: The hash of the transaction that created the bet (e.g. 5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed)
     """
-    return ledger.get_bet(db, bet_hash=bet_hash)
+    return ledger.select_row(
+        db,
+        "bets",
+        where={"tx_hash": bet_hash},
+    )
 
 
 def get_bet_matches_by_bet(db, bet_hash: str, status: str = "pending"):
