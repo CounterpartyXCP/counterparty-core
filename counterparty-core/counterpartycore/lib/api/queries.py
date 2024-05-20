@@ -1,4 +1,83 @@
-from counterpartycore.lib import ledger
+def select_rows(
+    db,
+    table,
+    where=None,
+    cursor_field="rowid",
+    last_cursor=None,
+    limit=100,
+    select="*",
+    group_by="",
+    order="DESC",
+    wrap_where=None,
+):
+    cursor = db.cursor()
+
+    if where is None:
+        where = [{}]
+    if isinstance(where, dict):
+        where = [where]
+
+    bindings = []
+
+    or_where = []
+    for where_dict in where:
+        where_field = []
+        for key, value in where_dict.items():
+            if key.endswith("__gt"):
+                where_field.append(f"{key[:-4]} > ?")
+            elif key.endswith("__like"):
+                where_field.append(f"{key[:-6]} LIKE ?")
+            else:
+                where_field.append(f"{key} = ?")
+            bindings.append(value)
+        and_where_clause = ""
+        if where_field:
+            and_where_clause = " AND ".join(where_field)
+            and_where_clause = f"({and_where_clause})"
+            or_where.append(and_where_clause)
+
+    where_clause = ""
+    if or_where:
+        where_clause = " OR ".join(or_where)
+
+    if last_cursor is not None:
+        if order == "ASC":
+            where_clause += f" AND {cursor_field} > ?"
+        else:
+            where_clause += f" AND {cursor_field} < ?"
+        bindings.append(last_cursor)
+
+    if where_clause:
+        where_clause = f"WHERE {where_clause}"
+
+    group_by_clause = ""
+    if group_by:
+        group_by_clause = f"GROUP BY {group_by}"
+
+    query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608
+
+    if wrap_where is not None:
+        wrap_where_field = []
+        for key, value in wrap_where.items():
+            wrap_where_field.append(f"{key} = ?")
+            bindings.append(value)
+        wrap_where_clause = " AND ".join(wrap_where_field)
+        wrap_where_clause = f"WHERE {wrap_where_clause}"
+        query = f"SELECT * FROM ({query}) {wrap_where_clause}"  # nosec B608  # noqa: S608
+
+    query = f"{query} ORDER BY {cursor_field} {order} LIMIT ?"  # nosec B608  # noqa: S608
+    bindings.append(limit)
+
+    # print(query, bindings)
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def select_row(db, table, where, select="*"):
+    rows = select_rows(db, table, where, limit=1, select=select)
+    if rows:
+        return rows[0]
+    return None
 
 
 def get_blocks(db, cursor: int = None, limit: int = 10):
@@ -7,9 +86,7 @@ def get_blocks(db, cursor: int = None, limit: int = 10):
     :param int cursor: The index of the most recent block to return (e.g. 840000)
     :param int limit: The number of blocks to return (e.g. 2)
     """
-    return ledger.select_rows(
-        db, "blocks", cursor_field="block_index", last_cursor=cursor, limit=limit
-    )
+    return select_rows(db, "blocks", cursor_field="block_index", last_cursor=cursor, limit=limit)
 
 
 def get_block_by_height(db, block_index: int):
@@ -17,7 +94,7 @@ def get_block_by_height(db, block_index: int):
     Return the information of a block
     :param int block_index: The index of the block to return (e.g. 840464)
     """
-    return ledger.select_row(db, "blocks", where={"block_index": block_index})
+    return select_row(db, "blocks", where={"block_index": block_index})
 
 
 def get_transactions_by_block(db, block_index: int, cursor: int = None, limit: int = 10):
@@ -27,7 +104,7 @@ def get_transactions_by_block(db, block_index: int, cursor: int = None, limit: i
     :param int cursor: The last transaction index to return (e.g. 10665092)
     :param int limit: The maximum number of transactions to return (e.g. 5)
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "transactions",
         where={"block_index": block_index},
@@ -43,7 +120,7 @@ def get_all_events(db, cursor: int = None, limit: int = 100):
     :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "events",
         cursor_field="message_index",
@@ -60,7 +137,7 @@ def get_events_by_block(db, block_index: int, cursor: int = None, limit: int = 1
     :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "events",
         where={"block_index": block_index},
@@ -78,7 +155,7 @@ def get_events_by_transaction_hash(db, tx_hash: str, cursor: int = None, limit: 
     :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "events",
         where={"tx_hash": tx_hash},
@@ -99,7 +176,7 @@ def get_events_by_transaction_hash_and_event(
     :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "events",
         where={"tx_hash": tx_hash, "event": event},
@@ -117,7 +194,7 @@ def get_events_by_transaction_index(db, tx_index: int, cursor: int = None, limit
     :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     """
-    tx = ledger.select_row(db, "transactions", where={"tx_index": tx_index})
+    tx = select_row(db, "transactions", where={"tx_index": tx_index})
     if tx:
         return get_events_by_transaction_hash(db, tx["tx_hash"], last_cursor=cursor, limit=limit)
     return None
@@ -133,7 +210,7 @@ def get_events_by_transaction_index_and_event(
     :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     """
-    tx = ledger.select_row(db, "transactions", where={"tx_index": tx_index})
+    tx = select_row(db, "transactions", where={"tx_index": tx_index})
     if tx:
         return get_events_by_transaction_hash_and_event(
             db, tx["tx_hash"], event, last_cursor=cursor, limit=limit
@@ -153,7 +230,7 @@ def get_events_by_block_and_event(
     """
     if event == "count":
         return get_event_counts_by_block(db, block_index=block_index)
-    return ledger.select_rows(
+    return select_rows(
         db,
         "events",
         where={"block_index": block_index, "event": event},
@@ -169,7 +246,7 @@ def get_event_by_index(db, event_index: int):
     Returns the event of an index
     :param int event_index: The index of the event to return (e.g. 10665092)
     """
-    return ledger.select_row(
+    return select_row(
         db,
         "events",
         where={"message_index": event_index},
@@ -184,7 +261,7 @@ def get_events_by_name(db, event: str, cursor: int = None, limit: int = 100):
     :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "events",
         where={"event": event},
@@ -201,7 +278,7 @@ def get_all_mempool_events(db, cursor: int = None, limit: int = 100):
     :param int cursor: The last event index to return
     :param int limit: The maximum number of events to return
     """
-    return ledger.select_rows(db, "mempool", last_cursor=cursor, limit=limit)
+    return select_rows(db, "mempool", last_cursor=cursor, limit=limit)
 
 
 def get_mempool_events_by_name(db, event: str, cursor: int = None, limit: int = 100):
@@ -211,9 +288,7 @@ def get_mempool_events_by_name(db, event: str, cursor: int = None, limit: int = 
     :param int cursor: The last event index to return
     :param int limit: The maximum number of events to return
     """
-    return ledger.select_rows(
-        db, "mempool", where={"event": event}, last_cursor=cursor, limit=limit
-    )
+    return select_rows(db, "mempool", where={"event": event}, last_cursor=cursor, limit=limit)
 
 
 def get_mempool_events_by_tx_hash(db, tx_hash: str, cursor: int = None, limit: int = 100):
@@ -223,19 +298,17 @@ def get_mempool_events_by_tx_hash(db, tx_hash: str, cursor: int = None, limit: i
     :param int cursor: The last event index to return
     :param int limit: The maximum number of events to return
     """
-    return ledger.select_rows(
-        db, "mempool", where={"tx_hash": tx_hash}, last_cursor=cursor, limit=limit
-    )
+    return select_rows(db, "mempool", where={"tx_hash": tx_hash}, last_cursor=cursor, limit=limit)
 
 
-def get_event_counts_by_block(db, block_index: int, cursor: int = None, limit: int = 100):
+def get_event_counts_by_block(db, block_index: int, cursor: str = None, limit: int = 100):
     """
     Returns the event counts of a block
     :param int block_index: The index of the block to return (e.g. 840464)
     :param int cursor: The last event index to return
     :param int limit: The maximum number of events to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "messages",
         where={"block_index": block_index},
@@ -247,13 +320,13 @@ def get_event_counts_by_block(db, block_index: int, cursor: int = None, limit: i
     )
 
 
-def get_all_events_counts(db, cursor: int = None, limit: int = 100):
+def get_all_events_counts(db, cursor: str = None, limit: int = 100):
     """
     Returns the event counts of all blocks
     :param int cursor: The last event index to return
     :param int limit: The maximum number of events to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "messages",
         select="event, COUNT(*) AS event_count",
@@ -271,7 +344,7 @@ def get_credits_by_block(db, block_index: int, cursor: int = None, limit: int = 
     :param int cursor: The last credit index to return
     :param int limit: The maximum number of credits to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db, "credits", where={"block_index": block_index}, last_cursor=cursor, limit=limit
     )
 
@@ -283,9 +356,7 @@ def get_credits_by_address(db, address: str, cursor: int = None, limit: int = 10
     :param int cursor: The last index of the credits to return
     :param int limit: The maximum number of credits to return
     """
-    return ledger.select_rows(
-        db, "credits", where={"address": address}, last_cursor=cursor, limit=limit
-    )
+    return select_rows(db, "credits", where={"address": address}, last_cursor=cursor, limit=limit)
 
 
 def get_credits_by_asset(db, asset: str, cursor: int = None, limit: int = 100):
@@ -295,9 +366,7 @@ def get_credits_by_asset(db, asset: str, cursor: int = None, limit: int = 100):
     :param int cursor: The last index of the credits to return
     :param int limit: The maximum number of credits to return
     """
-    return ledger.select_rows(
-        db, "credits", where={"asset": asset}, last_cursor=cursor, limit=limit
-    )
+    return select_rows(db, "credits", where={"asset": asset}, last_cursor=cursor, limit=limit)
 
 
 def get_debits_by_block(db, block_index: int, cursor: int = None, limit: int = 100):
@@ -307,7 +376,7 @@ def get_debits_by_block(db, block_index: int, cursor: int = None, limit: int = 1
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db, "debits", where={"block_index": block_index}, last_cursor=cursor, limit=limit
     )
 
@@ -319,9 +388,7 @@ def get_debits_by_address(db, address: str, cursor: int = None, limit: int = 100
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return
     """
-    return ledger.select_rows(
-        db, "debits", where={"address": address}, last_cursor=cursor, limit=limit
-    )
+    return select_rows(db, "debits", where={"address": address}, last_cursor=cursor, limit=limit)
 
 
 def get_debits_by_asset(db, asset: str, cursor: int = None, limit: int = 100):
@@ -331,7 +398,7 @@ def get_debits_by_asset(db, asset: str, cursor: int = None, limit: int = 100):
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return
     """
-    return ledger.select_rows(db, "debits", where={"asset": asset}, last_cursor=cursor, limit=limit)
+    return select_rows(db, "debits", where={"asset": asset}, last_cursor=cursor, limit=limit)
 
 
 def get_sends_by_block(db, block_index: int, cursor: int = None, limit: int = 100):
@@ -341,7 +408,7 @@ def get_sends_by_block(db, block_index: int, cursor: int = None, limit: int = 10
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db, "sends", where={"block_index": block_index}, last_cursor=cursor, limit=limit
     )
 
@@ -353,20 +420,21 @@ def get_sends_by_asset(db, asset: str, cursor: int = None, limit: int = 100):
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return
     """
-    return ledger.select_rows(db, "sends", where={"asset": asset}, last_cursor=cursor, limit=limit)
+    return select_rows(db, "sends", where={"asset": asset}, last_cursor=cursor, limit=limit)
 
 
-def get_expirations(db, block_index: int, cursor: int = None, limit: int = 100):
+def get_expirations(db, block_index: int, cursor: str = None, limit: int = 100):
     """
     Returns the expirations of a block
     :param int block_index: The index of the block to return (e.g. 840356)
     :param int cursor: The last index of the expirations to return
     :param int limit: The maximum number of expirations to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "all_expirations",
         where={"block_index": block_index},
+        cursor_field="cursor_id",
         last_cursor=cursor,
         limit=limit,
     )
@@ -379,7 +447,7 @@ def get_cancels(db, block_index: int, cursor: int = None, limit: int = 100):
     :param int cursor: The last index of the cancels to return
     :param int limit: The maximum number of cancels to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db, "cancels", where={"block_index": block_index}, last_cursor=cursor, limit=limit
     )
 
@@ -391,7 +459,7 @@ def get_destructions(db, block_index: int, cursor: int = None, limit: int = 100)
     :param int cursor: The last index of the destructions to return
     :param int limit: The maximum number of destructions to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db, "destructions", where={"block_index": block_index}, last_cursor=cursor, limit=limit
     )
 
@@ -403,7 +471,7 @@ def get_issuances_by_block(db, block_index: int, cursor: int = None, limit: int 
     :param int cursor: The last index of the issuances to return
     :param int limit: The maximum number of issuances to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db, "issuances", where={"block_index": block_index}, last_cursor=cursor, limit=limit
     )
 
@@ -415,9 +483,7 @@ def get_issuances_by_asset(db, asset: str, cursor: int = None, limit: int = 100)
     :param int cursor: The last index of the issuances to return
     :param int limit: The maximum number of issuances to return
     """
-    return ledger.select_rows(
-        db, "issuances", where={"asset": asset}, last_cursor=cursor, limit=limit
-    )
+    return select_rows(db, "issuances", where={"asset": asset}, last_cursor=cursor, limit=limit)
 
 
 def get_dispenses_by_block(db, block_index: int, cursor: int = None, limit: int = 100):
@@ -427,7 +493,7 @@ def get_dispenses_by_block(db, block_index: int, cursor: int = None, limit: int 
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db, "dispenses", where={"block_index": block_index}, last_cursor=cursor, limit=limit
     )
 
@@ -439,7 +505,7 @@ def get_dispenses_by_dispenser(db, dispenser_hash: str, cursor: int = None, limi
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "dispenses",
         where={"dispenser_tx_hash": dispenser_hash},
@@ -455,9 +521,7 @@ def get_dispenses_by_source(db, address: str, cursor: int = None, limit: int = 1
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return
     """
-    return ledger.select_rows(
-        db, "dispenses", where={"source": address}, last_cursor=cursor, limit=limit
-    )
+    return select_rows(db, "dispenses", where={"source": address}, last_cursor=cursor, limit=limit)
 
 
 def get_dispenses_by_destination(db, address: str, cursor: int = None, limit: int = 100):
@@ -467,7 +531,7 @@ def get_dispenses_by_destination(db, address: str, cursor: int = None, limit: in
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db, "dispenses", where={"destination": address}, last_cursor=cursor, limit=limit
     )
 
@@ -479,9 +543,7 @@ def get_dispenses_by_asset(db, asset: str, cursor: int = None, limit: int = 100)
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return
     """
-    return ledger.select_rows(
-        db, "dispenses", where={"asset": asset}, last_cursor=cursor, limit=limit
-    )
+    return select_rows(db, "dispenses", where={"asset": asset}, last_cursor=cursor, limit=limit)
 
 
 def get_dispenses_by_source_and_asset(
@@ -494,7 +556,7 @@ def get_dispenses_by_source_and_asset(
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db, "dispenses", where={"source": address, "asset": asset}, last_cursor=cursor, limit=limit
     )
 
@@ -509,7 +571,7 @@ def get_dispenses_by_destination_and_asset(
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "dispenses",
         where={"destination": address, "asset": asset},
@@ -525,7 +587,7 @@ def get_sweeps_by_block(db, block_index: int, cursor: int = None, limit: int = 1
     :param int cursor: The last index of the sweeps to return
     :param int limit: The maximum number of sweeps to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db, "sweeps", where={"block_index": block_index}, last_cursor=cursor, limit=limit
     )
 
@@ -537,9 +599,7 @@ def get_sweeps_by_address(db, address: str, cursor: int = None, limit: int = 100
     :param int cursor: The last index of the sweeps to return
     :param int limit: The maximum number of sweeps to return
     """
-    return ledger.select_rows(
-        db, "sweeps", where={"address": address}, last_cursor=cursor, limit=limit
-    )
+    return select_rows(db, "sweeps", where={"address": address}, last_cursor=cursor, limit=limit)
 
 
 def get_address_balances(db, address: str, cursor: int = None, limit: int = 100):
@@ -549,7 +609,7 @@ def get_address_balances(db, address: str, cursor: int = None, limit: int = 100)
     :param int cursor: The last index of the balances to return
     :param int limit: The maximum number of balances to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "balances",
         where={"address": address},
@@ -566,7 +626,7 @@ def get_balance_by_address_and_asset(db, address: str, asset: str):
     :param str address: The address to return (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
     :param str asset: The asset to return (e.g. XCP)
     """
-    return ledger.select_row(
+    return select_row(
         db,
         "balances",
         where={"address": address, "asset": asset},
@@ -581,7 +641,7 @@ def get_bet_by_feed(db, address: str, status: str = "open", cursor: int = None, 
     :param int cursor: The last index of the bets to return
     :param int limit: The maximum number of bets to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "bets",
         where={"feed_address": address},
@@ -603,7 +663,7 @@ def get_broadcasts_by_source(
     :param int cursor: The last index of the broadcasts to return
     :param int limit: The maximum number of broadcasts to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "broadcasts",
         where={"source": address, "status": status},
@@ -620,9 +680,7 @@ def get_burns_by_address(db, address: str, cursor: int = None, limit: int = 100)
     :param int cursor: The last index of the burns to return
     :param int limit: The maximum number of burns to return
     """
-    return ledger.select_rows(
-        db, "burns", where={"source": address}, last_cursor=cursor, limit=limit
-    )
+    return select_rows(db, "burns", where={"source": address}, last_cursor=cursor, limit=limit)
 
 
 def get_send_by_address(db, address: str, cursor: int = None, limit: int = 100):
@@ -632,9 +690,7 @@ def get_send_by_address(db, address: str, cursor: int = None, limit: int = 100):
     :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return
     """
-    return ledger.select_rows(
-        db, "sends", where={"source": address}, last_cursor=cursor, limit=limit
-    )
+    return select_rows(db, "sends", where={"source": address}, last_cursor=cursor, limit=limit)
 
 
 def get_send_by_address_and_asset(
@@ -647,7 +703,7 @@ def get_send_by_address_and_asset(
     :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db, "sends", where={"source": address, "asset": asset}, last_cursor=cursor, limit=limit
     )
 
@@ -659,9 +715,7 @@ def get_receive_by_address(db, address: str, cursor: int = None, limit: int = 10
     :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return
     """
-    return ledger.select_rows(
-        db, "sends", where={"destination": address}, last_cursor=cursor, limit=limit
-    )
+    return select_rows(db, "sends", where={"destination": address}, last_cursor=cursor, limit=limit)
 
 
 def get_receive_by_address_and_asset(
@@ -674,7 +728,7 @@ def get_receive_by_address_and_asset(
     :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db, "sends", where={"destination": address, "asset": asset}, last_cursor=cursor, limit=limit
     )
 
@@ -689,7 +743,7 @@ def get_dispensers_by_address(
     :param int cursor: The last index of the dispensers to return
     :param int limit: The maximum number of dispensers to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "dispensers",
         where={"source": address},
@@ -709,7 +763,7 @@ def get_dispensers_by_asset(db, asset: str, status: int = 0, cursor: int = None,
     :param int cursor: The last index of the dispensers to return
     :param int limit: The maximum number of dispensers to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "dispensers",
         where={"asset": asset},
@@ -727,28 +781,20 @@ def get_dispenser_by_address_and_asset(db, address: str, asset: str):
     :param str address: The address to return (e.g. bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz)
     :param str asset: The asset to return (e.g. ERYKAHPEPU)
     """
-    return ledger.select_row(
+    return select_row(
         db,
         "dispensers",
         where={"source": address, "asset": asset},
     )
 
 
-def get_asset_info(db, asset: str):
-    """
-    Returns the asset information
-    :param str asset: The asset to return (e.g. UNNEGOTIABLE)
-    """
-    return ledger.get_asset_info(db, asset=asset)
-
-
-def get_valid_assets(db, cursor: int = None, limit: int = 100):
+def get_valid_assets(db, cursor: str = None, limit: int = 100):
     """
     Returns the valid assets
     :param int cursor: The last index of the assets to return
     :param int limit: The maximum number of assets to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "issuances",
         where={"status": "valid"},
@@ -768,7 +814,7 @@ def get_dividends(db, asset: str, cursor: int = None, limit: int = 100):
     :param int cursor: The last index of the assets to return
     :param int limit: The maximum number of assets to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "dividends",
         where={"asset": asset, "status": "valid"},
@@ -777,14 +823,14 @@ def get_dividends(db, asset: str, cursor: int = None, limit: int = 100):
     )
 
 
-def get_asset_balances(db, asset: str, cursor: int = None, limit: int = 100):
+def get_asset_balances(db, asset: str, cursor: str = None, limit: int = 100):
     """
     Returns the asset balances
     :param str asset: The asset to return (e.g. UNNEGOTIABLE)
     :param int cursor: The last index of the balances to return
     :param int limit: The maximum number of balances to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "balances",
         where={"asset": asset, "quantity__gt": 0},
@@ -805,7 +851,7 @@ def get_orders_by_asset(db, asset: str, status: str = "open", cursor: int = None
     :param int cursor: The last index of the orders to return
     :param int limit: The maximum number of orders to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "orders",
         where=[{"give_asset": asset}, {"get_asset": asset}],
@@ -828,7 +874,7 @@ def get_orders_by_two_assets(
     :param int cursor: The last index of the orders to return
     :param int limit: The maximum number of orders to return
     """
-    orders = ledger.select_rows(
+    orders = select_rows(
         db,
         "orders",
         where=[
@@ -850,12 +896,21 @@ def get_orders_by_two_assets(
     return orders
 
 
-def get_asset_holders(db, asset: str):
+def get_asset_holders(db, asset: str, cursor: str = None, limit: int = 100):
     """
     Returns the holders of an asset
     :param str asset: The asset to return (e.g. ERYKAHPEPU)
+    :param int cursor: The last index of the holder to return
+    :param int limit: The maximum number of holders to return
     """
-    return ledger.get_asset_holders(db, asset=asset)
+    return select_rows(
+        db,
+        "all_holders",
+        where={"asset": asset},
+        cursor_field="cursor_id",
+        last_cursor=cursor,
+        limit=limit,
+    )
 
 
 def get_order(db, order_hash: str):
@@ -863,7 +918,7 @@ def get_order(db, order_hash: str):
     Returns the information of an order
     :param str order_hash: The hash of the transaction that created the order (e.g. 23f68fdf934e81144cca31ce8ef69062d553c521321a039166e7ba99aede0776)
     """
-    return ledger.select_row(
+    return select_row(
         db,
         "orders",
         where={"tx_hash": order_hash},
@@ -880,7 +935,7 @@ def get_order_matches_by_order(
     :param int cursor: The last index of the order matches to return
     :param int limit: The maximum number of order matches to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "order_matches",
         where=[{"tx0_hash": order_hash}, {"tx1_hash": order_hash}],  # tx0_hash = ? OR tx1_hash = ?
@@ -899,7 +954,7 @@ def get_btcpays_by_order(db, order_hash: str, cursor: int = None, limit: int = 1
     :param int cursor: The last index of the resolutions to return
     :param int limit: The maximum number of resolutions to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "btcpays",
         where={"order_match_id__like": f"%{order_hash}%"},
@@ -913,7 +968,7 @@ def get_bet(db, bet_hash: str):
     Returns the information of a bet
     :param str bet_hash: The hash of the transaction that created the bet (e.g. 5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed)
     """
-    return ledger.select_row(
+    return select_row(
         db,
         "bets",
         where={"tx_hash": bet_hash},
@@ -930,7 +985,7 @@ def get_bet_matches_by_bet(
     :param int cursor: The last index of the bet matches to return
     :param int limit: The maximum number of bet matches to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "bet_matches",
         where=[{"tx0_hash": bet_hash}, {"tx1_hash": bet_hash}],  # tx0_hash = ? OR tx1_hash = ?
@@ -949,7 +1004,7 @@ def get_resolutions_by_bet(db, bet_hash: str, cursor: int = None, limit: int = 1
     :param int cursor: The last index of the resolutions to return
     :param int limit: The maximum number of resolutions to return
     """
-    return ledger.select_rows(
+    return select_rows(
         db,
         "bet_match_resolutions",
         where={"bet_match_id__like": f"%{bet_hash}%"},
@@ -965,9 +1020,7 @@ def get_all_burns(db, status: str = "valid", cursor: int = None, limit: int = 10
     :param int cursor: The last index of the burns to return
     :param int limit: The maximum number of burns to return
     """
-    return ledger.select_rows(
-        db, "burns", where={"status": status}, last_cursor=cursor, limit=limit
-    )
+    return select_rows(db, "burns", where={"status": status}, last_cursor=cursor, limit=limit)
 
 
 def get_dispenser_info_by_hash(db, dispenser_hash: str):
@@ -975,7 +1028,7 @@ def get_dispenser_info_by_hash(db, dispenser_hash: str):
     Returns the dispenser information by tx_hash
     :param str dispenser_hash: The hash of the dispenser to return (e.g. 753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a)
     """
-    return ledger.select_row(
+    return select_row(
         db,
         "dispensers",
         where={"tx_hash": dispenser_hash},
