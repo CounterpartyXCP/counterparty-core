@@ -50,10 +50,12 @@ def select_rows(
         where_clause = " OR ".join(or_where)
 
     if last_cursor is not None:
+        if where_clause != "":
+            where_clause += " AND "
         if order == "ASC":
-            where_clause += f" AND {cursor_field} > ?"
+            where_clause += f" {cursor_field} > ?"
         else:
-            where_clause += f" AND {cursor_field} < ?"
+            where_clause += f" {cursor_field} < ?"
         bindings.append(last_cursor)
 
     if where_clause:
@@ -307,7 +309,7 @@ def get_all_mempool_events(db, cursor: int = None, limit: int = 100):
     """
     Returns all mempool events
     :param int cursor: The last event index to return
-    :param int limit: The maximum number of events to return
+    :param int limit: The maximum number of events to return (e.g. 5)
     """
     return select_rows(db, "mempool", last_cursor=cursor, limit=limit)
 
@@ -317,7 +319,7 @@ def get_mempool_events_by_name(db, event: str, cursor: int = None, limit: int = 
     Returns the mempool events filtered by event name
     :param str event: The event to return (e.g. OPEN_ORDER)
     :param int cursor: The last event index to return
-    :param int limit: The maximum number of events to return
+    :param int limit: The maximum number of events to return (e.g. 5)
     """
     return select_rows(db, "mempool", where={"event": event}, last_cursor=cursor, limit=limit)
 
@@ -327,7 +329,7 @@ def get_mempool_events_by_tx_hash(db, tx_hash: str, cursor: int = None, limit: i
     Returns the mempool events filtered by transaction hash
     :param str tx_hash: The hash of the transaction to return (e.g. 84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040)
     :param int cursor: The last event index to return
-    :param int limit: The maximum number of events to return
+    :param int limit: The maximum number of events to return (e.g. 5)
     """
     return select_rows(db, "mempool", where={"tx_hash": tx_hash}, last_cursor=cursor, limit=limit)
 
@@ -337,7 +339,7 @@ def get_event_counts_by_block(db, block_index: int, cursor: str = None, limit: i
     Returns the event counts of a block
     :param int block_index: The index of the block to return (e.g. 840464)
     :param int cursor: The last event index to return
-    :param int limit: The maximum number of events to return
+    :param int limit: The maximum number of events to return (e.g. 5)
     """
     return select_rows(
         db,
@@ -355,7 +357,7 @@ def get_all_events_counts(db, cursor: str = None, limit: int = 100):
     """
     Returns the event counts of all blocks
     :param int cursor: The last event index to return
-    :param int limit: The maximum number of events to return
+    :param int limit: The maximum number of events to return (e.g. 5)
     """
     return select_rows(
         db,
@@ -373,7 +375,7 @@ def get_credits_by_block(db, block_index: int, cursor: int = None, limit: int = 
     Returns the credits of a block
     :param int block_index: The index of the block to return (e.g. 840464)
     :param int cursor: The last credit index to return
-    :param int limit: The maximum number of credits to return
+    :param int limit: The maximum number of credits to return (e.g. 5)
     """
     return select_rows(
         db, "credits", where={"block_index": block_index}, last_cursor=cursor, limit=limit
@@ -385,7 +387,7 @@ def get_credits_by_address(db, address: str, cursor: int = None, limit: int = 10
     Returns the credits of an address
     :param str address: The address to return (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
     :param int cursor: The last index of the credits to return
-    :param int limit: The maximum number of credits to return
+    :param int limit: The maximum number of credits to return (e.g. 5)
     """
     return select_rows(db, "credits", where={"address": address}, last_cursor=cursor, limit=limit)
 
@@ -395,7 +397,7 @@ def get_credits_by_asset(db, asset: str, cursor: int = None, limit: int = 100):
     Returns the credits of an asset
     :param str asset: The asset to return (e.g. UNNEGOTIABLE)
     :param int cursor: The last index of the credits to return
-    :param int limit: The maximum number of credits to return
+    :param int limit: The maximum number of credits to return (e.g. 5)
     """
     return select_rows(db, "credits", where={"asset": asset}, last_cursor=cursor, limit=limit)
 
@@ -405,7 +407,7 @@ def get_debits_by_block(db, block_index: int, cursor: int = None, limit: int = 1
     Returns the debits of a block
     :param int block_index: The index of the block to return (e.g. 840464)
     :param int cursor: The last index of the debits to return
-    :param int limit: The maximum number of debits to return
+    :param int limit: The maximum number of debits to return (e.g. 5)
     """
     return select_rows(
         db, "debits", where={"block_index": block_index}, last_cursor=cursor, limit=limit
@@ -417,7 +419,7 @@ def get_debits_by_address(db, address: str, cursor: int = None, limit: int = 100
     Returns the debits of an address
     :param str address: The address to return (e.g. bc1q7787j6msqczs58asdtetchl3zwe8ruj57p9r9y)
     :param int cursor: The last index of the debits to return
-    :param int limit: The maximum number of debits to return
+    :param int limit: The maximum number of debits to return (e.g. 5)
     """
     return select_rows(db, "debits", where={"address": address}, last_cursor=cursor, limit=limit)
 
@@ -427,7 +429,7 @@ def get_debits_by_asset(db, asset: str, cursor: int = None, limit: int = 100):
     Returns the debits of an asset
     :param str asset: The asset to return (e.g. XCP)
     :param int cursor: The last index of the debits to return
-    :param int limit: The maximum number of debits to return
+    :param int limit: The maximum number of debits to return (e.g. 5)
     """
     return select_rows(db, "debits", where={"asset": asset}, last_cursor=cursor, limit=limit)
 
@@ -437,7 +439,7 @@ def get_sends_by_block(db, block_index: int, cursor: int = None, limit: int = 10
     Returns the sends of a block
     :param int block_index: The index of the block to return (e.g. 840459)
     :param int cursor: The last index of the debits to return
-    :param int limit: The maximum number of debits to return
+    :param int limit: The maximum number of debits to return (e.g. 5)
     """
     return select_rows(
         db, "sends", where={"block_index": block_index}, last_cursor=cursor, limit=limit
@@ -449,7 +451,7 @@ def get_sends_by_asset(db, asset: str, cursor: int = None, limit: int = 100):
     Returns the sends of an asset
     :param str asset: The asset to return (e.g. XCP)
     :param int cursor: The last index of the debits to return
-    :param int limit: The maximum number of debits to return
+    :param int limit: The maximum number of debits to return (e.g. 5)
     """
     return select_rows(db, "sends", where={"asset": asset}, last_cursor=cursor, limit=limit)
 
@@ -459,7 +461,7 @@ def get_expirations(db, block_index: int, cursor: str = None, limit: int = 100):
     Returns the expirations of a block
     :param int block_index: The index of the block to return (e.g. 840356)
     :param int cursor: The last index of the expirations to return
-    :param int limit: The maximum number of expirations to return
+    :param int limit: The maximum number of expirations to return (e.g. 5)
     """
     return select_rows(
         db,
@@ -476,7 +478,7 @@ def get_cancels(db, block_index: int, cursor: int = None, limit: int = 100):
     Returns the cancels of a block
     :param int block_index: The index of the block to return (e.g. 839746)
     :param int cursor: The last index of the cancels to return
-    :param int limit: The maximum number of cancels to return
+    :param int limit: The maximum number of cancels to return (e.g. 5)
     """
     return select_rows(
         db, "cancels", where={"block_index": block_index}, last_cursor=cursor, limit=limit
@@ -488,7 +490,7 @@ def get_destructions(db, block_index: int, cursor: int = None, limit: int = 100)
     Returns the destructions of a block
     :param int block_index: The index of the block to return (e.g. 839988)
     :param int cursor: The last index of the destructions to return
-    :param int limit: The maximum number of destructions to return
+    :param int limit: The maximum number of destructions to return (e.g. 5)
     """
     return select_rows(
         db, "destructions", where={"block_index": block_index}, last_cursor=cursor, limit=limit
@@ -500,7 +502,7 @@ def get_issuances_by_block(db, block_index: int, cursor: int = None, limit: int 
     Returns the issuances of a block
     :param int block_index: The index of the block to return (e.g. 840464)
     :param int cursor: The last index of the issuances to return
-    :param int limit: The maximum number of issuances to return
+    :param int limit: The maximum number of issuances to return (e.g. 5)
     """
     return select_rows(
         db, "issuances", where={"block_index": block_index}, last_cursor=cursor, limit=limit
@@ -512,7 +514,7 @@ def get_issuances_by_asset(db, asset: str, cursor: int = None, limit: int = 100)
     Returns the issuances of an asset
     :param str asset: The asset to return (e.g. UNNEGOTIABLE)
     :param int cursor: The last index of the issuances to return
-    :param int limit: The maximum number of issuances to return
+    :param int limit: The maximum number of issuances to return (e.g. 5)
     """
     return select_rows(db, "issuances", where={"asset": asset}, last_cursor=cursor, limit=limit)
 
@@ -522,7 +524,7 @@ def get_dispenses_by_block(db, block_index: int, cursor: int = None, limit: int 
     Returns the dispenses of a block
     :param int block_index: The index of the block to return (e.g. 840322)
     :param int cursor: The last index of the dispenses to return
-    :param int limit: The maximum number of dispenses to return
+    :param int limit: The maximum number of dispenses to return (e.g. 5)
     """
     return select_rows(
         db, "dispenses", where={"block_index": block_index}, last_cursor=cursor, limit=limit
@@ -534,7 +536,7 @@ def get_dispenses_by_dispenser(db, dispenser_hash: str, cursor: int = None, limi
     Returns the dispenses of a dispenser
     :param str dispenser_hash: The hash of the dispenser to return (e.g. 753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a)
     :param int cursor: The last index of the dispenses to return
-    :param int limit: The maximum number of dispenses to return
+    :param int limit: The maximum number of dispenses to return (e.g. 5)
     """
     return select_rows(
         db,
@@ -550,7 +552,7 @@ def get_dispenses_by_source(db, address: str, cursor: int = None, limit: int = 1
     Returns the dispenses of a source
     :param str address: The address to return (e.g. bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz)
     :param int cursor: The last index of the dispenses to return
-    :param int limit: The maximum number of dispenses to return
+    :param int limit: The maximum number of dispenses to return (e.g. 5)
     """
     return select_rows(db, "dispenses", where={"source": address}, last_cursor=cursor, limit=limit)
 
@@ -560,7 +562,7 @@ def get_dispenses_by_destination(db, address: str, cursor: int = None, limit: in
     Returns the dispenses of a destination
     :param str address: The address to return (e.g. bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz)
     :param int cursor: The last index of the dispenses to return
-    :param int limit: The maximum number of dispenses to return
+    :param int limit: The maximum number of dispenses to return (e.g. 5)
     """
     return select_rows(
         db, "dispenses", where={"destination": address}, last_cursor=cursor, limit=limit
@@ -572,7 +574,7 @@ def get_dispenses_by_asset(db, asset: str, cursor: int = None, limit: int = 100)
     Returns the dispenses of an asset
     :param str asset: The asset to return (e.g. ERYKAHPEPU)
     :param int cursor: The last index of the dispenses to return
-    :param int limit: The maximum number of dispenses to return
+    :param int limit: The maximum number of dispenses to return (e.g. 5)
     """
     return select_rows(db, "dispenses", where={"asset": asset}, last_cursor=cursor, limit=limit)
 
@@ -585,7 +587,7 @@ def get_dispenses_by_source_and_asset(
     :param str address: The address to return (e.g. bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz)
     :param str asset: The asset to return (e.g. ERYKAHPEPU)
     :param int cursor: The last index of the dispenses to return
-    :param int limit: The maximum number of dispenses to return
+    :param int limit: The maximum number of dispenses to return (e.g. 5)
     """
     return select_rows(
         db, "dispenses", where={"source": address, "asset": asset}, last_cursor=cursor, limit=limit
@@ -600,7 +602,7 @@ def get_dispenses_by_destination_and_asset(
     :param str address: The address to return (e.g. bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz)
     :param str asset: The asset to return (e.g. ERYKAHPEPU)
     :param int cursor: The last index of the dispenses to return
-    :param int limit: The maximum number of dispenses to return
+    :param int limit: The maximum number of dispenses to return (e.g. 5)
     """
     return select_rows(
         db,
@@ -616,7 +618,7 @@ def get_sweeps_by_block(db, block_index: int, cursor: int = None, limit: int = 1
     Returns the sweeps of a block
     :param int block_index: The index of the block to return (e.g. 836519)
     :param int cursor: The last index of the sweeps to return
-    :param int limit: The maximum number of sweeps to return
+    :param int limit: The maximum number of sweeps to return (e.g. 5)
     """
     return select_rows(
         db, "sweeps", where={"block_index": block_index}, last_cursor=cursor, limit=limit
@@ -628,7 +630,7 @@ def get_sweeps_by_address(db, address: str, cursor: int = None, limit: int = 100
     Returns the sweeps of an address
     :param str address: The address to return (e.g. 18szqTVJUWwYrtRHq98Wn4DhCGGiy3jZ87)
     :param int cursor: The last index of the sweeps to return
-    :param int limit: The maximum number of sweeps to return
+    :param int limit: The maximum number of sweeps to return (e.g. 5)
     """
     return select_rows(db, "sweeps", where={"source": address}, last_cursor=cursor, limit=limit)
 
@@ -638,7 +640,7 @@ def get_address_balances(db, address: str, cursor: int = None, limit: int = 100)
     Returns the balances of an address
     :param str address: The address to return (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
     :param int cursor: The last index of the balances to return
-    :param int limit: The maximum number of balances to return
+    :param int limit: The maximum number of balances to return (e.g. 5)
     """
     return select_rows(
         db,
@@ -670,7 +672,7 @@ def get_bet_by_feed(db, address: str, status: str = "open", cursor: int = None, 
     :param str address: The address of the feed (e.g. 1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk)
     :param str status: The status of the bet (e.g. filled)
     :param int cursor: The last index of the bets to return
-    :param int limit: The maximum number of bets to return
+    :param int limit: The maximum number of bets to return (e.g. 5)
     """
     return select_rows(
         db,
@@ -692,7 +694,7 @@ def get_broadcasts_by_source(
     :param str address: The address to return (e.g. 1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk)
     :param str status: The status of the broadcasts to return (e.g. valid)
     :param int cursor: The last index of the broadcasts to return
-    :param int limit: The maximum number of broadcasts to return
+    :param int limit: The maximum number of broadcasts to return (e.g. 5)
     """
     return select_rows(
         db,
@@ -709,7 +711,7 @@ def get_burns_by_address(db, address: str, cursor: int = None, limit: int = 100)
     Returns the burns of an address
     :param str address: The address to return (e.g. 1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W)
     :param int cursor: The last index of the burns to return
-    :param int limit: The maximum number of burns to return
+    :param int limit: The maximum number of burns to return (e.g. 5)
     """
     return select_rows(db, "burns", where={"source": address}, last_cursor=cursor, limit=limit)
 
@@ -719,7 +721,7 @@ def get_send_by_address(db, address: str, cursor: int = None, limit: int = 100):
     Returns the sends of an address
     :param str address: The address to return (e.g. 1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W)
     :param int cursor: The last index of the sends to return
-    :param int limit: The maximum number of sends to return
+    :param int limit: The maximum number of sends to return (e.g. 5)
     """
     return select_rows(db, "sends", where={"source": address}, last_cursor=cursor, limit=limit)
 
@@ -732,7 +734,7 @@ def get_send_by_address_and_asset(
     :param str address: The address to return (e.g. 1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W)
     :param str asset: The asset to return (e.g. XCP)
     :param int cursor: The last index of the sends to return
-    :param int limit: The maximum number of sends to return
+    :param int limit: The maximum number of sends to return (e.g. 5)
     """
     return select_rows(
         db, "sends", where={"source": address, "asset": asset}, last_cursor=cursor, limit=limit
@@ -744,7 +746,7 @@ def get_receive_by_address(db, address: str, cursor: int = None, limit: int = 10
     Returns the receives of an address
     :param str address: The address to return (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
     :param int cursor: The last index of the sends to return
-    :param int limit: The maximum number of sends to return
+    :param int limit: The maximum number of sends to return (e.g. 5)
     """
     return select_rows(db, "sends", where={"destination": address}, last_cursor=cursor, limit=limit)
 
@@ -757,7 +759,7 @@ def get_receive_by_address_and_asset(
     :param str address: The address to return (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
     :param str asset: The asset to return (e.g. XCP)
     :param int cursor: The last index of the sends to return
-    :param int limit: The maximum number of sends to return
+    :param int limit: The maximum number of sends to return (e.g. 5)
     """
     return select_rows(
         db, "sends", where={"destination": address, "asset": asset}, last_cursor=cursor, limit=limit
@@ -772,7 +774,7 @@ def get_dispensers_by_address(
     :param str address: The address to return (e.g. bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz)
     :param int status: The status of the dispensers to return (e.g. 0)
     :param int cursor: The last index of the dispensers to return
-    :param int limit: The maximum number of dispensers to return
+    :param int limit: The maximum number of dispensers to return (e.g. 5)
     """
     return select_rows(
         db,
@@ -792,7 +794,7 @@ def get_dispensers_by_asset(db, asset: str, status: int = 0, cursor: int = None,
     :param str asset: The asset to return (e.g. ERYKAHPEPU)
     :param int status: The status of the dispensers to return (e.g. 0)
     :param int cursor: The last index of the dispensers to return
-    :param int limit: The maximum number of dispensers to return
+    :param int limit: The maximum number of dispensers to return (e.g. 5)
     """
     return select_rows(
         db,
@@ -823,7 +825,7 @@ def get_valid_assets(db, cursor: str = None, limit: int = 100):
     """
     Returns the valid assets
     :param int cursor: The last index of the assets to return
-    :param int limit: The maximum number of assets to return
+    :param int limit: The maximum number of assets to return (e.g. 5)
     """
     return select_rows(
         db,
@@ -843,7 +845,7 @@ def get_dividends(db, asset: str, cursor: int = None, limit: int = 100):
     Returns the dividends of an asset
     :param str asset: The asset to return (e.g. GMONEYPEPE)
     :param int cursor: The last index of the assets to return
-    :param int limit: The maximum number of assets to return
+    :param int limit: The maximum number of assets to return (e.g. 5)
     """
     return select_rows(
         db,
@@ -859,7 +861,7 @@ def get_asset_balances(db, asset: str, cursor: str = None, limit: int = 100):
     Returns the asset balances
     :param str asset: The asset to return (e.g. UNNEGOTIABLE)
     :param int cursor: The last index of the balances to return
-    :param int limit: The maximum number of balances to return
+    :param int limit: The maximum number of balances to return (e.g. 5)
     """
     return select_rows(
         db,
@@ -881,7 +883,7 @@ def get_orders_by_asset(db, asset: str, status: str = "open", cursor: int = None
     :param str asset: The asset to return (e.g. NEEDPEPE)
     :param str status: The status of the orders to return (e.g. filled)
     :param int cursor: The last index of the orders to return
-    :param int limit: The maximum number of orders to return
+    :param int limit: The maximum number of orders to return (e.g. 5)
     """
     return select_rows(
         db,
@@ -904,7 +906,7 @@ def get_orders_by_two_assets(
     :param str asset2: The second asset to return (e.g. XCP)
     :param str status: The status of the orders to return (e.g. filled)
     :param int cursor: The last index of the orders to return
-    :param int limit: The maximum number of orders to return
+    :param int limit: The maximum number of orders to return (e.g. 5)
     """
     query_result = select_rows(
         db,
@@ -933,7 +935,7 @@ def get_asset_holders(db, asset: str, cursor: str = None, limit: int = 100):
     Returns the holders of an asset
     :param str asset: The asset to return (e.g. ERYKAHPEPU)
     :param int cursor: The last index of the holder to return
-    :param int limit: The maximum number of holders to return
+    :param int limit: The maximum number of holders to return (e.g. 5)
     """
     return select_rows(
         db,
@@ -965,7 +967,7 @@ def get_order_matches_by_order(
     :param str order_hash: The hash of the transaction that created the order (e.g. 5461e6f99a37a7167428b4a720a52052cd9afed43905f818f5d7d4f56abd0947)
     :param str status: The status of the order matches to return (e.g. completed)
     :param int cursor: The last index of the order matches to return
-    :param int limit: The maximum number of order matches to return
+    :param int limit: The maximum number of order matches to return (e.g. 5)
     """
     return select_rows(
         db,
@@ -984,7 +986,7 @@ def get_btcpays_by_order(db, order_hash: str, cursor: int = None, limit: int = 1
     Returns the BTC pays of an order
     :param str order_hash: The hash of the transaction that created the order (e.g. 299b5b648f54eacb839f3487232d49aea373cdd681b706d4cc0b5e0b03688db4)
     :param int cursor: The last index of the resolutions to return
-    :param int limit: The maximum number of resolutions to return
+    :param int limit: The maximum number of resolutions to return (e.g. 5)
     """
     return select_rows(
         db,
@@ -1015,7 +1017,7 @@ def get_bet_matches_by_bet(
     :param str bet_hash: The hash of the transaction that created the bet (e.g. 5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed)
     :param str status: The status of the bet matches (e.g. expired)
     :param int cursor: The last index of the bet matches to return
-    :param int limit: The maximum number of bet matches to return
+    :param int limit: The maximum number of bet matches to return (e.g. 5)
     """
     return select_rows(
         db,
@@ -1034,7 +1036,7 @@ def get_resolutions_by_bet(db, bet_hash: str, cursor: int = None, limit: int = 1
     Returns the resolutions of a bet
     :param str bet_hash: The hash of the transaction that created the bet (e.g. 36bbbb7dbd85054dac140a8ad8204eda2ee859545528bd2a9da69ad77c277ace)
     :param int cursor: The last index of the resolutions to return
-    :param int limit: The maximum number of resolutions to return
+    :param int limit: The maximum number of resolutions to return (e.g. 5)
     """
     return select_rows(
         db,
@@ -1050,7 +1052,7 @@ def get_all_burns(db, status: str = "valid", cursor: int = None, limit: int = 10
     Returns the burns
     :param str status: The status of the burns to return (e.g. valid)
     :param int cursor: The last index of the burns to return
-    :param int limit: The maximum number of burns to return
+    :param int limit: The maximum number of burns to return (e.g. 5)
     """
     return select_rows(db, "burns", where={"status": status}, last_cursor=cursor, limit=limit)
 
