@@ -53,9 +53,9 @@ def select_rows(
         if where_clause != "":
             where_clause += " AND "
         if order == "ASC":
-            where_clause += f" {cursor_field} > ?"
+            where_clause += f" {cursor_field} >= ?"
         else:
-            where_clause += f" {cursor_field} < ?"
+            where_clause += f" {cursor_field} <= ?"
         bindings.append(last_cursor)
 
     if where_clause:
@@ -83,15 +83,16 @@ def select_rows(
         query = f"SELECT * FROM ({query}) {wrap_where_clause}"  # nosec B608  # noqa: S608
 
     query = f"{query} ORDER BY {cursor_field} {order} LIMIT ?"  # nosec B608  # noqa: S608
-    bindings.append(limit)
+    bindings.append(limit + 1)
 
-    print(query, bindings)
+    # print(query, bindings)
     cursor.execute(query, bindings)
     result = cursor.fetchall()
-    print(result)
+    # print(result)
 
-    if result:
+    if result and len(result) > limit:
         next_cursor = result[-1][cursor_field]
+        result = result[:-1]
     else:
         next_cursor = None
 

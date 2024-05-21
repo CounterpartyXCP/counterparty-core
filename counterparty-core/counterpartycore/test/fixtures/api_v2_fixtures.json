@@ -102,7 +102,7 @@
                 "messages_hash": "9671cfedb3124b67ed996c547cb26a32e95490009ad56065c79be54a28c45994"
             }
         ],
-        "next_cursor": 310491
+        "next_cursor": 310490
     },
     "http://localhost:10009/v2/blocks/310491": {
         "result": {
@@ -132,7 +132,7 @@
                 "supported": 1
             }
         ],
-        "next_cursor": 492
+        "next_cursor": null
     },
     "http://localhost:10009/v2/blocks/310491/events": {
         "result": [
@@ -228,7 +228,7 @@
                 "tx_hash": null
             }
         ],
-        "next_cursor": 1178
+        "next_cursor": null
     },
     "http://localhost:10009/v2/blocks/310491/events/counts": {
         "result": [
@@ -257,7 +257,7 @@
                 "event_count": 1
             }
         ],
-        "next_cursor": "BLOCK_PARSED"
+        "next_cursor": null
     },
     "http://localhost:10009/v2/blocks/310491/events/CREDIT": {
         "result": [],
@@ -279,7 +279,7 @@
                 "tx_index": 492
             }
         ],
-        "next_cursor": 29
+        "next_cursor": null
     },
     "http://localhost:10009/v2/blocks/310491/expirations": {
         "result": [],
@@ -457,7 +457,7 @@
                 "timestamp": 0
             }
         ],
-        "next_cursor": 9
+        "next_cursor": null
     },
     "http://localhost:10009/v2/transactions/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/events": {
         "result": [
@@ -516,7 +516,7 @@
                 "timestamp": 0
             }
         ],
-        "next_cursor": 1179
+        "next_cursor": null
     },
     "http://localhost:10009/v2/transactions/2/events/CREDIT": {
         "result": [
@@ -537,7 +537,7 @@
                 "timestamp": 0
             }
         ],
-        "next_cursor": 12
+        "next_cursor": null
     },
     "http://localhost:10009/v2/transactions/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/events/CREDIT": {
         "result": [],
@@ -586,7 +586,7 @@
                 "quantity": 1000
             }
         ],
-        "next_cursor": 7
+        "next_cursor": null
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances/NODIVISIBLE": {
         "result": {
@@ -708,7 +708,7 @@
                 "tx_index": 1
             }
         ],
-        "next_cursor": 1
+        "next_cursor": null
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/debits": {
         "result": [
@@ -902,7 +902,7 @@
                 "tx_index": 2
             }
         ],
-        "next_cursor": 1
+        "next_cursor": null
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/bets": {
         "result": [
@@ -926,7 +926,7 @@
                 "status": "open"
             }
         ],
-        "next_cursor": 5
+        "next_cursor": null
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/broadcasts": {
         "result": [
@@ -955,7 +955,7 @@
                 "status": "valid"
             }
         ],
-        "next_cursor": 18
+        "next_cursor": null
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/burns": {
         "result": [
@@ -969,7 +969,7 @@
                 "status": "valid"
             }
         ],
-        "next_cursor": 1
+        "next_cursor": null
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/sends": {
         "result": [
@@ -1070,7 +1070,7 @@
                 "memo": null
             }
         ],
-        "next_cursor": 1
+        "next_cursor": null
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/receives": {
         "result": [
@@ -1087,7 +1087,7 @@
                 "memo": "fade0001"
             }
         ],
-        "next_cursor": 9
+        "next_cursor": null
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/sends/NODIVISIBLE": {
         "result": [
@@ -1116,7 +1116,7 @@
                 "memo": null
             }
         ],
-        "next_cursor": 5
+        "next_cursor": null
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/receives/NODIVISIBLE": {
         "result": [],
@@ -1207,7 +1207,7 @@
                 "asset_longname": null
             }
         ],
-        "next_cursor": "PAYTOSCRIPT"
+        "next_cursor": null
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE": {
         "result": {
@@ -1240,7 +1240,7 @@
                 "quantity": 5
             }
         ],
-        "next_cursor": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns"
+        "next_cursor": null
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/balances/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc": {
         "result": {
@@ -1285,7 +1285,7 @@
                 "tx_index": 3
             }
         ],
-        "next_cursor": 3
+        "next_cursor": null
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/debits": {
         "result": [
@@ -1308,7 +1308,7 @@
                 "tx_index": 15
             }
         ],
-        "next_cursor": 13
+        "next_cursor": null
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/dividends": {
         "result": [],
@@ -1338,7 +1338,7 @@
                 "reset": 0
             }
         ],
-        "next_cursor": 2
+        "next_cursor": null
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/sends": {
         "result": [
@@ -1367,7 +1367,7 @@
                 "memo": null
             }
         ],
-        "next_cursor": 5
+        "next_cursor": null
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/dispensers": {
         "result": [],
@@ -1421,7 +1421,7 @@
                 "status": null
             }
         ],
-        "next_cursor": "balances_23"
+        "next_cursor": null
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/dispenses": {
         "result": [],
@@ -1472,7 +1472,7 @@
                 "status": "pending"
             }
         ],
-        "next_cursor": 1
+        "next_cursor": null
     },
     "http://localhost:10009/v2/orders/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/btcpays": {
         "result": [],
@@ -1521,7 +1521,7 @@
                 "fee": 0
             }
         ],
-        "next_cursor": 1
+        "next_cursor": null
     },
     "http://localhost:10009/v2/burns": {
         "result": [
@@ -1598,7 +1598,7 @@
                 "status": "valid"
             }
         ],
-        "next_cursor": 1
+        "next_cursor": null
     },
     "http://localhost:10009/v2/dispensers/9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec": {
         "result": {
@@ -1696,7 +1696,7 @@
                 "timestamp": 0
             }
         ],
-        "next_cursor": 1233
+        "next_cursor": 1232
     },
     "http://localhost:10009/v2/events/10?limit=5": {
         "result": {
@@ -1736,7 +1736,7 @@
                 "event_count": 6
             }
         ],
-        "next_cursor": "OPEN_ORDER"
+        "next_cursor": "OPEN_DISPENSER"
     },
     "http://localhost:10009/v2/events/CREDIT?limit=5": {
         "result": [
@@ -1821,6 +1821,6 @@
                 "timestamp": 0
             }
         ],
-        "next_cursor": 1201
+        "next_cursor": 1193
     }
 }
