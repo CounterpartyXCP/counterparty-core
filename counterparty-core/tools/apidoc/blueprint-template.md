@@ -25,15 +25,15 @@ All API responses contain the following 3 headers:
 
 All API responses follow the following format:
 
-    ```
-    {
-        "error": <error_messsage_if_success_is_false>,
-        "result": <result_of_the_query_if_success_is_true>
-        "next_cursor": <cursor_value_to_get_the_next_page>
-    }
-    ```
+```
+{
+    "error": <error_messsage_if_success_is_false>,
+    "result": <result_of_the_query_if_success_is_true>
+    "next_cursor": <cursor_value_to_get_the_next_page>
+}
+```
 
-All queries that return lists from the database accept the "cursor" and "limit" arguments. To get the next page you must use "?cursor=<next_cursor>".
+All queries that return lists from the database accept the `cursor` and `limit` arguments. To get the next page you must use `?cursor=<next_cursor>`.
 
 ## Bitcoin Core Proxy
 
