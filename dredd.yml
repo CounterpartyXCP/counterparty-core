@@ -4,6 +4,7 @@ loglevel: error
 only:
 - Blocks > Get Blocks > Get Blocks
 - Blocks > Get Block By Height > Get Block By Height
+- Blocks > Get Block By Hash > Get Block By Hash
 - Blocks > Get Transactions By Block > Get Transactions By Block
 - Blocks > Get Events By Block > Get Events By Block
 - Blocks > Get Event Counts By Block > Get Event Counts By Block
@@ -34,9 +35,9 @@ only:
 - Addresses > Get Bet By Feed > Get Bet By Feed
 - Addresses > Get Broadcasts By Source > Get Broadcasts By Source
 - Addresses > Get Burns By Address > Get Burns By Address
-- Addresses > Get Send By Address > Get Send By Address
+- Addresses > Get Sends By Address > Get Sends By Address
 - Addresses > Get Receive By Address > Get Receive By Address
-- Addresses > Get Send By Address And Asset > Get Send By Address And Asset
+- Addresses > Get Sends By Address And Asset > Get Sends By Address And Asset
 - Addresses > Get Receive By Address And Asset > Get Receive By Address And Asset
 - Addresses > Get Dispensers By Address > Get Dispensers By Address
 - Addresses > Get Dispenser By Address And Asset > Get Dispenser By Address And Asset
@@ -82,6 +83,7 @@ only:
 - V1 > Redirect To Rpc V1 > Redirect To Rpc V1
 - Blocks > Get Blocks > Get Blocks
 - Blocks > Get Block By Height > Get Block By Height
+- Blocks > Get Block By Hash > Get Block By Hash
 - Blocks > Get Transactions By Block > Get Transactions By Block
 - Blocks > Get Events By Block > Get Events By Block
 - Blocks > Get Event Counts By Block > Get Event Counts By Block
@@ -112,9 +114,9 @@ only:
 - Addresses > Get Bet By Feed > Get Bet By Feed
 - Addresses > Get Broadcasts By Source > Get Broadcasts By Source
 - Addresses > Get Burns By Address > Get Burns By Address
-- Addresses > Get Send By Address > Get Send By Address
+- Addresses > Get Sends By Address > Get Sends By Address
 - Addresses > Get Receive By Address > Get Receive By Address
-- Addresses > Get Send By Address And Asset > Get Send By Address And Asset
+- Addresses > Get Sends By Address And Asset > Get Sends By Address And Asset
 - Addresses > Get Receive By Address And Asset > Get Receive By Address And Asset
 - Addresses > Get Dispensers By Address > Get Dispensers By Address
 - Addresses > Get Dispenser By Address And Asset > Get Dispenser By Address And Asset

@@ -725,7 +725,7 @@ def get_burns_by_address(db, address: str, cursor: int = None, limit: int = 100)
     return select_rows(db, "burns", where={"source": address}, last_cursor=cursor, limit=limit)
 
 
-def get_send_by_address(db, address: str, cursor: int = None, limit: int = 100):
+def get_sends_by_address(db, address: str, cursor: int = None, limit: int = 100):
     """
     Returns the sends of an address
     :param str address: The address to return (e.g. 1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W)
@@ -735,7 +735,7 @@ def get_send_by_address(db, address: str, cursor: int = None, limit: int = 100):
     return select_rows(db, "sends", where={"source": address}, last_cursor=cursor, limit=limit)
 
 
-def get_send_by_address_and_asset(
+def get_sends_by_address_and_asset(
     db, address: str, asset: str, cursor: int = None, limit: int = 100
 ):
     """

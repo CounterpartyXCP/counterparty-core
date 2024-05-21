@@ -3994,5 +3994,17 @@
             }
         ],
         "next_cursor": 10665087
+    },
+    "/v2/blocks/<block_hash>": {
+        "result": {
+            "block_index": 844401,
+            "block_hash": "0000000000000000000073b0a277154cbc420e04fd8c699ae188d8d4421418ad",
+            "block_time": 1716270324,
+            "previous_block_hash": "00000000000000000000108f5c32f545b2a1727e3a5f4b216d195a0e5150ebd5",
+            "difficulty": 386097818,
+            "ledger_hash": "f15379c7451713abb91776214fbdcee0218fa6043a9b7754f18671a2957e1bc8",
+            "txlist_hash": "232407297ace6ecd2d133e84462e8126c4fb32edf98851188416f3fc2519aee7",
+            "messages_hash": "5f68018f64f657d922de5f50a73dbe45becc6a3ada3d391f87aadf76990c5dc2"
+        }
     }
 }
