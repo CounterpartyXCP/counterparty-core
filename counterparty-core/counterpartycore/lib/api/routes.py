@@ -8,6 +8,7 @@ ROUTES = util.prepare_routes(
         ### /blocks ###
         "/v2/blocks": queries.get_blocks,
         "/v2/blocks/<int:block_index>": queries.get_block_by_height,
+        "/v2/blocks/<block_hash>": queries.get_block_by_hash,
         "/v2/blocks/<int:block_index>/transactions": queries.get_transactions_by_block,
         "/v2/blocks/<int:block_index>/events": queries.get_events_by_block,
         "/v2/blocks/<int:block_index>/events/counts": queries.get_event_counts_by_block,

@@ -31,6 +31,7 @@ def test_api_v2(request):
     order_hash = "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
     bet_hash = "2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1"
     dispenser_hash = "9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec"
+    block_hash = "54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b"
     event = "CREDIT"
     event_index = 10
     tx_index = 2
@@ -75,6 +76,7 @@ def test_api_v2(request):
         url = url.replace("<bet_hash>", bet_hash)
         url = url.replace("<dispenser_hash>", dispenser_hash)
         url = url.replace("<tx_hash>", tx_hash)
+        url = url.replace("<block_hash>", block_hash)
         if route.startswith("/v2/events"):
             url += "?limit=5"
         print(url)

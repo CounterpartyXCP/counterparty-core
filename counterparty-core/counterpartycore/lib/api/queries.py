@@ -129,6 +129,14 @@ def get_block_by_height(db, block_index: int):
     return select_row(db, "blocks", where={"block_index": block_index})
 
 
+def get_block_by_hash(db, block_hash: str):
+    """
+    Return the information of a block
+    :param str block_hash: The index of the block to return (e.g. 0000000000000000000073b0a277154cbc420e04fd8c699ae188d8d4421418ad)
+    """
+    return select_row(db, "blocks", where={"block_hash": block_hash})
+
+
 def get_transactions_by_block(db, block_index: int, cursor: int = None, limit: int = 10):
     """
     Returns the transactions of a block
