@@ -528,6 +528,16 @@ def get_issuances_by_asset(db, asset: str, cursor: int = None, limit: int = 100)
     return select_rows(db, "issuances", where={"asset": asset}, last_cursor=cursor, limit=limit)
 
 
+def get_issuances_by_address(db, address: str, cursor: int = None, limit: int = 100):
+    """
+    Returns the issuances of an address
+    :param str address: The address to return (e.g. 178etygrwEeeyQso9we85rUqYZbkiqzL4A)
+    :param int cursor: The last index of the issuances to return
+    :param int limit: The maximum number of issuances to return (e.g. 5)
+    """
+    return select_rows(db, "issuances", where={"issuer": address}, last_cursor=cursor, limit=limit)
+
+
 def get_dispenses_by_block(db, block_index: int, cursor: int = None, limit: int = 100):
     """
     Returns the dispenses of a block

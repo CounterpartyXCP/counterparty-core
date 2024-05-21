@@ -47,6 +47,7 @@ only:
 - Addresses > Get Dispenses By Destination And Asset > Get Dispenses By Destination
   And Asset
 - Addresses > Get Sweeps By Address > Get Sweeps By Address
+- Addresses > Get Issuances By Address > Get Issuances By Address
 - Assets > Get Valid Assets > Get Valid Assets
 - Assets > Get Asset Info > Get Asset Info
 - Assets > Get Asset Balances > Get Asset Balances
@@ -126,6 +127,7 @@ only:
 - Addresses > Get Dispenses By Destination And Asset > Get Dispenses By Destination
   And Asset
 - Addresses > Get Sweeps By Address > Get Sweeps By Address
+- Addresses > Get Issuances By Address > Get Issuances By Address
 - Assets > Get Valid Assets > Get Valid Assets
 - Assets > Get Asset Info > Get Asset Info
 - Assets > Get Asset Balances > Get Asset Balances
