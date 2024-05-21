@@ -134,7 +134,6 @@ def return_result(http_code, result=None, error=None, next_cursor=None):
 
 
 def prepare_args(route, **kwargs):
-    print(route, kwargs)
     function_args = dict(kwargs)
     # inject args from request.args
     for arg in route["args"]:
@@ -184,8 +183,6 @@ def execute_api_function(db, route, function_args):
     if cache_key in BLOCK_CACHE:
         result = BLOCK_CACHE[cache_key]
     else:
-        print(request.url)
-        print(function_args)
         if function_needs_db(route["function"]):
             result = route["function"](db, **function_args)
         else:
