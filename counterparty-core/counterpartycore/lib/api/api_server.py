@@ -163,8 +163,11 @@ def prepare_args(route, **kwargs):
                 function_args[arg_name] = float(str_arg)
             except ValueError as e:
                 raise ValueError(f"Invalid float: {arg_name}") from e
-        else:
-            function_args[arg_name] = str_arg
+
+    for key in function_args:
+        if key in ["asset", "assets", "get_asset", "give_asset"]:
+            function_args["asset"] = function_args["asset"].upper()
+
     return function_args
 
 
