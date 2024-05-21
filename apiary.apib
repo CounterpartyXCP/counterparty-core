@@ -1356,7 +1356,29 @@ Returns the list of the last ten blocks
 
     ```
         {
-            "error": "Unknown error"
+            "result": [
+                {
+                    "block_index": 839999,
+                    "block_hash": "0000000000000000000172014ba58d66455762add0512355ad651207918494ab",
+                    "block_time": 1713571533,
+                    "previous_block_hash": "00000000000000000001dcce6ce7c8a45872cafd1fb04732b447a14a91832591",
+                    "difficulty": 86388558925171.02,
+                    "ledger_hash": "e2b2e23c2ac1060dafe2395da01fe5907f323b5a644816f45f003411c612ac30",
+                    "txlist_hash": "f33f800ef166e6ef5b3df15a0733f9fd3ebb0b799f39ef1951e6709118b7c0fd",
+                    "messages_hash": "3039ba14f9d6d65f8778f251f9d654aae986d62e59a54cc8f3118fa930d3234d"
+                },
+                {
+                    "block_index": 839998,
+                    "block_hash": "00000000000000000001dcce6ce7c8a45872cafd1fb04732b447a14a91832591",
+                    "block_time": 1713571122,
+                    "previous_block_hash": "00000000000000000000a3cbf20d45ab342cfe00e573c2c305ccddef5a396aab",
+                    "difficulty": 86388558925171.02,
+                    "ledger_hash": "6a3e53ba3752a2329930724026dca9531a9ace81a6cad60ded32278293eba09f",
+                    "txlist_hash": "e89ea9112dc89f9820fd1ae72153c13b3e92bd292e3953b2dfaaf8a38e696f5e",
+                    "messages_hash": "666580a735259c68919d286ab0ee7aea8881fa27e1f544948c9d7976d7060a42"
+                }
+            ],
+            "next_cursor": 839998
         }
     ```
 
@@ -5580,7 +5602,128 @@ Returns all events
 
     ```
         {
-            "error": "Unknown error"
+            "result": [
+                {
+                    "event_index": 10665091,
+                    "event": "OPEN_DISPENSER",
+                    "params": {
+                        "asset": "CORNSNACK",
+                        "block_index": 700853,
+                        "dispense_count": 0,
+                        "escrow_quantity": 6,
+                        "give_quantity": 1,
+                        "give_remaining": 6,
+                        "oracle_address": null,
+                        "origin": "12eVsMrMdFyvTnvPAZAmtpDj7dDo9s8wLi",
+                        "satoshirate": 670000,
+                        "source": "12eVsMrMdFyvTnvPAZAmtpDj7dDo9s8wLi",
+                        "status": 0,
+                        "tx_hash": "eae4f53b1d77fa9a8f96b30f12b1272bfe5a7a5813953e98fc0ee00379c3fc22",
+                        "tx_index": 1668919,
+                        "asset_info": {
+                            "asset_longname": null,
+                            "description": "corn snack",
+                            "issuer": "17Xw41Zg2zxNV5DcCPQ28TdSVaAwk1SpdA",
+                            "divisible": 0,
+                            "locked": 1
+                        },
+                        "give_quantity_normalized": "1",
+                        "give_remaining_normalized": "6",
+                        "escrow_quantity_normalized": "6"
+                    },
+                    "tx_hash": "eae4f53b1d77fa9a8f96b30f12b1272bfe5a7a5813953e98fc0ee00379c3fc22",
+                    "block_index": 700853,
+                    "timestamp": 1715466250
+                },
+                {
+                    "event_index": 10665090,
+                    "event": "DEBIT",
+                    "params": {
+                        "action": "open dispenser",
+                        "address": "12eVsMrMdFyvTnvPAZAmtpDj7dDo9s8wLi",
+                        "asset": "CORNSNACK",
+                        "block_index": 700853,
+                        "event": "eae4f53b1d77fa9a8f96b30f12b1272bfe5a7a5813953e98fc0ee00379c3fc22",
+                        "quantity": 6,
+                        "tx_index": 1668919,
+                        "asset_info": {
+                            "asset_longname": null,
+                            "description": "corn snack",
+                            "issuer": "17Xw41Zg2zxNV5DcCPQ28TdSVaAwk1SpdA",
+                            "divisible": 0,
+                            "locked": 1
+                        },
+                        "quantity_normalized": "6"
+                    },
+                    "tx_hash": "eae4f53b1d77fa9a8f96b30f12b1272bfe5a7a5813953e98fc0ee00379c3fc22",
+                    "block_index": 700853,
+                    "timestamp": 1715466250
+                },
+                {
+                    "event_index": 10665089,
+                    "event": "NEW_TRANSACTION",
+                    "params": {
+                        "block_hash": "000000000000000000090c8913411f74dd7d6c6bcdaa698d247f0b222393c3bb",
+                        "block_index": 700853,
+                        "block_time": 1631830009,
+                        "btc_amount": 0,
+                        "data": "0c0000007caf1e6e460000000000000001000000000000000600000000000a393000",
+                        "destination": "",
+                        "fee": 1000,
+                        "source": "12eVsMrMdFyvTnvPAZAmtpDj7dDo9s8wLi",
+                        "tx_hash": "eae4f53b1d77fa9a8f96b30f12b1272bfe5a7a5813953e98fc0ee00379c3fc22",
+                        "tx_index": 1668919
+                    },
+                    "tx_hash": null,
+                    "block_index": 700853,
+                    "timestamp": 1715466250
+                },
+                {
+                    "event_index": 10665088,
+                    "event": "TRANSACTION_PARSED",
+                    "params": {
+                        "supported": true,
+                        "tx_hash": "350620b94ae578fb5f966a0ece07b5f5ac0a3e4670c87b976acbbc6a32657c4a",
+                        "tx_index": 1668918
+                    },
+                    "tx_hash": "350620b94ae578fb5f966a0ece07b5f5ac0a3e4670c87b976acbbc6a32657c4a",
+                    "block_index": 700853,
+                    "timestamp": 1715466250
+                },
+                {
+                    "event_index": 10665087,
+                    "event": "OPEN_DISPENSER",
+                    "params": {
+                        "asset": "INDIANAFROGS",
+                        "block_index": 700853,
+                        "dispense_count": 0,
+                        "escrow_quantity": 8,
+                        "give_quantity": 1,
+                        "give_remaining": 8,
+                        "oracle_address": null,
+                        "origin": "18EXyZXLuGSs2Zaafo1s4URSujkdS3TgnH",
+                        "satoshirate": 488888,
+                        "source": "18EXyZXLuGSs2Zaafo1s4URSujkdS3TgnH",
+                        "status": 0,
+                        "tx_hash": "350620b94ae578fb5f966a0ece07b5f5ac0a3e4670c87b976acbbc6a32657c4a",
+                        "tx_index": 1668918,
+                        "asset_info": {
+                            "asset_longname": null,
+                            "description": "archaeologist frog",
+                            "issuer": "17Xw41Zg2zxNV5DcCPQ28TdSVaAwk1SpdA",
+                            "divisible": 0,
+                            "locked": 1
+                        },
+                        "give_quantity_normalized": "1",
+                        "give_remaining_normalized": "8",
+                        "escrow_quantity_normalized": "8"
+                    },
+                    "tx_hash": "350620b94ae578fb5f966a0ece07b5f5ac0a3e4670c87b976acbbc6a32657c4a",
+                    "block_index": 700853,
+                    "timestamp": 1715466250
+                }
+            ],
+            "next_cursor": 10665087
         }
     ```
 
