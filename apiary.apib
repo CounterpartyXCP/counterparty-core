@@ -3132,7 +3132,7 @@ Composes a transaction to issue a bet against a feed.
     + bet_type: `2` (int, required) - Bet 0 for Bullish CFD (deprecated), 1 for Bearish CFD (deprecated), 2 for Equal, 3 for NotEqual
     + deadline: `3000000000` (int, required) - The time at which the bet should be decided/settled, in Unix time (seconds since epoch)
     + wager_quantity: `1000` (int, required) - The quantities of XCP to wager (in satoshis, hence integer)
-    + counterwager_quantity: `1000` (int, required) - The minimum quantities of XCP to be wagered against, for the bets to match
+    + counterwager_quantity: `1000` (int, required) - The minimum quantities of XCP to be wagered against, for the bets to match (in satoshis, hence integer)
     + expiration: `100` (int, required) - The number of blocks after which the bet expires if it remains unmatched
     + leverage (int, optional) - Leverage, as a fraction of 5040
         + Default: `5040`
@@ -3309,7 +3309,7 @@ Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, poss
 
 + Parameters
     + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address with the BTC to burn
-    + quantity: `1000` (int, required) - The quantities of BTC to burn (1 BTC maximum burn per address)
+    + quantity: `1000` (int, required) - The quantities of BTC to burn (in satoshis, hence integer) (1 BTC maximum burn per address)
     + overburn (bool, optional) - Whether to allow the burn to exceed 1 BTC for the address
         + Default: `False`
     + encoding (str, optional) - The encoding method to use
@@ -3419,7 +3419,7 @@ Composes a transaction to destroy a quantity of an asset.
 + Parameters
     + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be sending the asset to be destroyed
     + asset: `XCP` (str, required) - The asset to be destroyed
-    + quantity: `1000` (int, required) - The quantity of the asset to be destroyed
+    + quantity: `1000` (int, required) - The quantity of the asset to be destroyed (in satoshis, hence integer)
     + tag: `"bugs!"` (str, required) - A tag for the destruction
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
@@ -3476,9 +3476,9 @@ Opens or closes a dispenser for a given asset at a given rate of main chain asse
 + Parameters
     + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be dispensing (must have the necessary escrow_quantity of the specified asset)
     + asset: `XCP` (str, required) - The asset or subasset to dispense
-    + give_quantity: `1000` (int, required) - The quantity of the asset to dispense
-    + escrow_quantity: `1000` (int, required) - The quantity of the asset to reserve for this dispenser
-    + mainchainrate: `100` (int, required) - The quantity of the main chain asset (BTC) per dispensed portion
+    + give_quantity: `1000` (int, required) - The quantity of the asset to dispense (in satoshis, hence integer)
+    + escrow_quantity: `1000` (int, required) - The quantity of the asset to reserve for this dispenser (in satoshis, hence integer)
+    + mainchainrate: `100` (int, required) - The quantity of the main chain asset (BTC) per dispensed portion (in satoshis, hence integer)
     + status: `0` (int, required) - The state of the dispenser. 0 for open, 1 for open using open_address, 10 for closed
     + open_address (str, optional) - The address that you would like to open the dispenser on
         + Default: `None`
@@ -3542,7 +3542,7 @@ Composes a transaction to issue a dividend to holders of a given asset.
 
 + Parameters
     + address: `1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD` (str, required) - The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on)
-    + quantity_per_unit: `1` (int, required) - The amount of dividend_asset rewarded
+    + quantity_per_unit: `1` (int, required) - The amount of dividend_asset rewarded (in satoshis, hence integer)
     + asset: `PEPECASH` (str, required) - The asset or subasset that the dividends are being rewarded on
     + dividend_asset: `XCP` (str, required) - The asset or subasset that the dividends are paid in
     + encoding (str, optional) - The encoding method to use
@@ -3600,7 +3600,7 @@ Composes a transaction to Issue a new asset, issue more of an existing asset, lo
 + Parameters
     + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be issuing or transfering the asset
     + asset: `XCPTEST` (str, required) - The assets to issue or transfer. This can also be a subasset longname for new subasset issuances
-    + quantity: `1000` (int, required) - The quantity of the asset to issue (set to 0 if transferring an asset)
+    + quantity: `1000` (int, required) - The quantity of the asset to issue (set to 0 if transferring an asset) (in satoshis, hence integer)
     + transfer_destination: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, optional) - The address to receive the asset
         + Default: `None`
     + divisible (bool, optional) - Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued)
@@ -3671,7 +3671,7 @@ Composes a transaction to send multiple payments to multiple addresses.
     + address: `1Fv87qmdtjQDP9d4p9E5ncBQvYB4a3Rhy6` (str, required) - The address that will be sending (must have the necessary quantity of the specified asset)
     + assets: `BAABAABLKSHP,BADHAIRDAY,BADWOJAK` (str, required) - comma-separated list of assets to send
     + destinations: `1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev,1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD,1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs` (str, required) - comma-separated list of addresses to send to
-    + quantities: `1,2,3` (str, required) - comma-separated list of quantities to send
+    + quantities: `1,2,3` (str, required) - comma-separated list of quantities to send (in satoshis, hence integer)
     + memo: `"Hello, world!"` (str, required) - The Memo associated with this transaction
     + memo_is_hex: `False` (bool, required) - Whether the memo field is a hexadecimal string
     + encoding (str, optional) - The encoding method to use
@@ -3745,9 +3745,9 @@ Composes a transaction to place an order on the distributed exchange.
 + Parameters
     + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be issuing the order request (must have the necessary quantity of the specified asset to give)
     + give_asset: `XCP` (str, required) - The asset that will be given in the trade
-    + give_quantity: `1000` (int, required) - The quantity of the asset that will be given
+    + give_quantity: `1000` (int, required) - The quantity of the asset that will be given (in satoshis, hence integer)
     + get_asset: `PEPECASH` (str, required) - The asset that will be received in the trade
-    + get_quantity: `1000` (int, required) - The quantity of the asset that will be received
+    + get_quantity: `1000` (int, required) - The quantity of the asset that will be received (in satoshis, hence integer)
     + expiration: `100` (int, required) - The number of blocks for which the order should be valid
     + fee_required: `100` (int, required) - The miners’ fee required to be paid by orders for them to match this one; in BTC; required only if buying BTC (may be zero, though)
     + encoding (str, optional) - The encoding method to use
@@ -3809,7 +3809,7 @@ Composes a transaction to send a quantity of an asset to another address.
     + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be sending (must have the necessary quantity of the specified asset)
     + destination: `1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev` (str, required) - The address that will be receiving the asset
     + asset: `XCP` (str, required) - The asset or subasset to send
-    + quantity: `1000` (int, required) - The quantity of the asset to send
+    + quantity: `1000` (int, required) - The quantity of the asset to send (in satoshis, hence integer)
     + memo (str, optional) - The Memo associated with this transaction
         + Default: `None`
     + memo_is_hex (bool, optional) - Whether the memo field is a hexadecimal string
