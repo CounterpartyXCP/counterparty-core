@@ -1083,6 +1083,38 @@ UNITTEST_VECTOR = {
                 ),
                 "out": None,
             },
+            {
+                "mock_protocol_changes": {"short_tx_type_id": True, "multiple_dispenses": False},
+                "in": (
+                    {
+                        "tx_hash": "db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d",
+                        "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "supported": 1,
+                        "block_index": 310500,
+                        "fee": 10000,
+                        "block_time": 155409000,
+                        "block_hash": DP["default_block_hash"],
+                        "btc_amount": 100,
+                        "data": b"\r\x00",
+                        "tx_index": 502,
+                        "destination": ADDR[5],
+                    },
+                ),
+                "records": [
+                    {
+                        "table": "credits",
+                        "values": {
+                            "calling_function": "dispense",
+                            "address": ADDR[0],
+                            "asset": config.XCP,
+                            "block_index": 310500,
+                            "event": "db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d",
+                            "quantity": 100,
+                            "tx_index": 502,
+                        },
+                    },
+                ],
+            },
         ],
         "get_next_tx_index": [{"in": (), "out": 500}],
     },
@@ -6985,6 +7017,32 @@ UNITTEST_VECTOR = {
                 ],
             },
         ],
+    },
+    "dispense": {
+        "compose": [
+            {
+                "in": (ADDR[0], ADDR[5], 10),
+                "out": (
+                    ADDR[0],
+                    [(ADDR[5], 10)],
+                    b"\r\x00",
+                ),
+            },
+            {
+                "in": (ADDR[0], ADDR[5], 10000),
+                "error": (
+                    exceptions.ComposeError,
+                    "dispenser doesn't have enough asset to give",
+                ),
+            },
+            {
+                "in": (ADDR[0], ADDR[2], 10),
+                "error": (
+                    exceptions.ComposeError,
+                    "address doesn't have any open dispenser",
+                ),
+            },
+        ]
     },
     "transaction_helper.serializer": {
         "var_int": [
