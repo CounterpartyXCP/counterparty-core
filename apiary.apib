@@ -3,7 +3,7 @@ HOST: https://api.counterparty.io:4000
 
 # Counterparty Core API
 
-The Counterparty Core API is the recommended (and only supported) way to query the state of a Counterparty node. 
+The Counterparty Core API is the recommended way to query the state of a Counterparty node. All other methods have no official support.
 
 Please see [Apiary](https://counterpartycore.docs.apiary.io/) for interactive documentation.
 
@@ -26,7 +26,7 @@ API routes are divided into 11 groups:
 
 ## Headers and HTTP Code
 
-When the server is not ready, that is to say when all the blocks are not yet parsed, all routes return a 503 error except `/` and those in the `/blocks`, `/transactions` and `/backend` groups which always return a result.
+When the server is not ready, that is to say when all the extant blocks have not yet been parsed, every route will return a `503` error, except `/` and those routes that are in the `/blocks`, `/transactions` and `/backend` groups.
 
 All API responses contain the following 3 headers:
 
@@ -49,7 +49,7 @@ All API responses follow the following format:
 
 ## Pagination
 
-For all routes that return a list of results from the database you can choose between two pagination modes:
+For all routes that return a list of results from the database, you can choose between two pagination modes:
 
 - With the `cursor` and `limit` parameters
 - With the `offset` and `limit` parameters
@@ -69,7 +69,7 @@ Routes in the `/v2/bitcoin` group serve as a proxy to make requests to Bitcoin C
 
 ## Events API
 
-One of the new features of API v2 is being able to make requests by events. This is the most powerful way to recover the vast majority of data.
+One of the new features of API v2 is the ability to make requests by events. This is the most powerful way to recover the vast majority of data.
 
 For example to retrieve events concerning dispensers for a given block:
 
@@ -3287,12 +3287,12 @@ Returns the issuances of an address
     ```
 
 ## Group Compose
-**Notes about optional parameter `encoding`.**
+**Notes about the Optional `encoding` Parameter.**
 
 By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
 
 - To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force OP_RETURN encoding and your transaction would have more than this amount, an exception will be generated.
+   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force `OP_RETURN` encoding and your transaction would have more than this amount, an exception will be generated.
 
 - To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
     - `pubkey` should be set to the hex-encoded public key of the source address.
@@ -3303,7 +3303,7 @@ By default the default value of the `encoding` parameter detailed above is `auto
 
 - To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
     - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
+    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait for the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
     - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
     - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
     - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
@@ -6339,6 +6339,26 @@ Returns the events filtered by event name
             ],
             "next_cursor": 10665068,
             "result_count": 3670341
+        }
+    ```
+
+### Get Event Count [GET /v2/events/{event}/count{?verbose}]
+
+Returns the number of events
+
++ Parameters
+    + event: `CREDIT` (str, required) - The name of the event to return
+    + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
+        + Default: `false`
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": {
+                "event": "CREDIT",
+                "event_count": 3670380
+            }
         }
     ```
 

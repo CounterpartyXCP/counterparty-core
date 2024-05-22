@@ -428,6 +428,19 @@ def get_event_counts_by_block(
     )
 
 
+def get_event_count(db, event: str):
+    """
+    Returns the number of events
+    :param int event: The name of the event to return (e.g. CREDIT)
+    """
+    return select_row(
+        db,
+        "messages",
+        where={"event": event},
+        select="event, COUNT(*) AS event_count",
+    )
+
+
 def get_all_events_counts(db, cursor: str = None, limit: int = 100, offset: int = None):
     """
     Returns the event counts of all blocks

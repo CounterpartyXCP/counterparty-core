@@ -2115,5 +2115,11 @@
         ],
         "next_cursor": 1193,
         "result_count": 34
+    },
+    "http://localhost:10009/v2/events/CREDIT/count?limit=5": {
+        "result": {
+            "event": "CREDIT",
+            "event_count": 34
+        }
     }
 }

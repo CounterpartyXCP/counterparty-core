@@ -33,6 +33,7 @@
     `/v2/blocks/last`
     `/v2/mempool/transactions/<tx_hash>/events`
     `/v2/addresses/<address>/issuances`
+    `/v2/events/<event>/count`
 * Introduce the `cursor` API argument.
 * All responses now contain a `next_cursor` field.
 * All responses now contain a `result_count` field.

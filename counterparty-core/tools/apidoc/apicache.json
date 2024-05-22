@@ -4273,5 +4273,11 @@
         ],
         "next_cursor": "balances_5896137",
         "result_count": 10
+    },
+    "/v2/events/<event>/count": {
+        "result": {
+            "event": "CREDIT",
+            "event_count": 3670380
+        }
     }
 }
