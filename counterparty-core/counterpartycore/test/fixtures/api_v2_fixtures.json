@@ -102,7 +102,8 @@
                 "messages_hash": "9671cfedb3124b67ed996c547cb26a32e95490009ad56065c79be54a28c45994"
             }
         ],
-        "next_cursor": 310490
+        "next_cursor": 310490,
+        "result_count": 502
     },
     "http://localhost:10009/v2/blocks/last": {
         "result": {
@@ -156,7 +157,8 @@
                 "supported": true
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 1
     },
     "http://localhost:10009/v2/blocks/310491/events": {
         "result": [
@@ -252,7 +254,8 @@
                 "tx_hash": null
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 6
     },
     "http://localhost:10009/v2/blocks/310491/events/counts": {
         "result": [
@@ -281,15 +284,18 @@
                 "event_count": 1
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 6
     },
     "http://localhost:10009/v2/blocks/310491/events/CREDIT": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/blocks/310491/credits": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/blocks/310491/debits": {
         "result": [
@@ -303,35 +309,43 @@
                 "tx_index": 492
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 1
     },
     "http://localhost:10009/v2/blocks/310491/expirations": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/blocks/310491/cancels": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/blocks/310491/destructions": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/blocks/310491/issuances": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/blocks/310491/sends": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/blocks/310491/dispenses": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/blocks/310491/sweeps": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/transactions/2": {
         "result": {
@@ -481,7 +495,8 @@
                 "timestamp": 0
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 5
     },
     "http://localhost:10009/v2/transactions/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/events": {
         "result": [
@@ -540,7 +555,8 @@
                 "timestamp": 0
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 3
     },
     "http://localhost:10009/v2/transactions/2/events/CREDIT": {
         "result": [
@@ -561,11 +577,13 @@
                 "timestamp": 0
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 1
     },
     "http://localhost:10009/v2/transactions/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/events/CREDIT": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances": {
         "result": [
@@ -610,7 +628,8 @@
                 "quantity": 1000
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 8
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances/NODIVISIBLE": {
         "result": {
@@ -732,7 +751,8 @@
                 "tx_index": 1
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 12
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/debits": {
         "result": [
@@ -926,7 +946,8 @@
                 "tx_index": 2
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 21
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/bets": {
         "result": [
@@ -950,7 +971,8 @@
                 "status": "open"
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 1
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/broadcasts": {
         "result": [
@@ -979,7 +1001,8 @@
                 "status": "valid"
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 2
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/burns": {
         "result": [
@@ -993,7 +1016,8 @@
                 "status": "valid"
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 1
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/sends": {
         "result": [
@@ -1094,7 +1118,8 @@
                 "memo": null
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 8
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/receives": {
         "result": [
@@ -1111,7 +1136,8 @@
                 "memo": "fade0001"
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 1
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/sends/NODIVISIBLE": {
         "result": [
@@ -1140,15 +1166,18 @@
                 "memo": null
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 2
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/receives/NODIVISIBLE": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispensers": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/addresses/munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b/dispensers/XCP": {
         "result": {
@@ -1170,23 +1199,28 @@
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispenses/sends": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispenses/receives": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispenses/sends/NODIVISIBLE": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispenses/receives/NODIVISIBLE": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/sweeps": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/issuances": {
         "result": [
@@ -1359,52 +1393,94 @@
                 "reset": false
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 8
     },
     "http://localhost:10009/v2/assets": {
         "result": [
             {
                 "asset": "A95428956661682277",
-                "asset_longname": "PARENT.already.issued"
+                "asset_longname": "PARENT.already.issued",
+                "description": "Child of parent",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false
             },
             {
                 "asset": "CALLABLE",
-                "asset_longname": null
+                "asset_longname": null,
+                "description": "Callable asset",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false
             },
             {
                 "asset": "DIVIDEND",
-                "asset_longname": null
+                "asset_longname": null,
+                "description": "",
+                "issuer": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
+                "divisible": true,
+                "locked": false
             },
             {
                 "asset": "DIVISIBLE",
-                "asset_longname": null
+                "asset_longname": null,
+                "description": "Divisible asset",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false
             },
             {
                 "asset": "LOCKED",
-                "asset_longname": null
+                "asset_longname": null,
+                "description": "Locked asset",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": true
             },
             {
                 "asset": "LOCKEDPREV",
-                "asset_longname": null
+                "asset_longname": null,
+                "description": "changed",
+                "issuer": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
+                "divisible": true,
+                "locked": false
             },
             {
                 "asset": "MAXI",
-                "asset_longname": null
+                "asset_longname": null,
+                "description": "Maximum quantity",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false
             },
             {
                 "asset": "NODIVISIBLE",
-                "asset_longname": null
+                "asset_longname": null,
+                "description": "No divisible asset",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": false,
+                "locked": false
             },
             {
                 "asset": "PARENT",
-                "asset_longname": null
+                "asset_longname": null,
+                "description": "Parent asset",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false
             },
             {
                 "asset": "PAYTOSCRIPT",
-                "asset_longname": null
+                "asset_longname": null,
+                "description": "PSH issued asset",
+                "issuer": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
+                "divisible": false,
+                "locked": false
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 10
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE": {
         "result": {
@@ -1437,7 +1513,8 @@
                 "quantity": 5
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 3
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/balances/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc": {
         "result": {
@@ -1450,7 +1527,8 @@
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/orders": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/credits": {
         "result": [
@@ -1482,7 +1560,8 @@
                 "tx_index": 3
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 3
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/debits": {
         "result": [
@@ -1505,11 +1584,13 @@
                 "tx_index": 15
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 2
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/dividends": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/issuances": {
         "result": [
@@ -1535,7 +1616,8 @@
                 "reset": false
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 1
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/sends": {
         "result": [
@@ -1564,11 +1646,13 @@
                 "memo": null
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 2
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/dispensers": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/assets/XCP/dispensers/munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b": {
         "result": {
@@ -1592,10 +1676,10 @@
         "result": [
             {
                 "asset": "NODIVISIBLE",
-                "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
-                "quantity": 10,
+                "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                "quantity": 5,
                 "escrow": null,
-                "cursor_id": "balances_25",
+                "cursor_id": "balances_23",
                 "holding_type": "balances",
                 "status": null
             },
@@ -1610,19 +1694,21 @@
             },
             {
                 "asset": "NODIVISIBLE",
-                "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                "quantity": 5,
+                "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
+                "quantity": 10,
                 "escrow": null,
-                "cursor_id": "balances_23",
+                "cursor_id": "balances_25",
                 "holding_type": "balances",
                 "status": null
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 3
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/dispenses": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/orders/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498": {
         "result": {
@@ -1669,15 +1755,18 @@
                 "status": "pending"
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 1
     },
     "http://localhost:10009/v2/orders/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/btcpays": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/orders/NODIVISIBLE/XCP": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/bets/2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1": {
         "result": {
@@ -1702,7 +1791,8 @@
     },
     "http://localhost:10009/v2/bets/2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1/matches": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/bets/2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1/resolutions": {
         "result": [
@@ -1718,7 +1808,8 @@
                 "fee": 0
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 1
     },
     "http://localhost:10009/v2/burns": {
         "result": [
@@ -1795,7 +1886,8 @@
                 "status": "valid"
             }
         ],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 8
     },
     "http://localhost:10009/v2/dispensers/9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec": {
         "result": {
@@ -1817,7 +1909,8 @@
     },
     "http://localhost:10009/v2/dispensers/9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec/dispenses": {
         "result": [],
-        "next_cursor": null
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/events?limit=5": {
         "result": [
@@ -1893,7 +1986,8 @@
                 "timestamp": 0
             }
         ],
-        "next_cursor": 1232
+        "next_cursor": 1232,
+        "result_count": 1238
     },
     "http://localhost:10009/v2/events/10?limit=5": {
         "result": {
@@ -1933,7 +2027,8 @@
                 "event_count": 6
             }
         ],
-        "next_cursor": "OPEN_DISPENSER"
+        "next_cursor": "OPEN_DISPENSER",
+        "result_count": 21
     },
     "http://localhost:10009/v2/events/CREDIT?limit=5": {
         "result": [
@@ -2018,6 +2113,7 @@
                 "timestamp": 0
             }
         ],
-        "next_cursor": 1193
+        "next_cursor": 1193,
+        "result_count": 34
     }
 }

@@ -50,7 +50,10 @@ def select_rows(
     if or_where:
         where_clause = " OR ".join(or_where)
 
-    where_clause_count = f"WHERE {where_clause}"
+    if where_clause:
+        where_clause_count = f"WHERE {where_clause}"
+    else:
+        where_clause_count = ""
     bindings_count = list(bindings)
 
     if last_cursor is not None:
@@ -980,6 +983,7 @@ def get_asset_holders(db, asset: str, cursor: str = None, limit: int = 100):
         db,
         "all_holders",
         where={"asset": asset},
+        order="ASC",
         cursor_field="cursor_id",
         last_cursor=cursor,
         limit=limit,
