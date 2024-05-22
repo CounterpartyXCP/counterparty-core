@@ -2,7 +2,7 @@ import binascii
 import logging
 import struct
 
-from counterpartycore.lib import arc4, backend, config, script, util
+from counterpartycore.lib import arc4, backend, config, message_type, script, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.kickstart.utils import ib2h, inverse_hash
 from counterpartycore.lib.messages import dispenser
@@ -406,6 +406,21 @@ def get_tx_info_new(
         return get_dispensers_tx_info(sources, dispensers_outputs)
 
     destinations = "-".join(destinations)
+
+    try:
+        message_type_id, _ = message_type.unpack(data, block_index)
+    except struct.error:  # Deterministically raised.
+        message_type_id = None
+
+    if message_type_id == dispenser.DISPENSE_ID and util.enabled(
+        "dispense_prefix", block_index=block_index
+    ):
+        # if there is a dispense prefix we assume all potential_dispensers are dispensers
+        # that's mean we don't need to call get_dispensers_outputs()
+        # and so we avoid a db query (dispenser.is_dispensable()).
+        # If one of them is not a dispenser `dispenser.dispense()` will silently skip it
+        return get_dispensers_tx_info(sources, potential_dispensers)
+
     return sources, destinations, btc_amount, round(fee), data, []
 
 

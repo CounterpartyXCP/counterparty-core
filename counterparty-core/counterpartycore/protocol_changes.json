@@ -534,5 +534,12 @@
         "value":0.001
       }
     }
+  },
+  "dispense_prefix": {
+      "minimum_version_major": 10,
+      "minimum_version_minor": 2,
+      "minimum_version_revision": 0,
+      "block_index": 900000,
+      "testnet_block_index": 2817000
   }
 }

@@ -391,6 +391,28 @@ def compose(
     return (source, destination, data)
 
 
+def compose_dispense(db, source, destination, quantity, no_only_btc=False):
+    dispensers = ledger.get_dispensers(db, address=destination)
+    if len(dispensers) == 0:
+        # simple BTC send
+        if no_only_btc:
+            raise exceptions.ComposeError("address doesn't have any open dispenser")
+        return (source, [(destination, quantity)], None)
+    # sanity check
+    for dispenser in dispensers:
+        if dispenser["status"] != STATUS_OPEN:
+            raise exceptions.ComposeError("dispenser is not open")
+        if dispenser["give_remaining"] == 0:
+            raise exceptions.ComposeError("dispenser is empty")
+        must_give = get_must_give(db, dispenser, quantity) * dispenser["give_quantity"]
+        if must_give > dispenser["give_remaining"]:
+            raise exceptions.ComposeError("dispenser doesn't have enough asset to give")
+    # create data
+    data = struct.pack(config.SHORT_TXTYPE_FORMAT, DISPENSE_ID)
+    data += b"\x00"
+    return (source, [(destination, quantity)], data)
+
+
 def calculate_oracle_fee(
     db, escrow_quantity, give_quantity, mainchainrate, oracle_address, block_index
 ):
@@ -758,6 +780,19 @@ def is_dispensable(db, address, amount):
     return False
 
 
+def get_must_give(db, dispenser, btc_amount, block_index=None):
+    if (dispenser["oracle_address"] != None) and util.enabled(  # noqa: E711
+        "oracle_dispensers", block_index
+    ):
+        last_price, last_fee, last_fiat_label, last_updated = ledger.get_oracle_last_price(
+            db, dispenser["oracle_address"], block_index
+        )
+        fiatrate = util.satoshirate_to_fiat(dispenser["satoshirate"])
+        return int(floor(((btc_amount / config.UNIT) * last_price) / fiatrate))
+    else:
+        return int(floor(btc_amount / dispenser["satoshirate"]))
+
+
 def dispense(db, tx):
     cursor = db.cursor()
 
@@ -786,21 +821,9 @@ def dispense(db, tx):
             give_quantity = dispenser["give_quantity"]
 
             if satoshirate > 0 and give_quantity > 0:
-                if (dispenser["oracle_address"] != None) and util.enabled(  # noqa: E711
-                    "oracle_dispensers", next_out["block_index"]
-                ):
-                    last_price, last_fee, last_fiat_label, last_updated = (
-                        ledger.get_oracle_last_price(
-                            db, dispenser["oracle_address"], next_out["block_index"]
-                        )
-                    )
-                    fiatrate = util.satoshirate_to_fiat(satoshirate)
-                    must_give = int(
-                        floor(((next_out["btc_amount"] / config.UNIT) * last_price) / fiatrate)
-                    )
-                else:
-                    must_give = int(floor(next_out["btc_amount"] / satoshirate))
-
+                must_give = get_must_give(
+                    db, dispenser, next_out["btc_amount"], next_out["block_index"]
+                )
                 remaining = int(floor(dispenser["give_remaining"] / give_quantity))
                 actually_given = min(must_give, remaining) * give_quantity
                 give_remaining = dispenser["give_remaining"] - actually_given

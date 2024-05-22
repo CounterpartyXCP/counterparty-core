@@ -2301,7 +2301,7 @@ Composes a transaction to send a quantity of an asset to another address.
     ```
         {
             "result": {
-                "rawtransaction": "01000000017004c1186a4a6a11708e1739839488180dbb6dbf4a9bf52228faa5b3173cdb05000000001976a914818895f3dc2c178629d3d2d8fa3ec4a3f817982188acffffffff020000000000000000306a2e0d1e454cefefcbe167ffa672ce93608ec55d2594e5d1946a774e4e944f50dfb46943bffd3b68866791f7f496f8c270060406000000001976a914818895f3dc2c178629d3d2d8fa3ec4a3f817982188ac00000000",
+                "rawtransaction": "01000000017004c1186a4a6a11708e1739839488180dbb6dbf4a9bf52228faa5b3173cdb05000000001976a914818895f3dc2c178629d3d2d8fa3ec4a3f817982188acffffffff020000000000000000306a2e0d1e454cefefcbe167ffa672ce93608ec55d2594e5d1946a774e4e944f50dfb46943bffd3b68866791f7f496f8c2210b0506000000001976a914818895f3dc2c178629d3d2d8fa3ec4a3f817982188ac00000000",
                 "params": {
                     "source": "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
                     "destination": "1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev",
@@ -2309,7 +2309,14 @@ Composes a transaction to send a quantity of an asset to another address.
                     "quantity": 1000,
                     "memo": null,
                     "memo_is_hex": false,
-                    "use_enhanced_send": true
+                    "use_enhanced_send": true,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": "Counterparty",
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true
+                    },
+                    "quantity_normalized": "0.00001"
                 },
                 "name": "send"
             }
@@ -2369,6 +2376,61 @@ Composes a transaction to Sends all assets and/or transfer ownerships to a desti
                     "memo": "FFFF"
                 },
                 "name": "sweep"
+            }
+        }
+    ```
+
+### Compose Dispense [GET /v2/addresses/{address}/compose/dispense{?dispenser}{&quantity}{&encoding}{&fee_per_kb}{&regular_dust_size}{&multisig_dust_size}{&pubkey}{&allow_unconfirmed_inputs}{&fee}{&fee_provided}{&unspent_tx_hash}{&dust_return_pubkey}{&disable_utxo_locks}{&extended_tx_info}{&p2sh_pretx_txid}{&segwit}{&verbose}]
+
+Composes a transaction to send BTC to a dispenser.
+
++ Parameters
+    + address: `1CounterpartyXXXXXXXXXXXXXXXUWLpVr` (str, required) - The address that will be sending (must have the necessary quantity of BTC)
+    + dispenser: `17SDWBrEVyJ2nisHDmozgw35R9Bgu8ewqo` (str, required) - The dispenser that will be receiving the asset
+    + quantity: `1000` (int, required) - The quantity of BTC to send (in satoshis, hence integer)
+    + encoding (str, optional) - The encoding method to use
+        + Default: `auto`
+    + fee_per_kb (int, optional) - The fee per kilobyte of transaction data constant that the server uses when deciding on the dynamic fee to use (in satoshis)
+        + Default: `None`
+    + regular_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each non-(bare) multisig output.
+        + Default: `546`
+    + multisig_dust_size (int, optional) - Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output
+        + Default: `1000`
+    + pubkey (str, optional) - The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.
+        + Default: `None`
+    + allow_unconfirmed_inputs (bool, optional) - Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs
+        + Default: `False`
+    + fee (int, optional) - If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose
+        + Default: `None`
+    + fee_provided (int, optional) - If you would like to specify a maximum fee (up to and including which may be used as the transaction fee), specify it here (in satoshis). This differs from fee in that this is an upper bound value, which fee is an exact value
+        + Default: `0`
+    + unspent_tx_hash (str, optional) - When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs
+        + Default: `None`
+    + dust_return_pubkey (str, optional) - The dust return pubkey is used in multi-sig data outputs (as the only real pubkey) to make those the outputs spendable. By default, this pubkey is taken from the pubkey used in the first transaction input. However, it can be overridden here (and is required to be specified if a P2SH input is used and multisig is used as the data output encoding.) If specified, specify the public key (in hex format) where dust will be returned to so that it can be reclaimed. Only valid/useful when used with transactions that utilize multisig data encoding. Note that if this value is set to false, this instructs counterparty-server to use the default dust return pubkey configured at the node level. If this default is not set at the node level, the call will generate an exception
+        + Default: `None`
+    + disable_utxo_locks (bool, optional) - By default, UTXOs utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs
+        + Default: `False`
+    + extended_tx_info (bool, optional) - When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee
+        + Default: `False`
+    + p2sh_pretx_txid (str, optional) - The previous transaction txid for a two part P2SH message. This txid must be taken from the signed transaction
+        + Default: `None`
+    + segwit (bool, optional) - Use segwit
+        + Default: `False`
+    + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
+        + Default: `false`
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": {
+                "rawtransaction": "01000000017004c1186a4a6a11708e1739839488180dbb6dbf4a9bf52228faa5b3173cdb05000000001976a914818895f3dc2c178629d3d2d8fa3ec4a3f817982188acffffffff03e8030000000000001976a9144695974623d397083e3d469163e0c680ac77639188ac00000000000000000c6a0a0d1e454cefefcbe168ff6b070506000000001976a914818895f3dc2c178629d3d2d8fa3ec4a3f817982188ac00000000",
+                "params": {
+                    "source": "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
+                    "destination": "17SDWBrEVyJ2nisHDmozgw35R9Bgu8ewqo",
+                    "quantity": 1000
+                },
+                "name": "dispense"
             }
         }
     ```

@@ -534,6 +534,6 @@ def ensure_script_pub_key_for_inputs(coins):
                 txid = coin["txid"]
                 for vout in txs[txid]["vout"]:
                     if vout["n"] == coin["vout"]:
-                        coin["script_pub_key"] = vout["script_pub_key"]["hex"]
+                        coin["script_pub_key"] = vout["scriptPubKey"]["hex"]
 
     return coins
