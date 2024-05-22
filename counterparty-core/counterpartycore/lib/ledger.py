@@ -716,6 +716,9 @@ def get_asset_info(db, asset: str):
     cursor.execute(query, bindings)
     issuance = cursor.fetchone()
 
+    if not issuance:
+        return None
+
     asset_info = asset_info | {
         "asset_longname": issuance["asset_longname"],
         "owner": issuance["issuer"],

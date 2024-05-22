@@ -30,6 +30,7 @@
     `/v2/transactions/<tx_hash>/events/<event>`
     `/v2/transactions/<int:tx_index>`
     `/v2/blocks/<block_hash>`
+    `/v2/blocks/last`
     `/v2/mempool/transactions/<tx_hash>/events`
     `/v2/addresses/<address>/issuances`
 * Replace `offset` and `last` arguments by `cursor`.
