@@ -33,9 +33,10 @@
     `/v2/blocks/last`
     `/v2/mempool/transactions/<tx_hash>/events`
     `/v2/addresses/<address>/issuances`
-* Replace `offset` and `last` arguments by `cursor`.
+* Replace `last` arguments by `cursor`.
 * All responses contain a `next_cursor` field.
-* All queries that return lists from the database accept the "cursor" and "limit" arguments. To get the next page you must use "?cursor=<next_cursor>"
+* All responses contain a `result_count` field.
+* All queries that return lists from the database accept the `cursor`/`offset` and `limit` arguments (see Pagination paragraph in API Documentation).
 * Documents the list of events with an example format for each of them.
 * The `asset`, `assets`, `give_asset` and `get_asset` parameters are not case sensitive.
 
