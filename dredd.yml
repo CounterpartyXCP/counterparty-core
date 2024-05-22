@@ -3,7 +3,9 @@ endpoint: http://127.0.0.1:4000
 loglevel: error
 only:
 - Blocks > Get Blocks > Get Blocks
-- Blocks > Get Block > Get Block
+- Blocks > Get Last Block > Get Last Block
+- Blocks > Get Block By Height > Get Block By Height
+- Blocks > Get Block By Hash > Get Block By Hash
 - Blocks > Get Transactions By Block > Get Transactions By Block
 - Blocks > Get Events By Block > Get Events By Block
 - Blocks > Get Event Counts By Block > Get Event Counts By Block
@@ -19,8 +21,14 @@ only:
 - Blocks > Get Sweeps By Block > Get Sweeps By Block
 - Transactions > Info > Info
 - Transactions > Unpack > Unpack
+- Transactions > Get Transaction By Tx Index > Get Transaction By Tx Index
 - Transactions > Get Transaction By Hash > Get Transaction By Hash
-- Transactions > Get Events By Transaction > Get Events By Transaction
+- Transactions > Get Events By Transaction Index > Get Events By Transaction Index
+- Transactions > Get Events By Transaction Hash > Get Events By Transaction Hash
+- Transactions > Get Events By Transaction Index And Event > Get Events By Transaction
+  Index And Event
+- Transactions > Get Events By Transaction Hash And Event > Get Events By Transaction
+  Hash And Event
 - Addresses > Get Address Balances > Get Address Balances
 - Addresses > Get Balance By Address And Asset > Get Balance By Address And Asset
 - Addresses > Get Credits By Address > Get Credits By Address
@@ -33,9 +41,14 @@ only:
 - Addresses > Get Sends By Address And Asset > Get Sends By Address And Asset
 - Addresses > Get Receive By Address And Asset > Get Receive By Address And Asset
 - Addresses > Get Dispensers By Address > Get Dispensers By Address
-- Addresses > Get Dispensers By Address And Asset > Get Dispensers By Address And
-  Asset
+- Addresses > Get Dispenser By Address And Asset > Get Dispenser By Address And Asset
+- Addresses > Get Dispenses By Source > Get Dispenses By Source
+- Addresses > Get Dispenses By Destination > Get Dispenses By Destination
+- Addresses > Get Dispenses By Source And Asset > Get Dispenses By Source And Asset
+- Addresses > Get Dispenses By Destination And Asset > Get Dispenses By Destination
+  And Asset
 - Addresses > Get Sweeps By Address > Get Sweeps By Address
+- Addresses > Get Issuances By Address > Get Issuances By Address
 - Assets > Get Valid Assets > Get Valid Assets
 - Assets > Get Asset Info > Get Asset Info
 - Assets > Get Asset Balances > Get Asset Balances
@@ -47,8 +60,9 @@ only:
 - Assets > Get Issuances By Asset > Get Issuances By Asset
 - Assets > Get Sends By Asset > Get Sends By Asset
 - Assets > Get Dispensers By Asset > Get Dispensers By Asset
-- Assets > Get Dispensers By Address And Asset > Get Dispensers By Address And Asset
+- Assets > Get Dispenser By Address And Asset > Get Dispenser By Address And Asset
 - Assets > Get Asset Holders > Get Asset Holders
+- Assets > Get Dispenses By Asset > Get Dispenses By Asset
 - Orders > Get Order > Get Order
 - Orders > Get Order Matches By Order > Get Order Matches By Order
 - Orders > Get BTCPays By Order > Get BTCPays By Order
@@ -63,6 +77,89 @@ only:
 - Events > Get Event By Index > Get Event By Index
 - Events > Get All Events Counts > Get All Events Counts
 - Events > Get Events By Name > Get Events By Name
+- Events > Get Event Count > Get Event Count
+- Z-pages > Check Server Health > Check Server Health
+- Z-pages > Check Server Health > Check Server Health
+- V1 > Redirect To Rpc V1 > Redirect To Rpc V1
+- V1 > Redirect To Rpc V1 > Redirect To Rpc V1
+- V1 > Redirect To Rpc V1 > Redirect To Rpc V1
+- V1 > Redirect To Rpc V1 > Redirect To Rpc V1
+- Blocks > Get Blocks > Get Blocks
+- Blocks > Get Last Block > Get Last Block
+- Blocks > Get Block By Height > Get Block By Height
+- Blocks > Get Block By Hash > Get Block By Hash
+- Blocks > Get Transactions By Block > Get Transactions By Block
+- Blocks > Get Events By Block > Get Events By Block
+- Blocks > Get Event Counts By Block > Get Event Counts By Block
+- Blocks > Get Events By Block And Event > Get Events By Block And Event
+- Blocks > Get Credits By Block > Get Credits By Block
+- Blocks > Get Debits By Block > Get Debits By Block
+- Blocks > Get Expirations > Get Expirations
+- Blocks > Get Cancels > Get Cancels
+- Blocks > Get Destructions > Get Destructions
+- Blocks > Get Issuances By Block > Get Issuances By Block
+- Blocks > Get Sends By Block > Get Sends By Block
+- Blocks > Get Dispenses By Block > Get Dispenses By Block
+- Blocks > Get Sweeps By Block > Get Sweeps By Block
+- Transactions > Info > Info
+- Transactions > Unpack > Unpack
+- Transactions > Get Transaction By Tx Index > Get Transaction By Tx Index
+- Transactions > Get Transaction By Hash > Get Transaction By Hash
+- Transactions > Get Events By Transaction Index > Get Events By Transaction Index
+- Transactions > Get Events By Transaction Hash > Get Events By Transaction Hash
+- Transactions > Get Events By Transaction Index And Event > Get Events By Transaction
+  Index And Event
+- Transactions > Get Events By Transaction Hash And Event > Get Events By Transaction
+  Hash And Event
+- Addresses > Get Address Balances > Get Address Balances
+- Addresses > Get Balance By Address And Asset > Get Balance By Address And Asset
+- Addresses > Get Credits By Address > Get Credits By Address
+- Addresses > Get Debits By Address > Get Debits By Address
+- Addresses > Get Bet By Feed > Get Bet By Feed
+- Addresses > Get Broadcasts By Source > Get Broadcasts By Source
+- Addresses > Get Burns By Address > Get Burns By Address
+- Addresses > Get Sends By Address > Get Sends By Address
+- Addresses > Get Receive By Address > Get Receive By Address
+- Addresses > Get Sends By Address And Asset > Get Sends By Address And Asset
+- Addresses > Get Receive By Address And Asset > Get Receive By Address And Asset
+- Addresses > Get Dispensers By Address > Get Dispensers By Address
+- Addresses > Get Dispenser By Address And Asset > Get Dispenser By Address And Asset
+- Addresses > Get Dispenses By Source > Get Dispenses By Source
+- Addresses > Get Dispenses By Destination > Get Dispenses By Destination
+- Addresses > Get Dispenses By Source And Asset > Get Dispenses By Source And Asset
+- Addresses > Get Dispenses By Destination And Asset > Get Dispenses By Destination
+  And Asset
+- Addresses > Get Sweeps By Address > Get Sweeps By Address
+- Addresses > Get Issuances By Address > Get Issuances By Address
+- Assets > Get Valid Assets > Get Valid Assets
+- Assets > Get Asset Info > Get Asset Info
+- Assets > Get Asset Balances > Get Asset Balances
+- Assets > Get Balance By Address And Asset > Get Balance By Address And Asset
+- Assets > Get Orders By Asset > Get Orders By Asset
+- Assets > Get Credits By Asset > Get Credits By Asset
+- Assets > Get Debits By Asset > Get Debits By Asset
+- Assets > Get Dividends > Get Dividends
+- Assets > Get Issuances By Asset > Get Issuances By Asset
+- Assets > Get Sends By Asset > Get Sends By Asset
+- Assets > Get Dispensers By Asset > Get Dispensers By Asset
+- Assets > Get Dispenser By Address And Asset > Get Dispenser By Address And Asset
+- Assets > Get Asset Holders > Get Asset Holders
+- Assets > Get Dispenses By Asset > Get Dispenses By Asset
+- Orders > Get Order > Get Order
+- Orders > Get Order Matches By Order > Get Order Matches By Order
+- Orders > Get BTCPays By Order > Get BTCPays By Order
+- Orders > Get Orders By Two Assets > Get Orders By Two Assets
+- Bets > Get Bet > Get Bet
+- Bets > Get Bet Matches By Bet > Get Bet Matches By Bet
+- Bets > Get Resolutions By Bet > Get Resolutions By Bet
+- Burns > Get All Burns > Get All Burns
+- Dispensers > Get Dispenser Info By Hash > Get Dispenser Info By Hash
+- Dispensers > Get Dispenses By Dispenser > Get Dispenses By Dispenser
+- Events > Get All Events > Get All Events
+- Events > Get Event By Index > Get Event By Index
+- Events > Get All Events Counts > Get All Events Counts
+- Events > Get Events By Name > Get Events By Name
+- Events > Get Event Count > Get Event Count
 - Z-pages > Check Server Health > Check Server Health
 - Z-pages > Check Server Health > Check Server Health
 - V1 > Redirect To Rpc V1 > Redirect To Rpc V1

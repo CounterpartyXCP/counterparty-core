@@ -122,7 +122,16 @@ def initialise(db):
 
     # create indexes
     database.create_indexes(
-        cursor, "dispenses", [["tx_hash"], ["block_index"], ["dispenser_tx_hash"]]
+        cursor,
+        "dispenses",
+        [
+            ["tx_hash"],
+            ["block_index"],
+            ["dispenser_tx_hash"],
+            ["asset"],
+            ["source"],
+            ["destination"],
+        ],
     )
 
     # Dispenser refills
