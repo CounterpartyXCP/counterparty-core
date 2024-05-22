@@ -3,6 +3,7 @@ endpoint: http://127.0.0.1:4000
 loglevel: error
 only:
 - Blocks > Get Blocks > Get Blocks
+- Blocks > Get Last Block > Get Last Block
 - Blocks > Get Block By Height > Get Block By Height
 - Blocks > Get Block By Hash > Get Block By Hash
 - Blocks > Get Transactions By Block > Get Transactions By Block
@@ -83,6 +84,7 @@ only:
 - V1 > Redirect To Rpc V1 > Redirect To Rpc V1
 - V1 > Redirect To Rpc V1 > Redirect To Rpc V1
 - Blocks > Get Blocks > Get Blocks
+- Blocks > Get Last Block > Get Last Block
 - Blocks > Get Block By Height > Get Block By Height
 - Blocks > Get Block By Hash > Get Block By Hash
 - Blocks > Get Transactions By Block > Get Transactions By Block

@@ -1382,6 +1382,31 @@ Returns the list of the last ten blocks
         }
     ```
 
+### Get Last Block [GET /v2/blocks/last{?verbose}]
+
+Return the information of the last block
+
++ Parameters
+    + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
+        + Default: `false`
+
++ Response 200 (application/json)
+
+    ```
+        {
+            "result": {
+                "block_index": 844544,
+                "block_hash": "0000000000000000000163831eb9f071ed4f23a95b7880002b9a699ac43d2aa7",
+                "block_time": 1716362146,
+                "previous_block_hash": "00000000000000000002c19dbc70640b22c619188a2e80dea97fb4e0ba1e7897",
+                "difficulty": 386097818,
+                "ledger_hash": "44153528dcff76acfd1b04ba9ff685151432f12b089f191fcdb4f00253cd1404",
+                "txlist_hash": "5fbbb440809224128a411165751b115cfa0b2ef55e214a26c889a0851492899b",
+                "messages_hash": "59459d953c676a527587f4cfc7fe8ca4103e0e225acd9e163f3c4ff619399b16"
+            }
+        }
+    ```
+
 ### Get Block By Height [GET /v2/blocks/{block_index}{?verbose}]
 
 Return the information of a block

@@ -137,6 +137,13 @@ def get_block_by_hash(db, block_hash: str):
     return select_row(db, "blocks", where={"block_hash": block_hash})
 
 
+def get_last_block(db):
+    """
+    Return the information of the last block
+    """
+    return select_row(db, "blocks", where={})
+
+
 def get_transactions_by_block(db, block_index: int, cursor: int = None, limit: int = 10):
     """
     Returns the transactions of a block

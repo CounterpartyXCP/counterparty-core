@@ -7,6 +7,7 @@ ROUTES = util.prepare_routes(
     {
         ### /blocks ###
         "/v2/blocks": queries.get_blocks,
+        "/v2/blocks/last": queries.get_last_block,
         "/v2/blocks/<int:block_index>": queries.get_block_by_height,
         "/v2/blocks/<block_hash>": queries.get_block_by_hash,
         "/v2/blocks/<int:block_index>/transactions": queries.get_transactions_by_block,
