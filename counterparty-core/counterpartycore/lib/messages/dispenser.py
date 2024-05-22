@@ -790,16 +790,15 @@ def is_dispensable(db, address, amount):
 
 
 def get_must_give(db, dispenser, btc_amount, block_index=None):
-    if (dispenser["oracle_address"] != None) and util.enabled(  # noqa: E711
+    if (dispenser["oracle_address"] is not None) and util.enabled(  # noqa: E711
         "oracle_dispensers", block_index
     ):
-        last_price, last_fee, last_fiat_label, last_updated = ledger.get_oracle_last_price(
+        last_price, _last_fee, _last_fiat_label, _last_updated = ledger.get_oracle_last_price(
             db, dispenser["oracle_address"], block_index
         )
         fiatrate = util.satoshirate_to_fiat(dispenser["satoshirate"])
         return int(floor(((btc_amount / config.UNIT) * last_price) / fiatrate))
-    else:
-        return int(floor(btc_amount / dispenser["satoshirate"]))
+    return int(floor(btc_amount / dispenser["satoshirate"]))
 
 
 def dispense(db, tx):
