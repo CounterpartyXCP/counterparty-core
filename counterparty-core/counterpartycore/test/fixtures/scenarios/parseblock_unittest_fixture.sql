@@ -3252,9 +3252,15 @@ CREATE TRIGGER block_update_dispenses
                            BEFORE UPDATE ON dispenses BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
+CREATE INDEX dispenses_asset_idx ON dispenses (asset)
+        ;
 CREATE INDEX dispenses_block_index_idx ON dispenses (block_index)
         ;
+CREATE INDEX dispenses_destination_idx ON dispenses (destination)
+        ;
 CREATE INDEX dispenses_dispenser_tx_hash_idx ON dispenses (dispenser_tx_hash)
+        ;
+CREATE INDEX dispenses_source_idx ON dispenses (source)
         ;
 CREATE INDEX dispenses_tx_hash_idx ON dispenses (tx_hash)
         ;

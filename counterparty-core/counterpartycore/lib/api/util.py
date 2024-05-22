@@ -265,7 +265,7 @@ def inject_issuance(db, result):
     # gather asset list
     asset_list = []
     for result_item in result_list:
-        if "asset_longname" in result_item:
+        if "asset_longname" in result_item and "description" in result_item:
             continue
         item = result_item
         if "params" in item:

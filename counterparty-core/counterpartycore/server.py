@@ -107,7 +107,7 @@ def initialise_log_config(
         config.LOG = log_file
 
     if config.LOG:
-        config.FETCHER_LOG = os.path.join(os.path.dirname(config.LOG), "fetcher.log")
+        config.FETCHER_LOG = os.path.join(os.path.dirname(config.LOG), f"fetcher{network}.log")
 
     if no_log_files:  # no file logging
         config.API_LOG = None
@@ -225,7 +225,7 @@ def initialise_config(
 
     logger.debug("DATABASE: %s", config.DATABASE)
 
-    config.FETCHER_DB = os.path.join(os.path.dirname(config.DATABASE), "fetcherdb")
+    config.FETCHER_DB = os.path.join(os.path.dirname(config.DATABASE), f"fetcherdb{network}")
 
     config.API_LIMIT_ROWS = api_limit_rows
 

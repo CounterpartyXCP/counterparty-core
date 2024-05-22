@@ -83,6 +83,7 @@ def init_database(sqlfile, dbfile, options=None):
 
     restore_database(config.DATABASE, sqlfile)
     db = database.get_connection(read_only=False)  # reinit the DB to deal with the restoring
+    blocks.create_views(db)
     database.update_version(db)
     util.FIRST_MULTISIG_BLOCK_TESTNET = 1
 

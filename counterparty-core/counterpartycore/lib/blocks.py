@@ -628,6 +628,8 @@ def initialise(db):
     if "event" not in columns:
         cursor.execute("""ALTER TABLE mempool ADD COLUMN event TEXT""")
 
+    create_views(db)
+
     # Lock UPDATE on all tables
     for table in TABLES:
         cursor.execute(f"""CREATE TRIGGER IF NOT EXISTS block_update_{table}
@@ -635,6 +637,151 @@ def initialise(db):
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
                         """)
+    cursor.close()
+
+
+def create_views(db):
+    cursor = db.cursor()
+    # Create Expiration View
+    expiration_queries = [
+        """
+        SELECT 'order' AS type, order_hash AS object_id, block_index,
+        CONCAT(CAST(block_index AS VARCAHR), '_order_', CAST(rowid AS VARCAHR)) AS cursor_id
+        FROM order_expirations
+        """,
+        """
+        SELECT 'order_match' AS type, order_match_id AS object_id, block_index,
+        CONCAT(CAST(block_index AS VARCAHR), '_order_match_', CAST(rowid AS VARCAHR)) AS cursor_id
+        FROM order_match_expirations
+        """,
+        """
+        SELECT 'bet' AS type, bet_hash AS object_id, block_index,
+        CONCAT(CAST(block_index AS VARCAHR), '_bet_', CAST(rowid AS VARCAHR)) AS cursor_id
+        FROM bet_expirations
+        """,
+        """
+        SELECT 'bet_match' AS type, bet_match_id AS object_id, block_index,
+        CONCAT(CAST(block_index AS VARCAHR), '_bet_match_', CAST(rowid AS VARCAHR)) AS cursor_id
+        FROM bet_match_expirations
+        """,
+        """
+        SELECT 'rps' AS type, rps_hash AS object_id, block_index,
+        CONCAT(CAST(block_index AS VARCAHR), '_rps_', CAST(rowid AS VARCAHR)) AS cursor_id
+        FROM rps_expirations
+        """,
+        """
+        SELECT 'rps_match' AS type, rps_match_id AS object_id, block_index,
+        CONCAT(CAST(block_index AS VARCAHR), '_rps_match_', CAST(rowid AS VARCAHR)) AS cursor_id
+        FROM rps_match_expirations
+        """,
+    ]
+    expiration_query = " UNION ALL ".join(expiration_queries)
+    expiration_query = f"CREATE VIEW IF NOT EXISTS all_expirations AS {expiration_query}"
+    cursor.execute(expiration_query)
+
+    # Create holders view
+    holders_queries = [
+        """
+        SELECT asset, address, quantity, NULL AS escrow, MAX(rowid) AS rowid,
+            CONCAT('balances_', CAST(rowid AS VARCAHR)) AS cursor_id, 'balances' AS holding_type, NULL AS status
+        FROM balances
+        GROUP BY asset, address
+        """,
+        """
+        SELECT * FROM (
+            SELECT give_asset AS asset, source AS address, give_remaining AS quantity, tx_hash AS escrow,
+                MAX(rowid) AS rowid, CONCAT('open_order_', CAST(rowid AS VARCAHR)) AS cursor_id,
+                'open_order' AS holding_type, status
+            FROM orders
+            GROUP BY tx_hash
+        ) WHERE status = 'open'
+        """,
+        """
+        SELECT * FROM (
+            SELECT forward_asset AS asset, tx0_address AS address, forward_quantity AS quantity,
+                id AS escrow, MAX(rowid) AS rowid, CONCAT('order_match_', CAST(rowid AS VARCAHR)) AS cursor_id,
+                'pending_order_match' AS holding_type, status
+            FROM order_matches
+            GROUP BY id
+        ) WHERE status = 'pending'
+        """,
+        """
+        SELECT * FROM (
+            SELECT backward_asset AS asset, tx1_address AS address, backward_quantity AS quantity,
+                id AS escrow, MAX(rowid) AS rowid, CONCAT('order_match_', CAST(rowid AS VARCAHR)) AS cursor_id,
+                'pending_order_match' AS holding_type, status
+            FROM order_matches
+            GROUP BY id
+        ) WHERE status = 'pending'
+        """,
+        """
+        SELECT * FROM (
+            SELECT 'XCP' AS asset, source AS address, wager_remaining AS quantity,
+            tx_hash AS escrow, MAX(rowid) AS rowid, CONCAT('open_bet_', CAST(rowid AS VARCAHR)) AS cursor_id,
+            'open_bet' AS holding_type, status
+            FROM bets
+            GROUP BY tx_hash
+        ) WHERE status = 'open'
+        """,
+        """
+        SELECT * FROM (
+            SELECT 'XCP' AS asset, tx0_address AS address, forward_quantity AS quantity,
+            id AS escrow, MAX(rowid) AS rowid, CONCAT('bet_match_', CAST(rowid AS VARCAHR)) AS cursor_id,
+            'pending_bet_match' AS holding_type, status
+            FROM bet_matches
+            GROUP BY id
+        ) WHERE status = 'pending'
+        """,
+        """
+        SELECT * FROM (
+            SELECT 'XCP' AS asset, tx1_address AS address, backward_quantity AS quantity,
+            id AS escrow, MAX(rowid) AS rowid, CONCAT('bet_match_', CAST(rowid AS VARCAHR)) AS cursor_id,
+            'pending_bet_match' AS holding_type, status
+            FROM bet_matches
+            GROUP BY id
+        ) WHERE status = 'pending'
+        """,
+        """
+        SELECT * FROM (
+            SELECT 'XCP' AS asset, source AS address, wager AS quantity,
+            tx_hash AS escrow, MAX(rowid) AS rowid, CONCAT('open_rps_', CAST(rowid AS VARCAHR)) AS cursor_id,
+            'open_rps' AS holding_type, status
+            FROM rps
+            GROUP BY tx_hash
+        ) WHERE status = 'open'
+        """,
+        """
+        SELECT * FROM (
+            SELECT 'XCP' AS asset, tx0_address AS address, wager AS quantity,
+            id AS escrow, MAX(rowid) AS rowid, CONCAT('rps_match_', CAST(rowid AS VARCAHR)) AS cursor_id,
+            'pending_rps_match' AS holding_type, status
+            FROM rps_matches
+            GROUP BY id
+        ) WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
+        """,
+        """
+        SELECT * FROM (
+            SELECT 'XCP' AS asset, tx1_address AS address, wager AS quantity,
+            id AS escrow, MAX(rowid) AS rowid, CONCAT('rps_match_', CAST(rowid AS VARCAHR)) AS cursor_id,
+            'pending_rps_match' AS holding_type, status
+            FROM rps_matches
+            GROUP BY id
+        ) WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
+        """,
+        """
+        SELECT * FROM (
+            SELECT asset, source AS address, give_remaining AS quantity,
+            tx_hash AS escrow, MAX(rowid) AS rowid, CONCAT('open_dispenser_', CAST(rowid AS VARCAHR)) AS cursor_id,
+            'open_dispenser' AS holding_type, status
+            FROM dispensers
+            GROUP BY source, asset
+        ) WHERE status = 0
+        """,
+    ]
+    holder_query = " UNION ALL ".join(holders_queries)
+    holder_query = f"CREATE VIEW IF NOT EXISTS all_holders AS {holder_query}"
+    cursor.execute(holder_query)
+
     cursor.close()
 
 
@@ -903,9 +1050,9 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
             else:
                 previous_block_index = backend.bitcoind.get_block_height(decoded_block["hash_prev"])
             logger.info("Blockchain reorganization detected from block %s", previous_block_index)
-            # roolback to the previous block
+            # rollback to the previous block
             util.CURRENT_BLOCK_INDEX = previous_block_index + 1
-            rollback(db, block_index=util.CURRENT_BLOCK_INDEX)
+            rollback(db, block_index=previous_block_index)
             tx_index = get_next_tx_index(db)
     else:
         previous_block = {
@@ -987,7 +1134,7 @@ def catch_up(db, check_asset_conservation=True):
     block_count = backend.bitcoind.getblockcount()
 
     # initialize blocks fetcher
-    # block_fetcher = bitcoind.BlockFetcher(util.CURRENT_BLOCK_INDEX + 1)
+    # block_fetcher = backend.bitcoind.BlockFetcher(util.CURRENT_BLOCK_INDEX + 1)
     fetcher.initialize(util.CURRENT_BLOCK_INDEX + 1)
 
     # Get index of last transaction.
