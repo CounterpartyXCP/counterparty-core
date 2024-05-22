@@ -2,9 +2,10 @@ import json
 
 
 class QueryResult:
-    def __init__(self, result, next_cursor):
+    def __init__(self, result, next_cursor, result_count=None):
         self.result = result
         self.next_cursor = next_cursor
+        self.result_count = result_count
 
 
 def select_rows(
@@ -49,9 +50,12 @@ def select_rows(
     if or_where:
         where_clause = " OR ".join(or_where)
 
+    where_clause_count = f"WHERE {where_clause}"
+    bindings_count = list(bindings)
+
     if last_cursor is not None:
         if where_clause != "":
-            where_clause += " AND "
+            where_clause = f"({where_clause}) AND "
         if order == "ASC":
             where_clause += f" {cursor_field} >= ?"
         else:
@@ -69,6 +73,7 @@ def select_rows(
         select = f"*, {cursor_field} AS {cursor_field}"
 
     query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608
+    query_count = f"SELECT {select} FROM {table} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608
 
     if wrap_where is not None:
         wrap_where_field = []
@@ -78,9 +83,13 @@ def select_rows(
             else:
                 wrap_where_field.append(f"{key} = ?")
             bindings.append(value)
+            bindings_count.append(value)
         wrap_where_clause = " AND ".join(wrap_where_field)
         wrap_where_clause = f"WHERE {wrap_where_clause}"
         query = f"SELECT * FROM ({query}) {wrap_where_clause}"  # nosec B608  # noqa: S608
+        query_count = f"SELECT COUNT(*) AS count FROM ({query_count}) {wrap_where_clause}"  # nosec B608  # noqa: S608
+    else:
+        query_count = f"SELECT COUNT(*) AS count FROM ({query_count})"  # nosec B608  # noqa: S608
 
     query = f"{query} ORDER BY {cursor_field} {order} LIMIT ?"  # nosec B608  # noqa: S608
     bindings.append(limit + 1)
@@ -89,6 +98,10 @@ def select_rows(
     cursor.execute(query, bindings)
     result = cursor.fetchall()
     # print(result)
+
+    print(query_count, bindings_count)
+    cursor.execute(query_count, bindings_count)
+    result_count = cursor.fetchone()["count"]
 
     if result and len(result) > limit:
         next_cursor = result[-1][cursor_field]
@@ -102,13 +115,13 @@ def select_rows(
                 break
             row["params"] = json.loads(row["params"])
 
-    return QueryResult(result, next_cursor)
+    return QueryResult(result, next_cursor, result_count)
 
 
 def select_row(db, table, where, select="*"):
     query_result = select_rows(db, table, where, limit=1, select=select)
     if query_result.result:
-        return QueryResult(query_result.result[0], None)
+        return QueryResult(query_result.result[0], None, 1)
     return None
 
 
@@ -860,7 +873,7 @@ def get_valid_assets(db, cursor: str = None, limit: int = 100):
         cursor_field="asset",
         group_by="asset",
         order="ASC",
-        select="asset, asset_longname",
+        select="asset, asset_longname, description, issuer, divisible, locked",
         last_cursor=cursor,
         limit=limit,
     )
@@ -953,7 +966,7 @@ def get_orders_by_two_assets(
             order["market_dir"] = "SELL"
         else:
             order["market_dir"] = "BUY"
-    return QueryResult(query_result.result, query_result.next_cursor)
+    return QueryResult(query_result.result, query_result.next_cursor, query_result.result_count)
 
 
 def get_asset_holders(db, asset: str, cursor: str = None, limit: int = 100):
