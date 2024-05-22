@@ -41,12 +41,27 @@ All API responses follow the following format:
 ```
 {
     "error": <error_messsage_if_success_is_false>,
-    "result": <result_of_the_query_if_success_is_true>
-    "next_cursor": <cursor_value_to_get_the_next_page>
+    "result": <result_of_the_query_if_success_is_true>,
+    "next_cursor": <cursor_value_to_get_the_next_page>,
+    "result_count": <number_of_results>
 }
 ```
 
-All queries that return lists from the database accept the `cursor` and `limit` arguments. To get the next page you must use `?cursor=<next_cursor>`.
+## Pagination
+
+For all routes that return a list of results from the database you can choose between two pagination modes:
+
+- With the `cursor` and `limit` parameters
+- With the `offset` and `limit` parameters
+
+The `cursor` parameter allows you to get results from a certain index. This index is generally retrieved from the `next_cursor` field of the previous result (see above).
+The `offset` parameter allows you to ignore a certain number of results before returning the rest.
+
+For example:
+`/v2/blocks?limit=5&cursor=844575` allows you to recover blocks 844575 to 844570.
+`/v2/blocks?limit=5&offset=5` allows you to retrieve the 5th to the tenth most recent blocks.
+
+All responses contain a `result_count` field allowing you to calculate the number of pages.
 
 ## Bitcoin Core Proxy
 
@@ -1382,7 +1397,7 @@ Returns server information and the list of documented routes in JSON format.
 
 ## Group Blocks
 
-### Get Blocks [GET /v2/blocks{?cursor}{&limit}{&verbose}]
+### Get Blocks [GET /v2/blocks{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the list of the last ten blocks
 
@@ -1391,6 +1406,8 @@ Returns the list of the last ten blocks
         + Default: `None`
     + limit: `2` (int, optional) - The number of blocks to return
         + Default: `10`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -1502,7 +1519,7 @@ Return the information of a block
         }
     ```
 
-### Get Transactions By Block [GET /v2/blocks/{block_index}/transactions{?cursor}{&limit}{&verbose}]
+### Get Transactions By Block [GET /v2/blocks/{block_index}/transactions{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the transactions of a block
 
@@ -1512,6 +1529,8 @@ Returns the transactions of a block
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of transactions to return
         + Default: `10`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -1539,7 +1558,7 @@ Returns the transactions of a block
         }
     ```
 
-### Get Events By Block [GET /v2/blocks/{block_index}/events{?cursor}{&limit}{&verbose}]
+### Get Events By Block [GET /v2/blocks/{block_index}/events{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the events of a block
 
@@ -1549,6 +1568,8 @@ Returns the events of a block
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of events to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -1562,7 +1583,7 @@ Returns the events of a block
         }
     ```
 
-### Get Event Counts By Block [GET /v2/blocks/{block_index}/events/counts{?cursor}{&limit}{&verbose}]
+### Get Event Counts By Block [GET /v2/blocks/{block_index}/events/counts{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the event counts of a block
 
@@ -1572,6 +1593,8 @@ Returns the event counts of a block
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of events to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -1606,7 +1629,7 @@ Returns the event counts of a block
         }
     ```
 
-### Get Events By Block And Event [GET /v2/blocks/{block_index}/events/{event}{?cursor}{&limit}{&verbose}]
+### Get Events By Block And Event [GET /v2/blocks/{block_index}/events/{event}{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the events of a block filtered by event
 
@@ -1617,6 +1640,8 @@ Returns the events of a block filtered by event
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of events to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -1630,7 +1655,7 @@ Returns the events of a block filtered by event
         }
     ```
 
-### Get Credits By Block [GET /v2/blocks/{block_index}/credits{?cursor}{&limit}{&verbose}]
+### Get Credits By Block [GET /v2/blocks/{block_index}/credits{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the credits of a block
 
@@ -1640,6 +1665,8 @@ Returns the credits of a block
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of credits to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -1671,7 +1698,7 @@ Returns the credits of a block
         }
     ```
 
-### Get Debits By Block [GET /v2/blocks/{block_index}/debits{?cursor}{&limit}{&verbose}]
+### Get Debits By Block [GET /v2/blocks/{block_index}/debits{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the debits of a block
 
@@ -1681,6 +1708,8 @@ Returns the debits of a block
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of debits to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -1711,7 +1740,7 @@ Returns the debits of a block
         }
     ```
 
-### Get Expirations [GET /v2/blocks/{block_index}/expirations{?cursor}{&limit}{&verbose}]
+### Get Expirations [GET /v2/blocks/{block_index}/expirations{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the expirations of a block
 
@@ -1721,6 +1750,8 @@ Returns the expirations of a block
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of expirations to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -1747,7 +1778,7 @@ Returns the expirations of a block
         }
     ```
 
-### Get Cancels [GET /v2/blocks/{block_index}/cancels{?cursor}{&limit}{&verbose}]
+### Get Cancels [GET /v2/blocks/{block_index}/cancels{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the cancels of a block
 
@@ -1757,6 +1788,8 @@ Returns the cancels of a block
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of cancels to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -1787,7 +1820,7 @@ Returns the cancels of a block
         }
     ```
 
-### Get Destructions [GET /v2/blocks/{block_index}/destructions{?cursor}{&limit}{&verbose}]
+### Get Destructions [GET /v2/blocks/{block_index}/destructions{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the destructions of a block
 
@@ -1797,6 +1830,8 @@ Returns the destructions of a block
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of destructions to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -1829,7 +1864,7 @@ Returns the destructions of a block
         }
     ```
 
-### Get Issuances By Block [GET /v2/blocks/{block_index}/issuances{?cursor}{&limit}{&verbose}]
+### Get Issuances By Block [GET /v2/blocks/{block_index}/issuances{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the issuances of a block
 
@@ -1839,6 +1874,8 @@ Returns the issuances of a block
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of issuances to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -1874,7 +1911,7 @@ Returns the issuances of a block
         }
     ```
 
-### Get Sends By Block [GET /v2/blocks/{block_index}/sends{?cursor}{&limit}{&verbose}]
+### Get Sends By Block [GET /v2/blocks/{block_index}/sends{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the sends of a block
 
@@ -1884,6 +1921,8 @@ Returns the sends of a block
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of debits to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -1918,7 +1957,7 @@ Returns the sends of a block
         }
     ```
 
-### Get Dispenses By Block [GET /v2/blocks/{block_index}/dispenses{?cursor}{&limit}{&verbose}]
+### Get Dispenses By Block [GET /v2/blocks/{block_index}/dispenses{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the dispenses of a block
 
@@ -1928,6 +1967,8 @@ Returns the dispenses of a block
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of dispenses to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -1977,7 +2018,7 @@ Returns the dispenses of a block
         }
     ```
 
-### Get Sweeps By Block [GET /v2/blocks/{block_index}/sweeps{?cursor}{&limit}{&verbose}]
+### Get Sweeps By Block [GET /v2/blocks/{block_index}/sweeps{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the sweeps of a block
 
@@ -1987,6 +2028,8 @@ Returns the sweeps of a block
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of sweeps to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -2188,7 +2231,7 @@ Returns a transaction by its hash.
         }
     ```
 
-### Get Events By Transaction Index [GET /v2/transactions/{tx_index}/events{?cursor}{&limit}{&verbose}]
+### Get Events By Transaction Index [GET /v2/transactions/{tx_index}/events{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the events of a transaction
 
@@ -2198,6 +2241,8 @@ Returns the events of a transaction
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of events to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -2251,7 +2296,7 @@ Returns the events of a transaction
         }
     ```
 
-### Get Events By Transaction Hash [GET /v2/transactions/{tx_hash}/events{?cursor}{&limit}{&verbose}]
+### Get Events By Transaction Hash [GET /v2/transactions/{tx_hash}/events{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the events of a transaction
 
@@ -2261,6 +2306,8 @@ Returns the events of a transaction
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of events to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -2274,7 +2321,7 @@ Returns the events of a transaction
         }
     ```
 
-### Get Events By Transaction Index And Event [GET /v2/transactions/{tx_index}/events/{event}{?cursor}{&limit}{&verbose}]
+### Get Events By Transaction Index And Event [GET /v2/transactions/{tx_index}/events/{event}{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the events of a transaction
 
@@ -2285,6 +2332,8 @@ Returns the events of a transaction
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of events to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -2322,7 +2371,7 @@ Returns the events of a transaction
         }
     ```
 
-### Get Events By Transaction Hash And Event [GET /v2/transactions/{tx_hash}/events/{event}{?cursor}{&limit}{&verbose}]
+### Get Events By Transaction Hash And Event [GET /v2/transactions/{tx_hash}/events/{event}{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the events of a transaction
 
@@ -2333,6 +2382,8 @@ Returns the events of a transaction
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of events to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -2348,7 +2399,7 @@ Returns the events of a transaction
 
 ## Group Addresses
 
-### Get Address Balances [GET /v2/addresses/{address}/balances{?cursor}{&limit}{&verbose}]
+### Get Address Balances [GET /v2/addresses/{address}/balances{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the balances of an address
 
@@ -2358,6 +2409,8 @@ Returns the balances of an address
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of balances to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -2415,7 +2468,7 @@ Returns the balance of an address and asset
         }
     ```
 
-### Get Credits By Address [GET /v2/addresses/{address}/credits{?cursor}{&limit}{&verbose}]
+### Get Credits By Address [GET /v2/addresses/{address}/credits{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the credits of an address
 
@@ -2425,6 +2478,8 @@ Returns the credits of an address
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of credits to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -2455,7 +2510,7 @@ Returns the credits of an address
         }
     ```
 
-### Get Debits By Address [GET /v2/addresses/{address}/debits{?cursor}{&limit}{&verbose}]
+### Get Debits By Address [GET /v2/addresses/{address}/debits{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the debits of an address
 
@@ -2465,6 +2520,8 @@ Returns the debits of an address
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of debits to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -2527,7 +2584,7 @@ Returns the debits of an address
         }
     ```
 
-### Get Bet By Feed [GET /v2/addresses/{address}/bets{?status}{&cursor}{&limit}{&verbose}]
+### Get Bet By Feed [GET /v2/addresses/{address}/bets{?status}{&cursor}{&limit}{&offset}{&verbose}]
 
 Returns the bets of a feed
 
@@ -2539,6 +2596,8 @@ Returns the bets of a feed
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of bets to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -2591,7 +2650,7 @@ Returns the bets of a feed
         }
     ```
 
-### Get Broadcasts By Source [GET /v2/addresses/{address}/broadcasts{?status}{&cursor}{&limit}{&verbose}]
+### Get Broadcasts By Source [GET /v2/addresses/{address}/broadcasts{?status}{&cursor}{&limit}{&offset}{&verbose}]
 
 Returns the broadcasts of a source
 
@@ -2603,6 +2662,8 @@ Returns the broadcasts of a source
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of broadcasts to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -2641,7 +2702,7 @@ Returns the broadcasts of a source
         }
     ```
 
-### Get Burns By Address [GET /v2/addresses/{address}/burns{?cursor}{&limit}{&verbose}]
+### Get Burns By Address [GET /v2/addresses/{address}/burns{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the burns of an address
 
@@ -2651,6 +2712,8 @@ Returns the burns of an address
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of burns to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -2674,7 +2737,7 @@ Returns the burns of an address
         }
     ```
 
-### Get Sends By Address [GET /v2/addresses/{address}/sends{?cursor}{&limit}{&verbose}]
+### Get Sends By Address [GET /v2/addresses/{address}/sends{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the sends of an address
 
@@ -2684,6 +2747,8 @@ Returns the sends of an address
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of sends to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -2717,7 +2782,7 @@ Returns the sends of an address
         }
     ```
 
-### Get Receive By Address [GET /v2/addresses/{address}/receives{?cursor}{&limit}{&verbose}]
+### Get Receive By Address [GET /v2/addresses/{address}/receives{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the receives of an address
 
@@ -2727,6 +2792,8 @@ Returns the receives of an address
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of sends to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -2760,7 +2827,7 @@ Returns the receives of an address
         }
     ```
 
-### Get Sends By Address And Asset [GET /v2/addresses/{address}/sends/{asset}{?cursor}{&limit}{&verbose}]
+### Get Sends By Address And Asset [GET /v2/addresses/{address}/sends/{asset}{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the sends of an address and asset
 
@@ -2771,6 +2838,8 @@ Returns the sends of an address and asset
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of sends to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -2804,7 +2873,7 @@ Returns the sends of an address and asset
         }
     ```
 
-### Get Receive By Address And Asset [GET /v2/addresses/{address}/receives/{asset}{?cursor}{&limit}{&verbose}]
+### Get Receive By Address And Asset [GET /v2/addresses/{address}/receives/{asset}{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the receives of an address and asset
 
@@ -2815,6 +2884,8 @@ Returns the receives of an address and asset
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of sends to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -2848,7 +2919,7 @@ Returns the receives of an address and asset
         }
     ```
 
-### Get Dispensers By Address [GET /v2/addresses/{address}/dispensers{?status}{&cursor}{&limit}{&verbose}]
+### Get Dispensers By Address [GET /v2/addresses/{address}/dispensers{?status}{&cursor}{&limit}{&offset}{&verbose}]
 
 Returns the dispensers of an address
 
@@ -2860,6 +2931,8 @@ Returns the dispensers of an address
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of dispensers to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -2943,7 +3016,7 @@ Returns the dispenser of an address and an asset
         }
     ```
 
-### Get Dispenses By Source [GET /v2/addresses/{address}/dispenses/sends{?cursor}{&limit}{&verbose}]
+### Get Dispenses By Source [GET /v2/addresses/{address}/dispenses/sends{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the dispenses of a source
 
@@ -2953,6 +3026,8 @@ Returns the dispenses of a source
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of dispenses to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -2966,7 +3041,7 @@ Returns the dispenses of a source
         }
     ```
 
-### Get Dispenses By Destination [GET /v2/addresses/{address}/dispenses/receives{?cursor}{&limit}{&verbose}]
+### Get Dispenses By Destination [GET /v2/addresses/{address}/dispenses/receives{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the dispenses of a destination
 
@@ -2976,6 +3051,8 @@ Returns the dispenses of a destination
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of dispenses to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -2989,7 +3066,7 @@ Returns the dispenses of a destination
         }
     ```
 
-### Get Dispenses By Source And Asset [GET /v2/addresses/{address}/dispenses/sends/{asset}{?cursor}{&limit}{&verbose}]
+### Get Dispenses By Source And Asset [GET /v2/addresses/{address}/dispenses/sends/{asset}{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the dispenses of an address and an asset
 
@@ -3000,6 +3077,8 @@ Returns the dispenses of an address and an asset
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of dispenses to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -3013,7 +3092,7 @@ Returns the dispenses of an address and an asset
         }
     ```
 
-### Get Dispenses By Destination And Asset [GET /v2/addresses/{address}/dispenses/receives/{asset}{?cursor}{&limit}{&verbose}]
+### Get Dispenses By Destination And Asset [GET /v2/addresses/{address}/dispenses/receives/{asset}{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the dispenses of an address and an asset
 
@@ -3024,6 +3103,8 @@ Returns the dispenses of an address and an asset
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of dispenses to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -3037,7 +3118,7 @@ Returns the dispenses of an address and an asset
         }
     ```
 
-### Get Sweeps By Address [GET /v2/addresses/{address}/sweeps{?cursor}{&limit}{&verbose}]
+### Get Sweeps By Address [GET /v2/addresses/{address}/sweeps{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the sweeps of an address
 
@@ -3047,6 +3128,8 @@ Returns the sweeps of an address
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of sweeps to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -3072,7 +3155,7 @@ Returns the sweeps of an address
         }
     ```
 
-### Get Issuances By Address [GET /v2/addresses/{address}/issuances{?cursor}{&limit}{&verbose}]
+### Get Issuances By Address [GET /v2/addresses/{address}/issuances{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the issuances of an address
 
@@ -3082,6 +3165,8 @@ Returns the issuances of an address
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of issuances to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -4028,7 +4113,7 @@ Composes a transaction to Sends all assets and/or transfer ownerships to a desti
 
 ## Group Assets
 
-### Get Valid Assets [GET /v2/assets{?cursor}{&limit}{&verbose}]
+### Get Valid Assets [GET /v2/assets{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the valid assets
 
@@ -4037,6 +4122,8 @@ Returns the valid assets
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of assets to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -4118,7 +4205,7 @@ Returns the asset information
         }
     ```
 
-### Get Asset Balances [GET /v2/assets/{asset}/balances{?cursor}{&limit}{&verbose}]
+### Get Asset Balances [GET /v2/assets/{asset}/balances{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the asset balances
 
@@ -4128,6 +4215,8 @@ Returns the asset balances
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of balances to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -4238,7 +4327,7 @@ Returns the balance of an address and asset
         }
     ```
 
-### Get Orders By Asset [GET /v2/assets/{asset}/orders{?status}{&cursor}{&limit}{&verbose}]
+### Get Orders By Asset [GET /v2/assets/{asset}/orders{?status}{&cursor}{&limit}{&offset}{&verbose}]
 
 Returns the orders of an asset
 
@@ -4250,6 +4339,8 @@ Returns the orders of an asset
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of orders to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -4445,7 +4536,7 @@ Returns the orders of an asset
         }
     ```
 
-### Get Credits By Asset [GET /v2/assets/{asset}/credits{?cursor}{&limit}{&verbose}]
+### Get Credits By Asset [GET /v2/assets/{asset}/credits{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the credits of an asset
 
@@ -4455,6 +4546,8 @@ Returns the credits of an asset
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of credits to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -4554,7 +4647,7 @@ Returns the credits of an asset
         }
     ```
 
-### Get Debits By Asset [GET /v2/assets/{asset}/debits{?cursor}{&limit}{&verbose}]
+### Get Debits By Asset [GET /v2/assets/{asset}/debits{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the debits of an asset
 
@@ -4564,6 +4657,8 @@ Returns the debits of an asset
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of debits to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -4658,7 +4753,7 @@ Returns the debits of an asset
         }
     ```
 
-### Get Dividends [GET /v2/assets/{asset}/dividends{?cursor}{&limit}{&verbose}]
+### Get Dividends [GET /v2/assets/{asset}/dividends{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the dividends of an asset
 
@@ -4668,6 +4763,8 @@ Returns the dividends of an asset
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of assets to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -4772,7 +4869,7 @@ Returns the dividends of an asset
         }
     ```
 
-### Get Issuances By Asset [GET /v2/assets/{asset}/issuances{?cursor}{&limit}{&verbose}]
+### Get Issuances By Asset [GET /v2/assets/{asset}/issuances{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the issuances of an asset
 
@@ -4782,6 +4879,8 @@ Returns the issuances of an asset
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of issuances to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -4880,7 +4979,7 @@ Returns the issuances of an asset
         }
     ```
 
-### Get Sends By Asset [GET /v2/assets/{asset}/sends{?cursor}{&limit}{&verbose}]
+### Get Sends By Asset [GET /v2/assets/{asset}/sends{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the sends of an asset
 
@@ -4890,6 +4989,8 @@ Returns the sends of an asset
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of debits to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -4999,7 +5100,7 @@ Returns the sends of an asset
         }
     ```
 
-### Get Dispensers By Asset [GET /v2/assets/{asset}/dispensers{?status}{&cursor}{&limit}{&verbose}]
+### Get Dispensers By Asset [GET /v2/assets/{asset}/dispensers{?status}{&cursor}{&limit}{&offset}{&verbose}]
 
 Returns the dispensers of an asset
 
@@ -5011,6 +5112,8 @@ Returns the dispensers of an asset
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of dispensers to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -5094,7 +5197,7 @@ Returns the dispenser of an address and an asset
         }
     ```
 
-### Get Asset Holders [GET /v2/assets/{asset}/holders{?cursor}{&limit}{&verbose}]
+### Get Asset Holders [GET /v2/assets/{asset}/holders{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the holders of an asset
 
@@ -5104,6 +5207,8 @@ Returns the holders of an asset
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of holders to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -5203,7 +5308,7 @@ Returns the holders of an asset
         }
     ```
 
-### Get Dispenses By Asset [GET /v2/assets/{asset}/dispenses{?cursor}{&limit}{&verbose}]
+### Get Dispenses By Asset [GET /v2/assets/{asset}/dispenses{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the dispenses of an asset
 
@@ -5213,6 +5318,8 @@ Returns the dispenses of an asset
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of dispenses to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -5280,7 +5387,7 @@ Returns the information of an order
         }
     ```
 
-### Get Order Matches By Order [GET /v2/orders/{order_hash}/matches{?status}{&cursor}{&limit}{&verbose}]
+### Get Order Matches By Order [GET /v2/orders/{order_hash}/matches{?status}{&cursor}{&limit}{&offset}{&verbose}]
 
 Returns the order matches of an order
 
@@ -5292,6 +5399,8 @@ Returns the order matches of an order
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of order matches to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -5327,7 +5436,7 @@ Returns the order matches of an order
         }
     ```
 
-### Get BTCPays By Order [GET /v2/orders/{order_hash}/btcpays{?cursor}{&limit}{&verbose}]
+### Get BTCPays By Order [GET /v2/orders/{order_hash}/btcpays{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the BTC pays of an order
 
@@ -5337,6 +5446,8 @@ Returns the BTC pays of an order
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of resolutions to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -5361,7 +5472,7 @@ Returns the BTC pays of an order
         }
     ```
 
-### Get Orders By Two Assets [GET /v2/orders/{asset1}/{asset2}{?status}{&cursor}{&limit}{&verbose}]
+### Get Orders By Two Assets [GET /v2/orders/{asset1}/{asset2}{?status}{&cursor}{&limit}{&offset}{&verbose}]
 
 Returns the orders to exchange two assets
 
@@ -5374,6 +5485,8 @@ Returns the orders to exchange two assets
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of orders to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -5581,7 +5694,7 @@ Returns the information of a bet
         }
     ```
 
-### Get Bet Matches By Bet [GET /v2/bets/{bet_hash}/matches{?status}{&cursor}{&limit}{&verbose}]
+### Get Bet Matches By Bet [GET /v2/bets/{bet_hash}/matches{?status}{&cursor}{&limit}{&offset}{&verbose}]
 
 Returns the bet matches of a bet
 
@@ -5593,6 +5706,8 @@ Returns the bet matches of a bet
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of bet matches to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -5633,7 +5748,7 @@ Returns the bet matches of a bet
         }
     ```
 
-### Get Resolutions By Bet [GET /v2/bets/{bet_hash}/resolutions{?cursor}{&limit}{&verbose}]
+### Get Resolutions By Bet [GET /v2/bets/{bet_hash}/resolutions{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the resolutions of a bet
 
@@ -5643,6 +5758,8 @@ Returns the resolutions of a bet
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of resolutions to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -5670,7 +5787,7 @@ Returns the resolutions of a bet
 
 ## Group Burns
 
-### Get All Burns [GET /v2/burns{?status}{&cursor}{&limit}{&verbose}]
+### Get All Burns [GET /v2/burns{?status}{&cursor}{&limit}{&offset}{&verbose}]
 
 Returns the burns
 
@@ -5681,6 +5798,8 @@ Returns the burns
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of burns to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -5784,7 +5903,7 @@ Returns the dispenser information by tx_hash
         }
     ```
 
-### Get Dispenses By Dispenser [GET /v2/dispensers/{dispenser_hash}/dispenses{?cursor}{&limit}{&verbose}]
+### Get Dispenses By Dispenser [GET /v2/dispensers/{dispenser_hash}/dispenses{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the dispenses of a dispenser
 
@@ -5794,6 +5913,8 @@ Returns the dispenses of a dispenser
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of dispenses to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -5880,7 +6001,7 @@ Returns the dispenses of a dispenser
 
 ## Group Events
 
-### Get All Events [GET /v2/events{?cursor}{&limit}{&verbose}]
+### Get All Events [GET /v2/events{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns all events
 
@@ -5889,6 +6010,8 @@ Returns all events
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of events to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -6030,7 +6153,7 @@ Returns the event of an index
         }
     ```
 
-### Get All Events Counts [GET /v2/events/counts{?cursor}{&limit}{&verbose}]
+### Get All Events Counts [GET /v2/events/counts{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the event counts of all blocks
 
@@ -6039,6 +6162,8 @@ Returns the event counts of all blocks
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of events to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -6073,7 +6198,7 @@ Returns the event counts of all blocks
         }
     ```
 
-### Get Events By Name [GET /v2/events/{event}{?cursor}{&limit}{&verbose}]
+### Get Events By Name [GET /v2/events/{event}{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the events filtered by event name
 
@@ -6083,6 +6208,8 @@ Returns the events filtered by event name
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of events to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -6551,7 +6678,7 @@ Proxy to `sendrawtransaction` RPC call.
 
 ## Group Mempool
 
-### Get All Mempool Events [GET /v2/mempool/events{?cursor}{&limit}{&verbose}]
+### Get All Mempool Events [GET /v2/mempool/events{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns all mempool events
 
@@ -6560,6 +6687,8 @@ Returns all mempool events
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of events to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -6614,7 +6743,7 @@ Returns all mempool events
         }
     ```
 
-### Get Mempool Events By Name [GET /v2/mempool/events/{event}{?cursor}{&limit}{&verbose}]
+### Get Mempool Events By Name [GET /v2/mempool/events/{event}{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the mempool events filtered by event name
 
@@ -6624,6 +6753,8 @@ Returns the mempool events filtered by event name
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of events to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 
@@ -6678,7 +6809,7 @@ Returns the mempool events filtered by event name
         }
     ```
 
-### Get Mempool Events By Tx Hash [GET /v2/mempool/transactions/{tx_hash}/events{?cursor}{&limit}{&verbose}]
+### Get Mempool Events By Tx Hash [GET /v2/mempool/transactions/{tx_hash}/events{?cursor}{&limit}{&offset}{&verbose}]
 
 Returns the mempool events filtered by transaction hash
 
@@ -6688,6 +6819,8 @@ Returns the mempool events filtered by transaction hash
         + Default: `None`
     + limit: `5` (int, optional) - The maximum number of events to return
         + Default: `100`
+    + offset (int, optional) - The number of lines to skip before returning results (overrides the `cursor` parameter)
+        + Default: `None`
     + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
         + Default: `false`
 

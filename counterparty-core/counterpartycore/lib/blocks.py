@@ -643,7 +643,6 @@ def initialise(db):
 def create_views(db):
     cursor = db.cursor()
     # Create Expiration View
-    cursor.execute("""DROP VIEW IF EXISTS all_expirations""")
     expiration_queries = [
         """
         SELECT 'order' AS type, order_hash AS object_id, block_index,
@@ -681,7 +680,6 @@ def create_views(db):
     cursor.execute(expiration_query)
 
     # Create holders view
-    cursor.execute("""DROP VIEW IF EXISTS all_holders""")
     holders_queries = [
         """
         SELECT asset, address, quantity, NULL AS escrow, MAX(rowid) AS rowid,

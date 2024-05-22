@@ -28,12 +28,27 @@ All API responses follow the following format:
 ```
 {
     "error": <error_messsage_if_success_is_false>,
-    "result": <result_of_the_query_if_success_is_true>
-    "next_cursor": <cursor_value_to_get_the_next_page>
+    "result": <result_of_the_query_if_success_is_true>,
+    "next_cursor": <cursor_value_to_get_the_next_page>,
+    "result_count": <number_of_results>
 }
 ```
 
-All queries that return lists from the database accept the `cursor` and `limit` arguments. To get the next page you must use `?cursor=<next_cursor>`.
+## Pagination
+
+For all routes that return a list of results from the database you can choose between two pagination modes:
+
+- With the `cursor` and `limit` parameters
+- With the `offset` and `limit` parameters
+
+The `cursor` parameter allows you to get results from a certain index. This index is generally retrieved from the `next_cursor` field of the previous result (see above).
+The `offset` parameter allows you to ignore a certain number of results before returning the rest.
+
+For example:
+`/v2/blocks?limit=5&cursor=844575` allows you to recover blocks 844575 to 844570.
+`/v2/blocks?limit=5&offset=5` allows you to retrieve the 5th to the tenth most recent blocks.
+
+All responses contain a `result_count` field allowing you to calculate the number of pages.
 
 ## Bitcoin Core Proxy
 
