@@ -3,7 +3,7 @@ HOST: https://api.counterparty.io:4000
 
 # Counterparty Core API
 
-The Counterparty Core API is the recommended (and only supported) way to query the state of a Counterparty node. 
+The Counterparty Core API is the recommended way to query the state of a Counterparty node. All other methods have no official support.
 
 Please see [Apiary](https://counterpartycore.docs.apiary.io/) for interactive documentation.
 
@@ -13,7 +13,7 @@ API routes are divided into 11 groups:
 
 ## Headers and HTTP Code
 
-When the server is not ready, that is to say when all the blocks are not yet parsed, all routes return a 503 error except `/` and those in the `/blocks`, `/transactions` and `/backend` groups which always return a result.
+When the server is not ready, that is to say when all the extant blocks have not yet been parsed, every route will return a `503` error, except `/` and those routes that are in the `/blocks`, `/transactions` and `/backend` groups.
 
 All API responses contain the following 3 headers:
 
@@ -36,7 +36,7 @@ All API responses follow the following format:
 
 ## Pagination
 
-For all routes that return a list of results from the database you can choose between two pagination modes:
+For all routes that return a list of results from the database, you can choose between two pagination modes:
 
 - With the `cursor` and `limit` parameters
 - With the `offset` and `limit` parameters
@@ -56,7 +56,7 @@ Routes in the `/v2/bitcoin` group serve as a proxy to make requests to Bitcoin C
 
 ## Events API
 
-One of the new features of API v2 is being able to make requests by events. This is the most powerful way to recover the vast majority of data.
+One of the new features of API v2 is the ability to make requests by events. This is the most powerful way to recover the vast majority of data.
 
 For example to retrieve events concerning dispensers for a given block:
 
