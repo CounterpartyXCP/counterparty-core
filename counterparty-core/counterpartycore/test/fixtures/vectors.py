@@ -883,6 +883,25 @@ UNITTEST_VECTOR = {
                     [],
                 ),
             },
+            {
+                "comment": "Dispense",
+                "mock_protocol_changes": {"dispense_prefix": True, "short_tx_type_id": True},
+                "in": (
+                    deserialize.deserialize_tx(
+                        "0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff03e8030000000000001976a9149c8d1f5405451de6070bf1db86ab6accb495b62588ac00000000000000000c6a0a3ab408a679f108a193352bc5f505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000",
+                        use_txid=True,
+                    ),
+                    DP["default_block_index"],
+                ),
+                "out": (
+                    "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                    ADDR[5],
+                    1000,
+                    0,
+                    b"\r\x00",
+                    [{"destination": ADDR[5], "btc_amount": 1000, "out_index": 0}],
+                ),
+            },
         ],
         "get_tx_info_legacy": [
             # data in OP_CHECKSIG script
@@ -7744,6 +7763,18 @@ UNITTEST_VECTOR = {
                     {},
                 ),
                 "out": "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff04e8030000000000006951210343415bf04af834423d3dd7adba82d48f033795759e9fba5aee7a7f51b189c8c0210322bf262f8a561b168ea2be007a7eb5b0303637dfc1f8cd0c59aa3459cf825784210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aee8030000000000006951210343415bf04af834423d49f7d9c1af065a776d1601beebdf299a5a477f8291a7c4210220bf277b92125e0692e3b8046a7ef0b62665379ac6e99e0c1cad250acfc750c9210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aee8030000000000006951210361415bf04af834423d58a4d984a8170977281110edeb9a2e8b09473a8580f45d210220da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe724dc210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aefa28ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+            },
+            {
+                "comment": "Dispense",
+                "in": (
+                    (
+                        "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                        [(ADDR[5], 1000)],
+                        b"\r\x00",
+                    ),
+                    {},
+                ),
+                "out": "0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff03e8030000000000001976a9149c8d1f5405451de6070bf1db86ab6accb495b62588ac00000000000000000c6a0a3ab408a679f108a193352bc5f505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000",
             },
         ],
     },
