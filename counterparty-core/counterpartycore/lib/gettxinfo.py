@@ -250,6 +250,8 @@ def get_dispensers_tx_info(sources, dispensers_outputs):
     dispenser_source = sources.split("-")[0]
     out_index = 0
     for out in dispensers_outputs:
+        if out[0] is None or out[1] is None:
+            continue
         if out[0] != dispenser_source:
             source = dispenser_source
             destination = out[0]
@@ -345,7 +347,6 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
-
     # Ignore coinbase transactions.
     if decoded_tx["coinbase"]:
         raise DecodeError("coinbase transaction")
