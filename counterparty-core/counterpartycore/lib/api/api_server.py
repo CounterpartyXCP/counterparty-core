@@ -255,7 +255,12 @@ def handle_route(**kwargs):
         result = execute_api_function(db, route, function_args)
     except (exceptions.ComposeError, exceptions.UnpackError) as e:
         return return_result(503, error=str(e))
-    except exceptions.JSONRPCInvalidRequest as e:
+    except (
+        exceptions.JSONRPCInvalidRequest,
+        exceptions.TransactionError,
+        exceptions.BalanceError,
+        exceptions.UnknownPubKeyError,
+    ) as e:
         return return_result(400, error=str(e))
     except Exception as e:
         logger.exception("Error in API: %s", e)
