@@ -7,6 +7,7 @@ from logging import handlers as logging_handlers
 
 import flask
 import requests
+import werkzeug
 from counterpartycore.lib import backend, config, exceptions, ledger, transaction, util
 from docstring_parser import parse as parse_docstring
 
@@ -391,5 +392,8 @@ def redirect_to_rpc_v1():
         url += f"?{flask.request.query_string}"
     request_function = getattr(requests, flask.request.method.lower())
     if flask.request.method == "POST":
-        query_params["json"] = flask.request.json
+        try:
+            query_params["json"] = flask.request.json
+        except werkzeug.exceptions.UnsupportedMediaType as e:
+            raise exceptions.JSONRPCInvalidRequest("Invalid JSON-RPC 2.0 request format") from e
     return request_function(url, **query_params).json()

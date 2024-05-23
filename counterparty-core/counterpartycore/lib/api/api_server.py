@@ -255,6 +255,8 @@ def handle_route(**kwargs):
         result = execute_api_function(db, route, function_args)
     except (exceptions.ComposeError, exceptions.UnpackError) as e:
         return return_result(503, error=str(e))
+    except exceptions.JSONRPCInvalidRequest as e:
+        return return_result(400, error=str(e))
     except Exception as e:
         logger.exception("Error in API: %s", e)
         traceback.print_exc()
@@ -296,14 +298,14 @@ def run_api_server(args):
         # Get the last block index
         util.CURRENT_BLOCK_INDEX = ledger.last_db_index(get_db())
         # Add routes
-        app.add_url_rule("/v2/", view_func=handle_route)
+        app.add_url_rule("/v2/", view_func=handle_route, strict_slashes=False)
         for path in ROUTES:
             methods = ["GET"]
             if path == "/v2/bitcoin/transactions":
                 methods = ["POST"]
             if not path.startswith("/v2/"):
                 methods = ["GET", "POST"]
-            app.add_url_rule(path, view_func=handle_route, methods=methods)
+            app.add_url_rule(path, view_func=handle_route, methods=methods, strict_slashes=False)
         # run the scheduler to refresh the backend height
         # `no_refresh_backend_height` used only for testing. TODO: find a way to mock it
         if "no_refresh_backend_height" not in args or not args["no_refresh_backend_height"]:
