@@ -105,3 +105,7 @@ class BitcoindRPCError(Exception):
 
 class UnknownPubKeyError(Exception):
     pass
+
+
+class JSONRPCInvalidRequest(Exception):
+    pass
