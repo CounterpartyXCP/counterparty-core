@@ -10,7 +10,7 @@ import apsw
 from halo import Halo
 from termcolor import colored
 
-from counterpartycore.lib import backend, blocks, config, database
+from counterpartycore.lib import backend, blocks, config, database, util
 from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser, ChainstateParser
 from counterpartycore.lib.kickstart.utils import remove_shm_from_resource_tracker
 
@@ -344,6 +344,9 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     kickstart_db, block_count, tx_index, last_parsed_block = intialize_kickstart_db(
         bitcoind_dir, last_known_hash, resuming, new_database, debug_block
     )
+
+    # update the current block index
+    util.CURRENT_BLOCK_INDEX = last_parsed_block
 
     # Start block parser.
     block_parser = start_blocks_parser_process(bitcoind_dir, last_parsed_block, max_queue_size)
