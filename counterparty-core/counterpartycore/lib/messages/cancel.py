@@ -1,5 +1,3 @@
-#! /usr/bin/python3
-
 """
 offer_hash is the hash of either a bet or an order.
 """
@@ -11,7 +9,7 @@ import struct
 
 from counterpartycore.lib import config, database, exceptions, ledger, message_type
 
-from . import bet, order, rps
+from . import bet, order
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -58,21 +56,18 @@ def validate(db, source, offer_hash):
     # TODO: make query only if necessary
     orders = ledger.get_order(db, order_hash=offer_hash)
     bets = ledger.get_bet(db, bet_hash=offer_hash)
-    rps = ledger.get_rps(db, tx_hash=offer_hash)
 
     offer_type = None
     if orders:
         offer_type = "order"
     elif bets:
         offer_type = "bet"
-    elif rps:
-        offer_type = "rps"
     else:
         problems = ["no open offer with that hash"]
 
     offer = None
     if offer_type:
-        offers = orders + bets + rps
+        offers = orders + bets
         offer = offers[0]
         if offer["source"] != source:
             problems.append("incorrect source address")
@@ -130,9 +125,6 @@ def parse(db, tx, message):
         # Cancel if bet.
         elif offer_type == "bet":
             bet.cancel_bet(db, offer, "cancelled", tx["block_index"], tx["tx_index"])
-        # Cancel if rps.
-        elif offer_type == "rps":
-            rps.cancel_rps(db, offer, "cancelled", tx["block_index"], tx["tx_index"])
         # If neither order or bet, mark as invalid.
         else:
             assert False  # noqa: B011

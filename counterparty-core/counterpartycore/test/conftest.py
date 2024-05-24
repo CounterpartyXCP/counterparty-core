@@ -537,6 +537,9 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def check_wal_file():
         pass
 
+    def rps_expire(db, block_index):
+        pass
+
     monkeypatch.setattr("counterpartycore.lib.transaction.arc4.init_arc4", init_arc4)
     monkeypatch.setattr(
         "counterpartycore.lib.backend.addrindexrs.get_unspent_txouts", get_unspent_txouts
@@ -566,3 +569,4 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         multisig_pubkeyhashes_to_pubkeys,
     )
     monkeypatch.setattr("counterpartycore.lib.database.check_wal_file", check_wal_file)
+    monkeypatch.setattr("counterpartycore.lib.messages.rps.expire", rps_expire)

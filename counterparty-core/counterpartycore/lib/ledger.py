@@ -173,6 +173,32 @@ def add_to_journal(db, block_index, command, category, event, bindings):
     log.log_event(block_index, event, items)
 
 
+def replay_event(db, event, action, table, bindings, id_name=None):
+    if action == "insert":
+        insert_record(db, table, bindings, event)
+        if table in ["debits", "credits"]:
+            BLOCK_LEDGER.append(
+                f"{bindings['block_index']}{bindings['address']}{bindings['asset']}{bindings['quantity']}"
+            )
+    elif action == "update":
+        if id_name is None:
+            raise exceptions.DatabaseError("id_name is required for update action")
+        id_value = bindings.pop(id_name)
+        insert_update(db, table, id_name, id_value, bindings, event)
+    else:
+        raise exceptions.DatabaseError(f"Unknown action: {action}")
+
+
+def replay_events(db, events):
+    for event in events:
+        event_name = event[0]
+        bindings = json.loads(event[3])
+        if event_name.endswith("_UPDATE"):
+            replay_event(db, event[0], event[1], event[2], bindings, id_name=event[4])
+        else:
+            replay_event(db, event[0], event[1], event[2], bindings)
+
+
 ###########################
 #         BALANCES        #
 ###########################
@@ -1563,155 +1589,6 @@ def update_order_match_status(db, id, status):
     insert_update(
         db, "order_matches", "id", id, update_data, "ORDER_MATCH_UPDATE", {"order_match_id": id}
     )
-
-
-#####################
-#       RPS         #
-#####################
-
-### SELECTS ###
-
-
-def get_matched_not_expired_rps(db, tx0_hash, tx1_hash, expire_index):
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM (
-            SELECT *, MAX(rowid) as rowid
-            FROM rps
-            WHERE tx_hash IN (?, ?)
-            AND expire_index >= ?
-            GROUP BY tx_hash
-        ) WHERE status = ?
-    """
-    bindings = (tx0_hash, tx1_hash, expire_index, "matched")
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_already_matched_rps(db, tx_hash):
-    cursor = db.cursor()
-    query = """
-        SELECT *, MAX(rowid) AS rowid
-        FROM rps_matches
-        WHERE tx0_hash = ? OR tx1_hash = ?
-        GROUP BY id
-        ORDER BY rowid
-    """
-    bindings = (tx_hash, tx_hash)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_matching_rps(db, possible_moves, wager, source, already_matched_tx_hashes):
-    cursor = db.cursor()
-    bindings = (possible_moves, wager, source)
-    already_matched_cond = ""
-    if already_matched_tx_hashes:
-        place_holders = ",".join(["?" for e in range(0, len(already_matched_tx_hashes))])
-        already_matched_cond = f"""AND tx_hash NOT IN ({place_holders})"""
-        bindings += tuple(already_matched_tx_hashes)
-    bindings += ("open",)
-    # no sql injection here
-    query = f"""
-        SELECT * FROM (
-            SELECT *, MAX(rowid) FROM rps
-            WHERE (possible_moves = ? AND wager = ? AND source != ? {already_matched_cond})
-            GROUP BY tx_hash
-        ) WHERE status = ?
-        ORDER BY tx_index LIMIT 1
-    """  # nosec B608  # noqa: S608
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_rps_to_expire(db, block_index):
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM (
-            SELECT *, MAX(rowid)
-            FROM rps
-            WHERE expire_index = ? - 1
-            GROUP BY tx_hash
-        ) WHERE status = ?
-        ORDER BY tx_index, tx_hash
-    """
-    bindings = (block_index, "open")
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_rps(db, tx_hash):
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM rps
-        WHERE tx_hash = ?
-        ORDER BY rowid DESC
-        LIMIT 1
-    """
-    bindings = (tx_hash,)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_rps_matches_to_expire(db, block_index):
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM (
-            SELECT *, MAX(rowid) AS rowid
-            FROM rps_matches
-            WHERE match_expire_index < ?
-            GROUP BY id
-        ) WHERE status IN (?, ? , ?)
-        ORDER BY rowid
-    """
-    bindings = (block_index, "pending", "pending and resolved", "resolved and pending")
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_rps_match(db, id):
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM rps_matches
-        WHERE id = ?
-        ORDER BY rowid
-        DESC LIMIT 1
-    """
-    bindings = (id,)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_rpsresolves(db, source=None, status=None, rps_match_id=None):
-    cursor = db.cursor()
-    where = []
-    bindings = []
-    if source is not None:
-        where.append("source = ?")
-        bindings.append(source)
-    if status is not None:
-        where.append("status = ?")
-        bindings.append(status)
-    if rps_match_id is not None:
-        where.append("rps_match_id = ?")
-        bindings.append(rps_match_id)
-    # no sql injection here
-    query = f"""SELECT * FROM rpsresolves WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
-    cursor.execute(query, tuple(bindings))
-    return cursor.fetchall()
-
-
-### UPDATES ###
-
-
-def update_rps_match_status(db, id, status):
-    update_data = {"status": status}
-    insert_update(db, "rps_matches", "id", id, update_data, "RPS_MATCH_UPDATE")
-
-
-def update_rps_status(db, tx_hash, status):
-    update_data = {"status": status}
-    insert_update(db, "rps", "tx_hash", tx_hash, update_data, "RPS_UPDATE")
 
 
 #####################
