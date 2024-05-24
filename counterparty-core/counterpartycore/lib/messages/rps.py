@@ -176,11 +176,17 @@ def initialise(db):
     )
 
 
+def replay_events(db, key):
+    if config.TESTNET:
+        return
+    events = RPS_EVENTS.get(key)
+    if events:
+        ledger.replay_events(db, events)
+
+
 def parse(db, tx, message):
-    events = RPS_EVENTS.get(tx["tx_hash"])
-    ledger.replay_events(db, events)
+    replay_events(db, tx["tx_hash"])
 
 
 def expire(db, block_index):
-    events = RPS_EVENTS.get(block_index)
-    ledger.replay_events(db, events)
+    replay_events(db, block_index)
