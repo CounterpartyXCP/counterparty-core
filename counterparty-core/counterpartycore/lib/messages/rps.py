@@ -189,4 +189,4 @@ def parse(db, tx, message):
 
 
 def expire(db, block_index):
-    replay_events(db, block_index)
+    replay_events(db, str(block_index))
