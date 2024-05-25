@@ -149,8 +149,8 @@ def get_last_block(database_file_1, database_file_2):
 database_file_1 = sys.argv[1]
 database_file_2 = sys.argv[2]
 
-LAST_BLOCK = 290000
-# compare_ledger(database_file_1, database_file_2)
-# check_hashes(database_file_1, database_file_2, "txlist_hash")
-get_checkpoints(database_file_1)
+LAST_BLOCK = 320000
+compare_ledger(database_file_1, database_file_2)
+check_hashes(database_file_1, database_file_2, "ledger_hash")
+# get_checkpoints(database_file_1)
 # get_last_block(database_file_1, database_file_2)
