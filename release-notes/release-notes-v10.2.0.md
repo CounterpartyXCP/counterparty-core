@@ -16,6 +16,7 @@
 * Refactor the `backend` module. Separate calls to Bitcoin Core and AddrIndexRs into two different modules.
 * Add the indexed `tx_hash` field in `messages` table.
 * Update `rowtracer` so that `apsw` returns boolean instead of integer for `BOOL` type fields.
+* Clean RPS implementation. Introduce `replay_events()` function to reconstruct database from JSON list of events. 
 
 ## API
 * Add following routes:
