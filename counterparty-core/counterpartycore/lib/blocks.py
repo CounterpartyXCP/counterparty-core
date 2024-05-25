@@ -333,6 +333,10 @@ def initialise(db):
     """Initialise data, create and populate the database."""
     cursor = db.cursor()
 
+    # Drop views that are going to be recreated
+    cursor.execute("DROP VIEW IF EXISTS all_expirations")
+    cursor.execute("DROP VIEW IF EXISTS all_holders")
+
     # remove misnamed indexes
     database.drop_indexes(
         cursor,
@@ -889,7 +893,7 @@ def rebuild_database(db, include_transactions=True):
     if include_transactions:
         tables_to_clean += ["transaction_outputs", "transactions", "blocks"]
     for table in tables_to_clean:
-        cursor.execute(f"DROP TABLE {table}")  # nosec B608
+        cursor.execute(f"DROP TABLE IF EXISTS {table}")  # nosec B608
     cursor.execute("""PRAGMA foreign_keys=ON""")
     initialise(db)
 
