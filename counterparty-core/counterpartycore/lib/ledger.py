@@ -175,11 +175,28 @@ def add_to_journal(db, block_index, command, category, event, bindings):
 
 def replay_event(db, event, action, table, bindings, id_name=None):
     if action == "insert":
-        insert_record(db, table, bindings, event)
-        if table in ["debits", "credits"]:
-            BLOCK_LEDGER.append(
-                f"{bindings['block_index']}{bindings['address']}{bindings['asset']}{bindings['quantity']}"
+        if event == "DEBIT":
+            debit(
+                db,
+                bindings["address"],
+                bindings["asset"],
+                bindings["quantity"],
+                bindings["tx_index"],
+                action=bindings["action"],
+                event=bindings["event"],
             )
+        elif event == "CREDIT":
+            credit(
+                db,
+                bindings["address"],
+                bindings["asset"],
+                bindings["quantity"],
+                bindings["tx_index"],
+                action=bindings["calling_function"],
+                event=bindings["event"],
+            )
+        else:
+            insert_record(db, table, bindings, event)
     elif action == "update":
         if id_name is None:
             raise exceptions.DatabaseError("id_name is required for update action")
