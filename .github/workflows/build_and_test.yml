@@ -44,15 +44,12 @@ jobs:
 
       # Build counterparty packages
 
-      - name: Build counterparty-rs
-        uses: messense/maturin-action@v1
-        with:
-          args: --release --out dist --sdist -m ${{ env.COUNTERPARTY_RS_DIR }}/Cargo.toml
-
-      - name: Test counterparty-rs
+      - name: Build and test counterparty-rs
         run: |
           cd ${{ env.COUNTERPARTY_RS_DIR }}
+          maturin develop --release -m Cargo.toml
           cargo test
+          maturin build --release --out ../dist --sdist -m Cargo.toml
 
       - name: Build counterparty-core
         run: |
@@ -111,15 +108,12 @@ jobs:
 
       # Build counterparty packages
 
-      - name: Build counterparty-rs
-        uses: messense/maturin-action@v1
-        with:
-          args: --release --out dist --sdist -m ${{ env.COUNTERPARTY_RS_DIR }}/Cargo.toml
-
-      - name: Test counterparty-rs
+      - name: Build and test counterparty-rs
         run: |
           cd ${{ env.COUNTERPARTY_RS_DIR }}
+          maturin develop --release -m Cargo.toml
           cargo test
+          maturin build --release --out ../dist --sdist -m Cargo.toml
 
       - name: Build counterparty-core
         run: |
