@@ -47,6 +47,7 @@ jobs:
       - name: Test counterparty-rs
         run: |
           cd ${{ env.COUNTERPARTY_RS_DIR }}
+          cargo build --release
           cargo test
 
       - name: Build counterparty-rs
@@ -114,6 +115,7 @@ jobs:
       - name: Test counterparty-rs
         run: |
           cd ${{ env.COUNTERPARTY_RS_DIR }}
+          cargo build --release
           cargo test
 
       - name: Build counterparty-rs
