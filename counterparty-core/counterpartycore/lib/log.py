@@ -1,10 +1,12 @@
 import decimal
+import json
 import logging
 import sys
 import traceback
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
+import zmq
 from colorlog import ColoredFormatter
 from dateutil.tz import tzlocal
 from termcolor import cprint
@@ -133,15 +135,46 @@ EVENTS = {
 }
 
 
-def log_event(block_index, event_name, bindings):
+def log_event(block_index, event_index, event_name, bindings):
     if config.JSON_LOG:
         logger.info({"event": event_name, "bindings": bindings})
     elif event_name in EVENTS:
         block_name = "mempool" if util.PARSING_MEMPOOL else block_index
         log_message = f"[{block_name}] {EVENTS[event_name]}"
         logger.info(log_message, bindings)
+    # Publish event to ZMQ
+    if config.ENABLE_ZMQ_PUBLISHER:
+        zmq_publisher = ZmqPublisher()
+        zmq_event = {
+            "event": event_name,
+            "params": bindings,
+            "mempool": util.PARSING_MEMPOOL,
+            "description": EVENTS[event_name] % bindings,
+        }
+        if not util.PARSING_MEMPOOL:
+            zmq_event["block_index"] = block_index
+            zmq_event["event_index"] = event_index
+        zmq_publisher.publish_event(zmq_event)
 
 
 def shutdown():
     logger.info("Shutting down logging...")
     logging.shutdown()
+
+
+class ZmqPublisher(metaclass=util.SingletonMeta):
+    def __init__(self):
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.PUB)
+        self.socket.bind("tcp://*:%s" % config.ZMQ_PUBLISHER_PORT)
+
+    def publish_event(self, event):
+        logger.debug("Publishing event: %s", event["event"])
+        self.socket.send_multipart(
+            [event["event"].encode("utf-8"), json.dumps(event).encode("utf-8")]
+        )
+
+    def close(self):
+        if self.socket:
+            self.socket.close(linger=0)
+            self.context.term()

@@ -170,7 +170,7 @@ def add_to_journal(db, block_index, command, category, event, bindings):
 
     BLOCK_JOURNAL.append(f"{command}{category}{bindings_string}")
 
-    log.log_event(block_index, event, items)
+    log.log_event(block_index, message_index, event, items)
 
 
 def replay_event(db, event, action, table, bindings, id_name=None):
