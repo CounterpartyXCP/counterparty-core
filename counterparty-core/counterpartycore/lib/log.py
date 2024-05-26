@@ -12,6 +12,7 @@ from dateutil.tz import tzlocal
 from termcolor import cprint
 
 from counterpartycore.lib import config, util
+from counterpartycore.lib.api.util import inject_details
 
 logging.TRACE = logging.DEBUG - 5
 logging.addLevelName(logging.TRACE, "TRACE")
@@ -170,6 +171,7 @@ class ZmqPublisher(metaclass=util.SingletonMeta):
 
     def publish_event(self, event):
         logger.debug("Publishing event: %s", event["event"])
+        event = inject_details(event)
         self.socket.send_multipart(
             [event["event"].encode("utf-8"), json.dumps(event).encode("utf-8")]
         )

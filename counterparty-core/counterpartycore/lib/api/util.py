@@ -379,6 +379,13 @@ def inject_dispensers(db, result):
     return result
 
 
+def inject_details(db, result):
+    result = inject_dispensers(db, result)
+    result = inject_issuance(db, result)
+    result = inject_normalized_quantities(result)
+    return result
+
+
 def redirect_to_rpc_v1():
     """
     Redirect to the RPC API v1.
