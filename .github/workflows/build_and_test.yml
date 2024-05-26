@@ -44,6 +44,11 @@ jobs:
 
       # Build counterparty packages
 
+      - name: Test counterparty-rs
+        run: |
+          cd ${{ env.COUNTERPARTY_RS_DIR }}
+          cargo test
+
       - name: Build counterparty-rs
         uses: messense/maturin-action@v1
         with:
@@ -105,6 +110,11 @@ jobs:
           python -m pip install --upgrade build
 
       # Build counterparty packages
+
+      - name: Test counterparty-rs
+        run: |
+          cd ${{ env.COUNTERPARTY_RS_DIR }}
+          cargo test
 
       - name: Build counterparty-rs
         uses: messense/maturin-action@v1
