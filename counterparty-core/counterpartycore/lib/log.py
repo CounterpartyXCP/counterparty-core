@@ -136,7 +136,7 @@ EVENTS = {
 }
 
 
-def log_event(block_index, event_index, event_name, bindings):
+def log_event(db, block_index, event_index, event_name, bindings):
     if config.JSON_LOG:
         logger.info({"event": event_name, "bindings": bindings})
     elif event_name in EVENTS:
@@ -155,7 +155,7 @@ def log_event(block_index, event_index, event_name, bindings):
         if not util.PARSING_MEMPOOL:
             zmq_event["block_index"] = block_index
             zmq_event["event_index"] = event_index
-        zmq_publisher.publish_event(zmq_event)
+        zmq_publisher.publish_event(db, zmq_event)
 
 
 def shutdown():
@@ -169,9 +169,9 @@ class ZmqPublisher(metaclass=util.SingletonMeta):
         self.socket = self.context.socket(zmq.PUB)
         self.socket.bind("tcp://*:%s" % config.ZMQ_PUBLISHER_PORT)
 
-    def publish_event(self, event):
+    def publish_event(self, db, event):
         logger.debug("Publishing event: %s", event["event"])
-        event = inject_details(event)
+        event = inject_details(db, event)
         self.socket.send_multipart(
             [event["event"].encode("utf-8"), json.dumps(event).encode("utf-8")]
         )
