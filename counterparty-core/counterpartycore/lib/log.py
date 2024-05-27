@@ -1,14 +1,16 @@
 import decimal
 import logging
 import sys
+import time
 import traceback
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
 from colorlog import ColoredFormatter
 from dateutil.tz import tzlocal
+from halo import Halo
 from json_log_formatter import VerboseJSONFormatter
-from termcolor import cprint
+from termcolor import colored, cprint
 
 from counterpartycore.lib import config, util
 
@@ -18,12 +20,19 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 D = decimal.Decimal
 
+LOG_IN_CONSOLE = False
+OK_GREEN = colored("[OK]", "green")
+SPINNER_STYLE = "bouncingBar"
+
 
 def trace(self, msg, *args, **kwargs):
     self._log(logging.TRACE, msg, args, **kwargs)
 
 
 def set_up(verbose=0, quiet=True, log_file=None, log_in_console=False):
+    global LOG_IN_CONSOLE  # noqa PLW0603
+    LOG_IN_CONSOLE = log_in_console
+
     logging.Logger.trace = trace
 
     loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
@@ -54,7 +63,7 @@ def set_up(verbose=0, quiet=True, log_file=None, log_in_console=False):
         fileh.setFormatter(VerboseJSONFormatter())
         logger.addHandler(fileh)
 
-    if log_in_console:
+    if LOG_IN_CONSOLE:
         console = logging.StreamHandler()
         console.setLevel(log_level)
         log_format = "%(log_color)s%(asctime)s - [%(levelname)8s] - %(message)s%(reset)s"
@@ -172,6 +181,35 @@ def log_event(block_index, event_name, bindings):
             format_event_fields(bindings),
             extra={"event": {"name": event_name, "block_index": block_index, **bindings}},
         )
+
+
+class Spinner:
+    def __init__(self, step, done_message=None):
+        self.halo = None
+        self.done_message = done_message
+        if not LOG_IN_CONSOLE:
+            self.step = step
+            self.halo = Halo(text=step, spinner=SPINNER_STYLE)
+        logger.info(step)
+
+    def __enter__(self):
+        self.start_time = time.time()
+        if self.halo:
+            self.halo.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        duration = time.time() - self.start_time
+        if self.halo:
+            self.halo.stop()
+            print(f"{OK_GREEN} {self.step} (in {duration:.2f}s)")
+        if self.done_message:
+            logger.info(self.done_message.format(duration))
+
+    def set_messsage(self, message):
+        if self.halo:
+            self.halo.text = message
+            self.step = message
 
 
 def shutdown():

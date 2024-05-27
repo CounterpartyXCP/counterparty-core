@@ -13,9 +13,6 @@ import struct
 import time
 from datetime import timedelta
 
-from halo import Halo  # noqa: E402
-from termcolor import colored  # noqa: E402
-
 from counterpartycore.lib import (  # noqa: E402
     backend,
     check,
@@ -23,6 +20,7 @@ from counterpartycore.lib import (  # noqa: E402
     database,
     exceptions,
     ledger,
+    log,
     message_type,
     util,
 )
@@ -90,9 +88,6 @@ with open(CURR_DIR + "/../mainnet_burns.csv", "r") as f:
     mainnet_burns_reader = csv.DictReader(f)
     for line in mainnet_burns_reader:
         MAINNET_BURNS[line["tx_hash"]] = line
-
-OK_GREEN = colored("[OK]", "green")
-SPINNER_STYLE = "bouncingBar"
 
 
 def parse_tx(db, tx):
@@ -901,9 +896,9 @@ def rebuild_database(db, include_transactions=True):
 def rollback(db, block_index=0):
     block_index = max(block_index, config.BLOCK_FIRST)
     # clean all tables
-    start_time = time.time()
     step = f"Rolling database back to block {block_index}..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    done_message = f"Database rolled back to block_index {block_index} in {{}}s"
+    with log.Spinner(step, done_message):
         if block_index == config.BLOCK_FIRST:
             rebuild_database(db)
         else:
@@ -911,10 +906,7 @@ def rollback(db, block_index=0):
             cursor = db.cursor()
             clean_transactions_tables(cursor, block_index=block_index)
             cursor.close()
-        logger.info(f"Database rolled back to block_index {block_index}")
     util.CURRENT_BLOCK_INDEX = block_index - 1
-    print(f"{OK_GREEN} {step}")
-    print(f"Rollback done in {time.time() - start_time:.2f}s")
 
 
 def generate_progression_message(
@@ -944,20 +936,17 @@ def generate_progression_message(
 def reparse(db, block_index=0):
     cursor = db.cursor()
     # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
-    step = f"Rolling database back to block {block_index}..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner(f"Rolling database back to block {block_index}..."):
         clean_messages_tables(db, block_index=block_index)
-    print(f"{OK_GREEN} {step}")
 
     step = "Cleaning consensus hashes..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner("Cleaning consensus hashes..."):
         query = """
             UPDATE blocks 
             SET ledger_hash=NULL, txlist_hash=NULL, messages_hash=NULL 
             WHERE block_index >= ?
         """
         cursor.execute(query, (block_index,))
-    print(f"{OK_GREEN} {step}")
 
     # reparse blocks
     start_time_all_blocks_parse = time.time()
@@ -965,8 +954,9 @@ def reparse(db, block_index=0):
     count_query = "SELECT COUNT(*) AS cnt FROM blocks WHERE block_index >= ?"
     block_count = cursor.execute(count_query, (block_index,)).fetchone()["cnt"]
     step = f"Reparsing blocks from block {block_index}..."
+    done_message = "All blocks reparsed in {}s"
     message = ""
-    with Halo(text=step, spinner=SPINNER_STYLE) as spinner:
+    with log.Spinner(step, done_message) as spinner:
         cursor.execute(
             """SELECT * FROM blocks WHERE block_index >= ? ORDER BY block_index""", (block_index,)
         )
@@ -1013,9 +1003,7 @@ def reparse(db, block_index=0):
                 block_parsed_count,
                 block_count,
             )
-            spinner.text = message
-    print(f"{OK_GREEN} {message}")
-    print(f"All blocks reparsed in {time.time() - start_time_all_blocks_parse:.2f}s")
+            spinner.set_messsage(message)
 
 
 def get_next_tx_index(db):
