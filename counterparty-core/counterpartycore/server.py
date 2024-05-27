@@ -14,7 +14,6 @@ from urllib.parse import quote_plus as urlencode
 
 import appdirs
 import bitcoin as bitcoinlib
-from halo import Halo
 from termcolor import colored, cprint
 
 from counterpartycore.lib import (
@@ -769,10 +768,8 @@ def kickstart(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
 
 def vacuum():
     db = database.initialise_db()
-    step = "Vacuuming database..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner("Vacuuming database..."):
         database.vacuum(db)
-    print(f"{OK_GREEN} {step}")
 
 
 def check_database():
@@ -780,23 +777,14 @@ def check_database():
 
     start_all_time = time.time()
 
-    start_time = time.time()
-    step = "Checking asset conservation..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner("Checking asset conservation..."):
         check.asset_conservation(db)
-    print(f"{OK_GREEN} {step} (in {time.time() - start_time:.2f}s)")
 
-    start_time = time.time()
-    step = "Checking database foreign keys...."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner("Checking database foreign keys...."):
         database.check_foreign_keys(db)
-    print(f"{OK_GREEN} {step} (in {time.time() - start_time:.2f}s)")
 
-    start_time = time.time()
-    step = "Checking database integrity..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner("Checking database integrity..."):
         database.intergrity_check(db)
-    print(f"{OK_GREEN} {step} (in {time.time() - start_time:.2f}s)")
 
     cprint(f"Database checks complete in {time.time() - start_all_time:.2f}s.", "green")
 
@@ -884,44 +872,36 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
         os.remove(shm_path)
 
     # Define Progress Bar.
-    step = f"Downloading database from {bootstrap_url}..."
-    spinner = Halo(text=step, spinner=SPINNER_STYLE)
+    spinner = log.Spinner(f"Downloading database from {bootstrap_url}...")
 
     def bootstrap_progress(blocknum, blocksize, totalsize):
         readsofar = blocknum * blocksize
         if totalsize > 0:
             percent = readsofar * 1e2 / totalsize
             message = f"Downloading database: {percent:5.1f}% {readsofar} / {totalsize}"
-            spinner.text = message
+            spinner.set_messsage(message)
 
     # Downloading
     spinner.start()
     urllib.request.urlretrieve(bootstrap_url, tarball_path, bootstrap_progress)  # nosec B310  # noqa: S310
     urllib.request.urlretrieve(bootstrap_sig_url, sig_path)  # nosec B310  # noqa: S310
     spinner.stop()
-    print(f"{OK_GREEN} {step}")
 
-    step = "Verifying signature..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner("Verifying signature..."):
         if not any(util.verify_signature(k, sig_path, tarball_path) for k in PUBLIC_KEYS):
             print("Snaptshot was not signed by any trusted keys")
             sys.exit(1)
-    print(f"{OK_GREEN} {step}")
 
     # TODO: check checksum, filenames, etc.
-    step = f"Extracting database to {data_dir}..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner(f"Extracting database to {data_dir}..."):
         with tarfile.open(tarball_path, "r:gz") as tar_file:
             tar_file.extractall(path=data_dir)  # nosec B202  # noqa: S202
-    print(f"{OK_GREEN} {step}")
 
     assert os.path.exists(database_path)
     # user and group have "rw" access
     os.chmod(database_path, 0o660)  # nosec B103
 
-    step = "Cleaning up..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner("Cleaning up..."):
         os.remove(tarball_path)
-    print(f"{OK_GREEN} {step}")
 
     cprint(f"Database has been successfully bootstrapped to {database_path}.", "green")

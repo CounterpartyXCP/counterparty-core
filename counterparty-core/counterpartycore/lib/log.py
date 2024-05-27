@@ -193,18 +193,26 @@ class Spinner:
         logger.info(step)
 
     def __enter__(self):
-        self.start_time = time.time()
-        if self.halo:
-            self.halo.start()
+        self.start()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        self.stop()
+
+    def start(self):
+        self.start_time = time.time()
+        if self.halo:
+            self.halo.start()
+
+    def stop(self):
         duration = time.time() - self.start_time
         if self.halo:
             self.halo.stop()
             print(f"{OK_GREEN} {self.step} (in {duration:.2f}s)")
         if self.done_message:
             logger.info(self.done_message.format(duration))
+        self.halo = None
+        self.done_message = None
 
     def set_messsage(self, message):
         if self.halo:
