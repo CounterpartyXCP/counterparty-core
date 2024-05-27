@@ -78,7 +78,6 @@ def initialise_log_config(
     testnet=False,
     testcoin=False,
     regtest=False,
-    json_log=False,
 ):
     # Log directory
     log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
@@ -116,8 +115,6 @@ def initialise_log_config(
         config.API_LOG = os.path.join(log_dir, filename)
     else:  # user-specified location
         config.API_LOG = api_log_file
-
-    config.JSON_LOG = json_log
 
 
 def initialise_config(
@@ -632,7 +629,6 @@ def initialise_log_and_config(args):
         testnet=args.testnet,
         testcoin=args.testcoin,
         regtest=args.regtest,
-        json_log=args.json_log,
     )
 
     # set up logging

@@ -7,6 +7,7 @@ from logging.handlers import RotatingFileHandler
 
 from colorlog import ColoredFormatter
 from dateutil.tz import tzlocal
+from json_log_formatter import VerboseJSONFormatter
 from termcolor import cprint
 
 from counterpartycore.lib import config, util
@@ -50,16 +51,20 @@ def set_up(verbose=0, quiet=True, log_file=None, log_in_console=False):
         max_log_size = 20 * 1024 * 1024  # 20 MB
         fileh = RotatingFileHandler(log_file, maxBytes=max_log_size, backupCount=5)
         fileh.setLevel(logging.TRACE)
-        log_format = "%(asctime)s [%(levelname)s] %(message)s"
-        formatter = logging.Formatter(log_format, "%Y-%m-%d-T%H:%M:%S%z")
-        fileh.setFormatter(formatter)
+        fileh.setFormatter(VerboseJSONFormatter())
         logger.addHandler(fileh)
 
     if log_in_console:
         console = logging.StreamHandler()
         console.setLevel(log_level)
-        log_format = "%(log_color)s[%(asctime)s][%(levelname)s] %(message)s%(reset)s"
-        log_colors = {"WARNING": "yellow", "ERROR": "red", "CRITICAL": "red"}
+        log_format = "%(log_color)s%(asctime)s - [%(levelname)8s] - %(message)s%(reset)s"
+        log_colors = {
+            "TRACE": "light_cyan",
+            "DEBUG": "cyan",
+            "WARNING": "yellow",
+            "ERROR": "red",
+            "CRITICAL": "red",
+        }
         formatter = ColoredFormatter(log_format, "%Y-%m-%d %H:%M:%S", log_colors=log_colors)
         console.setFormatter(formatter)
         logger.addHandler(console)
@@ -132,14 +137,39 @@ EVENTS = {
     "TRANSACTION_PARSED": "Transaction %(tx_hash)s parsed. Supported: %(supported)s",
 }
 
+ADDRESS_FIELD = [
+    "address",
+    "source",
+    "destination",
+    "feed_address",
+    "tx0_address",
+    "tx1_address",
+    "issuer",
+]
+HASH_FIELD = ["tx_hash", "bet_hash", "order_hash", "rps_hash"]
+
+
+def format_event_fields(bindings):
+    for key, value in bindings.items():
+        if key in ADDRESS_FIELD:
+            bindings[key] = value[:8]
+        elif key in HASH_FIELD:
+            bindings[key] = value[:7]
+        elif key.endswith("_id"):
+            part1, part2 = value.split("_")
+            bindings[key] = f"{part1[:7]}_{part2[:7]}"
+    return bindings
+
 
 def log_event(block_index, event_name, bindings):
-    if config.JSON_LOG:
-        logger.info({"event": event_name, "bindings": bindings})
-    elif event_name in EVENTS:
-        block_name = "mempool" if util.PARSING_MEMPOOL else block_index
-        log_message = f"[{block_name}] {EVENTS[event_name]}"
-        logger.info(log_message, bindings)
+    if event_name in EVENTS:
+        block_name = "Mempool" if util.PARSING_MEMPOOL else f"Block {block_index}"
+        log_message = f"{block_name} - {EVENTS[event_name]}"
+        logger.info(
+            log_message,
+            format_event_fields(bindings),
+            extra={"event": {"name": event_name, "block_index": block_index, **bindings}},
+        )
 
 
 def shutdown():
