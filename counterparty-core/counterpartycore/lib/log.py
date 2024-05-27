@@ -146,16 +146,18 @@ ADDRESS_FIELD = [
     "tx1_address",
     "issuer",
 ]
-HASH_FIELD = ["tx_hash", "bet_hash", "order_hash", "rps_hash"]
+HASH_FIELD = ["tx_hash", "bet_hash", "order_hash", "rps_hash", "ledger_hash", "txlist_hash"]
 
 
 def format_event_fields(bindings):
     for key, value in bindings.items():
+        if value is None:
+            continue
         if key in ADDRESS_FIELD:
             bindings[key] = value[:8]
         elif key in HASH_FIELD:
             bindings[key] = value[:7]
-        elif key.endswith("_id"):
+        elif key.endswith("_id") and isinstance(value, str) and "_" in value:
             part1, part2 = value.split("_")
             bindings[key] = f"{part1[:7]}_{part2[:7]}"
     return bindings
