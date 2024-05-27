@@ -175,6 +175,8 @@ def format_event_fields(bindings):
 def log_event(block_index, event_name, bindings):
     if event_name in EVENTS:
         block_name = "Mempool" if util.PARSING_MEMPOOL else f"Block {block_index}"
+        if event_name == "BLOCK_PARSED":
+            block_name = colored(block_name, attrs=["bold"])
         log_message = f"{block_name} - {EVENTS[event_name]}"
         logger.info(
             log_message,
