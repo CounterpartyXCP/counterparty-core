@@ -51,11 +51,17 @@ class CustomFormatter(logging.Formatter):
     }
 
     def format(self, record):
-        if record.levelno != logging.EVENT and util.CURRENT_BLOCK_INDEX is not None:
+        if (
+            record.levelno != logging.EVENT
+            and util.CURRENT_BLOCK_INDEX is not None
+            and "/counterpartycore/lib/messages/" in record.pathname
+        ):
             if util.CURRENT_BLOCK_INDEX != config.MEMPOOL_BLOCK_INDEX:
                 log_format = f"%(asctime)s - [%(levelname)8s] - Block {util.CURRENT_BLOCK_INDEX} - %(message)s"
             else:
                 log_format = "%(asctime)s - [%(levelname)8s] - Mempool - %(message)s"
+        elif record.name == "werkzeug":
+            log_format = "%(asctime)s - [%(levelname)8s] - API Request - %(message)s"
         else:
             log_format = "%(asctime)s - [%(levelname)8s] - %(message)s"
         log_format = colored(log_format, self.COLORS.get(record.levelno))
@@ -198,12 +204,7 @@ def format_event_fields(bindings):
 def log_event(block_index, event_name, bindings):
     if event_name in EVENTS:
         block_name = "Mempool" if util.PARSING_MEMPOOL else f"Block {block_index}"
-        if event_name == "BLOCK_PARSED":
-            block_name = colored(block_name, "white", attrs=["bold"])
-            message = colored(f" - {EVENTS[event_name]}", "light_grey")
-            log_message = f"{block_name}{message}"
-        else:
-            log_message = f"{block_name} - {EVENTS[event_name]}"
+        log_message = f"{block_name} - {EVENTS[event_name]}"
         logger.event(
             log_message,
             format_event_fields(bindings),

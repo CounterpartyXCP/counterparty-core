@@ -103,11 +103,11 @@ def is_server_ready():
 
 
 def is_cachable(rule):
-    if rule.startswith("/blocks"):
+    if rule.startswith("/v2/blocks"):
         return True
-    if rule.startswith("/transactions"):
+    if rule.startswith("/v2/transactions"):
         return True
-    if rule.startswith("/backend"):
+    if rule.startswith("/v2/backend"):
         return True
     return False
 
