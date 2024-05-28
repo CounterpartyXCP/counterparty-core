@@ -170,7 +170,7 @@ def check_backend_state():
         raise BackendError(f"Bitcoind is running about {round(time_behind / 3600)} hours behind.")
 
     # check backend index
-    blocks_behind = backend.bitcoind.getindexblocksbehind()
+    blocks_behind = backend.bitcoind.get_blocks_behind()
     if blocks_behind > 5:
         raise BackendError(f"Indexd is running {blocks_behind} blocks behind.")
 
@@ -824,7 +824,7 @@ class APIServer(threading.Thread):
                 last_message = None
 
             try:
-                indexd_blocks_behind = backend.bitcoind.getindexblocksbehind()
+                indexd_blocks_behind = backend.bitcoind.get_blocks_behind()
             except:  # noqa: E722
                 indexd_blocks_behind = latest_block_index if latest_block_index > 0 else 999999
             indexd_caught_up = indexd_blocks_behind <= 1

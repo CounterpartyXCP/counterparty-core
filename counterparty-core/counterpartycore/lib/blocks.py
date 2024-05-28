@@ -1125,6 +1125,11 @@ def catch_up(db, check_asset_conservation=True):
     # Get block count.
     block_count = backend.bitcoind.getblockcount()
 
+    # Wait for bitcoind to catch up at least one block after util.CURRENT_BLOCK_INDEX
+    if backend.bitcoind.get_blocks_behind() > 0 and block_count <= util.CURRENT_BLOCK_INDEX:
+        backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
+        block_count = backend.bitcoind.getblockcount()
+
     # initialize blocks fetcher
     # block_fetcher = backend.bitcoind.BlockFetcher(util.CURRENT_BLOCK_INDEX + 1)
     fetcher.initialize(util.CURRENT_BLOCK_INDEX + 1)
@@ -1146,10 +1151,14 @@ def catch_up(db, check_asset_conservation=True):
 
         parsed_blocks += 1
         duration = timedelta(seconds=int(time.time() - start_time))
-        logger.info(f"{parsed_blocks} block parsed in {duration}")
+        logger.info(f"{parsed_blocks} blocks parsed in {duration}")
 
         # Refresh block count.
-        block_count = backend.bitcoind.getblockcount()
+        if util.CURRENT_BLOCK_INDEX == block_count:
+            # if bitcoind is catching up, wait for the next block
+            if backend.bitcoind.get_blocks_behind() > 0:
+                backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
+            block_count = backend.bitcoind.getblockcount()
 
     fetcher.stop()
 

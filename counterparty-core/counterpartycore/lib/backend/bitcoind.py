@@ -161,10 +161,22 @@ def get_btc_supply(normalize=False):
     return total_supply if normalize else int(total_supply * config.UNIT)
 
 
-def getindexblocksbehind():
+def get_chain_tip():
+    return rpc("getchaintips", [])[0]["height"]
+
+
+def get_blocks_behind():
     block_count = getblockcount()
-    chain_tip = rpc("getchaintips", [])[0]["height"]
+    chain_tip = get_chain_tip()
     return chain_tip - block_count
+
+
+def wait_for_block(block_index):
+    block_count = getblockcount()
+    while block_count < block_index:
+        logger.debug(f"Waiting for bitcoind to catch up {block_index - block_count} blocks...")
+        time.sleep(10)
+        block_count = getblockcount()
 
 
 def add_transaction_in_cache(tx_hash, tx):

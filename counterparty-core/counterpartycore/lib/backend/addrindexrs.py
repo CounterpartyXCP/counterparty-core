@@ -585,9 +585,14 @@ class AddrindexrsSocket:
         self.connect()
 
     def connect(self):
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.settimeout(ADDRINDEXRS_CLIENT_TIMEOUT)
-        self.sock.connect((config.INDEXD_CONNECT, config.INDEXD_PORT))
+        try:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.settimeout(ADDRINDEXRS_CLIENT_TIMEOUT)
+            self.sock.connect((config.INDEXD_CONNECT, config.INDEXD_PORT))
+        except Exception:
+            logger.warning("Failed to connect to addrindexrs, retrying in 10s...")
+            time.sleep(10)
+            self.connect()
 
     def _send(self, query, timeout=ADDRINDEXRS_CLIENT_TIMEOUT):
         query["id"] = self.next_message_id
