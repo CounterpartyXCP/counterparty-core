@@ -60,8 +60,6 @@ class CustomFormatter(logging.Formatter):
                 log_format = f"%(asctime)s - [%(levelname)8s] - Block {util.CURRENT_BLOCK_INDEX} - %(message)s"
             else:
                 log_format = "%(asctime)s - [%(levelname)8s] - Mempool - %(message)s"
-        elif record.name == "werkzeug":
-            log_format = "%(asctime)s - [%(levelname)8s] - API Request - %(message)s"
         else:
             log_format = "%(asctime)s - [%(levelname)8s] - %(message)s"
         log_format = colored(log_format, self.COLORS.get(record.levelno))

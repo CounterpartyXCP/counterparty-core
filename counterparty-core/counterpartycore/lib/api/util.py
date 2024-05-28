@@ -8,7 +8,7 @@ from logging import handlers as logging_handlers
 import flask
 import requests
 import werkzeug
-from counterpartycore.lib import backend, config, exceptions, ledger, log, transaction, util
+from counterpartycore.lib import backend, config, exceptions, ledger, transaction, util
 from docstring_parser import parse as parse_docstring
 
 D = decimal.Decimal
@@ -161,14 +161,6 @@ def init_api_access_log(flask_app):
         handler.setLevel(logging.DEBUG)
         flask_app.logger.addHandler(handler)
         werkzeug_logger.addHandler(handler)
-
-    if config.LOG_IN_CONSOLE:
-        console = logging.StreamHandler()
-        console.setLevel(logging.DEBUG)
-        console.setFormatter(log.CustomFormatter())
-        flask_app.logger.addHandler(console)
-        werkzeug_logger = logging.getLogger("werkzeug")
-        werkzeug_logger.addHandler(console)
 
     flask.cli.show_server_banner = lambda *args: None
 
