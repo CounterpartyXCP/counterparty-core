@@ -140,7 +140,7 @@ def get_oldest_transaction_by_address(address: str, block_index: int = None):
 
 def get_backend_height():
     block_count = backend.bitcoind.getblockcount()
-    blocks_behind = backend.bitcoind.getindexblocksbehind()
+    blocks_behind = backend.bitcoind.get_blocks_behind()
     return block_count + blocks_behind
 
 
