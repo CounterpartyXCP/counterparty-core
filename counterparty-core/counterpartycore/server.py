@@ -721,7 +721,7 @@ def start_all(args):
         follower_daemon.start()
 
     except KeyboardInterrupt:
-        logger.info("Keyboard interrupt.")
+        logger.warning("Keyboard interrupt.")
         pass
     finally:
         if telemetry_daemon:

@@ -34,12 +34,16 @@ def event(self, msg, *args, **kwargs):
     self._log(logging.EVENT, msg, args, **kwargs)
 
 
+def debug(self, msg, *args, **kwargs):
+    self._log(logging.DEBUG, msg, args, **kwargs)
+
+
 class CustomFormatter(logging.Formatter):
     FORMAT = "%(asctime)s - [%(levelname)8s] - %(message)s"
 
     COLORS = {
         logging.TRACE: "light_cyan",
-        logging.DEBUG: "cyan",
+        logging.DEBUG: "light_blue",
         logging.WARNING: "yellow",
         logging.ERROR: "red",
         logging.CRITICAL: "red",
@@ -47,7 +51,14 @@ class CustomFormatter(logging.Formatter):
     }
 
     def format(self, record):
-        log_format = colored(self.FORMAT, self.COLORS.get(record.levelno))
+        if record.levelno != logging.EVENT and util.CURRENT_BLOCK_INDEX is not None:
+            if util.CURRENT_BLOCK_INDEX != config.MEMPOOL_BLOCK_INDEX:
+                log_format = f"%(asctime)s - [%(levelname)8s] - Block {util.CURRENT_BLOCK_INDEX} - %(message)s"
+            else:
+                log_format = "%(asctime)s - [%(levelname)8s] - Mempool - %(message)s"
+        else:
+            log_format = "%(asctime)s - [%(levelname)8s] - %(message)s"
+        log_format = colored(log_format, self.COLORS.get(record.levelno))
         formatter = logging.Formatter(log_format, "%Y-%m-%d-T%H:%M:%S%z")
         return formatter.format(record)
 
