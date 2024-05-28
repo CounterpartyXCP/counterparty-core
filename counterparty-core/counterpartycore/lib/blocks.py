@@ -1163,7 +1163,7 @@ def catch_up(db, check_asset_conservation=True):
 
         parsed_blocks += 1
         duration = timedelta(seconds=int(time.time() - start_time))
-        logger.info(f"{parsed_blocks} block parsed in {duration}")
+        logger.info(f"{parsed_blocks} blocks parsed in {duration}")
 
         # Refresh block count.
         if util.CURRENT_BLOCK_INDEX == block_count:
