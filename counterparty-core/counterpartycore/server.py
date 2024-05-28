@@ -63,6 +63,7 @@ def initialise(*args, **kwargs):
         testnet=kwargs.get("testnet", False),
         testcoin=kwargs.get("testcoin", False),
         regtest=kwargs.get("regtest", False),
+        action=kwargs.get("action", None),
     )
     initialise_config(*args, **kwargs)
     return database.initialise_db()
@@ -77,6 +78,7 @@ def initialise_log_config(
     testnet=False,
     testcoin=False,
     regtest=False,
+    action=None,
 ):
     # Log directory
     log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
@@ -114,6 +116,8 @@ def initialise_log_config(
         config.API_LOG = os.path.join(log_dir, filename)
     else:  # user-specified location
         config.API_LOG = api_log_file
+
+    config.LOG_IN_CONSOLE = action == "start" or config.VERBOSE > 0
 
 
 def initialise_config(
@@ -628,6 +632,7 @@ def initialise_log_and_config(args):
         testnet=args.testnet,
         testcoin=args.testcoin,
         regtest=args.regtest,
+        action=args.action,
     )
 
     # set up logging
@@ -635,7 +640,6 @@ def initialise_log_and_config(args):
         verbose=config.VERBOSE,
         quiet=config.QUIET,
         log_file=config.LOG,
-        log_in_console=args.action == "start",
     )
     initialise_config(**init_args)
 

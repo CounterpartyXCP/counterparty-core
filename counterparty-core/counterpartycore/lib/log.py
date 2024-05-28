@@ -20,7 +20,6 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 D = decimal.Decimal
 
-LOG_IN_CONSOLE = False
 OK_GREEN = colored("[OK]", "green")
 SPINNER_STYLE = "bouncingBar"
 
@@ -29,10 +28,7 @@ def trace(self, msg, *args, **kwargs):
     self._log(logging.TRACE, msg, args, **kwargs)
 
 
-def set_up(verbose=0, quiet=True, log_file=None, log_in_console=False):
-    global LOG_IN_CONSOLE  # noqa PLW0603
-    LOG_IN_CONSOLE = log_in_console
-
+def set_up(verbose=0, quiet=True, log_file=None):
     logging.Logger.trace = trace
 
     loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
@@ -63,7 +59,7 @@ def set_up(verbose=0, quiet=True, log_file=None, log_in_console=False):
         fileh.setFormatter(VerboseJSONFormatter())
         logger.addHandler(fileh)
 
-    if LOG_IN_CONSOLE:
+    if config.LOG_IN_CONSOLE:
         console = logging.StreamHandler()
         console.setLevel(log_level)
         log_format = "%(log_color)s%(asctime)s - [%(levelname)8s] - %(message)s%(reset)s"
@@ -176,8 +172,11 @@ def log_event(block_index, event_name, bindings):
     if event_name in EVENTS:
         block_name = "Mempool" if util.PARSING_MEMPOOL else f"Block {block_index}"
         if event_name == "BLOCK_PARSED":
-            block_name = colored(block_name, attrs=["bold"])
-        log_message = f"{block_name} - {EVENTS[event_name]}"
+            block_name = colored(block_name, "white", attrs=["bold"])
+        else:
+            block_name = colored(block_name, "light_grey")
+        log_message = colored(EVENTS[event_name], "light_grey")
+        log_message = f"{block_name} - {log_message}"
         logger.info(
             log_message,
             format_event_fields(bindings),
@@ -189,7 +188,7 @@ class Spinner:
     def __init__(self, step, done_message=None):
         self.halo = None
         self.done_message = done_message
-        if not LOG_IN_CONSOLE:
+        if not config.LOG_IN_CONSOLE:
             self.step = step
             self.halo = Halo(text=step, spinner=SPINNER_STYLE)
         logger.info(step)
