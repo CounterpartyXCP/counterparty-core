@@ -42,7 +42,7 @@ class CustomFormatter(logging.Formatter):
     FORMAT = "%(asctime)s - [%(levelname)8s] - %(message)s"
 
     COLORS = {
-        logging.TRACE: "light_cyan",
+        logging.TRACE: "cyan",
         logging.DEBUG: "light_blue",
         logging.WARNING: "yellow",
         logging.ERROR: "red",

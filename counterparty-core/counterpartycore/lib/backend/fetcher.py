@@ -60,7 +60,7 @@ def get_block_simple():
 
 
 def get_block():
-    logger.debug("Fetching block with Rust backend.")
+    logger.trace("Fetching block with Rust backend.")
     block = get_block_simple()
 
     if util.enabled("correct_segwit_txids", block_index=block["height"]):
