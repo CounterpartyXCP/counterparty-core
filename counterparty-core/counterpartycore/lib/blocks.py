@@ -817,7 +817,6 @@ def list_tx(
         assert block_index == util.CURRENT_BLOCK_INDEX
 
     if source and (data or destination == config.UNSPENDABLE or dispensers_outs):
-        logger.debug(f"Saving transaction: {tx_hash}")
         transaction_bindings = {
             "tx_index": tx_index,
             "tx_hash": tx_hash,

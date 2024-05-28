@@ -6,7 +6,6 @@ import traceback
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
-from colorlog import ColoredFormatter
 from dateutil.tz import tzlocal
 from halo import Halo
 from json_log_formatter import VerboseJSONFormatter
@@ -16,6 +15,9 @@ from counterpartycore.lib import config, util
 
 logging.TRACE = logging.DEBUG - 5
 logging.addLevelName(logging.TRACE, "TRACE")
+logging.EVENT = logging.CRITICAL + 5
+logging.addLevelName(logging.EVENT, "EVENT")
+
 logger = logging.getLogger(config.LOGGER_NAME)
 
 D = decimal.Decimal
@@ -28,8 +30,31 @@ def trace(self, msg, *args, **kwargs):
     self._log(logging.TRACE, msg, args, **kwargs)
 
 
+def event(self, msg, *args, **kwargs):
+    self._log(logging.EVENT, msg, args, **kwargs)
+
+
+class CustomFormatter(logging.Formatter):
+    FORMAT = "%(asctime)s - [%(levelname)8s] - %(message)s"
+
+    COLORS = {
+        logging.TRACE: "light_cyan",
+        logging.DEBUG: "cyan",
+        logging.WARNING: "yellow",
+        logging.ERROR: "red",
+        logging.CRITICAL: "red",
+        logging.EVENT: "light_grey",
+    }
+
+    def format(self, record):
+        log_format = colored(self.FORMAT, self.COLORS.get(record.levelno))
+        formatter = logging.Formatter(log_format, "%Y-%m-%d-T%H:%M:%S%z")
+        return formatter.format(record)
+
+
 def set_up(verbose=0, quiet=True, log_file=None):
     logging.Logger.trace = trace
+    logging.Logger.event = event
 
     loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
     for logger in loggers:
@@ -62,16 +87,7 @@ def set_up(verbose=0, quiet=True, log_file=None):
     if config.LOG_IN_CONSOLE:
         console = logging.StreamHandler()
         console.setLevel(log_level)
-        log_format = "%(log_color)s%(asctime)s - [%(levelname)8s] - %(message)s%(reset)s"
-        log_colors = {
-            "TRACE": "light_cyan",
-            "DEBUG": "cyan",
-            "WARNING": "yellow",
-            "ERROR": "red",
-            "CRITICAL": "red",
-        }
-        formatter = ColoredFormatter(log_format, "%Y-%m-%d %H:%M:%S", log_colors=log_colors)
-        console.setFormatter(formatter)
+        console.setFormatter(CustomFormatter())
         logger.addHandler(console)
 
     # Log unhandled errors.
@@ -173,11 +189,11 @@ def log_event(block_index, event_name, bindings):
         block_name = "Mempool" if util.PARSING_MEMPOOL else f"Block {block_index}"
         if event_name == "BLOCK_PARSED":
             block_name = colored(block_name, "white", attrs=["bold"])
+            message = colored(f" - {EVENTS[event_name]}", "light_grey")
+            log_message = f"{block_name}{message}"
         else:
-            block_name = colored(block_name, "light_grey")
-        log_message = colored(EVENTS[event_name], "light_grey")
-        log_message = f"{block_name} - {log_message}"
-        logger.info(
+            log_message = f"{block_name} - {EVENTS[event_name]}"
+        logger.event(
             log_message,
             format_event_fields(bindings),
             extra={"event": {"name": event_name, "block_index": block_index, **bindings}},
