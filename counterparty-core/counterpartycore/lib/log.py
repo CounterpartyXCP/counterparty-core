@@ -64,7 +64,8 @@ class CustomFormatter(logging.Formatter):
                 log_format = "%(asctime)s - [%(levelname)8s] - Mempool - %(message)s"
         else:
             log_format = "%(asctime)s - [%(levelname)8s] - %(message)s"
-        log_format = colored(log_format, self.COLORS.get(record.levelno))
+        attrs = ["bold"] if hasattr(record, "bold") and record.bold else []
+        log_format = colored(log_format, self.COLORS.get(record.levelno), attrs=attrs)
         formatter = logging.Formatter(log_format, "%Y-%m-%d-T%H:%M:%S%z")
         if isinstance(record.args, dict):
             record.args = truncate_fields(record.args)

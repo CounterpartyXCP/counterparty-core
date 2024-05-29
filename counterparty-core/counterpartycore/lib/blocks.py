@@ -13,8 +13,6 @@ import struct
 import time
 from datetime import timedelta
 
-from termcolor import colored
-
 from counterpartycore.lib import (  # noqa: E402
     backend,
     check,
@@ -1059,7 +1057,7 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
     decoded_block["block_index"] = util.CURRENT_BLOCK_INDEX
 
     with db:  # ensure all the block or nothing
-        logger.info(colored(f"Block {decoded_block['block_index']}", attrs=["bold"]))
+        logger.info(f"Block {decoded_block['block_index']}", extra={"bold": True})
         # insert block
         block_bindings = {
             "block_index": decoded_block["block_index"],
@@ -1099,7 +1097,7 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
 
         log_message = "Block %(block_index)s - Parsing Complete. L: %(ledger_hash)s, TX: %(txlist_hash)s, M: %(messages_hash)s (%(duration).2fs)"
         logger.info(
-            colored(log_message, attrs=["bold"]),
+            log_message,
             {
                 "block_index": decoded_block["block_index"],
                 "ledger_hash": new_ledger_hash,
