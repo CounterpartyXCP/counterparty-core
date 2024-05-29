@@ -278,14 +278,14 @@ Fee/KB 0.00025000
 New input: amount: 1.36717365; txid: f6a0f819e899b407cbfa07b4eff3d58902af3899abfbaa47d5f31d5b398e76e7; vout: 2; confirmations: 371
 final_fee inputs: 1 size: 255 final_fee 6375
 Size: 255 Fee: 0.00006375 Change quantity: 1.36710990 BTC
-Send (ENHANCED) XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5) [valid]
+Send (Enhanced) XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5) [valid]
 Constructing opreturn transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
 data_btc_out=0 (data_value=0 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 0.99971840; txid: db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e; vout: 2; confirmations: 381
 final_fee inputs: 1 size: 254 final_fee 6350
 Size: 254 Fee: 0.00006350 Change quantity: 0.99965490 BTC
-Send (ENHANCED) XCP from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (c8716524f33646b9af94d6f5e52494ff3b34466497094b1db2ab920e4f79bc34) [valid]
+Send (Enhanced) XCP from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (c8716524f33646b9af94d6f5e52494ff3b34466497094b1db2ab920e4f79bc34) [valid]
 Constructing multisig transaction from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000

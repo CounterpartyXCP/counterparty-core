@@ -1096,8 +1096,10 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
             previous_messages_hash=previous_block["messages_hash"],
         )
         duration = time.time() - start_time
+
+        log_message = "Block %(block_index)s - Parsing Complete. L: %(ledger_hash)s, TX: %(txlist_hash)s, M: %(messages_hash)s (%(duration).2fs)"
         logger.info(
-            "Block %(block_index)s - Parsing Complete. L: %(ledger_hash)s, TX: %(txlist_hash)s, M: %(messages_hash)s (%(duration).2fs)",
+            colored(log_message, attrs=["bold"]),
             {
                 "block_index": decoded_block["block_index"],
                 "ledger_hash": new_ledger_hash,
@@ -1156,7 +1158,6 @@ def catch_up(db, check_asset_conservation=True):
     parsed_blocks = 0
 
     while util.CURRENT_BLOCK_INDEX < block_count:
-
         # Get block information and transactions
         decoded_block = fetcher.get_block()
         # decoded_block = block_fetcher.get_block()
@@ -1165,11 +1166,12 @@ def catch_up(db, check_asset_conservation=True):
 
         parsed_blocks += 1
         duration_seconds = int(time.time() - start_time)
-        duration = timedelta(seconds=duration_seconds)
         hours, remainder = divmod(duration_seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
         formatted_duration = f"{hours}h {minutes}m {seconds}s"
-        logger.debug(f"Block {util.CURRENT_BLOCK_INDEX}/{block_count} parsed, for {parsed_blocks} blocks in {formatted_duration}.")
+        logger.debug(
+            f"Block {util.CURRENT_BLOCK_INDEX}/{block_count} parsed, for {parsed_blocks} blocks in {formatted_duration}."
+        )
 
         # Refresh block count.
         if util.CURRENT_BLOCK_INDEX == block_count:
