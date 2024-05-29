@@ -3,7 +3,15 @@
 import logging
 import struct
 
-from counterpartycore.lib import address, config, database, exceptions, ledger, message_type, util
+from counterpartycore.lib import (
+    address,
+    config,
+    database,
+    exceptions,
+    ledger,
+    message_type,
+    util,
+)
 from counterpartycore.lib.exceptions import *  # noqa: F403
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -292,5 +300,7 @@ def parse(db, tx, message):
             "fee_paid": total_fee if antispamfee > 0 else fee_paid,
         }
         ledger.insert_record(db, "sweeps", bindings, "SWEEP")
+
+        logger.info("Sweep from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]", bindings)
 
     cursor.close()

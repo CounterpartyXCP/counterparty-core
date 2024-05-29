@@ -614,6 +614,12 @@ def parse(db, tx, message):
                             bindings["origin"] = tx["source"]
 
                         ledger.insert_record(db, "dispensers", bindings, "OPEN_DISPENSER")
+
+                        logger.info(
+                            "Opened dispenser for %(asset)s at %(source)s (%(tx_hash)s) [valid]",
+                            bindings,
+                        )
+
                 elif (
                     len(existing) == 1
                     and existing[0]["satoshirate"] == mainchainrate
@@ -683,6 +689,11 @@ def parse(db, tx, message):
                                 ledger.insert_record(
                                     db, "dispenser_refills", bindings_refill, "REFILL_DISPENSER"
                                 )
+
+                                logger.info(
+                                    "Refilled dispenser for %(asset)s at %(source)s (%(tx_hash)s) [valid]",
+                                    bindings_refill,
+                                )
                             except ledger.DebitError:
                                 status = "insufficient funds"
                     else:
@@ -733,13 +744,36 @@ def parse(db, tx, message):
                     ledger.update_dispenser(
                         db, existing[0]["rowid"], set_data, {"source": tx["source"], "asset": asset}
                     )
+
+                    log_data = {
+                        "asset": asset,
+                        "source": tx["source"],
+                        "tx_hash": tx["tx_hash"],
+                        "close_delay": close_delay,
+                    }
+                    if close_delay == 0:
+                        logger.info(
+                            "Closed dispenser for %(asset)s at %(source)s (%(tx_hash)s) [valid]",
+                            log_data,
+                        )
+                    else:
+                        logger.info(
+                            "Closing dispenser for %(asset)s at %(source)s in %(close_delay)s blocks (%(tx_hash)s) [valid]",
+                            log_data,
+                        )
                 else:
                     status = "dispenser inexistent"
             else:
                 status = "invalid: status must be one of OPEN or CLOSE"
 
     if status != "valid":
-        logger.debug(f"Not storing [dispenser] tx [{tx['tx_hash']}]: {status}")
+        logger.debug(
+            "Invalid dispenser transaction [%(tx_hash)s] (%(status)s)",
+            {
+                "tx_hash": tx["tx_hash"],
+                "status": status,
+            },
+        )
 
     cursor.close()
 
@@ -897,6 +931,11 @@ def dispense(db, tx):
                 ledger.insert_record(db, "dispenses", bindings, "DISPENSE")
                 dispense_index += 1
 
+                logger.info(
+                    "Dispensed %(dispense_quantity)s of %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [valid]",
+                    bindings,
+                )
+
     cursor.close()
 
 
@@ -930,3 +969,5 @@ def close_pending(db, block_index):
                 set_data,
                 {"source": dispenser["source"], "asset": dispenser["asset"]},
             )  # use tx_index=0 for block actions
+
+            logger.info("Closed dispenser for %(asset)s at %(source)s", dispenser)

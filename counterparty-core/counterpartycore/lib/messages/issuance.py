@@ -5,7 +5,6 @@ Allow simultaneous lock and transfer.
 """
 
 import decimal
-import json
 import logging
 import struct
 
@@ -898,6 +897,8 @@ def parse(db, tx, message, message_type_id):
 
                 ledger.insert_record(db, "issuances", bindings, "RESET_ISSUANCE")
 
+                logger.info("Reset issuance of %(asset)s [%(tx_hash)s] (%(status)s)", bindings)
+
                 # Credit.
                 if quantity:
                     ledger.credit(
@@ -980,9 +981,10 @@ def parse(db, tx, message, message_type_id):
         }
         if "integer overflow" not in status:
             ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
-        else:
-            logger.debug(f"Not storing [issuance] tx [{tx['tx_hash']}]: {status}")
-            logger.debug(f"Bindings: {json.dumps(bindings)}")
+
+        logger.info(
+            "Issuance of %(quantity)s %(asset)s by %(source)s [%(tx_hash)s] (%(status)s)", bindings
+        )
 
         # Credit.
         if status == "valid" and quantity:

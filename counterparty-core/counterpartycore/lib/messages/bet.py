@@ -13,7 +13,6 @@ Expiring a bet match doesn’t re‐open the constituent bets. (So all bets may 
 """
 
 import decimal
-import json
 import struct
 
 D = decimal.Decimal
@@ -212,6 +211,12 @@ def cancel_bet(db, bet, status, block_index, tx_index):
     # Update status of bet.
     set_data = {"status": status}
     ledger.update_bet(db, bet["tx_hash"], set_data)
+
+    log_data = set_data | {
+        "bet_hash": bet["tx_hash"],
+    }
+    logger.info("Bet %{bet_hash} canceled [%(status)s]", log_data)
+
     # Refund wager.
     ledger.credit(
         db,
@@ -249,6 +254,14 @@ def cancel_bet_match(db, bet_match, status, block_index, tx_index):
     )
     # Update status of bet match.
     ledger.update_bet_match_status(db, bet_match["id"], status)
+
+    logger.info(
+        "Bet Match %(id)s canceled [%(status)s]",
+        {
+            "id": bet_match["id"],
+            "status": status,
+        },
+    )
 
 
 def get_fee_fraction(db, feed_address):
@@ -535,9 +548,8 @@ def parse(db, tx, message):
     }
     if "integer overflow" not in status:
         ledger.insert_record(db, "bets", bindings, "OPEN_BET")
-    else:
-        logger.warning(f"Not storing [bet] tx [{tx['tx_hash']}]: {status}")
-        logger.debug(f"Bindings: {json.dumps(bindings)}")
+
+    logger.info("Open Bet (%(tx_hash)s) [%(status)s]", bindings)
 
     # Match.
     if status == "open" and tx["block_index"] != config.MEMPOOL_BLOCK_INDEX:
@@ -672,6 +684,12 @@ def match(db, tx):
             }
             ledger.update_bet(db, tx0["tx_hash"], set_data)
 
+            log_data = set_data | {
+                "tx_hash": tx["tx_hash"],
+                "bet_hash": tx0["tx_hash"],
+            }
+            logger.info("Bet %{bet_hash} updated (%(tx_hash)s) [%(status)s]", log_data)
+
             if tx1["block_index"] >= 292000 or config.TESTNET or config.REGTEST:  # Protocol change
                 if tx1_wager_remaining <= 0 or tx1_counterwager_remaining <= 0:
                     # Fill order, and recredit give_remaining.
@@ -692,6 +710,12 @@ def match(db, tx):
                 "status": tx1_status,
             }
             ledger.update_bet(db, tx1["tx_hash"], set_data)
+
+            log_data = set_data | {
+                "tx_hash": tx["tx_hash"],
+                "bet_hash": tx1["tx_hash"],
+            }
+            logger.info("Bet %{bet_hash} updated (%(tx_hash)s) [%(status)s]", log_data)
 
             # Get last value of feed.
             broadcasts = ledger.get_broadcasts_by_source(db, feed_address, "valid", order_by="ASC")
@@ -725,6 +749,10 @@ def match(db, tx):
                 "status": "pending",
             }
             ledger.insert_record(db, "bet_matches", bindings, "BET_MATCH")
+            logger.info(
+                "Bet match %(tx0_index)s for %(forward_quantity)s XCP against %(backward_quantity)s XCP on %(feed_address)s",
+                bindings,
+            )
 
     cursor.close()
 
@@ -745,6 +773,7 @@ def expire(db, block_index, block_time):
             "block_index": block_index,
         }
         ledger.insert_record(db, "bet_expirations", bindings, "BET_EXPIRATION")
+        logger.info("Bet Expiration %(bet_hash)s", bindings)
 
     # Expire bet matches whose deadline is more than two weeks before the current block time.
     for bet_match in ledger.get_bet_matches_to_expire(db, block_time):
@@ -759,5 +788,6 @@ def expire(db, block_index, block_time):
             "block_index": block_index,
         }
         ledger.insert_record(db, "bet_match_expirations", bindings, "BET_MATCH_EXPIRATION")
+        logger.info("Bet Match Expiration %(bet_match_id)s", bindings)
 
     cursor.close()

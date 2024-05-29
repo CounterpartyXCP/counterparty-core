@@ -17,7 +17,7 @@ from counterpartycore.lib.api.util import inject_details, to_json
 
 logging.TRACE = logging.DEBUG - 5
 logging.addLevelName(logging.TRACE, "TRACE")
-logging.EVENT = logging.CRITICAL + 5
+logging.EVENT = logging.DEBUG - 4
 logging.addLevelName(logging.EVENT, "EVENT")
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -66,6 +66,8 @@ class CustomFormatter(logging.Formatter):
             log_format = "%(asctime)s - [%(levelname)8s] - %(message)s"
         log_format = colored(log_format, self.COLORS.get(record.levelno))
         formatter = logging.Formatter(log_format, "%Y-%m-%d-T%H:%M:%S%z")
+        if isinstance(record.args, dict):
+            record.args = truncate_fields(record.args)
         return formatter.format(record)
 
 
@@ -123,58 +125,6 @@ def isodt(epoch_time):
         return "<datetime>"
 
 
-EVENTS = {
-    "NEW_BLOCK": "New block inserted %(block_index)s",
-    "NEW_TRANSACTION": "New transaction inserted %(tx_hash)s",
-    "NEW_TRANSACTION_OUTPUT": "New transaction output inserted %(tx_hash)s",
-    "DEBIT": "Debit %(quantity)s %(asset)s from %(address)s",
-    "CREDIT": "Credit %(quantity)s %(asset)s to %(address)s",
-    "OPEN_BET": "Opened bet %(tx_hash)s",
-    "BET_MATCH": "Bet match %(tx0_index)s for %(forward_quantity)s XCP against %(backward_quantity)s XCP on %(feed_address)s",
-    "BET_EXPIRATION": "Bet %(bet_hash)s expired",
-    "BET_MATCH_EXPIRATION": "Bet match %(bet_match_id)s expired",
-    "BROADCAST": "Broadcast from %(source)s (%(tx_hash)s) [%(status)s]",
-    "BET_MATCH_RESOLUTON": "Bet match %(bet_match_id)s resolved",
-    "BTC_PAY": "BTC payment for order match %(order_match_id)s",
-    "BURN": "Burned %(burned)s BTC for %(earned)s XCP",
-    "CANCEL_BET": "Bet %(tx_hash)s canceled",
-    "CANCEL_ORDER": "Order %(tx_hash)s canceled",
-    "CANCEL_RPS": "RPS %(tx_hash)s canceled",
-    "INVALID_CANCEL": "Invalid cancel transaction %(tx_hash)s",
-    "ASSET_DESTRUCTION": "%(quantity)s %(asset)s destroyed",
-    "OPEN_DISPENSER": "Opened dispenser for %(asset)s at %(source)s",
-    "REFILL_DISPENSER": "Dispenser refilled for %(asset)s at %(source)s",
-    "DISPENSE": "%(dispense_quantity)s %(asset)s dispensed from %(source)s to %(destination)s",
-    "ASSET_DIVIDEND": "Dividend of %(quantity_per_unit)s %(dividend_asset)s per unit of %(asset)s",
-    "RESET_ISSUANCE": "Issuance of %(asset)s reset",
-    "ASSET_CREATION": "Asset %(asset_name)s created",
-    "ASSET_ISSUANCE": "Issuance of %(quantity)s %(asset)s (%(tx_hash)s)",
-    "ORDER_EXPIRATION": "Order expiration %(give_asset)s / %(get_asset)s (%(order_hash)s)",
-    "ORDER_MATCH_EXPIRATION": "Order match expiration %(forward_asset)s / %(backward_asset)s (%(order_match_id)s)",
-    "OPEN_ORDER": "Order opened for %(give_quantity)s %(give_asset)s at %(source)s",
-    "ORDER_MATCH": "Order match for %(forward_quantity)s %(forward_asset)s against %(backward_quantity)s %(backward_asset)s (%(id)s)",
-    "OPEN_RPS": "Player %(source)s opened RPS game with %(possible_moves)s possible moves and a wager of %(wager)s XCP",
-    "RPS_MATCH": "RPS match %(id)s for %(tx0_address)s against %(tx1_address)s with a wager of %(wager)s XCP",
-    "RPS_EXPIRATION": "RPS %(rps_hash)s expired",
-    "RPS_MATCH_EXPIRATION": "RPS match %(rps_match_id)s expired",
-    "RPS_RESOLVE": "RPS %(tx_hash)s resolved",
-    "ASSET_TRANSFER": "Asset %(asset)s transferred to %(issuer)s",
-    "SWEEP": "Sweep from %(source)s to %(destination)s",
-    "ENHANCED_SEND": "Send (ENHANCED) %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]",
-    "MPMA_SEND": "Send (MPMA) %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]",
-    "SEND": "Send %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]",
-    "DISPENSER_UPDATE": "Updated dispenser for %(asset)s at %(source)s [%(status)s]",
-    "BET_UPDATE": "Updated bet %(tx_hash)s [%(status)s]",
-    "BET_MATCH_UPDATE": "Updated bet match %(id)s [%(status)s]",
-    "ORDER_UPDATE": "Updated order %(tx_hash)s [%(status)s]",
-    "ORDER_FILLED": "Order %(tx_hash)s filled",
-    "ORDER_MATCH_UPDATE": "Order match %(id)s updated [%(status)s]",
-    "RPS_MATCH_UPDATE": "Updated RPS match %(id)s [%(status)s]",
-    "RPS_UPDATE": "RPS %(tx_hash)s updated [%(status)s]",
-    # "BLOCK_PARSED": "Block %(block_index)s parsed, ledger hash is %(ledger_hash)s and txlist hash is %(txlist_hash)s",
-    "TRANSACTION_PARSED": "Transaction %(tx_hash)s parsed. Supported: %(supported)s",
-}
-
 ADDRESS_FIELD = [
     "address",
     "source",
@@ -192,10 +142,11 @@ HASH_FIELD = [
     "ledger_hash",
     "txlist_hash",
     "messages_hash",
+    "offer_hash",
 ]
 
 
-def format_event_fields(bindings):
+def truncate_fields(bindings):
     for key, value in bindings.items():
         if value is None:
             continue
@@ -210,14 +161,14 @@ def format_event_fields(bindings):
 
 
 def log_event(db, block_index, event_index, event_name, bindings):
-    if event_name in EVENTS:
-        block_name = "Mempool" if util.PARSING_MEMPOOL else f"Block {block_index}"
-        log_message = f"{block_name} - {EVENTS[event_name]}"
-        logger.event(
-            log_message,
-            format_event_fields(bindings),
-            extra={"event": {"name": event_name, "block_index": block_index, **bindings}},
-        )
+    block_name = "Mempool" if util.PARSING_MEMPOOL else f"Block {block_index}"
+    log_bindings = truncate_fields(bindings)
+    log_bindings = " ".join([f"{key}={value}" for key, value in log_bindings.items()])
+    log_message = f"{block_name} - {event_name} [{log_bindings}]"
+    logger.event(
+        log_message,
+        extra={"event": {"name": event_name, "block_index": block_index, **bindings}},
+    )
     # Publish event to ZMQ
     if config.ENABLE_ZMQ_PUBLISHER:
         zmq_publisher = ZmqPublisher()
@@ -225,7 +176,6 @@ def log_event(db, block_index, event_index, event_name, bindings):
             "event": event_name,
             "params": bindings,
             "mempool": util.PARSING_MEMPOOL,
-            "description": EVENTS[event_name] % bindings,
         }
         if not util.PARSING_MEMPOOL:
             zmq_event["block_index"] = block_index

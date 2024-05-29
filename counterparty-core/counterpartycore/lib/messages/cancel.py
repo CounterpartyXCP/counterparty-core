@@ -3,7 +3,6 @@ offer_hash is the hash of either a bet or an order.
 """
 
 import binascii
-import json
 import logging
 import struct
 
@@ -141,9 +140,11 @@ def parse(db, tx, message):
     if "integer overflow" not in status:
         event_name = f"CANCEL_{offer_type.upper()}" if offer_type else "INVALID_CANCEL"
         ledger.insert_record(db, "cancels", bindings, event_name)
-    else:
-        logger.debug(f"Not storing [cancel] tx [{tx['tx_hash']}]: {status}")
-        logger.debug(f"Bindings: {json.dumps(bindings)}")
+
+    log_data = bindings | {
+        "offer_type": offer_type.capitalize() if offer_type else "Invalid",
+    }
+    logger.info("Cancel %(offer_type)s %(offer_hash)s (%(tx_hash)s) [%(status)s]", log_data)
 
     cursor.close()
 

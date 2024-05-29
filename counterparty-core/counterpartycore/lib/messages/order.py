@@ -3,7 +3,6 @@
 # Filled orders may not be re‐opened, so only orders not involving BTC (and so
 # which cannot have expired order matches) may be filled.
 import decimal
-import json
 import logging
 import struct
 
@@ -12,6 +11,7 @@ from counterpartycore.lib import (  # noqa: F401
     database,
     exceptions,
     ledger,
+    log,
     message_type,
     util,
 )
@@ -229,16 +229,17 @@ def cancel_order(db, order, status, block_index, tx_index):
             "source": order["source"],
             "block_index": block_index,
         }
-        ledger.insert_record(
-            db,
-            "order_expirations",
-            bindings,
-            "ORDER_EXPIRATION",
-            {
-                "give_asset": order["give_asset"],
-                "get_asset": order["get_asset"],
-            },
-        )
+        ledger.insert_record(db, "order_expirations", bindings, "ORDER_EXPIRATION")
+
+    logger.info(
+        "Order cancelled %(give_asset)s / %(get_asset)s (%(order_hash)s) [%(status)s]",
+        {
+            "give_asset": order["give_asset"],
+            "get_asset": order["get_asset"],
+            "order_hash": order["tx_hash"],
+            "status": status,
+        },
+    )
 
     cursor.close()
 
@@ -367,16 +368,17 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
             "tx1_address": order_match["tx1_address"],
             "block_index": block_index,
         }
-        ledger.insert_record(
-            db,
-            "order_match_expirations",
-            bindings,
-            "ORDER_MATCH_EXPIRATION",
-            {
-                "forward_asset": order_match["forward_asset"],
-                "backward_asset": order_match["backward_asset"],
-            },
-        )
+        ledger.insert_record(db, "order_match_expirations", bindings, "ORDER_MATCH_EXPIRATION")
+
+    logger.info(
+        "Order match cancelled %(forward_asset)s / %(backward_asset)s (%(order_match_id)s) [%(status)s]",
+        {
+            "forward_asset": order_match["forward_asset"],
+            "backward_asset": order_match["backward_asset"],
+            "order_match_id": order_match["id"],
+            "status": status,
+        },
+    )
 
 
 def validate(
@@ -615,9 +617,11 @@ def parse(db, tx, message):
     }
     if "integer overflow" not in status:
         ledger.insert_record(db, "orders", bindings, "OPEN_ORDER")
-    else:
-        logger.debug(f"Not storing [order] tx [{tx['tx_hash']}]: {status}")
-        logger.debug(f"Bindings: {json.dumps(bindings)}")
+
+    logger.info(
+        "Order opened for %(give_quantity)s %(give_asset)s at %(source)s (%(tx_hash)s) [%(status)s]",
+        bindings,
+    )
 
     # Match.
     if status == "open" and tx["block_index"] != config.MEMPOOL_BLOCK_INDEX:
@@ -945,6 +949,11 @@ def match(db, tx, block_index=None):
                 "status": status,
             }
             ledger.insert_record(db, "order_matches", bindings, "ORDER_MATCH")
+
+            logger.info(
+                "Order match for %(forward_quantity)s %(forward_asset)s against %(backward_quantity)s %(backward_asset)s (%(id)s) [%(status)s]",
+                bindings,
+            )
 
             if tx1_status == "filled":
                 break

@@ -1097,12 +1097,14 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
         )
         duration = time.time() - start_time
         logger.info(
-            "Block %s - L: %s, TX: %s, M: %s (%.4fs)",
-            decoded_block["block_index"],
-            new_ledger_hash[:7],
-            new_txlist_hash[:7],
-            new_messages_hash[:7],
-            duration,
+            "Block %(block_index)s - L: %(ledger_hash)s, TX: %(txlist_hash)s, M: %(messages_hash)s (%(duration).4fs)",
+            {
+                "block_index": decoded_block["block_index"],
+                "ledger_hash": new_ledger_hash,
+                "txlist_hash": new_txlist_hash,
+                "messages_hash": new_messages_hash,
+                "duration": duration,
+            },
         )
 
     return tx_index
