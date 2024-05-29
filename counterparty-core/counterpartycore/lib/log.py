@@ -184,7 +184,15 @@ ADDRESS_FIELD = [
     "tx1_address",
     "issuer",
 ]
-HASH_FIELD = ["tx_hash", "bet_hash", "order_hash", "rps_hash", "ledger_hash", "txlist_hash"]
+HASH_FIELD = [
+    "tx_hash",
+    "bet_hash",
+    "order_hash",
+    "rps_hash",
+    "ledger_hash",
+    "txlist_hash",
+    "messages_hash",
+]
 
 
 def format_event_fields(bindings):
@@ -274,7 +282,7 @@ class ZmqPublisher(metaclass=util.SingletonMeta):
         self.socket.bind("tcp://*:%s" % config.ZMQ_PUBLISHER_PORT)
 
     def publish_event(self, db, event):
-        logger.debug("Publishing event: %s", event["event"])
+        logger.trace("Publishing event: %s", event["event"])
         event = inject_details(db, event)
         self.socket.send_multipart([event["event"].encode("utf-8"), to_json(event).encode("utf-8")])
 

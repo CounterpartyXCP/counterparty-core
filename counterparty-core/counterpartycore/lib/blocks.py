@@ -321,9 +321,9 @@ def parse_block(
             },
         )
 
-        return new_ledger_hash, new_txlist_hash, new_messages_hash, found_messages_hash
+        return new_ledger_hash, new_txlist_hash, new_messages_hash
 
-    return None, None, None, None
+    return None, None, None
 
 
 def initialise(db):
@@ -1025,6 +1025,8 @@ def get_next_tx_index(db):
 
 
 def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
+    start_time = time.time()
+
     # increment block index
     util.CURRENT_BLOCK_INDEX += 1
 
@@ -1085,13 +1087,22 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
                 block_parser=block_parser,
             )
         # Parse the transactions in the block.
-        parse_block(
+        new_ledger_hash, new_txlist_hash, new_messages_hash = parse_block(
             db,
             decoded_block["block_index"],
             decoded_block["block_time"],
             previous_ledger_hash=previous_block["ledger_hash"],
             previous_txlist_hash=previous_block["txlist_hash"],
             previous_messages_hash=previous_block["messages_hash"],
+        )
+        duration = time.time() - start_time
+        logger.info(
+            "Block %s - L: %s, TX: %s, M: %s (%.4fs)",
+            decoded_block["block_index"],
+            new_ledger_hash[:7],
+            new_txlist_hash[:7],
+            new_messages_hash[:7],
+            duration,
         )
 
     return tx_index
