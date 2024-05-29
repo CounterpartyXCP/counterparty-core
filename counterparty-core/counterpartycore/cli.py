@@ -297,6 +297,17 @@ CONFIG_ARGS = [
             "help": "port on which bitcoind will publish ZMQ notificiations for `rawblock` topic",
         },
     ],
+    [
+        ("--enable-zmq-publisher",),
+        {"action": "store_true", "default": False, "help": "Enable ZMQ events publisher"},
+    ],
+    [
+        ("--zmq-publisher-port",),
+        {
+            "type": int,
+            "help": "port on which Counterparty server will publish ZMQ notificiations for every event",
+        },
+    ],
 ]
 
 

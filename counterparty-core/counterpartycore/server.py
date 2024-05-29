@@ -160,6 +160,8 @@ def initialise_config(
     no_telemetry=False,
     zmq_sequence_port=None,
     zmq_rawblock_port=None,
+    enable_zmq_publisher=False,
+    zmq_publisher_port=None,
 ):
     # log config alreasdy initialized
     logger.debug("VERBOSE: %s", config.VERBOSE)
@@ -468,6 +470,36 @@ def initialise_config(
             "Please specific a valid port number rpc-port configuration parameter"
         )
 
+    # ZMQ Publisher
+    config.ENABLE_ZMQ_PUBLISHER = enable_zmq_publisher
+
+    if zmq_publisher_port:
+        config.ZMQ_PUBLISHER_PORT = zmq_publisher_port
+    else:
+        if config.TESTNET:
+            if config.TESTCOIN:
+                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET + 1
+            else:
+                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET
+        elif config.REGTEST:
+            if config.TESTCOIN:
+                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_REGTEST + 1
+            else:
+                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_REGTEST
+        else:
+            if config.TESTCOIN:
+                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT + 1
+            else:
+                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT
+    try:
+        config.ZMQ_PUBLISHER_PORT = int(config.ZMQ_PUBLISHER_PORT)
+        if not (int(config.ZMQ_PUBLISHER_PORT) > 1 and int(config.ZMQ_PUBLISHER_PORT) < 65535):
+            raise ConfigurationError("invalid ZMQ publisher port number")
+    except:  # noqa: E722
+        raise ConfigurationError(  # noqa: B904
+            "Please specific a valid port number rpc-port configuration parameter"
+        )
+
     # Server API user
     if api_user:
         config.API_USER = api_user
@@ -621,6 +653,8 @@ def initialise_log_and_config(args):
         "no_telemetry": args.no_telemetry,
         "zmq_sequence_port": args.zmq_sequence_port,
         "zmq_rawblock_port": args.zmq_rawblock_port,
+        "enable_zmq_publisher": args.enable_zmq_publisher,
+        "zmq_publisher_port": args.zmq_publisher_port,
     }
 
     initialise_log_config(
