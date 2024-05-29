@@ -148,7 +148,7 @@ EVENTS = {
     "ASSET_DIVIDEND": "Dividend of %(quantity_per_unit)s %(dividend_asset)s per unit of %(asset)s",
     "RESET_ISSUANCE": "Issuance of %(asset)s reset",
     "ASSET_CREATION": "Asset %(asset_name)s created",
-    "ASSET_ISSUANCE": "Issuance of %(quantity)s  %(asset)s (%(tx_hash)s)",
+    "ASSET_ISSUANCE": "Issuance of %(quantity)s %(asset)s (%(tx_hash)s)",
     "ORDER_EXPIRATION": "Order expiration %(give_asset)s / %(get_asset)s (%(order_hash)s)",
     "ORDER_MATCH_EXPIRATION": "Order match expiration %(forward_asset)s / %(backward_asset)s (%(order_match_id)s)",
     "OPEN_ORDER": "Order opened for %(give_quantity)s %(give_asset)s at %(source)s",
