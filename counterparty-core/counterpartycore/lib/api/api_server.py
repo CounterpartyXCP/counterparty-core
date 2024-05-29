@@ -156,7 +156,7 @@ def return_result(
     if error:
         message += f" ({error})"
     if start_time:
-        message += f" - {time.time() - start_time:.4f}s"
+        message += f" - {int((time.time() - start_time) * 1000)}ms"
     logger.debug(message)
 
     return response
@@ -243,7 +243,7 @@ def handle_route(**kwargs):
     if BACKEND_HEIGHT is None:
         return return_result(
             503,
-            error="Backend still not ready. Please retry later.",
+            error="Backend still not ready. Please try again later.",
             start_time=start_time,
             query_args=query_args,
         )

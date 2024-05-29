@@ -856,7 +856,7 @@ def list_tx(
 
 
 def clean_table_from(cursor, table, block_index):
-    logger.info(f"Rolling table `{table}` back to block {block_index}...")
+    logger.info(f"Rolling table `{table}` back to Block {block_index}...")
     # internal function, no sql injection here
     cursor.execute(f"""DELETE FROM {table} WHERE block_index >= ?""", (block_index,))  # nosec B608  # noqa: S608
 
@@ -897,8 +897,8 @@ def rebuild_database(db, include_transactions=True):
 def rollback(db, block_index=0):
     block_index = max(block_index, config.BLOCK_FIRST)
     # clean all tables
-    step = f"Rolling database back to block {block_index}..."
-    done_message = f"Database rolled back to block_index {block_index} in {{}}s"
+    step = f"Rolling database back to Block {block_index}..."
+    done_message = f"Database rolled back to Block {block_index} ({{}}s)"
     with log.Spinner(step, done_message):
         if block_index == config.BLOCK_FIRST:
             rebuild_database(db)
@@ -922,7 +922,7 @@ def generate_progression_message(
     cumulated_duration = time.time() - start_time_all_blocks_parse
     expected_duration = (cumulated_duration / block_parsed_count) * block_count
     remaining_duration = expected_duration - cumulated_duration
-    current_block = f"Block {block['block_index']} parsed in {block_parsing_duration:.3f}s"
+    current_block = f"Block {block['block_index']} parsed in {block_parsing_duration:.2f}s"
     blocks_parsed = f"{block_parsed_count}/{block_count} blocks parsed"
     txs_indexed = " - "
     if tx_index is not None:
@@ -937,7 +937,7 @@ def generate_progression_message(
 def reparse(db, block_index=0):
     cursor = db.cursor()
     # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
-    with log.Spinner(f"Rolling database back to block {block_index}..."):
+    with log.Spinner(f"Rolling database back to Block {block_index}..."):
         clean_messages_tables(db, block_index=block_index)
 
     step = "Cleaning consensus hashes..."
@@ -1044,7 +1044,7 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
                 previous_block_index = decoded_block["height"] - 1
             else:
                 previous_block_index = backend.bitcoind.get_block_height(decoded_block["hash_prev"])
-            logger.info("Blockchain reorganization detected from block %s", previous_block_index)
+            logger.info("Blockchain reorganization detected at Block %s.", previous_block_index)
             # rollback to the previous block
             util.CURRENT_BLOCK_INDEX = previous_block_index + 1
             rollback(db, block_index=previous_block_index)
@@ -1097,7 +1097,7 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
         )
         duration = time.time() - start_time
         logger.info(
-            "Block %(block_index)s - L: %(ledger_hash)s, TX: %(txlist_hash)s, M: %(messages_hash)s (%(duration).4fs)",
+            "Block %(block_index)s - Parsing Complete. L: %(ledger_hash)s, TX: %(txlist_hash)s, M: %(messages_hash)s (%(duration).2fs)",
             {
                 "block_index": decoded_block["block_index"],
                 "ledger_hash": new_ledger_hash,
@@ -1156,7 +1156,6 @@ def catch_up(db, check_asset_conservation=True):
     parsed_blocks = 0
 
     while util.CURRENT_BLOCK_INDEX < block_count:
-        logger.debug(f"Catching up block {util.CURRENT_BLOCK_INDEX}/{block_count}...")
 
         # Get block information and transactions
         decoded_block = fetcher.get_block()
@@ -1165,8 +1164,12 @@ def catch_up(db, check_asset_conservation=True):
         tx_index = parse_new_block(db, decoded_block, block_parser=None, tx_index=tx_index)
 
         parsed_blocks += 1
-        duration = timedelta(seconds=int(time.time() - start_time))
-        logger.debug(f"{parsed_blocks} blocks parsed in {duration}")
+        duration_seconds = int(time.time() - start_time)
+        duration = timedelta(seconds=duration_seconds)
+        hours, remainder = divmod(duration_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        formatted_duration = f"{hours}h {minutes}m {seconds}s"
+        logger.debug(f"Block {util.CURRENT_BLOCK_INDEX}/{block_count} parsed, for {parsed_blocks} blocks in {formatted_duration}.")
 
         # Refresh block count.
         if util.CURRENT_BLOCK_INDEX == block_count:
@@ -1183,4 +1186,4 @@ def catch_up(db, check_asset_conservation=True):
         # catch up new blocks during asset conservation check
         catch_up(db, check_asset_conservation=False)
 
-    logger.info("Catch up done.")
+    logger.info("Catch up complete.")

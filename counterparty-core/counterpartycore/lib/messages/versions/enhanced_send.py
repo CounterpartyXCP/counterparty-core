@@ -211,7 +211,7 @@ def parse(db, tx, message):
         ledger.insert_record(db, "sends", bindings, "ENHANCED_SEND")
 
     logger.info(
-        "Send (ENHANCED) %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]",
+        "Send (Enhanced) %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]",
         bindings,
     )
 
