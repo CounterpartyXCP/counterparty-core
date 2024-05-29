@@ -229,7 +229,16 @@ def cancel_order(db, order, status, block_index, tx_index):
             "source": order["source"],
             "block_index": block_index,
         }
-        ledger.insert_record(db, "order_expirations", bindings, "ORDER_EXPIRATION")
+        ledger.insert_record(
+            db,
+            "order_expirations",
+            bindings,
+            "ORDER_EXPIRATION",
+            {
+                "give_asset": order["give_asset"],
+                "get_asset": order["get_asset"],
+            },
+        )
 
     cursor.close()
 
@@ -358,7 +367,16 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
             "tx1_address": order_match["tx1_address"],
             "block_index": block_index,
         }
-        ledger.insert_record(db, "order_match_expirations", bindings, "ORDER_MATCH_EXPIRATION")
+        ledger.insert_record(
+            db,
+            "order_match_expirations",
+            bindings,
+            "ORDER_MATCH_EXPIRATION",
+            {
+                "forward_asset": order_match["forward_asset"],
+                "backward_asset": order_match["backward_asset"],
+            },
+        )
 
 
 def validate(

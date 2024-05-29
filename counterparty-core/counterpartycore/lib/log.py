@@ -133,7 +133,7 @@ EVENTS = {
     "BET_MATCH": "Bet match %(tx0_index)s for %(forward_quantity)s XCP against %(backward_quantity)s XCP on %(feed_address)s",
     "BET_EXPIRATION": "Bet %(bet_hash)s expired",
     "BET_MATCH_EXPIRATION": "Bet match %(bet_match_id)s expired",
-    "BROADCAST": "Broadcast %(tx_hash)s: %(text)s",
+    "BROADCAST": "Broadcast from %(source)s (%(tx_hash)s) [%(status)s]",
     "BET_MATCH_RESOLUTON": "Bet match %(bet_match_id)s resolved",
     "BTC_PAY": "BTC payment for order match %(order_match_id)s",
     "BURN": "Burned %(burned)s BTC for %(earned)s XCP",
@@ -148,11 +148,11 @@ EVENTS = {
     "ASSET_DIVIDEND": "Dividend of %(quantity_per_unit)s %(dividend_asset)s per unit of %(asset)s",
     "RESET_ISSUANCE": "Issuance of %(asset)s reset",
     "ASSET_CREATION": "Asset %(asset_name)s created",
-    "ASSET_ISSUANCE": "Asset %(asset)s issued",
-    "ORDER_EXPIRATION": "Order %(order_hash)s expired",
-    "ORDER_MATCH_EXPIRATION": "Order match %(order_match_id)s expired",
+    "ASSET_ISSUANCE": "Issuance of %(quantity)s  %(asset)s (%(tx_hash)s)",
+    "ORDER_EXPIRATION": "Order expiration %(give_asset)s / %(get_asset)s (%(order_hash)s)",
+    "ORDER_MATCH_EXPIRATION": "Order match expiration %(forward_asset)s / %(backward_asset)s (%(order_match_id)s)",
     "OPEN_ORDER": "Order opened for %(give_quantity)s %(give_asset)s at %(source)s",
-    "ORDER_MATCH": "Order match %(id)s for %(forward_quantity)s %(forward_asset)s against %(backward_quantity)s %(backward_asset)s",
+    "ORDER_MATCH": "Order match for %(forward_quantity)s %(forward_asset)s against %(backward_quantity)s %(backward_asset)s (%(id)s)",
     "OPEN_RPS": "Player %(source)s opened RPS game with %(possible_moves)s possible moves and a wager of %(wager)s XCP",
     "RPS_MATCH": "RPS match %(id)s for %(tx0_address)s against %(tx1_address)s with a wager of %(wager)s XCP",
     "RPS_EXPIRATION": "RPS %(rps_hash)s expired",
@@ -160,17 +160,17 @@ EVENTS = {
     "RPS_RESOLVE": "RPS %(tx_hash)s resolved",
     "ASSET_TRANSFER": "Asset %(asset)s transferred to %(issuer)s",
     "SWEEP": "Sweep from %(source)s to %(destination)s",
-    "ENHANCED_SEND": "Send (ENHANCED) %(quantity)s %(asset)s from %(source)s to %(destination)s",
-    "MPMA_SEND": "Send (MPMA) %(quantity)s %(asset)s from %(source)s to %(destination)s",
-    "SEND": "Send %(quantity)s %(asset)s from %(source)s to %(destination)s",
-    "DISPENSER_UPDATE": "Updated dispenser for %(asset)s at %(source)s. New status: %(status)s",
-    "BET_UPDATE": "Updated bet %(tx_hash)s. New status: %(status)s",
-    "BET_MATCH_UPDATE": "Updated bet match %(id)s. New status: %(status)s",
-    "ORDER_UPDATE": "Updated order %(tx_hash)s. New status: %(status)s",
+    "ENHANCED_SEND": "Send (ENHANCED) %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]",
+    "MPMA_SEND": "Send (MPMA) %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]",
+    "SEND": "Send %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]",
+    "DISPENSER_UPDATE": "Updated dispenser for %(asset)s at %(source)s [%(status)s]",
+    "BET_UPDATE": "Updated bet %(tx_hash)s [%(status)s]",
+    "BET_MATCH_UPDATE": "Updated bet match %(id)s [%(status)s]",
+    "ORDER_UPDATE": "Updated order %(tx_hash)s [%(status)s]",
     "ORDER_FILLED": "Order %(tx_hash)s filled",
-    "ORDER_MATCH_UPDATE": "Order match %(id)s updated. New status: %(status)s",
-    "RPS_MATCH_UPDATE": "Updated RPS match %(id)s. New status: %(status)s",
-    "RPS_UPDATE": "RPS %(tx_hash)s updated. New status: %(status)s",
+    "ORDER_MATCH_UPDATE": "Order match %(id)s updated [%(status)s]",
+    "RPS_MATCH_UPDATE": "Updated RPS match %(id)s [%(status)s]",
+    "RPS_UPDATE": "RPS %(tx_hash)s updated [%(status)s]",
     # "BLOCK_PARSED": "Block %(block_index)s parsed, ledger hash is %(ledger_hash)s and txlist hash is %(txlist_hash)s",
     "TRANSACTION_PARSED": "Transaction %(tx_hash)s parsed. Supported: %(supported)s",
 }
@@ -203,7 +203,7 @@ def format_event_fields(bindings):
             bindings[key] = value[:8]
         elif key in HASH_FIELD:
             bindings[key] = value[:7]
-        elif key.endswith("_id") and isinstance(value, str) and "_" in value:
+        elif key.endswith("id") and isinstance(value, str) and "_" in value:
             part1, part2 = value.split("_")
             bindings[key] = f"{part1[:7]}_{part2[:7]}"
     return bindings
