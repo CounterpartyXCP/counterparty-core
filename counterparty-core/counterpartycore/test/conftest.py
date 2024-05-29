@@ -298,6 +298,8 @@ def api_server_v2(request, cp_server):
         "no_telemetry": True,
         "zmq_rawblock_port": None,
         "zmq_sequence_port": None,
+        "enable_zmq_publisher": False,
+        "zmq_publisher_port": None,
     }
     server_config = (
         default_config

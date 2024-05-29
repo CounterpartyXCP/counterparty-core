@@ -71,6 +71,27 @@ Or to know the events triggered by a given transaction:
 
 `/v2/transactions/<tx_hash>/events`
 
+### ZMQ Publisher
+
+You can enable a ZMQ server by starting `counteparty-server` with the `--enable-zmq-publisher` flag.
+All events are published, each in a specific topic. You can subscribe to the events that interest you. For example in Python:
+
+```
+context = zmq.asyncio.Context()
+socket = context.socket(zmq.SUB)
+socket.setsockopt(zmq.RCVHWM, 0)
+socket.setsockopt_string(zmq.SUBSCRIBE, "CREDIT")
+socket.setsockopt_string(zmq.SUBSCRIBE, "DEBIT")
+```
+
+You can use an empty string to subscribe to all events.
+
+By default events are published on port `4001`, you can customize this port with the flag `--zmq-publisher-port`.
+
+You can see a complete, working example in Python here: https://github.com/CounterpartyXCP/counterparty-core/blob/master/counterparty-core/tools/zmqclient.py.
+
+### Events Reference
+
 Here is a list of events classified by theme and for each an example response:
 
 <EVENTS_DOC>

@@ -24,9 +24,7 @@ from counterpartycore.lib.api.util import (
     function_needs_db,
     get_backend_height,
     init_api_access_log,
-    inject_dispensers,
-    inject_issuance,
-    inject_normalized_quantities,
+    inject_details,
     remove_rowids,
     to_json,
 )
@@ -196,13 +194,6 @@ def execute_api_function(db, route, function_args):
             if len(BLOCK_CACHE) > MAX_BLOCK_CACHE_SIZE:
                 BLOCK_CACHE.popitem(last=False)
 
-    return result
-
-
-def inject_details(db, result):
-    result = inject_dispensers(db, result)
-    result = inject_issuance(db, result)
-    result = inject_normalized_quantities(result)
     return result
 
 

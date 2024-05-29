@@ -41,6 +41,7 @@
 * All queries that return lists from the database now accept the `cursor`/`offset` and `limit` arguments (see the Pagination paragraph from the API Documentation).
 * Document the list of events with an example for each of them.
 * The `asset`, `assets`, `give_asset`, and `get_asset` parameters are no longer case-sensitive.
+* Publish events on ZMQ Pub/Sub channel (see Documentation)
 
 ## Command-Line Interface
 
