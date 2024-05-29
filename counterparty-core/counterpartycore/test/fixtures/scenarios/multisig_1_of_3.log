@@ -1,6 +1,5 @@
 Creating connection to `:memory:`.
 Block 0 - New block inserted 309999
-Block 309999 - Block 309999 parsed, ledger hash is 63f0fef and txlist hash is 63f0fef
 Constructing None transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=0 (data_value=0 len(data_array)=0)
 Fee/KB 0.00025000
@@ -11,7 +10,6 @@ Block 309999 - New block inserted 310000
 Block 310000 - New transaction inserted 63f8a75
 Block 310000 - Credit 93000000000 XCP to 1_mn6q3d
 Block 310000 - Burned 62000000 BTC for 93000000000 XCP
-Block 310000 - Block 310000 parsed, ledger hash is 7e1322d and txlist hash is 702e537
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
@@ -22,9 +20,8 @@ Block 310000 - New block inserted 310001
 Block 310001 - New transaction inserted 5849bd1
 Block 310001 - Debit 50000000 XCP from 1_mn6q3d
 Block 310001 - Credit 50000000 XCP to 1_mn6q3d
-Block 310001 - Send 50000000 XCP from 1_mn6q3d to 1_mn6q3d
+Block 310001 - Send XCP from 1_mn6q3d to 1_mn6q3d (5849bd1) [valid]
 Block 310001 - Transaction 5849bd1 parsed. Supported: True
-Block 310001 - Block 310001 parsed, ledger hash is 3e18d8a and txlist hash is bcd6210
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
@@ -35,7 +32,6 @@ Block 310001 - New block inserted 310002
 Block 310002 - New transaction inserted 04d5809
 Block 310002 - Order opened for 50000000 BTC at 1_mn6q3d
 Block 310002 - Transaction 04d5809 parsed. Supported: True
-Block 310002 - Block 310002 parsed, ledger hash is 71dfa52 and txlist hash is f7e5b51
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
@@ -52,11 +48,10 @@ Potential forward quantities: 50000000, 52500000
 Forward Quantity: 50000000
 Backward Quantity: 100000000
 Tx0 fee provided remaining: 0.01; required fee: 0.00857142
-Block 310003 - Updated order 04d5809. New status: open
-Block 310003 - Updated order 98ef3d3. New status: open
-Block 310003 - Order match 04d5809f0085bf2655c500a8c65d6d8b42dd373160fb431af05792b0f30b63a6_98ef3d31d1777ad18801e94eef03d4314911ac03d7a82483b40614ea5cf80e52 for 50000000 BTC against 100000000 XCP
+Block 310003 - Updated order 04d5809 [open]
+Block 310003 - Updated order 98ef3d3 [open]
+Block 310003 - Order match for 50000000 BTC against 100000000 XCP (04d5809_98ef3d3)
 Block 310003 - Transaction 98ef3d3 parsed. Supported: True
-Block 310003 - Block 310003 parsed, ledger hash is 39feff8 and txlist hash is a857bb0
 Order match has only -10 confirmation(s).
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=2000 (data_value=1000 len(data_array)=2)
@@ -67,10 +62,9 @@ Size: 387 Fee: 0.00009675 Change quantity: 1.86964250 BTC
 Block 310003 - New block inserted 310004
 Block 310004 - New transaction inserted 90eb885
 Block 310004 - Credit 100000000 XCP to 1_mn6q3d
-Block 310004 - Order match 04d5809f0085bf2655c500a8c65d6d8b42dd373160fb431af05792b0f30b63a6_98ef3d31d1777ad18801e94eef03d4314911ac03d7a82483b40614ea5cf80e52 updated. New status: completed
+Block 310004 - Order match 04d5809_98ef3d3 updated [completed]
 Block 310004 - BTC payment for order match 04d5809_98ef3d3
 Block 310004 - Transaction 90eb885 parsed. Supported: True
-Block 310004 - Block 310004 parsed, ledger hash is 1cee085 and txlist hash is 32e68b3
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
@@ -81,10 +75,9 @@ Block 310004 - New block inserted 310005
 Block 310005 - New transaction inserted 1ba2a0b
 Block 310005 - Debit 50000000 XCP from 1_mn6q3d
 Block 310005 - Asset BBBB created
-Block 310005 - Asset BBBB issued
+Block 310005 - Issuance of 1000000000  BBBB (1ba2a0b)
 Block 310005 - Credit 1000000000 BBBB to 1_mn6q3d
 Block 310005 - Transaction 1ba2a0b parsed. Supported: True
-Block 310005 - Block 310005 parsed, ledger hash is 89f516c and txlist hash is 3a41f3c
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
@@ -95,10 +88,9 @@ Block 310005 - New block inserted 310006
 Block 310006 - New transaction inserted 3f9e2dc
 Block 310006 - Debit 50000000 XCP from 1_mn6q3d
 Block 310006 - Asset BBBC created
-Block 310006 - Asset BBBC issued
+Block 310006 - Issuance of 100000  BBBC (3f9e2dc)
 Block 310006 - Credit 100000 BBBC to 1_mn6q3d
 Block 310006 - Transaction 3f9e2dc parsed. Supported: True
-Block 310006 - Block 310006 parsed, ledger hash is e9a37cf and txlist hash is 4d2d694
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
@@ -109,9 +101,8 @@ Block 310006 - New block inserted 310007
 Block 310007 - New transaction inserted 30bfb27
 Block 310007 - Debit 4000000 BBBB from 1_mn6q3d
 Block 310007 - Credit 4000000 BBBB to 1_mn6q3d
-Block 310007 - Send 4000000 BBBB from 1_mn6q3d to 1_mn6q3d
+Block 310007 - Send BBBB from 1_mn6q3d to 1_mn6q3d (30bfb27) [valid]
 Block 310007 - Transaction 30bfb27 parsed. Supported: True
-Block 310007 - Block 310007 parsed, ledger hash is 174c7c1 and txlist hash is dd1e752
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
@@ -122,9 +113,8 @@ Block 310007 - New block inserted 310008
 Block 310008 - New transaction inserted 7da21be
 Block 310008 - Debit 526 BBBC from 1_mn6q3d
 Block 310008 - Credit 526 BBBC to 1_mn6q3d
-Block 310008 - Send 526 BBBC from 1_mn6q3d to 1_mn6q3d
+Block 310008 - Send BBBC from 1_mn6q3d to 1_mn6q3d (7da21be) [valid]
 Block 310008 - Transaction 7da21be parsed. Supported: True
-Block 310008 - Block 310008 parsed, ledger hash is 1463da3 and txlist hash is 3e547d6
 Total quantity to be distributed in dividends: 0.00000024 XCP
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
@@ -139,7 +129,6 @@ Block 310009 - Debit 20000 XCP from 1_mn6q3d
 Block 310009 - Credit 24 XCP to 1_mn6q3d
 Block 310009 - Dividend of 600 XCP per unit of BBBB
 Block 310009 - Transaction f3cb8e3 parsed. Supported: True
-Block 310009 - Block 310009 parsed, ledger hash is dfe8c57 and txlist hash is 20b7caf
 Total quantity to be distributed in dividends: 0.004208 XCP
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
@@ -154,7 +143,6 @@ Block 310010 - Debit 20000 XCP from 1_mn6q3d
 Block 310010 - Credit 420800 XCP to 1_mn6q3d
 Block 310010 - Dividend of 800 XCP per unit of BBBC
 Block 310010 - Transaction 1574164 parsed. Supported: True
-Block 310010 - Block 310010 parsed, ledger hash is f9c936d and txlist hash is 47442be
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
@@ -163,9 +151,8 @@ final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.86905950 BTC
 Block 310010 - New block inserted 310011
 Block 310011 - New transaction inserted 1a5b632
-Block 310011 - Broadcast 1a5b632: Unit Test
+Block 310011 - Broadcast from 1_mn6q3d (1a5b632) [valid]
 Block 310011 - Transaction 1a5b632 parsed. Supported: True
-Block 310011 - Block 310011 parsed, ledger hash is 490bfec and txlist hash is 8a060a9
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
@@ -177,7 +164,6 @@ Block 310012 - New transaction inserted 1075391
 Block 310012 - Debit 50000000 XCP from 1_mn6q3d
 Block 310012 - Opened bet 1075391
 Block 310012 - Transaction 1075391 parsed. Supported: True
-Block 310012 - Block 310012 parsed, ledger hash is 621d39c and txlist hash is 4eb1fdd
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
@@ -186,8 +172,8 @@ final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 1.86886650 BTC
 Block 310012 - New block inserted 310013
 Block 310013 - New transaction inserted a067f79
-Block 310013 - Updated order 04d5809. New status: expired
-Block 310013 - Order 04d5809 expired
+Block 310013 - Updated order 04d5809 [expired]
+Block 310013 - Order expiration BTC / XCP (04d5809)
 Block 310013 - Debit 25000000 XCP from 1_mn6q3d
 Block 310013 - Opened bet a067f79
 Considering: 1075391072b01264a783bf31205a83abdf7356c8c405753d3ef8599f852df887
@@ -195,12 +181,11 @@ Tx0 Inverse Odds: 0.5; Tx1 Odds: 0.6024096385542169
 Potential forward quantities: 50000000, 41500000
 Forward Quantity: 41500000
 Backward Quantity: 20750000
-Block 310013 - Updated bet 1075391. New status: open
+Block 310013 - Updated bet 1075391 [open]
 Block 310013 - Credit 4250000 XCP to 1_mn6q3d
-Block 310013 - Updated bet a067f79. New status: filled
+Block 310013 - Updated bet a067f79 [filled]
 Block 310013 - Bet match 13 for 41500000 XCP against 20750000 XCP on 1_mn6q3d
 Block 310013 - Transaction a067f79 parsed. Supported: True
-Block 310013 - Block 310013 parsed, ledger hash is 7d31be7 and txlist hash is c71d132
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
@@ -209,13 +194,12 @@ final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 1.86877000 BTC
 Block 310013 - New block inserted 310014
 Block 310014 - New transaction inserted 040e03d
-Block 310014 - Updated order 98ef3d3. New status: expired
+Block 310014 - Updated order 98ef3d3 [expired]
 Block 310014 - Credit 5000000 XCP to 1_mn6q3d
-Block 310014 - Order 98ef3d3 expired
+Block 310014 - Order expiration XCP / BTC (98ef3d3)
 Block 310014 - Debit 150000000 XCP from 1_mn6q3d
 Block 310014 - Opened bet 040e03d
 Block 310014 - Transaction 040e03d parsed. Supported: True
-Block 310014 - Block 310014 parsed, ledger hash is 3aba962 and txlist hash is d7949a9
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
@@ -234,12 +218,11 @@ Potential forward quantities: 150000000, 150000000
 Forward Quantity: 150000000
 Backward Quantity: 350000000
 Block 310015 - Credit 0 XCP to 1_mn6q3d
-Block 310015 - Updated bet 040e03d. New status: filled
+Block 310015 - Updated bet 040e03d [filled]
 Block 310015 - Credit 0 XCP to 1_mn6q3d
-Block 310015 - Updated bet 62ece57. New status: filled
+Block 310015 - Updated bet 62ece57 [filled]
 Block 310015 - Bet match 15 for 150000000 XCP against 350000000 XCP on 1_mn6q3d
 Block 310015 - Transaction 62ece57 parsed. Supported: True
-Block 310015 - Block 310015 parsed, ledger hash is 342e5dd and txlist hash is 5afdd42
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
@@ -251,7 +234,6 @@ Block 310016 - New transaction inserted 578d802
 Block 310016 - Debit 750000000 XCP from 1_mn6q3d
 Block 310016 - Opened bet 578d802
 Block 310016 - Transaction 578d802 parsed. Supported: True
-Block 310016 - Block 310016 parsed, ledger hash is 51b904e and txlist hash is d74711d
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
@@ -268,12 +250,11 @@ Potential forward quantities: 750000000, 750000000
 Forward Quantity: 750000000
 Backward Quantity: 650000000
 Block 310017 - Credit 0 XCP to 1_mn6q3d
-Block 310017 - Updated bet 578d802. New status: filled
+Block 310017 - Updated bet 578d802 [filled]
 Block 310017 - Credit 0 XCP to 1_mn6q3d
-Block 310017 - Updated bet 479b0fb. New status: filled
+Block 310017 - Updated bet 479b0fb [filled]
 Block 310017 - Bet match 17 for 750000000 XCP against 650000000 XCP on 1_mn6q3d
 Block 310017 - Transaction 479b0fb parsed. Supported: True
-Block 310017 - Block 310017 parsed, ledger hash is 03a6065 and txlist hash is bafeaf2
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
@@ -282,13 +263,12 @@ final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.86840250 BTC
 Block 310017 - New block inserted 310018
 Block 310018 - New transaction inserted 16a5d04
-Block 310018 - Broadcast 16a5d04: Unit Test
+Block 310018 - Broadcast from 1_mn6q3d (16a5d04) [valid]
 Block 310018 - Credit 59137500 XCP to 1_mn6q3d
 Block 310018 - Credit 3112500 XCP to 1_mn6q3d
 Block 310018 - Bet match 1075391_a067f79 resolved
-Block 310018 - Updated bet match 1075391072b01264a783bf31205a83abdf7356c8c405753d3ef8599f852df887_a067f79057992245507ea08e901e623918be2b0eb2d178e35b01f36da2d30a33. New status: settled: liquidated for bear
+Block 310018 - Updated bet match 1075391_a067f79 [settled: liquidated for bear]
 Block 310018 - Transaction 16a5d04 parsed. Supported: True
-Block 310018 - Block 310018 parsed, ledger hash is a590602 and txlist hash is 930eaae
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
@@ -297,14 +277,13 @@ final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.86832450 BTC
 Block 310018 - New block inserted 310019
 Block 310019 - New transaction inserted 65c96e8
-Block 310019 - Broadcast 65c96e8: Unit Test
+Block 310019 - Broadcast from 1_mn6q3d (65c96e8) [valid]
 Block 310019 - Credit 159300000 XCP to 1_mn6q3d
 Block 310019 - Credit 315700000 XCP to 1_mn6q3d
 Block 310019 - Credit 25000000 XCP to 1_mn6q3d
 Block 310019 - Bet match 040e03d_62ece57 resolved
-Block 310019 - Updated bet match 040e03dfdef2df24411a077cfe5f90f3311bbb82bb3783ea2d7e6f484afd3e2b_62ece578c6760773bd4252922a7a0af87da1a1c308f32423e20cf49a369ea0a2. New status: settled
+Block 310019 - Updated bet match 040e03d_62ece57 [settled]
 Block 310019 - Transaction 65c96e8 parsed. Supported: True
-Block 310019 - Block 310019 parsed, ledger hash is 1b340e7 and txlist hash is ba496b2
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
@@ -313,13 +292,12 @@ final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.86824650 BTC
 Block 310019 - New block inserted 310020
 Block 310020 - New transaction inserted 43232e4
-Block 310020 - Broadcast 43232e4: Unit Test
+Block 310020 - Broadcast from 1_mn6q3d (43232e4) [valid]
 Block 310020 - Credit 1330000000 XCP to 1_mn6q3d
 Block 310020 - Credit 70000000 XCP to 1_mn6q3d
 Block 310020 - Bet match 578d802_479b0fb resolved
-Block 310020 - Updated bet match 578d8026c9a3a9173fdb7d5f10c6d5e7d49f375edf5fd8b3f29ccb37a8b42d1f_479b0fbec468381f1e27332755b12a69800680379d0037e02f641265a8beb183. New status: settled: for notequal
+Block 310020 - Updated bet match 578d802_479b0fb [settled: for notequal]
 Block 310020 - Transaction 43232e4 parsed. Supported: True
-Block 310020 - Block 310020 parsed, ledger hash is 5a5a31a and txlist hash is be94a40
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
@@ -331,7 +309,6 @@ Block 310021 - New transaction inserted cd79f15
 Block 310021 - Debit 50000000 BBBB from 1_mn6q3d
 Block 310021 - Order opened for 50000000 BBBB at 1_mn6q3d
 Block 310021 - Transaction cd79f15 parsed. Supported: True
-Block 310021 - Block 310021 parsed, ledger hash is 2005a30 and txlist hash is afa68f3
 Constructing None transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=0 (data_value=0 len(data_array)=0)
 Fee/KB 0.00025000
@@ -342,7 +319,6 @@ Block 310021 - New block inserted 310022
 Block 310022 - New transaction inserted ec9788f
 Block 310022 - Credit 56999887262 XCP to 1_mn6q3d
 Block 310022 - Burned 38000000 BTC for 56999887262 XCP
-Block 310022 - Block 310022 parsed, ledger hash is 95307de and txlist hash is 66f27b0
 Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
@@ -351,173 +327,94 @@ final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 0.86801575 BTC
 Block 310022 - New block inserted 310023
 Block 310023 - New transaction inserted 5329070
-Block 310023 - Updated bet 1075391. New status: expired
+Block 310023 - Updated bet 1075391 [expired]
 Block 310023 - Credit 8500000 XCP to 1_mn6q3d
 Block 310023 - Bet 1075391 expired
 Block 310023 - Debit 10000 BBBC from 1_mn6q3d
 Block 310023 - Credit 10000 BBBC to 1_mn6q3d
-Block 310023 - Send 10000 BBBC from 1_mn6q3d to 1_mn6q3d
+Block 310023 - Send BBBC from 1_mn6q3d to 1_mn6q3d (5329070) [valid]
 Block 310023 - Transaction 5329070 parsed. Supported: True
-Block 310023 - Block 310023 parsed, ledger hash is de5a22c and txlist hash is eda7d72
 Block 310023 - New block inserted 310024
-Block 310024 - Block 310024 parsed, ledger hash is e54da9d and txlist hash is 6d7b69d
 Block 310024 - New block inserted 310025
-Block 310025 - Block 310025 parsed, ledger hash is dac63e0 and txlist hash is fb8e2f9
 Block 310025 - New block inserted 310026
-Block 310026 - Block 310026 parsed, ledger hash is 0397b7d and txlist hash is 35f40ce
 Block 310026 - New block inserted 310027
-Block 310027 - Block 310027 parsed, ledger hash is dbe43e7 and txlist hash is df94b52
 Block 310027 - New block inserted 310028
-Block 310028 - Block 310028 parsed, ledger hash is ce1021a and txlist hash is 7d8c18a
 Block 310028 - New block inserted 310029
-Block 310029 - Block 310029 parsed, ledger hash is 4a066ff and txlist hash is 0dab776
 Block 310029 - New block inserted 310030
-Block 310030 - Block 310030 parsed, ledger hash is be1cc89 and txlist hash is 934400a
 Block 310030 - New block inserted 310031
-Block 310031 - Block 310031 parsed, ledger hash is a616b3d and txlist hash is b45534f
 Block 310031 - New block inserted 310032
-Block 310032 - Updated order cd79f15. New status: expired
+Block 310032 - Updated order cd79f15 [expired]
 Block 310032 - Credit 50000000 BBBB to 1_mn6q3d
-Block 310032 - Order cd79f15 expired
-Block 310032 - Block 310032 parsed, ledger hash is e7e76fe and txlist hash is b8261f9
+Block 310032 - Order expiration BBBB / XCP (cd79f15)
 Block 310032 - New block inserted 310033
-Block 310033 - Block 310033 parsed, ledger hash is f0d33d2 and txlist hash is bd31337
 Block 310033 - New block inserted 310034
-Block 310034 - Block 310034 parsed, ledger hash is 434d631 and txlist hash is eea570d
 Block 310034 - New block inserted 310035
-Block 310035 - Block 310035 parsed, ledger hash is 5ca4281 and txlist hash is c827847
 Block 310035 - New block inserted 310036
-Block 310036 - Block 310036 parsed, ledger hash is 31aecb8 and txlist hash is 5a69c5c
 Block 310036 - New block inserted 310037
-Block 310037 - Block 310037 parsed, ledger hash is 7a3167e and txlist hash is 8bc588a
 Block 310037 - New block inserted 310038
-Block 310038 - Block 310038 parsed, ledger hash is 212bc51 and txlist hash is 77861a7
 Block 310038 - New block inserted 310039
-Block 310039 - Block 310039 parsed, ledger hash is 03e72d7 and txlist hash is b445575
 Block 310039 - New block inserted 310040
-Block 310040 - Block 310040 parsed, ledger hash is 922aa74 and txlist hash is d46179d
 Block 310040 - New block inserted 310041
-Block 310041 - Block 310041 parsed, ledger hash is de422fc and txlist hash is d0cef14
 Block 310041 - New block inserted 310042
-Block 310042 - Block 310042 parsed, ledger hash is 82d7c9a and txlist hash is 68777d5
 Block 310042 - New block inserted 310043
-Block 310043 - Block 310043 parsed, ledger hash is c9232d9 and txlist hash is 728975e
 Block 310043 - New block inserted 310044
-Block 310044 - Block 310044 parsed, ledger hash is 71c3e7a and txlist hash is 56e52a1
 Block 310044 - New block inserted 310045
-Block 310045 - Block 310045 parsed, ledger hash is 47230be and txlist hash is e8b8a81
 Block 310045 - New block inserted 310046
-Block 310046 - Block 310046 parsed, ledger hash is 2c306c4 and txlist hash is 3ed0119
 Block 310046 - New block inserted 310047
-Block 310047 - Block 310047 parsed, ledger hash is 95a6325 and txlist hash is 730fe63
 Block 310047 - New block inserted 310048
-Block 310048 - Block 310048 parsed, ledger hash is 8811d6a and txlist hash is a1772d6
 Block 310048 - New block inserted 310049
-Block 310049 - Block 310049 parsed, ledger hash is 4bffe3d and txlist hash is af66fd2
 Block 310049 - New block inserted 310050
-Block 310050 - Block 310050 parsed, ledger hash is b00d500 and txlist hash is 64149e5
 Block 310050 - New block inserted 310051
-Block 310051 - Block 310051 parsed, ledger hash is 90dd8fa and txlist hash is 71f3161
 Block 310051 - New block inserted 310052
-Block 310052 - Block 310052 parsed, ledger hash is 923848b and txlist hash is de443d5
 Block 310052 - New block inserted 310053
-Block 310053 - Block 310053 parsed, ledger hash is e5ecdf8 and txlist hash is 05b8fe3
 Block 310053 - New block inserted 310054
-Block 310054 - Block 310054 parsed, ledger hash is 03cd75c and txlist hash is d8edec9
 Block 310054 - New block inserted 310055
-Block 310055 - Block 310055 parsed, ledger hash is 7239560 and txlist hash is 1294057
 Block 310055 - New block inserted 310056
-Block 310056 - Block 310056 parsed, ledger hash is 3aa4ef8 and txlist hash is 211d0e4
 Block 310056 - New block inserted 310057
-Block 310057 - Block 310057 parsed, ledger hash is fee33c0 and txlist hash is f851a0d
 Block 310057 - New block inserted 310058
-Block 310058 - Block 310058 parsed, ledger hash is 94d58bd and txlist hash is e959bdd
 Block 310058 - New block inserted 310059
-Block 310059 - Block 310059 parsed, ledger hash is e9c87b2 and txlist hash is ec20500
 Block 310059 - New block inserted 310060
-Block 310060 - Block 310060 parsed, ledger hash is b664a09 and txlist hash is dec86d1
 Block 310060 - New block inserted 310061
-Block 310061 - Block 310061 parsed, ledger hash is 5ffa5e1 and txlist hash is be052cc
 Block 310061 - New block inserted 310062
-Block 310062 - Block 310062 parsed, ledger hash is fc6f9f2 and txlist hash is 1495ca8
 Block 310062 - New block inserted 310063
-Block 310063 - Block 310063 parsed, ledger hash is cc6c3b8 and txlist hash is 93d193d
 Block 310063 - New block inserted 310064
-Block 310064 - Block 310064 parsed, ledger hash is cc57ac6 and txlist hash is 064c03f
 Block 310064 - New block inserted 310065
-Block 310065 - Block 310065 parsed, ledger hash is 9999be7 and txlist hash is f1196c8
 Block 310065 - New block inserted 310066
-Block 310066 - Block 310066 parsed, ledger hash is efb2fcb and txlist hash is ba6d273
 Block 310066 - New block inserted 310067
-Block 310067 - Block 310067 parsed, ledger hash is fb396fc and txlist hash is 20ebf68
 Block 310067 - New block inserted 310068
-Block 310068 - Block 310068 parsed, ledger hash is 6cbc681 and txlist hash is d8c0941
 Block 310068 - New block inserted 310069
-Block 310069 - Block 310069 parsed, ledger hash is 7cb734e and txlist hash is 4f02ef1
 Block 310069 - New block inserted 310070
-Block 310070 - Block 310070 parsed, ledger hash is 7b57a4d and txlist hash is 7716368
 Block 310070 - New block inserted 310071
-Block 310071 - Block 310071 parsed, ledger hash is f46f820 and txlist hash is 7137596
 Block 310071 - New block inserted 310072
-Block 310072 - Block 310072 parsed, ledger hash is 8782391 and txlist hash is 4ead629
 Block 310072 - New block inserted 310073
-Block 310073 - Block 310073 parsed, ledger hash is d2d8682 and txlist hash is 3958da4
 Block 310073 - New block inserted 310074
-Block 310074 - Block 310074 parsed, ledger hash is 9fd098f and txlist hash is f5b2e27
 Block 310074 - New block inserted 310075
-Block 310075 - Block 310075 parsed, ledger hash is f1ad21f and txlist hash is 3711ef3
 Block 310075 - New block inserted 310076
-Block 310076 - Block 310076 parsed, ledger hash is 9a1f3de and txlist hash is 8e73f7f
 Block 310076 - New block inserted 310077
-Block 310077 - Block 310077 parsed, ledger hash is ab56d9f and txlist hash is 2720a0a
 Block 310077 - New block inserted 310078
-Block 310078 - Block 310078 parsed, ledger hash is 8399d46 and txlist hash is 18ee242
 Block 310078 - New block inserted 310079
-Block 310079 - Block 310079 parsed, ledger hash is b6696a1 and txlist hash is e839a42
 Block 310079 - New block inserted 310080
-Block 310080 - Block 310080 parsed, ledger hash is 9aea0f9 and txlist hash is fca6c96
 Block 310080 - New block inserted 310081
-Block 310081 - Block 310081 parsed, ledger hash is 7571b55 and txlist hash is a168e4a
 Block 310081 - New block inserted 310082
-Block 310082 - Block 310082 parsed, ledger hash is b2507a7 and txlist hash is 379aebc
 Block 310082 - New block inserted 310083
-Block 310083 - Block 310083 parsed, ledger hash is 18566f2 and txlist hash is b238ccb
 Block 310083 - New block inserted 310084
-Block 310084 - Block 310084 parsed, ledger hash is 72c44bd and txlist hash is 2736ff0
 Block 310084 - New block inserted 310085
-Block 310085 - Block 310085 parsed, ledger hash is 1ddc441 and txlist hash is 3407db6
 Block 310085 - New block inserted 310086
-Block 310086 - Block 310086 parsed, ledger hash is b594478 and txlist hash is e02f456
 Block 310086 - New block inserted 310087
-Block 310087 - Block 310087 parsed, ledger hash is 54a1c32 and txlist hash is 5177e82
 Block 310087 - New block inserted 310088
-Block 310088 - Block 310088 parsed, ledger hash is f0bef71 and txlist hash is 84abe1e
 Block 310088 - New block inserted 310089
-Block 310089 - Block 310089 parsed, ledger hash is 0a4ce98 and txlist hash is ca0f3a6
 Block 310089 - New block inserted 310090
-Block 310090 - Block 310090 parsed, ledger hash is f3b6781 and txlist hash is 283080a
 Block 310090 - New block inserted 310091
-Block 310091 - Block 310091 parsed, ledger hash is 14261b6 and txlist hash is 744bcdb
 Block 310091 - New block inserted 310092
-Block 310092 - Block 310092 parsed, ledger hash is 3c033a5 and txlist hash is c424d17
 Block 310092 - New block inserted 310093
-Block 310093 - Block 310093 parsed, ledger hash is acc1dc4 and txlist hash is dde73fa
 Block 310093 - New block inserted 310094
-Block 310094 - Block 310094 parsed, ledger hash is 1443d97 and txlist hash is a52c247
 Block 310094 - New block inserted 310095
-Block 310095 - Block 310095 parsed, ledger hash is 1c74208 and txlist hash is 693d04e
 Block 310095 - New block inserted 310096
-Block 310096 - Block 310096 parsed, ledger hash is 662e1b2 and txlist hash is bce25b4
 Block 310096 - New block inserted 310097
-Block 310097 - Block 310097 parsed, ledger hash is 8a1b606 and txlist hash is 0d0259b
 Block 310097 - New block inserted 310098
-Block 310098 - Block 310098 parsed, ledger hash is c2e25d2 and txlist hash is 32c25e6
 Block 310098 - New block inserted 310099
-Block 310099 - Block 310099 parsed, ledger hash is bd7479c and txlist hash is 0fdf6d9
 Block 310099 - New block inserted 310100
-Block 310100 - Block 310100 parsed, ledger hash is ddb8394 and txlist hash is 8cd6864
 Block 310100 - New block inserted 310101
-Block 310101 - Block 310101 parsed, ledger hash is 3ed7694 and txlist hash is b6c1530
 Checking for conservation of assets.
 XCP has been conserved (1498.99847262 XCP both issued and held)
 BBBB has been conserved (10.0 BBBB both issued and held)
