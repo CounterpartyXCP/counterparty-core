@@ -4,7 +4,6 @@ setuptools-markdown==0.4.1
 python-dateutil==2.8.2
 Flask-HTTPAuth==4.8.0
 Flask==3.0.0
-colorlog==6.8.0
 prettytable==3.9.0
 json-rpc==1.15.0
 pycoin==0.92.20230326
@@ -32,4 +31,5 @@ psutil==5.9.8
 influxdb-client==1.42.0
 python-gnupg==0.5.2
 pyzmq==26.0.3
+JSON-log-formatter==1.0
 counterparty-rs==10.1.2

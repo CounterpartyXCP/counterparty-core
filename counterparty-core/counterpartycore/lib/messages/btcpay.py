@@ -1,7 +1,6 @@
 #! /usr/bin/python3
 
 import binascii
-import json
 import logging
 import struct
 
@@ -10,6 +9,7 @@ from counterpartycore.lib import (  # noqa: F401
     database,
     exceptions,
     ledger,
+    log,
     message_type,
     util,
 )
@@ -211,8 +211,6 @@ def parse(db, tx, message):
     }
     if "integer overflow" not in status:
         ledger.insert_record(db, "btcpays", bindings, "BTC_PAY")
-    else:
-        logger.debug(f"Not storing [btcpay] tx [{tx['tx_hash']}]: {status}")
-        logger.debug(f"Bindings: {json.dumps(bindings)}")
+    logger.info("BTC Pay for order match %(order_match_id)s (%(tx_hash)s) [%(status)s]", bindings)
 
     cursor.close()

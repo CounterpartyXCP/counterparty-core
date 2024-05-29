@@ -101,11 +101,11 @@ def is_server_ready():
 
 
 def is_cachable(rule):
-    if rule.startswith("/blocks"):
+    if rule.startswith("/v2/blocks"):
         return True
-    if rule.startswith("/transactions"):
+    if rule.startswith("/v2/transactions"):
         return True
-    if rule.startswith("/backend"):
+    if rule.startswith("/v2/backend"):
         return True
     return False
 
@@ -114,7 +114,15 @@ def return_result_if_not_ready(rule):
     return is_cachable(rule) or rule == "/v2/"
 
 
-def return_result(http_code, result=None, error=None, next_cursor=None, result_count=None):
+def return_result(
+    http_code,
+    result=None,
+    error=None,
+    next_cursor=None,
+    result_count=None,
+    start_time=None,
+    query_args=None,
+):
     assert result is None or error is None
     api_result = {}
     if result is not None:
@@ -129,6 +137,28 @@ def return_result(http_code, result=None, error=None, next_cursor=None, result_c
     response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
     response.headers["X-BITCOIN-HEIGHT"] = BACKEND_HEIGHT
     response.headers["Content-Type"] = "application/json"
+
+    if http_code != 404:
+        rule = str(request.url_rule.rule)
+        if rule == "/v2/":
+            query_name = "API Root"
+        else:
+            route = ROUTES.get(rule)
+            query_name = " ".join(
+                [part.capitalize() for part in str(route["function"].__name__).split("_")]
+            )
+    else:
+        query_name = request.path
+    if query_args:
+        query_args_str = " ".join([f"{k}={v}" for k, v in query_args.items()])
+        query_name += f" ({query_args_str})"
+    message = f"API Request - {query_name} - Response {http_code}"
+    if error:
+        message += f" ({error})"
+    if start_time:
+        message += f" - {int((time.time() - start_time) * 1000)}ms"
+    logger.debug(message)
+
     return response
 
 
@@ -207,8 +237,16 @@ def get_transaction_name(rule):
 
 @auth.login_required
 def handle_route(**kwargs):
+    start_time = time.time()
+    query_args = request.args.to_dict() | kwargs
+
     if BACKEND_HEIGHT is None:
-        return return_result(503, error="Backend still not ready. Please retry later.")
+        return return_result(
+            503,
+            error="Backend still not ready. Please try again later.",
+            start_time=start_time,
+            query_args=query_args,
+        )
     db = get_db()
 
     # update the current block index
@@ -228,10 +266,12 @@ def handle_route(**kwargs):
 
     # check if server must be ready
     if not is_server_ready() and not return_result_if_not_ready(rule):
-        return return_result(503, error="Counterparty not ready")
+        return return_result(
+            503, error="Counterparty not ready", start_time=start_time, query_args=query_args
+        )
 
     if rule == "/v2/":
-        return return_result(200, result=api_root())
+        return return_result(200, result=api_root(), start_time=start_time, query_args=query_args)
 
     route = ROUTES.get(rule)
 
@@ -239,28 +279,30 @@ def handle_route(**kwargs):
     try:
         function_args = prepare_args(route, **kwargs)
     except ValueError as e:
-        return return_result(400, error=str(e))
+        return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
 
     # call the function
     try:
         result = execute_api_function(db, route, function_args)
     except (exceptions.ComposeError, exceptions.UnpackError) as e:
-        return return_result(503, error=str(e))
+        return return_result(503, error=str(e), start_time=start_time, query_args=query_args)
     except (
         exceptions.JSONRPCInvalidRequest,
         exceptions.TransactionError,
         exceptions.BalanceError,
         exceptions.UnknownPubKeyError,
     ) as e:
-        return return_result(400, error=str(e))
+        return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
     except Exception as e:
         logger.exception("Error in API: %s", e)
         traceback.print_exc()
-        return return_result(503, error="Unknown error")
+        return return_result(
+            503, error="Unknown error", start_time=start_time, query_args=query_args
+        )
 
     # clean up and return the result
     if result is None:
-        return return_result(404, error="Not found")
+        return return_result(404, error="Not found", start_time=start_time, query_args=query_args)
 
     next_cursor = None
     result_count = None
@@ -276,7 +318,18 @@ def handle_route(**kwargs):
     if verbose.lower() in ["true", "1"]:
         result = inject_details(db, result)
 
-    return return_result(200, result=result, next_cursor=next_cursor, result_count=result_count)
+    return return_result(
+        200,
+        result=result,
+        next_cursor=next_cursor,
+        result_count=result_count,
+        start_time=start_time,
+        query_args=query_args,
+    )
+
+
+def handle_not_found(error):
+    return return_result(404, error="Not found")
 
 
 def run_api_server(args):
@@ -302,6 +355,7 @@ def run_api_server(args):
             if not path.startswith("/v2/"):
                 methods = ["GET", "POST"]
             app.add_url_rule(path, view_func=handle_route, methods=methods, strict_slashes=False)
+        app.register_error_handler(404, handle_not_found)
         # run the scheduler to refresh the backend height
         # `no_refresh_backend_height` used only for testing. TODO: find a way to mock it
         if "no_refresh_backend_height" not in args or not args["no_refresh_backend_height"]:

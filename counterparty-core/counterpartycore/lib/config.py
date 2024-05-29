@@ -180,3 +180,5 @@ INFLUX_DB_TOKEN = (
 )
 INFLUX_DB_ORG = "counterparty"
 INFLUX_DB_BUCKET = "node-telemetry"
+
+LOG_IN_CONSOLE = False

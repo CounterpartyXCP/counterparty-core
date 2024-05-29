@@ -289,7 +289,6 @@ def api_server_v2(request, cp_server):
         "log_file": None,
         "api_log_file": None,
         "no_log_files": False,
-        "json_log": False,
         "no_check_asset_conservation": True,
         "action": "",
         "no_refresh_backend_height": True,

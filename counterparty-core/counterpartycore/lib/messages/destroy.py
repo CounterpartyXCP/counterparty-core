@@ -2,7 +2,6 @@
 
 """Destroy a quantity of an asset."""
 
-import json
 import logging
 import struct
 
@@ -151,9 +150,10 @@ def parse(db, tx, message):
     }
     if "integer overflow" not in status:
         ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
-    else:
-        logger.debug(f"Not storing [destroy] tx [{tx['tx_hash']}]: {status}")
-        logger.debug(f"Bindings: {json.dumps(bindings)}")
+
+    logger.info(
+        "Destroy of %(quantity)s %(asset)s by %(source)s (%(tx_hash)s) [%(status)s]", bindings
+    )
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

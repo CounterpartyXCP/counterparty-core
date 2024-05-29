@@ -25,6 +25,7 @@ from counterpartycore.lib import (  # noqa: F401
     config,
     database,
     ledger,
+    log,
 )
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -185,8 +186,20 @@ def replay_events(db, key):
 
 
 def parse(db, tx, message):
+    logger.debug(
+        "Replay RPS events for transaction %(tx_hash)s",
+        {
+            "tx_hash": tx["tx_hash"],
+        },
+    )
     replay_events(db, tx["tx_hash"])
 
 
 def expire(db, block_index):
+    logger.trace(
+        "Replay RPS events for block %(block_index)s",
+        {
+            "block_index": block_index,
+        },
+    )
     replay_events(db, str(block_index))

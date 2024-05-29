@@ -18,7 +18,7 @@ BLOCK_JOURNAL = []
 ###############################
 
 
-def insert_record(db, table_name, record, event):
+def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
     cursor = db.cursor()
     fields_name = ", ".join(record.keys())
     fields_values = ", ".join([f":{key}" for key in record.keys()])
@@ -27,7 +27,7 @@ def insert_record(db, table_name, record, event):
     cursor.execute(query, record)
     cursor.close()
     # Add event to journal
-    add_to_journal(db, util.CURRENT_BLOCK_INDEX, "insert", table_name, event, record)
+    add_to_journal(db, util.CURRENT_BLOCK_INDEX, "insert", table_name, event, record | event_info)
 
 
 # This function allows you to update a record using an INSERT.

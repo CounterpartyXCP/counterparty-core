@@ -256,10 +256,6 @@ CONFIG_ARGS = [
         {"action": "store_true", "default": False, "help": "Don't write log files"},
     ],
     [
-        ("--json-log",),
-        {"action": "store_true", "default": False, "help": "Log events in JSON format"},
-    ],
-    [
         ("--utxo-locks-max-addresses",),
         {
             "type": int,
