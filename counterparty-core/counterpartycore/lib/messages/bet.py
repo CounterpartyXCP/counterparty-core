@@ -215,7 +215,7 @@ def cancel_bet(db, bet, status, block_index, tx_index):
     log_data = set_data | {
         "bet_hash": bet["tx_hash"],
     }
-    logger.info("Bet %{bet_hash} canceled [%(status)s]", log_data)
+    logger.info("Bet %(bet_hash)s canceled [%(status)s]", log_data)
 
     # Refund wager.
     ledger.credit(
@@ -688,7 +688,7 @@ def match(db, tx):
                 "tx_hash": tx["tx_hash"],
                 "bet_hash": tx0["tx_hash"],
             }
-            logger.info("Bet %{bet_hash} updated (%(tx_hash)s) [%(status)s]", log_data)
+            logger.info("Bet %(bet_hash)s updated (%(tx_hash)s) [%(status)s]", log_data)
 
             if tx1["block_index"] >= 292000 or config.TESTNET or config.REGTEST:  # Protocol change
                 if tx1_wager_remaining <= 0 or tx1_counterwager_remaining <= 0:
@@ -715,7 +715,7 @@ def match(db, tx):
                 "tx_hash": tx["tx_hash"],
                 "bet_hash": tx1["tx_hash"],
             }
-            logger.info("Bet %{bet_hash} updated (%(tx_hash)s) [%(status)s]", log_data)
+            logger.info("Bet %(bet_hash)s updated (%(tx_hash)s) [%(status)s]", log_data)
 
             # Get last value of feed.
             broadcasts = ledger.get_broadcasts_by_source(db, feed_address, "valid", order_by="ASC")

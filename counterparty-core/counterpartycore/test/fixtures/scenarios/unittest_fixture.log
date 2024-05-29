@@ -1,1072 +1,394 @@
 Creating connection to `:memory:`.
-Block 0 - New block inserted 309999
 Constructing None transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=0 (data_value=0 len(data_array)=0)
 Fee/KB 0.00025000
 New input: amount: 1.99909140; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 75
 final_fee inputs: 1 size: 225 final_fee 5625
 Size: 225 Fee: 0.00005625 Change quantity: 1.37903515 BTC
-Block 309999 - New block inserted 310000
-Block 310000 - New transaction inserted 6dc5b0a
-Block 310000 - Credit 93000000000 XCP to mn6q3dS2
-Block 310000 - Burned 62000000 BTC for 93000000000 XCP
+mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 62000000 BTC for 93000000000 XCP (6dc5b0a33d4d4297e0f5cc2d23ae307951d32aab2d86b7fa147b385219f3a597) [valid]
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.37903515; txid: 6dc5b0a33d4d4297e0f5cc2d23ae307951d32aab2d86b7fa147b385219f3a597; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.37895715 BTC
-Block 310000 - New block inserted 310001
-Block 310001 - New transaction inserted 1fc2e5a
-Block 310001 - Debit 50000000 XCP from mn6q3dS2
-Block 310001 - Asset DIVISIBLE created
-Block 310001 - Issuance of 100000000000  DIVISIBLE (1fc2e5a)
-Block 310001 - Credit 100000000000 DIVISIBLE to mn6q3dS2
-Block 310001 - Transaction 1fc2e5a parsed. Supported: True
+Issuance of 100000000000 DIVISIBLE by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1] (valid)
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.37895715; txid: 1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.37887915 BTC
-Block 310001 - New block inserted 310002
-Block 310002 - New transaction inserted 7b1bf51
-Block 310002 - Debit 50000000 XCP from mn6q3dS2
-Block 310002 - Asset NODIVISIBLE created
-Block 310002 - Issuance of 1000  NODIVISIBLE (7b1bf51)
-Block 310002 - Credit 1000 NODIVISIBLE to mn6q3dS2
-Block 310002 - Transaction 7b1bf51 parsed. Supported: True
+Issuance of 1000 NODIVISIBLE by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [7b1bf5144346279271b1ff78664f118224fe27fd8679d6c1519345f9c6c54584] (valid)
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.37887915; txid: 7b1bf5144346279271b1ff78664f118224fe27fd8679d6c1519345f9c6c54584; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.37880115 BTC
-Block 310002 - New block inserted 310003
-Block 310003 - New transaction inserted c26f3a0
-Block 310003 - Debit 50000000 XCP from mn6q3dS2
-Block 310003 - Asset CALLABLE created
-Block 310003 - Issuance of 1000  CALLABLE (c26f3a0)
-Block 310003 - Credit 1000 CALLABLE to mn6q3dS2
-Block 310003 - Transaction c26f3a0 parsed. Supported: True
+Issuance of 1000 CALLABLE by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [c26f3a0c4e57e41919ff27aae95a9a9d4d65d34c6da6f1893884a17c8d407140] (valid)
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.37880115; txid: c26f3a0c4e57e41919ff27aae95a9a9d4d65d34c6da6f1893884a17c8d407140; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.37872315 BTC
-Block 310003 - New block inserted 310004
-Block 310004 - New transaction inserted 90b5734
-Block 310004 - Debit 50000000 XCP from mn6q3dS2
-Block 310004 - Asset LOCKED created
-Block 310004 - Issuance of 1000  LOCKED (90b5734)
-Block 310004 - Credit 1000 LOCKED to mn6q3dS2
-Block 310004 - Transaction 90b5734 parsed. Supported: True
+Issuance of 1000 LOCKED by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [90b5734be98b0f2a0bd4b6a269c8db3368e2e387bb890ade239951d05423b4da] (valid)
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.37872315; txid: 90b5734be98b0f2a0bd4b6a269c8db3368e2e387bb890ade239951d05423b4da; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.37864515 BTC
-Block 310004 - New block inserted 310005
-Block 310005 - New transaction inserted 344dcc8
-Block 310005 - Debit 0 XCP from mn6q3dS2
-Block 310005 - Issuance of 0  LOCKED (344dcc8)
-Block 310005 - Transaction 344dcc8 parsed. Supported: True
+Issuance of 0 LOCKED by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc] (valid)
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.37864515; txid: 344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.37856715 BTC
-Block 310005 - New block inserted 310006
-Block 310006 - New transaction inserted 4f0433b
-Block 310006 - Debit 100000000 XCP from mn6q3dS2
-Block 310006 - Order opened for 100000000 XCP at mn6q3dS2
-Block 310006 - Transaction 4f0433b parsed. Supported: True
+Order opened for 100000000 XCP at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8) [open]
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.37856715; txid: 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 1.37842635 BTC
-Block 310006 - New block inserted 310007
-Block 310007 - New transaction inserted 6e91ae2
-Block 310007 - Debit 100000000 DIVISIBLE from mn6q3dS2
-Block 310007 - Credit 100000000 DIVISIBLE to mtQheFaS
-Block 310007 - Send DIVISIBLE from mn6q3dS2 to mtQheFaS (6e91ae2) [valid]
-Block 310007 - Transaction 6e91ae2 parsed. Supported: True
+Send DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (6e91ae23de2035e3e28c3322712212333592a1f666bcff9dd91aec45d5ea2753) [valid]
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.37842635; txid: 6e91ae23de2035e3e28c3322712212333592a1f666bcff9dd91aec45d5ea2753; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 1.37828555 BTC
-Block 310007 - New block inserted 310008
-Block 310008 - New transaction inserted 4fd55ab
-Block 310008 - Debit 100000000 XCP from mn6q3dS2
-Block 310008 - Credit 100000000 XCP to mtQheFaS
-Block 310008 - Send XCP from mn6q3dS2 to mtQheFaS (4fd55ab) [valid]
-Block 310008 - Transaction 4fd55ab parsed. Supported: True
+Send XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (4fd55abadfdbe77c3bda2431749cca934a29994a179620a62c1b57f28bd62a43) [valid]
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.37828555; txid: 4fd55abadfdbe77c3bda2431749cca934a29994a179620a62c1b57f28bd62a43; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.37820755 BTC
-Block 310008 - New block inserted 310009
 BUMP TXID 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8
-Block 310009 - New transaction inserted 21460d5
-Block 310009 - Debit 100000000 XCP from mn6q3dS2
-Block 310009 - Order opened for 100000000 XCP at mn6q3dS2
-Block 310009 - Transaction 21460d5 parsed. Supported: True
+Order opened for 100000000 XCP at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (21460d5c07284f9be9baf824927d0d4e4eb790e297f3162305841607b672349b) [open]
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.37820755; txid: 21460d5c07284f9be9baf824927d0d4e4eb790e297f3162305841607b672349b; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.37812955 BTC
-Block 310009 - New block inserted 310010
-Block 310010 - New transaction inserted 1899b2e
-Block 310010 - Debit 100000000 XCP from mn6q3dS2
-Block 310010 - Order opened for 100000000 XCP at mn6q3dS2
-Block 310010 - Transaction 1899b2e parsed. Supported: True
+Order opened for 100000000 XCP at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a) [open]
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.37812955; txid: 1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 1000000
 Size: 272 Fee: 0.01000000 Change quantity: 1.36811955 BTC
-Block 310010 - New block inserted 310011
-Block 310011 - New transaction inserted a1768d7
-Block 310011 - Order opened for 666667 BTC at mn6q3dS2
+Order opened for 666667 BTC at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (a1768d7db2db3b9732b26df8c04db4b9a8535a1e5cf684a680e81e7c06f394b6) [open]
 Considering: 1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a
 Tx0 Price: 0.01; Tx1 Inverse Price: 0.00666667
 Skipping: price mismatch.
-Block 310011 - Transaction a1768d7 parsed. Supported: True
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.36811955; txid: a1768d7db2db3b9732b26df8c04db4b9a8535a1e5cf684a680e81e7c06f394b6; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 1.36802305 BTC
-Block 310011 - New block inserted 310012
-Block 310012 - New transaction inserted 698e97e
-Block 310012 - Debit 300000000 XCP from mn6q3dS2
-Block 310012 - Credit 300000000 XCP to 1_mn6q3d
-Block 310012 - Send XCP from mn6q3dS2 to 1_mn6q3d (698e97e) [valid]
-Block 310012 - Transaction 698e97e parsed. Supported: True
+Send XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (698e97e507da8623cf38ab42701853443c8f7fe0d93b4674aabb42f9800ee9d6) [valid]
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.36802305; txid: 698e97e507da8623cf38ab42701853443c8f7fe0d93b4674aabb42f9800ee9d6; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 1.36792655 BTC
-Block 310012 - New block inserted 310013
-Block 310013 - New transaction inserted 0cfeeb5
-Block 310013 - Debit 1000000000 DIVISIBLE from mn6q3dS2
-Block 310013 - Credit 1000000000 DIVISIBLE to 1_mn6q3d
-Block 310013 - Send DIVISIBLE from mn6q3dS2 to 1_mn6q3d (0cfeeb5) [valid]
-Block 310013 - Transaction 0cfeeb5 parsed. Supported: True
+Send DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (0cfeeb559ed794d067557df0376a6c213b48b174b80cdb2c3c6d365cf538e132) [valid]
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.36792655; txid: 0cfeeb559ed794d067557df0376a6c213b48b174b80cdb2c3c6d365cf538e132; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 1.36778575 BTC
-Block 310013 - New block inserted 310014
-Block 310014 - New transaction inserted 1facb00
-Block 310014 - Debit 5 NODIVISIBLE from mn6q3dS2
-Block 310014 - Credit 5 NODIVISIBLE to mtQheFaS
-Block 310014 - Send NODIVISIBLE from mn6q3dS2 to mtQheFaS (1facb00) [valid]
-Block 310014 - Transaction 1facb00 parsed. Supported: True
+Send NODIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (1facb0072f16f6bdca64ea859c82b850f58f0ec7ff410d901679772a4727515a) [valid]
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.36778575; txid: 1facb0072f16f6bdca64ea859c82b850f58f0ec7ff410d901679772a4727515a; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 1.36768925 BTC
-Block 310014 - New block inserted 310015
-Block 310015 - New transaction inserted e3b6667
-Block 310015 - Debit 10 NODIVISIBLE from mn6q3dS2
-Block 310015 - Credit 10 NODIVISIBLE to 1_mn6q3d
-Block 310015 - Send NODIVISIBLE from mn6q3dS2 to 1_mn6q3d (e3b6667) [valid]
-Block 310015 - Transaction e3b6667 parsed. Supported: True
+Send NODIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (e3b6667b7baa515048a7fcf2be7818e3e7622371236b78e19b4b08e2d7e7818c) [valid]
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.36768925; txid: e3b6667b7baa515048a7fcf2be7818e3e7622371236b78e19b4b08e2d7e7818c; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.36761125 BTC
-Block 310015 - New block inserted 310016
-Block 310016 - New transaction inserted bd4e9cb
-Block 310016 - Debit 50000000 XCP from mn6q3dS2
-Block 310016 - Asset MAXI created
-Block 310016 - Issuance of 9223372036854775807  MAXI (bd4e9cb)
-Block 310016 - Credit 9223372036854775807 MAXI to mn6q3dS2
-Block 310016 - Transaction bd4e9cb parsed. Supported: True
+Issuance of 9223372036854775807 MAXI by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [bd4e9cbbe69c2db893cd32182a2d315c89c45ba4e31aa5775d1fe42d841cea39] (valid)
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.36761125; txid: bd4e9cbbe69c2db893cd32182a2d315c89c45ba4e31aa5775d1fe42d841cea39; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.36753325 BTC
-Block 310016 - New block inserted 310017
-Block 310017 - New transaction inserted d14388b
-Block 310017 - Broadcast from mn6q3dS2 (d14388b) [valid]
-Block 310017 - Transaction d14388b parsed. Supported: True
+Broadcast from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (d14388b74b63d93e4477b1fe8426028bb8ab20656703e3ce8deeb23c2fe0b8af) [valid]
 Constructing multisig transaction from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.93427600; txid: dc4f91c42eb79898b266ee237eed0d501b8b1a843f69aed847ad740e1933f85e; vout: 1; confirmations: 25
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.93419800 BTC
-Block 310017 - New block inserted 310018
-Block 310018 - New transaction inserted f9e0527
-Block 310018 - Broadcast from mnfAHmdd (f9e0527) [valid]
-Block 310018 - Transaction f9e0527 parsed. Supported: True
+Broadcast from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH (f9e0527c85a9084d7eda91fc30a49993370d029efea031a8ccccdf846146a660) [valid]
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.36753325; txid: d14388b74b63d93e4477b1fe8426028bb8ab20656703e3ce8deeb23c2fe0b8af; vout: 1; confirmations: 2
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 1.36739245 BTC
-Block 310018 - New block inserted 310019
-Block 310019 - New transaction inserted 2a21699
-Block 310019 - Debit 9 XCP from mn6q3dS2
-Block 310019 - Opened bet 2a21699
-Block 310019 - Transaction 2a21699 parsed. Supported: True
+Open Bet (2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1) [open]
 Constructing multisig transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.00000000; txid: e43c357b78baf473fd21cbc1481ac450746b60cf1d2702ce3a73a8811811e3eb; vout: 0; confirmations: 23
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 0.99985920 BTC
-Block 310019 - New block inserted 310020
-Block 310020 - New transaction inserted 5c6562d
-Block 310020 - Debit 9 XCP from mtQheFaS
-Block 310020 - Opened bet 5c6562d
+Open Bet (5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93) [open]
 Considering: 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1
 Tx0 Inverse Odds: 1.0; Tx1 Odds: 1.0
 Potential forward quantities: 9, 9
 Forward Quantity: 9
 Backward Quantity: 9
-Block 310020 - Credit 0 XCP to mn6q3dS2
-Block 310020 - Updated bet 2a21699 [filled]
-Block 310020 - Credit 0 XCP to mtQheFaS
-Block 310020 - Updated bet 5c6562d [filled]
-Block 310020 - Bet match 20 for 9 XCP against 9 XCP on mn6q3dS2
-Block 310020 - Transaction 5c6562d parsed. Supported: True
-Block 310020 - New block inserted 310021
-Block 310021 - New block inserted 310022
-Block 310022 - New block inserted 310023
-Block 310023 - New block inserted 310024
-Block 310024 - New block inserted 310025
-Block 310025 - New block inserted 310026
-Block 310026 - New block inserted 310027
-Block 310027 - New block inserted 310028
-Block 310028 - New block inserted 310029
-Block 310029 - New block inserted 310030
-Block 310030 - New block inserted 310031
-Block 310031 - New block inserted 310032
-Block 310032 - New block inserted 310033
-Block 310033 - New block inserted 310034
-Block 310034 - New block inserted 310035
-Block 310035 - New block inserted 310036
-Block 310036 - New block inserted 310037
-Block 310037 - New block inserted 310038
-Block 310038 - New block inserted 310039
-Block 310039 - New block inserted 310040
-Block 310040 - New block inserted 310041
-Block 310041 - New block inserted 310042
-Block 310042 - New block inserted 310043
-Block 310043 - New block inserted 310044
-Block 310044 - New block inserted 310045
-Block 310045 - New block inserted 310046
-Block 310046 - New block inserted 310047
-Block 310047 - New block inserted 310048
-Block 310048 - New block inserted 310049
-Block 310049 - New block inserted 310050
-Block 310050 - New block inserted 310051
-Block 310051 - New block inserted 310052
-Block 310052 - New block inserted 310053
-Block 310053 - New block inserted 310054
-Block 310054 - New block inserted 310055
-Block 310055 - New block inserted 310056
-Block 310056 - New block inserted 310057
-Block 310057 - New block inserted 310058
-Block 310058 - New block inserted 310059
-Block 310059 - New block inserted 310060
-Block 310060 - New block inserted 310061
-Block 310061 - New block inserted 310062
-Block 310062 - New block inserted 310063
-Block 310063 - New block inserted 310064
-Block 310064 - New block inserted 310065
-Block 310065 - New block inserted 310066
-Block 310066 - New block inserted 310067
-Block 310067 - New block inserted 310068
-Block 310068 - New block inserted 310069
-Block 310069 - New block inserted 310070
-Block 310070 - New block inserted 310071
-Block 310071 - New block inserted 310072
-Block 310072 - New block inserted 310073
-Block 310073 - New block inserted 310074
-Block 310074 - New block inserted 310075
-Block 310075 - New block inserted 310076
-Block 310076 - New block inserted 310077
-Block 310077 - New block inserted 310078
-Block 310078 - New block inserted 310079
-Block 310079 - New block inserted 310080
-Block 310080 - New block inserted 310081
-Block 310081 - New block inserted 310082
-Block 310082 - New block inserted 310083
-Block 310083 - New block inserted 310084
-Block 310084 - New block inserted 310085
-Block 310085 - New block inserted 310086
-Block 310086 - New block inserted 310087
-Block 310087 - New block inserted 310088
-Block 310088 - New block inserted 310089
-Block 310089 - New block inserted 310090
-Block 310090 - New block inserted 310091
-Block 310091 - New block inserted 310092
-Block 310092 - New block inserted 310093
-Block 310093 - New block inserted 310094
-Block 310094 - New block inserted 310095
-Block 310095 - New block inserted 310096
-Block 310096 - New block inserted 310097
-Block 310097 - New block inserted 310098
-Block 310098 - New block inserted 310099
-Block 310099 - New block inserted 310100
+Bet 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1 updated (5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93) [filled]
+Bet 5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93 updated (5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93) [filled]
+Bet match 20 for 9 XCP against 9 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Constructing multisig transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 0.99985920; txid: 5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93; vout: 2; confirmations: 81
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 0.99971840 BTC
-Block 310100 - New block inserted 310101
-Block 310101 - New transaction inserted db4ea09
-Block 310101 - Debit 10 XCP from mtQheFaS
-Block 310101 - Opened bet db4ea09
-Block 310101 - Transaction db4ea09 parsed. Supported: True
+Open Bet (db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e) [open]
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.36739245; txid: 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1; vout: 2; confirmations: 83
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.36731445 BTC
-Block 310101 - New block inserted 310102
-Block 310102 - New transaction inserted 16462ea
-Block 310102 - Broadcast from mn6q3dS2 (16462ea) [valid]
-Block 310102 - Credit 9 XCP to mtQheFaS
-Block 310102 - Credit 9 XCP to mn6q3dS2
-Block 310102 - Credit 0 XCP to mn6q3dS2
-Block 310102 - Bet match 2a21699_5c6562d resolved
-Block 310102 - Updated bet match 2a21699_5c6562d [settled]
-Block 310102 - Transaction 16462ea parsed. Supported: True
+Broadcast from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (16462eac6c795cea6e5985ee063867d8c61ae24373df02048186d28118d25bae) [valid]
+Bet Match 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93 resolved
+Bet Match 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93 updated [settled]
 Constructing None transaction from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM.
 data_btc_out=0 (data_value=0 len(data_array)=0)
 Fee/KB 0.00025000
 New input: amount: 1.07824570; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 247
 final_fee inputs: 1 size: 225 final_fee 5625
 Size: 225 Fee: 0.00005625 Change quantity: 0.45818945 BTC
-Block 310102 - New block inserted 310103
-Block 310103 - New transaction inserted 65d4048
-Block 310103 - Credit 92999138821 XCP to myAtcJEH
-Block 310103 - Burned 62000000 BTC for 92999138821 XCP
+myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM burned 62000000 BTC for 92999138821 XCP (65d4048700fb8ae03f321be93c6669b8497f506a1f43920f96d994f43358c35b) [valid]
 Constructing None transaction from munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b.
 data_btc_out=0 (data_value=0 len(data_array)=0)
 Fee/KB 0.00025000
 New input: amount: 1.07824570; txid: 1befa135e687812ab8a60678ac17f982daf008cd7094dc95fc65a0b8e4bd955e; vout: 0; confirmations: 248
 final_fee inputs: 1 size: 225 final_fee 5625
 Size: 225 Fee: 0.00005625 Change quantity: 0.45818945 BTC
-Block 310103 - New block inserted 310104
-Block 310104 - New transaction inserted 95332a7
-Block 310104 - Credit 92999130460 XCP to munimLLH
-Block 310104 - Burned 62000000 BTC for 92999130460 XCP
+munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b burned 62000000 BTC for 92999130460 XCP (95332a7e3e2b04f2c10e3027327bfc31b686947fb05381e28903e3ff569bd4ff) [valid]
 Constructing None transaction from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42.
 data_btc_out=0 (data_value=0 len(data_array)=0)
 Fee/KB 0.00025000
 New input: amount: 1.07824570; txid: fea12706ef63c7ce57df3e1197b8b33e6a93ef2df07964ff654c14f1b900e17f; vout: 0; confirmations: 249
 final_fee inputs: 1 size: 225 final_fee 5625
 Size: 225 Fee: 0.00005625 Change quantity: 0.45818945 BTC
-Block 310104 - New block inserted 310105
-Block 310105 - New transaction inserted e062d1e
-Block 310105 - Credit 92999122099 XCP to mwtPsLQx
-Block 310105 - Burned 62000000 BTC for 92999122099 XCP
+mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 burned 62000000 BTC for 92999122099 XCP (e062d1ebf4cb71bd22d80c949b956f5286080838a7607ccf87945b2b3abfcafa) [valid]
 Constructing None transaction from mrPk7hTeZWjjSCrMTC2ET4SAUThQt7C4uK.
 data_btc_out=0 (data_value=0 len(data_array)=0)
 Fee/KB 0.00025000
 New input: amount: 0.05608646; txid: eac206b369d8130892c8be2d52f7bd9e3e0324870262daf3a19264246068ed2b; vout: 0; confirmations: 113
 final_fee inputs: 1 size: 225 final_fee 5625
 Size: 225 Fee: 0.00005625 Change quantity: 0.05593021 BTC
-Block 310105 - New block inserted 310106
-Block 310106 - New transaction inserted bbf0b9f
-Block 310106 - Credit 14999857 XCP to mrPk7hTe
-Block 310106 - Burned 10000 BTC for 14999857 XCP
+mrPk7hTeZWjjSCrMTC2ET4SAUThQt7C4uK burned 10000 BTC for 14999857 XCP (bbf0b9f6992755a3e371fb0c0b72f6828831e81c6f7ada6f95ba1104fb901ac3) [valid]
 Constructing opreturn transaction from munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b.
 data_btc_out=0 (data_value=0 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 0.45818945; txid: 95332a7e3e2b04f2c10e3027327bfc31b686947fb05381e28903e3ff569bd4ff; vout: 1; confirmations: 3
 final_fee inputs: 1 size: 246 final_fee 6150
 Size: 246 Fee: 0.00006150 Change quantity: 0.45812795 BTC
-Block 310106 - New block inserted 310107
-Block 310107 - New transaction inserted 9834219
-Block 310107 - Debit 100 XCP from munimLLH
-Block 310107 - Opened dispenser for XCP at munimLLH
-Block 310107 - Transaction 9834219 parsed. Supported: True
+Opened dispenser for XCP at munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b (9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec) [valid]
 Constructing None transaction from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy.
 data_btc_out=0 (data_value=0 len(data_array)=0)
 Fee/KB 0.00025000
 New input: amount: 1.00000000; txid: 20ffe4012d5fc638309b2d087a15fb100d9194132633623bc4c23b4c2caf0150; vout: 0; confirmations: 115
 final_fee inputs: 1 size: 225 final_fee 5625
 Size: 225 Fee: 0.00005625 Change quantity: 0.68994375 BTC
-Block 310107 - New block inserted 310108
-Block 310108 - New transaction inserted 93c6d24
-Block 310108 - Credit 46499548508 XCP to 2MyJHMUe
-Block 310108 - Burned 31000000 BTC for 46499548508 XCP
+2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy burned 31000000 BTC for 46499548508 XCP (93c6d2499a0536c31c77a3db3fc9fc8456fbd0726c45b8f716af16f938727a73) [valid]
 Constructing multisig transaction from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 0.68994375; txid: 93c6d2499a0536c31c77a3db3fc9fc8456fbd0726c45b8f716af16f938727a73; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.68986575 BTC
-Block 310108 - New block inserted 310109
-Block 310109 - New transaction inserted e8baf78
-Block 310109 - Debit 50000000 XCP from 2MyJHMUe
-Block 310109 - Asset PAYTOSCRIPT created
-Block 310109 - Issuance of 1000  PAYTOSCRIPT (e8baf78)
-Block 310109 - Credit 1000 PAYTOSCRIPT to 2MyJHMUe
-Block 310109 - Transaction e8baf78 parsed. Supported: True
+Issuance of 1000 PAYTOSCRIPT by 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy [e8baf787b9e4636a3cad0ffeb62992ad7abb160dc6506af0546f566dc178de7e] (valid)
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.36731445; txid: 16462eac6c795cea6e5985ee063867d8c61ae24373df02048186d28118d25bae; vout: 1; confirmations: 8
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 1.36717365 BTC
-Block 310109 - New block inserted 310110
-Block 310110 - New transaction inserted f6a0f81
-Block 310110 - Debit 100000000 DIVISIBLE from mn6q3dS2
-Block 310110 - Credit 100000000 DIVISIBLE to 2MyJHMUe
-Block 310110 - Send DIVISIBLE from mn6q3dS2 to 2MyJHMUe (f6a0f81) [valid]
-Block 310110 - Transaction f6a0f81 parsed. Supported: True
+Send DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy (f6a0f819e899b407cbfa07b4eff3d58902af3899abfbaa47d5f31d5b398e76e7) [valid]
 Constructing opreturn transaction from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy.
 data_btc_out=0 (data_value=0 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 0.68986575; txid: e8baf787b9e4636a3cad0ffeb62992ad7abb160dc6506af0546f566dc178de7e; vout: 1; confirmations: 2
 final_fee inputs: 1 size: 239 final_fee 5975
 Size: 239 Fee: 0.00005975 Change quantity: 0.68980600 BTC
-Block 310110 - New block inserted 310111
-Block 310111 - New transaction inserted 510f6fe
-Block 310111 - Broadcast from 2MyJHMUe (510f6fe) [valid]
-Block 310111 - Transaction 510f6fe parsed. Supported: True
+Broadcast from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy (510f6feb902159622d83f64eae590a4fec88989869a20caf5804c313aa5e0186) [valid]
 Constructing opreturn transaction from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy.
 data_btc_out=0 (data_value=0 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 0.68980600; txid: 510f6feb902159622d83f64eae590a4fec88989869a20caf5804c313aa5e0186; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 285 final_fee 7124
 Size: 285 Fee: 0.00007124 Change quantity: 0.68968046 BTC
-Block 310111 - New block inserted 310112
-Block 310112 - New transaction inserted d79b590
-Block 310112 - Debit 10 XCP from 2MyJHMUe
-Block 310112 - Opened bet d79b590
-Block 310112 - Transaction d79b590 parsed. Supported: True
+Open Bet (d79b590e4ec3e74cbc3eb4d0f956ce7abb0e3af2ccac85ff90ed8acf13f2e048) [open]
 Constructing multisig transaction from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 0.45818945; txid: e062d1ebf4cb71bd22d80c949b956f5286080838a7607ccf87945b2b3abfcafa; vout: 1; confirmations: 8
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.45811145 BTC
-Block 310112 - New block inserted 310113
-Block 310113 - New transaction inserted 34bce6f
-Block 310113 - Debit 50000000 XCP from mwtPsLQx
-Block 310113 - Asset LOCKEDPREV created
-Block 310113 - Issuance of 1000  LOCKEDPREV (34bce6f)
-Block 310113 - Credit 1000 LOCKEDPREV to mwtPsLQx
-Block 310113 - Transaction 34bce6f parsed. Supported: True
+Issuance of 1000 LOCKEDPREV by mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 [34bce6f409758b3d6fd13282a99b277ef1fdf44a1025d2901075cac0249dbc63] (valid)
 Constructing multisig transaction from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 0.45811145; txid: 34bce6f409758b3d6fd13282a99b277ef1fdf44a1025d2901075cac0249dbc63; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.45803345 BTC
-Block 310113 - New block inserted 310114
-Block 310114 - New transaction inserted 025b810
-Block 310114 - Debit 0 XCP from mwtPsLQx
-Block 310114 - Issuance of 0  LOCKEDPREV (025b810)
-Block 310114 - Transaction 025b810 parsed. Supported: True
+Issuance of 0 LOCKEDPREV by mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 [025b810fce7735c5869b90846007e5f604f60c1beda4c1695f1c7fbec3d44bc2] (valid)
 Constructing multisig transaction from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 0.45803345; txid: 025b810fce7735c5869b90846007e5f604f60c1beda4c1695f1c7fbec3d44bc2; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.45795545 BTC
-Block 310114 - New block inserted 310115
-Block 310115 - New transaction inserted 4ab1a24
-Block 310115 - Debit 0 XCP from mwtPsLQx
-Block 310115 - Issuance of 0  LOCKEDPREV (4ab1a24)
-Block 310115 - Transaction 4ab1a24 parsed. Supported: True
+Issuance of 0 LOCKEDPREV by mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 [4ab1a24283c1dbfc710be7b215d64e8a4510ee97af019e210049c25773b50beb] (valid)
 Constructing None transaction from tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx.
 data_btc_out=0 (data_value=0 len(data_array)=0)
 Fee/KB 0.00025000
 New input: amount: 1.00000000; txid: 20efe4012d5fc638309b2d087a15fb100d9194132633623bc4c23b4c2caf0150; vout: 0; confirmations: 123
 final_fee inputs: 1 size: 225 final_fee 5625
 Size: 225 Fee: 0.00005625 Change quantity: 0.37994375 BTC
-Block 310115 - New block inserted 310116
-Block 310116 - New transaction inserted 27929c4
-Block 310116 - Credit 92999030129 XCP to tb1qw508
-Block 310116 - Burned 62000000 BTC for 92999030129 XCP
-Block 310116 - New block inserted 310117
-Block 310117 - New block inserted 310118
-Block 310118 - New block inserted 310119
-Block 310119 - New block inserted 310120
-Block 310120 - New block inserted 310121
-Block 310121 - New block inserted 310122
-Block 310122 - New block inserted 310123
-Block 310123 - New block inserted 310124
-Block 310124 - New block inserted 310125
-Block 310125 - New block inserted 310126
-Block 310126 - New block inserted 310127
-Block 310127 - New block inserted 310128
-Block 310128 - New block inserted 310129
-Block 310129 - New block inserted 310130
-Block 310130 - New block inserted 310131
-Block 310131 - New block inserted 310132
-Block 310132 - New block inserted 310133
-Block 310133 - New block inserted 310134
-Block 310134 - New block inserted 310135
-Block 310135 - New block inserted 310136
-Block 310136 - New block inserted 310137
-Block 310137 - New block inserted 310138
-Block 310138 - New block inserted 310139
-Block 310139 - New block inserted 310140
-Block 310140 - New block inserted 310141
-Block 310141 - New block inserted 310142
-Block 310142 - New block inserted 310143
-Block 310143 - New block inserted 310144
-Block 310144 - New block inserted 310145
-Block 310145 - New block inserted 310146
-Block 310146 - New block inserted 310147
-Block 310147 - New block inserted 310148
-Block 310148 - New block inserted 310149
-Block 310149 - New block inserted 310150
-Block 310150 - New block inserted 310151
-Block 310151 - New block inserted 310152
-Block 310152 - New block inserted 310153
-Block 310153 - New block inserted 310154
-Block 310154 - New block inserted 310155
-Block 310155 - New block inserted 310156
-Block 310156 - New block inserted 310157
-Block 310157 - New block inserted 310158
-Block 310158 - New block inserted 310159
-Block 310159 - New block inserted 310160
-Block 310160 - New block inserted 310161
-Block 310161 - New block inserted 310162
-Block 310162 - New block inserted 310163
-Block 310163 - New block inserted 310164
-Block 310164 - New block inserted 310165
-Block 310165 - New block inserted 310166
-Block 310166 - New block inserted 310167
-Block 310167 - New block inserted 310168
-Block 310168 - New block inserted 310169
-Block 310169 - New block inserted 310170
-Block 310170 - New block inserted 310171
-Block 310171 - New block inserted 310172
-Block 310172 - New block inserted 310173
-Block 310173 - New block inserted 310174
-Block 310174 - New block inserted 310175
-Block 310175 - New block inserted 310176
-Block 310176 - New block inserted 310177
-Block 310177 - New block inserted 310178
-Block 310178 - New block inserted 310179
-Block 310179 - New block inserted 310180
-Block 310180 - New block inserted 310181
-Block 310181 - New block inserted 310182
-Block 310182 - New block inserted 310183
-Block 310183 - New block inserted 310184
-Block 310184 - New block inserted 310185
-Block 310185 - New block inserted 310186
-Block 310186 - New block inserted 310187
-Block 310187 - New block inserted 310188
-Block 310188 - New block inserted 310189
-Block 310189 - New block inserted 310190
-Block 310190 - New block inserted 310191
-Block 310191 - New block inserted 310192
-Block 310192 - New block inserted 310193
-Block 310193 - New block inserted 310194
-Block 310194 - New block inserted 310195
-Block 310195 - New block inserted 310196
-Block 310196 - New block inserted 310197
-Block 310197 - New block inserted 310198
-Block 310198 - New block inserted 310199
-Block 310199 - New block inserted 310200
-Block 310200 - New block inserted 310201
-Block 310201 - New block inserted 310202
-Block 310202 - New block inserted 310203
-Block 310203 - New block inserted 310204
-Block 310204 - New block inserted 310205
-Block 310205 - New block inserted 310206
-Block 310206 - New block inserted 310207
-Block 310207 - New block inserted 310208
-Block 310208 - New block inserted 310209
-Block 310209 - New block inserted 310210
-Block 310210 - New block inserted 310211
-Block 310211 - New block inserted 310212
-Block 310212 - New block inserted 310213
-Block 310213 - New block inserted 310214
-Block 310214 - New block inserted 310215
-Block 310215 - New block inserted 310216
-Block 310216 - New block inserted 310217
-Block 310217 - New block inserted 310218
-Block 310218 - New block inserted 310219
-Block 310219 - New block inserted 310220
-Block 310220 - New block inserted 310221
-Block 310221 - New block inserted 310222
-Block 310222 - New block inserted 310223
-Block 310223 - New block inserted 310224
-Block 310224 - New block inserted 310225
-Block 310225 - New block inserted 310226
-Block 310226 - New block inserted 310227
-Block 310227 - New block inserted 310228
-Block 310228 - New block inserted 310229
-Block 310229 - New block inserted 310230
-Block 310230 - New block inserted 310231
-Block 310231 - New block inserted 310232
-Block 310232 - New block inserted 310233
-Block 310233 - New block inserted 310234
-Block 310234 - New block inserted 310235
-Block 310235 - New block inserted 310236
-Block 310236 - New block inserted 310237
-Block 310237 - New block inserted 310238
-Block 310238 - New block inserted 310239
-Block 310239 - New block inserted 310240
-Block 310240 - New block inserted 310241
-Block 310241 - New block inserted 310242
-Block 310242 - New block inserted 310243
-Block 310243 - New block inserted 310244
-Block 310244 - New block inserted 310245
-Block 310245 - New block inserted 310246
-Block 310246 - New block inserted 310247
-Block 310247 - New block inserted 310248
-Block 310248 - New block inserted 310249
-Block 310249 - New block inserted 310250
-Block 310250 - New block inserted 310251
-Block 310251 - New block inserted 310252
-Block 310252 - New block inserted 310253
-Block 310253 - New block inserted 310254
-Block 310254 - New block inserted 310255
-Block 310255 - New block inserted 310256
-Block 310256 - New block inserted 310257
-Block 310257 - New block inserted 310258
-Block 310258 - New block inserted 310259
-Block 310259 - New block inserted 310260
-Block 310260 - New block inserted 310261
-Block 310261 - New block inserted 310262
-Block 310262 - New block inserted 310263
-Block 310263 - New block inserted 310264
-Block 310264 - New block inserted 310265
-Block 310265 - New block inserted 310266
-Block 310266 - New block inserted 310267
-Block 310267 - New block inserted 310268
-Block 310268 - New block inserted 310269
-Block 310269 - New block inserted 310270
-Block 310270 - New block inserted 310271
-Block 310271 - New block inserted 310272
-Block 310272 - New block inserted 310273
-Block 310273 - New block inserted 310274
-Block 310274 - New block inserted 310275
-Block 310275 - New block inserted 310276
-Block 310276 - New block inserted 310277
-Block 310277 - New block inserted 310278
-Block 310278 - New block inserted 310279
-Block 310279 - New block inserted 310280
-Block 310280 - New block inserted 310281
-Block 310281 - New block inserted 310282
-Block 310282 - New block inserted 310283
-Block 310283 - New block inserted 310284
-Block 310284 - New block inserted 310285
-Block 310285 - New block inserted 310286
-Block 310286 - New block inserted 310287
-Block 310287 - New block inserted 310288
-Block 310288 - New block inserted 310289
-Block 310289 - New block inserted 310290
-Block 310290 - New block inserted 310291
-Block 310291 - New block inserted 310292
-Block 310292 - New block inserted 310293
-Block 310293 - New block inserted 310294
-Block 310294 - New block inserted 310295
-Block 310295 - New block inserted 310296
-Block 310296 - New block inserted 310297
-Block 310297 - New block inserted 310298
-Block 310298 - New block inserted 310299
-Block 310299 - New block inserted 310300
-Block 310300 - New block inserted 310301
-Block 310301 - New block inserted 310302
-Block 310302 - New block inserted 310303
-Block 310303 - New block inserted 310304
-Block 310304 - New block inserted 310305
-Block 310305 - New block inserted 310306
-Block 310306 - New block inserted 310307
-Block 310307 - New block inserted 310308
-Block 310308 - New block inserted 310309
-Block 310309 - New block inserted 310310
-Block 310310 - New block inserted 310311
-Block 310311 - New block inserted 310312
-Block 310312 - New block inserted 310313
-Block 310313 - New block inserted 310314
-Block 310314 - New block inserted 310315
-Block 310315 - New block inserted 310316
-Block 310316 - New block inserted 310317
-Block 310317 - New block inserted 310318
-Block 310318 - New block inserted 310319
-Block 310319 - New block inserted 310320
-Block 310320 - New block inserted 310321
-Block 310321 - New block inserted 310322
-Block 310322 - New block inserted 310323
-Block 310323 - New block inserted 310324
-Block 310324 - New block inserted 310325
-Block 310325 - New block inserted 310326
-Block 310326 - New block inserted 310327
-Block 310327 - New block inserted 310328
-Block 310328 - New block inserted 310329
-Block 310329 - New block inserted 310330
-Block 310330 - New block inserted 310331
-Block 310331 - New block inserted 310332
-Block 310332 - New block inserted 310333
-Block 310333 - New block inserted 310334
-Block 310334 - New block inserted 310335
-Block 310335 - New block inserted 310336
-Block 310336 - New block inserted 310337
-Block 310337 - New block inserted 310338
-Block 310338 - New block inserted 310339
-Block 310339 - New block inserted 310340
-Block 310340 - New block inserted 310341
-Block 310341 - New block inserted 310342
-Block 310342 - New block inserted 310343
-Block 310343 - New block inserted 310344
-Block 310344 - New block inserted 310345
-Block 310345 - New block inserted 310346
-Block 310346 - New block inserted 310347
-Block 310347 - New block inserted 310348
-Block 310348 - New block inserted 310349
-Block 310349 - New block inserted 310350
-Block 310350 - New block inserted 310351
-Block 310351 - New block inserted 310352
-Block 310352 - New block inserted 310353
-Block 310353 - New block inserted 310354
-Block 310354 - New block inserted 310355
-Block 310355 - New block inserted 310356
-Block 310356 - New block inserted 310357
-Block 310357 - New block inserted 310358
-Block 310358 - New block inserted 310359
-Block 310359 - New block inserted 310360
-Block 310360 - New block inserted 310361
-Block 310361 - New block inserted 310362
-Block 310362 - New block inserted 310363
-Block 310363 - New block inserted 310364
-Block 310364 - New block inserted 310365
-Block 310365 - New block inserted 310366
-Block 310366 - New block inserted 310367
-Block 310367 - New block inserted 310368
-Block 310368 - New block inserted 310369
-Block 310369 - New block inserted 310370
-Block 310370 - New block inserted 310371
-Block 310371 - New block inserted 310372
-Block 310372 - New block inserted 310373
-Block 310373 - New block inserted 310374
-Block 310374 - New block inserted 310375
-Block 310375 - New block inserted 310376
-Block 310376 - New block inserted 310377
-Block 310377 - New block inserted 310378
-Block 310378 - New block inserted 310379
-Block 310379 - New block inserted 310380
-Block 310380 - New block inserted 310381
-Block 310381 - New block inserted 310382
-Block 310382 - New block inserted 310383
-Block 310383 - New block inserted 310384
-Block 310384 - New block inserted 310385
-Block 310385 - New block inserted 310386
-Block 310386 - New block inserted 310387
-Block 310387 - New block inserted 310388
-Block 310388 - New block inserted 310389
-Block 310389 - New block inserted 310390
-Block 310390 - New block inserted 310391
-Block 310391 - New block inserted 310392
-Block 310392 - New block inserted 310393
-Block 310393 - New block inserted 310394
-Block 310394 - New block inserted 310395
-Block 310395 - New block inserted 310396
-Block 310396 - New block inserted 310397
-Block 310397 - New block inserted 310398
-Block 310398 - New block inserted 310399
-Block 310399 - New block inserted 310400
-Block 310400 - New block inserted 310401
-Block 310401 - New block inserted 310402
-Block 310402 - New block inserted 310403
-Block 310403 - New block inserted 310404
-Block 310404 - New block inserted 310405
-Block 310405 - New block inserted 310406
-Block 310406 - New block inserted 310407
-Block 310407 - New block inserted 310408
-Block 310408 - New block inserted 310409
-Block 310409 - New block inserted 310410
-Block 310410 - New block inserted 310411
-Block 310411 - New block inserted 310412
-Block 310412 - New block inserted 310413
-Block 310413 - New block inserted 310414
-Block 310414 - New block inserted 310415
-Block 310415 - New block inserted 310416
-Block 310416 - New block inserted 310417
-Block 310417 - New block inserted 310418
-Block 310418 - New block inserted 310419
-Block 310419 - New block inserted 310420
-Block 310420 - New block inserted 310421
-Block 310421 - New block inserted 310422
-Block 310422 - New block inserted 310423
-Block 310423 - New block inserted 310424
-Block 310424 - New block inserted 310425
-Block 310425 - New block inserted 310426
-Block 310426 - New block inserted 310427
-Block 310427 - New block inserted 310428
-Block 310428 - New block inserted 310429
-Block 310429 - New block inserted 310430
-Block 310430 - New block inserted 310431
-Block 310431 - New block inserted 310432
-Block 310432 - New block inserted 310433
-Block 310433 - New block inserted 310434
-Block 310434 - New block inserted 310435
-Block 310435 - New block inserted 310436
-Block 310436 - New block inserted 310437
-Block 310437 - New block inserted 310438
-Block 310438 - New block inserted 310439
-Block 310439 - New block inserted 310440
-Block 310440 - New block inserted 310441
-Block 310441 - New block inserted 310442
-Block 310442 - New block inserted 310443
-Block 310443 - New block inserted 310444
-Block 310444 - New block inserted 310445
-Block 310445 - New block inserted 310446
-Block 310446 - New block inserted 310447
-Block 310447 - New block inserted 310448
-Block 310448 - New block inserted 310449
-Block 310449 - New block inserted 310450
-Block 310450 - New block inserted 310451
-Block 310451 - New block inserted 310452
-Block 310452 - New block inserted 310453
-Block 310453 - New block inserted 310454
-Block 310454 - New block inserted 310455
-Block 310455 - New block inserted 310456
-Block 310456 - New block inserted 310457
-Block 310457 - New block inserted 310458
-Block 310458 - New block inserted 310459
-Block 310459 - New block inserted 310460
-Block 310460 - New block inserted 310461
-Block 310461 - New block inserted 310462
-Block 310462 - New block inserted 310463
-Block 310463 - New block inserted 310464
-Block 310464 - New block inserted 310465
-Block 310465 - New block inserted 310466
-Block 310466 - New block inserted 310467
-Block 310467 - New block inserted 310468
-Block 310468 - New block inserted 310469
-Block 310469 - New block inserted 310470
-Block 310470 - New block inserted 310471
-Block 310471 - New block inserted 310472
-Block 310472 - New block inserted 310473
-Block 310473 - New block inserted 310474
-Block 310474 - New block inserted 310475
-Block 310475 - New block inserted 310476
-Block 310476 - New block inserted 310477
-Block 310477 - New block inserted 310478
-Block 310478 - New block inserted 310479
-Block 310479 - New block inserted 310480
+tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx burned 62000000 BTC for 92999030129 XCP (27929c4fcad307a76ea7da34dd2691084f678a22ee43ce7f3842b78730ee08f9) [valid]
 Constructing opreturn transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=0 (data_value=0 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.36717365; txid: f6a0f819e899b407cbfa07b4eff3d58902af3899abfbaa47d5f31d5b398e76e7; vout: 2; confirmations: 371
 final_fee inputs: 1 size: 255 final_fee 6375
 Size: 255 Fee: 0.00006375 Change quantity: 1.36710990 BTC
-Block 310480 - New block inserted 310481
-Block 310481 - New transaction inserted b00bdf0
-Block 310481 - Debit 100000000 XCP from mn6q3dS2
-Block 310481 - Credit 100000000 XCP to mtQheFaS
-Block 310481 - Send (ENHANCED) XCP from mn6q3dS2 to mtQheFaS (b00bdf0) [valid]
-Block 310481 - Transaction b00bdf0 parsed. Supported: True
+Send (ENHANCED) XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5) [valid]
 Constructing opreturn transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
 data_btc_out=0 (data_value=0 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 0.99971840; txid: db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e; vout: 2; confirmations: 381
 final_fee inputs: 1 size: 254 final_fee 6350
 Size: 254 Fee: 0.00006350 Change quantity: 0.99965490 BTC
-Block 310481 - New block inserted 310482
-Block 310482 - New transaction inserted c871652
-Block 310482 - Debit 100000000 XCP from mtQheFaS
-Block 310482 - Credit 100000000 XCP to mn6q3dS2
-Block 310482 - Send (ENHANCED) XCP from mtQheFaS to mn6q3dS2 (c871652) [valid]
-Block 310482 - Transaction c871652 parsed. Supported: True
-Block 310482 - New block inserted 310483
-Block 310483 - New block inserted 310484
-Block 310484 - New block inserted 310485
+Send (ENHANCED) XCP from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (c8716524f33646b9af94d6f5e52494ff3b34466497094b1db2ab920e4f79bc34) [valid]
 Constructing multisig transaction from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 0.45818945; txid: 65d4048700fb8ae03f321be93c6669b8497f506a1f43920f96d994f43358c35b; vout: 1; confirmations: 383
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.45811145 BTC
-Block 310485 - New block inserted 310486
-Block 310486 - New transaction inserted 3b95e07
-Block 310486 - Broadcast from myAtcJEH (3b95e07) [valid]
-Block 310486 - Transaction 3b95e07 parsed. Supported: True
+Broadcast from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM (3b95e07a2194174ac020de27e8b2b6ee24d5fc120f118df516ba28495657cf14) [valid]
 Constructing multisig transaction from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 0.45811145; txid: 3b95e07a2194174ac020de27e8b2b6ee24d5fc120f118df516ba28495657cf14; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 0.45797065 BTC
-Block 310486 - New block inserted 310487
-Block 310487 - New transaction inserted 41e821a
-Block 310487 - Debit 9 XCP from myAtcJEH
-Block 310487 - Opened bet 41e821a
-Block 310487 - Transaction 41e821a parsed. Supported: True
+Open Bet (41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef) [open]
 Constructing multisig transaction from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 0.45797065; txid: 41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.45789265 BTC
-Block 310487 - New block inserted 310488
-Block 310488 - New transaction inserted 870fb08
-Block 310488 - Broadcast from myAtcJEH (870fb08) [valid]
-Block 310488 - Transaction 870fb08 parsed. Supported: True
+Broadcast from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM (870fb08b373705423f31ccd91fdbcabe135ad92d74e709a959dfa2e12f9a6638) [valid]
 Constructing multisig transaction from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 0.45789265; txid: 870fb08b373705423f31ccd91fdbcabe135ad92d74e709a959dfa2e12f9a6638; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.45781465 BTC
-Block 310488 - New block inserted 310489
-Block 310489 - New transaction inserted 685d7f9
-Block 310489 - Broadcast from myAtcJEH (685d7f9) [valid]
-Block 310489 - Transaction 685d7f9 parsed. Supported: True
+Broadcast from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM (685d7f99fa76a05201c3239a4e0d9060ea53307b171f6ad7d482a26c73e9c0d1) [valid]
 Constructing multisig transaction from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 0.45795545; txid: 4ab1a24283c1dbfc710be7b215d64e8a4510ee97af019e210049c25773b50beb; vout: 1; confirmations: 375
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 0.45787745 BTC
-Block 310489 - New block inserted 310490
-Block 310490 - New transaction inserted 7c43770
-Block 310490 - Broadcast from mwtPsLQx (7c43770) [valid]
-Block 310490 - Transaction 7c43770 parsed. Supported: True
+Broadcast from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 (7c437705c315212315c85c0b8ba09d358679c91be20b54f30929c5a6052426af) [valid]
 Constructing multisig transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.36710990; txid: b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5; vout: 1; confirmations: 10
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.36703190 BTC
-Block 310490 - New block inserted 310491
-Block 310491 - New transaction inserted 74db175
-Block 310491 - Debit 100000000 XCP from mn6q3dS2
-Block 310491 - Order opened for 100000000 XCP at mn6q3dS2
+Order opened for 100000000 XCP at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498) [open]
 Considering: a1768d7db2db3b9732b26df8c04db4b9a8535a1e5cf684a680e81e7c06f394b6
 Tx0 Price: 149.9999250000375; Tx1 Inverse Price: 125.0
 Skipping: price mismatch.
-Block 310491 - Transaction 74db175 parsed. Supported: True
 Constructing multisig transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 0.99965490; txid: c8716524f33646b9af94d6f5e52494ff3b34466497094b1db2ab920e4f79bc34; vout: 1; confirmations: 10
 final_fee inputs: 1 size: 272 final_fee 1000000
 Size: 272 Fee: 0.01000000 Change quantity: 0.98964490 BTC
-Block 310491 - New block inserted 310492
-Block 310492 - New transaction inserted 1b294dd
-Block 310492 - Order opened for 800000 BTC at mtQheFaS
+Order opened for 800000 BTC at mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81) [open]
 Considering: 74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498
 Tx0 Price: 0.008; Tx1 Inverse Price: 0.008
 Potential forward quantities: 100000000, 100000000
 Forward Quantity: 100000000
 Backward Quantity: 800000
 Tx1 fee provided remaining: 0.01; required fee: 7.2e-05
-Block 310492 - Updated order 74db175 [open]
-Block 310492 - Updated order 1b294dd [open]
-Block 310492 - Order match for 100000000 XCP against 800000 BTC (74db175_1b294dd)
+Order match for 100000000 XCP against 800000 BTC (74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498_1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81) [pending]
 Considering: 1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a
 Skipping: negative give quantity remaining
-Block 310492 - Transaction 1b294dd parsed. Supported: True
 Constructing None transaction from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH.
 data_btc_out=0 (data_value=0 len(data_array)=0)
 Fee/KB 0.00025000
 New input: amount: 1.93419800; txid: f9e0527c85a9084d7eda91fc30a49993370d029efea031a8ccccdf846146a660; vout: 1; confirmations: 475
 final_fee inputs: 1 size: 225 final_fee 5625
 Size: 225 Fee: 0.00005625 Change quantity: 1.31414175 BTC
-Block 310492 - New block inserted 310493
-Block 310493 - New transaction inserted c0733e1
-Block 310493 - Credit 92995878046 XCP to mnfAHmdd
-Block 310493 - Burned 62000000 BTC for 92995878046 XCP
+mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH burned 62000000 BTC for 92995878046 XCP (c0733e1287afb1bb3d2fdacd1db7c74ea84f14362f3a8d1c038e662e1d0b1b1a) [valid]
 Constructing multisig transaction from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.31414175; txid: c0733e1287afb1bb3d2fdacd1db7c74ea84f14362f3a8d1c038e662e1d0b1b1a; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 272 final_fee 6800
 Size: 272 Fee: 0.00006800 Change quantity: 1.31406375 BTC
-Block 310493 - New block inserted 310494
-Block 310494 - New transaction inserted 321bed3
-Block 310494 - Debit 50000000 XCP from mnfAHmdd
-Block 310494 - Asset DIVIDEND created
-Block 310494 - Issuance of 100  DIVIDEND (321bed3)
-Block 310494 - Credit 100 DIVIDEND to mnfAHmdd
-Block 310494 - Transaction 321bed3 parsed. Supported: True
+Issuance of 100 DIVIDEND by mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH [321bed395482e034f2ce0a4dbf28d1f800592a658e26ea91ae9c5b0928204503] (valid)
 Constructing multisig transaction from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.31406375; txid: 321bed395482e034f2ce0a4dbf28d1f800592a658e26ea91ae9c5b0928204503; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 1.31392295 BTC
-Block 310494 - New block inserted 310495
-Block 310495 - New transaction inserted 02156b9
-Block 310495 - Debit 10 DIVIDEND from mnfAHmdd
-Block 310495 - Credit 10 DIVIDEND to mqPCfvqT
-Block 310495 - Send DIVIDEND from mnfAHmdd to mqPCfvqT (02156b9) [valid]
-Block 310495 - Transaction 02156b9 parsed. Supported: True
+Send DIVIDEND from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj (02156b9a1f643fb48330396274a37620c8abbbe5eddb2f8b53dadd135f5d2e2e) [valid]
 Constructing multisig transaction from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH.
 data_btc_out=1000 (data_value=1000 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.31392295; txid: 02156b9a1f643fb48330396274a37620c8abbbe5eddb2f8b53dadd135f5d2e2e; vout: 2; confirmations: 1
 final_fee inputs: 1 size: 306 final_fee 7650
 Size: 306 Fee: 0.00007650 Change quantity: 1.31378215 BTC
-Block 310495 - New block inserted 310496
-Block 310496 - New transaction inserted a35ab17
-Block 310496 - Debit 92945878046 XCP from mnfAHmdd
-Block 310496 - Credit 92945878046 XCP to mqPCfvqT
-Block 310496 - Send XCP from mnfAHmdd to mqPCfvqT (a35ab17) [valid]
-Block 310496 - Transaction a35ab17 parsed. Supported: True
+Send XCP from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj (a35ab1736565aceddbd1d71f92fc7f39d1361006aa9099f731e54e762964d5ba) [valid]
 Constructing opreturn transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=0 (data_value=0 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.36703190; txid: 74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498; vout: 1; confirmations: 6
 final_fee inputs: 1 size: 252 final_fee 6300
 Size: 252 Fee: 0.00006300 Change quantity: 1.36696890 BTC
-Block 310496 - New block inserted 310497
-Block 310497 - New transaction inserted 076ae3d
-Block 310497 - Debit 50000000 XCP from mn6q3dS2
-Block 310497 - Asset PARENT created
-Block 310497 - Issuance of 100000000  PARENT (076ae3d)
-Block 310497 - Credit 100000000 PARENT to mn6q3dS2
-Block 310497 - Transaction 076ae3d parsed. Supported: True
+Issuance of 100000000 PARENT by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f] (valid)
 Constructing opreturn transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=0 (data_value=0 len(data_array)=1)
 Fee/KB 0.00025000
 New input: amount: 1.36696890; txid: 076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f; vout: 1; confirmations: 1
 final_fee inputs: 1 size: 262 final_fee 6550
 Size: 262 Fee: 0.00006550 Change quantity: 1.36690340 BTC
-Block 310497 - New block inserted 310498
-Block 310498 - New transaction inserted 0abfce2
-Block 310498 - Debit 25000000 XCP from mn6q3dS2
-Block 310498 - Asset A95428956661682277 created
-Block 310498 - Issuance of 100000000  A95428956661682277 (0abfce2)
-Block 310498 - Credit 100000000 A95428956661682277 to mn6q3dS2
-Block 310498 - Transaction 0abfce2 parsed. Supported: True
-Block 310498 - New block inserted 310499
-Block 310499 - New block inserted 310500
+Issuance of 100000000 A95428956661682277 by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf] (valid)
 Checking for conservation of assets.
 XCP has been conserved (6040.3184792 XCP both issued and held)
 A95428956661682277 has been conserved (1.0 A95428956661682277 both issued and held)
