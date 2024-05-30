@@ -403,4 +403,4 @@ def redirect_to_rpc_v1():
             query_params["json"] = flask.request.json
         except werkzeug.exceptions.UnsupportedMediaType as e:
             raise exceptions.JSONRPCInvalidRequest("Invalid JSON-RPC 2.0 request format") from e
-    return request_function(url, **query_params).json()
+    return request_function(url, **query_params)
