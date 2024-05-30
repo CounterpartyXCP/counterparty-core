@@ -521,7 +521,7 @@ class APIStatusPoller(threading.Thread):
                         logger.debug("Checking database state.")
                         api_util.check_last_parsed_block(self.db, backend.bitcoind.getblockcount())
                         self.last_database_check = time.time()
-            except (BackendError, DatabaseError) as e:
+            except (BackendError, exceptions.DatabaseError) as e:
                 exception_name = e.__class__.__name__
                 exception_text = str(e)
                 logger.debug("API Status Poller: %s", exception_text)
@@ -796,10 +796,9 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_running_info():
             latest_block_index = backend.bitcoind.getblockcount()
-
             try:
                 api_util.check_last_parsed_block(self.db, latest_block_index)
-            except DatabaseError:
+            except exceptions.DatabaseError:
                 caught_up = False
             else:
                 caught_up = True
@@ -1150,6 +1149,7 @@ class APIServer(threading.Thread):
             # Answer request normally.
             # NOTE: `UnboundLocalError: local variable 'output' referenced before assignment` means the method doesn’t return anything.
             jsonrpc_response = jsonrpc.JSONRPCResponseManager.handle(request_json, dispatcher)
+
             response = flask.Response(
                 jsonrpc_response.json.encode(), 200, mimetype="application/json"
             )

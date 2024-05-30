@@ -2,12 +2,12 @@ import argparse
 import logging
 import multiprocessing
 import time
-import traceback
 from collections import OrderedDict
 from multiprocessing import Process
 from threading import Timer
 
 import flask
+import requests
 from counterpartycore import server
 from counterpartycore.lib import (
     config,
@@ -111,7 +111,13 @@ def is_cachable(rule):
 
 
 def return_result_if_not_ready(rule):
-    return is_cachable(rule) or rule == "/v2/"
+    return (
+        is_cachable(rule)
+        or rule == "/v2/"
+        or rule == "/"
+        or rule.startswith("/v1")
+        or rule.startswith("/rpc")
+    )
 
 
 def return_result(
@@ -295,10 +301,13 @@ def handle_route(**kwargs):
         return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
     except Exception as e:
         logger.exception("Error in API: %s", e)
-        traceback.print_exc()
+        # traceback.print_exc()
         return return_result(
             503, error="Unknown error", start_time=start_time, query_args=query_args
         )
+
+    if isinstance(result, requests.Response):
+        return result.content, result.status_code, result.headers.items()
 
     # clean up and return the result
     if result is None:
@@ -333,11 +342,11 @@ def handle_not_found(error):
 
 
 def run_api_server(args):
-    logger.info("Starting API Server.")
     sentry.init()
-    app = Flask(config.APP_NAME)
     # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
+    logger.info("Starting API Server.")
+    app = Flask(config.APP_NAME)
     transaction.initialise()
     with app.app_context():
         if not config.API_NO_ALLOW_CORS:
