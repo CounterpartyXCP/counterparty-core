@@ -185,16 +185,23 @@ def get_transactions_by_block(
     )
 
 
-def get_all_events(db, cursor: int = None, limit: int = 100, offset: int = None):
+def get_all_events(
+    db, event_name: str = None, cursor: int = None, limit: int = 100, offset: int = None
+):
     """
     Returns all events
+    :param str event_name: Comma separated list of events to return (e.g. CREDIT,DEBIT)
     :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = None
+    if event_name:
+        where = [{"event": event} for event in event_name.split(",")]
     return select_rows(
         db,
         "messages",
+        where=where,
         cursor_field="event_index",
         last_cursor=cursor,
         limit=limit,
