@@ -117,6 +117,7 @@ def return_result_if_not_ready(rule):
         or rule == "/"
         or rule.startswith("/v1")
         or rule.startswith("/rpc")
+        or rule.startswith("/v2/events")
     )
 
 
