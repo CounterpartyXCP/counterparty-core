@@ -164,6 +164,18 @@ def get_last_block(db):
     return select_row(db, "blocks", where={})
 
 
+def get_transactions(db, cursor: int = None, limit: int = 10, offset: int = None):
+    """
+    Returns the list of the last ten transactions
+    :param int cursor: The index of the most recent transactions to return (e.g. 5000000)
+    :param int limit: The number of transactions to return (e.g. 2)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        db, "transactions", cursor_field="tx_index", last_cursor=cursor, limit=limit, offset=offset
+    )
+
+
 def get_transactions_by_block(
     db, block_index: int, cursor: int = None, limit: int = 10, offset: int = None
 ):

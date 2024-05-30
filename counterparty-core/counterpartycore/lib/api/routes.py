@@ -24,6 +24,7 @@ ROUTES = util.prepare_routes(
         "/v2/blocks/<int:block_index>/dispenses": queries.get_dispenses_by_block,
         "/v2/blocks/<int:block_index>/sweeps": queries.get_sweeps_by_block,
         ### /transactions ###
+        "/v2/transactions": queries.get_transactions,
         "/v2/transactions/info": transaction.info,
         "/v2/transactions/unpack": transaction.unpack,
         "/v2/transactions/<int:tx_index>": transaction.get_transaction_by_tx_index,
