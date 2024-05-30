@@ -684,6 +684,7 @@ def connect_to_backend():
 
 
 def initialize_telemetry():
+    telemetry_daemon = None
     if not config.NO_TELEMETRY:
         logger.info("Telemetry enabled.")
         telemetry_daemon = TelemetryDaemon(
