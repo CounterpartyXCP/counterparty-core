@@ -1408,52 +1408,6 @@
         "next_cursor": 333960,
         "result_count": 41
     },
-    "/v2/assets": {
-        "result": [
-            {
-                "asset": "A100000000000000000",
-                "asset_longname": null,
-                "description": "a lotta zeros",
-                "issuer": "1QEx9kdYQqmNzC8HW8FPQS3Mb7vVXYa7bK",
-                "divisible": true,
-                "locked": false
-            },
-            {
-                "asset": "A1000000000000000000",
-                "asset_longname": null,
-                "description": "",
-                "issuer": "1QD5oHa3QZdeaXVbtwqWkSiW8nLUB1jrCx",
-                "divisible": true,
-                "locked": false
-            },
-            {
-                "asset": "A10000000000000000000",
-                "asset_longname": null,
-                "description": "19",
-                "issuer": "1Bemb8LJMY5TxWJPvbW4QFEYRQ6wXKRFo2",
-                "divisible": true,
-                "locked": false
-            },
-            {
-                "asset": "A10000000000000000001",
-                "asset_longname": null,
-                "description": "",
-                "issuer": "1CiezJhGh4YqT1gv4NuBJ9pQAXSFkSEXXG",
-                "divisible": true,
-                "locked": false
-            },
-            {
-                "asset": "A10000000000000000002",
-                "asset_longname": null,
-                "description": "",
-                "issuer": "1F9NzQLoi7CumUHSdDDeQdNqfojhEyP2XW",
-                "divisible": true,
-                "locked": false
-            }
-        ],
-        "next_cursor": "A10000000000000000003",
-        "result_count": 236751
-    },
     "/v2/assets/<asset>": {
         "result": {
             "asset": "UNNEGOTIABLE",

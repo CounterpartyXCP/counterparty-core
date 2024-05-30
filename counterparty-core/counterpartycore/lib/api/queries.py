@@ -38,6 +38,8 @@ def select_rows(
                 where_field.append(f"{key[:-4]} > ?")
             elif key.endswith("__like"):
                 where_field.append(f"{key[:-6]} LIKE ?")
+            elif key.endswith("__notlike"):
+                where_field.append(f"{key[:-9]} NOT LIKE ?")
             else:
                 where_field.append(f"{key} = ?")
             bindings.append(value)
@@ -1118,20 +1120,28 @@ def get_dispenser_by_address_and_asset(db, address: str, asset: str):
     )
 
 
-def get_valid_assets(db, cursor: str = None, limit: int = 100, offset: int = None):
+def get_valid_assets(
+    db, named: bool = None, cursor: str = None, limit: int = 100, offset: int = None
+):
     """
     Returns the valid assets
+    :param bool named: Whether to return only named assets (e.g. true)
     :param int cursor: The last index of the assets to return
     :param int limit: The maximum number of assets to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = {"status": "valid"}
+    if named is not None:
+        if named:
+            where["asset__notlike"] = "A%"
+        else:
+            where["asset__like"] = "A%"
+
     return select_rows(
         db,
         "issuances",
-        where={"status": "valid"},
-        cursor_field="asset",
+        where=where,
         group_by="asset",
-        order="ASC",
         select="asset, asset_longname, description, issuer, divisible, locked",
         last_cursor=cursor,
         limit=limit,
