@@ -179,7 +179,7 @@ def base58_check_decode_py(s, version):
 
 def base58_check_decode(s, version):
     try:
-        decoded = b58.b58_decode(s)
+        decoded = bytes(b58.b58_decode(s))
     except ValueError:
         raise Base58Error("invalid base58 string")  # noqa: B904
 
