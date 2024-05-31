@@ -50,6 +50,7 @@
 * The `asset`, `assets`, `give_asset`, and `get_asset` parameters are no longer case-sensitive.
 * `/v2/assets` accepts now the paramater `named=true|false` to return only named or numeric assets. 
 * Publish events on ZMQ Pub/Sub channel (see Documentation).
+* Database connection pooling.
 
 ## Command-Line Interface
 
