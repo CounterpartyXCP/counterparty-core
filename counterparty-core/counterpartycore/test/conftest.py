@@ -299,6 +299,7 @@ def api_server_v2(request, cp_server):
         "zmq_sequence_port": None,
         "enable_zmq_publisher": False,
         "zmq_publisher_port": None,
+        "db_connection_pool_size": None,
     }
     server_config = (
         default_config

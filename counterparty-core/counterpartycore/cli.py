@@ -308,6 +308,13 @@ CONFIG_ARGS = [
             "help": "port on which Counterparty server will publish ZMQ notificiations for every event",
         },
     ],
+    [
+        ("--db-connection-pool-size",),
+        {
+            "type": int,
+            "help": "size of the database connection pool",
+        },
+    ],
 ]
 
 

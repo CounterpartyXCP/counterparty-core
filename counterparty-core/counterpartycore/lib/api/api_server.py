@@ -11,7 +11,6 @@ import requests
 from counterpartycore import server
 from counterpartycore.lib import (
     config,
-    database,
     exceptions,
     ledger,
     sentry,
@@ -28,8 +27,8 @@ from counterpartycore.lib.api.util import (
     remove_rowids,
     to_json,
 )
+from counterpartycore.lib.database import DBConnectionPool
 from flask import Flask, request
-from flask import g as flask_globals
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
 from sentry_sdk import capture_exception
@@ -49,13 +48,6 @@ BLOCK_CACHE = OrderedDict()
 MAX_BLOCK_CACHE_SIZE = 1000
 
 
-def get_db():
-    """Get the database connection."""
-    if not hasattr(flask_globals, "db"):
-        flask_globals.db = database.get_connection(read_only=True)
-    return flask_globals.db
-
-
 @auth.verify_password
 def verify_password(username, password):
     if config.API_PASSWORD is None:
@@ -64,7 +56,8 @@ def verify_password(username, password):
 
 
 def api_root():
-    counterparty_height = ledger.last_db_index(get_db())
+    with DBConnectionPool().connection() as db:
+        counterparty_height = ledger.last_db_index(db)
     routes = []
     for path, route in ROUTES.items():
         routes.append(
@@ -254,11 +247,11 @@ def handle_route(**kwargs):
             start_time=start_time,
             query_args=query_args,
         )
-    db = get_db()
 
     # update the current block index
     global CURRENT_BLOCK_TIME  # noqa F811
-    last_block = ledger.get_last_block(db)
+    with DBConnectionPool().connection() as db:
+        last_block = ledger.get_last_block(db)
     if last_block:
         util.CURRENT_BLOCK_INDEX = last_block["block_index"]
         CURRENT_BLOCK_TIME = last_block["block_time"]
@@ -290,7 +283,8 @@ def handle_route(**kwargs):
 
     # call the function
     try:
-        result = execute_api_function(db, route, function_args)
+        with DBConnectionPool().connection() as db:
+            result = execute_api_function(db, route, function_args)
     except (exceptions.ComposeError, exceptions.UnpackError) as e:
         return return_result(503, error=str(e), start_time=start_time, query_args=query_args)
     except (
@@ -357,7 +351,8 @@ def run_api_server(args):
         # Initialise the API access log
         init_api_access_log(app)
         # Get the last block index
-        util.CURRENT_BLOCK_INDEX = ledger.last_db_index(get_db())
+        with DBConnectionPool().connection() as db:
+            util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
         # Add routes
         app.add_url_rule("/v2/", view_func=handle_route, strict_slashes=False)
         for path in ROUTES:
@@ -382,7 +377,7 @@ def run_api_server(args):
         # Run app server (blocking)
         werkzeug_server.serve_forever()
     finally:
-        get_db().close()
+        DBConnectionPool().close()
         werkzeug_server.shutdown()
         # ensure timer is cancelled
         if BACKEND_HEIGHT_TIMER:

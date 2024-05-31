@@ -1,5 +1,6 @@
 import logging
 import os
+from contextlib import contextmanager
 
 import apsw
 import apsw.bestpractice
@@ -87,6 +88,35 @@ def get_connection(read_only=True, check_wal=True):
 
     cursor.close()
     return db
+
+
+# Minimalistic but sufficient connection pool
+class DBConnectionPool(metaclass=util.SingletonMeta):
+    def __init__(self):
+        self.connections = []
+
+    @contextmanager
+    def connection(self):
+        if self.connections:
+            # Reusing connection
+            db = self.connections.pop(0)
+        else:
+            # New db connection
+            db = get_connection(read_only=True)
+        try:
+            yield db
+        finally:
+            if len(self.connections) < config.DB_CONNECTION_POOL_SIZE:
+                # Add connection to pool
+                self.connections.append(db)
+            else:
+                # Too much connections in the pool: closing connection
+                logger.warning("Closing connection due to pool size limit.")
+                db.close()
+
+    def close(self):
+        for db in self.connections:
+            db.close()
 
 
 def initialise_db():

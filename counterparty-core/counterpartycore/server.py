@@ -162,6 +162,7 @@ def initialise_config(
     zmq_rawblock_port=None,
     enable_zmq_publisher=False,
     zmq_publisher_port=None,
+    db_connection_pool_size=None,
 ):
     # log config alreasdy initialized
     logger.debug("VERBOSE: %s", config.VERBOSE)
@@ -611,6 +612,11 @@ def initialise_config(
 
     config.NO_TELEMETRY = no_telemetry
 
+    if db_connection_pool_size:
+        config.DB_CONNECTION_POOL_SIZE = db_connection_pool_size
+    else:
+        config.DB_CONNECTION_POOL_SIZE = config.DEFAULT_DB_CONNECTION_POOL_SIZE
+
     logger.info(f"Running v{config.VERSION_STRING} of counterparty-core.")
 
 
@@ -655,6 +661,7 @@ def initialise_log_and_config(args):
         "zmq_rawblock_port": args.zmq_rawblock_port,
         "enable_zmq_publisher": args.enable_zmq_publisher,
         "zmq_publisher_port": args.zmq_publisher_port,
+        "db_connection_pool_size": args.db_connection_pool_size,
     }
 
     initialise_log_config(
