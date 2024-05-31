@@ -1082,7 +1082,7 @@ def get_dispensers(db, status: int = 0, cursor: int = None, limit: int = 100, of
     """
     Returns the dispensers of an address
     :param int status: The status of the dispensers to return (e.g. 0)
-    :param int cursor: The last index of the dispensers to return
+    :param int cursor: The last index of the dispensers to return (e.g. 319619)
     :param int limit: The maximum number of dispensers to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
