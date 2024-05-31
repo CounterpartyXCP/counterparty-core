@@ -581,7 +581,7 @@ def get_sends_by_block(
     db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
-    Returns the sends of a block
+    Returns the sends, include Enhanced and MPMA sends, of a block
     :param int block_index: The index of the block to return (e.g. 840459)
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
@@ -599,7 +599,7 @@ def get_sends_by_block(
 
 def get_sends_by_asset(db, asset: str, cursor: int = None, limit: int = 100, offset: int = None):
     """
-    Returns the sends of an asset
+    Returns the sends, include Enhanced and MPMA sends, of an asset
     :param str asset: The asset to return (e.g. XCP)
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
@@ -920,6 +920,26 @@ def get_balance_by_address_and_asset(db, address: str, asset: str):
     )
 
 
+def get_bets(db, status: str = "open", cursor: int = None, limit: int = 100, offset: int = None):
+    """
+    Returns the bets of a feed
+    :param str status: The status of the bet (e.g. filled)
+    :param int cursor: The last index of the bets to return
+    :param int limit: The maximum number of bets to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        db,
+        "bets",
+        wrap_where={"status": status},
+        select="*, MAX(rowid) AS rowid",
+        group_by="tx_hash",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
 def get_bet_by_feed(
     db, address: str, status: str = "open", cursor: int = None, limit: int = 100, offset: int = None
 ):
@@ -990,7 +1010,7 @@ def get_sends_by_address(
     db, address: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
-    Returns the sends of an address
+    Returns the sends, include Enhanced and MPMA sends, of an address
     :param str address: The address to return (e.g. 1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W)
     :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
@@ -1005,7 +1025,7 @@ def get_sends_by_address_and_asset(
     db, address: str, asset: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
-    Returns the sends of an address and asset
+    Returns the sends, include Enhanced and MPMA sends, of an address and asset
     :param str address: The address to return (e.g. 1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W)
     :param str asset: The asset to return (e.g. XCP)
     :param int cursor: The last index of the sends to return
@@ -1052,6 +1072,26 @@ def get_receive_by_address_and_asset(
         db,
         "sends",
         where={"destination": address, "asset": asset},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_dispensers(db, status: int = 0, cursor: int = None, limit: int = 100, offset: int = None):
+    """
+    Returns the dispensers of an address
+    :param int status: The status of the dispensers to return (e.g. 0)
+    :param int cursor: The last index of the dispensers to return
+    :param int limit: The maximum number of dispensers to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        db,
+        "dispensers",
+        wrap_where={"status": status},
+        select="*, MAX(rowid) AS rowid",
+        group_by="asset, source",
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1184,6 +1224,26 @@ def get_asset_balances(db, asset: str, cursor: str = None, limit: int = 100, off
         select="address, asset, quantity, MAX(rowid) AS rowid",
         group_by="address, asset",
         order="ASC",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_orders(db, status: str = "open", cursor: int = None, limit: int = 100, offset: int = None):
+    """
+    Returns all the orders
+    :param str status: The status of the orders to return (e.g. filled)
+    :param int cursor: The last index of the orders to return
+    :param int limit: The maximum number of orders to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        db,
+        "orders",
+        wrap_where={"status": status},
+        select="*, MAX(rowid) AS rowid",
+        group_by="tx_hash",
         last_cursor=cursor,
         limit=limit,
         offset=offset,
