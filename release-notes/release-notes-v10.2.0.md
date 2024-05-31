@@ -9,6 +9,7 @@
 ## Bugfixes
 * Fix circular imports.
 * Fix `404` errors for undefined routes.
+* Fix redirection to API v1
 
 ## Codebase
 * Refactors mempool management and block tracking. Catching up is done using RPC and tracking using ZMQ.
@@ -17,6 +18,8 @@
 * Add the indexed `tx_hash` field in `messages` table.
 * Update `rowtracer` so that `apsw` returns boolean instead of integer for `BOOL` type fields.
 * Clean RPS implementation. Introduce `replay_events()` function to reconstruct database from JSON list of events. 
+* Add rust test suit to `build_and_test` Github workflow.
+* It is possible to start parsing blocks while Bitcoin Core catches up.
 
 ## API
 * Add following routes:
@@ -35,13 +38,18 @@
     `/v2/mempool/transactions/<tx_hash>/events`
     `/v2/addresses/<address>/issuances`
     `/v2/events/<event>/count`
+    `/v2/transactions`
+    `/v2/bets`
+    `/v2/orders`
+    `/v2/dispensers`
 * Introduce the `cursor` API argument.
 * All responses now contain a `next_cursor` field.
 * All responses now contain a `result_count` field.
 * All queries that return lists from the database now accept the `cursor`/`offset` and `limit` arguments (see the Pagination paragraph from the API Documentation).
 * Document the list of events with an example for each of them.
 * The `asset`, `assets`, `give_asset`, and `get_asset` parameters are no longer case-sensitive.
-* Publish events on ZMQ Pub/Sub channel (see Documentation)
+* `/v2/assets` accepts now the paramater `named=true|false` to return only named or numeric assets. 
+* Publish events on ZMQ Pub/Sub channel (see Documentation).
 
 ## Command-Line Interface
 

@@ -60,6 +60,7 @@ from flask import request
 from flask_httpauth import HTTPBasicAuth
 from jsonrpc import dispatcher
 from jsonrpc.exceptions import JSONRPCDispatchException
+from sentry_sdk import capture_exception
 from sentry_sdk import configure_scope as configure_sentry_scope
 from werkzeug.serving import make_server
 from xmltodict import unparse as serialize_to_xml
@@ -1124,7 +1125,8 @@ class APIServer(threading.Thread):
                     and request_data["method"]
                 )
                 # params may be omitted
-            except:  # noqa: E722
+            except Exception as error:  # noqa: E722
+                capture_exception(error)
                 obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(
                     data="Invalid JSON-RPC 2.0 request format"
                 )
@@ -1135,9 +1137,8 @@ class APIServer(threading.Thread):
 
             # Only arguments passed as a `dict` are supported.
             if request_data.get("params", None) and not isinstance(request_data["params"], dict):
-                obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(
-                    data="Arguments must be passed as a JSON object (list of unnamed arguments not supported)"
-                )
+                error_message = "Arguments must be passed as a JSON object (list of unnamed arguments not supported)"
+                obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(data=error_message)
                 return flask.Response(obj_error.json.encode(), 400, mimetype="application/json")
 
             # Return an error if the API Status Poller checks fail.

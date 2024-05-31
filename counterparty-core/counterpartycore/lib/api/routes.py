@@ -24,6 +24,7 @@ ROUTES = util.prepare_routes(
         "/v2/blocks/<int:block_index>/dispenses": queries.get_dispenses_by_block,
         "/v2/blocks/<int:block_index>/sweeps": queries.get_sweeps_by_block,
         ### /transactions ###
+        "/v2/transactions": queries.get_transactions,
         "/v2/transactions/info": transaction.info,
         "/v2/transactions/unpack": transaction.unpack,
         "/v2/transactions/<int:tx_index>": transaction.get_transaction_by_tx_index,
@@ -82,17 +83,20 @@ ROUTES = util.prepare_routes(
         "/v2/assets/<asset>/holders": queries.get_asset_holders,
         "/v2/assets/<asset>/dispenses": queries.get_dispenses_by_asset,
         ### /orders ###
+        "/v2/orders": queries.get_orders,
         "/v2/orders/<order_hash>": queries.get_order,
         "/v2/orders/<order_hash>/matches": queries.get_order_matches_by_order,
         "/v2/orders/<order_hash>/btcpays": queries.get_btcpays_by_order,
         "/v2/orders/<asset1>/<asset2>": queries.get_orders_by_two_assets,
         ### /bets ###
+        "/v2/bets": queries.get_bets,
         "/v2/bets/<bet_hash>": queries.get_bet,
         "/v2/bets/<bet_hash>/matches": queries.get_bet_matches_by_bet,
         "/v2/bets/<bet_hash>/resolutions": queries.get_resolutions_by_bet,
         ### /burns ###
         "/v2/burns": queries.get_all_burns,
         ### /dispensers ###
+        "/v2/dispensers": queries.get_dispensers,
         "/v2/dispensers/<dispenser_hash>": queries.get_dispenser_info_by_hash,
         "/v2/dispensers/<dispenser_hash>/dispenses": queries.get_dispenses_by_dispenser,
         ### /events ###

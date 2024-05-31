@@ -92,6 +92,24 @@ if [ "$response_v2_mainnet" -ne 200 ]; then
     exit 1
 fi
 
+# Let's reparse 50 blocks before Dredd and compare hashes tests
+CURRENT_HEIGHT=$(curl http://localhost:4000/v2/ --silent | jq '.result.counterparty_height')
+REPARSE_FROM=$(($CURRENT_HEIGHT-50))
+
+# Stop, reparse and start counterparty-core mainnet
+docker compose --profile mainnet stop counterparty-core
+docker compose --profile mainnet run counterparty-core reparse $REPARSE_FROM \
+   --backend-connect=bitcoind \
+   --indexd-connect=addrindexrs \
+   --rpc-host=0.0.0.0 \
+   --api-host=0.0.0.0
+docker compose --profile mainnet up -d counterparty-core
+
+# wait for counterparty-core to be ready
+while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Catch up complete.')" = "" ]; do
+    echo "Waiting for counterparty-core mainnet to be ready"
+    sleep 1
+done
 
 # Run dredd test
 dredd
