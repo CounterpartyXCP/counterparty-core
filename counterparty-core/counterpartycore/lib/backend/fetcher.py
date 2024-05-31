@@ -56,7 +56,7 @@ def stop():
 
 def get_block_simple():
     block_bytes = instance().get_block()
-    return json.loads(block_bytes)
+    return json.loads(bytes(block_bytes))
 
 
 def get_block():
