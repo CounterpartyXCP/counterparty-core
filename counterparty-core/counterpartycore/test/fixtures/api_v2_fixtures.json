@@ -347,6 +347,142 @@
         "next_cursor": null,
         "result_count": 0
     },
+    "http://localhost:10009/v2/transactions": {
+        "result": [
+            {
+                "tx_index": 499,
+                "tx_hash": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf",
+                "block_index": 310498,
+                "block_hash": "b7058b6d1ddc325a10bf33144937e06ce6025215b416518ae120da9440ae279e",
+                "block_time": 310498000,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "destination": "",
+                "btc_amount": 0,
+                "fee": 6550,
+                "data": "0000001501530821671b10650000000005f5e10001108e90a57dba9967c422e83080f22f0c684368696c64206f6620706172656e74",
+                "supported": true
+            },
+            {
+                "tx_index": 498,
+                "tx_hash": "076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f",
+                "block_index": 310497,
+                "block_hash": "f1118591fe79b8bf52ccf0c5de9826bfd266b1fdc24b44676cf22bbcc76d464e",
+                "block_time": 310497000,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "destination": "",
+                "btc_amount": 0,
+                "fee": 6300,
+                "data": "00000014000000000aa4097d0000000005f5e100010000000000000000000c506172656e74206173736574",
+                "supported": true
+            },
+            {
+                "tx_index": 497,
+                "tx_hash": "a35ab1736565aceddbd1d71f92fc7f39d1361006aa9099f731e54e762964d5ba",
+                "block_index": 310496,
+                "block_hash": "65884816927e8c566655e85c07bc2bc2c7ee26e625742f219939d43238fb31f8",
+                "block_time": 310496000,
+                "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
+                "destination": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj",
+                "btc_amount": 5430,
+                "fee": 7650,
+                "data": "00000000000000000000000100000015a4018c1e",
+                "supported": true
+            },
+            {
+                "tx_index": 496,
+                "tx_hash": "02156b9a1f643fb48330396274a37620c8abbbe5eddb2f8b53dadd135f5d2e2e",
+                "block_index": 310495,
+                "block_hash": "4769aa7030f28a05a137a85ef4ee0c1765c37013773212b93ec90f1227168b67",
+                "block_time": 310495000,
+                "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
+                "destination": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj",
+                "btc_amount": 5430,
+                "fee": 7650,
+                "data": "00000000000000063e985ffd000000000000000a",
+                "supported": true
+            },
+            {
+                "tx_index": 495,
+                "tx_hash": "321bed395482e034f2ce0a4dbf28d1f800592a658e26ea91ae9c5b0928204503",
+                "block_index": 310494,
+                "block_hash": "7dda1d3e12785313d5651ee5314d0aecf17588196f9150b10c55695dbaebee5d",
+                "block_time": 310494000,
+                "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
+                "destination": "",
+                "btc_amount": 0,
+                "fee": 6800,
+                "data": "00000014000000063e985ffd00000000000000640100000000000000000000",
+                "supported": true
+            },
+            {
+                "tx_index": 494,
+                "tx_hash": "c0733e1287afb1bb3d2fdacd1db7c74ea84f14362f3a8d1c038e662e1d0b1b1a",
+                "block_index": 310493,
+                "block_hash": "c19e2915b750279b2be4b52e57e5ce29f63dffb4e14d9aad30c9e820affc0cbf",
+                "block_time": 310493000,
+                "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
+                "destination": "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
+                "btc_amount": 62000000,
+                "fee": 5625,
+                "data": "",
+                "supported": true
+            },
+            {
+                "tx_index": 493,
+                "tx_hash": "1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81",
+                "block_index": 310492,
+                "block_hash": "8a09b2faf0a7ad67eb4ab5c948b9769fc87eb2ec5e16108f2cde8bd9e6cf7607",
+                "block_time": 310492000,
+                "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                "destination": "",
+                "btc_amount": 0,
+                "fee": 1000000,
+                "data": "0000000a000000000000000000000000000c350000000000000000010000000005f5e10007d00000000000000000",
+                "supported": true
+            },
+            {
+                "tx_index": 492,
+                "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
+                "block_index": 310491,
+                "block_hash": "811abd7cf2b768cfdaa84ab44c63f4463c96a368ead52125bf149cf0c7447b16",
+                "block_time": 310491000,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "destination": "",
+                "btc_amount": 0,
+                "fee": 6800,
+                "data": "0000000a00000000000000010000000005f5e100000000000000000000000000000c350007d000000000000dbba0",
+                "supported": true
+            },
+            {
+                "tx_index": 491,
+                "tx_hash": "7c437705c315212315c85c0b8ba09d358679c91be20b54f30929c5a6052426af",
+                "block_index": 310490,
+                "block_hash": "e2cb04b8a7368c95359c9d5ff33e64209200fb606de0d64b7c0f67bb1cb8d87c",
+                "block_time": 310490000,
+                "source": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
+                "destination": "",
+                "btc_amount": 0,
+                "fee": 6800,
+                "data": "0000001e52bb33043ff000000000000000000000096f7074696f6e732031",
+                "supported": true
+            },
+            {
+                "tx_index": 490,
+                "tx_hash": "685d7f99fa76a05201c3239a4e0d9060ea53307b171f6ad7d482a26c73e9c0d1",
+                "block_index": 310489,
+                "block_hash": "2efdb36f986b3e3ccc6cc9b0c1c3cdcb07429fb43cbc0cc3b6c87d1b33f258b6",
+                "block_time": 310489000,
+                "source": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM",
+                "destination": "",
+                "btc_amount": 0,
+                "fee": 6800,
+                "data": "0000001e52bb33033ff000000000000000000000046c6f636b",
+                "supported": true
+            }
+        ],
+        "next_cursor": 489,
+        "result_count": 52
+    },
     "http://localhost:10009/v2/transactions/2": {
         "result": {
             "tx_index": 2,
@@ -1407,9 +1543,9 @@
                 "locked": false
             },
             {
-                "asset": "CALLABLE",
+                "asset": "PARENT",
                 "asset_longname": null,
-                "description": "Callable asset",
+                "description": "Parent asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
                 "locked": false
@@ -1423,9 +1559,25 @@
                 "locked": false
             },
             {
-                "asset": "DIVISIBLE",
+                "asset": "LOCKEDPREV",
                 "asset_longname": null,
-                "description": "Divisible asset",
+                "description": "changed",
+                "issuer": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
+                "divisible": true,
+                "locked": false
+            },
+            {
+                "asset": "PAYTOSCRIPT",
+                "asset_longname": null,
+                "description": "PSH issued asset",
+                "issuer": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
+                "divisible": false,
+                "locked": false
+            },
+            {
+                "asset": "MAXI",
+                "asset_longname": null,
+                "description": "Maximum quantity",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
                 "locked": false
@@ -1439,17 +1591,9 @@
                 "locked": true
             },
             {
-                "asset": "LOCKEDPREV",
+                "asset": "CALLABLE",
                 "asset_longname": null,
-                "description": "changed",
-                "issuer": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
-                "divisible": true,
-                "locked": false
-            },
-            {
-                "asset": "MAXI",
-                "asset_longname": null,
-                "description": "Maximum quantity",
+                "description": "Callable asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
                 "locked": false
@@ -1463,19 +1607,11 @@
                 "locked": false
             },
             {
-                "asset": "PARENT",
+                "asset": "DIVISIBLE",
                 "asset_longname": null,
-                "description": "Parent asset",
+                "description": "Divisible asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
-                "locked": false
-            },
-            {
-                "asset": "PAYTOSCRIPT",
-                "asset_longname": null,
-                "description": "PSH issued asset",
-                "issuer": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
-                "divisible": false,
                 "locked": false
             }
         ],
@@ -1710,6 +1846,126 @@
         "next_cursor": null,
         "result_count": 0
     },
+    "http://localhost:10009/v2/orders": {
+        "result": [
+            {
+                "tx_index": 493,
+                "tx_hash": "1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81",
+                "block_index": 310492,
+                "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                "give_asset": "BTC",
+                "give_quantity": 800000,
+                "give_remaining": 0,
+                "get_asset": "XCP",
+                "get_quantity": 100000000,
+                "get_remaining": 0,
+                "expiration": 2000,
+                "expire_index": 312492,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 1000000,
+                "fee_provided_remaining": 992800,
+                "status": "open"
+            },
+            {
+                "tx_index": 492,
+                "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
+                "block_index": 310492,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "give_asset": "XCP",
+                "give_quantity": 100000000,
+                "give_remaining": 0,
+                "get_asset": "BTC",
+                "get_quantity": 800000,
+                "get_remaining": 0,
+                "expiration": 2000,
+                "expire_index": 312491,
+                "fee_required": 900000,
+                "fee_required_remaining": 892800,
+                "fee_provided": 6800,
+                "fee_provided_remaining": 6800,
+                "status": "open"
+            },
+            {
+                "tx_index": 12,
+                "tx_hash": "a1768d7db2db3b9732b26df8c04db4b9a8535a1e5cf684a680e81e7c06f394b6",
+                "block_index": 310011,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "give_asset": "BTC",
+                "give_quantity": 666667,
+                "give_remaining": 666667,
+                "get_asset": "XCP",
+                "get_quantity": 100000000,
+                "get_remaining": 100000000,
+                "expiration": 2000,
+                "expire_index": 312011,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 1000000,
+                "fee_provided_remaining": 1000000,
+                "status": "open"
+            },
+            {
+                "tx_index": 11,
+                "tx_hash": "1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a",
+                "block_index": 310010,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "give_asset": "XCP",
+                "give_quantity": 100000000,
+                "give_remaining": 100000000,
+                "get_asset": "BTC",
+                "get_quantity": 1000000,
+                "get_remaining": 1000000,
+                "expiration": 2000,
+                "expire_index": 312010,
+                "fee_required": 900000,
+                "fee_required_remaining": 900000,
+                "fee_provided": 6800,
+                "fee_provided_remaining": 6800,
+                "status": "open"
+            },
+            {
+                "tx_index": 10,
+                "tx_hash": "21460d5c07284f9be9baf824927d0d4e4eb790e297f3162305841607b672349b",
+                "block_index": 310009,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "give_asset": "XCP",
+                "give_quantity": 100000000,
+                "give_remaining": 100000000,
+                "get_asset": "DIVISIBLE",
+                "get_quantity": 100000000,
+                "get_remaining": 100000000,
+                "expiration": 2000,
+                "expire_index": 312009,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 6800,
+                "fee_provided_remaining": 6800,
+                "status": "open"
+            },
+            {
+                "tx_index": 7,
+                "tx_hash": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8",
+                "block_index": 310006,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "give_asset": "XCP",
+                "give_quantity": 100000000,
+                "give_remaining": 100000000,
+                "get_asset": "DIVISIBLE",
+                "get_quantity": 100000000,
+                "get_remaining": 100000000,
+                "expiration": 2000,
+                "expire_index": 312006,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 6800,
+                "fee_provided_remaining": 6800,
+                "status": "open"
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 6
+    },
     "http://localhost:10009/v2/orders/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498": {
         "result": {
             "tx_index": 492,
@@ -1767,6 +2023,69 @@
         "result": [],
         "next_cursor": null,
         "result_count": 0
+    },
+    "http://localhost:10009/v2/bets": {
+        "result": [
+            {
+                "tx_index": 488,
+                "tx_hash": "41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef",
+                "block_index": 310487,
+                "source": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM",
+                "feed_address": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM",
+                "bet_type": 1,
+                "deadline": 1388000001,
+                "wager_quantity": 9,
+                "wager_remaining": 9,
+                "counterwager_quantity": 9,
+                "counterwager_remaining": 9,
+                "target_value": 0.0,
+                "leverage": 5040,
+                "expiration": 100,
+                "expire_index": 310587,
+                "fee_fraction_int": 5000000,
+                "status": "open"
+            },
+            {
+                "tx_index": 113,
+                "tx_hash": "d79b590e4ec3e74cbc3eb4d0f956ce7abb0e3af2ccac85ff90ed8acf13f2e048",
+                "block_index": 310112,
+                "source": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
+                "feed_address": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
+                "bet_type": 3,
+                "deadline": 1388000200,
+                "wager_quantity": 10,
+                "wager_remaining": 10,
+                "counterwager_quantity": 10,
+                "counterwager_remaining": 10,
+                "target_value": 0.0,
+                "leverage": 5040,
+                "expiration": 1000,
+                "expire_index": 311112,
+                "fee_fraction_int": 5000000,
+                "status": "open"
+            },
+            {
+                "tx_index": 102,
+                "tx_hash": "db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e",
+                "block_index": 310101,
+                "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "bet_type": 3,
+                "deadline": 1388000200,
+                "wager_quantity": 10,
+                "wager_remaining": 10,
+                "counterwager_quantity": 10,
+                "counterwager_remaining": 10,
+                "target_value": 0.0,
+                "leverage": 5040,
+                "expiration": 1000,
+                "expire_index": 311101,
+                "fee_fraction_int": 5000000,
+                "status": "open"
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 3
     },
     "http://localhost:10009/v2/bets/2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1": {
         "result": {
@@ -1888,6 +2207,28 @@
         ],
         "next_cursor": null,
         "result_count": 8
+    },
+    "http://localhost:10009/v2/dispensers": {
+        "result": [
+            {
+                "tx_index": 108,
+                "tx_hash": "9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec",
+                "block_index": 310107,
+                "source": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
+                "asset": "XCP",
+                "give_quantity": 100,
+                "escrow_quantity": 100,
+                "satoshirate": 100,
+                "status": 0,
+                "give_remaining": 100,
+                "oracle_address": null,
+                "last_status_tx_hash": null,
+                "origin": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
+                "dispense_count": 0
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 1
     },
     "http://localhost:10009/v2/dispensers/9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec": {
         "result": {

@@ -19,6 +19,7 @@ only:
 - Blocks > Get Sends By Block > Get Sends By Block
 - Blocks > Get Dispenses By Block > Get Dispenses By Block
 - Blocks > Get Sweeps By Block > Get Sweeps By Block
+- Transactions > Get Transactions > Get Transactions
 - Transactions > Info > Info
 - Transactions > Unpack > Unpack
 - Transactions > Get Transaction By Tx Index > Get Transaction By Tx Index
@@ -63,14 +64,17 @@ only:
 - Assets > Get Dispenser By Address And Asset > Get Dispenser By Address And Asset
 - Assets > Get Asset Holders > Get Asset Holders
 - Assets > Get Dispenses By Asset > Get Dispenses By Asset
+- Orders > Get Orders > Get Orders
 - Orders > Get Order > Get Order
 - Orders > Get Order Matches By Order > Get Order Matches By Order
 - Orders > Get BTCPays By Order > Get BTCPays By Order
 - Orders > Get Orders By Two Assets > Get Orders By Two Assets
+- Bets > Get Bets > Get Bets
 - Bets > Get Bet > Get Bet
 - Bets > Get Bet Matches By Bet > Get Bet Matches By Bet
 - Bets > Get Resolutions By Bet > Get Resolutions By Bet
 - Burns > Get All Burns > Get All Burns
+- Dispensers > Get Dispensers > Get Dispensers
 - Dispensers > Get Dispenser Info By Hash > Get Dispenser Info By Hash
 - Dispensers > Get Dispenses By Dispenser > Get Dispenses By Dispenser
 - Events > Get All Events > Get All Events
@@ -101,6 +105,7 @@ only:
 - Blocks > Get Sends By Block > Get Sends By Block
 - Blocks > Get Dispenses By Block > Get Dispenses By Block
 - Blocks > Get Sweeps By Block > Get Sweeps By Block
+- Transactions > Get Transactions > Get Transactions
 - Transactions > Info > Info
 - Transactions > Unpack > Unpack
 - Transactions > Get Transaction By Tx Index > Get Transaction By Tx Index
@@ -145,14 +150,17 @@ only:
 - Assets > Get Dispenser By Address And Asset > Get Dispenser By Address And Asset
 - Assets > Get Asset Holders > Get Asset Holders
 - Assets > Get Dispenses By Asset > Get Dispenses By Asset
+- Orders > Get Orders > Get Orders
 - Orders > Get Order > Get Order
 - Orders > Get Order Matches By Order > Get Order Matches By Order
 - Orders > Get BTCPays By Order > Get BTCPays By Order
 - Orders > Get Orders By Two Assets > Get Orders By Two Assets
+- Bets > Get Bets > Get Bets
 - Bets > Get Bet > Get Bet
 - Bets > Get Bet Matches By Bet > Get Bet Matches By Bet
 - Bets > Get Resolutions By Bet > Get Resolutions By Bet
 - Burns > Get All Burns > Get All Burns
+- Dispensers > Get Dispensers > Get Dispensers
 - Dispensers > Get Dispenser Info By Hash > Get Dispenser Info By Hash
 - Dispensers > Get Dispenses By Dispenser > Get Dispenses By Dispenser
 - Events > Get All Events > Get All Events
