@@ -2,32 +2,34 @@ mod b58;
 mod indexer;
 mod utils;
 
-use b58::create_b58_module;
-use indexer::create_indexer_module;
-use utils::create_utils_module;
+use b58::register_b58_module;
 
+use indexer::register_indexer_module;
 use pyo3::prelude::*;
 use pyo3::types::PyString;
+use utils::register_utils_module;
 
-/// A Python module implemented in Rust.
 #[pymodule]
-fn counterparty_rs(py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_submodule(create_b58_module(py)?)?;
-    m.add_submodule(create_utils_module(py)?)?;
-    m.add_submodule(create_indexer_module(py)?)?;
+fn counterparty_rs(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    register_b58_module(m)?;
+    register_utils_module(m)?;
+    register_indexer_module(m)?;
 
     m.add(
         "__version__",
-        PyString::new(py, env!("VERGEN_GIT_DESCRIBE")),
+        PyString::new_bound(m.py(), env!("VERGEN_GIT_DESCRIBE")),
     )?;
-    m.add("__sha__", PyString::new(py, env!("VERGEN_GIT_SHA")))?;
+    m.add(
+        "__sha__",
+        PyString::new_bound(m.py(), env!("VERGEN_GIT_SHA")),
+    )?;
     m.add(
         "__target__",
-        PyString::new(py, env!("VERGEN_CARGO_TARGET_TRIPLE")),
+        PyString::new_bound(m.py(), env!("VERGEN_CARGO_TARGET_TRIPLE")),
     )?;
     m.add(
         "__build_date__",
-        PyString::new(py, env!("VERGEN_BUILD_DATE")),
+        PyString::new_bound(m.py(), env!("VERGEN_BUILD_DATE")),
     )?;
     Ok(())
 }

@@ -17,7 +17,7 @@ mod workers;
 use std::thread::JoinHandle;
 
 use crossbeam_channel::{Receiver, Sender};
-use pyo3::{prelude::*, types::PyBytes};
+use pyo3::prelude::*;
 
 use self::{
     bitcoin_client::BitcoinClient,
@@ -67,17 +67,14 @@ impl Indexer {
         )?)
     }
 
-    pub fn get_block(&self, py: Python) -> PyResult<PyObject> {
-        Ok(PyBytes::new(
-            py,
-            &get_block::new(self.stopper.clone(), self.chan.1.clone())?,
-        )
-        .into())
+    pub fn get_block(&self) -> PyResult<Vec<u8>> {
+        Ok(get_block::new(self.stopper.clone(), self.chan.1.clone())?)
     }
 }
 
-pub fn create_indexer_module(py: Python) -> PyResult<&'_ PyModule> {
-    let m = PyModule::new(py, "indexer")?;
+pub fn register_indexer_module(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
+    let m = PyModule::new_bound(parent_module.py(), "indexer")?;
     m.add_class::<Indexer>()?;
-    Ok(m)
+    parent_module.add_submodule(&m)?;
+    Ok(())
 }

@@ -8,8 +8,8 @@ pub enum LogFormat {
 
 impl<'source> FromPyObject<'source> for LogFormat {
     fn extract(obj: &'source PyAny) -> PyResult<Self> {
-        let log_format_str: &str = obj.extract()?;
-        match log_format_str {
+        let log_format_str: String = obj.extract()?;
+        match log_format_str.as_str() {
             "structured" => Ok(LogFormat::Structured),
             "unstructured" => Ok(LogFormat::Unstructured),
             _ => Err(PyErr::new::<PyValueError, _>(
@@ -29,12 +29,12 @@ pub enum LogOutput {
 
 impl<'source> FromPyObject<'source> for LogOutput {
     fn extract(obj: &'source PyAny) -> PyResult<Self> {
-        if let Ok(output_str) = obj.extract::<&str>() {
-            return match output_str {
+        if let Ok(output_str) = obj.extract::<String>() {
+            return match output_str.as_str() {
                 "stdout" => Ok(LogOutput::Stdout),
                 "stderr" => Ok(LogOutput::Stderr),
                 "none" => Ok(LogOutput::None),
-                _ => Ok(LogOutput::File(output_str.into())),
+                _ => Ok(LogOutput::File(output_str)),
             };
         }
 
@@ -52,8 +52,8 @@ pub enum Mode {
 
 impl<'source> FromPyObject<'source> for Mode {
     fn extract(obj: &'source PyAny) -> PyResult<Self> {
-        let mode_str: &str = obj.extract()?;
-        match mode_str {
+        let mode_str: String = obj.extract()?;
+        match mode_str.as_str() {
             "indexer" => Ok(Mode::Indexer),
             "fetcher" => Ok(Mode::Fetcher),
             _ => Err(PyErr::new::<PyValueError, _>(
