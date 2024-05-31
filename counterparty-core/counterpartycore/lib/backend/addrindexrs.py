@@ -175,13 +175,13 @@ class SocketManager:
             self.connected = True
             logger.debug(f"`{self.host}:{self.port}` -- connected")
         except socket.timeout as e:
-            logger.exception(f"`{self.host}:{self.port}` -- socket.connect timeout")
+            logger.error(f"`{self.host}:{self.port}` -- socket.connect timeout")
             raise e
         except ConnectionRefusedError as e:
-            logger.exception(f"`{self.host}:{self.port}` -- connection refused")
+            logger.error(f"`{self.host}:{self.port}` -- connection refused")
             raise e
         except Exception as e:
-            logger.exception(f"`{self.host}:{self.port}` -- unknown exception: {e}")
+            logger.error(f"`{self.host}:{self.port}` -- unknown exception: {e}")
             raise e
 
     def disconnect(self):
@@ -191,7 +191,7 @@ class SocketManager:
                 self.connected = False
                 logger.debug(f"`{self.host}:{self.port}` -- disconnected")
             except Exception as e:
-                logger.exception(f"`{self.host}:{self.port}` -- unknown exception: {e}")
+                logger.error(f"`{self.host}:{self.port}` -- unknown exception: {e}")
                 raise e
 
     def send(self, message):
@@ -202,11 +202,11 @@ class SocketManager:
             self.socket.sendall(message)
             logger.debug(f"`{self.host}:{self.port}` -- sent message {message}")
         except socket.timeout as e:
-            logger.exception(f"`{self.host}:{self.port}` -- socket.send timeout")
+            logger.error(f"`{self.host}:{self.port}` -- socket.send timeout")
             self.connected = False
             raise e
         except Exception as e:
-            logger.exception(f"`{self.host}:{self.port}` -- unknown exception: {e}")
+            logger.error(f"`{self.host}:{self.port}` -- unknown exception: {e}")
             self.connected = False
             raise e
 
@@ -232,11 +232,11 @@ class SocketManager:
                     # logger.debug(f"`{self.host}:{self.port}` -- JSONDecodeError -- continuing")
                     continue
             except socket.timeout as e:
-                logger.exception(f"`{self.host}:{self.port}` -- Timeout receiving message: {e}")
+                logger.error(f"`{self.host}:{self.port}` -- Timeout receiving message: {e}")
                 self.connected = False
                 raise e
             except Exception as e:
-                logger.exception(f"`{self.host}:{self.port}`  -- Error receiving message: {e}")
+                logger.error(f"`{self.host}:{self.port}`  -- Error receiving message: {e}")
                 self.connected = False
                 raise e
 
@@ -296,7 +296,7 @@ class AddrIndexRsClient:
             self.res_queue.join()
             self.thread.join()
         except Exception as e:
-            logger.exception(f"AddrIndexRsClient -- error while stopping: {e}")
+            logger.error(f"AddrIndexRsClient -- error while stopping: {e}")
 
     def send(self, msg):
         with self.msg_id_lock:
@@ -348,7 +348,7 @@ class AddrIndexRsClient:
             except queue.Empty:
                 continue
             except Exception as e:
-                logger.exception(f"AddrIndexRsClient.thread -- exception {e}")
+                logger.error(f"AddrIndexRsClient.thread -- exception {e}")
                 self.res_queue.put({"error": str(e)})
 
 
@@ -361,7 +361,7 @@ def indexer_check_version():
             12:
         ]  # 12 is the length of "addrindexrs "
     except TypeError as e:  # noqa: F841
-        logger.exception(f"Error when checking address indexer version: {addrindexrs_version}")
+        logger.error(f"Error when checking address indexer version: {addrindexrs_version}")
         sys.exit(1)
 
     if addrindexrs_version_label != config.ADDRINDEXRS_VERSION:
