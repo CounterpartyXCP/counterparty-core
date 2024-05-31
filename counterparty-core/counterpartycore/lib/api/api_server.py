@@ -32,6 +32,7 @@ from flask import Flask, request
 from flask import g as flask_globals
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
+from sentry_sdk import capture_exception
 from sentry_sdk import configure_scope as configure_sentry_scope
 from werkzeug.serving import make_server
 
@@ -301,6 +302,7 @@ def handle_route(**kwargs):
     ) as e:
         return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
     except Exception as e:
+        capture_exception(e)
         logger.exception("Error in API: %s", e)
         # traceback.print_exc()
         return return_result(
