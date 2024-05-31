@@ -1182,7 +1182,7 @@ def get_valid_assets(
         "issuances",
         where=where,
         group_by="asset",
-        select="asset, asset_longname, description, issuer, divisible, locked",
+        select="asset, asset_longname, description, issuer, divisible, locked, rowid",
         last_cursor=cursor,
         limit=limit,
         offset=offset,
