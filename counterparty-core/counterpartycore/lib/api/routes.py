@@ -2,7 +2,6 @@ from counterpartycore.lib import ledger, transaction
 from counterpartycore.lib.api import queries, util
 from counterpartycore.lib.backend import addrindexrs, bitcoind
 
-# /transactions, /addresses, /mempool
 # Define the API routes except root (`/`) defined in `api_server.py`
 ROUTES = util.prepare_routes(
     {

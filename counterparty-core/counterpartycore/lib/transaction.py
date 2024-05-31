@@ -1745,7 +1745,7 @@ def info(db, rawtransaction: str, block_index: int = None):
     )
     result = {
         "source": source,
-        "destination": destination,
+        "destination": destination if destination else None,
         "btc_amount": btc_amount,
         "fee": fee,
         "data": util.hexlify(data) if data else "",
