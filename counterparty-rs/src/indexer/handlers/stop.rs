@@ -1,12 +1,12 @@
 use std::thread::JoinHandle;
 
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossbeam_channel::unbounded;
 use tracing::info;
 
 use crate::indexer::{
     config::Config,
     stopper::Stopper,
-    types::error::Error,
+    types::{error::Error, pipeline::ChanOut},
     workers::{consumer, new_worker_pool},
 };
 
@@ -14,7 +14,7 @@ pub fn new(
     handles: &mut Vec<JoinHandle<Result<(), Error>>>,
     config: Config,
     stopper: Stopper,
-    chan: (Sender<Vec<u8>>, Receiver<Vec<u8>>),
+    chan: ChanOut,
 ) -> Result<(), Error> {
     if stopper.stopped()? {
         return Err(Error::Stopped);

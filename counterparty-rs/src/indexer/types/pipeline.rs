@@ -1,11 +1,15 @@
 use bitcoincore_rpc::bitcoin::BlockHash;
+use crossbeam_channel::{Receiver, Sender};
 
-use crate::indexer::{block::ToSerializedBlock, config::Mode};
+use crate::indexer::block::{Block, ToBlock};
+use crate::indexer::config::Mode;
 
 use super::{
     entry::{ToEntry, TxidVoutPrefix},
     error::Error,
 };
+
+pub type ChanOut = (Sender<Box<Block>>, Receiver<Box<Block>>);
 
 pub trait BlockHasEntries {
     fn get_entries(&self, mode: Mode, height: u32) -> Vec<Box<dyn ToEntry>>;
@@ -71,27 +75,6 @@ pub struct PipelineDataWithBlock<B> {
     pub block: Box<B>,
 }
 
-impl<B: BlockHasEntries + ToSerializedBlock> Transition<Box<PipelineDataWithEntries<B>>, Mode, ()>
-    for PipelineDataWithBlock<B>
-{
-    fn transition(
-        self: Box<Self>,
-        mode: Mode,
-    ) -> Result<((), Box<PipelineDataWithEntries<B>>), Error> {
-        let height = self.get_height();
-        let entries = self.block.get_entries(mode, height);
-        let serialized_block = self.block.to_serialized_block(height);
-        Ok((
-            (),
-            Box::new(PipelineDataWithEntries {
-                prev: self,
-                entries,
-                serialized_block,
-            }),
-        ))
-    }
-}
-
 impl<B> HasHeight for PipelineDataWithBlock<B> {
     fn get_height(&self) -> u32 {
         self.prev.get_height()
@@ -108,10 +91,31 @@ impl<B> HasHash for PipelineDataWithBlock<B> {
     }
 }
 
+impl<B: BlockHasEntries + ToBlock> Transition<Box<PipelineDataWithEntries<B>>, Mode, ()>
+    for PipelineDataWithBlock<B>
+{
+    fn transition(
+        self: Box<Self>,
+        mode: Mode,
+    ) -> Result<((), Box<PipelineDataWithEntries<B>>), Error> {
+        let height = self.get_height();
+        let entries = self.block.get_entries(mode, height);
+        let block = self.block.to_block(height);
+        Ok((
+            (),
+            Box::new(PipelineDataWithEntries {
+                prev: self,
+                entries,
+                block: Box::new(block),
+            }),
+        ))
+    }
+}
+
 pub struct PipelineDataWithEntries<B> {
     pub prev: Box<PipelineDataWithBlock<B>>,
     pub entries: Vec<Box<dyn ToEntry>>,
-    pub serialized_block: Vec<u8>,
+    pub block: Box<Block>,
 }
 
 impl<B> HasHeight for PipelineDataWithEntries<B> {
@@ -141,7 +145,7 @@ impl<B> Transition<Box<PipelineDataWithoutEntries<B>>, (), Vec<Box<dyn ToEntry>>
             self.entries,
             Box::new(PipelineDataWithoutEntries {
                 prev: self.prev,
-                serialized_block: self.serialized_block,
+                block: self.block,
             }),
         ))
     }
@@ -154,7 +158,7 @@ pub struct PipelineDataBatch<U> {
 
 pub struct PipelineDataWithoutEntries<B> {
     pub prev: Box<PipelineDataWithBlock<B>>,
-    pub serialized_block: Vec<u8>,
+    pub block: Box<Block>,
 }
 
 impl<B> HasHeight for PipelineDataWithoutEntries<B> {
@@ -167,8 +171,8 @@ impl<B> HasHeight for PipelineDataWithoutEntries<B> {
     }
 }
 
-impl<B> Transition<(), (), Vec<u8>> for PipelineDataWithoutEntries<B> {
-    fn transition(self: Box<Self>, _: ()) -> Result<(Vec<u8>, ()), Error> {
-        Ok((self.serialized_block, ()))
+impl<B> Transition<(), (), Box<Block>> for PipelineDataWithoutEntries<B> {
+    fn transition(self: Box<Self>, _: ()) -> Result<(Box<Block>, ()), Error> {
+        Ok((self.block, ()))
     }
 }
