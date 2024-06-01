@@ -1125,17 +1125,27 @@ def get_refilling_count(db, dispenser_tx_hash):
 
 
 def get_pending_dispensers(db, block_index):
+    STATUS_CLOSING = 11
+
     cursor = db.cursor()
     query = """
-        SELECT *, MAX(rowid) AS rowid
-        FROM dispensers
-        WHERE close_block_index = :close_block_index
-        GROUP BY source, asset
+        SELECT * FROM (
+            SELECT *, MAX(rowid) AS rowid
+            FROM dispensers
+            WHERE close_block_index = :close_block_index
+            GROUP BY source, asset
+        )
+        WHERE status = :status_closing
         ORDER BY tx_index
     """
-    bindings = {"close_block_index": block_index}
+    bindings = {
+        "close_block_index": block_index,
+        "status_closing": STATUS_CLOSING,
+    }
     cursor.execute(query, bindings)
-    return cursor.fetchall()
+    result = cursor.fetchall()
+
+    return result
 
 
 def get_dispensers_count(db, source, status, origin):
