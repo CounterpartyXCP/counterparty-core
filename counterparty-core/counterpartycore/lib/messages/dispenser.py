@@ -55,7 +55,9 @@ def initialise(db):
                                 oracle_address TEXT,
                                 last_status_tx_hash TEXT,
                                 origin TEXT,
-                                dispense_count INTEGER DEFAULT 0)
+                                dispense_count INTEGER DEFAULT 0,
+                                last_status_tx_source TEXT,
+                                close_block_index INTEGER)
                                 """
     # create tables
     cursor.execute(create_dispensers_query)
@@ -74,6 +76,10 @@ def initialise(db):
         )
     if "dispense_count" not in columns:
         cursor.execute("ALTER TABLE dispensers ADD COLUMN dispense_count INTEGER DEFAULT 0")
+    if "last_status_tx_source" not in columns:
+        cursor.execute("ALTER TABLE dispensers ADD COLUMN last_status_tx_source TEXT")
+    if "close_block_index" not in columns:
+        cursor.execute("ALTER TABLE dispensers ADD COLUMN close_block_index TEXT")
 
     # migrate old table
     if database.field_is_pk(cursor, "dispensers", "tx_index"):
@@ -93,8 +99,9 @@ def initialise(db):
             ["give_remaining"],
             ["status", "block_index"],
             ["source", "origin"],
-            ["source", "asset", "origin"],
+            ["source", "asset", "origin", "status"],
             ["last_status_tx_hash"],
+            ["close_block_index", "status"],
         ],
     )
 
@@ -740,7 +747,13 @@ def parse(db, tx, message):
                             "status": STATUS_CLOSED,
                         }
                     else:
-                        set_data = {"status": STATUS_CLOSING, "last_status_tx_hash": tx["tx_hash"]}
+                        set_data = {
+                            "status": STATUS_CLOSING,
+                            "last_status_tx_hash": tx["tx_hash"],
+                            "last_status_tx_source": tx["source"],
+                            "close_block_index": tx["block_index"] + close_delay,
+                        }
+
                     ledger.update_dispenser(
                         db, existing[0]["rowid"], set_data, {"source": tx["source"], "asset": asset}
                     )
@@ -943,15 +956,13 @@ def close_pending(db, block_index):
     block_delay = util.get_value_by_block_index("dispenser_close_delay", block_index)
 
     if block_delay > 0:
-        pending_dispensers = ledger.get_pending_dispensers(
-            db, delay=block_delay, block_index=block_index
-        )
+        pending_dispensers = ledger.get_pending_dispensers(db, block_index=block_index)
 
         for dispenser in pending_dispensers:
             # use tx_index=0 for block actions
             ledger.credit(
                 db,
-                dispenser["tx_source"],
+                dispenser["last_status_tx_source"],
                 dispenser["asset"],
                 dispenser["give_remaining"],
                 0,
