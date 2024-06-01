@@ -953,7 +953,7 @@ def reparse(db, block_index=0):
     count_query = "SELECT COUNT(*) AS cnt FROM blocks WHERE block_index >= ?"
     block_count = cursor.execute(count_query, (block_index,)).fetchone()["cnt"]
     step = f"Reparsing blocks from Block {block_index}..."
-    done_message = "All blocks reparsed in {.2f}s."  # TODO: this is logged even if the operation is interrupted
+    done_message = "All blocks reparsed in {:.2f}s."  # TODO: this is logged even if the operation is interrupted
     message = ""
     with log.Spinner(step, done_message) as spinner:
         cursor.execute(
