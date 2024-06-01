@@ -854,7 +854,7 @@ def list_tx(
 
 
 def clean_table_from(cursor, table, block_index):
-    logger.info(f"Rolling table `{table}` back to Block {block_index}...")
+    logger.debug(f"Rolling table `{table}` back...")
     # internal function, no sql injection here
     cursor.execute(f"""DELETE FROM {table} WHERE block_index >= ?""", (block_index,))  # nosec B608  # noqa: S608
 
@@ -952,8 +952,8 @@ def reparse(db, block_index=0):
     block_parsed_count = 0
     count_query = "SELECT COUNT(*) AS cnt FROM blocks WHERE block_index >= ?"
     block_count = cursor.execute(count_query, (block_index,)).fetchone()["cnt"]
-    step = f"Reparsing blocks from block {block_index}..."
-    done_message = "All blocks reparsed in {}s"
+    step = f"Reparsing blocks from Block {block_index}..."
+    done_message = "All blocks reparsed in {}s."
     message = ""
     with log.Spinner(step, done_message) as spinner:
         cursor.execute(

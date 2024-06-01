@@ -963,7 +963,7 @@ def dispense(db, tx):
                 dispense_index += 1
 
                 logger.info(
-                    "Dispensed %(dispense_quantity)s of %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [valid]",
+                    "Dispensed %(dispense_quantity)s %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [valid]",
                     bindings,
                 )
 
