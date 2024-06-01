@@ -87,14 +87,14 @@ impl ToBlock for Block {
                     hash,
                     n: vin.previous_output.vout,
                     sequence: vin.sequence.0,
-                    script_sig: vin.script_sig.to_hex_string(),
+                    script_sig: vin.script_sig.to_bytes(),
                 })
             }
             let mut vouts = Vec::new();
             for vout in tx.output.iter() {
                 vouts.push(Vout {
                     value: vout.value.to_sat(),
-                    script_pub_key: vout.script_pubkey.to_hex_string(),
+                    script_pub_key: vout.script_pubkey.to_bytes(),
                 })
             }
             transactions.push(Transaction {

@@ -39,6 +39,9 @@ def test_fetcher_interrupt():
             block = fetcher.get_block_simple()
             assert isinstance(block, dict)
             assert "height" in block
+            for t in block["transactions"]:
+                for v in t["vin"]:
+                    assert isinstance(v["script_sig"], bytes)
     except KeyboardInterrupt:
         interrupted = True
         pass

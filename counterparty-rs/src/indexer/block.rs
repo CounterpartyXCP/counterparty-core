@@ -1,5 +1,5 @@
 use pyo3::{
-    types::{PyAnyMethods, PyDict},
+    types::{PyAnyMethods, PyBytes, PyDict},
     IntoPy, PyObject, Python,
 };
 
@@ -8,7 +8,7 @@ pub struct Vin {
     pub hash: String, // prev output txid
     pub n: u32,       // prev output index
     pub sequence: u32,
-    pub script_sig: String,
+    pub script_sig: Vec<u8>,
 }
 
 impl IntoPy<PyObject> for Vin {
@@ -18,7 +18,8 @@ impl IntoPy<PyObject> for Vin {
         dict.set_item("hash", self.hash).unwrap();
         dict.set_item("n", self.n).unwrap();
         dict.set_item("sequence", self.sequence).unwrap();
-        dict.set_item("script_sig", self.script_sig).unwrap();
+        dict.set_item("script_sig", PyBytes::new_bound(py, &self.script_sig))
+            .unwrap();
         dict.unbind().into()
     }
 }
@@ -26,7 +27,7 @@ impl IntoPy<PyObject> for Vin {
 #[derive(Clone)]
 pub struct Vout {
     pub value: u64,
-    pub script_pub_key: String,
+    pub script_pub_key: Vec<u8>,
 }
 
 impl IntoPy<PyObject> for Vout {
@@ -34,8 +35,11 @@ impl IntoPy<PyObject> for Vout {
     fn into_py(self, py: Python<'_>) -> PyObject {
         let dict = PyDict::new_bound(py);
         dict.set_item("value", self.value).unwrap();
-        dict.set_item("script_pub_key", self.script_pub_key)
-            .unwrap();
+        dict.set_item(
+            "script_pub_key",
+            PyBytes::new_bound(py, &self.script_pub_key),
+        )
+        .unwrap();
         dict.unbind().into()
     }
 }
