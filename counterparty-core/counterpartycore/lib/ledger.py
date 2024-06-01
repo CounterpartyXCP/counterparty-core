@@ -1261,6 +1261,15 @@ def get_dispensers(
     return cursor.fetchall()
 
 
+def get_all_dispensables(db):
+    cursor = db.cursor()
+    query = """SELECT DISTINCT source AS source FROM dispensers"""
+    dispensables = {}
+    for row in cursor.execute(query).fetchall():
+        dispensables[row["source"]] = True
+    return dispensables
+
+
 ### UPDATES ###
 
 

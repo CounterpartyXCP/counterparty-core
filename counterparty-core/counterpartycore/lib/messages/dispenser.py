@@ -621,6 +621,8 @@ def parse(db, tx, message):
                             bindings["origin"] = tx["source"]
 
                         ledger.insert_record(db, "dispensers", bindings, "OPEN_DISPENSER")
+                        # Add the address to the dispensable cache
+                        DispensableCache(db).new_dispensable(action_address)
 
                         logger.info(
                             "Opened dispenser for %(asset)s at %(source)s (%(tx_hash)s) [valid]",
@@ -791,8 +793,23 @@ def parse(db, tx, message):
     cursor.close()
 
 
+class DispensableCache(metaclass=util.SingletonMeta):
+    def __init__(self, db):
+        logger.debug("Initialising dispensable cache...")
+        self.dispensable = ledger.get_all_dispensables(db)
+
+    def could_be_dispensable(self, address):
+        return self.dispensable.get(address, False)
+
+    def new_dispensable(self, address):
+        self.dispensable[address] = True
+
+
 def is_dispensable(db, address, amount):
     if address is None:
+        return False
+
+    if not DispensableCache(db).could_be_dispensable(address):
         return False
 
     dispensers = ledger.get_dispensers(db, address=address, status_in=[0, 11])
