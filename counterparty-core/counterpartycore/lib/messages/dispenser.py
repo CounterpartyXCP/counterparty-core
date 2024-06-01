@@ -626,7 +626,7 @@ def parse(db, tx, message):
                         DispensableCache(db).new_dispensable(action_address)
 
                         logger.info(
-                            "Opened dispenser for %(asset)s at %(source)s (%(tx_hash)s) [valid]",
+                            "Dispenser opened for %(asset)s at %(source)s (%(tx_hash)s) [valid]",
                             bindings,
                         )
 
@@ -769,7 +769,7 @@ def parse(db, tx, message):
                     }
                     if close_delay == 0:
                         logger.info(
-                            "Closed dispenser for %(asset)s at %(source)s (%(tx_hash)s) [valid]",
+                            "Dispenser closed for %(asset)s at %(source)s (%(tx_hash)s) [valid]",
                             log_data,
                         )
                     else:
@@ -963,7 +963,7 @@ def dispense(db, tx):
                 dispense_index += 1
 
                 logger.info(
-                    "Dispensed %(dispense_quantity)s %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [valid]",
+                    "Dispense %(dispense_quantity)s %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [valid]",
                     bindings,
                 )
 
