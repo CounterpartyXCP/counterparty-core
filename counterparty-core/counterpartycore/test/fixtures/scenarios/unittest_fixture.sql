@@ -3193,8 +3193,10 @@ CREATE TABLE dispensers(
                                 oracle_address TEXT,
                                 last_status_tx_hash TEXT,
                                 origin TEXT,
-                                dispense_count INTEGER DEFAULT 0);
-INSERT INTO dispensers VALUES(108,'9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec',310107,'munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b','XCP',100,100,100,0,100,NULL,NULL,'munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b',0);
+                                dispense_count INTEGER DEFAULT 0,
+                                last_status_tx_source TEXT,
+                                close_block_index INTEGER);
+INSERT INTO dispensers VALUES(108,'9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec',310107,'munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b','XCP',100,100,100,0,100,NULL,NULL,'munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b',0,NULL,NULL);
 -- Triggers and indices on  dispensers
 CREATE TRIGGER block_update_dispensers
                            BEFORE UPDATE ON dispensers BEGIN
@@ -3204,11 +3206,13 @@ CREATE INDEX dispensers_asset_idx ON dispensers (asset)
         ;
 CREATE INDEX dispensers_block_index_idx ON dispensers (block_index)
         ;
+CREATE INDEX dispensers_close_block_index_status_idx ON dispensers (close_block_index, status)
+        ;
 CREATE INDEX dispensers_give_remaining_idx ON dispensers (give_remaining)
         ;
 CREATE INDEX dispensers_last_status_tx_hash_idx ON dispensers (last_status_tx_hash)
         ;
-CREATE INDEX dispensers_source_asset_origin_idx ON dispensers (source, asset, origin)
+CREATE INDEX dispensers_source_asset_origin_status_idx ON dispensers (source, asset, origin, status)
         ;
 CREATE INDEX dispensers_source_idx ON dispensers (source)
         ;

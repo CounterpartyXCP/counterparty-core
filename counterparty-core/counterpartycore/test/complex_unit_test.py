@@ -327,6 +327,8 @@ def test_updated_tables_endpoints():
                 "last_status_tx_hash": None,
                 "origin": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
                 "dispense_count": 0,
+                "close_block_index": None,
+                "last_status_tx_source": None,
             }
 
 

@@ -12,7 +12,6 @@ import struct
 from math import floor
 
 from counterpartycore.lib import (
-    address,
     backend,
     config,
     database,
@@ -21,6 +20,8 @@ from counterpartycore.lib import (
     message_type,
     util,
 )
+from counterpartycore.lib.address import pack as address_pack
+from counterpartycore.lib.address import unpack as address_unpack
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -55,7 +56,9 @@ def initialise(db):
                                 oracle_address TEXT,
                                 last_status_tx_hash TEXT,
                                 origin TEXT,
-                                dispense_count INTEGER DEFAULT 0)
+                                dispense_count INTEGER DEFAULT 0,
+                                last_status_tx_source TEXT,
+                                close_block_index INTEGER)
                                 """
     # create tables
     cursor.execute(create_dispensers_query)
@@ -74,6 +77,10 @@ def initialise(db):
         )
     if "dispense_count" not in columns:
         cursor.execute("ALTER TABLE dispensers ADD COLUMN dispense_count INTEGER DEFAULT 0")
+    if "last_status_tx_source" not in columns:
+        cursor.execute("ALTER TABLE dispensers ADD COLUMN last_status_tx_source TEXT")
+    if "close_block_index" not in columns:
+        cursor.execute("ALTER TABLE dispensers ADD COLUMN close_block_index TEXT")
 
     # migrate old table
     if database.field_is_pk(cursor, "dispensers", "tx_index"):
@@ -93,8 +100,9 @@ def initialise(db):
             ["give_remaining"],
             ["status", "block_index"],
             ["source", "origin"],
-            ["source", "asset", "origin"],
+            ["source", "asset", "origin", "status"],
             ["last_status_tx_hash"],
+            ["close_block_index", "status"],
         ],
     )
 
@@ -382,7 +390,7 @@ def compose(
         and open_address
         and open_address != source
     ):
-        data += address.pack(open_address)
+        data += address_pack(open_address)
     if oracle_address is not None and util.enabled("oracle_dispensers"):
         oracle_fee = calculate_oracle_fee(
             db,
@@ -395,7 +403,7 @@ def compose(
 
         if oracle_fee >= config.DEFAULT_REGULAR_DUST_SIZE:
             destination.append((oracle_address, oracle_fee))
-        data += address.pack(oracle_address)
+        data += address_pack(oracle_address)
 
     return (source, destination, data)
 
@@ -433,10 +441,10 @@ def unpack(message, return_dict=False):
             and dispenser_status == STATUS_CLOSED
             and len(message) > read
         ):
-            action_address = address.unpack(message[LENGTH : LENGTH + 21])
+            action_address = address_unpack(message[LENGTH : LENGTH + 21])
             read = LENGTH + 21
         if len(message) > read:
-            oracle_address = address.unpack(message[read : read + 21])
+            oracle_address = address_unpack(message[read : read + 21])
         asset = ledger.generate_asset_name(assetid, util.CURRENT_BLOCK_INDEX)
         status = "valid"
     except (exceptions.UnpackError, struct.error) as e:  # noqa: F841
@@ -614,6 +622,8 @@ def parse(db, tx, message):
                             bindings["origin"] = tx["source"]
 
                         ledger.insert_record(db, "dispensers", bindings, "OPEN_DISPENSER")
+                        # Add the address to the dispensable cache
+                        DispensableCache(db).new_dispensable(action_address)
 
                         logger.info(
                             "Opened dispenser for %(asset)s at %(source)s (%(tx_hash)s) [valid]",
@@ -740,7 +750,13 @@ def parse(db, tx, message):
                             "status": STATUS_CLOSED,
                         }
                     else:
-                        set_data = {"status": STATUS_CLOSING, "last_status_tx_hash": tx["tx_hash"]}
+                        set_data = {
+                            "status": STATUS_CLOSING,
+                            "last_status_tx_hash": tx["tx_hash"],
+                            "last_status_tx_source": tx["source"],
+                            "close_block_index": tx["block_index"] + close_delay,
+                        }
+
                     ledger.update_dispenser(
                         db, existing[0]["rowid"], set_data, {"source": tx["source"], "asset": asset}
                     )
@@ -778,8 +794,23 @@ def parse(db, tx, message):
     cursor.close()
 
 
+class DispensableCache(metaclass=util.SingletonMeta):
+    def __init__(self, db):
+        logger.debug("Initialising dispensable cache...")
+        self.dispensable = ledger.get_all_dispensables(db)
+
+    def could_be_dispensable(self, source):
+        return self.dispensable.get(source, False)
+
+    def new_dispensable(self, source):
+        self.dispensable[source] = True
+
+
 def is_dispensable(db, address, amount):
     if address is None:
+        return False
+
+    if not DispensableCache(db).could_be_dispensable(address):
         return False
 
     dispensers = ledger.get_dispensers(db, address=address, status_in=[0, 11])
@@ -943,15 +974,13 @@ def close_pending(db, block_index):
     block_delay = util.get_value_by_block_index("dispenser_close_delay", block_index)
 
     if block_delay > 0:
-        pending_dispensers = ledger.get_pending_dispensers(
-            db, delay=block_delay, block_index=block_index
-        )
+        pending_dispensers = ledger.get_pending_dispensers(db, block_index=block_index)
 
         for dispenser in pending_dispensers:
             # use tx_index=0 for block actions
             ledger.credit(
                 db,
-                dispenser["tx_source"],
+                dispenser["last_status_tx_source"],
                 dispenser["asset"],
                 dispenser["give_remaining"],
                 0,

@@ -1330,7 +1330,9 @@
             "oracle_address": null,
             "last_status_tx_hash": null,
             "origin": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
-            "dispense_count": 0
+            "dispense_count": 0,
+            "last_status_tx_source": null,
+            "close_block_index": null
         }
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispenses/sends": {
@@ -1805,7 +1807,9 @@
             "oracle_address": null,
             "last_status_tx_hash": null,
             "origin": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
-            "dispense_count": 0
+            "dispense_count": 0,
+            "last_status_tx_source": null,
+            "close_block_index": null
         }
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/holders": {
@@ -2224,7 +2228,9 @@
                 "oracle_address": null,
                 "last_status_tx_hash": null,
                 "origin": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
-                "dispense_count": 0
+                "dispense_count": 0,
+                "last_status_tx_source": null,
+                "close_block_index": null
             }
         ],
         "next_cursor": null,
@@ -2245,7 +2251,9 @@
             "oracle_address": null,
             "last_status_tx_hash": null,
             "origin": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
-            "dispense_count": 0
+            "dispense_count": 0,
+            "last_status_tx_source": null,
+            "close_block_index": null
         }
     },
     "http://localhost:10009/v2/dispensers/9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec/dispenses": {
