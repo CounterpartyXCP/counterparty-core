@@ -13,6 +13,7 @@ TEST_CONFIG = {
     "rpc_user": "rpc",
     "rpc_password": "rpc",
     "db_dir": TEST_DB_PATH,
+    # "consume_blocks": True,
 }
 
 
@@ -38,6 +39,9 @@ def test_fetcher_interrupt():
             block = fetcher.get_block_simple()
             assert isinstance(block, dict)
             assert "height" in block
+            for t in block["transactions"]:
+                for v in t["vin"]:
+                    assert isinstance(v["script_sig"], bytes)
     except KeyboardInterrupt:
         interrupted = True
         pass
@@ -52,4 +56,4 @@ def test_fetcher_interrupt():
 def test_indexer():
     i = indexer.Indexer(TEST_CONFIG)
     i.start()
-    sleep(float("inf"))
+    sleep(1000000000)

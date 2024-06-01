@@ -5,11 +5,11 @@ use crate::indexer::{
     config::Config,
     database::DatabaseOps,
     stopper::Stopper,
-    types::error::Error,
+    types::{error::Error, pipeline::ChanOut},
     utils::timed,
     workers::{consumer, extractor, fetcher, new_worker_pool, orderer, producer, reporter, writer},
 };
-use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
+use crossbeam_channel::{bounded, unbounded};
 use tracing::info;
 
 pub fn new<D>(
@@ -17,7 +17,7 @@ pub fn new<D>(
     config: Config,
     client: BitcoinClient,
     stopper: Stopper,
-    chan: (Sender<Vec<u8>>, Receiver<Vec<u8>>),
+    chan: ChanOut,
     db: D,
 ) -> Result<Vec<JoinHandle<Result<(), Error>>>, Error>
 where

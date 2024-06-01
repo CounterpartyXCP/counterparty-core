@@ -1,4 +1,3 @@
-import json
 import logging
 
 from counterparty_rs import indexer
@@ -55,8 +54,7 @@ def stop():
 
 
 def get_block_simple():
-    block_bytes = instance().get_block()
-    return json.loads(bytes(block_bytes))
+    return instance().get_block()
 
 
 def get_block():

@@ -16,8 +16,8 @@ mod workers;
 
 use std::thread::JoinHandle;
 
-use crossbeam_channel::{Receiver, Sender};
 use pyo3::prelude::*;
+use types::pipeline::ChanOut;
 
 use self::{
     bitcoin_client::BitcoinClient,
@@ -35,7 +35,7 @@ pub struct Indexer {
     stopper: Stopper,
     client: BitcoinClient,
     db: Database,
-    chan: (Sender<Vec<u8>>, Receiver<Vec<u8>>),
+    chan: ChanOut,
     handles: Vec<JoinHandle<Result<(), Error>>>,
 }
 
@@ -67,8 +67,9 @@ impl Indexer {
         )?)
     }
 
-    pub fn get_block(&self) -> PyResult<Vec<u8>> {
-        Ok(get_block::new(self.stopper.clone(), self.chan.1.clone())?)
+    pub fn get_block(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let block = get_block::new(self.stopper.clone(), self.chan.1.clone())?;
+        Ok(block.into_py(py))
     }
 }
 
