@@ -3,6 +3,7 @@
 
 # Upgrading
 
+Note: A reparse from block 819250 is automatically launched during the update.
 
 # ChangeLog
 
@@ -20,6 +21,8 @@
 * Clean RPS implementation. Introduce `replay_events()` function to reconstruct database from JSON list of events. 
 * Add rust test suit to `build_and_test` Github workflow.
 * It is possible to start parsing blocks while Bitcoin Core catches up.
+* Optimizes `get_pending_dispensers()` by adding the `last_status_tx_source` and `close_block_index` fields in the `dispensers` table.
+* Optimizes `is_dispensable()` by caching a list of all dispenser addresses.
 
 ## API
 * Add following routes:
