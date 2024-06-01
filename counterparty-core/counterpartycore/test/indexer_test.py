@@ -13,6 +13,7 @@ TEST_CONFIG = {
     "rpc_user": "rpc",
     "rpc_password": "rpc",
     "db_dir": TEST_DB_PATH,
+    # "consume_blocks": True,
 }
 
 
@@ -52,4 +53,4 @@ def test_fetcher_interrupt():
 def test_indexer():
     i = indexer.Indexer(TEST_CONFIG)
     i.start()
-    sleep(float("inf"))
+    sleep(1000000000)

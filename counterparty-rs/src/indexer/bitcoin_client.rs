@@ -12,7 +12,7 @@ use bitcoincore_rpc::{
 use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
 
 use super::{
-    block::{Block as CrateBlock, ToSerializedBlock, Transaction, Vin, Vout},
+    block::{Block as CrateBlock, ToBlock, Transaction, Vin, Vout},
     config::{Config, Mode},
     stopper::Stopper,
     types::{
@@ -68,8 +68,8 @@ impl BlockHasEntries for Block {
     }
 }
 
-impl ToSerializedBlock for Block {
-    fn to_serialized_block(&self, height: u32) -> Vec<u8> {
+impl ToBlock for Block {
+    fn to_block(&self, height: u32) -> CrateBlock {
         let mut transactions = Vec::new();
         for tx in self.txdata.iter() {
             let tx_bytes = serialize(tx);
@@ -109,8 +109,7 @@ impl ToSerializedBlock for Block {
                 vout: vouts,
             })
         }
-        #[allow(clippy::expect_used)]
-        serde_json::to_vec(&CrateBlock {
+        CrateBlock {
             height,
             version: self.header.version.to_consensus(),
             hash_prev: self.header.prev_blockhash.to_hex(),
@@ -121,8 +120,7 @@ impl ToSerializedBlock for Block {
             block_hash: self.block_hash().to_hex(),
             transaction_count: self.txdata.len(),
             transactions,
-        })
-        .expect("Block serialization failed unexpectedly")
+        }
     }
 }
 
