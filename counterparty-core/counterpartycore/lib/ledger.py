@@ -1125,8 +1125,6 @@ def get_refilling_count(db, dispenser_tx_hash):
 
 
 def get_pending_dispensers(db, block_index):
-    STATUS_CLOSING = 11
-
     cursor = db.cursor()
     query = """
         SELECT * FROM (
@@ -1140,7 +1138,7 @@ def get_pending_dispensers(db, block_index):
     """
     bindings = {
         "close_block_index": block_index,
-        "status_closing": STATUS_CLOSING,
+        "status_closing": 11,  # STATUS_CLOSING
     }
     cursor.execute(query, bindings)
     result = cursor.fetchall()

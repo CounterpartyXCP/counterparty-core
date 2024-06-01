@@ -12,7 +12,6 @@ import struct
 from math import floor
 
 from counterpartycore.lib import (
-    address,
     backend,
     config,
     database,
@@ -21,6 +20,8 @@ from counterpartycore.lib import (
     message_type,
     util,
 )
+from counterpartycore.lib.address import pack as address_pack
+from counterpartycore.lib.address import unpack as address_unpack
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -389,7 +390,7 @@ def compose(
         and open_address
         and open_address != source
     ):
-        data += address.pack(open_address)
+        data += address_pack(open_address)
     if oracle_address is not None and util.enabled("oracle_dispensers"):
         oracle_fee = calculate_oracle_fee(
             db,
@@ -402,7 +403,7 @@ def compose(
 
         if oracle_fee >= config.DEFAULT_REGULAR_DUST_SIZE:
             destination.append((oracle_address, oracle_fee))
-        data += address.pack(oracle_address)
+        data += address_pack(oracle_address)
 
     return (source, destination, data)
 
@@ -440,10 +441,10 @@ def unpack(message, return_dict=False):
             and dispenser_status == STATUS_CLOSED
             and len(message) > read
         ):
-            action_address = address.unpack(message[LENGTH : LENGTH + 21])
+            action_address = address_unpack(message[LENGTH : LENGTH + 21])
             read = LENGTH + 21
         if len(message) > read:
-            oracle_address = address.unpack(message[read : read + 21])
+            oracle_address = address_unpack(message[read : read + 21])
         asset = ledger.generate_asset_name(assetid, util.CURRENT_BLOCK_INDEX)
         status = "valid"
     except (exceptions.UnpackError, struct.error) as e:  # noqa: F841
@@ -798,11 +799,11 @@ class DispensableCache(metaclass=util.SingletonMeta):
         logger.debug("Initialising dispensable cache...")
         self.dispensable = ledger.get_all_dispensables(db)
 
-    def could_be_dispensable(self, address):
-        return self.dispensable.get(address, False)
+    def could_be_dispensable(self, source):
+        return self.dispensable.get(source, False)
 
-    def new_dispensable(self, address):
-        self.dispensable[address] = True
+    def new_dispensable(self, source):
+        self.dispensable[source] = True
 
 
 def is_dispensable(db, address, amount):
