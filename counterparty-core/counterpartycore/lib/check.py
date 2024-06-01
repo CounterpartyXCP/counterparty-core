@@ -982,20 +982,20 @@ class DatabaseVersionError(Exception):
 def database_version(db):
     if config.FORCE:
         return
-    logger.debug("Checking database version.")
+    logger.debug("Checking database version...")
 
     version_major, version_minor = database.version(db)
     if version_major != config.VERSION_MAJOR:
         # Rollback database if major version has changed.
         raise DatabaseVersionError(
-            message=f"Client major version number mismatch ({version_major} ≠ {config.VERSION_MAJOR}).",
+            message=f"Client major version number mismatch: {version_major} ≠ {config.VERSION_MAJOR}.",
             required_action="rollback",
             from_block_index=config.BLOCK_FIRST,
         )
     elif version_minor != config.VERSION_MINOR:
         # Reparse transactions from the vesion block if minor version has changed.
         message = (
-            f"Client minor version number mismatch ({version_minor} ≠ {config.VERSION_MINOR})."
+            f"Client minor version number mismatch: {version_minor} ≠ {config.VERSION_MINOR}."
         )
         need_reparse_from = (
             config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET

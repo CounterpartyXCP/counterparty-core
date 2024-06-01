@@ -854,7 +854,7 @@ def list_tx(
 
 
 def clean_table_from(cursor, table, block_index):
-    logger.debug(f"Rolling table `{table}` back...")
+    logger.debug(f"Rolling back table `{table}`...")
     # internal function, no sql injection here
     cursor.execute(f"""DELETE FROM {table} WHERE block_index >= ?""", (block_index,))  # nosec B608  # noqa: S608
 
@@ -938,8 +938,8 @@ def reparse(db, block_index=0):
     with log.Spinner(f"Rolling database back to Block {block_index}..."):
         clean_messages_tables(db, block_index=block_index)
 
-    step = "Cleaning consensus hashes..."
-    with log.Spinner("Cleaning consensus hashes..."):
+    step = "Recalculating consensus hashes..."
+    with log.Spinner("Recalculating consensus hashes..."):
         query = """
             UPDATE blocks 
             SET ledger_hash=NULL, txlist_hash=NULL, messages_hash=NULL 
@@ -953,7 +953,7 @@ def reparse(db, block_index=0):
     count_query = "SELECT COUNT(*) AS cnt FROM blocks WHERE block_index >= ?"
     block_count = cursor.execute(count_query, (block_index,)).fetchone()["cnt"]
     step = f"Reparsing blocks from Block {block_index}..."
-    done_message = "All blocks reparsed in {}s."
+    done_message = "All blocks reparsed in {.2f}s."  # TODO: this is logged even if the operation is interrupted
     message = ""
     with log.Spinner(step, done_message) as spinner:
         cursor.execute(

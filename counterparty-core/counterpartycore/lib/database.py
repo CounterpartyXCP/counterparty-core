@@ -53,7 +53,7 @@ def check_wal_file():
 
 def get_connection(read_only=True, check_wal=True):
     """Connects to the SQLite database, returning a db `Connection` object"""
-    logger.debug(f"Creating connection to `{config.DATABASE}`.")
+    logger.debug(f"Creating connection to `{config.DATABASE}`...")
 
     need_quick_check = False
     if not read_only and check_wal:
@@ -199,7 +199,7 @@ def optimize(db):
     logger.info("Running PRAGMA optimize...")
     cursor = db.cursor()
     cursor.execute("PRAGMA optimize")
-    logger.info("PRAGMA optimize done.")
+    logger.debug("PRAGMA optimize completed.")
 
 
 def close(db):
