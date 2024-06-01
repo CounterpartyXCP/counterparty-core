@@ -1095,7 +1095,7 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
         )
         duration = time.time() - start_time
 
-        log_message = "Block %(block_index)s - Parsing Complete. L: %(ledger_hash)s, TX: %(txlist_hash)s, M: %(messages_hash)s (%(duration).2fs)"
+        log_message = "Block %(block_index)s - Parsing complete. L: %(ledger_hash)s, TX: %(txlist_hash)s, M: %(messages_hash)s (%(duration).2fs)"
         logger.info(
             log_message,
             {
