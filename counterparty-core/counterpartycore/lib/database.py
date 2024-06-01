@@ -53,7 +53,7 @@ def check_wal_file():
 
 def get_connection(read_only=True, check_wal=True):
     """Connects to the SQLite database, returning a db `Connection` object"""
-    logger.debug(f"Creating connection to `{config.DATABASE}`.")
+    logger.debug(f"Creating connection to `{config.DATABASE}`...")
 
     need_quick_check = False
     if not read_only and check_wal:
@@ -124,7 +124,7 @@ def initialise_db():
         cprint("THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.", "yellow")
 
     # Database
-    logger.info(f"Connecting to database (SQLite {apsw.apswversion()}).")
+    logger.info(f"Connecting to database... (SQLite {apsw.apswversion()})")
     db = get_connection(read_only=False)
 
     util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
@@ -199,7 +199,7 @@ def optimize(db):
     logger.info("Running PRAGMA optimize...")
     cursor = db.cursor()
     cursor.execute("PRAGMA optimize")
-    logger.info("PRAGMA optimize done.")
+    logger.debug("PRAGMA optimize completed.")
 
 
 def close(db):

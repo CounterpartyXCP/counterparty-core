@@ -1,4 +1,4 @@
-Creating connection to `:memory:`.
+Creating connection to `:memory:`...
 Constructing None transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 data_btc_out=0 (data_value=0 len(data_array)=0)
 Fee/KB 0.00025000
@@ -209,7 +209,7 @@ New input: amount: 0.45818945; txid: 95332a7e3e2b04f2c10e3027327bfc31b686947fb05
 final_fee inputs: 1 size: 246 final_fee 6150
 Size: 246 Fee: 0.00006150 Change quantity: 0.45812795 BTC
 Initialising dispensable cache...
-Opened dispenser for XCP at munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b (9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec) [valid]
+Dispenser opened for XCP at munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b (9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec) [valid]
 Constructing None transaction from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy.
 data_btc_out=0 (data_value=0 len(data_array)=0)
 Fee/KB 0.00025000

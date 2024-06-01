@@ -175,13 +175,13 @@ class SocketManager:
             self.connected = True
             logger.debug(f"`{self.host}:{self.port}` -- connected")
         except socket.timeout as e:
-            logger.error(f"`{self.host}:{self.port}` -- socket.connect timeout")
+            logger.debug(f"`{self.host}:{self.port}` -- socket.connect timeout")
             raise e
         except ConnectionRefusedError as e:
-            logger.error(f"`{self.host}:{self.port}` -- connection refused")
+            logger.debug(f"`{self.host}:{self.port}` -- connection refused")
             raise e
         except Exception as e:
-            logger.error(f"`{self.host}:{self.port}` -- unknown exception: {e}")
+            logger.debug(f"`{self.host}:{self.port}` -- unknown exception: {e}")
             raise e
 
     def disconnect(self):
@@ -202,7 +202,7 @@ class SocketManager:
             self.socket.sendall(message)
             logger.debug(f"`{self.host}:{self.port}` -- sent message {message}")
         except socket.timeout as e:
-            logger.error(f"`{self.host}:{self.port}` -- socket.send timeout")
+            logger.warning(f"`{self.host}:{self.port}` -- socket.send timeout")
             self.connected = False
             raise e
         except Exception as e:
@@ -232,7 +232,7 @@ class SocketManager:
                     # logger.debug(f"`{self.host}:{self.port}` -- JSONDecodeError -- continuing")
                     continue
             except socket.timeout as e:
-                logger.error(f"`{self.host}:{self.port}` -- Timeout receiving message: {e}")
+                logger.warning(f"`{self.host}:{self.port}` -- Timeout receiving message: {e}")
                 self.connected = False
                 raise e
             except Exception as e:
@@ -279,7 +279,7 @@ class AddrIndexRsClient:
                 break
             except Exception as e:
                 self.is_running = False
-                logger.info(
+                logger.warning(
                     f"AddrIndexRsClient -- failed to start: {e}, retrying in {self.backoff} seconds..."
                 )
                 time.sleep(self.backoff)

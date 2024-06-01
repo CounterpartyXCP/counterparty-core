@@ -325,11 +325,11 @@ def welcome_message(action, server_configfile):
     cprint(f"Configuration file: {server_configfile}", "light_grey")
     cprint(f"Counterparty database: {config.DATABASE}", "light_grey")
     if config.LOG:
-        cprint(f"Writing log to file: `{config.LOG}`", "light_grey")
+        cprint(f"Writing log to file: {config.LOG}", "light_grey")
     else:
         cprint("Warning: log disabled", "yellow")
     if config.API_LOG:
-        cprint(f"Writing API accesses log to file: `{config.API_LOG}`", "light_grey")
+        cprint(f"Writing API accesses log to file: {config.API_LOG}", "light_grey")
     else:
         cprint("Warning: API log disabled", "yellow")
 
