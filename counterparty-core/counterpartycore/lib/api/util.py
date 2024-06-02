@@ -312,6 +312,8 @@ def inject_normalized_quantities(result):
             "give_remaining",
             "escrow_quantity",
             "dispense_quantity",
+            "burned",
+            "earned",
         ]:
             if "params" in item:
                 item = item["params"]
@@ -319,20 +321,25 @@ def inject_normalized_quantities(result):
                 item = result_item["dispenser"]
             if field_name not in item:
                 continue
-            issuance_field_name = (
-                field_name.replace("quantity", "asset").replace("remaining", "asset") + "_info"
-            )
-            if issuance_field_name not in item:
-                issuance_field_name = "asset_info"
-            if issuance_field_name not in item and issuance_field_name not in result_item:
-                continue
-            if issuance_field_name not in item:
-                is_divisible = result_item[issuance_field_name]["divisible"]
-            else:
-                is_divisible = item[issuance_field_name]["divisible"]
+
+            is_divisible = True
+            if field_name not in ["burned", "earned"]:
+                issuance_field_name = (
+                    field_name.replace("quantity", "asset").replace("remaining", "asset") + "_info"
+                )
+                if issuance_field_name not in item:
+                    issuance_field_name = "asset_info"
+                if issuance_field_name not in item and issuance_field_name not in result_item:
+                    continue
+                if issuance_field_name not in item:
+                    is_divisible = result_item[issuance_field_name]["divisible"]
+                else:
+                    is_divisible = item[issuance_field_name]["divisible"]
+
             item[field_name + "_normalized"] = (
                 divide(item[field_name], 10**8) if is_divisible else str(item[field_name])
             )
+
         if "get_quantity" in item and "give_quantity" in item and "market_dir" in item:
             if item["market_dir"] == "SELL":
                 item["market_price"] = divide(

@@ -171,8 +171,8 @@ def parse(db, tx, mainnet_burns, message=None):
         tx_hash = line["tx_hash"]
         block_index = line["block_index"]
         source = line["source"]
-        burned = line["burned"]
-        earned = line["earned"]
+        burned = int(line["burned"])
+        earned = int(line["earned"])
         status = "valid"
 
     # Add parsed transaction to message-type–specific table.
