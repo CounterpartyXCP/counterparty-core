@@ -199,6 +199,27 @@ def get_transactions_by_block(
     )
 
 
+def get_transactions_by_address(
+    db, address: str, cursor: int = None, limit: int = 10, offset: int = None
+):
+    """
+    Returns the transactions of an address
+    :param str address: The address to return (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
+    :param int cursor: The last transaction index to return (e.g. 10665092)
+    :param int limit: The maximum number of transactions to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        db,
+        "transactions",
+        where={"source": address},
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
 def get_all_events(
     db, event_name: str = None, cursor: int = None, limit: int = 100, offset: int = None
 ):
@@ -1213,6 +1234,36 @@ def get_valid_assets(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     where = {"status": "valid"}
+    if named is not None:
+        if named:
+            where["asset__notlike"] = "A%"
+        else:
+            where["asset__like"] = "A%"
+
+    return select_rows(
+        db,
+        "issuances",
+        where=where,
+        group_by="asset",
+        select="asset, asset_longname, description, issuer, divisible, locked, rowid",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_valid_assets_by_issuer(
+    db, issuer: str, named: bool = None, cursor: str = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the valid assets of an issuer
+    :param str issuer: The issuer to return (e.g. 1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk)
+    :param bool named: Whether to return only named assets (e.g. true)
+    :param int cursor: The last index of the assets to return
+    :param int limit: The maximum number of assets to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    where = {"status": "valid", "issuer": issuer}
     if named is not None:
         if named:
             where["asset__notlike"] = "A%"

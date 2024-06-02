@@ -418,6 +418,7 @@ def initialise(db):
             ["tx_hash"],
             ["block_index", "tx_index"],
             ["tx_index", "tx_hash", "block_index"],
+            ["source"],
         ],
     )
 
