@@ -176,6 +176,8 @@ CREATE INDEX transactions_block_index_idx ON transactions (block_index)
         ;
 CREATE INDEX transactions_block_index_tx_index_idx ON transactions (block_index, tx_index)
         ;
+CREATE INDEX transactions_source_idx ON transactions (source)
+        ;
 CREATE INDEX transactions_tx_hash_idx ON transactions (tx_hash)
         ;
 CREATE INDEX transactions_tx_index_idx ON transactions (tx_index)
@@ -1422,6 +1424,8 @@ CREATE INDEX issuances_asset_longname_idx ON issuances (asset_longname)
 CREATE INDEX issuances_asset_status_idx ON issuances (asset, status)
         ;
 CREATE INDEX issuances_block_index_idx ON issuances (block_index)
+        ;
+CREATE INDEX issuances_issuer_idx ON issuances (issuer)
         ;
 CREATE INDEX issuances_source_idx ON issuances (source)
         ;

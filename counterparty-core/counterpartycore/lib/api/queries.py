@@ -825,7 +825,7 @@ def get_dispenses_by_source(
 ):
     """
     Returns the dispenses of a source
-    :param str address: The address to return (e.g. bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz)
+    :param str address: The address to return (e.g. 1LducqbrdyzSCTUFfqNwnxxvrxkjGQ7WZQ)
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -1253,17 +1253,17 @@ def get_valid_assets(
 
 
 def get_valid_assets_by_issuer(
-    db, issuer: str, named: bool = None, cursor: str = None, limit: int = 100, offset: int = None
+    db, address: str, named: bool = None, cursor: str = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the valid assets of an issuer
-    :param str issuer: The issuer to return (e.g. 1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk)
+    :param str address: The issuer to return (e.g. 1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk)
     :param bool named: Whether to return only named assets (e.g. true)
     :param int cursor: The last index of the assets to return
     :param int limit: The maximum number of assets to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = {"status": "valid", "issuer": issuer}
+    where = {"status": "valid", "issuer": address}
     if named is not None:
         if named:
             where["asset__notlike"] = "A%"
