@@ -225,19 +225,28 @@ def get_all_events(
 
 
 def get_events_by_block(
-    db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
+    db,
+    block_index: int,
+    event_name: str = None,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the events of a block
     :param int block_index: The index of the block to return (e.g. 840464)
+    :param str event_name: Comma separated list of events to return
     :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = {"block_index": block_index}
+    if event_name:
+        where = [{"event": event, "block_index": block_index} for event in event_name.split(",")]
     return select_rows(
         db,
         "messages",
-        where={"block_index": block_index},
+        where=where,
         cursor_field="event_index",
         last_cursor=cursor,
         limit=limit,
@@ -247,19 +256,28 @@ def get_events_by_block(
 
 
 def get_events_by_transaction_hash(
-    db, tx_hash: str, cursor: int = None, limit: int = 100, offset: int = None
+    db,
+    tx_hash: str,
+    event_name: str = None,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the events of a transaction
     :param str tx_hash: The hash of the transaction to return (e.g. 84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040)
+    :param str event_name: Comma separated list of events to return
     :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = {"tx_hash": tx_hash}
+    if event_name:
+        where = [{"event": event, "tx_hash": tx_hash} for event in event_name.split(",")]
     return select_rows(
         db,
         "messages",
-        where={"tx_hash": tx_hash},
+        where=where,
         cursor_field="event_index",
         last_cursor=cursor,
         limit=limit,
@@ -292,11 +310,17 @@ def get_events_by_transaction_hash_and_event(
 
 
 def get_events_by_transaction_index(
-    db, tx_index: int, cursor: int = None, limit: int = 100, offset: int = None
+    db,
+    tx_index: int,
+    event_name: str = None,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the events of a transaction
     :param str tx_index: The index of the transaction to return (e.g. 1000)
+    :param str event_name: Comma separated list of events to return
     :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -304,7 +328,12 @@ def get_events_by_transaction_index(
     query_result = select_row(db, "transactions", where={"tx_index": tx_index})
     if query_result:
         return get_events_by_transaction_hash(
-            db, query_result.result["tx_hash"], cursor=cursor, limit=limit, offset=offset
+            db,
+            query_result.result["tx_hash"],
+            event_name=event_name,
+            cursor=cursor,
+            limit=limit,
+            offset=offset,
         )
     return None
 
@@ -386,14 +415,20 @@ def get_events_by_name(db, event: str, cursor: int = None, limit: int = 100, off
     )
 
 
-def get_all_mempool_events(db, cursor: int = None, limit: int = 100, offset: int = None):
+def get_all_mempool_events(
+    db, event_name: str = None, cursor: int = None, limit: int = 100, offset: int = None
+):
     """
     Returns all mempool events
+    :param str event_name: Comma separated list of events to return
     :param int cursor: The last event index to return
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    return select_rows(db, "mempool", last_cursor=cursor, limit=limit, offset=offset)
+    where = None
+    if event_name:
+        where = [{"event": event} for event in event_name.split(",")]
+    return select_rows(db, "mempool", where=where, last_cursor=cursor, limit=limit, offset=offset)
 
 
 def get_mempool_events_by_name(
@@ -412,18 +447,25 @@ def get_mempool_events_by_name(
 
 
 def get_mempool_events_by_tx_hash(
-    db, tx_hash: str, cursor: int = None, limit: int = 100, offset: int = None
+    db,
+    tx_hash: str,
+    event_name: str = None,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the mempool events filtered by transaction hash
     :param str tx_hash: The hash of the transaction to return (e.g. 84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040)
+    :param str event_name: Comma separated list of events to return
     :param int cursor: The last event index to return
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    return select_rows(
-        db, "mempool", where={"tx_hash": tx_hash}, last_cursor=cursor, limit=limit, offset=offset
-    )
+    where = {"tx_hash": tx_hash}
+    if event_name:
+        where = [{"event": event, "tx_hash": tx_hash} for event in event_name.split(",")]
+    return select_rows(db, "mempool", where=where, last_cursor=cursor, limit=limit, offset=offset)
 
 
 def get_event_counts_by_block(
