@@ -448,6 +448,8 @@ def initialise(db):
             ["address"],
             ["asset"],
             ["block_index"],
+            ["event"],
+            ["action"],
         ],
     )
 
@@ -475,6 +477,8 @@ def initialise(db):
             ["address"],
             ["asset"],
             ["block_index"],
+            ["event"],
+            ["calling_function"],
         ],
     )
 

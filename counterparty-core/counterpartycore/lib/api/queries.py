@@ -1282,10 +1282,60 @@ def get_valid_assets_by_issuer(
     )
 
 
-def get_dividends(db, asset: str, cursor: int = None, limit: int = 100, offset: int = None):
+def get_dividends(db, cursor: int = None, limit: int = 100, offset: int = None):
+    """
+    Returns all the dividends
+    :param int cursor: The last index of the dividend to return
+    :param int limit: The maximum number of dividend to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        db,
+        "dividends",
+        where={"status": "valid"},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_dividend(db, dividend_hash: str):
+    """
+    Returns a dividend by its hash
+    """
+    return select_row(
+        db,
+        "dividends",
+        where={"tx_hash": dividend_hash},
+    )
+
+
+def get_dividends_by_asset(
+    db, asset: str, cursor: int = None, limit: int = 100, offset: int = None
+):
     """
     Returns the dividends of an asset
     :param str asset: The asset to return (e.g. GMONEYPEPE)
+    :param int cursor: The last index of the dividend to return
+    :param int limit: The maximum number of dividend to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        db,
+        "dividends",
+        where={"asset": asset, "status": "valid"},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_dividends_distributed_by_address(
+    db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the dividends distributed by an address
+    :param str address: The address to return (e.g. 1PHnxfHgojebxzW6muz8zfbE4bkDtbEudx)
     :param int cursor: The last index of the assets to return
     :param int limit: The maximum number of assets to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -1293,7 +1343,27 @@ def get_dividends(db, asset: str, cursor: int = None, limit: int = 100, offset: 
     return select_rows(
         db,
         "dividends",
-        where={"asset": asset, "status": "valid"},
+        where={"source": address, "status": "valid"},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_dividend_disribution(
+    db, dividend_hash: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns a dividend distribution by its hash
+    :param str dividend_hash: The hash of the dividend distribution to return (e.g. 9b7b9
+    :param int cursor: The last index of the credit to return
+    :param int limit: The maximum number of credit to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        db,
+        "credits",
+        where={"event": dividend_hash},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
