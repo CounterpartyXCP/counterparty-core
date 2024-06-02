@@ -545,19 +545,28 @@ def get_all_events_counts(db, cursor: str = None, limit: int = 100, offset: int 
 
 
 def get_credits_by_block(
-    db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
+    db,
+    block_index: int,
+    action: str = None,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the credits of a block
     :param int block_index: The index of the block to return (e.g. 840464)
+    :param str action: The action to filter by
     :param int cursor: The last credit index to return
     :param int limit: The maximum number of credits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = {"block_index": block_index}
+    if action:
+        where["calling_function"] = action
     return select_rows(
         db,
         "credits",
-        where={"block_index": block_index},
+        where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -565,47 +574,62 @@ def get_credits_by_block(
 
 
 def get_credits_by_address(
-    db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+    db, address: str, action: str = None, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the credits of an address
     :param str address: The address to return (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
+    :param str action: The action to filter by
     :param int cursor: The last index of the credits to return
     :param int limit: The maximum number of credits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    return select_rows(
-        db, "credits", where={"address": address}, last_cursor=cursor, limit=limit, offset=offset
-    )
+    where = {"address": address}
+    if action:
+        where["calling_function"] = action
+    return select_rows(db, "credits", where=where, last_cursor=cursor, limit=limit, offset=offset)
 
 
-def get_credits_by_asset(db, asset: str, cursor: int = None, limit: int = 100, offset: int = None):
+def get_credits_by_asset(
+    db, asset: str, action: str = None, cursor: int = None, limit: int = 100, offset: int = None
+):
     """
     Returns the credits of an asset
     :param str asset: The asset to return (e.g. UNNEGOTIABLE)
+    :param str action: The action to filter by
     :param int cursor: The last index of the credits to return
     :param int limit: The maximum number of credits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    return select_rows(
-        db, "credits", where={"asset": asset}, last_cursor=cursor, limit=limit, offset=offset
-    )
+    where = {"asset": asset}
+    if action:
+        where["calling_function"] = action
+    return select_rows(db, "credits", where=where, last_cursor=cursor, limit=limit, offset=offset)
 
 
 def get_debits_by_block(
-    db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
+    db,
+    block_index: int,
+    action: str = None,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the debits of a block
     :param int block_index: The index of the block to return (e.g. 840464)
+    :param str action: The action to filter by
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = {"block_index": block_index}
+    if action:
+        where["action"] = action
     return select_rows(
         db,
         "debits",
-        where={"block_index": block_index},
+        where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -613,31 +637,37 @@ def get_debits_by_block(
 
 
 def get_debits_by_address(
-    db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+    db, address: str, action: str = None, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the debits of an address
     :param str address: The address to return (e.g. bc1q7787j6msqczs58asdtetchl3zwe8ruj57p9r9y)
+    :param str action: The action to filter by
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    return select_rows(
-        db, "debits", where={"address": address}, last_cursor=cursor, limit=limit, offset=offset
-    )
+    where = {"address": address}
+    if action:
+        where["action"] = action
+    return select_rows(db, "debits", where=where, last_cursor=cursor, limit=limit, offset=offset)
 
 
-def get_debits_by_asset(db, asset: str, cursor: int = None, limit: int = 100, offset: int = None):
+def get_debits_by_asset(
+    db, asset: str, action: str = None, cursor: int = None, limit: int = 100, offset: int = None
+):
     """
     Returns the debits of an asset
     :param str asset: The asset to return (e.g. XCP)
+    :param str action: The action to filter by
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    return select_rows(
-        db, "debits", where={"asset": asset}, last_cursor=cursor, limit=limit, offset=offset
-    )
+    where = {"asset": asset}
+    if action:
+        where["action"] = action
+    return select_rows(db, "debits", where=where, last_cursor=cursor, limit=limit, offset=offset)
 
 
 def get_sends_by_block(
