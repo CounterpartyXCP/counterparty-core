@@ -314,6 +314,7 @@ def inject_normalized_quantities(result):
             "dispense_quantity",
             "burned",
             "earned",
+            "btc_amount",
         ]:
             if "params" in item:
                 item = item["params"]
