@@ -27,6 +27,7 @@ Note: A reparse from block 819250 is automatically launched during the update.
 * Add `transaction_count` field in `blocks` table.
 * Added the following indexes: `credits.calling_function`, `debits.action`, `transactions.source`
 * Remove checking of impossible edge case in `list_tx()` function.
+* Add `EVENT` log level
 
 ## API
 * Add following routes:
@@ -72,7 +73,7 @@ Note: A reparse from block 819250 is automatically launched during the update.
 * Add BTC sent in `DISPENSE` event.
 
 ## Command-Line Interface
-
+* `-v` for `DEBUG` level, `-vv` for `EVENT` level, `-vvv` for `TRACE` level
 
 # Credits
 * Ouziel Slama
