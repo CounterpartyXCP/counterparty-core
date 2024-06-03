@@ -27,7 +27,8 @@ Note: A reparse from block 819250 is automatically launched during the update.
 * Add `transaction_count` field in `blocks` table.
 * Added the following indexes: `credits.calling_function`, `debits.action`, `transactions.source`
 * Remove checking of impossible edge case in `list_tx()` function.
-* Add `EVENT` log level
+* Add `EVENT` log level.
+* Update Pyo3 to the latest version.
 
 ## API
 * Add following routes:
@@ -73,9 +74,12 @@ Note: A reparse from block 819250 is automatically launched during the update.
 * Excludes zero balances in the results of `/v2/addresses/<address>/balances`.
 * Excludes zero quantities in the results of `*/credits` and `*/debits`.
 * Add BTC sent in `DISPENSE` event.
+* Accept trailing slashes in routes.
+* Update and improve documentation.
 
 ## Command-Line Interface
 * `-v` for `DEBUG` level, `-vv` for `EVENT` level, `-vvv` for `TRACE` level
+* Clean CLI outputs for all commands
 
 # Credits
 * Ouziel Slama
