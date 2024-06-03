@@ -620,7 +620,7 @@ def get_credits_by_block(
     :param int limit: The maximum number of credits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = {"block_index": block_index}
+    where = {"block_index": block_index, "quantity__gt": 0}
     if action:
         where["calling_function"] = action
     return select_rows(
@@ -649,7 +649,7 @@ def get_credits_by_address(
     :param int limit: The maximum number of credits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = {"address": address}
+    where = {"address": address, "quantity__gt": 0}
     if action:
         where["calling_function"] = action
     return select_rows(db, "credits", where=where, last_cursor=cursor, limit=limit, offset=offset)
@@ -671,7 +671,7 @@ def get_credits_by_asset(
     :param int limit: The maximum number of credits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = {"asset": asset}
+    where = {"asset": asset, "quantity__gt": 0}
     if action:
         where["calling_function"] = action
     return select_rows(db, "credits", where=where, last_cursor=cursor, limit=limit, offset=offset)
@@ -693,7 +693,7 @@ def get_debits_by_block(
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = {"block_index": block_index}
+    where = {"block_index": block_index, "quantity__gt": 0}
     if action:
         where["action"] = action
     return select_rows(
@@ -722,7 +722,7 @@ def get_debits_by_address(
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = {"address": address}
+    where = {"address": address, "quantity__gt": 0}
     if action:
         where["action"] = action
     return select_rows(db, "debits", where=where, last_cursor=cursor, limit=limit, offset=offset)
@@ -744,7 +744,7 @@ def get_debits_by_asset(
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = {"asset": asset}
+    where = {"asset": asset, "quantity__gt": 0}
     if action:
         where["action"] = action
     return select_rows(db, "debits", where=where, last_cursor=cursor, limit=limit, offset=offset)

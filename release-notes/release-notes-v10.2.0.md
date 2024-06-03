@@ -71,6 +71,7 @@ Note: A reparse from block 819250 is automatically launched during the update.
 * Added an `event_name` filter for the `*/events` routes.
 * Add `issuer=None` in XCP and BTC asset information.
 * Excludes zero balances in the results of `/v2/addresses/<address>/balances`.
+* Excludes zero quantities in the results of `*/credits` and `*/debits`.
 * Add BTC sent in `DISPENSE` event.
 
 ## Command-Line Interface

@@ -1035,24 +1035,6 @@
                 "block_index": 310102,
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "XCP",
-                "quantity": 0,
-                "calling_function": "feed fee",
-                "event": "16462eac6c795cea6e5985ee063867d8c61ae24373df02048186d28118d25bae",
-                "tx_index": 103,
-                "block_time": 310102000,
-                "asset_info": {
-                    "divisible": true,
-                    "asset_longname": "Counterparty",
-                    "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
-                },
-                "quantity_normalized": "0"
-            },
-            {
-                "block_index": 310102,
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "XCP",
                 "quantity": 9,
                 "calling_function": "bet settled",
                 "event": "16462eac6c795cea6e5985ee063867d8c61ae24373df02048186d28118d25bae",
@@ -1066,24 +1048,6 @@
                     "issuer": null
                 },
                 "quantity_normalized": "9E-8"
-            },
-            {
-                "block_index": 310020,
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "XCP",
-                "quantity": 0,
-                "calling_function": "filled",
-                "event": "5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93",
-                "tx_index": 21,
-                "block_time": 310020000,
-                "asset_info": {
-                    "divisible": true,
-                    "asset_longname": "Counterparty",
-                    "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
-                },
-                "quantity_normalized": "0"
             },
             {
                 "block_index": 310016,
@@ -1195,7 +1159,7 @@
             }
         ],
         "next_cursor": null,
-        "result_count": 12
+        "result_count": 10
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/debits?verbose=true": {
         "result": [
@@ -1488,24 +1452,6 @@
                 "quantity_normalized": "1"
             },
             {
-                "block_index": 310005,
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "XCP",
-                "quantity": 0,
-                "action": "issuance fee",
-                "event": "344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc",
-                "tx_index": 6,
-                "block_time": 310005000,
-                "asset_info": {
-                    "divisible": true,
-                    "asset_longname": "Counterparty",
-                    "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
-                },
-                "quantity_normalized": "0"
-            },
-            {
                 "block_index": 310004,
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "XCP",
@@ -1579,7 +1525,7 @@
             }
         ],
         "next_cursor": null,
-        "result_count": 21
+        "result_count": 20
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/bets?verbose=true": {
         "result": [
