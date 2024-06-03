@@ -203,7 +203,6 @@ def optimize(db):
 
 
 def close(db):
-    optimize(db)
     logger.info("Closing database...")
     db.close()
 

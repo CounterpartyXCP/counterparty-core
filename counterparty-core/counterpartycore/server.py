@@ -727,6 +727,7 @@ def start_all(args):
         db = database.initialise_db()
         blocks.initialise(db)
         blocks.check_database_version(db)
+        database.optimize(db)
 
         # check software version
         check.software_version()
