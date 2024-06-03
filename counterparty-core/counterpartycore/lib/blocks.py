@@ -224,9 +224,7 @@ def parse_block(
     block_index,
     block_time,
     previous_ledger_hash=None,
-    ledger_hash=None,
     previous_txlist_hash=None,
-    txlist_hash=None,
     previous_messages_hash=None,
     reparsing=False,
 ):
@@ -257,7 +255,8 @@ def parse_block(
         {"block_index": block_index},
     )
     txlist = []
-    for tx in list(cursor):
+    transactions = cursor.fetchall()
+    for tx in transactions:
         try:
             # Add manual event to journal because transaction already exists
             if reparsing:
@@ -304,13 +303,18 @@ def parse_block(
         )
         update_block_query = """
             UPDATE blocks
-            SET txlist_hash=:txlist_hash, ledger_hash=:ledger_hash, messages_hash=:messages_hash
+            SET 
+                txlist_hash=:txlist_hash,
+                ledger_hash=:ledger_hash,
+                messages_hash=:messages_hash,
+                transaction_count=:transaction_count
             WHERE block_index=:block_index
         """
         update_block_bindings = {
             "txlist_hash": new_txlist_hash,
             "ledger_hash": new_ledger_hash,
             "messages_hash": new_messages_hash,
+            "transaction_count": len(transactions),
             "block_index": block_index,
         }
         cursor.execute(update_block_query, update_block_bindings)
@@ -327,6 +331,7 @@ def parse_block(
                 "ledger_hash": new_ledger_hash,
                 "txlist_hash": new_txlist_hash,
                 "messages_hash": new_messages_hash,
+                "transaction_count": len(transactions),
             },
         )
 
@@ -370,8 +375,12 @@ def initialise(db):
                       block_index INTEGER UNIQUE,
                       block_hash TEXT UNIQUE,
                       block_time INTEGER,
+                      ledger_hash TEXT,
+                      txlist_hash TEXT,
+                      messages_hash TEXT,
                       previous_block_hash TEXT UNIQUE,
                       difficulty INTEGER,
+                      transaction_count INTEGER,
                       PRIMARY KEY (block_index, block_hash))
                    """)
 
@@ -387,6 +396,17 @@ def initialise(db):
         cursor.execute("""ALTER TABLE blocks ADD COLUMN previous_block_hash TEXT""")
     if "difficulty" not in block_columns:
         cursor.execute("""ALTER TABLE blocks ADD COLUMN difficulty TEXT""")
+    if "transaction_count" not in block_columns:
+        logger.info("Adding transaction_count column to blocks table...")
+        cursor.execute("""ALTER TABLE blocks ADD COLUMN transaction_count INTEGER""")
+        cursor.execute("""
+            UPDATE blocks SET 
+                transaction_count = (
+                       SELECT COUNT(*)
+                       FROM transactions
+                       WHERE transactions.block_index = blocks.block_index
+                )
+        """)
 
     database.create_indexes(
         cursor,

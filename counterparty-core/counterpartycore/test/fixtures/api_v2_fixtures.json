@@ -5,101 +5,111 @@
                 "block_index": 310500,
                 "block_hash": "54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b",
                 "block_time": 310500000,
-                "previous_block_hash": null,
-                "difficulty": null,
                 "ledger_hash": "5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d",
                 "txlist_hash": "35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1",
-                "messages_hash": "45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f"
+                "messages_hash": "45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f",
+                "previous_block_hash": null,
+                "difficulty": null,
+                "transaction_count": 0
             },
             {
                 "block_index": 310499,
                 "block_hash": "1950e1a4d7fc820ed9603f6df6819c3c953c277c726340dec2a4253e261a1764",
                 "block_time": 310499000,
-                "previous_block_hash": null,
-                "difficulty": null,
                 "ledger_hash": "b9fcbdafddd46fdda061f6e9f8744b426b6ca37e32b315df1098cbc7899ae9b9",
                 "txlist_hash": "032166892f568bb97f4f69ef5bdf49cc1b15cc9f8c7f6c1f3e1f9d54816ad7e5",
-                "messages_hash": "d6aedacd4f81520d86ae47c9c776d17a213c706a5cf7c91203a4299261d1648c"
+                "messages_hash": "d6aedacd4f81520d86ae47c9c776d17a213c706a5cf7c91203a4299261d1648c",
+                "previous_block_hash": null,
+                "difficulty": null,
+                "transaction_count": 0
             },
             {
                 "block_index": 310498,
                 "block_hash": "b7058b6d1ddc325a10bf33144937e06ce6025215b416518ae120da9440ae279e",
                 "block_time": 310498000,
-                "previous_block_hash": null,
-                "difficulty": null,
                 "ledger_hash": "5fe6cdb0828379bf240fad99c68bba34e1889bbc19605ce5c297b82352264414",
                 "txlist_hash": "b488f6f0e6c233f202ee17c0843236d464144e79c870af88bae56355ae9372b7",
-                "messages_hash": "113207bd13dda56b5e5edf305f70a56e62cc861184e1e95a64e79ce100462c98"
+                "messages_hash": "113207bd13dda56b5e5edf305f70a56e62cc861184e1e95a64e79ce100462c98",
+                "previous_block_hash": null,
+                "difficulty": null,
+                "transaction_count": 1
             },
             {
                 "block_index": 310497,
                 "block_hash": "f1118591fe79b8bf52ccf0c5de9826bfd266b1fdc24b44676cf22bbcc76d464e",
                 "block_time": 310497000,
-                "previous_block_hash": null,
-                "difficulty": null,
                 "ledger_hash": "28c6e92b2299b9cbbb5953f8b7ff3de0fe962d15642ba27e43faa64e1935e819",
                 "txlist_hash": "ff8136601b9e0138a999d1f0467af6e8535a2bcdd2b622af7be0178a083b9519",
-                "messages_hash": "ac8d8759fbddc8f92ad8b5d8b4637a63b8d21a04ba1a4126baf2b42a87edfce3"
+                "messages_hash": "ac8d8759fbddc8f92ad8b5d8b4637a63b8d21a04ba1a4126baf2b42a87edfce3",
+                "previous_block_hash": null,
+                "difficulty": null,
+                "transaction_count": 1
             },
             {
                 "block_index": 310496,
                 "block_hash": "65884816927e8c566655e85c07bc2bc2c7ee26e625742f219939d43238fb31f8",
                 "block_time": 310496000,
-                "previous_block_hash": null,
-                "difficulty": null,
                 "ledger_hash": "7ac6121c624b634f44695172761830926afe76bb18c4cc9195773f3a26966941",
                 "txlist_hash": "9eda85cce745579122ba9c6e24b63cd83f2e5161031a34e6ee9bf08b80823cb4",
-                "messages_hash": "1b1ed76f99d39b36f4d0737299ce15b21fed9e077d0476658c023b09819853a7"
+                "messages_hash": "1b1ed76f99d39b36f4d0737299ce15b21fed9e077d0476658c023b09819853a7",
+                "previous_block_hash": null,
+                "difficulty": null,
+                "transaction_count": 1
             },
             {
                 "block_index": 310495,
                 "block_hash": "4769aa7030f28a05a137a85ef4ee0c1765c37013773212b93ec90f1227168b67",
                 "block_time": 310495000,
-                "previous_block_hash": null,
-                "difficulty": null,
                 "ledger_hash": "5a7e5a36882466373d576bb5f4ccd1bc72ecaf548b9589baa803a7275a7a24cd",
                 "txlist_hash": "09e9db121649cacd979fd18bbaa35e519361e727e7e072e2f2f86291160cdb29",
-                "messages_hash": "56518bc9abc11bf108188834058bb9c51c9b8dc3b6276116c5b786b07c797fab"
+                "messages_hash": "56518bc9abc11bf108188834058bb9c51c9b8dc3b6276116c5b786b07c797fab",
+                "previous_block_hash": null,
+                "difficulty": null,
+                "transaction_count": 1
             },
             {
                 "block_index": 310494,
                 "block_hash": "7dda1d3e12785313d5651ee5314d0aecf17588196f9150b10c55695dbaebee5d",
                 "block_time": 310494000,
-                "previous_block_hash": null,
-                "difficulty": null,
                 "ledger_hash": "72d71bd72263699ea9f2b097ad141be5bc394f49d8b0b0a6b2ff6a87b0ee3919",
                 "txlist_hash": "9350c3ba33d0546d1194c5fa767ced28834b26246aedc56d89b1d48ec4f26014",
-                "messages_hash": "0d3c87692d49dc033eed975eb8b8ee17ff2f0f877c8ed5a5866f73ce63bf8715"
+                "messages_hash": "0d3c87692d49dc033eed975eb8b8ee17ff2f0f877c8ed5a5866f73ce63bf8715",
+                "previous_block_hash": null,
+                "difficulty": null,
+                "transaction_count": 1
             },
             {
                 "block_index": 310493,
                 "block_hash": "c19e2915b750279b2be4b52e57e5ce29f63dffb4e14d9aad30c9e820affc0cbf",
                 "block_time": 310493000,
-                "previous_block_hash": null,
-                "difficulty": null,
                 "ledger_hash": "29119cd30a4733916fbfd0551506eaa16f7bb1bdfbdf8d17ac4e5bb20d1cb09c",
                 "txlist_hash": "7ec4cfa94544900c8e8732ad51be7cee6452aa1884ea940cd5c98862fb4aaba6",
-                "messages_hash": "53a339feb73df3a98bc4acc84af77e111d4780533c8f5a26cf250594d9613cf2"
+                "messages_hash": "53a339feb73df3a98bc4acc84af77e111d4780533c8f5a26cf250594d9613cf2",
+                "previous_block_hash": null,
+                "difficulty": null,
+                "transaction_count": 1
             },
             {
                 "block_index": 310492,
                 "block_hash": "8a09b2faf0a7ad67eb4ab5c948b9769fc87eb2ec5e16108f2cde8bd9e6cf7607",
                 "block_time": 310492000,
-                "previous_block_hash": null,
-                "difficulty": null,
                 "ledger_hash": "98af18583618fdeed545347c013763d068e8294405d265911cc5e1bc420bc740",
                 "txlist_hash": "daf4d2c1a1ad5206abcf7744bdd06fae99c442fb2607a843dcabb5727d02916e",
-                "messages_hash": "0d34fbc26126add5a57b7e8f6f71bad150d7232abf046f3fa9b1fc72b10d61b2"
+                "messages_hash": "0d34fbc26126add5a57b7e8f6f71bad150d7232abf046f3fa9b1fc72b10d61b2",
+                "previous_block_hash": null,
+                "difficulty": null,
+                "transaction_count": 1
             },
             {
                 "block_index": 310491,
                 "block_hash": "811abd7cf2b768cfdaa84ab44c63f4463c96a368ead52125bf149cf0c7447b16",
                 "block_time": 310491000,
-                "previous_block_hash": null,
-                "difficulty": null,
                 "ledger_hash": "3114d8091cfcaa9944c6fab49d51950535c4ef269877d58c372ed80b2b472ec6",
                 "txlist_hash": "f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8",
-                "messages_hash": "9671cfedb3124b67ed996c547cb26a32e95490009ad56065c79be54a28c45994"
+                "messages_hash": "9671cfedb3124b67ed996c547cb26a32e95490009ad56065c79be54a28c45994",
+                "previous_block_hash": null,
+                "difficulty": null,
+                "transaction_count": 1
             }
         ],
         "next_cursor": 310490,
@@ -110,11 +120,12 @@
             "block_index": 310500,
             "block_hash": "54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b",
             "block_time": 310500000,
-            "previous_block_hash": null,
-            "difficulty": null,
             "ledger_hash": "5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d",
             "txlist_hash": "35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1",
-            "messages_hash": "45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f"
+            "messages_hash": "45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f",
+            "previous_block_hash": null,
+            "difficulty": null,
+            "transaction_count": 0
         }
     },
     "http://localhost:10009/v2/blocks/310491?verbose=true": {
@@ -122,11 +133,12 @@
             "block_index": 310491,
             "block_hash": "811abd7cf2b768cfdaa84ab44c63f4463c96a368ead52125bf149cf0c7447b16",
             "block_time": 310491000,
-            "previous_block_hash": null,
-            "difficulty": null,
             "ledger_hash": "3114d8091cfcaa9944c6fab49d51950535c4ef269877d58c372ed80b2b472ec6",
             "txlist_hash": "f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8",
-            "messages_hash": "9671cfedb3124b67ed996c547cb26a32e95490009ad56065c79be54a28c45994"
+            "messages_hash": "9671cfedb3124b67ed996c547cb26a32e95490009ad56065c79be54a28c45994",
+            "previous_block_hash": null,
+            "difficulty": null,
+            "transaction_count": 1
         }
     },
     "http://localhost:10009/v2/blocks/54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b?verbose=true": {
@@ -134,11 +146,12 @@
             "block_index": 310500,
             "block_hash": "54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b",
             "block_time": 310500000,
-            "previous_block_hash": null,
-            "difficulty": null,
             "ledger_hash": "5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d",
             "txlist_hash": "35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1",
-            "messages_hash": "45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f"
+            "messages_hash": "45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f",
+            "previous_block_hash": null,
+            "difficulty": null,
+            "transaction_count": 0
         }
     },
     "http://localhost:10009/v2/blocks/310491/transactions?verbose=true": {
@@ -183,6 +196,7 @@
                     "block_index": 310491,
                     "ledger_hash": "3114d8091cfcaa9944c6fab49d51950535c4ef269877d58c372ed80b2b472ec6",
                     "messages_hash": "9671cfedb3124b67ed996c547cb26a32e95490009ad56065c79be54a28c45994",
+                    "transaction_count": 1,
                     "txlist_hash": "f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8",
                     "block_time": 310491000
                 },
@@ -3597,6 +3611,7 @@
                     "block_index": 310500,
                     "ledger_hash": "5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d",
                     "messages_hash": "45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f",
+                    "transaction_count": 0,
                     "txlist_hash": "35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1",
                     "block_time": 310500000
                 },
@@ -3629,6 +3644,7 @@
                     "block_index": 310499,
                     "ledger_hash": "b9fcbdafddd46fdda061f6e9f8744b426b6ca37e32b315df1098cbc7899ae9b9",
                     "messages_hash": "d6aedacd4f81520d86ae47c9c776d17a213c706a5cf7c91203a4299261d1648c",
+                    "transaction_count": 0,
                     "txlist_hash": "032166892f568bb97f4f69ef5bdf49cc1b15cc9f8c7f6c1f3e1f9d54816ad7e5",
                     "block_time": 310499000
                 },
@@ -3661,6 +3677,7 @@
                     "block_index": 310498,
                     "ledger_hash": "5fe6cdb0828379bf240fad99c68bba34e1889bbc19605ce5c297b82352264414",
                     "messages_hash": "113207bd13dda56b5e5edf305f70a56e62cc861184e1e95a64e79ce100462c98",
+                    "transaction_count": 1,
                     "txlist_hash": "b488f6f0e6c233f202ee17c0843236d464144e79c870af88bae56355ae9372b7",
                     "block_time": 310498000
                 },
