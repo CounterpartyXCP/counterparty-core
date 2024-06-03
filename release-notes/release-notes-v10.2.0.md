@@ -78,8 +78,8 @@ Note: A reparse from block 819250 is automatically launched during the update.
 * Update and improve documentation.
 
 ## Command-Line Interface
-* `-v` for `DEBUG` level, `-vv` for `EVENT` level, `-vvv` for `TRACE` level
-* Clean CLI outputs for all commands
+* `-v` for `DEBUG` level, `-vv` for `EVENT` level, `-vvv` for `TRACE` level. It is also possible to repeat the `--verbose` flag as many times as necessary.
+* Clean CLI outputs for all commands.
 
 # Credits
 * Ouziel Slama
