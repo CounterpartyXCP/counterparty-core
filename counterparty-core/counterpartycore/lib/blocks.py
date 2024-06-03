@@ -835,14 +835,6 @@ def list_tx(
     assert type(tx_hash) == str  # noqa: E721
     cursor = db.cursor()
 
-    # Edge case: confirmed tx_hash also in mempool
-    # TODO: This is dog-slow.
-    if block_parser is None:  # skip on kickstart
-        cursor.execute("""SELECT * FROM transactions WHERE tx_hash = ?""", (tx_hash,))
-        transactions = list(cursor)
-        if transactions:
-            return tx_index
-
     source, destination, btc_amount, fee, data, dispensers_outs = get_tx_info(
         db, decoded_tx, block_index, block_parser=block_parser
     )
