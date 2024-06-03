@@ -3,6 +3,8 @@ use pyo3::{
     IntoPy, PyObject, Python,
 };
 
+use super::config::Config;
+
 #[derive(Clone)]
 pub struct Vin {
     pub hash: String, // prev output txid
@@ -121,5 +123,5 @@ impl IntoPy<PyObject> for Block {
 }
 
 pub trait ToBlock {
-    fn to_block(&self, height: u32) -> Block;
+    fn to_block(&self, config: Config, height: u32) -> Block;
 }

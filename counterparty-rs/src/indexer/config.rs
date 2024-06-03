@@ -56,6 +56,7 @@ pub struct Config {
     pub consume_blocks: bool,
     pub start_height: Option<u32>,
     pub mode: Mode,
+    pub prefix: Vec<u8>,
 }
 
 impl<'source> FromPyObject<'source> for Config {
@@ -94,12 +95,17 @@ impl<'source> FromPyObject<'source> for Config {
 
         let mode = match dict.get_item("mode") {
             Ok(Some(item)) => item.extract()?,
-            _ => Mode::Fetcher, // Default to Fetcher if not provided or in case of an error
+            _ => Mode::Fetcher,
         };
 
         let log_level = match dict.get_item("log_level") {
             Ok(Some(item)) => item.extract()?,
-            _ => LogLevel(Level::INFO), // Default to INFO if not provided or in case of an error
+            _ => LogLevel(Level::INFO),
+        };
+
+        let prefix = match dict.get_item("prefix") {
+            Ok(Some(item)) => item.extract::<Vec<u8>>()?,
+            _ => b"CNTRPRTY".to_vec(),
         };
 
         Ok(Config {
@@ -112,6 +118,7 @@ impl<'source> FromPyObject<'source> for Config {
             consume_blocks,
             start_height,
             mode,
+            prefix,
         })
     }
 }

@@ -2,7 +2,7 @@ use bitcoincore_rpc::bitcoin::BlockHash;
 use crossbeam_channel::{Receiver, Sender};
 
 use crate::indexer::block::{Block, ToBlock};
-use crate::indexer::config::Mode;
+use crate::indexer::config::{Config, Mode};
 
 use super::{
     entry::{ToEntry, TxidVoutPrefix},
@@ -91,16 +91,16 @@ impl<B> HasHash for PipelineDataWithBlock<B> {
     }
 }
 
-impl<B: BlockHasEntries + ToBlock> Transition<Box<PipelineDataWithEntries<B>>, Mode, ()>
+impl<B: BlockHasEntries + ToBlock> Transition<Box<PipelineDataWithEntries<B>>, (Mode, Config), ()>
     for PipelineDataWithBlock<B>
 {
     fn transition(
         self: Box<Self>,
-        mode: Mode,
+        (mode, config): (Mode, Config),
     ) -> Result<((), Box<PipelineDataWithEntries<B>>), Error> {
         let height = self.get_height();
         let entries = self.block.get_entries(mode, height);
-        let block = self.block.to_block(height);
+        let block = self.block.to_block(config, height);
         Ok((
             (),
             Box::new(PipelineDataWithEntries {

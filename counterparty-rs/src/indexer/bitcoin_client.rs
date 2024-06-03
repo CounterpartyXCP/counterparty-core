@@ -1,3 +1,4 @@
+use core::slice::SlicePattern;
 use std::{collections::HashMap, sync::Arc, thread::JoinHandle};
 
 use bitcoin::hashes::hex::ToHex;
@@ -5,11 +6,16 @@ use bitcoincore_rpc::{
     bitcoin::{
         consensus::serialize,
         hashes::{sha256d::Hash as Sha256dHash, Hash},
+        opcodes::all::{OP_CHECKMULTISIG, OP_CHECKSIG, OP_DUP, OP_EQUALVERIFY, OP_HASH160},
+        script::Instruction::{Op, PushBytes},
         Block, BlockHash,
     },
     Auth, Client, RpcApi,
 };
 use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
+use crypto::buffer::{RefReadBuffer, RefWriteBuffer, WriteBuffer};
+use crypto::rc4::Rc4;
+use crypto::symmetriccipher::Decryptor;
 
 use super::{
     block::{Block as CrateBlock, ToBlock, Transaction, Vin, Vout},
@@ -69,14 +75,18 @@ impl BlockHasEntries for Block {
 }
 
 impl ToBlock for Block {
-    fn to_block(&self, height: u32) -> CrateBlock {
+    fn to_block(&self, config: Config, height: u32) -> CrateBlock {
         let mut transactions = Vec::new();
         for tx in self.txdata.iter() {
             let tx_bytes = serialize(tx);
             let mut vins = Vec::new();
             let mut segwit = false;
             let mut vtxinwit = Vec::new();
+            let mut key = Vec::new();
             for vin in tx.input.iter() {
+                if key.len() == 0 {
+                    key = vin.previous_output.txid.to_byte_array().to_vec();
+                }
                 let hash = vin.previous_output.txid.to_hex();
                 if !vin.witness.is_empty() {
                     vtxinwit
@@ -91,11 +101,64 @@ impl ToBlock for Block {
                 })
             }
             let mut vouts = Vec::new();
+            let mut fee = 0;
             for vout in tx.output.iter() {
                 vouts.push(Vout {
                     value: vout.value.to_sat(),
                     script_pub_key: vout.script_pubkey.to_bytes(),
-                })
+                });
+
+                let output_value = vout.value.to_sat();
+                let fee = fee - output_value;
+                let script = vout.script_pubkey;
+                let mut data = None;
+                if script.is_op_return() {
+                    for result in script.instructions().into_iter() {
+                        if let Ok(i) = result {
+                            if let PushBytes(pb) = i {
+                                let mut read_buf = RefReadBuffer::new(pb.as_bytes());
+                                let mut write_buf = RefWriteBuffer::new(&mut Vec::new());
+                                Rc4::new(&key)
+                                    .decrypt(&mut read_buf, &mut write_buf, false)
+                                    .expect("RC4 decryption failed");
+                                let bytes = write_buf
+                                    .take_remaining()
+                                    .iter()
+                                    .map(|&i| i)
+                                    .collect::<Vec<_>>();
+                                if bytes.starts_with(&config.prefix) {
+                                    data = Some(bytes[config.prefix.len()..].to_vec());
+                                }
+                            }
+                        }
+                    }
+                } else if let Some(Ok(Op(OP_CHECKSIG))) = script.instructions().next() {
+                    match script
+                        .instructions()
+                        .into_iter()
+                        .collect::<Vec<_>>()
+                        .as_slice()
+                    {
+                        [Ok(Op(OP_DUP)), Ok(Op(OP_HASH160)), Ok(PushBytes(pb)), Ok(Op(OP_EQUALVERIFY)), Ok(Op(OP_CHECKSIG))] =>
+                        {
+                            todo!()
+                        }
+                        _ => continue,
+                    }
+                } else if script.is_multisig() {
+                    match script
+                        .instructions()
+                        .into_iter()
+                        .collect::<Vec<_>>()
+                        .as_slice()
+                    {
+                        [Ok(PushBytes(sigs_req_pb)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(Op(OP_CHECKMULTISIG))] =>
+                            {}
+                        [Ok(PushBytes(sigs_req_pb)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(PushBytes(pk4_pb)), Ok(Op(OP_CHECKMULTISIG))] =>
+                            {}
+                        _ => continue,
+                    }
+                }
             }
             transactions.push(Transaction {
                 version: tx.version.0,
