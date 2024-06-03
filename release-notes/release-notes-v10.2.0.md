@@ -68,6 +68,7 @@ Note: A reparse from block 819250 is automatically launched during the update.
 * Database connection pooling.
 * If `verbose=true`, enrich results containing `block_index` with `block_time`.
 * Added an `action` filter for the `*/credits` and `*/debits` routes.
+* Added an `event_name` filter for the `*/events` routes.
 * Add `issuer=None` in XCP and BTC asset information.
 * Excludes zero balances in the results of `/v2/addresses/<address>/balances`.
 * Add BTC sent in `DISPENSE` event.
