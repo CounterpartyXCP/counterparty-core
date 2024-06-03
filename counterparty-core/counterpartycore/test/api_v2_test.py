@@ -81,7 +81,9 @@ def test_api_v2(request):
         url = url.replace("<block_hash>", block_hash)
         url = url.replace("<dividend_hash>", dividend_hash)
         if route.startswith("/v2/events"):
-            url += "?limit=5"
+            url += "?limit=5&verbose=true"
+        else:
+            url += "?verbose=true"
         print(url)
         result = requests.get(url)  # noqa: S113
         results[url] = result.json()
