@@ -887,6 +887,10 @@ CREATE INDEX credits_asset_idx ON credits (asset)
         ;
 CREATE INDEX credits_block_index_idx ON credits (block_index)
         ;
+CREATE INDEX credits_calling_function_idx ON credits (calling_function)
+        ;
+CREATE INDEX credits_event_idx ON credits (event)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -945,11 +949,15 @@ CREATE TRIGGER block_update_debits
                            BEFORE UPDATE ON debits BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
+CREATE INDEX debits_action_idx ON debits (action)
+        ;
 CREATE INDEX debits_address_idx ON debits (address)
         ;
 CREATE INDEX debits_asset_idx ON debits (asset)
         ;
 CREATE INDEX debits_block_index_idx ON debits (block_index)
+        ;
+CREATE INDEX debits_event_idx ON debits (event)
         ;
 
 COMMIT TRANSACTION;

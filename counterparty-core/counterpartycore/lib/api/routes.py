@@ -56,6 +56,7 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/assets": queries.get_valid_assets_by_issuer,
         "/v2/addresses/<address>/transactions": queries.get_transactions_by_address,
         "/v2/addresses/<address>/dividends": queries.get_dividends_distributed_by_address,
+        "/v2/addresses/<address>/orders": queries.get_orders_by_address,
         ### /addresses/<address>/compose/ ###
         "/v2/addresses/<address>/compose/bet": transaction.compose_bet,
         "/v2/addresses/<address>/compose/broadcast": transaction.compose_broadcast,

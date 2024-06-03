@@ -1732,6 +1732,112 @@
         "next_cursor": 15,
         "result_count": 25
     },
+    "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dividends": {
+        "result": [],
+        "next_cursor": null,
+        "result_count": 0
+    },
+    "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/orders": {
+        "result": [
+            {
+                "tx_index": 492,
+                "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
+                "block_index": 310492,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "give_asset": "XCP",
+                "give_quantity": 100000000,
+                "give_remaining": 0,
+                "get_asset": "BTC",
+                "get_quantity": 800000,
+                "get_remaining": 0,
+                "expiration": 2000,
+                "expire_index": 312491,
+                "fee_required": 900000,
+                "fee_required_remaining": 892800,
+                "fee_provided": 6800,
+                "fee_provided_remaining": 6800,
+                "status": "open"
+            },
+            {
+                "tx_index": 12,
+                "tx_hash": "a1768d7db2db3b9732b26df8c04db4b9a8535a1e5cf684a680e81e7c06f394b6",
+                "block_index": 310011,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "give_asset": "BTC",
+                "give_quantity": 666667,
+                "give_remaining": 666667,
+                "get_asset": "XCP",
+                "get_quantity": 100000000,
+                "get_remaining": 100000000,
+                "expiration": 2000,
+                "expire_index": 312011,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 1000000,
+                "fee_provided_remaining": 1000000,
+                "status": "open"
+            },
+            {
+                "tx_index": 11,
+                "tx_hash": "1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a",
+                "block_index": 310010,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "give_asset": "XCP",
+                "give_quantity": 100000000,
+                "give_remaining": 100000000,
+                "get_asset": "BTC",
+                "get_quantity": 1000000,
+                "get_remaining": 1000000,
+                "expiration": 2000,
+                "expire_index": 312010,
+                "fee_required": 900000,
+                "fee_required_remaining": 900000,
+                "fee_provided": 6800,
+                "fee_provided_remaining": 6800,
+                "status": "open"
+            },
+            {
+                "tx_index": 10,
+                "tx_hash": "21460d5c07284f9be9baf824927d0d4e4eb790e297f3162305841607b672349b",
+                "block_index": 310009,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "give_asset": "XCP",
+                "give_quantity": 100000000,
+                "give_remaining": 100000000,
+                "get_asset": "DIVISIBLE",
+                "get_quantity": 100000000,
+                "get_remaining": 100000000,
+                "expiration": 2000,
+                "expire_index": 312009,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 6800,
+                "fee_provided_remaining": 6800,
+                "status": "open"
+            },
+            {
+                "tx_index": 7,
+                "tx_hash": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8",
+                "block_index": 310006,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "give_asset": "XCP",
+                "give_quantity": 100000000,
+                "give_remaining": 100000000,
+                "get_asset": "DIVISIBLE",
+                "get_quantity": 100000000,
+                "get_remaining": 100000000,
+                "expiration": 2000,
+                "expire_index": 312006,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 6800,
+                "fee_provided_remaining": 6800,
+                "status": "open"
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 5
+    },
     "http://localhost:10009/v2/assets": {
         "result": [
             {
@@ -2455,6 +2561,11 @@
         }
     },
     "http://localhost:10009/v2/dispensers/9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec/dispenses": {
+        "result": [],
+        "next_cursor": null,
+        "result_count": 0
+    },
+    "http://localhost:10009/v2/dividends": {
         "result": [],
         "next_cursor": null,
         "result_count": 0

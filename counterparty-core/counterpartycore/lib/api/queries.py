@@ -1319,10 +1319,14 @@ def get_dividends(db, cursor: int = None, limit: int = 100, offset: int = None):
     :param int limit: The maximum number of dividend to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    cursorsb = db.cursor()
+    cursorsb.execute("SELECT * FROM dividends")
+    print(cursorsb.fetchall())
+
     return select_rows(
         db,
         "dividends",
-        where={"status": "valid"},
+        # where={"status": "valid"},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1458,6 +1462,30 @@ def get_orders_by_asset(
         db,
         "orders",
         where=[{"give_asset": asset}, {"get_asset": asset}],
+        wrap_where={"status": status},
+        select="*, MAX(rowid) AS rowid",
+        group_by="tx_hash",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_orders_by_address(
+    db, address: str, status: str = "open", cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the orders of an address
+    :param str address: The address to return (e.g. 1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk)
+    :param str status: The status of the orders to return (e.g. filled)
+    :param int cursor: The last index of the orders to return
+    :param int limit: The maximum number of orders to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        db,
+        "orders",
+        where={"source": address},
         wrap_where={"status": status},
         select="*, MAX(rowid) AS rowid",
         group_by="tx_hash",
