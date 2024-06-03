@@ -1408,7 +1408,6 @@ def get_dividends(db, cursor: int = None, limit: int = 100, offset: int = None):
     """
     cursorsb = db.cursor()
     cursorsb.execute("SELECT * FROM dividends")
-    print(cursorsb.fetchall())
 
     return select_rows(
         db,

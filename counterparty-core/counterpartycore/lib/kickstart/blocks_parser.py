@@ -174,7 +174,6 @@ class BlockchainParser:
             self.data_stream.seek_file(pos_in_file)
 
     def read_raw_block(self, block_hash, only_header=False, use_txid=True):
-        # print('Reading raw block:', block_hash, only_header)
         block_key = bytes("b", "utf-8") + binascii.unhexlify(inverse_hash(block_hash))
         block_data = self.blocks_leveldb.get(block_key)
         ds = BCDataStream()

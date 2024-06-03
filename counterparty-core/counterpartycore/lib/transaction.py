@@ -821,8 +821,7 @@ class TransactionService:
                 txid_ba = bytearray(ptx.GetTxid())
                 txid_ba.reverse()
                 pretx_txid = bytes(txid_ba)  # gonna leave the malleability problem to upstream
-                self.logger.debug(f"pretx_txid {pretx_txid}")
-                print("pretx txid:", binascii.hexlify(pretx_txid))
+                self.logger.trace("pretx_txid: %s", binascii.hexlify(pretx_txid))
 
             if unsigned_pretx:
                 # we set a long lock on this, don't want other TXs to spend from it
