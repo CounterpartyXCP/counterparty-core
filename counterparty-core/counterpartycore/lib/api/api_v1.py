@@ -499,8 +499,8 @@ class APIStatusPoller(threading.Thread):
     def stop(self):
         logger.info("Stopping API Status Poller...")
         self.stopping = True
-        self.db.close()
         self.join()
+        self.db.close()
 
     def run(self):
         logger.debug("Starting API Status Poller...")
