@@ -3,6 +3,7 @@ import inspect
 import json
 import logging
 import time
+import typing
 from logging import handlers as logging_handlers
 
 import flask
@@ -205,6 +206,9 @@ def prepare_route_args(function):
         else:
             route_arg["required"] = True
         route_arg["type"] = arg.annotation.__name__
+        if route_arg["type"] == "Literal":
+            route_arg["type"] = "enum[str]"
+            route_arg["members"] = list(typing.get_args(annotation))
         if arg_name in args_description:
             route_arg["description"] = args_description[arg_name]
         args.append(route_arg)
@@ -255,7 +259,7 @@ def divide(value1, value2):
     return D(value1) / D(value2)
 
 
-def inject_issuance(db, result):
+def inject_issuances_and_block_times(db, result):
     # let's work with a list
     result_list = result
     result_is_dict = False
@@ -263,9 +267,22 @@ def inject_issuance(db, result):
         result_list = [result]
         result_is_dict = True
 
-    # gather asset list
+    # gather asset list and block indexes
     asset_list = []
+    block_indexes = []
     for result_item in result_list:
+        if "block_index" in result_item:
+            result_item["block_index"] = int(result_item["block_index"])
+        if "params" in result_item and "block_index" in result_item["params"]:
+            result_item["params"]["block_index"] = int(result_item["params"]["block_index"])
+        if "block_index" in result_item and result_item["block_index"] not in block_indexes:
+            block_indexes.append(result_item["block_index"])
+        if (
+            "params" in result_item
+            and "block_index" in result_item["params"]
+            and result_item["params"]["block_index"] not in block_indexes
+        ):
+            block_indexes.append(result_item["params"]["block_index"])
         if "asset_longname" in result_item and "description" in result_item:
             continue
         item = result_item
@@ -279,9 +296,16 @@ def inject_issuance(db, result):
     # get asset issuances
     issuance_by_asset = ledger.get_assets_last_issuance(db, asset_list)
 
-    # inject issuance
+    # get block_time for each block_index
+    block_times = ledger.get_blocks_time(db, block_indexes)
+
+    # inject issuance and block_time
     for result_item in result_list:
         item = result_item
+        if "block_index" in item:
+            item["block_time"] = block_times[item["block_index"]]
+        if "params" in item and "block_index" in item["params"]:
+            item["params"]["block_time"] = block_times[item["params"]["block_index"]]
         if "params" in item:
             item = item["params"]
         for field_name in ["asset", "give_asset", "get_asset"]:
@@ -312,6 +336,9 @@ def inject_normalized_quantities(result):
             "give_remaining",
             "escrow_quantity",
             "dispense_quantity",
+            "burned",
+            "earned",
+            "btc_amount",
         ]:
             if "params" in item:
                 item = item["params"]
@@ -319,20 +346,25 @@ def inject_normalized_quantities(result):
                 item = result_item["dispenser"]
             if field_name not in item:
                 continue
-            issuance_field_name = (
-                field_name.replace("quantity", "asset").replace("remaining", "asset") + "_info"
-            )
-            if issuance_field_name not in item:
-                issuance_field_name = "asset_info"
-            if issuance_field_name not in item and issuance_field_name not in result_item:
-                continue
-            if issuance_field_name not in item:
-                is_divisible = result_item[issuance_field_name]["divisible"]
-            else:
-                is_divisible = item[issuance_field_name]["divisible"]
+
+            is_divisible = True
+            if field_name not in ["burned", "earned"]:
+                issuance_field_name = (
+                    field_name.replace("quantity", "asset").replace("remaining", "asset") + "_info"
+                )
+                if issuance_field_name not in item:
+                    issuance_field_name = "asset_info"
+                if issuance_field_name not in item and issuance_field_name not in result_item:
+                    continue
+                if issuance_field_name not in item:
+                    is_divisible = result_item[issuance_field_name]["divisible"]
+                else:
+                    is_divisible = item[issuance_field_name]["divisible"]
+
             item[field_name + "_normalized"] = (
                 divide(item[field_name], 10**8) if is_divisible else str(item[field_name])
             )
+
         if "get_quantity" in item and "give_quantity" in item and "market_dir" in item:
             if item["market_dir"] == "SELL":
                 item["market_price"] = divide(
@@ -381,7 +413,7 @@ def inject_dispensers(db, result):
 
 def inject_details(db, result):
     result = inject_dispensers(db, result)
-    result = inject_issuance(db, result)
+    result = inject_issuances_and_block_times(db, result)
     result = inject_normalized_quantities(result)
     return result
 

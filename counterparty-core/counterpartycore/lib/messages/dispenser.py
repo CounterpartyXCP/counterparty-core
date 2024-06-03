@@ -959,7 +959,15 @@ def dispense(db, tx):
                     "dispense_quantity": actually_given,
                     "dispenser_tx_hash": dispenser["tx_hash"],
                 }
-                ledger.insert_record(db, "dispenses", bindings, "DISPENSE")
+                ledger.insert_record(
+                    db,
+                    "dispenses",
+                    bindings,
+                    "DISPENSE",
+                    {
+                        "btc_amount": next_out["btc_amount"],
+                    },
+                )
                 dispense_index += 1
 
                 logger.info(

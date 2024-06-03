@@ -793,12 +793,14 @@ def get_assets_last_issuance(db, asset_list):
             "asset_longname": "Bitcoin",
             "description": "The Bitcoin cryptocurrency",
             "locked": False,
+            "issuer": None,
         },
         "XCP": {
             "divisible": True,
             "asset_longname": "Counterparty",
             "description": "The Counterparty protocol native currency",
             "locked": True,
+            "issuer": None,
         },
     }
     for issuance in issuances:
@@ -1001,6 +1003,21 @@ def get_last_block(db):
     cursor.execute(query)
     block = cursor.fetchone()
     return block
+
+
+def get_blocks_time(db, block_indexes):
+    cursor = db.cursor()
+    query = f"""
+        SELECT block_index, block_time
+        FROM blocks
+        WHERE block_index IN ({",".join(["?" for e in range(0, len(block_indexes))])})
+    """  # nosec B608  # noqa: S608
+    cursor.execute(query, block_indexes)
+    blocks = cursor.fetchall()
+    result = {}
+    for block in blocks:
+        result[block["block_index"]] = block["block_time"]
+    return result
 
 
 def get_vouts(db, tx_hash):

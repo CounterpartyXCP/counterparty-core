@@ -32,6 +32,7 @@ def test_api_v2(request):
     bet_hash = "2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1"
     dispenser_hash = "9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec"
     block_hash = "54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b"
+    dividend_hash = "42ae2fd7f3a18f84334bc37aa88283e79d6bff0b234dbf97e788695957d75518"
     event = "CREDIT"
     event_index = 10
     tx_index = 2
@@ -52,7 +53,8 @@ def test_api_v2(request):
         fixtures = json.load(f)
 
     for route in routes.ROUTES:
-        if route == "/" or route == "/<path:subpath>":
+        # TODO: add dividends in fixtures
+        if route == "/" or route == "/<path:subpath>" or "<dividend_hash>" in route:
             continue
         if any([exclude in route for exclude in exclude_routes]):
             continue
@@ -77,8 +79,11 @@ def test_api_v2(request):
         url = url.replace("<dispenser_hash>", dispenser_hash)
         url = url.replace("<tx_hash>", tx_hash)
         url = url.replace("<block_hash>", block_hash)
+        url = url.replace("<dividend_hash>", dividend_hash)
         if route.startswith("/v2/events"):
-            url += "?limit=5"
+            url += "?limit=5&verbose=true"
+        else:
+            url += "?verbose=true"
         print(url)
         result = requests.get(url)  # noqa: S113
         results[url] = result.json()

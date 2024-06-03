@@ -90,7 +90,58 @@ By default events are published on port `4001`, you can customize this port with
 
 You can see a complete, working example in Python here: https://github.com/CounterpartyXCP/counterparty-core/blob/master/counterparty-core/tools/zmqclient.py.
 
-### Events Reference
+
+### Notes about update events
+
+For the events `DISPENSER_UPDATE` and `ORDER_UPDATE`, depending on the reason for the update, the fields present in `params` may be different.
+
+Here are the different possibilities for `DISPENSER_UPDATE`:
+
+On refill dispenser and on dispense:
+
+- give_remaining
+- dispense_count
+- source
+- asset
+- status
+
+On closing dispenser with delay:
+
+- last_status_tx_hash
+- source
+- asset
+- status
+
+On closing dispenser:
+
+- give_remaining
+- source
+- asset
+- status
+
+and those for `ORDER_UPDATE`:
+
+On order cancellation:
+
+- status
+- tx_hash
+
+On order match cancellation:
+
+- give_remaining
+- get_remaining
+- status
+- fee_required_remaining
+
+On order match:
+
+- give_remaining
+- get_remaining
+- fee_required_remaining
+- fee_provided_remaining
+- status
+
+## Events Reference
 
 Here is a list of events classified by theme and for each an example response:
 

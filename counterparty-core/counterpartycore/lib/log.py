@@ -91,7 +91,9 @@ def set_up(verbose=0, quiet=True, log_file=None):
         log_level = logging.INFO
     elif verbose == 1:
         log_level = logging.DEBUG
-    elif verbose > 1:
+    elif verbose == 2:
+        log_level = logging.EVENT
+    elif verbose >= 3:
         log_level = logging.TRACE
 
     logger.setLevel(log_level)

@@ -224,9 +224,7 @@ def parse_block(
     block_index,
     block_time,
     previous_ledger_hash=None,
-    ledger_hash=None,
     previous_txlist_hash=None,
-    txlist_hash=None,
     previous_messages_hash=None,
     reparsing=False,
 ):
@@ -257,7 +255,8 @@ def parse_block(
         {"block_index": block_index},
     )
     txlist = []
-    for tx in list(cursor):
+    transactions = cursor.fetchall()
+    for tx in transactions:
         try:
             # Add manual event to journal because transaction already exists
             if reparsing:
@@ -291,8 +290,6 @@ def parse_block(
             raise e
             # pass
 
-    cursor.close()
-
     if block_index != config.MEMPOOL_BLOCK_INDEX:
         # Calculate consensus hashes.
         new_txlist_hash, found_txlist_hash = check.consensus_hash(
@@ -304,6 +301,24 @@ def parse_block(
         new_messages_hash, found_messages_hash = check.consensus_hash(
             db, "messages_hash", previous_messages_hash, ledger.BLOCK_JOURNAL
         )
+        update_block_query = """
+            UPDATE blocks
+            SET 
+                txlist_hash=:txlist_hash,
+                ledger_hash=:ledger_hash,
+                messages_hash=:messages_hash,
+                transaction_count=:transaction_count
+            WHERE block_index=:block_index
+        """
+        update_block_bindings = {
+            "txlist_hash": new_txlist_hash,
+            "ledger_hash": new_ledger_hash,
+            "messages_hash": new_messages_hash,
+            "transaction_count": len(transactions),
+            "block_index": block_index,
+        }
+        cursor.execute(update_block_query, update_block_bindings)
+
         # trigger BLOCK_PARSED event
         ledger.add_to_journal(
             db,
@@ -316,11 +331,14 @@ def parse_block(
                 "ledger_hash": new_ledger_hash,
                 "txlist_hash": new_txlist_hash,
                 "messages_hash": new_messages_hash,
+                "transaction_count": len(transactions),
             },
         )
 
+        cursor.close()
         return new_ledger_hash, new_txlist_hash, new_messages_hash
 
+    cursor.close()
     return None, None, None
 
 
@@ -357,8 +375,12 @@ def initialise(db):
                       block_index INTEGER UNIQUE,
                       block_hash TEXT UNIQUE,
                       block_time INTEGER,
+                      ledger_hash TEXT,
+                      txlist_hash TEXT,
+                      messages_hash TEXT,
                       previous_block_hash TEXT UNIQUE,
                       difficulty INTEGER,
+                      transaction_count INTEGER,
                       PRIMARY KEY (block_index, block_hash))
                    """)
 
@@ -374,6 +396,17 @@ def initialise(db):
         cursor.execute("""ALTER TABLE blocks ADD COLUMN previous_block_hash TEXT""")
     if "difficulty" not in block_columns:
         cursor.execute("""ALTER TABLE blocks ADD COLUMN difficulty TEXT""")
+    if "transaction_count" not in block_columns:
+        logger.info("Adding transaction_count column to blocks table...")
+        cursor.execute("""ALTER TABLE blocks ADD COLUMN transaction_count INTEGER""")
+        cursor.execute("""
+            UPDATE blocks SET 
+                transaction_count = (
+                       SELECT COUNT(*)
+                       FROM transactions
+                       WHERE transactions.block_index = blocks.block_index
+                )
+        """)
 
     database.create_indexes(
         cursor,
@@ -418,6 +451,7 @@ def initialise(db):
             ["tx_hash"],
             ["block_index", "tx_index"],
             ["tx_index", "tx_hash", "block_index"],
+            ["source"],
         ],
     )
 
@@ -447,6 +481,8 @@ def initialise(db):
             ["address"],
             ["asset"],
             ["block_index"],
+            ["event"],
+            ["action"],
         ],
     )
 
@@ -474,6 +510,8 @@ def initialise(db):
             ["address"],
             ["asset"],
             ["block_index"],
+            ["event"],
+            ["calling_function"],
         ],
     )
 
@@ -796,14 +834,6 @@ def list_tx(
 ):
     assert type(tx_hash) == str  # noqa: E721
     cursor = db.cursor()
-
-    # Edge case: confirmed tx_hash also in mempool
-    # TODO: This is dog-slow.
-    if block_parser is None:  # skip on kickstart
-        cursor.execute("""SELECT * FROM transactions WHERE tx_hash = ?""", (tx_hash,))
-        transactions = list(cursor)
-        if transactions:
-            return tx_index
 
     source, destination, btc_amount, fee, data, dispensers_outs = get_tx_info(
         db, decoded_tx, block_index, block_parser=block_parser
