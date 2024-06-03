@@ -272,8 +272,16 @@ def inject_issuances_and_block_times(db, result):
     block_indexes = []
     for result_item in result_list:
         if "block_index" in result_item:
-            block_indexes.append(result_item["block_index"])
+            result_item["block_index"] = int(result_item["block_index"])
         if "params" in result_item and "block_index" in result_item["params"]:
+            result_item["params"]["block_index"] = int(result_item["params"]["block_index"])
+        if "block_index" in result_item and result_item["block_index"] not in block_indexes:
+            block_indexes.append(result_item["block_index"])
+        if (
+            "params" in result_item
+            and "block_index" in result_item["params"]
+            and result_item["params"]["block_index"] not in block_indexes
+        ):
             block_indexes.append(result_item["params"]["block_index"])
         if "asset_longname" in result_item and "description" in result_item:
             continue

@@ -50,6 +50,11 @@ only:
   And Asset
 - Addresses > Get Sweeps By Address > Get Sweeps By Address
 - Addresses > Get Issuances By Address > Get Issuances By Address
+- Addresses > Get Valid Assets By Issuer > Get Valid Assets By Issuer
+- Addresses > Get Transactions By Address > Get Transactions By Address
+- Addresses > Get Dividends Distributed By Address > Get Dividends Distributed By
+  Address
+- Addresses > Get Orders By Address > Get Orders By Address
 - Assets > Get Valid Assets > Get Valid Assets
 - Assets > Get Asset Info > Get Asset Info
 - Assets > Get Asset Balances > Get Asset Balances
@@ -57,7 +62,7 @@ only:
 - Assets > Get Orders By Asset > Get Orders By Asset
 - Assets > Get Credits By Asset > Get Credits By Asset
 - Assets > Get Debits By Asset > Get Debits By Asset
-- Assets > Get Dividends > Get Dividends
+- Assets > Get Dividends By Asset > Get Dividends By Asset
 - Assets > Get Issuances By Asset > Get Issuances By Asset
 - Assets > Get Sends By Asset > Get Sends By Asset
 - Assets > Get Dispensers By Asset > Get Dispensers By Asset
@@ -77,6 +82,9 @@ only:
 - Dispensers > Get Dispensers > Get Dispensers
 - Dispensers > Get Dispenser Info By Hash > Get Dispenser Info By Hash
 - Dispensers > Get Dispenses By Dispenser > Get Dispenses By Dispenser
+- Dividends > Get Dividends > Get Dividends
+- Dividends > Get Dividend > Get Dividend
+- Dividends > Get Dividend Disribution > Get Dividend Disribution
 - Events > Get All Events > Get All Events
 - Events > Get Event By Index > Get Event By Index
 - Events > Get All Events Counts > Get All Events Counts
@@ -136,6 +144,11 @@ only:
   And Asset
 - Addresses > Get Sweeps By Address > Get Sweeps By Address
 - Addresses > Get Issuances By Address > Get Issuances By Address
+- Addresses > Get Valid Assets By Issuer > Get Valid Assets By Issuer
+- Addresses > Get Transactions By Address > Get Transactions By Address
+- Addresses > Get Dividends Distributed By Address > Get Dividends Distributed By
+  Address
+- Addresses > Get Orders By Address > Get Orders By Address
 - Assets > Get Valid Assets > Get Valid Assets
 - Assets > Get Asset Info > Get Asset Info
 - Assets > Get Asset Balances > Get Asset Balances
@@ -143,7 +156,7 @@ only:
 - Assets > Get Orders By Asset > Get Orders By Asset
 - Assets > Get Credits By Asset > Get Credits By Asset
 - Assets > Get Debits By Asset > Get Debits By Asset
-- Assets > Get Dividends > Get Dividends
+- Assets > Get Dividends By Asset > Get Dividends By Asset
 - Assets > Get Issuances By Asset > Get Issuances By Asset
 - Assets > Get Sends By Asset > Get Sends By Asset
 - Assets > Get Dispensers By Asset > Get Dispensers By Asset
@@ -163,6 +176,9 @@ only:
 - Dispensers > Get Dispensers > Get Dispensers
 - Dispensers > Get Dispenser Info By Hash > Get Dispenser Info By Hash
 - Dispensers > Get Dispenses By Dispenser > Get Dispenses By Dispenser
+- Dividends > Get Dividends > Get Dividends
+- Dividends > Get Dividend > Get Dividend
+- Dividends > Get Dividend Disribution > Get Dividend Disribution
 - Events > Get All Events > Get All Events
 - Events > Get Event By Index > Get Event By Index
 - Events > Get All Events Counts > Get All Events Counts

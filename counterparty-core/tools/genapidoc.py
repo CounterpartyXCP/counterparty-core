@@ -306,9 +306,9 @@ def update_blueprint(target, save_dredd=False):
 def gen_events_doc():
     md = ""
     for event_group in EVENT_LIST:
-        md += f"\n#### {event_group['group']}\n"
+        md += f"\n### {event_group['group']}\n"
         for event in event_group["events"]:
-            md += f"\n##### `{event}`\n\n"
+            md += f"\n#### `{event}`\n\n"
             path = f"/v2/events/{event}"
             if not USE_API_CACHE or path not in API_CACHE:
                 example_output = get_example_output(path, {"limit": "1", "verbose": "true"})

@@ -90,15 +90,11 @@ By default events are published on port `4001`, you can customize this port with
 
 You can see a complete, working example in Python here: https://github.com/CounterpartyXCP/counterparty-core/blob/master/counterparty-core/tools/zmqclient.py.
 
-### Events Reference
 
-Here is a list of events classified by theme and for each an example response:
+### Notes about update events
 
-<EVENTS_DOC>
+For the events `DISPENSER_UPDATE` and `ORDER_UPDATE`, depending on the reason for the update, the fields present in `params` may be different.
 
-### Notes about `DISPENSER_UPDATE`and `ORDER_UPDATE` events
-
-For these two events, depending on the reason for the update, the fields present in `params` may be different.
 Here are the different possibilities for `DISPENSER_UPDATE`:
 
 On refill dispenser and on dispense:
@@ -144,6 +140,12 @@ On order match:
 - fee_required_remaining
 - fee_provided_remaining
 - status
+
+## Events Reference
+
+Here is a list of events classified by theme and for each an example response:
+
+<EVENTS_DOC>
 
 # Counterparty API Root [<ROOT_PATH>]
 

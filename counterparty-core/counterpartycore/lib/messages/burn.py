@@ -167,9 +167,9 @@ def parse(db, tx, mainnet_burns, message=None):
             event=line["tx_hash"],
         )
 
-        tx_index = tx["tx_index"]
+        tx_index = int(tx["tx_index"])
         tx_hash = line["tx_hash"]
-        block_index = line["block_index"]
+        block_index = int(line["block_index"])
         source = line["source"]
         burned = int(line["burned"])
         earned = int(line["earned"])
