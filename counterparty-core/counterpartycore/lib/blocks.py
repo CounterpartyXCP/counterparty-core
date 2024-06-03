@@ -291,8 +291,6 @@ def parse_block(
             raise e
             # pass
 
-    cursor.close()
-
     if block_index != config.MEMPOOL_BLOCK_INDEX:
         # Calculate consensus hashes.
         new_txlist_hash, found_txlist_hash = check.consensus_hash(
@@ -304,6 +302,19 @@ def parse_block(
         new_messages_hash, found_messages_hash = check.consensus_hash(
             db, "messages_hash", previous_messages_hash, ledger.BLOCK_JOURNAL
         )
+        update_block_query = """
+            UPDATE blocks
+            SET txlist_hash=:txlist_hash, ledger_hash=:ledger_hash, messages_hash=:messages_hash
+            WHERE block_index=:block_index
+        """
+        update_block_bindings = {
+            "txlist_hash": new_txlist_hash,
+            "ledger_hash": new_ledger_hash,
+            "messages_hash": new_messages_hash,
+            "block_index": block_index,
+        }
+        cursor.execute(update_block_query, update_block_bindings)
+
         # trigger BLOCK_PARSED event
         ledger.add_to_journal(
             db,
@@ -319,8 +330,10 @@ def parse_block(
             },
         )
 
+        cursor.close()
         return new_ledger_hash, new_txlist_hash, new_messages_hash
 
+    cursor.close()
     return None, None, None
 
 

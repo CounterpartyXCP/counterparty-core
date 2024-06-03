@@ -256,7 +256,6 @@ def divide(value1, value2):
 
 
 def inject_issuances_and_block_times(db, result):
-    print("INJECTION____________________________________________")
     # let's work with a list
     result_list = result
     result_is_dict = False
@@ -287,7 +286,6 @@ def inject_issuances_and_block_times(db, result):
 
     # get block_time for each block_index
     block_times = ledger.get_blocks_time(db, block_indexes)
-    print("BLOCK TIMES", block_times)
 
     # inject issuance and block_time
     for result_item in result_list:

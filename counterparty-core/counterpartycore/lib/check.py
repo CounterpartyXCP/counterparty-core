@@ -860,12 +860,6 @@ def consensus_hash(db, field, previous_consensus_hash, content):
             raise ConsensusError(
                 f"Inconsistent {field} for block {block_index} (calculated {calculated_hash}, vs {found_hash} in database)."
             )
-    else:
-        # Save new hash. No sql injection here.
-        cursor.execute(
-            f"""UPDATE blocks SET {field} = ? WHERE block_index = ?""",  # noqa: S608
-            (calculated_hash, block_index),
-        )  # nosec B608
 
     # Check against checkpoints.
     if config.TESTNET:
