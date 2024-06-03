@@ -3,6 +3,7 @@ import inspect
 import json
 import logging
 import time
+import typing
 from logging import handlers as logging_handlers
 
 import flask
@@ -205,6 +206,9 @@ def prepare_route_args(function):
         else:
             route_arg["required"] = True
         route_arg["type"] = arg.annotation.__name__
+        if route_arg["type"] == "Literal":
+            route_arg["type"] = "enum[str]"
+            route_arg["members"] = list(typing.get_args(annotation))
         if arg_name in args_description:
             route_arg["description"] = args_description[arg_name]
         args.append(route_arg)

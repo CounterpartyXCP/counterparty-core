@@ -235,6 +235,10 @@ def gen_blueprint(target):
                 md += f"    + {arg['name']}{example_arg} ({arg['type']}, {required}) - {description}\n"
                 if not arg["required"]:
                     md += f"        + Default: `{arg.get('default', '')}`\n"
+                if "members" in arg:
+                    md += "        + Members\n"
+                    for member in arg["members"]:
+                        md += f"            + `{member}`\n"
 
         if (
             example_args != {} or len(route["args"]) == 1 or "healthz" in path

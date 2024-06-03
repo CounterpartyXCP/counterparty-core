@@ -1,4 +1,64 @@
 import json
+from typing import Literal
+
+OrderStatus = Literal["open", "expired", "filled", "cancelled"]
+OrderMatchesStatus = Literal["pending", "completed", "expired"]
+BetStatus = Literal["cancelled", "dropped", "expired", "filled", "open"]
+BetMatchesStatus = Literal[
+    "dropped",
+    "expired",
+    "pending",
+    "settled: for equal",
+    "settled: for notequal",
+    "settled: liquidated for bear",
+]
+DebitAction = Literal[
+    "bet",
+    "destroy",
+    "dividend",
+    "dividend fee",
+    "issuance fee",
+    "mpma send",
+    "open RPS",
+    "open dispenser",
+    "open dispenser empty addr",
+    "open order",
+    "refill dispenser",
+    "reopen RPS after matching expiration",
+    "reset destroy",
+    "send",
+    "sweep",
+    "sweep fee",
+]
+CreditAction = Literal[
+    "Closed: Max dispenses reached",
+    "bet settled: for equal",
+    "bet settled: for notequal",
+    "bet settled: liquidated for bear",
+    "btcpay",
+    "burn",
+    "cancel order",
+    "close dispenser",
+    "dispense",
+    "dispenser close",
+    "dividend",
+    "feed fee",
+    "filled",
+    "issuance",
+    "mpma send",
+    "open dispenser empty addr",
+    "order cancelled",
+    "order expired",
+    "order match",
+    "recredit backward quantity",
+    "recredit forward quantity",
+    "recredit wager",
+    "recredit wager remaining",
+    "reset issuance",
+    "send",
+    "sweep",
+    "wins",
+]
 
 
 class QueryResult:
@@ -547,7 +607,7 @@ def get_all_events_counts(db, cursor: str = None, limit: int = 100, offset: int 
 def get_credits_by_block(
     db,
     block_index: int,
-    action: str = None,
+    action: CreditAction = None,
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
@@ -574,7 +634,12 @@ def get_credits_by_block(
 
 
 def get_credits_by_address(
-    db, address: str, action: str = None, cursor: int = None, limit: int = 100, offset: int = None
+    db,
+    address: str,
+    action: CreditAction = None,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the credits of an address
@@ -591,7 +656,12 @@ def get_credits_by_address(
 
 
 def get_credits_by_asset(
-    db, asset: str, action: str = None, cursor: int = None, limit: int = 100, offset: int = None
+    db,
+    asset: str,
+    action: CreditAction = None,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the credits of an asset
@@ -610,7 +680,7 @@ def get_credits_by_asset(
 def get_debits_by_block(
     db,
     block_index: int,
-    action: str = None,
+    action: DebitAction = None,
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
@@ -637,7 +707,12 @@ def get_debits_by_block(
 
 
 def get_debits_by_address(
-    db, address: str, action: str = None, cursor: int = None, limit: int = 100, offset: int = None
+    db,
+    address: str,
+    action: DebitAction = None,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the debits of an address
@@ -654,7 +729,12 @@ def get_debits_by_address(
 
 
 def get_debits_by_asset(
-    db, asset: str, action: str = None, cursor: int = None, limit: int = 100, offset: int = None
+    db,
+    asset: str,
+    action: DebitAction = None,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the debits of an asset
@@ -1014,7 +1094,9 @@ def get_balance_by_address_and_asset(db, address: str, asset: str):
     )
 
 
-def get_bets(db, status: str = "open", cursor: int = None, limit: int = 100, offset: int = None):
+def get_bets(
+    db, status: BetStatus = "open", cursor: int = None, limit: int = 100, offset: int = None
+):
     """
     Returns the bets of a feed
     :param str status: The status of the bet (e.g. filled)
@@ -1035,7 +1117,12 @@ def get_bets(db, status: str = "open", cursor: int = None, limit: int = 100, off
 
 
 def get_bet_by_feed(
-    db, address: str, status: str = "open", cursor: int = None, limit: int = 100, offset: int = None
+    db,
+    address: str,
+    status: BetStatus = "open",
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the bets of a feed
@@ -1061,7 +1148,6 @@ def get_bet_by_feed(
 def get_broadcasts_by_source(
     db,
     address: str,
-    status: str = "valid",
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
@@ -1077,7 +1163,7 @@ def get_broadcasts_by_source(
     return select_rows(
         db,
         "broadcasts",
-        where={"source": address, "status": status},
+        where={"source": address, "status": "valid"},
         cursor_field="tx_index",
         last_cursor=cursor,
         limit=limit,
@@ -1428,7 +1514,9 @@ def get_asset_balances(db, asset: str, cursor: str = None, limit: int = 100, off
     )
 
 
-def get_orders(db, status: str = "open", cursor: int = None, limit: int = 100, offset: int = None):
+def get_orders(
+    db, status: OrderStatus = "open", cursor: int = None, limit: int = 100, offset: int = None
+):
     """
     Returns all the orders
     :param str status: The status of the orders to return (e.g. filled)
@@ -1449,7 +1537,12 @@ def get_orders(db, status: str = "open", cursor: int = None, limit: int = 100, o
 
 
 def get_orders_by_asset(
-    db, asset: str, status: str = "open", cursor: int = None, limit: int = 100, offset: int = None
+    db,
+    asset: str,
+    status: OrderStatus = "open",
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the orders of an asset
@@ -1473,7 +1566,12 @@ def get_orders_by_asset(
 
 
 def get_orders_by_address(
-    db, address: str, status: str = "open", cursor: int = None, limit: int = 100, offset: int = None
+    db,
+    address: str,
+    status: OrderStatus = "open",
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the orders of an address
@@ -1500,7 +1598,7 @@ def get_orders_by_two_assets(
     db,
     asset1: str,
     asset2: str,
-    status: str = "open",
+    status: OrderStatus = "open",
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
@@ -1572,7 +1670,7 @@ def get_order(db, order_hash: str):
 def get_order_matches_by_order(
     db,
     order_hash: str,
-    status: str = "pending",
+    status: OrderMatchesStatus = "pending",
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
@@ -1633,7 +1731,7 @@ def get_bet(db, bet_hash: str):
 def get_bet_matches_by_bet(
     db,
     bet_hash: str,
-    status: str = "pending",
+    status: BetMatchesStatus = "pending",
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
@@ -1679,9 +1777,7 @@ def get_resolutions_by_bet(
     )
 
 
-def get_all_burns(
-    db, status: str = "valid", cursor: int = None, limit: int = 100, offset: int = None
-):
+def get_all_burns(db, cursor: int = None, limit: int = 100, offset: int = None):
     """
     Returns the burns
     :param str status: The status of the burns to return (e.g. valid)
@@ -1690,7 +1786,7 @@ def get_all_burns(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     return select_rows(
-        db, "burns", where={"status": status}, last_cursor=cursor, limit=limit, offset=offset
+        db, "burns", where={"status": "valid"}, last_cursor=cursor, limit=limit, offset=offset
     )
 
 
