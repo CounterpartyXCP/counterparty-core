@@ -499,8 +499,9 @@ class APIStatusPoller(threading.Thread):
     def stop(self):
         logger.info("Stopping API Status Poller...")
         self.stopping = True
-        self.join()
         self.db.close()
+        self.db = None
+        self.join()
 
     def run(self):
         logger.debug("Starting API Status Poller...")
@@ -514,7 +515,7 @@ class APIStatusPoller(threading.Thread):
                 if (
                     time.time() - self.last_database_check > 10 * 60
                 ):  # Ten minutes since last check.
-                    if not config.FORCE:
+                    if not config.FORCE and self.db is not None:
                         code = 11
                         logger.debug("Checking backend state.")
                         check_backend_state()

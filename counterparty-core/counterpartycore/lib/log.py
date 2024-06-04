@@ -58,10 +58,10 @@ class CustomFormatter(logging.Formatter):
             and util.CURRENT_BLOCK_INDEX is not None
             and "/counterpartycore/lib/messages/" in record.pathname
         ):
-            if util.CURRENT_BLOCK_INDEX != config.MEMPOOL_BLOCK_INDEX:
-                log_format = f"%(asctime)s - [%(levelname)8s] - Block {util.CURRENT_BLOCK_INDEX} - %(message)s"
-            else:
+            if util.PARSING_MEMPOOL:
                 log_format = "%(asctime)s - [%(levelname)8s] - Mempool - %(message)s"
+            else:
+                log_format = f"%(asctime)s - [%(levelname)8s] - Block {util.CURRENT_BLOCK_INDEX} - %(message)s"
         else:
             log_format = "%(asctime)s - [%(levelname)8s] - %(message)s"
         attrs = ["bold"] if hasattr(record, "bold") and record.bold else []
