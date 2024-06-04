@@ -483,6 +483,7 @@ def initialise(db):
             ["block_index"],
             ["event"],
             ["action"],
+            ["quantity"],
         ],
     )
 
@@ -512,6 +513,7 @@ def initialise(db):
             ["block_index"],
             ["event"],
             ["calling_function"],
+            ["quantity"],
         ],
     )
 
@@ -539,6 +541,7 @@ def initialise(db):
             ["address"],
             ["asset"],
             ["block_index"],
+            ["quantity"],
         ],
     )
 

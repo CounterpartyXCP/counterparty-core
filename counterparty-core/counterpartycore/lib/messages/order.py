@@ -85,6 +85,8 @@ def initialise(db):
             ["get_asset", "give_asset"],
             ["status"],
             ["source", "give_asset"],
+            ["get_quantity"],
+            ["give_quantity"],
         ],
     )
 

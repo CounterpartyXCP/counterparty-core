@@ -103,6 +103,7 @@ def initialise(db):
             ["source", "asset", "origin", "status"],
             ["last_status_tx_hash"],
             ["close_block_index", "status"],
+            ["give_quantity"],
         ],
     )
 
@@ -139,6 +140,7 @@ def initialise(db):
             ["asset"],
             ["source"],
             ["destination"],
+            ["dispense_quantity"],
         ],
     )
 
