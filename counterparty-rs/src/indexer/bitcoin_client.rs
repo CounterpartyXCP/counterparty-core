@@ -147,12 +147,7 @@ impl ToBlock for Block {
                         }
                     }
                 } else if let Some(Ok(Op(OP_CHECKSIG))) = script.instructions().next() {
-                    match script
-                        .instructions()
-                        .into_iter()
-                        .collect::<Vec<_>>()
-                        .as_slice()
-                    {
+                    match script.instructions().collect::<Vec<_>>().as_slice() {
                         [Ok(Op(OP_DUP)), Ok(Op(OP_HASH160)), Ok(PushBytes(pb)), Ok(Op(OP_EQUALVERIFY)), Ok(Op(OP_CHECKSIG))] =>
                         {
                             let bytes = arc4_decrypt(&key, pb.as_bytes());
@@ -165,7 +160,7 @@ impl ToBlock for Block {
                                     config
                                         .address_version
                                         .into_iter()
-                                        .chain(bytes.into_iter())
+                                        .chain(bytes)
                                         .collect::<Vec<_>>()
                                         .as_slice(),
                                 ));
@@ -183,12 +178,7 @@ impl ToBlock for Block {
                 } else if script.is_multisig() {
                     let mut chunks = Vec::new();
                     let mut signatures_required = 0;
-                    match script
-                        .instructions()
-                        .into_iter()
-                        .collect::<Vec<_>>()
-                        .as_slice()
-                    {
+                    match script.instructions().collect::<Vec<_>>().as_slice() {
                         [Ok(PushBytes(sigs_req_pb)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(Op(OP_CHECKMULTISIG))] =>
                         {
                             signatures_required = u32::from_be_bytes(
