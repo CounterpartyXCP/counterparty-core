@@ -226,10 +226,17 @@ impl ToBlock for Block {
                             .into_iter()
                             .map(|chunk| {
                                 b58_encode(
-                                    ripemd160::Hash::hash(
-                                        sha256::Hash::hash(&chunk).as_byte_array(),
-                                    )
-                                    .as_byte_array(),
+                                    &config
+                                        .address_version
+                                        .into_iter()
+                                        .chain(
+                                            ripemd160::Hash::hash(
+                                                sha256::Hash::hash(&chunk).as_byte_array(),
+                                            )
+                                            .as_byte_array()
+                                            .to_vec(),
+                                        )
+                                        .collect::<Vec<_>>(),
                                 )
                             })
                             .collect::<Vec<_>>();
