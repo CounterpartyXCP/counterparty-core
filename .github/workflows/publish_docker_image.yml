@@ -26,7 +26,7 @@ jobs:
         if [[ ${{ github.event_name }} == 'release' ]]; then
           export VERSION=v$(cat counterparty-core/counterpartycore/lib/config.py | grep '__version__ =' | awk -F '"' '{print $2}')
         elif [[ ${{ github.event_name }} == 'push' && ${{ github.ref }} == 'refs/heads/develop' ]]; then
-          export VERSION=develop-${{ github.sha }}
+          export VERSION=develop
         fi
         docker build -t $DOCKER_REPO:$VERSION .
         docker tag $DOCKER_REPO:$VERSION $DOCKER_REPO:latest
