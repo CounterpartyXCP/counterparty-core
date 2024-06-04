@@ -1,5 +1,6 @@
 import json
 import tempfile
+from contextlib import contextmanager
 
 import pytest
 from apsw import ConstraintError
@@ -21,7 +22,8 @@ FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
 
 @pytest.mark.usefixtures("server_db")
 @pytest.mark.usefixtures("api_server")
-def test_alice_bob(server_db):
+@pytest.mark.usefixtures("cp_server")
+def test_alice_bob(server_db, cp_server, api_server):
     alice = ADDR[0]
     bob = "miJqNkHhC5xsB61gsiSWXeTLnEGSQnWbXB"
 
@@ -65,6 +67,17 @@ def test_alice_bob(server_db):
     assert alice_balance2 == alice_balance - v
     assert bob_balance2 == bob_balance + v
 
+    class DBConnectionPoolMock(metaclass=util.SingletonMeta):
+        @contextmanager
+        def connection(self):
+            try:
+                yield server_db
+            finally:
+                pass
+
+    api_server_connection_pool = api_server.connection_pool
+    api_server.connection_pool = DBConnectionPoolMock()
+
     # check API result
     result = util.api(
         "get_balances",
@@ -75,6 +88,10 @@ def test_alice_bob(server_db):
             ],
         },
     )
+
+    api_server.connection_pool = api_server_connection_pool
+
+    print(result)
 
     assert result[0]["quantity"] == alice_balance2
 

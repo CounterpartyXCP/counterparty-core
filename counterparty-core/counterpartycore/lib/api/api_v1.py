@@ -547,12 +547,13 @@ class APIServer(threading.Thread):
         self.is_ready = False
         self.server = None
         self.ctx = None
+        self.connection_pool = DBConnectionPool()
         threading.Thread.__init__(self)
         sentry.init()
 
     def stop(self):
         logger.info("Stopping API Server v1...")
-        DBConnectionPool().close()
+        self.connection_pool.close()
         self.server.shutdown()
         self.join()
 
@@ -574,7 +575,7 @@ class APIServer(threading.Thread):
         def generate_get_method(table):
             def get_method(**kwargs):
                 try:
-                    with DBConnectionPool().connection() as db:
+                    with self.connection_pool.connection() as db:
                         return get_rows(db, table=table, **kwargs)
                 except TypeError as e:  # TODO: generalise for all API methods
                     raise APIError(str(e))  # noqa: B904
@@ -590,7 +591,7 @@ class APIServer(threading.Thread):
         def sql(query, bindings=None):
             if bindings == None:  # noqa: E711
                 bindings = []
-            with DBConnectionPool().connection() as db:
+            with self.connection_pool.connection() as db:
                 return db_query(db, query, tuple(bindings))
 
         ######################
@@ -603,7 +604,7 @@ class APIServer(threading.Thread):
                     transaction_args, common_args, private_key_wif = (
                         transaction.split_compose_params(**kwargs)
                     )
-                    with DBConnectionPool().connection() as db:
+                    with self.connection_pool.connection() as db:
                         return transaction.compose_transaction(
                             db, name=tx, params=transaction_args, api_v1=True, **common_args
                         )
@@ -633,7 +634,7 @@ class APIServer(threading.Thread):
         def get_messages(block_index):
             if not isinstance(block_index, int):
                 raise APIError("block_index must be an integer.")
-            with DBConnectionPool().connection() as db:
+            with self.connection_pool.connection() as db:
                 messages = ledger.get_messages(db, block_index=block_index)
             return messages
 
@@ -650,13 +651,13 @@ class APIServer(threading.Thread):
             for idx in message_indexes:  # make sure the data is clean
                 if not isinstance(idx, int):
                     raise APIError("All items in message_indexes are not integers")
-            with DBConnectionPool().connection() as db:
+            with self.connection_pool.connection() as db:
                 messages = ledger.get_messages(db, message_index_in=message_indexes)
             return messages
 
         @dispatcher.add_method
         def get_supply(asset):
-            with DBConnectionPool().connection() as db:
+            with self.connection_pool.connection() as db:
                 if asset == "BTC":
                     return backend.bitcoind.get_btc_supply(normalize=False)
                 elif asset == "XCP":
@@ -668,7 +669,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_xcp_supply():
             logger.warning("Deprecated method: `get_xcp_supply`")
-            with DBConnectionPool().connection() as db:
+            with self.connection_pool.connection() as db:
                 return ledger.xcp_supply(db)
 
         @dispatcher.add_method
@@ -681,7 +682,7 @@ class APIServer(threading.Thread):
                     "assets must be a list of asset names, even if it just contains one entry"
                 )
             assets_info = []
-            with DBConnectionPool().connection() as db:
+            with self.connection_pool.connection() as db:
                 for asset in assets:
                     asset = ledger.resolve_subasset_longname(db, asset)  # noqa: PLW2901
 
@@ -735,7 +736,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_block_info(block_index):
             assert isinstance(block_index, int)
-            with DBConnectionPool().connection() as db:
+            with self.connection_pool.connection() as db:
                 cursor = db.cursor()
                 cursor.execute("""SELECT * FROM blocks WHERE block_index = ?""", (block_index,))
                 blocks = list(cursor)  # noqa: F811
@@ -774,7 +775,7 @@ class APIServer(threading.Thread):
                 if not isinstance(block_index, int):
                     raise APIError(must_be_non_empty_list_int)
 
-            with DBConnectionPool().connection() as db:
+            with self.connection_pool.connection() as db:
                 cursor = db.cursor()
 
                 block_indexes_placeholder = f"{','.join(['?'] * len(block_indexes))}"
@@ -805,7 +806,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_running_info():
             latest_block_index = backend.bitcoind.getblockcount()
-            with DBConnectionPool().connection() as db:
+            with self.connection_pool.connection() as db:
                 try:
                     api_util.check_last_parsed_block(db, latest_block_index)
                 except exceptions.DatabaseError:
@@ -867,7 +868,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_element_counts():
-            with DBConnectionPool().connection() as db:
+            with self.connection_pool.connection() as db:
                 counts = {}
                 cursor = db.cursor()
                 for element in [
@@ -904,7 +905,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_asset_names(longnames=False):
-            with DBConnectionPool().connection() as db:
+            with self.connection_pool.connection() as db:
                 all_assets = ledger.get_valid_assets(db)
             if longnames:
                 names = [
@@ -921,7 +922,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_holder_count(asset):
-            with DBConnectionPool().connection() as db:
+            with self.connection_pool.connection() as db:
                 asset = ledger.resolve_subasset_longname(db, asset)
                 holders = ledger.holders(db, asset, True)
             addresses = []
@@ -931,7 +932,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_holders(asset):
-            with DBConnectionPool().connection() as db:
+            with self.connection_pool.connection() as db:
                 asset = ledger.resolve_subasset_longname(db, asset)
                 holders = ledger.holders(db, asset, True)
             return holders
@@ -975,7 +976,7 @@ class APIServer(threading.Thread):
         def get_tx_info(tx_hex, block_index=None):
             # block_index mandatory for transactions before block 335000
             use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
-            with DBConnectionPool().connection() as db:
+            with self.connection_pool.connection() as db:
                 source, destination, btc_amount, fee, data, extra = gettxinfo.get_tx_info(
                     db,
                     deserialize.deserialize_tx(tx_hex, use_txid=use_txid),
@@ -996,7 +997,7 @@ class APIServer(threading.Thread):
 
             # TODO: Enabled only for `send`.
             if message_type_id == send.ID:
-                with DBConnectionPool().connection() as db:
+                with self.connection_pool.connection() as db:
                     unpacked = send.unpack(db, message, util.CURRENT_BLOCK_INDEX)
             elif message_type_id == enhanced_send.ID:
                 unpacked = enhanced_send.unpack(message, util.CURRENT_BLOCK_INDEX)
@@ -1015,7 +1016,7 @@ class APIServer(threading.Thread):
                 raise APIError("You must provided a tx hash or a tx index")
 
             dispensers = []
-            with DBConnectionPool().connection() as db:
+            with self.connection_pool.connection() as db:
                 if tx_hash is not None:
                     dispensers = ledger.get_dispenser_info(db, tx_hash=tx_hash)
                 else:
@@ -1082,7 +1083,7 @@ class APIServer(threading.Thread):
             with configure_sentry_scope() as scope:
                 scope.set_transaction_name("healthcheck")
             check_type = request.args.get("type", "light")
-            with DBConnectionPool().connection() as db:
+            with self.connection_pool.connection() as db:
                 return api_util.handle_healthz_route(db, check_type)
 
         @app.route("/", defaults={"args_path": ""}, methods=["GET", "POST", "OPTIONS"])
@@ -1222,7 +1223,7 @@ class APIServer(threading.Thread):
 
                 # Compose the transaction.
                 try:
-                    with DBConnectionPool().connection() as db:
+                    with self.connection_pool.connection() as db:
                         query_data = transaction.compose_transaction(
                             db, name=query_type, params=transaction_args, **common_args
                         )
@@ -1248,7 +1249,7 @@ class APIServer(threading.Thread):
 
                 # Run the query.
                 try:
-                    with DBConnectionPool().connection() as db:
+                    with self.connection_pool.connection() as db:
                         query_data = get_rows(
                             db,
                             table=query_type,
