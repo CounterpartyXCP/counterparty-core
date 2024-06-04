@@ -7,6 +7,7 @@ import binascii
 import json
 import logging
 import time
+from contextlib import contextmanager
 from datetime import datetime
 
 import apsw
@@ -205,13 +206,25 @@ def rawtransactions_db(request):
 
 
 @pytest.fixture(scope="function")
-def server_db(request, cp_server, api_server):
+def server_db(request, cp_server, api_server, monkeypatch):
     """Enable database access for unit test vectors."""
     db = database.get_connection(read_only=False)
-    api_server.db = db  # inject into api_server
     cursor = db.cursor()
     cursor.execute("""BEGIN""")
     util_test.reset_current_block_index(db)
+
+    class DBConnectionPool:
+        @contextmanager
+        def connection(self):
+            try:
+                yield db
+            finally:
+                pass
+
+        def close(self):
+            db.close()
+
+    database.DBConnectionPool = DBConnectionPool
 
     request.addfinalizer(lambda: cursor.execute("""ROLLBACK"""))
     request.addfinalizer(lambda: util_test.reset_current_block_index(db))

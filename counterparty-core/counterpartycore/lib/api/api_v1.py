@@ -33,6 +33,7 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.api import util as api_util
+from counterpartycore.lib.database import DBConnectionPool
 from counterpartycore.lib.messages import (
     bet,  # noqa: F401
     broadcast,  # noqa: F401
@@ -543,7 +544,6 @@ class APIServer(threading.Thread):
     """Handle JSON-RPC API calls."""
 
     def __init__(self, db=None):
-        self.db = db
         self.is_ready = False
         self.server = None
         self.ctx = None
@@ -552,13 +552,12 @@ class APIServer(threading.Thread):
 
     def stop(self):
         logger.info("Stopping API Server v1...")
-        self.db.close()
+        DBConnectionPool().close()
         self.server.shutdown()
         self.join()
 
     def run(self):
         logger.info("Starting API Server v1...")
-        self.db = self.db or database.get_connection(read_only=True)
         app = flask.Flask(__name__)
         auth = HTTPBasicAuth()
 
@@ -575,7 +574,8 @@ class APIServer(threading.Thread):
         def generate_get_method(table):
             def get_method(**kwargs):
                 try:
-                    return get_rows(self.db, table=table, **kwargs)
+                    with DBConnectionPool().connection() as db:
+                        return get_rows(db, table=table, **kwargs)
                 except TypeError as e:  # TODO: generalise for all API methods
                     raise APIError(str(e))  # noqa: B904
 
@@ -590,7 +590,8 @@ class APIServer(threading.Thread):
         def sql(query, bindings=None):
             if bindings == None:  # noqa: E711
                 bindings = []
-            return db_query(self.db, query, tuple(bindings))
+            with DBConnectionPool().connection() as db:
+                return db_query(db, query, tuple(bindings))
 
         ######################
         # WRITE/ACTION API
@@ -602,9 +603,10 @@ class APIServer(threading.Thread):
                     transaction_args, common_args, private_key_wif = (
                         transaction.split_compose_params(**kwargs)
                     )
-                    return transaction.compose_transaction(
-                        self.db, name=tx, params=transaction_args, api_v1=True, **common_args
-                    )
+                    with DBConnectionPool().connection() as db:
+                        return transaction.compose_transaction(
+                            db, name=tx, params=transaction_args, api_v1=True, **common_args
+                        )
                 except (
                     TypeError,
                     script.AddressError,
@@ -631,8 +633,8 @@ class APIServer(threading.Thread):
         def get_messages(block_index):
             if not isinstance(block_index, int):
                 raise APIError("block_index must be an integer.")
-
-            messages = ledger.get_messages(self.db, block_index=block_index)
+            with DBConnectionPool().connection() as db:
+                messages = ledger.get_messages(db, block_index=block_index)
             return messages
 
         @dispatcher.add_method
@@ -648,24 +650,26 @@ class APIServer(threading.Thread):
             for idx in message_indexes:  # make sure the data is clean
                 if not isinstance(idx, int):
                     raise APIError("All items in message_indexes are not integers")
-
-            messages = ledger.get_messages(self.db, message_index_in=message_indexes)
+            with DBConnectionPool().connection() as db:
+                messages = ledger.get_messages(db, message_index_in=message_indexes)
             return messages
 
         @dispatcher.add_method
         def get_supply(asset):
-            if asset == "BTC":
-                return backend.bitcoind.get_btc_supply(normalize=False)
-            elif asset == "XCP":
-                return ledger.xcp_supply(self.db)
-            else:
-                asset = ledger.resolve_subasset_longname(self.db, asset)
-                return ledger.asset_supply(self.db, asset)
+            with DBConnectionPool().connection() as db:
+                if asset == "BTC":
+                    return backend.bitcoind.get_btc_supply(normalize=False)
+                elif asset == "XCP":
+                    return ledger.xcp_supply(db)
+                else:
+                    asset = ledger.resolve_subasset_longname(db, asset)
+                    return ledger.asset_supply(db, asset)
 
         @dispatcher.add_method
         def get_xcp_supply():
             logger.warning("Deprecated method: `get_xcp_supply`")
-            return ledger.xcp_supply(self.db)
+            with DBConnectionPool().connection() as db:
+                return ledger.xcp_supply(db)
 
         @dispatcher.add_method
         def get_asset_info(assets=None, asset=None):
@@ -677,70 +681,72 @@ class APIServer(threading.Thread):
                     "assets must be a list of asset names, even if it just contains one entry"
                 )
             assets_info = []
-            for asset in assets:
-                asset = ledger.resolve_subasset_longname(self.db, asset)  # noqa: PLW2901
+            with DBConnectionPool().connection() as db:
+                for asset in assets:
+                    asset = ledger.resolve_subasset_longname(db, asset)  # noqa: PLW2901
 
-                # BTC and XCP.
-                if asset in [config.BTC, config.XCP]:
-                    if asset == config.BTC:
-                        supply = backend.bitcoind.get_btc_supply(normalize=False)
+                    # BTC and XCP.
+                    if asset in [config.BTC, config.XCP]:
+                        if asset == config.BTC:
+                            supply = backend.bitcoind.get_btc_supply(normalize=False)
+                        else:
+                            supply = ledger.xcp_supply(db)
+
+                        assets_info.append(
+                            {
+                                "asset": asset,
+                                "asset_longname": None,
+                                "owner": None,
+                                "divisible": True,
+                                "locked": False,
+                                "supply": supply,
+                                "description": "",
+                                "issuer": None,
+                            }
+                        )
+                        continue
+
+                    # User‐created asset.
+                    cursor = db.cursor()
+                    issuances = ledger.get_issuances(db, asset=asset, status="valid", first=True)
+                    cursor.close()
+                    if not issuances:
+                        continue  # asset not found, most likely
                     else:
-                        supply = ledger.xcp_supply(self.db)
-
+                        last_issuance = issuances[-1]
+                    locked = False
+                    for e in issuances:
+                        if e["locked"]:
+                            locked = True
                     assets_info.append(
                         {
                             "asset": asset,
-                            "asset_longname": None,
-                            "owner": None,
-                            "divisible": True,
-                            "locked": False,
-                            "supply": supply,
-                            "description": "",
-                            "issuer": None,
+                            "asset_longname": last_issuance["asset_longname"],
+                            "owner": last_issuance["issuer"],
+                            "divisible": bool(last_issuance["divisible"]),
+                            "locked": locked,
+                            "supply": ledger.asset_supply(db, asset),
+                            "description": last_issuance["description"],
+                            "issuer": last_issuance["issuer"],
                         }
                     )
-                    continue
-
-                # User‐created asset.
-                cursor = self.db.cursor()
-                issuances = ledger.get_issuances(self.db, asset=asset, status="valid", first=True)
-                cursor.close()
-                if not issuances:
-                    continue  # asset not found, most likely
-                else:
-                    last_issuance = issuances[-1]
-                locked = False
-                for e in issuances:
-                    if e["locked"]:
-                        locked = True
-                assets_info.append(
-                    {
-                        "asset": asset,
-                        "asset_longname": last_issuance["asset_longname"],
-                        "owner": last_issuance["issuer"],
-                        "divisible": bool(last_issuance["divisible"]),
-                        "locked": locked,
-                        "supply": ledger.asset_supply(self.db, asset),
-                        "description": last_issuance["description"],
-                        "issuer": last_issuance["issuer"],
-                    }
-                )
             return assets_info
 
         @dispatcher.add_method
         def get_block_info(block_index):
             assert isinstance(block_index, int)
-            cursor = self.db.cursor()
-            cursor.execute("""SELECT * FROM blocks WHERE block_index = ?""", (block_index,))
-            blocks = list(cursor)  # noqa: F811
-            if len(blocks) == 1:
-                block = blocks[0]
-            elif len(blocks) == 0:
-                raise exceptions.DatabaseError("No blocks found.")
-            else:
-                assert False  # noqa: B011
-            cursor.close()
-            return block
+            with DBConnectionPool().connection() as db:
+                cursor = db.cursor()
+                cursor.execute("""SELECT * FROM blocks WHERE block_index = ?""", (block_index,))
+                blocks = list(cursor)  # noqa: F811
+                if len(blocks) == 1:
+                    block = blocks[0]
+                elif len(blocks) == 0:
+                    raise exceptions.DatabaseError("No blocks found.")
+                else:
+                    assert False  # noqa: B011
+                cursor.close()
+                return block
 
         @dispatcher.add_method
         def fee_per_kb(conf_target=config.ESTIMATE_FEE_CONF_TARGET, mode=config.ESTIMATE_FEE_MODE):
@@ -768,61 +774,63 @@ class APIServer(threading.Thread):
                 if not isinstance(block_index, int):
                     raise APIError(must_be_non_empty_list_int)
 
-            cursor = self.db.cursor()
+            with DBConnectionPool().connection() as db:
+                cursor = db.cursor()
 
-            block_indexes_placeholder = f"{','.join(['?'] * len(block_indexes))}"
-            # no sql injection here
-            cursor.execute(
-                f"SELECT * FROM blocks WHERE block_index IN ({block_indexes_placeholder}) ORDER BY block_index ASC",  # nosec B608  # noqa: S608
-                block_indexes,
-            )
-            blocks = cursor.fetchall()  # noqa: F811
+                block_indexes_placeholder = f"{','.join(['?'] * len(block_indexes))}"
+                # no sql injection here
+                cursor.execute(
+                    f"SELECT * FROM blocks WHERE block_index IN ({block_indexes_placeholder}) ORDER BY block_index ASC",  # nosec B608  # noqa: S608
+                    block_indexes,
+                )
+                blocks = cursor.fetchall()  # noqa: F811
 
-            messages = collections.deque(ledger.get_messages(self.db, block_index_in=block_indexes))
+                messages = collections.deque(ledger.get_messages(db, block_index_in=block_indexes))
 
-            # Discard any messages less than min_message_index
-            if min_message_index:
-                while len(messages) and messages[0]["message_index"] < min_message_index:
-                    messages.popleft()
+                # Discard any messages less than min_message_index
+                if min_message_index:
+                    while len(messages) and messages[0]["message_index"] < min_message_index:
+                        messages.popleft()
 
-            # Packages messages into their appropriate block in the data structure to be returned
-            for block in blocks:
-                block["_messages"] = []
-                while len(messages) and messages[0]["block_index"] == block["block_index"]:
-                    block["_messages"].append(messages.popleft())
-            # NOTE: if len(messages), then we're only returning the messages for the first set of blocks before the reorg
+                # Packages messages into their appropriate block in the data structure to be returned
+                for block in blocks:
+                    block["_messages"] = []
+                    while len(messages) and messages[0]["block_index"] == block["block_index"]:
+                        block["_messages"].append(messages.popleft())
+                # NOTE: if len(messages), then we're only returning the messages for the first set of blocks before the reorg
 
-            cursor.close()
+                cursor.close()
             return blocks
 
         @dispatcher.add_method
         def get_running_info():
             latest_block_index = backend.bitcoind.getblockcount()
-            try:
-                api_util.check_last_parsed_block(self.db, latest_block_index)
-            except exceptions.DatabaseError:
-                caught_up = False
-            else:
-                caught_up = True
+            with DBConnectionPool().connection() as db:
+                try:
+                    api_util.check_last_parsed_block(db, latest_block_index)
+                except exceptions.DatabaseError:
+                    caught_up = False
+                else:
+                    caught_up = True
 
-            try:
-                cursor = self.db.cursor()
-                blocks = list(
-                    cursor.execute(
-                        """SELECT * FROM blocks WHERE block_index = ?""",
-                        (util.CURRENT_BLOCK_INDEX,),
+                try:
+                    cursor = db.cursor()
+                    blocks = list(
+                        cursor.execute(
+                            """SELECT * FROM blocks WHERE block_index = ?""",
+                            (util.CURRENT_BLOCK_INDEX,),
+                        )
                     )
-                )
-                assert len(blocks) == 1
-                last_block = blocks[0]
-                cursor.close()
-            except:  # noqa: E722
-                last_block = None
+                    assert len(blocks) == 1
+                    last_block = blocks[0]
+                    cursor.close()
+                except:  # noqa: E722
+                    last_block = None
 
-            try:
-                last_message = ledger.last_message(self.db)
-            except:  # noqa: E722
-                last_message = None
+                try:
+                    last_message = ledger.last_message(db)
+                except:  # noqa: E722
+                    last_message = None
 
             try:
                 indexd_blocks_behind = backend.bitcoind.get_blocks_behind()
@@ -859,43 +867,45 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_element_counts():
-            counts = {}
-            cursor = self.db.cursor()
-            for element in [
-                "transactions",
-                "blocks",
-                "debits",
-                "credits",
-                "balances",
-                "sends",
-                "orders",
-                "order_matches",
-                "btcpays",
-                "issuances",
-                "broadcasts",
-                "bets",
-                "bet_matches",
-                "dividends",
-                "burns",
-                "cancels",
-                "order_expirations",
-                "bet_expirations",
-                "order_match_expirations",
-                "bet_match_expirations",
-                "messages",
-                "destructions",
-            ]:
-                # no sql injection here, element is hardcoded
-                cursor.execute(f"SELECT COUNT(*) AS count FROM {element}")  # nosec B608  # noqa: S608
-                count_list = cursor.fetchall()
-                assert len(count_list) == 1
-                counts[element] = count_list[0]["count"]
-            cursor.close()
-            return counts
+            with DBConnectionPool().connection() as db:
+                counts = {}
+                cursor = db.cursor()
+                for element in [
+                    "transactions",
+                    "blocks",
+                    "debits",
+                    "credits",
+                    "balances",
+                    "sends",
+                    "orders",
+                    "order_matches",
+                    "btcpays",
+                    "issuances",
+                    "broadcasts",
+                    "bets",
+                    "bet_matches",
+                    "dividends",
+                    "burns",
+                    "cancels",
+                    "order_expirations",
+                    "bet_expirations",
+                    "order_match_expirations",
+                    "bet_match_expirations",
+                    "messages",
+                    "destructions",
+                ]:
+                    # no sql injection here, element is hardcoded
+                    cursor.execute(f"SELECT COUNT(*) AS count FROM {element}")  # nosec B608  # noqa: S608
+                    count_list = cursor.fetchall()
+                    assert len(count_list) == 1
+                    counts[element] = count_list[0]["count"]
+                cursor.close()
+                return counts
 
         @dispatcher.add_method
         def get_asset_names(longnames=False):
-            all_assets = ledger.get_valid_assets(self.db)
+            with DBConnectionPool().connection() as db:
+                all_assets = ledger.get_valid_assets(db)
             if longnames:
                 names = [
                     {"asset": row["asset"], "asset_longname": row["asset_longname"]}
@@ -911,8 +921,9 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_holder_count(asset):
-            asset = ledger.resolve_subasset_longname(self.db, asset)
-            holders = ledger.holders(self.db, asset, True)
+            with DBConnectionPool().connection() as db:
+                asset = ledger.resolve_subasset_longname(db, asset)
+                holders = ledger.holders(db, asset, True)
             addresses = []
             for holder in holders:
                 addresses.append(holder["address"])
@@ -920,8 +931,9 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_holders(asset):
-            asset = ledger.resolve_subasset_longname(self.db, asset)
-            holders = ledger.holders(self.db, asset, True)
+            with DBConnectionPool().connection() as db:
+                asset = ledger.resolve_subasset_longname(db, asset)
+                holders = ledger.holders(db, asset, True)
             return holders
 
         @dispatcher.add_method
@@ -963,11 +975,12 @@ class APIServer(threading.Thread):
         def get_tx_info(tx_hex, block_index=None):
             # block_index mandatory for transactions before block 335000
             use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
-            source, destination, btc_amount, fee, data, extra = gettxinfo.get_tx_info(
-                self.db,
-                deserialize.deserialize_tx(tx_hex, use_txid=use_txid),
-                block_index=block_index,
-            )
+            with DBConnectionPool().connection() as db:
+                source, destination, btc_amount, fee, data, extra = gettxinfo.get_tx_info(
+                    db,
+                    deserialize.deserialize_tx(tx_hex, use_txid=use_txid),
+                    block_index=block_index,
+                )
             return (
                 source,
                 destination,
@@ -983,7 +996,8 @@ class APIServer(threading.Thread):
 
             # TODO: Enabled only for `send`.
             if message_type_id == send.ID:
-                unpacked = send.unpack(self.db, message, util.CURRENT_BLOCK_INDEX)
+                with DBConnectionPool().connection() as db:
+                    unpacked = send.unpack(db, message, util.CURRENT_BLOCK_INDEX)
             elif message_type_id == enhanced_send.ID:
                 unpacked = enhanced_send.unpack(message, util.CURRENT_BLOCK_INDEX)
             else:
@@ -1001,54 +1015,55 @@ class APIServer(threading.Thread):
                 raise APIError("You must provided a tx hash or a tx index")
 
             dispensers = []
-            if tx_hash is not None:
-                dispensers = ledger.get_dispenser_info(self.db, tx_hash=tx_hash)
-            else:
-                dispensers = ledger.get_dispenser_info(self.db, tx_index=tx_index)
+            with DBConnectionPool().connection() as db:
+                if tx_hash is not None:
+                    dispensers = ledger.get_dispenser_info(db, tx_hash=tx_hash)
+                else:
+                    dispensers = ledger.get_dispenser_info(db, tx_index=tx_index)
 
-            if len(dispensers) == 1:
-                dispenser = dispensers[0]
-                oracle_price = ""
-                satoshi_price = ""
-                fiat_price = ""
-                oracle_price_last_updated = ""
-                oracle_fiat_label = ""
+                if len(dispensers) == 1:
+                    dispenser = dispensers[0]
+                    oracle_price = ""
+                    satoshi_price = ""
+                    fiat_price = ""
+                    oracle_price_last_updated = ""
+                    oracle_fiat_label = ""
 
-                if dispenser["oracle_address"] != None:  # noqa: E711
-                    fiat_price = util.satoshirate_to_fiat(dispenser["satoshirate"])
-                    (
-                        oracle_price,
-                        oracle_fee,
-                        oracle_fiat_label,
-                        oracle_price_last_updated,
-                    ) = ledger.get_oracle_last_price(
-                        self.db, dispenser["oracle_address"], util.CURRENT_BLOCK_INDEX
-                    )
+                    if dispenser["oracle_address"] != None:  # noqa: E711
+                        fiat_price = util.satoshirate_to_fiat(dispenser["satoshirate"])
+                        (
+                            oracle_price,
+                            oracle_fee,
+                            oracle_fiat_label,
+                            oracle_price_last_updated,
+                        ) = ledger.get_oracle_last_price(
+                            db, dispenser["oracle_address"], util.CURRENT_BLOCK_INDEX
+                        )
 
-                    if oracle_price > 0:
-                        satoshi_price = math.ceil((fiat_price / oracle_price) * config.UNIT)
-                    else:
-                        raise APIError("Last oracle price is zero")
+                        if oracle_price > 0:
+                            satoshi_price = math.ceil((fiat_price / oracle_price) * config.UNIT)
+                        else:
+                            raise APIError("Last oracle price is zero")
 
-                return {
-                    "tx_index": dispenser["tx_index"],
-                    "tx_hash": dispenser["tx_hash"],
-                    "block_index": dispenser["block_index"],
-                    "source": dispenser["source"],
-                    "asset": dispenser["asset"],
-                    "give_quantity": dispenser["give_quantity"],
-                    "escrow_quantity": dispenser["escrow_quantity"],
-                    "mainchainrate": dispenser["satoshirate"],
-                    "fiat_price": fiat_price,
-                    "fiat_unit": oracle_fiat_label,
-                    "oracle_price": oracle_price,
-                    "satoshi_price": satoshi_price,
-                    "status": dispenser["status"],
-                    "give_remaining": dispenser["give_remaining"],
-                    "oracle_address": dispenser["oracle_address"],
-                    "oracle_price_last_updated": oracle_price_last_updated,
-                    "asset_longname": dispenser["asset_longname"],
-                }
+                    return {
+                        "tx_index": dispenser["tx_index"],
+                        "tx_hash": dispenser["tx_hash"],
+                        "block_index": dispenser["block_index"],
+                        "source": dispenser["source"],
+                        "asset": dispenser["asset"],
+                        "give_quantity": dispenser["give_quantity"],
+                        "escrow_quantity": dispenser["escrow_quantity"],
+                        "mainchainrate": dispenser["satoshirate"],
+                        "fiat_price": fiat_price,
+                        "fiat_unit": oracle_fiat_label,
+                        "oracle_price": oracle_price,
+                        "satoshi_price": satoshi_price,
+                        "status": dispenser["status"],
+                        "give_remaining": dispenser["give_remaining"],
+                        "oracle_address": dispenser["oracle_address"],
+                        "oracle_price_last_updated": oracle_price_last_updated,
+                        "asset_longname": dispenser["asset_longname"],
+                    }
 
             return {}
 
@@ -1067,7 +1082,8 @@ class APIServer(threading.Thread):
             with configure_sentry_scope() as scope:
                 scope.set_transaction_name("healthcheck")
             check_type = request.args.get("type", "light")
-            return api_util.handle_healthz_route(self.db, check_type)
+            with DBConnectionPool().connection() as db:
+                return api_util.handle_healthz_route(db, check_type)
 
         @app.route("/", defaults={"args_path": ""}, methods=["GET", "POST", "OPTIONS"])
         @app.route("/<path:args_path>", methods=["GET", "POST", "OPTIONS"])
@@ -1206,9 +1222,10 @@ class APIServer(threading.Thread):
 
                 # Compose the transaction.
                 try:
-                    query_data = transaction.compose_transaction(
-                        self.db, name=query_type, params=transaction_args, **common_args
-                    )
+                    with DBConnectionPool().connection() as db:
+                        query_data = transaction.compose_transaction(
+                            db, name=query_type, params=transaction_args, **common_args
+                        )
                 except (
                     script.AddressError,
                     exceptions.ComposeError,
@@ -1231,12 +1248,13 @@ class APIServer(threading.Thread):
 
                 # Run the query.
                 try:
-                    query_data = get_rows(
-                        self.db,
-                        table=query_type,
-                        filters=data_filter,
-                        filterop=operator,
-                    )
+                    with DBConnectionPool().connection() as db:
+                        query_data = get_rows(
+                            db,
+                            table=query_type,
+                            filters=data_filter,
+                            filterop=operator,
+                        )
                 except APIError as error:  # noqa: F841
                     return flask.Response("API Error", 400, mimetype="application/json")
 
