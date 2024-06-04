@@ -46,6 +46,61 @@ impl<'source> FromPyObject<'source> for LogLevel {
 }
 
 #[derive(Debug, Clone)]
+pub enum Network {
+    Mainnet,
+    Testnet,
+}
+
+impl<'source> FromPyObject<'source> for Network {
+    fn extract(obj: &'source PyAny) -> PyResult<Self> {
+        let network_str: String = obj.extract()?;
+        match network_str.as_str() {
+            "mainnet" => Ok(Network::Mainnet),
+            "testnet" => Ok(Network::Testnet),
+            _ => Err(PyErr::new::<PyValueError, _>(
+                "'network' must be either 'mainnet' or 'testnet'",
+            )),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Indexes {
+    pub segwit: u32,
+    pub p2sh_addresses: u32,
+    pub p2sh_dispensers: u32,
+}
+
+impl Indexes {
+    pub fn new(network: Network) -> Self {
+        match network {
+            Network::Mainnet => Indexes {
+                segwit: 557236,
+                p2sh_addresses: 423888,
+                p2sh_dispensers: 724000,
+            },
+            Network::Testnet => Indexes {
+                segwit: 1440200,
+                p2sh_addresses: 0,
+                p2sh_dispensers: 2163328,
+            },
+        }
+    }
+
+    pub fn segwit_supported(&self, block_height: u32) -> bool {
+        block_height >= self.segwit
+    }
+
+    pub fn p2sh_address_supported(&self, block_height: u32) -> bool {
+        block_height >= self.p2sh_addresses
+    }
+
+    pub fn p2sh_dispensers_supported(&self, block_height: u32) -> bool {
+        block_height >= self.p2sh_dispensers
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Config {
     pub rpc_address: String,
     pub rpc_user: String,
@@ -58,6 +113,8 @@ pub struct Config {
     pub mode: Mode,
     pub prefix: Vec<u8>,
     pub address_version: Vec<u8>,
+    pub network: Network,
+    pub indexes: Indexes,
 }
 
 impl<'source> FromPyObject<'source> for Config {
@@ -114,6 +171,13 @@ impl<'source> FromPyObject<'source> for Config {
             _ => vec![0x00],
         };
 
+        let network = match dict.get_item("network") {
+            Ok(Some(item)) => item.extract()?,
+            _ => Network::Mainnet, // Default to Mainnet if not provided or in case of an error
+        };
+
+        let indexes = Indexes::new(network);
+
         Ok(Config {
             rpc_address,
             rpc_user,
@@ -126,6 +190,8 @@ impl<'source> FromPyObject<'source> for Config {
             mode,
             prefix,
             address_version,
+            network,
+            indexes,
         })
     }
 }
