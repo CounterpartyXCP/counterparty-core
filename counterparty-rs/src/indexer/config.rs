@@ -65,38 +65,26 @@ impl<'source> FromPyObject<'source> for Network {
 }
 
 #[derive(Debug, Clone)]
-pub struct Indexes {
+pub struct Heights {
     pub segwit: u32,
     pub p2sh_addresses: u32,
     pub p2sh_dispensers: u32,
 }
 
-impl Indexes {
+impl Heights {
     pub fn new(network: Network) -> Self {
         match network {
-            Network::Mainnet => Indexes {
+            Network::Mainnet => Heights {
                 segwit: 557236,
                 p2sh_addresses: 423888,
                 p2sh_dispensers: 724000,
             },
-            Network::Testnet => Indexes {
+            Network::Testnet => Heights {
                 segwit: 1440200,
                 p2sh_addresses: 0,
                 p2sh_dispensers: 2163328,
             },
         }
-    }
-
-    pub fn segwit_supported(&self, block_height: u32) -> bool {
-        block_height >= self.segwit
-    }
-
-    pub fn p2sh_address_supported(&self, block_height: u32) -> bool {
-        block_height >= self.p2sh_addresses
-    }
-
-    pub fn p2sh_dispensers_supported(&self, block_height: u32) -> bool {
-        block_height >= self.p2sh_dispensers
     }
 }
 
@@ -114,7 +102,21 @@ pub struct Config {
     pub prefix: Vec<u8>,
     pub address_version: Vec<u8>,
     pub network: Network,
-    pub indexes: Indexes,
+    pub heights: Heights,
+}
+
+impl Config {
+    pub fn segwit_supported(&self, block_height: u32) -> bool {
+        block_height >= self.heights.segwit
+    }
+
+    pub fn p2sh_address_supported(&self, block_height: u32) -> bool {
+        block_height >= self.heights.p2sh_addresses
+    }
+
+    pub fn p2sh_dispensers_supported(&self, block_height: u32) -> bool {
+        block_height >= self.heights.p2sh_dispensers
+    }
 }
 
 impl<'source> FromPyObject<'source> for Config {
@@ -176,7 +178,7 @@ impl<'source> FromPyObject<'source> for Config {
             _ => Network::Mainnet, // Default to Mainnet if not provided or in case of an error
         };
 
-        let indexes = Indexes::new(network);
+        let heights = Heights::new(network);
 
         Ok(Config {
             rpc_address,
@@ -191,7 +193,7 @@ impl<'source> FromPyObject<'source> for Config {
             prefix,
             address_version,
             network,
-            indexes,
+            heights,
         })
     }
 }
