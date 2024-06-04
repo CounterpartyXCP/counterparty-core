@@ -1,10 +1,11 @@
-use std::{collections::HashMap, hash::Hash, sync::Arc, thread::JoinHandle};
+use std::{collections::HashMap, sync::Arc, thread::JoinHandle};
 
 use crate::b58::b58_encode;
-use bitcoin::{hashes::hex::ToHex, Script};
+use bitcoin::hashes::hex::ToHex;
 use bitcoincore_rpc::{
     bitcoin::{
         consensus::serialize,
+        hashes::{ripemd160, sha256},
         hashes::{sha256d::Hash as Sha256dHash, Hash},
         opcodes::all::{OP_CHECKMULTISIG, OP_CHECKSIG, OP_DUP, OP_EQUALVERIFY, OP_HASH160},
         script::Instruction::{Op, PushBytes},
@@ -181,19 +182,34 @@ impl ToBlock for Block {
                     }
                 } else if script.is_multisig() {
                     let mut chunks = Vec::new();
+                    let mut signatures_required = 0;
                     match script
                         .instructions()
                         .into_iter()
                         .collect::<Vec<_>>()
                         .as_slice()
                     {
-                        [Ok(PushBytes(sigs_req_pb)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(_)), Ok(Op(OP_CHECKMULTISIG))] => {
-                            for pb in [pk1_pb, pk2_pb] {
+                        [Ok(PushBytes(sigs_req_pb)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(Op(OP_CHECKMULTISIG))] =>
+                        {
+                            signatures_required = u32::from_be_bytes(
+                                sigs_req_pb
+                                    .as_bytes()
+                                    .try_into()
+                                    .expect("Invalid signatures required byte encountered"),
+                            );
+                            for pb in [pk1_pb, pk2_pb, pk3_pb] {
                                 chunks.push(pb.as_bytes().to_vec());
                             }
                         }
-                        [Ok(PushBytes(sigs_req_pb)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(PushBytes(_)), Ok(Op(OP_CHECKMULTISIG))] => {
-                            for pb in [pk1_pb, pk2_pb, pk3_pb] {
+                        [Ok(PushBytes(sigs_req_pb)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(PushBytes(pk4_pb)), Ok(Op(OP_CHECKMULTISIG))] =>
+                        {
+                            signatures_required = u32::from_be_bytes(
+                                sigs_req_pb
+                                    .as_bytes()
+                                    .try_into()
+                                    .expect("Invalid signatures required byte encountered"),
+                            );
+                            for pb in [pk1_pb, pk2_pb, pk3_pb, pk4_pb] {
                                 chunks.push(pb.as_bytes().to_vec());
                             }
                         }
@@ -216,10 +232,29 @@ impl ToBlock for Block {
                         let chunk = bytes[1..=chunk_len].to_vec();
                         data = Some(chunk[config.prefix.len()..].to_vec());
                     } else {
-                        todo!()
-                        // let pub_key_hashes = chunks
-                        //     .into_iter()
-                        //     .map(|chunk| Script::from(chunk).script_hash().as_hash().to_hex());
+                        let mut pub_key_hashes = chunks
+                            .into_iter()
+                            .map(|chunk| {
+                                b58_encode(
+                                    ripemd160::Hash::hash(
+                                        sha256::Hash::hash(&chunk).as_byte_array(),
+                                    )
+                                    .as_byte_array(),
+                                )
+                            })
+                            .collect::<Vec<_>>();
+                        pub_key_hashes.sort();
+                        destination = Some(
+                            [signatures_required.to_string()]
+                                .into_iter()
+                                .chain(
+                                    pub_key_hashes
+                                        .into_iter()
+                                        .chain([pub_key_hashes.len().to_string()]),
+                                )
+                                .collect::<Vec<_>>()
+                                .join("_"),
+                        )
                     }
                 }
             }
