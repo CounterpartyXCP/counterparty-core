@@ -1,7 +1,7 @@
-use core::slice::SlicePattern;
-use std::{collections::HashMap, sync::Arc, thread::JoinHandle};
+use std::{collections::HashMap, hash::Hash, sync::Arc, thread::JoinHandle};
 
-use bitcoin::hashes::hex::ToHex;
+use crate::b58::b58_encode;
+use bitcoin::{hashes::hex::ToHex, Script};
 use bitcoincore_rpc::{
     bitcoin::{
         consensus::serialize,
@@ -16,6 +16,7 @@ use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
 use crypto::buffer::{RefReadBuffer, RefWriteBuffer, WriteBuffer};
 use crypto::rc4::Rc4;
 use crypto::symmetriccipher::Decryptor;
+use tracing::warn;
 
 use super::{
     block::{Block as CrateBlock, ToBlock, Transaction, Vin, Vout},
@@ -74,6 +75,19 @@ impl BlockHasEntries for Block {
     }
 }
 
+fn arc4_decrypt(key: &[u8], data: &[u8]) -> Vec<u8> {
+    let mut read_buf = RefReadBuffer::new(data);
+    let mut write_buf = RefWriteBuffer::new(&mut Vec::new());
+    Rc4::new(&key)
+        .decrypt(&mut read_buf, &mut write_buf, false)
+        .expect("RC4 decryption failed");
+    write_buf
+        .take_remaining()
+        .iter()
+        .map(|&i| i)
+        .collect::<Vec<_>>()
+}
+
 impl ToBlock for Block {
     fn to_block(&self, config: Config, height: u32) -> CrateBlock {
         let mut transactions = Vec::new();
@@ -102,7 +116,7 @@ impl ToBlock for Block {
             }
             let mut vouts = Vec::new();
             let mut fee = 0;
-            for vout in tx.output.iter() {
+            for (vi, vout) in tx.output.iter().enumerate() {
                 vouts.push(Vout {
                     value: vout.value.to_sat(),
                     script_pub_key: vout.script_pubkey.to_bytes(),
@@ -111,25 +125,24 @@ impl ToBlock for Block {
                 let output_value = vout.value.to_sat();
                 let fee = fee - output_value;
                 let script = vout.script_pubkey;
+                let mut destination = None;
                 let mut data = None;
                 if script.is_op_return() {
                     for result in script.instructions().into_iter() {
                         if let Ok(i) = result {
                             if let PushBytes(pb) = i {
-                                let mut read_buf = RefReadBuffer::new(pb.as_bytes());
-                                let mut write_buf = RefWriteBuffer::new(&mut Vec::new());
-                                Rc4::new(&key)
-                                    .decrypt(&mut read_buf, &mut write_buf, false)
-                                    .expect("RC4 decryption failed");
-                                let bytes = write_buf
-                                    .take_remaining()
-                                    .iter()
-                                    .map(|&i| i)
-                                    .collect::<Vec<_>>();
+                                let bytes = arc4_decrypt(&key, pb.as_bytes());
                                 if bytes.starts_with(&config.prefix) {
                                     data = Some(bytes[config.prefix.len()..].to_vec());
                                 }
                             }
+                        } else {
+                            warn!(
+                                "Encountered invalid OP_RETURN script | tx: {}, vout: {}",
+                                tx.txid().to_hex(),
+                                vi
+                            );
+                            continue;
                         }
                     }
                 } else if let Some(Ok(Op(OP_CHECKSIG))) = script.instructions().next() {
@@ -141,22 +154,72 @@ impl ToBlock for Block {
                     {
                         [Ok(Op(OP_DUP)), Ok(Op(OP_HASH160)), Ok(PushBytes(pb)), Ok(Op(OP_EQUALVERIFY)), Ok(Op(OP_CHECKSIG))] =>
                         {
-                            todo!()
+                            let bytes = arc4_decrypt(&key, pb.as_bytes());
+                            if bytes[1..=config.prefix.len()] == config.prefix {
+                                let chunk_len = bytes[0] as usize;
+                                let chunk = bytes[1..=chunk_len].to_vec();
+                                data = Some(chunk[config.prefix.len()..].to_vec());
+                            } else {
+                                destination = Some(b58_encode(
+                                    config
+                                        .address_version
+                                        .into_iter()
+                                        .chain(bytes.into_iter())
+                                        .collect::<Vec<_>>()
+                                        .as_slice(),
+                                ));
+                            }
                         }
-                        _ => continue,
+                        _ => {
+                            warn!(
+                                "Encountered invalid OP_CHECKSIG script | tx: {}, vout: {}",
+                                tx.txid().to_hex(),
+                                vi
+                            );
+                            continue;
+                        }
                     }
                 } else if script.is_multisig() {
+                    let mut chunks = Vec::new();
                     match script
                         .instructions()
                         .into_iter()
                         .collect::<Vec<_>>()
                         .as_slice()
                     {
-                        [Ok(PushBytes(sigs_req_pb)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(Op(OP_CHECKMULTISIG))] =>
-                            {}
-                        [Ok(PushBytes(sigs_req_pb)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(PushBytes(pk4_pb)), Ok(Op(OP_CHECKMULTISIG))] =>
-                            {}
-                        _ => continue,
+                        [Ok(PushBytes(sigs_req_pb)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(_)), Ok(Op(OP_CHECKMULTISIG))] => {
+                            for pb in [pk1_pb, pk2_pb] {
+                                chunks.push(pb.as_bytes().to_vec());
+                            }
+                        }
+                        [Ok(PushBytes(sigs_req_pb)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(PushBytes(_)), Ok(Op(OP_CHECKMULTISIG))] => {
+                            for pb in [pk1_pb, pk2_pb, pk3_pb] {
+                                chunks.push(pb.as_bytes().to_vec());
+                            }
+                        }
+                        _ => {
+                            warn!(
+                                "Encountered invalid OP_MULTISIG script | tx: {}, vout: {}",
+                                tx.txid().to_hex(),
+                                vi
+                            );
+                            continue;
+                        }
+                    }
+                    let mut enc_bytes = Vec::new();
+                    for chunk in chunks {
+                        enc_bytes.extend(chunk[1..chunk.len() - 1].to_vec());
+                    }
+                    let bytes = arc4_decrypt(&key, &enc_bytes);
+                    if bytes[1..=config.prefix.len()] == config.prefix {
+                        let chunk_len = bytes[0] as usize;
+                        let chunk = bytes[1..=chunk_len].to_vec();
+                        data = Some(chunk[config.prefix.len()..].to_vec());
+                    } else {
+                        todo!()
+                        // let pub_key_hashes = chunks
+                        //     .into_iter()
+                        //     .map(|chunk| Script::from(chunk).script_hash().as_hash().to_hex());
                     }
                 }
             }

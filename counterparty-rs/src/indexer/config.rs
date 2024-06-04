@@ -57,6 +57,7 @@ pub struct Config {
     pub start_height: Option<u32>,
     pub mode: Mode,
     pub prefix: Vec<u8>,
+    pub address_version: Vec<u8>,
 }
 
 impl<'source> FromPyObject<'source> for Config {
@@ -108,6 +109,11 @@ impl<'source> FromPyObject<'source> for Config {
             _ => b"CNTRPRTY".to_vec(),
         };
 
+        let address_version = match dict.get_item("address_version") {
+            Ok(Some(item)) => item.extract::<Vec<u8>>()?,
+            _ => vec![0x00],
+        };
+
         Ok(Config {
             rpc_address,
             rpc_user,
@@ -119,6 +125,7 @@ impl<'source> FromPyObject<'source> for Config {
             start_height,
             mode,
             prefix,
+            address_version,
         })
     }
 }
