@@ -377,6 +377,7 @@ def run_api_server(args):
         # Run app server (blocking)
         werkzeug_server.serve_forever()
     finally:
+        logger.trace("Shutting down API server...")
         DBConnectionPool().close()
         werkzeug_server.shutdown()
         # ensure timer is cancelled

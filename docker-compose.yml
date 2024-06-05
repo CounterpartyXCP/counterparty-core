@@ -90,6 +90,8 @@ services:
       - "--rpc-host=0.0.0.0"
       - "--api-host=0.0.0.0"
       - "--catch-up=bootstrap"
+      - "--force"
+      - "-vvv"
       #- "--verbose"
 
   ###################
@@ -157,6 +159,8 @@ services:
       - "--rpc-host=0.0.0.0"
       - "--api-host=0.0.0.0"
       - "--catch-up=bootstrap"
+      - "--force"
+      - "-vvv"
       #- "--verbose"
 
 volumes: 
