@@ -60,7 +60,7 @@ def get_connection(read_only=True, check_wal=True):
             check_wal_file()
         except exceptions.WALFileFoundError:
             logger.warning(
-                "Found WAL file. Database may be corrupted. Please run `counterpary-server check-db` as soon is possible."
+                "Database WAL file detected. To ensure no data corruption has occurred, run `counterpary-server check-db`."
             )
 
     if read_only:

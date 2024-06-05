@@ -787,11 +787,11 @@ def start_all(args):
             database.check_wal_file()
         except exceptions.WALFileFoundError:
             logger.error(
-                "Found WAL file. Database may be corrupted. Please run `counterpary-server check-db` as soon is possible."
+                "Database WAL file detected. To ensure no data corruption has occurred, run `counterpary-server check-db`."
             )
         except exceptions.DatabaseError:
             logger.error(
-                "Database still used by a process. Please run `counterpary-server check-db` as soon is possible."
+                "Database in use by another process. Please run `counterpary-server check-db` to verify its integrity."
             )
 
 
