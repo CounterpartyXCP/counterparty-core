@@ -791,7 +791,7 @@ def start_all(args):
             )
         except exceptions.DatabaseError:
             logger.error(
-                "Database in use by another process. Please run `counterpary-server check-db` to verify its integrity."
+                "Database is in use by another process and was unable to be closed correctly."
             )
 
 
