@@ -276,6 +276,8 @@ CREATE INDEX balances_asset_idx ON balances (asset)
         ;
 CREATE INDEX balances_block_index_idx ON balances (block_index)
         ;
+CREATE INDEX balances_quantity_idx ON balances (quantity)
+        ;
 CREATE TRIGGER block_update_balances
                            BEFORE UPDATE ON balances BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
@@ -348,6 +350,8 @@ CREATE INDEX balances_asset_idx ON balances (asset)
         ;
 CREATE INDEX balances_block_index_idx ON balances (block_index)
         ;
+CREATE INDEX balances_quantity_idx ON balances (quantity)
+        ;
 CREATE TRIGGER block_update_balances
                            BEFORE UPDATE ON balances BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
@@ -412,6 +416,8 @@ CREATE INDEX credits_calling_function_idx ON credits (calling_function)
         ;
 CREATE INDEX credits_event_idx ON credits (event)
         ;
+CREATE INDEX credits_quantity_idx ON credits (quantity)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -463,6 +469,8 @@ CREATE INDEX debits_asset_idx ON debits (asset)
 CREATE INDEX debits_block_index_idx ON debits (block_index)
         ;
 CREATE INDEX debits_event_idx ON debits (event)
+        ;
+CREATE INDEX debits_quantity_idx ON debits (quantity)
         ;
 
 COMMIT TRANSACTION;
@@ -1008,7 +1016,11 @@ CREATE INDEX orders_expire_index_idx ON orders (expire_index)
         ;
 CREATE INDEX orders_get_asset_give_asset_idx ON orders (get_asset, give_asset)
         ;
+CREATE INDEX orders_get_quantity_idx ON orders (get_quantity)
+        ;
 CREATE INDEX orders_give_asset_idx ON orders (give_asset)
+        ;
+CREATE INDEX orders_give_quantity_idx ON orders (give_quantity)
         ;
 CREATE INDEX orders_source_give_asset_idx ON orders (source, give_asset)
         ;
@@ -1817,6 +1829,8 @@ CREATE INDEX dispensers_block_index_idx ON dispensers (block_index)
         ;
 CREATE INDEX dispensers_close_block_index_status_idx ON dispensers (close_block_index, status)
         ;
+CREATE INDEX dispensers_give_quantity_idx ON dispensers (give_quantity)
+        ;
 CREATE INDEX dispensers_give_remaining_idx ON dispensers (give_remaining)
         ;
 CREATE INDEX dispensers_last_status_tx_hash_idx ON dispensers (last_status_tx_hash)
@@ -1868,6 +1882,8 @@ CREATE INDEX dispenses_asset_idx ON dispenses (asset)
 CREATE INDEX dispenses_block_index_idx ON dispenses (block_index)
         ;
 CREATE INDEX dispenses_destination_idx ON dispenses (destination)
+        ;
+CREATE INDEX dispenses_dispense_quantity_idx ON dispenses (dispense_quantity)
         ;
 CREATE INDEX dispenses_dispenser_tx_hash_idx ON dispenses (dispenser_tx_hash)
         ;

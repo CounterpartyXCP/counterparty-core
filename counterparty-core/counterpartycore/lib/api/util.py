@@ -56,6 +56,7 @@ def healthz(db, check_type: str = "heavy"):
             healthz_light(db)
             healthz_heavy(db)
     except Exception as e:
+        # logger.exception(e)
         logger.error(f"Health check failed: {e}")
         return False
     return True

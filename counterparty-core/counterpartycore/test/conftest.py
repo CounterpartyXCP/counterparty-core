@@ -208,7 +208,6 @@ def rawtransactions_db(request):
 def server_db(request, cp_server, api_server):
     """Enable database access for unit test vectors."""
     db = database.get_connection(read_only=False)
-    api_server.db = db  # inject into api_server
     cursor = db.cursor()
     cursor.execute("""BEGIN""")
     util_test.reset_current_block_index(db)
@@ -334,6 +333,8 @@ def cp_server(request):
         config.PREFIX = b"TESTXXXX"
 
     request.addfinalizer(lambda: util_test.remove_database_files(dbfile))
+
+    return db
 
 
 class MockUTXOSet(object):

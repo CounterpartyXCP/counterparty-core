@@ -25,7 +25,17 @@ Note: A reparse from block 819250 is automatically launched during the update.
 * Optimizes `get_pending_dispensers()` by adding the `last_status_tx_source` and `close_block_index` fields in the `dispensers` table.
 * Optimizes `is_dispensable()` by caching a list of all dispenser addresses.
 * Add `transaction_count` field in `blocks` table.
-* Added the following indexes: `credits.calling_function`, `debits.action`, `transactions.source`
+* Added the following indexes:
+    - `credits.calling_function`
+    - `debits.action`
+    - `transactions.source`
+    - `credit.quantity`
+    - `debit.quanity`
+    - `balance.quantity`
+    - `dispenser.give_quantity`
+    - `order.get_quantity`
+    - `order.give_quantity`
+    - `dispense.dispense_quantity`
 * Remove checking of impossible edge case in `list_tx()` function.
 * Add `EVENT` log level.
 * Update Pyo3 to the latest version.
@@ -66,7 +76,7 @@ Note: A reparse from block 819250 is automatically launched during the update.
 * The `asset`, `assets`, `give_asset`, and `get_asset` parameters are no longer case-sensitive.
 * `/v2/assets` accepts now the paramater `named=true|false` to return only named or numeric assets. 
 * Publish events on ZMQ Pub/Sub channel (see Documentation).
-* Database connection pooling.
+* Database connection pooling for API v1 and v2.
 * If `verbose=true`, enrich results containing `block_index` with `block_time`.
 * Added an `action` filter for the `*/credits` and `*/debits` routes.
 * Added an `event_name` filter for the `*/events` routes.

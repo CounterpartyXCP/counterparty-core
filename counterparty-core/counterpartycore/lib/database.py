@@ -115,7 +115,8 @@ class DBConnectionPool(metaclass=util.SingletonMeta):
                 db.close()
 
     def close(self):
-        for db in self.connections:
+        while len(self.connections) > 0:
+            db = self.connections.pop()
             db.close()
 
 
