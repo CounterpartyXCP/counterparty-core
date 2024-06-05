@@ -768,14 +768,14 @@ def start_all(args):
         logger.warning("Keyboard interrupt.")
         pass
     finally:
+        if api_server_v2:
+            api_server_v2.stop()
         if telemetry_daemon:
             telemetry_daemon.stop()
         if api_status_poller:
             api_status_poller.stop()
         if api_server_v1:
             api_server_v1.stop()
-        if api_server_v2:
-            api_server_v2.stop()
         if follower_daemon:
             follower_daemon.stop()
         if db:

@@ -3,7 +3,7 @@ import logging
 import multiprocessing
 import time
 from collections import OrderedDict
-from multiprocessing import Process, Value, current_process
+from multiprocessing import Process, Value
 from threading import Thread, Timer
 
 import flask
@@ -373,7 +373,7 @@ def run_api_server(args, interruped_value):
     try:
         # Init the HTTP Server.
         werkzeug_server = make_server(config.API_HOST, config.API_PORT, app, threaded=True)
-        ParentProcessChecker(interruped_value, current_process(), werkzeug_server).start()
+        ParentProcessChecker(interruped_value, werkzeug_server).start()
         app.app_context().push()
         # Run app server (blocking)
         werkzeug_server.serve_forever()
@@ -404,10 +404,9 @@ def refresh_backend_height(start=False):
 
 
 class ParentProcessChecker(Thread):
-    def __init__(self, interruped_value, parent_process, werkzeug_server):
+    def __init__(self, interruped_value, werkzeug_server):
         super().__init__()
         self.interruped_value = interruped_value
-        self.parent_process = parent_process
         self.werkzeug_server = werkzeug_server
 
     def run(self):
@@ -423,20 +422,22 @@ class ParentProcessChecker(Thread):
             pass
 
 
-INTERRUPTED = Value("I", 0)
-
-
 class APIServer(object):
     def __init__(self):
         self.process = None
+        self.interrupted = Value("I", 0)
 
     def start(self, args):
         if self.process is not None:
             raise Exception("API server is already running")
-        self.process = Process(target=run_api_server, args=(vars(args), INTERRUPTED))
+        self.process = Process(target=run_api_server, args=(vars(args), self.interrupted))
         self.process.start()
         return self.process
 
     def stop(self):
-        global INTERRUPTED  # noqa F811
-        INTERRUPTED.value = 1
+        logger.info("Stopping API server...")
+        self.interrupted.value = 1
+        while self.process.is_alive():
+            time.sleep(1)
+            logger.trace("Waiting for API server to stop...")
+        logger.trace("API server stopped")

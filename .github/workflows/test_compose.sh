@@ -98,7 +98,7 @@ REPARSE_FROM=$(($CURRENT_HEIGHT-50))
 
 # Stop, reparse and start counterparty-core mainnet
 docker compose --profile mainnet stop counterparty-core
-docker compose --profile mainnet run counterparty-core reparse $REPARSE_FROM --force \
+docker compose --profile mainnet run counterparty-core reparse $REPARSE_FROM \
    --backend-connect=bitcoind \
    --indexd-connect=addrindexrs \
    --rpc-host=0.0.0.0 \

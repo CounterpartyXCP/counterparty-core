@@ -102,6 +102,7 @@ class DBConnectionPool(metaclass=util.SingletonMeta):
             yield db
         finally:
             if self.closed:
+                logger.trace("Connection pool is closed. Closing connection.")
                 db.close()
             elif len(self.connections) < config.DB_CONNECTION_POOL_SIZE:
                 # Add connection to pool
