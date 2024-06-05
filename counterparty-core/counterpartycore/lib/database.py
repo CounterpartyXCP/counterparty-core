@@ -204,8 +204,9 @@ def optimize(db):
 
 
 def close(db):
-    logger.info("Closing database...")
+    logger.info("Closing database connections...")
     db.close()
+    DBConnectionPool().close()
 
 
 def field_is_pk(cursor, table, field):
