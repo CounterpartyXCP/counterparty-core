@@ -376,6 +376,8 @@ def run_api_server(args):
         app.app_context().push()
         # Run app server (blocking)
         werkzeug_server.serve_forever()
+    except KeyboardInterrupt:
+        logger.trace("API server interrupted.")
     finally:
         logger.trace("Shutting down API server...")
         DBConnectionPool().close()

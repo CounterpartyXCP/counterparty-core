@@ -94,6 +94,7 @@ def get_connection(read_only=True, check_wal=True):
 class DBConnectionPool(metaclass=util.SingletonMeta):
     def __init__(self):
         self.connections = []
+        self.closed = False
 
     @contextmanager
     def connection(self):
@@ -106,7 +107,9 @@ class DBConnectionPool(metaclass=util.SingletonMeta):
         try:
             yield db
         finally:
-            if len(self.connections) < config.DB_CONNECTION_POOL_SIZE:
+            if self.closed:
+                db.close()
+            elif len(self.connections) < config.DB_CONNECTION_POOL_SIZE:
                 # Add connection to pool
                 self.connections.append(db)
             else:
@@ -116,6 +119,7 @@ class DBConnectionPool(metaclass=util.SingletonMeta):
 
     def close(self):
         logger.trace("Closing all connections in pool (%s).", len(self.connections))
+        self.closed = True
         while len(self.connections) > 0:
             db = self.connections.pop()
             db.close()
