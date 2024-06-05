@@ -381,11 +381,11 @@ def run_api_server(args, interruped_value):
         logger.trace("Keyboard Interrupt")
     finally:
         logger.trace("Shutting down API server...")
-        DBConnectionPool().close()
         werkzeug_server.shutdown()
         # ensure timer is cancelled
         if BACKEND_HEIGHT_TIMER:
             BACKEND_HEIGHT_TIMER.cancel()
+        DBConnectionPool().close()
 
 
 def refresh_backend_height(start=False):
@@ -419,12 +419,6 @@ class ParentProcessChecker(Thread):
                     logger.trace("Parent process is dead. Exiting...")
                     break
             self.werkzeug_server.shutdown()
-            DBConnectionPool().close()
-            if self.parent_process is not None and self.parent_process.is_alive():
-                try:
-                    self.parent_process.terminate()
-                except AttributeError:
-                    pass
         except KeyboardInterrupt:
             pass
 
