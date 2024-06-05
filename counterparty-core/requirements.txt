@@ -32,4 +32,4 @@ influxdb-client==1.42.0
 python-gnupg==0.5.2
 pyzmq==26.0.3
 JSON-log-formatter==1.0
-counterparty-rs==10.1.2
+counterparty-rs==10.2.0
