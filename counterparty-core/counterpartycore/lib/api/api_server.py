@@ -202,7 +202,7 @@ def prepare_args(route, **kwargs):
     return function_args
 
 
-def execute_api_function(db, route, function_args):
+def execute_api_function(db, rule, route, function_args):
     # cache everything for one block
     cache_key = f"{util.CURRENT_BLOCK_INDEX}:{request.url}"
     # except for blocks and transactions cached forever
@@ -217,8 +217,10 @@ def execute_api_function(db, route, function_args):
         else:
             result = route["function"](**function_args)
         # don't cache API v1 and mempool queries
-        if route["function"].__name__ != "redirect_to_api_v1" and not request.path.startswith(
-            "/v2/mempool/"
+        if (
+            is_cachable(rule)
+            and route["function"].__name__ != "redirect_to_api_v1"
+            and not request.path.startswith("/v2/mempool/")
         ):
             BLOCK_CACHE[cache_key] = result
             if len(BLOCK_CACHE) > MAX_BLOCK_CACHE_SIZE:
@@ -284,7 +286,7 @@ def handle_route(**kwargs):
     # call the function
     try:
         with DBConnectionPool().connection() as db:
-            result = execute_api_function(db, route, function_args)
+            result = execute_api_function(db, rule, route, function_args)
     except (exceptions.ComposeError, exceptions.UnpackError) as e:
         return return_result(503, error=str(e), start_time=start_time, query_args=query_args)
     except (
@@ -403,6 +405,9 @@ def refresh_backend_height(start=False):
     BACKEND_HEIGHT_TIMER.start()
 
 
+# This thread is used for the following two reasons:
+# 1. `docker-compose stop` does not send a SIGTERM to the child processes (in this case the API v2 process)
+# 2. `process.terminate()` does not trigger a `KeyboardInterrupt` or execute the `finally` block.
 class ParentProcessChecker(Thread):
     def __init__(self, interruped_value, werkzeug_server):
         super().__init__()
