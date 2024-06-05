@@ -1508,11 +1508,6 @@
         "next_cursor": 333960,
         "result_count": 41
     },
-    "/v2/addresses/<address>/assets": {
-        "result": [],
-        "next_cursor": null,
-        "result_count": 0
-    },
     "/v2/addresses/<address>/transactions": {
         "result": [],
         "next_cursor": null,
@@ -1566,65 +1561,6 @@
         "result": [],
         "next_cursor": null,
         "result_count": 0
-    },
-    "/v2/assets": {
-        "result": [
-            {
-                "asset": "PROOFOFBYRNE",
-                "asset_longname": null,
-                "description": "https://5cjqeseihvmlvly52sfoqulshuchwxmyxsjip6gzekuxglsvxh4a.arweave.net/6JMCSIg9WLqvHdSK6FFyPQR7XZi8kof42SKpcy5Vufg/PROOF.json",
-                "issuer": "1LJqTgnwrYiMyLFwgzhK2i1nKXyiDn1bAx",
-                "divisible": false,
-                "locked": false
-            },
-            {
-                "asset": "SYLTPEPE",
-                "asset_longname": null,
-                "description": "",
-                "issuer": "1J8aLankHbmAHojseGRmWRZoTZKiNVi5GQ",
-                "divisible": false,
-                "locked": false
-            },
-            {
-                "asset": "PEPEFRESHER",
-                "asset_longname": null,
-                "description": "",
-                "issuer": "16TZTFwUwuai6QnrrV7UhuCyCkAjtzYWBe",
-                "divisible": false,
-                "locked": false
-            },
-            {
-                "asset": "BINGOCARD",
-                "asset_longname": null,
-                "description": "",
-                "issuer": "1J8aLankHbmAHojseGRmWRZoTZKiNVi5GQ",
-                "divisible": false,
-                "locked": false
-            },
-            {
-                "asset": "PEPRAETORIAN",
-                "asset_longname": null,
-                "description": "https://pqyj7jfan2zlvjicrcwewmm5nvfkb52nnlsyexhigxjakjde6mdq.arweave.net/fDCfpKBusrqlAoisSzGdbUqg901q5YJc6DXSBSRk8wc/PEPRA.json",
-                "issuer": "1LJqTgnwrYiMyLFwgzhK2i1nKXyiDn1bAx",
-                "divisible": false,
-                "locked": true
-            }
-        ],
-        "next_cursor": 335280,
-        "result_count": 107929
-    },
-    "/v2/assets/<asset>": {
-        "result": {
-            "asset": "UNNEGOTIABLE",
-            "asset_longname": null,
-            "owner": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-            "divisible": false,
-            "locked": true,
-            "supply": 1776,
-            "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
-            "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-            "holder_count": 6
-        }
     },
     "/v2/assets/<asset>/balances": {
         "result": [
@@ -5207,5 +5143,154 @@
         ],
         "next_cursor": 21373,
         "result_count": 2576
+    },
+    "/v2/addresses/<address>/assets": {
+        "result": [
+            {
+                "asset": "RAREGLASSES",
+                "asset_longname": null,
+                "description": "RARE GLASSES",
+                "issuer": "1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD",
+                "divisible": false,
+                "locked": false,
+                "first_issuance_block_index": 568490,
+                "last_issuance_block_index": 568490,
+                "first_issuance_block_time": 1553377215,
+                "last_issuance_block_time": 1553377215
+            },
+            {
+                "asset": "YINYIN",
+                "asset_longname": null,
+                "description": "Dragon of Wealth and prosperity. ",
+                "issuer": "1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD",
+                "divisible": false,
+                "locked": false,
+                "first_issuance_block_index": 568487,
+                "last_issuance_block_index": 568487,
+                "first_issuance_block_time": 1553373937,
+                "last_issuance_block_time": 1553373937
+            },
+            {
+                "asset": "YANGGANG",
+                "asset_longname": null,
+                "description": "",
+                "issuer": "1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD",
+                "divisible": false,
+                "locked": false,
+                "first_issuance_block_index": 566069,
+                "last_issuance_block_index": 566069,
+                "first_issuance_block_time": 1551979732,
+                "last_issuance_block_time": 1551979732
+            },
+            {
+                "asset": "PIMPHAT",
+                "asset_longname": null,
+                "description": "Beautiful Pimphat",
+                "issuer": "1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD",
+                "divisible": false,
+                "locked": false,
+                "first_issuance_block_index": 565697,
+                "last_issuance_block_index": 565697,
+                "first_issuance_block_time": 1551752302,
+                "last_issuance_block_time": 1551752302
+            },
+            {
+                "asset": "INVISIBLPEPE",
+                "asset_longname": null,
+                "description": "",
+                "issuer": "1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD",
+                "divisible": false,
+                "locked": false,
+                "first_issuance_block_index": 467375,
+                "last_issuance_block_index": 467375,
+                "first_issuance_block_time": 1495333293,
+                "last_issuance_block_time": 1495333293
+            }
+        ],
+        "next_cursor": 87515,
+        "result_count": 19
+    },
+    "/v2/assets": {
+        "result": [
+            {
+                "asset": "TXSE",
+                "asset_longname": null,
+                "description": "",
+                "issuer": "13Hnmhs5gy2yXKVBx4wSM5HCBdKnaSBZJH",
+                "divisible": false,
+                "locked": false,
+                "first_issuance_block_index": 846586,
+                "last_issuance_block_index": 846586,
+                "first_issuance_block_time": 1717561488,
+                "last_issuance_block_time": 1717561488
+            },
+            {
+                "asset": "SOLARPARADE",
+                "asset_longname": null,
+                "description": "",
+                "issuer": "1MW4J7UNLurpNAs3EvLY5FNr3BSib5gj7r",
+                "divisible": false,
+                "locked": false,
+                "first_issuance_block_index": 846567,
+                "last_issuance_block_index": 846567,
+                "first_issuance_block_time": 1717553990,
+                "last_issuance_block_time": 1717553990
+            },
+            {
+                "asset": "PEPEFRESHER",
+                "asset_longname": null,
+                "description": "",
+                "issuer": "16TZTFwUwuai6QnrrV7UhuCyCkAjtzYWBe",
+                "divisible": false,
+                "locked": false,
+                "first_issuance_block_index": 846084,
+                "last_issuance_block_index": 846084,
+                "first_issuance_block_time": 1717261501,
+                "last_issuance_block_time": 1717261501
+            },
+            {
+                "asset": "HAIRGOGO",
+                "asset_longname": null,
+                "description": "",
+                "issuer": "1Q8f3efUeUCxhwtU1yJGiXuwbMFxGz9sjd",
+                "divisible": false,
+                "locked": false,
+                "first_issuance_block_index": 846526,
+                "last_issuance_block_index": 846526,
+                "first_issuance_block_time": 1717527431,
+                "last_issuance_block_time": 1717527431
+            },
+            {
+                "asset": "FUCKINGGOGO",
+                "asset_longname": null,
+                "description": "https://easyasset.art/j/859bhw/FUCKI.json",
+                "issuer": "16TZTFwUwuai6QnrrV7UhuCyCkAjtzYWBe",
+                "divisible": false,
+                "locked": false,
+                "first_issuance_block_index": 846522,
+                "last_issuance_block_index": 846522,
+                "first_issuance_block_time": 1717526944,
+                "last_issuance_block_time": 1717526944
+            }
+        ],
+        "next_cursor": 335310,
+        "result_count": 107938
+    },
+    "/v2/assets/<asset>": {
+        "result": {
+            "asset": "UNNEGOTIABLE",
+            "asset_longname": null,
+            "owner": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+            "divisible": false,
+            "locked": false,
+            "supply": 1776,
+            "description": "UNNEGOTIABLE WE MUST BECOME UNNEGOTIABLE WE ARE",
+            "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+            "holder_count": 7,
+            "first_issuance_block_index": 840464,
+            "last_issuance_block_index": 840464,
+            "first_issuance_block_time": 1713852783,
+            "last_issuance_block_time": 1713852783
+        }
     }
 }

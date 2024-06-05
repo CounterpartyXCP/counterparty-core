@@ -89,6 +89,7 @@ Note: A reparse from block 819250 is automatically launched during the update.
 * Add BTC sent in `DISPENSE` event.
 * Accept trailing slashes in routes.
 * Update and improve documentation.
+* Add `first_issuance_block_index` and `last_issuance_block_index` in assets information.
 
 ## Command-Line Interface
 * `-v` for `DEBUG` level, `-vv` for `EVENT` level, `-vvv` for `TRACE` level. It is also possible to repeat the `--verbose` flag as many times as necessary.

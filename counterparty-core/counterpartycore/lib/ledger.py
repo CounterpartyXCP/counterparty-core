@@ -750,10 +750,12 @@ def get_asset_info(db, asset: str):
 
     cursor = db.cursor()
     query = """
-        SELECT * FROM issuances
+        SELECT *, MAX(rowid) AS rowid, 
+                  MIN(block_index) AS first_issuance_block_index,
+                  block_index AS last_issuance_block_index FROM issuances
         WHERE (status = ? AND asset = ?)
+        GROUP BY asset
         ORDER BY rowid DESC
-        LIMIT 1
     """
     bindings = ("valid", asset)
     cursor.execute(query, bindings)
@@ -769,6 +771,8 @@ def get_asset_info(db, asset: str):
         "locked": bool(issuance["locked"]),
         "description": issuance["description"],
         "issuer": issuance["issuer"],
+        "first_issuance_block_index": issuance["first_issuance_block_index"],
+        "last_issuance_block_index": issuance["last_issuance_block_index"],
     }
 
     return asset_info

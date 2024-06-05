@@ -272,18 +272,24 @@ def inject_issuances_and_block_times(db, result):
     asset_list = []
     block_indexes = []
     for result_item in result_list:
-        if "block_index" in result_item:
-            result_item["block_index"] = int(result_item["block_index"])
-        if "params" in result_item and "block_index" in result_item["params"]:
-            result_item["params"]["block_index"] = int(result_item["params"]["block_index"])
-        if "block_index" in result_item and result_item["block_index"] not in block_indexes:
-            block_indexes.append(result_item["block_index"])
-        if (
-            "params" in result_item
-            and "block_index" in result_item["params"]
-            and result_item["params"]["block_index"] not in block_indexes
-        ):
-            block_indexes.append(result_item["params"]["block_index"])
+        for field_name in [
+            "block_index",
+            "first_issuance_block_index",
+            "last_issuance_block_index",
+        ]:
+            if field_name in result_item:
+                result_item[field_name] = int(result_item[field_name])
+            if "params" in result_item and field_name in result_item["params"]:
+                result_item["params"][field_name] = int(result_item["params"][field_name])
+            if field_name in result_item and result_item[field_name] not in block_indexes:
+                block_indexes.append(result_item[field_name])
+            if (
+                "params" in result_item
+                and field_name in result_item["params"]
+                and result_item["params"][field_name] not in block_indexes
+            ):
+                block_indexes.append(result_item["params"][field_name])
+
         if "asset_longname" in result_item and "description" in result_item:
             continue
         item = result_item
@@ -303,10 +309,16 @@ def inject_issuances_and_block_times(db, result):
     # inject issuance and block_time
     for result_item in result_list:
         item = result_item
-        if "block_index" in item:
-            item["block_time"] = block_times[item["block_index"]]
-        if "params" in item and "block_index" in item["params"]:
-            item["params"]["block_time"] = block_times[item["params"]["block_index"]]
+        for field_name in [
+            "block_index",
+            "first_issuance_block_index",
+            "last_issuance_block_index",
+        ]:
+            field_name_time = field_name.replace("index", "time")
+            if field_name in item:
+                item[field_name_time] = block_times[item[field_name]]
+            if "params" in item and field_name in item["params"]:
+                item["params"][field_name_time] = block_times[item["params"][field_name]]
         if "params" in item:
             item = item["params"]
         for field_name in ["asset", "give_asset", "get_asset"]:

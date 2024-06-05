@@ -1362,7 +1362,9 @@ def get_valid_assets(
         "issuances",
         where=where,
         group_by="asset",
-        select="asset, asset_longname, description, issuer, divisible, locked, rowid",
+        select="""asset, asset_longname, description, issuer, divisible, locked, MAX(rowid) AS rowid, 
+                  MIN(block_index) AS first_issuance_block_index,
+                  block_index AS last_issuance_block_index""",
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1374,7 +1376,7 @@ def get_valid_assets_by_issuer(
 ):
     """
     Returns the valid assets of an issuer
-    :param str address: The issuer to return (e.g. 1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk)
+    :param str address: The issuer to return (e.g. 1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD)
     :param bool named: Whether to return only named assets (e.g. true)
     :param int cursor: The last index of the assets to return
     :param int limit: The maximum number of assets to return (e.g. 5)
@@ -1392,7 +1394,9 @@ def get_valid_assets_by_issuer(
         "issuances",
         where=where,
         group_by="asset",
-        select="asset, asset_longname, description, issuer, divisible, locked, rowid",
+        select="""asset, asset_longname, description, issuer, divisible, locked, MAX(rowid) AS rowid, 
+                  MIN(block_index) AS first_issuance_block_index,
+                  block_index AS last_issuance_block_index""",
         last_cursor=cursor,
         limit=limit,
         offset=offset,

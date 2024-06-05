@@ -2108,7 +2108,11 @@
                 "description": "Child of parent",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
-                "locked": false
+                "locked": false,
+                "first_issuance_block_index": 310498,
+                "last_issuance_block_index": 310498,
+                "first_issuance_block_time": 310498000,
+                "last_issuance_block_time": 310498000
             },
             {
                 "asset": "PARENT",
@@ -2116,7 +2120,11 @@
                 "description": "Parent asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
-                "locked": false
+                "locked": false,
+                "first_issuance_block_index": 310497,
+                "last_issuance_block_index": 310497,
+                "first_issuance_block_time": 310497000,
+                "last_issuance_block_time": 310497000
             },
             {
                 "asset": "MAXI",
@@ -2124,7 +2132,11 @@
                 "description": "Maximum quantity",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
-                "locked": false
+                "locked": false,
+                "first_issuance_block_index": 310016,
+                "last_issuance_block_index": 310016,
+                "first_issuance_block_time": 310016000,
+                "last_issuance_block_time": 310016000
             },
             {
                 "asset": "LOCKED",
@@ -2132,7 +2144,11 @@
                 "description": "Locked asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
-                "locked": true
+                "locked": false,
+                "first_issuance_block_index": 310004,
+                "last_issuance_block_index": 310004,
+                "first_issuance_block_time": 310004000,
+                "last_issuance_block_time": 310004000
             },
             {
                 "asset": "CALLABLE",
@@ -2140,7 +2156,11 @@
                 "description": "Callable asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
-                "locked": false
+                "locked": false,
+                "first_issuance_block_index": 310003,
+                "last_issuance_block_index": 310003,
+                "first_issuance_block_time": 310003000,
+                "last_issuance_block_time": 310003000
             },
             {
                 "asset": "NODIVISIBLE",
@@ -2148,7 +2168,11 @@
                 "description": "No divisible asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": false,
-                "locked": false
+                "locked": false,
+                "first_issuance_block_index": 310002,
+                "last_issuance_block_index": 310002,
+                "first_issuance_block_time": 310002000,
+                "last_issuance_block_time": 310002000
             },
             {
                 "asset": "DIVISIBLE",
@@ -2156,7 +2180,11 @@
                 "description": "Divisible asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
-                "locked": false
+                "locked": false,
+                "first_issuance_block_index": 310001,
+                "last_issuance_block_index": 310001,
+                "first_issuance_block_time": 310001000,
+                "last_issuance_block_time": 310001000
             }
         ],
         "next_cursor": null,
@@ -2507,7 +2535,11 @@
                 "description": "Child of parent",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
-                "locked": false
+                "locked": false,
+                "first_issuance_block_index": 310498,
+                "last_issuance_block_index": 310498,
+                "first_issuance_block_time": 310498000,
+                "last_issuance_block_time": 310498000
             },
             {
                 "asset": "PARENT",
@@ -2515,7 +2547,11 @@
                 "description": "Parent asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
-                "locked": false
+                "locked": false,
+                "first_issuance_block_index": 310497,
+                "last_issuance_block_index": 310497,
+                "first_issuance_block_time": 310497000,
+                "last_issuance_block_time": 310497000
             },
             {
                 "asset": "DIVIDEND",
@@ -2523,15 +2559,23 @@
                 "description": "",
                 "issuer": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
                 "divisible": true,
-                "locked": false
+                "locked": false,
+                "first_issuance_block_index": 310494,
+                "last_issuance_block_index": 310494,
+                "first_issuance_block_time": 310494000,
+                "last_issuance_block_time": 310494000
             },
             {
                 "asset": "LOCKEDPREV",
                 "asset_longname": null,
-                "description": "changed",
+                "description": "Locked asset",
                 "issuer": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
                 "divisible": true,
-                "locked": false
+                "locked": false,
+                "first_issuance_block_index": 310113,
+                "last_issuance_block_index": 310113,
+                "first_issuance_block_time": 310113000,
+                "last_issuance_block_time": 310113000
             },
             {
                 "asset": "PAYTOSCRIPT",
@@ -2539,7 +2583,11 @@
                 "description": "PSH issued asset",
                 "issuer": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
                 "divisible": false,
-                "locked": false
+                "locked": false,
+                "first_issuance_block_index": 310109,
+                "last_issuance_block_index": 310109,
+                "first_issuance_block_time": 310109000,
+                "last_issuance_block_time": 310109000
             },
             {
                 "asset": "MAXI",
@@ -2547,7 +2595,11 @@
                 "description": "Maximum quantity",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
-                "locked": false
+                "locked": false,
+                "first_issuance_block_index": 310016,
+                "last_issuance_block_index": 310016,
+                "first_issuance_block_time": 310016000,
+                "last_issuance_block_time": 310016000
             },
             {
                 "asset": "LOCKED",
@@ -2555,7 +2607,11 @@
                 "description": "Locked asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
-                "locked": true
+                "locked": false,
+                "first_issuance_block_index": 310004,
+                "last_issuance_block_index": 310004,
+                "first_issuance_block_time": 310004000,
+                "last_issuance_block_time": 310004000
             },
             {
                 "asset": "CALLABLE",
@@ -2563,7 +2619,11 @@
                 "description": "Callable asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
-                "locked": false
+                "locked": false,
+                "first_issuance_block_index": 310003,
+                "last_issuance_block_index": 310003,
+                "first_issuance_block_time": 310003000,
+                "last_issuance_block_time": 310003000
             },
             {
                 "asset": "NODIVISIBLE",
@@ -2571,7 +2631,11 @@
                 "description": "No divisible asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": false,
-                "locked": false
+                "locked": false,
+                "first_issuance_block_index": 310002,
+                "last_issuance_block_index": 310002,
+                "first_issuance_block_time": 310002000,
+                "last_issuance_block_time": 310002000
             },
             {
                 "asset": "DIVISIBLE",
@@ -2579,7 +2643,11 @@
                 "description": "Divisible asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
-                "locked": false
+                "locked": false,
+                "first_issuance_block_index": 310001,
+                "last_issuance_block_index": 310001,
+                "first_issuance_block_time": 310001000,
+                "last_issuance_block_time": 310001000
             }
         ],
         "next_cursor": null,
@@ -2595,7 +2663,11 @@
             "supply": 1000,
             "description": "No divisible asset",
             "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "holder_count": 3
+            "holder_count": 3,
+            "first_issuance_block_index": 310002,
+            "last_issuance_block_index": 310002,
+            "first_issuance_block_time": 310002000,
+            "last_issuance_block_time": 310002000
         }
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/balances?verbose=true": {
