@@ -333,7 +333,7 @@ checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
 
 [[package]]
 name = "counterparty-rs"
-version = "10.1.2"
+version = "10.2.0"
 dependencies = [
  "bip32",
  "bitcoin 0.29.2",
