@@ -4,7 +4,7 @@ import multiprocessing
 import time
 from collections import OrderedDict
 from multiprocessing import Process, Value
-from threading import Timer
+from threading import Thread, Timer
 
 import flask
 import requests
@@ -338,13 +338,8 @@ def handle_not_found(error):
     return return_result(404, error="Not found")
 
 
-INTERRUPTED = Value("I", 0)
-
-
-def run_api_server(args, interrupted):
+def run_api_server(args, interruped_value):
     sentry.init()
-    global INTERRUPTED  # noqa F811
-    INTERRUPTED = interrupted
     # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
     logger.info("Starting API Server.")
@@ -375,7 +370,7 @@ def run_api_server(args, interrupted):
         else:
             global BACKEND_HEIGHT  # noqa F811
             BACKEND_HEIGHT = 0
-        Timer(0.05, check_if_interrupted).start()
+        ParentProcessChecker(interruped_value).start()
     try:
         # Init the HTTP Server.
         werkzeug_server = make_server(config.API_HOST, config.API_PORT, app, threaded=True)
@@ -408,10 +403,26 @@ def refresh_backend_height(start=False):
     BACKEND_HEIGHT_TIMER.start()
 
 
-def check_if_interrupted():
-    if INTERRUPTED.value == 1:
-        logger.trace("API server interrupted.")
-        raise KeyboardInterrupt
+class ParentProcessChecker(Thread):
+    def __init__(self, interruped_value):
+        super().__init__()
+        self.interruped_value = interruped_value
+
+    def run(self):
+        try:
+            while True:
+                if self.interruped_value.value == 0:
+                    time.sleep(0.05)
+                else:
+                    logger.trace("Parent process is dead. Raising KeyboardInterrupt...")
+                    break
+            DBConnectionPool().close()
+            exit(0)
+        except KeyboardInterrupt:
+            pass
+
+
+INTERRUPTED = Value("I", 0)
 
 
 class APIServer(object):
@@ -426,9 +437,5 @@ class APIServer(object):
         return self.process
 
     def stop(self):
-        logger.info("Stopping API server...")
         global INTERRUPTED  # noqa F811
         INTERRUPTED.value = 1
-        if self.process and self.process.is_alive():
-            self.process.terminate()
-        self.process = None
