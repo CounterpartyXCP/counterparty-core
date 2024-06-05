@@ -309,6 +309,8 @@ impl ToBlock for Block {
                         )
                         .expect("Segwit script to address failed"),
                     );
+                } else {
+                    todo!();
                 }
             }
             transactions.push(Transaction {

@@ -1,5 +1,5 @@
 use pyo3::{
-    types::{PyAnyMethods, PyBytes, PyDict},
+    types::{PyAnyMethods, PyBytes, PyDict, PyTuple},
     IntoPy, PyObject, Python,
 };
 
@@ -47,6 +47,48 @@ impl IntoPy<PyObject> for Vout {
 }
 
 #[derive(Clone)]
+pub struct PotentialDispenser {
+    destination: String,
+    value: u64,
+}
+
+impl IntoPy<PyObject> for PotentialDispenser {
+    fn into_py(self, py: Python<'_>) -> PyObject {
+        PyTuple::new_bound(py, &[self.destination.into_py(py), self.value.into_py(py)]).into_py(py)
+    }
+}
+
+#[derive(Clone)]
+pub struct ParsedVouts {
+    pub destinations: Vec<String>,
+    pub btc_amount: u32,
+    pub fee: i32,
+    pub data: Vec<u8>,
+    pub potential_dispensers: Vec<PotentialDispenser>,
+}
+
+impl IntoPy<PyObject> for ParsedVouts {
+    fn into_py(self, py: Python<'_>) -> PyObject {
+        let dispensers: Vec<PyObject> = self
+            .potential_dispensers
+            .into_iter()
+            .map(|pd| pd.into_py(py))
+            .collect();
+        PyTuple::new_bound(
+            py,
+            &[
+                self.destinations.into_py(py),
+                self.btc_amount.into_py(py),
+                self.fee.into_py(py),
+                PyBytes::new_bound(py, &self.data).into_py(py),
+                dispensers.into_py(py),
+            ],
+        )
+        .into_py(py)
+    }
+}
+
+#[derive(Clone)]
 pub struct Transaction {
     pub version: i32,
     pub segwit: bool,
@@ -55,6 +97,7 @@ pub struct Transaction {
     pub tx_id: String,
     pub tx_hash: String,
     pub vtxinwit: Vec<String>,
+    pub parsed_vouts: ParsedVouts,
     pub vin: Vec<Vin>,
     pub vout: Vec<Vout>,
 }
