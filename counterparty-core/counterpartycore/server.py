@@ -22,6 +22,7 @@ from counterpartycore.lib import (
     check,
     config,
     database,
+    exceptions,
     follow,
     log,
     transaction,
@@ -782,6 +783,16 @@ def start_all(args):
         backend.addrindexrs.stop()
         log.shutdown()
         fetcher.stop()
+        try:
+            database.check_wal_file()
+        except exceptions.WALFileFoundError:
+            logger.error(
+                "Found WAL file. Database may be corrupted. Please run `counterpary-server check-db` as soon is possible."
+            )
+        except exceptions.DatabaseError:
+            logger.error(
+                "Database still used by a process. Please run `counterpary-server check-db` as soon is possible."
+            )
 
 
 def reparse(block_index):

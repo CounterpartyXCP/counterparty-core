@@ -416,5 +416,5 @@ class APIServer(object):
     def stop(self):
         logger.info("Stopping API server...")
         if self.process and self.process.is_alive():
-            self.process.terminate()
+            self.process.close()
         self.process = None

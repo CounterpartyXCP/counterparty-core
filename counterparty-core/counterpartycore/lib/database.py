@@ -55,15 +55,13 @@ def get_connection(read_only=True, check_wal=True):
     """Connects to the SQLite database, returning a db `Connection` object"""
     logger.debug(f"Creating connection to `{config.DATABASE}`...")
 
-    need_quick_check = False
     if not read_only and check_wal:
         try:
             check_wal_file()
         except exceptions.WALFileFoundError:
             logger.warning(
-                "Found WAL file. Database may be corrupted. Running a quick check after connection."
+                "Found WAL file. Database may be corrupted. Please run `counterpary-server check-db` as soon is possible."
             )
-            need_quick_check = True
 
     if read_only:
         db = apsw.Connection(config.DATABASE, flags=apsw.SQLITE_OPEN_READONLY)
@@ -79,10 +77,6 @@ def get_connection(read_only=True, check_wal=True):
     cursor.execute("PRAGMA journal_size_limit = 6144000")
     cursor.execute("PRAGMA foreign_keys = ON")
     cursor.execute("PRAGMA defer_foreign_keys = ON")
-
-    if need_quick_check and not config.FORCE:
-        logger.info("Running a quick check...")
-        cursor.execute("PRAGMA quick_check")
 
     db.setrowtrace(rowtracer)
 
