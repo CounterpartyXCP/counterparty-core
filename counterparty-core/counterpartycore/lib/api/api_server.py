@@ -370,10 +370,10 @@ def run_api_server(args, interruped_value):
         else:
             global BACKEND_HEIGHT  # noqa F811
             BACKEND_HEIGHT = 0
-        ParentProcessChecker(interruped_value, current_process()).start()
     try:
         # Init the HTTP Server.
         werkzeug_server = make_server(config.API_HOST, config.API_PORT, app, threaded=True)
+        ParentProcessChecker(interruped_value, current_process(), werkzeug_server).start()
         app.app_context().push()
         # Run app server (blocking)
         werkzeug_server.serve_forever()
@@ -404,10 +404,11 @@ def refresh_backend_height(start=False):
 
 
 class ParentProcessChecker(Thread):
-    def __init__(self, interruped_value, parent_process):
+    def __init__(self, interruped_value, parent_process, werkzeug_server):
         super().__init__()
         self.interruped_value = interruped_value
         self.parent_process = parent_process
+        self.werkzeug_server = werkzeug_server
 
     def run(self):
         try:
@@ -417,6 +418,7 @@ class ParentProcessChecker(Thread):
                 else:
                     logger.trace("Parent process is dead. Exiting...")
                     break
+            self.werkzeug_server.shutdown()
             DBConnectionPool().close()
             if self.parent_process is not None and self.parent_process.is_alive():
                 try:
