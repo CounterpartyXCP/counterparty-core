@@ -91,15 +91,15 @@ impl<B> HasHash for PipelineDataWithBlock<B> {
     }
 }
 
-impl<B: BlockHasEntries + ToBlock> Transition<Box<PipelineDataWithEntries<B>>, (Mode, Config), ()>
+impl<B: BlockHasEntries + ToBlock> Transition<Box<PipelineDataWithEntries<B>>, Config, ()>
     for PipelineDataWithBlock<B>
 {
     fn transition(
         self: Box<Self>,
-        (mode, config): (Mode, Config),
+        config: Config,
     ) -> Result<((), Box<PipelineDataWithEntries<B>>), Error> {
         let height = self.get_height();
-        let entries = self.block.get_entries(mode, height);
+        let entries = self.block.get_entries(config.mode, height);
         let block = self.block.to_block(config, height);
         Ok((
             (),

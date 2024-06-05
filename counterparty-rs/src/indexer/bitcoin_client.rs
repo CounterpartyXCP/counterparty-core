@@ -1,15 +1,17 @@
 use std::{collections::HashMap, sync::Arc, thread::JoinHandle};
 
 use crate::b58::b58_encode;
+use crate::utils::script_to_address;
 use bitcoin::hashes::hex::ToHex;
 use bitcoincore_rpc::{
     bitcoin::{
         consensus::serialize,
-        hashes::{ripemd160, sha256},
-        hashes::{sha256d::Hash as Sha256dHash, Hash},
-        opcodes::all::{OP_CHECKMULTISIG, OP_CHECKSIG, OP_DUP, OP_EQUALVERIFY, OP_HASH160},
+        hashes::{ripemd160, sha256, sha256d::Hash as Sha256dHash, Hash},
+        opcodes::all::{
+            OP_CHECKMULTISIG, OP_CHECKSIG, OP_DUP, OP_EQUAL, OP_EQUALVERIFY, OP_HASH160,
+        },
         script::Instruction::{Op, PushBytes},
-        Block, BlockHash,
+        Block, BlockHash, Script,
     },
     Auth, Client, RpcApi,
 };
@@ -78,7 +80,8 @@ impl BlockHasEntries for Block {
 
 fn arc4_decrypt(key: &[u8], data: &[u8]) -> Vec<u8> {
     let mut read_buf = RefReadBuffer::new(data);
-    let mut write_buf = RefWriteBuffer::new(&mut Vec::new());
+    let mut buf = Vec::new();
+    let mut write_buf = RefWriteBuffer::new(&mut buf);
     Rc4::new(&key)
         .decrypt(&mut read_buf, &mut write_buf, false)
         .expect("RC4 decryption failed");
@@ -87,6 +90,17 @@ fn arc4_decrypt(key: &[u8], data: &[u8]) -> Vec<u8> {
         .iter()
         .map(|&i| i)
         .collect::<Vec<_>>()
+}
+
+fn is_valid_segwit_script(config: &Config, script: &Script, height: u32) -> bool {
+    if config.segwit_supported(height) {
+        if let Some(Ok(PushBytes(pb))) = script.instructions().next() {
+            if pb.len() == 0 {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 impl ToBlock for Block {
@@ -125,11 +139,10 @@ impl ToBlock for Block {
 
                 let output_value = vout.value.to_sat();
                 let fee = fee - output_value;
-                let script = vout.script_pubkey;
                 let mut destination = None;
                 let mut data = None;
-                if script.is_op_return() {
-                    for result in script.instructions().into_iter() {
+                if vout.script_pubkey.is_op_return() {
+                    for result in vout.script_pubkey.instructions().into_iter() {
                         if let Ok(i) = result {
                             if let PushBytes(pb) = i {
                                 let bytes = arc4_decrypt(&key, pb.as_bytes());
@@ -146,8 +159,13 @@ impl ToBlock for Block {
                             continue;
                         }
                     }
-                } else if let Some(Ok(Op(OP_CHECKSIG))) = script.instructions().next() {
-                    match script.instructions().collect::<Vec<_>>().as_slice() {
+                } else if let Some(Ok(Op(OP_CHECKSIG))) = vout.script_pubkey.instructions().next() {
+                    match vout
+                        .script_pubkey
+                        .instructions()
+                        .collect::<Vec<_>>()
+                        .as_slice()
+                    {
                         [Ok(Op(OP_DUP)), Ok(Op(OP_HASH160)), Ok(PushBytes(pb)), Ok(Op(OP_EQUALVERIFY)), Ok(Op(OP_CHECKSIG))] =>
                         {
                             let bytes = arc4_decrypt(&key, pb.as_bytes());
@@ -159,6 +177,7 @@ impl ToBlock for Block {
                                 destination = Some(b58_encode(
                                     config
                                         .address_version
+                                        .clone()
                                         .into_iter()
                                         .chain(bytes)
                                         .collect::<Vec<_>>()
@@ -175,10 +194,15 @@ impl ToBlock for Block {
                             continue;
                         }
                     }
-                } else if script.is_multisig() {
+                } else if vout.script_pubkey.is_multisig() {
                     let mut chunks = Vec::new();
                     let mut signatures_required = 0;
-                    match script.instructions().collect::<Vec<_>>().as_slice() {
+                    match vout
+                        .script_pubkey
+                        .instructions()
+                        .collect::<Vec<_>>()
+                        .as_slice()
+                    {
                         [Ok(PushBytes(sigs_req_pb)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(Op(OP_CHECKMULTISIG))] =>
                         {
                             signatures_required = u32::from_be_bytes(
@@ -213,7 +237,7 @@ impl ToBlock for Block {
                         }
                     }
                     let mut enc_bytes = Vec::new();
-                    for chunk in chunks {
+                    for chunk in chunks.iter() {
                         enc_bytes.extend(chunk[1..chunk.len() - 1].to_vec());
                     }
                     let bytes = arc4_decrypt(&key, &enc_bytes);
@@ -228,6 +252,7 @@ impl ToBlock for Block {
                                 b58_encode(
                                     &config
                                         .address_version
+                                        .clone()
                                         .into_iter()
                                         .chain(
                                             ripemd160::Hash::hash(
@@ -241,18 +266,49 @@ impl ToBlock for Block {
                             })
                             .collect::<Vec<_>>();
                         pub_key_hashes.sort();
+                        let pub_key_hashes_n_s = pub_key_hashes.len().to_string();
                         destination = Some(
                             [signatures_required.to_string()]
                                 .into_iter()
-                                .chain(
-                                    pub_key_hashes
-                                        .into_iter()
-                                        .chain([pub_key_hashes.len().to_string()]),
-                                )
+                                .chain(pub_key_hashes.into_iter().chain([pub_key_hashes_n_s]))
                                 .collect::<Vec<_>>()
                                 .join("_"),
                         )
                     }
+                } else if config.p2sh_address_supported(height) {
+                    match vout
+                        .script_pubkey
+                        .instructions()
+                        .collect::<Vec<_>>()
+                        .as_slice()
+                    {
+                        [Ok(Op(OP_HASH160)), Ok(PushBytes(pb)), Ok(Op(OP_EQUAL))] => {
+                            destination = Some(b58_encode(
+                                &config
+                                    .p2sh_address_version
+                                    .clone()
+                                    .into_iter()
+                                    .chain(pb.as_bytes().to_vec())
+                                    .collect::<Vec<_>>(),
+                            ));
+                        }
+                        _ => {
+                            warn!(
+                                "Encountered invalid P2SH script | tx: {}, vout: {}",
+                                tx.txid().to_hex(),
+                                vi
+                            );
+                            continue;
+                        }
+                    }
+                } else if is_valid_segwit_script(&config, &vout.script_pubkey, height) {
+                    destination = Some(
+                        script_to_address(
+                            vout.script_pubkey.as_bytes().to_vec(),
+                            config.network.to_string().as_str(),
+                        )
+                        .expect("Segwit script to address failed"),
+                    );
                 }
             }
             transactions.push(Transaction {

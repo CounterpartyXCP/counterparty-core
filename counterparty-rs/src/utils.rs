@@ -20,7 +20,7 @@ fn inverse_hash(hashstring: &str) -> String {
 }
 
 #[pyfunction]
-fn script_to_address(script_pubkey: Vec<u8>, network: &str) -> PyResult<String> {
+pub fn script_to_address(script_pubkey: Vec<u8>, network: &str) -> PyResult<String> {
     // Convert the script pubkey to a Script object
     let script = Script::from(script_pubkey);
 
