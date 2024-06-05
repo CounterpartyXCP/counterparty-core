@@ -3,7 +3,7 @@ import logging
 import multiprocessing
 import time
 from collections import OrderedDict
-from multiprocessing import Process, Value
+from multiprocessing import Process, Value, current_process
 from threading import Thread, Timer
 
 import flask
@@ -370,7 +370,7 @@ def run_api_server(args, interruped_value):
         else:
             global BACKEND_HEIGHT  # noqa F811
             BACKEND_HEIGHT = 0
-        ParentProcessChecker(interruped_value).start()
+        ParentProcessChecker(interruped_value, current_process()).start()
     try:
         # Init the HTTP Server.
         werkzeug_server = make_server(config.API_HOST, config.API_PORT, app, threaded=True)
@@ -404,20 +404,25 @@ def refresh_backend_height(start=False):
 
 
 class ParentProcessChecker(Thread):
-    def __init__(self, interruped_value):
+    def __init__(self, interruped_value, parent_process):
         super().__init__()
         self.interruped_value = interruped_value
+        self.parent_process = parent_process
 
     def run(self):
         try:
             while True:
                 if self.interruped_value.value == 0:
-                    time.sleep(0.05)
+                    time.sleep(0.01)
                 else:
-                    logger.trace("Parent process is dead. Raising KeyboardInterrupt...")
+                    logger.trace("Parent process is dead. Exiting...")
                     break
             DBConnectionPool().close()
-            exit(0)
+            if self.parent_process is not None and self.parent_process.is_alive():
+                try:
+                    self.parent_process.terminate()
+                except AttributeError:
+                    pass
         except KeyboardInterrupt:
             pass
 
