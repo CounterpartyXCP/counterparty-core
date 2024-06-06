@@ -1570,7 +1570,8 @@
                 "expire_index": 311101,
                 "fee_fraction_int": 5000000,
                 "status": "open",
-                "block_time": 310101000
+                "block_time": 310101000,
+                "fee_fraction_int_normalized": "0.05"
             }
         ],
         "next_cursor": null,
@@ -1589,7 +1590,8 @@
                 "text": "Unit Test",
                 "locked": false,
                 "status": "valid",
-                "block_time": 310102000
+                "block_time": 310102000,
+                "fee_fraction_int_normalized": "0.05"
             },
             {
                 "tx_index": 18,
@@ -1602,7 +1604,8 @@
                 "text": "Unit Test",
                 "locked": false,
                 "status": "valid",
-                "block_time": 310017000
+                "block_time": 310017000,
+                "fee_fraction_int_normalized": "0.05"
             }
         ],
         "next_cursor": null,
@@ -3444,7 +3447,8 @@
                 "expire_index": 310587,
                 "fee_fraction_int": 5000000,
                 "status": "open",
-                "block_time": 310487000
+                "block_time": 310487000,
+                "fee_fraction_int_normalized": "0.05"
             },
             {
                 "tx_index": 113,
@@ -3464,7 +3468,8 @@
                 "expire_index": 311112,
                 "fee_fraction_int": 5000000,
                 "status": "open",
-                "block_time": 310112000
+                "block_time": 310112000,
+                "fee_fraction_int_normalized": "0.05"
             },
             {
                 "tx_index": 102,
@@ -3484,7 +3489,8 @@
                 "expire_index": 311101,
                 "fee_fraction_int": 5000000,
                 "status": "open",
-                "block_time": 310101000
+                "block_time": 310101000,
+                "fee_fraction_int_normalized": "0.05"
             }
         ],
         "next_cursor": null,
@@ -3509,7 +3515,8 @@
             "expire_index": 310119,
             "fee_fraction_int": 5000000,
             "status": "filled",
-            "block_time": 310020000
+            "block_time": 310020000,
+            "fee_fraction_int_normalized": "0.05"
         }
     },
     "http://localhost:10009/v2/bets/2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1/matches?verbose=true": {
