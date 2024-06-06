@@ -30,7 +30,9 @@ docker container prune -f
 docker rmi counterparty/counterparty:$VERSION || true
 
 # build the counterparty-core new image
-docker build -t counterparty/counterparty:$VERSION .
+docker build -t counterparty/counterparty:$VERSION . > build.txt 2>&1
+COUNTERPARTY_RS_CACHED=$(awk '/COPY \.\/counterparty-rs \/counterparty-rs/{getline; print}' build.txt | awk '{print $2}')
+cat build.txt
 
 # re-start containers
 docker compose --profile mainnet up -d
@@ -122,7 +124,7 @@ current_counterparty_rs_hash=$(find counterparty-rs/ -type f -print0 | sort -z |
 . "$HOME/.profile"
 cd counterparty-core
 
-if [ "$previous_counterparty_rs_hash" != "$current_counterparty_rs_hash" ]; then
+if [ "$COUNTERPARTY_RS_CACHED" != "CACHED" ]; then
     echo $current_counterparty_rs_hash > ../counterparty_rs_hash
     hatch env prune
 fi
