@@ -11,12 +11,21 @@ Note: This update requires a reparse from Block 819250, which will proceed autom
 # ChangeLog
 
 ## Bugfixes
+<<<<<<< HEAD
+* Fix circular imports.
+* Fix `404` errors for undefined routes.
+* Fix redirection to API v1.
+* Fix `burned`, `earned` field in API result.
+* Fix non-cacheable API v2 routes.
+* Fix the execution interval of the `APIStatusPoller` thread.
+=======
 * Fix circular imports
 * Return `404` errors for undefined API routes
 * Fix nested `result` value in the v1 API
 * Fix `burned`, `earned`, and `btc_amount_normalized` fields in API results
 * Do not cache non-cacheable v2 API routes (which could lead to a broken health check, in particular)
 * Fix the execution interval of the `APIStatusPoller` thread
+>>>>>>> develop
 
 ## Codebase
 * Refactor mempool management and block tracking—catching up is now done via RPC, and tracking via ZeroMQ
@@ -85,6 +94,18 @@ Note: This update requires a reparse from Block 819250, which will proceed autom
 * Add BTC sent to the `DISPENSE` event
 * Accept trailing slashes in routes
 * Include `first_issuance_block_index` and `last_issuance_block_index` in asset information
+* Add normalized quantities for the following fields:
+    - `fee_paid`
+    - `fee_provided`
+    - `fee_required`
+    - `fee_required_remaining`
+    - `fee_provided_remaining`
+    - `fee_fraction_int`
+    - `quantity_per_unit`
+    - `btc_amount_normalized`
+    - `burned`
+    - `earned`
+* Add `dispense_asset_info`.
 
 ## CLI
 * Use `-v` for the `DEBUG` level, `-vv` for the `EVENT` level, and `-vvv` for the `TRACE` level (it is also possible to repeat the `--verbose` flag)

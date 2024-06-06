@@ -268,6 +268,8 @@ def inject_issuances_and_block_times(db, result):
         result_list = [result]
         result_is_dict = True
 
+    asset_fields = ["asset", "give_asset", "get_asset", "dividend_asset"]
+
     # gather asset list and block indexes
     asset_list = []
     block_indexes = []
@@ -295,7 +297,7 @@ def inject_issuances_and_block_times(db, result):
         item = result_item
         if "params" in item:
             item = item["params"]
-        for field_name in ["asset", "give_asset", "get_asset"]:
+        for field_name in asset_fields:
             if field_name in item:
                 if item[field_name] not in asset_list:
                     asset_list.append(item[field_name])
@@ -321,7 +323,7 @@ def inject_issuances_and_block_times(db, result):
                 item["params"][field_name_time] = block_times[item["params"][field_name]]
         if "params" in item:
             item = item["params"]
-        for field_name in ["asset", "give_asset", "get_asset"]:
+        for field_name in asset_fields:
             if field_name in item and item[field_name] in issuance_by_asset:
                 item[field_name + "_info"] = issuance_by_asset[item[field_name]]
 
@@ -338,21 +340,34 @@ def inject_normalized_quantities(result):
         result_list = [result]
         result_is_dict = True
 
+    asset_fields = [
+        "quantity",
+        "give_quantity",
+        "get_quantity",
+        "get_remaining",
+        "give_remaining",
+        "escrow_quantity",
+        "dispense_quantity",
+        "quantity_per_unit",
+    ]
+    divisible_fields = [
+        "satoshirate",
+        "burned",
+        "earned",
+        "btc_amount",
+        "fee_paid",
+        "fee_provided",
+        "fee_required",
+        "fee_required_remaining",
+        "fee_provided_remaining",
+        "fee_fraction_int",
+    ]
+    quantity_fields = asset_fields + divisible_fields
+
     # inject normalized quantities
     for result_item in result_list:
         item = result_item
-        for field_name in [
-            "quantity",
-            "give_quantity",
-            "get_quantity",
-            "get_remaining",
-            "give_remaining",
-            "escrow_quantity",
-            "dispense_quantity",
-            "burned",
-            "earned",
-            "btc_amount",
-        ]:
+        for field_name in quantity_fields:
             if "params" in item:
                 item = item["params"]
             if "dispenser" in item:
@@ -361,10 +376,14 @@ def inject_normalized_quantities(result):
                 continue
 
             is_divisible = True
-            if field_name not in ["burned", "earned", "btc_amount"]:
-                issuance_field_name = (
-                    field_name.replace("quantity", "asset").replace("remaining", "asset") + "_info"
-                )
+            if field_name not in divisible_fields:
+                if field_name == "quantity_per_unit":
+                    issuance_field_name = "dividend_asset_info"
+                else:
+                    issuance_field_name = (
+                        field_name.replace("quantity", "asset").replace("remaining", "asset")
+                        + "_info"
+                    )
                 if issuance_field_name not in item:
                     issuance_field_name = "asset_info"
                 if issuance_field_name not in item and issuance_field_name not in result_item:
