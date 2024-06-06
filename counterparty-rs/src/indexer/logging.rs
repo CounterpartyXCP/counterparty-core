@@ -1,44 +1,80 @@
 use std::{fs::OpenOptions, io, sync::Once};
 
-use tracing::error;
+use tracing::{level_filters::LevelFilter, Event, Subscriber};
 use tracing_subscriber::{
-    fmt::{self, writer::BoxMakeWriter},
-    EnvFilter,
+    field::delimited::Delimited,
+    fmt::{
+        format::{DefaultFields, Writer},
+        layer,
+        time::{ChronoLocal, FormatTime},
+        writer::BoxMakeWriter,
+        FmtContext, FormatEvent, FormatFields,
+    },
+    layer::SubscriberExt,
+    registry::LookupSpan,
+    Layer, Registry,
 };
 
-use super::config::{Config, LogFormat, LogOutput};
+use super::config::Config;
 
 static INIT: Once = Once::new();
 
+#[allow(clippy::expect_used)]
 pub fn setup_logging(config: &Config) {
     INIT.call_once(|| {
-        let env_filter =
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+        let file = OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(&config.log_file)
+            .expect("Failed to open log file");
 
-        let writer = match &config.log_output {
-            LogOutput::Stdout => BoxMakeWriter::new(io::stdout),
-            LogOutput::Stderr => BoxMakeWriter::new(io::stderr),
-            LogOutput::File(path) => {
-                match OpenOptions::new().append(true).create(true).open(path) {
-                    Ok(file) => BoxMakeWriter::new(file),
-                    Err(_) => {
-                        error!("Failed to open log file: {}", path);
-                        BoxMakeWriter::new(io::sink)
-                    }
-                }
-            }
-            LogOutput::None => BoxMakeWriter::new(io::sink),
-        };
+        let file_writer = BoxMakeWriter::new(file);
+        let stderr_writer = BoxMakeWriter::new(io::stderr);
 
-        let builder = fmt::Subscriber::builder().with_env_filter(env_filter);
+        let file_layer = layer()
+            .json()
+            .with_writer(file_writer)
+            .with_filter(LevelFilter::TRACE);
 
-        match config.log_format {
-            LogFormat::Structured => {
-                builder.json().with_writer(writer).init();
-            }
-            LogFormat::Unstructured => {
-                builder.with_writer(writer).init();
-            }
-        }
-    })
+        let stderr_layer = layer()
+            .event_format(CustomFormatter {
+                timer: ChronoLocal::rfc_3339(),
+            })
+            .fmt_fields(Delimited::new(" -", DefaultFields::new()))
+            .with_writer(stderr_writer)
+            .with_filter(LevelFilter::INFO);
+
+        let subscriber = Registry::default().with(file_layer).with(stderr_layer);
+
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("Failed to set global subscriber");
+    });
+}
+
+struct CustomFormatter {
+    pub timer: ChronoLocal,
+}
+
+impl<S, N> FormatEvent<S, N> for CustomFormatter
+where
+    S: Subscriber + for<'a> LookupSpan<'a>,
+    N: for<'a> FormatFields<'a> + 'static,
+{
+    fn format_event(
+        &self,
+        ctx: &FmtContext<'_, S, N>,
+        mut writer: Writer<'_>,
+        event: &Event<'_>,
+    ) -> std::fmt::Result {
+        self.timer.format_time(&mut writer)?;
+        let metadata = event.metadata();
+        write!(
+            writer,
+            " - [{}] - {} - ",
+            metadata.level(),
+            metadata.target()
+        )?;
+        ctx.field_format().format_fields(writer.by_ref(), event)?;
+        writeln!(writer)
+    }
 }

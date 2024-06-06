@@ -23,8 +23,7 @@ def initialize(start_height):
                 "rpc_password": config.BACKEND_PASSWORD,
                 "db_dir": config.FETCHER_DB,
                 "start_height": start_height,
-                "log_output": config.FETCHER_LOG,
-                "log_format": "structured",
+                "log_file": config.FETCHER_LOG,
             }
         )
         _fetcher.start()
