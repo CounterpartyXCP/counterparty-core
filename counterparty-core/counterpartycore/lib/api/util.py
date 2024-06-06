@@ -374,9 +374,10 @@ def inject_normalized_quantities(result):
                 else:
                     is_divisible = item[issuance_field_name]["divisible"]
 
-            item[field_name + "_normalized"] = (
-                divide(item[field_name], 10**8) if is_divisible else str(item[field_name])
-            )
+            if item[field_name] is not None:
+                item[field_name + "_normalized"] = (
+                    divide(item[field_name], 10**8) if is_divisible else str(item[field_name])
+                )
 
         if "get_quantity" in item and "give_quantity" in item and "market_dir" in item:
             if item["market_dir"] == "SELL":
