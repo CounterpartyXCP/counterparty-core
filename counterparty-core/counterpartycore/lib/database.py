@@ -55,15 +55,13 @@ def get_connection(read_only=True, check_wal=True):
     """Connects to the SQLite database, returning a db `Connection` object"""
     logger.debug(f"Creating connection to `{config.DATABASE}`...")
 
-    need_quick_check = False
     if not read_only and check_wal:
         try:
             check_wal_file()
         except exceptions.WALFileFoundError:
             logger.warning(
-                "Found WAL file. Database may be corrupted. Running a quick check after connection."
+                "Database WAL file detected. To ensure no data corruption has occurred, run `counterpary-server check-db`."
             )
-            need_quick_check = True
 
     if read_only:
         db = apsw.Connection(config.DATABASE, flags=apsw.SQLITE_OPEN_READONLY)
@@ -80,10 +78,6 @@ def get_connection(read_only=True, check_wal=True):
     cursor.execute("PRAGMA foreign_keys = ON")
     cursor.execute("PRAGMA defer_foreign_keys = ON")
 
-    if need_quick_check and not config.FORCE:
-        logger.info("Running a quick check...")
-        cursor.execute("PRAGMA quick_check")
-
     db.setrowtrace(rowtracer)
 
     cursor.close()
@@ -94,6 +88,7 @@ def get_connection(read_only=True, check_wal=True):
 class DBConnectionPool(metaclass=util.SingletonMeta):
     def __init__(self):
         self.connections = []
+        self.closed = False
 
     @contextmanager
     def connection(self):
@@ -106,7 +101,10 @@ class DBConnectionPool(metaclass=util.SingletonMeta):
         try:
             yield db
         finally:
-            if len(self.connections) < config.DB_CONNECTION_POOL_SIZE:
+            if self.closed:
+                logger.trace("Connection pool is closed. Closing connection.")
+                db.close()
+            elif len(self.connections) < config.DB_CONNECTION_POOL_SIZE:
                 # Add connection to pool
                 self.connections.append(db)
             else:
@@ -115,6 +113,8 @@ class DBConnectionPool(metaclass=util.SingletonMeta):
                 db.close()
 
     def close(self):
+        logger.trace("Closing all connections in pool (%s).", len(self.connections))
+        self.closed = True
         while len(self.connections) > 0:
             db = self.connections.pop()
             db.close()
@@ -204,8 +204,9 @@ def optimize(db):
 
 
 def close(db):
-    logger.info("Closing database...")
+    logger.info("Closing database connections...")
     db.close()
+    DBConnectionPool().close()
 
 
 def field_is_pk(cursor, table, field):

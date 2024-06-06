@@ -10,8 +10,10 @@ Note: A reparse from block 819250 is automatically launched during the update.
 ## Bugfixes
 * Fix circular imports.
 * Fix `404` errors for undefined routes.
-* Fix redirection to API v1
-* Fix `burned` and `earned` field in API result
+* Fix redirection to API v1.
+* Fix `burned`, `earned` and `btc_amount_normalized` field in API result.
+* Fix non-cacheable API v2 routes.
+* Fix the execution interval of the `APIStatusPoller` thread.
 
 ## Codebase
 * Refactors mempool management and block tracking. Catching up is done using RPC and tracking using ZMQ.
@@ -39,6 +41,7 @@ Note: A reparse from block 819250 is automatically launched during the update.
 * Remove checking of impossible edge case in `list_tx()` function.
 * Add `EVENT` log level.
 * Update Pyo3 to the latest version.
+* Disables the quick check if the database is not closed correctly. If this happens, display an error message when exiting and at the next restart.
 
 ## API
 * Add following routes:
@@ -86,6 +89,7 @@ Note: A reparse from block 819250 is automatically launched during the update.
 * Add BTC sent in `DISPENSE` event.
 * Accept trailing slashes in routes.
 * Update and improve documentation.
+* Add `first_issuance_block_index` and `last_issuance_block_index` in assets information.
 
 ## Command-Line Interface
 * `-v` for `DEBUG` level, `-vv` for `EVENT` level, `-vvv` for `TRACE` level. It is also possible to repeat the `--verbose` flag as many times as necessary.

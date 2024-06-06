@@ -1,9 +1,12 @@
+import logging
 import os
 
 import counterpartycore.lib.telemetry.util as util
 from counterpartycore.lib import config, ledger  # noqa: I001, F4
 
 from .interface import TelemetryCollectorI
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 
 # DEFAULT IMPLEMENTATION
@@ -66,4 +69,5 @@ class TelemetryCollectorBase(TelemetryCollectorKwargs):
         return getattr(config, key, default)
 
     def close(self):
+        logger.trace("Closing connection telemetry collector base")
         self.db.close()

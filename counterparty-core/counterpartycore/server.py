@@ -22,6 +22,7 @@ from counterpartycore.lib import (
     check,
     config,
     database,
+    exceptions,
     follow,
     log,
     transaction,
@@ -767,14 +768,14 @@ def start_all(args):
         logger.warning("Keyboard interrupt.")
         pass
     finally:
+        if api_server_v2:
+            api_server_v2.stop()
         if telemetry_daemon:
             telemetry_daemon.stop()
         if api_status_poller:
             api_status_poller.stop()
         if api_server_v1:
             api_server_v1.stop()
-        if api_server_v2:
-            api_server_v2.stop()
         if follower_daemon:
             follower_daemon.stop()
         if db:
@@ -782,6 +783,16 @@ def start_all(args):
         backend.addrindexrs.stop()
         log.shutdown()
         fetcher.stop()
+        try:
+            database.check_wal_file()
+        except exceptions.WALFileFoundError:
+            logger.error(
+                "Database WAL file detected. To ensure no data corruption has occurred, run `counterpary-server check-db`."
+            )
+        except exceptions.DatabaseError:
+            logger.error(
+                "Database is in use by another process and was unable to be closed correctly."
+            )
 
 
 def reparse(block_index):
