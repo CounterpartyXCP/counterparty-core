@@ -361,7 +361,7 @@ def inject_normalized_quantities(result):
                 continue
 
             is_divisible = True
-            if field_name not in ["burned", "earned"]:
+            if field_name not in ["burned", "earned", "btc_amount"]:
                 issuance_field_name = (
                     field_name.replace("quantity", "asset").replace("remaining", "asset") + "_info"
                 )
