@@ -1,50 +1,49 @@
 # Release Notes - Counterparty Core v10.2.0 (2024-05-??)
 
+This is a large release that includes significant refactoring and redesigns of critical node components, including the CLI and logging subsystems, mempool processing, and API database connection management. It also includes numerous updates and extensions to the v2 API, plus new ZeroMQ support. Of course, a large number of bugs have been resolved as well.
+
 
 # Upgrading
 
-Note: A reparse from block 819250 is automatically launched during the update.
+Note: This update requires a reparse from Block 819250, which will proceed automatically on initialization.
+
 
 # ChangeLog
 
 ## Bugfixes
-* Fix circular imports.
-* Fix `404` errors for undefined routes.
-* Fix redirection to API v1.
-* Fix `burned`, `earned` and `btc_amount_normalized` field in API result.
-* Fix non-cacheable API v2 routes.
-* Fix the execution interval of the `APIStatusPoller` thread.
+* Fix circular imports
+* Return `404` errors for undefined API routes
+* Fix nested `result` value in the v1 API
+* Fix `burned`, `earned`, and `btc_amount_normalized` fields in API results
+* Do not cache non-cacheable v2 API routes (which could lead to a broken health check, in particular)
+* Fix the execution interval of the `APIStatusPoller` thread
 
 ## Codebase
-* Refactors mempool management and block tracking. Catching up is done using RPC and tracking using ZMQ.
-* Introduce a new Rust module to fetch blocks from Bitcoin Core over RPC. Calls are now massively parallelized and buffered; block fetching no longer slows down block parsing.
-* Refactor the `backend` module. Separate calls to Bitcoin Core and AddrIndexRs into two different modules.
-* Add the indexed `tx_hash` field in `messages` table.
-* Update `rowtracer` so that `apsw` returns boolean instead of integer for `BOOL` type fields.
-* Clean RPS implementation. Introduce `replay_events()` function to reconstruct database from JSON list of events. 
-* Add rust test suit to `build_and_test` Github workflow.
-* It is possible to start parsing blocks while Bitcoin Core catches up.
-* Optimizes `get_pending_dispensers()` by adding the `last_status_tx_source` and `close_block_index` fields in the `dispensers` table.
-* Optimizes `is_dispensable()` by caching a list of all dispenser addresses.
-* Add `transaction_count` field in `blocks` table.
-* Added the following indexes:
+* Refactor mempool management and block tracking—catching up is now done via RPC, and tracking via ZeroMQ
+* Introduce a new Rust module to fetch blocks from Bitcoin Core over RPC. Calls are now massively parallelized and buffered; block fetching no longer slows down block parsing
+* Refactor the `backend` module; separate calls to Bitcoin Core and AddrIndexRs into two different modules.
+* Add the indexed `tx_hash` field to the `messages` table
+* Update `rowtracer` so that `apsw` returns a boolean instead of an integer for `BOOL` type fields
+* Delete the defunct implementation of rock-paper-scissors; introduce a `replay_events()` function to reconstruct the database from a hard-coded list of historical events
+* Enable parsing blocks while Bitcoin Core is still catching up
+* Optimize `get_pending_dispensers()` by adding the `last_status_tx_source` and `close_block_index` fields to the `dispensers` table; optimize `is_dispensable()` by caching a list of all dispenser addresses
+* Add the `transaction_count` field to the `blocks` table
+* Add the following new database indexes:
     - `credits.calling_function`
     - `debits.action`
     - `transactions.source`
     - `credit.quantity`
-    - `debit.quanity`
+    - `debit.quantity`
     - `balance.quantity`
     - `dispenser.give_quantity`
     - `order.get_quantity`
     - `order.give_quantity`
     - `dispense.dispense_quantity`
-* Remove checking of impossible edge case in `list_tx()` function.
-* Add `EVENT` log level.
-* Update Pyo3 to the latest version.
-* Disables the quick check if the database is not closed correctly. If this happens, display an error message when exiting and at the next restart.
+* Add the new `EVENT` log level
+* Disable the automatic SQLite ‘quick check’ for when the database has not been closed correctly. Display an error message when exiting and at the next restart.
 
 ## API
-* Add following routes:
+* Introduce the following new routes:
     `/v2/assets/<asset>/dispenses`
     `/v2/addresses/<address>/issuances`
     `/v2/addresses/<address>/assets`
@@ -71,29 +70,26 @@ Note: A reparse from block 819250 is automatically launched during the update.
     `/v2/bets`
     `/v2/orders`
     `/v2/dispensers`
-* Introduce the `cursor` API argument.
-* All responses now contain a `next_cursor` field.
-* All responses now contain a `result_count` field.
-* All queries that return lists from the database now accept the `cursor`/`offset` and `limit` arguments (see the Pagination paragraph from the API Documentation).
-* Document the list of events with an example for each of them.
-* The `asset`, `assets`, `give_asset`, and `get_asset` parameters are no longer case-sensitive.
-* `/v2/assets` accepts now the paramater `named=true|false` to return only named or numeric assets. 
-* Publish events on ZMQ Pub/Sub channel (see Documentation).
-* Database connection pooling for API v1 and v2.
-* If `verbose=true`, enrich results containing `block_index` with `block_time`.
-* Added an `action` filter for the `*/credits` and `*/debits` routes.
-* Added an `event_name` filter for the `*/events` routes.
-* Add `issuer=None` in XCP and BTC asset information.
-* Excludes zero balances in the results of `/v2/addresses/<address>/balances`.
-* Excludes zero quantities in the results of `*/credits` and `*/debits`.
-* Add BTC sent in `DISPENSE` event.
-* Accept trailing slashes in routes.
-* Update and improve documentation.
-* Add `first_issuance_block_index` and `last_issuance_block_index` in assets information.
+* Introduce the `cursor` API parameter
+* Include `next_cursor` and `result_count` fields in all responses
+* Accept `cursor`/`offset` and `limit` arguments in all queries that return lists from the database (see the Pagination paragraph of the API Documentation)
+* Make the `asset`, `assets`, `give_asset`, and `get_asset` parameters case-insensitive
+* Add the `named=true|false` parameter to `/v2/assets` to for returning only named xor numeric assets
+* Publish events on the ZeroMQ Pub/Sub channel
+* Implement database connection pooling for both API v1 and v2
+* Enrich results containing `block_index` with `block_time` when `verbose=true`
+* Add an `action` filter for the `*/credits` and `*/debits` routes.
+* Add an `event_name` filter for the `*/events` routes
+* Specify `issuer=None` within XCP and BTC asset information
+* Exclude zero balances in the results of `/v2/addresses/<address>/balances` and zero quantities in the results of `*/credits` and `*/debits`
+* Add BTC sent to the `DISPENSE` event
+* Accept trailing slashes in routes
+* Include `first_issuance_block_index` and `last_issuance_block_index` in asset information
 
-## Command-Line Interface
-* `-v` for `DEBUG` level, `-vv` for `EVENT` level, `-vvv` for `TRACE` level. It is also possible to repeat the `--verbose` flag as many times as necessary.
-* Clean CLI outputs for all commands.
+## CLI
+* Use `-v` for the `DEBUG` level, `-vv` for the `EVENT` level, and `-vvv` for the `TRACE` level (it is also possible to repeat the `--verbose` flag)
+* Clean up and refactor CLI outputs for all commands
+
 
 # Credits
 * Ouziel Slama
