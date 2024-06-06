@@ -171,6 +171,10 @@ def get_blocks_behind():
     return chain_tip - block_count
 
 
+def get_zmq_notifications():
+    return rpc("getzmqnotifications", [])
+
+
 def wait_for_block(block_index):
     block_count = getblockcount()
     while block_count < block_index:

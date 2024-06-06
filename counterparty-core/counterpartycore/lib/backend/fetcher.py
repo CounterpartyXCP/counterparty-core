@@ -1,4 +1,5 @@
 import logging
+import time
 
 from counterparty_rs import indexer
 
@@ -14,18 +15,23 @@ def initialize(start_height):
     if _fetcher is not None:
         raise Exception("Fetcher has already been initialized.")
 
-    _fetcher = indexer.Indexer(
-        {
-            "rpc_address": f"http://{config.BACKEND_CONNECT}:{config.BACKEND_PORT}",
-            "rpc_user": config.BACKEND_USER,
-            "rpc_password": config.BACKEND_PASSWORD,
-            "db_dir": config.FETCHER_DB,
-            "start_height": start_height,
-            "log_output": config.FETCHER_LOG,
-            "log_format": "structured",
-        }
-    )
-    _fetcher.start()
+    try:
+        _fetcher = indexer.Indexer(
+            {
+                "rpc_address": f"http://{config.BACKEND_CONNECT}:{config.BACKEND_PORT}",
+                "rpc_user": config.BACKEND_USER,
+                "rpc_password": config.BACKEND_PASSWORD,
+                "db_dir": config.FETCHER_DB,
+                "start_height": start_height,
+                "log_output": config.FETCHER_LOG,
+                "log_format": "structured",
+            }
+        )
+        _fetcher.start()
+    except BaseException as e:
+        logger.error("Failed to initialize fetcher: %s. Retrying in 5 seconds...", e)
+        time.sleep(5)
+        initialize(start_height)
 
 
 def initialize_with_config(config):
@@ -49,7 +55,13 @@ def stop():
     global _fetcher  # noqa: PLW0603
     if _fetcher is None:
         return
-    _fetcher.stop()
+    try:
+        _fetcher.stop()
+    except Exception as e:
+        if str(e) == "Stopped error":
+            pass
+        else:
+            raise e
     _fetcher = None
 
 
