@@ -2179,11 +2179,11 @@
                 "description": "Locked asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
-                "locked": false,
+                "locked": true,
                 "first_issuance_block_index": 310004,
-                "last_issuance_block_index": 310004,
+                "last_issuance_block_index": 310005,
                 "first_issuance_block_time": 310004000,
-                "last_issuance_block_time": 310004000
+                "last_issuance_block_time": 310005000
             },
             {
                 "asset": "CALLABLE",
@@ -2633,14 +2633,14 @@
             {
                 "asset": "LOCKEDPREV",
                 "asset_longname": null,
-                "description": "Locked asset",
+                "description": "changed",
                 "issuer": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
                 "divisible": true,
                 "locked": false,
                 "first_issuance_block_index": 310113,
-                "last_issuance_block_index": 310113,
+                "last_issuance_block_index": 310115,
                 "first_issuance_block_time": 310113000,
-                "last_issuance_block_time": 310113000
+                "last_issuance_block_time": 310115000
             },
             {
                 "asset": "PAYTOSCRIPT",
@@ -2672,11 +2672,11 @@
                 "description": "Locked asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
-                "locked": false,
+                "locked": true,
                 "first_issuance_block_index": 310004,
-                "last_issuance_block_index": 310004,
+                "last_issuance_block_index": 310005,
                 "first_issuance_block_time": 310004000,
-                "last_issuance_block_time": 310004000
+                "last_issuance_block_time": 310005000
             },
             {
                 "asset": "CALLABLE",
