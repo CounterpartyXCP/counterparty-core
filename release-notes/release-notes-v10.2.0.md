@@ -11,7 +11,7 @@ Note: A reparse from block 819250 is automatically launched during the update.
 * Fix circular imports.
 * Fix `404` errors for undefined routes.
 * Fix redirection to API v1.
-* Fix `burned`, `earned` and `btc_amount_normalized` field in API result.
+* Fix `burned`, `earned` field in API result.
 * Fix non-cacheable API v2 routes.
 * Fix the execution interval of the `APIStatusPoller` thread.
 
@@ -90,6 +90,18 @@ Note: A reparse from block 819250 is automatically launched during the update.
 * Accept trailing slashes in routes.
 * Update and improve documentation.
 * Add `first_issuance_block_index` and `last_issuance_block_index` in assets information.
+* Add normalized quantities for the following fields:
+    - `fee_paid`
+    - `fee_provided`
+    - `fee_required`
+    - `fee_required_remaining`
+    - `fee_provided_remaining`
+    - `fee_fraction_int`
+    - `quantity_per_unit`
+    - `btc_amount_normalized`
+    - `burned`
+    - `earned`
+* Add `dispense_asset_info`.
 
 ## Command-Line Interface
 * `-v` for `DEBUG` level, `-vv` for `EVENT` level, `-vvv` for `TRACE` level. It is also possible to repeat the `--verbose` flag as many times as necessary.

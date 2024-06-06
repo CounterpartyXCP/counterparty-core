@@ -252,7 +252,11 @@
                     "give_quantity_normalized": "1",
                     "get_quantity_normalized": "0.008",
                     "get_remaining_normalized": "0.008",
-                    "give_remaining_normalized": "1"
+                    "give_remaining_normalized": "1",
+                    "fee_provided_normalized": "0.000068",
+                    "fee_required_normalized": "0.009",
+                    "fee_required_remaining_normalized": "0.009",
+                    "fee_provided_remaining_normalized": "0.000068"
                 },
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
             },
@@ -681,7 +685,8 @@
                         "divisible": true,
                         "locked": false
                     },
-                    "quantity_normalized": "1000"
+                    "quantity_normalized": "1000",
+                    "fee_paid_normalized": "0.5"
                 },
                 "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
@@ -787,7 +792,11 @@
                     "give_quantity_normalized": "1",
                     "get_quantity_normalized": "0.008",
                     "get_remaining_normalized": "0.008",
-                    "give_remaining_normalized": "1"
+                    "give_remaining_normalized": "1",
+                    "fee_provided_normalized": "0.000068",
+                    "fee_required_normalized": "0.009",
+                    "fee_required_remaining_normalized": "0.009",
+                    "fee_provided_remaining_normalized": "0.000068"
                 },
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                 "block_index": 310491,
@@ -1904,7 +1913,8 @@
             },
             "give_quantity_normalized": "0.000001",
             "give_remaining_normalized": "0.000001",
-            "escrow_quantity_normalized": "0.000001"
+            "escrow_quantity_normalized": "0.000001",
+            "satoshirate_normalized": "0.000001"
         }
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispenses/sends?verbose=true": {
@@ -1954,7 +1964,8 @@
                 "status": "valid",
                 "asset_longname": "PARENT.already.issued",
                 "reset": false,
-                "block_time": 310498000
+                "block_time": 310498000,
+                "fee_paid_normalized": "0.25"
             },
             {
                 "tx_index": 498,
@@ -1976,7 +1987,8 @@
                 "status": "valid",
                 "asset_longname": null,
                 "reset": false,
-                "block_time": 310497000
+                "block_time": 310497000,
+                "fee_paid_normalized": "0.5"
             },
             {
                 "tx_index": 17,
@@ -1998,7 +2010,8 @@
                 "status": "valid",
                 "asset_longname": null,
                 "reset": false,
-                "block_time": 310016000
+                "block_time": 310016000,
+                "fee_paid_normalized": "0.5"
             },
             {
                 "tx_index": 6,
@@ -2020,7 +2033,8 @@
                 "status": "valid",
                 "asset_longname": null,
                 "reset": false,
-                "block_time": 310005000
+                "block_time": 310005000,
+                "fee_paid_normalized": "0"
             },
             {
                 "tx_index": 5,
@@ -2042,7 +2056,8 @@
                 "status": "valid",
                 "asset_longname": null,
                 "reset": false,
-                "block_time": 310004000
+                "block_time": 310004000,
+                "fee_paid_normalized": "0.5"
             },
             {
                 "tx_index": 4,
@@ -2064,7 +2079,8 @@
                 "status": "valid",
                 "asset_longname": null,
                 "reset": false,
-                "block_time": 310003000
+                "block_time": 310003000,
+                "fee_paid_normalized": "0.5"
             },
             {
                 "tx_index": 3,
@@ -2086,7 +2102,8 @@
                 "status": "valid",
                 "asset_longname": null,
                 "reset": false,
-                "block_time": 310002000
+                "block_time": 310002000,
+                "fee_paid_normalized": "0.5"
             },
             {
                 "tx_index": 2,
@@ -2108,7 +2125,8 @@
                 "status": "valid",
                 "asset_longname": null,
                 "reset": false,
-                "block_time": 310001000
+                "block_time": 310001000,
+                "fee_paid_normalized": "0.5"
             }
         ],
         "next_cursor": null,
@@ -2393,7 +2411,11 @@
                 "give_quantity_normalized": "1",
                 "get_quantity_normalized": "0.008",
                 "get_remaining_normalized": "0",
-                "give_remaining_normalized": "0"
+                "give_remaining_normalized": "0",
+                "fee_provided_normalized": "0.000068",
+                "fee_required_normalized": "0.009",
+                "fee_required_remaining_normalized": "0.008928",
+                "fee_provided_remaining_normalized": "0.000068"
             },
             {
                 "tx_index": 12,
@@ -2431,7 +2453,11 @@
                 "give_quantity_normalized": "0.00666667",
                 "get_quantity_normalized": "1",
                 "get_remaining_normalized": "1",
-                "give_remaining_normalized": "0.00666667"
+                "give_remaining_normalized": "0.00666667",
+                "fee_provided_normalized": "0.01",
+                "fee_required_normalized": "0",
+                "fee_required_remaining_normalized": "0",
+                "fee_provided_remaining_normalized": "0.01"
             },
             {
                 "tx_index": 11,
@@ -2469,7 +2495,11 @@
                 "give_quantity_normalized": "1",
                 "get_quantity_normalized": "0.01",
                 "get_remaining_normalized": "0.01",
-                "give_remaining_normalized": "1"
+                "give_remaining_normalized": "1",
+                "fee_provided_normalized": "0.000068",
+                "fee_required_normalized": "0.009",
+                "fee_required_remaining_normalized": "0.009",
+                "fee_provided_remaining_normalized": "0.000068"
             },
             {
                 "tx_index": 10,
@@ -2507,7 +2537,11 @@
                 "give_quantity_normalized": "1",
                 "get_quantity_normalized": "1",
                 "get_remaining_normalized": "1",
-                "give_remaining_normalized": "1"
+                "give_remaining_normalized": "1",
+                "fee_provided_normalized": "0.000068",
+                "fee_required_normalized": "0",
+                "fee_required_remaining_normalized": "0",
+                "fee_provided_remaining_normalized": "0.000068"
             },
             {
                 "tx_index": 7,
@@ -2545,7 +2579,11 @@
                 "give_quantity_normalized": "1",
                 "get_quantity_normalized": "1",
                 "get_remaining_normalized": "1",
-                "give_remaining_normalized": "1"
+                "give_remaining_normalized": "1",
+                "fee_provided_normalized": "0.000068",
+                "fee_required_normalized": "0",
+                "fee_required_remaining_normalized": "0",
+                "fee_provided_remaining_normalized": "0.000068"
             }
         ],
         "next_cursor": null,
@@ -2891,7 +2929,8 @@
                 "status": "valid",
                 "asset_longname": null,
                 "reset": false,
-                "block_time": 310002000
+                "block_time": 310002000,
+                "fee_paid_normalized": "0.5"
             }
         ],
         "next_cursor": null,
@@ -2978,7 +3017,8 @@
             },
             "give_quantity_normalized": "0.000001",
             "give_remaining_normalized": "0.000001",
-            "escrow_quantity_normalized": "0.000001"
+            "escrow_quantity_normalized": "0.000001",
+            "satoshirate_normalized": "0.000001"
         }
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/holders?verbose=true": {
@@ -3081,7 +3121,11 @@
                 "give_quantity_normalized": "0.008",
                 "get_quantity_normalized": "1",
                 "get_remaining_normalized": "0",
-                "give_remaining_normalized": "0"
+                "give_remaining_normalized": "0",
+                "fee_provided_normalized": "0.01",
+                "fee_required_normalized": "0",
+                "fee_required_remaining_normalized": "0",
+                "fee_provided_remaining_normalized": "0.009928"
             },
             {
                 "tx_index": 492,
@@ -3119,7 +3163,11 @@
                 "give_quantity_normalized": "1",
                 "get_quantity_normalized": "0.008",
                 "get_remaining_normalized": "0",
-                "give_remaining_normalized": "0"
+                "give_remaining_normalized": "0",
+                "fee_provided_normalized": "0.000068",
+                "fee_required_normalized": "0.009",
+                "fee_required_remaining_normalized": "0.008928",
+                "fee_provided_remaining_normalized": "0.000068"
             },
             {
                 "tx_index": 12,
@@ -3157,7 +3205,11 @@
                 "give_quantity_normalized": "0.00666667",
                 "get_quantity_normalized": "1",
                 "get_remaining_normalized": "1",
-                "give_remaining_normalized": "0.00666667"
+                "give_remaining_normalized": "0.00666667",
+                "fee_provided_normalized": "0.01",
+                "fee_required_normalized": "0",
+                "fee_required_remaining_normalized": "0",
+                "fee_provided_remaining_normalized": "0.01"
             },
             {
                 "tx_index": 11,
@@ -3195,7 +3247,11 @@
                 "give_quantity_normalized": "1",
                 "get_quantity_normalized": "0.01",
                 "get_remaining_normalized": "0.01",
-                "give_remaining_normalized": "1"
+                "give_remaining_normalized": "1",
+                "fee_provided_normalized": "0.000068",
+                "fee_required_normalized": "0.009",
+                "fee_required_remaining_normalized": "0.009",
+                "fee_provided_remaining_normalized": "0.000068"
             },
             {
                 "tx_index": 10,
@@ -3233,7 +3289,11 @@
                 "give_quantity_normalized": "1",
                 "get_quantity_normalized": "1",
                 "get_remaining_normalized": "1",
-                "give_remaining_normalized": "1"
+                "give_remaining_normalized": "1",
+                "fee_provided_normalized": "0.000068",
+                "fee_required_normalized": "0",
+                "fee_required_remaining_normalized": "0",
+                "fee_provided_remaining_normalized": "0.000068"
             },
             {
                 "tx_index": 7,
@@ -3271,7 +3331,11 @@
                 "give_quantity_normalized": "1",
                 "get_quantity_normalized": "1",
                 "get_remaining_normalized": "1",
-                "give_remaining_normalized": "1"
+                "give_remaining_normalized": "1",
+                "fee_provided_normalized": "0.000068",
+                "fee_required_normalized": "0",
+                "fee_required_remaining_normalized": "0",
+                "fee_provided_remaining_normalized": "0.000068"
             }
         ],
         "next_cursor": null,
@@ -3314,7 +3378,11 @@
             "give_quantity_normalized": "1",
             "get_quantity_normalized": "0.008",
             "get_remaining_normalized": "0",
-            "give_remaining_normalized": "0"
+            "give_remaining_normalized": "0",
+            "fee_provided_normalized": "0.000068",
+            "fee_required_normalized": "0.009",
+            "fee_required_remaining_normalized": "0.008928",
+            "fee_provided_remaining_normalized": "0.000068"
         }
     },
     "http://localhost:10009/v2/orders/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/matches?verbose=true": {
@@ -3339,7 +3407,8 @@
                 "match_expire_index": 310512,
                 "fee_paid": 7200,
                 "status": "pending",
-                "block_time": 310492000
+                "block_time": 310492000,
+                "fee_paid_normalized": "0.000072"
             }
         ],
         "next_cursor": null,
@@ -3597,7 +3666,8 @@
                 },
                 "give_quantity_normalized": "0.000001",
                 "give_remaining_normalized": "0.000001",
-                "escrow_quantity_normalized": "0.000001"
+                "escrow_quantity_normalized": "0.000001",
+                "satoshirate_normalized": "0.000001"
             }
         ],
         "next_cursor": null,
@@ -3631,7 +3701,8 @@
             },
             "give_quantity_normalized": "0.000001",
             "give_remaining_normalized": "0.000001",
-            "escrow_quantity_normalized": "0.000001"
+            "escrow_quantity_normalized": "0.000001",
+            "satoshirate_normalized": "0.000001"
         }
     },
     "http://localhost:10009/v2/dispensers/9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec/dispenses?verbose=true": {
