@@ -11,7 +11,7 @@ Note: A reparse from block 819250 is automatically launched during the update.
 * Fix circular imports.
 * Fix `404` errors for undefined routes.
 * Fix redirection to API v1.
-* Fix `burned` and `earned` field in API result.
+* Fix `burned`, `earned` and `btc_amount_normalized` field in API result.
 * Fix non-cacheable API v2 routes.
 * Fix the execution interval of the `APIStatusPoller` thread.
 
