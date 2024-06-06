@@ -750,9 +750,10 @@ def get_asset_info(db, asset: str):
 
     cursor = db.cursor()
     query = """
-        SELECT *, MAX(rowid) AS rowid, 
-                  MIN(block_index) AS first_issuance_block_index,
-                  block_index AS last_issuance_block_index FROM issuances
+        SELECT *, MIN(block_index) AS first_issuance_block_index,
+                  MAX(rowid) AS rowid,
+                  block_index AS last_issuance_block_index
+        FROM issuances
         WHERE (status = ? AND asset = ?)
         GROUP BY asset
         ORDER BY rowid DESC
