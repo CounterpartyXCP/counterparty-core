@@ -1,6 +1,6 @@
 use std::{fs::OpenOptions, io, sync::Once};
 
-use ansi_term::Color;
+use colored::{Color, Colorize};
 use tracing::{level_filters::LevelFilter, Event, Level, Subscriber};
 use tracing_subscriber::{
     fmt::{
@@ -55,13 +55,13 @@ struct CustomFormatter {
 }
 
 impl CustomFormatter {
-    fn get_color(&self, level: &tracing::Level) -> Color {
+    fn get_color(&self, level: &Level) -> Color {
         match *level {
-            tracing::Level::TRACE => Color::Cyan,
-            tracing::Level::DEBUG => Color::RGB(214, 149, 251),
-            tracing::Level::WARN => Color::Yellow,
-            tracing::Level::ERROR => Color::Red,
-            tracing::Level::INFO => Color::White,
+            Level::TRACE => Color::Cyan,
+            Level::DEBUG => Color::Magenta,
+            Level::WARN => Color::Yellow,
+            Level::ERROR => Color::Red,
+            Level::INFO => Color::BrightWhite,
         }
     }
 }
@@ -82,8 +82,7 @@ where
         write!(
             writer,
             " - [{}] - RS Fetcher - ",
-            self.get_color(metadata.level())
-                .paint(format!("{:>8}", metadata.level().to_string()))
+            format!("{:>8}", metadata.level().to_string()).color(self.get_color(metadata.level()))
         )?;
         ctx.field_format().format_fields(writer.by_ref(), event)?;
         writeln!(writer)
