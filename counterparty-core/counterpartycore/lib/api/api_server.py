@@ -114,6 +114,24 @@ def return_result_if_not_ready(rule):
     )
 
 
+def get_log_prefix(query_args=None):
+    rule = str(request.url_rule.rule)
+    if rule == "/v2/":
+        query_name = "API Root"
+    else:
+        route = ROUTES.get(rule)
+        query_name = " ".join(
+            [part.capitalize() for part in str(route["function"].__name__).split("_")]
+        )
+    message = f"API Request - {query_name}"
+
+    if query_args:
+        query_args_str = " ".join([f"{k}={v}" for k, v in query_args.items()])
+        message += f" ({query_args_str})"
+
+    return message
+
+
 def return_result(
     http_code,
     result=None,
@@ -139,24 +157,16 @@ def return_result(
     response.headers["Content-Type"] = "application/json"
 
     if http_code != 404:
-        rule = str(request.url_rule.rule)
-        if rule == "/v2/":
-            query_name = "API Root"
-        else:
-            route = ROUTES.get(rule)
-            query_name = " ".join(
-                [part.capitalize() for part in str(route["function"].__name__).split("_")]
-            )
+        message = get_log_prefix(query_args)
     else:
-        query_name = request.path
-    if query_args:
-        query_args_str = " ".join([f"{k}={v}" for k, v in query_args.items()])
-        query_name += f" ({query_args_str})"
-    message = f"API Request - {query_name} - Response {http_code}"
+        message = f"API Request - {request.path}"
+
+    message += f" - Response {http_code}"
     if error:
         message += f" ({error})"
     if start_time:
         message += f" - {int((time.time() - start_time) * 1000)}ms"
+
     logger.debug(message)
 
     return response
@@ -242,6 +252,9 @@ def handle_route(**kwargs):
     start_time = time.time()
     query_args = request.args.to_dict() | kwargs
 
+    logger.trace(f"API Request - {request.remote_addr} {request.method} {request.url}")
+    logger.debug(get_log_prefix(query_args))
+
     if BACKEND_HEIGHT is None:
         return return_result(
             503,
@@ -282,6 +295,8 @@ def handle_route(**kwargs):
         function_args = prepare_args(route, **kwargs)
     except ValueError as e:
         return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
+
+    logger.trace(f"API Request - Arguments: {function_args}")
 
     # call the function
     try:

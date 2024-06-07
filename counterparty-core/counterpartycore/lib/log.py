@@ -40,12 +40,20 @@ def debug(self, msg, *args, **kwargs):
     self._log(logging.DEBUG, msg, args, **kwargs)
 
 
+def formatTime(record, datefmt=None):
+    date = datetime.fromtimestamp(record.created, tzlocal())
+    date_string = date.strftime("%Y-%m-%dT%H:%M:%S.%f000%z")
+    # same as Rust log format
+    date_string = date_string[0:-2] + ":" + date_string[-2:]
+    return date_string
+
+
 class CustomFormatter(logging.Formatter):
     FORMAT = "%(asctime)s - [%(levelname)8s] - %(message)s"
 
     COLORS = {
         logging.TRACE: "cyan",
-        logging.DEBUG: "light_blue",
+        logging.DEBUG: "light_blue",  # D695FB 214 149 251
         logging.WARNING: "yellow",
         logging.ERROR: "red",
         logging.CRITICAL: "red",
@@ -53,22 +61,25 @@ class CustomFormatter(logging.Formatter):
     }
 
     def format(self, record):
+        attrs = ["bold"] if hasattr(record, "bold") else []
+        level_name_format = colored("%(levelname)8s", self.COLORS.get(record.levelno), attrs=attrs)
+
         if (
             record.levelno != logging.EVENT
             and util.CURRENT_BLOCK_INDEX is not None
             and "/counterpartycore/lib/messages/" in record.pathname
         ):
             if util.PARSING_MEMPOOL:
-                log_format = "%(asctime)s - [%(levelname)8s] - Mempool - %(message)s"
+                log_format = f"%(asctime)s - [{level_name_format}] - Mempool - %(message)s"
             else:
-                log_format = f"%(asctime)s - [%(levelname)8s] - Block {util.CURRENT_BLOCK_INDEX} - %(message)s"
+                log_format = f"%(asctime)s - [{level_name_format}] - Block {util.CURRENT_BLOCK_INDEX} - %(message)s"
         else:
-            log_format = "%(asctime)s - [%(levelname)8s] - %(message)s"
-        attrs = ["bold"] if hasattr(record, "bold") and record.bold else []
-        log_format = colored(log_format, self.COLORS.get(record.levelno), attrs=attrs)
-        formatter = logging.Formatter(log_format, "%Y-%m-%d-T%H:%M:%S%z")
+            log_format = f"%(asctime)s - [{level_name_format}] - %(message)s"
+
+        formatter = logging.Formatter(log_format)
         if isinstance(record.args, dict):
             record.args = truncate_fields(record.args)
+        formatter.formatTime = formatTime
         return formatter.format(record)
 
 

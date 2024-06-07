@@ -167,21 +167,30 @@ class SocketManager:
         self.socket = None
         self.connected = False
 
+    def log(self, message, level=logging.DEBUG):
+        message = f"AddrindexRS Client - Server: `{self.host}:{self.port}` - {message}"
+        if level == logging.ERROR:
+            logger.error(message)
+        elif level == logging.WARNING:
+            logger.warning(message)
+        else:
+            logger.debug(message)
+
     def connect(self):
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.settimeout(self.timeout)
             self.socket.connect((self.host, self.port))
             self.connected = True
-            logger.debug(f"`{self.host}:{self.port}` -- connected")
+            self.log("Connected")
         except socket.timeout as e:
-            logger.debug(f"`{self.host}:{self.port}` -- socket.connect timeout")
+            self.log("Socket connect timeout")
             raise e
         except ConnectionRefusedError as e:
-            logger.debug(f"`{self.host}:{self.port}` -- connection refused")
+            self.log("Connection refused")
             raise e
         except Exception as e:
-            logger.debug(f"`{self.host}:{self.port}` -- unknown exception: {e}")
+            self.log(f"Unknown exception: {e}")
             raise e
 
     def disconnect(self):
@@ -189,9 +198,9 @@ class SocketManager:
             try:
                 self.socket.close()
                 self.connected = False
-                logger.debug(f"`{self.host}:{self.port}` -- disconnected")
+                self.log("Disconnected")
             except Exception as e:
-                logger.error(f"`{self.host}:{self.port}` -- unknown exception: {e}")
+                self.log(f"Unknown exception: {e}", level=logging.ERROR)
                 raise e
 
     def send(self, message):
@@ -200,13 +209,13 @@ class SocketManager:
 
         try:
             self.socket.sendall(message)
-            logger.debug(f"`{self.host}:{self.port}` -- sent message {message}")
+            self.log(f"Message sent: {message}")
         except socket.timeout as e:
-            logger.warning(f"`{self.host}:{self.port}` -- socket.send timeout")
+            self.log("Socket send timeout", level=logging.WARNING)
             self.connected = False
             raise e
         except Exception as e:
-            logger.error(f"`{self.host}:{self.port}` -- unknown exception: {e}")
+            self.log(f"Unknown exception: {e}", level=logging.ERROR)
             self.connected = False
             raise e
 
@@ -221,22 +230,20 @@ class SocketManager:
                 if not chunk:
                     raise Exception("Socket disconnected")
                 response += chunk
-                # logger.debug(
-                #     f"`{self.host}:{self.port}` -- chunk received: {chunk}, response: {response}"
-                # )
+                # self.log(""chunk received: {chunk}, response: {response}")
                 try:
                     res = parse(response)
-                    # logger.debug(f"`{self.host}:{self.port}` -- received message: { res}")
+                    # self.log("received message: { res}")
                     return res
                 except json.JSONDecodeError:
-                    # logger.debug(f"`{self.host}:{self.port}` -- JSONDecodeError -- continuing")
+                    # self.log("JSONDecodeError -- continuing")
                     continue
             except socket.timeout as e:
-                logger.warning(f"`{self.host}:{self.port}` -- Timeout receiving message: {e}")
+                self.log(f"Timeout receiving message: {e}", level=logging.WARNING)
                 self.connected = False
                 raise e
             except Exception as e:
-                logger.error(f"`{self.host}:{self.port}`  -- Error receiving message: {e}")
+                self.log(f"Error receiving message: {e}", level=logging.ERROR)
                 self.connected = False
                 raise e
 
@@ -254,6 +261,7 @@ class AddrIndexRsClient:
         self.host = host
         self.port = port
         self.socket_manager = SocketManager(host, port, timeout)
+        self.log = self.socket_manager.log
         self.thread = threading.Thread(target=self._run, name="AddrIndexRsClient")
         self.req_queue = queue.Queue()
         self.res_queue = queue.Queue()
@@ -270,7 +278,7 @@ class AddrIndexRsClient:
         if self.is_running:
             return
 
-        logger.debug("AddrIndexRsClient -- starting...")
+        self.log("Starting...")
         while True:
             try:
                 self.socket_manager.connect()
@@ -279,8 +287,9 @@ class AddrIndexRsClient:
                 break
             except Exception as e:
                 self.is_running = False
-                logger.warning(
-                    f"AddrIndexRsClient -- failed to start: {e}, retrying in {self.backoff} seconds..."
+                self.log(
+                    f"Failed to start: {e}, retrying in {self.backoff} seconds...",
+                    level=logging.WARNING,
                 )
                 time.sleep(self.backoff)
                 self.backoff = min(self.backoff * self.backoff_factor, self.backoff_max)
@@ -296,7 +305,7 @@ class AddrIndexRsClient:
             self.res_queue.join()
             self.thread.join()
         except Exception as e:
-            logger.error(f"AddrIndexRsClient -- error while stopping: {e}")
+            self.log(f"Error while stopping: {e}", level=logging.ERROR)
 
     def send(self, msg):
         with self.msg_id_lock:
@@ -348,7 +357,7 @@ class AddrIndexRsClient:
             except queue.Empty:
                 continue
             except Exception as e:
-                logger.error(f"AddrIndexRsClient.thread -- exception {e}")
+                self.log(f"Thread exception: {e}", level=logging.ERROR)
                 self.res_queue.put({"error": str(e)})
 
 
@@ -554,7 +563,7 @@ def init():
     INDEXER_THREAD = AddrIndexRsClient(config.INDEXD_CONNECT, config.INDEXD_PORT)
     INDEXER_THREAD.daemon = True
     INDEXER_THREAD.start()
-    logger.info("Connecting to address indexer.")
+    logger.info("Connecting to address indexer...")
     indexer_check_version()
     INITIALIZED = True
 

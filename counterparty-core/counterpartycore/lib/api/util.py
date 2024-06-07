@@ -23,17 +23,15 @@ def check_last_parsed_block(db, blockcount):
         return
     if util.CURRENT_BLOCK_INDEX + 1 < blockcount:
         raise exceptions.DatabaseError(f"{config.XCP_NAME} database is behind backend.")
-    logger.debug("Database state check passed.")
+    logger.trace("API Server - Database state check passed.")
 
 
 def healthz_light(db):
-    logger.debug("Performing light healthz check.")
     latest_block_index = backend.bitcoind.getblockcount()
     check_last_parsed_block(db, latest_block_index)
 
 
 def healthz_heavy(db):
-    logger.debug("Performing heavy healthz check.")
     transaction.compose_transaction(
         db,
         name="send",
@@ -48,13 +46,13 @@ def healthz_heavy(db):
     )
 
 
-def healthz(db, check_type: str = "heavy"):
+def healthz(db, check_type: str = "light"):
     try:
-        if check_type == "light":
-            healthz_light(db)
-        else:
+        if check_type == "heavy":
             healthz_light(db)
             healthz_heavy(db)
+        else:
+            healthz_light(db)
     except Exception as e:
         # logger.exception(e)
         logger.error(f"Health check failed: {e}")
@@ -62,7 +60,7 @@ def healthz(db, check_type: str = "heavy"):
     return True
 
 
-def handle_healthz_route(db, check_type: str = "heavy"):
+def handle_healthz_route(db, check_type: str = "light"):
     """
     Health check route.
     :param check_type: Type of health check to perform. Options are 'light' and 'heavy' (e.g. light)
@@ -76,7 +74,7 @@ def handle_healthz_route(db, check_type: str = "heavy"):
     return flask.Response(to_json(result), code, mimetype="application/json")
 
 
-def check_server_health(db, check_type: str = "heavy"):
+def check_server_health(db, check_type: str = "light"):
     """
     Health check route.
     :param check_type: Type of health check to perform. Options are 'light' and 'heavy' (e.g. light)
@@ -245,7 +243,7 @@ def prepare_routes(routes):
 class ApiJsonEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, decimal.Decimal):
-            return str(o)
+            return "{0:f}".format(o)
         if isinstance(o, bytes):
             return o.hex()
         return super().default(o)
@@ -332,6 +330,18 @@ def inject_issuances_and_block_times(db, result):
     return result
 
 
+def inject_normalized_quantity(item, field_name, asset_info):
+    if field_name not in item:
+        return item
+
+    if item[field_name] is not None:
+        item[field_name + "_normalized"] = (
+            divide(item[field_name], 10**8) if asset_info["divisible"] else str(item[field_name])
+        )
+
+    return item
+
+
 def inject_normalized_quantities(result):
     # let's work with a list
     result_list = result
@@ -340,67 +350,70 @@ def inject_normalized_quantities(result):
         result_list = [result]
         result_is_dict = True
 
-    asset_fields = [
-        "quantity",
-        "give_quantity",
-        "get_quantity",
-        "get_remaining",
-        "give_remaining",
-        "escrow_quantity",
-        "dispense_quantity",
-        "quantity_per_unit",
-    ]
-    divisible_fields = [
-        "satoshirate",
-        "burned",
-        "earned",
-        "btc_amount",
-        "fee_paid",
-        "fee_provided",
-        "fee_required",
-        "fee_required_remaining",
-        "fee_provided_remaining",
-        "fee_fraction_int",
-    ]
-    quantity_fields = asset_fields + divisible_fields
+    quantity_fields = {
+        "quantity": {"asset_field": "asset_info", "divisible": None},
+        "give_quantity": {"asset_field": "give_asset_info", "divisible": None},
+        "get_quantity": {"asset_field": "get_asset_info", "divisible": None},
+        "get_remaining": {"asset_field": "get_asset_info", "divisible": None},
+        "give_remaining": {"asset_field": "give_asset_info", "divisible": None},
+        "escrow_quantity": {"asset_field": "asset_info", "divisible": None},
+        "dispense_quantity": {"asset_field": "asset_info", "divisible": None},
+        "quantity_per_unit": {"asset_field": "dividend_asset_info", "divisible": None},
+        "satoshirate": {"asset_field": None, "divisible": True},
+        "burned": {"asset_field": None, "divisible": True},
+        "earned": {"asset_field": None, "divisible": True},
+        "btc_amount": {"asset_field": None, "divisible": True},
+        "fee_paid": {"asset_field": None, "divisible": True},
+        "fee_provided": {"asset_field": None, "divisible": True},
+        "fee_required": {"asset_field": None, "divisible": True},
+        "fee_required_remaining": {"asset_field": None, "divisible": True},
+        "fee_provided_remaining": {"asset_field": None, "divisible": True},
+        "fee_fraction_int": {"asset_field": None, "divisible": True},
+    }
 
-    # inject normalized quantities
+    enriched_result_list = []
     for result_item in result_list:
         item = result_item.copy()
-        for field_name in quantity_fields:
-            if "params" in item:
-                item = item["params"]
-            if "dispenser" in item and field_name != "dispense_quantity":
-                item = result_item["dispenser"]
-            if field_name not in item:
-                item = result_item
+        for field_name, field_info in quantity_fields.items():
+            if field_info["divisible"] is not None:
+                if field_name in item:
+                    item = inject_normalized_quantity(
+                        item, field_name, {"divisible": field_info["divisible"]}
+                    )
+                if "params" in item and field_name in item["params"]:
+                    item["params"] = inject_normalized_quantity(
+                        item["params"], field_name, {"divisible": field_info["divisible"]}
+                    )
+                if "dispenser" in item and field_name in item["dispenser"]:
+                    item["dispenser"] = inject_normalized_quantity(
+                        item["dispenser"], field_name, {"divisible": field_info["divisible"]}
+                    )
                 continue
 
-            is_divisible = True
-            if field_name not in divisible_fields:
-                if field_name == "quantity_per_unit":
-                    issuance_field_name = "dividend_asset_info"
+            asset_info = None
+            if field_info["asset_field"] in item:
+                asset_info = item[field_info["asset_field"]]
+            elif "params" in item and field_info["asset_field"] in item["params"]:
+                asset_info = item["params"][field_info["asset_field"]]
+
+            if asset_info is None:
+                if "asset_info" in item:
+                    asset_info = item["asset_info"]
+                elif "params" in item and "asset_info" in item["params"]:
+                    asset_info = item["params"]["asset_info"]
                 else:
-                    issuance_field_name = (
-                        field_name.replace("quantity", "asset").replace("remaining", "asset")
-                        + "_info"
-                    )
-                if issuance_field_name not in item:
-                    issuance_field_name = "asset_info"
-                if issuance_field_name not in item and issuance_field_name not in result_item:
-                    item = result_item
                     continue
-                if issuance_field_name not in item:
-                    is_divisible = result_item[issuance_field_name]["divisible"]
-                else:
-                    is_divisible = item[issuance_field_name]["divisible"]
 
-            if item[field_name] is not None:
-                item[field_name + "_normalized"] = (
-                    divide(item[field_name], 10**8) if is_divisible else str(item[field_name])
+            if field_name in item:
+                item = inject_normalized_quantity(item, field_name, asset_info)  # noqa
+            if "params" in item and field_name in item["params"]:
+                item["params"] = inject_normalized_quantity(  # noqa
+                    item["params"], field_name, asset_info
                 )
-            item = result_item
-
+            if "dispenser" in item and field_name in item["dispenser"]:
+                item["dispenser"] = inject_normalized_quantity(  # noqa
+                    item["dispenser"], field_name, asset_info
+                )
         if "get_quantity" in item and "give_quantity" in item and "market_dir" in item:
             if item["market_dir"] == "SELL":
                 item["market_price"] = divide(
@@ -411,9 +424,11 @@ def inject_normalized_quantities(result):
                     item["give_quantity_normalized"], item["get_quantity_normalized"]
                 )
 
+        enriched_result_list.append(item)
+
     if result_is_dict:
-        return result_list[0]
-    return result
+        return enriched_result_list[0]
+    return enriched_result_list
 
 
 def inject_dispensers(db, result):
