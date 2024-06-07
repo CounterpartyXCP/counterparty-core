@@ -61,19 +61,21 @@ class CustomFormatter(logging.Formatter):
     }
 
     def format(self, record):
+        attrs = ["bold"] if hasattr(record, "bold") else []
+        level_name_format = colored("%(levelname)8s", self.COLORS.get(record.levelno), attrs=attrs)
+
         if (
             record.levelno != logging.EVENT
             and util.CURRENT_BLOCK_INDEX is not None
             and "/counterpartycore/lib/messages/" in record.pathname
         ):
             if util.PARSING_MEMPOOL:
-                log_format = "%(asctime)s - [%(levelname)8s] - Mempool - %(message)s"
+                log_format = f"%(asctime)s - [{level_name_format}] - Mempool - %(message)s"
             else:
-                log_format = f"%(asctime)s - [%(levelname)8s] - Block {util.CURRENT_BLOCK_INDEX} - %(message)s"
+                log_format = f"%(asctime)s - [{level_name_format}] - Block {util.CURRENT_BLOCK_INDEX} - %(message)s"
         else:
-            log_format = "%(asctime)s - [%(levelname)8s] - %(message)s"
-        attrs = ["bold"] if hasattr(record, "bold") and record.bold else []
-        log_format = colored(log_format, self.COLORS.get(record.levelno), attrs=attrs)
+            log_format = f"%(asctime)s - [{level_name_format}] - %(message)s"
+
         formatter = logging.Formatter(log_format)
         if isinstance(record.args, dict):
             record.args = truncate_fields(record.args)
