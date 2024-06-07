@@ -40,6 +40,14 @@ def debug(self, msg, *args, **kwargs):
     self._log(logging.DEBUG, msg, args, **kwargs)
 
 
+def formatTime(record, datefmt=None):
+    date = datetime.fromtimestamp(record.created, tzlocal())
+    date_string = date.strftime("%Y-%m-%dT%H:%M:%S.%f000%z")
+    # same as Rust log format
+    date_string = date_string[0:-2] + ":" + date_string[-2:]
+    return date_string
+
+
 class CustomFormatter(logging.Formatter):
     FORMAT = "%(asctime)s - [%(levelname)8s] - %(message)s"
 
@@ -66,9 +74,10 @@ class CustomFormatter(logging.Formatter):
             log_format = "%(asctime)s - [%(levelname)8s] - %(message)s"
         attrs = ["bold"] if hasattr(record, "bold") and record.bold else []
         log_format = colored(log_format, self.COLORS.get(record.levelno), attrs=attrs)
-        formatter = logging.Formatter(log_format, "%Y-%m-%d-T%H:%M:%S%z")
+        formatter = logging.Formatter(log_format)
         if isinstance(record.args, dict):
             record.args = truncate_fields(record.args)
+        formatter.formatTime = formatTime
         return formatter.format(record)
 
 
