@@ -264,7 +264,7 @@ def get_transactions_by_address(
 ):
     """
     Returns the transactions of an address
-    :param str address: The address to return (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
+    :param str address: The address to return (e.g. 1PHnxfHgojebxzW6muz8zfbE4bkDtbEudx)
     :param int cursor: The last transaction index to return (e.g. 10665092)
     :param int limit: The maximum number of transactions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -1426,6 +1426,7 @@ def get_dividends(db, cursor: int = None, limit: int = 100, offset: int = None):
 def get_dividend(db, dividend_hash: str):
     """
     Returns a dividend by its hash
+    :param str dividend_hash: The hash of the dividend to return (e.g. d74242f4789f98c0ff6df44fe21a2cf614f02e694c1e34f1193d3a8f35cc01a0)
     """
     return select_row(
         db,
@@ -1578,7 +1579,7 @@ def get_orders_by_address(
 ):
     """
     Returns the orders of an address
-    :param str address: The address to return (e.g. 1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk)
+    :param str address: The address to return (e.g. 1H875qrfLT3USeA1zDhngDMtb7VsmAdL8c)
     :param str status: The status of the orders to return (e.g. filled)
     :param int cursor: The last index of the orders to return
     :param int limit: The maximum number of orders to return (e.g. 5)
