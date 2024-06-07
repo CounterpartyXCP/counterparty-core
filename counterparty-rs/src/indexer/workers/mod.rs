@@ -1,7 +1,7 @@
 use std::thread::{self, JoinHandle};
 
 use crossbeam_channel::{Receiver, Sender};
-use tracing::{error, info};
+use tracing::{error, info, debug};
 
 use super::{stopper::Stopper, types::error::Error};
 
@@ -47,6 +47,6 @@ where
         }));
     }
 
-    info!("{} {} workers started", n, name);
+    debug!("{} {} workers started", n, name);
     Ok(handles)
 }
