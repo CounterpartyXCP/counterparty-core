@@ -615,9 +615,12 @@ class TransactionService:
         else:
             # no data
             encoding = None
-        self.logger.debug(
-            f"TX Construct - Constructing `{encoding.upper()}` transaction from {source}."
-        )
+        if encoding:
+            self.logger.debug(
+                f"TX Construct - Constructing `{encoding.upper()}` transaction from {source}."
+            )
+        else:
+            self.logger.debug(f"TX Construct - Constructing transaction from {source}.")
 
         """Destinations"""
 
