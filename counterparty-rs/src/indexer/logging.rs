@@ -58,10 +58,10 @@ impl CustomFormatter {
     fn get_color(&self, level: &tracing::Level) -> Color {
         match *level {
             tracing::Level::TRACE => Color::Cyan,
-            tracing::Level::DEBUG => Color::Blue,
+            tracing::Level::DEBUG => Color::RGB(214, 149, 251),
             tracing::Level::WARN => Color::Yellow,
             tracing::Level::ERROR => Color::Red,
-            tracing::Level::INFO => Color::Fixed(248),
+            tracing::Level::INFO => Color::White,
         }
     }
 }
