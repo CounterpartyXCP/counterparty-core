@@ -105,6 +105,7 @@ Note: This update requires a reparse from Block 819250, which will proceed autom
     - `btc_amount_normalized`
     - `burned`
     - `earned`
+    - `dispense_quantity`
 * Add `dispense_asset_info`.
 
 ## CLI

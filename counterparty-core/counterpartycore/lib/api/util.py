@@ -366,13 +366,14 @@ def inject_normalized_quantities(result):
 
     # inject normalized quantities
     for result_item in result_list:
-        item = result_item
+        item = result_item.copy()
         for field_name in quantity_fields:
             if "params" in item:
                 item = item["params"]
-            if "dispenser" in item:
+            if "dispenser" in item and field_name != "dispense_quantity":
                 item = result_item["dispenser"]
             if field_name not in item:
+                item = result_item
                 continue
 
             is_divisible = True
@@ -387,6 +388,7 @@ def inject_normalized_quantities(result):
                 if issuance_field_name not in item:
                     issuance_field_name = "asset_info"
                 if issuance_field_name not in item and issuance_field_name not in result_item:
+                    item = result_item
                     continue
                 if issuance_field_name not in item:
                     is_divisible = result_item[issuance_field_name]["divisible"]
@@ -397,6 +399,7 @@ def inject_normalized_quantities(result):
                 item[field_name + "_normalized"] = (
                     divide(item[field_name], 10**8) if is_divisible else str(item[field_name])
                 )
+            item = result_item
 
         if "get_quantity" in item and "give_quantity" in item and "market_dir" in item:
             if item["market_dir"] == "SELL":
