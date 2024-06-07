@@ -90,6 +90,13 @@ def initialise_log_config(
     config.VERBOSE = verbose
     config.QUIET = quiet
 
+    if config.VERBOSE == 0:
+        config.LOG_LEVEL_STRING = "info"
+    elif config.VERBOSE == 1:
+        config.LOG_LEVEL_STRING = "debug"
+    elif config.VERBOSE >= 2:
+        config.LOG_LEVEL_STRING = "trace"
+
     network = ""
     if testnet:
         network += ".testnet"
