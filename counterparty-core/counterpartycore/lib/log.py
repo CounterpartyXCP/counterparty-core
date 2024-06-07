@@ -45,7 +45,7 @@ class CustomFormatter(logging.Formatter):
 
     COLORS = {
         logging.TRACE: "cyan",
-        logging.DEBUG: "light_blue",
+        logging.DEBUG: "light_blue",  # D695FB 214 149 251
         logging.WARNING: "yellow",
         logging.ERROR: "red",
         logging.CRITICAL: "red",
