@@ -1,7 +1,7 @@
 use std::{fs::OpenOptions, io, sync::Once};
 
 use ansi_term::Color;
-use tracing::{level_filters::LevelFilter, Event, Subscriber};
+use tracing::{level_filters::LevelFilter, Event, Level, Subscriber};
 use tracing_subscriber::{
     fmt::{
         format::Writer,
@@ -41,7 +41,7 @@ pub fn setup_logging(config: &Config) {
                 timer: ChronoLocal::rfc_3339(),
             })
             .with_writer(stderr_writer)
-            .with_filter(LevelFilter::INFO);
+            .with_filter(LevelFilter::from_level(Level::from(config.log_level)));
 
         let subscriber = Registry::default().with(file_layer).with(stderr_layer);
 
