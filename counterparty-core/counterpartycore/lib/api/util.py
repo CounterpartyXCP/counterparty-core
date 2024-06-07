@@ -46,13 +46,13 @@ def healthz_heavy(db):
     )
 
 
-def healthz(db, check_type: str = "heavy"):
+def healthz(db, check_type: str = "light"):
     try:
-        if check_type == "light":
-            healthz_light(db)
-        else:
+        if check_type == "heavy":
             healthz_light(db)
             healthz_heavy(db)
+        else:
+            healthz_light(db)
     except Exception as e:
         # logger.exception(e)
         logger.error(f"Health check failed: {e}")
@@ -60,7 +60,7 @@ def healthz(db, check_type: str = "heavy"):
     return True
 
 
-def handle_healthz_route(db, check_type: str = "heavy"):
+def handle_healthz_route(db, check_type: str = "light"):
     """
     Health check route.
     :param check_type: Type of health check to perform. Options are 'light' and 'heavy' (e.g. light)
@@ -74,7 +74,7 @@ def handle_healthz_route(db, check_type: str = "heavy"):
     return flask.Response(to_json(result), code, mimetype="application/json")
 
 
-def check_server_health(db, check_type: str = "heavy"):
+def check_server_health(db, check_type: str = "light"):
     """
     Health check route.
     :param check_type: Type of health check to perform. Options are 'light' and 'heavy' (e.g. light)

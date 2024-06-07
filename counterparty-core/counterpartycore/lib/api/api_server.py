@@ -296,6 +296,8 @@ def handle_route(**kwargs):
     except ValueError as e:
         return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
 
+    logger.trace(f"API Request - Arguments: {function_args}")
+
     # call the function
     try:
         with DBConnectionPool().connection() as db:
