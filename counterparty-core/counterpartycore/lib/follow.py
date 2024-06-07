@@ -23,10 +23,52 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 MEMPOOL_BLOCK_MAX_SIZE = 100
 
+NOTIFICATION_TYPES = ["pubrawtx", "pubhashtx", "pubsequence", "pubrawblock"]
+
+
+def get_zmq_notifications_addresses():
+    zmq_notification = backend.bitcoind.get_zmq_notifications()
+
+    if len(zmq_notification) == 0:
+        raise exceptions.BitcoindZMQError("Bitcoin Core was started without ZMQ notifications.")
+
+    notification_types = sorted([notification["type"] for notification in zmq_notification])
+    if notification_types != sorted(NOTIFICATION_TYPES):
+        raise exceptions.BitcoindZMQError(
+            f"Bitcoin Core ZMQ notifications are incorrect. The following notification must be enabled: {NOTIFICATION_TYPES}"
+        )
+
+    notification_addresses = {
+        notification["type"]: notification["address"] for notification in zmq_notification
+    }
+    if (
+        notification_addresses["pubrawtx"] != notification_addresses["pubhashtx"]
+        or notification_addresses["pubrawtx"] != notification_addresses["pubsequence"]
+    ):
+        raise exceptions.BitcoindZMQError(
+            "Bitcoin Core ZMQ notifications must use the same address for `pubhashtx`, `pubrawtx` and `pubsequence`."
+        )
+
+    return notification_addresses["pubrawtx"], notification_addresses["pubrawblock"]
+
+
+def start_blockchain_watcher(db):
+    try:
+        follower_daemon = BlockchainWatcher(db)
+        follower_daemon.start()
+        return follower_daemon
+    except exceptions.BitcoindZMQError as e:
+        logger.error(e)
+        logger.warning("Sleeping 5 seconds, catching up again then retrying...")
+        time.sleep(5)
+        blocks.catch_up(db, check_asset_conservation=False)
+        return start_blockchain_watcher(db)
+
 
 class BlockchainWatcher:
     def __init__(self, db):
         logger.debug("Initializing blockchain watcher...")
+        self.zmq_sequence_address, self.zmq_rawblock_address = get_zmq_notifications_addresses()
         self.db = db
         self.loop = asyncio.get_event_loop()
         self.connect_to_zmq()
@@ -43,18 +85,16 @@ class BlockchainWatcher:
         self.zmq_context = zmq.asyncio.Context()
         self.zmq_sub_socket_sequence = self.zmq_context.socket(zmq.SUB)
         self.zmq_sub_socket_sequence.setsockopt(zmq.RCVHWM, 0)
+        self.zmq_sub_socket_sequence.setsockopt(zmq.RCVTIMEO, 1000)
         self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "rawtx")
         self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "hashtx")
         self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "sequence")
-        self.zmq_sub_socket_sequence.connect(
-            f"tcp://{config.BACKEND_CONNECT}:{config.ZMQ_SEQUENCE_PORT}"
-        )
+        self.zmq_sub_socket_sequence.connect(self.zmq_sequence_address)
         self.zmq_sub_socket_rawblock = self.zmq_context.socket(zmq.SUB)
         self.zmq_sub_socket_rawblock.setsockopt(zmq.RCVHWM, 0)
+        self.zmq_sub_socket_sequence.setsockopt(zmq.RCVTIMEO, 1000)
         self.zmq_sub_socket_rawblock.setsockopt_string(zmq.SUBSCRIBE, "rawblock")
-        self.zmq_sub_socket_rawblock.connect(
-            f"tcp://{config.BACKEND_CONNECT}:{config.ZMQ_RAWBLOCK_PORT}"
-        )
+        self.zmq_sub_socket_rawblock.connect(self.zmq_rawblock_address)
 
     def check_software_version_if_needed(self):
         if time.time() - self.last_software_version_check_time > 60 * 60 * 24:
