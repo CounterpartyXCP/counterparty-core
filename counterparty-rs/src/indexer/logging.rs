@@ -2,9 +2,8 @@ use std::{fs::OpenOptions, io, sync::Once};
 
 use tracing::{level_filters::LevelFilter, Event, Subscriber};
 use tracing_subscriber::{
-    field::delimited::Delimited,
     fmt::{
-        format::{DefaultFields, Writer},
+        format::Writer,
         layer,
         time::{ChronoLocal, FormatTime},
         writer::BoxMakeWriter,
@@ -38,9 +37,8 @@ pub fn setup_logging(config: &Config) {
 
         let stderr_layer = layer()
             .event_format(CustomFormatter {
-                timer: ChronoLocal::rfc_3339(),
+                timer: ChronoLocal::new("%Y-%m-%dT-%H:%M:%S%:z".into()),
             })
-            .fmt_fields(Delimited::new(" -", DefaultFields::new()))
             .with_writer(stderr_writer)
             .with_filter(LevelFilter::INFO);
 
@@ -68,12 +66,7 @@ where
     ) -> std::fmt::Result {
         self.timer.format_time(&mut writer)?;
         let metadata = event.metadata();
-        write!(
-            writer,
-            " - [{}] - {} - ",
-            metadata.level(),
-            metadata.target()
-        )?;
+        write!(writer, " - [{:>8}] - RS Fetcher - ", metadata.level())?;
         ctx.field_format().format_fields(writer.by_ref(), event)?;
         writeln!(writer)
     }

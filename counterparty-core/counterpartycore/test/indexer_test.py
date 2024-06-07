@@ -14,7 +14,7 @@ TEST_CONFIG = {
     "rpc_password": "rpc",
     "db_dir": TEST_DB_PATH,
     "log_file": "/Users/wilfred/Desktop/indexer_test.log",
-    "consume_blocks": True,
+    # "consume_blocks": True,
 }
 
 

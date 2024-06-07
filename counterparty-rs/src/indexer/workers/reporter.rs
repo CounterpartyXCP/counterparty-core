@@ -4,7 +4,7 @@ use std::{
 };
 
 use crossbeam_channel::{select, Receiver, Sender};
-use tracing::info;
+use tracing::debug;
 
 use crate::indexer::{
     block::Block,
@@ -101,7 +101,7 @@ where
                   let total_elapsed_formatted = format!("{:.2}", total_elapsed);
                   let remaining_hrs_formatted = format!("{:.2}", remaining_hrs);
 
-                  info!(
+                  debug!(
                       height = height,
                       max_height = max_height,
                       progress = progress_formatted,
