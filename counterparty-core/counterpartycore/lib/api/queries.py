@@ -935,7 +935,7 @@ def get_dispenses_by_source(
 ):
     """
     Returns the dispenses of a source
-    :param str address: The address to return (e.g. 1LducqbrdyzSCTUFfqNwnxxvrxkjGQ7WZQ)
+    :param str address: The address to return (e.g. bc1qq735dv8peps2ayr3qwwwdwylq4ddwcgrpyg9r2)
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -950,7 +950,7 @@ def get_dispenses_by_destination(
 ):
     """
     Returns the dispenses of a destination
-    :param str address: The address to return (e.g. bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz)
+    :param str address: The address to return (e.g. bc1qzcdkhnexpjc8wvkyrpyrsn0f5xzcpu877mjmgj)
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -970,7 +970,7 @@ def get_dispenses_by_asset(
 ):
     """
     Returns the dispenses of an asset
-    :param str asset: The asset to return (e.g. ERYKAHPEPU)
+    :param str asset: The asset to return (e.g. FLOCK)
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -985,8 +985,8 @@ def get_dispenses_by_source_and_asset(
 ):
     """
     Returns the dispenses of an address and an asset
-    :param str address: The address to return (e.g. bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz)
-    :param str asset: The asset to return (e.g. ERYKAHPEPU)
+    :param str address: The address to return (e.g. bc1qq735dv8peps2ayr3qwwwdwylq4ddwcgrpyg9r2)
+    :param str asset: The asset to return (e.g. FLOCK)
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -1006,8 +1006,8 @@ def get_dispenses_by_destination_and_asset(
 ):
     """
     Returns the dispenses of an address and an asset
-    :param str address: The address to return (e.g. bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz)
-    :param str asset: The asset to return (e.g. ERYKAHPEPU)
+    :param str address: The address to return (e.g. bc1qzcdkhnexpjc8wvkyrpyrsn0f5xzcpu877mjmgj)
+    :param str asset: The asset to return (e.g. FLOCK)
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
