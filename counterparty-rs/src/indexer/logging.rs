@@ -81,9 +81,9 @@ where
         let metadata = event.metadata();
         write!(
             writer,
-            " - [{:>8}] - RS Fetcher - ",
+            " - [{}] - RS Fetcher - ",
             self.get_color(metadata.level())
-                .paint(metadata.level().to_string())
+                .paint(format!("{:>8}", metadata.level().to_string()))
         )?;
         ctx.field_format().format_fields(writer.by_ref(), event)?;
         writeln!(writer)
