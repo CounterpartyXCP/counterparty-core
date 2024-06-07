@@ -398,7 +398,7 @@ class TransactionService:
                     estimated_fee_per_kb, fee_per_kb
                 )  # never drop below the default fee_per_kb
 
-        self.logger.debug(f"Fee/KB {fee_per_kb / config.UNIT:.8f}")
+        self.logger.trace(f"TX Construct - Fee/KB {fee_per_kb / config.UNIT:.8f}")
 
         inputs = []
         btc_in = 0
@@ -413,7 +413,7 @@ class TransactionService:
         # pop inputs until we can pay for the fee
         use_inputs_index = 0
         for coin in use_inputs:
-            self.logger.debug(f"New input: {print_coin(coin)}")
+            self.logger.trace(f"TX Construct - New input: {print_coin(coin)}")
             inputs.append(coin)
             btc_in += round(coin["amount"] * config.UNIT)
 
@@ -425,15 +425,15 @@ class TransactionService:
             else:
                 necessary_fee = int(size / 1000 * fee_per_kb)
                 final_fee = max(fee_provided, necessary_fee)
-                self.logger.debug(
-                    f"final_fee inputs: {len(inputs)} size: {size} final_fee {final_fee}"
+                self.logger.trace(
+                    f"TX Construct - final_fee inputs: {len(inputs)} size: {size} final_fee {final_fee}"
                 )
 
             # Check if good.
             btc_out = destination_btc_out + data_btc_out
             change_quantity = btc_in - (btc_out + final_fee)
-            self.logger.debug(
-                f"Size: {size} Fee: {final_fee / config.UNIT:.8f} Change quantity: {change_quantity / config.UNIT:.8f} BTC"
+            self.logger.trace(
+                f"TX Construct - Size: {size} Fee: {final_fee / config.UNIT:.8f} Change quantity: {change_quantity / config.UNIT:.8f} BTC"
             )
 
             # If after the sum of all the utxos the change is dust, then it will be added to the miners instead of returning an error
@@ -615,7 +615,9 @@ class TransactionService:
         else:
             # no data
             encoding = None
-        self.logger.debug(f"Constructing {encoding} transaction from {source}.")
+        self.logger.debug(
+            f"TX Construct - Constructing `{encoding.upper()}` transaction from {source}."
+        )
 
         """Destinations"""
 
@@ -713,8 +715,8 @@ class TransactionService:
             dust_return_pubkey = None
 
         data_btc_out = data_value * len(data_array)
-        self.logger.debug(
-            f"data_btc_out={data_btc_out} (data_value={data_value} len(data_array)={len(data_array)})"
+        self.logger.trace(
+            f"TX Construct - data_btc_out={data_btc_out} (data_value={data_value} len(data_array)={len(data_array)})"
         )
 
         """Inputs"""
@@ -914,7 +916,7 @@ class TransactionService:
                     "btc_fee": final_fee,
                     "tx_hex": unsigned_tx_hex,
                 }
-            self.logger.debug("BTC-ONLY")
+            self.logger.trace("TX Construct - Skip BTC‐only transactions")
             return return_result([unsigned_pretx_hex, unsigned_tx_hex], old_style_api=old_style_api)
         desired_source = script.make_canonical(desired_source)
 
@@ -939,6 +941,8 @@ class TransactionService:
                 "btc_fee": final_fee,
                 "tx_hex": unsigned_tx_hex,
             }
+
+        self.logger.debug("TX Construct - Transaction constructed.")
         return return_result([unsigned_pretx_hex, unsigned_tx_hex], old_style_api=old_style_api)
 
 

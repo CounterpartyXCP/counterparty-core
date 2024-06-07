@@ -23,17 +23,15 @@ def check_last_parsed_block(db, blockcount):
         return
     if util.CURRENT_BLOCK_INDEX + 1 < blockcount:
         raise exceptions.DatabaseError(f"{config.XCP_NAME} database is behind backend.")
-    logger.debug("Database state check passed.")
+    logger.trace("API Server - Database state check passed.")
 
 
 def healthz_light(db):
-    logger.debug("Performing light healthz check.")
     latest_block_index = backend.bitcoind.getblockcount()
     check_last_parsed_block(db, latest_block_index)
 
 
 def healthz_heavy(db):
-    logger.debug("Performing heavy healthz check.")
     transaction.compose_transaction(
         db,
         name="send",

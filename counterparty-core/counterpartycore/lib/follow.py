@@ -105,8 +105,8 @@ class BlockchainWatcher:
                         logger.trace("Transaction not found in bitcoind: %s", item_hash)
                         return
                 # add transaction to mempool block
-                logger.trace("Adding transaction to mempool block: %s", item_hash)
-                logger.trace("Mempool block size: %s", len(self.mempool_block))
+                # logger.trace("Adding transaction to mempool block: %s", item_hash)
+                # logger.trace("Mempool block size: %s", len(self.mempool_block))
                 self.mempool_block.append(raw_tx)
                 if len(self.mempool_block) == MEMPOOL_BLOCK_MAX_SIZE:
                     # parse mempool block
@@ -123,7 +123,7 @@ class BlockchainWatcher:
         sequence = "Unknown"
         if len(seq) == 4:
             sequence = str(struct.unpack("<I", seq)[-1])
-        logger.trace("Received message: %s %s", topic, sequence)
+        # logger.trace("Received message: %s %s", topic, sequence)
         if topic == b"rawblock":
             self.receive_rawblock(body)
         elif topic == b"hashtx":
