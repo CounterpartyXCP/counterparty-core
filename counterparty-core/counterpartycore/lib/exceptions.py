@@ -109,3 +109,7 @@ class UnknownPubKeyError(Exception):
 
 class JSONRPCInvalidRequest(Exception):
     pass
+
+
+class BitcoindZMQError(Exception):
+    pass

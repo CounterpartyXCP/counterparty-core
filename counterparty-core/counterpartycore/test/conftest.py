@@ -294,8 +294,6 @@ def api_server_v2(request, cp_server):
         "no_mempool": False,
         "skip_db_check": False,
         "no_telemetry": True,
-        "zmq_rawblock_port": None,
-        "zmq_sequence_port": None,
         "enable_zmq_publisher": False,
         "zmq_publisher_port": None,
         "db_connection_pool_size": None,
