@@ -1,5 +1,6 @@
 use std::{fs::OpenOptions, io, sync::Once};
 
+use ansi_term::Color;
 use tracing::{level_filters::LevelFilter, Event, Subscriber};
 use tracing_subscriber::{
     fmt::{
@@ -53,6 +54,18 @@ struct CustomFormatter {
     pub timer: ChronoLocal,
 }
 
+impl CustomFormatter {
+    fn get_color(&self, level: &tracing::Level) -> Color {
+        match *level {
+            tracing::Level::TRACE => Color::Cyan,
+            tracing::Level::DEBUG => Color::Blue,
+            tracing::Level::WARN => Color::Yellow,
+            tracing::Level::ERROR => Color::Red,
+            tracing::Level::INFO => Color::Fixed(248),
+        }
+    }
+}
+
 impl<S, N> FormatEvent<S, N> for CustomFormatter
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
@@ -66,7 +79,12 @@ where
     ) -> std::fmt::Result {
         self.timer.format_time(&mut writer)?;
         let metadata = event.metadata();
-        write!(writer, " - [{:>8}] - RS Fetcher - ", metadata.level())?;
+        write!(
+            writer,
+            " - [{:>8}] - RS Fetcher - ",
+            self.get_color(metadata.level())
+                .paint(metadata.level().to_string())
+        )?;
         ctx.field_format().format_fields(writer.by_ref(), event)?;
         writeln!(writer)
     }
