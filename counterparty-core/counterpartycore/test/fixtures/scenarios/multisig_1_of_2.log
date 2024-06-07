@@ -1,31 +1,15 @@
 Creating connection to `:memory:`...
-Constructing None transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=0 (data_value=0 len(data_array)=0)
-Fee/KB 0.00025000
-New input: amount: 1.00000000; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 7
-final_fee inputs: 1 size: 225 final_fee 5625
-Size: 225 Fee: 0.00005625 Change quantity: 0.37994375 BTC
+TX Construct - Constructing transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 burned 62000000 BTC for 93000000000 XCP (9b6b1abb696d8d1b70c5beed046d7cddd23cd95b69ef18946cb18c5b56cfde30) [valid]
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 1.00000000; txid: 9d34af75fca5282eb97f1aba6cf0f23e78556e6fc04a16e013351d841093d539; vout: 0; confirmations: 8
-final_fee inputs: 1 size: 306 final_fee 7650
-Size: 306 Fee: 0.00007650 Change quantity: 0.99990350 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Send XCP from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 to 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (58e839ec2b1584d3474014093393ce57e5c22d6e686213ee4a7a0abe7bbac33c) [valid]
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.99990350; txid: 58e839ec2b1584d3474014093393ce57e5c22d6e686213ee4a7a0abe7bbac33c; vout: 2; confirmations: 1
-final_fee inputs: 1 size: 272 final_fee 1000000
-Size: 272 Fee: 0.01000000 Change quantity: 0.98989350 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Order opened for 50000000 BTC at 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (332b030da57b9565324df01414778b1eafbee6c52343fea80774ee1725484367) [open]
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.98989350; txid: 332b030da57b9565324df01414778b1eafbee6c52343fea80774ee1725484367; vout: 1; confirmations: 1
-final_fee inputs: 1 size: 272 final_fee 6800
-Size: 272 Fee: 0.00006800 Change quantity: 0.98981550 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Order opened for 105000000 XCP at 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (f093b6c00e1bbe85106db6874b1ab4e3f4378d0bf0bcffbd8b51835285dfbf3f) [open]
 Considering: 332b030da57b9565324df01414778b1eafbee6c52343fea80774ee1725484367
 Tx0 Price: 2.0; Tx1 Inverse Price: 2.1
@@ -35,77 +19,37 @@ Backward Quantity: 100000000
 Tx0 fee provided remaining: 0.01; required fee: 0.00857142
 Order match for 50000000 BTC against 100000000 XCP (332b030da57b9565324df01414778b1eafbee6c52343fea80774ee1725484367_f093b6c00e1bbe85106db6874b1ab4e3f4378d0bf0bcffbd8b51835285dfbf3f) [pending]
 Order match has only -10 confirmation(s).
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=2000 (data_value=1000 len(data_array)=2)
-Fee/KB 0.00025000
-New input: amount: 0.98981550; txid: f093b6c00e1bbe85106db6874b1ab4e3f4378d0bf0bcffbd8b51835285dfbf3f; vout: 1; confirmations: 1
-final_fee inputs: 1 size: 387 final_fee 9675
-Size: 387 Fee: 0.00009675 Change quantity: 0.48969875 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 BTC Pay for order match 332b030da57b9565324df01414778b1eafbee6c52343fea80774ee1725484367_f093b6c00e1bbe85106db6874b1ab4e3f4378d0bf0bcffbd8b51835285dfbf3f (ed17dc38233838e15d319a1786825b9e7cdba815554c9d6f4dd527615bce10b8) [valid]
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.50000000; txid: ed17dc38233838e15d319a1786825b9e7cdba815554c9d6f4dd527615bce10b8; vout: 0; confirmations: 1
-final_fee inputs: 1 size: 272 final_fee 6800
-Size: 272 Fee: 0.00006800 Change quantity: 0.49992200 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Issuance of 1000000000 BBBB by 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 [cd2b44cb56dd5aaae1181c42ab8953ebb9d0fb8e177e960ffe55e3500b3aae25] (valid)
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.49992200; txid: cd2b44cb56dd5aaae1181c42ab8953ebb9d0fb8e177e960ffe55e3500b3aae25; vout: 1; confirmations: 1
-final_fee inputs: 1 size: 272 final_fee 6800
-Size: 272 Fee: 0.00006800 Change quantity: 0.49984400 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Issuance of 100000 BBBC by 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 [ddefdf227fd8cd8df1e77f0b531e98a033d2e5b237fa4331b83c003de54877d9] (valid)
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.49984400; txid: ddefdf227fd8cd8df1e77f0b531e98a033d2e5b237fa4331b83c003de54877d9; vout: 1; confirmations: 1
-final_fee inputs: 1 size: 306 final_fee 7650
-Size: 306 Fee: 0.00007650 Change quantity: 0.49974750 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Send BBBB from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 to 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (f337451a19eac3c2fe66daf7d44d39c41a012d2dfd85de90cc3877bbc2e7d30c) [valid]
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.49974750; txid: f337451a19eac3c2fe66daf7d44d39c41a012d2dfd85de90cc3877bbc2e7d30c; vout: 2; confirmations: 1
-final_fee inputs: 1 size: 306 final_fee 7650
-Size: 306 Fee: 0.00007650 Change quantity: 0.49965100 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Send BBBC from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 to 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (c639e9482b31b487115b4437dd87cff98338003fabf18066bf051e1164aa4394) [valid]
 Total quantity to be distributed in dividends: 0.00000024 XCP
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.49965100; txid: c639e9482b31b487115b4437dd87cff98338003fabf18066bf051e1164aa4394; vout: 2; confirmations: 1
-final_fee inputs: 1 size: 272 final_fee 6800
-Size: 272 Fee: 0.00006800 Change quantity: 0.49957300 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Dividend of 600 XCP per unit of BBBB (7881c1fe7881a590d09302dde67cfd888a74154888e0c310bd01575f560b8ac8) [valid]
 Total quantity to be distributed in dividends: 0.004208 XCP
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.49957300; txid: 7881c1fe7881a590d09302dde67cfd888a74154888e0c310bd01575f560b8ac8; vout: 1; confirmations: 1
-final_fee inputs: 1 size: 272 final_fee 6800
-Size: 272 Fee: 0.00006800 Change quantity: 0.49949500 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Dividend of 800 XCP per unit of BBBC (c41898ad625e2236110101070c09e9f28b6fea1ed436ecb78f231f3f99f123f7) [valid]
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.49949500; txid: c41898ad625e2236110101070c09e9f28b6fea1ed436ecb78f231f3f99f123f7; vout: 1; confirmations: 1
-final_fee inputs: 1 size: 272 final_fee 6800
-Size: 272 Fee: 0.00006800 Change quantity: 0.49941700 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Broadcast from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (a21533ad03334823cca2aa8e57c383113a7f93a5810c5df8dd2fa70f6eec416d) [valid]
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.49941700; txid: a21533ad03334823cca2aa8e57c383113a7f93a5810c5df8dd2fa70f6eec416d; vout: 1; confirmations: 1
-final_fee inputs: 1 size: 306 final_fee 7650
-Size: 306 Fee: 0.00007650 Change quantity: 0.49932050 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Open Bet (74062934f0a97c41851735fef2a7df4d9ad9945424f09a54281e145a5e32492f) [open]
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.49932050; txid: 74062934f0a97c41851735fef2a7df4d9ad9945424f09a54281e145a5e32492f; vout: 2; confirmations: 1
-final_fee inputs: 1 size: 306 final_fee 7650
-Size: 306 Fee: 0.00007650 Change quantity: 0.49922400 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Order cancelled BTC / XCP (332b030da57b9565324df01414778b1eafbee6c52343fea80774ee1725484367) [expired]
 Open Bet (6a5f30666a5f24b6e0e6f31cf06b22ee74d3e692a550297450bdf1d36b1cc167) [open]
 Considering: 74062934f0a97c41851735fef2a7df4d9ad9945424f09a54281e145a5e32492f
@@ -116,20 +60,12 @@ Backward Quantity: 20750000
 Bet 74062934f0a97c41851735fef2a7df4d9ad9945424f09a54281e145a5e32492f updated (6a5f30666a5f24b6e0e6f31cf06b22ee74d3e692a550297450bdf1d36b1cc167) [open]
 Bet 6a5f30666a5f24b6e0e6f31cf06b22ee74d3e692a550297450bdf1d36b1cc167 updated (6a5f30666a5f24b6e0e6f31cf06b22ee74d3e692a550297450bdf1d36b1cc167) [filled]
 Bet match 13 for 41500000 XCP against 20750000 XCP on 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.49922400; txid: 6a5f30666a5f24b6e0e6f31cf06b22ee74d3e692a550297450bdf1d36b1cc167; vout: 2; confirmations: 1
-final_fee inputs: 1 size: 306 final_fee 7650
-Size: 306 Fee: 0.00007650 Change quantity: 0.49912750 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Order cancelled XCP / BTC (f093b6c00e1bbe85106db6874b1ab4e3f4378d0bf0bcffbd8b51835285dfbf3f) [expired]
 Open Bet (2066b9a6b8913412384a0401ef57bfc604e7c5a2c141e23111a8ccc6881b0fb3) [open]
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.49912750; txid: 2066b9a6b8913412384a0401ef57bfc604e7c5a2c141e23111a8ccc6881b0fb3; vout: 2; confirmations: 1
-final_fee inputs: 1 size: 306 final_fee 7650
-Size: 306 Fee: 0.00007650 Change quantity: 0.49903100 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Open Bet (65db3ab58b65891a947ab9bdba4723e907678bf3b48397add62802dcc65d1d8e) [open]
 Considering: 74062934f0a97c41851735fef2a7df4d9ad9945424f09a54281e145a5e32492f
 Skipping: leverages disagree.
@@ -141,19 +77,11 @@ Backward Quantity: 350000000
 Bet 2066b9a6b8913412384a0401ef57bfc604e7c5a2c141e23111a8ccc6881b0fb3 updated (65db3ab58b65891a947ab9bdba4723e907678bf3b48397add62802dcc65d1d8e) [filled]
 Bet 65db3ab58b65891a947ab9bdba4723e907678bf3b48397add62802dcc65d1d8e updated (65db3ab58b65891a947ab9bdba4723e907678bf3b48397add62802dcc65d1d8e) [filled]
 Bet match 15 for 150000000 XCP against 350000000 XCP on 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.49903100; txid: 65db3ab58b65891a947ab9bdba4723e907678bf3b48397add62802dcc65d1d8e; vout: 2; confirmations: 1
-final_fee inputs: 1 size: 306 final_fee 7650
-Size: 306 Fee: 0.00007650 Change quantity: 0.49893450 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Open Bet (94b11df6b519372bfbcf0ec5f3e6465a63e323c7cd7cff83a8abd78596d4bce4) [open]
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.49893450; txid: 94b11df6b519372bfbcf0ec5f3e6465a63e323c7cd7cff83a8abd78596d4bce4; vout: 2; confirmations: 1
-final_fee inputs: 1 size: 306 final_fee 7650
-Size: 306 Fee: 0.00007650 Change quantity: 0.49883800 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Open Bet (a7daff1ca2874f6b18a8f1a1e70db27f58c6b39a9f106c353223fbccde57098e) [open]
 Considering: 94b11df6b519372bfbcf0ec5f3e6465a63e323c7cd7cff83a8abd78596d4bce4
 Tx0 Inverse Odds: 0.8666666666666667; Tx1 Odds: 0.8666666666666667
@@ -163,59 +91,29 @@ Backward Quantity: 650000000
 Bet 94b11df6b519372bfbcf0ec5f3e6465a63e323c7cd7cff83a8abd78596d4bce4 updated (a7daff1ca2874f6b18a8f1a1e70db27f58c6b39a9f106c353223fbccde57098e) [filled]
 Bet a7daff1ca2874f6b18a8f1a1e70db27f58c6b39a9f106c353223fbccde57098e updated (a7daff1ca2874f6b18a8f1a1e70db27f58c6b39a9f106c353223fbccde57098e) [filled]
 Bet match 17 for 750000000 XCP against 650000000 XCP on 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.49883800; txid: a7daff1ca2874f6b18a8f1a1e70db27f58c6b39a9f106c353223fbccde57098e; vout: 2; confirmations: 1
-final_fee inputs: 1 size: 272 final_fee 6800
-Size: 272 Fee: 0.00006800 Change quantity: 0.49876000 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Broadcast from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (f020ae6c0b1aadbba4893581678ef87f9d2a925be5e6b08d02440e213f6183b4) [valid]
 Bet Match 74062934f0a97c41851735fef2a7df4d9ad9945424f09a54281e145a5e32492f_6a5f30666a5f24b6e0e6f31cf06b22ee74d3e692a550297450bdf1d36b1cc167 resolved
 Bet Match 74062934f0a97c41851735fef2a7df4d9ad9945424f09a54281e145a5e32492f_6a5f30666a5f24b6e0e6f31cf06b22ee74d3e692a550297450bdf1d36b1cc167 updated [settled: liquidated for bear]
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.49876000; txid: f020ae6c0b1aadbba4893581678ef87f9d2a925be5e6b08d02440e213f6183b4; vout: 1; confirmations: 1
-final_fee inputs: 1 size: 272 final_fee 6800
-Size: 272 Fee: 0.00006800 Change quantity: 0.49868200 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Broadcast from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (dccbd8852c8d489d32f87be0c86a631b63ec50202b0109a2be6aa96f27f89600) [valid]
 Bet Match 2066b9a6b8913412384a0401ef57bfc604e7c5a2c141e23111a8ccc6881b0fb3_65db3ab58b65891a947ab9bdba4723e907678bf3b48397add62802dcc65d1d8e resolved
 Bet Match 2066b9a6b8913412384a0401ef57bfc604e7c5a2c141e23111a8ccc6881b0fb3_65db3ab58b65891a947ab9bdba4723e907678bf3b48397add62802dcc65d1d8e updated [settled]
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.49868200; txid: dccbd8852c8d489d32f87be0c86a631b63ec50202b0109a2be6aa96f27f89600; vout: 1; confirmations: 1
-final_fee inputs: 1 size: 272 final_fee 6800
-Size: 272 Fee: 0.00006800 Change quantity: 0.49860400 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Broadcast from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (457f36dccce6664a8e28b00ebf47aa60ba4a41b46642aceef0e2a297429eb64e) [valid]
 Bet Match 94b11df6b519372bfbcf0ec5f3e6465a63e323c7cd7cff83a8abd78596d4bce4_a7daff1ca2874f6b18a8f1a1e70db27f58c6b39a9f106c353223fbccde57098e resolved
 Bet Match 94b11df6b519372bfbcf0ec5f3e6465a63e323c7cd7cff83a8abd78596d4bce4_a7daff1ca2874f6b18a8f1a1e70db27f58c6b39a9f106c353223fbccde57098e updated [settled: for notequal]
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.49860400; txid: 457f36dccce6664a8e28b00ebf47aa60ba4a41b46642aceef0e2a297429eb64e; vout: 1; confirmations: 1
-final_fee inputs: 1 size: 272 final_fee 6800
-Size: 272 Fee: 0.00006800 Change quantity: 0.49852600 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Order opened for 50000000 BBBB at 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (6cb08a1c0547ab0d0d37b74633c1c8a2fd2372d9fd72eb3abdea298f2b245fee) [open]
-Constructing None transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=0 (data_value=0 len(data_array)=0)
-Fee/KB 0.00025000
-New input: amount: 0.49852600; txid: 6cb08a1c0547ab0d0d37b74633c1c8a2fd2372d9fd72eb3abdea298f2b245fee; vout: 1; confirmations: 1
-final_fee inputs: 1 size: 225 final_fee 5625
-Size: 225 Fee: 0.00005625 Change quantity: -0.50153025 BTC
-New input: amount: 0.48969875; txid: ed17dc38233838e15d319a1786825b9e7cdba815554c9d6f4dd527615bce10b8; vout: 3; confirmations: 18
-final_fee inputs: 2 size: 406 final_fee 10150
-Size: 406 Fee: 0.00010150 Change quantity: -0.01187675 BTC
-New input: amount: 0.37994375; txid: 9b6b1abb696d8d1b70c5beed046d7cddd23cd95b69ef18946cb18c5b56cfde30; vout: 1; confirmations: 22
-final_fee inputs: 3 size: 587 final_fee 14675
-Size: 587 Fee: 0.00014675 Change quantity: 0.36802175 BTC
+TX Construct - Constructing transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 burned 38000000 BTC for 56999887262 XCP (c81cd36f1efabd22f1a00923714fd5a5f1ba07852ef1f0763223563e3f55dfda) [valid]
-Constructing multisig transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
-data_btc_out=1000 (data_value=1000 len(data_array)=1)
-Fee/KB 0.00025000
-New input: amount: 0.36802175; txid: c81cd36f1efabd22f1a00923714fd5a5f1ba07852ef1f0763223563e3f55dfda; vout: 1; confirmations: 1
-final_fee inputs: 1 size: 306 final_fee 7650
-Size: 306 Fee: 0.00007650 Change quantity: 0.36792525 BTC
+TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
+TX Construct - Transaction constructed.
 Bet 74062934f0a97c41851735fef2a7df4d9ad9945424f09a54281e145a5e32492f canceled [expired]
 Bet Expiration 74062934f0a97c41851735fef2a7df4d9ad9945424f09a54281e145a5e32492f
 Send BBBC from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 to 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (c576ecde0f86c86725b540c9f5e6ae57a378fe9694260f7859eca55613d9d341) [valid]

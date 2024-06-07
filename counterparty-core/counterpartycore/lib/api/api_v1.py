@@ -176,7 +176,7 @@ def check_backend_state():
     if blocks_behind > 5:
         raise BackendError(f"Indexd is running {blocks_behind} blocks behind.")
 
-    logger.debug("Backend state check passed.")
+    logger.debug("API Status Pooler - Backend state check passed.")
 
 
 class DatabaseError(Exception):
@@ -523,10 +523,8 @@ class APIStatusPoller(threading.Thread):
                     self.last_database_check = time.time()
                     if not config.FORCE and self.db is not None:
                         code = 11
-                        logger.debug("Checking backend state.")
                         check_backend_state()
                         code = 12
-                        logger.debug("Checking database state.")
                         api_util.check_last_parsed_block(self.db, backend.bitcoind.getblockcount())
                         interval = interval_if_ready
             except (BackendError, exceptions.DatabaseError) as e:
