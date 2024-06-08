@@ -176,7 +176,7 @@ def check_backend_state():
     if blocks_behind > 5:
         raise BackendError(f"Indexd is running {blocks_behind} blocks behind.")
 
-    logger.debug("API Status Pooler - Backend state check passed.")
+    logger.debug("API Status Poller - Backend state check passed.")
 
 
 class DatabaseError(Exception):
