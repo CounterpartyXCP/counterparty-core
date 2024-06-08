@@ -49,7 +49,12 @@ def get_zmq_notifications_addresses():
             "Bitcoin Core ZMQ notifications must use the same address for `pubhashtx`, `pubrawtx` and `pubsequence`."
         )
 
-    return notification_addresses["pubrawtx"], notification_addresses["pubrawblock"]
+    pubrawtx_port = notification_addresses["pubrawtx"].split(":")[-1]
+    pubrawblock_port = notification_addresses["pubrawblock"].split(":")[-1]
+    pubrawtx_address = f"tcp://{config.BACKEND_CONNECT}:{pubrawtx_port}"
+    pubrawblock_address = f"tcp://{config.BACKEND_CONNECT}:{pubrawblock_port}"
+
+    return pubrawtx_address, pubrawblock_address
 
 
 def start_blockchain_watcher(db):
