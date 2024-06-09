@@ -364,6 +364,9 @@ class TransactionService:
                 unspent = self.backend.addrindexrs.get_unspent_txouts(
                     source, unconfirmed=allow_unconfirmed_inputs
                 )
+            self.logger.trace(
+                f"TX Construct - Unspent UTXOs: {[print_coin(coin) for coin in unspent]}"
+            )
 
             filter_unspents_utxo_locks = []
             if self.utxo_locks is not None and source in self.utxo_locks:
@@ -1081,6 +1084,11 @@ COMPOSE_COMMONS_ARGS = {
         "The previous transaction txid for a two part P2SH message. This txid must be taken from the signed transaction",
     ),
     "segwit": (bool, False, "Use segwit"),
+    "confirmation_target": (
+        int,
+        config.ESTIMATE_FEE_CONF_TARGET,
+        "The number of blocks to target for confirmation",
+    ),
 }
 
 
@@ -1117,6 +1125,7 @@ def compose_transaction(
     regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
     multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
     op_return_value=config.DEFAULT_OP_RETURN_VALUE,
+    confirmation_target=config.ESTIMATE_FEE_CONF_TARGET,
     pubkey=None,
     allow_unconfirmed_inputs=False,
     fee=None,
@@ -1226,6 +1235,7 @@ def compose_transaction(
         p2sh_pretx_txid=p2sh_pretx_txid,
         old_style_api=old_style_api,
         segwit=segwit,
+        estimate_fee_per_kb_nblocks=confirmation_target,
     )
 
 
