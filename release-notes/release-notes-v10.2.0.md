@@ -108,6 +108,7 @@ Note: This update requires a reparse from Block 819250, which will proceed autom
     - `dispense_quantity`
 * Add `dispense_asset_info`.
 * Add `confirmation_target` argument for compose endpoints to set the number of blocks to target for transaction confirmation.
+* Compose endpoint return specific error when not UTXO.
 
 ## CLI
 * Use `-v` for the `DEBUG` level, `-vv` for the `EVENT` level, and `-vvv` for the `TRACE` level (it is also possible to repeat the `--verbose` flag)
