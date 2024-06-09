@@ -106,7 +106,9 @@ Note: This update requires a reparse from Block 819250, which will proceed autom
     - `burned`
     - `earned`
     - `dispense_quantity`
-* Add `dispense_asset_info`.
+* Return asset info for dispenses
+* Add `confirmation_target` argument for `compose` endpoints
+
 
 ## CLI
 * Use `-v` for the `DEBUG` level, `-vv` for the `EVENT` level, and `-vvv` for the `TRACE` level (it is also possible to repeat the `--verbose` flag)
