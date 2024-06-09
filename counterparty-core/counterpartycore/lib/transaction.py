@@ -367,6 +367,10 @@ class TransactionService:
             self.logger.trace(
                 f"TX Construct - Unspent UTXOs: {[print_coin(coin) for coin in unspent]}"
             )
+            if len(unspent) == 0:
+                raise exceptions.BalanceError(
+                    f"Insufficient {config.BTC} at address {source}: no unspent outputs."
+                )
 
             filter_unspents_utxo_locks = []
             if self.utxo_locks is not None and source in self.utxo_locks:
