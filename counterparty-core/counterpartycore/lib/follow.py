@@ -183,7 +183,7 @@ class BlockchainWatcher:
             flags = 0 if topic_name == "sequence" else zmq.NOBLOCK
             topic, body, seq = await socket.recv_multipart(flags=flags)
         except zmq.ZMQError:
-            logger.trace("No message available in topic %s", topic_name)
+            logger.trace("No message available in topic `%s`", topic_name)
             return
         self.receive_message(topic, body, seq)
 
