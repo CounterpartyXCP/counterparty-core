@@ -170,11 +170,7 @@ def initialise_config(
     zmq_publisher_port=None,
     db_connection_pool_size=None,
 ):
-    # log config alreasdy initialized
-    logger.debug("VERBOSE: %s", config.VERBOSE)
-    logger.debug("QUIET: %s", config.QUIET)
-    logger.debug("LOG: %s", config.LOG)
-    logger.debug("API_LOG: %s", config.API_LOG)
+    # log config already initialized
 
     # Data directory
     data_dir = appdirs.user_data_dir(
@@ -209,13 +205,10 @@ def initialise_config(
 
     if config.TESTNET:
         bitcoinlib.SelectParams("testnet")
-        logger.debug("NETWORK: testnet")
     elif config.REGTEST:
         bitcoinlib.SelectParams("regtest")
-        logger.debug("NETWORK: regtest")
     else:
         bitcoinlib.SelectParams("mainnet")
-        logger.debug("NETWORK: mainnet")
 
     network = ""
     if config.TESTNET:
@@ -231,8 +224,6 @@ def initialise_config(
     else:
         filename = f"{config.APP_NAME}{network}.db"
         config.DATABASE = os.path.join(data_dir, filename)
-
-    logger.debug("DATABASE: %s", config.DATABASE)
 
     config.FETCHER_DB = os.path.join(os.path.dirname(config.DATABASE), f"fetcherdb{network}")
 
@@ -327,7 +318,6 @@ def initialise_config(
         config.BACKEND_URL = "http://" + config.BACKEND_URL
 
     cleaned_backend_url = config.BACKEND_URL.replace(f":{config.BACKEND_PASSWORD}@", ":*****@")
-    logger.debug("BACKEND_URL: %s", cleaned_backend_url)
 
     # Indexd RPC host
     if indexd_connect:
@@ -357,8 +347,6 @@ def initialise_config(
 
     # Construct Indexd URL.
     config.INDEXD_URL = "http://" + config.INDEXD_CONNECT + ":" + str(config.INDEXD_PORT)
-
-    logger.debug("INDEXD_URL: %s", config.INDEXD_URL)
 
     ##############
     # THINGS WE SERVE
@@ -602,8 +590,6 @@ def initialise_config(
         config.DB_CONNECTION_POOL_SIZE = db_connection_pool_size
     else:
         config.DB_CONNECTION_POOL_SIZE = config.DEFAULT_DB_CONNECTION_POOL_SIZE
-
-    logger.info(f"Running v{config.VERSION_STRING} of counterparty-core.")
 
 
 def initialise_log_and_config(args):
