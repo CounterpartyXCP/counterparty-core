@@ -72,6 +72,11 @@ impl Indexer {
         Ok(block.into_py(py))
     }
 
+    pub fn get_block_non_blocking(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let block = get_block::new_non_blocking(self.stopper.clone(), self.chan.1.clone())?;
+        Ok(block.map(|b| b.into_py(py)).into_py(py))
+    }
+
     pub fn get_version(&self) -> PyResult<String> {
         Ok(env!("CARGO_PKG_VERSION").to_string())
     }
