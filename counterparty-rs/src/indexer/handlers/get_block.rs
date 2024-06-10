@@ -9,3 +9,15 @@ pub fn new(stopper: Stopper, rx: Receiver<Box<Block>>) -> Result<Box<Block>, Err
         recv(rx) -> result => Ok(result?)
     }
 }
+
+pub fn new_non_blocking(
+    stopper: Stopper,
+    rx: Receiver<Box<Block>>,
+) -> Result<Option<Box<Block>>, Error> {
+    let (_, done) = stopper.subscribe()?;
+    select! {
+        recv(done) -> _ => Err(Error::Stopped),
+        recv(rx) -> result => Ok(Some(result?)),
+        default() => Ok(None)
+    }
+}
