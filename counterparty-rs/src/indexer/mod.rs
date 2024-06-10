@@ -71,6 +71,10 @@ impl Indexer {
         let block = get_block::new(self.stopper.clone(), self.chan.1.clone())?;
         Ok(block.into_py(py))
     }
+
+    pub fn get_version(&self) -> PyResult<String> {
+        Ok(env!("CARGO_PKG_VERSION").to_string())
+    }
 }
 
 pub fn register_indexer_module(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {

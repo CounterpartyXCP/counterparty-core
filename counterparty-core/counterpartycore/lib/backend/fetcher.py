@@ -1,4 +1,5 @@
 import logging
+import sys
 import time
 
 from counterparty_rs import indexer
@@ -14,6 +15,7 @@ def initialize(start_height):
     global _fetcher  # noqa: PLW0603
     if _fetcher is not None:
         raise Exception("Fetcher has already been initialized.")
+    exiting = False
 
     try:
         _fetcher = indexer.Indexer(
@@ -27,8 +29,23 @@ def initialize(start_height):
                 "log_level": config.LOG_LEVEL_STRING,
             }
         )
-        _fetcher.start()
-    except BaseException as e:
+        # check fetcher version
+        fetcher_version = _fetcher.get_version()
+        logger.debug("Current Fetcher version: %s", fetcher_version)
+        if fetcher_version != config.__version__:
+            logger.error(
+                "Fetcher version mismatch. Expected: %s, Got: %s. Please re-compile `counterparty-rs`.",
+                config.__version__,
+                fetcher_version,
+            )
+            exiting = True
+            raise Exception("Fetcher version mismatch.")
+        else:
+            # start fetcher
+            _fetcher.start()
+    except BaseException as e:  # TODO: BaseException is too broad
+        if exiting:
+            sys.exit()
         logger.error("Failed to initialize fetcher: %s. Retrying in 5 seconds...", e)
         time.sleep(5)
         initialize(start_height)
