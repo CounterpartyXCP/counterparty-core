@@ -733,7 +733,7 @@ def start_all(args):
         follower_daemon = follow.start_blockchain_watcher(db)
 
     except KeyboardInterrupt:
-        logger.warning("Keyboard interrupt.")
+        logger.warning("Keyboard interrupt!")
         pass
     finally:
         if api_server_v2:
@@ -761,6 +761,7 @@ def start_all(args):
             logger.error(
                 "Database is in use by another process and was unable to be closed correctly."
             )
+        logger.info("Shutdown complete.")
 
 
 def reparse(block_index):
@@ -850,7 +851,6 @@ def configure_rpc(rpc_password=None):
     config.RPC = config.API_ROOT + config.RPC_WEBROOT
 
     cleaned_rpc_url = config.RPC.replace(f":{urlencode(config.RPC_PASSWORD)}@", ":*****@")
-    logger.debug("RPC: %s", cleaned_rpc_url)
 
 
 def bootstrap(no_confirm=False):

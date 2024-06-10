@@ -569,7 +569,7 @@ def init():
 
 
 def stop():
-    logger.info("Stopping addrindexrs thread...")
+    logger.info("Stopping AddrIndexRs thread...")
     if "INDEXER_THREAD" in globals() and INDEXER_THREAD is not None:
         INDEXER_THREAD.stop()
 

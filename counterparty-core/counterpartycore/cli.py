@@ -305,13 +305,13 @@ CONFIG_ARGS = [
 
 
 def welcome_message(action, server_configfile):
-    cprint(f"Counterparty Core: v{config.__version__}", "magenta")
+    cprint(f"\nCounterparty Core v{config.__version__}", "white", attrs=["bold"])
 
     # print some info
-    cprint("Verbosity: {config.VERBOSE}")
-    cprint("Quiet: {config.QUIET}")
-    cprint(f"Configuration file: {server_configfile}", "light_grey")
-    cprint(f"Counterparty database: {config.DATABASE}", "light_grey")
+    cprint(f"Verbosity: {config.VERBOSE}", "light_grey")
+    cprint(f"Quiet: {config.QUIET}", "light_grey")
+    cprint(f"Configuration File: {server_configfile}", "light_grey")
+    cprint(f"Counterparty Database: {config.DATABASE}", "light_grey")
 
     if config.VERBOSE:
         if config.TESTNET:
@@ -330,7 +330,7 @@ def welcome_message(action, server_configfile):
         cprint(f"Counterparty RPC Server: {cleaned_rpc_url}", "light_grey")
 
     if config.LOG:
-        cprint(f"Server Logfile: {config.LOG}", "light_grey")
+        cprint(f"Server Log: {config.LOG}", "light_grey")
     else:
         cprint("Warning: Server logging disabled", "yellow")
     if config.API_LOG:
@@ -438,8 +438,6 @@ def main():
 
     # Configuration and logging
     server.initialise_log_and_config(args)
-
-    logger.debug(f"{APP_NAME} Version: v{APP_VERSION}")
 
     welcome_message(args.action, server_configfile)
 
