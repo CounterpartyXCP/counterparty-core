@@ -161,17 +161,18 @@ HASH_FIELD = [
 
 
 def truncate_fields(bindings):
-    for key, value in bindings.items():
+    truncated_bindings = bindings.copy()
+    for key, value in truncated_bindings.items():
         if value is None:
             continue
         if key in ADDRESS_FIELD:
-            bindings[key] = value[:8]
+            truncated_bindings[key] = value[:8]
         elif key in HASH_FIELD:
-            bindings[key] = value[:7]
+            truncated_bindings[key] = value[:7]
         elif key.endswith("id") and isinstance(value, str) and "_" in value:
             part1, part2 = value.split("_")
-            bindings[key] = f"{part1[:7]}_{part2[:7]}"
-    return bindings
+            truncated_bindings[key] = f"{part1[:7]}_{part2[:7]}"
+    return truncated_bindings
 
 
 def log_event(db, block_index, event_index, event_name, bindings):

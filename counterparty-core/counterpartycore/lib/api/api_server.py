@@ -403,6 +403,7 @@ def run_api_server(args, interruped_value):
         if BACKEND_HEIGHT_TIMER:
             BACKEND_HEIGHT_TIMER.cancel()
         DBConnectionPool().close()
+        exit()
 
 
 def refresh_backend_height(start=False):
@@ -457,7 +458,12 @@ class APIServer(object):
     def stop(self):
         logger.info("Stopping API server...")
         self.interrupted.value = 1
+        waiting_start_time = time.time()
         while self.process.is_alive():
-            time.sleep(1)
+            time.sleep(0.5)
             logger.trace("Waiting for API server to stop...")
+            if time.time() - waiting_start_time > 2:
+                logger.error("API server did not stop in time. Terminating...")
+                self.process.kill()
+                break
         logger.trace("API server stopped")
