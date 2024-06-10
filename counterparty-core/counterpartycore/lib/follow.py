@@ -83,6 +83,8 @@ class BlockchainWatcher:
         self.hash_by_sequence = {}
         self.last_block_check_time = 0
         self.last_software_version_check_time = 0
+        if config.FOLLOWING_METHOD == "rpc":
+            backend.fetcher.initialize(ledger.last_db_index(self.db) + 1)
         # clean mempool before starting
         mempool.clean_mempool(self.db)
 
@@ -95,11 +97,13 @@ class BlockchainWatcher:
         self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "hashtx")
         self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "sequence")
         self.zmq_sub_socket_sequence.connect(self.zmq_sequence_address)
-        self.zmq_sub_socket_rawblock = self.zmq_context.socket(zmq.SUB)
-        self.zmq_sub_socket_rawblock.setsockopt(zmq.RCVHWM, 0)
-        self.zmq_sub_socket_sequence.setsockopt(zmq.RCVTIMEO, 1000)
-        self.zmq_sub_socket_rawblock.setsockopt_string(zmq.SUBSCRIBE, "rawblock")
-        self.zmq_sub_socket_rawblock.connect(self.zmq_rawblock_address)
+
+        if config.FOLLOWING_METHOD == "zmq":
+            self.zmq_sub_socket_rawblock = self.zmq_context.socket(zmq.SUB)
+            self.zmq_sub_socket_rawblock.setsockopt(zmq.RCVHWM, 0)
+            self.zmq_sub_socket_sequence.setsockopt(zmq.RCVTIMEO, 1000)
+            self.zmq_sub_socket_rawblock.setsockopt_string(zmq.SUBSCRIBE, "rawblock")
+            self.zmq_sub_socket_rawblock.connect(self.zmq_rawblock_address)
 
     def check_software_version_if_needed(self):
         if time.time() - self.last_software_version_check_time > 60 * 60 * 24:
@@ -109,6 +113,9 @@ class BlockchainWatcher:
     def receive_rawblock(self, body):
         # parse blocks as they come in
         decoded_block = deserialize.deserialize_block(body.hex(), use_txid=True)
+        self.receive_decoded_block(decoded_block)
+
+    def receive_decoded_block(self, decoded_block):
         # check if already parsed by block.catch_up()
         existing_block = ledger.get_block_by_hash(self.db, decoded_block["block_hash"])
         if existing_block is None:
@@ -187,6 +194,14 @@ class BlockchainWatcher:
             return
         self.receive_message(topic, body, seq)
 
+    async def receive_next_block(self):
+        if config.FOLLOWING_METHOD == "zmq":
+            await self.receive_multipart(self.zmq_sub_socket_rawblock, "rawblock")
+        else:
+            block = backend.fetcher.get_block()
+            if block is not None:
+                self.receive_decoded_block(block)
+
     async def handle(self):
         self.check_software_version_if_needed()
         try:
@@ -194,7 +209,7 @@ class BlockchainWatcher:
             await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")
             # check every 10 seconds rawblock topic
             if time.time() - self.last_block_check_time > 10:
-                await self.receive_multipart(self.zmq_sub_socket_rawblock, "rawblock")
+                await self.receive_next_block()
                 self.last_block_check_time = time.time()
         except Exception as e:
             logger.error(traceback.format_exc())

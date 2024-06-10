@@ -169,6 +169,7 @@ def initialise_config(
     enable_zmq_publisher=False,
     zmq_publisher_port=None,
     db_connection_pool_size=None,
+    following_method=config.DEFAULT_FOLLOWING_METHOD,
 ):
     # log config alreasdy initialized
     logger.debug("VERBOSE: %s", config.VERBOSE)
@@ -603,6 +604,8 @@ def initialise_config(
     else:
         config.DB_CONNECTION_POOL_SIZE = config.DEFAULT_DB_CONNECTION_POOL_SIZE
 
+    config.FOLLOWING_METHOD = following_method
+
     logger.info(f"Running v{config.VERSION_STRING} of counterparty-core.")
 
 
@@ -646,6 +649,7 @@ def initialise_log_and_config(args):
         "enable_zmq_publisher": args.enable_zmq_publisher,
         "zmq_publisher_port": args.zmq_publisher_port,
         "db_connection_pool_size": args.db_connection_pool_size,
+        "following_method": args.following_method,
     }
 
     initialise_log_config(

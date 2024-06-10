@@ -301,6 +301,15 @@ CONFIG_ARGS = [
             "help": "size of the database connection pool",
         },
     ],
+    [
+        ("--following-method",),
+        {
+            "type": str,
+            "choices": ["zmq", "rpc"],
+            "help": "method to follow the blockchain",
+            "default": config.DEFAULT_FOLLOWING_METHOD,
+        },
+    ],
 ]
 
 
