@@ -11,21 +11,12 @@ Note: This update requires a reparse from Block 819250, which will proceed autom
 # ChangeLog
 
 ## Bugfixes
-<<<<<<< HEAD
-* Fix circular imports.
-* Fix `404` errors for undefined routes.
-* Fix redirection to API v1.
-* Fix `burned`, `earned` field in API result.
-* Fix non-cacheable API v2 routes.
-* Fix the execution interval of the `APIStatusPoller` thread.
-=======
 * Fix circular imports
 * Return `404` errors for undefined API routes
 * Fix nested `result` value in the v1 API
 * Fix `burned`, `earned`, and `btc_amount_normalized` fields in API results
 * Do not cache non-cacheable v2 API routes (which could lead to a broken health check, in particular)
 * Fix the execution interval of the `APIStatusPoller` thread
->>>>>>> develop
 
 ## Codebase
 * Refactor mempool management and block tracking—catching up is now done via RPC, and tracking via ZeroMQ
@@ -50,6 +41,7 @@ Note: This update requires a reparse from Block 819250, which will proceed autom
     - `dispense.dispense_quantity`
 * Add the new `EVENT` log level
 * Disable the automatic SQLite ‘quick check’ for when the database has not been closed correctly. Display an error message when exiting and at the next restart.
+* `get_oldest_tx()` retries on Addrindexrs timeout.
 
 ## API
 * Introduce the following new routes:
