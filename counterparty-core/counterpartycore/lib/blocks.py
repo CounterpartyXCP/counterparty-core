@@ -1087,7 +1087,10 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
             "messages_hash": None,
         }
 
-    decoded_block["block_index"] = util.CURRENT_BLOCK_INDEX
+    if "height" not in decoded_block:
+        decoded_block["block_index"] = util.CURRENT_BLOCK_INDEX
+    else:
+        decoded_block["block_index"] = decoded_block["height"]
 
     with db:  # ensure all the block or nothing
         logger.info(f"Block {decoded_block['block_index']}", extra={"bold": True})
