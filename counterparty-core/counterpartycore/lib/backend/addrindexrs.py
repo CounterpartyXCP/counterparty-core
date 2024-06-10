@@ -581,10 +581,14 @@ def stop():
 # This class assumes responses are always not longer than READ_BUF_SIZE (65536 bytes).
 # This class assumes responses are always valid JSON.
 
-ADDRINDEXRS_CLIENT_TIMEOUT = 20.0
+ADDRINDEXRS_CLIENT_TIMEOUT = 60.0
 
 
 class AddrindexrsSocketError(Exception):
+    pass
+
+
+class AddrindexrsSocketTimeoutError(Exception):
     pass
 
 
@@ -634,7 +638,7 @@ class AddrindexrsSocket:
 
             duration = time.time() - start_time
             if duration > timeout:
-                raise AddrindexrsSocketError("Timeout. Please retry.")
+                raise AddrindexrsSocketTimeoutError("Timeout. Please retry.")
 
     def send(self, query, timeout=ADDRINDEXRS_CLIENT_TIMEOUT, retry=0):
         try:
@@ -647,12 +651,21 @@ class AddrindexrsSocket:
             return self.send(query, timeout=timeout, retry=retry + 1)
 
     def get_oldest_tx(self, address, block_index, timeout=ADDRINDEXRS_CLIENT_TIMEOUT):
-        hsh = _address_to_hash(address)
-        query = {
-            "method": "blockchain.scripthash.get_oldest_tx",
-            "params": [hsh, block_index],
-        }
-        return self.send(query, timeout=timeout)
+        try:
+            hsh = _address_to_hash(address)
+            query = {
+                "method": "blockchain.scripthash.get_oldest_tx",
+                "params": [hsh, block_index],
+            }
+            return self.send(query, timeout=timeout)
+        except AddrindexrsSocketTimeoutError:
+            logger.warning(
+                f"Timeout when fetching oldest tx for {address} at block {block_index}. Retrying in 5s..."
+            )
+            time.sleep(5)
+            self.sock.close()
+            self.connect()
+            return self.get_oldest_tx(address, block_index, timeout=timeout)
 
 
 # We hardcoded certain addresses to reproduce an `addrindexrs` bug.
