@@ -29,7 +29,6 @@ from counterpartycore.lib.api.util import (
 )
 from counterpartycore.lib.database import DBConnectionPool
 from flask import Flask, request
-from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
 from sentry_sdk import capture_exception
 from sentry_sdk import configure_scope as configure_sentry_scope
@@ -156,7 +155,9 @@ def return_result(
     response.headers["X-BITCOIN-HEIGHT"] = BACKEND_HEIGHT
     response.headers["Content-Type"] = "application/json"
     if not config.API_NO_ALLOW_CORS:
+        response.headers["Access-Control-Allow-Origin"] = "*"
         response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "*"
 
     if http_code != 404:
         message = get_log_prefix(query_args)
@@ -365,8 +366,6 @@ def run_api_server(args, interruped_value):
     app = Flask(config.APP_NAME)
     transaction.initialise()
     with app.app_context():
-        if not config.API_NO_ALLOW_CORS:
-            CORS(app)
         # Initialise the API access log
         init_api_access_log(app)
         # Get the last block index
