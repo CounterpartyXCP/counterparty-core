@@ -5,7 +5,25 @@ This is a large release that includes significant refactoring and redesigns of c
 
 # Upgrading
 
-Note: This update requires a reparse from Block 819250, which will proceed automatically on initialization.
+The `counterparty-server` process now uses ZeroMQ communicate with Bitcoin Core, in addition to the traditional RPC API. You must configure Bitcoin Core with:
+
+```
+zmqpubrawtx=tcp://0.0.0.0:9332
+zmqpubhashtx=tcp://0.0.0.0:9332
+zmqpubsequence=tcp://0.0.0.0:9332
+zmqpubrawblock=tcp://0.0.0.0:9333
+```
+
+and for `testnet` with:
+
+```
+zmqpubrawtx=tcp://0.0.0.0:19332
+zmqpubhashtx=tcp://0.0.0.0:19332
+zmqpubsequence=tcp://0.0.0.0:19332
+zmqpubrawblock=tcp://0.0.0.0:19333
+```
+
+Note: This update requires a reparse from Block 819250, which will proceed automatically upon initialization.
 
 
 # ChangeLog
