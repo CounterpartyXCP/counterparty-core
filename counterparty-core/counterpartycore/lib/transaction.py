@@ -465,9 +465,15 @@ class TransactionService:
             btc_out = destination_btc_out + data_btc_out
             total_btc_out = btc_out + max(change_quantity, 0) + final_fee
 
-            error_message = f"Insufficient {config.BTC} at address {source}. (Need approximately {total_btc_out / config.UNIT} {config.BTC}.)"
+            need = f"{total_btc_out / config.UNIT} {config.BTC}"
+            include_fee = f"{final_fee / config.UNIT} {config.BTC}"
+            available = f"{btc_in / config.UNIT} {config.BTC}"
+            error_message = f"Insufficient {config.BTC} at address {source}. Need: {need} (Including fee: {include_fee}), available: {available}."
+            error_message += f" These fees are estimated for a confirmation target of {estimate_fee_per_kb_nblocks} blocks, you can reduce them by using the `confirmation_target` parameter with a higher value or by manually setting the fees with the `fee` parameter."
+
             if not allow_unconfirmed_inputs:
                 error_message += " To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)"
+
             raise exceptions.BalanceError(error_message)
 
         # Lock the source's inputs (UTXOs) chosen for this transaction
