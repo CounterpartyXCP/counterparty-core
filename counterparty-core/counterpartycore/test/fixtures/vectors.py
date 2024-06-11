@@ -7216,7 +7216,7 @@ UNITTEST_VECTOR = {
                 ),
                 "error": (
                     exceptions.BalanceError,
-                    "Insufficient BTC at address mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns. (Need approximately 10.73754999 BTC.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)",
+                    "Insufficient BTC at address mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns. Need: 10.73754999 BTC (Including fee: 0.00012175 BTC), available: 1.11121663 BTC. These fees are estimated for a confirmation target of 3 blocks, you can reduce them by using the `confirmation_target` parameter with a higher value or by manually setting the fees with the `fee` parameter. To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)",
                 ),
             },
             {
@@ -7302,7 +7302,7 @@ UNITTEST_VECTOR = {
                 ),
                 "error": (
                     exceptions.BalanceError,
-                    "Insufficient BTC at address mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc. (Need approximately 0.0001408 BTC.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)",
+                    "Insufficient BTC at address mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc. Need: 0.0001408 BTC (Including fee: 0.0000765 BTC), available: 0.00001 BTC. These fees are estimated for a confirmation target of 3 blocks, you can reduce them by using the `confirmation_target` parameter with a higher value or by manually setting the fees with the `fee` parameter. To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)",
                 ),
             },
             {

@@ -473,11 +473,19 @@ def inject_unpacked_data(db, result):
 
     for result_item in result_list:
         if "data" in result_item:
-            data = binascii.hexlify(result_item["data"])
+            data = (
+                binascii.hexlify(result_item["data"])
+                if isinstance(result_item["data"], bytes)
+                else result_item["data"]
+            )
             block_index = result_item.get("block_index")
             result_item["unpacked_data"] = transaction.unpack(db, data, block_index=block_index)
         if "params" in result_item and "data" in result_item["params"]:
-            data = binascii.hexlify(result_item["params"]["data"])
+            data = (
+                binascii.hexlify(result_item["params"]["data"])
+                if isinstance(result_item["params"]["data"], bytes)
+                else result_item["params"]["data"]
+            )
             block_index = result_item.get("block_index")
             result_item["params"]["unpacked_data"] = transaction.unpack(
                 db, data, block_index=block_index
