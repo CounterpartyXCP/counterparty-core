@@ -395,9 +395,9 @@ def run_api_server(args, interruped_value):
         # Run app server (blocking)
         werkzeug_server.serve_forever()
     except KeyboardInterrupt:
-        logger.trace("Keyboard Interrupt")
+        logger.trace("Keyboard Interrupt!")
     finally:
-        logger.trace("Shutting down API server...")
+        logger.trace("Shutting down API Server...")
         werkzeug_server.shutdown()
         # ensure timer is cancelled
         if BACKEND_HEIGHT_TIMER:
@@ -450,20 +450,20 @@ class APIServer(object):
 
     def start(self, args):
         if self.process is not None:
-            raise Exception("API server is already running")
+            raise Exception("API Server is already running")
         self.process = Process(target=run_api_server, args=(vars(args), self.interrupted))
         self.process.start()
         return self.process
 
     def stop(self):
-        logger.info("Stopping API server...")
+        logger.info("Stopping API Server...")
         self.interrupted.value = 1
         waiting_start_time = time.time()
         while self.process.is_alive():
             time.sleep(0.5)
-            logger.trace("Waiting for API server to stop...")
+            logger.trace("Waiting for API Server to stop...")
             if time.time() - waiting_start_time > 2:
-                logger.error("API server did not stop in time. Terminating...")
+                logger.error("API Server did not stop in time. Terminating...")
                 self.process.kill()
                 break
-        logger.trace("API server stopped")
+        logger.trace("API Server stopped.")

@@ -89,7 +89,7 @@ def fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner):
         spinner.set_message(f"Blocks indexed in: {time.time() - start_time_blocks_indexing:.3f}s")
         return block_count
     except KeyboardInterrupt as e:
-        print(colored("Keyboard interrupt. Cleanin up, please wait...", "yellow"))
+        print(colored("Keyboard interrupt! Cleaning up, please wait...", "yellow"))
         block_parser.close()
         cursor.execute("""DROP TABLE kickstart_blocks""")
         raise e
@@ -387,7 +387,7 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
             ok_yellow = colored("[OK]", "yellow")
             print(f"{ok_yellow} {message}")
             message = ""
-        print(colored("Keyboard interrupt. Stopping...", "yellow"))
+        print(colored("Keyboard interrupt! Stopping...", "yellow"))
     finally:
         spinner.stop()
         # re-print last message
