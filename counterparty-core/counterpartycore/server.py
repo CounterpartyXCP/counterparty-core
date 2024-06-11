@@ -317,8 +317,6 @@ def initialise_config(
     else:
         config.BACKEND_URL = "http://" + config.BACKEND_URL
 
-    cleaned_backend_url = config.BACKEND_URL.replace(f":{config.BACKEND_PASSWORD}@", ":*****@")
-
     # Indexd RPC host
     if indexd_connect:
         config.INDEXD_CONNECT = indexd_connect
@@ -849,8 +847,6 @@ def configure_rpc(rpc_password=None):
     else:
         config.API_ROOT = "http://" + config.RPC_HOST + ":" + str(config.RPC_PORT)
     config.RPC = config.API_ROOT + config.RPC_WEBROOT
-
-    cleaned_rpc_url = config.RPC.replace(f":{urlencode(config.RPC_PASSWORD)}@", ":*****@")
 
 
 def bootstrap(no_confirm=False):
