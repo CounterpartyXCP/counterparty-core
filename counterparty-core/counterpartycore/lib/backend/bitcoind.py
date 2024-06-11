@@ -58,7 +58,7 @@ def rpc_call(payload):
             exit(0)
         except (Timeout, ReadTimeout, ConnectionError, ChunkedEncodingError):
             logger.debug(
-                f"Could not connect to backend at `{util.clean_url_for_log(url)}`. (Try {tries})"
+                f"Could not connect to backend at `{util.clean_url_for_log(url)}`. (Attempt: {tries})"
             )
             time.sleep(5)
         except Exception as e:

@@ -113,7 +113,7 @@ class DBConnectionPool(metaclass=util.SingletonMeta):
                 db.close()
 
     def close(self):
-        logger.trace("Closing all connections in pool (%s).", len(self.connections))
+        logger.trace("Closing all connections in pool... (%s)", len(self.connections))
         self.closed = True
         while len(self.connections) > 0:
             db = self.connections.pop()

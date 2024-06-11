@@ -65,7 +65,7 @@ def rpc(url, method, params=None, ssl_verify=False, tries=1):
         except requests.exceptions.Timeout as e:
             raise e
         except requests.exceptions.ConnectionError:
-            logger.debug(f"Could not connect to {url}. (Try {i+1}/{tries})")
+            logger.debug(f"Could not connect to {url}. (Attempt: {i+1}/{tries})")
             time.sleep(5)
 
     if response == None:  # noqa: E711

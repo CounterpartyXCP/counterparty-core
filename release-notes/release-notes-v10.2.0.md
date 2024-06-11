@@ -17,7 +17,7 @@ Note: This update requires a reparse from Block 819250, which will proceed autom
 * Fix `burned`, `earned`, and `btc_amount_normalized` fields in API results
 * Do not cache non-cacheable v2 API routes (which could lead to a broken health check, in particular)
 * Fix the execution interval of the `APIStatusPoller` thread
-* Add `Access-Control-Allow-Headers = *` header in API v2
+* Add `Access-Control-Allow-Headers = *` header to API v2 for CORS
 
 ## Codebase
 * Refactor mempool management and block tracking—catching up is now done via RPC, and tracking via ZeroMQ
