@@ -30,19 +30,21 @@ docker container prune -f
 docker rmi counterparty/counterparty:$VERSION || true
 
 # build the counterparty-core new image
-docker build -t counterparty/counterparty:$VERSION .
+docker build -t counterparty/counterparty:$VERSION . > build.txt 2>&1
+COUNTERPARTY_RS_CACHED=$(awk '/COPY \.\/counterparty-rs \/counterparty-rs/{getline; print}' build.txt | awk '{print $2}')
+cat build.txt
 
 # re-start containers
 docker compose --profile mainnet up -d
 docker compose --profile testnet up -d
 
 # wait for counterparty-core to be ready
-while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Ready for queries')" = "" ]; do
+while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Catch up complete.')" = "" ]; do
     echo "Waiting for counterparty-core mainnet to be ready"
     sleep 1
 done
 
-while [ "$(docker compose logs counterparty-core-testnet 2>&1 | grep 'Ready for queries')" = "" ]; do
+while [ "$(docker compose logs counterparty-core-testnet 2>&1 | grep 'Catch up complete.')" = "" ]; do
     echo "Waiting for counterparty-core testnet to be ready"
     sleep 1
 done
@@ -75,7 +77,7 @@ if [ "$response_v1_testnet" -ne 200 ]; then
 fi
 
 # check running info with API v2 mainnet
-response_v2_mainnet=$(curl http://api:api@127.0.0.1:4000/v2/ \
+response_v2_mainnet=$(curl http://localhost:4000/v2/ \
                         --write-out '%{http_code}' --silent --output /dev/null)
 
 if [ "$response_v2_mainnet" -ne 200 ]; then
@@ -84,7 +86,7 @@ if [ "$response_v2_mainnet" -ne 200 ]; then
 fi
 
 # check running info with API v2 testnet
-response_v2_testnet=$(curl http://api:api@127.0.0.1:14000/v2/ \
+response_v2_testnet=$(curl http://localhost:14000/v2/ \
                         --write-out '%{http_code}' --silent --output /dev/null)
 
 if [ "$response_v2_mainnet" -ne 200 ]; then
@@ -92,14 +94,41 @@ if [ "$response_v2_mainnet" -ne 200 ]; then
     exit 1
 fi
 
+# Let's reparse 50 blocks before Dredd and compare hashes tests
+CURRENT_HEIGHT=$(curl http://localhost:4000/v2/ --silent | jq '.result.counterparty_height')
+REPARSE_FROM=$(($CURRENT_HEIGHT-50))
+
+# Stop, reparse and start counterparty-core mainnet
+docker compose --profile mainnet stop counterparty-core
+docker compose --profile mainnet run counterparty-core reparse $REPARSE_FROM \
+   --backend-connect=bitcoind \
+   --indexd-connect=addrindexrs \
+   --rpc-host=0.0.0.0 \
+   --api-host=0.0.0.0
+docker compose --profile mainnet up -d counterparty-core
+
+# wait for counterparty-core to be ready
+while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Catch up complete.')" = "" ]; do
+    echo "Waiting for counterparty-core mainnet to be ready"
+    sleep 1
+done
 
 # Run dredd test
 dredd
 
+previous_counterparty_rs_hash=$(cat ../counterparty_rs_hash)
+current_counterparty_rs_hash=$(find counterparty-rs/ -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum | awk '{print $1}')
+
+
 # Run compare hashes test
 . "$HOME/.profile"
 cd counterparty-core
-hatch env prune
+
+if [ "$COUNTERPARTY_RS_CACHED" != "CACHED" ]; then
+    echo $current_counterparty_rs_hash > ../counterparty_rs_hash
+    hatch env prune
+fi
+
 hatch run pytest counterpartycore/test/compare_hashes_test.py --comparehashes
 cd ..
 

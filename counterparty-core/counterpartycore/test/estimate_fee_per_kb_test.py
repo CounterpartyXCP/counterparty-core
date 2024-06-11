@@ -32,10 +32,11 @@ def test_estimate_fee_per_kb(fee_per_kb, fee_per_kb_used, server_db, monkeypatch
     def _fee_per_kb(conf_target, mode):
         return fee_per_kb
 
-    monkeypatch.setattr("counterpartycore.lib.backend.fee_per_kb", _fee_per_kb)
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.fee_per_kb", _fee_per_kb)
 
     utxos = dict(
-        ((utxo["txid"], utxo["vout"]), utxo) for utxo in backend.get_unspent_txouts(ADDR[0])
+        ((utxo["txid"], utxo["vout"]), utxo)
+        for utxo in backend.addrindexrs.get_unspent_txouts(ADDR[0])
     )
 
     with util_test.ConfigContext(ESTIMATE_FEE_PER_KB=True):

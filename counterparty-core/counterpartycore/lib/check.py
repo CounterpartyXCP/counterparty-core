@@ -635,6 +635,10 @@ CHECKPOINTS_MAINNET = {
         "ledger_hash": "6440b7d750fd29c2e9714df93989859cac1adef2b6098a7e1ef6d5ca7bb4f366",
         "txlist_hash": "6e49153c8042f20227ffc52b4df7a450a8f8416230081e373dabf11e9aceb63d",
     },
+    847469: {
+        "ledger_hash": "60dad3b667c237ef4430e703863048b949ba1f62a13e895a64b4ba9381b959f9",
+        "txlist_hash": "b59af166c3300e2e0f53951fa2663d6d717c69610bc0fa86b8d7b4675398870d",
+    },
 }
 
 CONSENSUS_HASH_VERSION_TESTNET = 7
@@ -795,6 +799,10 @@ CHECKPOINTS_TESTNET = {
         "ledger_hash": "104b61a4d22d793674a4c869ebdcc3030dc49794f36d270c4e51126cfd969135",
         "txlist_hash": "1bfe60296102f50272abc664ee42f4fb70818b7211e36dafa6e6bad6194fc833",
     },
+    2820893: {
+        "ledger_hash": "83feb31ce5edf67250c01f5cca4dbec91a32e5189a9b14d23ad2348bafaadaaf",
+        "txlist_hash": "5db6363332cee5ccd16370af747050bad438a6bcf52f2004b3b9db1c8b8ef8ee",
+    },
 }
 
 CONSENSUS_HASH_VERSION_REGTEST = 1
@@ -860,12 +868,6 @@ def consensus_hash(db, field, previous_consensus_hash, content):
             raise ConsensusError(
                 f"Inconsistent {field} for block {block_index} (calculated {calculated_hash}, vs {found_hash} in database)."
             )
-    else:
-        # Save new hash. No sql injection here.
-        cursor.execute(
-            f"""UPDATE blocks SET {field} = ? WHERE block_index = ?""",  # noqa: S608
-            (calculated_hash, block_index),
-        )  # nosec B608
 
     # Check against checkpoints.
     if config.TESTNET:
@@ -982,21 +984,19 @@ class DatabaseVersionError(Exception):
 def database_version(db):
     if config.FORCE:
         return
-    logger.debug("Checking database version.")
+    logger.debug("Checking database version...")
 
     version_major, version_minor = database.version(db)
     if version_major != config.VERSION_MAJOR:
         # Rollback database if major version has changed.
         raise DatabaseVersionError(
-            message=f"Client major version number mismatch ({version_major} ≠ {config.VERSION_MAJOR}).",
+            message=f"Client major version number mismatch: {version_major} ≠ {config.VERSION_MAJOR}.",
             required_action="rollback",
             from_block_index=config.BLOCK_FIRST,
         )
     elif version_minor != config.VERSION_MINOR:
         # Reparse transactions from the vesion block if minor version has changed.
-        message = (
-            f"Client minor version number mismatch ({version_minor} ≠ {config.VERSION_MINOR})."
-        )
+        message = f"Client minor version number mismatch: {version_minor} ≠ {config.VERSION_MINOR}."
         need_reparse_from = (
             config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET
             if config.TESTNET

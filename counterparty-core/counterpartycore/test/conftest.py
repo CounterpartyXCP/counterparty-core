@@ -208,7 +208,6 @@ def rawtransactions_db(request):
 def server_db(request, cp_server, api_server):
     """Enable database access for unit test vectors."""
     db = database.get_connection(read_only=False)
-    api_server.db = db  # inject into api_server
     cursor = db.cursor()
     cursor.execute("""BEGIN""")
     util_test.reset_current_block_index(db)
@@ -289,13 +288,15 @@ def api_server_v2(request, cp_server):
         "log_file": None,
         "api_log_file": None,
         "no_log_files": False,
-        "json_log": False,
         "no_check_asset_conservation": True,
         "action": "",
         "no_refresh_backend_height": True,
         "no_mempool": False,
         "skip_db_check": False,
         "no_telemetry": True,
+        "enable_zmq_publisher": False,
+        "zmq_publisher_port": None,
+        "db_connection_pool_size": None,
     }
     server_config = (
         default_config
@@ -330,6 +331,8 @@ def cp_server(request):
         config.PREFIX = b"TESTXXXX"
 
     request.addfinalizer(lambda: util_test.remove_database_files(dbfile))
+
+    return db
 
 
 class MockUTXOSet(object):
@@ -387,7 +390,7 @@ class MockUTXOSet(object):
                     "amount": txout["amount"],
                     "value": round(txout["amount"] * config.UNIT),
                     "confirmations": int(txout["confirmations"]),
-                    "scriptPubKey": txout["scriptPubKey"],
+                    "script_pub_key": txout["script_pub_key"],
                     "txhex": txout["txhex"],
                     "txid": txout["txid"],
                     "vout": txout["vout"],
@@ -425,7 +428,7 @@ class MockUTXOSet(object):
                     "confirmations": int(confirmations),
                     "amount": txout.coin_value / 1e8,
                     "value": txout.coin_value,
-                    "scriptPubKey": binascii.hexlify(txout.script).decode("ascii"),
+                    "script_pub_key": binascii.hexlify(txout.script).decode("ascii"),
                     "txhex": raw_transaction,
                     "txid": tx_id,
                     "vout": idx,
@@ -535,24 +538,36 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def check_wal_file():
         pass
 
+    def rps_expire(db, block_index):
+        pass
+
     monkeypatch.setattr("counterpartycore.lib.transaction.arc4.init_arc4", init_arc4)
-    monkeypatch.setattr("counterpartycore.lib.backend.get_unspent_txouts", get_unspent_txouts)
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.addrindexrs.get_unspent_txouts", get_unspent_txouts
+    )
     monkeypatch.setattr("counterpartycore.lib.log.isodt", isodt)
     monkeypatch.setattr("counterpartycore.lib.ledger.curr_time", curr_time)
     monkeypatch.setattr("counterpartycore.lib.util.date_passed", date_passed)
     monkeypatch.setattr("counterpartycore.lib.api.util.init_api_access_log", init_api_access_log)
     if hasattr(config, "PREFIX"):
         monkeypatch.setattr("counterpartycore.lib.config.PREFIX", b"TESTXXXX")
-    monkeypatch.setattr("counterpartycore.lib.backend.getrawtransaction", mocked_getrawtransaction)
     monkeypatch.setattr(
-        "counterpartycore.lib.backend.getrawtransaction_batch", mocked_getrawtransaction_batch
+        "counterpartycore.lib.backend.bitcoind.getrawtransaction", mocked_getrawtransaction
     )
     monkeypatch.setattr(
-        "counterpartycore.lib.backend.search_raw_transactions", mocked_search_raw_transactions
+        "counterpartycore.lib.backend.addrindexrs.getrawtransaction_batch",
+        mocked_getrawtransaction_batch,
     )
-    monkeypatch.setattr("counterpartycore.lib.backend.pubkeyhash_to_pubkey", pubkeyhash_to_pubkey)
     monkeypatch.setattr(
-        "counterpartycore.lib.backend.multisig_pubkeyhashes_to_pubkeys",
+        "counterpartycore.lib.backend.addrindexrs.search_raw_transactions",
+        mocked_search_raw_transactions,
+    )
+    monkeypatch.setattr(
+        "counterpartycore.lib.transaction.pubkeyhash_to_pubkey", pubkeyhash_to_pubkey
+    )
+    monkeypatch.setattr(
+        "counterpartycore.lib.transaction.multisig_pubkeyhashes_to_pubkeys",
         multisig_pubkeyhashes_to_pubkeys,
     )
     monkeypatch.setattr("counterpartycore.lib.database.check_wal_file", check_wal_file)
+    monkeypatch.setattr("counterpartycore.lib.messages.rps.expire", rps_expire)

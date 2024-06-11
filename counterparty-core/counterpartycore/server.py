@@ -13,9 +13,7 @@ import urllib
 from urllib.parse import quote_plus as urlencode
 
 import appdirs
-import apsw
 import bitcoin as bitcoinlib
-from halo import Halo
 from termcolor import colored, cprint
 
 from counterpartycore.lib import (
@@ -24,13 +22,16 @@ from counterpartycore.lib import (
     check,
     config,
     database,
+    exceptions,
+    follow,
     log,
     transaction,
     util,
 )
 from counterpartycore.lib import kickstart as kickstarter
 from counterpartycore.lib.api import api_server as api_v2
-from counterpartycore.lib.api import api_v1, routes  # noqa: F401
+from counterpartycore.lib.api import api_v1
+from counterpartycore.lib.backend import fetcher
 from counterpartycore.lib.public_keys import PUBLIC_KEYS
 from counterpartycore.lib.telemetry.clients.influxdb import TelemetryClientInfluxDB
 from counterpartycore.lib.telemetry.collectors.influxdb import (
@@ -63,9 +64,10 @@ def initialise(*args, **kwargs):
         testnet=kwargs.get("testnet", False),
         testcoin=kwargs.get("testcoin", False),
         regtest=kwargs.get("regtest", False),
+        action=kwargs.get("action", None),
     )
     initialise_config(*args, **kwargs)
-    return initialise_db()
+    return database.initialise_db()
 
 
 def initialise_log_config(
@@ -77,7 +79,7 @@ def initialise_log_config(
     testnet=False,
     testcoin=False,
     regtest=False,
-    json_log=False,
+    action=None,
 ):
     # Log directory
     log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
@@ -87,6 +89,13 @@ def initialise_log_config(
     # Set up logging.
     config.VERBOSE = verbose
     config.QUIET = quiet
+
+    if config.VERBOSE == 0:
+        config.LOG_LEVEL_STRING = "info"
+    elif config.VERBOSE == 1:
+        config.LOG_LEVEL_STRING = "debug"
+    elif config.VERBOSE >= 2:
+        config.LOG_LEVEL_STRING = "trace"
 
     network = ""
     if testnet:
@@ -105,6 +114,9 @@ def initialise_log_config(
     else:  # user-specified location
         config.LOG = log_file
 
+    if config.LOG:
+        config.FETCHER_LOG = os.path.join(os.path.dirname(config.LOG), f"fetcher{network}.log")
+
     if no_log_files:  # no file logging
         config.API_LOG = None
     elif not api_log_file:  # default location
@@ -113,7 +125,7 @@ def initialise_log_config(
     else:  # user-specified location
         config.API_LOG = api_log_file
 
-    config.JSON_LOG = json_log
+    config.LOG_IN_CONSOLE = action == "start" or config.VERBOSE > 0
 
 
 def initialise_config(
@@ -154,12 +166,11 @@ def initialise_config(
     customnet=None,
     no_mempool=False,
     no_telemetry=False,
+    enable_zmq_publisher=False,
+    zmq_publisher_port=None,
+    db_connection_pool_size=None,
 ):
-    # log config alreasdy initialized
-    logger.debug("VERBOSE: %s", config.VERBOSE)
-    logger.debug("QUIET: %s", config.QUIET)
-    logger.debug("LOG: %s", config.LOG)
-    logger.debug("API_LOG: %s", config.API_LOG)
+    # log config already initialized
 
     # Data directory
     data_dir = appdirs.user_data_dir(
@@ -194,13 +205,10 @@ def initialise_config(
 
     if config.TESTNET:
         bitcoinlib.SelectParams("testnet")
-        logger.debug("NETWORK: testnet")
     elif config.REGTEST:
         bitcoinlib.SelectParams("regtest")
-        logger.debug("NETWORK: regtest")
     else:
         bitcoinlib.SelectParams("mainnet")
-        logger.debug("NETWORK: mainnet")
 
     network = ""
     if config.TESTNET:
@@ -217,7 +225,7 @@ def initialise_config(
         filename = f"{config.APP_NAME}{network}.db"
         config.DATABASE = os.path.join(data_dir, filename)
 
-    logger.debug("DATABASE: %s", config.DATABASE)
+    config.FETCHER_DB = os.path.join(os.path.dirname(config.DATABASE), f"fetcherdb{network}")
 
     config.API_LIMIT_ROWS = api_limit_rows
 
@@ -309,9 +317,6 @@ def initialise_config(
     else:
         config.BACKEND_URL = "http://" + config.BACKEND_URL
 
-    cleaned_backend_url = config.BACKEND_URL.replace(f":{config.BACKEND_PASSWORD}@", ":*****@")
-    logger.debug("BACKEND_URL: %s", cleaned_backend_url)
-
     # Indexd RPC host
     if indexd_connect:
         config.INDEXD_CONNECT = indexd_connect
@@ -340,8 +345,6 @@ def initialise_config(
 
     # Construct Indexd URL.
     config.INDEXD_URL = "http://" + config.INDEXD_CONNECT + ":" + str(config.INDEXD_PORT)
-
-    logger.debug("INDEXD_URL: %s", config.INDEXD_URL)
 
     ##############
     # THINGS WE SERVE
@@ -435,6 +438,36 @@ def initialise_config(
         config.API_PORT = int(config.API_PORT)
         if not (int(config.API_PORT) > 1 and int(config.API_PORT) < 65535):
             raise ConfigurationError("invalid server API port number")
+    except:  # noqa: E722
+        raise ConfigurationError(  # noqa: B904
+            "Please specific a valid port number rpc-port configuration parameter"
+        )
+
+    # ZMQ Publisher
+    config.ENABLE_ZMQ_PUBLISHER = enable_zmq_publisher
+
+    if zmq_publisher_port:
+        config.ZMQ_PUBLISHER_PORT = zmq_publisher_port
+    else:
+        if config.TESTNET:
+            if config.TESTCOIN:
+                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET + 1
+            else:
+                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET
+        elif config.REGTEST:
+            if config.TESTCOIN:
+                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_REGTEST + 1
+            else:
+                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_REGTEST
+        else:
+            if config.TESTCOIN:
+                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT + 1
+            else:
+                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT
+    try:
+        config.ZMQ_PUBLISHER_PORT = int(config.ZMQ_PUBLISHER_PORT)
+        if not (int(config.ZMQ_PUBLISHER_PORT) > 1 and int(config.ZMQ_PUBLISHER_PORT) < 65535):
+            raise ConfigurationError("invalid ZeroMQ publisher port number")
     except:  # noqa: E722
         raise ConfigurationError(  # noqa: B904
             "Please specific a valid port number rpc-port configuration parameter"
@@ -551,7 +584,10 @@ def initialise_config(
 
     config.NO_TELEMETRY = no_telemetry
 
-    logger.info(f"Running v{config.VERSION_STRING} of counterparty-core.")
+    if db_connection_pool_size:
+        config.DB_CONNECTION_POOL_SIZE = db_connection_pool_size
+    else:
+        config.DB_CONNECTION_POOL_SIZE = config.DEFAULT_DB_CONNECTION_POOL_SIZE
 
 
 def initialise_log_and_config(args):
@@ -591,6 +627,9 @@ def initialise_log_and_config(args):
         "utxo_locks_max_age": args.utxo_locks_max_age,
         "no_mempool": args.no_mempool,
         "no_telemetry": args.no_telemetry,
+        "enable_zmq_publisher": args.enable_zmq_publisher,
+        "zmq_publisher_port": args.zmq_publisher_port,
+        "db_connection_pool_size": args.db_connection_pool_size,
     }
 
     initialise_log_config(
@@ -602,7 +641,7 @@ def initialise_log_and_config(args):
         testnet=args.testnet,
         testcoin=args.testcoin,
         regtest=args.regtest,
-        json_log=args.json_log,
+        action=args.action,
     )
 
     # set up logging
@@ -610,46 +649,29 @@ def initialise_log_and_config(args):
         verbose=config.VERBOSE,
         quiet=config.QUIET,
         log_file=config.LOG,
-        log_in_console=args.action == "start",
     )
     initialise_config(**init_args)
 
 
-def initialise_db():
-    if config.FORCE:
-        cprint("THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.", "yellow")
-
-    # Database
-    logger.info(f"Connecting to database (SQLite {apsw.apswversion()}).")
-    db = database.get_connection(read_only=False)
-
-    util.CURRENT_BLOCK_INDEX = blocks.last_db_index(db)
-
-    return db
-
-
 def connect_to_backend():
     if not config.FORCE:
-        backend.getblockcount()
+        backend.bitcoind.getblockcount()
 
 
-def connect_to_addrindexrs():
-    step = "Connecting to `addrindexrs`..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
-        util.CURRENT_BLOCK_INDEX = 0
-        backend.backend()
-        check_addrindexrs = {}
-        while check_addrindexrs == {}:
-            check_address = (
-                "mrHFGUKSiNMeErqByjX97qPKfumdZxe6mC"
-                if config.TESTNET
-                else "1GsjsKKT4nH4GPmDnaxaZEDWgoBpmexwMA"
-            )
-            check_addrindexrs = backend.get_oldest_tx(check_address, 99999999999)
-            if check_addrindexrs == {}:
-                logger.info("`addrindexrs` is not ready. Waiting one second.")
-                time.sleep(1)
-    print(f"{OK_GREEN} {step}")
+def initialize_telemetry():
+    telemetry_daemon = None
+    if not config.NO_TELEMETRY:
+        logger.info("Telemetry enabled.")
+        telemetry_daemon = TelemetryDaemon(
+            interval=config.TELEMETRY_INTERVAL,
+            collector=TelemetryCollectorInfluxDB(db=database.get_connection(read_only=True)),
+            client=TelemetryClientInfluxDB(),
+        )
+        telemetry_daemon.start()
+    else:
+        logger.info("Telemetry disabled.")
+
+    return telemetry_daemon
 
 
 def start_all(args):
@@ -657,17 +679,26 @@ def start_all(args):
     api_server_v1 = None
     api_server_v2 = None
     telemetry_daemon = None
+    follower_daemon = None
     db = None
 
     try:
+        # set signal handlers (needed for graceful shutdown on SIGINT/SIGTERM)
         signal.signal(signal.SIGINT, handle_interrupt_signal)
         signal.signal(signal.SIGTERM, handle_interrupt_signal)
 
+        # download bootstrap if necessary
         if not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap":
             bootstrap(no_confirm=True)
 
-        db = initialise_db()
+        # initialise database
+        db = database.initialise_db()
         blocks.initialise(db)
+        blocks.check_database_version(db)
+        database.optimize(db)
+
+        # check software version
+        check.software_version()
 
         # API Server v2.
         api_server_v2 = api_v2.APIServer()
@@ -676,16 +707,8 @@ def start_all(args):
         # Backend.
         connect_to_backend()
 
-        if not config.NO_TELEMETRY:
-            logger.info("Telemetry enabled.")
-            telemetry_daemon = TelemetryDaemon(
-                interval=config.TELEMETRY_INTERVAL,
-                collector=TelemetryCollectorInfluxDB(db=database.get_connection(read_only=True)),
-                client=TelemetryClientInfluxDB(),
-            )
-            telemetry_daemon.start()
-        else:
-            logger.info("Telemetry disabled.")
+        # Initialise telemetry.
+        telemetry_daemon = initialize_telemetry()
 
         # Reset UTXO_LOCKS.  This previously was done in
         # initilise_config
@@ -701,42 +724,57 @@ def start_all(args):
         api_server_v1.daemon = True
         api_server_v1.start()
 
-        # Server
-        blocks.follow(db)
+        # catch up
+        blocks.catch_up(db)
+
+        # Blockchain watcher
+        follower_daemon = follow.start_blockchain_watcher(db)
+
     except KeyboardInterrupt:
-        logger.info("Keyboard interrupt.")
+        logger.warning("Keyboard interrupt!")
         pass
     finally:
+        if api_server_v2:
+            api_server_v2.stop()
         if telemetry_daemon:
             telemetry_daemon.stop()
         if api_status_poller:
             api_status_poller.stop()
         if api_server_v1:
             api_server_v1.stop()
-        if api_server_v2:
-            api_server_v2.stop()
-        backend.stop()
+        if follower_daemon:
+            follower_daemon.stop()
         if db:
-            database.optimize(db)
-            logger.info("Closing database...")
-            db.close()
-        logger.info("Shutting down logging...")
-        logging.shutdown()
+            database.close(db)
+        backend.addrindexrs.stop()
+        log.shutdown()
+        fetcher.stop()
+        try:
+            database.check_wal_file()
+        except exceptions.WALFileFoundError:
+            logger.error(
+                "Database WAL file detected. To ensure no data corruption has occurred, run `counterpary-server check-db`."
+            )
+        except exceptions.DatabaseError:
+            logger.error(
+                "Database is in use by another process and was unable to be closed correctly."
+            )
+        logger.info("Shutdown complete.")
 
 
 def reparse(block_index):
-    connect_to_addrindexrs()
-    db = initialise_db()
+    backend.addrindexrs.init()
+    db = database.initialise_db()
     try:
         blocks.reparse(db, block_index=block_index)
     finally:
-        backend.stop()
+        backend.addrindexrs.stop()
         database.optimize(db)
         db.close()
 
 
 def rollback(block_index=None):
-    db = initialise_db()
+    db = database.initialise_db()
     try:
         blocks.rollback(db, block_index=block_index)
     finally:
@@ -754,35 +792,24 @@ def kickstart(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
 
 
 def vacuum():
-    db = initialise_db()
-    step = "Vacuuming database..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    db = database.initialise_db()
+    with log.Spinner("Vacuuming database..."):
         database.vacuum(db)
-    print(f"{OK_GREEN} {step}")
 
 
 def check_database():
-    db = initialise_db()
+    db = database.initialise_db()
 
     start_all_time = time.time()
 
-    start_time = time.time()
-    step = "Checking asset conservation..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner("Checking asset conservation..."):
         check.asset_conservation(db)
-    print(f"{OK_GREEN} {step} (in {time.time() - start_time:.2f}s)")
 
-    start_time = time.time()
-    step = "Checking database foreign keys...."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner("Checking database foreign keys...."):
         database.check_foreign_keys(db)
-    print(f"{OK_GREEN} {step} (in {time.time() - start_time:.2f}s)")
 
-    start_time = time.time()
-    step = "Checking database integrity..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner("Checking database integrity..."):
         database.intergrity_check(db)
-    print(f"{OK_GREEN} {step} (in {time.time() - start_time:.2f}s)")
 
     cprint(f"Database checks complete in {time.time() - start_all_time:.2f}s.", "green")
 
@@ -820,9 +847,6 @@ def configure_rpc(rpc_password=None):
     else:
         config.API_ROOT = "http://" + config.RPC_HOST + ":" + str(config.RPC_PORT)
     config.RPC = config.API_ROOT + config.RPC_WEBROOT
-
-    cleaned_rpc_url = config.RPC.replace(f":{urlencode(config.RPC_PASSWORD)}@", ":*****@")
-    logger.debug("RPC: %s", cleaned_rpc_url)
 
 
 def bootstrap(no_confirm=False):
@@ -870,44 +894,36 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
         os.remove(shm_path)
 
     # Define Progress Bar.
-    step = f"Downloading database from {bootstrap_url}..."
-    spinner = Halo(text=step, spinner=SPINNER_STYLE)
+    spinner = log.Spinner(f"Downloading database from {bootstrap_url}...")
 
     def bootstrap_progress(blocknum, blocksize, totalsize):
         readsofar = blocknum * blocksize
         if totalsize > 0:
             percent = readsofar * 1e2 / totalsize
             message = f"Downloading database: {percent:5.1f}% {readsofar} / {totalsize}"
-            spinner.text = message
+            spinner.set_messsage(message)
 
     # Downloading
     spinner.start()
     urllib.request.urlretrieve(bootstrap_url, tarball_path, bootstrap_progress)  # nosec B310  # noqa: S310
     urllib.request.urlretrieve(bootstrap_sig_url, sig_path)  # nosec B310  # noqa: S310
     spinner.stop()
-    print(f"{OK_GREEN} {step}")
 
-    step = "Verifying signature..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner("Verifying signature..."):
         if not any(util.verify_signature(k, sig_path, tarball_path) for k in PUBLIC_KEYS):
             print("Snaptshot was not signed by any trusted keys")
             sys.exit(1)
-    print(f"{OK_GREEN} {step}")
 
     # TODO: check checksum, filenames, etc.
-    step = f"Extracting database to {data_dir}..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner(f"Extracting database to {data_dir}..."):
         with tarfile.open(tarball_path, "r:gz") as tar_file:
             tar_file.extractall(path=data_dir)  # nosec B202  # noqa: S202
-    print(f"{OK_GREEN} {step}")
 
     assert os.path.exists(database_path)
     # user and group have "rw" access
     os.chmod(database_path, 0o660)  # nosec B103
 
-    step = "Cleaning up..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner("Cleaning up..."):
         os.remove(tarball_path)
-    print(f"{OK_GREEN} {step}")
 
     cprint(f"Database has been successfully bootstrapped to {database_path}.", "green")

@@ -1,11 +1,13 @@
 import logging
 import os
+from contextlib import contextmanager
 
 import apsw
 import apsw.bestpractice
 import psutil
+from termcolor import cprint
 
-from counterpartycore.lib import config, exceptions  # noqa: E402, F401
+from counterpartycore.lib import config, exceptions, ledger, util
 
 apsw.bestpractice.apply(apsw.bestpractice.recommended)  # includes WAL mode
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -14,8 +16,11 @@ logger = logging.getLogger(config.LOGGER_NAME)
 def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style"""
     dictionary = {}
-    for index, (name, type_) in enumerate(cursor.getdescription()):  # noqa: B007
-        dictionary[name] = sql[index]
+    for index, (name, field_type) in enumerate(cursor.getdescription()):  # noqa: B007
+        if str(field_type) == "BOOL":
+            dictionary[name] = bool(sql[index])
+        else:
+            dictionary[name] = sql[index]
     return dictionary
 
 
@@ -46,19 +51,17 @@ def check_wal_file():
         raise exceptions.WALFileFoundError("Found WAL file. Database may be corrupted.")
 
 
-def get_connection(read_only=True):
+def get_connection(read_only=True, check_wal=True):
     """Connects to the SQLite database, returning a db `Connection` object"""
-    logger.debug(f"Creating connection to `{config.DATABASE}`.")
+    logger.debug(f"Creating connection to `{config.DATABASE}`...")
 
-    need_quick_check = False
-    if not read_only:
+    if not read_only and check_wal:
         try:
             check_wal_file()
         except exceptions.WALFileFoundError:
             logger.warning(
-                "Found WAL file. Database may be corrupted. Running a quick check after connection."
+                "Database WAL file detected. To ensure no data corruption has occurred, run `counterpary-server check-db`."
             )
-            need_quick_check = True
 
     if read_only:
         db = apsw.Connection(config.DATABASE, flags=apsw.SQLITE_OPEN_READONLY)
@@ -75,13 +78,58 @@ def get_connection(read_only=True):
     cursor.execute("PRAGMA foreign_keys = ON")
     cursor.execute("PRAGMA defer_foreign_keys = ON")
 
-    if need_quick_check and not config.FORCE:
-        logger.info("Running a quick check...")
-        cursor.execute("PRAGMA quick_check")
-
     db.setrowtrace(rowtracer)
 
     cursor.close()
+    return db
+
+
+# Minimalistic but sufficient connection pool
+class DBConnectionPool(metaclass=util.SingletonMeta):
+    def __init__(self):
+        self.connections = []
+        self.closed = False
+
+    @contextmanager
+    def connection(self):
+        if self.connections:
+            # Reusing connection
+            db = self.connections.pop(0)
+        else:
+            # New db connection
+            db = get_connection(read_only=True)
+        try:
+            yield db
+        finally:
+            if self.closed:
+                logger.trace("Connection pool is closed. Closing connection.")
+                db.close()
+            elif len(self.connections) < config.DB_CONNECTION_POOL_SIZE:
+                # Add connection to pool
+                self.connections.append(db)
+            else:
+                # Too much connections in the pool: closing connection
+                logger.warning("Closing connection due to pool size limit.")
+                db.close()
+
+    def close(self):
+        logger.trace("Closing all connections in pool... (%s)", len(self.connections))
+        self.closed = True
+        while len(self.connections) > 0:
+            db = self.connections.pop()
+            db.close()
+
+
+def initialise_db():
+    if config.FORCE:
+        cprint("THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.", "yellow")
+
+    # Database
+    logger.info(f"Connecting to database... (SQLite {apsw.apswversion()})")
+    db = get_connection(read_only=False)
+
+    util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
+
     return db
 
 
@@ -152,7 +200,13 @@ def optimize(db):
     logger.info("Running PRAGMA optimize...")
     cursor = db.cursor()
     cursor.execute("PRAGMA optimize")
-    logger.info("PRAGMA optimize done.")
+    logger.debug("PRAGMA optimize completed.")
+
+
+def close(db):
+    logger.info("Closing database connections...")
+    db.close()
+    DBConnectionPool().close()
 
 
 def field_is_pk(cursor, table, field):

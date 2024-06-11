@@ -5,19 +5,13 @@ Sieve blockchain for Counterparty transactions, and add them to the database.
 """
 
 import binascii
-import collections  # noqa: E402
 import csv  # noqa: E402
 import decimal
-import http  # noqa: E402
 import logging  # noqa: E402
 import os
 import struct
 import time
 from datetime import timedelta
-
-import bitcoin as bitcoinlib  # noqa: E402
-from halo import Halo  # noqa: E402
-from termcolor import colored  # noqa: E402
 
 from counterpartycore.lib import (  # noqa: E402
     backend,
@@ -26,13 +20,12 @@ from counterpartycore.lib import (  # noqa: E402
     database,
     exceptions,
     ledger,
+    log,
     message_type,
-    prefetcher,
     util,
 )
+from counterpartycore.lib.backend import fetcher
 from counterpartycore.lib.gettxinfo import get_tx_info  # noqa: E402
-from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
-from counterpartycore.lib.transaction_helper import p2sh_encoding  # noqa: E402, F401
 
 from .messages import (  # noqa: E402
     bet,
@@ -96,11 +89,9 @@ with open(CURR_DIR + "/../mainnet_burns.csv", "r") as f:
     for line in mainnet_burns_reader:
         MAINNET_BURNS[line["tx_hash"]] = line
 
-OK_GREEN = colored("[OK]", "green")
-SPINNER_STYLE = "bouncingBar"
-
 
 def parse_tx(db, tx):
+    util.CURRENT_TX_HASH = tx["tx_hash"]
     """Parse the transaction, return True for success."""
     cursor = db.cursor()
 
@@ -225,6 +216,7 @@ def parse_tx(db, tx):
         raise exceptions.ParseTransactionError(f"{e}")  # noqa: B904
     finally:
         cursor.close()
+        util.CURRENT_TX_HASH = None
 
 
 def parse_block(
@@ -232,9 +224,7 @@ def parse_block(
     block_index,
     block_time,
     previous_ledger_hash=None,
-    ledger_hash=None,
     previous_txlist_hash=None,
-    txlist_hash=None,
     previous_messages_hash=None,
     reparsing=False,
 ):
@@ -246,7 +236,8 @@ def parse_block(
     ledger.BLOCK_LEDGER = []
     ledger.BLOCK_JOURNAL = []
 
-    assert block_index == util.CURRENT_BLOCK_INDEX
+    if block_index != config.MEMPOOL_BLOCK_INDEX:
+        assert block_index == util.CURRENT_BLOCK_INDEX
 
     # Expire orders, bets and rps.
     order.expire(db, block_index)
@@ -264,7 +255,8 @@ def parse_block(
         {"block_index": block_index},
     )
     txlist = []
-    for tx in list(cursor):
+    transactions = cursor.fetchall()
+    for tx in transactions:
         try:
             # Add manual event to journal because transaction already exists
             if reparsing:
@@ -298,39 +290,65 @@ def parse_block(
             raise e
             # pass
 
-    cursor.close()
-
-    # Calculate consensus hashes.
-    new_txlist_hash, found_txlist_hash = check.consensus_hash(
-        db, "txlist_hash", previous_txlist_hash, txlist
-    )
-    new_ledger_hash, found_ledger_hash = check.consensus_hash(
-        db, "ledger_hash", previous_ledger_hash, ledger.BLOCK_LEDGER
-    )
-    new_messages_hash, found_messages_hash = check.consensus_hash(
-        db, "messages_hash", previous_messages_hash, ledger.BLOCK_JOURNAL
-    )
-
-    ledger.add_to_journal(
-        db,
-        block_index,
-        "parse",
-        "blocks",
-        "BLOCK_PARSED",
-        {
-            "block_index": block_index,
-            "ledger_hash": new_ledger_hash,
+    if block_index != config.MEMPOOL_BLOCK_INDEX:
+        # Calculate consensus hashes.
+        new_txlist_hash, found_txlist_hash = check.consensus_hash(
+            db, "txlist_hash", previous_txlist_hash, txlist
+        )
+        new_ledger_hash, found_ledger_hash = check.consensus_hash(
+            db, "ledger_hash", previous_ledger_hash, ledger.BLOCK_LEDGER
+        )
+        new_messages_hash, found_messages_hash = check.consensus_hash(
+            db, "messages_hash", previous_messages_hash, ledger.BLOCK_JOURNAL
+        )
+        update_block_query = """
+            UPDATE blocks
+            SET 
+                txlist_hash=:txlist_hash,
+                ledger_hash=:ledger_hash,
+                messages_hash=:messages_hash,
+                transaction_count=:transaction_count
+            WHERE block_index=:block_index
+        """
+        update_block_bindings = {
             "txlist_hash": new_txlist_hash,
+            "ledger_hash": new_ledger_hash,
             "messages_hash": new_messages_hash,
-        },
-    )
+            "transaction_count": len(transactions),
+            "block_index": block_index,
+        }
+        cursor.execute(update_block_query, update_block_bindings)
 
-    return new_ledger_hash, new_txlist_hash, new_messages_hash, found_messages_hash
+        # trigger BLOCK_PARSED event
+        ledger.add_to_journal(
+            db,
+            block_index,
+            "parse",
+            "blocks",
+            "BLOCK_PARSED",
+            {
+                "block_index": block_index,
+                "ledger_hash": new_ledger_hash,
+                "txlist_hash": new_txlist_hash,
+                "messages_hash": new_messages_hash,
+                "transaction_count": len(transactions),
+            },
+        )
+
+        cursor.close()
+        return new_ledger_hash, new_txlist_hash, new_messages_hash
+
+    cursor.close()
+    return None, None, None
 
 
 def initialise(db):
     """Initialise data, create and populate the database."""
     cursor = db.cursor()
+
+    # Drop views that are going to be recreated
+    cursor.execute("DROP VIEW IF EXISTS all_expirations")
+    cursor.execute("DROP VIEW IF EXISTS all_holders")
 
     # remove misnamed indexes
     database.drop_indexes(
@@ -357,8 +375,12 @@ def initialise(db):
                       block_index INTEGER UNIQUE,
                       block_hash TEXT UNIQUE,
                       block_time INTEGER,
+                      ledger_hash TEXT,
+                      txlist_hash TEXT,
+                      messages_hash TEXT,
                       previous_block_hash TEXT UNIQUE,
                       difficulty INTEGER,
+                      transaction_count INTEGER,
                       PRIMARY KEY (block_index, block_hash))
                    """)
 
@@ -374,6 +396,17 @@ def initialise(db):
         cursor.execute("""ALTER TABLE blocks ADD COLUMN previous_block_hash TEXT""")
     if "difficulty" not in block_columns:
         cursor.execute("""ALTER TABLE blocks ADD COLUMN difficulty TEXT""")
+    if "transaction_count" not in block_columns:
+        logger.info("Adding transaction_count column to blocks table...")
+        cursor.execute("""ALTER TABLE blocks ADD COLUMN transaction_count INTEGER""")
+        cursor.execute("""
+            UPDATE blocks SET 
+                transaction_count = (
+                       SELECT COUNT(*)
+                       FROM transactions
+                       WHERE transactions.block_index = blocks.block_index
+                )
+        """)
 
     database.create_indexes(
         cursor,
@@ -418,6 +451,7 @@ def initialise(db):
             ["tx_hash"],
             ["block_index", "tx_index"],
             ["tx_index", "tx_hash", "block_index"],
+            ["source"],
         ],
     )
 
@@ -447,6 +481,9 @@ def initialise(db):
             ["address"],
             ["asset"],
             ["block_index"],
+            ["event"],
+            ["action"],
+            ["quantity"],
         ],
     )
 
@@ -474,6 +511,9 @@ def initialise(db):
             ["address"],
             ["asset"],
             ["block_index"],
+            ["event"],
+            ["calling_function"],
+            ["quantity"],
         ],
     )
 
@@ -501,6 +541,7 @@ def initialise(db):
             ["address"],
             ["asset"],
             ["block_index"],
+            ["quantity"],
         ],
     )
 
@@ -582,11 +623,14 @@ def initialise(db):
                       category TEXT,
                       bindings TEXT,
                       timestamp INTEGER,
-                      event TEXT)
+                      event TEXT,
+                      tx_hash TEXT)
                   """)
     columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(messages)""")]
     if "event" not in columns:
         cursor.execute("""ALTER TABLE messages ADD COLUMN event TEXT""")
+    if "tx_hash" not in columns:
+        cursor.execute("""ALTER TABLE messages ADD COLUMN tx_hash TEXT""")
 
     # TODO: FOREIGN KEY (block_index) REFERENCES blocks(block_index) DEFERRABLE INITIALLY DEFERRED)
     database.create_indexes(
@@ -596,6 +640,7 @@ def initialise(db):
             ["block_index"],
             ["block_index", "message_index"],
             ["event"],
+            ["tx_hash"],
         ],
     )
 
@@ -610,19 +655,20 @@ def initialise(db):
                         FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    """)
 
-    # Mempool messages
-    # NOTE: `status`, 'block_index` are removed from bindings.
-    cursor.execute("""DROP TABLE IF EXISTS mempool""")
-    cursor.execute("""CREATE TABLE mempool(
+    # Mempool events
+    cursor.execute("""CREATE TABLE IF NOT EXISTS mempool(
                       tx_hash TEXT,
                       command TEXT,
                       category TEXT,
                       bindings TEXT,
-                      timestamp INTEGER)
+                      timestamp INTEGER,
+                      event TEXT)
                   """)
     columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(mempool)""")]
     if "event" not in columns:
         cursor.execute("""ALTER TABLE mempool ADD COLUMN event TEXT""")
+
+    create_views(db)
 
     # Lock UPDATE on all tables
     for table in TABLES:
@@ -634,6 +680,151 @@ def initialise(db):
     cursor.close()
 
 
+def create_views(db):
+    cursor = db.cursor()
+    # Create Expiration View
+    expiration_queries = [
+        """
+        SELECT 'order' AS type, order_hash AS object_id, block_index,
+        CONCAT(CAST(block_index AS VARCAHR), '_order_', CAST(rowid AS VARCAHR)) AS cursor_id
+        FROM order_expirations
+        """,
+        """
+        SELECT 'order_match' AS type, order_match_id AS object_id, block_index,
+        CONCAT(CAST(block_index AS VARCAHR), '_order_match_', CAST(rowid AS VARCAHR)) AS cursor_id
+        FROM order_match_expirations
+        """,
+        """
+        SELECT 'bet' AS type, bet_hash AS object_id, block_index,
+        CONCAT(CAST(block_index AS VARCAHR), '_bet_', CAST(rowid AS VARCAHR)) AS cursor_id
+        FROM bet_expirations
+        """,
+        """
+        SELECT 'bet_match' AS type, bet_match_id AS object_id, block_index,
+        CONCAT(CAST(block_index AS VARCAHR), '_bet_match_', CAST(rowid AS VARCAHR)) AS cursor_id
+        FROM bet_match_expirations
+        """,
+        """
+        SELECT 'rps' AS type, rps_hash AS object_id, block_index,
+        CONCAT(CAST(block_index AS VARCAHR), '_rps_', CAST(rowid AS VARCAHR)) AS cursor_id
+        FROM rps_expirations
+        """,
+        """
+        SELECT 'rps_match' AS type, rps_match_id AS object_id, block_index,
+        CONCAT(CAST(block_index AS VARCAHR), '_rps_match_', CAST(rowid AS VARCAHR)) AS cursor_id
+        FROM rps_match_expirations
+        """,
+    ]
+    expiration_query = " UNION ALL ".join(expiration_queries)
+    expiration_query = f"CREATE VIEW IF NOT EXISTS all_expirations AS {expiration_query}"
+    cursor.execute(expiration_query)
+
+    # Create holders view
+    holders_queries = [
+        """
+        SELECT asset, address, quantity, NULL AS escrow, MAX(rowid) AS rowid,
+            CONCAT('balances_', CAST(rowid AS VARCAHR)) AS cursor_id, 'balances' AS holding_type, NULL AS status
+        FROM balances
+        GROUP BY asset, address
+        """,
+        """
+        SELECT * FROM (
+            SELECT give_asset AS asset, source AS address, give_remaining AS quantity, tx_hash AS escrow,
+                MAX(rowid) AS rowid, CONCAT('open_order_', CAST(rowid AS VARCAHR)) AS cursor_id,
+                'open_order' AS holding_type, status
+            FROM orders
+            GROUP BY tx_hash
+        ) WHERE status = 'open'
+        """,
+        """
+        SELECT * FROM (
+            SELECT forward_asset AS asset, tx0_address AS address, forward_quantity AS quantity,
+                id AS escrow, MAX(rowid) AS rowid, CONCAT('order_match_', CAST(rowid AS VARCAHR)) AS cursor_id,
+                'pending_order_match' AS holding_type, status
+            FROM order_matches
+            GROUP BY id
+        ) WHERE status = 'pending'
+        """,
+        """
+        SELECT * FROM (
+            SELECT backward_asset AS asset, tx1_address AS address, backward_quantity AS quantity,
+                id AS escrow, MAX(rowid) AS rowid, CONCAT('order_match_', CAST(rowid AS VARCAHR)) AS cursor_id,
+                'pending_order_match' AS holding_type, status
+            FROM order_matches
+            GROUP BY id
+        ) WHERE status = 'pending'
+        """,
+        """
+        SELECT * FROM (
+            SELECT 'XCP' AS asset, source AS address, wager_remaining AS quantity,
+            tx_hash AS escrow, MAX(rowid) AS rowid, CONCAT('open_bet_', CAST(rowid AS VARCAHR)) AS cursor_id,
+            'open_bet' AS holding_type, status
+            FROM bets
+            GROUP BY tx_hash
+        ) WHERE status = 'open'
+        """,
+        """
+        SELECT * FROM (
+            SELECT 'XCP' AS asset, tx0_address AS address, forward_quantity AS quantity,
+            id AS escrow, MAX(rowid) AS rowid, CONCAT('bet_match_', CAST(rowid AS VARCAHR)) AS cursor_id,
+            'pending_bet_match' AS holding_type, status
+            FROM bet_matches
+            GROUP BY id
+        ) WHERE status = 'pending'
+        """,
+        """
+        SELECT * FROM (
+            SELECT 'XCP' AS asset, tx1_address AS address, backward_quantity AS quantity,
+            id AS escrow, MAX(rowid) AS rowid, CONCAT('bet_match_', CAST(rowid AS VARCAHR)) AS cursor_id,
+            'pending_bet_match' AS holding_type, status
+            FROM bet_matches
+            GROUP BY id
+        ) WHERE status = 'pending'
+        """,
+        """
+        SELECT * FROM (
+            SELECT 'XCP' AS asset, source AS address, wager AS quantity,
+            tx_hash AS escrow, MAX(rowid) AS rowid, CONCAT('open_rps_', CAST(rowid AS VARCAHR)) AS cursor_id,
+            'open_rps' AS holding_type, status
+            FROM rps
+            GROUP BY tx_hash
+        ) WHERE status = 'open'
+        """,
+        """
+        SELECT * FROM (
+            SELECT 'XCP' AS asset, tx0_address AS address, wager AS quantity,
+            id AS escrow, MAX(rowid) AS rowid, CONCAT('rps_match_', CAST(rowid AS VARCAHR)) AS cursor_id,
+            'pending_rps_match' AS holding_type, status
+            FROM rps_matches
+            GROUP BY id
+        ) WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
+        """,
+        """
+        SELECT * FROM (
+            SELECT 'XCP' AS asset, tx1_address AS address, wager AS quantity,
+            id AS escrow, MAX(rowid) AS rowid, CONCAT('rps_match_', CAST(rowid AS VARCAHR)) AS cursor_id,
+            'pending_rps_match' AS holding_type, status
+            FROM rps_matches
+            GROUP BY id
+        ) WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
+        """,
+        """
+        SELECT * FROM (
+            SELECT asset, source AS address, give_remaining AS quantity,
+            tx_hash AS escrow, MAX(rowid) AS rowid, CONCAT('open_dispenser_', CAST(rowid AS VARCAHR)) AS cursor_id,
+            'open_dispenser' AS holding_type, status
+            FROM dispensers
+            GROUP BY source, asset
+        ) WHERE status = 0
+        """,
+    ]
+    holder_query = " UNION ALL ".join(holders_queries)
+    holder_query = f"CREATE VIEW IF NOT EXISTS all_holders AS {holder_query}"
+    cursor.execute(holder_query)
+
+    cursor.close()
+
+
 def list_tx(
     db,
     block_hash,
@@ -641,40 +832,24 @@ def list_tx(
     block_time,
     tx_hash,
     tx_index,
-    tx_hex=None,
-    decoded_tx=None,
+    decoded_tx,
     block_parser=None,
 ):
     assert type(tx_hash) == str  # noqa: E721
     cursor = db.cursor()
-
-    # Edge case: confirmed tx_hash also in mempool
-    # TODO: This is dog-slow.
-    if block_parser is None:  # skip on kickstart
-        cursor.execute("""SELECT * FROM transactions WHERE tx_hash = ?""", (tx_hash,))
-        transactions = list(cursor)
-        if transactions:
-            return tx_index
-
-    # Get the important details about each transaction.
-    if decoded_tx is None:
-        if tx_hex is None:
-            tx_hex = backend.getrawtransaction(tx_hash, block_index=block_index)
-        decoded_tx = BlockchainParser().deserialize_tx(tx_hex)
 
     source, destination, btc_amount, fee, data, dispensers_outs = get_tx_info(
         db, decoded_tx, block_index, block_parser=block_parser
     )
 
     # For mempool
-    if block_hash == None:  # noqa: E711
+    if block_hash is None or block_hash == config.MEMPOOL_BLOCK_HASH:
         block_hash = config.MEMPOOL_BLOCK_HASH
         block_index = config.MEMPOOL_BLOCK_INDEX
     else:
         assert block_index == util.CURRENT_BLOCK_INDEX
 
     if source and (data or destination == config.UNSPENDABLE or dispensers_outs):
-        logger.debug(f"Saving transaction: {tx_hash}")
         transaction_bindings = {
             "tx_index": tx_index,
             "tx_hash": tx_hash,
@@ -712,7 +887,7 @@ def list_tx(
 
 
 def clean_table_from(cursor, table, block_index):
-    logger.info(f"Rolling table `{table}` back to block {block_index}...")
+    logger.debug(f"Rolling back table `{table}`...")
     # internal function, no sql injection here
     cursor.execute(f"""DELETE FROM {table} WHERE block_index >= ?""", (block_index,))  # nosec B608  # noqa: S608
 
@@ -745,7 +920,7 @@ def rebuild_database(db, include_transactions=True):
     if include_transactions:
         tables_to_clean += ["transaction_outputs", "transactions", "blocks"]
     for table in tables_to_clean:
-        cursor.execute(f"DROP TABLE {table}")  # nosec B608
+        cursor.execute(f"DROP TABLE IF EXISTS {table}")  # nosec B608
     cursor.execute("""PRAGMA foreign_keys=ON""")
     initialise(db)
 
@@ -753,9 +928,9 @@ def rebuild_database(db, include_transactions=True):
 def rollback(db, block_index=0):
     block_index = max(block_index, config.BLOCK_FIRST)
     # clean all tables
-    start_time = time.time()
-    step = f"Rolling database back to block {block_index}..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    step = f"Rolling database back to Block {block_index}..."
+    done_message = f"Database rolled back to Block {block_index} ({{}}s)"
+    with log.Spinner(step, done_message):
         if block_index == config.BLOCK_FIRST:
             rebuild_database(db)
         else:
@@ -763,10 +938,7 @@ def rollback(db, block_index=0):
             cursor = db.cursor()
             clean_transactions_tables(cursor, block_index=block_index)
             cursor.close()
-        logger.info(f"Database rolled back to block_index {block_index}")
     util.CURRENT_BLOCK_INDEX = block_index - 1
-    print(f"{OK_GREEN} {step}")
-    print(f"Rollback done in {time.time() - start_time:.2f}s")
 
 
 def generate_progression_message(
@@ -781,7 +953,7 @@ def generate_progression_message(
     cumulated_duration = time.time() - start_time_all_blocks_parse
     expected_duration = (cumulated_duration / block_parsed_count) * block_count
     remaining_duration = expected_duration - cumulated_duration
-    current_block = f"Block {block['block_index']} parsed in {block_parsing_duration:.3f}s"
+    current_block = f"Block {block['block_index']} parsed in {block_parsing_duration:.2f}s"
     blocks_parsed = f"{block_parsed_count}/{block_count} blocks parsed"
     txs_indexed = " - "
     if tx_index is not None:
@@ -796,28 +968,27 @@ def generate_progression_message(
 def reparse(db, block_index=0):
     cursor = db.cursor()
     # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
-    step = f"Rolling database back to block {block_index}..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner(f"Rolling database back to Block {block_index}..."):
         clean_messages_tables(db, block_index=block_index)
-    print(f"{OK_GREEN} {step}")
 
-    step = "Cleaning consensus hashes..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    step = "Recalculating consensus hashes..."
+    with log.Spinner("Recalculating consensus hashes..."):
         query = """
             UPDATE blocks 
             SET ledger_hash=NULL, txlist_hash=NULL, messages_hash=NULL 
             WHERE block_index >= ?
         """
         cursor.execute(query, (block_index,))
-    print(f"{OK_GREEN} {step}")
 
     # reparse blocks
     start_time_all_blocks_parse = time.time()
     block_parsed_count = 0
     count_query = "SELECT COUNT(*) AS cnt FROM blocks WHERE block_index >= ?"
     block_count = cursor.execute(count_query, (block_index,)).fetchone()["cnt"]
-    step = f"Reparsing blocks from block {block_index}..."
-    with Halo(text=step, spinner=SPINNER_STYLE) as spinner:
+    step = f"Reparsing blocks from Block {block_index}..."
+    done_message = "All blocks reparsed in {:.2f}s."  # TODO: this is logged even if the operation is interrupted
+    message = ""
+    with log.Spinner(step, done_message) as spinner:
         cursor.execute(
             """SELECT * FROM blocks WHERE block_index >= ? ORDER BY block_index""", (block_index,)
         )
@@ -839,14 +1010,21 @@ def reparse(db, block_index=0):
                     "difficulty": block["difficulty"],
                 },
             )
-            previous_block = ledger.get_block(db, block["block_index"] - 1)
+            previous_ledger_hash = None
+            previous_txlist_hash = None
+            previous_messages_hash = None
+            if util.CURRENT_BLOCK_INDEX > config.BLOCK_FIRST:
+                previous_block = ledger.get_block(db, block["block_index"] - 1)
+                previous_ledger_hash = previous_block["ledger_hash"]
+                previous_txlist_hash = previous_block["txlist_hash"]
+                previous_messages_hash = previous_block["messages_hash"]
             parse_block(
                 db,
                 block["block_index"],
                 block["block_time"],
-                previous_ledger_hash=previous_block["ledger_hash"],
-                previous_txlist_hash=previous_block["txlist_hash"],
-                previous_messages_hash=previous_block["messages_hash"],
+                previous_ledger_hash=previous_ledger_hash,
+                previous_txlist_hash=previous_txlist_hash,
+                previous_messages_hash=previous_messages_hash,
                 reparsing=True,
             )
             block_parsed_count += 1
@@ -857,23 +1035,7 @@ def reparse(db, block_index=0):
                 block_parsed_count,
                 block_count,
             )
-            spinner.text = message
-    print(f"{OK_GREEN} {message}")
-    print(f"All blocks reparsed in {time.time() - start_time_all_blocks_parse:.2f}s")
-
-
-def last_db_index(db):
-    cursor = db.cursor()
-    query = "SELECT name FROM sqlite_master WHERE type='table' AND name='blocks'"
-    if len(list(cursor.execute(query))) == 0:
-        return 0
-
-    query = "SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1"
-    blocks = list(cursor.execute(query))
-    if len(blocks) == 0:
-        return 0
-
-    return blocks[0]["block_index"]
+            spinner.set_messsage(message)
 
 
 def get_next_tx_index(db):
@@ -893,390 +1055,171 @@ def get_next_tx_index(db):
     return tx_index
 
 
-class MempoolError(Exception):
-    pass
+def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
+    start_time = time.time()
 
+    # increment block index
+    util.CURRENT_BLOCK_INDEX += 1
 
-def follow(db):
-    # Check software version.
-    check.software_version()
-    last_software_check = time.time()
+    # get next tx index if not provided
+    if tx_index is None:
+        tx_index = get_next_tx_index(db)
 
-    # Get index of last block.
-    if util.CURRENT_BLOCK_INDEX == 0:
-        logger.warning("New database.")
-        block_index = config.BLOCK_FIRST
-        database.update_version(db)
+    if util.CURRENT_BLOCK_INDEX > config.BLOCK_FIRST:
+        # get previous block
+        previous_block = ledger.get_block(db, util.CURRENT_BLOCK_INDEX - 1)
+
+        # check if reorg is needed
+        if decoded_block["hash_prev"] != previous_block["block_hash"]:
+            if "height" in decoded_block:
+                previous_block_index = decoded_block["height"] - 1
+            else:
+                previous_block_index = backend.bitcoind.get_block_height(decoded_block["hash_prev"])
+            logger.info("Blockchain reorganization detected at Block %s.", previous_block_index)
+            # rollback to the previous block
+            rollback(db, block_index=previous_block_index + 1)
+            util.CURRENT_BLOCK_INDEX = previous_block_index + 1
+            tx_index = get_next_tx_index(db)
     else:
-        block_index = util.CURRENT_BLOCK_INDEX + 1
+        previous_block = {
+            "ledger_hash": None,
+            "txlist_hash": None,
+            "messages_hash": None,
+        }
 
-        # Check database version.
-        try:
-            check.database_version(db)
-        except check.DatabaseVersionError as e:
-            logger.info(str(e))
-            # no need to rollback a new database
-            if block_index != config.BLOCK_FIRST:
-                if e.required_action == "rollback":
-                    rollback(db, block_index=e.from_block_index)
-                    block_index = e.from_block_index
-                elif e.required_action == "reparse":
-                    reparse(db, block_index=e.from_block_index)
-            database.update_version(db)
+    if "height" not in decoded_block:
+        decoded_block["block_index"] = util.CURRENT_BLOCK_INDEX
+    else:
+        decoded_block["block_index"] = decoded_block["height"]
 
-    logger.info("Resuming parsing.")
-    if config.NO_MEMPOOL:
-        logger.warning("Mempool parsing disabled.")
+    with db:  # ensure all the block or nothing
+        logger.info(f"Block {decoded_block['block_index']}", extra={"bold": True})
+        # insert block
+        block_bindings = {
+            "block_index": decoded_block["block_index"],
+            "block_hash": decoded_block["block_hash"],
+            "block_time": decoded_block["block_time"],
+            "previous_block_hash": decoded_block["hash_prev"],
+            "difficulty": decoded_block["bits"],
+        }
+        ledger.insert_record(db, "blocks", block_bindings, "NEW_BLOCK")
 
-    # If we're far behind, start Prefetcher.
-    block_count = backend.getblockcount()  # TODO: Need retry logic
-    if block_index <= block_count - 2000:
-        prefetcher.start_all(NUM_PREFETCHER_THREADS)
+        # save transactions
+        for transaction in decoded_block["transactions"]:
+            # for kickstart
+            if block_parser is not None:
+                # Cache transaction. We do that here because the block is fetched by another process.
+                block_parser.put_in_cache(transaction)
+            tx_index = list_tx(
+                db,
+                decoded_block["block_hash"],
+                decoded_block["block_index"],
+                decoded_block["block_time"],
+                transaction["tx_hash"],
+                tx_index,
+                decoded_tx=transaction,
+                block_parser=block_parser,
+            )
+        # Parse the transactions in the block.
+        new_ledger_hash, new_txlist_hash, new_messages_hash = parse_block(
+            db,
+            decoded_block["block_index"],
+            decoded_block["block_time"],
+            previous_ledger_hash=previous_block["ledger_hash"],
+            previous_txlist_hash=previous_block["txlist_hash"],
+            previous_messages_hash=previous_block["messages_hash"],
+        )
+        duration = time.time() - start_time
+
+        log_message = "Block %(block_index)s - Parsing complete. L: %(ledger_hash)s, TX: %(txlist_hash)s, M: %(messages_hash)s (%(duration).2fs)"
+        logger.info(
+            log_message,
+            {
+                "block_index": decoded_block["block_index"],
+                "ledger_hash": new_ledger_hash,
+                "txlist_hash": new_txlist_hash,
+                "messages_hash": new_messages_hash,
+                "duration": duration,
+            },
+        )
+
+    return tx_index
+
+
+def check_database_version(db):
+    # Update version if new database.
+    if util.CURRENT_BLOCK_INDEX <= config.BLOCK_FIRST:
+        database.update_version(db)
+        return
+    try:
+        check.database_version(db)
+    except check.DatabaseVersionError as e:
+        logger.info(str(e))
+        # rollback or reparse the database
+        if e.required_action == "rollback":
+            rollback(db, block_index=e.from_block_index)
+        elif e.required_action == "reparse":
+            reparse(db, block_index=e.from_block_index)
+        # refresh the current block index
+        util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
+        # update the database version
+        database.update_version(db)
+
+
+def catch_up(db, check_asset_conservation=True):
+    # update the current block index
+    util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
+    if util.CURRENT_BLOCK_INDEX == 0:
+        logger.info("New database.")
+        util.CURRENT_BLOCK_INDEX = config.BLOCK_FIRST - 1
+
+    # Get block count.
+    block_count = backend.bitcoind.getblockcount()
+
+    # Wait for bitcoind to catch up at least one block after util.CURRENT_BLOCK_INDEX
+    if backend.bitcoind.get_blocks_behind() > 0 and block_count <= util.CURRENT_BLOCK_INDEX:
+        backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
+        block_count = backend.bitcoind.getblockcount()
+
+    # initialize blocks fetcher
+    # block_fetcher = backend.bitcoind.BlockFetcher(util.CURRENT_BLOCK_INDEX + 1)
+    fetcher.initialize(util.CURRENT_BLOCK_INDEX + 1)
 
     # Get index of last transaction.
     tx_index = get_next_tx_index(db)
 
-    not_supported = {}  # No false positives. Use a dict to allow for O(1) lookups
-    not_supported_sorted = collections.deque()
-    # ^ Entries in form of (block_index, tx_hash), oldest first. Allows for easy removal of past, unncessary entries
-    cursor = db.cursor()
+    start_time = time.time()
+    parsed_blocks = 0
 
-    # a reorg can happen without the block count increasing, or even for that
-    # matter, with the block count decreasing. This should only delay
-    # processing of the new blocks a bit.
-    while True:
-        start_time = time.time()
+    while util.CURRENT_BLOCK_INDEX < block_count:
+        # Get block information and transactions
+        decoded_block = fetcher.get_block()
+        # decoded_block = block_fetcher.get_block()
+        # util.CURRENT_BLOCK_INDEX is incremented in parse_new_block
+        tx_index = parse_new_block(db, decoded_block, block_parser=None, tx_index=tx_index)
 
-        # Get block count.
-        # If the backend is unreachable and `config.FORCE` is set, just sleep
-        # and try again repeatedly.
-        try:
-            block_count = backend.getblockcount()
-        except (
-            ConnectionRefusedError,
-            http.client.CannotSendRequest,
-            backend.addrindexrs.BackendRPCError,
-        ) as e:
-            if config.FORCE:
-                time.sleep(config.BACKEND_POLL_INTERVAL)
-                continue
-            else:
-                raise e
+        parsed_blocks += 1
+        duration_seconds = int(time.time() - start_time)
+        hours, remainder = divmod(duration_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        formatted_duration = f"{hours}h {minutes}m {seconds}s"
+        logger.debug(
+            f"Block {util.CURRENT_BLOCK_INDEX}/{block_count} parsed, for {parsed_blocks} blocks in {formatted_duration}."
+        )
 
-        # Stop Prefetcher thread as we get close to today.
-        if block_index >= block_count - 100:
-            prefetcher.stop_all()
+        # Refresh block count.
+        if util.CURRENT_BLOCK_INDEX == block_count:
+            # if bitcoind is catching up, wait for the next block
+            if backend.bitcoind.get_blocks_behind() > 0:
+                backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
+            block_count = backend.bitcoind.getblockcount()
 
-        # Get new blocks.
-        if block_index <= block_count:
-            # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
-            current_index = block_index
-            requires_rollback = False
-            while True:
-                if current_index == config.BLOCK_FIRST:
-                    break
+    fetcher.stop()
 
-                logger.debug(f"Checking that block {current_index} is not an orphan.")
-                # Backend parent hash.
-                current_hash = backend.getblockhash(current_index)
-                current_cblock = backend.getblock(current_hash)
-                backend_parent = bitcoinlib.core.b2lx(current_cblock.hashPrevBlock)
+    if config.CHECK_ASSET_CONSERVATION and check_asset_conservation:
+        # TODO: timer to check asset conservation every N hours
+        check.asset_conservation(db)
+        # catch up new blocks during asset conservation check
+        catch_up(db, check_asset_conservation=False)
 
-                # DB parent hash.
-                blocks = list(
-                    cursor.execute(
-                        """SELECT * FROM blocks
-                                                WHERE block_index = ?""",
-                        (current_index - 1,),
-                    )
-                )
-                if len(blocks) != 1:  # For empty DB.
-                    break
-                db_parent = blocks[0]["block_hash"]
-
-                # Compare.
-                assert type(db_parent) == str  # noqa: E721
-                assert type(backend_parent) == str  # noqa: E721
-                if db_parent == backend_parent:
-                    break
-                else:
-                    current_index -= 1
-                    requires_rollback = True
-
-            # Rollback for reorganisation.
-            if requires_rollback:
-                # Record reorganisation.
-                logger.warning(f"Blockchain reorganisation at block {current_index}.")
-                ledger.add_to_journal(
-                    db,
-                    block_index,
-                    "reorg",
-                    "blocks",
-                    "BLOCKCHAIN_REORGANISATION",
-                    {"block_index": current_index},
-                )
-
-                # Rollback the DB.
-                rollback(db, block_index=current_index - 1)
-                block_index = current_index - 1
-                tx_index = get_next_tx_index(db)
-                continue
-
-            # Check version every 24H.
-            # (Don’t add more blocks to the database while
-            # running an out‐of‐date client!)
-            if time.time() - last_software_check > 86400:
-                last_software_check = time.time()
-                check.software_version()
-
-            # Get and parse transactions in this block (atomically).
-            # logger.debug(f'Blockchain cache size: {len(backend.BLOCKCHAIN_CACHE)}')
-            if current_index in backend.BLOCKCHAIN_CACHE:
-                # logger.debug(f'Blockchain cache hit! Block index: {current_index}')
-                block_hash = backend.BLOCKCHAIN_CACHE[current_index]["block_hash"]
-                txhash_list = backend.BLOCKCHAIN_CACHE[current_index]["txhash_list"]
-                raw_transactions = backend.BLOCKCHAIN_CACHE[current_index]["raw_transactions"]
-                previous_block_hash = backend.BLOCKCHAIN_CACHE[current_index]["previous_block_hash"]
-                block_time = backend.BLOCKCHAIN_CACHE[current_index]["block_time"]
-                block_difficulty = backend.BLOCKCHAIN_CACHE[current_index]["block_difficulty"]
-                del backend.BLOCKCHAIN_CACHE[current_index]
-            else:
-                if block_index < block_count - 100:
-                    logger.warning(f"Blockchain cache miss :/ Block index: {current_index}")
-                block_hash = backend.getblockhash(current_index)
-                block = backend.getblock(block_hash)
-                previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
-                block_time = block.nTime
-                txhash_list, raw_transactions = backend.get_tx_list(
-                    block,
-                    correct_segwit=util.enabled("correct_segwit_txids", block_index=block_index),
-                )
-                block_difficulty = block.difficulty
-
-            with db:
-                util.CURRENT_BLOCK_INDEX = block_index
-
-                # List the block.
-                block_bindings = {
-                    "block_index": block_index,
-                    "block_hash": block_hash,
-                    "block_time": block_time,
-                    "previous_block_hash": previous_block_hash,
-                    "difficulty": block_difficulty,
-                }
-                ledger.insert_record(db, "blocks", block_bindings, "NEW_BLOCK")
-
-                # List the transactions in the block.
-                for tx_hash in txhash_list:
-                    tx_hex = raw_transactions[tx_hash]
-                    tx_index = list_tx(
-                        db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex
-                    )
-
-                # Parse the transactions in the block.
-                new_ledger_hash, new_txlist_hash, new_messages_hash, found_messages_hash = (
-                    parse_block(db, block_index, block_time)
-                )
-
-            # When newly caught up, check for conservation of assets.
-            if block_index == block_count:
-                if config.CHECK_ASSET_CONSERVATION:
-                    check.asset_conservation(db)
-                else:
-                    logger.debug("Skip asset conservation check.")
-
-            # Remove any non‐supported transactions older than ten blocks.
-            while len(not_supported_sorted) and not_supported_sorted[0][0] <= block_index - 10:
-                tx_h = not_supported_sorted.popleft()[1]
-                del not_supported[tx_h]
-
-            duration = time.time() - start_time
-            overwrote_hash = (
-                found_messages_hash
-                if found_messages_hash and found_messages_hash != new_messages_hash
-                else ""
-            )
-            overwrote = f"[overwrote {overwrote_hash}]" if overwrote_hash else ""
-            logger.info(
-                f"Block: {block_index} ({duration:.2f}, hashes: L:{new_ledger_hash[-5:]} / TX:{new_txlist_hash[-5:]} / M:{new_messages_hash[-5:]}{overwrote})"
-            )
-
-            # Increment block index.
-            block_count = backend.getblockcount()
-            block_index += 1
-
-        elif config.NO_MEMPOOL is False:
-            # TODO: add zeromq support here to await TXs and Blocks instead of constantly polling
-            # Get old mempool.
-            old_mempool = list(cursor.execute("""SELECT * FROM mempool"""))
-            old_mempool_hashes = [message["tx_hash"] for message in old_mempool]
-
-            if backend.MEMPOOL_CACHE_INITIALIZED is False:
-                backend.init_mempool_cache()
-                logger.info("Ready for queries.")
-
-            # Fake values for fake block.
-            curr_time = int(time.time())
-            mempool_tx_index = tx_index
-
-            xcp_mempool = []
-            raw_mempool = backend.getrawmempool()
-
-            # For each transaction in Bitcoin Core mempool, if it’s new, create
-            # a fake block, a fake transaction, capture the generated messages,
-            # and then save those messages.
-            # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
-            # We first filter out which transactions we've already parsed before so we can batch fetch their raw data
-            parse_txs = []
-            for tx_hash in raw_mempool:
-                # If already in mempool, copy to new one.
-                if tx_hash in old_mempool_hashes:
-                    for message in old_mempool:
-                        if message["tx_hash"] == tx_hash:
-                            xcp_mempool.append((tx_hash, message))
-
-                # If not a supported XCP transaction, skip.
-                elif tx_hash in not_supported:
-                    pass
-
-                # Else: list, parse and save it.
-                else:
-                    parse_txs.append(tx_hash)
-
-            # fetch raw for all transactions that need to be parsed
-            # Sometimes the transactions can’t be found: `{'code': -5, 'message': 'No information available about transaction'}`
-            #  - is txindex enabled in Bitcoind?
-            #  - or was there a block found while batch feting the raw txs
-            #  - or was there a double spend for w/e reason accepted into the mempool (replace-by-fee?)
-            try:
-                raw_transactions = backend.getrawtransaction_batch(parse_txs, skip_missing=True)
-            except Exception as e:
-                logger.warning("Failed to fetch raw for mempool TXs, restarting loop; %s", (e,))
-                continue  # restart the follow loop
-
-            parsed_txs_count = 0
-            for tx_hash in parse_txs:
-                # Get block count everytime we parse some mempool_txs. If there is a new block, we just interrupt this process
-                if parsed_txs_count % 100 == 0:
-                    if len(parse_txs) > 1000:
-                        logger.trace(
-                            f"Mempool parsed txs count:{parsed_txs_count} from {len(parse_txs)}"
-                        )
-
-                    try:
-                        block_count = backend.getblockcount()
-
-                        if block_index <= block_count:
-                            logger.info("Mempool parsing interrupted, there are blocks to parse")
-                            break  # Interrupt the process if there is a new block to parse
-                    except (
-                        ConnectionRefusedError,
-                        http.client.CannotSendRequest,
-                        backend.addrindexrs.BackendRPCError,
-                    ) as e:  # noqa: F841
-                        # Keep parsing what we have, anyway if there is a temporary problem with the server,
-                        # normal parse won't work
-                        pass
-
-                try:
-                    with db:
-                        # List the fake block.
-                        cursor.execute(
-                            """INSERT INTO blocks(
-                                            block_index,
-                                            block_hash,
-                                            block_time) VALUES(?,?,?)""",
-                            (config.MEMPOOL_BLOCK_INDEX, config.MEMPOOL_BLOCK_HASH, curr_time),
-                        )
-
-                        tx_hex = raw_transactions[tx_hash]
-                        if tx_hex is None:
-                            # logger.debug(
-                            #     "tx_hash %s not found in backend.  Not adding to mempool.",
-                            #     (tx_hash,),
-                            # )
-                            raise MempoolError
-                        mempool_tx_index = list_tx(
-                            db,
-                            None,
-                            block_index,
-                            curr_time,
-                            tx_hash,
-                            tx_index=mempool_tx_index,
-                            tx_hex=tx_hex,
-                        )
-
-                        # Parse transaction.
-                        cursor.execute(
-                            """SELECT * FROM transactions WHERE tx_hash = ?""", (tx_hash,)
-                        )
-                        transactions = list(cursor)
-                        if transactions:
-                            assert len(transactions) == 1
-                            transaction = transactions[0]
-                            supported = parse_tx(db, transaction)
-                            if not supported:
-                                not_supported[tx_hash] = ""
-                                not_supported_sorted.append((block_index, tx_hash))
-                        else:
-                            # If a transaction hasn’t been added to the
-                            # table `transactions`, then it’s not a
-                            # Counterparty transaction.
-                            not_supported[tx_hash] = ""
-                            not_supported_sorted.append((block_index, tx_hash))
-                            raise MempoolError
-
-                        # Save transaction and side‐effects in memory.
-                        cursor.execute(
-                            """SELECT * FROM messages WHERE block_index = ?""",
-                            (config.MEMPOOL_BLOCK_INDEX,),
-                        )
-                        for message in list(cursor):
-                            xcp_mempool.append((tx_hash, message))
-
-                        # Rollback.
-                        raise MempoolError
-                except exceptions.ParseTransactionError as e:
-                    logger.warning(f"ParseTransactionError for tx {tx_hash}: {e}")
-                except MempoolError:
-                    pass
-
-                parsed_txs_count = parsed_txs_count + 1
-
-            if parsed_txs_count < len(parse_txs):
-                continue  # if parse didn't finish is an interruption
-            else:
-                if len(parse_txs) > 1000:
-                    logger.info("Mempool parsing finished")
-
-            # Re‐write mempool messages to database.
-            with db:
-                cursor.execute("""DELETE FROM mempool""")
-                for message in xcp_mempool:
-                    tx_hash, new_message = message
-                    new_message["tx_hash"] = tx_hash
-                    cursor.execute(
-                        """INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp, :event)""",
-                        new_message,
-                    )
-
-            elapsed_time = time.time() - start_time
-            sleep_time = (
-                config.BACKEND_POLL_INTERVAL - elapsed_time
-                if elapsed_time <= config.BACKEND_POLL_INTERVAL
-                else 0
-            )
-
-            logger.trace(
-                f"Mempool refreshed ({len(xcp_mempool)} Counterparty / {len(raw_mempool)} Bitcoin transactions)"
-            )
-
-            # Wait
-            # db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
-            time.sleep(sleep_time)
-        else:
-            # Wait
-            # logger.trace(f"Waiting for new blocks. Block index: {block_index}")
-
-            # db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
-            time.sleep(config.BACKEND_POLL_INTERVAL)
+    logger.info("Catch up complete.")

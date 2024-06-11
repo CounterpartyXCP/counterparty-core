@@ -226,8 +226,16 @@ def parse(db, tx, message):
 
             ledger.insert_record(db, "sends", bindings, "MPMA_SEND")
 
+            logger.info(
+                "Send (MPMA) %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]",
+                bindings,
+            )
+
     if status != "valid":
-        logger.debug(f"Not storing [mpma] tx [{tx['tx_hash']}]: {status}")
+        logger.info(
+            "Invalid MPMA Send (%(tx_hash)s) [%(status)s]",
+            {"tx_hash": tx["tx_hash"], "status": status},
+        )
 
     cursor.close()
 

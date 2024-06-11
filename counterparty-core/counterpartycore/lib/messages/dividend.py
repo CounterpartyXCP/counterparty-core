@@ -3,7 +3,6 @@
 """Pay out dividends."""
 
 import decimal
-import json
 import struct
 
 D = decimal.Decimal
@@ -318,8 +317,10 @@ def parse(db, tx, message):
 
     if "integer overflow" not in status:
         ledger.insert_record(db, "dividends", bindings, "ASSET_DIVIDEND")
-    else:
-        logger.debug(f"Not storing [dividend] tx [{tx['tx_hash']}]: {status}")
-        logger.debug(f"Bindings: {json.dumps(bindings)}")
+
+    logger.info(
+        "Dividend of %(quantity_per_unit)s %(dividend_asset)s per unit of %(asset)s (%(tx_hash)s) [%(status)s]",
+        bindings,
+    )
 
     dividend_parse_cursor.close()

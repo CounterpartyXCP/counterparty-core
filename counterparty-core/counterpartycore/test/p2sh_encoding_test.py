@@ -20,14 +20,14 @@ logger = logging.getLogger(__name__)
 from counterpartycore.lib import (  # noqa: E402
     backend,
     config,
+    deserialize,
     exceptions,
     gettxinfo,
     script,
     transaction,
     util,
 )
-from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
-from counterpartycore.lib.transaction_helper import p2sh_encoding, serializer  # noqa: E402, F401
+from counterpartycore.lib.transaction_helper import p2sh_encoding  # noqa: E402
 
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"
 FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
@@ -47,7 +47,7 @@ def test_p2sh_encoding_composed(server_db):
         parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = (
             gettxinfo._get_tx_info(
                 server_db,
-                BlockchainParser().deserialize_tx(datatxhex, True),
+                deserialize.deserialize_tx(datatxhex, use_txid=True),
                 util.CURRENT_BLOCK_INDEX,
             )
         )
@@ -70,7 +70,8 @@ def test_p2sh_encoding(server_db):
         DISABLE_ARC4_MOCKING=True, OLD_STYLE_API=True
     ), util_test.MockProtocolChangesContext(enhanced_sends=True, p2sh_encoding=True):
         utxos = dict(
-            ((utxo["txid"], utxo["vout"]), utxo) for utxo in backend.get_unspent_txouts(source)
+            ((utxo["txid"], utxo["vout"]), utxo)
+            for utxo in backend.addrindexrs.get_unspent_txouts(source)
         )
 
         fee = 20000
@@ -137,7 +138,7 @@ def test_p2sh_encoding(server_db):
         with pytest.raises(exceptions.BTCOnlyError):
             gettxinfo._get_tx_info(
                 server_db,
-                BlockchainParser().deserialize_tx(pretxhex, True),
+                deserialize.deserialize_tx(pretxhex, True),
                 util.CURRENT_BLOCK_INDEX,
             )
 
@@ -213,7 +214,7 @@ def test_p2sh_encoding(server_db):
         parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = (
             gettxinfo._get_tx_info(
                 server_db,
-                BlockchainParser().deserialize_tx(datatxhex, True),
+                deserialize.deserialize_tx(datatxhex, True),
                 util.CURRENT_BLOCK_INDEX,
             )
         )
@@ -247,7 +248,8 @@ def test_p2sh_encoding_long_data(server_db):
         enhanced_sends=True, p2sh_encoding=True
     ):
         utxos = dict(
-            ((utxo["txid"], utxo["vout"]), utxo) for utxo in backend.get_unspent_txouts(source)
+            ((utxo["txid"], utxo["vout"]), utxo)
+            for utxo in backend.addrindexrs.get_unspent_txouts(source)
         )
 
         # pprint.pprint(utxos)
@@ -405,7 +407,7 @@ def test_p2sh_encoding_long_data(server_db):
         parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = (
             gettxinfo._get_tx_info(
                 server_db,
-                BlockchainParser().deserialize_tx(datatxhex, True),
+                deserialize.deserialize_tx(datatxhex, True),
                 util.CURRENT_BLOCK_INDEX,
             )
         )
@@ -526,7 +528,7 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
         parsed_source, parsed_destination, parsed_btc_amount, parsed_fee, parsed_data, extra = (
             gettxinfo._get_tx_info(
                 server_db,
-                BlockchainParser().deserialize_tx(datatxhex, True),
+                deserialize.deserialize_tx(datatxhex, True),
                 util.CURRENT_BLOCK_INDEX,
             )
         )
@@ -548,7 +550,7 @@ def test_p2sh_script_decoding():
     script_hex = "1c8a5dda15fb6f05628a061e67576e926dc71a7fa2f0cceb97452b4d564101a914c088c83aeddd211096df9f5f0df1f3b885ac7fe70188210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ad0075740087"
     script_sig = bitcoinlib.core.script.CScript(binascii.unhexlify(script_hex))
 
-    print("scriptSig", repr(script_sig), list(script_sig), len(list(script_sig)))
+    print("script_sig", repr(script_sig), list(script_sig), len(list(script_sig)))
 
     chunks = list(script_sig)
     if len(chunks) == 3:
@@ -585,9 +587,9 @@ def test_p2sh_signed_multisig_script_decoding():
     with util_test.ConfigContext(PREFIX=b"CNTRPRTY"):
         txHex = "0100000001bae95e59f83e55035f566dc0e3034f79f0d670dc6d6a0d207a11b4e49e9baecf00000000fd0301483045022100d2d38c2d98285e44a271e91894622fa85044469257dbfc15a49e1ba98cddaf8002202b06bf0ca9d65af9f9c96db13c7585b4cd66cabedba269f9b70659dd8e456c46014cb84c8d434e5452505254591e5a3ae08000000000000000000000000073434950203620737570706f727473207573696e672070327368206164647265737365732061732074686520736f7572636520616464726573732062757420726571756972657320616e206164646974696f6e616c20696e70757420696e207468652064617461207472616e73616374696f6e2e752102e53b79237cacdc221cff4c0fb320223cac3e0fe30a682a22f19a70a3975aa3f8ad0075740087ffffffff0100000000000000000e6a0c804e42751677319b884a2d1b00000000"
 
-        ctx = BlockchainParser().deserialize_tx(txHex, True)
+        ctx = deserialize.deserialize_tx(txHex, True)
         vin = ctx["vin"][0]
-        asm = script.script_to_asm(vin["scriptSig"])
+        asm = script.script_to_asm(vin["script_sig"])
         new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(asm)
 
         assert new_data == binascii.unhexlify(

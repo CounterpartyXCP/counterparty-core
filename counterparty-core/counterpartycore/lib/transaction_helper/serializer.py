@@ -196,7 +196,7 @@ def serialise(
     use_segwit = False
     for i in range(len(inputs)):
         txin = inputs[i]
-        spk = txin["scriptPubKey"]
+        spk = txin["script_pub_key"]
         if spk[0:2] == "00":  # Witness version 0
             datalen = binascii.unhexlify(spk[2:4])[0]
             if datalen == 20 or datalen == 32:
@@ -223,7 +223,7 @@ def serialise(
         s += binascii.unhexlify(bytes(txin["txid"], "utf-8"))[::-1]  # TxOutHash
         s += txin["vout"].to_bytes(4, byteorder="little")  # TxOutIndex
 
-        tx_script = binascii.unhexlify(bytes(txin["scriptPubKey"], "utf-8"))
+        tx_script = binascii.unhexlify(bytes(txin["script_pub_key"], "utf-8"))
         s += var_int(int(len(tx_script)))  # Script length
         s += tx_script  # Script
         s += b"\xff" * 4  # Sequence
@@ -367,7 +367,7 @@ def serialise_p2sh_pretx(
         s += binascii.unhexlify(bytes(txin["txid"], "utf-8"))[::-1]  # TxOutHash
         s += txin["vout"].to_bytes(4, byteorder="little")  # TxOutIndex
 
-        tx_script = binascii.unhexlify(bytes(txin["scriptPubKey"], "utf-8"))
+        tx_script = binascii.unhexlify(bytes(txin["script_pub_key"], "utf-8"))
         s += var_int(int(len(tx_script)))  # Script length
         s += tx_script  # Script
         s += b"\xff" * 4  # Sequence
@@ -441,9 +441,9 @@ def serialise_p2sh_datatx(
         s += source_input["vout"].to_bytes(4, byteorder="little")  # TxOutIndex
 
         # since pubkey is not returned from indexd, add it from bitcoind
-        source_inputs = backend.ensure_script_pub_key_for_inputs([source_input])
+        source_inputs = script.ensure_script_pub_key_for_inputs([source_input])
         source_input = source_inputs[0]
-        tx_script = binascii.unhexlify(bytes(source_input["scriptPubKey"], "utf-8"))
+        tx_script = binascii.unhexlify(bytes(source_input["script_pub_key"], "utf-8"))
         s += var_int(int(len(tx_script)))  # Script length
         s += tx_script  # Script
         s += b"\xff" * 4  # Sequence

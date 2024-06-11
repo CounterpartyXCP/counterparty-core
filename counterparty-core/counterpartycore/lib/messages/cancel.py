@@ -1,17 +1,14 @@
-#! /usr/bin/python3
-
 """
 offer_hash is the hash of either a bet or an order.
 """
 
 import binascii
-import json
 import logging
 import struct
 
 from counterpartycore.lib import config, database, exceptions, ledger, message_type
 
-from . import bet, order, rps
+from . import bet, order
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -58,21 +55,18 @@ def validate(db, source, offer_hash):
     # TODO: make query only if necessary
     orders = ledger.get_order(db, order_hash=offer_hash)
     bets = ledger.get_bet(db, bet_hash=offer_hash)
-    rps = ledger.get_rps(db, tx_hash=offer_hash)
 
     offer_type = None
     if orders:
         offer_type = "order"
     elif bets:
         offer_type = "bet"
-    elif rps:
-        offer_type = "rps"
     else:
         problems = ["no open offer with that hash"]
 
     offer = None
     if offer_type:
-        offers = orders + bets + rps
+        offers = orders + bets
         offer = offers[0]
         if offer["source"] != source:
             problems.append("incorrect source address")
@@ -130,9 +124,6 @@ def parse(db, tx, message):
         # Cancel if bet.
         elif offer_type == "bet":
             bet.cancel_bet(db, offer, "cancelled", tx["block_index"], tx["tx_index"])
-        # Cancel if rps.
-        elif offer_type == "rps":
-            rps.cancel_rps(db, offer, "cancelled", tx["block_index"], tx["tx_index"])
         # If neither order or bet, mark as invalid.
         else:
             assert False  # noqa: B011
@@ -149,9 +140,11 @@ def parse(db, tx, message):
     if "integer overflow" not in status:
         event_name = f"CANCEL_{offer_type.upper()}" if offer_type else "INVALID_CANCEL"
         ledger.insert_record(db, "cancels", bindings, event_name)
-    else:
-        logger.debug(f"Not storing [cancel] tx [{tx['tx_hash']}]: {status}")
-        logger.debug(f"Bindings: {json.dumps(bindings)}")
+
+    log_data = bindings | {
+        "offer_type": offer_type.capitalize() if offer_type else "Invalid",
+    }
+    logger.info("Cancel %(offer_type)s %(offer_hash)s (%(tx_hash)s) [%(status)s]", log_data)
 
     cursor.close()
 

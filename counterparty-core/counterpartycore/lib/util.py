@@ -23,6 +23,8 @@ from counterpartycore.lib import config, exceptions
 logger = logging.getLogger(config.LOGGER_NAME)
 
 CURRENT_BLOCK_INDEX = None
+CURRENT_TX_HASH = None
+PARSING_MEMPOOL = False
 
 D = decimal.Decimal
 B26_DIGITS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -534,3 +536,17 @@ def get_value_by_block_index(change_name, block_index=None):
             max_block_index = key
 
     return PROTOCOL_CHANGES[change_name][index_name][max_block_index]["value"]
+
+
+class SingletonMeta(type):
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        """
+        Possible changes to the value of the `__init__` argument do not affect
+        the returned instance.
+        """
+        if cls not in cls._instances:
+            instance = super().__call__(*args, **kwargs)
+            cls._instances[cls] = instance
+        return cls._instances[cls]

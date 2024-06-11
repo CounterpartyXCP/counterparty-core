@@ -256,10 +256,6 @@ CONFIG_ARGS = [
         {"action": "store_true", "default": False, "help": "Don't write log files"},
     ],
     [
-        ("--json-log",),
-        {"action": "store_true", "default": False, "help": "Log events in JSON format"},
-    ],
-    [
         ("--utxo-locks-max-addresses",),
         {
             "type": int,
@@ -287,41 +283,62 @@ CONFIG_ARGS = [
             "help": "Do not send anonymous node telemetry data to telemetry server",
         },
     ],
+    [
+        ("--enable-zmq-publisher",),
+        {"action": "store_true", "default": False, "help": "Enable ZeroMQ events publisher"},
+    ],
+    [
+        ("--zmq-publisher-port",),
+        {
+            "type": int,
+            "help": "port on which Counterparty server will publish ZeroMQ notificiations for every event",
+        },
+    ],
+    [
+        ("--db-connection-pool-size",),
+        {
+            "type": int,
+            "help": "size of the database connection pool",
+        },
+    ],
 ]
 
 
 def welcome_message(action, server_configfile):
-    cprint(f"Running v{config.__version__} of {config.FULL_APP_NAME}.", "magenta")
+    cprint(f"\nCounterparty Core v{config.__version__}", "white", attrs=["bold"])
 
     # print some info
-    cprint(f"Configuration file: {server_configfile}", "light_grey")
-    cprint(f"Counterparty database: {config.DATABASE}", "light_grey")
-    if config.LOG:
-        cprint(f"Writing log to file: `{config.LOG}`", "light_grey")
-    else:
-        cprint("Warning: log disabled", "yellow")
-    if config.API_LOG:
-        cprint(f"Writing API accesses log to file: `{config.API_LOG}`", "light_grey")
-    else:
-        cprint("Warning: API log disabled", "yellow")
+    cprint(f"Verbosity: {config.VERBOSE}", "light_grey")
+    cprint(f"Quiet: {config.QUIET}", "light_grey")
+    cprint(f"Configuration File: {server_configfile}", "light_grey")
+    cprint(f"Counterparty Database: {config.DATABASE}", "light_grey")
 
     if config.VERBOSE:
         if config.TESTNET:
-            cprint("NETWORK: Testnet", "light_grey")
+            cprint("Network: `testnet`", "light_grey")
         elif config.REGTEST:
-            cprint("NETWORK: Regtest", "light_grey")
+            cprint("Network: `regtest`", "light_grey")
         else:
-            cprint("NETWORK: Mainnet", "light_grey")
+            cprint("Network: `mainnet`", "light_grey")
 
         pass_str = f":{urlencode(config.BACKEND_PASSWORD)}@"
         cleaned_backend_url = config.BACKEND_URL.replace(pass_str, ":*****@")
-        cprint(f"BACKEND_URL: {cleaned_backend_url}", "light_grey")
-        cprint(f"INDEXD_URL: {config.INDEXD_URL}", "light_grey")
+        cprint(f"Bitcoin Core: {cleaned_backend_url}", "light_grey")
+        cprint(f"AddrIndexRs: {config.INDEXD_URL}", "light_grey")
         pass_str = f":{urlencode(config.RPC_PASSWORD)}@"
         cleaned_rpc_url = config.RPC.replace(pass_str, ":*****@")
-        cprint(f"RPC: {cleaned_rpc_url}", "light_grey")
+        cprint(f"Counterparty RPC Server: {cleaned_rpc_url}", "light_grey")
 
-    cprint(f"{'-' * 30} {action} {'-' * 30}\n", "green")
+    if config.LOG:
+        cprint(f"Server Log: {config.LOG}", "light_grey")
+    else:
+        cprint("Warning: Server logging disabled", "yellow")
+    if config.API_LOG:
+        cprint(f"API Access Log: {config.API_LOG}", "light_grey")
+    else:
+        cprint("Warning: API access log disabled", "yellow")
+
+    cprint(f"\n{'-' * 30} {action.upper()} {'-' * 30}\n", "green")
 
 
 class VersionError(Exception):
@@ -421,8 +438,6 @@ def main():
 
     # Configuration and logging
     server.initialise_log_and_config(args)
-
-    logger.info(f"Running v{APP_VERSION} of {APP_NAME}.")
 
     welcome_message(args.action, server_configfile)
 

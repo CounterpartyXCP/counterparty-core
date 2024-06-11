@@ -21,6 +21,7 @@ from counterpartycore.lib import (
     arc4,  # noqa: F401 # TODO: need for test: clean that up
     backend,
     config,
+    deserialize,
     exceptions,
     gettxinfo,
     ledger,
@@ -29,7 +30,7 @@ from counterpartycore.lib import (
     script,
     util,
 )
-from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser
+from counterpartycore.lib.backend import addrindexrs
 from counterpartycore.lib.transaction_helper import p2sh_encoding, serializer
 
 # Constants
@@ -189,6 +190,68 @@ class ThreadSafeTTLCache(BaseThreadSafeCache):
         return cachetools.TTLCache(*args, **kwargs)
 
 
+def sort_unspent_txouts(unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE):
+    # Filter out all dust amounts to avoid bloating the resultant transaction
+    unspent = list(filter(lambda x: x["value"] > dust_size, unspent))
+    # Sort by amount, using the largest UTXOs available
+    if config.REGTEST:
+        # REGTEST has a lot of coinbase inputs that can't be spent due to maturity
+        # this doesn't usually happens on mainnet or testnet because most fednodes aren't mining
+        unspent = sorted(unspent, key=lambda x: (x["confirmations"], x["value"]), reverse=True)
+    else:
+        unspent = sorted(unspent, key=lambda x: x["value"], reverse=True)
+
+    return unspent
+
+
+def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
+    # Search provided pubkeys.
+    if provided_pubkeys:
+        if type(provided_pubkeys) != list:  # noqa: E721
+            provided_pubkeys = [provided_pubkeys]
+        for pubkey in provided_pubkeys:
+            if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                return pubkey
+            elif pubkeyhash == script.pubkey_to_p2whash(util.unhexlify(pubkey)):
+                return pubkey
+
+    # Search blockchain.
+    raw_transactions = addrindexrs.search_raw_transactions(pubkeyhash, unconfirmed=True)
+    for tx_id in raw_transactions:
+        tx = raw_transactions[tx_id]
+        for vin in tx["vin"]:
+            if "txinwitness" in vin:
+                if len(vin["txinwitness"]) >= 2:
+                    # catch unhexlify errs for when txinwitness[1] isn't a witness program (eg; for P2W)
+                    try:
+                        pubkey = vin["txinwitness"][1]
+                        if pubkeyhash == script.pubkey_to_p2whash(util.unhexlify(pubkey)):
+                            return pubkey
+                    except binascii.Error:
+                        pass
+            elif "coinbase" not in vin:
+                scriptsig = vin["scriptSig"]
+                asm = scriptsig["asm"].split(" ")
+                if len(asm) >= 2:
+                    # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
+                    try:
+                        pubkey = asm[1]
+                        if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                            return pubkey
+                    except binascii.Error:
+                        pass
+
+    raise exceptions.UnknownPubKeyError(
+        "Public key was neither provided nor published in blockchain."
+    )
+
+
+def multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys=None):
+    signatures_required, pubkeyhashes, signatures_possible = script.extract_array(address)
+    pubkeys = [pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys) for pubkeyhash in pubkeyhashes]
+    return script.construct_array(signatures_required, pubkeys, signatures_possible)
+
+
 # set higher than the max number of UTXOs we should expect to
 # manage in an aging cache for any one source address, at any one period
 # UTXO_P2SH_ENCODING_LOCKS is TTLCache for UTXOs that are used for chaining p2sh encoding
@@ -247,11 +310,11 @@ class TransactionService:
         # inject `script`
         if script.is_multisig(source):
             a, self_pubkeys, b = script.extract_array(
-                self.backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
+                multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
             )
             dust_return_pubkey_hex = self_pubkeys[0]
         else:
-            dust_return_pubkey_hex = self.backend.pubkeyhash_to_pubkey(source, provided_pubkeys)
+            dust_return_pubkey_hex = pubkeyhash_to_pubkey(source, provided_pubkeys)
 
         # Convert hex public key into the (binary) dust return pubkey.
         try:
@@ -263,7 +326,7 @@ class TransactionService:
 
     def make_outkey_vin_txid(self, txid, vout):
         if (txid, vout) not in self.utxo_p2sh_encoding_locks_cache:
-            txhex = self.backend.getrawtransaction(txid, verbose=False)
+            txhex = self.backend.bitcoind.getrawtransaction(txid, verbose=False)
             self.utxo_p2sh_encoding_locks_cache.set((txid, vout), make_outkey_vin(txhex, vout))
 
         return self.utxo_p2sh_encoding_locks_cache.get((txid, vout))
@@ -292,14 +355,21 @@ class TransactionService:
             use_inputs = unspent = custom_inputs
         else:
             if unspent_tx_hash is not None:
-                unspent = self.backend.get_unspent_txouts(
+                unspent = self.backend.addrindexrs.get_unspent_txouts(
                     source,
                     unconfirmed=allow_unconfirmed_inputs,
                     unspent_tx_hash=unspent_tx_hash,
                 )
             else:
-                unspent = self.backend.get_unspent_txouts(
+                unspent = self.backend.addrindexrs.get_unspent_txouts(
                     source, unconfirmed=allow_unconfirmed_inputs
+                )
+            self.logger.trace(
+                f"TX Construct - Unspent UTXOs: {[print_coin(coin) for coin in unspent]}"
+            )
+            if len(unspent) == 0:
+                raise exceptions.BalanceError(
+                    f"Insufficient {config.BTC} at address {source}: no unspent outputs."
                 )
 
             filter_unspents_utxo_locks = []
@@ -321,13 +391,13 @@ class TransactionService:
             else:
                 dust = self.default_regular_dust_size
 
-            unspent = self.backend.sort_unspent_txouts(unspent, dust_size=dust)
+            unspent = sort_unspent_txouts(unspent, dust_size=dust)
             # self.logger.debug(f"Sorted candidate UTXOs: {[print_coin(coin) for coin in unspent]}")
             use_inputs = unspent
 
         # use backend estimated fee_per_kb
         if estimate_fee_per_kb:
-            estimated_fee_per_kb = self.backend.fee_per_kb(
+            estimated_fee_per_kb = self.backend.bitcoind.fee_per_kb(
                 estimate_fee_per_kb_nblocks, config.ESTIMATE_FEE_MODE
             )
             if estimated_fee_per_kb is not None:
@@ -335,7 +405,7 @@ class TransactionService:
                     estimated_fee_per_kb, fee_per_kb
                 )  # never drop below the default fee_per_kb
 
-        self.logger.debug(f"Fee/KB {fee_per_kb / config.UNIT:.8f}")
+        self.logger.trace(f"TX Construct - Fee/KB {fee_per_kb / config.UNIT:.8f}")
 
         inputs = []
         btc_in = 0
@@ -350,7 +420,7 @@ class TransactionService:
         # pop inputs until we can pay for the fee
         use_inputs_index = 0
         for coin in use_inputs:
-            self.logger.debug(f"New input: {print_coin(coin)}")
+            self.logger.trace(f"TX Construct - New input: {print_coin(coin)}")
             inputs.append(coin)
             btc_in += round(coin["amount"] * config.UNIT)
 
@@ -362,15 +432,15 @@ class TransactionService:
             else:
                 necessary_fee = int(size / 1000 * fee_per_kb)
                 final_fee = max(fee_provided, necessary_fee)
-                self.logger.debug(
-                    f"final_fee inputs: {len(inputs)} size: {size} final_fee {final_fee}"
+                self.logger.trace(
+                    f"TX Construct - final_fee inputs: {len(inputs)} size: {size} final_fee {final_fee}"
                 )
 
             # Check if good.
             btc_out = destination_btc_out + data_btc_out
             change_quantity = btc_in - (btc_out + final_fee)
-            self.logger.debug(
-                f"Size: {size} Fee: {final_fee / config.UNIT:.8f} Change quantity: {change_quantity / config.UNIT:.8f} BTC"
+            self.logger.trace(
+                f"TX Construct - Size: {size} Fee: {final_fee / config.UNIT:.8f} Change quantity: {change_quantity / config.UNIT:.8f} BTC"
             )
 
             # If after the sum of all the utxos the change is dust, then it will be added to the miners instead of returning an error
@@ -420,7 +490,7 @@ class TransactionService:
 
         # ensure inputs have scriptPubKey
         #   this is not provided by indexd
-        inputs = self.backend.ensure_script_pub_key_for_inputs(inputs)
+        inputs = script.ensure_script_pub_key_for_inputs(inputs)
 
         return inputs, change_quantity, btc_in, final_fee
 
@@ -430,7 +500,9 @@ class TransactionService:
         """Get the first (biggest) input from the source address"""
 
         # Array of UTXOs, as retrieved by listunspent function from bitcoind
-        unspent = self.backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs)
+        unspent = self.backend.addrindexrs.get_unspent_txouts(
+            source, unconfirmed=allow_unconfirmed_inputs
+        )
 
         filter_unspents_utxo_locks = []
         if self.utxo_locks is not None and source in self.utxo_locks:
@@ -444,9 +516,7 @@ class TransactionService:
         unspent = filtered_unspent
 
         # sort
-        unspent = self.backend.sort_unspent_txouts(
-            unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE
-        )
+        unspent = sort_unspent_txouts(unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE)
 
         # use the first input
         input = unspent[0]
@@ -519,7 +589,7 @@ class TransactionService:
 
         # Normalize source
         if script.is_multisig(source):
-            source_address = self.backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
+            source_address = multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
         else:
             source_address = source
 
@@ -552,7 +622,12 @@ class TransactionService:
         else:
             # no data
             encoding = None
-        self.logger.debug(f"Constructing {encoding} transaction from {source}.")
+        if encoding:
+            self.logger.debug(
+                f"TX Construct - Constructing `{encoding.upper()}` transaction from {source}."
+            )
+        else:
+            self.logger.debug(f"TX Construct - Constructing transaction from {source}.")
 
         """Destinations"""
 
@@ -577,9 +652,7 @@ class TransactionService:
                 if script.is_multisig(address):
                     destination_outputs_new.append(
                         (
-                            self.backend.multisig_pubkeyhashes_to_pubkeys(
-                                address, provided_pubkeys
-                            ),
+                            multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys),
                             value,
                         )
                     )
@@ -652,8 +725,8 @@ class TransactionService:
             dust_return_pubkey = None
 
         data_btc_out = data_value * len(data_array)
-        self.logger.debug(
-            f"data_btc_out={data_btc_out} (data_value={data_value} len(data_array)={len(data_array)})"
+        self.logger.trace(
+            f"TX Construct - data_btc_out={data_btc_out} (data_value={data_value} len(data_array)={len(data_array)})"
         )
 
         """Inputs"""
@@ -760,8 +833,7 @@ class TransactionService:
                 txid_ba = bytearray(ptx.GetTxid())
                 txid_ba.reverse()
                 pretx_txid = bytes(txid_ba)  # gonna leave the malleability problem to upstream
-                self.logger.debug(f"pretx_txid {pretx_txid}")
-                print("pretx txid:", binascii.hexlify(pretx_txid))
+                self.logger.trace("pretx_txid: %s", binascii.hexlify(pretx_txid))
 
             if unsigned_pretx:
                 # we set a long lock on this, don't want other TXs to spend from it
@@ -830,13 +902,11 @@ class TransactionService:
 
         # Parsed transaction info.
         try:
-            if pretx_txid and unsigned_pretx:
-                self.backend.cache_pretx(pretx_txid, unsigned_pretx)
             parsed_source, parsed_destination, x, y, parsed_data, extra = (
                 # TODO: inject
                 gettxinfo.get_tx_info_new(
                     db,
-                    BlockchainParser().deserialize_tx(unsigned_tx_hex),
+                    deserialize.deserialize_tx(unsigned_tx_hex, use_txid=True),
                     util.CURRENT_BLOCK_INDEX,
                     p2sh_is_segwit=script.is_bech32(desired_source),
                     composing=True,
@@ -846,9 +916,6 @@ class TransactionService:
             if encoding == "p2sh":
                 # make_canonical can't determine the address, so we blindly change the desired to the parsed
                 desired_source = parsed_source
-
-            if pretx_txid and unsigned_pretx:
-                self.backend.clear_pretx(pretx_txid)
         except exceptions.BTCOnlyError:
             # Skip BTC‐only transactions.
             if extended_tx_info:
@@ -859,7 +926,7 @@ class TransactionService:
                     "btc_fee": final_fee,
                     "tx_hex": unsigned_tx_hex,
                 }
-            self.logger.debug("BTC-ONLY")
+            self.logger.trace("TX Construct - Skip BTC‐only transactions")
             return return_result([unsigned_pretx_hex, unsigned_tx_hex], old_style_api=old_style_api)
         desired_source = script.make_canonical(desired_source)
 
@@ -884,6 +951,8 @@ class TransactionService:
                 "btc_fee": final_fee,
                 "tx_hex": unsigned_tx_hex,
             }
+
+        self.logger.debug("TX Construct - Transaction constructed.")
         return return_result([unsigned_pretx_hex, unsigned_tx_hex], old_style_api=old_style_api)
 
 
@@ -941,11 +1010,11 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
     # Get hex dust return pubkey.
     if script.is_multisig(source):
         a, self_pubkeys, b = script.extract_array(
-            backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
+            multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
         )
         dust_return_pubkey_hex = self_pubkeys[0]
     else:
-        dust_return_pubkey_hex = backend.pubkeyhash_to_pubkey(source, provided_pubkeys)
+        dust_return_pubkey_hex = pubkeyhash_to_pubkey(source, provided_pubkeys)
 
     # Convert hex public key into the (binary) dust return pubkey.
     try:
@@ -1019,6 +1088,11 @@ COMPOSE_COMMONS_ARGS = {
         "The previous transaction txid for a two part P2SH message. This txid must be taken from the signed transaction",
     ),
     "segwit": (bool, False, "Use segwit"),
+    "confirmation_target": (
+        int,
+        config.ESTIMATE_FEE_CONF_TARGET,
+        "The number of blocks to target for confirmation",
+    ),
 }
 
 
@@ -1055,6 +1129,7 @@ def compose_transaction(
     regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
     multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
     op_return_value=config.DEFAULT_OP_RETURN_VALUE,
+    confirmation_target=config.ESTIMATE_FEE_CONF_TARGET,
     pubkey=None,
     allow_unconfirmed_inputs=False,
     fee=None,
@@ -1164,6 +1239,7 @@ def compose_transaction(
         p2sh_pretx_txid=p2sh_pretx_txid,
         old_style_api=old_style_api,
         segwit=segwit,
+        estimate_fee_per_kb_nblocks=confirmation_target,
     )
 
 
@@ -1214,7 +1290,7 @@ def compose_bet(
     :param bet_type: Bet 0 for Bullish CFD (deprecated), 1 for Bearish CFD (deprecated), 2 for Equal, 3 for NotEqual (e.g. 2)
     :param deadline: The time at which the bet should be decided/settled, in Unix time (seconds since epoch) (e.g. 3000000000)
     :param wager_quantity: The quantities of XCP to wager (in satoshis, hence integer) (e.g. 1000)
-    :param counterwager_quantity: The minimum quantities of XCP to be wagered against, for the bets to match (e.g. 1000)
+    :param counterwager_quantity: The minimum quantities of XCP to be wagered against, for the bets to match (in satoshis, hence integer) (e.g. 1000)
     :param expiration: The number of blocks after which the bet expires if it remains unmatched (e.g. 100)
     :param leverage: Leverage, as a fraction of 5040
     :param target_value: Target value for Equal/NotEqual bet (e.g. 1000)
@@ -1298,7 +1374,7 @@ def compose_burn(db, address: str, quantity: int, overburn: bool = False, **cons
     """
     Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, possible between blocks 278310 and 283810; on testnet it is still available).
     :param address: The address with the BTC to burn (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
-    :param quantity: The quantities of BTC to burn (1 BTC maximum burn per address) (e.g. 1000)
+    :param quantity: The quantities of BTC to burn (in satoshis, hence integer) (1 BTC maximum burn per address) (e.g. 1000)
     :param overburn: Whether to allow the burn to exceed 1 BTC for the address
     """
     params = {"source": address, "quantity": quantity, "overburn": overburn}
@@ -1340,7 +1416,7 @@ def compose_destroy(db, address: str, asset: str, quantity: int, tag: str, **con
     Composes a transaction to destroy a quantity of an asset.
     :param address: The address that will be sending the asset to be destroyed (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
     :param asset: The asset to be destroyed (e.g. XCP)
-    :param quantity: The quantity of the asset to be destroyed (e.g. 1000)
+    :param quantity: The quantity of the asset to be destroyed (in satoshis, hence integer) (e.g. 1000)
     :param tag: A tag for the destruction (e.g. "bugs!")
     """
     params = {"source": address, "asset": asset, "quantity": quantity, "tag": tag}
@@ -1373,9 +1449,9 @@ def compose_dispenser(
     Opens or closes a dispenser for a given asset at a given rate of main chain asset (BTC). Escrowed quantity on open must be equal or greater than give_quantity. It is suggested that you escrow multiples of give_quantity to ease dispenser operation.
     :param address: The address that will be dispensing (must have the necessary escrow_quantity of the specified asset) (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
     :param asset: The asset or subasset to dispense (e.g. XCP)
-    :param give_quantity: The quantity of the asset to dispense (e.g. 1000)
-    :param escrow_quantity: The quantity of the asset to reserve for this dispenser (e.g. 1000)
-    :param mainchainrate: The quantity of the main chain asset (BTC) per dispensed portion (e.g. 100)
+    :param give_quantity: The quantity of the asset to dispense (in satoshis, hence integer) (e.g. 1000)
+    :param escrow_quantity: The quantity of the asset to reserve for this dispenser (in satoshis, hence integer) (e.g. 1000)
+    :param mainchainrate: The quantity of the main chain asset (BTC) per dispensed portion (in satoshis, hence integer) (e.g. 100)
     :param status: The state of the dispenser. 0 for open, 1 for open using open_address, 10 for closed (e.g. 0)
     :param open_address: The address that you would like to open the dispenser on
     :param oracle_address: The address that you would like to use as a price oracle for this dispenser
@@ -1409,7 +1485,7 @@ def compose_dividend(
     """
     Composes a transaction to issue a dividend to holders of a given asset.
     :param address: The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on) (e.g. 1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD)
-    :param quantity_per_unit: The amount of dividend_asset rewarded (e.g. 1)
+    :param quantity_per_unit: The amount of dividend_asset rewarded (in satoshis, hence integer) (e.g. 1)
     :param asset: The asset or subasset that the dividends are being rewarded on (e.g. PEPECASH)
     :param dividend_asset: The asset or subasset that the dividends are paid in (e.g. XCP)
     """
@@ -1448,7 +1524,7 @@ def compose_issuance(
     Composes a transaction to Issue a new asset, issue more of an existing asset, lock an asset, reset existing supply, or transfer the ownership of an asset.
     :param address: The address that will be issuing or transfering the asset (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
     :param asset: The assets to issue or transfer. This can also be a subasset longname for new subasset issuances (e.g. XCPTEST)
-    :param quantity: The quantity of the asset to issue (set to 0 if transferring an asset) (e.g. 1000)
+    :param quantity: The quantity of the asset to issue (set to 0 if transferring an asset) (in satoshis, hence integer) (e.g. 1000)
     :param transfer_destination: The address to receive the asset (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
     :param divisible: Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued)
     :param lock: Whether this issuance should lock supply of this asset forever
@@ -1493,7 +1569,7 @@ def compose_mpma(
     :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. 1Fv87qmdtjQDP9d4p9E5ncBQvYB4a3Rhy6)
     :param assets: comma-separated list of assets to send (e.g. BAABAABLKSHP,BADHAIRDAY,BADWOJAK)
     :param destinations: comma-separated list of addresses to send to (e.g. 1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev,1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD,1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
-    :param quantities: comma-separated list of quantities to send (e.g. 1,2,3)
+    :param quantities: comma-separated list of quantities to send (in satoshis, hence integer) (e.g. 1,2,3)
     :param memo: The Memo associated with this transaction (e.g. "Hello, world!")
     :param memo_is_hex: Whether the memo field is a hexadecimal string (e.g. False)
     """
@@ -1545,9 +1621,9 @@ def compose_order(
     Composes a transaction to place an order on the distributed exchange.
     :param address: The address that will be issuing the order request (must have the necessary quantity of the specified asset to give) (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
     :param give_asset: The asset that will be given in the trade (e.g. XCP)
-    :param give_quantity: The quantity of the asset that will be given (e.g. 1000)
+    :param give_quantity: The quantity of the asset that will be given (in satoshis, hence integer) (e.g. 1000)
     :param get_asset: The asset that will be received in the trade (e.g. PEPECASH)
-    :param get_quantity: The quantity of the asset that will be received (e.g. 1000)
+    :param get_quantity: The quantity of the asset that will be received (in satoshis, hence integer) (e.g. 1000)
     :param expiration: The number of blocks for which the order should be valid (e.g. 100)
     :param fee_required: The miners’ fee required to be paid by orders for them to match this one; in BTC; required only if buying BTC (may be zero, though) (e.g. 100)
     """
@@ -1589,7 +1665,7 @@ def compose_send(
     :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
     :param destination: The address that will be receiving the asset (e.g. 1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev)
     :param asset: The asset or subasset to send (e.g. XCP)
-    :param quantity: The quantity of the asset to send (e.g. 1000)
+    :param quantity: The quantity of the asset to send (in satoshis, hence integer) (e.g. 1000)
     :param memo: The Memo associated with this transaction
     :param memo_is_hex: Whether the memo field is a hexadecimal string
     :param use_enhanced_send: If this is false, the construct a legacy transaction sending bitcoin dust
@@ -1647,15 +1723,31 @@ def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **c
     }
 
 
+def inject_unpacked_data(db, tx):
+    if tx and tx["data"]:
+        tx["unpacked_data"] = unpack(db, binascii.hexlify(tx["data"]), tx["block_index"])
+    return tx
+
+
 def get_transaction_by_hash(db, tx_hash: str):
     """
     Returns a transaction by its hash.
     :param tx_hash: The hash of the transaction (e.g. 876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5)
     """
     tx = ledger.get_transaction(db, tx_hash)
-    if tx and tx["data"]:
-        tx["unpacked_data"] = unpack(db, binascii.hexlify(tx["data"]), tx["block_index"])
-    return tx
+    return inject_unpacked_data(db, tx)
+
+
+def get_transaction_by_tx_index(db, tx_index: int):
+    """
+    Returns a transaction by its index.
+    :param tx_index: The index of the transaction (e.g. 10000)
+    """
+    txs = ledger.get_transactions(db, tx_index=tx_index)
+    if txs:
+        tx = txs[0]
+        return inject_unpacked_data(db, tx)
+    return None
 
 
 def info(db, rawtransaction: str, block_index: int = None):
@@ -1664,12 +1756,16 @@ def info(db, rawtransaction: str, block_index: int = None):
     :param rawtransaction: Raw transaction in hex format (e.g. 01000000017828697743c03aef6a3a8ba54b22bf579ffcab8161faf20e7b20c4ecd75cc986010000006b483045022100d1bd0531bb1ed2dd2cbf77d6933273e792a3dbfa84327d419169850ddd5976f502205d1ab0f7bcbf1a0cc183f0520c9aa8f711d41cb790c0c4ac39da6da4a093d798012103d3b1f711e907acb556e239f6cafb6a4f7fe40d8dd809b0e06e739c2afd73f202ffffffff0200000000000000004d6a4bf29880b93b0711524c7ef9c76835752088db8bd4113a3daf41fc45ffdc8867ebdbf26817fae377696f36790e52f51005806e9399a427172fedf348cf798ed86e548002ee96909eef0775ec3c2b0100000000001976a91443434cf159cc585fbd74daa9c4b833235b19761b88ac00000000)
     :param block_index: Block index mandatory for transactions before block 335000
     """
-    source, destination, btc_amount, fee, data, extra = gettxinfo.get_tx_info(
-        db, BlockchainParser().deserialize_tx(rawtransaction), block_index=block_index
+    source, destination, btc_amount, fee, data, _extra = gettxinfo.get_tx_info(
+        db,
+        deserialize.deserialize_tx(
+            rawtransaction, use_txid=util.enabled("correct_segwit_txids", block_index)
+        ),
+        block_index=block_index,
     )
     result = {
         "source": source,
-        "destination": destination,
+        "destination": destination if destination else None,
         "btc_amount": btc_amount,
         "fee": fee,
         "data": util.hexlify(data) if data else "",

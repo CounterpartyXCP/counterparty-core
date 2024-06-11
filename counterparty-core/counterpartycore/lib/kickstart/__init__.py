@@ -7,12 +7,9 @@ import time
 from queue import Empty
 
 import apsw
-from halo import Halo
 from termcolor import colored
 
-from counterpartycore import server
-from counterpartycore.lib import backend, blocks, config, database, ledger, util  # noqa: F401
-from counterpartycore.lib.backend.addrindexrs import AddrindexrsSocket  # noqa: F401
+from counterpartycore.lib import backend, blocks, config, database, log, util
 from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser, ChainstateParser
 from counterpartycore.lib.kickstart.utils import remove_shm_from_resource_tracker
 
@@ -83,16 +80,16 @@ def fetch_blocks(cursor, bitcoind_dir, last_known_hash, first_block, spinner):
                                 VALUES {', '.join(bindings_place)}""",  # nosec B608  # noqa: S608
                 bindings_lot,
             )
-            spinner.text = (
+            spinner.set_message(
                 f"Initialising database: block {bindings_lot[0]} to {bindings_lot[-6]} inserted."
             )
             if block["block_index"] == first_block:
                 break
         block_parser.close()
-        spinner.text = f"Blocks indexed in: {time.time() - start_time_blocks_indexing:.3f}s"
+        spinner.set_message(f"Blocks indexed in: {time.time() - start_time_blocks_indexing:.3f}s")
         return block_count
     except KeyboardInterrupt as e:
-        print(colored("Keyboard interrupt. Cleanin up, please wait...", "yellow"))
+        print(colored("Keyboard interrupt! Cleaning up, please wait...", "yellow"))
         block_parser.close()
         cursor.execute("""DROP TABLE kickstart_blocks""")
         raise e
@@ -155,20 +152,18 @@ def get_bitcoind_dir(bitcoind_dir=None):
 
 
 def get_last_known_block_hash(bitcoind_dir):
-    step = "Getting last known block hash..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner("Getting last known block hash..."):
         chain_parser = ChainstateParser(os.path.join(bitcoind_dir, "chainstate"))
         last_known_hash = chain_parser.get_last_block_hash()
         chain_parser.close()
         # print(f'Last known block hash: {last_known_hash}')
-    print(f"{OK_GREEN} {step}")
     return last_known_hash
 
 
 def intialize_kickstart_db(bitcoind_dir, last_known_hash, resuming, new_database, debug_block):
     step = "Initialising database..."
-    with Halo(text=step, spinner=SPINNER_STYLE) as spinner:
-        kickstart_db = server.initialise_db()
+    with log.Spinner(step) as spinner:
+        kickstart_db = database.initialise_db()
         blocks.initialise(kickstart_db)
         database.update_version(kickstart_db)
         cursor = kickstart_db.cursor()
@@ -202,16 +197,14 @@ def intialize_kickstart_db(bitcoind_dir, last_known_hash, resuming, new_database
                         cursor, bitcoind_dir, last_known_hash, last_block_index + 1, spinner
                     )
         # get last block index
-        spinner.text = step
+        spinner.set_messsage(step)
         block_count, tx_index, last_parsed_block = prepare_db_for_resume(cursor)
         cursor.close()
-    print(f"{OK_GREEN} {step}")
     return kickstart_db, block_count, tx_index, last_parsed_block
 
 
 def start_blocks_parser_process(bitcoind_dir, last_parsed_block, max_queue_size):
-    step = f"Starting blocks parser from block {last_parsed_block}..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner(f"Starting blocks parser from block {last_parsed_block}..."):
         # determine queue size
         default_queue_size = 100
         if config.TESTNET:
@@ -221,13 +214,11 @@ def start_blocks_parser_process(bitcoind_dir, last_parsed_block, max_queue_size)
         block_parser = BlockchainParser(
             bitcoind_dir, config.DATABASE, last_parsed_block, queue_size
         )
-    print(f"{OK_GREEN} {step}")
     return block_parser
 
 
 def is_resuming(new_database):
-    step = "Checking database state..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner("Checking database state..."):
         current_db = apsw.Connection(config.DATABASE)
         cursor = current_db.cursor()
         resuming = False
@@ -237,13 +228,11 @@ def is_resuming(new_database):
                 resuming = True
         cursor.close()
         current_db.close()
-    print(f"{OK_GREEN} {step}")
     return resuming
 
 
 def backup_db(move=False):
-    step = "Backing up database..."
-    with Halo(text=step, spinner="bouncingBar"):
+    with log.Spinner("Backing up database..."):
         if move:
             os.rename(config.DATABASE, config.DATABASE + ".old")
         else:
@@ -260,8 +249,6 @@ def backup_db(move=False):
             os.remove(shm_path)
         except OSError:
             pass
-
-    print(f"{OK_GREEN} {step}")
 
 
 def backup_if_needed(new_database, resuming):
@@ -295,54 +282,18 @@ def backup_if_needed(new_database, resuming):
     return new_database
 
 
-def parse_block(kickstart_db, cursor, block, block_parser, tx_index):
-    util.CURRENT_BLOCK_INDEX = block["block_index"]
-
-    with kickstart_db:  # ensure all the block or nothing
-        # insert block
-        block_bindings = {
-            "block_index": block["block_index"],
-            "block_hash": block["block_hash"],
-            "block_time": block["block_time"],
-            "previous_block_hash": block["hash_prev"],
-            "difficulty": block["bits"],
-        }
-        ledger.insert_record(kickstart_db, "blocks", block_bindings, "NEW_BLOCK")
-
-        # save transactions
-        for transaction in block["transactions"]:
-            # Cache transaction. We do that here because the block is fetched by another process.
-            block_parser.put_in_cache(transaction)
-            tx_index = blocks.list_tx(
-                kickstart_db,
-                block["block_hash"],
-                block["block_index"],
-                block["block_time"],
-                transaction["tx_hash"],
-                tx_index,
-                decoded_tx=transaction,
-                block_parser=block_parser,
-            )
-        # Parse the transactions in the block.
-        blocks.parse_block(kickstart_db, block["block_index"], block["block_time"])
-
-    return tx_index
-
-
 def cleanup(kickstart_db, block_parser):
     remove_shm_from_resource_tracker()
-    step = "Cleaning up..."
-    with Halo(text=step, spinner=SPINNER_STYLE):
+    with log.Spinner("Cleaning up..."):
         # empyt queue to clean shared memory
         try:
             block_parser.block_parsed()
             block_parser.close()
         except (Empty, FileNotFoundError):
             pass
-        backend.stop()
+        backend.addrindexrs.stop()
         # remove kickstart tables if all blocks have been parsed
         clean_kicstart_blocks(kickstart_db)
-    print(f"{OK_GREEN} {step}")
 
 
 def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
@@ -355,7 +306,7 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
         confirm_kickstart()
 
     # check addrindexrs
-    server.connect_to_addrindexrs()
+    backend.addrindexrs.init()
 
     # determine bitoincore data directory
     bitcoind_dir = get_bitcoind_dir(bitcoind_dir)
@@ -381,6 +332,9 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
         bitcoind_dir, last_known_hash, resuming, new_database, debug_block
     )
 
+    # update the current block index
+    util.CURRENT_BLOCK_INDEX = last_parsed_block
+
     # Start block parser.
     block_parser = start_blocks_parser_process(bitcoind_dir, last_parsed_block, max_queue_size)
 
@@ -388,18 +342,17 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
     message = ""
     start_time_all_blocks_parse = time.time()
     block_parsed_count = 0
-    spinner = Halo(text="Starting...", spinner=SPINNER_STYLE)
+    spinner = log.Spinner("Starting...")
     spinner.start()
 
     # start parsing blocks
     try:
-        cursor = kickstart_db.cursor()
         block = block_parser.next_block()
         while block is not None:
             # initialize block parsing timer
             start_time_block_parse = time.time()
             # parse block
-            tx_index = parse_block(kickstart_db, cursor, block, block_parser, tx_index)
+            tx_index = blocks.parse_new_block(kickstart_db, block, block_parser, tx_index)
             # update last parsed block
             last_parsed_block = block["block_index"]
             # update block parsed count
@@ -413,7 +366,7 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
                 block_count,
                 tx_index,
             )
-            spinner.text = message
+            spinner.set_messsage(message)
             # notify block parsed
             block_parser.block_parsed()
             # check if we are done
@@ -434,7 +387,7 @@ def run(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
             ok_yellow = colored("[OK]", "yellow")
             print(f"{ok_yellow} {message}")
             message = ""
-        print(colored("Keyboard interrupt. Stopping...", "yellow"))
+        print(colored("Keyboard interrupt! Stopping...", "yellow"))
     finally:
         spinner.stop()
         # re-print last message

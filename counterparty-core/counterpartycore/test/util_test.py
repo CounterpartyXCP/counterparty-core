@@ -36,21 +36,16 @@ from counterpartycore.lib import (  # noqa: E402
     check,
     config,
     database,
+    deserialize,
     exceptions,
     gettxinfo,
     ledger,
     transaction,
     util,
 )
-from counterpartycore.lib.backend.indexd import (  # noqa: E402
-    extract_addresses,  # noqa: F401
-    extract_addresses_from_txlist,
-)
-from counterpartycore.lib.kickstart.blocks_parser import BlockchainParser  # noqa: E402
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: E402
 from counterpartycore.test.fixtures.scenarios import (  # noqa: E402
     INTEGRATION_SCENARIOS,
-    UNITTEST_FIXTURE,  # noqa: F401
     standard_scenarios_params,
 )
 
@@ -88,6 +83,7 @@ def init_database(sqlfile, dbfile, options=None):
 
     restore_database(config.DATABASE, sqlfile)
     db = database.get_connection(read_only=False)  # reinit the DB to deal with the restoring
+    blocks.create_views(db)
     database.update_version(db)
     util.FIRST_MULTISIG_BLOCK_TESTNET = 1
 
@@ -206,7 +202,7 @@ def insert_raw_transaction(raw_transaction, db):
     tx_index = block_index - config.BURN_START + 1
     try:
         source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
-            db, BlockchainParser().deserialize_tx(raw_transaction, True), block_index
+            db, deserialize.deserialize_tx(raw_transaction, True), block_index
         )
         bindings = {
             "tx_index": tx_index,
@@ -253,7 +249,7 @@ def insert_unconfirmed_raw_transaction(raw_transaction, db):
     tx_index = tx_index + 1
 
     source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
-        db, BlockchainParser().deserialize_tx(raw_transaction, True), util.CURRENT_BLOCK_INDEX
+        db, deserialize.deserialize_tx(raw_transaction, True), util.CURRENT_BLOCK_INDEX
     )
     tx = {
         "tx_index": tx_index,
@@ -358,7 +354,7 @@ def prefill_rawtransactions_db(db):
         wallet_unspent = json.load(listunspent_test_file)
         for output in wallet_unspent:
             txid = output["txid"]
-            tx = BlockchainParser().deserialize_tx(output["txhex"], True)  # noqa: F841
+            tx = deserialize.deserialize_tx(output["txhex"], True)  # noqa: F841
             cursor.execute(
                 "INSERT INTO raw_transactions VALUES (?, ?, ?)",
                 (txid, output["txhex"], output["confirmations"]),
@@ -493,7 +489,7 @@ def mock_bitcoind_verbose_tx_output(tx, txid, confirmations):
         rvout = {
             "n": idx,
             "value": vout.nValue / config.UNIT,
-            "scriptPubKey": {
+            "script_pub_key": {
                 "type": type,
                 "addresses": addresses,
                 "hex": binascii.hexlify(vout.scriptPubKey).decode("ascii"),
@@ -512,6 +508,41 @@ def getrawtransaction_batch(db, txhash_list, verbose=False):
         result[txhash] = getrawtransaction(db, txhash, verbose=verbose)
 
     return result
+
+
+def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
+    """
+    helper for extract_addresses, seperated so we can pass in a mocked _getrawtransaction_batch for test purposes
+    """
+
+    tx_hashes_addresses = {}
+    tx_inputs_hashes = set()  # use set to avoid duplicates
+
+    for tx_hash, tx in tx_hashes_tx.items():
+        tx_hashes_addresses[tx_hash] = set()
+        for vout in tx["vout"]:
+            if "addresses" in vout["script_pub_key"]:
+                tx_hashes_addresses[tx_hash].update(tuple(vout["script_pub_key"]["addresses"]))
+
+        tx_inputs_hashes.update([vin["txid"] for vin in tx["vin"]])
+
+    # chunk txs to avoid huge memory spikes
+    for tx_inputs_hashes_chunk in util.chunkify(
+        list(tx_inputs_hashes), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE
+    ):
+        raw_transactions = _getrawtransaction_batch(tx_inputs_hashes_chunk, verbose=True)
+        for tx_hash, tx in tx_hashes_tx.items():
+            for vin in tx["vin"]:
+                vin_tx = raw_transactions.get(vin["txid"], None)
+
+                if not vin_tx:
+                    continue
+
+                vout = vin_tx["vout"][vin["vout"]]
+                if "addresses" in vout["script_pub_key"]:
+                    tx_hashes_addresses[tx_hash].update(tuple(vout["script_pub_key"]["addresses"]))
+
+    return tx_hashes_addresses, tx_hashes_tx
 
 
 def search_raw_transactions(db, address, unconfirmed=False):
@@ -774,7 +805,6 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         or method == "get_tx_info_legacy"
         or tx_name == "transaction"
         or tx_name == "transaction_helper.serializer"
-        or method == "sortkeypicker"
         or tx_name == "backend"
         or tx_name == "message_type"
         or tx_name == "address"
@@ -947,10 +977,6 @@ class MockProtocolChangesContext(object):
             del self.mock_protocol_changes[k]
 
 
-def connect_to_addrindexrs_mock():
-    return True
-
-
 def get_oldest_tx_mock(address, block_index=None):
     if address == "mrHFGUKSiNMeErqByjX97qPKfumdZxe6mC" and block_index == 99999999999:
         return {
@@ -968,8 +994,7 @@ def reparse(testnet=True, checkpoint_count=5):
     """
 
     # mock the backend
-    server.connect_to_addrindexrs = connect_to_addrindexrs_mock
-    backend.get_oldest_tx = get_oldest_tx_mock
+    backend.addrindexrs.get_oldest_tx = get_oldest_tx_mock
 
     # create a new in-memory DB
     options = dict(COUNTERPARTYD_OPTIONS)

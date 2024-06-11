@@ -5,6 +5,7 @@ target/
 typings/
 pyrightconfig.json
 .DS_Store
+test_dbs/
 
 profile.txt
 

@@ -25,7 +25,6 @@ import decimal
 import struct
 
 D = decimal.Decimal
-import json  # noqa: E402
 import logging  # noqa: E402
 from fractions import Fraction  # noqa: E402
 
@@ -245,9 +244,8 @@ def parse(db, tx, message):
     }
     if "integer overflow" not in status:
         ledger.insert_record(db, "broadcasts", bindings, "BROADCAST")
-    else:
-        logger.debug(f"Not storing [broadcast] tx [{tx['tx_hash']}]: {status}")
-        logger.debug(f"Bindings: {json.dumps(bindings)}")
+
+    logger.info("Broadcast from %(source)s (%(tx_hash)s) [%(status)s]", bindings)
 
     # stop processing if broadcast is invalid for any reason
     if util.enabled("broadcast_invalid_check") and status != "valid":
@@ -388,6 +386,7 @@ def parse(db, tx, message):
                     "fee": fee,
                 }
                 ledger.insert_record(db, "bet_match_resolutions", bindings, "BET_MATCH_RESOLUTON")
+                logger.debug("Bet Match %(bet_match_id)s resolved", bindings)
 
             # Settle (if not liquidated).
             elif timestamp >= bet_match["deadline"]:
@@ -436,6 +435,7 @@ def parse(db, tx, message):
                     "fee": fee,
                 }
                 ledger.insert_record(db, "bet_match_resolutions", bindings, "BET_MATCH_RESOLUTON")
+                logger.debug("Bet Match %(bet_match_id)s resolved", bindings)
 
         # Equal[/NotEqual] bet.
         elif bet_match_type_id == equal_type_id and timestamp >= bet_match["deadline"]:
@@ -497,11 +497,20 @@ def parse(db, tx, message):
                 "fee": fee,
             }
             ledger.insert_record(db, "bet_match_resolutions", bindings, "BET_MATCH_RESOLUTON")
+            logger.debug("Bet Match %(bet_match_id)s resolved", bindings)
 
         # Update the bet match’s status.
         if bet_match_status:
             bet_match_id = util.make_id(bet_match["tx0_hash"], bet_match["tx1_hash"])
             ledger.update_bet_match_status(db, bet_match_id, bet_match_status)
+
+            logger.info(
+                "Bet Match %(id)s updated [%(status)s]",
+                {
+                    "id": bet_match_id,
+                    "status": bet_match_status,
+                },
+            )
 
         broadcast_bet_match_cursor.close()
 

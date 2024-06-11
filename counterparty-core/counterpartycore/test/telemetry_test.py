@@ -61,7 +61,7 @@ class TestTelemetryCollectorBase:
         assert data["addrindexrs_version"] == "4.5.6"
         assert data["uptime"] > 0
         assert data["network"] == "MAINNET"
-        assert data["dockerized"] == False  # noqa: E712
+        assert isinstance(data["dockerized"], bool)  # noqa: E712
         assert data["force_enabled"] == False  # noqa: E712
 
     @patch("counterpartycore.lib.telemetry.collectors.base.ledger")

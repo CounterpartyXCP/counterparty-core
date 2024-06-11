@@ -12,6 +12,70 @@ logger = logging.getLogger(config.LOGGER_NAME)
 BLOCK_LEDGER = []
 BLOCK_JOURNAL = []
 
+
+###############################
+#       UTIL FUNCTIONS        #
+###############################
+
+
+def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
+    cursor = db.cursor()
+    fields_name = ", ".join(record.keys())
+    fields_values = ", ".join([f":{key}" for key in record.keys()])
+    # no sql injection here
+    query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608  # noqa: S608
+    cursor.execute(query, record)
+    cursor.close()
+    # Add event to journal
+    add_to_journal(db, util.CURRENT_BLOCK_INDEX, "insert", table_name, event, record | event_info)
+
+
+# This function allows you to update a record using an INSERT.
+# The `block_index` and `rowid` fields allow you to
+# order updates and retrieve the row with the current data.
+def insert_update(db, table_name, id_name, id_value, update_data, event, event_info={}):  # noqa: B006
+    cursor = db.cursor()
+    # select records to update
+    select_query = f"""
+        SELECT *, rowid
+        FROM {table_name}
+        WHERE {id_name} = ?
+        ORDER BY rowid DESC
+        LIMIT 1
+    """  # nosec B608  # noqa: S608
+    bindings = (id_value,)
+    need_update_record = cursor.execute(select_query, bindings).fetchone()
+
+    # update record
+    new_record = need_update_record.copy()
+    # updade needed fields
+    for key, value in update_data.items():
+        new_record[key] = value
+    # new block_index and tx_index
+    new_record["block_index"] = util.CURRENT_BLOCK_INDEX
+    # let's keep the original tx_index so we can preserve order
+    # with the old queries (ordered by default by old primary key)
+    # TODO: restore with protocol change and checkpoints update
+    # if 'tx_index' in new_record:
+    #    new_record['tx_index'] = tx_index
+    # insert new record
+    if "rowid" in new_record:
+        del new_record["rowid"]
+    fields_name = ", ".join(new_record.keys())
+    fields_values = ", ".join([f":{key}" for key in new_record.keys()])
+    # no sql injection here
+    insert_query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608  # noqa: S608
+    cursor.execute(insert_query, new_record)
+    cursor.close()
+    # Add event to journal
+    event_paylod = update_data | {id_name: id_value} | event_info
+    if "rowid" in event_paylod:
+        del event_paylod["rowid"]
+    add_to_journal(
+        db, util.CURRENT_BLOCK_INDEX, "update", table_name, event, update_data | event_paylod
+    )
+
+
 ###########################
 #         MESSAGES        #
 ###########################
@@ -57,163 +121,6 @@ def get_messages(db, block_index=None, block_index_in=None, message_index_in=Non
     return cursor.fetchall()
 
 
-def get_events(db, block_index=None, event=None, event_index=None, last=None, limit=None):
-    cursor = db.cursor()
-    where = []
-    bindings = []
-    if block_index is not None:
-        where.append("block_index = ?")
-        bindings.append(block_index)
-    if event is not None:
-        where.append("event = ?")
-        bindings.append(event)
-    if event_index is not None:
-        where.append("message_index = ?")
-        bindings.append(event_index)
-    if last is not None:
-        where.append("message_index <= ?")
-        bindings.append(last)
-    if block_index is None and limit is None:
-        limit = 100
-    if limit is not None:
-        limit = f"LIMIT {int(limit)}"
-    else:
-        limit = ""
-    # no sql injection here
-    select_fields = "message_index AS event_index, event, bindings AS params"
-    if block_index is None:
-        select_fields += ", block_index, timestamp"
-    query = f"""
-        SELECT {select_fields}
-        FROM messages
-    """  # noqa S608
-    if len(where) > 0:
-        query += f"""
-            WHERE ({" AND ".join(where)})
-        """  # nosec B608  # noqa: S608
-    query += f"""
-        ORDER BY message_index DESC {limit}
-    """
-    cursor.execute(query, tuple(bindings))
-    events = cursor.fetchall()
-    for i, _ in enumerate(events):
-        events[i]["params"] = json.loads(events[i]["params"])
-    return events
-
-
-def get_all_events(db, last: int = None, limit: int = 100):
-    """
-    Returns all events
-    :param int last: The last event index to return (e.g. 10665092)
-    :param int limit: The maximum number of events to return (e.g. 5)
-    """
-    return get_events(db, last=last, limit=limit)
-
-
-def get_events_by_block(db, block_index: int):
-    """
-    Returns the events of a block
-    :param int block_index: The index of the block to return (e.g. 840464)
-    """
-    return get_events(db, block_index=block_index)
-
-
-def get_events_by_block_and_event(db, block_index: int, event: str):
-    """
-    Returns the events of a block filtered by event
-    :param int block_index: The index of the block to return (e.g. 840464)
-    :param str event: The event to filter by (e.g. CREDIT)
-    """
-    if event == "count":
-        return get_event_counts_by_block(db, block_index=block_index)
-    return get_events(db, block_index=block_index, event=event)
-
-
-def get_event_by_index(db, event_index: int):
-    """
-    Returns the event of an index
-    :param int event_index: The index of the event to return (e.g. 10665092)
-    """
-    return get_events(db, event_index=event_index)
-
-
-def get_events_by_name(db, event: str, last: int = None, limit: int = 100):
-    """
-    Returns the events filtered by event name
-    :param str event: The event to return (e.g. CREDIT)
-    :param int last: The last event index to return (e.g. 10665092)
-    :param int limit: The maximum number of events to return (e.g. 5)
-    """
-    return get_events(db, event=event, last=last, limit=limit)
-
-
-def get_mempool_events(db, event_name=None):
-    cursor = db.cursor()
-    where = []
-    bindings = []
-    if event_name is not None:
-        where.append("event = ?")
-        bindings.append(event_name)
-    # no sql injection here
-    query = """
-        SELECT tx_hash, event, bindings AS params, timestamp
-        FROM mempool
-    """
-    if event_name is not None:
-        query += f"""WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
-    query += """ORDER BY timestamp DESC"""
-    cursor.execute(query, tuple(bindings))
-    events = cursor.fetchall()
-    for i, _ in enumerate(events):
-        events[i]["params"] = json.loads(events[i]["params"])
-    return events
-
-
-def get_all_mempool_events(db):
-    """
-    Returns all mempool events
-    """
-    return get_mempool_events(db)
-
-
-def get_mempool_events_by_name(db, event: str):
-    """
-    Returns the mempool events filtered by event name
-    :param str event: The event to return (e.g. OPEN_ORDER)
-    """
-    return get_mempool_events(db, event_name=event)
-
-
-def get_events_counts(db, block_index=None):
-    cursor = db.cursor()
-    bindings = []
-    query = """
-        SELECT event, COUNT(*) AS event_count
-        FROM messages
-    """
-    if block_index is not None:
-        query += "WHERE block_index = ?"
-        bindings.append(block_index)
-    query += " GROUP BY event"
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_event_counts_by_block(db, block_index: int):
-    """
-    Returns the event counts of a block
-    :param int block_index: The index of the block to return (e.g. 840464)
-    """
-    return get_events_counts(db, block_index=block_index)
-
-
-def get_all_events_counts(db):
-    """
-    Returns the event counts of all blocks
-    """
-    return get_events_counts(db)
-
-
 # we are using a function here for testing purposes
 def curr_time():
     return int(time.time())
@@ -228,15 +135,6 @@ def add_to_journal(db, block_index, command, category, event, bindings):
         message_index = message["message_index"] + 1
     except exceptions.DatabaseError:
         message_index = 0
-
-    # Not to be misleading…
-    if block_index == config.MEMPOOL_BLOCK_INDEX:
-        try:
-            del bindings["status"]
-            del bindings["block_index"]
-            del bindings["tx_index"]
-        except KeyError:
-            pass
 
     # Handle binary data.
     items = {}
@@ -256,14 +154,66 @@ def add_to_journal(db, block_index, command, category, event, bindings):
         "bindings": bindings_string,
         "timestamp": current_time,
         "event": event,
+        "tx_hash": util.CURRENT_TX_HASH,
     }
-    query = """INSERT INTO messages VALUES (:message_index, :block_index, :command, :category, :bindings, :timestamp, :event)"""
+    query = """INSERT INTO messages VALUES (
+                    :message_index,
+                    :block_index,
+                    :command,
+                    :category,
+                    :bindings,
+                    :timestamp,
+                    :event,
+                    :tx_hash)"""
     cursor.execute(query, message_bindings)
     cursor.close()
 
     BLOCK_JOURNAL.append(f"{command}{category}{bindings_string}")
 
-    log.log_event(event, items)
+    log.log_event(db, block_index, message_index, event, items)
+
+
+def replay_event(db, event, action, table, bindings, id_name=None):
+    if action == "insert":
+        if event == "DEBIT":
+            debit(
+                db,
+                bindings["address"],
+                bindings["asset"],
+                bindings["quantity"],
+                bindings["tx_index"],
+                action=bindings["action"],
+                event=bindings["event"],
+            )
+        elif event == "CREDIT":
+            credit(
+                db,
+                bindings["address"],
+                bindings["asset"],
+                bindings["quantity"],
+                bindings["tx_index"],
+                action=bindings["calling_function"],
+                event=bindings["event"],
+            )
+        else:
+            insert_record(db, table, bindings, event)
+    elif action == "update":
+        if id_name is None:
+            raise exceptions.DatabaseError("id_name is required for update action")
+        id_value = bindings.pop(id_name)
+        insert_update(db, table, id_name, id_value, bindings, event)
+    else:
+        raise exceptions.DatabaseError(f"Unknown action: {action}")
+
+
+def replay_events(db, events):
+    for event in events:
+        event_name = event[0]
+        bindings = json.loads(event[3])
+        if event_name.endswith("_UPDATE"):
+            replay_event(db, event[0], event[1], event[2], bindings, id_name=event[4])
+        else:
+            replay_event(db, event[0], event[1], event[2], bindings)
 
 
 ###########################
@@ -435,19 +385,6 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False, return_list
     return balances[0]["quantity"]
 
 
-def get_balance_by_address_and_asset(db, address: str, asset: str):
-    """
-    Returns the balance of an address and asset
-    :param str address: The address to return (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
-    :param str asset: The asset to return (e.g. XCP)
-    """
-    return {
-        "address": address,
-        "asset": asset,
-        "quantity": get_balance(db, address, asset),
-    }
-
-
 def get_address_balances(db, address: str):
     """
     Returns the balances of an address
@@ -491,285 +428,6 @@ def get_balances_count(db, address):
     bindings = {"address": address}
     cursor.execute(query, bindings)
     return cursor.fetchall()
-
-
-def get_credits_or_debits(
-    db, table, address=None, asset=None, block_index=None, tx_index=None, offset=0, limit=None
-):
-    cursor = db.cursor()
-    where = []
-    bindings = []
-    if address is not None:
-        where.append("address = ?")
-        bindings.append(address)
-    if asset is not None:
-        where.append("asset = ?")
-        bindings.append(asset)
-    if block_index is not None:
-        where.append("block_index = ?")
-        bindings.append(block_index)
-    if tx_index is not None:
-        where.append("tx_index = ?")
-        bindings.append(tx_index)
-    query_limit = ""
-    if limit is not None:
-        query_limit = "LIMIT ?"
-        bindings.append(limit)
-    query_offset = ""
-    if offset > 0:
-        query_offset = "OFFSET ?"
-        bindings.append(offset)
-    # no sql injection here
-    query = f"""SELECT * FROM {table} WHERE ({" AND ".join(where)}) {query_limit} {query_offset}"""  # nosec B608  # noqa: S608
-    cursor.execute(query, tuple(bindings))
-    return cursor.fetchall()
-
-
-def get_credits(db, address=None, asset=None, block_index=None, tx_index=None, limit=100, offset=0):
-    return get_credits_or_debits(
-        db, "credits", address, asset, block_index, tx_index, limit=limit, offset=offset
-    )
-
-
-def get_credits_by_block(db, block_index: int):
-    """
-    Returns the credits of a block
-    :param int block_index: The index of the block to return (e.g. 840464)
-    """
-    return get_credits(db, block_index=block_index)
-
-
-def get_credits_by_address(db, address: str, limit: int = 100, offset: int = 0):
-    """
-    Returns the credits of an address
-    :param str address: The address to return (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
-    :param int limit: The maximum number of credits to return (e.g. 5)
-    :param int offset: The offset of the credits to return (e.g. 0)
-    """
-    return get_credits(db, address=address, limit=limit, offset=offset)
-
-
-def get_credits_by_asset(db, asset: str, limit: int = 100, offset: int = 0):
-    """
-    Returns the credits of an asset
-    :param str asset: The asset to return (e.g. UNNEGOTIABLE)
-    :param int limit: The maximum number of credits to return (e.g. 5)
-    :param int offset: The offset of the credits to return (e.g. 0)
-    """
-    return get_credits(db, asset=asset, limit=limit, offset=offset)
-
-
-def get_debits(db, address=None, asset=None, block_index=None, tx_index=None, limit=100, offset=0):
-    return get_credits_or_debits(
-        db, "debits", address, asset, block_index, tx_index, limit=limit, offset=offset
-    )
-
-
-def get_debits_by_block(db, block_index: int):
-    """
-    Returns the debits of a block
-    :param int block_index: The index of the block to return (e.g. 840464)
-    """
-    return get_debits(db, block_index=block_index)
-
-
-def get_debits_by_address(db, address: str, limit: int = 100, offset: int = 0):
-    """
-    Returns the debits of an address
-    :param str address: The address to return (e.g. bc1q7787j6msqczs58asdtetchl3zwe8ruj57p9r9y)
-    :param int limit: The maximum number of debits to return (e.g. 5)
-    :param int offset: The offset of the debits to return (e.g. 0)
-    """
-    return get_debits(db, address=address, limit=limit, offset=offset)
-
-
-def get_debits_by_asset(db, asset: str, limit: int = 100, offset: int = 0):
-    """
-    Returns the debits of an asset
-    :param str asset: The asset to return (e.g. XCP)
-    :param int limit: The maximum number of debits to return (e.g. 5)
-    :param int offset: The offset of the debits to return (e.g. 0)
-    """
-    return get_debits(db, asset=asset, limit=limit, offset=offset)
-
-
-def get_sends_or_receives(
-    db,
-    source=None,
-    destination=None,
-    asset=None,
-    block_index=None,
-    status="valid",
-    limit=None,
-    offset=0,
-):
-    cursor = db.cursor()
-    where = []
-    bindings = []
-    if source is not None:
-        where.append("source = ?")
-        bindings.append(source)
-    if destination is not None:
-        where.append("destination = ?")
-        bindings.append(destination)
-    if asset is not None:
-        where.append("asset = ?")
-        bindings.append(asset)
-    if block_index is not None:
-        where.append("block_index = ?")
-        bindings.append(block_index)
-    if status is not None:
-        where.append("status = ?")
-        bindings.append(status)
-    query_limit = ""
-    if limit is not None:
-        query_limit = "LIMIT ?"
-        bindings.append(limit)
-    query_offset = ""
-    if offset > 0:
-        query_offset = "OFFSET ?"
-        bindings.append(offset)
-    # no sql injection here
-    query = f"""SELECT * FROM sends WHERE ({" AND ".join(where)}) {query_limit} {query_offset}"""  # nosec B608  # noqa: S608
-    cursor.execute(query, tuple(bindings))
-    return cursor.fetchall()
-
-
-def get_sends_by_block(db, block_index: int, limit: int = 100, offset: int = 0):
-    """
-    Returns the sends of a block
-    :param int block_index: The index of the block to return (e.g. 840459)
-    :param int limit: The maximum number of sends to return (e.g. 5)
-    :param int offset: The offset of the sends to return (e.g. 0)
-    """
-    return get_sends_or_receives(db, block_index=block_index, limit=limit, offset=offset)
-
-
-def get_sends_by_asset(db, asset: str, limit: int = 100, offset: int = 0):
-    """
-    Returns the sends of an asset
-    :param str asset: The asset to return (e.g. XCP)
-    :param int limit: The maximum number of sends to return (e.g. 5)
-    :param int offset: The offset of the sends to return (e.g. 0)
-    """
-    return get_sends_or_receives(db, asset=asset, limit=limit, offset=offset)
-
-
-def get_sends(
-    db,
-    address=None,
-    asset=None,
-    block_index=None,
-    status="valid",
-    limit: int = 100,
-    offset: int = 0,
-):
-    return get_sends_or_receives(
-        db,
-        source=address,
-        asset=asset,
-        block_index=block_index,
-        status=status,
-        limit=limit,
-        offset=offset,
-    )
-
-
-def get_send_by_address(db, address: str, limit: int = 100, offset: int = 0):
-    """
-    Returns the sends of an address
-    :param str address: The address to return (e.g. 1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W)
-    :param int limit: The maximum number of sends to return (e.g. 5)
-    :param int offset: The offset of the sends to return (e.g. 0)
-    """
-    return get_sends(db, address=address, limit=limit, offset=offset)
-
-
-def get_send_by_address_and_asset(db, address: str, asset: str):
-    """
-    Returns the sends of an address and asset
-    :param str address: The address to return (e.g. 1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W)
-    :param str asset: The asset to return (e.g. XCP)
-    """
-    return get_sends(db, address=address, asset=asset)
-
-
-def get_receives(
-    db,
-    address=None,
-    asset=None,
-    block_index=None,
-    status="valid",
-    limit: int = 100,
-    offset: int = 0,
-):
-    return get_sends_or_receives(
-        db,
-        destination=address,
-        asset=asset,
-        block_index=block_index,
-        status=status,
-        limit=limit,
-        offset=offset,
-    )
-
-
-def get_receive_by_address(db, address: str, limit: int = 100, offset: int = 0):
-    """
-    Returns the receives of an address
-    :param str address: The address to return (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
-    :param int limit: The maximum number of receives to return (e.g. 5)
-    :param int offset: The offset of the receives to return (e.g. 0)
-    """
-    return get_receives(db, address=address, limit=limit, offset=offset)
-
-
-def get_receive_by_address_and_asset(
-    db, address: str, asset: str, limit: int = 100, offset: int = 0
-):
-    """
-    Returns the receives of an address and asset
-    :param str address: The address to return (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
-    :param str asset: The asset to return (e.g. XCP)
-    :param int limit: The maximum number of receives to return (e.g. 5)
-    :param int offset: The offset of the receives to return (e.g. 0)
-    """
-    return get_receives(db, address=address, asset=asset, limit=limit, offset=offset)
-
-
-def get_sweeps(db, address=None, block_index=None, status="valid"):
-    cursor = db.cursor()
-    where = []
-    bindings = []
-    if address is not None:
-        where.append("source = ?")
-        bindings.append(address)
-    if block_index is not None:
-        where.append("block_index = ?")
-        bindings.append(block_index)
-    if status is not None:
-        where.append("status = ?")
-        bindings.append(status)
-    # no sql injection here
-    query = f"""SELECT * FROM sweeps WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
-    cursor.execute(query, tuple(bindings))
-    return cursor.fetchall()
-
-
-def get_sweeps_by_block(db, block_index: int):
-    """
-    Returns the sweeps of a block
-    :param int block_index: The index of the block to return (e.g. 836519)
-    """
-    return get_sweeps(db, block_index=block_index)
-
-
-def get_sweeps_by_address(db, address: str):
-    """
-    Returns the sweeps of an address
-    :param str address: The address to return (e.g. 18szqTVJUWwYrtRHq98Wn4DhCGGiy3jZ87)
-    """
-    return get_sweeps(db, address=address)
 
 
 #####################
@@ -1079,7 +737,7 @@ def get_asset_info(db, asset: str):
     }
 
     if asset_name == config.BTC:
-        asset_info["supply"] = backend.get_btc_supply(normalize=False)
+        asset_info["supply"] = backend.bitcoind.get_btc_supply(normalize=False)
         return asset_info
 
     if asset_name == config.XCP:
@@ -1092,14 +750,20 @@ def get_asset_info(db, asset: str):
 
     cursor = db.cursor()
     query = """
-        SELECT * FROM issuances
+        SELECT *, MIN(block_index) AS first_issuance_block_index,
+                  MAX(rowid) AS rowid,
+                  block_index AS last_issuance_block_index
+        FROM issuances
         WHERE (status = ? AND asset = ?)
+        GROUP BY asset
         ORDER BY rowid DESC
-        LIMIT 1
     """
     bindings = ("valid", asset)
     cursor.execute(query, bindings)
     issuance = cursor.fetchone()
+
+    if not issuance:
+        return None
 
     asset_info = asset_info | {
         "asset_longname": issuance["asset_longname"],
@@ -1108,6 +772,8 @@ def get_asset_info(db, asset: str):
         "locked": bool(issuance["locked"]),
         "description": issuance["description"],
         "issuer": issuance["issuer"],
+        "first_issuance_block_index": issuance["first_issuance_block_index"],
+        "last_issuance_block_index": issuance["last_issuance_block_index"],
     }
 
     return asset_info
@@ -1132,12 +798,14 @@ def get_assets_last_issuance(db, asset_list):
             "asset_longname": "Bitcoin",
             "description": "The Bitcoin cryptocurrency",
             "locked": False,
+            "issuer": None,
         },
         "XCP": {
             "divisible": True,
             "asset_longname": "Counterparty",
             "description": "The Counterparty protocol native currency",
             "locked": True,
+            "issuer": None,
         },
     }
     for issuance in issuances:
@@ -1177,22 +845,6 @@ def get_issuances(
     return cursor.fetchall()
 
 
-def get_issuances_by_block(db, block_index: int):
-    """
-    Returns the issuances of a block
-    :param int block_index: The index of the block to return (e.g. 840464)
-    """
-    return get_issuances(db, block_index=block_index)
-
-
-def get_issuances_by_asset(db, asset: str):
-    """
-    Returns the issuances of an asset
-    :param str asset: The asset to return (e.g. UNNEGOTIABLE)
-    """
-    return get_issuances(db, asset=asset)
-
-
 def get_assets_by_longname(db, asset_longname):
     cursor = db.cursor()
     query = """
@@ -1200,45 +852,6 @@ def get_assets_by_longname(db, asset_longname):
         WHERE (asset_longname = ?)
     """
     bindings = (asset_longname,)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_valid_assets(db, offset: int = 0, limit: int = 100):
-    """
-    Returns the valid assets
-    :param int offset: The offset of the assets to return (e.g. 0)
-    :param int limit: The limit of the assets to return (e.g. 5)
-    """
-    try:
-        int(offset)
-        int(limit)
-    except ValueError as e:
-        raise exceptions.InvalidArgument("Invalid offset or limit parameter") from e
-    cursor = db.cursor()
-    query = """
-        SELECT asset, asset_longname
-        FROM issuances
-        WHERE status = 'valid'
-        GROUP BY asset
-        ORDER BY asset ASC
-        LIMIT ? OFFSET ?
-    """
-    cursor.execute(query, (limit, offset))
-    return cursor.fetchall()
-
-
-def get_dividends(db, asset: str):
-    """
-    Returns the dividends of an asset
-    :param str asset: The asset to return (e.g. GMONEYPEPE)
-    """
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM dividends
-        WHERE asset = ? AND status = ?
-    """
-    bindings = (asset, "valid")
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -1324,38 +937,6 @@ def get_burns(db, address: str = None, status: str = "valid"):
     return cursor.fetchall()
 
 
-def get_burns_by_address(db, address: str):
-    """
-    Returns the burns of an address
-    :param str address: The address to return (e.g. 1HVgrYx3U258KwvBEvuG7R8ss1RN2Z9J1W)
-    """
-    return get_burns(db, address=address)
-
-
-def get_all_burns(db, status: str = "valid", offset: int = 0, limit: int = 100):
-    """
-    Returns the burns
-    :param str status: The status of the burns to return (e.g. valid)
-    :param int offset: The offset of the burns to return (e.g. 10)
-    :param int limit: The limit of the burns to return (e.g. 5)
-    """
-    try:
-        int(offset)
-        int(limit)
-    except ValueError as e:
-        raise exceptions.InvalidArgument("Invalid offset or limit parameter") from e
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM burns
-        WHERE status = ?
-        ORDER BY tx_index ASC
-        LIMIT ? OFFSET ?
-    """
-    bindings = (status, limit, offset)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
 ######################################
 #       BLOCKS AND TRANSACTIONS      #
 ######################################
@@ -1392,6 +973,35 @@ def get_block(db, block_index: int):
     return None
 
 
+def last_db_index(db):
+    cursor = db.cursor()
+    query = "SELECT name FROM sqlite_master WHERE type='table' AND name='blocks'"
+    if len(list(cursor.execute(query))) == 0:
+        return 0
+
+    query = "SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1"
+    blocks = list(cursor.execute(query))
+    if len(blocks) == 0:
+        return 0
+
+    return blocks[0]["block_index"]
+
+
+def get_block_by_hash(db, block_hash: str):
+    """
+    Return the information of a block
+    :param int block_hash: The hash of the block to return (e.g. 00000000000000000001158f52eae43aa7fede1bb675736f105ccb545edcf5dd)
+    """
+    query = """
+        SELECT * FROM blocks
+        WHERE block_hash = ?
+    """
+    bindings = (block_hash,)
+    cursor = db.cursor()
+    cursor.execute(query, bindings)
+    return cursor.fetchone()
+
+
 def get_last_block(db):
     cursor = db.cursor()
     query = "SELECT * FROM blocks ORDER BY block_index DESC LIMIT 1"
@@ -1400,20 +1010,19 @@ def get_last_block(db):
     return block
 
 
-def get_transactions_by_block(db, block_index: int):
-    """
-    Returns the transactions of a block
-    :param int block_index: The index of the block to return (e.g. 840464)
-    """
+def get_blocks_time(db, block_indexes):
     cursor = db.cursor()
-    query = """
-        SELECT * FROM transactions
-        WHERE block_index = ?
-        ORDER BY tx_index ASC
-    """
-    bindings = (block_index,)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
+    query = f"""
+        SELECT block_index, block_time
+        FROM blocks
+        WHERE block_index IN ({",".join(["?" for e in range(0, len(block_indexes))])})
+    """  # nosec B608  # noqa: S608
+    cursor.execute(query, block_indexes)
+    blocks = cursor.fetchall()
+    result = {}
+    for block in blocks:
+        result[block["block_index"]] = block["block_time"]
+    return result
 
 
 def get_vouts(db, tx_hash):
@@ -1430,13 +1039,16 @@ def get_vouts(db, tx_hash):
     return cursor.fetchall()
 
 
-def get_transactions(db, tx_hash=None):
+def get_transactions(db, tx_hash=None, tx_index=None):
     cursor = db.cursor()
     where = []
     bindings = []
     if tx_hash is not None:
         where.append("tx_hash = ?")
         bindings.append(tx_hash)
+    if tx_index is not None:
+        where.append("tx_index = ?")
+        bindings.append(tx_index)
     # no sql injection here
     query = f"""SELECT * FROM transactions WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
@@ -1471,218 +1083,6 @@ def get_addresses(db, address=None):
         bindings.append(address)
     # no sql injection here
     query = f"""SELECT * FROM addresses WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
-    cursor.execute(query, tuple(bindings))
-    return cursor.fetchall()
-
-
-def get_expirations(db, block_index: int):
-    """
-    Returns the expirations of a block
-    :param int block_index: The index of the block to return (e.g. 840356)
-    """
-    cursor = db.cursor()
-    queries = [
-        """
-        SELECT 'order' AS type, order_hash AS object_id FROM order_expirations
-        WHERE block_index = ?
-        """,
-        """
-        SELECT 'order_match' AS type, order_match_id AS object_id FROM order_match_expirations
-        WHERE block_index = ?
-        """,
-        """
-        SELECT 'bet' AS type, bet_hash AS object_id FROM bet_expirations
-        WHERE block_index = ?
-        """,
-        """
-        SELECT 'bet_match' AS type, bet_match_id AS object_id FROM bet_match_expirations
-        WHERE block_index = ?
-        """,
-        """
-        SELECT 'rps' AS type, rps_hash AS object_id FROM rps_expirations
-        WHERE block_index = ?
-        """,
-        """
-        SELECT 'rps_match' AS type, rps_match_id AS object_id FROM rps_match_expirations
-        WHERE block_index = ?
-        """,
-    ]
-    query = " UNION ALL ".join(queries)
-    bindings = (block_index,) * 6
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_cancels(db, block_index: int):
-    """
-    Returns the cancels of a block
-    :param int block_index: The index of the block to return (e.g. 839746)
-    """
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM cancels
-        WHERE block_index = ?
-    """
-    bindings = (block_index,)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_destructions(db, block_index: int):
-    """
-    Returns the destructions of a block
-    :param int block_index: The index of the block to return (e.g. 839988)
-    """
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM destructions
-        WHERE block_index = ?
-    """
-    bindings = (block_index,)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-###############################
-#       UTIL FUNCTIONS        #
-###############################
-
-
-def insert_record(db, table_name, record, event):
-    cursor = db.cursor()
-    fields_name = ", ".join(record.keys())
-    fields_values = ", ".join([f":{key}" for key in record.keys()])
-    # no sql injection here
-    query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608  # noqa: S608
-    cursor.execute(query, record)
-    cursor.close()
-    # Add event to journal
-    add_to_journal(db, util.CURRENT_BLOCK_INDEX, "insert", table_name, event, record)
-
-
-# This function allows you to update a record using an INSERT.
-# The `block_index` and `rowid` fields allow you to
-# order updates and retrieve the row with the current data.
-def insert_update(db, table_name, id_name, id_value, update_data, event, event_info={}):  # noqa: B006
-    cursor = db.cursor()
-    # select records to update
-    select_query = f"""
-        SELECT *, rowid
-        FROM {table_name}
-        WHERE {id_name} = ?
-        ORDER BY rowid DESC
-        LIMIT 1
-    """  # nosec B608  # noqa: S608
-    bindings = (id_value,)
-    need_update_record = cursor.execute(select_query, bindings).fetchone()
-
-    # update record
-    new_record = need_update_record.copy()
-    # updade needed fields
-    for key, value in update_data.items():
-        new_record[key] = value
-    # new block_index and tx_index
-    new_record["block_index"] = util.CURRENT_BLOCK_INDEX
-    # let's keep the original tx_index so we can preserve order
-    # with the old queries (ordered by default by old primary key)
-    # TODO: restore with protocol change and checkpoints update
-    # if 'tx_index' in new_record:
-    #    new_record['tx_index'] = tx_index
-    # insert new record
-    if "rowid" in new_record:
-        del new_record["rowid"]
-    fields_name = ", ".join(new_record.keys())
-    fields_values = ", ".join([f":{key}" for key in new_record.keys()])
-    # no sql injection here
-    insert_query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608  # noqa: S608
-    cursor.execute(insert_query, new_record)
-    cursor.close()
-    # Add event to journal
-    event_paylod = update_data | {id_name: id_value} | event_info
-    if "rowid" in event_paylod:
-        del event_paylod["rowid"]
-    add_to_journal(
-        db, util.CURRENT_BLOCK_INDEX, "update", table_name, event, update_data | event_paylod
-    )
-
-
-MUTABLE_FIELDS = {
-    "balances": ["quantity"],
-    "orders": [
-        "give_remaining",
-        "get_remaining",
-        "fee_required_remaining",
-        "fee_provided_remaining",
-        "status",
-    ],
-    "order_matches": ["status"],
-    "bets": ["wager_remaining", "counterwager_remaining", "status"],
-    "bet_matches": ["status"],
-    "rps": ["status"],
-    "rps_matches": ["status"],
-    "dispensers": ["give_remaining", "status", "last_status_tx_hash"],
-}
-ID_FIELDS = {
-    "balances": ["address", "asset"],
-    "orders": ["tx_hash"],
-    "order_matches": ["id"],
-    "bets": ["tx_hash"],
-    "bet_matches": ["id"],
-    "rps": ["tx_hash"],
-    "rps_matches": ["id"],
-    "dispensers": ["tx_hash"],
-}
-
-
-def _gen_where_and_binding(key, value):
-    where = ""
-    bindings = []
-    _key = key.replace("_in", "")
-    if key.endswith("_in"):
-        assert isinstance(value, list)
-        where = f'{_key} IN ({",".join(["?" for e in range(0, len(value))])})'
-        bindings += value
-    else:
-        where = f"{_key} = ?"
-        bindings.append(value)
-    return where, bindings
-
-
-def select_last_revision(db, table_name, where_data):
-    cursor = db.cursor()
-    if table_name not in MUTABLE_FIELDS.keys():
-        raise exceptions.UnknownTable(f"Unknown table: {table_name}")
-    query = """
-        PRAGMA table_info(?)
-    """
-    bindings = (table_name,)
-    columns = [column["name"] for column in cursor.execute(query, bindings)]
-    for key in where_data.keys():
-        _key = key.replace("_in", "")
-        if _key not in columns:
-            raise exceptions.UnknownField(f"Unknown field: {key}")
-
-    where_immutable = []
-    where_mutable = []
-    bindings = []
-    for key, value in where_data.items():
-        if key.replace("_in", "") not in MUTABLE_FIELDS[table_name]:
-            _where, _bindings = _gen_where_and_binding(key, value)
-            where_immutable.append(_where)
-            bindings += _bindings
-    for key, value in where_data.items():
-        if key.replace("_in", "") in MUTABLE_FIELDS[table_name]:
-            _where, _bindings = _gen_where_and_binding(key, value)
-            where_mutable.append(_where)
-            bindings += _bindings
-    # no sql injection here
-    query = f"""SELECT * FROM (
-        SELECT *, MAX(rowid)
-        FROM {table_name}
-        WHERE ({" AND ".join(where_immutable)})
-        GROUP BY {", ".join(ID_FIELDS[table_name])}
-    ) WHERE ({" AND ".join(where_mutable)})
-    """  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -1734,14 +1134,6 @@ def get_dispensers_info(db, tx_hash_list):
     return result
 
 
-def get_dispenser_info_by_hash(db, dispenser_hash: str):
-    """
-    Returns the dispenser information by tx_hash
-    :param str dispenser_hash: The hash of the dispenser to return (e.g. 753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a)
-    """
-    return get_dispenser_info(db, tx_hash=dispenser_hash)
-
-
 def get_refilling_count(db, dispenser_tx_hash):
     cursor = db.cursor()
     query = """
@@ -1754,48 +1146,26 @@ def get_refilling_count(db, dispenser_tx_hash):
     return cursor.fetchall()[0]["cnt"]
 
 
-def get_pending_dispensers_old(db, status, delay, block_index):
+def get_pending_dispensers(db, block_index):
     cursor = db.cursor()
     query = """
-        SELECT * FROM
-            (SELECT d.*, t.source AS tx_source, t.block_index AS tx_block_index, MAX(d.rowid) AS rowid
-            FROM dispensers AS d
-            LEFT JOIN transactions t ON t.tx_hash = d.last_status_tx_hash
-            WHERE :block_index = t.block_index + :delay
-            GROUP BY d.source, d.asset)
-        WHERE status = :status
-        AND last_status_tx_hash IS NOT NULL
-        ORDER BY tx_index
-    """
-    bindings = {"status": status, "delay": delay, "block_index": block_index}
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_pending_dispensers(db, delay, block_index):
-    status_closed = 10
-    status_closing = 11
-
-    cursor = db.cursor()
-    # we assume here that the status_closed and status_closing are the last statuses
-    # and that dispenser with status_closing can be closed before the delay if it's empty
-    query = """
-        SELECT d.*, t.source AS tx_source, t.block_index AS tx_block_index, MAX(d.rowid) AS rowid
-        FROM dispensers AS d
-        LEFT JOIN transactions t ON t.tx_hash = d.last_status_tx_hash
-        WHERE :block_index = t.block_index + :delay
-        AND status IN (:status_closed, :status_closing)
-        GROUP BY d.source, d.asset
+        SELECT * FROM (
+            SELECT *, MAX(rowid) AS rowid
+            FROM dispensers
+            WHERE close_block_index = :close_block_index
+            GROUP BY source, asset
+        )
+        WHERE status = :status_closing
         ORDER BY tx_index
     """
     bindings = {
-        "status_closed": status_closed,
-        "status_closing": status_closing,
-        "delay": delay,
-        "block_index": block_index,
+        "close_block_index": block_index,
+        "status_closing": 11,  # STATUS_CLOSING
     }
     cursor.execute(query, bindings)
-    return [dispenser for dispenser in cursor.fetchall() if dispenser["status"] == status_closing]
+    result = cursor.fetchall()
+
+    return result
 
 
 def get_dispensers_count(db, source, status, origin):
@@ -1911,61 +1281,13 @@ def get_dispensers(
     return cursor.fetchall()
 
 
-def get_dispensers_by_address(db, address: str, status: int = 0):
-    """
-    Returns the dispensers of an address
-    :param str address: The address to return (e.g. bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz)
-    """
-    return get_dispensers(db, address=address, status=status)
-
-
-def get_dispensers_by_asset(db, asset: str, status: int = 0):
-    """
-    Returns the dispensers of an asset
-    :param str asset: The asset to return (e.g. ERYKAHPEPU)
-    """
-    return get_dispensers(db, asset=asset, status=status)
-
-
-def get_dispensers_by_address_and_asset(db, address: str, asset: str, status: int = 0):
-    """
-    Returns the dispensers of an address and an asset
-    :param str address: The address to return (e.g. bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz)
-    :param str asset: The asset to return (e.g. ERYKAHPEPU)
-    """
-    return get_dispensers(db, address=address, asset=asset, status=status)
-
-
-def get_dispenses(db, dispenser_tx_hash=None, block_index=None):
+def get_all_dispensables(db):
     cursor = db.cursor()
-    where = []
-    bindings = []
-    if dispenser_tx_hash is not None:
-        where.append("dispenser_tx_hash = ?")
-        bindings.append(dispenser_tx_hash)
-    if block_index is not None:
-        where.append("block_index = ?")
-        bindings.append(block_index)
-    # no sql injection here
-    query = f"""SELECT * FROM dispenses WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
-    cursor.execute(query, tuple(bindings))
-    return cursor.fetchall()
-
-
-def get_dispenses_by_block(db, block_index: int):
-    """
-    Returns the dispenses of a block
-    :param int block_index: The index of the block to return (e.g. 840322)
-    """
-    return get_dispenses(db, block_index=block_index)
-
-
-def get_dispenses_by_dispenser(db, dispenser_hash: str):
-    """
-    Returns the dispenses of a dispenser
-    :param str dispenser_hash: The hash of the dispenser to return (e.g. 753787004d6e93e71f6e0aa1e0932cc74457d12276d53856424b2e4088cc542a)
-    """
-    return get_dispenses(db, dispenser_tx_hash=dispenser_hash)
+    query = """SELECT DISTINCT source AS source FROM dispensers"""
+    dispensables = {}
+    for row in cursor.execute(query).fetchall():
+        dispensables[row["source"]] = True
+    return dispensables
 
 
 ### UPDATES ###
@@ -2087,42 +1409,6 @@ def get_bet_by_feed(db, address: str, status: str = "open"):
         ORDER BY tx_index, tx_hash
     """
     bindings = (address, status)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_bet_matches_by_bet(db, bet_hash: str, status: str = "pending"):
-    """
-    Returns the bet matches of a bet
-    :param str bet_hash: The hash of the transaction that created the bet (e.g. 5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed)
-    :param str status: The status of the bet matches (e.g. expired)
-    """
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM (
-            SELECT *, MAX(rowid)
-            FROM bet_matches
-            WHERE (tx0_hash = ? OR tx1_hash = ?)
-            GROUP BY id
-        ) WHERE status = ?
-    """
-    bindings = (bet_hash, bet_hash, status)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_resolutions_by_bet(db, bet_hash: str):
-    """
-    Returns the resolutions of a bet
-    :param str bet_hash: The hash of the transaction that created the bet (e.g. 36bbbb7dbd85054dac140a8ad8204eda2ee859545528bd2a9da69ad77c277ace)
-    """
-    cursor = db.cursor()
-    query = """
-        SELECT *
-        FROM bet_match_resolutions
-        WHERE bet_match_id LIKE ?
-    """
-    bindings = (f"%{bet_hash}%",)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -2281,90 +1567,6 @@ def get_matching_orders(db, tx_hash, give_asset, get_asset):
     return cursor.fetchall()
 
 
-def get_orders_by_asset(db, asset: str, status: str = "open"):
-    """
-    Returns the orders of an asset
-    :param str asset: The asset to return (e.g. NEEDPEPE)
-    :param str status: The status of the orders to return (e.g. filled)
-    """
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM (
-            SELECT *, MAX(rowid)
-            FROM orders
-            WHERE (give_asset = ? OR get_asset = ?)
-            GROUP BY tx_hash
-        ) WHERE status = ?
-    """
-    bindings = (asset, asset, status)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_orders_by_two_assets(db, asset1: str, asset2: str, status: str = "open"):
-    """
-    Returns the orders to exchange two assets
-    :param str asset1: The first asset to return (e.g. NEEDPEPE)
-    :param str asset2: The second asset to return (e.g. XCP)
-    :param str status: The status of the orders to return (e.g. filled)
-    """
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM (
-            SELECT *, MAX(rowid)
-            FROM orders
-            WHERE (give_asset = ? AND get_asset = ?) OR (give_asset = ? AND get_asset = ?)
-            GROUP BY tx_hash
-        ) WHERE status = ?
-    """
-    bindings = (asset1, asset2, asset2, asset1, status)
-    cursor.execute(query, bindings)
-    orders = cursor.fetchall()
-    for order in orders:
-        order["market_pair"] = f"{asset1}/{asset2}"
-        if order["give_asset"] == asset1:
-            order["market_dir"] = "SELL"
-        else:
-            order["market_dir"] = "BUY"
-    return orders
-
-
-def get_order_matches_by_order(db, order_hash: str, status: str = "pending"):
-    """
-    Returns the order matches of an order
-    :param str order_hash: The hash of the transaction that created the order (e.g. 5461e6f99a37a7167428b4a720a52052cd9afed43905f818f5d7d4f56abd0947)
-    :param str status: The status of the order matches to return (e.g. completed)
-    """
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM (
-            SELECT *, MAX(rowid)
-            FROM order_matches
-            WHERE (tx0_hash = ? OR tx1_hash = ?)
-            GROUP BY id
-        ) WHERE status = ?
-    """
-    bindings = (order_hash, order_hash, status)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_btcpays_by_order(db, order_hash: str):
-    """
-    Returns the BTC pays of an order
-    :param str order_hash: The hash of the transaction that created the order (e.g. 299b5b648f54eacb839f3487232d49aea373cdd681b706d4cc0b5e0b03688db4)
-    """
-    cursor = db.cursor()
-    query = """
-        SELECT *
-        FROM btcpays
-        WHERE order_match_id LIKE ?
-    """
-    bindings = (f"%{order_hash}%",)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
 ### UPDATES ###
 
 
@@ -2413,155 +1615,6 @@ def update_order_match_status(db, id, status):
     insert_update(
         db, "order_matches", "id", id, update_data, "ORDER_MATCH_UPDATE", {"order_match_id": id}
     )
-
-
-#####################
-#       RPS         #
-#####################
-
-### SELECTS ###
-
-
-def get_matched_not_expired_rps(db, tx0_hash, tx1_hash, expire_index):
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM (
-            SELECT *, MAX(rowid) as rowid
-            FROM rps
-            WHERE tx_hash IN (?, ?)
-            AND expire_index >= ?
-            GROUP BY tx_hash
-        ) WHERE status = ?
-    """
-    bindings = (tx0_hash, tx1_hash, expire_index, "matched")
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_already_matched_rps(db, tx_hash):
-    cursor = db.cursor()
-    query = """
-        SELECT *, MAX(rowid) AS rowid
-        FROM rps_matches
-        WHERE tx0_hash = ? OR tx1_hash = ?
-        GROUP BY id
-        ORDER BY rowid
-    """
-    bindings = (tx_hash, tx_hash)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_matching_rps(db, possible_moves, wager, source, already_matched_tx_hashes):
-    cursor = db.cursor()
-    bindings = (possible_moves, wager, source)
-    already_matched_cond = ""
-    if already_matched_tx_hashes:
-        place_holders = ",".join(["?" for e in range(0, len(already_matched_tx_hashes))])
-        already_matched_cond = f"""AND tx_hash NOT IN ({place_holders})"""
-        bindings += tuple(already_matched_tx_hashes)
-    bindings += ("open",)
-    # no sql injection here
-    query = f"""
-        SELECT * FROM (
-            SELECT *, MAX(rowid) FROM rps
-            WHERE (possible_moves = ? AND wager = ? AND source != ? {already_matched_cond})
-            GROUP BY tx_hash
-        ) WHERE status = ?
-        ORDER BY tx_index LIMIT 1
-    """  # nosec B608  # noqa: S608
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_rps_to_expire(db, block_index):
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM (
-            SELECT *, MAX(rowid)
-            FROM rps
-            WHERE expire_index = ? - 1
-            GROUP BY tx_hash
-        ) WHERE status = ?
-        ORDER BY tx_index, tx_hash
-    """
-    bindings = (block_index, "open")
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_rps(db, tx_hash):
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM rps
-        WHERE tx_hash = ?
-        ORDER BY rowid DESC
-        LIMIT 1
-    """
-    bindings = (tx_hash,)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_rps_matches_to_expire(db, block_index):
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM (
-            SELECT *, MAX(rowid) AS rowid
-            FROM rps_matches
-            WHERE match_expire_index < ?
-            GROUP BY id
-        ) WHERE status IN (?, ? , ?)
-        ORDER BY rowid
-    """
-    bindings = (block_index, "pending", "pending and resolved", "resolved and pending")
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_rps_match(db, id):
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM rps_matches
-        WHERE id = ?
-        ORDER BY rowid
-        DESC LIMIT 1
-    """
-    bindings = (id,)
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
-def get_rpsresolves(db, source=None, status=None, rps_match_id=None):
-    cursor = db.cursor()
-    where = []
-    bindings = []
-    if source is not None:
-        where.append("source = ?")
-        bindings.append(source)
-    if status is not None:
-        where.append("status = ?")
-        bindings.append(status)
-    if rps_match_id is not None:
-        where.append("rps_match_id = ?")
-        bindings.append(rps_match_id)
-    # no sql injection here
-    query = f"""SELECT * FROM rpsresolves WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
-    cursor.execute(query, tuple(bindings))
-    return cursor.fetchall()
-
-
-### UPDATES ###
-
-
-def update_rps_match_status(db, id, status):
-    update_data = {"status": status}
-    insert_update(db, "rps_matches", "id", id, update_data, "RPS_MATCH_UPDATE")
-
-
-def update_rps_status(db, tx_hash, status):
-    update_data = {"status": status}
-    insert_update(db, "rps", "tx_hash", tx_hash, update_data, "RPS_UPDATE")
 
 
 #####################

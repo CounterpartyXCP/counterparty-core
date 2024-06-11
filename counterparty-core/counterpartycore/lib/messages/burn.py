@@ -1,6 +1,5 @@
 #! /usr/bin/python3
 import decimal
-import json
 import logging
 
 D = decimal.Decimal
@@ -168,12 +167,12 @@ def parse(db, tx, mainnet_burns, message=None):
             event=line["tx_hash"],
         )
 
-        tx_index = tx["tx_index"]
+        tx_index = int(tx["tx_index"])
         tx_hash = line["tx_hash"]
-        block_index = line["block_index"]
+        block_index = int(line["block_index"])
         source = line["source"]
-        burned = line["burned"]
-        earned = line["earned"]
+        burned = int(line["burned"])
+        earned = int(line["earned"])
         status = "valid"
 
     # Add parsed transaction to message-type–specific table.
@@ -189,9 +188,10 @@ def parse(db, tx, mainnet_burns, message=None):
     }
     if "integer overflow" not in status:
         ledger.insert_record(db, "burns", bindings, "BURN")
-    else:
-        logger.debug(f"Not storing [burn] tx [{tx['tx_hash']}]: {status}")
-        logger.debug(f"Bindings: {json.dumps(bindings)}")
+
+    logger.info(
+        "%(source)s burned %(burned)s BTC for %(earned)s XCP (%(tx_hash)s) [%(status)s]", bindings
+    )
 
     burn_parse_cursor.close()
 

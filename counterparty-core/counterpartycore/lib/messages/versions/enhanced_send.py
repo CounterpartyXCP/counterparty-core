@@ -1,6 +1,5 @@
 #! /usr/bin/python3
 
-import json
 import logging
 import struct
 
@@ -37,11 +36,11 @@ def unpack(message, block_index):
             raise exceptions.AssetNameError(f"{config.BTC} not allowed")
 
     except struct.error as e:
-        logger.warning(f"enhanced send unpack error: {e}")
+        logger.trace(f"enhanced send unpack error: {e}")
         raise exceptions.UnpackError("could not unpack")  # noqa: B904
 
     except (exceptions.AssetNameError, exceptions.AssetIDError) as e:
-        logger.warning(f"enhanced send invalid asset id: {e}")
+        logger.trace(f"enhanced send invalid asset id: {e}")
         raise exceptions.UnpackError("asset id invalid")  # noqa: B904
 
     unpacked = {
@@ -196,17 +195,6 @@ def parse(db, tx, message):
             db, destination, asset, quantity, tx["tx_index"], action="send", event=tx["tx_hash"]
         )
 
-    # log invalid transactions
-    if status != "valid":
-        if quantity is None:
-            logger.warning(
-                f"Invalid send from {tx['source']} with status {status}. ({tx['tx_hash']})"
-            )
-        else:
-            logger.warning(
-                f"Invalid send of {quantity} {asset} from {tx['source']} to {destination}. status is {status}. ({tx['tx_hash']})"
-            )
-
     # Add parsed transaction to message-type–specific table.
     bindings = {
         "tx_index": tx["tx_index"],
@@ -221,9 +209,11 @@ def parse(db, tx, message):
     }
     if "integer overflow" not in status and "quantity must be in satoshis" not in status:
         ledger.insert_record(db, "sends", bindings, "ENHANCED_SEND")
-    else:
-        logger.debug(f"Not storing [send] tx [{tx['tx_hash']}]: {status}")
-        logger.debug(f"Bindings: {json.dumps(bindings)}")
+
+    logger.info(
+        "Send (Enhanced) %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]",
+        bindings,
+    )
 
     cursor.close()
 
