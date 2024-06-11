@@ -71,9 +71,9 @@ Or to know the events triggered by a given transaction:
 
 `/v2/transactions/<tx_hash>/events`
 
-### ZMQ Publisher
+### ZeroMQ Publisher
 
-You can enable a ZMQ server by starting `counteparty-server` with the `--enable-zmq-publisher` flag.
+You can enable the ZeroMQ server by starting `counterparty-server` with the `--enable-zmq-publisher` flag.
 All events are published, each in a specific topic. You can subscribe to the events that interest you. For example in Python:
 
 ```

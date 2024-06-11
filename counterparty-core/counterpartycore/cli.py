@@ -285,13 +285,13 @@ CONFIG_ARGS = [
     ],
     [
         ("--enable-zmq-publisher",),
-        {"action": "store_true", "default": False, "help": "Enable ZMQ events publisher"},
+        {"action": "store_true", "default": False, "help": "Enable ZeroMQ events publisher"},
     ],
     [
         ("--zmq-publisher-port",),
         {
             "type": int,
-            "help": "port on which Counterparty server will publish ZMQ notificiations for every event",
+            "help": "port on which Counterparty server will publish ZeroMQ notificiations for every event",
         },
     ],
     [

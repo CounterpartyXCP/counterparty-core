@@ -467,7 +467,7 @@ def initialise_config(
     try:
         config.ZMQ_PUBLISHER_PORT = int(config.ZMQ_PUBLISHER_PORT)
         if not (int(config.ZMQ_PUBLISHER_PORT) > 1 and int(config.ZMQ_PUBLISHER_PORT) < 65535):
-            raise ConfigurationError("invalid ZMQ publisher port number")
+            raise ConfigurationError("invalid ZeroMQ publisher port number")
     except:  # noqa: E722
         raise ConfigurationError(  # noqa: B904
             "Please specific a valid port number rpc-port configuration parameter"
