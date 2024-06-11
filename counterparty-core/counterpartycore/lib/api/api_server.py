@@ -155,6 +155,8 @@ def return_result(
     response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
     response.headers["X-BITCOIN-HEIGHT"] = BACKEND_HEIGHT
     response.headers["Content-Type"] = "application/json"
+    if not config.API_NO_ALLOW_CORS:
+        response.headers["Access-Control-Allow-Headers"] = "*"
 
     if http_code != 404:
         message = get_log_prefix(query_args)
