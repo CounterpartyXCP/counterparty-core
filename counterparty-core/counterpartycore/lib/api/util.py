@@ -1,3 +1,4 @@
+import binascii
 import decimal
 import inspect
 import json
@@ -462,10 +463,36 @@ def inject_dispensers(db, result):
     return result
 
 
+def inject_unpacked_data(db, result):
+    # let's work with a list
+    result_list = result
+    result_is_dict = False
+    if isinstance(result, dict):
+        result_list = [result]
+        result_is_dict = True
+
+    for result_item in result_list:
+        if "data" in result_item:
+            data = binascii.hexlify(result_item["data"])
+            block_index = result_item.get("block_index")
+            result_item["unpacked_data"] = transaction.unpack(db, data, block_index=block_index)
+        if "params" in result_item and "data" in result_item["params"]:
+            data = binascii.hexlify(result_item["params"]["data"])
+            block_index = result_item.get("block_index")
+            result_item["params"]["unpacked_data"] = transaction.unpack(
+                db, data, block_index=block_index
+            )
+
+    if result_is_dict:
+        return result_list[0]
+    return result
+
+
 def inject_details(db, result):
     result = inject_dispensers(db, result)
     result = inject_issuances_and_block_times(db, result)
     result = inject_normalized_quantities(result)
+    result = inject_unpacked_data(db, result)
     return result
 
 

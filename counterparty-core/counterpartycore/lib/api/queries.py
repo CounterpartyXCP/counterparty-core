@@ -280,6 +280,30 @@ def get_transactions_by_address(
     )
 
 
+def get_transaction_by_hash(db, tx_hash: str):
+    """
+    Returns a transaction by its hash.
+    :param tx_hash: The hash of the transaction (e.g. 876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5)
+    """
+    return select_row(
+        db,
+        "transactions",
+        where={"tx_hash": tx_hash},
+    )
+
+
+def get_transaction_by_tx_index(db, tx_index: int):
+    """
+    Returns a transaction by its index.
+    :param tx_index: The index of the transaction (e.g. 10000)
+    """
+    return select_row(
+        db,
+        "transactions",
+        where={"tx_index": tx_index},
+    )
+
+
 def get_all_events(
     db, event_name: str = None, cursor: int = None, limit: int = 100, offset: int = None
 ):
