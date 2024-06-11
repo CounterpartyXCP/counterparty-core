@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v10.2.0 (2024-05-??)
+# Release Notes - Counterparty Core v10.2.0 (2024-06-11)
 
 This is a large release that includes significant refactoring and redesigns of critical node components, including the CLI and logging subsystems, mempool processing, and API database connection management. It also includes numerous updates and extensions to the v2 API, plus new ZeroMQ support. Of course, a large number of bugs have been resolved as well.
 
