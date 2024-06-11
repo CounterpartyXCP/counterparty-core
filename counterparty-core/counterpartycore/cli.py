@@ -315,11 +315,11 @@ def welcome_message(action, server_configfile):
 
     if config.VERBOSE:
         if config.TESTNET:
-            cprint("Network: Testnet", "light_grey")
+            cprint("Network: `testnet`", "light_grey")
         elif config.REGTEST:
-            cprint("Network: Regtest", "light_grey")
+            cprint("Network: `regtest`", "light_grey")
         else:
-            cprint("Network: Mainnet", "light_grey")
+            cprint("Network: `mainnet`", "light_grey")
 
         pass_str = f":{urlencode(config.BACKEND_PASSWORD)}@"
         cleaned_backend_url = config.BACKEND_URL.replace(pass_str, ":*****@")
