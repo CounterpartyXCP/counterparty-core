@@ -250,7 +250,7 @@ def parse_block(
     # Parse transactions, sorting them by type.
     cursor = db.cursor()
     cursor.execute(
-        """SELECT * FROM transactions \
+        """SELECT *, rowid FROM transactions \
                       WHERE block_index=$block_index ORDER BY tx_index""",
         {"block_index": block_index},
     )
@@ -279,6 +279,7 @@ def parse_block(
                     "transactions",
                     "NEW_TRANSACTION",
                     transaction_bindings,
+                    insert_rowid=tx["rowid"],
                 )
             parse_tx(db, tx)
             data = binascii.hexlify(tx["data"]).decode("UTF-8") if tx["data"] else ""
@@ -624,13 +625,16 @@ def initialise(db):
                       bindings TEXT,
                       timestamp INTEGER,
                       event TEXT,
-                      tx_hash TEXT)
+                      tx_hash TEXT,
+                      insert_rowid INTEGER)
                   """)
     columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(messages)""")]
     if "event" not in columns:
         cursor.execute("""ALTER TABLE messages ADD COLUMN event TEXT""")
     if "tx_hash" not in columns:
         cursor.execute("""ALTER TABLE messages ADD COLUMN tx_hash TEXT""")
+    if "insert_rowid" not in columns:
+        cursor.execute("""ALTER TABLE messages ADD COLUMN insert_rowid INTEGER""")
 
     # TODO: FOREIGN KEY (block_index) REFERENCES blocks(block_index) DEFERRABLE INITIALLY DEFERRED)
     database.create_indexes(
@@ -641,6 +645,7 @@ def initialise(db):
             ["block_index", "message_index"],
             ["event"],
             ["tx_hash"],
+            ["category", "insert_rowid"],
         ],
     )
 
@@ -990,7 +995,8 @@ def reparse(db, block_index=0):
     message = ""
     with log.Spinner(step, done_message) as spinner:
         cursor.execute(
-            """SELECT * FROM blocks WHERE block_index >= ? ORDER BY block_index""", (block_index,)
+            """SELECT *, rowid FROM blocks WHERE block_index >= ? ORDER BY block_index""",
+            (block_index,),
         )
         for block in cursor.fetchall():
             start_time_block_parse = time.time()
@@ -1009,6 +1015,7 @@ def reparse(db, block_index=0):
                     "previous_block_hash": block["previous_block_hash"],
                     "difficulty": block["difficulty"],
                 },
+                insert_rowid=block["rowid"],
             )
             previous_ledger_hash = None
             previous_txlist_hash = None

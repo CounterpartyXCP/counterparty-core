@@ -18,6 +18,10 @@ BLOCK_JOURNAL = []
 ###############################
 
 
+def get_last_insert_rowid(cursor):
+    return cursor.execute("SELECT last_insert_rowid() AS last_rowid").fetchone()["last_rowid"]
+
+
 def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
     cursor = db.cursor()
     fields_name = ", ".join(record.keys())
@@ -25,9 +29,18 @@ def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
     # no sql injection here
     query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608  # noqa: S608
     cursor.execute(query, record)
-    cursor.close()
+
     # Add event to journal
-    add_to_journal(db, util.CURRENT_BLOCK_INDEX, "insert", table_name, event, record | event_info)
+    add_to_journal(
+        db,
+        util.CURRENT_BLOCK_INDEX,
+        "insert",
+        table_name,
+        event,
+        record | event_info,
+        get_last_insert_rowid(cursor),
+    )
+    cursor.close()
 
 
 # This function allows you to update a record using an INSERT.
@@ -66,14 +79,20 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     # no sql injection here
     insert_query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608  # noqa: S608
     cursor.execute(insert_query, new_record)
-    cursor.close()
     # Add event to journal
     event_paylod = update_data | {id_name: id_value} | event_info
     if "rowid" in event_paylod:
         del event_paylod["rowid"]
     add_to_journal(
-        db, util.CURRENT_BLOCK_INDEX, "update", table_name, event, update_data | event_paylod
+        db,
+        util.CURRENT_BLOCK_INDEX,
+        "update",
+        table_name,
+        event,
+        update_data | event_paylod,
+        get_last_insert_rowid(cursor),
     )
+    cursor.close()
 
 
 ###########################
@@ -126,7 +145,7 @@ def curr_time():
     return int(time.time())
 
 
-def add_to_journal(db, block_index, command, category, event, bindings):
+def add_to_journal(db, block_index, command, category, event, bindings, insert_rowid=None):
     cursor = db.cursor()
 
     # Get last message index.
@@ -155,6 +174,7 @@ def add_to_journal(db, block_index, command, category, event, bindings):
         "timestamp": current_time,
         "event": event,
         "tx_hash": util.CURRENT_TX_HASH,
+        "insert_rowid": insert_rowid,
     }
     query = """INSERT INTO messages VALUES (
                     :message_index,
@@ -164,7 +184,8 @@ def add_to_journal(db, block_index, command, category, event, bindings):
                     :bindings,
                     :timestamp,
                     :event,
-                    :tx_hash)"""
+                    :tx_hash,
+                    :insert_rowid)"""
     cursor.execute(query, message_bindings)
     cursor.close()
 
