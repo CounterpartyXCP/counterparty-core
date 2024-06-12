@@ -18,6 +18,7 @@
 
 * More Detailed InsufficientBTC Error
 * When `verbose=true`, inject `unpacked_data` into all results containing a `data` field
+* Remove `asset_info` from ASSET_ISSUANCE event
 
 ## CLI
 
