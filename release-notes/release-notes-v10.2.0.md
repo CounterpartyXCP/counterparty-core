@@ -1,22 +1,19 @@
-# Release Notes - Counterparty Core v10.2.0 (2024-05-??)
+# Release Notes - Counterparty Core v10.2.0 (2024-06-11)
 
 This is a large release that includes significant refactoring and redesigns of critical node components, including the CLI and logging subsystems, mempool processing, and API database connection management. It also includes numerous updates and extensions to the v2 API, plus new ZeroMQ support. Of course, a large number of bugs have been resolved as well.
 
 
 # Upgrading
 
-The `counterparty-server` process now uses ZeroMQ communicate with Bitcoin Core, in addition to the traditional RPC API. You must configure Bitcoin Core with:
+The `counterparty-server` process now uses ZeroMQ to communicate with Bitcoin Core, in addition to the traditional RPC API. You must configure Bitcoin Core with:
 
 ```
+[main]
 zmqpubrawtx=tcp://0.0.0.0:9332
 zmqpubhashtx=tcp://0.0.0.0:9332
 zmqpubsequence=tcp://0.0.0.0:9332
 zmqpubrawblock=tcp://0.0.0.0:9333
-```
-
-and for `testnet` with:
-
-```
+[test]
 zmqpubrawtx=tcp://0.0.0.0:19332
 zmqpubhashtx=tcp://0.0.0.0:19332
 zmqpubsequence=tcp://0.0.0.0:19332
@@ -40,7 +37,7 @@ Note: This update requires a reparse from Block 819250, which will proceed autom
 ## Codebase
 * Refactor mempool management and block tracking—catching up is now done via RPC, and tracking via ZeroMQ
 * Introduce a new Rust module to fetch blocks from Bitcoin Core over RPC. Calls are now massively parallelized and buffered; block fetching no longer slows down block parsing
-* Refactor the `backend` module; separate calls to Bitcoin Core and AddrIndexRs into two different modules.
+* Refactor the `backend` module; separate calls to Bitcoin Core and AddrIndexRs into two different modules
 * Add the indexed `tx_hash` field to the `messages` table
 * Update `rowtracer` so that `apsw` returns a boolean instead of an integer for `BOOL` type fields
 * Delete the defunct implementation of rock-paper-scissors; introduce a `replay_events()` function to reconstruct the database from a hard-coded list of historical events
@@ -60,45 +57,45 @@ Note: This update requires a reparse from Block 819250, which will proceed autom
     - `dispense.dispense_quantity`
 * Add the new `EVENT` log level
 * Disable the automatic SQLite ‘quick check’ for when the database has not been closed correctly. Display an error message when exiting and at the next restart.
-* `get_oldest_tx()` retries on Addrindexrs timeout.
+* Add retries to `get_oldest_tx()` on a Addrindexrs timeout
 
 ## API
 * Introduce the following new routes:
-    `/v2/assets/<asset>/dispenses`
-    `/v2/addresses/<address>/issuances`
-    `/v2/addresses/<address>/assets`
-    `/v2/addresses/<address>/transactions`
-    `/v2/addresses/<address>/dividends`
-    `/v2/addresses/<address>/orders`
-    `/v2/addresses/<address>/dispenses/sends`
-    `/v2/addresses/<address>/dispenses/receives`
-    `/v2/addresses/<address>/dispenses/sends/<asset>`
-    `/v2/addresses/<address>/dispenses/receives/<asset>`
-    `/v2/blocks/<block_hash>`
-    `/v2/blocks/last`
-    `/v2/transactions`
-    `/v2/transactions/<int:tx_index>/events`
-    `/v2/transactions/<tx_hash>/events`
-    `/v2/transactions/<int:tx_index>/events/<event>`
-    `/v2/transactions/<tx_hash>/events/<event>`
-    `/v2/transactions/<int:tx_index>`
-    `/v2/dividends`
-    `/v2/dividends/<dividend_hash>`
-    `/v2/dividends/<dividend_hash>/credits`
-    `/v2/mempool/transactions/<tx_hash>/events`
-    `/v2/events/<event>/count`
-    `/v2/bets`
-    `/v2/orders`
-    `/v2/dispensers`
+    - `/v2/assets/<asset>/dispenses`
+    - `/v2/addresses/<address>/issuances`
+    - `/v2/addresses/<address>/assets`
+    - `/v2/addresses/<address>/transactions`
+    - `/v2/addresses/<address>/dividends`
+    - `/v2/addresses/<address>/orders`
+    - `/v2/addresses/<address>/dispenses/sends`
+    - `/v2/addresses/<address>/dispenses/receives`
+    - `/v2/addresses/<address>/dispenses/sends/<asset>`
+    - `/v2/addresses/<address>/dispenses/receives/<asset>`
+    - `/v2/blocks/<block_hash>`
+    - `/v2/blocks/last`
+    - `/v2/transactions`
+    - `/v2/transactions/<int:tx_index>/events`
+    - `/v2/transactions/<tx_hash>/events`
+    - `/v2/transactions/<int:tx_index>/events/<event>`
+    - `/v2/transactions/<tx_hash>/events/<event>`
+    - `/v2/transactions/<int:tx_index>`
+    - `/v2/dividends`
+    - `/v2/dividends/<dividend_hash>`
+    - `/v2/dividends/<dividend_hash>/credits`
+    - `/v2/mempool/transactions/<tx_hash>/events`
+    - `/v2/events/<event>/count`
+    - `/v2/bets`
+    - `/v2/orders`
+    - `/v2/dispensers`
 * Introduce the `cursor` API parameter
 * Include `next_cursor` and `result_count` fields in all responses
 * Accept `cursor`/`offset` and `limit` arguments in all queries that return lists from the database (see the Pagination paragraph of the API Documentation)
 * Make the `asset`, `assets`, `give_asset`, and `get_asset` parameters case-insensitive
-* Add the `named=true|false` parameter to `/v2/assets` to for returning only named xor numeric assets
+* Add the `named=true|false` parameter to `/v2/assets` to returning only named / numeric assets
 * Publish events on the ZeroMQ Pub/Sub channel
 * Implement database connection pooling for both API v1 and v2
 * Enrich results containing `block_index` with `block_time` when `verbose=true`
-* Add an `action` filter for the `*/credits` and `*/debits` routes.
+* Add an `action` filter for the `*/credits` and `*/debits` routes
 * Add an `event_name` filter for the `*/events` routes
 * Specify `issuer=None` within XCP and BTC asset information
 * Exclude zero balances in the results of `/v2/addresses/<address>/balances` and zero quantities in the results of `*/credits` and `*/debits`

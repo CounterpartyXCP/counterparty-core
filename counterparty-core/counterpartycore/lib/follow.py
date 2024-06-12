@@ -30,12 +30,12 @@ def get_zmq_notifications_addresses():
     zmq_notification = backend.bitcoind.get_zmq_notifications()
 
     if len(zmq_notification) == 0:
-        raise exceptions.BitcoindZMQError("Bitcoin Core was started without ZMQ notifications.")
+        raise exceptions.BitcoindZMQError("Bitcoin Core ZeroMQ notifications are not enabled.")
 
     notification_types = sorted([notification["type"] for notification in zmq_notification])
     if notification_types != sorted(NOTIFICATION_TYPES):
         raise exceptions.BitcoindZMQError(
-            f"Bitcoin Core ZMQ notifications are incorrect. The following notification must be enabled: {NOTIFICATION_TYPES}"
+            f"Bitcoin Core ZeroMQ notifications are incorrectly configured. The following notification must be enabled: {NOTIFICATION_TYPES}"
         )
 
     notification_addresses = {
@@ -46,7 +46,7 @@ def get_zmq_notifications_addresses():
         or notification_addresses["pubrawtx"] != notification_addresses["pubsequence"]
     ):
         raise exceptions.BitcoindZMQError(
-            "Bitcoin Core ZMQ notifications must use the same address for `pubhashtx`, `pubrawtx` and `pubsequence`."
+            "Bitcoin Core ZeroMQ notifications must use the same address for `pubhashtx`, `pubrawtx` and `pubsequence`."
         )
 
     pubrawtx_port = notification_addresses["pubrawtx"].split(":")[-1]
