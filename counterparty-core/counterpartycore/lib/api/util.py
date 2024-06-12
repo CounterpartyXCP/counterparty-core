@@ -259,14 +259,7 @@ def divide(value1, value2):
     return D(value1) / D(value2)
 
 
-def inject_issuances_and_block_times(db, result):
-    # let's work with a list
-    result_list = result
-    result_is_dict = False
-    if isinstance(result, dict):
-        result_list = [result]
-        result_is_dict = True
-
+def inject_issuances_and_block_times(db, result_list):
     asset_fields = ["asset", "give_asset", "get_asset", "dividend_asset"]
 
     # gather asset list and block indexes
@@ -331,12 +324,14 @@ def inject_issuances_and_block_times(db, result):
         elif "unpacked_data" in item:
             item = item["unpacked_data"]["message_data"]
         for field_name in asset_fields:
-            if field_name in item and item[field_name] in issuance_by_asset:
+            if (
+                field_name in item
+                and "divisible" not in item
+                and item[field_name] in issuance_by_asset
+            ):
                 item[field_name + "_info"] = issuance_by_asset[item[field_name]]
 
-    if result_is_dict:
-        return result_list[0]
-    return result
+    return result_list
 
 
 def inject_normalized_quantity(item, field_name, asset_info):

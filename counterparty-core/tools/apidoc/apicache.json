@@ -5335,50 +5335,6 @@
         "next_cursor": 17562675,
         "result_count": 236908
     },
-    "/v2/events/ASSET_ISSUANCE": {
-        "result": [
-            {
-                "event_index": 17562763,
-                "event": "ASSET_ISSUANCE",
-                "params": {
-                    "asset": "ENDTHEEVIL",
-                    "asset_longname": null,
-                    "block_index": 846845,
-                    "call_date": 0,
-                    "call_price": 0.0,
-                    "callable": false,
-                    "description": "https://easyasset.art/j/w0ehy0/ENDTH.json",
-                    "divisible": false,
-                    "fee_paid": 0,
-                    "issuer": "1L7aoyA1ZJ75ZW6bLfzpxySfxA1hWZdxEK",
-                    "locked": true,
-                    "quantity": 0,
-                    "reset": false,
-                    "source": "1L7aoyA1ZJ75ZW6bLfzpxySfxA1hWZdxEK",
-                    "status": "valid",
-                    "transfer": false,
-                    "tx_hash": "a2358f9314225a1cbc5283ba8481579c249424f181256805d0b7d8c31581bdbc",
-                    "tx_index": 2735733,
-                    "block_time": 1717738729,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "https://easyasset.art/j/w0ehy0/ENDTH.json",
-                        "issuer": "1L7aoyA1ZJ75ZW6bLfzpxySfxA1hWZdxEK",
-                        "divisible": false,
-                        "locked": true
-                    },
-                    "quantity_normalized": "0",
-                    "fee_paid_normalized": "0"
-                },
-                "tx_hash": "a2358f9314225a1cbc5283ba8481579c249424f181256805d0b7d8c31581bdbc",
-                "block_index": 846845,
-                "timestamp": 1717738753,
-                "block_time": 1717738729
-            }
-        ],
-        "next_cursor": 17562726,
-        "result_count": 324004
-    },
     "/v2/events/ASSET_DESTRUCTION": {
         "result": [
             {
@@ -6711,5 +6667,42 @@
         ],
         "next_cursor": null,
         "result_count": 4
+    },
+    "/v2/events/ASSET_ISSUANCE": {
+        "result": [
+            {
+                "event_index": 17566964,
+                "event": "ASSET_ISSUANCE",
+                "params": {
+                    "asset": "BTCNFTOGSEVE",
+                    "asset_longname": null,
+                    "block_index": 847626,
+                    "call_date": 0,
+                    "call_price": 0.0,
+                    "callable": false,
+                    "description": "https://easyasset.art/j/s3673u/BTCNF.json",
+                    "divisible": false,
+                    "fee_paid": 0,
+                    "issuer": "1EAJ59EK9w8kZpLrUCbEJK9LtR9eBYJCRE",
+                    "locked": true,
+                    "quantity": 0,
+                    "reset": false,
+                    "source": "1EAJ59EK9w8kZpLrUCbEJK9LtR9eBYJCRE",
+                    "status": "valid",
+                    "transfer": false,
+                    "tx_hash": "4fe305ac49d7fe67cb01be3a0773fe9af5f0e2b7145a86bff04d55df78e43edc",
+                    "tx_index": 2736191,
+                    "block_time": 1718199654,
+                    "quantity_normalized": "0",
+                    "fee_paid_normalized": "0"
+                },
+                "tx_hash": "4fe305ac49d7fe67cb01be3a0773fe9af5f0e2b7145a86bff04d55df78e43edc",
+                "block_index": 847626,
+                "timestamp": 1718199684,
+                "block_time": 1718199654
+            }
+        ],
+        "next_cursor": 17566903,
+        "result_count": 324031
     }
 }

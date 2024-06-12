@@ -526,13 +526,6 @@
                         "call_price": 0.0,
                         "description": "Parent asset",
                         "status": "valid",
-                        "asset_info": {
-                            "asset_longname": null,
-                            "description": "Parent asset",
-                            "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                            "divisible": true,
-                            "locked": false
-                        },
                         "quantity_normalized": "1"
                     }
                 },
@@ -626,13 +619,6 @@
                         "call_price": 0.0,
                         "description": "",
                         "status": "valid",
-                        "asset_info": {
-                            "asset_longname": null,
-                            "description": "",
-                            "issuer": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
-                            "divisible": true,
-                            "locked": false
-                        },
                         "quantity_normalized": "0.000001"
                     }
                 },
@@ -832,13 +818,6 @@
                     "call_price": 0.0,
                     "description": "Divisible asset",
                     "status": "valid",
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "Divisible asset",
-                        "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                        "divisible": true,
-                        "locked": false
-                    },
                     "quantity_normalized": "1000"
                 }
             },
@@ -955,13 +934,6 @@
                     "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                     "tx_index": 2,
                     "block_time": 310001000,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "Divisible asset",
-                        "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                        "divisible": true,
-                        "locked": false
-                    },
                     "quantity_normalized": "1000",
                     "fee_paid_normalized": "0.5"
                 },
@@ -2572,13 +2544,6 @@
                         "call_price": 0.0,
                         "description": "Parent asset",
                         "status": "valid",
-                        "asset_info": {
-                            "asset_longname": null,
-                            "description": "Parent asset",
-                            "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                            "divisible": true,
-                            "locked": false
-                        },
                         "quantity_normalized": "1"
                     }
                 },
@@ -2798,13 +2763,6 @@
                         "call_price": 0.0,
                         "description": "Maximum quantity",
                         "status": "valid",
-                        "asset_info": {
-                            "asset_longname": null,
-                            "description": "Maximum quantity",
-                            "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                            "divisible": true,
-                            "locked": false
-                        },
                         "quantity_normalized": "92233720000"
                     }
                 },
