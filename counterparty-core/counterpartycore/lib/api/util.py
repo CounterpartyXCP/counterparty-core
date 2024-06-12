@@ -424,6 +424,14 @@ def inject_normalized_quantities(result_list):
                 and field_info["asset_field"] in item["unpacked_data"]["message_data"]
             ):
                 asset_info = item["unpacked_data"]["message_data"][field_info["asset_field"]]
+            elif "divisible" in item and field_name in item:
+                asset_info = {"divisible": item["divisible"]}
+            elif (
+                "params" in item and "divisible" in item["params"] and field_name in item["params"]
+            ):
+                asset_info = {"divisible": item["params"]["divisible"]}
+            elif "unpacked_data" in item and "divisible" in item["unpacked_data"]["message_data"]:
+                asset_info = {"divisible": item["unpacked_data"]["message_data"]["divisible"]}
 
             if asset_info is None:
                 if "asset_info" in item:

@@ -2245,6 +2245,7 @@
                 "asset_longname": "PARENT.already.issued",
                 "reset": false,
                 "block_time": 310498000,
+                "quantity_normalized": "1",
                 "fee_paid_normalized": "0.25"
             },
             {
@@ -2268,6 +2269,7 @@
                 "asset_longname": null,
                 "reset": false,
                 "block_time": 310497000,
+                "quantity_normalized": "1",
                 "fee_paid_normalized": "0.5"
             },
             {
@@ -2291,6 +2293,7 @@
                 "asset_longname": null,
                 "reset": false,
                 "block_time": 310016000,
+                "quantity_normalized": "92233720000",
                 "fee_paid_normalized": "0.5"
             },
             {
@@ -2314,6 +2317,7 @@
                 "asset_longname": null,
                 "reset": false,
                 "block_time": 310005000,
+                "quantity_normalized": "0",
                 "fee_paid_normalized": "0"
             },
             {
@@ -2337,6 +2341,7 @@
                 "asset_longname": null,
                 "reset": false,
                 "block_time": 310004000,
+                "quantity_normalized": "0.00001",
                 "fee_paid_normalized": "0.5"
             },
             {
@@ -2360,6 +2365,7 @@
                 "asset_longname": null,
                 "reset": false,
                 "block_time": 310003000,
+                "quantity_normalized": "0.00001",
                 "fee_paid_normalized": "0.5"
             },
             {
@@ -2383,6 +2389,7 @@
                 "asset_longname": null,
                 "reset": false,
                 "block_time": 310002000,
+                "quantity_normalized": "1000",
                 "fee_paid_normalized": "0.5"
             },
             {
@@ -2406,6 +2413,7 @@
                 "asset_longname": null,
                 "reset": false,
                 "block_time": 310001000,
+                "quantity_normalized": "1000",
                 "fee_paid_normalized": "0.5"
             }
         ],
@@ -3398,6 +3406,7 @@
                 "asset_longname": null,
                 "reset": false,
                 "block_time": 310002000,
+                "quantity_normalized": "1000",
                 "fee_paid_normalized": "0.5"
             }
         ],

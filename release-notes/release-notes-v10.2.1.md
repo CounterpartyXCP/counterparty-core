@@ -9,6 +9,7 @@
 
 ## Bugfixes
 
+* Add `quantity_normalized` in Issuances endpoints.
 
 ## Codebase
 
