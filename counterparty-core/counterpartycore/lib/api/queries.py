@@ -229,7 +229,7 @@ def get_last_block(db):
 def get_transactions(db, cursor: int = None, limit: int = 10, offset: int = None):
     """
     Returns the list of the last ten transactions
-    :param int cursor: The index of the most recent transactions to return (e.g. 5000000)
+    :param int cursor: The index of the most recent transactions to return (e.g. 2736157)
     :param int limit: The number of transactions to return (e.g. 2)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -277,6 +277,30 @@ def get_transactions_by_address(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+    )
+
+
+def get_transaction_by_hash(db, tx_hash: str):
+    """
+    Returns a transaction by its hash.
+    :param tx_hash: The hash of the transaction (e.g. 876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5)
+    """
+    return select_row(
+        db,
+        "transactions",
+        where={"tx_hash": tx_hash},
+    )
+
+
+def get_transaction_by_tx_index(db, tx_index: int):
+    """
+    Returns a transaction by its index.
+    :param tx_index: The index of the transaction (e.g. 10000)
+    """
+    return select_row(
+        db,
+        "transactions",
+        where={"tx_index": tx_index},
     )
 
 
