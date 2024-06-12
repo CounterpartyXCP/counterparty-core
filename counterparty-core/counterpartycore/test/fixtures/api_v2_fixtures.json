@@ -168,7 +168,6 @@
                 "fee": 6800,
                 "data": "0000000a00000000000000010000000005f5e100000000000000000000000000000c350007d000000000000dbba0",
                 "supported": true,
-                "btc_amount_normalized": "0",
                 "unpacked_data": {
                     "message_type": "order",
                     "message_type_id": 10,
@@ -179,9 +178,27 @@
                         "get_quantity": 800000,
                         "expiration": 2000,
                         "fee_required": 900000,
-                        "status": "open"
+                        "status": "open",
+                        "give_asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Counterparty",
+                            "description": "The Counterparty protocol native currency",
+                            "locked": true,
+                            "issuer": null
+                        },
+                        "get_asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Bitcoin",
+                            "description": "The Bitcoin cryptocurrency",
+                            "locked": false,
+                            "issuer": null
+                        },
+                        "give_quantity_normalized": "1",
+                        "get_quantity_normalized": "0.008",
+                        "fee_required_normalized": "0.009"
                     }
-                }
+                },
+                "btc_amount_normalized": "0"
             }
         ],
         "next_cursor": null,
@@ -311,7 +328,6 @@
                     "supported": true,
                     "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                     "tx_index": 492,
-                    "btc_amount_normalized": "0",
                     "unpacked_data": {
                         "message_type": "order",
                         "message_type_id": 10,
@@ -322,9 +338,26 @@
                             "get_quantity": 800000,
                             "expiration": 2000,
                             "fee_required": 900000,
-                            "status": "open"
+                            "status": "open",
+                            "give_asset_info": {
+                                "divisible": true,
+                                "asset_longname": "Counterparty",
+                                "description": "The Counterparty protocol native currency",
+                                "locked": true,
+                                "issuer": null
+                            },
+                            "get_asset_info": {
+                                "divisible": true,
+                                "asset_longname": "Bitcoin",
+                                "description": "The Bitcoin cryptocurrency",
+                                "locked": false,
+                                "issuer": null
+                            },
+                            "give_quantity_normalized": "1",
+                            "get_quantity_normalized": "0.008"
                         }
-                    }
+                    },
+                    "btc_amount_normalized": "0"
                 },
                 "tx_hash": null
             }
@@ -445,7 +478,6 @@
                 "fee": 6550,
                 "data": "0000001501530821671b10650000000005f5e10001108e90a57dba9967c422e83080f22f0c684368696c64206f6620706172656e74",
                 "supported": true,
-                "btc_amount_normalized": "0",
                 "unpacked_data": {
                     "message_type": "issuance",
                     "message_type_id": 21,
@@ -463,7 +495,8 @@
                         "description": null,
                         "status": "invalid: could not unpack"
                     }
-                }
+                },
+                "btc_amount_normalized": "0"
             },
             {
                 "tx_index": 498,
@@ -477,7 +510,6 @@
                 "fee": 6300,
                 "data": "00000014000000000aa4097d0000000005f5e100010000000000000000000c506172656e74206173736574",
                 "supported": true,
-                "btc_amount_normalized": "0",
                 "unpacked_data": {
                     "message_type": "issuance",
                     "message_type_id": 20,
@@ -493,9 +525,18 @@
                         "call_date": 0,
                         "call_price": 0.0,
                         "description": "Parent asset",
-                        "status": "valid"
+                        "status": "valid",
+                        "asset_info": {
+                            "asset_longname": null,
+                            "description": "Parent asset",
+                            "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                            "divisible": true,
+                            "locked": false
+                        },
+                        "quantity_normalized": "1"
                     }
-                }
+                },
+                "btc_amount_normalized": "0"
             },
             {
                 "tx_index": 497,
@@ -509,15 +550,23 @@
                 "fee": 7650,
                 "data": "00000000000000000000000100000015a4018c1e",
                 "supported": true,
-                "btc_amount_normalized": "0.0000543",
                 "unpacked_data": {
                     "message_type": "send",
                     "message_type_id": 0,
                     "message_data": {
                         "asset": "XCP",
-                        "quantity": 92945878046
+                        "quantity": 92945878046,
+                        "asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Counterparty",
+                            "description": "The Counterparty protocol native currency",
+                            "locked": true,
+                            "issuer": null
+                        },
+                        "quantity_normalized": "929.45878"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.0000543"
             },
             {
                 "tx_index": 496,
@@ -531,15 +580,23 @@
                 "fee": 7650,
                 "data": "00000000000000063e985ffd000000000000000a",
                 "supported": true,
-                "btc_amount_normalized": "0.0000543",
                 "unpacked_data": {
                     "message_type": "send",
                     "message_type_id": 0,
                     "message_data": {
                         "asset": "DIVIDEND",
-                        "quantity": 10
+                        "quantity": 10,
+                        "asset_info": {
+                            "asset_longname": null,
+                            "description": "",
+                            "issuer": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
+                            "divisible": true,
+                            "locked": false
+                        },
+                        "quantity_normalized": "0.0000001"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.0000543"
             },
             {
                 "tx_index": 495,
@@ -553,7 +610,6 @@
                 "fee": 6800,
                 "data": "00000014000000063e985ffd00000000000000640100000000000000000000",
                 "supported": true,
-                "btc_amount_normalized": "0",
                 "unpacked_data": {
                     "message_type": "issuance",
                     "message_type_id": 20,
@@ -569,9 +625,18 @@
                         "call_date": 0,
                         "call_price": 0.0,
                         "description": "",
-                        "status": "valid"
+                        "status": "valid",
+                        "asset_info": {
+                            "asset_longname": null,
+                            "description": "",
+                            "issuer": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
+                            "divisible": true,
+                            "locked": false
+                        },
+                        "quantity_normalized": "0.000001"
                     }
-                }
+                },
+                "btc_amount_normalized": "0"
             },
             {
                 "tx_index": 494,
@@ -585,14 +650,14 @@
                 "fee": 5625,
                 "data": "",
                 "supported": true,
-                "btc_amount_normalized": "0.62",
                 "unpacked_data": {
                     "message_type": "unknown",
                     "message_type_id": null,
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.62"
             },
             {
                 "tx_index": 493,
@@ -606,7 +671,6 @@
                 "fee": 1000000,
                 "data": "0000000a000000000000000000000000000c350000000000000000010000000005f5e10007d00000000000000000",
                 "supported": true,
-                "btc_amount_normalized": "0",
                 "unpacked_data": {
                     "message_type": "order",
                     "message_type_id": 10,
@@ -617,9 +681,27 @@
                         "get_quantity": 100000000,
                         "expiration": 2000,
                         "fee_required": 0,
-                        "status": "open"
+                        "status": "open",
+                        "give_asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Bitcoin",
+                            "description": "The Bitcoin cryptocurrency",
+                            "locked": false,
+                            "issuer": null
+                        },
+                        "get_asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Counterparty",
+                            "description": "The Counterparty protocol native currency",
+                            "locked": true,
+                            "issuer": null
+                        },
+                        "give_quantity_normalized": "0.008",
+                        "get_quantity_normalized": "1",
+                        "fee_required_normalized": "0"
                     }
-                }
+                },
+                "btc_amount_normalized": "0"
             },
             {
                 "tx_index": 492,
@@ -633,7 +715,6 @@
                 "fee": 6800,
                 "data": "0000000a00000000000000010000000005f5e100000000000000000000000000000c350007d000000000000dbba0",
                 "supported": true,
-                "btc_amount_normalized": "0",
                 "unpacked_data": {
                     "message_type": "order",
                     "message_type_id": 10,
@@ -644,9 +725,27 @@
                         "get_quantity": 800000,
                         "expiration": 2000,
                         "fee_required": 900000,
-                        "status": "open"
+                        "status": "open",
+                        "give_asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Counterparty",
+                            "description": "The Counterparty protocol native currency",
+                            "locked": true,
+                            "issuer": null
+                        },
+                        "get_asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Bitcoin",
+                            "description": "The Bitcoin cryptocurrency",
+                            "locked": false,
+                            "issuer": null
+                        },
+                        "give_quantity_normalized": "1",
+                        "get_quantity_normalized": "0.008",
+                        "fee_required_normalized": "0.009"
                     }
-                }
+                },
+                "btc_amount_normalized": "0"
             },
             {
                 "tx_index": 491,
@@ -660,7 +759,6 @@
                 "fee": 6800,
                 "data": "0000001e52bb33043ff000000000000000000000096f7074696f6e732031",
                 "supported": true,
-                "btc_amount_normalized": "0",
                 "unpacked_data": {
                     "message_type": "broadcast",
                     "message_type_id": 30,
@@ -669,9 +767,11 @@
                         "value": 1.0,
                         "fee_fraction_int": 0,
                         "text": "options 1",
-                        "status": "valid"
+                        "status": "valid",
+                        "fee_fraction_int_normalized": "0"
                     }
-                }
+                },
+                "btc_amount_normalized": "0"
             },
             {
                 "tx_index": 490,
@@ -685,7 +785,6 @@
                 "fee": 6800,
                 "data": "0000001e52bb33033ff000000000000000000000046c6f636b",
                 "supported": true,
-                "btc_amount_normalized": "0",
                 "unpacked_data": {
                     "message_type": "broadcast",
                     "message_type_id": 30,
@@ -694,9 +793,11 @@
                         "value": 1.0,
                         "fee_fraction_int": 0,
                         "text": "lock",
-                        "status": "valid"
+                        "status": "valid",
+                        "fee_fraction_int_normalized": "0"
                     }
-                }
+                },
+                "btc_amount_normalized": "0"
             }
         ],
         "next_cursor": 489,
@@ -715,7 +816,6 @@
             "fee": 6800,
             "data": "00000014000000a25be34b66000000174876e800010000000000000000000f446976697369626c65206173736574",
             "supported": true,
-            "btc_amount_normalized": "0",
             "unpacked_data": {
                 "message_type": "issuance",
                 "message_type_id": 20,
@@ -731,9 +831,18 @@
                     "call_date": 0,
                     "call_price": 0.0,
                     "description": "Divisible asset",
-                    "status": "valid"
+                    "status": "valid",
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "Divisible asset",
+                        "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "divisible": true,
+                        "locked": false
+                    },
+                    "quantity_normalized": "1000"
                 }
-            }
+            },
+            "btc_amount_normalized": "0"
         }
     },
     "http://localhost:10009/v2/transactions/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498?verbose=true": {
@@ -749,7 +858,6 @@
             "fee": 6800,
             "data": "0000000a00000000000000010000000005f5e100000000000000000000000000000c350007d000000000000dbba0",
             "supported": true,
-            "btc_amount_normalized": "0",
             "unpacked_data": {
                 "message_type": "order",
                 "message_type_id": 10,
@@ -760,9 +868,27 @@
                     "get_quantity": 800000,
                     "expiration": 2000,
                     "fee_required": 900000,
-                    "status": "open"
+                    "status": "open",
+                    "give_asset_info": {
+                        "divisible": true,
+                        "asset_longname": "Counterparty",
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true,
+                        "issuer": null
+                    },
+                    "get_asset_info": {
+                        "divisible": true,
+                        "asset_longname": "Bitcoin",
+                        "description": "The Bitcoin cryptocurrency",
+                        "locked": false,
+                        "issuer": null
+                    },
+                    "give_quantity_normalized": "1",
+                    "get_quantity_normalized": "0.008",
+                    "fee_required_normalized": "0.009"
                 }
-            }
+            },
+            "btc_amount_normalized": "0"
         }
     },
     "http://localhost:10009/v2/transactions/2/events?verbose=true": {
@@ -2390,7 +2516,6 @@
                 "fee": 6550,
                 "data": "0000001501530821671b10650000000005f5e10001108e90a57dba9967c422e83080f22f0c684368696c64206f6620706172656e74",
                 "supported": true,
-                "btc_amount_normalized": "0",
                 "unpacked_data": {
                     "message_type": "issuance",
                     "message_type_id": 21,
@@ -2408,7 +2533,8 @@
                         "description": null,
                         "status": "invalid: could not unpack"
                     }
-                }
+                },
+                "btc_amount_normalized": "0"
             },
             {
                 "tx_index": 498,
@@ -2422,7 +2548,6 @@
                 "fee": 6300,
                 "data": "00000014000000000aa4097d0000000005f5e100010000000000000000000c506172656e74206173736574",
                 "supported": true,
-                "btc_amount_normalized": "0",
                 "unpacked_data": {
                     "message_type": "issuance",
                     "message_type_id": 20,
@@ -2438,9 +2563,18 @@
                         "call_date": 0,
                         "call_price": 0.0,
                         "description": "Parent asset",
-                        "status": "valid"
+                        "status": "valid",
+                        "asset_info": {
+                            "asset_longname": null,
+                            "description": "Parent asset",
+                            "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                            "divisible": true,
+                            "locked": false
+                        },
+                        "quantity_normalized": "1"
                     }
-                }
+                },
+                "btc_amount_normalized": "0"
             },
             {
                 "tx_index": 492,
@@ -2454,7 +2588,6 @@
                 "fee": 6800,
                 "data": "0000000a00000000000000010000000005f5e100000000000000000000000000000c350007d000000000000dbba0",
                 "supported": true,
-                "btc_amount_normalized": "0",
                 "unpacked_data": {
                     "message_type": "order",
                     "message_type_id": 10,
@@ -2465,9 +2598,27 @@
                         "get_quantity": 800000,
                         "expiration": 2000,
                         "fee_required": 900000,
-                        "status": "open"
+                        "status": "open",
+                        "give_asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Counterparty",
+                            "description": "The Counterparty protocol native currency",
+                            "locked": true,
+                            "issuer": null
+                        },
+                        "get_asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Bitcoin",
+                            "description": "The Bitcoin cryptocurrency",
+                            "locked": false,
+                            "issuer": null
+                        },
+                        "give_quantity_normalized": "1",
+                        "get_quantity_normalized": "0.008",
+                        "fee_required_normalized": "0.009"
                     }
-                }
+                },
+                "btc_amount_normalized": "0"
             },
             {
                 "tx_index": 482,
@@ -2481,7 +2632,6 @@
                 "fee": 6375,
                 "data": "0000000200000000000000010000000005f5e1006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec68656c6c6f",
                 "supported": true,
-                "btc_amount_normalized": "0",
                 "unpacked_data": {
                     "message_type": "enhanced_send",
                     "message_type_id": 2,
@@ -2489,9 +2639,18 @@
                         "asset": "XCP",
                         "quantity": 100000000,
                         "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                        "memo": "68656c6c6f"
+                        "memo": "68656c6c6f",
+                        "asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Counterparty",
+                            "description": "The Counterparty protocol native currency",
+                            "locked": true,
+                            "issuer": null
+                        },
+                        "quantity_normalized": "1"
                     }
-                }
+                },
+                "btc_amount_normalized": "0"
             },
             {
                 "tx_index": 111,
@@ -2505,15 +2664,23 @@
                 "fee": 7650,
                 "data": "00000000000000a25be34b660000000005f5e100",
                 "supported": true,
-                "btc_amount_normalized": "0.0000543",
                 "unpacked_data": {
                     "message_type": "send",
                     "message_type_id": 0,
                     "message_data": {
                         "asset": "DIVISIBLE",
-                        "quantity": 100000000
+                        "quantity": 100000000,
+                        "asset_info": {
+                            "asset_longname": null,
+                            "description": "Divisible asset",
+                            "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                            "divisible": true,
+                            "locked": false
+                        },
+                        "quantity_normalized": "1"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.0000543"
             },
             {
                 "tx_index": 103,
@@ -2527,7 +2694,6 @@
                 "fee": 6800,
                 "data": "0000001e52bb33023ff0000000000000004c4b4009556e69742054657374",
                 "supported": true,
-                "btc_amount_normalized": "0",
                 "unpacked_data": {
                     "message_type": "broadcast",
                     "message_type_id": 30,
@@ -2536,9 +2702,11 @@
                         "value": 1.0,
                         "fee_fraction_int": 5000000,
                         "text": "Unit Test",
-                        "status": "valid"
+                        "status": "valid",
+                        "fee_fraction_int_normalized": "0.05"
                     }
-                }
+                },
+                "btc_amount_normalized": "0"
             },
             {
                 "tx_index": 20,
@@ -2552,7 +2720,6 @@
                 "fee": 7650,
                 "data": "00000028000152bb3301000000000000000900000000000000090000000000000000000013b000000064",
                 "supported": true,
-                "btc_amount_normalized": "0.0000543",
                 "unpacked_data": {
                     "message_type": "bet",
                     "message_type_id": 40,
@@ -2566,7 +2733,8 @@
                         "expiration": 100,
                         "status": "open"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.0000543"
             },
             {
                 "tx_index": 18,
@@ -2580,7 +2748,6 @@
                 "fee": 6800,
                 "data": "0000001e52bb33003ff0000000000000004c4b4009556e69742054657374",
                 "supported": true,
-                "btc_amount_normalized": "0",
                 "unpacked_data": {
                     "message_type": "broadcast",
                     "message_type_id": 30,
@@ -2589,9 +2756,11 @@
                         "value": 1.0,
                         "fee_fraction_int": 5000000,
                         "text": "Unit Test",
-                        "status": "valid"
+                        "status": "valid",
+                        "fee_fraction_int_normalized": "0.05"
                     }
-                }
+                },
+                "btc_amount_normalized": "0"
             },
             {
                 "tx_index": 17,
@@ -2605,7 +2774,6 @@
                 "fee": 6800,
                 "data": "000000140000000000033a3e7fffffffffffffff01000000000000000000104d6178696d756d207175616e74697479",
                 "supported": true,
-                "btc_amount_normalized": "0",
                 "unpacked_data": {
                     "message_type": "issuance",
                     "message_type_id": 20,
@@ -2621,9 +2789,18 @@
                         "call_date": 0,
                         "call_price": 0.0,
                         "description": "Maximum quantity",
-                        "status": "valid"
+                        "status": "valid",
+                        "asset_info": {
+                            "asset_longname": null,
+                            "description": "Maximum quantity",
+                            "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                            "divisible": true,
+                            "locked": false
+                        },
+                        "quantity_normalized": "92233720000"
                     }
-                }
+                },
+                "btc_amount_normalized": "0"
             },
             {
                 "tx_index": 16,
@@ -2637,15 +2814,23 @@
                 "fee": 7650,
                 "data": "000000000006cad8dc7f0b66000000000000000a",
                 "supported": true,
-                "btc_amount_normalized": "0.00001",
                 "unpacked_data": {
                     "message_type": "send",
                     "message_type_id": 0,
                     "message_data": {
                         "asset": "NODIVISIBLE",
-                        "quantity": 10
+                        "quantity": 10,
+                        "asset_info": {
+                            "asset_longname": null,
+                            "description": "No divisible asset",
+                            "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                            "divisible": false,
+                            "locked": false
+                        },
+                        "quantity_normalized": "10"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00001"
             }
         ],
         "next_cursor": 15,

@@ -155,6 +155,7 @@ def add_to_journal(db, block_index, command, category, event, bindings):
         "timestamp": current_time,
         "event": event,
         "tx_hash": util.CURRENT_TX_HASH,
+        "insert_rowid": None,
     }
     query = """INSERT INTO messages VALUES (
                     :message_index,
@@ -164,7 +165,8 @@ def add_to_journal(db, block_index, command, category, event, bindings):
                     :bindings,
                     :timestamp,
                     :event,
-                    :tx_hash)"""
+                    :tx_hash,
+                    :insert_rowid)"""
     cursor.execute(query, message_bindings)
     cursor.close()
 

@@ -296,6 +296,10 @@ def inject_issuances_and_block_times(db, result):
         item = result_item
         if "params" in item:
             item = item["params"]
+            if "unpacked_data" in item:
+                item = item["unpacked_data"]["message_data"]
+        elif "unpacked_data" in item:
+            item = item["unpacked_data"]["message_data"]
         for field_name in asset_fields:
             if field_name in item:
                 if item[field_name] not in asset_list:
@@ -322,6 +326,10 @@ def inject_issuances_and_block_times(db, result):
                 item["params"][field_name_time] = block_times[item["params"][field_name]]
         if "params" in item:
             item = item["params"]
+            if "unpacked_data" in item:
+                item = item["unpacked_data"]["message_data"]
+        elif "unpacked_data" in item:
+            item = item["unpacked_data"]["message_data"]
         for field_name in asset_fields:
             if field_name in item and item[field_name] in issuance_by_asset:
                 item[field_name + "_info"] = issuance_by_asset[item[field_name]]
@@ -343,14 +351,7 @@ def inject_normalized_quantity(item, field_name, asset_info):
     return item
 
 
-def inject_normalized_quantities(result):
-    # let's work with a list
-    result_list = result
-    result_is_dict = False
-    if isinstance(result, dict):
-        result_list = [result]
-        result_is_dict = True
-
+def inject_normalized_quantities(result_list):
     quantity_fields = {
         "quantity": {"asset_field": "asset_info", "divisible": None},
         "give_quantity": {"asset_field": "give_asset_info", "divisible": None},
@@ -385,6 +386,20 @@ def inject_normalized_quantities(result):
                     item["params"] = inject_normalized_quantity(
                         item["params"], field_name, {"divisible": field_info["divisible"]}
                     )
+                    if "unpacked_data" in item["params"]:
+                        item["params"]["unpacked_data"]["message_data"] = (
+                            inject_normalized_quantity(
+                                item["params"]["unpacked_data"]["message_data"],
+                                field_name,
+                                {"divisible": field_info["divisible"]},
+                            )
+                        )
+                if "unpacked_data" in item:
+                    item["unpacked_data"]["message_data"] = inject_normalized_quantity(
+                        item["unpacked_data"]["message_data"],
+                        field_name,
+                        {"divisible": field_info["divisible"]},
+                    )
                 if "dispenser" in item and field_name in item["dispenser"]:
                     item["dispenser"] = inject_normalized_quantity(
                         item["dispenser"], field_name, {"divisible": field_info["divisible"]}
@@ -396,12 +411,36 @@ def inject_normalized_quantities(result):
                 asset_info = item[field_info["asset_field"]]
             elif "params" in item and field_info["asset_field"] in item["params"]:
                 asset_info = item["params"][field_info["asset_field"]]
+            elif (
+                "params" in item
+                and "unpacked_data" in item["params"]
+                and field_info["asset_field"] in item["params"]["unpacked_data"]["message_data"]
+            ):
+                asset_info = item["params"]["unpacked_data"]["message_data"][
+                    field_info["asset_field"]
+                ]
+            elif (
+                "unpacked_data" in item
+                and field_info["asset_field"] in item["unpacked_data"]["message_data"]
+            ):
+                asset_info = item["unpacked_data"]["message_data"][field_info["asset_field"]]
 
             if asset_info is None:
                 if "asset_info" in item:
                     asset_info = item["asset_info"]
                 elif "params" in item and "asset_info" in item["params"]:
                     asset_info = item["params"]["asset_info"]
+                elif (
+                    "params" in item
+                    and "unpacked_data" in item["params"]
+                    and "asset_info" in item["params"]["unpacked_data"]["message_data"]
+                ):
+                    asset_info = item["params"]["unpacked_data"]["message_data"]["asset_info"]
+                elif (
+                    "unpacked_data" in item
+                    and "asset_info" in item["unpacked_data"]["message_data"]
+                ):
+                    asset_info = item["unpacked_data"]["message_data"]["asset_info"]
                 else:
                     continue
 
@@ -411,10 +450,23 @@ def inject_normalized_quantities(result):
                 item["params"] = inject_normalized_quantity(  # noqa
                     item["params"], field_name, asset_info
                 )
+            if (
+                "params" in item
+                and "unpacked_data" in item["params"]
+                and field_name in item["params"]["unpacked_data"]["message_data"]
+            ):
+                item["params"]["unpacked_data"]["message_data"] = inject_normalized_quantity(  # noqa
+                    item["params"]["unpacked_data"]["message_data"], field_name, asset_info
+                )
+            if "unpacked_data" in item and field_name in item["unpacked_data"]["message_data"]:
+                item["unpacked_data"]["message_data"] = inject_normalized_quantity(  # noqa
+                    item["unpacked_data"]["message_data"], field_name, asset_info
+                )
             if "dispenser" in item and field_name in item["dispenser"]:
                 item["dispenser"] = inject_normalized_quantity(  # noqa
                     item["dispenser"], field_name, asset_info
                 )
+
         if "get_quantity" in item and "give_quantity" in item and "market_dir" in item:
             if item["market_dir"] == "SELL":
                 item["market_price"] = divide(
@@ -427,19 +479,10 @@ def inject_normalized_quantities(result):
 
         enriched_result_list.append(item)
 
-    if result_is_dict:
-        return enriched_result_list[0]
     return enriched_result_list
 
 
-def inject_dispensers(db, result):
-    # let's work with a list
-    result_list = result
-    result_is_dict = False
-    if isinstance(result, dict):
-        result_list = [result]
-        result_is_dict = True
-
+def inject_dispensers(db, result_list):
     # gather dispenser list
     dispenser_list = []
     for result_item in result_list:
@@ -451,19 +494,36 @@ def inject_dispensers(db, result):
     dispenser_info = ledger.get_dispensers_info(db, dispenser_list)
 
     # inject dispenser info
+    enriched_result_list = []
     for result_item in result_list:
         if (
             "dispenser_tx_hash" in result_item
             and result_item["dispenser_tx_hash"] in dispenser_info
         ):
             result_item["dispenser"] = dispenser_info[result_item["dispenser_tx_hash"]]
-
-    if result_is_dict:
-        return result_list[0]
-    return result
+        enriched_result_list.append(result_item)
+    return enriched_result_list
 
 
-def inject_unpacked_data(db, result):
+def inject_unpacked_data_in_dict(db, item):
+    if "data" in item:
+        data = binascii.hexlify(item["data"]) if isinstance(item["data"], bytes) else item["data"]
+        block_index = item.get("block_index")
+        item["unpacked_data"] = transaction.unpack(db, data, block_index=block_index)
+    return item
+
+
+def inject_unpacked_data(db, result_list):
+    enriched_result_list = []
+    for result_item in result_list:
+        result_item = inject_unpacked_data_in_dict(db, result_item)  # noqa PLW2901
+        if "params" in result_item:
+            result_item["params"] = inject_unpacked_data_in_dict(db, result_item["params"])
+        enriched_result_list.append(result_item)
+    return enriched_result_list
+
+
+def inject_details(db, result):
     # let's work with a list
     result_list = result
     result_is_dict = False
@@ -471,37 +531,14 @@ def inject_unpacked_data(db, result):
         result_list = [result]
         result_is_dict = True
 
-    for result_item in result_list:
-        if "data" in result_item:
-            data = (
-                binascii.hexlify(result_item["data"])
-                if isinstance(result_item["data"], bytes)
-                else result_item["data"]
-            )
-            block_index = result_item.get("block_index")
-            result_item["unpacked_data"] = transaction.unpack(db, data, block_index=block_index)
-        if "params" in result_item and "data" in result_item["params"]:
-            data = (
-                binascii.hexlify(result_item["params"]["data"])
-                if isinstance(result_item["params"]["data"], bytes)
-                else result_item["params"]["data"]
-            )
-            block_index = result_item.get("block_index")
-            result_item["params"]["unpacked_data"] = transaction.unpack(
-                db, data, block_index=block_index
-            )
+    result_list = inject_dispensers(db, result_list)
+    result_list = inject_unpacked_data(db, result_list)
+    result_list = inject_issuances_and_block_times(db, result_list)
+    result_list = inject_normalized_quantities(result_list)
 
     if result_is_dict:
         return result_list[0]
-    return result
-
-
-def inject_details(db, result):
-    result = inject_dispensers(db, result)
-    result = inject_issuances_and_block_times(db, result)
-    result = inject_normalized_quantities(result)
-    result = inject_unpacked_data(db, result)
-    return result
+    return result_list
 
 
 def redirect_to_rpc_v1():
