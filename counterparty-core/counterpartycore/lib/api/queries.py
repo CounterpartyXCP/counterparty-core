@@ -229,7 +229,7 @@ def get_last_block(db):
 def get_transactions(db, cursor: int = None, limit: int = 10, offset: int = None):
     """
     Returns the list of the last ten transactions
-    :param int cursor: The index of the most recent transactions to return (e.g. 5000000)
+    :param int cursor: The index of the most recent transactions to return (e.g. 2736157)
     :param int limit: The number of transactions to return (e.g. 2)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
