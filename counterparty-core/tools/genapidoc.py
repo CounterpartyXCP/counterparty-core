@@ -7,7 +7,6 @@ import yaml
 from counterpartycore.lib.api import routes
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-API_DOC_FILE = os.path.join(CURR_DIR, "../../../Documentation/docs/advanced/api-v2/node-api.md")
 API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../apiary.apib")
 DREDD_FILE = os.path.join(CURR_DIR, "../../dredd.yml")
 CACHE_FILE = os.path.join(CURR_DIR, "apidoc", "apicache.json")
@@ -156,17 +155,14 @@ def include_in_dredd(group, path):
     return True
 
 
-def gen_groups_toc(target):
+def gen_groups_toc():
     toc = ""
     for group in GROUPS:
-        if target == "docusaurus":
-            toc += f"- [`{group}`](#group-{group[1:]})\n"
-        else:
-            toc += f"- [`{group}`](#/reference{group})\n"
+        toc += f"- [`{group}`](#/reference{group})\n"
     return toc
 
 
-def gen_blueprint(target):
+def gen_blueprint():
     md = ""
     dredd = DREDD_CONFIG.copy()
     current_group = None
@@ -203,18 +199,16 @@ def gen_blueprint(target):
             dredd["only"].append(dredd_name)
 
         md += f"\n### {title} "
-        if target == "docusaurus":
-            md += f"[GET `{blueprint_path}`]\n\n"
-        else:
-            first_query_arg = True
-            for arg in route["args"]:
-                if f"{{{arg['name']}}}" in blueprint_path:
-                    continue
-                else:
-                    prefix = "?" if first_query_arg else "&"
-                    first_query_arg = False
-                    blueprint_path += f"{{{prefix}{arg['name']}}}"
-            md += f"[GET {blueprint_path}]\n\n"
+
+        first_query_arg = True
+        for arg in route["args"]:
+            if f"{{{arg['name']}}}" in blueprint_path:
+                continue
+            else:
+                prefix = "?" if first_query_arg else "&"
+                first_query_arg = False
+                blueprint_path += f"{{{prefix}{arg['name']}}}"
+        md += f"[GET {blueprint_path}]\n\n"
 
         md += route["description"].strip()
 
@@ -257,32 +251,15 @@ def gen_blueprint(target):
     return md, dredd
 
 
-def get_route_path(target):
-    if target == "docusaurus":
-        return "`/v2/`"
-    return "/v2/"
-
-
-def get_header(target):
-    if target == "docusaurus":
-        return """---
-title: API v2
----
-
-"""
-    return ""
-
-
-def update_blueprint(target, save_dredd=False):
-    md = get_header(target)
+def update_blueprint():
+    md = ""
     with open(os.path.join(CURR_DIR, "apidoc", "blueprint-template.md"), "r") as f:
         md += f.read()
 
-    blueprint, dredd = gen_blueprint(target)
+    blueprint, dredd = gen_blueprint()
 
-    md = md.replace("<GROUP_TOC>", gen_groups_toc(target))
+    md = md.replace("<GROUP_TOC>", gen_groups_toc())
     md = md.replace("<EVENTS_DOC>", gen_events_doc())
-    md = md.replace("<ROOT_PATH>", get_route_path(target))
     md = md.replace("<API_BLUEPRINT>", blueprint)
 
     md = (
@@ -290,17 +267,13 @@ def update_blueprint(target, save_dredd=False):
         + md
     )
 
-    target_file = API_DOC_FILE
-    if target == "apiary":
-        target_file = API_BLUEPRINT_FILE
-    with open(target_file, "w") as f:
+    with open(API_BLUEPRINT_FILE, "w") as f:
         f.write(md)
-        print(f"API documentation written to {target_file}")
+        print(f"API documentation written to {API_BLUEPRINT_FILE}")
 
-    if save_dredd:
-        with open(DREDD_FILE, "w") as f:
-            yaml.dump(dredd, f)
-            print(f"Dredd file written to {DREDD_FILE}")
+    with open(DREDD_FILE, "w") as f:
+        yaml.dump(dredd, f)
+        print(f"Dredd file written to {DREDD_FILE}")
 
 
 def gen_events_doc():
@@ -324,8 +297,7 @@ def gen_events_doc():
 
 
 def update_doc():
-    update_blueprint("apiary")
-    update_blueprint("docusaurus", save_dredd=True)
+    update_blueprint()
 
     with open(CACHE_FILE, "w") as f:
         json.dump(API_CACHE, f, indent=4)
