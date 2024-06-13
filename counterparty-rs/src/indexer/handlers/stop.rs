@@ -1,7 +1,7 @@
 use std::thread::JoinHandle;
 
 use crossbeam_channel::unbounded;
-use tracing::info;
+use tracing::{debug, info};
 
 use crate::indexer::{
     config::Config,
@@ -20,7 +20,7 @@ pub fn new(
         return Err(Error::Stopped);
     }
 
-    info!("Stopping");
+    debug!("Stopping...");
     let mut consumer_handle = None;
     let consumer_stopper = Stopper::new();
     let (tx, _) = unbounded::<()>();
@@ -56,6 +56,6 @@ pub fn new(
         handle.join().ok();
     }
 
-    info!("Stopped");
+    debug!("Stopped.");
     Ok(())
 }

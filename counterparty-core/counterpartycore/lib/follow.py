@@ -64,7 +64,7 @@ def start_blockchain_watcher(db):
         return follower_daemon
     except exceptions.BitcoindZMQError as e:
         logger.error(e)
-        logger.warning("Sleeping 5 seconds, catching up again then retrying...")
+        logger.warning("Sleeping 5 seconds, catching up again, then retrying...")
         time.sleep(5)
         blocks.catch_up(db, check_asset_conservation=False)
         return start_blockchain_watcher(db)
@@ -204,11 +204,11 @@ class BlockchainWatcher:
         asyncio.ensure_future(self.handle())
 
     def start(self):
-        logger.info("Starting blockchain watcher...")
+        logger.debug("Starting blockchain watcher...")
         self.loop.create_task(self.handle())
         self.loop.run_forever()
 
     def stop(self):
-        logger.info("Stopping blockchain watcher...")
+        logger.debug("Stopping blockchain watcher...")
         self.loop.stop()
         self.zmq_context.destroy()

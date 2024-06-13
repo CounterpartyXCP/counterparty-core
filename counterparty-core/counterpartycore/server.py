@@ -728,6 +728,7 @@ def start_all(args):
         blocks.catch_up(db)
 
         # Blockchain watcher
+        logger.info("Catchup complete. Watching for new blocks...")
         follower_daemon = follow.start_blockchain_watcher(db)
 
     except KeyboardInterrupt:

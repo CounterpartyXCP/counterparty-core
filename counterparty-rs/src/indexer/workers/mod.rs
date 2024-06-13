@@ -42,7 +42,7 @@ where
                 return Err(e);
             }
 
-            info!("{}-{} worker exited", name, i);
+            debug!("{}-{} worker exited.", name, i);
             Ok(())
         }));
     }
