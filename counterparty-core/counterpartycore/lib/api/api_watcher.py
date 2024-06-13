@@ -101,30 +101,108 @@ def insert_event(api_db, event):
     cursor.execute(sql, event)
 
 
-def parse_event(api_db, event):
+def parse_event(api_db, event, initial_parsing=False):
+    initial_event_saved = [
+        "NEW_BLOCK",
+        "NEW_TRANSACTION",
+        "BLOCK_PARSED",
+        "TRANSACTION_PARSED",
+        "CREDIT",
+        "DEBIT",
+    ]
     with api_db:
-        sql, sql_bindings = event_to_sql(event)
-        if sql is not None:
+        if initial_parsing and event["event"] in initial_event_saved:
+            insert_event(api_db, event)
+        else:
+            sql, sql_bindings = event_to_sql(event)
+            if sql is not None:
+                cursor = api_db.cursor()
+                cursor.execute(sql, sql_bindings)
+            insert_event(api_db, event)
+        logger.trace(f"Event parsed: {event['message_index']} {event['event']}")
+
+
+def copy_table(api_db, ledger_db, table_name):
+    logger.debug(f"Copying table {table_name}...")
+    start_time = time.time()
+    ledger_cursor = ledger_db.cursor()
+
+    ledger_cursor.execute(f"SELECT * FROM {table_name} LIMIT 1")  # noqa: S608
+    first_row = ledger_cursor.fetchone()
+
+    ledger_cursor.execute(f"SELECT COUNT(*) AS count FROM {table_name}")  # noqa: S608
+    total_rows = ledger_cursor.fetchone()["count"]
+
+    field_names = ", ".join(first_row.keys())
+    field_values = ", ".join([f":{key}" for key in first_row.keys()])
+    sql = f"INSERT INTO {table_name} ({field_names}) VALUES ({field_values})"  # noqa: S608
+    ledger_cursor.execute(f"SELECT * FROM {table_name}")  # noqa: S608
+
+    saved_rows = 0
+    with api_db:
+        api_cursor = api_db.cursor()
+        for row in ledger_cursor:
+            api_cursor.execute(sql, row)
+            saved_rows += 1
+            if saved_rows % 100000 == 0:
+                logger.debug(f"{saved_rows}/{total_rows} rows of {table_name} copied")
+    duration = time.time() - start_time
+    logger.debug(f"Table {table_name} copied in {duration:.2f} seconds")
+
+
+def initial_events_parsing(api_db, ledger_db):
+    logger.debug("Initial event parsing...")
+    start_time = time.time()
+    ledger_cursor = ledger_db.cursor()
+
+    ledger_cursor.execute("SELECT COUNT(*) AS count FROM messages")
+    event_count = ledger_cursor.fetchone()["count"]
+
+    ledger_cursor.execute("SELECT * FROM messages ORDER BY message_index ASC")
+    parsed_event_count = 0
+    for event in ledger_cursor:
+        parse_event(api_db, event, initial_parsing=True)
+        parsed_event_count += 1
+        if parsed_event_count % 100000 == 0:
+            logger.debug(f"{parsed_event_count}/{event_count} events parsed")
+    duration = time.time() - start_time
+    logger.debug(f"Initial event parsing completed in {duration:.2f} seconds")
+
+
+def initialize_api_db(api_db, ledger_db):
+    start_time = time.time()
+    last_message_index = get_last_parsed_message_index(api_db)
+    if last_message_index == -1:
+        logger.info("New API database, initializing...")
+        with api_db:  # everything or nothing
             cursor = api_db.cursor()
-            cursor.execute(sql, sql_bindings)
-        insert_event(api_db, event)
-        logger.debug(f"Event parsed: {event['message_index']} {event['event']}")
+            cursor.execute("""PRAGMA foreign_keys=OFF""")
+            for table in ["blocks", "transactions", "credits", "debits"]:
+                copy_table(api_db, ledger_db, table)
+            initial_events_parsing(api_db, ledger_db)
+            cursor.execute("""PRAGMA foreign_keys=ON""")
+        duration = time.time() - start_time
+        logger.info(f"API database initialized in {duration:.2f} seconds")
 
 
 class APIWatcher(Thread):
     def __init__(self):
         logger.debug("Initializing API Watcher...")
         self.stopped = False
-        self.api_db = database.get_db_onnection(
+        self.api_db = database.get_db_connection(
             config.API_DATABASE, read_only=False, check_wal=False
         )
-        self.ledger_db = database.get_db_onnection(config.DATABASE, read_only=True, check_wal=False)
+        self.ledger_db = database.get_db_connection(
+            config.DATABASE, read_only=True, check_wal=False
+        )
 
         # TODO: use migrations library
         with open(MIGRATIONS_FILE, "r") as f:
             cursor = self.api_db.cursor()
             sql = f.read()
             cursor.execute(sql)
+
+        initialize_api_db(self.api_db, self.ledger_db)
 
         Thread.__init__(self)
 

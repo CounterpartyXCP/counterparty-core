@@ -51,7 +51,7 @@ def check_wal_file():
         raise exceptions.WALFileFoundError("Found WAL file. Database may be corrupted.")
 
 
-def get_db_onnection(db_file, read_only=True, check_wal=True):
+def get_db_connection(db_file, read_only=True, check_wal=True):
     """Connects to the SQLite database, returning a db `Connection` object"""
     logger.debug(f"Creating connection to `{db_file}`...")
 
@@ -85,7 +85,7 @@ def get_db_onnection(db_file, read_only=True, check_wal=True):
 
 
 def get_connection(read_only=True, check_wal=True):
-    return get_db_onnection(config.DATABASE, read_only=read_only, check_wal=check_wal)
+    return get_db_connection(config.DATABASE, read_only=read_only, check_wal=check_wal)
 
 
 # Minimalistic but sufficient connection pool
