@@ -216,6 +216,8 @@ def prepare_args(route, **kwargs):
 
 
 def execute_api_function(db, rule, route, function_args):
+    logger.trace(f"API Request - {rule} - {route} - {function_args}")
+
     # cache everything for one block
     cache_key = f"{util.CURRENT_BLOCK_INDEX}:{request.url}"
     # except for blocks and transactions cached forever
@@ -224,11 +226,14 @@ def execute_api_function(db, rule, route, function_args):
 
     if cache_key in BLOCK_CACHE:
         result = BLOCK_CACHE[cache_key]
+        logger.trace(f"API Request - {result} (Cache hit)")
     else:
         if function_needs_db(route["function"]):
             result = route["function"](db, **function_args)
         else:
             result = route["function"](**function_args)
+        logger.trace(f"API Request - {result} (Cache miss)")
+
         # don't cache API v1 and mempool queries
         if (
             is_cachable(rule)
@@ -299,7 +304,6 @@ def handle_route(**kwargs):
         return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
 
     # call the function
-    logger.trace(f"API Request - {rule} - {route} - {function_args}")
     try:
         with DBConnectionPool().connection() as db:
             result = execute_api_function(db, rule, route, function_args)
