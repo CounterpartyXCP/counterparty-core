@@ -255,8 +255,7 @@ def handle_route(**kwargs):
     start_time = time.time()
     query_args = request.args.to_dict() | kwargs
 
-    logger.trace(f"API Request - {request.remote_addr} {request.method} {request.url}")
-    logger.debug(get_log_prefix(query_args))
+    logger.debug(f"API Request - {request.remote_addr} {request.method} {request.url}")
 
     if BACKEND_HEIGHT is None:
         return return_result(
