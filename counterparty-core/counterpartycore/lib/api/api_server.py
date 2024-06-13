@@ -168,7 +168,7 @@ def return_result(
     if error:
         message += f" ({error})"
     if start_time:
-        message += f" ({int((time.time() - start_time) * 1000)}ms)"
+        message += f" [{int((time.time() - start_time) * 1000)}ms]"
 
     logger.debug(message)
 
