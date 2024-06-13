@@ -168,7 +168,7 @@ def return_result(
     if error:
         message += f" ({error})"
     if start_time:
-        message += f" - {int((time.time() - start_time) * 1000)}ms"
+        message += f" ({int((time.time() - start_time) * 1000)}ms)"
 
     logger.debug(message)
 
@@ -298,9 +298,8 @@ def handle_route(**kwargs):
     except ValueError as e:
         return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
 
-    logger.trace(f"API Request - Arguments: {function_args}")
-
     # call the function
+    logger.trace(f"API Request - {rule} - {route} - {function_args}")
     try:
         with DBConnectionPool().connection() as db:
             result = execute_api_function(db, rule, route, function_args)
