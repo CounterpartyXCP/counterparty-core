@@ -51,9 +51,9 @@ def check_wal_file():
         raise exceptions.WALFileFoundError("Found WAL file. Database may be corrupted.")
 
 
-def get_connection(read_only=True, check_wal=True):
+def get_db_onnection(db_file, read_only=True, check_wal=True):
     """Connects to the SQLite database, returning a db `Connection` object"""
-    logger.debug(f"Creating connection to `{config.DATABASE}`...")
+    logger.debug(f"Creating connection to `{db_file}`...")
 
     if not read_only and check_wal:
         try:
@@ -64,9 +64,9 @@ def get_connection(read_only=True, check_wal=True):
             )
 
     if read_only:
-        db = apsw.Connection(config.DATABASE, flags=apsw.SQLITE_OPEN_READONLY)
+        db = apsw.Connection(db_file, flags=apsw.SQLITE_OPEN_READONLY)
     else:
-        db = apsw.Connection(config.DATABASE)
+        db = apsw.Connection(db_file)
     cursor = db.cursor()
 
     # Make case sensitive the `LIKE` operator.
@@ -82,6 +82,10 @@ def get_connection(read_only=True, check_wal=True):
 
     cursor.close()
     return db
+
+
+def get_connection(read_only=True, check_wal=True):
+    return get_db_onnection(config.DATABASE, read_only=read_only, check_wal=check_wal)
 
 
 # Minimalistic but sufficient connection pool

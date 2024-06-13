@@ -156,15 +156,18 @@ def add_to_journal(db, block_index, command, category, event, bindings):
         "event": event,
         "tx_hash": util.CURRENT_TX_HASH,
     }
-    query = """INSERT INTO messages VALUES (
-                    :message_index,
-                    :block_index,
-                    :command,
-                    :category,
-                    :bindings,
-                    :timestamp,
-                    :event,
-                    :tx_hash)"""
+    query = """INSERT INTO messages (
+                message_index, block_index, command, category, bindings, timestamp, event, tx_hash
+            ) VALUES (
+                :message_index,
+                :block_index,
+                :command,
+                :category,
+                :bindings,
+                :timestamp,
+                :event,
+                :tx_hash
+            )"""
     cursor.execute(query, message_bindings)
     cursor.close()
 

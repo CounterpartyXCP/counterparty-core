@@ -17,7 +17,7 @@ from counterpartycore.lib import (
     transaction,
     util,
 )
-from counterpartycore.lib.api import queries
+from counterpartycore.lib.api import api_watcher, queries
 from counterpartycore.lib.api.routes import ROUTES
 from counterpartycore.lib.api.util import (
     function_needs_db,
@@ -362,6 +362,10 @@ def run_api_server(args, interruped_value):
     sentry.init()
     # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
+
+    watcher = api_watcher.APIWatcher()
+    watcher.start()
+
     logger.info("Starting API Server.")
     app = Flask(config.APP_NAME)
     transaction.initialise()
@@ -399,6 +403,7 @@ def run_api_server(args, interruped_value):
         logger.trace("Keyboard Interrupt!")
     finally:
         logger.trace("Shutting down API Server...")
+        watcher.stop()
         werkzeug_server.shutdown()
         # ensure timer is cancelled
         if BACKEND_HEIGHT_TIMER:

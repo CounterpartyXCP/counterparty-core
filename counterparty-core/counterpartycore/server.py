@@ -226,7 +226,7 @@ def initialise_config(
         config.DATABASE = os.path.join(data_dir, filename)
 
     config.FETCHER_DB = os.path.join(os.path.dirname(config.DATABASE), f"fetcherdb{network}")
-
+    config.API_DATABASE = config.DATABASE.replace(".db", ".api.db")
     config.API_LIMIT_ROWS = api_limit_rows
 
     ##############
