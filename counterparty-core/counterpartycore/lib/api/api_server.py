@@ -265,7 +265,7 @@ def handle_route(**kwargs):
     if BACKEND_HEIGHT is None:
         return return_result(
             503,
-            error="Backend still not ready. Please try again later.",
+            error="Bitcoin Node is not ready. Please try again later.",
             start_time=start_time,
             query_args=query_args,
         )
@@ -289,7 +289,7 @@ def handle_route(**kwargs):
     # check if server must be ready
     if not is_server_ready() and not return_result_if_not_ready(rule):
         return return_result(
-            503, error="Counterparty not ready", start_time=start_time, query_args=query_args
+            503, error="Counterparty Node is not ready. Please try again later.", start_time=start_time, query_args=query_args
         )
 
     if rule == "/v2/":
