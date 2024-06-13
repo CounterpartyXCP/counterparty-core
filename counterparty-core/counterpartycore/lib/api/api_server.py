@@ -265,7 +265,7 @@ def handle_route(**kwargs):
     if BACKEND_HEIGHT is None:
         return return_result(
             503,
-            error="Bitcoin Node is not ready. Please try again later.",
+            error="Bitcoin Node Not Ready",
             start_time=start_time,
             query_args=query_args,
         )
@@ -289,7 +289,7 @@ def handle_route(**kwargs):
     # check if server must be ready
     if not is_server_ready() and not return_result_if_not_ready(rule):
         return return_result(
-            503, error="Counterparty Node is not ready. Please try again later.", start_time=start_time, query_args=query_args
+            503, error="Counterparty Node Not Ready", start_time=start_time, query_args=query_args
         )
 
     if rule == "/v2/":
@@ -322,7 +322,7 @@ def handle_route(**kwargs):
         logger.error("Error in API: %s", e)
         # traceback.print_exc()
         return return_result(
-            503, error="Unknown error", start_time=start_time, query_args=query_args
+            503, error="Unknown Error", start_time=start_time, query_args=query_args
         )
 
     if isinstance(result, requests.Response):
@@ -330,7 +330,7 @@ def handle_route(**kwargs):
 
     # clean up and return the result
     if result is None:
-        return return_result(404, error="Not found", start_time=start_time, query_args=query_args)
+        return return_result(404, error="Not Found", start_time=start_time, query_args=query_args)
 
     next_cursor = None
     result_count = None
@@ -357,7 +357,7 @@ def handle_route(**kwargs):
 
 
 def handle_not_found(error):
-    return return_result(404, error="Not found")
+    return return_result(404, error="Not Found")
 
 
 def run_api_server(args, interruped_value):
