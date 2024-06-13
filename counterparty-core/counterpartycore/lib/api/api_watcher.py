@@ -49,6 +49,8 @@ def get_event_bindings(event):
     event_bindings = json.loads(event["bindings"])
     if "order_match_id" in event_bindings:
         del event_bindings["order_match_id"]
+    elif event["category"] == "dispenses" and "btc_amount" in event_bindings:
+        del event_bindings["btc_amount"]
     return event_bindings
 
 
@@ -101,6 +103,41 @@ def insert_event(api_db, event):
     cursor.execute(sql, event)
 
 
+def update_balances(api_db, event):
+    if event["event"] not in ["DEBIT", "CREDIT"]:
+        return
+
+    cursor = api_db.cursor()
+
+    event_bindings = get_event_bindings(event)
+    quantity = event_bindings["quantity"]
+    if event["event"] == "DEBIT":
+        quantity = -quantity
+
+    existing_balance = cursor.execute(
+        "SELECT * FROM balances WHERE address = :address AND asset = :asset",
+        event_bindings,
+    ).fetchone()
+
+    if existing_balance is None:
+        sql = """
+            UPDATE balances
+            SET quantity = quantity + :quantity
+            WHERE address = :address AND asset = :asset
+            """
+    else:
+        sql = """
+            INSERT INTO balances (address, asset, quantity)
+            VALUES (:address, :asset, :quantity)
+            """
+    insert_bindings = {
+        "address": event_bindings["address"],
+        "asset": event_bindings["asset"],
+        "quantity": quantity,
+    }
+    cursor.execute(sql, insert_bindings)
+
+
 def parse_event(api_db, event, initial_parsing=False):
     initial_event_saved = [
         "NEW_BLOCK",
@@ -118,34 +155,40 @@ def parse_event(api_db, event, initial_parsing=False):
             if sql is not None:
                 cursor = api_db.cursor()
                 cursor.execute(sql, sql_bindings)
+            update_balances(api_db, event)
             insert_event(api_db, event)
         logger.trace(f"Event parsed: {event['message_index']} {event['event']}")
 
 
-def copy_table(api_db, ledger_db, table_name):
+def copy_table(api_db, ledger_db, table_name, group_by=None):
     logger.debug(f"Copying table {table_name}...")
     start_time = time.time()
     ledger_cursor = ledger_db.cursor()
 
-    ledger_cursor.execute(f"SELECT * FROM {table_name} LIMIT 1")  # noqa: S608
+    if group_by:
+        select_sql = f"SELECT *, MAX(rowid) AS rowid FROM {table_name} GROUP BY {group_by}"  # noqa: S608
+    else:
+        select_sql = f"SELECT * FROM {table_name}"  # noqa: S608
+    ledger_cursor.execute(f"{select_sql} LIMIT 1")
     first_row = ledger_cursor.fetchone()
 
-    ledger_cursor.execute(f"SELECT COUNT(*) AS count FROM {table_name}")  # noqa: S608
+    ledger_cursor.execute(f"SELECT COUNT(*) AS count FROM ({select_sql})")  # noqa: S608
     total_rows = ledger_cursor.fetchone()["count"]
 
     field_names = ", ".join(first_row.keys())
     field_values = ", ".join([f":{key}" for key in first_row.keys()])
-    sql = f"INSERT INTO {table_name} ({field_names}) VALUES ({field_values})"  # noqa: S608
-    ledger_cursor.execute(f"SELECT * FROM {table_name}")  # noqa: S608
+    insert_sql = f"INSERT INTO {table_name} ({field_names}) VALUES ({field_values})"  # noqa: S608
 
+    ledger_cursor.execute(select_sql)  # noqa: S608
     saved_rows = 0
     with api_db:
         api_cursor = api_db.cursor()
         for row in ledger_cursor:
-            api_cursor.execute(sql, row)
+            api_cursor.execute(insert_sql, row)
             saved_rows += 1
             if saved_rows % 100000 == 0:
                 logger.debug(f"{saved_rows}/{total_rows} rows of {table_name} copied")
+
     duration = time.time() - start_time
     logger.debug(f"Table {table_name} copied in {duration:.2f} seconds")
 
@@ -165,6 +208,7 @@ def initial_events_parsing(api_db, ledger_db):
         parsed_event_count += 1
         if parsed_event_count % 100000 == 0:
             logger.debug(f"{parsed_event_count}/{event_count} events parsed")
+
     duration = time.time() - start_time
     logger.debug(f"Initial event parsing completed in {duration:.2f} seconds")
 
@@ -179,6 +223,7 @@ def initialize_api_db(api_db, ledger_db):
             cursor.execute("""PRAGMA foreign_keys=OFF""")
             for table in ["blocks", "transactions", "credits", "debits"]:
                 copy_table(api_db, ledger_db, table)
+            copy_table(api_db, ledger_db, "balances", group_by="address, asset")
             initial_events_parsing(api_db, ledger_db)
             cursor.execute("""PRAGMA foreign_keys=ON""")
         duration = time.time() - start_time
