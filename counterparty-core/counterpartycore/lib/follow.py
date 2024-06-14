@@ -22,6 +22,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 MEMPOOL_BLOCK_MAX_SIZE = 100
+ZMQ_TIMEOUT = 3000
 
 NOTIFICATION_TYPES = ["pubrawtx", "pubhashtx", "pubsequence", "pubrawblock"]
 
@@ -90,14 +91,14 @@ class BlockchainWatcher:
         self.zmq_context = zmq.asyncio.Context()
         self.zmq_sub_socket_sequence = self.zmq_context.socket(zmq.SUB)
         self.zmq_sub_socket_sequence.setsockopt(zmq.RCVHWM, 0)
-        self.zmq_sub_socket_sequence.setsockopt(zmq.RCVTIMEO, 1000)
+        self.zmq_sub_socket_sequence.setsockopt(zmq.RCVTIMEO, ZMQ_TIMEOUT)
         self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "rawtx")
         self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "hashtx")
         self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "sequence")
         self.zmq_sub_socket_sequence.connect(self.zmq_sequence_address)
         self.zmq_sub_socket_rawblock = self.zmq_context.socket(zmq.SUB)
         self.zmq_sub_socket_rawblock.setsockopt(zmq.RCVHWM, 0)
-        self.zmq_sub_socket_sequence.setsockopt(zmq.RCVTIMEO, 1000)
+        self.zmq_sub_socket_sequence.setsockopt(zmq.RCVTIMEO, ZMQ_TIMEOUT)
         self.zmq_sub_socket_rawblock.setsockopt_string(zmq.SUBSCRIBE, "rawblock")
         self.zmq_sub_socket_rawblock.connect(self.zmq_rawblock_address)
 
