@@ -537,3 +537,10 @@ CREATE INDEX IF NOT EXISTS dispenses_dispense_quantity_idx ON dispenses (dispens
 CREATE INDEX IF NOT EXISTS debits_quantity_idx ON debits (quantity);
 CREATE INDEX IF NOT EXISTS credits_quantity_idx ON credits (quantity);
 CREATE INDEX IF NOT EXISTS messages_category_insert_rowid_idx ON messages (category, insert_rowid);
+
+CREATE TABLE IF NOT EXISTS all_expirations(
+                      type TEXT,
+                      object_id TEXT,
+                      block_index INTEGER);
+CREATE INDEX IF NOT EXISTS all_expirations_type_idx ON all_expirations (type);
+CREATE INDEX IF NOT EXISTS all_expirations_block_index_idx ON all_expirations (block_index);

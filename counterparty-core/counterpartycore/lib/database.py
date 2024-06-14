@@ -90,10 +90,11 @@ def get_connection(read_only=True, check_wal=True):
 
 # Minimalistic but sufficient connection pool
 class APSWConnectionPool:
-    def __init__(self, db_file):
+    def __init__(self, db_file, name):
         self.connections = []
         self.db_file = db_file
         self.closed = False
+        self.name = name
 
     @contextmanager
     def connection(self):
@@ -107,18 +108,20 @@ class APSWConnectionPool:
             yield db
         finally:
             if self.closed:
-                logger.trace("Connection pool is closed. Closing connection.")
+                logger.trace("Connection pool is closed. Closing connection (%s).", self.name)
                 db.close()
             elif len(self.connections) < config.DB_CONNECTION_POOL_SIZE:
                 # Add connection to pool
                 self.connections.append(db)
             else:
                 # Too much connections in the pool: closing connection
-                logger.warning("Closing connection due to pool size limit.")
+                logger.warning("Closing connection due to pool size limit (%s).", self.name)
                 db.close()
 
     def close(self):
-        logger.trace("Closing all connections in pool... (%s)", len(self.connections))
+        logger.trace(
+            "Closing all connections in pool (%s)... (%s)", self.name, len(self.connections)
+        )
         self.closed = True
         while len(self.connections) > 0:
             db = self.connections.pop()
@@ -127,12 +130,12 @@ class APSWConnectionPool:
 
 class DBConnectionPool(APSWConnectionPool, metaclass=util.SingletonMeta):
     def __init__(self):
-        super().__init__(config.DATABASE)
+        super().__init__(config.DATABASE, "Ledger DB")
 
 
 class APIDBConnectionPool(APSWConnectionPool, metaclass=util.SingletonMeta):
     def __init__(self):
-        super().__init__(config.API_DATABASE)
+        super().__init__(config.API_DATABASE, "API DB")
 
 
 def initialise_db():

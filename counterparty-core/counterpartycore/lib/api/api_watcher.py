@@ -24,6 +24,15 @@ UPDATE_EVENTS_ID_FIELDS = {
     "RPS_UPDATE": ["tx_hash"],
 }
 
+EXPIRATION_EVENTS_OBJECT_ID = {
+    "ORDER_EXPIRATION": "order_hash",
+    "ORDER_MATCH_EXPIRATION": "order_match_id",
+    "RPS_EXPIRATION": "rps_hash",
+    "RPS_MATCH_EXPIRATION": "rps_match_id",
+    "BET_EXPIRATION": "bet_hash",
+    "BET_MATCH_EXPIRATION": "bet_match_id",
+}
+
 
 def get_last_parsed_message_index(api_db):
     cursor = api_db.cursor()
@@ -43,6 +52,15 @@ def get_next_event_to_parse(api_db, ledger_db):
     cursor.execute(sql, (last_parsed_message_index,))
     next_event = cursor.fetchone()
     return next_event
+
+
+def get_event_to_parse_count(api_db, ledger_db):
+    last_parsed_message_index = get_last_parsed_message_index(api_db)
+    cursor = ledger_db.cursor()
+    sql = "SELECT message_index FROM messages ORDER BY message_index DESC LIMIT 1"
+    cursor.execute(sql)
+    last_event = cursor.fetchone()
+    return last_event["message_index"] - last_parsed_message_index
 
 
 def get_event_bindings(event):
@@ -138,6 +156,24 @@ def update_balances(api_db, event):
     cursor.execute(sql, insert_bindings)
 
 
+def update_expiration(api_db, event):
+    if event["event"] not in EXPIRATION_EVENTS_OBJECT_ID:
+        return
+    event_bindings = json.loads(event["bindings"])
+
+    cursor = api_db.cursor()
+    sql = """
+        INSERT INTO all_expirations (object_id, block_index, type) 
+        VALUES (:object_id, :block_index, :type)
+        """
+    bindings = {
+        "object_id": event_bindings[EXPIRATION_EVENTS_OBJECT_ID[event["event"]]],
+        "block_index": event_bindings["block_index"],
+        "type": event["event"].replace("_EXPIRATION", "").lower(),
+    }
+    cursor.execute(sql, bindings)
+
+
 def parse_event(api_db, event, initial_parsing=False):
     initial_event_saved = [
         "NEW_BLOCK",
@@ -148,15 +184,14 @@ def parse_event(api_db, event, initial_parsing=False):
         "DEBIT",
     ]
     with api_db:
-        if initial_parsing and event["event"] in initial_event_saved:
-            insert_event(api_db, event)
-        else:
+        if not (initial_parsing and event["event"] in initial_event_saved):
             sql, sql_bindings = event_to_sql(event)
             if sql is not None:
                 cursor = api_db.cursor()
                 cursor.execute(sql, sql_bindings)
             update_balances(api_db, event)
-            insert_event(api_db, event)
+        insert_event(api_db, event)
+        update_expiration(api_db, event)
         logger.trace(f"Event parsed: {event['message_index']} {event['event']}")
 
 
@@ -213,6 +248,28 @@ def initial_events_parsing(api_db, ledger_db):
     logger.debug(f"Initial event parsing completed in {duration:.2f} seconds")
 
 
+def catch_up(api_db, ledger_db):
+    event_to_parse_count = get_event_to_parse_count(api_db, ledger_db)
+    if event_to_parse_count > 0:
+        logger.info(f"{event_to_parse_count} events to catch up...")
+        start_time = time.time()
+        event_parsed = 0
+        next_event = get_next_event_to_parse(api_db, ledger_db)
+        while next_event:
+            logger.trace(f"Parsing event: {next_event}")
+            parse_event(api_db, next_event)
+            event_parsed += 1
+            if event_parsed % 10000 == 0:
+                duration = time.time() - start_time
+                expected_duration = duration / event_parsed * event_to_parse_count
+                logger.info(
+                    f"{event_parsed}/{event_to_parse_count} events parsed in {duration:.2f} seconds (expected {expected_duration:.2f} seconds)"
+                )
+            next_event = get_next_event_to_parse(api_db, ledger_db)
+        duration = time.time() - start_time
+        logger.info(f"{event_parsed} events parsed in {duration:.2f} seconds")
+
+
 def initialize_api_db(api_db, ledger_db):
     logger.info("Initializing API Database...")
     start_time = time.time()
@@ -250,6 +307,7 @@ def initialize_api_db(api_db, ledger_db):
 class APIWatcher(Thread):
     def __init__(self):
         logger.debug("Initializing API Watcher...")
+        self.stopping = False
         self.stopped = False
         self.api_db = database.get_db_connection(
             config.API_DATABASE, read_only=False, check_wal=False
@@ -264,7 +322,7 @@ class APIWatcher(Thread):
 
     def run(self):
         logger.info("Starting API Watcher...")
-        while True and not self.stopped:
+        while True and not self.stopping:
             next_event = get_next_event_to_parse(self.api_db, self.ledger_db)
             if next_event:
                 logger.trace(f"Parsing event: {next_event}")
@@ -272,10 +330,14 @@ class APIWatcher(Thread):
             else:
                 logger.trace("No new events to parse")
                 time.sleep(1)
+        self.stopped = True
         return
 
     def stop(self):
         logger.info("Stopping API Watcher...")
-        self.stopped = True
+        self.stopping = True
+        while not self.stopped:
+            time.sleep(0.1)
         self.api_db.close()
         self.ledger_db.close()
+        logger.trace("API Watcher stopped")
