@@ -89,9 +89,10 @@ def get_connection(read_only=True, check_wal=True):
 
 
 # Minimalistic but sufficient connection pool
-class DBConnectionPool(metaclass=util.SingletonMeta):
-    def __init__(self):
+class APSWConnectionPool:
+    def __init__(self, db_file):
         self.connections = []
+        self.db_file = db_file
         self.closed = False
 
     @contextmanager
@@ -101,7 +102,7 @@ class DBConnectionPool(metaclass=util.SingletonMeta):
             db = self.connections.pop(0)
         else:
             # New db connection
-            db = get_connection(read_only=True)
+            db = get_db_connection(self.db_file, read_only=True, check_wal=False)
         try:
             yield db
         finally:
@@ -122,6 +123,16 @@ class DBConnectionPool(metaclass=util.SingletonMeta):
         while len(self.connections) > 0:
             db = self.connections.pop()
             db.close()
+
+
+class DBConnectionPool(APSWConnectionPool, metaclass=util.SingletonMeta):
+    def __init__(self):
+        super().__init__(config.DATABASE)
+
+
+class APIDBConnectionPool(APSWConnectionPool, metaclass=util.SingletonMeta):
+    def __init__(self):
+        super().__init__(config.API_DATABASE)
 
 
 def initialise_db():

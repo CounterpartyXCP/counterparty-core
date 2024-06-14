@@ -27,7 +27,7 @@ from counterpartycore.lib.api.util import (
     remove_rowids,
     to_json,
 )
-from counterpartycore.lib.database import DBConnectionPool
+from counterpartycore.lib.database import APIDBConnectionPool
 from flask import Flask, request
 from flask_httpauth import HTTPBasicAuth
 from sentry_sdk import capture_exception
@@ -55,7 +55,7 @@ def verify_password(username, password):
 
 
 def api_root():
-    with DBConnectionPool().connection() as db:
+    with APIDBConnectionPool().connection() as db:
         counterparty_height = ledger.last_db_index(db)
     routes = []
     for path, route in ROUTES.items():
@@ -268,7 +268,7 @@ def handle_route(**kwargs):
 
     # update the current block index
     global CURRENT_BLOCK_TIME  # noqa F811
-    with DBConnectionPool().connection() as db:
+    with APIDBConnectionPool().connection() as db:
         last_block = ledger.get_last_block(db)
     if last_block:
         util.CURRENT_BLOCK_INDEX = last_block["block_index"]
@@ -303,7 +303,7 @@ def handle_route(**kwargs):
 
     # call the function
     try:
-        with DBConnectionPool().connection() as db:
+        with APIDBConnectionPool().connection() as db:
             result = execute_api_function(db, rule, route, function_args)
     except (exceptions.ComposeError, exceptions.UnpackError) as e:
         return return_result(503, error=str(e), start_time=start_time, query_args=query_args)
@@ -373,7 +373,7 @@ def run_api_server(args, interruped_value):
         # Initialise the API access log
         init_api_access_log(app)
         # Get the last block index
-        with DBConnectionPool().connection() as db:
+        with APIDBConnectionPool().connection() as db:
             util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
         # Add routes
         app.add_url_rule("/v2/", view_func=handle_route, strict_slashes=False)
@@ -408,7 +408,7 @@ def run_api_server(args, interruped_value):
         # ensure timer is cancelled
         if BACKEND_HEIGHT_TIMER:
             BACKEND_HEIGHT_TIMER.cancel()
-        DBConnectionPool().close()
+        APIDBConnectionPool().close()
         exit()
 
 
