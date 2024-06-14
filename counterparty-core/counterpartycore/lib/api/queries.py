@@ -137,6 +137,8 @@ def select_rows(
 
     if select == "*":
         select = f"*, {cursor_field} AS {cursor_field}"
+    elif cursor_field not in select:
+        select = f"{select}, {cursor_field} AS {cursor_field}"
 
     query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608
     query_count = f"SELECT {select} FROM {table} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608
@@ -1099,8 +1101,7 @@ def get_address_balances(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        select="address, asset, quantity, MAX(rowid) AS rowid",
-        group_by="address, asset",
+        select="address, asset, quantity",
     )
 
 
@@ -1131,9 +1132,7 @@ def get_bets(
     return select_rows(
         db,
         "bets",
-        wrap_where={"status": status},
-        select="*, MAX(rowid) AS rowid",
-        group_by="tx_hash",
+        where={"status": status},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1159,10 +1158,7 @@ def get_bet_by_feed(
     return select_rows(
         db,
         "bets",
-        where={"feed_address": address},
-        wrap_where={"status": status},
-        select="*, MAX(rowid) AS rowid",
-        group_by="tx_hash",
+        where={"feed_address": address, "status": status},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1293,9 +1289,7 @@ def get_dispensers(db, status: int = 0, cursor: int = None, limit: int = 100, of
     return select_rows(
         db,
         "dispensers",
-        wrap_where={"status": status},
-        select="*, MAX(rowid) AS rowid",
-        group_by="asset, source",
+        where={"status": status},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1316,10 +1310,7 @@ def get_dispensers_by_address(
     return select_rows(
         db,
         "dispensers",
-        where={"source": address},
-        wrap_where={"status": status},
-        select="*, MAX(rowid) AS rowid",
-        group_by="asset, source",
+        where={"source": address, "status": status},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1340,10 +1331,7 @@ def get_dispensers_by_asset(
     return select_rows(
         db,
         "dispensers",
-        where={"asset": asset},
-        wrap_where={"status": status},
-        select="*, MAX(rowid) AS rowid",
-        group_by="asset, source",
+        where={"asset": asset, "status": status},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1530,11 +1518,9 @@ def get_asset_balances(db, asset: str, cursor: str = None, limit: int = 100, off
     return select_rows(
         db,
         "balances",
-        where={"asset": asset},
-        wrap_where={"quantity__gt": 0},
+        where={"asset": asset, "quantity__gt": 0},
         cursor_field="address",
-        select="address, asset, quantity, MAX(rowid) AS rowid",
-        group_by="address, asset",
+        select="address, asset, quantity",
         order="ASC",
         last_cursor=cursor,
         limit=limit,
@@ -1555,9 +1541,7 @@ def get_orders(
     return select_rows(
         db,
         "orders",
-        wrap_where={"status": status},
-        select="*, MAX(rowid) AS rowid",
-        group_by="tx_hash",
+        where={"status": status},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1583,10 +1567,7 @@ def get_orders_by_asset(
     return select_rows(
         db,
         "orders",
-        where=[{"give_asset": asset}, {"get_asset": asset}],
-        wrap_where={"status": status},
-        select="*, MAX(rowid) AS rowid",
-        group_by="tx_hash",
+        where=[{"give_asset": asset, "status": status}, {"get_asset": asset, "status": status}],
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1612,10 +1593,7 @@ def get_orders_by_address(
     return select_rows(
         db,
         "orders",
-        where={"source": address},
-        wrap_where={"status": status},
-        select="*, MAX(rowid) AS rowid",
-        group_by="tx_hash",
+        where={"source": address, "status": status},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1644,12 +1622,9 @@ def get_orders_by_two_assets(
         db,
         "orders",
         where=[
-            {"give_asset": asset1, "get_asset": asset2},
-            {"give_asset": asset2, "get_asset": asset1},
+            {"give_asset": asset1, "get_asset": asset2, "status": status},
+            {"give_asset": asset2, "get_asset": asset1, "status": status},
         ],
-        wrap_where={"status": status},
-        select="*, MAX(rowid) AS rowid",
-        group_by="tx_hash",
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1714,10 +1689,10 @@ def get_order_matches_by_order(
     return select_rows(
         db,
         "order_matches",
-        where=[{"tx0_hash": order_hash}, {"tx1_hash": order_hash}],  # tx0_hash = ? OR tx1_hash = ?
-        select="*, MAX(rowid) AS rowid",
-        group_by="id",
-        wrap_where={"status": status},
+        where=[
+            {"tx0_hash": order_hash, "status": status},
+            {"tx1_hash": order_hash, "status": status},
+        ],  # tx0_hash = ? OR tx1_hash = ?
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1775,10 +1750,10 @@ def get_bet_matches_by_bet(
     return select_rows(
         db,
         "bet_matches",
-        where=[{"tx0_hash": bet_hash}, {"tx1_hash": bet_hash}],  # tx0_hash = ? OR tx1_hash = ?
-        select="*, MAX(rowid) AS rowid",
-        group_by="id",
-        wrap_where={"status": status},
+        where=[
+            {"tx0_hash": bet_hash, "status": status},
+            {"tx1_hash": bet_hash, "status": status},
+        ],  # tx0_hash = ? OR tx1_hash = ?
         last_cursor=cursor,
         limit=limit,
         offset=offset,
