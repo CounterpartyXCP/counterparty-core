@@ -214,7 +214,24 @@ def initial_events_parsing(api_db, ledger_db):
 
 
 def initialize_api_db(api_db, ledger_db):
+    logger.info("Initializing API Database...")
     start_time = time.time()
+
+    cursor = api_db.cursor()
+
+    # TODO: use migrations library
+    with open(MIGRATIONS_FILE, "r") as f:
+        sql = f.read()
+        cursor.execute(sql)
+
+    # Create XCP and BTC assets if they don't exist
+    cursor.execute("""SELECT * FROM assets WHERE asset_name = ?""", ("BTC",))
+    if not list(cursor):
+        cursor.execute("""INSERT INTO assets VALUES (?,?,?,?)""", ("0", "BTC", None, None))
+        cursor.execute("""INSERT INTO assets VALUES (?,?,?,?)""", ("1", "XCP", None, None))
+    cursor.close()
+
+    # check last parsed message index
     last_message_index = get_last_parsed_message_index(api_db)
     if last_message_index == -1:
         logger.info("New API database, initializing...")
@@ -240,12 +257,6 @@ class APIWatcher(Thread):
         self.ledger_db = database.get_db_connection(
             config.DATABASE, read_only=True, check_wal=False
         )
-
-        # TODO: use migrations library
-        with open(MIGRATIONS_FILE, "r") as f:
-            cursor = self.api_db.cursor()
-            sql = f.read()
-            cursor.execute(sql)
 
         initialize_api_db(self.api_db, self.ledger_db)
 

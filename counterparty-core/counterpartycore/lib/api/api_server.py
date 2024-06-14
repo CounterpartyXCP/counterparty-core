@@ -404,6 +404,7 @@ def run_api_server(args, interruped_value):
     finally:
         logger.trace("Shutting down API Server...")
         watcher.stop()
+        watcher.join()
         werkzeug_server.shutdown()
         # ensure timer is cancelled
         if BACKEND_HEIGHT_TIMER:

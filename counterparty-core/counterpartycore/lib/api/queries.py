@@ -471,7 +471,7 @@ def get_events_by_block_and_event(
     Returns the events of a block filtered by event
     :param int block_index: The index of the block to return (e.g. 840464)
     :param str event: The event to filter by (e.g. CREDIT)
-    :param int cursor: The last event index to return (e.g. 10665092)
+    :param int cursor: The last event index to return
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
