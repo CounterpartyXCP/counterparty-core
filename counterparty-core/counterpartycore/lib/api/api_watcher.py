@@ -195,26 +195,26 @@ def parse_event(api_db, event, initial_parsing=False):
         logger.trace(f"Event parsed: {event['message_index']} {event['event']}")
 
 
-def copy_table(api_db, ledger_db, table_name, group_by=None):
+def copy_table(api_db, ledger_db, table_name, last_block_index, group_by=None):
     logger.debug(f"Copying table {table_name}...")
     start_time = time.time()
     ledger_cursor = ledger_db.cursor()
 
     if group_by:
-        select_sql = f"SELECT *, MAX(rowid) AS rowid FROM {table_name} GROUP BY {group_by}"  # noqa: S608
+        select_sql = f"SELECT *, MAX(rowid) AS rowid FROM {table_name} WHERE block_index <= ? GROUP BY {group_by}"  # noqa: S608
     else:
-        select_sql = f"SELECT * FROM {table_name}"  # noqa: S608
-    ledger_cursor.execute(f"{select_sql} LIMIT 1")
+        select_sql = f"SELECT * FROM {table_name} WHERE block_index <= ?"  # noqa: S608
+    ledger_cursor.execute(f"{select_sql} LIMIT 1", (last_block_index,))
     first_row = ledger_cursor.fetchone()
 
-    ledger_cursor.execute(f"SELECT COUNT(*) AS count FROM ({select_sql})")  # noqa: S608
+    ledger_cursor.execute(f"SELECT COUNT(*) AS count FROM ({select_sql})", (last_block_index,))  # noqa: S608
     total_rows = ledger_cursor.fetchone()["count"]
 
     field_names = ", ".join(first_row.keys())
     field_values = ", ".join([f":{key}" for key in first_row.keys()])
     insert_sql = f"INSERT INTO {table_name} ({field_names}) VALUES ({field_values})"  # noqa: S608
 
-    ledger_cursor.execute(select_sql)  # noqa: S608
+    ledger_cursor.execute(select_sql, (last_block_index,))  # noqa: S608
     saved_rows = 0
     with api_db:
         api_cursor = api_db.cursor()
@@ -228,21 +228,30 @@ def copy_table(api_db, ledger_db, table_name, group_by=None):
     logger.debug(f"Table {table_name} copied in {duration:.2f} seconds")
 
 
-def initial_events_parsing(api_db, ledger_db):
+def initial_events_parsing(api_db, ledger_db, last_block_index):
     logger.debug("Initial event parsing...")
     start_time = time.time()
     ledger_cursor = ledger_db.cursor()
 
-    ledger_cursor.execute("SELECT COUNT(*) AS count FROM messages")
+    ledger_cursor.execute(
+        "SELECT COUNT(*) AS count FROM messages WHERE block_index <= ?", (last_block_index,)
+    )
     event_count = ledger_cursor.fetchone()["count"]
 
-    ledger_cursor.execute("SELECT * FROM messages ORDER BY message_index ASC")
+    ledger_cursor.execute(
+        "SELECT * FROM messages WHERE block_index <= ? ORDER BY message_index ASC",
+        (last_block_index,),
+    )
     parsed_event_count = 0
     for event in ledger_cursor:
         parse_event(api_db, event, initial_parsing=True)
         parsed_event_count += 1
         if parsed_event_count % 100000 == 0:
-            logger.debug(f"{parsed_event_count}/{event_count} events parsed")
+            duration = time.time() - start_time
+            expected_duration = duration / parsed_event_count * event_count
+            logger.debug(
+                f"{parsed_event_count}/{event_count} events parsed in {duration:.2f} seconds (expected {expected_duration:.2f} seconds)"
+            )
 
     duration = time.time() - start_time
     logger.debug(f"Initial event parsing completed in {duration:.2f} seconds")
@@ -270,9 +279,25 @@ def catch_up(api_db, ledger_db):
         logger.info(f"{event_parsed} events parsed in {duration:.2f} seconds")
 
 
+def optimized_catch_up(api_db, ledger_db):
+    # check last parsed message index
+    last_message_index = get_last_parsed_message_index(api_db)
+    if last_message_index == -1:
+        logger.info("New API database, initializing...")
+        start_time = time.time()
+        sql = "SELECT MAX(block_index) AS block_index FROM messages"
+        last_block_index = ledger_db.cursor().execute(sql).fetchone()["block_index"]
+        with api_db:  # everything or nothing
+            for table in ["blocks", "transactions", "credits", "debits"]:
+                copy_table(api_db, ledger_db, table, last_block_index)
+            copy_table(api_db, ledger_db, "balances", last_block_index, group_by="address, asset")
+            initial_events_parsing(api_db, ledger_db, last_block_index)
+        duration = time.time() - start_time
+        logger.info(f"API database initialized in {duration:.2f} seconds")
+
+
 def initialize_api_db(api_db, ledger_db):
     logger.info("Initializing API Database...")
-    start_time = time.time()
 
     cursor = api_db.cursor()
 
@@ -288,20 +313,8 @@ def initialize_api_db(api_db, ledger_db):
         cursor.execute("""INSERT INTO assets VALUES (?,?,?,?)""", ("1", "XCP", None, None))
     cursor.close()
 
-    # check last parsed message index
-    last_message_index = get_last_parsed_message_index(api_db)
-    if last_message_index == -1:
-        logger.info("New API database, initializing...")
-        with api_db:  # everything or nothing
-            cursor = api_db.cursor()
-            cursor.execute("""PRAGMA foreign_keys=OFF""")
-            for table in ["blocks", "transactions", "credits", "debits"]:
-                copy_table(api_db, ledger_db, table)
-            copy_table(api_db, ledger_db, "balances", group_by="address, asset")
-            initial_events_parsing(api_db, ledger_db)
-            cursor.execute("""PRAGMA foreign_keys=ON""")
-        duration = time.time() - start_time
-        logger.info(f"API database initialized in {duration:.2f} seconds")
+    # catch_up(api_db, ledger_db)
+    optimized_catch_up(api_db, ledger_db)
 
 
 class APIWatcher(Thread):

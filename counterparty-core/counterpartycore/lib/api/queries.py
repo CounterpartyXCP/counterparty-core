@@ -821,7 +821,6 @@ def get_expirations(db, block_index: int, cursor: str = None, limit: int = 100, 
         db,
         "all_expirations",
         where={"block_index": block_index},
-        cursor_field="cursor_id",
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1646,9 +1645,10 @@ def get_asset_holders(db, asset: str, cursor: str = None, limit: int = 100, offs
     :param int limit: The maximum number of holders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    table_name = "xcp_holders" if asset.upper() == "XCP" else "asset_holders"
     return select_rows(
         db,
-        "all_holders",
+        table_name,
         where={"asset": asset},
         order="ASC",
         cursor_field="cursor_id",
