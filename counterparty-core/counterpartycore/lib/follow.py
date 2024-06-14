@@ -22,6 +22,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 MEMPOOL_BLOCK_MAX_SIZE = 100
+ZMQ_TIMEOUT = 3000
 
 NOTIFICATION_TYPES = ["pubrawtx", "pubhashtx", "pubsequence", "pubrawblock"]
 
@@ -64,7 +65,7 @@ def start_blockchain_watcher(db):
         return follower_daemon
     except exceptions.BitcoindZMQError as e:
         logger.error(e)
-        logger.warning("Sleeping 5 seconds, catching up again then retrying...")
+        logger.warning("Sleeping 5 seconds, catching up again, then retrying...")
         time.sleep(5)
         blocks.catch_up(db, check_asset_conservation=False)
         return start_blockchain_watcher(db)
@@ -90,14 +91,14 @@ class BlockchainWatcher:
         self.zmq_context = zmq.asyncio.Context()
         self.zmq_sub_socket_sequence = self.zmq_context.socket(zmq.SUB)
         self.zmq_sub_socket_sequence.setsockopt(zmq.RCVHWM, 0)
-        self.zmq_sub_socket_sequence.setsockopt(zmq.RCVTIMEO, 1000)
+        self.zmq_sub_socket_sequence.setsockopt(zmq.RCVTIMEO, ZMQ_TIMEOUT)
         self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "rawtx")
         self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "hashtx")
         self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "sequence")
         self.zmq_sub_socket_sequence.connect(self.zmq_sequence_address)
         self.zmq_sub_socket_rawblock = self.zmq_context.socket(zmq.SUB)
         self.zmq_sub_socket_rawblock.setsockopt(zmq.RCVHWM, 0)
-        self.zmq_sub_socket_sequence.setsockopt(zmq.RCVTIMEO, 1000)
+        self.zmq_sub_socket_sequence.setsockopt(zmq.RCVTIMEO, ZMQ_TIMEOUT)
         self.zmq_sub_socket_rawblock.setsockopt_string(zmq.SUBSCRIBE, "rawblock")
         self.zmq_sub_socket_rawblock.connect(self.zmq_rawblock_address)
 
@@ -182,9 +183,11 @@ class BlockchainWatcher:
         try:
             flags = 0 if topic_name == "sequence" else zmq.NOBLOCK
             topic, body, seq = await socket.recv_multipart(flags=flags)
-        except zmq.ZMQError:
-            logger.trace("No message available in topic `%s`", topic_name)
-            return
+        except zmq.ZMQError as e:
+            if e.errno == zmq.EAGAIN:
+                logger.trace("No message available in topic `%s`", topic_name)
+                return
+            raise e
         self.receive_message(topic, body, seq)
 
     async def handle(self):
@@ -204,11 +207,11 @@ class BlockchainWatcher:
         asyncio.ensure_future(self.handle())
 
     def start(self):
-        logger.info("Starting blockchain watcher...")
+        logger.debug("Starting blockchain watcher...")
         self.loop.create_task(self.handle())
         self.loop.run_forever()
 
     def stop(self):
-        logger.info("Stopping blockchain watcher...")
+        logger.debug("Stopping blockchain watcher...")
         self.loop.stop()
         self.zmq_context.destroy()

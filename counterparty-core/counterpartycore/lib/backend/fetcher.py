@@ -68,7 +68,7 @@ def instance():
 
 
 def stop():
-    logger.info("Stopping fetcher...")
+    logger.debug("Stopping fetcher...")
     global _fetcher  # noqa: PLW0603
     if _fetcher is None:
         return
