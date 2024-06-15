@@ -4,7 +4,7 @@ import os
 import time
 from threading import Thread
 
-from counterpartycore.lib import config, database
+from counterpartycore.lib import config, database, exceptions
 from counterpartycore.lib.api import queries, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -128,15 +128,12 @@ def get_event_previous_state(api_db, event):
 
 
 def delete_event(api_db, event):
-    bindings = get_event_bindings(event)
-    sql = f"DELETE FROM {event['category']} WHERE "  # noqa: S608
-    for field_name in bindings:
-        sql += f"{field_name} = :{field_name} AND "
-    sql = sql[:-5]  # remove trailing " AND "
+    sql = f"DELETE FROM {event['category']} WHERE rowid = ?"  # noqa: S608
     cursor = api_db.cursor()
-    cursor.execute(sql, bindings)
-    changes = cursor.execute("SELECT changes()").fetchone()
-    logger.warning(changes)
+    cursor.execute(sql, (event["insert_rowid"],))
+    changes = cursor.execute("SELECT changes() AS deleted").fetchone()
+    if changes["deleted"] == 0:
+        raise exceptions.APIWatcherError(f"Event not found: {event}")
 
 
 def insert_event(api_db, event):
