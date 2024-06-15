@@ -111,14 +111,73 @@ def event_to_sql(event):
     return None, []
 
 
+def get_event_previous_state(api_db, event):
+    previous_state = None
+    if event["command"] in ["update", "parse"]:
+        cursor = api_db.cursor()
+        id_field_names = UPDATE_EVENTS_ID_FIELDS[event["event"]]
+        sql = f"SELECT * FROM {event['category']} WHERE "  # noqa: S608
+        for id_field_name in id_field_names:
+            sql += f"{id_field_name} = ? AND "
+        sql = sql[:-5]  # remove trailing " AND "
+        event_bindings = json.loads(event["bindings"])
+        cursor.execute(sql, event_bindings)
+        previous_state = cursor.fetchone()
+    return previous_state
+
+
+def delete_event(api_db, event):
+    bindings = get_event_bindings(event)
+    sql = f"DELETE FROM {event['category']} WHERE "  # noqa: S608
+    for field_name in bindings:
+        sql += f"{field_name} = :{field_name} AND "
+    sql = sql[:-5]  # remove trailing " AND "
+    cursor = api_db.cursor()
+    cursor.execute(sql, bindings)
+
+
 def insert_event(api_db, event):
+    event["previous_state"] = json.dumps(get_event_previous_state(api_db, event))
     sql = """
         INSERT INTO messages 
-            (message_index, block_index, event, category, command, bindings, tx_hash)
-        VALUES (:message_index, :block_index, :event, :category, :command, :bindings, :tx_hash)
+            (message_index, block_index, event, category, command, bindings, tx_hash, previous_state)
+        VALUES (:message_index, :block_index, :event, :category, :command, :bindings, :tx_hash, :previous_state)
     """
     cursor = api_db.cursor()
     cursor.execute(sql, event)
+
+
+def rollback_event(api_db, event):
+    if event["previous_state"] is None:
+        delete_event(api_db, event)
+        return
+    previous_state = json.loads(event["previous_state"])
+
+    sql = f"UPDATE {event['category']} SET "  # noqa: S608
+    id_field_names = UPDATE_EVENTS_ID_FIELDS[event["event"]]
+    for key in previous_state.keys():
+        if key in id_field_names:
+            continue
+        sql += f"{key} = :{key}, "
+    sql = sql[:-2]  # remove trailing comma
+    sql += " WHERE "
+    for id_field_name in id_field_names:
+        sql += f"{id_field_name} = :{id_field_name} AND "
+    sql = sql[:-5]  # remove trailing " AND "
+
+    cursor = api_db.cursor()
+    cursor.execute(sql, previous_state)
+
+
+def rollback_events(api_db, block_index):
+    with api_db:
+        cursor = api_db.cursor()
+        sql = "SELECT * FROM messages WHERE block_index >= ?"
+        cursor.execute(sql, (block_index,))
+        events = cursor.fetchall()
+        for event in events:
+            rollback_event(api_db, event)
+        cursor.execute("DELETE FROM messages WHERE block_index >= ?", (block_index,))
 
 
 def update_balances(api_db, event):
@@ -174,6 +233,13 @@ def update_expiration(api_db, event):
     cursor.execute(sql, bindings)
 
 
+def execute_event(api_db, event):
+    sql, sql_bindings = event_to_sql(event)
+    if sql is not None:
+        cursor = api_db.cursor()
+        cursor.execute(sql, sql_bindings)
+
+
 def parse_event(api_db, event, initial_parsing=False):
     initial_event_saved = [
         "NEW_BLOCK",
@@ -185,13 +251,10 @@ def parse_event(api_db, event, initial_parsing=False):
     ]
     with api_db:
         if not (initial_parsing and event["event"] in initial_event_saved):
-            sql, sql_bindings = event_to_sql(event)
-            if sql is not None:
-                cursor = api_db.cursor()
-                cursor.execute(sql, sql_bindings)
+            execute_event(api_db, event)
             update_balances(api_db, event)
-        insert_event(api_db, event)
         update_expiration(api_db, event)
+        insert_event(api_db, event)
         logger.trace(f"Event parsed: {event['message_index']} {event['event']}")
 
 
@@ -317,6 +380,12 @@ def initialize_api_db(api_db, ledger_db):
     optimized_catch_up(api_db, ledger_db)
 
 
+def get_last_block(api_db):
+    cursor = api_db.cursor()
+    cursor.execute("SELECT * FROM blocks ORDER BY block_index DESC LIMIT 1")
+    return cursor.fetchone()
+
+
 class APIWatcher(Thread):
     def __init__(self):
         logger.debug("Initializing API Watcher...")
@@ -339,6 +408,9 @@ class APIWatcher(Thread):
             next_event = get_next_event_to_parse(self.api_db, self.ledger_db)
             if next_event:
                 logger.trace(f"Parsing event: {next_event}")
+                last_block = get_last_block(self.api_db)
+                if last_block and last_block["block_index"] > next_event["block_index"]:
+                    rollback_events(self.api_db, next_event["block_index"])
                 parse_event(self.api_db, next_event)
             else:
                 logger.trace("No new events to parse")
