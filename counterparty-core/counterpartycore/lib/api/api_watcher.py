@@ -5,6 +5,7 @@ import time
 from threading import Thread
 
 from counterpartycore.lib import config, database
+from counterpartycore.lib.api import util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -118,7 +119,7 @@ def get_event_previous_state(api_db, event):
         id_field_names = UPDATE_EVENTS_ID_FIELDS[event["event"]]
         sql = f"SELECT * FROM {event['category']} WHERE "  # noqa: S608
         for id_field_name in id_field_names:
-            sql += f"{id_field_name} = ? AND "
+            sql += f"{id_field_name} = :{id_field_name} AND "
         sql = sql[:-5]  # remove trailing " AND "
         event_bindings = json.loads(event["bindings"])
         cursor.execute(sql, event_bindings)
@@ -137,7 +138,7 @@ def delete_event(api_db, event):
 
 
 def insert_event(api_db, event):
-    event["previous_state"] = json.dumps(get_event_previous_state(api_db, event))
+    event["previous_state"] = util.to_json(get_event_previous_state(api_db, event))
     sql = """
         INSERT INTO messages 
             (message_index, block_index, event, category, command, bindings, tx_hash, previous_state)
@@ -410,6 +411,10 @@ class APIWatcher(Thread):
                 logger.trace(f"Parsing event: {next_event}")
                 last_block = get_last_block(self.api_db)
                 if last_block and last_block["block_index"] > next_event["block_index"]:
+                    logger.warning(
+                        "Reorg detected, rolling back events to block %s...",
+                        next_event["block_index"],
+                    )
                     rollback_events(self.api_db, next_event["block_index"])
                 parse_event(self.api_db, next_event)
             else:

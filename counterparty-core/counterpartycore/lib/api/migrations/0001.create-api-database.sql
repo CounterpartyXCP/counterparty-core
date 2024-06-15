@@ -537,7 +537,6 @@ CREATE INDEX IF NOT EXISTS dispensers_give_quantity_idx ON dispensers (give_quan
 CREATE INDEX IF NOT EXISTS dispenses_dispense_quantity_idx ON dispenses (dispense_quantity);
 CREATE INDEX IF NOT EXISTS debits_quantity_idx ON debits (quantity);
 CREATE INDEX IF NOT EXISTS credits_quantity_idx ON credits (quantity);
-CREATE INDEX IF NOT EXISTS messages_category_insert_rowid_idx ON messages (category, insert_rowid);
 
 
 CREATE TABLE IF NOT EXISTS all_expirations(
