@@ -5,7 +5,7 @@ import time
 from threading import Thread
 
 from counterpartycore.lib import config, database
-from counterpartycore.lib.api import util
+from counterpartycore.lib.api import queries, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -135,10 +135,16 @@ def delete_event(api_db, event):
     sql = sql[:-5]  # remove trailing " AND "
     cursor = api_db.cursor()
     cursor.execute(sql, bindings)
+    changes = cursor.execute("SELECT changes()").fetchone()
+    logger.warning(changes)
 
 
 def insert_event(api_db, event):
-    event["previous_state"] = util.to_json(get_event_previous_state(api_db, event))
+    previous_state = get_event_previous_state(api_db, event)
+    if previous_state is not None:
+        event["previous_state"] = util.to_json(previous_state)
+    else:
+        event["previous_state"] = None
     sql = """
         INSERT INTO messages 
             (message_index, block_index, event, category, command, bindings, tx_hash, previous_state)
@@ -149,7 +155,8 @@ def insert_event(api_db, event):
 
 
 def rollback_event(api_db, event):
-    if event["previous_state"] is None:
+    logger.debug(f"Rolling back event: {event}")
+    if event["previous_state"] is None or event["previous_state"] == "null":
         delete_event(api_db, event)
         return
     previous_state = json.loads(event["previous_state"])
@@ -169,11 +176,17 @@ def rollback_event(api_db, event):
     cursor = api_db.cursor()
     cursor.execute(sql, previous_state)
 
+    if event["event"] in ["CREDIT", "DEBIT"]:
+        revert_event = event.copy()
+        revert_event["event"] = "DEBIT" if event["event"] == "CREDIT" else "CREDIT"
+        update_balances(api_db, revert_event)
+
 
 def rollback_events(api_db, block_index):
+    logger.info(f"Rolling back events to block {block_index}...")
     with api_db:
         cursor = api_db.cursor()
-        sql = "SELECT * FROM messages WHERE block_index >= ?"
+        sql = "SELECT * FROM messages WHERE block_index >= ? ORDER BY message_index DESC"
         cursor.execute(sql, (block_index,))
         events = cursor.fetchall()
         for event in events:
@@ -239,86 +252,19 @@ def execute_event(api_db, event):
     if sql is not None:
         cursor = api_db.cursor()
         cursor.execute(sql, sql_bindings)
+        if event["command"] == "insert":
+            cursor.execute("SELECT last_insert_rowid() AS rowid")
+            return cursor.fetchone()["rowid"]
+    return None
 
 
-def parse_event(api_db, event, initial_parsing=False):
-    initial_event_saved = [
-        "NEW_BLOCK",
-        "NEW_TRANSACTION",
-        "BLOCK_PARSED",
-        "TRANSACTION_PARSED",
-        "CREDIT",
-        "DEBIT",
-    ]
+def parse_event(api_db, event):
     with api_db:
-        if not (initial_parsing and event["event"] in initial_event_saved):
-            execute_event(api_db, event)
-            update_balances(api_db, event)
+        event["insert_rowid"] = execute_event(api_db, event)
+        update_balances(api_db, event)
         update_expiration(api_db, event)
         insert_event(api_db, event)
         logger.trace(f"Event parsed: {event['message_index']} {event['event']}")
-
-
-def copy_table(api_db, ledger_db, table_name, last_block_index, group_by=None):
-    logger.debug(f"Copying table {table_name}...")
-    start_time = time.time()
-    ledger_cursor = ledger_db.cursor()
-
-    if group_by:
-        select_sql = f"SELECT *, MAX(rowid) AS rowid FROM {table_name} WHERE block_index <= ? GROUP BY {group_by}"  # noqa: S608
-    else:
-        select_sql = f"SELECT * FROM {table_name} WHERE block_index <= ?"  # noqa: S608
-    ledger_cursor.execute(f"{select_sql} LIMIT 1", (last_block_index,))
-    first_row = ledger_cursor.fetchone()
-
-    ledger_cursor.execute(f"SELECT COUNT(*) AS count FROM ({select_sql})", (last_block_index,))  # noqa: S608
-    total_rows = ledger_cursor.fetchone()["count"]
-
-    field_names = ", ".join(first_row.keys())
-    field_values = ", ".join([f":{key}" for key in first_row.keys()])
-    insert_sql = f"INSERT INTO {table_name} ({field_names}) VALUES ({field_values})"  # noqa: S608
-
-    ledger_cursor.execute(select_sql, (last_block_index,))  # noqa: S608
-    saved_rows = 0
-    with api_db:
-        api_cursor = api_db.cursor()
-        for row in ledger_cursor:
-            api_cursor.execute(insert_sql, row)
-            saved_rows += 1
-            if saved_rows % 100000 == 0:
-                logger.debug(f"{saved_rows}/{total_rows} rows of {table_name} copied")
-
-    duration = time.time() - start_time
-    logger.debug(f"Table {table_name} copied in {duration:.2f} seconds")
-
-
-def initial_events_parsing(api_db, ledger_db, last_block_index):
-    logger.debug("Initial event parsing...")
-    start_time = time.time()
-    ledger_cursor = ledger_db.cursor()
-
-    ledger_cursor.execute(
-        "SELECT COUNT(*) AS count FROM messages WHERE block_index <= ?", (last_block_index,)
-    )
-    event_count = ledger_cursor.fetchone()["count"]
-
-    ledger_cursor.execute(
-        "SELECT * FROM messages WHERE block_index <= ? ORDER BY message_index ASC",
-        (last_block_index,),
-    )
-    parsed_event_count = 0
-    for event in ledger_cursor:
-        parse_event(api_db, event, initial_parsing=True)
-        parsed_event_count += 1
-        if parsed_event_count % 100000 == 0:
-            duration = time.time() - start_time
-            expected_duration = duration / parsed_event_count * event_count
-            logger.debug(
-                f"{parsed_event_count}/{event_count} events parsed in {duration:.2f} seconds (expected {expected_duration:.2f} seconds)"
-            )
-
-    duration = time.time() - start_time
-    logger.debug(f"Initial event parsing completed in {duration:.2f} seconds")
 
 
 def catch_up(api_db, ledger_db):
@@ -343,23 +289,6 @@ def catch_up(api_db, ledger_db):
         logger.info(f"{event_parsed} events parsed in {duration:.2f} seconds")
 
 
-def optimized_catch_up(api_db, ledger_db):
-    # check last parsed message index
-    last_message_index = get_last_parsed_message_index(api_db)
-    if last_message_index == -1:
-        logger.info("New API database, initializing...")
-        start_time = time.time()
-        sql = "SELECT MAX(block_index) AS block_index FROM messages"
-        last_block_index = ledger_db.cursor().execute(sql).fetchone()["block_index"]
-        with api_db:  # everything or nothing
-            for table in ["blocks", "transactions", "credits", "debits"]:
-                copy_table(api_db, ledger_db, table, last_block_index)
-            copy_table(api_db, ledger_db, "balances", last_block_index, group_by="address, asset")
-            initial_events_parsing(api_db, ledger_db, last_block_index)
-        duration = time.time() - start_time
-        logger.info(f"API database initialized in {duration:.2f} seconds")
-
-
 def initialize_api_db(api_db, ledger_db):
     logger.info("Initializing API Database...")
 
@@ -377,14 +306,23 @@ def initialize_api_db(api_db, ledger_db):
         cursor.execute("""INSERT INTO assets VALUES (?,?,?,?)""", ("1", "XCP", None, None))
     cursor.close()
 
-    # catch_up(api_db, ledger_db)
-    optimized_catch_up(api_db, ledger_db)
-
-
-def get_last_block(api_db):
-    cursor = api_db.cursor()
-    cursor.execute("SELECT * FROM blocks ORDER BY block_index DESC LIMIT 1")
-    return cursor.fetchone()
+    # check if rollback is needed
+    last_ledger_block = queries.get_last_block(ledger_db)
+    if last_ledger_block is not None:
+        last_ledger_block = last_ledger_block.result
+    last_api_block = queries.get_last_block(api_db)
+    if last_api_block is not None:
+        last_api_block = last_api_block.result
+    if last_api_block is None and last_ledger_block is None:
+        return
+    elif last_api_block is None and last_ledger_block is not None:
+        catch_up(api_db, ledger_db)
+    elif last_ledger_block is None and last_api_block is not None:
+        rollback_events(api_db, 0)
+    elif last_api_block["block_index"] > last_ledger_block["block_index"]:
+        rollback_events(api_db, last_ledger_block["block_index"])
+    else:
+        catch_up(api_db, ledger_db)
 
 
 class APIWatcher(Thread):
@@ -408,17 +346,17 @@ class APIWatcher(Thread):
         while True and not self.stopping:
             next_event = get_next_event_to_parse(self.api_db, self.ledger_db)
             if next_event:
-                logger.trace(f"Parsing event: {next_event}")
-                last_block = get_last_block(self.api_db)
+                last_block = queries.get_last_block(self.api_db).result
                 if last_block and last_block["block_index"] > next_event["block_index"]:
                     logger.warning(
                         "Reorg detected, rolling back events to block %s...",
                         next_event["block_index"],
                     )
                     rollback_events(self.api_db, next_event["block_index"])
+                logger.debug(f"API Watcher - Parsing event: {next_event}")
                 parse_event(self.api_db, next_event)
             else:
-                logger.trace("No new events to parse")
+                logger.debug("No new events to parse")
                 time.sleep(1)
         self.stopped = True
         return

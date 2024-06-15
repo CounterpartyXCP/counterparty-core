@@ -514,7 +514,8 @@ CREATE TABLE IF NOT EXISTS messages(
                       timestamp INTEGER,
                       event TEXT,
                       tx_hash TEXT,
-                      previous_state TEXT);
+                      previous_state TEXT,
+                      insert_rowid INTEGER);
 CREATE INDEX IF NOT EXISTS messages_block_index_idx ON messages (block_index);
 CREATE INDEX IF NOT EXISTS messages_block_index_message_index_idx ON messages (block_index, message_index);
 CREATE INDEX IF NOT EXISTS messages_event_idx ON messages (event);
