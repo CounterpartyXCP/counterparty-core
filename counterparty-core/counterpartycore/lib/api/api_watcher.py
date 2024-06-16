@@ -6,6 +6,7 @@ from threading import Thread
 
 from counterpartycore.lib import config, database, exceptions
 from counterpartycore.lib.api import queries, util
+from counterpartycore.lib.util import format_duration
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -144,8 +145,8 @@ def insert_event(api_db, event):
         event["previous_state"] = None
     sql = """
         INSERT INTO messages 
-            (message_index, block_index, event, category, command, bindings, tx_hash, previous_state)
-        VALUES (:message_index, :block_index, :event, :category, :command, :bindings, :tx_hash, :previous_state)
+            (message_index, block_index, event, category, command, bindings, tx_hash, previous_state, insert_rowid)
+        VALUES (:message_index, :block_index, :event, :category, :command, :bindings, :tx_hash, :previous_state, :insert_rowid)
     """
     cursor = api_db.cursor()
     cursor.execute(sql, event)
@@ -185,8 +186,7 @@ def rollback_events(api_db, block_index):
         cursor = api_db.cursor()
         sql = "SELECT * FROM messages WHERE block_index >= ? ORDER BY message_index DESC"
         cursor.execute(sql, (block_index,))
-        events = cursor.fetchall()
-        for event in events:
+        for event in cursor:
             rollback_event(api_db, event)
         cursor.execute("DELETE FROM messages WHERE block_index >= ?", (block_index,))
 
@@ -261,33 +261,33 @@ def parse_event(api_db, event):
         update_balances(api_db, event)
         update_expiration(api_db, event)
         insert_event(api_db, event)
-        logger.trace(f"Event parsed: {event['message_index']} {event['event']}")
+        logger.trace(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
 
 
 def catch_up(api_db, ledger_db):
     event_to_parse_count = get_event_to_parse_count(api_db, ledger_db)
     if event_to_parse_count > 0:
-        logger.info(f"{event_to_parse_count} events to catch up...")
+        logger.info(f"API Watcher - {event_to_parse_count} events to catch up...")
         start_time = time.time()
         event_parsed = 0
         next_event = get_next_event_to_parse(api_db, ledger_db)
         while next_event:
-            logger.trace(f"Parsing event: {next_event}")
+            logger.trace(f"API Watcher - Parsing event: {next_event}")
             parse_event(api_db, next_event)
             event_parsed += 1
             if event_parsed % 10000 == 0:
                 duration = time.time() - start_time
                 expected_duration = duration / event_parsed * event_to_parse_count
                 logger.info(
-                    f"{event_parsed}/{event_to_parse_count} events parsed in {duration:.2f} seconds (expected {expected_duration:.2f} seconds)"
+                    f"API Watcher - {event_parsed}/{event_to_parse_count} events parsed in {format_duration(duration)} (expected {format_duration(expected_duration)})"
                 )
             next_event = get_next_event_to_parse(api_db, ledger_db)
         duration = time.time() - start_time
-        logger.info(f"{event_parsed} events parsed in {duration:.2f} seconds")
+        logger.info(f"API Watcher - {event_parsed} events parsed in {format_duration(duration)}")
 
 
 def initialize_api_db(api_db, ledger_db):
-    logger.info("Initializing API Database...")
+    logger.info("API Watcher - Initializing API Database...")
 
     cursor = api_db.cursor()
 
@@ -324,6 +324,7 @@ def initialize_api_db(api_db, ledger_db):
 
 class APIWatcher(Thread):
     def __init__(self):
+        Thread.__init__(self)
         logger.debug("Initializing API Watcher...")
         self.stopping = False
         self.stopped = False
@@ -334,27 +335,35 @@ class APIWatcher(Thread):
             config.DATABASE, read_only=True, check_wal=False
         )
 
-        initialize_api_db(self.api_db, self.ledger_db)
-
-        Thread.__init__(self)
+        try:
+            initialize_api_db(self.api_db, self.ledger_db)
+        except KeyboardInterrupt:
+            logger.debug("API Watcher - Keyboard interrupt")
+            self.stopped = True
+            self.api_db.close()
+            self.ledger_db.close()
 
     def run(self):
         logger.info("Starting API Watcher...")
-        while True and not self.stopping:
-            next_event = get_next_event_to_parse(self.api_db, self.ledger_db)
-            if next_event:
-                last_block = queries.get_last_block(self.api_db).result
-                if last_block and last_block["block_index"] > next_event["block_index"]:
-                    logger.warning(
-                        "Reorg detected, rolling back events to block %s...",
-                        next_event["block_index"],
-                    )
-                    rollback_events(self.api_db, next_event["block_index"])
-                logger.debug(f"API Watcher - Parsing event: {next_event}")
-                parse_event(self.api_db, next_event)
-            else:
-                logger.debug("No new events to parse")
-                time.sleep(1)
+        try:
+            while True and not self.stopping and not self.stopped:
+                next_event = get_next_event_to_parse(self.api_db, self.ledger_db)
+                if next_event:
+                    last_block = queries.get_last_block(self.api_db).result
+                    if last_block and last_block["block_index"] > next_event["block_index"]:
+                        logger.warning(
+                            "API Watcher - Reorg detected, rolling back events to block %s...",
+                            next_event["block_index"],
+                        )
+                        rollback_events(self.api_db, next_event["block_index"])
+                    logger.debug(f"API Watcher - Parsing event: {next_event}")
+                    parse_event(self.api_db, next_event)
+                else:
+                    logger.trace("API Watcher - No new events to parse")
+                    time.sleep(1)
+        except KeyboardInterrupt:
+            logger.debug("API Watcher - Keyboard interrupt")
+            pass
         self.stopped = True
         return
 

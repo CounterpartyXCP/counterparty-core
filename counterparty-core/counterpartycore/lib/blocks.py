@@ -1199,10 +1199,7 @@ def catch_up(db, check_asset_conservation=True):
         tx_index = parse_new_block(db, decoded_block, block_parser=None, tx_index=tx_index)
 
         parsed_blocks += 1
-        duration_seconds = int(time.time() - start_time)
-        hours, remainder = divmod(duration_seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        formatted_duration = f"{hours}h {minutes}m {seconds}s"
+        formatted_duration = util.format_duration(time.time() - start_time)
         logger.debug(
             f"Block {util.CURRENT_BLOCK_INDEX}/{block_count} parsed, for {parsed_blocks} blocks in {formatted_duration}."
         )
