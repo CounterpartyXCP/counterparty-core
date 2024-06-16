@@ -1,7 +1,7 @@
 use std::thread::{self, JoinHandle};
 
 use crossbeam_channel::{Receiver, Sender};
-use tracing::{error, info, debug};
+use tracing::{debug, error};
 
 use super::{stopper::Stopper, types::error::Error};
 

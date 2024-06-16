@@ -48,8 +48,8 @@ impl IntoPy<PyObject> for Vout {
 
 #[derive(Clone)]
 pub struct PotentialDispenser {
-    destination: String,
-    value: u64,
+    pub destination: String,
+    pub value: u64,
 }
 
 impl IntoPy<PyObject> for PotentialDispenser {
@@ -61,10 +61,10 @@ impl IntoPy<PyObject> for PotentialDispenser {
 #[derive(Clone)]
 pub struct ParsedVouts {
     pub destinations: Vec<String>,
-    pub btc_amount: u32,
-    pub fee: i32,
+    pub btc_amount: i64,
+    pub fee: i64,
     pub data: Vec<u8>,
-    pub potential_dispensers: Vec<PotentialDispenser>,
+    pub potential_dispensers: Vec<Option<PotentialDispenser>>,
 }
 
 impl IntoPy<PyObject> for ParsedVouts {

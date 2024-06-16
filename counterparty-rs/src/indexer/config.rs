@@ -78,6 +78,7 @@ pub struct Heights {
     pub segwit: u32,
     pub p2sh_addresses: u32,
     pub p2sh_dispensers: u32,
+    pub correct_segwit_txids: u32,
 }
 
 impl Heights {
@@ -87,11 +88,13 @@ impl Heights {
                 segwit: 557236,
                 p2sh_addresses: 423888,
                 p2sh_dispensers: 724000,
+                correct_segwit_txids: 662000,
             },
             Network::Testnet => Heights {
                 segwit: 1440200,
                 p2sh_addresses: 0,
                 p2sh_dispensers: 2163328,
+                correct_segwit_txids: 1666625,
             },
         }
     }
@@ -126,6 +129,18 @@ impl Config {
 
     pub fn p2sh_dispensers_supported(&self, height: u32) -> bool {
         height >= self.heights.p2sh_dispensers
+    }
+
+    pub fn correct_segwit_txids_enabled(&self, height: u32) -> bool {
+        height >= self.heights.correct_segwit_txids
+    }
+
+    pub fn unspendable(&self) -> String {
+        match self.network {
+            Network::Mainnet => "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
+            Network::Testnet => "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
+        }
+        .into()
     }
 }
 
@@ -183,7 +198,7 @@ impl<'source> FromPyObject<'source> for Config {
             _ => Network::Mainnet, // Default to Mainnet if not provided or in case of an error
         };
 
-        let heights = Heights::new(network);
+        let heights = Heights::new(network.clone());
 
         let address_version = match dict.get_item("address_version") {
             Ok(Some(item)) => item.extract::<Vec<u8>>()?,

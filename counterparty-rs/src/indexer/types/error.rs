@@ -45,6 +45,8 @@ pub enum Error {
     OrderInvariant(u32, u32),
     #[error("Serde JSON error: {0}")]
     Serde(#[from] serde_json::Error),
+    #[error("ParseVout error: {0}")]
+    ParseVout(String),
 }
 
 impl<T> From<SendError<T>> for Error {
