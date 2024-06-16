@@ -36,11 +36,28 @@ EXPIRATION_EVENTS_OBJECT_ID = {
 }
 
 
+def fetch_all(db, query, bindings=None):
+    cursor = db.cursor()
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def fetch_one(db, query, bindings=None):
+    cursor = db.cursor()
+    cursor.execute(query, bindings)
+    return cursor.fetchone()
+
+
+def delete_all(db, query, bindings=None):
+    cursor = db.cursor()
+    cursor.execute(query, bindings)
+    changes = fetch_one(db, "SELECT changes() AS deleted")
+    return changes["deleted"]
+
+
 def get_last_parsed_message_index(api_db):
-    cursor = api_db.cursor()
     sql = "SELECT * FROM messages ORDER BY message_index DESC LIMIT 1"
-    cursor.execute(sql)
-    last_event = cursor.fetchone()
+    last_event = fetch_one(api_db, sql)
     last_message_index = -1
     if last_event:
         last_message_index = last_event["message_index"]
@@ -49,19 +66,15 @@ def get_last_parsed_message_index(api_db):
 
 def get_next_event_to_parse(api_db, ledger_db):
     last_parsed_message_index = get_last_parsed_message_index(api_db)
-    cursor = ledger_db.cursor()
     sql = "SELECT * FROM messages WHERE message_index > ? ORDER BY message_index ASC LIMIT 1"
-    cursor.execute(sql, (last_parsed_message_index,))
-    next_event = cursor.fetchone()
+    next_event = fetch_one(ledger_db, sql, (last_parsed_message_index,))
     return next_event
 
 
 def get_event_to_parse_count(api_db, ledger_db):
     last_parsed_message_index = get_last_parsed_message_index(api_db)
-    cursor = ledger_db.cursor()
     sql = "SELECT message_index FROM messages ORDER BY message_index DESC LIMIT 1"
-    cursor.execute(sql)
-    last_event = cursor.fetchone()
+    last_event = fetch_one(ledger_db, sql)
     return last_event["message_index"] - last_parsed_message_index
 
 
@@ -89,19 +102,25 @@ def insert_event_to_sql(event):
 def update_event_to_sql(event):
     event_bindings = get_event_bindings(event)
     sql_bindings = []
-    sql = f"UPDATE {event['category']} SET "  # noqa: S608
+
     id_field_names = UPDATE_EVENTS_ID_FIELDS[event["event"]]
+
+    sets = []
     for key, value in event_bindings.items():
         if key in id_field_names:
             continue
-        sql += f"{key} = ?, "
+        sets.append(f"{key} = ?")
         sql_bindings.append(value)
-    sql = sql[:-2]  # remove trailing comma
-    sql += " WHERE "
+    sets_clause = ", ".join(sets)
+
+    where = []
     for id_field_name in id_field_names:
-        sql += f"{id_field_name} = ? AND "
+        where.append(f"{id_field_name} = ?")
         sql_bindings.append(event_bindings[id_field_name])
-    sql = sql[:-5]  # remove trailing " AND "
+    where_clause = " AND ".join(where)
+
+    sql = f"UPDATE {event['category']} SET {sets_clause} WHERE {where_clause}"  # noqa: S608
+
     return sql, sql_bindings
 
 
@@ -116,24 +135,23 @@ def event_to_sql(event):
 def get_event_previous_state(api_db, event):
     previous_state = None
     if event["command"] in ["update", "parse"]:
-        cursor = api_db.cursor()
         id_field_names = UPDATE_EVENTS_ID_FIELDS[event["event"]]
-        sql = f"SELECT * FROM {event['category']} WHERE "  # noqa: S608
+
+        where = []
         for id_field_name in id_field_names:
-            sql += f"{id_field_name} = :{id_field_name} AND "
-        sql = sql[:-5]  # remove trailing " AND "
+            where.append(f"{id_field_name} = :{id_field_name}")
+        where_clause = " AND ".join(where)
+
+        sql = f"SELECT * FROM {event['category']} WHERE {where_clause}"  # noqa: S608
         event_bindings = json.loads(event["bindings"])
-        cursor.execute(sql, event_bindings)
-        previous_state = cursor.fetchone()
+        previous_state = fetch_one(api_db, sql, event_bindings)
     return previous_state
 
 
 def delete_event(api_db, event):
     sql = f"DELETE FROM {event['category']} WHERE rowid = ?"  # noqa: S608
-    cursor = api_db.cursor()
-    cursor.execute(sql, (event["insert_rowid"],))
-    changes = cursor.execute("SELECT changes() AS deleted").fetchone()
-    if changes["deleted"] == 0:
+    deleted = delete_all(api_db, sql, (event["insert_rowid"],))
+    if deleted == 0:
         raise exceptions.APIWatcherError(f"Event not found: {event}")
 
 
@@ -159,18 +177,21 @@ def rollback_event(api_db, event):
         return
     previous_state = json.loads(event["previous_state"])
 
-    sql = f"UPDATE {event['category']} SET "  # noqa: S608
     id_field_names = UPDATE_EVENTS_ID_FIELDS[event["event"]]
+
+    sets = []
     for key in previous_state.keys():
         if key in id_field_names:
             continue
-        sql += f"{key} = :{key}, "
-    sql = sql[:-2]  # remove trailing comma
-    sql += " WHERE "
-    for id_field_name in id_field_names:
-        sql += f"{id_field_name} = :{id_field_name} AND "
-    sql = sql[:-5]  # remove trailing " AND "
+        sets.append(f"{key} = :{key}")
+    set_clause = ", ".join(sets)
 
+    where = []
+    for id_field_name in id_field_names:
+        where.append(f"{id_field_name} = :{id_field_name}")
+    where_clause = " AND ".join(where)
+
+    sql = f"UPDATE {event['category']} SET {set_clause} WHERE {where_clause}"  # noqa: S608
     cursor = api_db.cursor()
     cursor.execute(sql, previous_state)
 
@@ -202,10 +223,8 @@ def update_balances(api_db, event):
     if event["event"] == "DEBIT":
         quantity = -quantity
 
-    existing_balance = cursor.execute(
-        "SELECT * FROM balances WHERE address = :address AND asset = :asset",
-        event_bindings,
-    ).fetchone()
+    sql = "SELECT * FROM balances WHERE address = :address AND asset = :asset"
+    existing_balance = fetch_one(api_db, sql, event_bindings)
 
     if existing_balance is None:
         sql = """
