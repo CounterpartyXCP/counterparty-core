@@ -67,7 +67,10 @@ def get_last_parsed_message_index(api_db):
 def get_next_event_to_parse(api_db, ledger_db):
     last_parsed_message_index = get_last_parsed_message_index(api_db)
     sql = "SELECT * FROM messages WHERE message_index > ? ORDER BY message_index ASC LIMIT 1"
+    # logger.warning(f"last_parsed_message_index: {last_parsed_message_index}")
     next_event = fetch_one(ledger_db, sql, (last_parsed_message_index,))
+    # logger.warning(api_db.cursor().execute("SELECT * FROM messages ORDER BY message_index DESC LIMIT 1").fetchone())
+    # logger.warning(ledger_db.cursor().execute("SELECT * FROM messages ORDER BY message_index DESC LIMIT 1").fetchone())
     return next_event
 
 
@@ -199,6 +202,9 @@ def rollback_event(api_db, event):
         revert_event = event.copy()
         revert_event["event"] = "DEBIT" if event["event"] == "CREDIT" else "CREDIT"
         update_balances(api_db, revert_event)
+
+    sql = "DELETE FROM messages WHERE message_index = ?"
+    cursor.execute(sql, (event["message_index"],))
 
 
 def rollback_events(api_db, block_index):
@@ -378,7 +384,7 @@ class APIWatcher(Thread):
                     logger.debug(f"API Watcher - Parsing event: {next_event}")
                     parse_event(self.api_db, next_event)
                 else:
-                    logger.trace("API Watcher - No new events to parse")
+                    logger.debug("API Watcher - No new events to parse")
                     time.sleep(1)
         except KeyboardInterrupt:
             logger.debug("API Watcher - Keyboard interrupt")
