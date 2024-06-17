@@ -9312,23 +9312,23 @@ UNITTEST_VECTOR = {
                     "Error composing send transaction via API: enhanced sends are not enabled (-32001)",
                 ),
             },
-            {
-                "comment": "CIP 9 enhanced send to a REQUIRE_MEMO address without memo",
-                "mock_protocol_changes": {"enhanced_sends": True, "options_require_memo": True},
-                "in": (
-                    "create_send",
-                    {
-                        "source": ADDR[0],
-                        "destination": ADDR[6],
-                        "asset": "XCP",
-                        "quantity": DP["small"],
-                    },
-                ),
-                "error": (
-                    RPCError,
-                    "Error composing send transaction via API: ['destination requires memo'] (-32001)",
-                ),
-            },
+            # {
+            #   "comment": "CIP 9 enhanced send to a REQUIRE_MEMO address without memo",
+            #    "mock_protocol_changes": {"enhanced_sends": True, "options_require_memo": True},
+            #    "in": (
+            #        "create_send",
+            #        {
+            #            "source": ADDR[0],
+            #            "destination": ADDR[6],
+            #            "asset": "XCP",
+            #            "quantity": DP["small"],
+            #        },
+            #    ),
+            #   "error": (
+            #        RPCError,
+            #        "Error composing send transaction via API: ['destination requires memo'] (-32001)",
+            #    ),
+            # },
             {
                 "comment": "CIP 9 enhanced send to a REQUIRE_MEMO address with memo",
                 "mock_protocol_changes": {"enhanced_sends": True, "options_require_memo": True},

@@ -373,6 +373,7 @@ class APIWatcher(Thread):
         try:
             while True and not self.stopping and not self.stopped:
                 next_event = get_next_event_to_parse(self.api_db, self.ledger_db)
+                print("API Watcher", next_event)
                 if next_event:
                     last_block = queries.get_last_block(self.api_db).result
                     if last_block and last_block["block_index"] > next_event["block_index"]:
@@ -381,10 +382,10 @@ class APIWatcher(Thread):
                             next_event["block_index"],
                         )
                         rollback_events(self.api_db, next_event["block_index"])
-                    logger.debug(f"API Watcher - Parsing event: {next_event}")
+                    logger.debug(f"API Watcher - Parsing event: {next_event['event']}")
                     parse_event(self.api_db, next_event)
                 else:
-                    logger.debug("API Watcher - No new events to parse")
+                    logger.trace("API Watcher - No new events to parse")
                     time.sleep(1)
         except KeyboardInterrupt:
             logger.debug("API Watcher - Keyboard interrupt")

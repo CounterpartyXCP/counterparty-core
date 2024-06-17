@@ -218,6 +218,20 @@ def server_db(request, cp_server, api_server):
     return db
 
 
+@pytest.fixture(scope="function")
+def server_api_db(request, cp_server, api_server):
+    """Enable database access for unit test vectors."""
+    db = database.get_db_connection(config.API_DATABASE, read_only=False)
+    cursor = db.cursor()
+    cursor.execute("""BEGIN""")
+    # util_test.reset_current_block_index(db)
+
+    request.addfinalizer(lambda: cursor.execute("""ROLLBACK"""))
+    # request.addfinalizer(lambda: util_test.reset_current_block_index(db))
+
+    return db
+
+
 @pytest.fixture(scope="module")
 def api_server(request, cp_server):
     """
@@ -229,6 +243,10 @@ def api_server(request, cp_server):
 
     config.RPC_PORT = TEST_RPC_PORT = TEST_RPC_PORT + 1
     server.configure_rpc(config.RPC_PASSWORD)
+
+    # watcher = api_watcher.APIWatcher()
+    # watcher.start()
+    # print(config.DATABASE, config.API_DATABASE)
 
     # start RPC server and wait for server to be ready
     api_server = api.APIServer()
