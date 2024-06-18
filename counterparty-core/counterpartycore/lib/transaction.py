@@ -1827,7 +1827,18 @@ def unpack(db, datahex: str, block_index: int = None):
         # MPMA send
         elif message_type_id == messages.versions.mpma.ID:
             message_type_name = "mpma_send"
-            message_data = messages.versions.mpma.unpack(message, block_index)
+            mpma_message_data = messages.versions.mpma.unpack(message, block_index)
+            message_data = []
+            for asset_name, send_info in mpma_message_data.items():
+                message_data.append(
+                    {
+                        "asset": asset_name,
+                        "destination": send_info[0][0],
+                        "quantity": send_info[0][1],
+                        "memo": send_info[0][2],
+                        "memo_is_hex": send_info[0][3],
+                    }
+                )
         # RPS
         elif message_type_id == messages.rps.ID:
             message_type_name = "rps"
