@@ -26,6 +26,9 @@ only:
 - Transactions > Get Transaction By Hash > Get Transaction By Hash
 - Transactions > Get Events By Transaction Index > Get Events By Transaction Index
 - Transactions > Get Events By Transaction Hash > Get Events By Transaction Hash
+- Transactions > Get Sends By Transaction Hash > Get Sends By Transaction Hash
+- Transactions > Get Dispenses By Transaction Hash > Get Dispenses By Transaction
+  Hash
 - Transactions > Get Events By Transaction Index And Event > Get Events By Transaction
   Index And Event
 - Transactions > Get Events By Transaction Hash And Event > Get Events By Transaction
@@ -91,7 +94,14 @@ only:
 - Events > Get All Events Counts > Get All Events Counts
 - Events > Get Events By Name > Get Events By Name
 - Events > Get Event Count > Get Event Count
+- Dispenses > Get Dispenses > Get Dispenses
+- Sends > Get Sends > Get Sends
+- Issuances > Get Issuances > Get Issuances
+- Issuances > Get Issuance By Transaction Hash > Get Issuance By Transaction Hash
 - Sweeps > Get Sweeps > Get Sweeps
+- Sweeps > Get Sweep By Transaction Hash > Get Sweep By Transaction Hash
+- Broadcasts > Get Valid Broadcasts > Get Valid Broadcasts
+- Broadcasts > Get Broadcast By Transaction Hash > Get Broadcast By Transaction Hash
 - Z-pages > Check Server Health > Check Server Health
 - Z-pages > Check Server Health > Check Server Health
 - V1 > Redirect To Rpc V1 > Redirect To Rpc V1
