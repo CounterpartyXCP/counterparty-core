@@ -204,9 +204,6 @@ def test_new_get_asset_info():
         "divisible": False,
         "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         "locked": False,
-        "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-        "supply": 1000,
-        "holder_count": 3,
         "first_issuance_block_index": 310002,
         "last_issuance_block_index": 310002,
     }

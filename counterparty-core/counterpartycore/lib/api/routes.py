@@ -73,7 +73,8 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/compose/sweep": transaction.compose_sweep,
         ### /assets ###
         "/v2/assets": queries.get_valid_assets,
-        "/v2/assets/<asset>": ledger.get_asset_info,
+        "/v2/assets/<asset>": queries.get_asset,
+        "/v2/assets/<asset>/info": ledger.get_asset_info,
         "/v2/assets/<asset>/balances": queries.get_asset_balances,
         "/v2/assets/<asset>/balances/<address>": queries.get_balance_by_address_and_asset,
         "/v2/assets/<asset>/orders": queries.get_orders_by_asset,

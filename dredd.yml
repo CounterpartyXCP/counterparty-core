@@ -56,6 +56,7 @@ only:
   Address
 - Addresses > Get Orders By Address > Get Orders By Address
 - Assets > Get Valid Assets > Get Valid Assets
+- Assets > Get Asset > Get Asset
 - Assets > Get Asset Info > Get Asset Info
 - Assets > Get Asset Balances > Get Asset Balances
 - Assets > Get Balance By Address And Asset > Get Balance By Address And Asset

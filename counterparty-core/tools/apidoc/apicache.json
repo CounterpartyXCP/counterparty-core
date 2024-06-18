@@ -2657,23 +2657,6 @@
         "next_cursor": 335392,
         "result_count": 107947
     },
-    "/v2/assets/<asset>": {
-        "result": {
-            "asset": "UNNEGOTIABLE",
-            "asset_longname": null,
-            "owner": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-            "divisible": false,
-            "locked": true,
-            "supply": 1776,
-            "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
-            "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-            "holder_count": 8,
-            "first_issuance_block_index": 840464,
-            "last_issuance_block_index": 840756,
-            "first_issuance_block_time": 1713852783,
-            "last_issuance_block_time": 1714013031
-        }
-    },
     "/v2/assets/<asset>/balances": {
         "result": [
             {
@@ -6698,5 +6681,36 @@
         ],
         "next_cursor": 21373,
         "result_count": 2576
+    },
+    "/v2/assets/<asset>": {
+        "result": {
+            "asset": "PEPECASH",
+            "asset_longname": null,
+            "description": "http://rarepepedirectory.com/json/pc.json",
+            "issuer": "1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD",
+            "divisible": true,
+            "locked": true,
+            "first_issuance_block_index": 430263,
+            "last_issuance_block_index": 431786,
+            "first_issuance_block_time": 1474131960,
+            "last_issuance_block_time": 1474991545
+        }
+    },
+    "/v2/assets/<asset>/info": {
+        "result": {
+            "asset": "UNNEGOTIABLE",
+            "asset_longname": null,
+            "owner": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+            "divisible": false,
+            "locked": true,
+            "supply": 1776,
+            "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+            "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+            "holder_count": 8,
+            "first_issuance_block_index": 840464,
+            "last_issuance_block_index": 840756,
+            "first_issuance_block_time": 1713852783,
+            "last_issuance_block_time": 1714013031
+        }
     }
 }

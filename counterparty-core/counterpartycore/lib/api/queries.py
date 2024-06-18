@@ -184,7 +184,7 @@ def select_rows(
     return QueryResult(result, next_cursor, result_count)
 
 
-def select_row(db, table, where, select="*"):
+def select_row(db, table, where, select="*", group_by=""):
     query_result = select_rows(db, table, where, limit=1, select=select)
     if query_result.result:
         return QueryResult(query_result.result[0], None, 1)
@@ -1392,6 +1392,23 @@ def get_valid_assets(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+    )
+
+
+def get_asset(db, asset: str):
+    """
+    Returns an asset by its name
+    :param str asset: The name of the asset to return (e.g. PEPECASH)
+    """
+    where = [{"status": "valid", "asset": asset}, {"status": "valid", "asset_longname": asset}]
+    return select_row(
+        db,
+        "issuances",
+        where=where,
+        group_by="asset",
+        select="""asset, asset_longname, description, issuer, divisible, locked, 
+                  MIN(block_index) AS first_issuance_block_index, MAX(rowid) AS rowid,
+                  block_index AS last_issuance_block_index""",
     )
 
 
