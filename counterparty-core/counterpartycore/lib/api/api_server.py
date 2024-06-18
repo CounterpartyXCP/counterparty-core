@@ -219,7 +219,9 @@ def execute_api_function(db, rule, route, function_args):
     # cache everything for one block
     cache_key = f"{util.CURRENT_BLOCK_INDEX}:{request.url}"
     # except for blocks and transactions cached forever
-    if request.path.startswith("/v2/blocks/") or request.path.startswith("/v2/transactions/"):
+    if (
+        request.path.startswith("/v2/blocks/") or request.path.startswith("/v2/transactions/")
+    ) and not request.path.startswith("/v2/blocks/last"):
         cache_key = request.url
 
     if cache_key in BLOCK_CACHE:

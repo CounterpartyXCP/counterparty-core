@@ -244,7 +244,7 @@ def prepare_routes(routes):
 class ApiJsonEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, decimal.Decimal):
-            return "{0:f}".format(o)
+            return "{0:.8f}".format(o)
         if isinstance(o, bytes):
             return o.hex()
         return super().default(o)
@@ -294,7 +294,12 @@ def inject_issuances_and_block_times(db, result_list):
         elif "unpacked_data" in item:
             item = item["unpacked_data"]["message_data"]
         for field_name in asset_fields:
-            if field_name in item:
+            if isinstance(item, list):
+                for sub_item in item:
+                    if field_name in sub_item:
+                        if sub_item[field_name] not in asset_list:
+                            asset_list.append(sub_item[field_name])
+            elif field_name in item:
                 if item[field_name] not in asset_list:
                     asset_list.append(item[field_name])
 
@@ -324,7 +329,15 @@ def inject_issuances_and_block_times(db, result_list):
         elif "unpacked_data" in item:
             item = item["unpacked_data"]["message_data"]
         for field_name in asset_fields:
-            if (
+            if isinstance(item, list):
+                for sub_item in item:
+                    if (
+                        field_name in sub_item
+                        and "divisible" not in sub_item
+                        and sub_item[field_name] in issuance_by_asset
+                    ):
+                        sub_item[field_name + "_info"] = issuance_by_asset[sub_item[field_name]]
+            elif (
                 field_name in item
                 and "divisible" not in item
                 and item[field_name] in issuance_by_asset
@@ -400,6 +413,28 @@ def inject_normalized_quantities(result_list):
                         item["dispenser"], field_name, {"divisible": field_info["divisible"]}
                     )
                 continue
+
+            if "unpacked_data" in item and isinstance(
+                item["unpacked_data"]["message_data"], list
+            ):  # mpma send
+                for pos, sub_item in enumerate(item["unpacked_data"]["message_data"]):
+                    if field_info["asset_field"] in sub_item:
+                        asset_info = sub_item["asset_info"]
+                        item["unpacked_data"]["message_data"][pos] = inject_normalized_quantity(
+                            sub_item, field_name, asset_info
+                        )
+                continue
+            if (
+                "params" in item
+                and "unpacked_data" in item["params"]
+                and isinstance(item["params"]["unpacked_data"]["message_data"], list)
+            ):  # mpma send
+                for pos, sub_item in enumerate(item["params"]["unpacked_data"]["message_data"]):
+                    if field_info["asset_field"] in sub_item:
+                        asset_info = sub_item["asset_info"]
+                        item["params"]["unpacked_data"]["message_data"][pos] = (
+                            inject_normalized_quantity(sub_item, field_name, asset_info)
+                        )
 
             asset_info = None
             if field_info["asset_field"] in item:

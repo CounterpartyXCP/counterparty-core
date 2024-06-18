@@ -31,6 +31,8 @@ ROUTES = util.prepare_routes(
         "/v2/transactions/<tx_hash>": queries.get_transaction_by_hash,
         "/v2/transactions/<int:tx_index>/events": queries.get_events_by_transaction_index,
         "/v2/transactions/<tx_hash>/events": queries.get_events_by_transaction_hash,
+        "/v2/transactions/<tx_hash>/sends": queries.get_sends_by_transaction_hash,
+        "/v2/transactions/<tx_hash>/dispenses": queries.get_dispenses_by_transaction_hash,
         "/v2/transactions/<int:tx_index>/events/<event>": queries.get_events_by_transaction_index_and_event,
         "/v2/transactions/<tx_hash>/events/<event>": queries.get_events_by_transaction_hash_and_event,
         ### /addresses ###
@@ -73,7 +75,8 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/compose/sweep": transaction.compose_sweep,
         ### /assets ###
         "/v2/assets": queries.get_valid_assets,
-        "/v2/assets/<asset>": ledger.get_asset_info,
+        "/v2/assets/<asset>": queries.get_asset,
+        "/v2/assets/<asset>/info": ledger.get_asset_info,
         "/v2/assets/<asset>/balances": queries.get_asset_balances,
         "/v2/assets/<asset>/balances/<address>": queries.get_balance_by_address_and_asset,
         "/v2/assets/<asset>/orders": queries.get_orders_by_asset,
@@ -113,6 +116,19 @@ ROUTES = util.prepare_routes(
         "/v2/events/counts": queries.get_all_events_counts,
         "/v2/events/<event>": queries.get_events_by_name,
         "/v2/events/<event>/count": queries.get_event_count,
+        ### /dispenses ###
+        "/v2/dispenses": queries.get_dispenses,
+        ### /sends ###
+        "/v2/sends": queries.get_sends,
+        ### /issuances ###
+        "/v2/issuances": queries.get_issuances,
+        "/v2/issuances/<tx_hash>": queries.get_issuance_by_transaction_hash,
+        ### /sweeps ###
+        "/v2/sweeps": queries.get_sweeps,
+        "/v2/sweeps/<tx_hash>": queries.get_sweep_by_transaction_hash,
+        ### /broadcasts ###
+        "/v2/broadcasts": queries.get_valid_broadcasts,
+        "/v2/broadcasts/<tx_hash>": queries.get_broadcast_by_transaction_hash,
         ### /healthz ###
         "/v2/healthz": util.check_server_health,
         "/healthz": util.check_server_health,
