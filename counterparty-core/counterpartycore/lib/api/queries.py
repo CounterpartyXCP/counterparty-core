@@ -2,7 +2,7 @@ import json
 from typing import Literal
 
 OrderStatus = Literal["open", "expired", "filled", "cancelled"]
-OrderMatchesStatus = Literal["pending", "completed", "expired"]
+OrderMatchesStatus = Literal["all", "pending", "completed", "expired"]
 BetStatus = Literal["cancelled", "dropped", "expired", "filled", "open"]
 BetMatchesStatus = Literal[
     "dropped",
@@ -1715,7 +1715,7 @@ def get_order(db, order_hash: str):
 def get_order_matches_by_order(
     db,
     order_hash: str,
-    status: OrderMatchesStatus = "pending",
+    status: OrderMatchesStatus = "all",
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
@@ -1728,13 +1728,17 @@ def get_order_matches_by_order(
     :param int limit: The maximum number of order matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    wrap_where = None
+    if status != "all":
+        wrap_where = {"status": status}
+
     return select_rows(
         db,
         "order_matches",
         where=[{"tx0_hash": order_hash}, {"tx1_hash": order_hash}],  # tx0_hash = ? OR tx1_hash = ?
         select="*, MAX(rowid) AS rowid",
         group_by="id",
-        wrap_where={"status": status},
+        wrap_where=wrap_where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
