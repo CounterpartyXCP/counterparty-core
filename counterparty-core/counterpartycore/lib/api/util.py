@@ -244,7 +244,7 @@ def prepare_routes(routes):
 class ApiJsonEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, decimal.Decimal):
-            return "{0:f}".format(o)
+            return "{0:.8f}".format(o)
         if isinstance(o, bytes):
             return o.hex()
         return super().default(o)
