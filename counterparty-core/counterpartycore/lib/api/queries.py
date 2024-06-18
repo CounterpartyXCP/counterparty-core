@@ -1046,6 +1046,22 @@ def get_dispenses_by_destination_and_asset(
     )
 
 
+def get_sweeps(db, cursor: int = None, limit: int = 100, offset: int = None):
+    """
+    Returns all sweeps
+    :param int cursor: The last index of the sweeps to return
+    :param int limit: The maximum number of sweeps to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        db,
+        "sweeps",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
 def get_sweeps_by_block(
     db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
 ):

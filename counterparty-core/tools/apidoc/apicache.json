@@ -6712,5 +6712,76 @@
             "first_issuance_block_time": 1713852783,
             "last_issuance_block_time": 1714013031
         }
+    },
+    "/v2/sweeps": {
+        "result": [
+            {
+                "tx_index": 2736442,
+                "tx_hash": "8cacf853c989393ce21e05e286958a3c650b94ac6f92807114552e1492e9c937",
+                "block_index": 848010,
+                "source": "1JTW6Hw6xaxcNkakMg7tSmBpdWeuGyNkU3",
+                "destination": "1D1RiWbmikELv1P2hfWKguWuQMZ1Siws5g",
+                "flags": 3,
+                "status": "valid",
+                "memo": null,
+                "fee_paid": 28000000,
+                "block_time": 1718444698,
+                "fee_paid_normalized": "0.28"
+            },
+            {
+                "tx_index": 2735977,
+                "tx_hash": "bb6611b62fecbef8a2c7e4da1876444e3b733d1b572795b926deade2c7a10485",
+                "block_index": 847396,
+                "source": "1JjCzmqmcMQwuddTpoYSsTPbxoEE7N2Mic",
+                "destination": "127ChgMdzicU8QhAFLi9KugRYkMzm3qb37",
+                "flags": 3,
+                "status": "valid",
+                "memo": null,
+                "fee_paid": 3000000,
+                "block_time": 1718052749,
+                "fee_paid_normalized": "0.03"
+            },
+            {
+                "tx_index": 2735678,
+                "tx_hash": "58597aa76e4e3f19c6902e6c4ccbf2682515978e163d14fe671e777f7d0e9416",
+                "block_index": 846798,
+                "source": "1NSU6VohuXbKQZBPUYbmsEzCpv9LqoXDXD",
+                "destination": "1C7vXRxsTFjwB1fKkrC6Qi7wYpgw66zLhZ",
+                "flags": 3,
+                "status": "valid",
+                "memo": null,
+                "fee_paid": 111600000,
+                "block_time": 1717711014,
+                "fee_paid_normalized": "1.116"
+            },
+            {
+                "tx_index": 2735519,
+                "tx_hash": "37e3260f5e7425dec096ebc2dea54724506a0f8ab346113d2dfcb22a5653bf46",
+                "block_index": 846482,
+                "source": "1D5yh6BE6LGx26ttZCefBvE2FdhPAJcWdw",
+                "destination": "14isMn1VuRskH8FxpV9Za5Np6sAUdZFyVV",
+                "flags": 3,
+                "status": "valid",
+                "memo": null,
+                "fee_paid": 10000000,
+                "block_time": 1717499059,
+                "fee_paid_normalized": "0.1"
+            },
+            {
+                "tx_index": 2734382,
+                "tx_hash": "af0e2206fc823684ef308a10906edae8139c56ff82025b774392e2ce93fae0cf",
+                "block_index": 845090,
+                "source": "1HNBGaqD79PFivFCzRCsWa8ieTNrFxNVMb",
+                "destination": "18b7eyatTwZ8mvSCXRRxjNjvr3DPwhh6bU",
+                "flags": 1,
+                "status": "valid",
+                "memo": "63 Set",
+                "fee_paid": 14600000,
+                "block_time": 1716645737,
+                "fee_paid_normalized": "0.146"
+            }
+        ],
+        "next_cursor": 2734317,
+        "result_count": 1046
     }
 }

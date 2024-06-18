@@ -114,6 +114,8 @@ ROUTES = util.prepare_routes(
         "/v2/events/counts": queries.get_all_events_counts,
         "/v2/events/<event>": queries.get_events_by_name,
         "/v2/events/<event>/count": queries.get_event_count,
+        ### /sweeps ###
+        "/v2/sweeps": queries.get_sweeps,
         ### /healthz ###
         "/v2/healthz": util.check_server_health,
         "/healthz": util.check_server_health,

@@ -4423,5 +4423,10 @@
             "event": "CREDIT",
             "event_count": 34
         }
+    },
+    "http://localhost:10009/v2/sweeps?verbose=true": {
+        "result": [],
+        "next_cursor": null,
+        "result_count": 0
     }
 }
