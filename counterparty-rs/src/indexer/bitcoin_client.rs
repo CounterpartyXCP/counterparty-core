@@ -135,7 +135,7 @@ fn parse_vout(
             "Encountered invalid OP_RETURN script | tx: {}, vout: {}",
             txid, vi
         )))
-    } else if let Some(Ok(Op(OP_CHECKSIG))) = vout.script_pubkey.instructions().next() {
+    } else if vout.script_pubkey.is_p2pkh() {
         if let [Ok(Op(OP_DUP)), Ok(Op(OP_HASH160)), Ok(PushBytes(pb)), Ok(Op(OP_EQUALVERIFY)), Ok(Op(OP_CHECKSIG))] =
             vout.script_pubkey
                 .instructions()
@@ -143,7 +143,7 @@ fn parse_vout(
                 .as_slice()
         {
             let bytes = arc4_decrypt(&key, pb.as_bytes())?;
-            if bytes[1..=config.prefix.len()] == config.prefix {
+            if bytes.len() >= config.prefix.len() && bytes[1..=config.prefix.len()] == config.prefix {
                 let data_len = bytes[0] as usize;
                 let data = bytes[1..=data_len].to_vec();
                 return Ok((
@@ -156,7 +156,7 @@ fn parse_vout(
                         .address_version
                         .clone()
                         .into_iter()
-                        .chain(bytes)
+                        .chain(pb.as_bytes().to_vec())
                         .collect::<Vec<_>>()
                         .as_slice(),
                 );
