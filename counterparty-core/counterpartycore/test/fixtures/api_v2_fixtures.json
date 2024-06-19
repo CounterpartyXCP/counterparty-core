@@ -3850,6 +3850,22 @@
                 "fee_paid": 7200,
                 "status": "pending",
                 "block_time": 310492000,
+                "forward_asset_info": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "backward_asset_info": {
+                    "divisible": true,
+                    "asset_longname": "Bitcoin",
+                    "description": "The Bitcoin cryptocurrency",
+                    "locked": false,
+                    "issuer": null
+                },
+                "forward_quantity_normalized": "1.00000000",
+                "backward_quantity_normalized": "0.00800000",
                 "fee_paid_normalized": "0.00007200"
             }
         ],

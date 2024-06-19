@@ -9,7 +9,8 @@
 
 ## Bugfixes
 
-* Add `quantity_normalized` in Issuances endpoints.
+* Add `quantity_normalized` in Issuances endpoints
+* Fix verbose mode for order matches
 
 ## Codebase
 
