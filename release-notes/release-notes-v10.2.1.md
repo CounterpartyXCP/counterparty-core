@@ -37,6 +37,7 @@
 * Clean and enrich `message_data` for MPMA sends
 * Supports `dispense` message type
 * Add `/assets/<asset>/info` route
+* Add `supply_normalized` in asset info
 
 ## CLI
 

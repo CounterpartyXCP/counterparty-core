@@ -378,6 +378,7 @@ def inject_normalized_quantities(result_list):
         "escrow_quantity": {"asset_field": "asset_info", "divisible": None},
         "dispense_quantity": {"asset_field": "asset_info", "divisible": None},
         "quantity_per_unit": {"asset_field": "dividend_asset_info", "divisible": None},
+        "supply": {"asset_field": "asset_info", "divisible": None},
         "satoshirate": {"asset_field": None, "divisible": True},
         "burned": {"asset_field": None, "divisible": True},
         "earned": {"asset_field": None, "divisible": True},
@@ -421,6 +422,12 @@ def inject_normalized_quantities(result_list):
                     item["dispenser"] = inject_normalized_quantity(
                         item["dispenser"], field_name, {"divisible": field_info["divisible"]}
                     )
+                continue
+
+            if field_name == "supply" and field_name in item:
+                item = inject_normalized_quantity(
+                    item, field_name, {"divisible": item["divisible"]}
+                )
                 continue
 
             if "unpacked_data" in item and isinstance(
