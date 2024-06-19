@@ -79,18 +79,14 @@ impl BlockHasEntries for Block {
     }
 }
 
-fn arc4_decrypt(key: &[u8], data: &[u8]) -> Vec<u8> {
+fn arc4_decrypt(key: &[u8], data: &[u8]) -> Result<Vec<u8>, Error> {
     let mut read_buf = RefReadBuffer::new(data);
     let mut buf = Vec::new();
     let mut write_buf = RefWriteBuffer::new(&mut buf);
-    Rc4::new(&key)
+    Rc4::new(key)
         .decrypt(&mut read_buf, &mut write_buf, false)
-        .expect("RC4 decryption failed");
-    write_buf
-        .take_remaining()
-        .iter()
-        .map(|&i| i)
-        .collect::<Vec<_>>()
+        .map_err(|e| Error::ParseVout(format!("ARC4 decrypt failed: {:?}", e)))?;
+    Ok(write_buf.take_remaining().to_vec())
 }
 
 fn is_valid_segwit_script(script: &Script) -> bool {
@@ -127,7 +123,7 @@ fn parse_vout(
             .collect::<Vec<_>>()
             .as_slice()
         {
-            let bytes = arc4_decrypt(&key, pb.as_bytes());
+            let bytes = arc4_decrypt(&key, pb.as_bytes())?;
             if bytes.starts_with(&config.prefix) {
                 return Ok((
                     ParseOutput::Data(bytes[config.prefix.len()..].to_vec()),
@@ -146,7 +142,7 @@ fn parse_vout(
                 .collect::<Vec<_>>()
                 .as_slice()
         {
-            let bytes = arc4_decrypt(&key, pb.as_bytes());
+            let bytes = arc4_decrypt(&key, pb.as_bytes())?;
             if bytes[1..=config.prefix.len()] == config.prefix {
                 let data_len = bytes[0] as usize;
                 let data = bytes[1..=data_len].to_vec();
@@ -186,24 +182,26 @@ fn parse_vout(
         {
             [Ok(PushBytes(sigs_req_pb)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(Op(OP_CHECKMULTISIG))] =>
             {
-                signatures_required = u32::from_be_bytes(
-                    sigs_req_pb
-                        .as_bytes()
-                        .try_into()
-                        .expect("Invalid signatures required byte encountered"),
-                );
+                signatures_required =
+                    u32::from_be_bytes(sigs_req_pb.as_bytes().try_into().map_err(|e| {
+                        Error::ParseVout(format!(
+                            "Invalid signatures required byte encountered: {:?}",
+                            e
+                        ))
+                    })?);
                 for pb in [pk1_pb, pk2_pb, pk3_pb] {
                     chunks.push(pb.as_bytes().to_vec());
                 }
             }
             [Ok(PushBytes(sigs_req_pb)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(PushBytes(pk4_pb)), Ok(Op(OP_CHECKMULTISIG))] =>
             {
-                signatures_required = u32::from_be_bytes(
-                    sigs_req_pb
-                        .as_bytes()
-                        .try_into()
-                        .expect("Invalid signatures required byte encountered"),
-                );
+                signatures_required =
+                    u32::from_be_bytes(sigs_req_pb.as_bytes().try_into().map_err(|e| {
+                        Error::ParseVout(format!(
+                            "Invalid signatures required byte encountered: {:?}",
+                            e
+                        ))
+                    })?);
                 for pb in [pk1_pb, pk2_pb, pk3_pb, pk4_pb] {
                     chunks.push(pb.as_bytes().to_vec());
                 }
@@ -219,7 +217,7 @@ fn parse_vout(
         for chunk in chunks.iter() {
             enc_bytes.extend(chunk[1..chunk.len() - 1].to_vec());
         }
-        let bytes = arc4_decrypt(&key, &enc_bytes);
+        let bytes = arc4_decrypt(&key, &enc_bytes)?;
         if bytes[1..=config.prefix.len()] == config.prefix {
             let chunk_len = bytes[0] as usize;
             let chunk = bytes[1..=chunk_len].to_vec();
@@ -290,7 +288,7 @@ fn parse_vout(
             vout.script_pubkey.as_bytes().to_vec(),
             config.network.to_string().as_str(),
         )
-        .expect("Segwit script to address failed");
+        .map_err(|e| Error::ParseVout(format!("Segwit script to address failed: {}", e)))?;
         let mut potential_dispenser = None;
         if config.correct_segwit_txids_enabled(height) {
             potential_dispenser = Some(PotentialDispenser {
@@ -340,6 +338,7 @@ impl ToBlock for Block {
             let mut btc_amount = 0;
             let mut data = Vec::new();
             let mut potential_dispensers = Vec::new();
+            let mut err = None;
             for (vi, vout) in tx.output.iter().enumerate() {
                 vouts.push(Vout {
                     value: vout.value.to_sat(),
@@ -348,25 +347,41 @@ impl ToBlock for Block {
 
                 let output_value = vout.value.to_sat() as i64;
                 fee -= output_value;
-                let (parse_output, potential_dispenser) =
-                    parse_vout(&config, key.clone(), height, tx.txid().to_hex(), vi, vout)
-                        .expect("Failed to parse vout");
-
-                potential_dispensers.push(potential_dispenser);
-                if data.is_empty()
-                    && parse_output.is_destination()
-                    && destinations != vec![config.unspendable()]
-                {
-                    if let ParseOutput::Destination(destination) = parse_output {
-                        destinations.push(destination);
+                let result = parse_vout(&config, key.clone(), height, tx.txid().to_hex(), vi, vout);
+                match result {
+                    Err(e) => {
+                        err = Some(e);
+                        break;
                     }
-                    btc_amount += output_value;
-                } else if parse_output.is_destination() {
-                    break;
-                } else if let ParseOutput::Data(mut new_data) = parse_output {
-                    data.append(&mut new_data)
+                    Ok((parse_output, potential_dispenser)) => {
+                        potential_dispensers.push(potential_dispenser);
+                        if data.is_empty()
+                            && parse_output.is_destination()
+                            && destinations != vec![config.unspendable()]
+                        {
+                            if let ParseOutput::Destination(destination) = parse_output {
+                                destinations.push(destination);
+                            }
+                            btc_amount += output_value;
+                        } else if parse_output.is_destination() {
+                            break;
+                        } else if let ParseOutput::Data(mut new_data) = parse_output {
+                            data.append(&mut new_data)
+                        }
+                    }
                 }
             }
+            let parsed_vouts = if let Some(e) = err {
+                Err(e.to_string())
+            } else {
+                Ok(ParsedVouts {
+                    destinations,
+                    btc_amount,
+                    fee,
+                    data,
+                    potential_dispensers,
+                })
+            };
             transactions.push(Transaction {
                 version: tx.version.0,
                 segwit,
@@ -377,13 +392,7 @@ impl ToBlock for Block {
                 vtxinwit,
                 vin: vins,
                 vout: vouts,
-                parsed_vouts: ParsedVouts {
-                    destinations,
-                    btc_amount,
-                    fee,
-                    data,
-                    potential_dispensers,
-                },
+                parsed_vouts,
             })
         }
         CrateBlock {

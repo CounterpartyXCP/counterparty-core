@@ -1,4 +1,5 @@
 use pyo3::{
+    exceptions::PyException,
     types::{PyAnyMethods, PyBytes, PyDict, PyTuple},
     IntoPy, PyObject, Python,
 };
@@ -97,7 +98,7 @@ pub struct Transaction {
     pub tx_id: String,
     pub tx_hash: String,
     pub vtxinwit: Vec<String>,
-    pub parsed_vouts: ParsedVouts,
+    pub parsed_vouts: Result<ParsedVouts, String>,
     pub vin: Vec<Vin>,
     pub vout: Vec<Vout>,
 }
@@ -113,6 +114,18 @@ impl IntoPy<PyObject> for Transaction {
         dict.set_item("tx_id", self.tx_id).unwrap();
         dict.set_item("tx_hash", self.tx_hash).unwrap();
         dict.set_item("vtxinwit", self.vtxinwit).unwrap();
+
+        match self.parsed_vouts {
+            Ok(parsed_vouts) => {
+                dict.set_item("parsed_vouts", parsed_vouts.into_py(py))
+                    .unwrap();
+            }
+            Err(error) => {
+                let exception = PyException::new_err(error);
+                dict.set_item("parsed_vouts", exception.into_py(py))
+                    .unwrap();
+            }
+        }
 
         let vin_list: Vec<PyObject> = self.vin.into_iter().map(|vin| vin.into_py(py)).collect();
         dict.set_item("vin", vin_list).unwrap();
