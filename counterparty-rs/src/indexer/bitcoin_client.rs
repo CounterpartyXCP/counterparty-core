@@ -149,7 +149,7 @@ fn parse_vout(
                 let data = bytes[1..=data_len].to_vec();
                 return Ok((
                     ParseOutput::Data(data[config.prefix.len()..].to_vec()),
-                    None,
+                    Some(PotentialDispenser { destination: None, value: Some(value) }),
                 ));
             } else {
                 let destination = b58_encode(
