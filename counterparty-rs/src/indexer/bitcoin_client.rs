@@ -9,6 +9,7 @@ use bitcoincore_rpc::{
         hashes::{ripemd160, sha256, sha256d::Hash as Sha256dHash, Hash},
         opcodes::all::{
             OP_CHECKMULTISIG, OP_CHECKSIG, OP_DUP, OP_EQUAL, OP_EQUALVERIFY, OP_HASH160, OP_RETURN,
+            OP_PUSHNUM_1, OP_PUSHNUM_2, OP_PUSHNUM_3,
         },
         script::Instruction::{Op, PushBytes},
         Block, BlockHash, Script, TxOut,
@@ -180,29 +181,24 @@ fn parse_vout(
             .collect::<Vec<_>>()
             .as_slice()
         {
-            [Ok(PushBytes(sigs_req_pb)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(Op(OP_CHECKMULTISIG))] =>
+            [Ok(Op(OP_PUSHNUM_1)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(Op(OP_PUSHNUM_2)), Ok(Op(OP_CHECKMULTISIG))] =>
             {
-                signatures_required =
-                    u32::from_be_bytes(sigs_req_pb.as_bytes().try_into().map_err(|e| {
-                        Error::ParseVout(format!(
-                            "Invalid signatures required byte encountered: {:?}",
-                            e
-                        ))
-                    })?);
+                signatures_required = 1;
+                for pb in [pk1_pb, pk2_pb] {
+                    chunks.push(pb.as_bytes().to_vec());
+                }
+            }
+            [Ok(Op(OP_PUSHNUM_1)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(Op(OP_PUSHNUM_3)), Ok(Op(OP_CHECKMULTISIG))] =>
+            {
+                signatures_required = 1;
                 for pb in [pk1_pb, pk2_pb, pk3_pb] {
                     chunks.push(pb.as_bytes().to_vec());
                 }
             }
-            [Ok(PushBytes(sigs_req_pb)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(PushBytes(pk4_pb)), Ok(Op(OP_CHECKMULTISIG))] =>
+            [Ok(Op(OP_PUSHNUM_2)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(Op(OP_PUSHNUM_3)), Ok(Op(OP_CHECKMULTISIG))] =>
             {
-                signatures_required =
-                    u32::from_be_bytes(sigs_req_pb.as_bytes().try_into().map_err(|e| {
-                        Error::ParseVout(format!(
-                            "Invalid signatures required byte encountered: {:?}",
-                            e
-                        ))
-                    })?);
-                for pb in [pk1_pb, pk2_pb, pk3_pb, pk4_pb] {
+                signatures_required = 2;
+                for pb in [pk1_pb, pk2_pb, pk3_pb] {
                     chunks.push(pb.as_bytes().to_vec());
                 }
             }
@@ -218,7 +214,7 @@ fn parse_vout(
             enc_bytes.extend(chunk[1..chunk.len() - 1].to_vec());
         }
         let bytes = arc4_decrypt(&key, &enc_bytes)?;
-        if bytes[1..=config.prefix.len()] == config.prefix {
+        if bytes.len() >= config.prefix.len() && bytes[1..=config.prefix.len()] == config.prefix {
             let chunk_len = bytes[0] as usize;
             let chunk = bytes[1..=chunk_len].to_vec();
             return Ok((
@@ -344,7 +340,9 @@ impl ToBlock for Block {
                     value: vout.value.to_sat(),
                     script_pub_key: vout.script_pubkey.to_bytes(),
                 });
-
+                if config.multisig_addresses_enabled(height) == false {
+                    continue;
+                }
                 let output_value = vout.value.to_sat() as i64;
                 fee -= output_value;
                 let result = parse_vout(&config, key.clone(), height, tx.txid().to_hex(), vi, vout);
@@ -370,6 +368,11 @@ impl ToBlock for Block {
                         }
                     }
                 }
+            }
+            if config.multisig_addresses_enabled(height) == false {
+                err = Some(Error::ParseVout(
+                    "Multisig addresses are not enabled".to_string(),
+                ));
             }
             let parsed_vouts = if let Some(e) = err {
                 Err(e.to_string())
