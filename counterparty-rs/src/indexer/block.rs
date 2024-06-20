@@ -50,7 +50,7 @@ impl IntoPy<PyObject> for Vout {
 #[derive(Clone)]
 pub struct PotentialDispenser {
     pub destination: Option<String>,
-    pub value: u64,
+    pub value: Option<u64>,
 }
 
 impl IntoPy<PyObject> for PotentialDispenser {

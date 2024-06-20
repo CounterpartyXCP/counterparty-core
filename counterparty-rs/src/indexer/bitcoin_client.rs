@@ -128,7 +128,7 @@ fn parse_vout(
             if bytes.starts_with(&config.prefix) {
                 return Ok((
                     ParseOutput::Data(bytes[config.prefix.len()..].to_vec()),
-                    None,
+                    Some(PotentialDispenser { destination: None, value: None }),
                 ));
             }
         }
@@ -163,7 +163,7 @@ fn parse_vout(
                 );
                 return Ok((
                     ParseOutput::Destination(destination.clone()),
-                    Some(PotentialDispenser { destination: Some(destination), value }),
+                    Some(PotentialDispenser { destination: Some(destination), value: Some(value) }),
                 ));
             }
         }
@@ -233,7 +233,7 @@ fn parse_vout(
             let chunk = bytes[1..=chunk_len].to_vec();
             return Ok((
                 ParseOutput::Data(chunk[config.prefix.len()..].to_vec()),
-                Some(PotentialDispenser { destination: None, value }),
+                Some(PotentialDispenser { destination: None, value: Some(value) }),
             ));
         } else {
             let mut pub_key_hashes = chunks
@@ -262,7 +262,7 @@ fn parse_vout(
                 .join("_");
             return Ok((
                 ParseOutput::Destination(destination.clone()),
-                Some(PotentialDispenser { destination: Some(destination), value }),
+                Some(PotentialDispenser { destination: Some(destination), value: Some(value) }),
             ));
         }
     } else if config.p2sh_address_supported(height) {
@@ -284,7 +284,7 @@ fn parse_vout(
             if config.p2sh_dispensers_supported(height) {
                 potential_dispenser = Some(PotentialDispenser {
                     destination: Some(destination.clone()),
-                    value,
+                    value: Some(value),
                 });
             }
             return Ok((ParseOutput::Destination(destination), potential_dispenser));
@@ -303,7 +303,7 @@ fn parse_vout(
         if config.correct_segwit_txids_enabled(height) {
             potential_dispenser = Some(PotentialDispenser {
                 destination: Some(destination.clone()),
-                value,
+                value: Some(value),
             });
         }
         return Ok((ParseOutput::Destination(destination), potential_dispenser));
