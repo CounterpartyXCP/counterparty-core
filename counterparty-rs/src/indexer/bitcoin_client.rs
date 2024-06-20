@@ -1,4 +1,5 @@
 use std::{collections::HashMap, sync::Arc, thread::JoinHandle};
+use std::iter::repeat;
 
 use crate::b58::b58_encode;
 use crate::utils::script_to_address;
@@ -20,6 +21,8 @@ use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
 use crypto::buffer::{RefReadBuffer, RefWriteBuffer, WriteBuffer};
 use crypto::rc4::Rc4;
 use crypto::symmetriccipher::Decryptor;
+use tracing::debug;
+use crypto::symmetriccipher::SynchronousStreamCipher;
 
 use super::{
     block::{
@@ -81,13 +84,10 @@ impl BlockHasEntries for Block {
 }
 
 fn arc4_decrypt(key: &[u8], data: &[u8]) -> Result<Vec<u8>, Error> {
-    let mut read_buf = RefReadBuffer::new(data);
-    let mut buf = Vec::new();
-    let mut write_buf = RefWriteBuffer::new(&mut buf);
-    Rc4::new(key)
-        .decrypt(&mut read_buf, &mut write_buf, false)
-        .map_err(|e| Error::ParseVout(format!("ARC4 decrypt failed: {:?}", e)))?;
-    Ok(write_buf.take_remaining().to_vec())
+    let mut rc4 = Rc4::new(key);
+    let mut result: Vec<u8> = repeat(0).take(data.len()).collect();
+    rc4.process(data, &mut result);
+    Ok(result)
 }
 
 fn is_valid_segwit_script(script: &Script) -> bool {
@@ -210,8 +210,8 @@ fn parse_vout(
             }
         }
         let mut enc_bytes = Vec::new();
-        for chunk in chunks.iter() {
-            enc_bytes.extend(chunk[1..chunk.len() - 1].to_vec());
+        for chunk in chunks.iter().take(chunks.len() - 1) { // (No data in last pubkey.)
+            enc_bytes.extend(chunk[1..chunk.len() - 1].to_vec()); // Skip sign byte and nonce byte.
         }
         let bytes = arc4_decrypt(&key, &enc_bytes)?;
         if bytes.len() >= config.prefix.len() && bytes[1..=config.prefix.len()] == config.prefix {
@@ -313,6 +313,7 @@ impl ToBlock for Block {
             for vin in tx.input.iter() {
                 if key.is_empty() {
                     key = vin.previous_output.txid.to_byte_array().to_vec();
+                    key.reverse();
                 }
                 let hash = vin.previous_output.txid.to_hex();
                 if !vin.witness.is_empty() {
