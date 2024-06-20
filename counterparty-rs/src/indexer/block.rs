@@ -49,7 +49,7 @@ impl IntoPy<PyObject> for Vout {
 
 #[derive(Clone)]
 pub struct PotentialDispenser {
-    pub destination: String,
+    pub destination: Option<String>,
     pub value: u64,
 }
 

@@ -163,7 +163,7 @@ fn parse_vout(
                 );
                 return Ok((
                     ParseOutput::Destination(destination.clone()),
-                    Some(PotentialDispenser { destination, value }),
+                    Some(PotentialDispenser { destination: Some(destination), value }),
                 ));
             }
         }
@@ -219,7 +219,7 @@ fn parse_vout(
             let chunk = bytes[1..=chunk_len].to_vec();
             return Ok((
                 ParseOutput::Data(chunk[config.prefix.len()..].to_vec()),
-                None,
+                Some(PotentialDispenser { destination: None, value }),
             ));
         } else {
             let mut pub_key_hashes = chunks
@@ -248,7 +248,7 @@ fn parse_vout(
                 .join("_");
             return Ok((
                 ParseOutput::Destination(destination.clone()),
-                Some(PotentialDispenser { destination, value }),
+                Some(PotentialDispenser { destination: Some(destination), value }),
             ));
         }
     } else if config.p2sh_address_supported(height) {
@@ -269,7 +269,7 @@ fn parse_vout(
             let mut potential_dispenser = None;
             if config.p2sh_dispensers_supported(height) {
                 potential_dispenser = Some(PotentialDispenser {
-                    destination: destination.clone(),
+                    destination: Some(destination.clone()),
                     value,
                 });
             }
@@ -288,7 +288,7 @@ fn parse_vout(
         let mut potential_dispenser = None;
         if config.correct_segwit_txids_enabled(height) {
             potential_dispenser = Some(PotentialDispenser {
-                destination: destination.clone(),
+                destination: Some(destination.clone()),
                 value,
             });
         }
