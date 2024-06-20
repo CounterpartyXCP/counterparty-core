@@ -265,7 +265,7 @@ fn parse_vout(
                 Some(PotentialDispenser { destination: Some(destination), value: Some(value) }),
             ));
         }
-    } else if config.p2sh_address_supported(height) {
+    } else if config.p2sh_address_supported(height) && vout.script_pubkey.is_p2sh() {
         if let [Ok(Op(OP_HASH160)), Ok(PushBytes(pb)), Ok(Op(OP_EQUAL))] = vout
             .script_pubkey
             .instructions()
