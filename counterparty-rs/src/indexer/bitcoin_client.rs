@@ -188,6 +188,13 @@ fn parse_vout(
                     chunks.push(pb.as_bytes().to_vec());
                 }
             }
+            [Ok(Op(OP_PUSHNUM_2)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(Op(OP_PUSHNUM_2)), Ok(Op(OP_CHECKMULTISIG))] =>
+            {
+                signatures_required = 2;
+                for pb in [pk1_pb, pk2_pb] {
+                    chunks.push(pb.as_bytes().to_vec());
+                }
+            }
             [Ok(Op(OP_PUSHNUM_1)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(Op(OP_PUSHNUM_3)), Ok(Op(OP_CHECKMULTISIG))] =>
             {
                 signatures_required = 1;
@@ -198,6 +205,13 @@ fn parse_vout(
             [Ok(Op(OP_PUSHNUM_2)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(Op(OP_PUSHNUM_3)), Ok(Op(OP_CHECKMULTISIG))] =>
             {
                 signatures_required = 2;
+                for pb in [pk1_pb, pk2_pb, pk3_pb] {
+                    chunks.push(pb.as_bytes().to_vec());
+                }
+            }
+            [Ok(Op(OP_PUSHNUM_3)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(Op(OP_PUSHNUM_3)), Ok(Op(OP_CHECKMULTISIG))] =>
+            {
+                signatures_required = 3;
                 for pb in [pk1_pb, pk2_pb, pk3_pb] {
                     chunks.push(pb.as_bytes().to_vec());
                 }
