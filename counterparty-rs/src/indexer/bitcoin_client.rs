@@ -280,7 +280,10 @@ fn parse_vout(
                     .chain(pb.as_bytes().to_vec())
                     .collect::<Vec<_>>(),
             );
-            let mut potential_dispenser = None;
+            let mut potential_dispenser = Some(PotentialDispenser {
+                destination: None,
+                value: None,
+            });
             if config.p2sh_dispensers_supported(height) {
                 potential_dispenser = Some(PotentialDispenser {
                     destination: Some(destination.clone()),
@@ -299,7 +302,10 @@ fn parse_vout(
             config.network.to_string().as_str(),
         )
         .map_err(|e| Error::ParseVout(format!("Segwit script to address failed: {}", e)))?;
-        let mut potential_dispenser = None;
+        let mut potential_dispenser = Some(PotentialDispenser {
+            destination: None,
+            value: None,
+        });
         if config.correct_segwit_txids_enabled(height) {
             potential_dispenser = Some(PotentialDispenser {
                 destination: Some(destination.clone()),
